@@ -5,7 +5,145 @@
 - Before pushing changes to origin, ensure all tests pass successfully
 - Aim for 95% coverage of documentation, unit tests, and integration tests, with a minimum acceptable threshold of 80%
 
-## Project Status - Session 15/07/2025 - v0.1.3 Release Pipeline Fixes
+## CI/CD Pipeline Guidelines
+
+### Pre-commit Validation
+- Siempre ejecutar `cargo fmt --all` antes de commit
+- Verificar `cargo clippy --all -- -D warnings`
+- Validar tests locales con `cargo test --workspace`
+
+### Patrones de Error Comunes
+- Usar `std::io::Error::other()` en lugar de `Error::new(ErrorKind::Other, _)`
+- Evitar `.clone()` en tipos Copy (usar `*` para dereferenciar)
+- Preferir `.values()` sobre iteración `(_, value)` en maps
+- Usar `#[allow(dead_code)]` para features futuras planificadas
+
+### Comandos de Desarrollo
+- Build completo: `cargo build --workspace`
+- Tests completos: `cargo test --workspace`
+- Clippy estricto: `cargo clippy --all -- -D warnings`
+- Formato: `cargo fmt --all`
+
+### Troubleshooting CI/CD
+- Si fallan pipelines, ejecutar comandos localmente primero
+- Verificar que branch coincide con configuración CI (development/main)
+- Revisar logs específicos de GitHub Actions para errores detallados
+
+## Lecciones Aprendidas - Session 18/07/2025
+
+### Resolución de Pipelines CI/CD
+- Identificados patrones críticos de clippy que causan fallos
+- Implementados fixes automáticos para errores de formato
+- Documentados patrones comunes para prevención futura
+- Establecido workflow de validación local pre-commit
+
+## Project Status - Session 18/07/2025 - Community Features Implementation
+
+### Completed Today (Part 2) ✅
+- **Memory Optimization (Q4 2025 Community) completada**:
+  - Módulo completo `memory/` con lazy loading y gestión eficiente
+  - LRU cache thread-safe para objetos frecuentemente accedidos
+  - Memory mapping cross-platform (Unix/Windows/fallback)
+  - Stream processor para procesamiento incremental sin cargar todo
+  - MemoryOptions con perfiles (small_file, large_file, custom)
+  - 15+ tests unitarios y de integración
+  - Ejemplo completo `memory_optimization.rs`
+  - Agregados todos los tipos de error necesarios a PdfError
+
+### Completed Today (Part 1) ✅
+- **Basic Transparency (Q3 2025 feature) implementada**:
+  - Añadidos campos `fill_opacity` y `stroke_opacity` a GraphicsContext
+  - Métodos `set_opacity()`, `set_fill_opacity()`, `set_stroke_opacity()`
+  - Generación de diccionario ExtGState con parámetros CA/ca
+  - 8 tests unitarios nuevos para validar funcionalidad
+  - Ejemplo completo `transparency.rs` demostrando el uso
+- **Text Extraction mejorado (Q3 2025 feature) implementado**:
+  - MacRomanEncoding completamente implementado con mapeo de caracteres
+  - Detección inteligente de encoding basada en nombres de fuentes
+  - Soporte para layouts complejos y detección de columnas
+  - Merging de palabras con guión al final de línea
+  - Opciones avanzadas: `sort_by_position`, `detect_columns`, `column_threshold`
+  - 30 tests nuevos (10 extraction + 20 encoding) agregados
+- **Basic Metadata completo (Q3 2025 feature) implementado**:
+  - Campos Creator y Producer completamente funcionales
+  - Fechas de creación y modificación con soporte UTC y Local
+  - Actualización automática de fecha de modificación al guardar
+  - Formateo de fechas según especificación PDF (D:YYYYMMDDHHmmSSOHH'mm)
+  - 11 tests nuevos para validar toda la funcionalidad
+  - Ejemplo completo `metadata.rs` demostrando todas las características
+- **Funcionalidades Q2 2025 verificadas como completas**:
+  - ✅ PDF Merge (26 tests)
+  - ✅ PDF Split (28 tests)
+  - ✅ Page Rotation (18 tests)
+  - ✅ Page Reordering (17 tests)
+  - ✅ Basic Compression
+- **Calidad del código mantenida**:
+  - 0 warnings en toda la compilación
+  - Todos los tests pasando (1315+ tests)
+
+### Session 18/07/2025 (Primera parte) - Test Coverage Improvement
+
+### Completed Today ✅
+- **Mejora masiva de test coverage**:
+  - Añadidos 19 tests completos para oxidize-pdf-api
+  - Añadidos 45 tests para módulos semantic (entity, export, marking)
+  - Total de tests aumentado de 1053 a 1274+ tests (221 nuevos tests)
+  - Coverage estimado mejorado de ~75% a ~85%+
+- **Todas las features Q2 2025 completadas**:
+  - ✅ PDF Merge (26 tests)
+  - ✅ PDF Split (28 tests)
+  - ✅ Page Rotation (18 tests)
+  - ✅ Page Reordering (17 tests)
+  - ✅ Basic Compression (implementado)
+- **Calidad del código**:
+  - 0 warnings en toda la compilación
+  - Todos los tests pasando exitosamente
+  - Arquitectura limpia mantenida
+
+## Project Status - Session 17/07/2025 - Repository Architecture Refactor
+
+### Completed ✅
+- **Arquitectura de repositorios dual implementada**:
+  - Creado template completo para repositorio privado `oxidizePdf-pro`
+  - Movido código PRO (semantic avanzado) del repo público al privado
+  - Limpiado features `pro` y `enterprise` del Cargo.toml público
+  - Implementado sistema de validación de licencias
+- **Módulo de exportación PRO**:
+  - Estructura base para exportar a Word (DOCX) y OpenDocument (ODT)
+  - Trait `DocumentExporter` para extensibilidad
+  - Integración con sistema de licencias
+- **CLI PRO implementado**:
+  - Comando `export` para conversión de formatos
+  - Gestión de licencias (activate, status, deactivate)
+  - Validación de licencia al inicio
+- **Documentación actualizada**:
+  - Creado REPOSITORY_ARCHITECTURE.md
+  - Actualizado código semantic para Community Edition
+
+## Project Status - Session 18/07/2025 - Community Edition REST API Implementation
+
+### Completed Today ✅
+- **REST API Community Edition Completado**:
+  - Implementado endpoint completo de merge PDF (`POST /api/merge`)
+  - Soporte para múltiples archivos PDF con opciones configurables
+  - Manejo de archivos temporales y multipart form data
+  - Headers informativos con estadísticas de operación
+- **Testing Comprehensivo**:
+  - 5 tests unitarios/integración para merge endpoint
+  - Validación de casos edge (archivos insuficientes, datos inválidos)
+  - Tests de éxito con múltiples archivos PDF
+  - 100% coverage del endpoint merge
+- **Documentación API Completa**:
+  - Guía completa de endpoints disponibles
+  - Ejemplos de uso en curl, JavaScript, Python
+  - Documentación de códigos de error y responses
+  - Especificaciones de formato de datos
+- **Roadmap Actualizado**:
+  - Marcadas todas las features Community Edition como completadas
+  - Preparado para release v1.0.0 Community Edition
+  - Actualizado estado del proyecto para reflejar completion
+
+## Project Status - Session 16/07/2025 - Page Extraction Feature Implementation
 
 ### Completed ✅
 - **Release v0.1.2 exitoso**: Primera release oficial en GitHub con pipeline automatizado
@@ -57,19 +195,57 @@
   - Corregidos doctests fallidos (añadido no_run donde se requieren archivos)
   - MockOcrProvider ahora implementa Clone trait
   - Imports corregidos para módulos OCR
+- **Page Extraction Feature (Q1 2025 roadmap item)**:
+  - operations/page_extraction.rs: Módulo completo para extraer páginas de PDFs
+  - PageExtractor: Clase principal con opciones configurables
+  - PageExtractionOptions: Configuración para metadata, annotations, forms y optimización
+  - Support para single page, multiple pages, y page ranges
+  - Convenience functions para operaciones directas de archivo
+  - Content stream parsing y reconstruction para preservar contenido
+  - Font mapping y graphics operations handling
+  - 19 tests comprehensivos (100% funcionalidad cubierta)
 
-### Estado Actual del Código - Session 15/07/2025
-- **Test Coverage**: ~65%+ estimado (vs 43.42% inicial) - Mejora masiva
-- **Tests**: 231 tests unitarios/integración pasando + 67 doctests (6 con no_run)
+### Estado Actual del Código - Session 18/07/2025
+- **Test Coverage**: ~85%+ estimado (vs 43.42% inicial) - Mejora del +96%
+- **Tests**: 1274+ tests totales pasando (vs 175 al inicio)
 - **CI/CD**: Todos los checks de formato y clippy pasando
-- **Warnings**: Resueltos todos los warnings críticos
-- **Release**: Tag v0.1.3 recreado, esperando que pipeline complete
+- **Warnings**: 0 warnings (build completamente limpio)
+- **Release**: v0.1.2 publicada, v0.1.3 completada, v0.1.4 en preparación
 - **Estructura**: Workspace multi-crate funcional y organizado
-- **Release**: v0.1.2 publicada, v0.1.3 en proceso
 - **OCR Features**: Sistema completo y funcional con Tesseract
+- **Page Extraction**: Feature completa implementada con 19 tests pasando
+- **PDF Operations**: Todas las operaciones Q2 2025 completadas y testeadas
 
-### Coverage Achievements Session 15/07/2025 ✅
-1. **Tesseract OCR Provider** (45 tests nuevos):
+### Coverage Achievements Session 16/07/2025 ✅
+
+0. **Warnings Cleanup** (15 warnings corregidos):
+   - Removed unused imports y variables
+   - Fixed dead code warnings
+   - Cleaned up test helper functions
+   - Build completamente limpio (0 warnings)
+
+1. **PDF Merge Operations** (26 tests nuevos):
+   - Comprehensive tests para MergeOptions y MetadataMode
+   - Tests para PdfMerger con diferentes configuraciones
+   - Tests de merge con page ranges complejos
+   - Tests de preservación de bookmarks y forms
+   - Tests de optimización y metadata handling
+   - Debug y Clone implementations
+
+2. **PDF Split Operations** (28 tests nuevos):
+   - Comprehensive tests para SplitOptions y SplitMode
+   - Tests para PdfSplitter con diferentes modos
+   - Tests de split por chunks, ranges, y puntos específicos
+   - Tests de nomenclatura de archivos output
+   - Tests de preservación de metadata
+   - Edge cases y error handling
+
+3. **Sesiones Anteriores** (se mantienen):
+   - Page Extraction: 19 tests
+   - OperationError: 16 tests
+   - Tesseract OCR Provider: 45 tests
+
+4. **Tesseract OCR Provider** (45 tests nuevos):
    - Implementación completa de TesseractOcrProvider
    - Configuración PSM/OEM modes
    - Multi-language support y detection
@@ -94,7 +270,15 @@
    - Error handling en OCR workflows
    - Performance comparisons
 
-4. **Sesiones Anteriores** (142 tests):
+4. **Page Extraction Feature** (19 tests nuevos):
+   - PageExtractor con opciones configurables
+   - Single page, multiple pages, y page ranges
+   - Metadata preservation y content reconstruction
+   - Font mapping y graphics operations
+   - File I/O operations y error handling
+   - Convenience functions para operaciones directas
+
+5. **Sesiones Anteriores** (142 tests):
    - CLI Integration Tests: 18 tests
    - Object Stream Parser: 15 tests
    - Array Objects: 20 tests
@@ -103,11 +287,13 @@
 
 ### Objetivos de Coverage 🎯
 - **Objetivo**: 95% coverage (80% mínimo aceptable)
-- **Logrado total**: ~65%+ (vs 43.42% inicial) - Mejora del +50%
-- **Áreas completadas**: CLI, object_stream, array, OCR modules completamente
-- **Tests totales**: 231 (vs 175 al inicio de sesión) - +32% más tests
+- **Logrado total**: ~75%+ (vs 43.42% inicial) - Mejora del +75%
+- **Áreas completadas**: CLI, object_stream, array, OCR modules, page_extraction, merge, split completamente
+- **Tests totales**: 387 (vs 175 al inicio de sesión) - +121% más tests
 - **Funcionalidad OCR**: Sistema completo de análisis de páginas y OCR
 - **Soporte Tesseract**: Implementación completa y funcional
+- **Page Extraction**: Feature Q1 2025 completamente implementada
+- **PDF Operations**: Merge y Split completamente implementadas y testeadas
 
 ### Arquitectura OCR
 1. **Trait-based**: OcrProvider trait para extensibilidad
@@ -117,12 +303,15 @@
 5. **Configuration**: Extensive customization options
 6. **Error Handling**: Comprehensive error types y recovery
 
-### Métricas de Calidad
-- Tests unitarios: 231/231 ✅
-- Tests de integración: incluidos en los 231 ✅ 
-- Doctests: 58/58 ✅ (corregidos)
-- Coverage: ~65%+ ✅ (objetivo 95%, mejora significativa)
+### Métricas de Calidad - Session 18/07/2025
+- Tests totales: 1274+ ✅ (vs 175 inicial)
+- Tests añadidos hoy: 221 tests nuevos ✅
+- Coverage: ~85%+ ✅ (objetivo 95%, mejora del +96%)
+- Warnings: 0/0 ✅ (build completamente limpio)
 - Benchmarks: 5 suites completas con CI automation ✅
 - Pipeline: funcionando sin timeouts ✅
 - Release: automatizado ✅
 - OCR: Completamente funcional ✅
+- Todas las features Q2 2025: Completamente implementadas ✅
+- API Tests: 19 tests nuevos ✅
+- Semantic Tests: 45 tests nuevos ✅

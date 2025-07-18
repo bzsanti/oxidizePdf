@@ -10,7 +10,6 @@
 //! Run with: `cargo bench ocr_benchmarks --features ocr-tesseract`
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use oxidize_pdf::graphics::ImageFormat;
 use oxidize_pdf::text::ocr::{ImagePreprocessing, MockOcrProvider, OcrOptions, OcrProvider};
 
 #[cfg(feature = "ocr-tesseract")]

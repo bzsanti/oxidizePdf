@@ -5,12 +5,11 @@ mod tests {
     use crate::graphics::{Image, ImageFormat};
     use crate::operations::extract_images::*;
     use crate::{Document, Page};
-    use std::fs;
     use std::path::PathBuf;
     use tempfile::TempDir;
 
     /// Helper to create a test PDF document with an embedded image
-    fn create_pdf_with_image(title: &str) -> Document {
+    fn _create_pdf_with_image(title: &str) -> Document {
         let mut doc = Document::new();
         doc.set_title(title);
 
@@ -53,7 +52,7 @@ mod tests {
         ];
 
         // Create an image from the JPEG data
-        let image = Image::from_jpeg_data(jpeg_data).unwrap();
+        let _image = Image::from_jpeg_data(jpeg_data).unwrap();
 
         // Create a page with the image
         let mut page = Page::a4();
@@ -246,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_name_pattern_replacement() {
-        let temp_dir = TempDir::new().unwrap();
+        let _temp_dir = TempDir::new().unwrap();
         let pattern = "page_{page}_image_{index}.{format}";
 
         // Test pattern replacement

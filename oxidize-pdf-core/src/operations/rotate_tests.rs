@@ -339,7 +339,7 @@ mod tests {
         let input_path = save_test_pdf(&mut doc, &temp_dir, "input.pdf");
 
         let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
-        let rotator = PageRotator::new(document);
+        let _rotator = PageRotator::new(document);
 
         // Just verify we can create a rotator
         assert!(true);

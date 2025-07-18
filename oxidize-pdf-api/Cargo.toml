@@ -34,6 +34,10 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
+# File operations
+zip = "2.2"
+tempfile = "3.8"
+
 [lib]
 name = "oxidize_pdf_api"
 path = "src/lib.rs"
@@ -46,3 +50,4 @@ path = "src/main.rs"
 tempfile = { workspace = true }
 pretty_assertions = { workspace = true }
 http-body-util = "0.1"
+hyper = "1.0"

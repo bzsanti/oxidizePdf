@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let jpeg_data = create_minimal_jpeg();
 
     // Create an image from the JPEG data
-    let image = Image::from_jpeg_data(jpeg_data)?;
+    let _image = Image::from_jpeg_data(jpeg_data)?;
 
     // Create document
     let mut doc = Document::new();
