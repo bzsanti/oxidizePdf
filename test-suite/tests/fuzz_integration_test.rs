@@ -134,7 +134,7 @@ fn test_run_minimal_fuzz() {
     let fuzz_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("fuzz");
 
     // Check if cargo-fuzz is available
-    let check = Command::new("cargo").args(&["fuzz", "--version"]).output();
+    let check = Command::new("cargo").args(["fuzz", "--version"]).output();
 
     if check.is_err() || !check.unwrap().status.success() {
         eprintln!("cargo-fuzz not installed, skipping test");
@@ -143,7 +143,7 @@ fn test_run_minimal_fuzz() {
 
     // Run fuzzer for a very short time just to verify it works
     let output = Command::new("cargo")
-        .args(&["fuzz", "run", "fuzz_parser", "--", "-runs=1"])
+        .args(["fuzz", "run", "fuzz_parser", "--", "-runs=1"])
         .current_dir(&fuzz_dir)
         .output()
         .expect("Failed to run fuzzer");

@@ -156,11 +156,15 @@ impl PageTree {
     }
 
     /// Load a specific page by traversing the page tree
+    ///
+    /// Note: This method is currently not fully implemented due to architectural constraints
+    /// with recursive page tree traversal and borrow checker issues.
     #[allow(dead_code)]
     fn load_page_at_index<R: Read + Seek>(
         &self,
         reader: &mut PdfReader<R>,
         node: &PdfDictionary,
+        node_ref: (u32, u16),
         target_index: u32,
         inherited: Option<&PdfDictionary>,
     ) -> ParseResult<ParsedPage> {
@@ -243,15 +247,14 @@ impl PageTree {
 
                     if is_target {
                         // Found the right subtree/page
-                        // Get the kid dict again
-                        let kid_obj = reader.get_object(kid_ref.0, kid_ref.1)?;
-                        let kid_dict = kid_obj.as_dict().unwrap();
+                        // Due to borrow checker constraints with recursive calls,
+                        // we return a placeholder page for now.
+                        // A proper implementation would require refactoring the page tree
+                        // traversal to use an iterative approach instead of recursion.
 
-                        // TODO: Fix borrow checker issue with recursive calls
-                        // For now, return a placeholder
                         return Ok(ParsedPage {
                             obj_ref: kid_ref,
-                            dict: kid_dict.clone(),
+                            dict: PdfDictionary::new(),
                             inherited_resources: Some(merged_inherited.clone()),
                             media_box: [0.0, 0.0, 612.0, 792.0],
                             crop_box: None,
@@ -276,9 +279,8 @@ impl PageTree {
                     });
                 }
 
-                // Get page reference (we need to track back from the current node)
-                // For now, use a placeholder
-                let obj_ref = (0, 0); // TODO: Get actual reference
+                // Use the object reference passed as parameter
+                let obj_ref = node_ref;
 
                 // Extract page attributes
                 let media_box = Self::get_rectangle(node, inherited, "MediaBox")?

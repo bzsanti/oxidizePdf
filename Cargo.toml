@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.3"
+version = "1.0.0"
 edition = "2021"
 authors = ["Santiago Fernández de Munoz"]
 license = "GPL-3.0"
@@ -30,9 +30,9 @@ lazy_static = "1.4"
 clap = { version = "4.5", features = ["derive"] }
 
 # API dependencies
-axum = "0.7"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # Async runtime
 tokio = { version = "1.40", features = ["full"] }

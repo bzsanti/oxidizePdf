@@ -184,7 +184,7 @@ fn create_test_object_stream(object_count: u32) -> PdfStream {
 
     // Add some mock object data
     for _i in 0..object_count {
-        data.extend_from_slice(format!("<<>> ").as_bytes());
+        data.extend_from_slice("<<>> ".to_string().as_bytes());
     }
 
     PdfStream { dict, data }
@@ -245,7 +245,7 @@ fn benchmark_xref_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("xref_operations");
     group.sample_size(100);
 
-    let entry_types = vec![
+    let entry_types = [
         XRefEntryType::Free {
             next_free_obj: 42,
             generation: 1,

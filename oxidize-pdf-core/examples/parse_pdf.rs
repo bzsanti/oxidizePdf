@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Get PDF version
     let version = reader.version();
-    println!("PDF Version: {}", version.to_string());
+    println!("PDF Version: {}", version);
 
     // Get document metadata
     let metadata = reader.metadata()?;

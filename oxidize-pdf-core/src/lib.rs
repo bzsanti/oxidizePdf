@@ -171,13 +171,17 @@
 //! # }
 //! ```
 
+pub mod batch;
 pub mod document;
 pub mod error;
 pub mod graphics;
+pub mod memory;
 pub mod objects;
 pub mod operations;
 pub mod page;
 pub mod parser;
+pub mod recovery;
+pub mod streaming;
 pub mod text;
 pub mod writer;
 
@@ -203,6 +207,30 @@ pub use parser::{
 
 // Re-export operations
 pub use operations::{merge_pdfs, rotate_pdf_pages, split_pdf};
+
+// Re-export memory optimization types
+pub use memory::{LazyDocument, MemoryOptions, StreamProcessor, StreamingOptions};
+
+// Re-export streaming types
+pub use streaming::{
+    process_in_chunks, stream_text, ChunkOptions, ChunkProcessor, ChunkType, ContentChunk,
+    IncrementalParser, ParseEvent, StreamingDocument, StreamingOptions as StreamOptions,
+    StreamingPage, TextChunk, TextStreamOptions, TextStreamer,
+};
+
+// Re-export batch processing types
+pub use batch::{
+    batch_merge_pdfs, batch_process_files, batch_split_pdfs, BatchJob, BatchOptions,
+    BatchProcessor, BatchProgress, BatchResult, BatchSummary, JobResult, JobStatus, JobType,
+    ProgressCallback, ProgressInfo,
+};
+
+// Re-export recovery types
+pub use recovery::{
+    analyze_corruption, detect_corruption, quick_recover, repair_document, validate_pdf,
+    CorruptionReport, CorruptionType, ObjectScanner, PartialRecovery, PdfRecovery, RecoveredPage,
+    RecoveryOptions, RepairResult, RepairStrategy, ScanResult, ValidationError, ValidationResult,
+};
 
 /// Current version of oxidize-pdf
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -272,5 +300,193 @@ mod tests {
     fn test_version_info() {
         assert!(!VERSION.is_empty());
         assert!(pdf_version::SUPPORTED_VERSIONS.contains(&"1.7"));
+    }
+
+    #[test]
+    fn test_pdf_version_constants() {
+        // Test that all expected PDF versions are supported
+        let expected_versions = ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"];
+
+        for version in expected_versions {
+            assert!(
+                pdf_version::SUPPORTED_VERSIONS.contains(&version),
+                "Expected PDF version {} to be supported",
+                version
+            );
+        }
+
+        // Test that we have exactly 8 supported versions
+        assert_eq!(pdf_version::SUPPORTED_VERSIONS.len(), 8);
+
+        // Test planned versions
+        assert!(pdf_version::PLANNED_VERSIONS.contains(&"2.0"));
+        assert_eq!(pdf_version::PLANNED_VERSIONS.len(), 1);
+    }
+
+    #[test]
+    fn test_document_with_metadata() {
+        let mut doc = Document::new();
+        doc.set_title("Test Document");
+        doc.set_author("Test Author");
+        doc.set_subject("Test Subject");
+
+        // Verify metadata is set (checking internal state)
+        assert_eq!(doc.pages.len(), 0);
+        // Note: We can't directly test metadata without exposing getters
+        // This test ensures the methods don't panic
+    }
+
+    #[test]
+    fn test_page_creation_variants() {
+        // Test different page creation methods
+        let page_a4 = Page::a4();
+        let page_letter = Page::letter();
+        let page_custom = Page::new(400.0, 600.0);
+
+        // A4 dimensions: 595.276 x 841.89 points (approximation)
+        assert!((page_a4.width() - 595.0).abs() < 10.0);
+        assert!((page_a4.height() - 842.0).abs() < 10.0);
+
+        // Letter dimensions: 612 x 792 points
+        assert_eq!(page_letter.width(), 612.0);
+        assert_eq!(page_letter.height(), 792.0);
+
+        // Custom dimensions
+        assert_eq!(page_custom.width(), 400.0);
+        assert_eq!(page_custom.height(), 600.0);
+    }
+
+    #[test]
+    fn test_color_creation() {
+        let red = Color::rgb(1.0, 0.0, 0.0);
+        let green = Color::rgb(0.0, 1.0, 0.0);
+        let blue = Color::rgb(0.0, 0.0, 1.0);
+        let black = Color::rgb(0.0, 0.0, 0.0);
+        let white = Color::rgb(1.0, 1.0, 1.0);
+
+        // Test color creation doesn't panic
+        let _colors = [red, green, blue, black, white];
+
+        // Test CMYK color (if available)
+        let cyan = Color::cmyk(1.0, 0.0, 0.0, 0.0);
+        let _cmyk_test = cyan;
+    }
+
+    #[test]
+    fn test_font_types() {
+        let helvetica = Font::Helvetica;
+        let times = Font::TimesRoman;
+        let courier = Font::Courier;
+
+        // Test font creation doesn't panic
+        let _fonts = [helvetica, times, courier];
+
+        // Test font family
+        let helvetica_family = FontFamily::Helvetica;
+        let times_family = FontFamily::Times;
+        let courier_family = FontFamily::Courier;
+
+        let _families = [helvetica_family, times_family, courier_family];
+    }
+
+    #[test]
+    fn test_error_types() {
+        // Test that error types can be created
+        let pdf_error = PdfError::InvalidStructure("test error".to_string());
+        let _error_test = pdf_error;
+
+        // Test result type
+        let ok_result: Result<i32> = Ok(42);
+        let err_result: Result<i32> = Err(PdfError::InvalidStructure("test error".to_string()));
+
+        assert!(ok_result.is_ok());
+        assert!(err_result.is_err());
+    }
+
+    #[test]
+    fn test_module_exports() {
+        // Test that all major types are properly exported
+        let _doc = Document::new();
+        let _page = Page::new(100.0, 100.0);
+        let _color = Color::rgb(0.5, 0.5, 0.5);
+        let _font = Font::Helvetica;
+
+        // Test parsing types
+        let _array = PdfArray::new();
+        let _dict = PdfDictionary::new();
+        let _name = PdfName::new("Test".to_string());
+        let _string = PdfString::new(b"Test".to_vec());
+
+        // Test operation types
+        let _margins = Margins {
+            top: 10.0,
+            right: 10.0,
+            bottom: 10.0,
+            left: 10.0,
+        };
+        let _align = TextAlign::Left;
+    }
+
+    #[test]
+    fn test_ocr_types() {
+        // Test OCR-related types
+        let _mock_ocr = MockOcrProvider::new();
+        let _ocr_options = OcrOptions::default();
+        let _ocr_engine = OcrEngine::Tesseract;
+
+        // Test fragment types
+        let _fragment_type = FragmentType::Word;
+        let _image_preprocessing = ImagePreprocessing::default();
+    }
+
+    #[test]
+    fn test_text_utilities() {
+        // Test text utility functions
+        let text = "Hello world test";
+        let words = split_into_words(text);
+        assert!(!words.is_empty());
+        assert!(words.contains(&"Hello"));
+        assert!(words.contains(&"world"));
+
+        // Test text measurement (with mock font)
+        let font = Font::Helvetica;
+        let size = 12.0;
+        let width = measure_text(text, font, size);
+        assert!(width > 0.0);
+    }
+
+    #[test]
+    fn test_image_types() {
+        // Test image-related types
+        let _format = ImageFormat::Jpeg;
+        let _color_space = ImageColorSpace::DeviceRGB;
+
+        // Test that image creation doesn't panic
+        let image_data = vec![0u8; 100];
+        let _image = Image::from_jpeg_data(image_data);
+    }
+
+    #[test]
+    fn test_version_string_format() {
+        // Test that version string follows semantic versioning
+        let version_parts: Vec<&str> = VERSION.split('.').collect();
+        assert!(
+            version_parts.len() >= 2,
+            "Version should have at least major.minor format"
+        );
+
+        // Test that major and minor are numeric
+        assert!(
+            version_parts[0].parse::<u32>().is_ok(),
+            "Major version should be numeric"
+        );
+        assert!(
+            version_parts[1].parse::<u32>().is_ok(),
+            "Minor version should be numeric"
+        );
+
+        // Test that version is not empty
+        assert!(!VERSION.is_empty());
+        assert!(!VERSION.is_empty());
     }
 }

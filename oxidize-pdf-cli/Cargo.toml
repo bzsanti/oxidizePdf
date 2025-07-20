@@ -9,6 +9,7 @@ documentation = "https://docs.rs/oxidize-pdf-cli"
 description = "Command-line interface for oxidizePdf"
 keywords = ["pdf", "cli", "command-line"]
 categories = ["command-line-utilities"]
+readme = "README.md"
 
 [[bin]]
 name = "oxidizepdf"

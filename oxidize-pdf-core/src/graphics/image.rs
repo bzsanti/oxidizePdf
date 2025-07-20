@@ -617,4 +617,921 @@ mod tests {
         assert_eq!(ImageFormat::Tiff, ImageFormat::Tiff);
         assert_ne!(ImageFormat::Jpeg, ImageFormat::Png);
     }
+
+    // Comprehensive tests for all image types and their methods
+    mod comprehensive_tests {
+        use super::*;
+        use std::fs;
+        use tempfile::TempDir;
+
+        #[test]
+        fn test_image_format_variants() {
+            // Test all ImageFormat variants
+            let jpeg = ImageFormat::Jpeg;
+            let png = ImageFormat::Png;
+            let tiff = ImageFormat::Tiff;
+
+            assert_eq!(jpeg, ImageFormat::Jpeg);
+            assert_eq!(png, ImageFormat::Png);
+            assert_eq!(tiff, ImageFormat::Tiff);
+
+            assert_ne!(jpeg, png);
+            assert_ne!(png, tiff);
+            assert_ne!(tiff, jpeg);
+        }
+
+        #[test]
+        fn test_image_format_debug() {
+            let jpeg = ImageFormat::Jpeg;
+            let png = ImageFormat::Png;
+            let tiff = ImageFormat::Tiff;
+
+            assert_eq!(format!("{:?}", jpeg), "Jpeg");
+            assert_eq!(format!("{:?}", png), "Png");
+            assert_eq!(format!("{:?}", tiff), "Tiff");
+        }
+
+        #[test]
+        fn test_image_format_clone_copy() {
+            let jpeg = ImageFormat::Jpeg;
+            let jpeg_clone = jpeg;
+            let jpeg_copy = jpeg;
+
+            assert_eq!(jpeg_clone, ImageFormat::Jpeg);
+            assert_eq!(jpeg_copy, ImageFormat::Jpeg);
+        }
+
+        #[test]
+        fn test_color_space_variants() {
+            // Test all ColorSpace variants
+            let gray = ColorSpace::DeviceGray;
+            let rgb = ColorSpace::DeviceRGB;
+            let cmyk = ColorSpace::DeviceCMYK;
+
+            assert_eq!(gray, ColorSpace::DeviceGray);
+            assert_eq!(rgb, ColorSpace::DeviceRGB);
+            assert_eq!(cmyk, ColorSpace::DeviceCMYK);
+
+            assert_ne!(gray, rgb);
+            assert_ne!(rgb, cmyk);
+            assert_ne!(cmyk, gray);
+        }
+
+        #[test]
+        fn test_color_space_debug() {
+            let gray = ColorSpace::DeviceGray;
+            let rgb = ColorSpace::DeviceRGB;
+            let cmyk = ColorSpace::DeviceCMYK;
+
+            assert_eq!(format!("{:?}", gray), "DeviceGray");
+            assert_eq!(format!("{:?}", rgb), "DeviceRGB");
+            assert_eq!(format!("{:?}", cmyk), "DeviceCMYK");
+        }
+
+        #[test]
+        fn test_color_space_clone_copy() {
+            let rgb = ColorSpace::DeviceRGB;
+            let rgb_clone = rgb;
+            let rgb_copy = rgb;
+
+            assert_eq!(rgb_clone, ColorSpace::DeviceRGB);
+            assert_eq!(rgb_copy, ColorSpace::DeviceRGB);
+        }
+
+        #[test]
+        fn test_image_from_jpeg_data() {
+            // Create a minimal valid JPEG with SOF0 header
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x64, // Height (100)
+                0x00, 0xC8, // Width (200)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image = Image::from_jpeg_data(jpeg_data.clone()).unwrap();
+
+            assert_eq!(image.width(), 200);
+            assert_eq!(image.height(), 100);
+            assert_eq!(image.format(), ImageFormat::Jpeg);
+            assert_eq!(image.data(), jpeg_data);
+        }
+
+        #[test]
+        fn test_image_from_png_data() {
+            // Create a minimal valid PNG with IHDR chunk
+            let png_data = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x01, 0x00, // Width (256)
+                0x00, 0x00, 0x01, 0x00, // Height (256)
+                0x08, // Bit depth (8)
+                0x02, // Color type (2 = RGB)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let image = Image::from_png_data(png_data.clone()).unwrap();
+
+            assert_eq!(image.width(), 256);
+            assert_eq!(image.height(), 256);
+            assert_eq!(image.format(), ImageFormat::Png);
+            assert_eq!(image.data(), png_data);
+        }
+
+        #[test]
+        fn test_image_from_tiff_data() {
+            // Create a minimal valid TIFF (little endian)
+            let tiff_data = vec![
+                0x49, 0x49, // Little endian byte order
+                0x2A, 0x00, // Magic number (42)
+                0x08, 0x00, 0x00, 0x00, // Offset to first IFD
+                0x04, 0x00, // Number of directory entries
+                // ImageWidth tag (256)
+                0x00, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+                // ImageHeight tag (257)
+                0x01, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+                // BitsPerSample tag (258)
+                0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+                // PhotometricInterpretation tag (262)
+                0x06, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, // Next IFD offset (0 = none)
+            ];
+
+            let image = Image::from_tiff_data(tiff_data.clone()).unwrap();
+
+            assert_eq!(image.width(), 128);
+            assert_eq!(image.height(), 128);
+            assert_eq!(image.format(), ImageFormat::Tiff);
+            assert_eq!(image.data(), tiff_data);
+        }
+
+        #[test]
+        fn test_image_from_jpeg_file() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("test.jpg");
+
+            // Create a minimal valid JPEG file
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x32, // Height (50)
+                0x00, 0x64, // Width (100)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            fs::write(&file_path, &jpeg_data).unwrap();
+
+            let image = Image::from_jpeg_file(&file_path).unwrap();
+
+            assert_eq!(image.width(), 100);
+            assert_eq!(image.height(), 50);
+            assert_eq!(image.format(), ImageFormat::Jpeg);
+            assert_eq!(image.data(), jpeg_data);
+        }
+
+        #[test]
+        fn test_image_from_png_file() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("test.png");
+
+            // Create a minimal valid PNG file
+            let png_data = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x50, // Width (80)
+                0x00, 0x00, 0x00, 0x50, // Height (80)
+                0x08, // Bit depth (8)
+                0x02, // Color type (2 = RGB)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            fs::write(&file_path, &png_data).unwrap();
+
+            let image = Image::from_png_file(&file_path).unwrap();
+
+            assert_eq!(image.width(), 80);
+            assert_eq!(image.height(), 80);
+            assert_eq!(image.format(), ImageFormat::Png);
+            assert_eq!(image.data(), png_data);
+        }
+
+        #[test]
+        fn test_image_from_tiff_file() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("test.tiff");
+
+            // Create a minimal valid TIFF file
+            let tiff_data = vec![
+                0x49, 0x49, // Little endian byte order
+                0x2A, 0x00, // Magic number (42)
+                0x08, 0x00, 0x00, 0x00, // Offset to first IFD
+                0x03, 0x00, // Number of directory entries
+                // ImageWidth tag (256)
+                0x00, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00,
+                // ImageHeight tag (257)
+                0x01, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00,
+                // BitsPerSample tag (258)
+                0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, // Next IFD offset (0 = none)
+            ];
+
+            fs::write(&file_path, &tiff_data).unwrap();
+
+            let image = Image::from_tiff_file(&file_path).unwrap();
+
+            assert_eq!(image.width(), 96);
+            assert_eq!(image.height(), 96);
+            assert_eq!(image.format(), ImageFormat::Tiff);
+            assert_eq!(image.data(), tiff_data);
+        }
+
+        #[test]
+        fn test_image_to_pdf_object_jpeg() {
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x64, // Height (100)
+                0x00, 0xC8, // Width (200)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image = Image::from_jpeg_data(jpeg_data.clone()).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, data) = pdf_obj {
+                assert_eq!(
+                    dict.get("Type").unwrap(),
+                    &Object::Name("XObject".to_string())
+                );
+                assert_eq!(
+                    dict.get("Subtype").unwrap(),
+                    &Object::Name("Image".to_string())
+                );
+                assert_eq!(dict.get("Width").unwrap(), &Object::Integer(200));
+                assert_eq!(dict.get("Height").unwrap(), &Object::Integer(100));
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceRGB".to_string())
+                );
+                assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(8));
+                assert_eq!(
+                    dict.get("Filter").unwrap(),
+                    &Object::Name("DCTDecode".to_string())
+                );
+                assert_eq!(data, jpeg_data);
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_image_to_pdf_object_png() {
+            let png_data = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x50, // Width (80)
+                0x00, 0x00, 0x00, 0x50, // Height (80)
+                0x08, // Bit depth (8)
+                0x06, // Color type (6 = RGB + Alpha)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let image = Image::from_png_data(png_data.clone()).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, data) = pdf_obj {
+                assert_eq!(
+                    dict.get("Type").unwrap(),
+                    &Object::Name("XObject".to_string())
+                );
+                assert_eq!(
+                    dict.get("Subtype").unwrap(),
+                    &Object::Name("Image".to_string())
+                );
+                assert_eq!(dict.get("Width").unwrap(), &Object::Integer(80));
+                assert_eq!(dict.get("Height").unwrap(), &Object::Integer(80));
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceRGB".to_string())
+                );
+                assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(8));
+                assert_eq!(
+                    dict.get("Filter").unwrap(),
+                    &Object::Name("FlateDecode".to_string())
+                );
+                assert_eq!(data, png_data);
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_image_to_pdf_object_tiff() {
+            let tiff_data = vec![
+                0x49, 0x49, // Little endian byte order
+                0x2A, 0x00, // Magic number (42)
+                0x08, 0x00, 0x00, 0x00, // Offset to first IFD
+                0x03, 0x00, // Number of directory entries
+                // ImageWidth tag (256)
+                0x00, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                // ImageHeight tag (257)
+                0x01, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
+                // BitsPerSample tag (258)
+                0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, // Next IFD offset (0 = none)
+            ];
+
+            let image = Image::from_tiff_data(tiff_data.clone()).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, data) = pdf_obj {
+                assert_eq!(
+                    dict.get("Type").unwrap(),
+                    &Object::Name("XObject".to_string())
+                );
+                assert_eq!(
+                    dict.get("Subtype").unwrap(),
+                    &Object::Name("Image".to_string())
+                );
+                assert_eq!(dict.get("Width").unwrap(), &Object::Integer(64));
+                assert_eq!(dict.get("Height").unwrap(), &Object::Integer(64));
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceGray".to_string())
+                );
+                assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(8));
+                assert_eq!(
+                    dict.get("Filter").unwrap(),
+                    &Object::Name("FlateDecode".to_string())
+                );
+                assert_eq!(data, tiff_data);
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_image_clone() {
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x32, // Height (50)
+                0x00, 0x64, // Width (100)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image1 = Image::from_jpeg_data(jpeg_data.clone()).unwrap();
+            let image2 = image1.clone();
+
+            assert_eq!(image1.width(), image2.width());
+            assert_eq!(image1.height(), image2.height());
+            assert_eq!(image1.format(), image2.format());
+            assert_eq!(image1.data(), image2.data());
+        }
+
+        #[test]
+        fn test_image_debug() {
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x32, // Height (50)
+                0x00, 0x64, // Width (100)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image = Image::from_jpeg_data(jpeg_data).unwrap();
+            let debug_str = format!("{:?}", image);
+
+            assert!(debug_str.contains("Image"));
+            assert!(debug_str.contains("width"));
+            assert!(debug_str.contains("height"));
+            assert!(debug_str.contains("format"));
+        }
+
+        #[test]
+        fn test_jpeg_grayscale_image() {
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x32, // Height (50)
+                0x00, 0x64, // Width (100)
+                0x01, // Components (1 = Grayscale)
+                0x01, 0x11, 0x00, // Component 1
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Padding
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image = Image::from_jpeg_data(jpeg_data).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, _) = pdf_obj {
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceGray".to_string())
+                );
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_jpeg_cmyk_image() {
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x32, // Height (50)
+                0x00, 0x64, // Width (100)
+                0x04, // Components (4 = CMYK)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image = Image::from_jpeg_data(jpeg_data).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, _) = pdf_obj {
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceCMYK".to_string())
+                );
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_png_grayscale_image() {
+            let png_data = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x50, // Width (80)
+                0x00, 0x00, 0x00, 0x50, // Height (80)
+                0x08, // Bit depth (8)
+                0x00, // Color type (0 = Grayscale)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let image = Image::from_png_data(png_data).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, _) = pdf_obj {
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceGray".to_string())
+                );
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_png_palette_image() {
+            let png_data = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x50, // Width (80)
+                0x00, 0x00, 0x00, 0x50, // Height (80)
+                0x08, // Bit depth (8)
+                0x03, // Color type (3 = Palette)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let image = Image::from_png_data(png_data).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, _) = pdf_obj {
+                // Palette images are treated as RGB in PDF
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceRGB".to_string())
+                );
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_tiff_big_endian() {
+            let tiff_data = vec![
+                0x4D, 0x4D, // Big endian byte order
+                0x00, 0x2A, // Magic number (42)
+                0x00, 0x00, 0x00, 0x08, // Offset to first IFD
+                0x00, 0x04, // Number of directory entries
+                // ImageWidth tag (256)
+                0x01, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x80,
+                // ImageHeight tag (257)
+                0x01, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x80,
+                // BitsPerSample tag (258)
+                0x01, 0x02, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x00,
+                // PhotometricInterpretation tag (262)
+                0x01, 0x06, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, // Next IFD offset (0 = none)
+            ];
+
+            let image = Image::from_tiff_data(tiff_data).unwrap();
+
+            assert_eq!(image.width(), 128);
+            assert_eq!(image.height(), 128);
+            assert_eq!(image.format(), ImageFormat::Tiff);
+        }
+
+        #[test]
+        fn test_tiff_cmyk_image() {
+            let tiff_data = vec![
+                0x49, 0x49, // Little endian byte order
+                0x2A, 0x00, // Magic number (42)
+                0x08, 0x00, 0x00, 0x00, // Offset to first IFD
+                0x04, 0x00, // Number of directory entries
+                // ImageWidth tag (256)
+                0x00, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x50, 0x00, 0x00, 0x00,
+                // ImageHeight tag (257)
+                0x01, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x50, 0x00, 0x00, 0x00,
+                // BitsPerSample tag (258)
+                0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+                // PhotometricInterpretation tag (262) - CMYK
+                0x06, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, // Next IFD offset (0 = none)
+            ];
+
+            let image = Image::from_tiff_data(tiff_data).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, _) = pdf_obj {
+                assert_eq!(
+                    dict.get("ColorSpace").unwrap(),
+                    &Object::Name("DeviceCMYK".to_string())
+                );
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_error_invalid_jpeg() {
+            let invalid_data = vec![0x00, 0x01, 0x02, 0x03]; // Not a JPEG
+            let result = Image::from_jpeg_data(invalid_data);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_invalid_png() {
+            let invalid_data = vec![0x00, 0x01, 0x02, 0x03]; // Not a PNG
+            let result = Image::from_png_data(invalid_data);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_invalid_tiff() {
+            let invalid_data = vec![0x00, 0x01, 0x02, 0x03]; // Not a TIFF
+            let result = Image::from_tiff_data(invalid_data);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_truncated_jpeg() {
+            let truncated_data = vec![0xFF, 0xD8, 0xFF]; // Truncated JPEG
+            let result = Image::from_jpeg_data(truncated_data);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_truncated_png() {
+            let truncated_data = vec![0x89, 0x50, 0x4E, 0x47]; // Truncated PNG
+            let result = Image::from_png_data(truncated_data);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_truncated_tiff() {
+            let truncated_data = vec![0x49, 0x49, 0x2A]; // Truncated TIFF
+            let result = Image::from_tiff_data(truncated_data);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_jpeg_unsupported_components() {
+            let invalid_jpeg = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x32, // Height (50)
+                0x00, 0x64, // Width (100)
+                0x05, // Components (5 = unsupported)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let result = Image::from_jpeg_data(invalid_jpeg);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_png_unsupported_color_type() {
+            let invalid_png = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x50, // Width (80)
+                0x00, 0x00, 0x00, 0x50, // Height (80)
+                0x08, // Bit depth (8)
+                0x07, // Color type (7 = unsupported)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let result = Image::from_png_data(invalid_png);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_error_nonexistent_file() {
+            let result = Image::from_jpeg_file("/nonexistent/path/image.jpg");
+            assert!(result.is_err());
+
+            let result = Image::from_png_file("/nonexistent/path/image.png");
+            assert!(result.is_err());
+
+            let result = Image::from_tiff_file("/nonexistent/path/image.tiff");
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_jpeg_no_dimensions() {
+            let jpeg_no_dims = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xD9, // EOI marker (no SOF)
+            ];
+
+            let result = Image::from_jpeg_data(jpeg_no_dims);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_png_no_ihdr() {
+            let png_no_ihdr = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // Chunk length (13)
+                0x49, 0x45, 0x4E, 0x44, // IEND chunk type (not IHDR)
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5C,
+                0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let result = Image::from_png_data(png_no_ihdr);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_tiff_no_dimensions() {
+            let tiff_no_dims = vec![
+                0x49, 0x49, // Little endian byte order
+                0x2A, 0x00, // Magic number (42)
+                0x08, 0x00, 0x00, 0x00, // Offset to first IFD
+                0x01, 0x00, // Number of directory entries
+                // BitsPerSample tag (258) - no width/height
+                0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, // Next IFD offset (0 = none)
+            ];
+
+            let result = Image::from_tiff_data(tiff_no_dims);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_different_bit_depths() {
+            // Test PNG with different bit depths
+            let png_16bit = vec![
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x50, // Width (80)
+                0x00, 0x00, 0x00, 0x50, // Height (80)
+                0x10, // Bit depth (16)
+                0x02, // Color type (2 = RGB)
+                0x00, // Compression method
+                0x00, // Filter method
+                0x00, // Interlace method
+                0x5C, 0x72, 0x6E, 0x38, // CRC
+            ];
+
+            let image = Image::from_png_data(png_16bit).unwrap();
+            let pdf_obj = image.to_pdf_object();
+
+            if let Object::Stream(dict, _) = pdf_obj {
+                assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(16));
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_performance_large_image_data() {
+            // Test with larger image data to ensure performance
+            let mut large_jpeg = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x04, 0x00, // Height (1024)
+                0x04, 0x00, // Width (1024)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+            ];
+
+            // Add some dummy data to make it larger
+            large_jpeg.extend(vec![0x00; 10000]);
+            large_jpeg.extend(vec![0xFF, 0xD9]); // EOI marker
+
+            let start = std::time::Instant::now();
+            let image = Image::from_jpeg_data(large_jpeg.clone()).unwrap();
+            let duration = start.elapsed();
+
+            assert_eq!(image.width(), 1024);
+            assert_eq!(image.height(), 1024);
+            assert_eq!(image.data().len(), large_jpeg.len());
+            assert!(duration.as_millis() < 100); // Should be fast
+        }
+
+        #[test]
+        fn test_memory_efficiency() {
+            let jpeg_data = vec![
+                0xFF, 0xD8, // SOI marker
+                0xFF, 0xC0, // SOF0 marker
+                0x00, 0x11, // Length (17 bytes)
+                0x08, // Precision (8 bits)
+                0x00, 0x64, // Height (100)
+                0x00, 0xC8, // Width (200)
+                0x03, // Components (3 = RGB)
+                0x01, 0x11, 0x00, // Component 1
+                0x02, 0x11, 0x01, // Component 2
+                0x03, 0x11, 0x01, // Component 3
+                0xFF, 0xD9, // EOI marker
+            ];
+
+            let image = Image::from_jpeg_data(jpeg_data.clone()).unwrap();
+
+            // Test that the image stores the data efficiently
+            assert_eq!(image.data().len(), jpeg_data.len());
+            assert_eq!(image.data(), jpeg_data);
+
+            // Test that cloning doesn't affect the original
+            let cloned = image.clone();
+            assert_eq!(cloned.data(), image.data());
+        }
+
+        #[test]
+        fn test_complete_workflow() {
+            // Test complete workflow: create image -> PDF object -> verify structure
+            let test_cases = vec![
+                (ImageFormat::Jpeg, "DCTDecode", "DeviceRGB"),
+                (ImageFormat::Png, "FlateDecode", "DeviceRGB"),
+                (ImageFormat::Tiff, "FlateDecode", "DeviceGray"),
+            ];
+
+            for (expected_format, expected_filter, expected_color_space) in test_cases {
+                let data = match expected_format {
+                    ImageFormat::Jpeg => vec![
+                        0xFF, 0xD8, // SOI marker
+                        0xFF, 0xC0, // SOF0 marker
+                        0x00, 0x11, // Length (17 bytes)
+                        0x08, // Precision (8 bits)
+                        0x00, 0x64, // Height (100)
+                        0x00, 0xC8, // Width (200)
+                        0x03, // Components (3 = RGB)
+                        0x01, 0x11, 0x00, // Component 1
+                        0x02, 0x11, 0x01, // Component 2
+                        0x03, 0x11, 0x01, // Component 3
+                        0xFF, 0xD9, // EOI marker
+                    ],
+                    ImageFormat::Png => vec![
+                        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                        0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+                        0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                        0x00, 0x00, 0x00, 0xC8, // Width (200)
+                        0x00, 0x00, 0x00, 0x64, // Height (100)
+                        0x08, // Bit depth (8)
+                        0x02, // Color type (2 = RGB)
+                        0x00, // Compression method
+                        0x00, // Filter method
+                        0x00, // Interlace method
+                        0x5C, 0x72, 0x6E, 0x38, // CRC
+                    ],
+                    ImageFormat::Tiff => vec![
+                        0x49, 0x49, // Little endian byte order
+                        0x2A, 0x00, // Magic number (42)
+                        0x08, 0x00, 0x00, 0x00, // Offset to first IFD
+                        0x03, 0x00, // Number of directory entries
+                        // ImageWidth tag (256)
+                        0x00, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0xC8, 0x00, 0x00, 0x00,
+                        // ImageHeight tag (257)
+                        0x01, 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00,
+                        // BitsPerSample tag (258)
+                        0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00, // Next IFD offset (0 = none)
+                    ],
+                };
+
+                let image = match expected_format {
+                    ImageFormat::Jpeg => Image::from_jpeg_data(data.clone()).unwrap(),
+                    ImageFormat::Png => Image::from_png_data(data.clone()).unwrap(),
+                    ImageFormat::Tiff => Image::from_tiff_data(data.clone()).unwrap(),
+                };
+
+                // Verify image properties
+                assert_eq!(image.format(), expected_format);
+                assert_eq!(image.width(), 200);
+                assert_eq!(image.height(), 100);
+                assert_eq!(image.data(), data);
+
+                // Verify PDF object conversion
+                let pdf_obj = image.to_pdf_object();
+                if let Object::Stream(dict, stream_data) = pdf_obj {
+                    assert_eq!(
+                        dict.get("Type").unwrap(),
+                        &Object::Name("XObject".to_string())
+                    );
+                    assert_eq!(
+                        dict.get("Subtype").unwrap(),
+                        &Object::Name("Image".to_string())
+                    );
+                    assert_eq!(dict.get("Width").unwrap(), &Object::Integer(200));
+                    assert_eq!(dict.get("Height").unwrap(), &Object::Integer(100));
+                    assert_eq!(
+                        dict.get("ColorSpace").unwrap(),
+                        &Object::Name(expected_color_space.to_string())
+                    );
+                    assert_eq!(
+                        dict.get("Filter").unwrap(),
+                        &Object::Name(expected_filter.to_string())
+                    );
+                    assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(8));
+                    assert_eq!(stream_data, data);
+                } else {
+                    panic!("Expected Stream object for format {:?}", expected_format);
+                }
+            }
+        }
+    }
 }

@@ -12,7 +12,6 @@ use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::text::{MockOcrProvider, OcrOptions};
 use oxidize_pdf::{Document, Page};
 use std::fs;
-use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Scanned PDF Analysis and OCR Demo");

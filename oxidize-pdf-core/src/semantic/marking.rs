@@ -1,21 +1,24 @@
 //! Marking API for semantic regions
 
 use super::{Entity, EntityMetadata, EntityType};
-use crate::graphics::Rectangle;
 use crate::page::Page;
 
 /// Builder for creating marked entities
 pub struct EntityBuilder<'a> {
-    page: &'a mut Page,
+    _page: &'a mut Page,
     entity_type: EntityType,
-    bounds: Rectangle,
+    bounds: (f64, f64, f64, f64),
     metadata: EntityMetadata,
 }
 
 impl<'a> EntityBuilder<'a> {
-    pub(crate) fn new(page: &'a mut Page, entity_type: EntityType, bounds: Rectangle) -> Self {
+    pub(crate) fn new(
+        page: &'a mut Page,
+        entity_type: EntityType,
+        bounds: (f64, f64, f64, f64),
+    ) -> Self {
         Self {
-            page,
+            _page: page,
             entity_type,
             bounds,
             metadata: EntityMetadata::new(),
@@ -43,21 +46,16 @@ impl<'a> EntityBuilder<'a> {
     /// Finalize the entity marking
     pub fn build(self) -> String {
         let id = format!("entity_{}", uuid_simple());
-        let entity = Entity {
+        let _entity = Entity {
             id: id.clone(),
             entity_type: self.entity_type,
-            bounds: (
-                self.bounds.x,
-                self.bounds.y,
-                self.bounds.width,
-                self.bounds.height,
-            ),
+            bounds: self.bounds,
             page: 0, // Will be set by page
             metadata: self.metadata,
         };
 
         // Store entity in page (implementation detail)
-        // self.page.add_entity(entity);
+        // self._page.add_entity(_entity);
 
         id
     }
@@ -74,28 +72,28 @@ impl<'a> SemanticMarker<'a> {
     }
 
     /// Mark a region as a specific entity type
-    pub fn mark(&mut self, entity_type: EntityType, bounds: Rectangle) -> EntityBuilder {
+    pub fn mark(&mut self, entity_type: EntityType, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         EntityBuilder::new(self.page, entity_type, bounds)
     }
 
     /// Mark text region
-    pub fn mark_text(&mut self, bounds: Rectangle) -> EntityBuilder {
+    pub fn mark_text(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         self.mark(EntityType::Text, bounds)
     }
 
     /// Mark image region
-    pub fn mark_image(&mut self, bounds: Rectangle) -> EntityBuilder {
+    pub fn mark_image(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         self.mark(EntityType::Image, bounds)
     }
 
     /// Mark table region
-    pub fn mark_table(&mut self, bounds: Rectangle) -> EntityBuilder {
+    pub fn mark_table(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         self.mark(EntityType::Table, bounds)
     }
 }
 
 // Simple UUID generation for entity IDs
-fn uuid_simple() -> String {
+pub fn uuid_simple() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)

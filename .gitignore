@@ -24,5 +24,12 @@ test-suite/external-suites/
 tests/fixtures/
 tests/fixtures
 
+# Development and debug scripts
+test_parsing.py
+debug_xref.py
+test_pdf_samples.sh
+debug_manual.pdf
+*.debug.pdf
+
 # Keep GitHub workflows
 !.github/

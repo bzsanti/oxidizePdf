@@ -39,7 +39,7 @@ fn test_single_pdf(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
             println!("✓ PDF parsed successfully!");
 
             // Get basic info
-            println!("  Version: {}", reader.version().to_string());
+            println!("  Version: {}", reader.version());
 
             // Try to get metadata
             match reader.metadata() {

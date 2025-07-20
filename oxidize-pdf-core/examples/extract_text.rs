@@ -31,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         preserve_layout: false,
         space_threshold: 0.2,
         newline_threshold: 10.0,
+        ..Default::default()
     };
 
     let extractor = TextExtractor::with_options(options);

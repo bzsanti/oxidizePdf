@@ -66,7 +66,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --all --out Xml
+        run: cargo tarpaulin --all --out Xml --timeout 300 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

@@ -17,7 +17,7 @@ fn create_test_stream_dict(n: i64, first: i64) -> PdfDictionary {
 }
 
 /// Helper to create test stream data with object number/offset pairs and objects
-fn create_test_stream_data(objects: &[(u32, &str)]) -> Vec<u8> {
+fn _create_test_stream_data(objects: &[(u32, &str)]) -> Vec<u8> {
     let mut data = Vec::new();
 
     // Write object number/offset pairs
@@ -239,7 +239,7 @@ fn test_xref_entry_type_clone() {
         index_in_stream: 3,
     };
 
-    let cloned = original.clone();
+    let cloned = original;
     assert_eq!(original, cloned, "Cloned entry should equal original");
 }
 

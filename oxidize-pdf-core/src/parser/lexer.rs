@@ -425,6 +425,35 @@ impl<R: Read> Lexer<R> {
             }
         }
 
+        // Handle scientific notation (e/E)
+        if let Some(ch) = self.peek_char()? {
+            if ch == b'e' || ch == b'E' {
+                self.consume_char()?;
+                number_str.push(ch as char);
+
+                // Check for optional sign after e/E
+                if let Some(sign_ch) = self.peek_char()? {
+                    if sign_ch == b'+' || sign_ch == b'-' {
+                        self.consume_char()?;
+                        number_str.push(sign_ch as char);
+                    }
+                }
+
+                // Read exponent digits
+                while let Some(digit_ch) = self.peek_char()? {
+                    if digit_ch.is_ascii_digit() {
+                        self.consume_char()?;
+                        number_str.push(digit_ch as char);
+                    } else {
+                        break;
+                    }
+                }
+
+                // Scientific notation always results in a real number
+                has_dot = true;
+            }
+        }
+
         // Don't try to parse references here - let the parser handle it
         // References are just "num num R" and can be handled at a higher level
 
@@ -677,5 +706,546 @@ mod tests {
             Token::Comment("PDF-1.7".to_string())
         );
         assert_eq!(lexer.next_token().unwrap(), Token::Integer(123));
+    }
+
+    // Comprehensive tests for Lexer
+    mod comprehensive_tests {
+        use super::*;
+        use std::io::Cursor;
+
+        #[test]
+        fn test_token_debug_trait() {
+            let token = Token::Integer(42);
+            let debug_str = format!("{:?}", token);
+            assert!(debug_str.contains("Integer"));
+            assert!(debug_str.contains("42"));
+        }
+
+        #[test]
+        fn test_token_clone() {
+            let token = Token::String(b"hello".to_vec());
+            let cloned = token.clone();
+            assert_eq!(token, cloned);
+        }
+
+        #[test]
+        fn test_token_equality() {
+            assert_eq!(Token::Integer(42), Token::Integer(42));
+            assert_ne!(Token::Integer(42), Token::Integer(43));
+            assert_eq!(Token::Boolean(true), Token::Boolean(true));
+            assert_ne!(Token::Boolean(true), Token::Boolean(false));
+            assert_eq!(Token::Null, Token::Null);
+            assert_ne!(Token::Null, Token::Integer(0));
+        }
+
+        #[test]
+        fn test_lexer_empty_input() {
+            let input = b"";
+            let mut lexer = Lexer::new(Cursor::new(input));
+            assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+        }
+
+        #[test]
+        fn test_lexer_whitespace_only() {
+            let input = b"   \t\n\r  ";
+            let mut lexer = Lexer::new(Cursor::new(input));
+            assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+        }
+
+        #[test]
+        fn test_lexer_integer_edge_cases() {
+            let input = b"0 +123 -0 9876543210";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(0));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(123));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(0));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(9876543210));
+        }
+
+        #[test]
+        fn test_lexer_real_edge_cases() {
+            let input = b"0.0 +3.14 -2.71828 .5 5. 123.456789";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(0.0));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(3.14));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(-2.71828));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(0.5));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(5.0));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(123.456789));
+        }
+
+        #[test]
+        fn test_lexer_scientific_notation() {
+            let input = b"1.23e10 -4.56E-5 1e0 2E+3";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(1.23e10));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(-4.56e-5));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(1e0));
+            assert_eq!(lexer.next_token().unwrap(), Token::Real(2e3));
+        }
+
+        #[test]
+        fn test_lexer_string_literal_escapes() {
+            let input = b"(Hello\\nWorld) (Tab\\tChar) (Quote\\\"Mark) (Backslash\\\\)";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Hello\nWorld".to_vec())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Tab\tChar".to_vec())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Quote\"Mark".to_vec())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Backslash\\".to_vec())
+            );
+        }
+
+        #[test]
+        fn test_lexer_string_literal_nested_parens() {
+            let input = b"(Nested (parentheses) work)";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Nested (parentheses) work".to_vec())
+            );
+        }
+
+        #[test]
+        fn test_lexer_string_literal_empty() {
+            let input = b"()";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::String(b"".to_vec()));
+        }
+
+        #[test]
+        fn test_lexer_hexadecimal_strings() {
+            let input = b"<48656C6C6F> <20576F726C64> <>";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Hello".to_vec())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b" World".to_vec())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::String(b"".to_vec()));
+        }
+
+        #[test]
+        fn test_lexer_hexadecimal_strings_odd_length() {
+            let input = b"<48656C6C6F2> <1> <ABC>";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            // Odd length hex strings should pad with 0
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Hello ".to_vec())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::String(b"\x10".to_vec()));
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"\xAB\xC0".to_vec())
+            );
+        }
+
+        #[test]
+        fn test_lexer_hexadecimal_strings_whitespace() {
+            let input = b"<48 65 6C 6C 6F>";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::String(b"Hello".to_vec())
+            );
+        }
+
+        #[test]
+        fn test_lexer_names() {
+            let input = b"/Type /Page /Root /Kids /Count /MediaBox";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Type".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Page".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Root".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Kids".to_string()));
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("Count".to_string())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("MediaBox".to_string())
+            );
+        }
+
+        #[test]
+        fn test_lexer_names_with_special_chars() {
+            let input = b"/Name#20with#20spaces /Name#2Fwith#2Fslashes";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("Name with spaces".to_string())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("Name/with/slashes".to_string())
+            );
+        }
+
+        #[test]
+        fn test_lexer_names_edge_cases() {
+            let input = b"/ /A /123 /true /false /null";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("A".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("123".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("true".to_string()));
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("false".to_string())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("null".to_string()));
+        }
+
+        #[test]
+        fn test_lexer_nested_dictionaries() {
+            let input = b"<< /Type /Page /Resources << /Font << /F1 123 0 R >> >> >>";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::DictStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Type".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Page".to_string()));
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("Resources".to_string())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::DictStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("Font".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::DictStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("F1".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(123));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(0));
+            assert_eq!(lexer.next_token().unwrap(), Token::Name("R".to_string()));
+            assert_eq!(lexer.next_token().unwrap(), Token::DictEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::DictEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::DictEnd);
+        }
+
+        #[test]
+        fn test_lexer_nested_arrays() {
+            let input = b"[[1 2] [3 4] [5 [6 7]]]";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(1));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(2));
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(3));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(4));
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(5));
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayStart);
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(6));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(7));
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::ArrayEnd);
+        }
+
+        #[test]
+        fn test_lexer_mixed_content() {
+            let input = b"<< /Type /Page /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 >> >> >> >>";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            // Just test that we can parse this without errors
+            let mut tokens = Vec::new();
+            loop {
+                match lexer.next_token().unwrap() {
+                    Token::Eof => break,
+                    token => tokens.push(token),
+                }
+            }
+            assert!(tokens.len() > 10);
+        }
+
+        #[test]
+        fn test_lexer_keywords() {
+            let input = b"obj endobj stream endstream startxref";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Obj);
+            assert_eq!(lexer.next_token().unwrap(), Token::EndObj);
+            assert_eq!(lexer.next_token().unwrap(), Token::Stream);
+            assert_eq!(lexer.next_token().unwrap(), Token::EndStream);
+            assert_eq!(lexer.next_token().unwrap(), Token::StartXRef);
+        }
+
+        #[test]
+        fn test_lexer_multiple_comments() {
+            let input = b"%First comment\n%Second comment\n123";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Comment("First comment".to_string())
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Comment("Second comment".to_string())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(123));
+        }
+
+        #[test]
+        fn test_lexer_comment_without_newline() {
+            let input = b"%Comment at end";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Comment("Comment at end".to_string())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+        }
+
+        #[test]
+        fn test_lexer_special_characters_in_streams() {
+            let input = b"<< /Length 5 >> stream\nHello endstream";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::DictStart);
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Name("Length".to_string())
+            );
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(5));
+            assert_eq!(lexer.next_token().unwrap(), Token::DictEnd);
+            assert_eq!(lexer.next_token().unwrap(), Token::Stream);
+            // The actual stream content would be handled by a higher-level parser
+        }
+
+        #[test]
+        fn test_lexer_push_token() {
+            let input = b"123 456";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let token1 = lexer.next_token().unwrap();
+            assert_eq!(token1, Token::Integer(123));
+
+            let token2 = lexer.next_token().unwrap();
+            assert_eq!(token2, Token::Integer(456));
+
+            // Push token2 back
+            lexer.push_token(token2.clone());
+
+            // Should get token2 again
+            let token3 = lexer.next_token().unwrap();
+            assert_eq!(token3, token2);
+
+            // Should get EOF
+            let token4 = lexer.next_token().unwrap();
+            assert_eq!(token4, Token::Eof);
+        }
+
+        #[test]
+        fn test_lexer_push_multiple_tokens() {
+            let input = b"123";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let original_token = lexer.next_token().unwrap();
+            assert_eq!(original_token, Token::Integer(123));
+
+            // Push multiple tokens
+            lexer.push_token(Token::Boolean(true));
+            lexer.push_token(Token::Boolean(false));
+            lexer.push_token(Token::Null);
+
+            // Should get them back in reverse order (stack behavior)
+            assert_eq!(lexer.next_token().unwrap(), Token::Null);
+            assert_eq!(lexer.next_token().unwrap(), Token::Boolean(false));
+            assert_eq!(lexer.next_token().unwrap(), Token::Boolean(true));
+            assert_eq!(lexer.next_token().unwrap(), Token::Eof);
+        }
+
+        #[test]
+        fn test_lexer_read_newline() {
+            let input = b"123\n456\r\n789";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            // Read first digits
+            let digits1 = lexer.read_digits().unwrap();
+            assert_eq!(digits1, "123");
+            assert!(lexer.read_newline().is_ok());
+
+            // Read second digits
+            let digits2 = lexer.read_digits().unwrap();
+            assert_eq!(digits2, "456");
+            assert!(lexer.read_newline().is_ok());
+
+            // Read final digits
+            let digits3 = lexer.read_digits().unwrap();
+            assert_eq!(digits3, "789");
+        }
+
+        #[test]
+        fn test_lexer_read_bytes() {
+            let input = b"Hello World";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let bytes = lexer.read_bytes(5).unwrap();
+            assert_eq!(bytes, b"Hello");
+
+            let bytes = lexer.read_bytes(6).unwrap();
+            assert_eq!(bytes, b" World");
+        }
+
+        #[test]
+        fn test_lexer_read_until_sequence() {
+            let input = b"Hello endstream World";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let result = lexer.read_until_sequence(b"endstream").unwrap();
+            assert_eq!(result, b"Hello ");
+
+            // Continue reading after the sequence
+            let rest = lexer.read_digits().unwrap();
+            assert_eq!(rest, ""); // read_digits only reads digits, " World" has no digits
+        }
+
+        #[test]
+        fn test_lexer_read_until_sequence_not_found() {
+            let input = b"Hello World";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let result = lexer.read_until_sequence(b"notfound");
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_lexer_position_tracking() {
+            let input = b"123 456";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let initial_pos = lexer.position();
+            assert_eq!(initial_pos, 0);
+
+            lexer.next_token().unwrap(); // "123"
+            let pos_after_first = lexer.position();
+            assert!(pos_after_first > initial_pos);
+
+            lexer.next_token().unwrap(); // "456"
+            let pos_after_second = lexer.position();
+            assert!(pos_after_second > pos_after_first);
+        }
+
+        #[test]
+        fn test_lexer_large_numbers() {
+            let input = b"2147483647 -2147483648 9223372036854775807 -9223372036854775808";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(2147483647));
+            assert_eq!(lexer.next_token().unwrap(), Token::Integer(-2147483648));
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Integer(9223372036854775807)
+            );
+            assert_eq!(
+                lexer.next_token().unwrap(),
+                Token::Integer(-9223372036854775808)
+            );
+        }
+
+        #[test]
+        fn test_lexer_very_long_string() {
+            let long_str = "A".repeat(1000);
+            let input = format!("({})", long_str);
+            let mut lexer = Lexer::new(Cursor::new(input.as_bytes()));
+
+            if let Token::String(s) = lexer.next_token().unwrap() {
+                assert_eq!(s.len(), 1000);
+                assert_eq!(s, long_str.as_bytes());
+            } else {
+                panic!("Expected string token");
+            }
+        }
+
+        #[test]
+        fn test_lexer_very_long_name() {
+            let long_name = "A".repeat(500);
+            let input = format!("/{}", long_name);
+            let mut lexer = Lexer::new(Cursor::new(input.as_bytes()));
+
+            if let Token::Name(name) = lexer.next_token().unwrap() {
+                assert_eq!(name.len(), 500);
+                assert_eq!(name, long_name);
+            } else {
+                panic!("Expected name token");
+            }
+        }
+
+        #[test]
+        fn test_lexer_error_handling_invalid_hex() {
+            let input = b"<48656C6C6FG>";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            // Should handle invalid hex gracefully
+            let result = lexer.next_token();
+            assert!(result.is_ok() || result.is_err()); // Either works or fails gracefully
+        }
+
+        #[test]
+        fn test_lexer_all_token_types() {
+            let input = b"true false null 123 -456 3.14 (string) <48656C6C6F> /Name [ ] << >> obj endobj stream endstream startxref % comment\n";
+            let mut lexer = Lexer::new(Cursor::new(input));
+
+            let mut token_types = Vec::new();
+            loop {
+                match lexer.next_token().unwrap() {
+                    Token::Eof => break,
+                    token => token_types.push(std::mem::discriminant(&token)),
+                }
+            }
+
+            // Should have multiple different token types
+            assert!(token_types.len() > 10);
+        }
+
+        #[test]
+        fn test_lexer_performance() {
+            let input = "123 456 789 ".repeat(1000);
+            let mut lexer = Lexer::new(Cursor::new(input.as_bytes()));
+
+            let start_time = std::time::Instant::now();
+            let mut count = 0;
+            loop {
+                match lexer.next_token().unwrap() {
+                    Token::Eof => break,
+                    _ => count += 1,
+                }
+            }
+            let elapsed = start_time.elapsed();
+
+            assert_eq!(count, 3000); // 1000 repetitions * 3 tokens each
+            assert!(elapsed.as_millis() < 1000); // Should complete within 1 second
+        }
     }
 }

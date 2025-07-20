@@ -23,7 +23,7 @@ lazy_static = { workspace = true }
 # Compression (optional)
 flate2 = { workspace = true, optional = true }
 
-# Serialization (for PRO features)
+# Serialization
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
@@ -31,10 +31,20 @@ serde_json = { workspace = true, optional = true }
 tracing = { workspace = true }
 
 # Hashing
-md5 = "0.7"
+md5 = "0.8"
+
+# Parallel processing
+num_cpus = "1.16"
+
+# Platform-specific
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
 
 # OCR dependencies (optional)
-tesseract = { version = "0.13", optional = true }
+tesseract = { version = "0.15", optional = true }
 leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
@@ -85,6 +95,21 @@ name = "parse_and_extract"
 name = "tesseract_ocr_demo"
 required-features = ["ocr-tesseract"]
 
+[[example]]
+name = "memory_optimization"
+
+[[example]]
+name = "metadata"
+
+[[example]]
+name = "streaming_support"
+
+[[example]]
+name = "batch_processing"
+
+[[example]]
+name = "error_recovery"
+
 [[bench]]
 name = "ocr_benchmarks"
 harness = false
@@ -100,10 +125,4 @@ ocr-tesseract = ["tesseract", "leptonica-plumbing"]
 ocr-full = ["ocr-tesseract"]
 
 # Semantic marking (Community level - basic tagging)
-semantic = []
-
-# PRO edition features (requires commercial license)
-pro = ["semantic", "serde", "serde_json"]
-
-# Enterprise features
-enterprise = ["pro", "ocr-full"]
+semantic = ["dep:serde", "dep:serde_json"]

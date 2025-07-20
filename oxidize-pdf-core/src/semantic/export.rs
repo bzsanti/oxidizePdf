@@ -73,27 +73,3 @@ impl Default for ExportFormat {
         Self::Json
     }
 }
-
-#[cfg(feature = "pro")]
-impl EntityMap {
-    /// Export to JSON-LD format with schema.org context
-    pub fn to_jsonld(&self) -> Result<String, serde_json::Error> {
-        let mut jsonld = serde_json::json!({
-            "@context": "https://schema.org",
-            "@type": "DigitalDocument",
-            "hasPart": []
-        });
-
-        // Add custom logic for JSON-LD export
-        // This is a simplified version
-
-        serde_json::to_string_pretty(&jsonld)
-    }
-
-    /// Export to XML format
-    pub fn to_xml(&self) -> Result<String, Box<dyn std::error::Error>> {
-        // XML export would be implemented here
-        // For now, return a placeholder
-        Ok("<entities><!-- XML export not yet implemented --></entities>".to_string())
-    }
-}

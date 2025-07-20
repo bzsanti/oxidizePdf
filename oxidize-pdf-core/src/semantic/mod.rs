@@ -1,7 +1,10 @@
-//! Semantic marking for AI-Ready PDFs
+//! Semantic marking for AI-Ready PDFs (Community Edition)
 //!
-//! This module provides functionality to mark PDF regions with semantic meaning,
+//! This module provides basic functionality to mark PDF regions with semantic meaning,
 //! making PDFs more accessible to AI/ML processing pipelines.
+//!
+//! For advanced features like invoice detection, form field marking, and ML-ready
+//! exports, please see the PRO edition.
 
 mod entity;
 mod export;
@@ -14,7 +17,8 @@ pub use marking::{EntityBuilder, SemanticMarker};
 /// Trait for types that support semantic marking
 pub trait SemanticMarking {
     /// Mark a region with semantic meaning
-    fn mark_region(&mut self, bounds: crate::graphics::Rectangle) -> EntityBuilder;
+    /// bounds is (x, y, width, height)
+    fn mark_region(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder;
 
     /// Add a schema definition to the document
     fn add_schema(&mut self, schema_url: &str);
@@ -23,22 +27,4 @@ pub trait SemanticMarking {
     fn export_entities(&self) -> EntityMap;
 }
 
-#[cfg(feature = "pro")]
-pub mod pro {
-    //! PRO edition features for semantic marking
-    use super::*;
-
-    /// Extended entity types for PRO edition
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum ProEntityType {
-        Invoice,
-        Receipt,
-        Contract,
-        Resume,
-        MedicalRecord,
-        Custom(u32),
-    }
-}
-
-#[cfg(test)]
 mod tests;

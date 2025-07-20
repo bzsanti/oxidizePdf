@@ -153,7 +153,7 @@ mod tests {
         let result = merger.merge();
         assert!(result.is_ok());
 
-        let merged_doc = result.unwrap();
+        let _merged_doc = result.unwrap();
         // Should have 5 pages total (3 + 2)
         // Note: We can't directly check page count without accessing internal state
         // but we can verify the merge succeeded
@@ -404,5 +404,188 @@ mod tests {
         // Map object from second document
         let new_num2 = merger.map_object_number(1, 10);
         assert_eq!(new_num2, 2); // Different from first document's mapping
+    }
+
+    #[test]
+    fn test_merge_options_variants() {
+        // Test all MergeOptions variants
+        let default_options = MergeOptions::default();
+        assert!(default_options.preserve_bookmarks);
+        assert!(!default_options.preserve_forms);
+        assert!(!default_options.optimize);
+        assert!(matches!(
+            default_options.metadata_mode,
+            MetadataMode::FromFirst
+        ));
+        assert!(default_options.page_ranges.is_none());
+
+        let custom_options = MergeOptions {
+            page_ranges: Some(vec![PageRange::Single(0), PageRange::Range(1, 3)]),
+            preserve_bookmarks: false,
+            preserve_forms: true,
+            optimize: true,
+            metadata_mode: MetadataMode::None,
+        };
+        assert!(!custom_options.preserve_bookmarks);
+        assert!(custom_options.preserve_forms);
+        assert!(custom_options.optimize);
+        assert!(matches!(custom_options.metadata_mode, MetadataMode::None));
+        assert!(custom_options.page_ranges.is_some());
+    }
+
+    #[test]
+    fn test_all_metadata_mode_variants() {
+        // Test all MetadataMode variants
+        let modes = vec![
+            MetadataMode::FromFirst,
+            MetadataMode::FromDocument(2),
+            MetadataMode::Custom {
+                title: Some("Title".to_string()),
+                author: Some("Author".to_string()),
+                subject: Some("Subject".to_string()),
+                keywords: Some("Keywords".to_string()),
+            },
+            MetadataMode::None,
+        ];
+
+        for mode in modes {
+            let options = MergeOptions {
+                metadata_mode: mode,
+                ..Default::default()
+            };
+            // Just verify we can create options with all metadata modes
+            assert!(options.preserve_bookmarks);
+        }
+    }
+
+    #[test]
+    fn test_merge_input_creation() {
+        let path = PathBuf::from("test.pdf");
+
+        // Test MergeInput::new
+        let input1 = MergeInput::new(&path);
+        assert_eq!(input1.path, path);
+        assert!(input1.pages.is_none());
+
+        // Test MergeInput::with_pages
+        let input2 = MergeInput::with_pages(&path, PageRange::Single(5));
+        assert_eq!(input2.path, path);
+        assert!(input2.pages.is_some());
+        if let Some(PageRange::Single(page)) = input2.pages {
+            assert_eq!(page, 5);
+        }
+
+        let input3 = MergeInput::with_pages(&path, PageRange::Range(1, 10));
+        assert_eq!(input3.path, path);
+        assert!(input3.pages.is_some());
+        if let Some(PageRange::Range(start, end)) = input3.pages {
+            assert_eq!(start, 1);
+            assert_eq!(end, 10);
+        }
+    }
+
+    #[test]
+    fn test_merger_add_inputs() {
+        let mut merger = PdfMerger::new(MergeOptions::default());
+
+        // Test adding single input
+        let input1 = MergeInput::new("doc1.pdf");
+        merger.add_input(input1);
+        assert_eq!(merger.inputs.len(), 1);
+
+        // Test adding multiple inputs
+        let inputs = vec![
+            MergeInput::new("doc2.pdf"),
+            MergeInput::new("doc3.pdf"),
+            MergeInput::with_pages("doc4.pdf", PageRange::Range(0, 2)),
+        ];
+        merger.add_inputs(inputs);
+        assert_eq!(merger.inputs.len(), 4);
+    }
+
+    #[test]
+    fn test_merge_with_no_metadata_mode() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // Create test PDFs with metadata
+        let mut doc1 = create_test_pdf(1, "Document 1");
+        doc1.set_author("Author 1");
+        doc1.set_subject("Subject 1");
+
+        let mut doc2 = create_test_pdf(1, "Document 2");
+        doc2.set_author("Author 2");
+        doc2.set_subject("Subject 2");
+
+        let path1 = save_test_pdf(&mut doc1, &temp_dir, "doc1.pdf");
+        let path2 = save_test_pdf(&mut doc2, &temp_dir, "doc2.pdf");
+
+        // Use None metadata mode
+        let options = MergeOptions {
+            metadata_mode: MetadataMode::None,
+            ..Default::default()
+        };
+
+        let mut merger = PdfMerger::new(options);
+        merger.add_input(MergeInput::new(&path1));
+        merger.add_input(MergeInput::new(&path2));
+
+        let result = merger.merge();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_merge_with_partial_custom_metadata() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let mut doc1 = create_test_pdf(1, "Document 1");
+        let path1 = save_test_pdf(&mut doc1, &temp_dir, "doc1.pdf");
+
+        // Custom metadata with only some fields
+        let options = MergeOptions {
+            metadata_mode: MetadataMode::Custom {
+                title: Some("Custom Title".to_string()),
+                author: None,
+                subject: Some("Custom Subject".to_string()),
+                keywords: None,
+            },
+            ..Default::default()
+        };
+
+        let mut merger = PdfMerger::new(options);
+        merger.add_input(MergeInput::new(&path1));
+
+        let result = merger.merge();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_merge_debug_implementations() {
+        // Test Debug implementations
+        let options = MergeOptions::default();
+        let debug_str = format!("{:?}", options);
+        assert!(debug_str.contains("MergeOptions"));
+
+        let metadata_mode = MetadataMode::FromFirst;
+        let debug_str = format!("{:?}", metadata_mode);
+        assert!(debug_str.contains("FromFirst"));
+
+        let input = MergeInput::new("test.pdf");
+        let debug_str = format!("{:?}", input);
+        assert!(debug_str.contains("MergeInput"));
+    }
+
+    #[test]
+    fn test_merge_clone_implementations() {
+        // Test Clone implementations
+        let options = MergeOptions::default();
+        let cloned_options = options.clone();
+        assert_eq!(
+            cloned_options.preserve_bookmarks,
+            options.preserve_bookmarks
+        );
+
+        let metadata_mode = MetadataMode::FromFirst;
+        let cloned_mode = metadata_mode.clone();
+        assert!(matches!(cloned_mode, MetadataMode::FromFirst));
     }
 }

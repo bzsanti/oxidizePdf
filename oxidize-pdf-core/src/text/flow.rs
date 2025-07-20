@@ -193,4 +193,266 @@ impl TextFlowContext {
     pub fn generate_operations(&self) -> Vec<u8> {
         self.operations.as_bytes().to_vec()
     }
+
+    /// Get the current alignment
+    pub fn alignment(&self) -> TextAlign {
+        self.alignment
+    }
+
+    /// Get the page dimensions
+    pub fn page_dimensions(&self) -> (f64, f64) {
+        (self.page_width, self.page_height)
+    }
+
+    /// Get the margins
+    pub fn margins(&self) -> &Margins {
+        &self.margins
+    }
+
+    /// Get current line height multiplier
+    pub fn line_height(&self) -> f64 {
+        self.line_height
+    }
+
+    /// Get the operations string
+    pub fn operations(&self) -> &str {
+        &self.operations
+    }
+
+    /// Clear all operations
+    pub fn clear(&mut self) {
+        self.operations.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::page::Margins;
+
+    fn create_test_margins() -> Margins {
+        Margins {
+            left: 50.0,
+            right: 50.0,
+            top: 50.0,
+            bottom: 50.0,
+        }
+    }
+
+    #[test]
+    fn test_text_flow_context_new() {
+        let margins = create_test_margins();
+        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        assert_eq!(context.current_font, Font::Helvetica);
+        assert_eq!(context.font_size, 12.0);
+        assert_eq!(context.line_height, 1.2);
+        assert_eq!(context.alignment, TextAlign::Left);
+        assert_eq!(context.page_width, 400.0);
+        assert_eq!(context.page_height, 600.0);
+        assert_eq!(context.cursor_x, 50.0); // margins.left
+        assert_eq!(context.cursor_y, 550.0); // page_height - margins.top
+    }
+
+    #[test]
+    fn test_set_font() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.set_font(Font::TimesBold, 16.0);
+        assert_eq!(context.current_font, Font::TimesBold);
+        assert_eq!(context.font_size, 16.0);
+    }
+
+    #[test]
+    fn test_set_line_height() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.set_line_height(1.5);
+        assert_eq!(context.line_height(), 1.5);
+    }
+
+    #[test]
+    fn test_set_alignment() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.set_alignment(TextAlign::Center);
+        assert_eq!(context.alignment(), TextAlign::Center);
+    }
+
+    #[test]
+    fn test_at_position() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.at(100.0, 200.0);
+        let (x, y) = context.cursor_position();
+        assert_eq!(x, 100.0);
+        assert_eq!(y, 200.0);
+    }
+
+    #[test]
+    fn test_content_width() {
+        let margins = create_test_margins();
+        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        let content_width = context.content_width();
+        assert_eq!(content_width, 300.0); // 400 - 50 - 50
+    }
+
+    #[test]
+    fn test_text_align_variants() {
+        assert_eq!(TextAlign::Left, TextAlign::Left);
+        assert_eq!(TextAlign::Right, TextAlign::Right);
+        assert_eq!(TextAlign::Center, TextAlign::Center);
+        assert_eq!(TextAlign::Justified, TextAlign::Justified);
+
+        assert_ne!(TextAlign::Left, TextAlign::Right);
+    }
+
+    #[test]
+    fn test_write_wrapped_simple() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.write_wrapped("Hello World").unwrap();
+
+        let ops = context.operations();
+        assert!(ops.contains("BT\n"));
+        assert!(ops.contains("ET\n"));
+        assert!(ops.contains("/Helvetica 12 Tf"));
+        assert!(ops.contains("(Hello World) Tj"));
+    }
+
+    #[test]
+    fn test_write_paragraph() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        let initial_y = context.cursor_y;
+        context.write_paragraph("Test paragraph").unwrap();
+
+        // Y position should have moved down more than just line height
+        assert!(context.cursor_y < initial_y);
+    }
+
+    #[test]
+    fn test_newline() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        let initial_y = context.cursor_y;
+        context.newline();
+
+        assert_eq!(context.cursor_x, margins.left);
+        assert!(context.cursor_y < initial_y);
+        assert_eq!(
+            context.cursor_y,
+            initial_y - context.font_size * context.line_height
+        );
+    }
+
+    #[test]
+    fn test_cursor_position() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.at(75.0, 125.0);
+        let (x, y) = context.cursor_position();
+        assert_eq!(x, 75.0);
+        assert_eq!(y, 125.0);
+    }
+
+    #[test]
+    fn test_generate_operations() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.write_wrapped("Test").unwrap();
+        let ops_bytes = context.generate_operations();
+        let ops_string = String::from_utf8(ops_bytes).unwrap();
+
+        assert_eq!(ops_string, context.operations());
+    }
+
+    #[test]
+    fn test_clear_operations() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context.write_wrapped("Test").unwrap();
+        assert!(!context.operations().is_empty());
+
+        context.clear();
+        assert!(context.operations().is_empty());
+    }
+
+    #[test]
+    fn test_page_dimensions() {
+        let margins = create_test_margins();
+        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        let (width, height) = context.page_dimensions();
+        assert_eq!(width, 400.0);
+        assert_eq!(height, 600.0);
+    }
+
+    #[test]
+    fn test_margins_access() {
+        let margins = create_test_margins();
+        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        let ctx_margins = context.margins();
+        assert_eq!(ctx_margins.left, 50.0);
+        assert_eq!(ctx_margins.right, 50.0);
+        assert_eq!(ctx_margins.top, 50.0);
+        assert_eq!(ctx_margins.bottom, 50.0);
+    }
+
+    #[test]
+    fn test_method_chaining() {
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+
+        context
+            .set_font(Font::Courier, 10.0)
+            .set_line_height(1.5)
+            .set_alignment(TextAlign::Center)
+            .at(100.0, 200.0);
+
+        assert_eq!(context.current_font, Font::Courier);
+        assert_eq!(context.font_size, 10.0);
+        assert_eq!(context.line_height(), 1.5);
+        assert_eq!(context.alignment(), TextAlign::Center);
+        let (x, y) = context.cursor_position();
+        assert_eq!(x, 100.0);
+        assert_eq!(y, 200.0);
+    }
+
+    #[test]
+    fn test_text_align_debug() {
+        let align = TextAlign::Center;
+        let debug_str = format!("{:?}", align);
+        assert_eq!(debug_str, "Center");
+    }
+
+    #[test]
+    fn test_text_align_clone() {
+        let align1 = TextAlign::Justified;
+        let align2 = align1;
+        assert_eq!(align1, align2);
+    }
+
+    #[test]
+    fn test_text_align_copy() {
+        let align1 = TextAlign::Right;
+        let align2 = align1; // Copy semantics
+        assert_eq!(align1, align2);
+
+        // Both variables should still be usable
+        assert_eq!(align1, TextAlign::Right);
+        assert_eq!(align2, TextAlign::Right);
+    }
 }

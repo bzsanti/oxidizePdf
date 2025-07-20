@@ -90,7 +90,7 @@ fn test_split_operation_with_new_architecture() {
         assert!(output_file.exists(), "Output file {} should exist", i);
 
         // Open and verify it has one page
-        let doc = PdfReader::open_document(&output_file).unwrap();
+        let doc = PdfReader::open_document(output_file).unwrap();
         assert_eq!(doc.page_count().unwrap(), 1);
     }
 }
@@ -106,7 +106,7 @@ fn test_merge_operation_with_new_architecture() {
         let test_pdf = temp_dir.path().join(format!("merge_input_{}.pdf", i));
 
         let mut doc = Document::new();
-        doc.set_title(&format!("Merge Test {}", i));
+        doc.set_title(format!("Merge Test {}", i));
 
         for j in 1..=2 {
             let mut page = Page::new(612.0, 792.0);

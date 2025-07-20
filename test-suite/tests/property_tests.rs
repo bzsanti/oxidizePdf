@@ -176,7 +176,7 @@ proptest! {
     ) {
         let mut content = Vec::new();
 
-        match unbalance_type.as_ref() {
+        match unbalance_type {
             "more_saves" => {
                 // More saves than restores
                 for _ in 0..count {
@@ -219,7 +219,7 @@ proptest! {
         prop_assert!(!report.is_valid(), "Expected validation errors but got none");
 
         // Check specific errors based on type
-        match unbalance_type.as_ref() {
+        match unbalance_type {
             "more_saves" => {
                 prop_assert!(report.errors.iter().any(|e| e.contains("Unbalanced graphics state")));
             }
@@ -362,7 +362,7 @@ proptest! {
         let pdf = builder.build();
 
         // PDF should still be generated (builder should handle this)
-        prop_assert!(pdf.len() > 0);
+        prop_assert!(!pdf.is_empty());
         prop_assert!(pdf.starts_with(b"%PDF-"));
     }
 }

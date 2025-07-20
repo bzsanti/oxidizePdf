@@ -190,3 +190,323 @@ pub fn split_into_words(text: &str) -> Vec<&str> {
 
     words
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_font_metrics_creation() {
+        let metrics = FontMetrics::new(500);
+        assert_eq!(metrics.default_width, 500);
+        assert!(metrics.widths.is_empty());
+    }
+
+    #[test]
+    fn test_font_metrics_with_widths() {
+        let widths = [('A', 600), ('B', 700), ('C', 650)];
+        let metrics = FontMetrics::new(500).with_widths(&widths);
+
+        assert_eq!(metrics.char_width('A'), 600);
+        assert_eq!(metrics.char_width('B'), 700);
+        assert_eq!(metrics.char_width('C'), 650);
+        assert_eq!(metrics.char_width('Z'), 500); // Default for unmapped
+    }
+
+    #[test]
+    fn test_font_metrics_clone() {
+        let widths = [('A', 600), ('B', 700)];
+        let metrics1 = FontMetrics::new(500).with_widths(&widths);
+        let metrics2 = metrics1.clone();
+
+        assert_eq!(metrics1.char_width('A'), metrics2.char_width('A'));
+        assert_eq!(metrics1.default_width, metrics2.default_width);
+    }
+
+    #[test]
+    fn test_measure_text_helvetica() {
+        let text = "Hello";
+        let width = measure_text(text, Font::Helvetica, 12.0);
+
+        // Helvetica "H" = 722, "e" = 556, "l" = 222, "l" = 222, "o" = 556
+        // Total = 2278 units = 2.278 at size 1.0, * 12.0 = 27.336
+        assert!((width - 27.336).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_measure_text_courier() {
+        let text = "ABC";
+        let width = measure_text(text, Font::Courier, 10.0);
+
+        // Courier is monospace: all chars = 600 units
+        // 3 chars * 600 = 1800 units = 1.8 at size 1.0, * 10.0 = 18.0
+        assert_eq!(width, 18.0);
+    }
+
+    #[test]
+    fn test_measure_text_symbolic_fonts() {
+        let text = "ABC";
+        let symbol_width = measure_text(text, Font::Symbol, 12.0);
+        let zapf_width = measure_text(text, Font::ZapfDingbats, 12.0);
+
+        // Symbolic fonts use approximation: len * font_size * 0.6
+        let expected = 3.0 * 12.0 * 0.6; // = 21.6
+        assert_eq!(symbol_width, expected);
+        assert_eq!(zapf_width, expected);
+    }
+
+    #[test]
+    fn test_measure_char_helvetica() {
+        let width = measure_char('A', Font::Helvetica, 12.0);
+
+        // Helvetica "A" = 667 units = 0.667 at size 1.0, * 12.0 = 8.004
+        assert!((width - 8.004).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_measure_char_courier() {
+        let width = measure_char('X', Font::Courier, 10.0);
+
+        // Courier "X" = 600 units = 0.6 at size 1.0, * 10.0 = 6.0
+        assert_eq!(width, 6.0);
+    }
+
+    #[test]
+    fn test_measure_char_symbolic() {
+        let symbol_width = measure_char('A', Font::Symbol, 15.0);
+        let zapf_width = measure_char('B', Font::ZapfDingbats, 15.0);
+
+        // Symbolic fonts: font_size * 0.6
+        let expected = 15.0 * 0.6; // = 9.0
+        assert_eq!(symbol_width, expected);
+        assert_eq!(zapf_width, expected);
+    }
+
+    #[test]
+    fn test_split_into_words_simple() {
+        let text = "Hello World";
+        let words = split_into_words(text);
+
+        assert_eq!(words, vec!["Hello", " ", "World"]);
+    }
+
+    #[test]
+    fn test_split_into_words_multiple_spaces() {
+        let text = "Hello   World";
+        let words = split_into_words(text);
+
+        assert_eq!(words, vec!["Hello", "   ", "World"]);
+    }
+
+    #[test]
+    fn test_split_into_words_leading_trailing_spaces() {
+        let text = " Hello World ";
+        let words = split_into_words(text);
+
+        assert_eq!(words, vec![" ", "Hello", " ", "World", " "]);
+    }
+
+    #[test]
+    fn test_split_into_words_tabs_newlines() {
+        let text = "Hello\tWorld\nTest";
+        let words = split_into_words(text);
+
+        assert_eq!(words, vec!["Hello", "\t", "World", "\n", "Test"]);
+    }
+
+    #[test]
+    fn test_split_into_words_empty() {
+        let text = "";
+        let words = split_into_words(text);
+
+        assert!(words.is_empty());
+    }
+
+    #[test]
+    fn test_split_into_words_only_spaces() {
+        let text = "   ";
+        let words = split_into_words(text);
+
+        assert_eq!(words, vec!["   "]);
+    }
+
+    #[test]
+    fn test_split_into_words_single_word() {
+        let text = "Hello";
+        let words = split_into_words(text);
+
+        assert_eq!(words, vec!["Hello"]);
+    }
+
+    #[test]
+    fn test_all_font_metrics_exist() {
+        let fonts = [
+            Font::Helvetica,
+            Font::HelveticaBold,
+            Font::HelveticaOblique,
+            Font::HelveticaBoldOblique,
+            Font::TimesRoman,
+            Font::TimesBold,
+            Font::TimesItalic,
+            Font::TimesBoldItalic,
+            Font::Courier,
+            Font::CourierBold,
+            Font::CourierOblique,
+            Font::CourierBoldOblique,
+        ];
+
+        for font in &fonts {
+            // Should not panic - all fonts should have metrics
+            let _width = measure_text("A", *font, 12.0);
+        }
+    }
+
+    #[test]
+    fn test_helvetica_specific_characters() {
+        let chars = [
+            (' ', 278),
+            ('A', 667),
+            ('B', 667),
+            ('C', 722),
+            ('a', 556),
+            ('b', 556),
+            ('0', 556),
+            ('1', 556),
+            ('@', 1015),
+            ('M', 833),
+            ('W', 944),
+            ('i', 222),
+        ];
+
+        for (ch, expected_width) in &chars {
+            let width = measure_char(*ch, Font::Helvetica, 1000.0);
+            let expected = *expected_width as f64;
+            assert!(
+                (width - expected).abs() < 0.1,
+                "Character '{}' width mismatch: {} vs {}",
+                ch,
+                width,
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_times_specific_characters() {
+        let chars = [
+            (' ', 250),
+            ('A', 722),
+            ('B', 667),
+            ('C', 667),
+            ('a', 444),
+            ('b', 500),
+            ('0', 500),
+            ('1', 500),
+            ('@', 921),
+            ('M', 889),
+            ('W', 944),
+            ('i', 278),
+        ];
+
+        for (ch, expected_width) in &chars {
+            let width = measure_char(*ch, Font::TimesRoman, 1000.0);
+            let expected = *expected_width as f64;
+            assert_eq!(width, expected, "Character '{}' width mismatch", ch);
+        }
+    }
+
+    #[test]
+    fn test_courier_monospace_property() {
+        let chars = [
+            ' ', 'A', 'B', 'C', 'a', 'b', '0', '1', '@', 'M', 'W', 'i', '~',
+        ];
+
+        for ch in &chars {
+            let width = measure_char(*ch, Font::Courier, 1000.0);
+            assert_eq!(
+                width, 600.0,
+                "Courier character '{}' should be 600 units",
+                ch
+            );
+        }
+    }
+
+    #[test]
+    fn test_font_size_scaling() {
+        let sizes = [6.0, 12.0, 18.0, 24.0, 36.0];
+
+        for size in &sizes {
+            let width = measure_char('A', Font::Helvetica, *size);
+            let expected = 667.0 * size / 1000.0; // Helvetica 'A' = 667 units
+            assert!(
+                (width - expected).abs() < 0.01,
+                "Size {} scaling incorrect",
+                size
+            );
+        }
+    }
+
+    #[test]
+    fn test_measure_text_empty_string() {
+        let width = measure_text("", Font::Helvetica, 12.0);
+        assert_eq!(width, 0.0);
+    }
+
+    #[test]
+    fn test_measure_text_consistency() {
+        let text = "Hello";
+
+        // Measuring whole text should equal sum of individual characters
+        let total_width = measure_text(text, Font::Helvetica, 12.0);
+        let individual_sum: f64 = text
+            .chars()
+            .map(|ch| measure_char(ch, Font::Helvetica, 12.0))
+            .sum();
+
+        assert!((total_width - individual_sum).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_font_variants_use_base_metrics() {
+        // Test that font variations use the base font metrics
+        let base_width = measure_char('A', Font::Helvetica, 12.0);
+        let oblique_width = measure_char('A', Font::HelveticaOblique, 12.0);
+        let bold_oblique_width = measure_char('A', Font::HelveticaBoldOblique, 12.0);
+
+        // Should use same metrics (though in reality, they'd be different)
+        assert_eq!(base_width, oblique_width);
+
+        let bold_width = measure_char('A', Font::HelveticaBold, 12.0);
+        assert_eq!(bold_width, bold_oblique_width);
+    }
+
+    #[test]
+    fn test_unicode_characters_default_width() {
+        // Test characters not in the metrics tables
+        let unicode_chars = ['β', 'π', '€', '™'];
+
+        for ch in &unicode_chars {
+            let helvetica_width = measure_char(*ch, Font::Helvetica, 12.0);
+            let times_width = measure_char(*ch, Font::TimesRoman, 12.0);
+            let courier_width = measure_char(*ch, Font::Courier, 12.0);
+
+            // Should use default widths
+            let helvetica_expected = 556.0 * 12.0 / 1000.0;
+            let times_expected = 500.0 * 12.0 / 1000.0;
+            let courier_expected = 600.0 * 12.0 / 1000.0;
+
+            assert!(
+                (helvetica_width - helvetica_expected).abs() < 0.01,
+                "Helvetica width mismatch"
+            );
+            assert!(
+                (times_width - times_expected).abs() < 0.01,
+                "Times width mismatch"
+            );
+            assert!(
+                (courier_width - courier_expected).abs() < 0.01,
+                "Courier width mismatch"
+            );
+        }
+    }
+}

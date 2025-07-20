@@ -375,13 +375,12 @@ mod integration_tests {
         let app = app();
 
         let boundary = "----boundary----";
-        let body = format!(
-            "------boundary----\r\n\
+        let body = "------boundary----\r\n\
              Content-Disposition: form-data; name=\"other\"\r\n\
              \r\n\
              Some data\r\n\
              ------boundary------\r\n"
-        );
+            .to_string();
 
         let response = app
             .oneshot(
@@ -526,7 +525,7 @@ mod handler_tests {
 
     #[test]
     fn test_app_error_debug_trait() {
-        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        let io_error = std::io::Error::other("test error");
         let app_error = AppError::Io(io_error);
         let debug_str = format!("{:?}", app_error);
         assert!(debug_str.contains("Io"));

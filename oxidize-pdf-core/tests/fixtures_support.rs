@@ -97,14 +97,12 @@ pub fn log_fixture_status() {
     if fixtures_available() {
         let count = get_fixture_pdfs().len();
         println!("📁 Found {} PDF fixtures for testing", count);
+    } else if env::var("CI").is_ok() {
+        println!("🤖 Running in CI: Using synthetic PDFs only");
+    } else if env::var("OXIDIZE_PDF_FIXTURES").unwrap_or_default() == "off" {
+        println!("🚫 PDF fixtures disabled via OXIDIZE_PDF_FIXTURES=off");
     } else {
-        if env::var("CI").is_ok() {
-            println!("🤖 Running in CI: Using synthetic PDFs only");
-        } else if env::var("OXIDIZE_PDF_FIXTURES").unwrap_or_default() == "off" {
-            println!("🚫 PDF fixtures disabled via OXIDIZE_PDF_FIXTURES=off");
-        } else {
-            println!("📂 No PDF fixtures found at ../tests/fixtures/ - using synthetic PDFs only");
-        }
+        println!("📂 No PDF fixtures found at ../tests/fixtures/ - using synthetic PDFs only");
     }
 }
 

@@ -95,18 +95,3 @@ impl Entity {
         }
     }
 }
-
-#[cfg(feature = "pro")]
-impl From<super::pro::ProEntityType> for EntityType {
-    fn from(pro_type: super::pro::ProEntityType) -> Self {
-        use super::pro::ProEntityType;
-        match pro_type {
-            ProEntityType::Invoice => EntityType::Table, // Fallback to table
-            ProEntityType::Receipt => EntityType::Table,
-            ProEntityType::Contract => EntityType::Text,
-            ProEntityType::Resume => EntityType::Text,
-            ProEntityType::MedicalRecord => EntityType::Text,
-            ProEntityType::Custom(_) => EntityType::Text,
-        }
-    }
-}

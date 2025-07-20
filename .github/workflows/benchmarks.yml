@@ -40,23 +40,23 @@ jobs:
           
     - name: Install CLI binary for benchmarks
       run: |
-        cargo build --release --bin oxidize-pdf
+        cargo build --release --bin oxidizepdf
         
     - name: Run core library benchmarks
       run: |
-        cargo bench --package test-suite --bench core_benchmarks -- --output-format html
+        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
         
     - name: Run parser benchmarks
       run: |
-        cargo bench --package test-suite --bench parser_bench -- --output-format html
+        cargo bench --package oxidize-pdf-test-suite --bench parser_bench
         
     - name: Run memory benchmarks
       run: |
-        cargo bench --package test-suite --bench memory_benchmarks -- --output-format html
+        cargo bench --package oxidize-pdf-test-suite --bench memory_benchmarks
         
     - name: Run CLI benchmarks
       run: |
-        cargo bench --package test-suite --bench cli_benchmarks -- --output-format html
+        cargo bench --package oxidize-pdf-test-suite --bench cli_benchmarks
         
     - name: Archive benchmark results
       uses: actions/upload-artifact@v4
@@ -96,8 +96,8 @@ jobs:
         
     - name: Run PR benchmarks
       run: |
-        cargo build --release --bin oxidize-pdf
-        cargo bench --package test-suite --bench core_benchmarks -- --save-baseline pr-benchmarks
+        cargo build --release --bin oxidizepdf
+        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
         
     - name: Checkout main branch
       run: |
@@ -106,8 +106,8 @@ jobs:
         
     - name: Run main branch benchmarks
       run: |
-        cargo build --release --bin oxidize-pdf
-        cargo bench --package test-suite --bench core_benchmarks -- --save-baseline main-benchmarks
+        cargo build --release --bin oxidizepdf
+        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
         
     - name: Compare benchmarks
       run: |

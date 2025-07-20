@@ -2,7 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::operations::page_analysis::*;
     use crate::text::{MockOcrProvider, OcrOptions, OcrProvider};
     use crate::{Document, Page};
@@ -10,7 +9,7 @@ mod tests {
     use tempfile::TempDir;
 
     /// Helper to create a mock scanned PDF document
-    fn create_mock_scanned_pdf(title: &str) -> Document {
+    fn _create_mock_scanned_pdf(title: &str) -> Document {
         let mut doc = Document::new();
         doc.set_title(title);
 
@@ -27,7 +26,7 @@ mod tests {
     }
 
     /// Helper to save a document to a temp file and return the path
-    fn save_test_pdf(doc: &mut Document, dir: &TempDir, name: &str) -> PathBuf {
+    fn _save_test_pdf(doc: &mut Document, dir: &TempDir, name: &str) -> PathBuf {
         let path = dir.path().join(name);
         doc.save(&path).unwrap();
         path

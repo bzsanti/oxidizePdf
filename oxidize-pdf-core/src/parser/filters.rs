@@ -279,6 +279,7 @@ fn decode_ascii85(data: &[u8]) -> ParseResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject};
 
     #[test]
     fn test_ascii_hex_decode() {
@@ -304,5 +305,187 @@ mod tests {
         let data = b"z~>"; // Special case for zeros
         let result = decode_ascii85(data).unwrap();
         assert_eq!(result, &[0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_filter_from_name() {
+        assert_eq!(
+            Filter::from_name("ASCIIHexDecode"),
+            Some(Filter::ASCIIHexDecode)
+        );
+        assert_eq!(
+            Filter::from_name("ASCII85Decode"),
+            Some(Filter::ASCII85Decode)
+        );
+        assert_eq!(Filter::from_name("LZWDecode"), Some(Filter::LZWDecode));
+        assert_eq!(Filter::from_name("FlateDecode"), Some(Filter::FlateDecode));
+        assert_eq!(
+            Filter::from_name("RunLengthDecode"),
+            Some(Filter::RunLengthDecode)
+        );
+        assert_eq!(
+            Filter::from_name("CCITTFaxDecode"),
+            Some(Filter::CCITTFaxDecode)
+        );
+        assert_eq!(Filter::from_name("JBIG2Decode"), Some(Filter::JBIG2Decode));
+        assert_eq!(Filter::from_name("DCTDecode"), Some(Filter::DCTDecode));
+        assert_eq!(Filter::from_name("JPXDecode"), Some(Filter::JPXDecode));
+        assert_eq!(Filter::from_name("Crypt"), Some(Filter::Crypt));
+        assert_eq!(Filter::from_name("UnknownFilter"), None);
+    }
+
+    #[test]
+    fn test_filter_equality() {
+        assert_eq!(Filter::ASCIIHexDecode, Filter::ASCIIHexDecode);
+        assert_ne!(Filter::ASCIIHexDecode, Filter::ASCII85Decode);
+        assert_ne!(Filter::FlateDecode, Filter::LZWDecode);
+    }
+
+    #[test]
+    fn test_filter_clone() {
+        let filter = Filter::FlateDecode;
+        let cloned = filter.clone();
+        assert_eq!(filter, cloned);
+    }
+
+    #[test]
+    fn test_decode_stream_no_filter() {
+        let data = b"Hello, world!";
+        let dict = PdfDictionary::new();
+
+        let result = decode_stream(data, &dict).unwrap();
+        assert_eq!(result, data);
+    }
+
+    #[test]
+    fn test_decode_stream_single_filter() {
+        let data = b"48656C6C6F>";
+        let mut dict = PdfDictionary::new();
+        dict.insert(
+            "Filter".to_string(),
+            PdfObject::Name(PdfName("ASCIIHexDecode".to_string())),
+        );
+
+        let result = decode_stream(data, &dict).unwrap();
+        assert_eq!(result, b"Hello");
+    }
+
+    #[test]
+    fn test_decode_stream_invalid_filter() {
+        let data = b"test data";
+        let mut dict = PdfDictionary::new();
+        dict.insert(
+            "Filter".to_string(),
+            PdfObject::Name(PdfName("UnknownFilter".to_string())),
+        );
+
+        let result = decode_stream(data, &dict);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_stream_filter_array() {
+        let data = b"48656C6C6F>";
+        let mut dict = PdfDictionary::new();
+        let filters = vec![PdfObject::Name(PdfName("ASCIIHexDecode".to_string()))];
+        dict.insert("Filter".to_string(), PdfObject::Array(PdfArray(filters)));
+
+        let result = decode_stream(data, &dict).unwrap();
+        assert_eq!(result, b"Hello");
+    }
+
+    #[test]
+    fn test_decode_stream_invalid_filter_type() {
+        let data = b"test data";
+        let mut dict = PdfDictionary::new();
+        dict.insert("Filter".to_string(), PdfObject::Integer(42)); // Invalid type
+
+        let result = decode_stream(data, &dict);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ascii_hex_decode_empty() {
+        let data = b">";
+        let result = decode_ascii_hex(data).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_ascii_hex_decode_invalid() {
+        let data = b"GG>"; // Invalid hex
+        let result = decode_ascii_hex(data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_ascii_hex_decode_no_terminator() {
+        let data = b"48656C6C6F"; // Missing '>'
+        let result = decode_ascii_hex(data).unwrap();
+        assert_eq!(result, b"Hello"); // Should work without terminator
+    }
+
+    #[test]
+    fn test_ascii85_decode_empty() {
+        let data = b"~>";
+        let result = decode_ascii85(data).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_ascii85_decode_invalid() {
+        let data = b"invalid~>";
+        let result = decode_ascii85(data);
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "compression")]
+    #[test]
+    fn test_flate_decode() {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        let original = b"Hello, compressed world!";
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(original).unwrap();
+        let compressed = encoder.finish().unwrap();
+
+        let result = decode_flate(&compressed).unwrap();
+        assert_eq!(result, original);
+    }
+
+    #[cfg(not(feature = "compression"))]
+    #[test]
+    fn test_flate_decode_not_supported() {
+        let data = b"compressed data";
+        let result = decode_flate(data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_apply_filter() {
+        let data = b"48656C6C6F>";
+        let result = apply_filter(data, Filter::ASCIIHexDecode).unwrap();
+        assert_eq!(result, b"Hello");
+    }
+
+    #[test]
+    fn test_apply_filter_unsupported() {
+        let data = b"test data";
+        let unsupported_filters = vec![
+            Filter::LZWDecode,
+            Filter::RunLengthDecode,
+            Filter::CCITTFaxDecode,
+            Filter::JBIG2Decode,
+            Filter::DCTDecode,
+            Filter::JPXDecode,
+            Filter::Crypt,
+        ];
+
+        for filter in unsupported_filters {
+            let result = apply_filter(data, filter);
+            assert!(result.is_err());
+        }
     }
 }

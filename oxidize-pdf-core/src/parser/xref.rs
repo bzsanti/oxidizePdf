@@ -35,6 +35,8 @@ pub struct XRefTable {
     extended_entries: HashMap<u32, XRefEntryExt>,
     /// Trailer dictionary
     trailer: Option<super::objects::PdfDictionary>,
+    /// Offset of the xref table in the file
+    xref_offset: u64,
 }
 
 impl Default for XRefTable {
@@ -50,6 +52,7 @@ impl XRefTable {
             entries: HashMap::new(),
             extended_entries: HashMap::new(),
             trailer: None,
+            xref_offset: 0,
         }
     }
 
@@ -59,6 +62,7 @@ impl XRefTable {
 
         // Find and parse xref
         let xref_offset = Self::find_xref_offset(reader)?;
+        table.xref_offset = xref_offset;
         reader.seek(SeekFrom::Start(xref_offset))?;
 
         // Check if this is a traditional xref table or xref stream
@@ -274,6 +278,11 @@ impl XRefTable {
         self.trailer.as_ref()
     }
 
+    /// Get the xref offset
+    pub fn xref_offset(&self) -> u64 {
+        self.xref_offset
+    }
+
     /// Get the number of entries
     pub fn len(&self) -> usize {
         self.entries.len()
@@ -300,6 +309,21 @@ impl XRefTable {
             .get(&obj_num)
             .map(|e| e.compressed_info.is_some())
             .unwrap_or(false)
+    }
+
+    /// Add an entry to the xref table
+    pub fn add_entry(&mut self, obj_num: u32, entry: XRefEntry) {
+        self.entries.insert(obj_num, entry);
+    }
+
+    /// Set the trailer dictionary
+    pub fn set_trailer(&mut self, trailer: super::objects::PdfDictionary) {
+        self.trailer = Some(trailer);
+    }
+
+    /// Add an extended entry to the xref table
+    pub fn add_extended_entry(&mut self, obj_num: u32, entry: XRefEntryExt) {
+        self.extended_entries.insert(obj_num, entry);
     }
 }
 
@@ -514,6 +538,9 @@ impl XRefStream {
 mod tests {
     use super::*;
 
+    use crate::parser::objects::{PdfDictionary, PdfObject};
+    use std::io::Cursor;
+
     #[test]
     fn test_parse_xref_entry() {
         let entry1 = XRefTable::parse_xref_entry("0000000000 65535 f ").unwrap();
@@ -525,5 +552,269 @@ mod tests {
         assert_eq!(entry2.offset, 17);
         assert_eq!(entry2.generation, 0);
         assert!(entry2.in_use);
+    }
+
+    #[test]
+    fn test_xref_table_new() {
+        let table = XRefTable::new();
+        assert!(table.entries.is_empty());
+        assert!(table.extended_entries.is_empty());
+        assert!(table.trailer.is_none());
+        assert_eq!(table.xref_offset, 0);
+    }
+
+    #[test]
+    fn test_xref_table_default() {
+        let table = XRefTable::default();
+        assert!(table.entries.is_empty());
+        assert!(table.extended_entries.is_empty());
+        assert!(table.trailer.is_none());
+    }
+
+    #[test]
+    fn test_xref_entry_struct() {
+        let entry = XRefEntry {
+            offset: 12345,
+            generation: 7,
+            in_use: true,
+        };
+        assert_eq!(entry.offset, 12345);
+        assert_eq!(entry.generation, 7);
+        assert!(entry.in_use);
+    }
+
+    #[test]
+    fn test_xref_entry_equality() {
+        let entry1 = XRefEntry {
+            offset: 100,
+            generation: 0,
+            in_use: true,
+        };
+        let entry2 = XRefEntry {
+            offset: 100,
+            generation: 0,
+            in_use: true,
+        };
+        assert_eq!(entry1, entry2);
+    }
+
+    #[test]
+    fn test_xref_entry_clone() {
+        let entry = XRefEntry {
+            offset: 999,
+            generation: 3,
+            in_use: false,
+        };
+        let cloned = entry;
+        assert_eq!(cloned.offset, 999);
+        assert_eq!(cloned.generation, 3);
+        assert!(!cloned.in_use);
+    }
+
+    #[test]
+    fn test_xref_entry_ext() {
+        let ext_entry = XRefEntryExt {
+            basic: XRefEntry {
+                offset: 500,
+                generation: 0,
+                in_use: true,
+            },
+            compressed_info: Some((10, 5)),
+        };
+        assert_eq!(ext_entry.basic.offset, 500);
+        assert_eq!(ext_entry.compressed_info, Some((10, 5)));
+    }
+
+    #[test]
+    fn test_xref_entry_ext_no_compression() {
+        let ext_entry = XRefEntryExt {
+            basic: XRefEntry {
+                offset: 1000,
+                generation: 1,
+                in_use: true,
+            },
+            compressed_info: None,
+        };
+        assert!(ext_entry.compressed_info.is_none());
+    }
+
+    #[test]
+    fn test_add_entry() {
+        let mut table = XRefTable::new();
+        table.add_entry(
+            5,
+            XRefEntry {
+                offset: 1000,
+                generation: 0,
+                in_use: true,
+            },
+        );
+        assert_eq!(table.entries.len(), 1);
+        assert!(table.entries.contains_key(&5));
+    }
+
+    #[test]
+    fn test_get_entry() {
+        let mut table = XRefTable::new();
+        let entry = XRefEntry {
+            offset: 2000,
+            generation: 1,
+            in_use: true,
+        };
+        table.add_entry(10, entry);
+
+        let retrieved = table.get_entry(10);
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().offset, 2000);
+
+        let missing = table.get_entry(999);
+        assert!(missing.is_none());
+    }
+
+    #[test]
+    fn test_set_trailer() {
+        let mut table = XRefTable::new();
+        let mut trailer = PdfDictionary::new();
+        trailer.insert("Size".to_string(), PdfObject::Integer(10));
+
+        table.set_trailer(trailer.clone());
+        assert!(table.trailer.is_some());
+        assert_eq!(
+            table.trailer().unwrap().get("Size"),
+            Some(&PdfObject::Integer(10))
+        );
+    }
+
+    #[test]
+    fn test_parse_xref_entry_invalid() {
+        // Too short
+        let result = XRefTable::parse_xref_entry("0000000000 65535");
+        assert!(result.is_err());
+
+        // Invalid format
+        let result = XRefTable::parse_xref_entry("not_a_number 65535 f ");
+        assert!(result.is_err());
+
+        // Invalid flag
+        let result = XRefTable::parse_xref_entry("0000000000 65535 x ");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_xref_entry_various_offsets() {
+        // Small offset
+        let entry = XRefTable::parse_xref_entry("0000000001 00000 n ").unwrap();
+        assert_eq!(entry.offset, 1);
+
+        // Large offset
+        let entry = XRefTable::parse_xref_entry("9999999999 00000 n ").unwrap();
+        assert_eq!(entry.offset, 9999999999);
+
+        // Max generation
+        let entry = XRefTable::parse_xref_entry("0000000000 65535 f ").unwrap();
+        assert_eq!(entry.generation, 65535);
+    }
+
+    #[test]
+    fn test_add_extended_entry() {
+        let mut table = XRefTable::new();
+        let ext_entry = XRefEntryExt {
+            basic: XRefEntry {
+                offset: 0,
+                generation: 0,
+                in_use: true,
+            },
+            compressed_info: Some((5, 10)),
+        };
+
+        table.add_extended_entry(15, ext_entry.clone());
+        assert_eq!(table.extended_entries.len(), 1);
+        assert!(table.extended_entries.contains_key(&15));
+    }
+
+    #[test]
+    fn test_get_extended_entry() {
+        let mut table = XRefTable::new();
+        let ext_entry = XRefEntryExt {
+            basic: XRefEntry {
+                offset: 0,
+                generation: 0,
+                in_use: true,
+            },
+            compressed_info: Some((20, 3)),
+        };
+
+        table.add_extended_entry(7, ext_entry);
+
+        let retrieved = table.get_extended_entry(7);
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().compressed_info, Some((20, 3)));
+    }
+
+    #[test]
+    fn test_xref_offset() {
+        let mut table = XRefTable::new();
+        assert_eq!(table.xref_offset(), 0);
+
+        table.xref_offset = 12345;
+        assert_eq!(table.xref_offset(), 12345);
+    }
+
+    #[test]
+    fn test_find_xref_offset_simple() {
+        let pdf_data = b"startxref\n12345\n%%EOF";
+        let cursor = Cursor::new(pdf_data.to_vec());
+        let mut reader = BufReader::new(cursor);
+
+        let offset = XRefTable::find_xref_offset(&mut reader).unwrap();
+        assert_eq!(offset, 12345);
+    }
+
+    #[test]
+    fn test_find_xref_offset_with_spaces() {
+        let pdf_data = b"startxref  \n  12345  \n%%EOF";
+        let cursor = Cursor::new(pdf_data.to_vec());
+        let mut reader = BufReader::new(cursor);
+
+        let offset = XRefTable::find_xref_offset(&mut reader).unwrap();
+        assert_eq!(offset, 12345);
+    }
+
+    #[test]
+    fn test_find_xref_offset_missing() {
+        let pdf_data = b"no startxref here";
+        let cursor = Cursor::new(pdf_data.to_vec());
+        let mut reader = BufReader::new(cursor);
+
+        let result = XRefTable::find_xref_offset(&mut reader);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_trailer_getter() {
+        let mut table = XRefTable::new();
+        assert!(table.trailer().is_none());
+
+        let trailer = PdfDictionary::new();
+        table.set_trailer(trailer);
+        assert!(table.trailer().is_some());
+    }
+
+    #[test]
+    fn test_xref_table_clone() {
+        let mut table = XRefTable::new();
+        table.add_entry(
+            1,
+            XRefEntry {
+                offset: 100,
+                generation: 0,
+                in_use: true,
+            },
+        );
+        table.xref_offset = 5000;
+
+        let cloned = table.clone();
+        assert_eq!(cloned.entries.len(), 1);
+        assert_eq!(cloned.xref_offset, 5000);
     }
 }

@@ -9,15 +9,16 @@ documentation = "https://docs.rs/oxidize-pdf-api"
 description = "REST API for oxidizePdf (Community edition)"
 keywords = ["pdf", "api", "rest", "web"]
 categories = ["web-programming::http-server"]
+readme = "README.md"
 
 [dependencies]
 # Core functionality
 oxidize-pdf = { version = "^0.1.2" }
 
 # Web framework
-axum = { version = "0.7", features = ["multipart"] }
-tower = { version = "0.4", features = ["util"] }
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+axum = { workspace = true, features = ["multipart"] }
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["cors", "trace"] }
 
 # Async runtime
 tokio = { workspace = true }
@@ -34,6 +35,10 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
+# File operations
+zip = "2.2"
+tempfile = "3.8"
+
 [lib]
 name = "oxidize_pdf_api"
 path = "src/lib.rs"
@@ -46,3 +51,4 @@ path = "src/main.rs"
 tempfile = { workspace = true }
 pretty_assertions = { workspace = true }
 http-body-util = "0.1"
+hyper = "1.0"

@@ -2,10 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::operations::page_analysis::*;
     use crate::{Document, Page};
-    use std::fs;
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -217,7 +215,7 @@ mod tests {
         };
 
         let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
-        let analyzer = PageContentAnalyzer::with_options(document, custom_options);
+        let _analyzer = PageContentAnalyzer::with_options(document, custom_options);
 
         // We can't directly access the options, but we can verify the analyzer was created
         assert!(true); // Placeholder assertion
@@ -298,7 +296,7 @@ mod tests {
         let is_scanned = is_scanned.unwrap();
         // Note: With the simplified implementation, we can't guarantee the result
         // but we can verify the method works
-        assert!(is_scanned == true || is_scanned == false);
+        assert!(is_scanned || !is_scanned);
     }
 
     #[test]
