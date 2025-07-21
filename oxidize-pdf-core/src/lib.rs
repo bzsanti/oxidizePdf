@@ -201,8 +201,9 @@ pub use text::{
 
 // Re-export parsing types
 pub use parser::{
-    ContentOperation, ContentParser, DocumentMetadata as ParsedDocumentMetadata, ParsedPage,
-    PdfArray, PdfDictionary, PdfDocument, PdfName, PdfObject, PdfReader, PdfStream, PdfString,
+    ContentOperation, ContentParser, DocumentMetadata as ParsedDocumentMetadata, ParseOptions,
+    ParsedPage, PdfArray, PdfDictionary, PdfDocument, PdfName, PdfObject, PdfReader, PdfStream,
+    PdfString,
 };
 
 // Re-export operations

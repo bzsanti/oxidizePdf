@@ -140,8 +140,11 @@ pub mod object_stream;
 pub mod objects;
 pub mod page_tree;
 pub mod reader;
+pub mod stack_safe;
+pub mod stack_safe_tests;
 pub mod trailer;
 pub mod xref;
+pub mod xref_types;
 
 #[cfg(test)]
 pub mod test_helpers;
@@ -157,6 +160,45 @@ pub use self::reader::{DocumentMetadata, PdfReader};
 
 /// Result type for parser operations
 pub type ParseResult<T> = Result<T, ParseError>;
+
+/// Options for parsing PDF files
+#[derive(Debug, Clone)]
+pub struct ParseOptions {
+    /// Enable lenient parsing for malformed streams with incorrect Length fields
+    pub lenient_streams: bool,
+    /// Maximum number of bytes to search ahead when recovering from stream errors
+    pub max_recovery_bytes: usize,
+    /// Collect warnings instead of failing on recoverable errors
+    pub collect_warnings: bool,
+}
+
+impl Default for ParseOptions {
+    fn default() -> Self {
+        Self {
+            lenient_streams: false,   // Strict mode by default
+            max_recovery_bytes: 1000, // Search up to 1KB ahead
+            collect_warnings: false,  // Don't collect warnings by default
+        }
+    }
+}
+
+/// Warnings that can be collected during lenient parsing
+#[derive(Debug, Clone)]
+pub enum ParseWarning {
+    /// Stream length mismatch was corrected
+    StreamLengthCorrected {
+        declared_length: usize,
+        actual_length: usize,
+        object_id: Option<(u32, u16)>,
+    },
+    /// Invalid character encoding was recovered
+    InvalidEncoding {
+        position: usize,
+        recovered_text: String,
+    },
+    /// Missing required key with fallback used
+    MissingKeyWithFallback { key: String, fallback_value: String },
+}
 
 /// PDF Parser errors covering all failure modes during parsing.
 ///
@@ -226,8 +268,18 @@ pub enum ParseError {
     StreamDecodeError(String),
 
     /// PDF encryption is not currently supported
-    #[error("Encryption not supported")]
+    #[error("PDF is encrypted. Decryption is not currently supported in the community edition")]
     EncryptionNotSupported,
+
+    /// Empty file
+    #[error("File is empty (0 bytes)")]
+    EmptyFile,
+
+    /// Stream length mismatch (only in strict mode)
+    #[error(
+        "Stream length mismatch: declared {declared} bytes, but found endstream at {actual} bytes"
+    )]
+    StreamLengthMismatch { declared: usize, actual: usize },
 }
 
 impl From<ParseError> for OxidizePdfError {

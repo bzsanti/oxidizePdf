@@ -33,3 +33,5 @@ debug_manual.pdf
 
 # Keep GitHub workflows
 !.github/
+PDF_RENDERING_ANALYSIS_REPORT.md
+simple_pdf_analysis.txt

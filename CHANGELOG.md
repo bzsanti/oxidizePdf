@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.0.1] - 2025-07-21
+
+### Added
+- Lenient parsing mode for handling PDFs with incorrect stream `/Length` fields
+- `ParseOptions` struct for configurable parsing behavior  
+- Look-ahead functionality in lexer for error recovery
+
+### Fixed
+- Compilation error from duplicate ParseOptions definition
+- Removed unused private methods generating warnings
+- Fixed circular reference handling with proper cleanup
+
+### Improved
+- Better error recovery for malformed PDF streams
+- More robust parsing of real-world PDFs with structural issues
+- Cleaner codebase with no compilation warnings
+
 ## [1.0.0] - 2025-07-20
 
 ### 🎉 Community Edition Complete!

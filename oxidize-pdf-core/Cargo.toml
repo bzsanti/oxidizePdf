@@ -110,6 +110,9 @@ name = "batch_processing"
 [[example]]
 name = "error_recovery"
 
+[[example]]
+name = "analyze_pdf_rendering"
+
 [[bench]]
 name = "ocr_benchmarks"
 harness = false
@@ -121,7 +124,7 @@ default = ["compression"]
 compression = ["dep:flate2"]
 
 # OCR features
-ocr-tesseract = ["tesseract", "leptonica-plumbing"]
+ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]
 ocr-full = ["ocr-tesseract"]
 
 # Semantic marking (Community level - basic tagging)

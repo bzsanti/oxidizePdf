@@ -3,7 +3,7 @@
 //! Tokenizes PDF syntax according to ISO 32000-1 Section 7.2
 
 use super::{ParseError, ParseResult};
-use std::io::Read;
+use std::io::{Read, Seek};
 
 /// PDF Token types
 #[derive(Debug, Clone, PartialEq)]
@@ -64,7 +64,7 @@ pub enum Token {
 }
 
 /// PDF Lexer for tokenizing PDF content
-pub struct Lexer<R: Read> {
+pub struct Lexer<R> {
     reader: std::io::BufReader<R>,
     #[allow(dead_code)]
     buffer: Vec<u8>,
@@ -602,6 +602,129 @@ impl<R: Read> Lexer<R> {
     /// Push back a token to be returned by the next call to next_token
     pub fn push_token(&mut self, token: Token) {
         self.token_buffer.push(token);
+    }
+
+    /// Expect a specific keyword token
+    pub fn expect_keyword(&mut self, keyword: &str) -> ParseResult<()> {
+        let token = self.next_token()?;
+        match (keyword, &token) {
+            ("endstream", Token::EndStream) => Ok(()),
+            ("stream", Token::Stream) => Ok(()),
+            ("endobj", Token::EndObj) => Ok(()),
+            ("obj", Token::Obj) => Ok(()),
+            ("startxref", Token::StartXRef) => Ok(()),
+            _ => Err(ParseError::UnexpectedToken {
+                expected: format!("keyword '{}'", keyword),
+                found: format!("{:?}", token),
+            }),
+        }
+    }
+
+    /// Find a keyword ahead in the stream without consuming bytes
+    /// Returns the number of bytes until the keyword is found
+    pub fn find_keyword_ahead(
+        &mut self,
+        keyword: &str,
+        max_bytes: usize,
+    ) -> ParseResult<Option<usize>>
+    where
+        R: Seek,
+    {
+        use std::io::{Read, Seek, SeekFrom};
+
+        // Save current position
+        let current_pos = self.reader.stream_position()?;
+        let start_buffer_state = self.peek_buffer;
+
+        let keyword_bytes = keyword.as_bytes();
+        let mut bytes_read = 0;
+        let mut match_buffer = Vec::new();
+
+        // Search for the keyword
+        while bytes_read < max_bytes {
+            let mut byte = [0u8; 1];
+            match self.reader.read_exact(&mut byte) {
+                Ok(_) => {
+                    bytes_read += 1;
+                    match_buffer.push(byte[0]);
+
+                    // Keep only the last keyword.len() bytes in match_buffer
+                    if match_buffer.len() > keyword_bytes.len() {
+                        match_buffer.remove(0);
+                    }
+
+                    // Check if we found the keyword
+                    if match_buffer.len() == keyword_bytes.len() && match_buffer == keyword_bytes {
+                        // Restore position
+                        self.reader.seek(SeekFrom::Start(current_pos))?;
+                        self.peek_buffer = start_buffer_state;
+                        return Ok(Some(bytes_read - keyword_bytes.len()));
+                    }
+                }
+                Err(_) => break, // EOF or error
+            }
+        }
+
+        // Restore position
+        self.reader.seek(SeekFrom::Start(current_pos))?;
+        self.peek_buffer = start_buffer_state;
+        Ok(None)
+    }
+
+    /// Peek ahead n bytes without consuming them
+    pub fn peek_ahead(&mut self, n: usize) -> ParseResult<Vec<u8>>
+    where
+        R: Seek,
+    {
+        use std::io::{Read, Seek, SeekFrom};
+
+        // Save current position
+        let current_pos = self.reader.stream_position()?;
+        let start_buffer_state = self.peek_buffer;
+
+        // Read n bytes
+        let mut bytes = vec![0u8; n];
+        let bytes_read = self.reader.read(&mut bytes)?;
+        bytes.truncate(bytes_read);
+
+        // Restore position
+        self.reader.seek(SeekFrom::Start(current_pos))?;
+        self.peek_buffer = start_buffer_state;
+
+        Ok(bytes)
+    }
+
+    /// Save the current position for later restoration
+    pub fn save_position(&mut self) -> ParseResult<(u64, Option<u8>)>
+    where
+        R: Seek,
+    {
+        use std::io::Seek;
+        let pos = self.reader.stream_position()?;
+        Ok((pos, self.peek_buffer))
+    }
+
+    /// Restore a previously saved position
+    pub fn restore_position(&mut self, saved: (u64, Option<u8>)) -> ParseResult<()>
+    where
+        R: Seek,
+    {
+        use std::io::{Seek, SeekFrom};
+        self.reader.seek(SeekFrom::Start(saved.0))?;
+        self.peek_buffer = saved.1;
+        self.position = saved.0 as usize;
+        Ok(())
+    }
+
+    /// Peek the next token without consuming it
+    pub fn peek_token(&mut self) -> ParseResult<Token>
+    where
+        R: Seek,
+    {
+        let saved_pos = self.save_position()?;
+        let token = self.next_token()?;
+        self.restore_position(saved_pos)?;
+        Ok(token)
     }
 }
 
@@ -1247,5 +1370,96 @@ mod tests {
             assert_eq!(count, 3000); // 1000 repetitions * 3 tokens each
             assert!(elapsed.as_millis() < 1000); // Should complete within 1 second
         }
+    }
+
+    #[test]
+    fn test_lexer_find_keyword_ahead() {
+        let input = b"some data here endstream more data";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Find endstream keyword
+        let result = lexer.find_keyword_ahead("endstream", 100);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(15)); // Position of endstream
+
+        // Try to find non-existent keyword
+        let result2 = lexer.find_keyword_ahead("notfound", 100);
+        assert!(result2.is_ok());
+        assert_eq!(result2.unwrap(), None);
+
+        // Test with limited search distance
+        let result3 = lexer.find_keyword_ahead("endstream", 10);
+        assert!(result3.is_ok());
+        assert_eq!(result3.unwrap(), None); // Not found within 10 bytes
+    }
+
+    #[test]
+    fn test_lexer_peek_token() {
+        let input = b"123 456 /Name";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Peek first token
+        let peeked = lexer.peek_token();
+        assert!(peeked.is_ok());
+        assert_eq!(peeked.unwrap(), Token::Integer(123));
+
+        // Verify peek doesn't consume
+        let next = lexer.next_token();
+        assert!(next.is_ok());
+        assert_eq!(next.unwrap(), Token::Integer(123));
+
+        // Peek and consume next tokens
+        assert_eq!(lexer.peek_token().unwrap(), Token::Integer(456));
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(456));
+
+        assert_eq!(lexer.peek_token().unwrap(), Token::Name("Name".to_string()));
+        assert_eq!(lexer.next_token().unwrap(), Token::Name("Name".to_string()));
+    }
+
+    #[test]
+    fn test_lexer_expect_keyword() {
+        let input = b"endstream obj endobj";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Expect correct keyword
+        assert!(lexer.expect_keyword("endstream").is_ok());
+
+        // Expect another correct keyword
+        assert!(lexer.expect_keyword("obj").is_ok());
+
+        // Expect wrong keyword (should fail)
+        let result = lexer.expect_keyword("stream");
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::UnexpectedToken { expected, found }) => {
+                assert!(expected.contains("stream"));
+                assert!(found.contains("EndObj"));
+            }
+            _ => panic!("Expected UnexpectedToken error"),
+        }
+    }
+
+    #[test]
+    fn test_lexer_save_restore_position() {
+        let input = b"123 456 789";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Read first token
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(123));
+
+        // Save position
+        let saved = lexer.save_position();
+        assert!(saved.is_ok());
+        let saved_pos = saved.unwrap();
+
+        // Read more tokens
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(456));
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(789));
+
+        // Restore position
+        assert!(lexer.restore_position(saved_pos).is_ok());
+
+        // Should be back at second token
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(456));
     }
 }
