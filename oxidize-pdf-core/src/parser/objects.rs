@@ -188,6 +188,9 @@ pub struct PdfStream {
     pub data: Vec<u8>,
 }
 
+/// Static empty array for use in lenient parsing
+pub static EMPTY_PDF_ARRAY: PdfArray = PdfArray(Vec::new());
+
 impl PdfStream {
     /// Get the decompressed stream data.
     ///
@@ -523,10 +526,29 @@ impl PdfObject {
         let length = dict
             .0
             .get(&PdfName("Length".to_string()))
+            .or_else(|| {
+                // If Length is missing and we have lenient parsing, try to find endstream
+                if options.lenient_streams {
+                    if options.collect_warnings {
+                        eprintln!("Warning: Missing Length key in stream dictionary, will search for endstream marker");
+                    }
+                    // Return a special marker to indicate we need to search for endstream
+                    Some(&PdfObject::Integer(-1))
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| ParseError::MissingKey("Length".to_string()))?;
 
         let length = match length {
-            PdfObject::Integer(len) => *len as usize,
+            PdfObject::Integer(len) => {
+                if *len == -1 {
+                    // Special marker for missing length - we need to search for endstream
+                    usize::MAX // We'll handle this specially below
+                } else {
+                    *len as usize
+                }
+            }
             PdfObject::Reference(_, _) => {
                 // In a full implementation, we'd need to resolve this reference
                 // For now, we'll return an error
@@ -547,7 +569,43 @@ impl PdfObject {
         lexer.read_newline()?;
 
         // Read the actual stream data
-        let mut stream_data = lexer.read_bytes(length)?;
+        let mut stream_data = if length == usize::MAX {
+            // Missing length - search for endstream marker
+            let mut data = Vec::new();
+            let max_search = 65536; // Search up to 64KB
+            let mut found_endstream = false;
+
+            for _ in 0..max_search {
+                match lexer.peek_byte() {
+                    Ok(b) => {
+                        // Check if we might be at "endstream"
+                        if b == b'e' {
+                            let pos = lexer.position();
+                            // Try to read "endstream"
+                            if let Ok(Token::EndStream) = lexer.peek_token() {
+                                found_endstream = true;
+                                break;
+                            }
+                            // Not endstream, continue
+                            lexer.seek(pos as u64)?;
+                        }
+                        data.push(lexer.read_byte()?);
+                    }
+                    Err(_) => break,
+                }
+            }
+
+            if !found_endstream && !options.lenient_streams {
+                return Err(ParseError::SyntaxError {
+                    position: lexer.position(),
+                    message: "Could not find endstream marker".to_string(),
+                });
+            }
+
+            data
+        } else {
+            lexer.read_bytes(length)?
+        };
 
         // Skip optional whitespace before endstream
         lexer.skip_whitespace()?;
@@ -1730,11 +1788,10 @@ mod tests {
         // Test lenient parsing
         let mut cursor = Cursor::new(test_data);
         let mut lexer = Lexer::new(&mut cursor);
-        let options = ParseOptions {
-            lenient_streams: true,
-            max_recovery_bytes: 100,
-            collect_warnings: false,
-        };
+        let mut options = ParseOptions::default();
+        options.lenient_streams = true;
+        options.max_recovery_bytes = 100;
+        options.collect_warnings = false;
 
         // parse_stream_data_with_options expects the 'stream' token to have been consumed already
         // and will read the newline after 'stream'
@@ -1775,11 +1832,10 @@ mod tests {
         // Test lenient parsing
         let mut cursor = Cursor::new(test_data);
         let mut lexer = Lexer::new(&mut cursor);
-        let options = ParseOptions {
-            lenient_streams: true,
-            max_recovery_bytes: 100,
-            collect_warnings: false,
-        };
+        let mut options = ParseOptions::default();
+        options.lenient_streams = true;
+        options.max_recovery_bytes = 100;
+        options.collect_warnings = false;
 
         // parse_stream_data_with_options expects the 'stream' token to have been consumed already
 
@@ -1800,11 +1856,10 @@ This text does not contain the magic word and continues for a very long time wit
 
         let mut cursor = Cursor::new(input.to_vec());
         let mut lexer = Lexer::new(&mut cursor);
-        let options = ParseOptions {
-            lenient_streams: true,
-            max_recovery_bytes: 50, // Limit search - endstream not within these bytes
-            collect_warnings: false,
-        };
+        let mut options = ParseOptions::default();
+        options.lenient_streams = true;
+        options.max_recovery_bytes = 50; // Limit search - endstream not within these bytes
+        options.collect_warnings = false;
 
         let dict_token = lexer.next_token().unwrap();
         let obj = PdfObject::parse_from_token_with_options(&mut lexer, dict_token, &options);

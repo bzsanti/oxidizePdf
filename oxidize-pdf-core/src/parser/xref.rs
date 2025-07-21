@@ -64,22 +64,43 @@ impl XRefTable {
 
     /// Parse xref table from a reader with fallback recovery
     pub fn parse<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<Self> {
+        Self::parse_with_options(reader, &super::ParseOptions::default())
+    }
+
+    /// Parse xref table from a reader with custom options
+    pub fn parse_with_options<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        options: &super::ParseOptions,
+    ) -> ParseResult<Self> {
         // Try normal parsing first
-        match Self::parse_with_incremental_updates(reader) {
+        match Self::parse_with_incremental_updates_options(reader, options) {
             Ok(table) => Ok(table),
             Err(e) => {
-                eprintln!("Primary XRef parsing failed: {:?}, attempting recovery", e);
+                if options.lenient_syntax {
+                    eprintln!("Primary XRef parsing failed: {:?}, attempting recovery", e);
 
-                // Reset reader position and try recovery
-                reader.seek(SeekFrom::Start(0))?;
-                Self::parse_with_recovery(reader)
+                    // Reset reader position and try recovery
+                    reader.seek(SeekFrom::Start(0))?;
+                    Self::parse_with_recovery_options(reader, options)
+                } else {
+                    Err(e)
+                }
             }
         }
     }
 
     /// Parse xref table with support for incremental updates
+    #[allow(dead_code)]
     fn parse_with_incremental_updates<R: Read + Seek>(
         reader: &mut BufReader<R>,
+    ) -> ParseResult<Self> {
+        Self::parse_with_incremental_updates_options(reader, &super::ParseOptions::default())
+    }
+
+    /// Parse xref table with support for incremental updates and options
+    fn parse_with_incremental_updates_options<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        options: &super::ParseOptions,
     ) -> ParseResult<Self> {
         // Find the most recent xref offset
         let xref_offset = Self::find_xref_offset(reader)?;
@@ -99,7 +120,7 @@ impl XRefTable {
 
             // Parse the xref table at this offset
             reader.seek(SeekFrom::Start(offset))?;
-            let table = Self::parse_primary(reader)?;
+            let table = Self::parse_primary_with_options(reader, options)?;
 
             // Get the previous offset from trailer
             let prev_offset = table
@@ -133,7 +154,16 @@ impl XRefTable {
     }
 
     /// Parse xref table from a reader (handles both traditional and stream xrefs)
+    #[allow(dead_code)]
     fn parse_primary<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<Self> {
+        Self::parse_primary_with_options(reader, &super::ParseOptions::default())
+    }
+
+    /// Parse xref table from a reader with options
+    fn parse_primary_with_options<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        options: &super::ParseOptions,
+    ) -> ParseResult<Self> {
         let mut table = Self::new();
 
         // First, check if this is a linearized PDF with XRef at the beginning
@@ -171,7 +201,7 @@ impl XRefTable {
 
         if line.trim() == "xref" {
             // Traditional xref table
-            Self::parse_traditional_xref(reader, &mut table)?;
+            Self::parse_traditional_xref_with_options(reader, &mut table, options)?;
         } else {
             eprintln!(
                 "Not a traditional xref, checking for xref stream. Line: {:?}",
@@ -182,7 +212,7 @@ impl XRefTable {
             reader.seek(SeekFrom::Start(pos))?;
 
             // Try to parse as an object
-            let mut lexer = super::lexer::Lexer::new(reader);
+            let mut lexer = super::lexer::Lexer::new_with_options(reader, options.clone());
 
             // Read object header
             let obj_num = match lexer.next_token()? {
@@ -203,7 +233,7 @@ impl XRefTable {
             };
 
             // Parse the object (should be a stream)
-            let obj = super::objects::PdfObject::parse(&mut lexer)?;
+            let obj = super::objects::PdfObject::parse_with_options(&mut lexer, options)?;
 
             if let Some(stream) = obj.as_stream() {
                 // Check if it's an xref stream
@@ -246,9 +276,19 @@ impl XRefTable {
     }
 
     /// Parse traditional xref table
+    #[allow(dead_code)]
     fn parse_traditional_xref<R: Read + Seek>(
         reader: &mut BufReader<R>,
         table: &mut XRefTable,
+    ) -> ParseResult<()> {
+        Self::parse_traditional_xref_with_options(reader, table, &super::ParseOptions::default())
+    }
+
+    /// Parse traditional xref table with options
+    fn parse_traditional_xref_with_options<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        table: &mut XRefTable,
+        options: &super::ParseOptions,
     ) -> ParseResult<()> {
         let mut line = String::new();
 
@@ -329,8 +369,8 @@ impl XRefTable {
         }
 
         // Parse trailer dictionary
-        let mut lexer = super::lexer::Lexer::new(reader);
-        let trailer_obj = super::objects::PdfObject::parse(&mut lexer)?;
+        let mut lexer = super::lexer::Lexer::new_with_options(reader, options.clone());
+        let trailer_obj = super::objects::PdfObject::parse_with_options(&mut lexer, options)?;
         // Trailer object parsed successfully
 
         table.trailer = trailer_obj.as_dict().cloned();
@@ -462,7 +502,16 @@ impl XRefTable {
     }
 
     /// Parse XRef table using recovery mode (scan for objects)
+    #[allow(dead_code)]
     fn parse_with_recovery<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<Self> {
+        Self::parse_with_recovery_options(reader, &super::ParseOptions::default())
+    }
+
+    /// Parse XRef table using recovery mode with options
+    fn parse_with_recovery_options<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        _options: &super::ParseOptions,
+    ) -> ParseResult<Self> {
         let mut table = Self::new();
 
         // Read entire file into memory for scanning
@@ -980,13 +1029,13 @@ impl XRefStream {
                             .insert(first_obj_num + i, ext_entry.clone());
                         ext_entry.basic
                     }
-                    XRefEntryType::Custom(type_num) => {
+                    XRefEntryType::Custom(_type_num) => {
                         // Custom types are treated as in-use objects
                         // Log only in debug mode to avoid spam
                         #[cfg(debug_assertions)]
                         eprintln!(
                             "Note: Custom xref entry type {} for object {} (treating as in-use)",
-                            type_num,
+                            _type_num,
                             first_obj_num + i
                         );
 

@@ -1,15 +1,13 @@
 {
-  "total_pdfs": 743,
-  "successful": 555,
-  "parse_errors": 23,
+  "total_pdfs": 749,
+  "successful": 543,
+  "parse_errors": 21,
   "render_errors": 0,
-  "partial_errors": 165,
-  "total_duration_secs": 68.013254389,
+  "partial_errors": 185,
+  "total_duration_secs": 85.11941782,
   "error_categories": {
-    "ParseError::Other": 20,
-    "ParseError::InvalidHeader": 2,
-    "PageTreeError": 165,
-    "ParseError::XrefError": 1
+    "ParseError::Other": 21,
+    "PageTreeError": 185
   },
-  "error_count": 188
+  "error_count": 206
 }

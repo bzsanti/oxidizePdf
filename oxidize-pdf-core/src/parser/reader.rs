@@ -32,6 +32,13 @@ pub struct PdfReader<R: Read + Seek> {
     options: super::ParseOptions,
 }
 
+impl<R: Read + Seek> PdfReader<R> {
+    /// Get parsing options
+    pub fn options(&self) -> &super::ParseOptions {
+        &self.options
+    }
+}
+
 impl PdfReader<File> {
     /// Open a PDF file from a path
     pub fn open<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
@@ -44,7 +51,16 @@ impl PdfReader<File> {
         if let Some(ref mut f) = debug_file {
             writeln!(f, "File opened successfully").ok();
         }
-        Self::new(file)
+        // Use lenient options by default for maximum compatibility
+        let options = super::ParseOptions::lenient();
+        Self::new_with_options(file, options)
+    }
+
+    /// Open a PDF file from a path with strict parsing
+    pub fn open_strict<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
+        let file = File::open(path)?;
+        let options = super::ParseOptions::strict();
+        Self::new_with_options(file, options)
     }
 
     /// Open a PDF file as a PdfDocument
@@ -91,7 +107,7 @@ impl<R: Read + Seek> PdfReader<R> {
         if let Some(ref mut f) = debug_file {
             writeln!(f, "Parsing XRef table...").ok();
         }
-        let xref = XRefTable::parse(&mut buf_reader)?;
+        let xref = XRefTable::parse_with_options(&mut buf_reader, &options)?;
         if let Some(ref mut f) = debug_file {
             writeln!(f, "XRef table parsed with {} entries", xref.len()).ok();
         }
@@ -168,6 +184,11 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Get an object by reference
     pub fn get_object(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<&PdfObject> {
+        self.load_object_from_disk(obj_num, gen_num)
+    }
+
+    /// Internal method to load an object from disk without stack management
+    fn load_object_from_disk(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<&PdfObject> {
         let key = (obj_num, gen_num);
 
         // Check cache first
@@ -175,15 +196,10 @@ impl<R: Read + Seek> PdfReader<R> {
             return Ok(&self.object_cache[&key]);
         }
 
-        // Check for circular references only for non-cached objects
-        self.parse_context.visit_ref(obj_num, gen_num)?;
-
         // Check if this is a compressed object
         if let Some(ext_entry) = self.xref.get_extended_entry(obj_num) {
             if let Some((stream_obj_num, index_in_stream)) = ext_entry.compressed_info {
                 // This is a compressed object - need to extract from object stream
-                // Important: unvisit the reference before returning
-                self.parse_context.unvisit_ref(obj_num, gen_num);
                 return self.get_compressed_object(
                     obj_num,
                     gen_num,
@@ -202,8 +218,6 @@ impl<R: Read + Seek> PdfReader<R> {
         if !entry.in_use {
             // Free object
             self.object_cache.insert(key, PdfObject::Null);
-            // Important: unvisit the reference before returning
-            self.parse_context.unvisit_ref(obj_num, gen_num);
             return Ok(&self.object_cache[&key]);
         }
 
@@ -215,21 +229,34 @@ impl<R: Read + Seek> PdfReader<R> {
         self.reader.seek(std::io::SeekFrom::Start(entry.offset))?;
 
         // Parse object header (obj_num gen_num obj)
-        let mut lexer = super::lexer::Lexer::new(&mut self.reader);
+        let mut lexer =
+            super::lexer::Lexer::new_with_options(&mut self.reader, self.options.clone());
 
-        // Read object number
+        // Read object number with recovery
         let token = lexer.next_token()?;
         let read_obj_num = match token {
             super::lexer::Token::Integer(n) => n as u32,
             _ => {
-                return Err(ParseError::SyntaxError {
-                    position: entry.offset as usize,
-                    message: "Expected object number".to_string(),
-                })
+                // Try fallback recovery (simplified implementation)
+                if self.options.lenient_syntax {
+                    // For now, use the expected object number and issue warning
+                    if self.options.collect_warnings {
+                        eprintln!(
+                            "Warning: Using expected object number {} instead of parsed token",
+                            obj_num
+                        );
+                    }
+                    obj_num
+                } else {
+                    return Err(ParseError::SyntaxError {
+                        position: entry.offset as usize,
+                        message: "Expected object number".to_string(),
+                    });
+                }
             }
         };
 
-        if read_obj_num != obj_num {
+        if read_obj_num != obj_num && !self.options.lenient_syntax {
             return Err(ParseError::SyntaxError {
                 position: entry.offset as usize,
                 message: format!(
@@ -243,14 +270,25 @@ impl<R: Read + Seek> PdfReader<R> {
         let read_gen_num = match token {
             super::lexer::Token::Integer(n) => n as u16,
             _ => {
-                return Err(ParseError::SyntaxError {
-                    position: entry.offset as usize,
-                    message: "Expected generation number".to_string(),
-                })
+                if self.options.lenient_syntax {
+                    // In lenient mode, assume generation 0
+                    if self.options.collect_warnings {
+                        eprintln!(
+                            "Warning: Using generation 0 instead of parsed token for object {}",
+                            obj_num
+                        );
+                    }
+                    0
+                } else {
+                    return Err(ParseError::SyntaxError {
+                        position: entry.offset as usize,
+                        message: "Expected generation number".to_string(),
+                    });
+                }
             }
         };
 
-        if read_gen_num != gen_num {
+        if read_gen_num != gen_num && !self.options.lenient_syntax {
             return Err(ParseError::SyntaxError {
                 position: entry.offset as usize,
                 message: format!(
@@ -264,35 +302,60 @@ impl<R: Read + Seek> PdfReader<R> {
         match token {
             super::lexer::Token::Obj => {}
             _ => {
-                return Err(ParseError::SyntaxError {
-                    position: entry.offset as usize,
-                    message: "Expected 'obj' keyword".to_string(),
-                })
+                if self.options.lenient_syntax {
+                    // In lenient mode, try to continue without 'obj' keyword
+                    if self.options.collect_warnings {
+                        eprintln!(
+                            "Warning: Expected 'obj' keyword for object {} {}, continuing anyway",
+                            obj_num, gen_num
+                        );
+                    }
+                    // We need to process the token we just read as part of the object
+                    // This is a bit tricky - for now, we'll just continue
+                } else {
+                    return Err(ParseError::SyntaxError {
+                        position: entry.offset as usize,
+                        message: "Expected 'obj' keyword".to_string(),
+                    });
+                }
             }
         };
 
-        // Check recursion depth
+        // Check recursion depth and parse object
         self.parse_context.enter()?;
-        let obj = PdfObject::parse_with_options(&mut lexer, &self.options)?;
-        self.parse_context.exit();
+
+        let obj = match PdfObject::parse_with_options(&mut lexer, &self.options) {
+            Ok(obj) => {
+                self.parse_context.exit();
+                obj
+            }
+            Err(e) => {
+                self.parse_context.exit();
+                return Err(e);
+            }
+        };
 
         // Read 'endobj' keyword
         let token = lexer.next_token()?;
         match token {
             super::lexer::Token::EndObj => {}
             _ => {
-                return Err(ParseError::SyntaxError {
-                    position: entry.offset as usize,
-                    message: "Expected 'endobj' keyword".to_string(),
-                })
+                if self.options.lenient_syntax {
+                    // In lenient mode, warn but continue
+                    if self.options.collect_warnings {
+                        eprintln!("Warning: Expected 'endobj' keyword after object {} {}, continuing anyway", obj_num, gen_num);
+                    }
+                } else {
+                    return Err(ParseError::SyntaxError {
+                        position: entry.offset as usize,
+                        message: "Expected 'endobj' keyword".to_string(),
+                    });
+                }
             }
         };
 
         // Cache the object
         self.object_cache.insert(key, obj);
-
-        // Unvisit the reference now that we're done
-        self.parse_context.unvisit_ref(obj_num, gen_num);
 
         Ok(&self.object_cache[&key])
     }
@@ -317,8 +380,8 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // Load the object stream if not cached
         if !self.object_stream_cache.contains_key(&stream_obj_num) {
-            // Get the stream object
-            let stream_obj = self.get_object(stream_obj_num, 0)?;
+            // Get the stream object using the internal method (no stack tracking)
+            let stream_obj = self.load_object_from_disk(stream_obj_num, 0)?;
 
             if let Some(stream) = stream_obj.as_stream() {
                 // Parse the object stream
@@ -376,7 +439,33 @@ impl<R: Read + Seek> PdfReader<R> {
                     }
                 }
 
-                return Err(ParseError::MissingKey("Pages".to_string()));
+                // If Pages is missing and we have lenient parsing, try to find it
+                if self.options.lenient_syntax {
+                    if self.options.collect_warnings {
+                        eprintln!("Warning: Missing Pages in catalog, searching for page tree");
+                    }
+                    // Search for a Pages object in the document
+                    let mut found_pages = None;
+                    for i in 1..self.xref.len() as u32 {
+                        if let Ok(obj) = self.get_object(i, 0) {
+                            if let Some(dict) = obj.as_dict() {
+                                if let Some(obj_type) = dict.get("Type").and_then(|t| t.as_name()) {
+                                    if obj_type.0 == "Pages" {
+                                        found_pages = Some((i, 0));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let Some((obj_num, gen_num)) = found_pages {
+                        (obj_num, gen_num)
+                    } else {
+                        return Err(ParseError::MissingKey("Pages".to_string()));
+                    }
+                } else {
+                    return Err(ParseError::MissingKey("Pages".to_string()));
+                }
             }
         };
 
@@ -491,6 +580,11 @@ impl<R: Read + Seek> PdfReader<R> {
     /// Clear the parse context (useful to avoid false circular references)
     pub fn clear_parse_context(&mut self) {
         self.parse_context = StackSafeContext::new();
+    }
+
+    /// Get a mutable reference to the parse context
+    pub fn parse_context_mut(&mut self) -> &mut StackSafeContext {
+        &mut self.parse_context
     }
 
     /// Find all page objects by scanning the entire PDF
@@ -1025,11 +1119,10 @@ startxref
     fn test_reader_with_options() {
         let pdf_data = create_minimal_pdf();
         let cursor = Cursor::new(pdf_data);
-        let options = ParseOptions {
-            lenient_streams: true,
-            max_recovery_bytes: 2000,
-            collect_warnings: true,
-        };
+        let mut options = ParseOptions::default();
+        options.lenient_streams = true;
+        options.max_recovery_bytes = 2000;
+        options.collect_warnings = true;
 
         let reader = PdfReader::new_with_options(cursor, options);
         assert!(reader.is_ok());
@@ -1077,11 +1170,10 @@ startxref
 
         // Test lenient mode (should succeed)
         let cursor = Cursor::new(pdf_data);
-        let options = ParseOptions {
-            lenient_streams: true,
-            max_recovery_bytes: 1000,
-            collect_warnings: false,
-        };
+        let mut options = ParseOptions::default();
+        options.lenient_streams = true;
+        options.max_recovery_bytes = 1000;
+        options.collect_warnings = false;
         let lenient_reader = PdfReader::new_with_options(cursor, options);
         assert!(lenient_reader.is_ok());
     }
@@ -1096,11 +1188,10 @@ startxref
 
     #[test]
     fn test_parse_options_clone() {
-        let options = ParseOptions {
-            lenient_streams: true,
-            max_recovery_bytes: 2000,
-            collect_warnings: true,
-        };
+        let mut options = ParseOptions::default();
+        options.lenient_streams = true;
+        options.max_recovery_bytes = 2000;
+        options.collect_warnings = true;
         let cloned = options.clone();
         assert_eq!(cloned.lenient_streams, true);
         assert_eq!(cloned.max_recovery_bytes, 2000);

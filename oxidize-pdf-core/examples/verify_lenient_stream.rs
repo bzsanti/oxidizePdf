@@ -46,6 +46,9 @@ startxref
         lenient_streams: false,
         max_recovery_bytes: 1000,
         collect_warnings: false,
+        lenient_encoding: true,
+        preferred_encoding: None,
+        lenient_syntax: false,
     };
 
     match PdfReader::new_with_options(cursor, strict_options) {
@@ -75,6 +78,9 @@ startxref
         lenient_streams: true,
         max_recovery_bytes: 1000,
         collect_warnings: true,
+        lenient_encoding: true,
+        preferred_encoding: None,
+        lenient_syntax: true,
     };
 
     match PdfReader::new_with_options(cursor, lenient_options) {

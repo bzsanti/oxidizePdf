@@ -1,105 +1,60 @@
 #!/usr/bin/env python3
-"""Simple PDF analysis script to count errors by type"""
+"""Simple script to analyze the 3 specific PDFs with circular reference issues."""
 
-import os
 import subprocess
-import re
-from collections import defaultdict
+import os
 
-def main():
-    fixtures_dir = "tests/fixtures"
+problematic_pdfs = [
+    "tests/fixtures/Course_Glossary_SUPPLY_LIST.pdf",
+    "tests/fixtures/liarsandoutliers_enablingthetrustthatsocietyneedstothrive.pdf",
+    "tests/fixtures/cryptography_engineering_design_principles_and_practical_applications.pdf"
+]
+
+print("=== Analyzing Specific Problematic PDFs ===\n")
+
+for pdf_path in problematic_pdfs:
+    print(f"\n{'='*60}")
+    print(f"Analyzing: {os.path.basename(pdf_path)}")
+    print(f"File size: {os.path.getsize(pdf_path):,} bytes")
+    print(f"{'='*60}\n")
     
-    # Check if fixtures directory exists and has PDFs
-    if os.path.exists(fixtures_dir) and os.path.isdir(fixtures_dir):
-        pdf_files = [f for f in os.listdir(fixtures_dir) if f.endswith('.pdf')]
-        if pdf_files:
-            print(f"Found {len(pdf_files)} PDFs in {fixtures_dir}")
-        else:
-            print(f"No PDFs found in {fixtures_dir}")
-            print("Please add PDF files to tests/fixtures/ directory")
-            return
-    else:
-        print(f"Directory {fixtures_dir} does not exist!")
-        print("Creating directory...")
-        os.makedirs(fixtures_dir, exist_ok=True)
-        print("Please add PDF files to tests/fixtures/ directory")
-        return
-    
-    successful = 0
-    failed = 0
-    error_types = defaultdict(int)
-    error_details = defaultdict(list)
-    
-    print(f"Analyzing {len(pdf_files)} PDFs...")
-    
-    for i, pdf_file in enumerate(pdf_files):
-        if i % 50 == 0:
-            print(f"Progress: {i}/{len(pdf_files)}...")
-            
-        pdf_path = os.path.join(fixtures_dir, pdf_file)
-        
-        # Run oxidizepdf info command
+    # Test with oxidize-pdf CLI
+    print("Testing with oxidize-pdf CLI:")
+    try:
         result = subprocess.run(
-            ['cargo', 'run', '--bin', 'oxidizepdf', '--', 'info', pdf_path],
+            ["cargo", "run", "--bin", "oxidizepdf", "--", "info", pdf_path],
             capture_output=True,
             text=True,
-            cwd='.'
+            timeout=10
         )
-        
         if result.returncode == 0:
-            successful += 1
+            print("SUCCESS!")
+            print(result.stdout)
         else:
-            failed += 1
-            # Extract error type from stderr
-            stderr = result.stderr
-            
-            # Look for specific error patterns
-            if "MissingKey" in stderr:
-                # Extract which key is missing
-                match = re.search(r'MissingKey\("([^"]+)"\)', stderr)
-                if match:
-                    key = match.group(1)
-                    error_types[f"MissingKey: {key}"] += 1
-                    error_details[f"MissingKey: {key}"].append(pdf_file)
-                else:
-                    error_types["MissingKey"] += 1
-                    error_details["MissingKey"].append(pdf_file)
-            elif "Invalid header" in stderr or "InvalidHeader" in stderr:
-                error_types["InvalidHeader"] += 1
-                error_details["InvalidHeader"].append(pdf_file)
-            elif "xref" in stderr.lower() or "XrefError" in stderr:
-                error_types["XrefError"] += 1
-                error_details["XrefError"].append(pdf_file)
-            elif "PageCount" in stderr:
-                error_types["PageCount: Other"] += 1
-                error_details["PageCount: Other"].append(pdf_file)
-            else:
-                error_types["Other"] += 1
-                error_details["Other"].append(pdf_file)
-                if len(error_details["Other"]) <= 5:
-                    print(f"  Other error in {pdf_file}: {stderr[:200]}")
+            print("FAILED!")
+            print("STDERR:")
+            print(result.stderr)
+    except subprocess.TimeoutExpired:
+        print("TIMEOUT after 10 seconds")
+    except Exception as e:
+        print(f"EXCEPTION: {str(e)}")
     
-    # Print results
-    print(f"\nSimple PDF Analysis Report")
-    print(f"=========================\n")
-    print(f"Total PDFs: {len(pdf_files)}")
-    print(f"Successful: {successful} ({successful/len(pdf_files)*100:.1f}%)")
-    print(f"Failed: {failed} ({failed/len(pdf_files)*100:.1f}%)\n")
+    # Test with pdfinfo
+    print("\n\nTesting with pdfinfo:")
+    try:
+        result = subprocess.run(
+            ["pdfinfo", pdf_path],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            print("SUCCESS!")
+            print(result.stdout[:500] + "..." if len(result.stdout) > 500 else result.stdout)
+        else:
+            print("FAILED!")
+            print(result.stderr)
+    except:
+        print("pdfinfo not available")
     
-    print(f"Error Categories:")
-    for error_type, count in sorted(error_types.items(), key=lambda x: x[1], reverse=True):
-        print(f"  {error_type}: {count} PDFs")
-    
-    print(f"\nFirst 100 Failed PDFs:")
-    count = 0
-    for error_type in sorted(error_types.keys()):
-        for pdf in error_details[error_type][:10]:  # Show up to 10 per category
-            print(f"  {pdf}: {error_type}")
-            count += 1
-            if count >= 100:
-                break
-        if count >= 100:
-            break
-
-if __name__ == "__main__":
-    main()
+    print("\n")

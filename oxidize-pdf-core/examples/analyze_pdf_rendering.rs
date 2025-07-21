@@ -3,7 +3,7 @@
 //! This tool analyzes all PDFs in the fixtures directory to identify
 //! rendering problems and generate a detailed report.
 
-use oxidize_pdf::parser::{ParseError, PdfDocument, PdfReader};
+use oxidize_pdf::parser::{ParseError, PdfReader};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Write;

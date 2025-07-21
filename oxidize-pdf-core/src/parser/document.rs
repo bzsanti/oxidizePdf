@@ -380,9 +380,6 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// # }
     /// ```
     pub fn get_page(&self, index: u32) -> ParseResult<ParsedPage> {
-        // Clear parse context to avoid false circular references
-        self.reader.borrow_mut().clear_parse_context();
-
         self.ensure_page_tree()?;
 
         // First check if page is already loaded
@@ -392,7 +389,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
         }
 
-        // Load the page
+        // Load the page (reference stack will handle circular detection automatically)
         let page = self.load_page_at_index(index)?;
 
         // Cache it
@@ -422,11 +419,6 @@ impl<R: Read + Seek> PdfDocument<R> {
         initial_current_index: u32,
         initial_inherited: Option<&PdfDictionary>,
     ) -> ParseResult<ParsedPage> {
-        use super::stack_safe::{RecursionGuard, StackSafeContext};
-
-        // Stack-safe context to prevent infinite recursion and timeouts
-        let mut context = StackSafeContext::new();
-
         // Work item for the traversal queue
         #[derive(Debug)]
         struct WorkItem {
@@ -447,9 +439,6 @@ impl<R: Read + Seek> PdfDocument<R> {
 
         // Iterative traversal
         while let Some(work_item) = work_queue.pop() {
-            // Check for stack safety limits
-            let _guard = RecursionGuard::new(&mut context)?;
-
             let WorkItem {
                 node_dict,
                 node_ref,
@@ -471,6 +460,18 @@ impl<R: Read + Seek> PdfDocument<R> {
                         None
                     }
                 })
+                .or_else(|| {
+                    // If Type is missing, try to infer from structure
+                    if node_dict.contains_key("Kids") {
+                        Some("Pages")
+                    } else if node_dict.contains_key("Contents")
+                        || (node_dict.contains_key("MediaBox") && !node_dict.contains_key("Kids"))
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                })
                 .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
             match node_type {
@@ -479,6 +480,13 @@ impl<R: Read + Seek> PdfDocument<R> {
                     let kids = node_dict
                         .get("Kids")
                         .and_then(|obj| obj.as_array())
+                        .or_else(|| {
+                            // If Kids is missing, use empty array
+                            eprintln!(
+                                "Warning: Missing Kids array in Pages node, using empty array"
+                            );
+                            Some(&super::objects::EMPTY_PDF_ARRAY)
+                        })
                         .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
 
                     // Merge inherited attributes

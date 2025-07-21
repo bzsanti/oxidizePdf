@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::objects::{PdfArray, PdfDictionary, PdfObject};
-    use super::super::stack_safe::{RecursionGuard, ReferenceGuard, StackSafeContext};
+    use super::super::stack_safe::{RecursionGuard, ReferenceStackGuard, StackSafeContext};
     use super::super::ParseError;
     use std::time::Duration;
 
@@ -45,17 +45,18 @@ mod tests {
         let mut context = StackSafeContext::new();
 
         // First reference should work
-        assert!(context.visit_ref(1, 0).is_ok());
+        assert!(context.push_ref(1, 0).is_ok());
 
         // Circular reference should be detected
-        assert!(context.visit_ref(1, 0).is_err());
+        assert!(context.push_ref(1, 0).is_err());
 
-        // Different generation should work
-        assert!(context.visit_ref(1, 1).is_ok());
+        // Pop and try different generation
+        context.pop_ref();
+        assert!(context.push_ref(1, 1).is_ok());
 
-        // Unvisit and revisit should work
-        context.unvisit_ref(1, 0);
-        assert!(context.visit_ref(1, 0).is_ok());
+        // Pop and revisit original should work
+        context.pop_ref();
+        assert!(context.push_ref(1, 0).is_ok());
     }
 
     #[test]
@@ -72,16 +73,16 @@ mod tests {
     }
 
     #[test]
-    fn test_reference_guard_raii() {
+    fn test_reference_stack_guard_raii() {
         let mut context = StackSafeContext::new();
 
         {
-            let _guard = ReferenceGuard::new(&mut context, 5, 0).unwrap();
-            // Reference is visited
-        } // Guard dropped, reference unvisited
+            let _guard = ReferenceStackGuard::new(&mut context, 5, 0).unwrap();
+            // Reference is pushed to stack
+        } // Guard dropped, reference popped
 
         // Should be able to visit again
-        assert!(context.visit_ref(5, 0).is_ok());
+        assert!(context.push_ref(5, 0).is_ok());
     }
 
     #[test]
@@ -136,14 +137,15 @@ mod tests {
     fn test_child_context() {
         let mut parent_context = StackSafeContext::with_limits(100, 60);
         parent_context.depth = 10;
-        parent_context.visit_ref(1, 0).unwrap();
+        parent_context.push_ref(1, 0).unwrap();
+        parent_context.pop_ref(); // Mark as completed
 
         let child_context = parent_context.child();
 
         // Child should inherit state
         assert_eq!(child_context.depth, 10);
         assert_eq!(child_context.max_depth, 100);
-        assert!(child_context.visited_refs.contains(&(1, 0)));
+        assert!(child_context.completed_refs.contains(&(1, 0)));
 
         // Child inherits the start time (by design for timeout consistency)
         assert_eq!(child_context.start_time, parent_context.start_time);
@@ -203,13 +205,13 @@ mod tests {
         // Create a chain of references
         let refs = [(1, 0), (2, 0), (3, 0), (4, 0), (5, 0)];
 
-        // Visit all references in chain
+        // Push all references to stack (simulating navigation chain)
         for &(obj, gen) in &refs {
-            assert!(context.visit_ref(obj, gen).is_ok());
+            assert!(context.push_ref(obj, gen).is_ok());
         }
 
         // Attempt to revisit the first one (simulating a cycle)
-        assert!(context.visit_ref(1, 0).is_err());
+        assert!(context.push_ref(1, 0).is_err());
     }
 
     #[test]
@@ -218,7 +220,8 @@ mod tests {
 
         assert_eq!(context.depth, 0);
         assert_eq!(context.max_depth, 1000);
-        assert!(context.visited_refs.is_empty());
+        assert!(context.active_stack.is_empty());
+        assert!(context.completed_refs.is_empty());
         assert_eq!(context.timeout, Duration::from_secs(30));
     }
 
@@ -228,7 +231,8 @@ mod tests {
 
         assert_eq!(context.depth, 0);
         assert_eq!(context.max_depth, 500);
-        assert!(context.visited_refs.is_empty());
+        assert!(context.active_stack.is_empty());
+        assert!(context.completed_refs.is_empty());
         assert_eq!(context.timeout, Duration::from_secs(10));
     }
 
@@ -236,15 +240,15 @@ mod tests {
     fn test_multiple_reference_generations() {
         let mut context = StackSafeContext::new();
 
-        // Different generations of the same object should be allowed
-        assert!(context.visit_ref(1, 0).is_ok());
-        assert!(context.visit_ref(1, 1).is_ok());
-        assert!(context.visit_ref(1, 2).is_ok());
+        // Different generations of the same object should be allowed in stack
+        assert!(context.push_ref(1, 0).is_ok());
+        assert!(context.push_ref(1, 1).is_ok());
+        assert!(context.push_ref(1, 2).is_ok());
 
-        // But same generation should fail
-        assert!(context.visit_ref(1, 0).is_err());
-        assert!(context.visit_ref(1, 1).is_err());
-        assert!(context.visit_ref(1, 2).is_err());
+        // But same generation should fail (circular reference)
+        assert!(context.push_ref(1, 0).is_err());
+        assert!(context.push_ref(1, 1).is_err());
+        assert!(context.push_ref(1, 2).is_err());
     }
 
     #[test]
@@ -271,14 +275,17 @@ mod tests {
     fn test_performance_with_many_references() {
         let mut context = StackSafeContext::new();
 
-        // Add many references (testing HashSet performance)
+        // Process many references sequentially (testing completed_refs performance)
         for obj_num in 0..1000 {
-            assert!(context.visit_ref(obj_num, 0).is_ok());
+            assert!(context.push_ref(obj_num, 0).is_ok());
+            context.pop_ref(); // Mark as completed
         }
 
-        // Should still be fast to check
-        assert!(context.visit_ref(500, 0).is_err()); // Already visited
-        assert!(context.visit_ref(1001, 0).is_ok()); // New one
+        // Should still be fast to check completed references
+        // Since 500 was completed, it should be OK to push again
+        assert!(context.push_ref(500, 0).is_ok());
+        context.pop_ref();
+        assert!(context.push_ref(1001, 0).is_ok()); // New one
     }
 
     #[test]
@@ -298,8 +305,8 @@ mod tests {
         }
 
         // Test circular reference error
-        context.visit_ref(10, 5).unwrap();
-        let cycle_error = context.visit_ref(10, 5).err().unwrap();
+        context.push_ref(10, 5).unwrap();
+        let cycle_error = context.push_ref(10, 5).err().unwrap();
         if let ParseError::SyntaxError { message, .. } = cycle_error {
             assert!(message.contains("Circular reference detected"));
             assert!(message.contains("10 5 R"));

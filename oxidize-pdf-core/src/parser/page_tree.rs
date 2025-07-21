@@ -180,6 +180,25 @@ impl PageTree {
                     None
                 }
             })
+            .or_else(|| {
+                // If Type is missing and we have lenient parsing, try to infer
+                if reader.options().lenient_syntax {
+                    // If it has Kids, it's likely a Pages node
+                    if node.contains_key("Kids") {
+                        Some("Pages")
+                    }
+                    // If it has Contents or MediaBox but no Kids, it's likely a Page
+                    else if node.contains_key("Contents")
+                        || (node.contains_key("MediaBox") && !node.contains_key("Kids"))
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
         match node_type {
@@ -188,6 +207,19 @@ impl PageTree {
                 let kids = node
                     .get("Kids")
                     .and_then(|obj| obj.as_array())
+                    .or_else(|| {
+                        // If Kids is missing and we have lenient parsing, use empty array
+                        if reader.options().lenient_syntax {
+                            if reader.options().collect_warnings {
+                                eprintln!(
+                                    "Warning: Missing Kids array in Pages node, using empty array"
+                                );
+                            }
+                            Some(&super::objects::EMPTY_PDF_ARRAY)
+                        } else {
+                            None
+                        }
+                    })
                     .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
 
                 // Merge inherited attributes

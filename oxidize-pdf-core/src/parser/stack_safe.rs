@@ -20,8 +20,10 @@ pub struct StackSafeContext {
     pub depth: usize,
     /// Maximum allowed depth
     pub max_depth: usize,
-    /// Set of visited object references to detect cycles
-    pub visited_refs: HashSet<(u32, u16)>,
+    /// Pila de referencias activas (para detectar ciclos reales)
+    pub active_stack: Vec<(u32, u16)>,
+    /// Referencias completamente procesadas (no son ciclos)
+    pub completed_refs: HashSet<(u32, u16)>,
     /// Start time for timeout tracking
     pub start_time: std::time::Instant,
     /// Timeout duration
@@ -40,7 +42,8 @@ impl StackSafeContext {
         Self {
             depth: 0,
             max_depth: MAX_RECURSION_DEPTH,
-            visited_refs: HashSet::new(),
+            active_stack: Vec::new(),
+            completed_refs: HashSet::new(),
             start_time: std::time::Instant::now(),
             timeout: std::time::Duration::from_secs(PARSING_TIMEOUT_SECS),
         }
@@ -51,7 +54,8 @@ impl StackSafeContext {
         Self {
             depth: 0,
             max_depth,
-            visited_refs: HashSet::new(),
+            active_stack: Vec::new(),
+            completed_refs: HashSet::new(),
             start_time: std::time::Instant::now(),
             timeout: std::time::Duration::from_secs(timeout_secs),
         }
@@ -81,22 +85,28 @@ impl StackSafeContext {
         }
     }
 
-    /// Check if we've visited an object reference (for cycle detection)
-    pub fn visit_ref(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<()> {
+    /// Push a reference onto the active stack (for cycle detection)
+    pub fn push_ref(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<()> {
         let ref_key = (obj_num, gen_num);
-        if self.visited_refs.contains(&ref_key) {
+
+        // Check if it's already in the active stack (real circular reference)
+        if self.active_stack.contains(&ref_key) {
             return Err(ParseError::SyntaxError {
                 position: 0,
                 message: format!("Circular reference detected: {} {} R", obj_num, gen_num),
             });
         }
-        self.visited_refs.insert(ref_key);
+
+        // It's OK if it was already processed completely
+        self.active_stack.push(ref_key);
         Ok(())
     }
 
-    /// Mark a reference as no longer being processed
-    pub fn unvisit_ref(&mut self, obj_num: u32, gen_num: u16) {
-        self.visited_refs.remove(&(obj_num, gen_num));
+    /// Pop a reference from the active stack and mark as completed
+    pub fn pop_ref(&mut self) {
+        if let Some(ref_key) = self.active_stack.pop() {
+            self.completed_refs.insert(ref_key);
+        }
     }
 
     /// Check if parsing has timed out
@@ -115,7 +125,8 @@ impl StackSafeContext {
         Self {
             depth: self.depth,
             max_depth: self.max_depth,
-            visited_refs: self.visited_refs.clone(),
+            active_stack: self.active_stack.clone(),
+            completed_refs: self.completed_refs.clone(),
             start_time: self.start_time,
             timeout: self.timeout,
         }
@@ -141,28 +152,22 @@ impl<'a> Drop for RecursionGuard<'a> {
     }
 }
 
-/// RAII guard for reference tracking
-pub struct ReferenceGuard<'a> {
+/// RAII guard for reference stack tracking
+pub struct ReferenceStackGuard<'a> {
     context: &'a mut StackSafeContext,
-    obj_num: u32,
-    gen_num: u16,
 }
 
-impl<'a> ReferenceGuard<'a> {
-    /// Create a new reference guard
+impl<'a> ReferenceStackGuard<'a> {
+    /// Create a new reference stack guard
     pub fn new(context: &'a mut StackSafeContext, obj_num: u32, gen_num: u16) -> ParseResult<Self> {
-        context.visit_ref(obj_num, gen_num)?;
-        Ok(Self {
-            context,
-            obj_num,
-            gen_num,
-        })
+        context.push_ref(obj_num, gen_num)?;
+        Ok(Self { context })
     }
 }
 
-impl<'a> Drop for ReferenceGuard<'a> {
+impl<'a> Drop for ReferenceStackGuard<'a> {
     fn drop(&mut self) {
-        self.context.unvisit_ref(self.obj_num, self.gen_num);
+        self.context.pop_ref();
     }
 }
 
@@ -196,18 +201,21 @@ mod tests {
     fn test_cycle_detection() {
         let mut context = StackSafeContext::new();
 
-        // First visit should work
-        assert!(context.visit_ref(1, 0).is_ok());
+        // First push should work
+        assert!(context.push_ref(1, 0).is_ok());
 
-        // Second visit to same ref should fail
-        assert!(context.visit_ref(1, 0).is_err());
+        // Second push of same ref should fail (circular)
+        assert!(context.push_ref(1, 0).is_err());
 
         // Different ref should work
-        assert!(context.visit_ref(2, 0).is_ok());
+        assert!(context.push_ref(2, 0).is_ok());
 
-        // Unvisit and try again
-        context.unvisit_ref(1, 0);
-        assert!(context.visit_ref(1, 0).is_ok());
+        // Pop refs
+        context.pop_ref(); // pops 2,0
+        context.pop_ref(); // pops 1,0
+
+        // Now we can push 1,0 again
+        assert!(context.push_ref(1, 0).is_ok());
     }
 
     #[test]
@@ -225,18 +233,20 @@ mod tests {
     }
 
     #[test]
-    fn test_reference_guard() {
+    fn test_reference_stack_guard() {
         let mut context = StackSafeContext::new();
 
         {
-            let _guard = ReferenceGuard::new(&mut context, 1, 0).unwrap();
-            // Can't access context while guard is active due to borrow checker
+            let _guard = ReferenceStackGuard::new(&mut context, 1, 0).unwrap();
+            // Reference is in active stack while guard is active
+            // Note: Can't check stack length here due to borrow checker constraints
         }
 
-        // Should auto-unvisit when guard drops
-        assert!(!context.visited_refs.contains(&(1, 0)));
+        // Should auto-pop when guard drops
+        assert_eq!(context.active_stack.len(), 0);
+        assert!(context.completed_refs.contains(&(1, 0)));
 
         // Can visit again after guard is dropped
-        assert!(context.visit_ref(1, 0).is_ok());
+        assert!(context.push_ref(1, 0).is_ok());
     }
 }
