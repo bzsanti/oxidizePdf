@@ -396,6 +396,41 @@ pub struct DocumentMetadata {
     pub page_count: Option<u32>,
 }
 
+pub struct EOLIter<'s> {
+    remainder: &'s str,
+}
+impl<'s> Iterator for EOLIter<'s> {
+    type Item = &'s str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remainder.is_empty() {
+            return None;
+        }
+
+        if let Some((i, sep)) = ["\r\n", "\n", "\r"]
+            .iter()
+            .filter_map(|&sep| self.remainder.find(sep).map(|i| (i, sep)))
+            .min_by_key(|(i, _)| *i)
+        {
+            let (line, rest) = self.remainder.split_at(i);
+            self.remainder = &rest[sep.len()..];
+            Some(line)
+        } else {
+            let line = self.remainder;
+            self.remainder = "";
+            Some(line)
+        }
+    }
+}
+pub trait PDFLines: AsRef<str> {
+    fn pdf_lines(&self) -> EOLIter<'_> {
+        EOLIter { remainder: self.as_ref() }
+    }
+}
+impl PDFLines for &str {}
+impl<'a> PDFLines for std::borrow::Cow<'a, str> {}
+impl PDFLines for String {}
+
 #[cfg(test)]
 mod tests {
 

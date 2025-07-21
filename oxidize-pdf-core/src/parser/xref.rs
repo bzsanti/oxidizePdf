@@ -5,6 +5,7 @@
 use super::{ParseError, ParseResult};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use crate::parser::reader::PDFLines;
 
 /// Cross-reference entry
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -209,14 +210,13 @@ impl XRefTable {
 
         // Convert to string and find startxref
         let content = String::from_utf8_lossy(&buffer);
-        let lines: Vec<&str> = content.lines().collect();
+        let mut lines = content.pdf_lines();
 
         // Find startxref line - need to iterate forward after finding it
-        for (i, line) in lines.iter().enumerate() {
+        while let Some(line) = lines.next() {
             if line.trim() == "startxref" {
                 // The offset should be on the next line
-                if i + 1 < lines.len() {
-                    let offset_line = lines[i + 1];
+                if let Some(offset_line) = lines.next() {
                     let offset = offset_line
                         .trim()
                         .parse::<u64>()
