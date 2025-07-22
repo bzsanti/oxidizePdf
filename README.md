@@ -22,12 +22,22 @@ A **production-ready** pure Rust PDF generation and manipulation library with **
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
+## Editions
+
+oxidize-pdf is available in multiple editions to meet different needs:
+
+- **🌍 Community Edition** (Open Source - GPL v3) - Essential PDF features for most use cases
+- **💼 PRO Edition** (Commercial License) - Advanced features for professional use
+- **🏢 Enterprise Edition** (Custom License) - Unlimited scale with premium support
+
+See [EDITIONS.md](EDITIONS.md) for detailed feature comparison and licensing information.
+
 ## 🎉 What's New in v1.1.0 - BREAKTHROUGH RELEASE!
 
 **Production-ready with exceptional compatibility:**
 - 🏆 **99.7% success rate** on valid PDFs (728/730 from 749 real-world PDFs tested)
 - 🛡️ **Stack overflow DoS vulnerability eliminated** - secure against malicious PDFs
-- 🚀 **215+ PDFs/second** processing with parallel architecture
+- 🚀 **179+ PDFs/second** processing with parallel architecture
 - ⚡ **All circular reference errors resolved** (170 → 0) through robust stack-safe parsing
 - 🔧 **Comprehensive lenient parsing** - handles malformed PDFs gracefully
 - 📊 **Advanced analysis tools** - custom `/analyze-pdfs` command for automated testing
@@ -83,7 +93,7 @@ fn main() -> Result<()> {
 ### Parse Existing PDF
 
 ```rust
-use oxidize_pdf::{PdfReader, Result};
+use oxidize_pdf::{parser::PdfReader, text::TextExtractor, Result};
 
 fn main() -> Result<()> {
     // Open and parse a PDF
@@ -95,10 +105,11 @@ fn main() -> Result<()> {
     
     // Extract text from all pages
     let document = reader.into_document();
-    let text = document.extract_text()?;
+    let extractor = TextExtractor::new();
+    let extracted_pages = extractor.extract_from_document(&document)?;
     
-    for (page_num, page_text) in text.iter().enumerate() {
-        println!("Page {}: {}", page_num + 1, page_text.content);
+    for (page_num, page_text) in extracted_pages.iter().enumerate() {
+        println!("Page {}: {}", page_num + 1, page_text.text);
     }
     
     Ok(())
@@ -354,22 +365,24 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## Roadmap
 
 ### Community Edition (Open Source)
-- [ ] Basic transparency/opacity support (Q3 2025)
-- [ ] PNG image support
-- [ ] XRef stream support (PDF 1.5+)
-- [ ] TrueType/OpenType font embedding
-- [ ] Improved text extraction with CMap/ToUnicode
+- ✅ Basic transparency/opacity support (COMPLETED)
+- ✅ Advanced text extraction with layout analysis (COMPLETED)
+- ✅ Batch processing and parallel execution (COMPLETED)
+- [ ] Additional compression filters (LZW, RunLength)
+- [ ] Additional color spaces (CalGray, CalRGB)
+- [ ] Form data extraction (read-only)
+- [ ] Annotation extraction (read-only)
 
-### PRO/Enterprise Features
-- [ ] Advanced transparency (blend modes, groups)
-- [ ] Cloud OCR providers (Azure, AWS, Google Cloud)
-- [ ] OCR batch processing and parallel execution
-- [ ] PDF forms and annotations
+### PRO Edition Features
+- [ ] Full encryption/decryption support
+- [ ] Form creation and editing
 - [ ] Digital signatures
-- [ ] PDF/A compliance
-- [ ] Encryption support
+- [ ] PDF to Word/Excel/PowerPoint conversion
+- [ ] Advanced OCR with multiple engines
+- [ ] PDF/A compliance validation
+- [ ] Advanced color spaces and transparency
 
-See our [detailed roadmap](ROADMAP.md) for more information.
+See our [detailed roadmap](ROADMAP.md) and [edition comparison](EDITIONS.md) for more information.
 
 ## Support
 
