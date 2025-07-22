@@ -88,7 +88,7 @@ curl -X POST http://localhost:3000/api/create \
 
 #### 3. Extract Text from PDF
 
-**POST** `/api/extract`
+**POST** `/api/extract/text` or `/api/extract` (for backward compatibility)
 
 Extracts text content from an uploaded PDF file.
 
@@ -155,6 +155,176 @@ curl -X POST http://localhost:3000/api/merge \
   -F "files=@document3.pdf" \
   -F 'options={"preserve_bookmarks": true, "optimize": false}' \
   --output merged.pdf
+```
+
+#### 5. Split PDF
+
+**POST** `/api/split`
+
+Splits a PDF file into multiple files.
+
+**Request:**
+- **Content-Type:** `multipart/form-data`
+- **Body:** 
+  - PDF file with field name `file`
+  - Optional configuration with field name `options`
+
+**Options JSON:**
+```json
+{
+  "mode": "pages",         // "pages" for single pages or "chunks" for groups
+  "chunk_size": 3,         // Number of pages per chunk (for chunks mode)
+  "ranges": ["1-3", "5-7"] // Custom ranges (future feature)
+}
+```
+
+**Response:**
+- **Content-Type:** `application/pdf`
+- **Content-Disposition:** `attachment; filename="split_1.pdf"`
+- **Body:** First split PDF file (for simplicity)
+
+**Example:**
+```bash
+# Split into individual pages
+curl -X POST http://localhost:3000/api/split \
+  -F "file=@document.pdf" \
+  -F 'options={"mode": "pages"}' \
+  --output split_1.pdf
+
+# Split into chunks of 3 pages
+curl -X POST http://localhost:3000/api/split \
+  -F "file=@document.pdf" \
+  -F 'options={"mode": "chunks", "chunk_size": 3}' \
+  --output split_1.pdf
+```
+
+#### 6. Rotate PDF Pages
+
+**POST** `/api/rotate`
+
+Rotates pages in a PDF file.
+
+**Request:**
+- **Content-Type:** `multipart/form-data`
+- **Body:** 
+  - PDF file with field name `file`
+  - Optional configuration with field name `options`
+
+**Options JSON:**
+```json
+{
+  "angle": 90,              // Rotation angle: 90, 180, or 270
+  "pages": "all"            // Page range: "all", "1", "1-5", "1,3,5"
+}
+```
+
+**Response:**
+- **Content-Type:** `application/pdf`
+- **Content-Disposition:** `attachment; filename="rotated.pdf"`
+- **Body:** Rotated PDF binary data
+
+**Example:**
+```bash
+# Rotate all pages 90 degrees
+curl -X POST http://localhost:3000/api/rotate \
+  -F "file=@document.pdf" \
+  -F 'options={"angle": 90, "pages": "all"}' \
+  --output rotated.pdf
+
+# Rotate specific pages 180 degrees
+curl -X POST http://localhost:3000/api/rotate \
+  -F "file=@document.pdf" \
+  -F 'options={"angle": 180, "pages": "1,3,5"}' \
+  --output rotated.pdf
+```
+
+#### 7. Reorder PDF Pages
+
+**POST** `/api/reorder`
+
+Reorders pages in a PDF file.
+
+**Request:**
+- **Content-Type:** `multipart/form-data`
+- **Body:** 
+  - PDF file with field name `file`
+  - Configuration with field name `options`
+
+**Options JSON:**
+```json
+{
+  "page_order": [2, 0, 1, 3]  // New order of pages (0-based indices)
+}
+```
+
+**Response:**
+- **Content-Type:** `application/pdf`
+- **Content-Disposition:** `attachment; filename="reordered.pdf"`
+- **Body:** Reordered PDF binary data
+
+**Example:**
+```bash
+# Reorder a 4-page PDF to pages 3,1,2,4
+curl -X POST http://localhost:3000/api/reorder \
+  -F "file=@document.pdf" \
+  -F 'options={"page_order": [2, 0, 1, 3]}' \
+  --output reordered.pdf
+```
+
+#### 8. Extract Images from PDF
+
+**POST** `/api/extract/images`
+
+Extracts information about images in a PDF file.
+
+**Request:**
+- **Content-Type:** `multipart/form-data`
+- **Body:** PDF file with field name `file`
+
+**Response:**
+```json
+{
+  "images_found": 0,
+  "message": "Image extraction endpoint is under development",
+  "page_count": 5
+}
+```
+
+**Note:** Full image extraction functionality is under development. Currently returns image count information only.
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/api/extract/images \
+  -F "file=@document.pdf"
+```
+
+#### 9. Get PDF Information
+
+**POST** `/api/info`
+
+Retrieves metadata and information from a PDF file.
+
+**Request:**
+- **Content-Type:** `multipart/form-data`
+- **Body:** PDF file with field name `file`
+
+**Response:**
+```json
+{
+  "version": "1.4",
+  "page_count": 10,
+  "title": "Sample Document",
+  "author": "John Doe",
+  "created": "D:20240115120000Z",
+  "modified": "D:20240120150000Z",
+  "file_size": 245760
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:3000/api/info \
+  -F "file=@document.pdf"
 ```
 
 ## Error Handling

@@ -1,0 +1,24 @@
+{
+  "analysis_date": "2025-07-22T11:39:27.259359",
+  "total_pdfs": 1,
+  "duration_seconds": 2.6026577949523926,
+  "parsing": {
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "rendering": {
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "combined": {
+    "both_successful": 1,
+    "parse_only": 0,
+    "render_only": 0,
+    "both_failed": 0
+  },
+  "parse_errors": {},
+  "render_errors": {},
+  "compatibility_issues": []
+}

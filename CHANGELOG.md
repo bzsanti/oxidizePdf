@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated PROJECT_PROGRESS.md with render verification capabilities
 - Added stream length tests for lenient parsing validation
 
+### Fixed
+
+**🐛 PDF Specification Compliance**
+- Fixed EOL handling to comply with PDF specification (thanks to @Caellian via PR #16)
+  - Now correctly handles all three PDF line endings: CR (0x0D), LF (0x0A), and CRLF
+  - Replaced Rust's `.lines()` with custom `pdf_lines()` implementation
+  - Fixes issue where CR-only line endings were not recognized
+
 ### Internal
 - Organized analysis tools into `tools/pdf-analysis/` directory
 - Fixed Send + Sync trait bounds in analyze_pdf_with_render example

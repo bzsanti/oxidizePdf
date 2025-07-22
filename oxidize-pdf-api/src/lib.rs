@@ -4,6 +4,8 @@
 //!
 
 mod api;
+// mod api_old; // Not using old API implementation
+
 pub use api::{
     app,
     create_pdf,
