@@ -148,6 +148,8 @@ pub mod xref;
 pub mod xref_types;
 
 #[cfg(test)]
+mod stream_length_tests;
+#[cfg(test)]
 pub mod test_helpers;
 
 use crate::error::OxidizePdfError;

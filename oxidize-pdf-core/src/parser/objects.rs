@@ -549,13 +549,21 @@ impl PdfObject {
                     *len as usize
                 }
             }
-            PdfObject::Reference(_, _) => {
-                // In a full implementation, we'd need to resolve this reference
-                // For now, we'll return an error
-                return Err(ParseError::SyntaxError {
-                    position: lexer.position(),
-                    message: "Stream length references not yet supported".to_string(),
-                });
+            PdfObject::Reference(obj_num, gen_num) => {
+                // Stream length is an indirect reference - we'll need to resolve it
+                // For now, we'll use a fallback approach: search for endstream marker
+                // This maintains compatibility while we implement proper reference resolution
+                if options.lenient_streams {
+                    if options.collect_warnings {
+                        eprintln!("Warning: Stream length is an indirect reference ({} {} R). Using endstream detection fallback.", obj_num, gen_num);
+                    }
+                    usize::MAX // This will trigger the endstream search below
+                } else {
+                    return Err(ParseError::SyntaxError {
+                        position: lexer.position(),
+                        message: format!("Stream length reference ({} {} R) requires lenient mode or reference resolution", obj_num, gen_num),
+                    });
+                }
             }
             _ => {
                 return Err(ParseError::SyntaxError {

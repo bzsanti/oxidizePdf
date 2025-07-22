@@ -368,6 +368,41 @@ impl<R: Read + Seek> PdfReader<R> {
         }
     }
 
+    /// Resolve a stream length reference to get the actual length value
+    /// This is a specialized method for handling indirect references in stream Length fields
+    pub fn resolve_stream_length(&mut self, obj: &PdfObject) -> ParseResult<Option<usize>> {
+        match obj {
+            PdfObject::Integer(len) => {
+                if *len >= 0 {
+                    Ok(Some(*len as usize))
+                } else {
+                    // Negative lengths are invalid, treat as missing
+                    Ok(None)
+                }
+            }
+            PdfObject::Reference(obj_num, gen_num) => {
+                let resolved = self.get_object(*obj_num, *gen_num)?;
+                match resolved {
+                    PdfObject::Integer(len) => {
+                        if *len >= 0 {
+                            Ok(Some(*len as usize))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => {
+                        // Reference doesn't point to a valid integer
+                        Ok(None)
+                    }
+                }
+            }
+            _ => {
+                // Not a valid length type
+                Ok(None)
+            }
+        }
+    }
+
     /// Get a compressed object from an object stream
     fn get_compressed_object(
         &mut self,
@@ -1161,9 +1196,10 @@ startxref
 %%EOF"
             .to_vec();
 
-        // Test strict mode (should fail)
+        // Test strict mode - using strict options since new() is now lenient
         let cursor = Cursor::new(pdf_data.clone());
-        let strict_reader = PdfReader::new(cursor);
+        let strict_options = ParseOptions::strict();
+        let strict_reader = PdfReader::new_with_options(cursor, strict_options);
         // In strict mode, this would fail during parsing if we try to read the stream
         // For now, just check that reader construction succeeds
         assert!(strict_reader.is_ok());

@@ -35,3 +35,10 @@ debug_manual.pdf
 !.github/
 PDF_RENDERING_ANALYSIS_REPORT.md
 simple_pdf_analysis.txt
+
+# Analysis tools and reports
+tools/pdf-analysis/
+pdf_analysis_*.json
+pdf_compatibility_*.json
+test_render_output.png
+batch_analysis_output.log
