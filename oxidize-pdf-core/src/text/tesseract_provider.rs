@@ -69,13 +69,13 @@ use crate::text::{
     OcrTextFragment,
 };
 #[cfg(feature = "ocr-tesseract")]
+use ::tesseract::Tesseract;
+#[cfg(feature = "ocr-tesseract")]
 use std::collections::HashMap;
 #[cfg(feature = "ocr-tesseract")]
 use std::sync::Mutex;
 #[cfg(feature = "ocr-tesseract")]
 use std::time::Instant;
-#[cfg(feature = "ocr-tesseract")]
-use tesseract::Tesseract;
 
 /// Page Segmentation Mode for Tesseract
 #[cfg(feature = "ocr-tesseract")]

@@ -133,6 +133,7 @@
 
 pub mod content;
 pub mod document;
+pub mod encoding;
 pub mod filters;
 pub mod header;
 pub mod lexer;
@@ -140,9 +141,14 @@ pub mod object_stream;
 pub mod objects;
 pub mod page_tree;
 pub mod reader;
+pub mod stack_safe;
+pub mod stack_safe_tests;
 pub mod trailer;
 pub mod xref;
+pub mod xref_types;
 
+#[cfg(test)]
+mod stream_length_tests;
 #[cfg(test)]
 pub mod test_helpers;
 
@@ -151,12 +157,103 @@ use crate::error::OxidizePdfError;
 // Re-export main types for convenient access
 pub use self::content::{ContentOperation, ContentParser, TextElement};
 pub use self::document::{PdfDocument, ResourceManager};
+pub use self::encoding::{
+    CharacterDecoder, EncodingOptions, EncodingResult, EncodingType, EnhancedDecoder,
+};
 pub use self::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
 pub use self::page_tree::ParsedPage;
 pub use self::reader::{DocumentMetadata, PdfReader};
 
 /// Result type for parser operations
 pub type ParseResult<T> = Result<T, ParseError>;
+
+/// Options for parsing PDF files
+#[derive(Debug, Clone)]
+pub struct ParseOptions {
+    /// Enable lenient parsing for malformed streams with incorrect Length fields
+    pub lenient_streams: bool,
+    /// Maximum number of bytes to search ahead when recovering from stream errors
+    pub max_recovery_bytes: usize,
+    /// Collect warnings instead of failing on recoverable errors
+    pub collect_warnings: bool,
+    /// Enable lenient character encoding (use replacement characters for invalid sequences)
+    pub lenient_encoding: bool,
+    /// Preferred character encoding for text decoding
+    pub preferred_encoding: Option<encoding::EncodingType>,
+    /// Enable automatic syntax error recovery
+    pub lenient_syntax: bool,
+}
+
+impl Default for ParseOptions {
+    fn default() -> Self {
+        Self {
+            lenient_streams: false,   // Strict mode by default
+            max_recovery_bytes: 1000, // Search up to 1KB ahead
+            collect_warnings: false,  // Don't collect warnings by default
+            lenient_encoding: true,   // Enable lenient encoding by default
+            preferred_encoding: None, // Auto-detect encoding
+            lenient_syntax: false,    // Strict syntax parsing by default
+        }
+    }
+}
+
+impl ParseOptions {
+    /// Create lenient parsing options for maximum compatibility
+    pub fn lenient() -> Self {
+        Self {
+            lenient_streams: true,
+            max_recovery_bytes: 5000,
+            collect_warnings: true,
+            lenient_encoding: true,
+            preferred_encoding: None,
+            lenient_syntax: true,
+        }
+    }
+
+    /// Create strict parsing options for maximum correctness
+    pub fn strict() -> Self {
+        Self {
+            lenient_streams: false,
+            max_recovery_bytes: 0,
+            collect_warnings: false,
+            lenient_encoding: false,
+            preferred_encoding: None,
+            lenient_syntax: false,
+        }
+    }
+}
+
+/// Warnings that can be collected during lenient parsing
+#[derive(Debug, Clone)]
+pub enum ParseWarning {
+    /// Stream length mismatch was corrected
+    StreamLengthCorrected {
+        declared_length: usize,
+        actual_length: usize,
+        object_id: Option<(u32, u16)>,
+    },
+    /// Invalid character encoding was recovered
+    InvalidEncoding {
+        position: usize,
+        recovered_text: String,
+        encoding_used: Option<encoding::EncodingType>,
+        replacement_count: usize,
+    },
+    /// Missing required key with fallback used
+    MissingKeyWithFallback { key: String, fallback_value: String },
+    /// Syntax error was recovered
+    SyntaxErrorRecovered {
+        position: usize,
+        expected: String,
+        found: String,
+        recovery_action: String,
+    },
+    /// Invalid object reference was skipped
+    InvalidReferenceSkipped {
+        object_id: (u32, u16),
+        reason: String,
+    },
+}
 
 /// PDF Parser errors covering all failure modes during parsing.
 ///
@@ -226,8 +323,26 @@ pub enum ParseError {
     StreamDecodeError(String),
 
     /// PDF encryption is not currently supported
-    #[error("Encryption not supported")]
+    #[error("PDF is encrypted. Decryption is not currently supported in the community edition")]
     EncryptionNotSupported,
+
+    /// Empty file
+    #[error("File is empty (0 bytes)")]
+    EmptyFile,
+
+    /// Stream length mismatch (only in strict mode)
+    #[error(
+        "Stream length mismatch: declared {declared} bytes, but found endstream at {actual} bytes"
+    )]
+    StreamLengthMismatch { declared: usize, actual: usize },
+
+    /// Character encoding error
+    #[error("Character encoding error at position {position}: {message}")]
+    CharacterEncodingError { position: usize, message: String },
+
+    /// Unexpected character in PDF content
+    #[error("Unexpected character: {character}")]
+    UnexpectedCharacter { character: String },
 }
 
 impl From<ParseError> for OxidizePdfError {

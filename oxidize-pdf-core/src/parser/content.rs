@@ -1189,10 +1189,54 @@ impl ContentParser {
     }
 
     fn pop_dict_or_name(&self, operands: &mut Vec<Token>) -> ParseResult<HashMap<String, String>> {
-        // For now, we'll just return an empty map
-        // Full dictionary parsing would be more complex
-        operands.pop();
-        Ok(HashMap::new())
+        if let Some(token) = operands.pop() {
+            match token {
+                Token::Name(name) => {
+                    // Name token - this is a reference to properties in the resource dictionary
+                    // For now, we'll store it as a special entry to indicate it's a resource reference
+                    let mut props = HashMap::new();
+                    props.insert("__resource_ref".to_string(), name);
+                    Ok(props)
+                }
+                Token::DictStart => {
+                    // Inline dictionary - parse key-value pairs
+                    let mut props = HashMap::new();
+
+                    // Look for dictionary entries in remaining operands
+                    while let Some(value_token) = operands.pop() {
+                        if matches!(value_token, Token::DictEnd) {
+                            break;
+                        }
+
+                        // Expect key-value pairs
+                        if let Token::Name(key) = value_token {
+                            if let Some(value_token) = operands.pop() {
+                                let value = match value_token {
+                                    Token::Name(name) => name,
+                                    Token::String(s) => String::from_utf8_lossy(&s).to_string(),
+                                    Token::Integer(i) => i.to_string(),
+                                    Token::Number(f) => f.to_string(),
+                                    _ => continue, // Skip unsupported value types
+                                };
+                                props.insert(key, value);
+                            }
+                        }
+                    }
+
+                    Ok(props)
+                }
+                _ => {
+                    // Unexpected token type, treat as empty properties
+                    Ok(HashMap::new())
+                }
+            }
+        } else {
+            // No operand available
+            Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Expected dictionary or name for marked content properties".to_string(),
+            })
+        }
     }
 
     fn pop_color_components(&self, operands: &mut Vec<Token>) -> ParseResult<Vec<f32>> {
