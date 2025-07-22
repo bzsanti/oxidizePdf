@@ -242,8 +242,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     // For now, use the expected object number and issue warning
                     if self.options.collect_warnings {
                         eprintln!(
-                            "Warning: Using expected object number {} instead of parsed token",
-                            obj_num
+                            "Warning: Using expected object number {obj_num} instead of parsed token"
                         );
                     }
                     obj_num
@@ -274,8 +273,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     // In lenient mode, assume generation 0
                     if self.options.collect_warnings {
                         eprintln!(
-                            "Warning: Using generation 0 instead of parsed token for object {}",
-                            obj_num
+                            "Warning: Using generation 0 instead of parsed token for object {obj_num}"
                         );
                     }
                     0
@@ -306,8 +304,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     // In lenient mode, try to continue without 'obj' keyword
                     if self.options.collect_warnings {
                         eprintln!(
-                            "Warning: Expected 'obj' keyword for object {} {}, continuing anyway",
-                            obj_num, gen_num
+                            "Warning: Expected 'obj' keyword for object {obj_num} {gen_num}, continuing anyway"
                         );
                     }
                     // We need to process the token we just read as part of the object
@@ -343,7 +340,7 @@ impl<R: Read + Seek> PdfReader<R> {
                 if self.options.lenient_syntax {
                     // In lenient mode, warn but continue
                     if self.options.collect_warnings {
-                        eprintln!("Warning: Expected 'endobj' keyword after object {} {}, continuing anyway", obj_num, gen_num);
+                        eprintln!("Warning: Expected 'endobj' keyword after object {obj_num} {gen_num}, continuing anyway");
                     }
                 } else {
                     return Err(ParseError::SyntaxError {

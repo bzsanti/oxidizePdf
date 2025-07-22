@@ -93,7 +93,7 @@ impl StackSafeContext {
         if self.active_stack.contains(&ref_key) {
             return Err(ParseError::SyntaxError {
                 position: 0,
-                message: format!("Circular reference detected: {} {} R", obj_num, gen_num),
+                message: format!("Circular reference detected: {obj_num} {gen_num} R"),
             });
         }
 

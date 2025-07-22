@@ -772,10 +772,7 @@ fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> Parse
         _ => {
             // Unknown predictor - return data as-is with warning
             #[cfg(debug_assertions)]
-            eprintln!(
-                "Warning: Unknown predictor {}, returning data as-is",
-                predictor
-            );
+            eprintln!("Warning: Unknown predictor {predictor}, returning data as-is");
             Ok(data.to_vec())
         }
     }
@@ -864,8 +861,7 @@ fn apply_png_predictor(
             }
             _ => {
                 return Err(ParseError::StreamDecodeError(format!(
-                    "PNG predictor: unknown filter type {}",
-                    predictor_byte
+                    "PNG predictor: unknown filter type {predictor_byte}"
                 )));
             }
         };

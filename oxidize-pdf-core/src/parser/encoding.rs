@@ -395,9 +395,8 @@ impl CharacterDecoder for EnhancedDecoder {
                 if lenient {
                     Ok(String::from_utf8_lossy(bytes).to_string())
                 } else {
-                    String::from_utf8(bytes.to_vec()).map_err(|e| {
-                        PdfError::EncodingError(format!("UTF-8 decoding failed: {}", e))
-                    })
+                    String::from_utf8(bytes.to_vec())
+                        .map_err(|e| PdfError::EncodingError(format!("UTF-8 decoding failed: {e}")))
                 }
             }
 
@@ -412,8 +411,7 @@ impl CharacterDecoder for EnhancedDecoder {
                         result.push('\u{FFFD}');
                     } else {
                         return Err(PdfError::EncodingError(format!(
-                            "Invalid Latin-1 character: 0x{:02X}",
-                            byte
+                            "Invalid Latin-1 character: 0x{byte:02X}"
                         )));
                     }
                 }
@@ -431,8 +429,7 @@ impl CharacterDecoder for EnhancedDecoder {
                         result.push('\u{FFFD}');
                     } else {
                         return Err(PdfError::EncodingError(format!(
-                            "Invalid Windows-1252 character: 0x{:02X}",
-                            byte
+                            "Invalid Windows-1252 character: 0x{byte:02X}"
                         )));
                     }
                 }
@@ -450,8 +447,7 @@ impl CharacterDecoder for EnhancedDecoder {
                         result.push('\u{FFFD}');
                     } else {
                         return Err(PdfError::EncodingError(format!(
-                            "Invalid MacRoman character: 0x{:02X}",
-                            byte
+                            "Invalid MacRoman character: 0x{byte:02X}"
                         )));
                     }
                 }

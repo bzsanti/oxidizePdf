@@ -555,13 +555,13 @@ impl PdfObject {
                 // This maintains compatibility while we implement proper reference resolution
                 if options.lenient_streams {
                     if options.collect_warnings {
-                        eprintln!("Warning: Stream length is an indirect reference ({} {} R). Using endstream detection fallback.", obj_num, gen_num);
+                        eprintln!("Warning: Stream length is an indirect reference ({obj_num} {gen_num} R). Using endstream detection fallback.");
                     }
                     usize::MAX // This will trigger the endstream search below
                 } else {
                     return Err(ParseError::SyntaxError {
                         position: lexer.position(),
-                        message: format!("Stream length reference ({} {} R) requires lenient mode or reference resolution", obj_num, gen_num),
+                        message: format!("Stream length reference ({obj_num} {gen_num} R) requires lenient mode or reference resolution"),
                     });
                 }
             }
@@ -630,7 +630,7 @@ impl PdfObject {
             Ok(other_token) => {
                 if options.lenient_streams {
                     // Try to find endstream within max_recovery_bytes
-                    eprintln!("Warning: Stream length mismatch. Expected 'endstream' after {} bytes, got {:?}", length, other_token);
+                    eprintln!("Warning: Stream length mismatch. Expected 'endstream' after {length} bytes, got {other_token:?}");
 
                     if let Some(additional_bytes) =
                         lexer.find_keyword_ahead("endstream", options.max_recovery_bytes)?
@@ -641,8 +641,7 @@ impl PdfObject {
 
                         let actual_length = stream_data.len();
                         eprintln!(
-                            "Stream length corrected: declared={}, actual={}",
-                            length, actual_length
+                            "Stream length corrected: declared={length}, actual={actual_length}"
                         );
 
                         // Skip whitespace and consume endstream
@@ -672,8 +671,7 @@ impl PdfObject {
                 if options.lenient_streams {
                     // Try to find endstream within max_recovery_bytes
                     eprintln!(
-                        "Warning: Stream length mismatch. Could not peek next token after {} bytes",
-                        length
+                        "Warning: Stream length mismatch. Could not peek next token after {length} bytes"
                     );
 
                     if let Some(additional_bytes) =
@@ -685,8 +683,7 @@ impl PdfObject {
 
                         let actual_length = stream_data.len();
                         eprintln!(
-                            "Stream length corrected: declared={}, actual={}",
-                            length, actual_length
+                            "Stream length corrected: declared={length}, actual={actual_length}"
                         );
 
                         // Skip whitespace and consume endstream

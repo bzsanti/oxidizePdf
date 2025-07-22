@@ -77,7 +77,7 @@ impl XRefTable {
             Ok(table) => Ok(table),
             Err(e) => {
                 if options.lenient_syntax {
-                    eprintln!("Primary XRef parsing failed: {:?}, attempting recovery", e);
+                    eprintln!("Primary XRef parsing failed: {e:?}, attempting recovery");
 
                     // Reset reader position and try recovery
                     reader.seek(SeekFrom::Start(0))?;
@@ -113,7 +113,7 @@ impl XRefTable {
         while let Some(offset) = current_offset {
             // Prevent infinite loops
             if visited_offsets.contains(&offset) {
-                eprintln!("Circular reference in XRef chain at offset {}", offset);
+                eprintln!("Circular reference in XRef chain at offset {offset}");
                 break;
             }
             visited_offsets.insert(offset);
@@ -173,7 +173,7 @@ impl XRefTable {
         // Check for linearized PDF by looking for the first object
         reader.seek(SeekFrom::Start(0))?;
         if let Ok(xref_offset) = Self::find_linearized_xref(reader) {
-            eprintln!("Found linearized PDF with XRef at offset {}", xref_offset);
+            eprintln!("Found linearized PDF with XRef at offset {xref_offset}");
 
             // Validate offset before using it
             Self::validate_offset(reader, xref_offset)?;
@@ -220,7 +220,7 @@ impl XRefTable {
                 _ => return Err(ParseError::InvalidXRef),
             };
 
-            eprintln!("Found object {} at xref position", obj_num);
+            eprintln!("Found object {obj_num} at xref position");
 
             let _gen_num = match lexer.next_token()? {
                 super::lexer::Token::Integer(n) => n as u16,
@@ -339,8 +339,7 @@ impl XRefTable {
                 // Check if we've hit EOF or trailer prematurely
                 if bytes_read == 0 || line.trim() == "trailer" {
                     eprintln!(
-                        "Warning: XRef subsection incomplete - expected {} entries but found only {}",
-                        count, entries_parsed
+                        "Warning: XRef subsection incomplete - expected {count} entries but found only {entries_parsed}"
                     );
                     // Put the "trailer" line back for the next phase
                     if line.trim() == "trailer" {
@@ -382,8 +381,7 @@ impl XRefTable {
                     let actual_entries = table.entries.len() as i64;
                     if actual_entries < expected_size {
                         eprintln!(
-                            "Warning: XRef table incomplete - found {} entries but trailer indicates {}. Attempting recovery...",
-                            actual_entries, expected_size
+                            "Warning: XRef table incomplete - found {actual_entries} entries but trailer indicates {expected_size}. Attempting recovery..."
                         );
                         // Don't fail here, let the recovery mode handle it
                         return Err(ParseError::InvalidXRef);
@@ -476,10 +474,7 @@ impl XRefTable {
 
         // Debug: print last part of file
         let debug_content = content.chars().take(200).collect::<String>();
-        eprintln!(
-            "XRef search in last {} bytes: {:?}",
-            read_size, debug_content
-        );
+        eprintln!("XRef search in last {read_size} bytes: {debug_content:?}");
 
         let lines: Vec<&str> = content.lines().collect();
 
@@ -583,8 +578,7 @@ impl XRefTable {
                                     {
                                         object_streams.push(obj_num);
                                         eprintln!(
-                                            "XRef recovery: found object stream at object {}",
-                                            obj_num
+                                            "XRef recovery: found object stream at object {obj_num}"
                                         );
                                     }
                                 }
@@ -666,10 +660,7 @@ impl XRefTable {
 
         if offset >= file_size {
             #[cfg(debug_assertions)]
-            eprintln!(
-                "Warning: XRef offset {} exceeds file size {}",
-                offset, file_size
-            );
+            eprintln!("Warning: XRef offset {offset} exceeds file size {file_size}");
             return Err(ParseError::InvalidXRef);
         }
 
@@ -680,7 +671,7 @@ impl XRefTable {
 
         if read_bytes == 0 {
             #[cfg(debug_assertions)]
-            eprintln!("Warning: XRef offset {} points to EOF", offset);
+            eprintln!("Warning: XRef offset {offset} points to EOF");
             return Err(ParseError::InvalidXRef);
         }
 

@@ -714,8 +714,8 @@ impl<R: Read> Lexer<R> {
             ("obj", Token::Obj) => Ok(()),
             ("startxref", Token::StartXRef) => Ok(()),
             _ => Err(ParseError::UnexpectedToken {
-                expected: format!("keyword '{}'", keyword),
-                found: format!("{:?}", token),
+                expected: format!("keyword '{keyword}'"),
+                found: format!("{token:?}"),
             }),
         }
     }
@@ -915,8 +915,7 @@ impl<R: Read> Lexer<R> {
                     Err(ParseError::CharacterEncodingError {
                         position: self.position,
                         message: format!(
-                            "Failed to decode string with any supported encoding: {}",
-                            encoding_error
+                            "Failed to decode string with any supported encoding: {encoding_error}"
                         ),
                     })
                 }
@@ -1008,8 +1007,7 @@ impl<R: Read> Lexer<R> {
                 self.warnings.push(ParseWarning::InvalidEncoding {
                     position: self.position,
                     recovered_text: format!(
-                        "Skipped problematic {} character (0x{:02X})",
-                        replacement_char, ch
+                        "Skipped problematic {replacement_char} character (0x{ch:02X})"
                     ),
                     encoding_used: None,
                     replacement_count: 1,
@@ -1030,16 +1028,15 @@ impl<R: Read> Lexer<R> {
             // In strict mode, generate a more descriptive error
             let char_description = match ch {
                 0x07 => "Bell character (\\u{07})".to_string(),
-                0x00..=0x1F => format!("Control character (\\u{{{:02X}}})", ch),
-                0x80..=0x9F => format!("Latin-1 supplement character (\\u{{{:02X}}})", ch),
-                _ => format!("Problematic character (\\u{{{:02X}}})", ch),
+                0x00..=0x1F => format!("Control character (\\u{{{ch:02X}}})"),
+                0x80..=0x9F => format!("Latin-1 supplement character (\\u{{{ch:02X}}})"),
+                _ => format!("Problematic character (\\u{{{ch:02X}}})"),
             };
 
             Err(ParseError::CharacterEncodingError {
                 position: self.position,
                 message: format!(
-                    "Unexpected character: {} - Consider using lenient parsing mode",
-                    char_description
+                    "Unexpected character: {char_description} - Consider using lenient parsing mode"
                 ),
             })
         }
