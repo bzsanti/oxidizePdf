@@ -424,7 +424,9 @@ impl<'s> Iterator for EOLIter<'s> {
 }
 pub trait PDFLines: AsRef<str> {
     fn pdf_lines(&self) -> EOLIter<'_> {
-        EOLIter { remainder: self.as_ref() }
+        EOLIter {
+            remainder: self.as_ref(),
+        }
     }
 }
 impl PDFLines for &str {}

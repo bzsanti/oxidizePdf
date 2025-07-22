@@ -3,9 +3,9 @@
 //! This module provides traits and implementations for testing PDF compliance
 //! with various versions of the PDF specification (ISO 32000).
 
+use oxidize_pdf::parser::reader::PDFLines;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use oxidize_pdf::parser::reader::PDFLines;
 
 /// Result of a specification test
 #[derive(Debug, Clone, Serialize, Deserialize)]

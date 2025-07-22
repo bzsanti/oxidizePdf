@@ -3,9 +3,9 @@
 //! Parses xref tables according to ISO 32000-1 Section 7.5.4
 
 use super::{ParseError, ParseResult};
+use crate::parser::reader::PDFLines;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
-use crate::parser::reader::PDFLines;
 
 /// Cross-reference entry
 #[derive(Debug, Clone, Copy, PartialEq)]
