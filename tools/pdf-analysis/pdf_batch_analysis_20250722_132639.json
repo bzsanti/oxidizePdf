@@ -1,0 +1,133 @@
+{
+  "analysis_date": "2025-07-22T13:26:39.861011",
+  "total_pdfs": 749,
+  "duration_seconds": 1636.9352087974548,
+  "parsing": {
+    "successful": 728,
+    "failed": 21,
+    "success_rate": 97.19626168224299
+  },
+  "rendering": {
+    "successful": 749,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "combined": {
+    "both_successful": 728,
+    "parse_only": 0,
+    "render_only": 21,
+    "both_failed": 0
+  },
+  "parse_errors": {
+    "XrefError": 19,
+    "Other": 2
+  },
+  "render_errors": {},
+  "compatibility_issues": [
+    {
+      "file": "ROCIO ROMERO VILLA BANCO DE SANGRE.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (1).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "BXC7VS-28yi23tu.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "0184c79b-9922-4514-a9ed-3919070ca099.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "14062025211250.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (10).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (7).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "GCGGJ3-CRL9qATd.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (9).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "cCrGGasNtv.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "Other"
+    },
+    {
+      "file": "lawpilots-santiago-fern\u00e1ndez-ydixg-2022-11-08-protecci\u00f3n-de-datos-para-empleados.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "solicitud-devuelve-192833.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (4).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "1002579 - FIRMADO.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Movimiento.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "Other"
+    },
+    {
+      "file": "G3WGS3-N35VSCn7.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (8).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (3).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "TUXGS6.pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    },
+    {
+      "file": "Documento (2).pdf",
+      "issue": "Renders but fails to parse",
+      "parse_error": "XrefError"
+    }
+  ]
+}
