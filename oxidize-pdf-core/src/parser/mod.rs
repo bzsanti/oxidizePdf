@@ -139,6 +139,7 @@ pub mod header;
 pub mod lexer;
 pub mod object_stream;
 pub mod objects;
+pub mod optimized_reader;
 pub mod page_tree;
 pub mod reader;
 pub mod stack_safe;
@@ -161,6 +162,7 @@ pub use self::encoding::{
     CharacterDecoder, EncodingOptions, EncodingResult, EncodingType, EnhancedDecoder,
 };
 pub use self::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
+pub use self::optimized_reader::OptimizedPdfReader;
 pub use self::page_tree::ParsedPage;
 pub use self::reader::{DocumentMetadata, PdfReader};
 

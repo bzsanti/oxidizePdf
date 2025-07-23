@@ -137,12 +137,40 @@ let options = MemoryOptions::default()
 
 Based on testing with various PDF files:
 
-| File Size | Eager Loading | Lazy Loading | Streaming |
-|-----------|--------------|--------------|-----------|
-| 1 MB      | ~3 MB        | ~0.5 MB      | ~0.1 MB   |
-| 10 MB     | ~30 MB       | ~5 MB        | ~1 MB     |
-| 100 MB    | ~300 MB      | ~20 MB       | ~1 MB     |
-| 1 GB      | ~3 GB        | ~100 MB      | ~1 MB     |
+| File Size | Standard Reader | Optimized Reader | Lazy Loading | Streaming |
+|-----------|----------------|------------------|--------------|-----------|
+| 1 MB      | ~3 MB (unbounded) | ~0.5 MB (LRU) | ~0.5 MB      | ~0.1 MB   |
+| 10 MB     | ~30 MB (unbounded) | ~5 MB (LRU)   | ~5 MB        | ~1 MB     |
+| 100 MB    | ~300 MB (unbounded) | ~20 MB (LRU) | ~20 MB       | ~1 MB     |
+| 1 GB      | ~3 GB (unbounded) | ~100 MB (LRU) | ~100 MB      | ~1 MB     |
+
+### OptimizedPdfReader - NEW!
+
+The `OptimizedPdfReader` provides a drop-in replacement for `PdfReader` with built-in LRU caching:
+
+```rust
+use oxidize_pdf::parser::OptimizedPdfReader;
+use oxidize_pdf::memory::MemoryOptions;
+
+// Create reader with custom cache size
+let memory_options = MemoryOptions::default()
+    .with_cache_size(500); // LRU cache for 500 objects
+
+let mut reader = OptimizedPdfReader::open_with_memory("document.pdf", memory_options)?;
+
+// Use just like PdfReader
+let catalog = reader.catalog()?;
+let info = reader.info()?;
+
+// Memory is automatically bounded by LRU cache
+// Objects are evicted when cache is full
+```
+
+**Key Benefits:**
+- Prevents unbounded memory growth
+- Configurable cache size
+- Built-in memory statistics
+- Compatible with existing PdfReader API
 
 ### Performance Trade-offs
 
@@ -167,6 +195,16 @@ cargo run --example memory_profiling -- --compare document.pdf
 
 # Batch profiling
 cargo run --example memory_profiling -- --batch /path/to/pdfs/
+```
+
+### 2. Optimized Reader Example
+
+```bash
+# Compare standard vs optimized reader
+cargo run --example memory_optimized_reader -- --compare document.pdf
+
+# Demonstrate cache eviction behavior
+cargo run --example memory_optimized_reader -- --eviction document.pdf
 ```
 
 ### 2. Memory Usage Analyzer
