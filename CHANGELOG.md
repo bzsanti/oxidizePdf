@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+
+**📦 Dependency Updates**
+- Updated oxidize-pdf dependency version to 1.1.0 in CLI and API crates
+- Fixed lib.rs dashboard warnings about outdated dependencies
+- All workspace dependencies are now using latest compatible versions
+
 ## [1.1.1] - 2025-07-22
 
 ### Added
