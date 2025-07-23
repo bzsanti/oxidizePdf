@@ -121,6 +121,7 @@ impl<W: Write> PdfWriter<W> {
             let mut font_entry = Dictionary::new();
             font_entry.set("Type", Object::Name("Font".to_string()));
             font_entry.set("Subtype", Object::Name("Type1".to_string()));
+            font_entry.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
             font_entry.set("BaseFont", Object::Name(font_name.to_string()));
             font_dict.set(*font_name, Object::Dictionary(font_entry));
         }
