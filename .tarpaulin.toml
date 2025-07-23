@@ -1,0 +1,26 @@
+[default]
+# Tarpaulin configuration for oxidize-pdf
+
+# Basic settings
+timeout = "300"
+exclude-files = ["*/tests/*", "*/examples/*", "*/benches/*", "*/build.rs"]
+ignored = true
+avoid-cfg-tarpaulin = true
+force-clean = false
+
+# Output formats
+out = ["Html", "Xml", "Lcov"]
+output-dir = "target/coverage"
+
+# Coverage settings  
+line = true
+branch = true
+
+# Package selection
+packages = ["oxidize-pdf", "oxidize-pdf-cli", "oxidize-pdf-api"]
+all-features = false
+features = ["compression", "ocr"]
+
+[report]
+# Skip coverage for generated code
+skip-clean = false

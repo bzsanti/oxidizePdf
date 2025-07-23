@@ -84,7 +84,7 @@ impl<W: Write> PdfWriter<W> {
             let page_id = ObjectId::new(next_id + i as u32 * 2, 0);
             let content_id = ObjectId::new(next_id + i as u32 * 2 + 1, 0);
 
-            self.write_page(page_id, pages_id, content_id, page)?;
+            self.write_page(page_id, pages_id, content_id, page, document)?;
             self.write_page_content(content_id, page)?;
         }
 
@@ -97,6 +97,7 @@ impl<W: Write> PdfWriter<W> {
         parent_id: ObjectId,
         content_id: ObjectId,
         page: &crate::page::Page,
+        document: &Document,
     ) -> Result<()> {
         let mut page_dict = Dictionary::new();
         page_dict.set("Type", Object::Name("Page".to_string()));
@@ -112,17 +113,25 @@ impl<W: Write> PdfWriter<W> {
         );
         page_dict.set("Contents", Object::Reference(content_id));
 
-        // Create resources dictionary with standard fonts
+        // Create resources dictionary with fonts from document
         let mut resources = Dictionary::new();
         let mut font_dict = Dictionary::new();
 
-        // Add standard fonts
-        for font_name in &["Helvetica", "Helvetica-Bold", "Times-Roman", "Courier"] {
+        // Get fonts with encodings from the document
+        let fonts_with_encodings = document.get_fonts_with_encodings();
+        
+        for font_with_encoding in fonts_with_encodings {
             let mut font_entry = Dictionary::new();
             font_entry.set("Type", Object::Name("Font".to_string()));
             font_entry.set("Subtype", Object::Name("Type1".to_string()));
-            font_entry.set("BaseFont", Object::Name(font_name.to_string()));
-            font_dict.set(*font_name, Object::Dictionary(font_entry));
+            font_entry.set("BaseFont", Object::Name(font_with_encoding.font.pdf_name().to_string()));
+            
+            // Add encoding if specified
+            if let Some(encoding) = font_with_encoding.encoding {
+                font_entry.set("Encoding", Object::Name(encoding.pdf_name().to_string()));
+            }
+            
+            font_dict.set(font_with_encoding.font.pdf_name(), Object::Dictionary(font_entry));
         }
 
         resources.set("Font", Object::Dictionary(font_dict));

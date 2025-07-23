@@ -11,7 +11,7 @@ pub mod tesseract_provider;
 pub use encoding::TextEncoding;
 pub use extraction::{ExtractedText, ExtractionOptions, TextExtractor, TextFragment};
 pub use flow::{TextAlign, TextFlowContext};
-pub use font::{Font, FontFamily};
+pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
     FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError, OcrOptions,
@@ -49,6 +49,11 @@ impl TextContext {
         self.current_font = font;
         self.font_size = size;
         self
+    }
+
+    /// Get the current font
+    pub(crate) fn current_font(&self) -> Font {
+        self.current_font
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
@@ -141,10 +146,6 @@ impl TextContext {
         Ok(self.operations.as_bytes().to_vec())
     }
 
-    /// Get the current font
-    pub fn current_font(&self) -> Font {
-        self.current_font
-    }
 
     /// Get the current font size
     pub fn font_size(&self) -> f64 {

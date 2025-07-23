@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::graphics::{GraphicsContext, Image};
-use crate::text::{TextContext, TextFlowContext};
-use std::collections::HashMap;
+use crate::text::{Font, TextContext, TextFlowContext};
+use std::collections::{HashMap, HashSet};
 
 /// Page margins in points (1/72 inch).
 #[derive(Clone, Debug)]
@@ -191,6 +191,31 @@ impl Page {
         final_content.extend_from_slice(&self.content);
 
         Ok(final_content)
+    }
+
+    /// Gets all fonts used in this page.
+    ///
+    /// This method scans the page content to identify which fonts are being used.
+    /// For now, it returns a simple set based on the current text context font,
+    /// but in a full implementation it would parse all text operations.
+    pub(crate) fn get_used_fonts(&self) -> Vec<Font> {
+        let mut fonts = HashSet::new();
+        
+        // Add the current font from text context
+        fonts.insert(self.text_context.current_font());
+
+        // TODO: In a full implementation, we would:
+        // 1. Parse the content stream to find all Tf (set font) operations
+        // 2. Extract font names from those operations
+        // 3. Map them back to Font enum values
+        // For now, we'll just return the fonts we know are commonly used
+        
+        // Add some commonly used fonts as a baseline
+        fonts.insert(Font::Helvetica);
+        fonts.insert(Font::TimesRoman);
+        fonts.insert(Font::Courier);
+        
+        fonts.into_iter().collect()
     }
 }
 

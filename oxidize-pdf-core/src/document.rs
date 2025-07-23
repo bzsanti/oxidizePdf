@@ -1,9 +1,10 @@
 use crate::error::Result;
 use crate::objects::{Object, ObjectId};
 use crate::page::Page;
+use crate::text::{FontEncoding, FontWithEncoding};
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A PDF document that can contain multiple pages and metadata.
 ///
@@ -28,6 +29,8 @@ pub struct Document {
     #[allow(dead_code)]
     pub(crate) next_object_id: u32,
     pub(crate) metadata: DocumentMetadata,
+    /// Default font encoding to use for fonts when no encoding is specified
+    pub(crate) default_font_encoding: Option<FontEncoding>,
 }
 
 /// Metadata for a PDF document.
@@ -75,6 +78,7 @@ impl Document {
             objects: HashMap::new(),
             next_object_id: 1,
             metadata: DocumentMetadata::default(),
+            default_font_encoding: None,
         }
     }
 
@@ -136,6 +140,51 @@ impl Document {
     /// Sets the modification date to the current time.
     pub fn update_modification_date(&mut self) {
         self.metadata.modification_date = Some(Utc::now());
+    }
+
+    /// Sets the default font encoding for fonts that don't specify an encoding.
+    ///
+    /// This encoding will be applied to fonts in the PDF font dictionary when
+    /// no explicit encoding is specified. Setting this to `None` (the default)
+    /// means no encoding metadata will be added to fonts unless explicitly specified.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, text::FontEncoding};
+    ///
+    /// let mut doc = Document::new();
+    /// doc.set_default_font_encoding(Some(FontEncoding::WinAnsiEncoding));
+    /// ```
+    pub fn set_default_font_encoding(&mut self, encoding: Option<FontEncoding>) {
+        self.default_font_encoding = encoding;
+    }
+
+    /// Gets the current default font encoding.
+    pub fn default_font_encoding(&self) -> Option<FontEncoding> {
+        self.default_font_encoding
+    }
+
+    /// Gets all fonts used in the document with their encodings.
+    ///
+    /// This scans all pages and collects the unique fonts used, applying
+    /// the default encoding where no explicit encoding is specified.
+    pub(crate) fn get_fonts_with_encodings(&self) -> Vec<FontWithEncoding> {
+        let mut fonts_used = HashSet::new();
+
+        // Collect fonts from all pages
+        for page in &self.pages {
+            // Get fonts from text content
+            for font in page.get_used_fonts() {
+                let font_with_encoding = match self.default_font_encoding {
+                    Some(default_encoding) => FontWithEncoding::new(font, Some(default_encoding)),
+                    None => FontWithEncoding::without_encoding(font),
+                };
+                fonts_used.insert(font_with_encoding);
+            }
+        }
+
+        fonts_used.into_iter().collect()
     }
 
     /// Gets the number of pages in the document.

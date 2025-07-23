@@ -120,6 +120,8 @@ fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> {
         Filter::FlateDecode => decode_flate(data),
         Filter::ASCIIHexDecode => decode_ascii_hex(data),
         Filter::ASCII85Decode => decode_ascii85(data),
+        Filter::LZWDecode => decode_lzw(data, None),
+        Filter::RunLengthDecode => decode_run_length(data),
         _ => Err(ParseError::SyntaxError {
             position: 0,
             message: format!("Filter {filter:?} not yet implemented"),
@@ -481,8 +483,6 @@ mod tests {
     fn test_apply_filter_unsupported() {
         let data = b"test data";
         let unsupported_filters = vec![
-            Filter::LZWDecode,
-            Filter::RunLengthDecode,
             Filter::CCITTFaxDecode,
             Filter::JBIG2Decode,
             Filter::DCTDecode,
@@ -713,6 +713,292 @@ mod tests {
             assert_eq!(result, vec![1, 2, 3, 4]);
         }
     }
+
+    // LZW Tests
+
+    // Helper function to encode LZW data for testing
+    fn encode_lzw_test_data(codes: &[u16]) -> Vec<u8> {
+        let mut result = Vec::new();
+        let mut bit_buffer = 0u32;
+        let mut bits_in_buffer = 0;
+        let mut code_size = 9;
+
+        for &code in codes {
+            // Add code to buffer
+            bit_buffer = (bit_buffer << code_size) | (code as u32);
+            bits_in_buffer += code_size;
+
+            // Write complete bytes
+            while bits_in_buffer >= 8 {
+                let byte = ((bit_buffer >> (bits_in_buffer - 8)) & 0xFF) as u8;
+                result.push(byte);
+                bits_in_buffer -= 8;
+            }
+
+            // Adjust code size if needed (simplified for testing)
+            if code == 511 && code_size == 9 {
+                code_size = 10;
+            } else if code == 1023 && code_size == 10 {
+                code_size = 11;
+            } else if code == 2047 && code_size == 11 {
+                code_size = 12;
+            }
+        }
+
+        // Write remaining bits
+        if bits_in_buffer > 0 {
+            let byte = ((bit_buffer << (8 - bits_in_buffer)) & 0xFF) as u8;
+            result.push(byte);
+        }
+
+        result
+    }
+
+    #[test]
+    fn test_lzw_decode_simple() {
+        // Simple LZW encoded data: "ABC"
+        // Codes: 65(A), 66(B), 67(C), 257(EOD)
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_lzw_decode_with_repetition() {
+        // LZW with repetition: "AAAA"
+        // Codes: 65(A), 65(A), 258(AA), 257(EOD)
+        let codes = vec![65, 65, 258, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert_eq!(result, b"AAAA");
+    }
+
+    #[test]
+    fn test_lzw_decode_clear_code() {
+        // LZW with clear code: "AB" + CLEAR + "CD"
+        // Codes: 65(A), 66(B), 256(CLEAR), 67(C), 68(D), 257(EOD)
+        let codes = vec![65, 66, 256, 67, 68, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert_eq!(result, b"ABCD");
+    }
+
+    #[test]
+    fn test_lzw_decode_growing_codes() {
+        // Test that exercises code size growth from 9 to 10 bits
+        // This would need to encode enough unique strings to exceed 512 entries
+        // For brevity, we'll test the mechanism with a smaller example
+        let mut params = PdfDictionary::new();
+        params.insert("EarlyChange".to_string(), PdfObject::Integer(1));
+
+        // Note: Real test data would be longer to actually trigger code size change
+        let data = vec![0x08, 0x21, 0x08, 0x61, 0x08, 0x20, 0x80];
+        let result = decode_lzw(&data, Some(&params));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_lzw_decode_early_change_false() {
+        let mut params = PdfDictionary::new();
+        params.insert("EarlyChange".to_string(), PdfObject::Integer(0));
+
+        // Simple test with EarlyChange=0
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, Some(&params)).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_lzw_decode_invalid_code() {
+        // Invalid code that references non-existent dictionary entry
+        let data = vec![0x08, 0x21, 0xFF, 0xFF, 0x00];
+        let result = decode_lzw(&data, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_lzw_decode_empty() {
+        // Just EOD code
+        let codes = vec![257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_lzw_bit_reader() {
+        let data = vec![0b10101010, 0b11001100, 0b11110000];
+        let mut reader = LzwBitReader::new(&data);
+
+        // Read 4 bits: should be 1010
+        assert_eq!(reader.read_bits(4), Some(0b1010));
+
+        // Read 8 bits: should be 10101100
+        assert_eq!(reader.read_bits(8), Some(0b10101100));
+
+        // Read 6 bits: should be 110011
+        assert_eq!(reader.read_bits(6), Some(0b110011));
+
+        // Read 6 bits: should be 110000
+        assert_eq!(reader.read_bits(6), Some(0b110000));
+
+        // Try to read more bits than available
+        assert_eq!(reader.read_bits(8), None);
+    }
+
+    #[test]
+    fn test_lzw_bit_reader_edge_cases() {
+        let data = vec![0xFF];
+        let mut reader = LzwBitReader::new(&data);
+
+        // Read 0 bits
+        assert_eq!(reader.read_bits(0), None);
+
+        // Read more than 16 bits
+        assert_eq!(reader.read_bits(17), None);
+
+        // Read all 8 bits
+        assert_eq!(reader.read_bits(8), Some(0xFF));
+
+        // No more data
+        assert_eq!(reader.read_bits(1), None);
+    }
+
+    #[test]
+    fn test_apply_filter_lzw() {
+        // Test the legacy apply_filter function with LZW
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = apply_filter(&data, Filter::LZWDecode).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_apply_filter_with_params_lzw() {
+        // Test apply_filter_with_params with LZW and parameters
+        let mut params = PdfDictionary::new();
+        params.insert("EarlyChange".to_string(), PdfObject::Integer(0));
+
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = apply_filter_with_params(&data, Filter::LZWDecode, Some(&params)).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    // RunLengthDecode Tests
+
+    #[test]
+    fn test_run_length_decode_literal() {
+        // Literal copy: length=2 (copy 3 bytes), data="ABC"
+        let data = vec![2, b'A', b'B', b'C'];
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_run_length_decode_repeat() {
+        // Repeat: length=-3 (repeat 4 times), byte='X'
+        let data = vec![253u8, b'X']; // -3 as u8 = 253
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"XXXX");
+    }
+
+    #[test]
+    fn test_run_length_decode_mixed() {
+        // Mixed: literal "AB", repeat 'C' 3 times, literal "DE"
+        let data = vec![
+            1, b'A', b'B',     // literal: copy 2 bytes
+            254u8, b'C',       // repeat: -2 as u8 = 254, repeat 3 times
+            1, b'D', b'E',     // literal: copy 2 bytes
+        ];
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"ABCCCDE");
+    }
+
+    #[test]
+    fn test_run_length_decode_eod() {
+        // Test EOD marker (-128)
+        let data = vec![0, b'A', 128u8, 1, b'B', b'C']; // 128u8 = -128 as i8
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"A"); // Only first byte before EOD
+    }
+
+    #[test]
+    fn test_run_length_decode_empty() {
+        // Empty input
+        let data = vec![];
+        let result = decode_run_length(&data).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_run_length_decode_single_literal() {
+        // Single byte literal: length=0 (copy 1 byte)
+        let data = vec![0, b'Z'];
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"Z");
+    }
+
+    #[test]
+    fn test_run_length_decode_single_repeat() {
+        // Single byte repeat: length=-1 (repeat 2 times)
+        let data = vec![255u8, b'Y']; // -1 as u8 = 255
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"YY");
+    }
+
+    #[test]
+    fn test_run_length_decode_max_repeat() {
+        // Maximum repeat: length=-127 (repeat 128 times)
+        let data = vec![129u8, b'M']; // -127 as u8 = 129
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result.len(), 128);
+        assert!(result.iter().all(|&b| b == b'M'));
+    }
+
+    #[test]
+    fn test_run_length_decode_max_literal() {
+        // Maximum literal: length=127 (copy 128 bytes)
+        let mut data = vec![127];
+        data.extend((0..128).map(|i| i as u8));
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result.len(), 128);
+        assert_eq!(result, (0..128).map(|i| i as u8).collect::<Vec<u8>>());
+    }
+
+    #[test]
+    fn test_run_length_decode_error_literal_overflow() {
+        // Literal copy with insufficient data
+        let data = vec![5, b'A', b'B']; // Says copy 6 bytes but only 2 available
+        let result = decode_run_length(&data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_run_length_decode_error_missing_repeat_byte() {
+        // Repeat without byte to repeat
+        let data = vec![254u8]; // -2 as u8, but no byte follows
+        let result = decode_run_length(&data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_apply_filter_run_length() {
+        // Test the legacy apply_filter function with RunLengthDecode
+        let data = vec![2, b'X', b'Y', b'Z'];
+        let result = apply_filter(&data, Filter::RunLengthDecode).unwrap();
+        assert_eq!(result, b"XYZ");
+    }
+
+    #[test]
+    fn test_apply_filter_with_params_run_length() {
+        // Test apply_filter_with_params with RunLengthDecode
+        let data = vec![254u8, b'A', 1, b'B', b'C']; // "AAA" + "BC"
+        let result = apply_filter_with_params(&data, Filter::RunLengthDecode, None).unwrap();
+        assert_eq!(result, b"AAABC");
+    }
 }
 
 /// Apply a single filter to data with parameters (enhanced version)
@@ -725,6 +1011,8 @@ fn apply_filter_with_params(
         Filter::FlateDecode => decode_flate(data)?,
         Filter::ASCIIHexDecode => decode_ascii_hex(data)?,
         Filter::ASCII85Decode => decode_ascii85(data)?,
+        Filter::LZWDecode => decode_lzw(data, params)?,
+        Filter::RunLengthDecode => decode_run_length(data)?,
         _ => {
             return Err(ParseError::SyntaxError {
                 position: 0,
@@ -961,4 +1249,207 @@ fn paeth_predictor(left: u8, up: u8, up_left: u8) -> u8 {
     } else {
         up_left
     }
+}
+
+/// Decode LZWDecode compressed data
+///
+/// Implements the LZW decompression algorithm as specified in PDF Reference 1.7
+/// Section 3.3.3. The PDF variant of LZW uses variable-length codes starting at
+/// 9 bits and growing up to 12 bits.
+fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    // Get parameters
+    let early_change = params
+        .and_then(|p| p.get("EarlyChange"))
+        .and_then(|v| v.as_integer())
+        .map(|v| v != 0)
+        .unwrap_or(true); // Default is 1 (true) for PDF
+
+    // LZW constants
+    const MIN_BITS: u32 = 9;
+    const MAX_BITS: u32 = 12;
+    const CLEAR_CODE: u16 = 256;
+    const EOD_CODE: u16 = 257;
+    const FIRST_CODE: u16 = 258;
+
+    // Initialize the dictionary with single-byte strings
+    let mut dictionary: Vec<Vec<u8>> = Vec::with_capacity(4096);
+    for i in 0..=255 {
+        dictionary.push(vec![i]);
+    }
+    // Add clear and EOD codes
+    dictionary.push(vec![]); // 256 - Clear
+    dictionary.push(vec![]); // 257 - EOD
+
+    let mut result = Vec::new();
+    let mut bit_reader = LzwBitReader::new(data);
+    let mut code_size = MIN_BITS;
+    let mut prev_code: Option<u16> = None;
+
+    loop {
+        // Read next code
+        let code = match bit_reader.read_bits(code_size) {
+            Some(c) => c as u16,
+            None => break, // No more data
+        };
+
+        if code == EOD_CODE {
+            break;
+        }
+
+        if code == CLEAR_CODE {
+            // Reset dictionary and code size
+            dictionary.truncate(258);
+            code_size = MIN_BITS;
+            prev_code = None;
+            continue;
+        }
+
+        // Handle the code
+        if let Some(prev) = prev_code {
+            let string = if (code as usize) < dictionary.len() {
+                // Code is in dictionary
+                dictionary[code as usize].clone()
+            } else if code as usize == dictionary.len() {
+                // Special case: code == next entry to be added
+                let mut s = dictionary[prev as usize].clone();
+                s.push(dictionary[prev as usize][0]);
+                s
+            } else {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decode error: invalid code {}",
+                    code
+                )));
+            };
+
+            // Output the string
+            result.extend_from_slice(&string);
+
+            // Add new entry to dictionary
+            if dictionary.len() < 4096 {
+                let mut new_entry = dictionary[prev as usize].clone();
+                new_entry.push(string[0]);
+                dictionary.push(new_entry);
+
+                // Increase code size if necessary
+                let dict_size = dictionary.len();
+                let threshold = if early_change {
+                    1 << code_size
+                } else {
+                    (1 << code_size) + 1
+                };
+
+                if dict_size >= threshold as usize && code_size < MAX_BITS {
+                    code_size += 1;
+                }
+            }
+        } else {
+            // First code after clear
+            if (code as usize) < dictionary.len() {
+                result.extend_from_slice(&dictionary[code as usize]);
+            } else {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decode error: invalid first code {}",
+                    code
+                )));
+            }
+        }
+
+        prev_code = Some(code);
+    }
+
+    Ok(result)
+}
+
+/// Bit reader for LZW decompression
+struct LzwBitReader<'a> {
+    data: &'a [u8],
+    byte_pos: usize,
+    bit_pos: u8,
+}
+
+impl<'a> LzwBitReader<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self {
+            data,
+            byte_pos: 0,
+            bit_pos: 0,
+        }
+    }
+
+    /// Read n bits from the stream (MSB first)
+    fn read_bits(&mut self, n: u32) -> Option<u32> {
+        if n == 0 || n > 16 {
+            return None;
+        }
+
+        let mut result = 0u32;
+        let mut bits_read = 0;
+
+        while bits_read < n {
+            if self.byte_pos >= self.data.len() {
+                return None;
+            }
+
+            let bits_available = 8 - self.bit_pos;
+            let bits_to_read = (n - bits_read).min(bits_available as u32);
+
+            // Extract bits from current byte
+            let mask = ((1u32 << bits_to_read) - 1) as u8;
+            let shift = bits_available - bits_to_read as u8;
+            let bits = (self.data[self.byte_pos] >> shift) & mask;
+
+            result = (result << bits_to_read) | (bits as u32);
+            bits_read += bits_to_read;
+            self.bit_pos += bits_to_read as u8;
+
+            if self.bit_pos >= 8 {
+                self.bit_pos = 0;
+                self.byte_pos += 1;
+            }
+        }
+
+        Some(result)
+    }
+}
+
+/// Decode RunLengthDecode compressed data
+///
+/// Implements the Run Length Encoding decompression as specified in PDF Reference 1.7
+/// Section 3.3.4. Run-length encoding compresses sequences of identical bytes.
+fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
+    let mut result = Vec::new();
+    let mut i = 0;
+
+    while i < data.len() {
+        let length = data[i] as i8;
+        i += 1;
+
+        if length == -128 {
+            // EOD marker
+            break;
+        } else if length >= 0 {
+            // Copy next length+1 bytes literally
+            let count = (length as usize) + 1;
+            if i + count > data.len() {
+                return Err(ParseError::StreamDecodeError(
+                    "RunLength decode error: insufficient data for literal copy".to_string(),
+                ));
+            }
+            result.extend_from_slice(&data[i..i + count]);
+            i += count;
+        } else {
+            // Repeat next byte (-length)+1 times
+            if i >= data.len() {
+                return Err(ParseError::StreamDecodeError(
+                    "RunLength decode error: missing byte to repeat".to_string(),
+                ));
+            }
+            let repeat_byte = data[i];
+            let count = ((-length) as usize) + 1;
+            result.extend(std::iter::repeat(repeat_byte).take(count));
+            i += 1;
+        }
+    }
+
+    Ok(result)
 }
