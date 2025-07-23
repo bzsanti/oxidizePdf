@@ -146,7 +146,6 @@ impl TextContext {
         Ok(self.operations.as_bytes().to_vec())
     }
 
-
     /// Get the current font size
     pub fn font_size(&self) -> f64 {
         self.font_size

@@ -38,11 +38,18 @@ impl FontEncoding {
     pub fn recommended_for_font(font: Font) -> Option<Self> {
         match font {
             // Text fonts typically use WinAnsiEncoding for broad compatibility
-            Font::Helvetica | Font::HelveticaBold | Font::HelveticaOblique | Font::HelveticaBoldOblique |
-            Font::TimesRoman | Font::TimesBold | Font::TimesItalic | Font::TimesBoldItalic |
-            Font::Courier | Font::CourierBold | Font::CourierOblique | Font::CourierBoldOblique => {
-                Some(FontEncoding::WinAnsiEncoding)
-            }
+            Font::Helvetica
+            | Font::HelveticaBold
+            | Font::HelveticaOblique
+            | Font::HelveticaBoldOblique
+            | Font::TimesRoman
+            | Font::TimesBold
+            | Font::TimesItalic
+            | Font::TimesBoldItalic
+            | Font::Courier
+            | Font::CourierBold
+            | Font::CourierOblique
+            | Font::CourierBoldOblique => Some(FontEncoding::WinAnsiEncoding),
             // Symbol fonts don't use text encodings
             Font::Symbol | Font::ZapfDingbats => None,
         }
@@ -393,9 +400,18 @@ mod tests {
     #[test]
     fn test_font_encoding_pdf_names() {
         assert_eq!(FontEncoding::WinAnsiEncoding.pdf_name(), "WinAnsiEncoding");
-        assert_eq!(FontEncoding::MacRomanEncoding.pdf_name(), "MacRomanEncoding");
-        assert_eq!(FontEncoding::StandardEncoding.pdf_name(), "StandardEncoding");
-        assert_eq!(FontEncoding::MacExpertEncoding.pdf_name(), "MacExpertEncoding");
+        assert_eq!(
+            FontEncoding::MacRomanEncoding.pdf_name(),
+            "MacRomanEncoding"
+        );
+        assert_eq!(
+            FontEncoding::StandardEncoding.pdf_name(),
+            "StandardEncoding"
+        );
+        assert_eq!(
+            FontEncoding::MacExpertEncoding.pdf_name(),
+            "MacExpertEncoding"
+        );
         assert_eq!(FontEncoding::Custom("MyEncoding").pdf_name(), "MyEncoding");
     }
 
@@ -423,7 +439,10 @@ mod tests {
     #[test]
     fn test_font_encoding_equality() {
         assert_eq!(FontEncoding::WinAnsiEncoding, FontEncoding::WinAnsiEncoding);
-        assert_ne!(FontEncoding::WinAnsiEncoding, FontEncoding::MacRomanEncoding);
+        assert_ne!(
+            FontEncoding::WinAnsiEncoding,
+            FontEncoding::MacRomanEncoding
+        );
         assert_eq!(FontEncoding::Custom("Test"), FontEncoding::Custom("Test"));
         assert_ne!(FontEncoding::Custom("Test1"), FontEncoding::Custom("Test2"));
     }
@@ -454,7 +473,8 @@ mod tests {
 
     #[test]
     fn test_font_with_encoding_with_specific() {
-        let font_enc = FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::MacRomanEncoding);
+        let font_enc =
+            FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::MacRomanEncoding);
         assert_eq!(font_enc.font, Font::TimesRoman);
         assert_eq!(font_enc.encoding, Some(FontEncoding::MacRomanEncoding));
     }
@@ -477,11 +497,17 @@ mod tests {
     fn test_font_convenience_methods() {
         let helvetica_with_enc = Font::Helvetica.with_encoding(FontEncoding::MacRomanEncoding);
         assert_eq!(helvetica_with_enc.font, Font::Helvetica);
-        assert_eq!(helvetica_with_enc.encoding, Some(FontEncoding::MacRomanEncoding));
+        assert_eq!(
+            helvetica_with_enc.encoding,
+            Some(FontEncoding::MacRomanEncoding)
+        );
 
         let times_recommended = Font::TimesRoman.with_recommended_encoding();
         assert_eq!(times_recommended.font, Font::TimesRoman);
-        assert_eq!(times_recommended.encoding, Some(FontEncoding::WinAnsiEncoding));
+        assert_eq!(
+            times_recommended.encoding,
+            Some(FontEncoding::WinAnsiEncoding)
+        );
 
         let courier_no_enc = Font::Courier.without_encoding();
         assert_eq!(courier_no_enc.font, Font::Courier);
@@ -492,8 +518,10 @@ mod tests {
     fn test_font_with_encoding_equality() {
         let font1 = FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
         let font2 = FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
-        let font3 = FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::MacRomanEncoding);
-        let font4 = FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::WinAnsiEncoding);
+        let font3 =
+            FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::MacRomanEncoding);
+        let font4 =
+            FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::WinAnsiEncoding);
 
         assert_eq!(font1, font2);
         assert_ne!(font1, font3);
@@ -502,7 +530,8 @@ mod tests {
 
     #[test]
     fn test_font_with_encoding_debug() {
-        let font_enc = FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
+        let font_enc =
+            FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
         let debug_str = format!("{:?}", font_enc);
         assert!(debug_str.contains("Helvetica"));
         assert!(debug_str.contains("WinAnsiEncoding"));
@@ -510,7 +539,8 @@ mod tests {
 
     #[test]
     fn test_font_with_encoding_clone() {
-        let font1 = FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::StandardEncoding);
+        let font1 =
+            FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::StandardEncoding);
         let font2 = font1.clone();
         assert_eq!(font1, font2);
     }

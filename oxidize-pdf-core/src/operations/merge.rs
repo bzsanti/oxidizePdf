@@ -146,7 +146,7 @@ impl PdfMerger {
         for input_idx in 0..self.inputs.len() {
             let input_path = self.inputs[input_idx].path.clone();
             let input_pages = self.inputs[input_idx].pages.clone();
-            
+
             let document = PdfReader::open_document(&input_path).map_err(|e| {
                 OperationError::ParseError(format!(
                     "Failed to open {}: {}",
@@ -243,12 +243,13 @@ impl PdfMerger {
                     let font_name_str = font_name.0.as_str();
                     if !self.font_mappings[input_idx].contains_key(font_name_str) {
                         let new_font_name = format!("MF{}", self.next_font_index);
-                        self.font_mappings[input_idx].insert(font_name_str.to_string(), new_font_name);
+                        self.font_mappings[input_idx]
+                            .insert(font_name_str.to_string(), new_font_name);
                         self.next_font_index += 1;
                     }
                 }
             }
-            
+
             // Map XObjects (images, forms)
             if let Some(xobjects_dict) = resources.get("XObject").and_then(|x| x.as_dict()) {
                 for (xobject_name, _xobject_obj) in xobjects_dict.0.iter() {
@@ -256,7 +257,8 @@ impl PdfMerger {
                     let xobject_name_str = xobject_name.0.as_str();
                     if !self.xobject_mappings[input_idx].contains_key(xobject_name_str) {
                         let new_xobject_name = format!("MX{}", self.next_xobject_index);
-                        self.xobject_mappings[input_idx].insert(xobject_name_str.to_string(), new_xobject_name);
+                        self.xobject_mappings[input_idx]
+                            .insert(xobject_name_str.to_string(), new_xobject_name);
                         self.next_xobject_index += 1;
                     }
                 }
@@ -328,10 +330,12 @@ impl PdfMerger {
                 }
                 ContentOperation::SetFont(name, size) => {
                     // Use font mapping if available
-                    let mapped_name = self.font_mappings.get(input_idx)
+                    let mapped_name = self
+                        .font_mappings
+                        .get(input_idx)
                         .and_then(|mapping| mapping.get(name))
                         .unwrap_or(name);
-                    
+
                     // Map PDF font names to our standard fonts
                     // Note: In a full implementation, we would preserve custom fonts
                     // by copying font resources and updating references
@@ -351,7 +355,10 @@ impl PdfMerger {
                         _ => {
                             // For non-standard fonts, default to Helvetica
                             // A complete implementation would preserve the original font
-                            eprintln!("Warning: Font '{}' not supported, using Helvetica", mapped_name);
+                            eprintln!(
+                                "Warning: Font '{}' not supported, using Helvetica",
+                                mapped_name
+                            );
                             crate::text::Font::Helvetica
                         }
                     };
@@ -404,10 +411,12 @@ impl PdfMerger {
                 }
                 ContentOperation::PaintXObject(name) => {
                     // Use XObject mapping if available
-                    let mapped_name = self.xobject_mappings.get(input_idx)
+                    let mapped_name = self
+                        .xobject_mappings
+                        .get(input_idx)
                         .and_then(|mapping| mapping.get(name))
                         .unwrap_or(name);
-                    
+
                     // Note: In a complete implementation, we would copy the XObject
                     // resource (image or form) and paint it with the new reference.
                     // For now, we'll add a placeholder comment
@@ -416,13 +425,13 @@ impl PdfMerger {
                          Full XObject support requires resource copying.",
                         name, mapped_name
                     );
-                    
+
                     // Add a visual placeholder for missing XObjects
                     page.graphics()
                         .set_fill_color(crate::graphics::Color::Rgb(0.9, 0.9, 0.9))
                         .rect(current_x as f64, current_y as f64, 100.0, 100.0)
                         .fill();
-                    
+
                     page.text()
                         .set_font(crate::text::Font::Helvetica, 10.0)
                         .at(current_x as f64 + 10.0, current_y as f64 + 50.0)

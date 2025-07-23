@@ -200,7 +200,7 @@ impl Page {
     /// but in a full implementation it would parse all text operations.
     pub(crate) fn get_used_fonts(&self) -> Vec<Font> {
         let mut fonts = HashSet::new();
-        
+
         // Add the current font from text context
         fonts.insert(self.text_context.current_font());
 
@@ -209,12 +209,12 @@ impl Page {
         // 2. Extract font names from those operations
         // 3. Map them back to Font enum values
         // For now, we'll just return the fonts we know are commonly used
-        
+
         // Add some commonly used fonts as a baseline
         fonts.insert(Font::Helvetica);
         fonts.insert(Font::TimesRoman);
         fonts.insert(Font::Courier);
-        
+
         fonts.into_iter().collect()
     }
 }

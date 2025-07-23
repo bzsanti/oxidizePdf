@@ -119,19 +119,25 @@ impl<W: Write> PdfWriter<W> {
 
         // Get fonts with encodings from the document
         let fonts_with_encodings = document.get_fonts_with_encodings();
-        
+
         for font_with_encoding in fonts_with_encodings {
             let mut font_entry = Dictionary::new();
             font_entry.set("Type", Object::Name("Font".to_string()));
             font_entry.set("Subtype", Object::Name("Type1".to_string()));
-            font_entry.set("BaseFont", Object::Name(font_with_encoding.font.pdf_name().to_string()));
-            
+            font_entry.set(
+                "BaseFont",
+                Object::Name(font_with_encoding.font.pdf_name().to_string()),
+            );
+
             // Add encoding if specified
             if let Some(encoding) = font_with_encoding.encoding {
                 font_entry.set("Encoding", Object::Name(encoding.pdf_name().to_string()));
             }
-            
-            font_dict.set(font_with_encoding.font.pdf_name(), Object::Dictionary(font_entry));
+
+            font_dict.set(
+                font_with_encoding.font.pdf_name(),
+                Object::Dictionary(font_entry),
+            );
         }
 
         resources.set("Font", Object::Dictionary(font_dict));

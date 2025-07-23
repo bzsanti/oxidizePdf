@@ -909,9 +909,9 @@ mod tests {
     fn test_run_length_decode_mixed() {
         // Mixed: literal "AB", repeat 'C' 3 times, literal "DE"
         let data = vec![
-            1, b'A', b'B',     // literal: copy 2 bytes
-            254u8, b'C',       // repeat: -2 as u8 = 254, repeat 3 times
-            1, b'D', b'E',     // literal: copy 2 bytes
+            1, b'A', b'B', // literal: copy 2 bytes
+            254u8, b'C', // repeat: -2 as u8 = 254, repeat 3 times
+            1, b'D', b'E', // literal: copy 2 bytes
         ];
         let result = decode_run_length(&data).unwrap();
         assert_eq!(result, b"ABCCCDE");
@@ -1269,6 +1269,7 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
     const MAX_BITS: u32 = 12;
     const CLEAR_CODE: u16 = 256;
     const EOD_CODE: u16 = 257;
+    #[allow(dead_code)]
     const FIRST_CODE: u16 = 258;
 
     // Initialize the dictionary with single-byte strings
@@ -1285,12 +1286,8 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
     let mut code_size = MIN_BITS;
     let mut prev_code: Option<u16> = None;
 
-    loop {
-        // Read next code
-        let code = match bit_reader.read_bits(code_size) {
-            Some(c) => c as u16,
-            None => break, // No more data
-        };
+    while let Some(c) = bit_reader.read_bits(code_size) {
+        let code = c as u16;
 
         if code == EOD_CODE {
             break;
@@ -1446,7 +1443,7 @@ fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
             }
             let repeat_byte = data[i];
             let count = ((-length) as usize) + 1;
-            result.extend(std::iter::repeat(repeat_byte).take(count));
+            result.extend(std::iter::repeat_n(repeat_byte, count));
             i += 1;
         }
     }
