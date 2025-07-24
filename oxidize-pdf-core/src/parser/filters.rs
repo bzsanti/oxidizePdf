@@ -1313,8 +1313,7 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
                 s
             } else {
                 return Err(ParseError::StreamDecodeError(format!(
-                    "LZW decode error: invalid code {}",
-                    code
+                    "LZW decode error: invalid code {code}"
                 )));
             };
 
@@ -1345,8 +1344,7 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
                 result.extend_from_slice(&dictionary[code as usize]);
             } else {
                 return Err(ParseError::StreamDecodeError(format!(
-                    "LZW decode error: invalid first code {}",
-                    code
+                    "LZW decode error: invalid first code {code}"
                 )));
             }
         }
