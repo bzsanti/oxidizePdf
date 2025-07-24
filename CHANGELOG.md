@@ -8,12 +8,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.1.2] - 2025-07-24
+
+### Added
+
+**🔧 XRef Recovery for Corrupted PDFs**
+- New `recovery/xref_recovery.rs` module for rebuilding cross-reference tables
+- `recover_xref()` function to recover XRef from corrupted PDFs
+- `needs_xref_recovery()` function to detect if recovery is needed
+- Automatic XRef recovery integrated into lenient parsing mode
+- 6 comprehensive tests for XRef recovery functionality
+
+**🧪 Test Infrastructure Improvements**
+- New `real-pdf-tests` feature flag for tests requiring actual PDF files
+- Tests with real PDFs are now ignored by default (faster CI/CD)
+- Enable with `cargo test --features real-pdf-tests`
+- Updated CONTRIBUTING.md with testing guidelines
+
+**📊 Code Coverage**
+- Integrated Tarpaulin for code coverage measurement
+- Current coverage: 60.15% (4919/8178 lines)
+- Added `measure_coverage.sh` script for local coverage analysis
+- Coverage configuration in `.tarpaulin.toml`
+
 ### Fixed
 
 **📦 Dependency Updates**
 - Updated oxidize-pdf dependency version to 1.1.0 in CLI and API crates
 - Fixed lib.rs dashboard warnings about outdated dependencies
 - All workspace dependencies are now using latest compatible versions
+- Synchronized versions: oxidize-pdf-cli and oxidize-pdf-api to 1.1.1
+
+### Internal
+- Added XRef recovery tests (`xref_recovery_test.rs`)
+- Updated real PDF integration tests to use feature flags
+- Improved error handling in XRef parsing
 
 ## [1.1.1] - 2025-07-22
 

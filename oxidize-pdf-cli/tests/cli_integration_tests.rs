@@ -422,7 +422,7 @@ fn test_cli_version_command() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("oxidizepdf"), "Should show program name");
-    assert!(stdout.contains("0.1"), "Should show version number");
+    assert!(stdout.contains("1.1"), "Should show version number");
 }
 
 #[test]

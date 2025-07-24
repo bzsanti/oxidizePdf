@@ -54,12 +54,14 @@ pub mod corruption;
 pub mod repair;
 pub mod scanner;
 pub mod validator;
+pub mod xref_recovery;
 
 // Re-export main types
 pub use corruption::{detect_corruption, CorruptionReport, CorruptionType};
 pub use repair::{repair_document, RepairResult, RepairStrategy};
 pub use scanner::{ObjectScanner, ScanResult};
 pub use validator::{validate_pdf, ValidationError, ValidationResult};
+pub use xref_recovery::{needs_xref_recovery, recover_xref, XRefRecovery};
 
 /// Options for PDF recovery
 #[derive(Debug, Clone)]

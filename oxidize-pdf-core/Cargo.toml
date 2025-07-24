@@ -127,5 +127,8 @@ compression = ["dep:flate2"]
 ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]
 ocr-full = ["ocr-tesseract"]
 
+# Test features
+real-pdf-tests = []  # Enable tests with real PDF files from fixtures
+
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde", "dep:serde_json"]
