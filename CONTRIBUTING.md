@@ -27,6 +27,15 @@ Thank you for your interest in contributing to oxidizePdf! This document provide
    cargo test --workspace
    ```
 
+4. **Running Tests with Real PDFs (Optional)**
+   ```bash
+   # Enable tests with real PDF fixtures
+   cargo test --workspace --features real-pdf-tests
+   
+   # Note: This requires PDF fixtures in tests/fixtures/
+   # Without the feature, these tests are ignored
+   ```
+
 ## Development Workflow
 
 ### Before Making Changes
@@ -174,6 +183,29 @@ cargo test --test integration_test_name
 - Add integration tests for complex workflows
 - Use descriptive test names: `test_merge_preserves_bookmarks`
 - Mock external dependencies appropriately
+
+#### Real PDF Testing
+Tests that require real PDF files are gated behind the `real-pdf-tests` feature flag:
+
+```rust
+#[test]
+#[cfg_attr(not(feature = "real-pdf-tests"), ignore = "real-pdf-tests feature not enabled")]
+fn test_with_real_pdfs() {
+    // Test code that requires actual PDF files
+}
+```
+
+To run tests with real PDFs:
+```bash
+# Place PDF files in tests/fixtures/
+# Run tests with the feature enabled
+cargo test --features real-pdf-tests
+```
+
+This approach ensures:
+- CI/CD pipelines run quickly with synthetic PDFs
+- Local development can test against real PDFs when needed
+- No copyrighted material is checked into the repository
 
 ## Community Guidelines
 

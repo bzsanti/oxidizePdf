@@ -23,6 +23,9 @@ rand = "0.8"
 hex = "0.4"
 regex = "1.11"
 
+# For memory profiling
+stats_alloc = "0.1"
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
 

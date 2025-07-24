@@ -7,6 +7,10 @@ use oxidize_pdf::parser::PdfReader;
 use std::path::Path;
 
 #[test]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_course_glossary_circular_ref() {
     let path = Path::new("tests/fixtures/Course_Glossary_SUPPLY_LIST.pdf");
 
@@ -52,6 +56,10 @@ fn test_course_glossary_circular_ref() {
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_liars_and_outliers_circular_ref() {
     let path =
         Path::new("tests/fixtures/liarsandoutliers_enablingthetrustthatsocietyneedstothrive.pdf");
@@ -93,6 +101,10 @@ fn test_liars_and_outliers_circular_ref() {
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_cryptography_engineering_circular_ref() {
     let path = Path::new(
         "tests/fixtures/cryptography_engineering_design_principles_and_practical_applications.pdf",
@@ -124,6 +136,10 @@ fn test_cryptography_engineering_circular_ref() {
 }
 
 #[test]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_circular_ref_batch() {
     // Test multiple PDFs that were failing with circular reference errors
     let test_pdfs = vec![
