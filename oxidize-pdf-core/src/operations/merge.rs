@@ -356,8 +356,7 @@ impl PdfMerger {
                             // For non-standard fonts, default to Helvetica
                             // A complete implementation would preserve the original font
                             eprintln!(
-                                "Warning: Font '{}' not supported, using Helvetica",
-                                mapped_name
+                                "Warning: Font '{mapped_name}' not supported, using Helvetica"
                             );
                             crate::text::Font::Helvetica
                         }
@@ -421,9 +420,8 @@ impl PdfMerger {
                     // resource (image or form) and paint it with the new reference.
                     // For now, we'll add a placeholder comment
                     eprintln!(
-                        "Info: XObject '{}' (mapped to '{}') would be painted here. \
-                         Full XObject support requires resource copying.",
-                        name, mapped_name
+                        "Info: XObject '{name}' (mapped to '{mapped_name}') would be painted here. \
+                         Full XObject support requires resource copying."
                     );
 
                     // Add a visual placeholder for missing XObjects
@@ -435,7 +433,7 @@ impl PdfMerger {
                     page.text()
                         .set_font(crate::text::Font::Helvetica, 10.0)
                         .at(current_x as f64 + 10.0, current_y as f64 + 50.0)
-                        .write(&format!("[Image: {}]", name))
+                        .write(&format!("[Image: {name}]"))
                         .map_err(OperationError::PdfError)?;
                 }
                 _ => {
