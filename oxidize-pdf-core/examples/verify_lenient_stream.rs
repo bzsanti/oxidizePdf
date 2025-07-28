@@ -42,14 +42,7 @@ startxref
     // Test with strict mode
     println!("Testing STRICT mode:");
     let cursor = Cursor::new(pdf_content.to_vec());
-    let strict_options = ParseOptions {
-        lenient_streams: false,
-        max_recovery_bytes: 1000,
-        collect_warnings: false,
-        lenient_encoding: true,
-        preferred_encoding: None,
-        lenient_syntax: false,
-    };
+    let strict_options = ParseOptions::strict();
 
     match PdfReader::new_with_options(cursor, strict_options) {
         Ok(mut reader) => {
@@ -74,14 +67,7 @@ startxref
     // Test with lenient mode
     println!("\nTesting LENIENT mode:");
     let cursor = Cursor::new(pdf_content.to_vec());
-    let lenient_options = ParseOptions {
-        lenient_streams: true,
-        max_recovery_bytes: 1000,
-        collect_warnings: true,
-        lenient_encoding: true,
-        preferred_encoding: None,
-        lenient_syntax: true,
-    };
+    let lenient_options = ParseOptions::lenient();
 
     match PdfReader::new_with_options(cursor, lenient_options) {
         Ok(mut reader) => {
