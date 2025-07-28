@@ -6,8 +6,8 @@ use oxidize_pdf::parser::PdfReader;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::path::PathBuf;
+use std::time::Instant;
 
 #[derive(Debug)]
 struct Report {

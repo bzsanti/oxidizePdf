@@ -1,6 +1,5 @@
 use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 
 fn main() {
@@ -48,14 +47,7 @@ startxref
     // Test strict mode
     println!("Testing STRICT mode:");
     let file = File::open(temp_path).unwrap();
-    let options = ParseOptions {
-        lenient_streams: false,
-        max_recovery_bytes: 1000,
-        collect_warnings: false,
-        lenient_encoding: true,
-        preferred_encoding: None,
-        lenient_syntax: false,
-    };
+    let options = ParseOptions::strict();
 
     match PdfReader::new_with_options(file, options) {
         Ok(mut reader) => {
@@ -80,14 +72,7 @@ startxref
     // Test lenient mode
     println!("\nTesting LENIENT mode:");
     let file = File::open(temp_path).unwrap();
-    let options = ParseOptions {
-        lenient_streams: true,
-        max_recovery_bytes: 1000,
-        collect_warnings: true,
-        lenient_encoding: true,
-        preferred_encoding: None,
-        lenient_syntax: true,
-    };
+    let options = ParseOptions::lenient();
 
     match PdfReader::new_with_options(file, options) {
         Ok(mut reader) => {

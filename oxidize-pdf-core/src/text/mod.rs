@@ -17,14 +17,16 @@ pub use extraction::{ExtractedText, ExtractionOptions, TextExtractor, TextFragme
 pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
 pub use header_footer::{HeaderFooter, HeaderFooterOptions, HeaderFooterPosition};
-pub use layout::{ColumnContent, ColumnLayout};
-pub use list::{ListElement, ListStyle};
+pub use layout::{ColumnContent, ColumnLayout, ColumnOptions, TextFormat};
+pub use list::{
+    BulletStyle, ListElement, ListOptions, ListStyle, OrderedList, OrderedListStyle, UnorderedList,
+};
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
     FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError, OcrOptions,
     OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
 };
-pub use table::Table;
+pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 
 use crate::error::Result;
 use std::fmt::Write;

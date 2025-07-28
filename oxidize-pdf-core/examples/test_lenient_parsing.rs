@@ -5,13 +5,10 @@ use std::path::Path;
 fn test_pdf_with_options(path: &Path, lenient: bool) -> Result<(), Box<dyn std::error::Error>> {
     let file = File::open(path)?;
 
-    let options = ParseOptions {
-        lenient_streams: lenient,
-        max_recovery_bytes: 2000,
-        collect_warnings: false,
-        lenient_encoding: true,
-        preferred_encoding: None,
-        lenient_syntax: lenient,
+    let options = if lenient {
+        ParseOptions::lenient()
+    } else {
+        ParseOptions::strict()
     };
 
     match PdfReader::new_with_options(file, options) {
