@@ -13,6 +13,10 @@ CLAUDE.md
 IMPLEMENTATION_*.md
 *_SESSION_*.md
 *_PROGRESS*.md
+SESSION_*.md
+.claude-session-*.md
+**/PROJECT_PROGRESS.md
+!PROJECT_PROGRESS.md
 
 # Private directories
 oxidizePdf-private*/
@@ -42,3 +46,13 @@ pdf_analysis_*.json
 pdf_compatibility_*.json
 test_render_output.png
 batch_analysis_output.log
+
+# Temporary analysis outputs
+analysis_*.txt
+*_analysis_*.txt
+*_analysis_*.json
+analysis_results.txt
+comprehensive_analysis_report.json
+character_encoding_analysis.json
+pdf_test_results.txt
+group*.txt
