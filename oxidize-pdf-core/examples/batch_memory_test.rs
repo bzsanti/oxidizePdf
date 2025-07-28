@@ -24,6 +24,7 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone)]
 struct PdfTestResult {
     filename: String,
+    #[allow(dead_code)]
     file_path: PathBuf,
     file_size: usize,
     // Standard reader results
@@ -89,6 +90,7 @@ impl PdfTestResult {
         }
     }
 
+    #[allow(dead_code)]
     fn categorize_size(&self) -> SizeCategory {
         match self.file_size {
             0..=102400 => SizeCategory::Small,        // < 100KB
