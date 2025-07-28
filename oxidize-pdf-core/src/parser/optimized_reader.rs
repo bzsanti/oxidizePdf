@@ -9,7 +9,7 @@ use super::objects::{PdfDictionary, PdfObject};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
 use super::xref::XRefTable;
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 use crate::memory::{LruCache, MemoryOptions, MemoryStats};
 use crate::objects::ObjectId;
 use std::collections::HashMap;
@@ -379,7 +379,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
             let stream_obj = self.load_object_from_disk(stream_obj_num, 0)?;
 
             if let PdfObject::Stream(stream) = stream_obj {
-                let obj_stream = ObjectStream::parse(stream)?;
+                let obj_stream = ObjectStream::parse(stream, &ParseOptions::default())?;
                 self.object_stream_cache.insert(stream_obj_num, obj_stream);
             } else {
                 return Err(ParseError::SyntaxError {

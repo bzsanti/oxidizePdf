@@ -417,7 +417,7 @@ impl<R: Read + Seek> PdfReader<R> {
 
             if let Some(stream) = stream_obj.as_stream() {
                 // Parse the object stream
-                let obj_stream = ObjectStream::parse(stream.clone())?;
+                let obj_stream = ObjectStream::parse(stream.clone(), &self.options)?;
                 self.object_stream_cache.insert(stream_obj_num, obj_stream);
             } else {
                 return Err(ParseError::SyntaxError {

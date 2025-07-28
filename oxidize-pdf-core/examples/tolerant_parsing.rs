@@ -35,7 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\n2. Trying tolerant parsing...");
-    match PdfReader::open_tolerant(pdf_path) {
+    let tolerant_options = ParseOptions::tolerant();
+    let file = std::fs::File::open(pdf_path).expect("Failed to open file");
+    match PdfReader::new_with_options(file, tolerant_options) {
         Ok(mut reader) => {
             println!("✅ Success with tolerant parsing!");
             println!("   PDF Version: {}", reader.version());
@@ -70,7 +72,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n3. Trying custom options (skip errors)...");
     let skip_options = ParseOptions::skip_errors();
-    match PdfReader::open_with_options(pdf_path, skip_options) {
+    let file = std::fs::File::open(pdf_path).expect("Failed to open file");
+    match PdfReader::new_with_options(file, skip_options) {
         Ok(mut reader) => {
             println!("✅ Success with skip_errors mode!");
             println!("   PDF Version: {}", reader.version());

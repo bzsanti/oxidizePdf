@@ -340,6 +340,7 @@ impl Table {
 
 impl TableRow {
     /// Create a new row with cells
+    #[allow(dead_code)]
     pub fn new(cells: Vec<TableCell>) -> Self {
         Self {
             cells,
@@ -348,6 +349,7 @@ impl TableRow {
     }
 
     /// Create a header row
+    #[allow(dead_code)]
     pub fn header(cells: Vec<TableCell>) -> Self {
         Self {
             cells,

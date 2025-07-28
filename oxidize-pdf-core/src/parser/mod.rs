@@ -318,30 +318,34 @@ impl ParseOptions {
 
 /// Warnings that can be collected during lenient parsing
 #[derive(Debug, Clone)]
-pub struct ParseWarning {
-    /// Type of warning
-    pub warning_type: ParseWarningType,
-    /// Context where the warning occurred
-    pub context: String,
-    /// Detailed message about the warning
-    pub message: String,
-    /// Byte offset where the warning occurred (if available)
-    pub offset: Option<usize>,
-}
-
-/// Types of warnings that can occur during lenient parsing
-#[derive(Debug, Clone, PartialEq)]
-pub enum ParseWarningType {
-    /// Invalid stream length was corrected
-    InvalidStreamLength,
-    /// Missing required object
-    MissingObject,
-    /// Invalid character encoding
-    InvalidEncoding,
-    /// Malformed syntax was recovered
-    MalformedSyntax,
-    /// Other warnings
-    Other,
+pub enum ParseWarning {
+    /// Stream length mismatch was corrected
+    StreamLengthCorrected {
+        declared_length: usize,
+        actual_length: usize,
+        object_id: Option<(u32, u16)>,
+    },
+    /// Invalid character encoding was recovered
+    InvalidEncoding {
+        position: usize,
+        recovered_text: String,
+        encoding_used: Option<encoding::EncodingType>,
+        replacement_count: usize,
+    },
+    /// Missing required key with fallback used
+    MissingKeyWithFallback { key: String, fallback_value: String },
+    /// Syntax error was recovered
+    SyntaxErrorRecovered {
+        position: usize,
+        expected: String,
+        found: String,
+        recovery_action: String,
+    },
+    /// Invalid object reference was skipped
+    InvalidReferenceSkipped {
+        object_id: (u32, u16),
+        reason: String,
+    },
 }
 
 /// PDF Parser errors covering all failure modes during parsing.

@@ -37,6 +37,15 @@ pub enum BulletStyle {
     Custom(char),
 }
 
+/// Combined list style enum
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ListStyle {
+    /// Ordered list with specific style
+    Ordered(OrderedListStyle),
+    /// Unordered list with specific bullet
+    Unordered(BulletStyle),
+}
+
 /// Options for list rendering
 #[derive(Debug, Clone)]
 pub struct ListOptions {

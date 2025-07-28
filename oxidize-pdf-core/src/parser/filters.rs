@@ -3,7 +3,7 @@
 //! Handles decompression and decoding of PDF streams according to ISO 32000-1 Section 7.4
 
 use super::objects::{PdfDictionary, PdfObject};
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 
 #[cfg(feature = "compression")]
 use flate2::read::ZlibDecoder;
@@ -63,7 +63,11 @@ impl Filter {
 }
 
 /// Decode stream data according to specified filters
-pub fn decode_stream(data: &[u8], dict: &PdfDictionary) -> ParseResult<Vec<u8>> {
+pub fn decode_stream(
+    data: &[u8],
+    dict: &PdfDictionary,
+    _options: &ParseOptions,
+) -> ParseResult<Vec<u8>> {
     // Get filter(s) from dictionary
     let filters = match dict.get("Filter") {
         Some(PdfObject::Name(name)) => vec![name.as_str()],
@@ -362,7 +366,7 @@ mod tests {
         let data = b"Hello, world!";
         let dict = PdfDictionary::new();
 
-        let result = decode_stream(data, &dict).unwrap();
+        let result = decode_stream(data, &dict, &ParseOptions::default()).unwrap();
         assert_eq!(result, data);
     }
 
@@ -375,7 +379,7 @@ mod tests {
             PdfObject::Name(PdfName("ASCIIHexDecode".to_string())),
         );
 
-        let result = decode_stream(data, &dict).unwrap();
+        let result = decode_stream(data, &dict, &ParseOptions::default()).unwrap();
         assert_eq!(result, b"Hello");
     }
 
@@ -388,7 +392,7 @@ mod tests {
             PdfObject::Name(PdfName("UnknownFilter".to_string())),
         );
 
-        let result = decode_stream(data, &dict);
+        let result = decode_stream(data, &dict, &ParseOptions::default());
         assert!(result.is_err());
     }
 
@@ -399,7 +403,7 @@ mod tests {
         let filters = vec![PdfObject::Name(PdfName("ASCIIHexDecode".to_string()))];
         dict.insert("Filter".to_string(), PdfObject::Array(PdfArray(filters)));
 
-        let result = decode_stream(data, &dict).unwrap();
+        let result = decode_stream(data, &dict, &ParseOptions::default()).unwrap();
         assert_eq!(result, b"Hello");
     }
 
@@ -409,7 +413,7 @@ mod tests {
         let mut dict = PdfDictionary::new();
         dict.insert("Filter".to_string(), PdfObject::Integer(42)); // Invalid type
 
-        let result = decode_stream(data, &dict);
+        let result = decode_stream(data, &dict, &ParseOptions::default());
         assert!(result.is_err());
     }
 
