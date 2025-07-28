@@ -133,16 +133,23 @@
 
 pub mod content;
 pub mod document;
+pub mod encoding;
 pub mod filters;
 pub mod header;
 pub mod lexer;
 pub mod object_stream;
 pub mod objects;
+pub mod optimized_reader;
 pub mod page_tree;
 pub mod reader;
+pub mod stack_safe;
+pub mod stack_safe_tests;
 pub mod trailer;
 pub mod xref;
+pub mod xref_types;
 
+#[cfg(test)]
+mod stream_length_tests;
 #[cfg(test)]
 pub mod test_helpers;
 
@@ -151,7 +158,11 @@ use crate::error::OxidizePdfError;
 // Re-export main types for convenient access
 pub use self::content::{ContentOperation, ContentParser, TextElement};
 pub use self::document::{PdfDocument, ResourceManager};
+pub use self::encoding::{
+    CharacterDecoder, EncodingOptions, EncodingResult, EncodingType, EnhancedDecoder,
+};
 pub use self::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
+pub use self::optimized_reader::OptimizedPdfReader;
 pub use self::page_tree::ParsedPage;
 pub use self::reader::{DocumentMetadata, PdfReader};
 
@@ -178,6 +189,12 @@ pub type ParseResult<T> = Result<T, ParseError>;
 ///     partial_content_allowed: true,
 ///     max_recovery_attempts: 10,     // Try harder to recover
 ///     log_recovery_details: false,   // Quiet recovery
+///     lenient_streams: true,
+///     max_recovery_bytes: 5000,
+///     collect_warnings: true,
+///     lenient_encoding: true,
+///     preferred_encoding: None,
+///     lenient_syntax: true,
 /// };
 /// ```
 #[derive(Debug, Clone)]
@@ -205,6 +222,18 @@ pub struct ParseOptions {
     ///
     /// Note: Requires the "logging" feature to be enabled
     pub log_recovery_details: bool,
+    /// Enable lenient parsing for malformed streams with incorrect Length fields
+    pub lenient_streams: bool,
+    /// Maximum number of bytes to search ahead when recovering from stream errors
+    pub max_recovery_bytes: usize,
+    /// Collect warnings instead of failing on recoverable errors
+    pub collect_warnings: bool,
+    /// Enable lenient character encoding (use replacement characters for invalid sequences)
+    pub lenient_encoding: bool,
+    /// Preferred character encoding for text decoding
+    pub preferred_encoding: Option<encoding::EncodingType>,
+    /// Enable automatic syntax error recovery
+    pub lenient_syntax: bool,
 }
 
 impl Default for ParseOptions {
@@ -216,6 +245,12 @@ impl Default for ParseOptions {
             partial_content_allowed: false,
             max_recovery_attempts: 3,
             log_recovery_details: false,
+            lenient_streams: false,   // Strict mode by default
+            max_recovery_bytes: 1000, // Search up to 1KB ahead
+            collect_warnings: false,  // Don't collect warnings by default
+            lenient_encoding: true,   // Enable lenient encoding by default
+            preferred_encoding: None, // Auto-detect encoding
+            lenient_syntax: false,    // Strict syntax parsing by default
         }
     }
 }
@@ -223,7 +258,20 @@ impl Default for ParseOptions {
 impl ParseOptions {
     /// Create options for strict parsing (default)
     pub fn strict() -> Self {
-        Self::default()
+        Self {
+            strict_mode: true,
+            recover_from_stream_errors: false,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: false,
+            max_recovery_attempts: 0,
+            log_recovery_details: false,
+            lenient_streams: false,
+            max_recovery_bytes: 0,
+            collect_warnings: false,
+            lenient_encoding: false,
+            preferred_encoding: None,
+            lenient_syntax: false,
+        }
     }
 
     /// Create options for tolerant parsing that attempts recovery
@@ -235,7 +283,18 @@ impl ParseOptions {
             partial_content_allowed: true,
             max_recovery_attempts: 5,
             log_recovery_details: true,
+            lenient_streams: true,
+            max_recovery_bytes: 5000,
+            collect_warnings: true,
+            lenient_encoding: true,
+            preferred_encoding: None,
+            lenient_syntax: true,
         }
+    }
+
+    /// Create lenient parsing options for maximum compatibility (alias for tolerant)
+    pub fn lenient() -> Self {
+        Self::tolerant()
     }
 
     /// Create options that skip corrupted content
@@ -247,8 +306,42 @@ impl ParseOptions {
             partial_content_allowed: true,
             max_recovery_attempts: 1,
             log_recovery_details: false,
+            lenient_streams: true,
+            max_recovery_bytes: 5000,
+            collect_warnings: false,
+            lenient_encoding: true,
+            preferred_encoding: None,
+            lenient_syntax: true,
         }
     }
+}
+
+/// Warnings that can be collected during lenient parsing
+#[derive(Debug, Clone)]
+pub struct ParseWarning {
+    /// Type of warning
+    pub warning_type: ParseWarningType,
+    /// Context where the warning occurred
+    pub context: String,
+    /// Detailed message about the warning
+    pub message: String,
+    /// Byte offset where the warning occurred (if available)
+    pub offset: Option<usize>,
+}
+
+/// Types of warnings that can occur during lenient parsing
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParseWarningType {
+    /// Invalid stream length was corrected
+    InvalidStreamLength,
+    /// Missing required object
+    MissingObject,
+    /// Invalid character encoding
+    InvalidEncoding,
+    /// Malformed syntax was recovered
+    MalformedSyntax,
+    /// Other warnings
+    Other,
 }
 
 /// PDF Parser errors covering all failure modes during parsing.
@@ -300,6 +393,12 @@ impl ParseOptions {
 ///     partial_content_allowed: true,
 ///     max_recovery_attempts: 5,
 ///     log_recovery_details: true,
+///     lenient_streams: true,
+///     max_recovery_bytes: 5000,
+///     collect_warnings: true,
+///     lenient_encoding: true,
+///     preferred_encoding: None,
+///     lenient_syntax: true,
 /// };
 /// let custom_reader = PdfReader::open_with_options("problematic.pdf", options)?;
 /// # Ok(())
@@ -348,8 +447,26 @@ pub enum ParseError {
     StreamDecodeError(String),
 
     /// PDF encryption is not currently supported
-    #[error("Encryption not supported")]
+    #[error("PDF is encrypted. Decryption is not currently supported in the community edition")]
     EncryptionNotSupported,
+
+    /// Empty file
+    #[error("File is empty (0 bytes)")]
+    EmptyFile,
+
+    /// Stream length mismatch (only in strict mode)
+    #[error(
+        "Stream length mismatch: declared {declared} bytes, but found endstream at {actual} bytes"
+    )]
+    StreamLengthMismatch { declared: usize, actual: usize },
+
+    /// Character encoding error
+    #[error("Character encoding error at position {position}: {message}")]
+    CharacterEncodingError { position: usize, message: String },
+
+    /// Unexpected character in PDF content
+    #[error("Unexpected character: {character}")]
+    UnexpectedCharacter { character: String },
 }
 
 impl From<ParseError> for OxidizePdfError {

@@ -3,7 +3,7 @@
 //! Handles decompression and decoding of PDF streams according to ISO 32000-1 Section 7.4
 
 use super::objects::{PdfDictionary, PdfObject};
-use super::{ParseError, ParseOptions, ParseResult};
+use super::{ParseError, ParseResult};
 
 #[cfg(feature = "compression")]
 use flate2::read::ZlibDecoder;
@@ -63,11 +63,7 @@ impl Filter {
 }
 
 /// Decode stream data according to specified filters
-pub fn decode_stream(
-    data: &[u8],
-    dict: &PdfDictionary,
-    options: &ParseOptions,
-) -> ParseResult<Vec<u8>> {
+pub fn decode_stream(data: &[u8], dict: &PdfDictionary) -> ParseResult<Vec<u8>> {
     // Get filter(s) from dictionary
     let filters = match dict.get("Filter") {
         Some(PdfObject::Name(name)) => vec![name.as_str()],
@@ -97,26 +93,35 @@ pub fn decode_stream(
         }
     };
 
+    // Get decode parameters
+    let decode_params = dict.get("DecodeParms");
+
     // Apply filters in order
     let mut result = data.to_vec();
-    for filter_name in filters {
+    for (i, filter_name) in filters.iter().enumerate() {
         let filter = Filter::from_name(filter_name).ok_or_else(|| ParseError::SyntaxError {
             position: 0,
             message: format!("Unknown filter: {filter_name}"),
         })?;
 
-        result = apply_filter(&result, filter, options)?;
+        // Get decode parameters for this filter
+        let filter_params = get_filter_params(decode_params, i);
+
+        result = apply_filter_with_params(&result, filter, filter_params)?;
     }
 
     Ok(result)
 }
 
-/// Apply a single filter to data
-fn apply_filter(data: &[u8], filter: Filter, options: &ParseOptions) -> ParseResult<Vec<u8>> {
+/// Apply a single filter to data (legacy function, use apply_filter_with_params)
+#[allow(dead_code)]
+fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> {
     match filter {
-        Filter::FlateDecode => decode_flate(data, options),
+        Filter::FlateDecode => decode_flate(data),
         Filter::ASCIIHexDecode => decode_ascii_hex(data),
         Filter::ASCII85Decode => decode_ascii85(data),
+        Filter::LZWDecode => decode_lzw(data, None),
+        Filter::RunLengthDecode => decode_run_length(data),
         _ => Err(ParseError::SyntaxError {
             position: 0,
             message: format!("Filter {filter:?} not yet implemented"),
@@ -126,132 +131,17 @@ fn apply_filter(data: &[u8], filter: Filter, options: &ParseOptions) -> ParseRes
 
 /// Decode FlateDecode (zlib/deflate) compressed data
 #[cfg(feature = "compression")]
-fn decode_flate(data: &[u8], options: &ParseOptions) -> ParseResult<Vec<u8>> {
-    // First try standard zlib decoding
+fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
     let mut decoder = ZlibDecoder::new(data);
     let mut result = Vec::new();
-
-    match decoder.read_to_end(&mut result) {
-        Ok(_) => Ok(result),
-        Err(e) => {
-            // Check if we should attempt recovery
-            if !options.recover_from_stream_errors {
-                return Err(ParseError::StreamDecodeError(format!(
-                    "Flate decode error: {e}"
-                )));
-            }
-
-            // Log the error for debugging
-            if options.log_recovery_details {
-                // Logging would happen here if the logging feature was enabled
-                eprintln!("Standard FlateDecode failed: {e}, attempting recovery");
-            }
-
-            // Try alternative decoding strategies
-            decode_flate_with_recovery(data, e, options)
-        }
-    }
-}
-
-/// Attempt to decode FlateDecode data with various recovery strategies
-#[cfg(feature = "compression")]
-fn decode_flate_with_recovery(
-    data: &[u8],
-    original_error: std::io::Error,
-    options: &ParseOptions,
-) -> ParseResult<Vec<u8>> {
-    let mut attempts = 0;
-    let max_attempts = options.max_recovery_attempts;
-
-    // Strategy 1: Try raw deflate without zlib wrapper
-    attempts += 1;
-    if attempts <= max_attempts {
-        if options.log_recovery_details {
-            eprintln!("Recovery attempt {attempts}/{max_attempts}: raw deflate decode");
-        }
-        use flate2::read::DeflateDecoder;
-        let mut raw_decoder = DeflateDecoder::new(data);
-        let mut result = Vec::new();
-        if raw_decoder.read_to_end(&mut result).is_ok() {
-            if options.log_recovery_details {
-                eprintln!("Successfully decoded using raw deflate");
-            }
-            return Ok(result);
-        }
-    }
-
-    // Strategy 2: Try with a custom decompressor that ignores checksums
-    attempts += 1;
-    if attempts <= max_attempts {
-        if options.log_recovery_details {
-            eprintln!(
-                "Recovery attempt {attempts}/{max_attempts}: decode with checksum validation disabled"
-            );
-        }
-        use flate2::{Decompress, FlushDecompress};
-        let mut decompress = Decompress::new(false); // false = ignore checksums
-        let mut output = Vec::with_capacity(data.len() * 3); // Estimate decompressed size
-
-        match decompress.decompress_vec(data, &mut output, FlushDecompress::Finish) {
-            Ok(flate2::Status::StreamEnd) => {
-                if options.log_recovery_details {
-                    eprintln!("Successfully decoded with checksum validation disabled");
-                }
-                return Ok(output);
-            }
-            Ok(flate2::Status::Ok) | Ok(flate2::Status::BufError) => {
-                // Partial decompression might have succeeded
-                if !output.is_empty() && options.partial_content_allowed {
-                    if options.log_recovery_details {
-                        eprintln!("Partial decompression recovered {} bytes", output.len());
-                    }
-                    return Ok(output);
-                }
-            }
-            Err(_) => {
-                // Continue to next strategy
-            }
-        }
-    }
-
-    // Strategy 3: Try to skip corrupted header bytes
-    if data.len() > 2 {
-        attempts += 1;
-        if attempts <= max_attempts {
-            if options.log_recovery_details {
-                eprintln!(
-                    "Recovery attempt {attempts}/{max_attempts}: skip potentially corrupted header"
-                );
-            }
-            for skip in 1..std::cmp::min(10, data.len()) {
-                let mut decoder = ZlibDecoder::new(&data[skip..]);
-                let mut result = Vec::new();
-                if decoder.read_to_end(&mut result).is_ok() && !result.is_empty() {
-                    if options.log_recovery_details {
-                        eprintln!("Successfully decoded by skipping {skip} header bytes");
-                    }
-                    return Ok(result);
-                }
-            }
-        }
-    }
-
-    // All strategies failed
-    if options.ignore_corrupt_streams {
-        // Return empty data if we're ignoring corrupt streams
-        if options.log_recovery_details {
-            eprintln!("Ignoring corrupt stream, returning empty data");
-        }
-        Ok(Vec::new())
-    } else {
-        Err(ParseError::StreamDecodeError(format!(
-            "Flate decode error: {original_error} (all {attempts} recovery strategies failed)"
-        )))
-    }
+    decoder
+        .read_to_end(&mut result)
+        .map_err(|e| ParseError::StreamDecodeError(format!("Flate decode error: {e}")))?;
+    Ok(result)
 }
 
 #[cfg(not(feature = "compression"))]
-fn decode_flate(_data: &[u8], _options: &ParseOptions) -> ParseResult<Vec<u8>> {
+fn decode_flate(_data: &[u8]) -> ParseResult<Vec<u8>> {
     Err(ParseError::StreamDecodeError(
         "FlateDecode requires 'compression' feature".to_string(),
     ))
@@ -471,9 +361,8 @@ mod tests {
     fn test_decode_stream_no_filter() {
         let data = b"Hello, world!";
         let dict = PdfDictionary::new();
-        let options = ParseOptions::default();
 
-        let result = decode_stream(data, &dict, &options).unwrap();
+        let result = decode_stream(data, &dict).unwrap();
         assert_eq!(result, data);
     }
 
@@ -485,9 +374,8 @@ mod tests {
             "Filter".to_string(),
             PdfObject::Name(PdfName("ASCIIHexDecode".to_string())),
         );
-        let options = ParseOptions::default();
 
-        let result = decode_stream(data, &dict, &options).unwrap();
+        let result = decode_stream(data, &dict).unwrap();
         assert_eq!(result, b"Hello");
     }
 
@@ -499,9 +387,8 @@ mod tests {
             "Filter".to_string(),
             PdfObject::Name(PdfName("UnknownFilter".to_string())),
         );
-        let options = ParseOptions::default();
 
-        let result = decode_stream(data, &dict, &options);
+        let result = decode_stream(data, &dict);
         assert!(result.is_err());
     }
 
@@ -511,9 +398,8 @@ mod tests {
         let mut dict = PdfDictionary::new();
         let filters = vec![PdfObject::Name(PdfName("ASCIIHexDecode".to_string()))];
         dict.insert("Filter".to_string(), PdfObject::Array(PdfArray(filters)));
-        let options = ParseOptions::default();
 
-        let result = decode_stream(data, &dict, &options).unwrap();
+        let result = decode_stream(data, &dict).unwrap();
         assert_eq!(result, b"Hello");
     }
 
@@ -522,9 +408,8 @@ mod tests {
         let data = b"test data";
         let mut dict = PdfDictionary::new();
         dict.insert("Filter".to_string(), PdfObject::Integer(42)); // Invalid type
-        let options = ParseOptions::default();
 
-        let result = decode_stream(data, &dict, &options);
+        let result = decode_stream(data, &dict);
         assert!(result.is_err());
     }
 
@@ -574,69 +459,23 @@ mod tests {
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(original).unwrap();
         let compressed = encoder.finish().unwrap();
-        let options = ParseOptions::default();
 
-        let result = decode_flate(&compressed, &options).unwrap();
+        let result = decode_flate(&compressed).unwrap();
         assert_eq!(result, original);
-    }
-
-    #[cfg(feature = "compression")]
-    #[test]
-    fn test_flate_decode_corrupt_stream() {
-        // Test with corrupted compressed data
-        let corrupt_data = b"This is not valid compressed data!";
-
-        // Test with strict options (should fail)
-        let strict_options = ParseOptions::strict();
-        let result = decode_flate(corrupt_data, &strict_options);
-        assert!(result.is_err());
-
-        // Test with tolerant options (should attempt recovery)
-        let tolerant_options = ParseOptions::tolerant();
-        let result = decode_flate(corrupt_data, &tolerant_options);
-        // Recovery might fail but should not panic
-        assert!(result.is_err() || result.is_ok());
-    }
-
-    #[cfg(feature = "compression")]
-    #[test]
-    fn test_flate_decode_raw_deflate() {
-        use flate2::write::DeflateEncoder;
-        use flate2::Compression;
-        use std::io::Write;
-
-        // Create raw deflate data (without zlib wrapper)
-        let original = b"Raw deflate data without zlib wrapper";
-        let mut encoder = DeflateEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(original).unwrap();
-        let compressed = encoder.finish().unwrap();
-
-        // This should fail with strict options (expects zlib wrapper)
-        let strict_options = ParseOptions::strict();
-        let result = decode_flate(&compressed, &strict_options);
-        assert!(result.is_err());
-
-        // But should succeed with tolerant options (tries raw deflate)
-        let tolerant_options = ParseOptions::tolerant();
-        let result = decode_flate(&compressed, &tolerant_options);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), original);
     }
 
     #[cfg(not(feature = "compression"))]
     #[test]
     fn test_flate_decode_not_supported() {
         let data = b"compressed data";
-        let options = ParseOptions::default();
-        let result = decode_flate(data, &options);
+        let result = decode_flate(data);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_apply_filter() {
         let data = b"48656C6C6F>";
-        let options = ParseOptions::default();
-        let result = apply_filter(data, Filter::ASCIIHexDecode, &options).unwrap();
+        let result = apply_filter(data, Filter::ASCIIHexDecode).unwrap();
         assert_eq!(result, b"Hello");
     }
 
@@ -644,8 +483,6 @@ mod tests {
     fn test_apply_filter_unsupported() {
         let data = b"test data";
         let unsupported_filters = vec![
-            Filter::LZWDecode,
-            Filter::RunLengthDecode,
             Filter::CCITTFaxDecode,
             Filter::JBIG2Decode,
             Filter::DCTDecode,
@@ -653,35 +490,961 @@ mod tests {
             Filter::Crypt,
         ];
 
-        let options = ParseOptions::default();
         for filter in unsupported_filters {
-            let result = apply_filter(data, filter, &options);
+            let result = apply_filter(data, filter);
             assert!(result.is_err());
         }
     }
 
-    #[cfg(feature = "compression")]
+    // PNG Predictor Tests for Compressed XRef Streams
+
     #[test]
-    fn test_decode_stream_with_recovery() {
-        // Create a stream with corrupted FlateDecode data
-        let mut dict = PdfDictionary::new();
-        dict.insert(
-            "Filter".to_string(),
-            PdfObject::Name(PdfName("FlateDecode".to_string())),
-        );
+    fn test_apply_filter_with_params_no_predictor() {
+        let data = b"48656C6C6F>";
+        let dict = PdfDictionary::new();
 
-        let corrupt_data = b"This is not valid compressed data!";
-
-        // Test with strict options
-        let strict_options = ParseOptions::strict();
-        let result = decode_stream(corrupt_data, &dict, &strict_options);
-        assert!(result.is_err());
-
-        // Test with skip_errors options
-        let skip_options = ParseOptions::skip_errors();
-        let result = decode_stream(corrupt_data, &dict, &skip_options);
-        // With skip_errors and ignore_corrupt_streams, it should return empty data
-        assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        let result = apply_filter_with_params(data, Filter::ASCIIHexDecode, Some(&dict)).unwrap();
+        assert_eq!(result, b"Hello");
     }
+
+    #[test]
+    fn test_apply_predictor_none() {
+        let data = vec![1, 2, 3, 4];
+        let dict = PdfDictionary::new();
+
+        let result = apply_predictor(&data, 1, &dict).unwrap();
+        assert_eq!(result, data);
+    }
+
+    #[test]
+    fn test_apply_predictor_unknown() {
+        let data = vec![1, 2, 3, 4];
+        let dict = PdfDictionary::new();
+
+        // Unknown predictor should return data as-is
+        let result = apply_predictor(&data, 99, &dict).unwrap();
+        assert_eq!(result, data);
+    }
+
+    #[test]
+    fn test_png_predictor_sub_filter() {
+        // Test PNG Sub filter (predictor 1)
+        let data = vec![1, 5, 10]; // bytes_per_pixel = 1
+        let result = apply_png_sub_filter(&data, 1);
+        assert_eq!(result, vec![1, 6, 16]); // 1, 1+5=6, 5+10=15->16 (wrapping)
+    }
+
+    #[test]
+    fn test_png_predictor_up_filter() {
+        // Test PNG Up filter (predictor 2)
+        let data = vec![1, 2, 3];
+        let prev_row = vec![5, 10, 15];
+        let result = apply_png_up_filter(&data, Some(&prev_row));
+        assert_eq!(result, vec![6, 12, 18]); // 1+5=6, 2+10=12, 3+15=18
+    }
+
+    #[test]
+    fn test_png_predictor_up_filter_no_prev() {
+        // Test PNG Up filter with no previous row
+        let data = vec![1, 2, 3];
+        let result = apply_png_up_filter(&data, None);
+        assert_eq!(result, vec![1, 2, 3]); // No change when no previous row
+    }
+
+    #[test]
+    fn test_png_predictor_average_filter() {
+        // Test PNG Average filter (predictor 3)
+        let data = vec![2, 4]; // bytes_per_pixel = 1
+        let prev_row = vec![6, 8];
+        let result = apply_png_average_filter(&data, Some(&prev_row), 1);
+        // First byte: left=0, up=6, avg=3, result=2+3=5
+        // Second byte: left=5, up=8, avg=6, result=4+6=10
+        assert_eq!(result, vec![5, 10]);
+    }
+
+    #[test]
+    fn test_png_predictor_paeth_filter() {
+        // Test PNG Paeth filter (predictor 4)
+        let data = vec![1, 2]; // bytes_per_pixel = 1
+        let prev_row = vec![3, 4];
+        let result = apply_png_paeth_filter(&data, Some(&prev_row), 1);
+        // Complex Paeth predictor calculation
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_paeth_predictor_algorithm() {
+        // Test the Paeth predictor algorithm directly
+        // For (1, 2, 0): p = 1 + 2 - 0 = 3; pa = |3-1| = 2, pb = |3-2| = 1, pc = |3-0| = 3
+        // pb <= pa and pb <= pc, so result is up = 2
+        assert_eq!(paeth_predictor(1, 2, 0), 2);
+
+        // For (5, 2, 3): p = 5 + 2 - 3 = 4; pa = |4-5| = 1, pb = |4-2| = 2, pc = |4-3| = 1
+        // pa <= pb and pa <= pc (tie with pc), so result is left = 5
+        assert_eq!(paeth_predictor(5, 2, 3), 5);
+
+        // For (5, 8, 3): p = 5 + 8 - 3 = 10; pa = |10-5| = 5, pb = |10-8| = 2, pc = |10-3| = 7
+        // pb <= pa and pb <= pc, so result is up = 8
+        assert_eq!(paeth_predictor(5, 8, 3), 8);
+    }
+
+    #[test]
+    fn test_apply_png_predictor_invalid_data() {
+        let mut params = PdfDictionary::new();
+        params.insert("Columns".to_string(), PdfObject::Integer(3));
+
+        // Data length not multiple of row size (3+1=4)
+        let data = vec![0, 1, 2, 3, 4, 5]; // 6 bytes, not multiple of 4
+        let result = apply_png_predictor(&data, 10, &params);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_apply_png_predictor_valid_simple() {
+        let mut params = PdfDictionary::new();
+        params.insert("Columns".to_string(), PdfObject::Integer(2));
+        params.insert("BitsPerComponent".to_string(), PdfObject::Integer(8));
+        params.insert("Colors".to_string(), PdfObject::Integer(1));
+
+        // Row size = 2 columns + 1 predictor byte = 3
+        let data = vec![
+            0, 1, 2, // Row 1: predictor=0 (None), data=[1,2]
+            0, 3, 4, // Row 2: predictor=0 (None), data=[3,4]
+        ];
+
+        let result = apply_png_predictor(&data, 10, &params).unwrap();
+        assert_eq!(result, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_apply_png_predictor_with_sub_filter() {
+        let mut params = PdfDictionary::new();
+        params.insert("Columns".to_string(), PdfObject::Integer(3));
+        params.insert("BitsPerComponent".to_string(), PdfObject::Integer(8));
+        params.insert("Colors".to_string(), PdfObject::Integer(1));
+
+        // Row size = 3 columns + 1 predictor byte = 4
+        let data = vec![
+            1, 1, 2, 3, // Row 1: predictor=1 (Sub), data=[1,2,3] -> [1,3,6]
+        ];
+
+        let result = apply_png_predictor(&data, 10, &params).unwrap();
+        assert_eq!(result, vec![1, 3, 6]); // Sub filter: 1, 1+2=3, 2+3=5->6
+    }
+
+    #[test]
+    fn test_apply_png_predictor_invalid_filter_type() {
+        let mut params = PdfDictionary::new();
+        params.insert("Columns".to_string(), PdfObject::Integer(2));
+
+        // Invalid predictor byte (5 is not defined)
+        let data = vec![5, 1, 2];
+        let result = apply_png_predictor(&data, 10, &params);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_filter_params_dict() {
+        let mut dict = PdfDictionary::new();
+        dict.insert("Predictor".to_string(), PdfObject::Integer(12));
+        let obj = PdfObject::Dictionary(dict);
+
+        let result = get_filter_params(Some(&obj), 0);
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap().get("Predictor"),
+            Some(&PdfObject::Integer(12))
+        );
+    }
+
+    #[test]
+    fn test_get_filter_params_array() {
+        let mut inner_dict = PdfDictionary::new();
+        inner_dict.insert("Predictor".to_string(), PdfObject::Integer(15));
+
+        let array = vec![PdfObject::Dictionary(inner_dict)];
+        let obj = PdfObject::Array(crate::parser::objects::PdfArray(array));
+
+        let result = get_filter_params(Some(&obj), 0);
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap().get("Predictor"),
+            Some(&PdfObject::Integer(15))
+        );
+    }
+
+    #[test]
+    fn test_get_filter_params_none() {
+        let result = get_filter_params(None, 0);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_compressed_xref_integration() {
+        // Integration test: FlateDecode + PNG Predictor
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        #[cfg(feature = "compression")]
+        {
+            // Create test data with PNG predictor applied
+            let original_data = vec![
+                0, 1, 2, // Row 1: predictor=0 (None), data=[1,2]
+                0, 3, 4, // Row 2: predictor=0 (None), data=[3,4]
+            ];
+
+            // Compress the data
+            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(&original_data).unwrap();
+            let compressed = encoder.finish().unwrap();
+
+            // Create decode parameters
+            let mut decode_params = PdfDictionary::new();
+            decode_params.insert("Predictor".to_string(), PdfObject::Integer(12)); // PNG Optimum
+            decode_params.insert("Columns".to_string(), PdfObject::Integer(2));
+            decode_params.insert("BitsPerComponent".to_string(), PdfObject::Integer(8));
+            decode_params.insert("Colors".to_string(), PdfObject::Integer(1));
+
+            // Apply filter with parameters
+            let result =
+                apply_filter_with_params(&compressed, Filter::FlateDecode, Some(&decode_params))
+                    .unwrap();
+            assert_eq!(result, vec![1, 2, 3, 4]);
+        }
+    }
+
+    // LZW Tests
+
+    // Helper function to encode LZW data for testing
+    fn encode_lzw_test_data(codes: &[u16]) -> Vec<u8> {
+        let mut result = Vec::new();
+        let mut bit_buffer = 0u32;
+        let mut bits_in_buffer = 0;
+        let mut code_size = 9;
+
+        for &code in codes {
+            // Add code to buffer
+            bit_buffer = (bit_buffer << code_size) | (code as u32);
+            bits_in_buffer += code_size;
+
+            // Write complete bytes
+            while bits_in_buffer >= 8 {
+                let byte = ((bit_buffer >> (bits_in_buffer - 8)) & 0xFF) as u8;
+                result.push(byte);
+                bits_in_buffer -= 8;
+            }
+
+            // Adjust code size if needed (simplified for testing)
+            if code == 511 && code_size == 9 {
+                code_size = 10;
+            } else if code == 1023 && code_size == 10 {
+                code_size = 11;
+            } else if code == 2047 && code_size == 11 {
+                code_size = 12;
+            }
+        }
+
+        // Write remaining bits
+        if bits_in_buffer > 0 {
+            let byte = ((bit_buffer << (8 - bits_in_buffer)) & 0xFF) as u8;
+            result.push(byte);
+        }
+
+        result
+    }
+
+    #[test]
+    fn test_lzw_decode_simple() {
+        // Simple LZW encoded data: "ABC"
+        // Codes: 65(A), 66(B), 67(C), 257(EOD)
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_lzw_decode_with_repetition() {
+        // LZW with repetition: "AAAA"
+        // Codes: 65(A), 65(A), 258(AA), 257(EOD)
+        let codes = vec![65, 65, 258, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert_eq!(result, b"AAAA");
+    }
+
+    #[test]
+    fn test_lzw_decode_clear_code() {
+        // LZW with clear code: "AB" + CLEAR + "CD"
+        // Codes: 65(A), 66(B), 256(CLEAR), 67(C), 68(D), 257(EOD)
+        let codes = vec![65, 66, 256, 67, 68, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert_eq!(result, b"ABCD");
+    }
+
+    #[test]
+    fn test_lzw_decode_growing_codes() {
+        // Test that exercises code size growth from 9 to 10 bits
+        // This would need to encode enough unique strings to exceed 512 entries
+        // For brevity, we'll test the mechanism with a smaller example
+        let mut params = PdfDictionary::new();
+        params.insert("EarlyChange".to_string(), PdfObject::Integer(1));
+
+        // Note: Real test data would be longer to actually trigger code size change
+        let data = vec![0x08, 0x21, 0x08, 0x61, 0x08, 0x20, 0x80];
+        let result = decode_lzw(&data, Some(&params));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_lzw_decode_early_change_false() {
+        let mut params = PdfDictionary::new();
+        params.insert("EarlyChange".to_string(), PdfObject::Integer(0));
+
+        // Simple test with EarlyChange=0
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, Some(&params)).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_lzw_decode_invalid_code() {
+        // Invalid code that references non-existent dictionary entry
+        let data = vec![0x08, 0x21, 0xFF, 0xFF, 0x00];
+        let result = decode_lzw(&data, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_lzw_decode_empty() {
+        // Just EOD code
+        let codes = vec![257];
+        let data = encode_lzw_test_data(&codes);
+        let result = decode_lzw(&data, None).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_lzw_bit_reader() {
+        let data = vec![0b10101010, 0b11001100, 0b11110000];
+        let mut reader = LzwBitReader::new(&data);
+
+        // Read 4 bits: should be 1010
+        assert_eq!(reader.read_bits(4), Some(0b1010));
+
+        // Read 8 bits: should be 10101100
+        assert_eq!(reader.read_bits(8), Some(0b10101100));
+
+        // Read 6 bits: should be 110011
+        assert_eq!(reader.read_bits(6), Some(0b110011));
+
+        // Read 6 bits: should be 110000
+        assert_eq!(reader.read_bits(6), Some(0b110000));
+
+        // Try to read more bits than available
+        assert_eq!(reader.read_bits(8), None);
+    }
+
+    #[test]
+    fn test_lzw_bit_reader_edge_cases() {
+        let data = vec![0xFF];
+        let mut reader = LzwBitReader::new(&data);
+
+        // Read 0 bits
+        assert_eq!(reader.read_bits(0), None);
+
+        // Read more than 16 bits
+        assert_eq!(reader.read_bits(17), None);
+
+        // Read all 8 bits
+        assert_eq!(reader.read_bits(8), Some(0xFF));
+
+        // No more data
+        assert_eq!(reader.read_bits(1), None);
+    }
+
+    #[test]
+    fn test_apply_filter_lzw() {
+        // Test the legacy apply_filter function with LZW
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = apply_filter(&data, Filter::LZWDecode).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_apply_filter_with_params_lzw() {
+        // Test apply_filter_with_params with LZW and parameters
+        let mut params = PdfDictionary::new();
+        params.insert("EarlyChange".to_string(), PdfObject::Integer(0));
+
+        let codes = vec![65, 66, 67, 257];
+        let data = encode_lzw_test_data(&codes);
+        let result = apply_filter_with_params(&data, Filter::LZWDecode, Some(&params)).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    // RunLengthDecode Tests
+
+    #[test]
+    fn test_run_length_decode_literal() {
+        // Literal copy: length=2 (copy 3 bytes), data="ABC"
+        let data = vec![2, b'A', b'B', b'C'];
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"ABC");
+    }
+
+    #[test]
+    fn test_run_length_decode_repeat() {
+        // Repeat: length=-3 (repeat 4 times), byte='X'
+        let data = vec![253u8, b'X']; // -3 as u8 = 253
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"XXXX");
+    }
+
+    #[test]
+    fn test_run_length_decode_mixed() {
+        // Mixed: literal "AB", repeat 'C' 3 times, literal "DE"
+        let data = vec![
+            1, b'A', b'B', // literal: copy 2 bytes
+            254u8, b'C', // repeat: -2 as u8 = 254, repeat 3 times
+            1, b'D', b'E', // literal: copy 2 bytes
+        ];
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"ABCCCDE");
+    }
+
+    #[test]
+    fn test_run_length_decode_eod() {
+        // Test EOD marker (-128)
+        let data = vec![0, b'A', 128u8, 1, b'B', b'C']; // 128u8 = -128 as i8
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"A"); // Only first byte before EOD
+    }
+
+    #[test]
+    fn test_run_length_decode_empty() {
+        // Empty input
+        let data = vec![];
+        let result = decode_run_length(&data).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_run_length_decode_single_literal() {
+        // Single byte literal: length=0 (copy 1 byte)
+        let data = vec![0, b'Z'];
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"Z");
+    }
+
+    #[test]
+    fn test_run_length_decode_single_repeat() {
+        // Single byte repeat: length=-1 (repeat 2 times)
+        let data = vec![255u8, b'Y']; // -1 as u8 = 255
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result, b"YY");
+    }
+
+    #[test]
+    fn test_run_length_decode_max_repeat() {
+        // Maximum repeat: length=-127 (repeat 128 times)
+        let data = vec![129u8, b'M']; // -127 as u8 = 129
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result.len(), 128);
+        assert!(result.iter().all(|&b| b == b'M'));
+    }
+
+    #[test]
+    fn test_run_length_decode_max_literal() {
+        // Maximum literal: length=127 (copy 128 bytes)
+        let mut data = vec![127];
+        data.extend((0..128).map(|i| i as u8));
+        let result = decode_run_length(&data).unwrap();
+        assert_eq!(result.len(), 128);
+        assert_eq!(result, (0..128).map(|i| i as u8).collect::<Vec<u8>>());
+    }
+
+    #[test]
+    fn test_run_length_decode_error_literal_overflow() {
+        // Literal copy with insufficient data
+        let data = vec![5, b'A', b'B']; // Says copy 6 bytes but only 2 available
+        let result = decode_run_length(&data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_run_length_decode_error_missing_repeat_byte() {
+        // Repeat without byte to repeat
+        let data = vec![254u8]; // -2 as u8, but no byte follows
+        let result = decode_run_length(&data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_apply_filter_run_length() {
+        // Test the legacy apply_filter function with RunLengthDecode
+        let data = vec![2, b'X', b'Y', b'Z'];
+        let result = apply_filter(&data, Filter::RunLengthDecode).unwrap();
+        assert_eq!(result, b"XYZ");
+    }
+
+    #[test]
+    fn test_apply_filter_with_params_run_length() {
+        // Test apply_filter_with_params with RunLengthDecode
+        let data = vec![254u8, b'A', 1, b'B', b'C']; // "AAA" + "BC"
+        let result = apply_filter_with_params(&data, Filter::RunLengthDecode, None).unwrap();
+        assert_eq!(result, b"AAABC");
+    }
+}
+
+/// Apply a single filter to data with parameters (enhanced version)
+fn apply_filter_with_params(
+    data: &[u8],
+    filter: Filter,
+    params: Option<&PdfDictionary>,
+) -> ParseResult<Vec<u8>> {
+    let result = match filter {
+        Filter::FlateDecode => decode_flate(data)?,
+        Filter::ASCIIHexDecode => decode_ascii_hex(data)?,
+        Filter::ASCII85Decode => decode_ascii85(data)?,
+        Filter::LZWDecode => decode_lzw(data, params)?,
+        Filter::RunLengthDecode => decode_run_length(data)?,
+        _ => {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!("Filter {filter:?} not yet implemented"),
+            });
+        }
+    };
+
+    // Apply predictor if specified in decode parameters
+    if let Some(params_dict) = params {
+        if let Some(predictor_obj) = params_dict.get("Predictor") {
+            if let Some(predictor) = predictor_obj.as_integer() {
+                return apply_predictor(&result, predictor as u32, params_dict);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// Get filter parameters for a specific filter index
+fn get_filter_params(decode_params: Option<&PdfObject>, _index: usize) -> Option<&PdfDictionary> {
+    match decode_params {
+        Some(PdfObject::Dictionary(dict)) => Some(dict),
+        Some(PdfObject::Array(array)) => {
+            // For multiple filters, each can have its own decode params
+            // For now, use the first one
+            array.0.first().and_then(|obj| obj.as_dict())
+        }
+        _ => None,
+    }
+}
+
+/// Apply predictor function to decoded data
+fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
+    match predictor {
+        1 => {
+            // No prediction
+            Ok(data.to_vec())
+        }
+        10..=15 => {
+            // PNG predictor functions
+            apply_png_predictor(data, predictor, params)
+        }
+        _ => {
+            // Unknown predictor - return data as-is with warning
+            #[cfg(debug_assertions)]
+            eprintln!("Warning: Unknown predictor {predictor}, returning data as-is");
+            Ok(data.to_vec())
+        }
+    }
+}
+
+/// Apply PNG predictor functions (values 10-15)
+fn apply_png_predictor(
+    data: &[u8],
+    _predictor: u32,
+    params: &PdfDictionary,
+) -> ParseResult<Vec<u8>> {
+    // Get columns (width of a row in bytes)
+    let columns = params
+        .get("Columns")
+        .and_then(|obj| obj.as_integer())
+        .unwrap_or(1) as usize;
+
+    // Get BitsPerComponent (defaults to 8)
+    let bpc = params
+        .get("BitsPerComponent")
+        .and_then(|obj| obj.as_integer())
+        .unwrap_or(8) as usize;
+
+    // Get Colors (number of color components, defaults to 1)
+    let colors = params
+        .get("Colors")
+        .and_then(|obj| obj.as_integer())
+        .unwrap_or(1) as usize;
+
+    // Calculate bytes per pixel
+    let bytes_per_pixel = (bpc * colors).div_ceil(8);
+
+    // Calculate row size (columns + 1 for predictor byte)
+    let row_size = columns + 1;
+
+    if data.len() % row_size != 0 {
+        return Err(ParseError::StreamDecodeError(
+            "PNG predictor: data length not multiple of row size".to_string(),
+        ));
+    }
+
+    let num_rows = data.len() / row_size;
+    let mut result = Vec::with_capacity(columns * num_rows);
+
+    for row in 0..num_rows {
+        let row_start = row * row_size;
+        let predictor_byte = data[row_start];
+        let row_data = &data[row_start + 1..row_start + row_size];
+
+        // Apply PNG filter based on predictor byte
+        let filtered_row = match predictor_byte {
+            0 => {
+                // None filter - no prediction
+                row_data.to_vec()
+            }
+            1 => {
+                // Sub filter - each byte is prediction from byte to the left
+                apply_png_sub_filter(row_data, bytes_per_pixel)
+            }
+            2 => {
+                // Up filter - each byte is prediction from byte above
+                let prev_row = if row > 0 {
+                    Some(&result[(row - 1) * columns..row * columns])
+                } else {
+                    None
+                };
+                apply_png_up_filter(row_data, prev_row)
+            }
+            3 => {
+                // Average filter
+                let prev_row = if row > 0 {
+                    Some(&result[(row - 1) * columns..row * columns])
+                } else {
+                    None
+                };
+                apply_png_average_filter(row_data, prev_row, bytes_per_pixel)
+            }
+            4 => {
+                // Paeth filter
+                let prev_row = if row > 0 {
+                    Some(&result[(row - 1) * columns..row * columns])
+                } else {
+                    None
+                };
+                apply_png_paeth_filter(row_data, prev_row, bytes_per_pixel)
+            }
+            _ => {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "PNG predictor: unknown filter type {predictor_byte}"
+                )));
+            }
+        };
+
+        result.extend_from_slice(&filtered_row);
+    }
+
+    Ok(result)
+}
+
+/// Apply PNG Sub filter (predictor 1)
+fn apply_png_sub_filter(data: &[u8], bytes_per_pixel: usize) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        if i < bytes_per_pixel {
+            result.push(byte);
+        } else {
+            result.push(byte.wrapping_add(result[i - bytes_per_pixel]));
+        }
+    }
+
+    result
+}
+
+/// Apply PNG Up filter (predictor 2)
+fn apply_png_up_filter(data: &[u8], prev_row: Option<&[u8]>) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
+        result.push(byte.wrapping_add(*up_byte));
+    }
+
+    result
+}
+
+/// Apply PNG Average filter (predictor 3)
+fn apply_png_average_filter(
+    data: &[u8],
+    prev_row: Option<&[u8]>,
+    bytes_per_pixel: usize,
+) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        let left_byte = if i < bytes_per_pixel {
+            0
+        } else {
+            result[i - bytes_per_pixel]
+        };
+        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
+        let average = ((left_byte as u16 + *up_byte as u16) / 2) as u8;
+        result.push(byte.wrapping_add(average));
+    }
+
+    result
+}
+
+/// Apply PNG Paeth filter (predictor 4)
+fn apply_png_paeth_filter(data: &[u8], prev_row: Option<&[u8]>, bytes_per_pixel: usize) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        let left_byte = if i < bytes_per_pixel {
+            0
+        } else {
+            result[i - bytes_per_pixel]
+        };
+        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
+        let up_left_byte = if i < bytes_per_pixel {
+            0
+        } else {
+            *prev_row
+                .and_then(|row| row.get(i - bytes_per_pixel))
+                .unwrap_or(&0)
+        };
+
+        let paeth = paeth_predictor(left_byte, *up_byte, up_left_byte);
+        result.push(byte.wrapping_add(paeth));
+    }
+
+    result
+}
+
+/// Paeth predictor algorithm
+fn paeth_predictor(left: u8, up: u8, up_left: u8) -> u8 {
+    let p = left as i16 + up as i16 - up_left as i16;
+    let pa = (p - left as i16).abs();
+    let pb = (p - up as i16).abs();
+    let pc = (p - up_left as i16).abs();
+
+    if pa <= pb && pa <= pc {
+        left
+    } else if pb <= pc {
+        up
+    } else {
+        up_left
+    }
+}
+
+/// Decode LZWDecode compressed data
+///
+/// Implements the LZW decompression algorithm as specified in PDF Reference 1.7
+/// Section 3.3.3. The PDF variant of LZW uses variable-length codes starting at
+/// 9 bits and growing up to 12 bits.
+fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    // Get parameters
+    let early_change = params
+        .and_then(|p| p.get("EarlyChange"))
+        .and_then(|v| v.as_integer())
+        .map(|v| v != 0)
+        .unwrap_or(true); // Default is 1 (true) for PDF
+
+    // LZW constants
+    const MIN_BITS: u32 = 9;
+    const MAX_BITS: u32 = 12;
+    const CLEAR_CODE: u16 = 256;
+    const EOD_CODE: u16 = 257;
+    #[allow(dead_code)]
+    const FIRST_CODE: u16 = 258;
+
+    // Initialize the dictionary with single-byte strings
+    let mut dictionary: Vec<Vec<u8>> = Vec::with_capacity(4096);
+    for i in 0..=255 {
+        dictionary.push(vec![i]);
+    }
+    // Add clear and EOD codes
+    dictionary.push(vec![]); // 256 - Clear
+    dictionary.push(vec![]); // 257 - EOD
+
+    let mut result = Vec::new();
+    let mut bit_reader = LzwBitReader::new(data);
+    let mut code_size = MIN_BITS;
+    let mut prev_code: Option<u16> = None;
+
+    while let Some(c) = bit_reader.read_bits(code_size) {
+        let code = c as u16;
+
+        if code == EOD_CODE {
+            break;
+        }
+
+        if code == CLEAR_CODE {
+            // Reset dictionary and code size
+            dictionary.truncate(258);
+            code_size = MIN_BITS;
+            prev_code = None;
+            continue;
+        }
+
+        // Handle the code
+        if let Some(prev) = prev_code {
+            let string = if (code as usize) < dictionary.len() {
+                // Code is in dictionary
+                dictionary[code as usize].clone()
+            } else if code as usize == dictionary.len() {
+                // Special case: code == next entry to be added
+                let mut s = dictionary[prev as usize].clone();
+                s.push(dictionary[prev as usize][0]);
+                s
+            } else {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decode error: invalid code {code}"
+                )));
+            };
+
+            // Output the string
+            result.extend_from_slice(&string);
+
+            // Add new entry to dictionary
+            if dictionary.len() < 4096 {
+                let mut new_entry = dictionary[prev as usize].clone();
+                new_entry.push(string[0]);
+                dictionary.push(new_entry);
+
+                // Increase code size if necessary
+                let dict_size = dictionary.len();
+                let threshold = if early_change {
+                    1 << code_size
+                } else {
+                    (1 << code_size) + 1
+                };
+
+                if dict_size >= threshold as usize && code_size < MAX_BITS {
+                    code_size += 1;
+                }
+            }
+        } else {
+            // First code after clear
+            if (code as usize) < dictionary.len() {
+                result.extend_from_slice(&dictionary[code as usize]);
+            } else {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decode error: invalid first code {code}"
+                )));
+            }
+        }
+
+        prev_code = Some(code);
+    }
+
+    Ok(result)
+}
+
+/// Bit reader for LZW decompression
+struct LzwBitReader<'a> {
+    data: &'a [u8],
+    byte_pos: usize,
+    bit_pos: u8,
+}
+
+impl<'a> LzwBitReader<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self {
+            data,
+            byte_pos: 0,
+            bit_pos: 0,
+        }
+    }
+
+    /// Read n bits from the stream (MSB first)
+    fn read_bits(&mut self, n: u32) -> Option<u32> {
+        if n == 0 || n > 16 {
+            return None;
+        }
+
+        let mut result = 0u32;
+        let mut bits_read = 0;
+
+        while bits_read < n {
+            if self.byte_pos >= self.data.len() {
+                return None;
+            }
+
+            let bits_available = 8 - self.bit_pos;
+            let bits_to_read = (n - bits_read).min(bits_available as u32);
+
+            // Extract bits from current byte
+            let mask = ((1u32 << bits_to_read) - 1) as u8;
+            let shift = bits_available - bits_to_read as u8;
+            let bits = (self.data[self.byte_pos] >> shift) & mask;
+
+            result = (result << bits_to_read) | (bits as u32);
+            bits_read += bits_to_read;
+            self.bit_pos += bits_to_read as u8;
+
+            if self.bit_pos >= 8 {
+                self.bit_pos = 0;
+                self.byte_pos += 1;
+            }
+        }
+
+        Some(result)
+    }
+}
+
+/// Decode RunLengthDecode compressed data
+///
+/// Implements the Run Length Encoding decompression as specified in PDF Reference 1.7
+/// Section 3.3.4. Run-length encoding compresses sequences of identical bytes.
+fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
+    let mut result = Vec::new();
+    let mut i = 0;
+
+    while i < data.len() {
+        let length = data[i] as i8;
+        i += 1;
+
+        if length == -128 {
+            // EOD marker
+            break;
+        } else if length >= 0 {
+            // Copy next length+1 bytes literally
+            let count = (length as usize) + 1;
+            if i + count > data.len() {
+                return Err(ParseError::StreamDecodeError(
+                    "RunLength decode error: insufficient data for literal copy".to_string(),
+                ));
+            }
+            result.extend_from_slice(&data[i..i + count]);
+            i += count;
+        } else {
+            // Repeat next byte (-length)+1 times
+            if i >= data.len() {
+                return Err(ParseError::StreamDecodeError(
+                    "RunLength decode error: missing byte to repeat".to_string(),
+                ));
+            }
+            let repeat_byte = data[i];
+            let count = ((-length) as usize) + 1;
+            result.extend(std::iter::repeat_n(repeat_byte, count));
+            i += 1;
+        }
+    }
+
+    Ok(result)
 }

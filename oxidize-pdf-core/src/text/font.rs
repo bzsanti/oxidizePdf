@@ -1,3 +1,112 @@
+/// PDF font encoding types
+///
+/// Specifies how text characters are encoded in the PDF document.
+/// Different encodings support different character sets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FontEncoding {
+    /// WinAnsiEncoding - Windows ANSI encoding (CP1252)
+    /// Supports Western European characters, most common for standard fonts
+    WinAnsiEncoding,
+    /// MacRomanEncoding - Apple Macintosh Roman encoding
+    /// Legacy encoding for Macintosh systems
+    MacRomanEncoding,
+    /// StandardEncoding - Adobe Standard encoding
+    /// Basic ASCII plus some additional characters
+    StandardEncoding,
+    /// MacExpertEncoding - Macintosh Expert encoding
+    /// For expert typography with additional symbols
+    MacExpertEncoding,
+    /// Custom encoding specified by name
+    /// Use this for custom or non-standard encodings
+    Custom(&'static str),
+}
+
+impl FontEncoding {
+    /// Get the PDF name for this encoding
+    pub fn pdf_name(&self) -> &'static str {
+        match self {
+            FontEncoding::WinAnsiEncoding => "WinAnsiEncoding",
+            FontEncoding::MacRomanEncoding => "MacRomanEncoding",
+            FontEncoding::StandardEncoding => "StandardEncoding",
+            FontEncoding::MacExpertEncoding => "MacExpertEncoding",
+            FontEncoding::Custom(name) => name,
+        }
+    }
+
+    /// Get the recommended encoding for a specific font
+    /// Returns None if the font doesn't typically need explicit encoding
+    pub fn recommended_for_font(font: Font) -> Option<Self> {
+        match font {
+            // Text fonts typically use WinAnsiEncoding for broad compatibility
+            Font::Helvetica
+            | Font::HelveticaBold
+            | Font::HelveticaOblique
+            | Font::HelveticaBoldOblique
+            | Font::TimesRoman
+            | Font::TimesBold
+            | Font::TimesItalic
+            | Font::TimesBoldItalic
+            | Font::Courier
+            | Font::CourierBold
+            | Font::CourierOblique
+            | Font::CourierBoldOblique => Some(FontEncoding::WinAnsiEncoding),
+            // Symbol fonts don't use text encodings
+            Font::Symbol | Font::ZapfDingbats => None,
+        }
+    }
+}
+
+/// A font with optional encoding specification
+///
+/// This allows specifying encoding for fonts when needed, while maintaining
+/// backward compatibility with the simple Font enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FontWithEncoding {
+    /// The font to use
+    pub font: Font,
+    /// Optional encoding specification
+    /// If None, no encoding will be set in the PDF (reader's default)
+    pub encoding: Option<FontEncoding>,
+}
+
+impl FontWithEncoding {
+    /// Create a new font with encoding
+    pub fn new(font: Font, encoding: Option<FontEncoding>) -> Self {
+        Self { font, encoding }
+    }
+
+    /// Create a font with recommended encoding
+    pub fn with_recommended_encoding(font: Font) -> Self {
+        Self {
+            font,
+            encoding: FontEncoding::recommended_for_font(font),
+        }
+    }
+
+    /// Create a font with specific encoding
+    pub fn with_encoding(font: Font, encoding: FontEncoding) -> Self {
+        Self {
+            font,
+            encoding: Some(encoding),
+        }
+    }
+
+    /// Create a font without encoding (reader's default)
+    pub fn without_encoding(font: Font) -> Self {
+        Self {
+            font,
+            encoding: None,
+        }
+    }
+}
+
+// Implement From trait for easy conversion
+impl From<Font> for FontWithEncoding {
+    fn from(font: Font) -> Self {
+        Self::without_encoding(font)
+    }
+}
+
 /// Standard PDF fonts (Type 1 base 14 fonts).
 ///
 /// These fonts are guaranteed to be available in all PDF readers
@@ -36,6 +145,7 @@ pub enum Font {
 }
 
 impl Font {
+    /// Get the PDF name for this font
     pub fn pdf_name(&self) -> &'static str {
         match self {
             Font::Helvetica => "Helvetica",
@@ -55,8 +165,24 @@ impl Font {
         }
     }
 
+    /// Check if this font is symbolic (doesn't use text encodings)
     pub fn is_symbolic(&self) -> bool {
         matches!(self, Font::Symbol | Font::ZapfDingbats)
+    }
+
+    /// Create this font with a specific encoding
+    pub fn with_encoding(self, encoding: FontEncoding) -> FontWithEncoding {
+        FontWithEncoding::with_encoding(self, encoding)
+    }
+
+    /// Create this font with recommended encoding
+    pub fn with_recommended_encoding(self) -> FontWithEncoding {
+        FontWithEncoding::with_recommended_encoding(self)
+    }
+
+    /// Create this font without explicit encoding
+    pub fn without_encoding(self) -> FontWithEncoding {
+        FontWithEncoding::without_encoding(self)
     }
 }
 
@@ -267,5 +393,175 @@ mod tests {
         assert_eq!(courier.bold(), Font::CourierBold);
         assert_eq!(courier.italic(), Font::CourierOblique);
         assert_eq!(courier.bold_italic(), Font::CourierBoldOblique);
+    }
+
+    // FontEncoding tests
+
+    #[test]
+    fn test_font_encoding_pdf_names() {
+        assert_eq!(FontEncoding::WinAnsiEncoding.pdf_name(), "WinAnsiEncoding");
+        assert_eq!(
+            FontEncoding::MacRomanEncoding.pdf_name(),
+            "MacRomanEncoding"
+        );
+        assert_eq!(
+            FontEncoding::StandardEncoding.pdf_name(),
+            "StandardEncoding"
+        );
+        assert_eq!(
+            FontEncoding::MacExpertEncoding.pdf_name(),
+            "MacExpertEncoding"
+        );
+        assert_eq!(FontEncoding::Custom("MyEncoding").pdf_name(), "MyEncoding");
+    }
+
+    #[test]
+    fn test_font_encoding_recommended_for_font() {
+        // Text fonts should have recommended encoding
+        assert_eq!(
+            FontEncoding::recommended_for_font(Font::Helvetica),
+            Some(FontEncoding::WinAnsiEncoding)
+        );
+        assert_eq!(
+            FontEncoding::recommended_for_font(Font::TimesRoman),
+            Some(FontEncoding::WinAnsiEncoding)
+        );
+        assert_eq!(
+            FontEncoding::recommended_for_font(Font::CourierBold),
+            Some(FontEncoding::WinAnsiEncoding)
+        );
+
+        // Symbol fonts should not have recommended encoding
+        assert_eq!(FontEncoding::recommended_for_font(Font::Symbol), None);
+        assert_eq!(FontEncoding::recommended_for_font(Font::ZapfDingbats), None);
+    }
+
+    #[test]
+    fn test_font_encoding_equality() {
+        assert_eq!(FontEncoding::WinAnsiEncoding, FontEncoding::WinAnsiEncoding);
+        assert_ne!(
+            FontEncoding::WinAnsiEncoding,
+            FontEncoding::MacRomanEncoding
+        );
+        assert_eq!(FontEncoding::Custom("Test"), FontEncoding::Custom("Test"));
+        assert_ne!(FontEncoding::Custom("Test1"), FontEncoding::Custom("Test2"));
+    }
+
+    // FontWithEncoding tests
+
+    #[test]
+    fn test_font_with_encoding_new() {
+        let font_enc = FontWithEncoding::new(Font::Helvetica, Some(FontEncoding::WinAnsiEncoding));
+        assert_eq!(font_enc.font, Font::Helvetica);
+        assert_eq!(font_enc.encoding, Some(FontEncoding::WinAnsiEncoding));
+
+        let font_no_enc = FontWithEncoding::new(Font::Symbol, None);
+        assert_eq!(font_no_enc.font, Font::Symbol);
+        assert_eq!(font_no_enc.encoding, None);
+    }
+
+    #[test]
+    fn test_font_with_encoding_with_recommended() {
+        let helvetica = FontWithEncoding::with_recommended_encoding(Font::Helvetica);
+        assert_eq!(helvetica.font, Font::Helvetica);
+        assert_eq!(helvetica.encoding, Some(FontEncoding::WinAnsiEncoding));
+
+        let symbol = FontWithEncoding::with_recommended_encoding(Font::Symbol);
+        assert_eq!(symbol.font, Font::Symbol);
+        assert_eq!(symbol.encoding, None);
+    }
+
+    #[test]
+    fn test_font_with_encoding_with_specific() {
+        let font_enc =
+            FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::MacRomanEncoding);
+        assert_eq!(font_enc.font, Font::TimesRoman);
+        assert_eq!(font_enc.encoding, Some(FontEncoding::MacRomanEncoding));
+    }
+
+    #[test]
+    fn test_font_with_encoding_without_encoding() {
+        let font_no_enc = FontWithEncoding::without_encoding(Font::Courier);
+        assert_eq!(font_no_enc.font, Font::Courier);
+        assert_eq!(font_no_enc.encoding, None);
+    }
+
+    #[test]
+    fn test_font_with_encoding_from_font() {
+        let font_enc: FontWithEncoding = Font::HelveticaBold.into();
+        assert_eq!(font_enc.font, Font::HelveticaBold);
+        assert_eq!(font_enc.encoding, None);
+    }
+
+    #[test]
+    fn test_font_convenience_methods() {
+        let helvetica_with_enc = Font::Helvetica.with_encoding(FontEncoding::MacRomanEncoding);
+        assert_eq!(helvetica_with_enc.font, Font::Helvetica);
+        assert_eq!(
+            helvetica_with_enc.encoding,
+            Some(FontEncoding::MacRomanEncoding)
+        );
+
+        let times_recommended = Font::TimesRoman.with_recommended_encoding();
+        assert_eq!(times_recommended.font, Font::TimesRoman);
+        assert_eq!(
+            times_recommended.encoding,
+            Some(FontEncoding::WinAnsiEncoding)
+        );
+
+        let courier_no_enc = Font::Courier.without_encoding();
+        assert_eq!(courier_no_enc.font, Font::Courier);
+        assert_eq!(courier_no_enc.encoding, None);
+    }
+
+    #[test]
+    fn test_font_with_encoding_equality() {
+        let font1 = FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
+        let font2 = FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
+        let font3 =
+            FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::MacRomanEncoding);
+        let font4 =
+            FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::WinAnsiEncoding);
+
+        assert_eq!(font1, font2);
+        assert_ne!(font1, font3);
+        assert_ne!(font1, font4);
+    }
+
+    #[test]
+    fn test_font_with_encoding_debug() {
+        let font_enc =
+            FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
+        let debug_str = format!("{:?}", font_enc);
+        assert!(debug_str.contains("Helvetica"));
+        assert!(debug_str.contains("WinAnsiEncoding"));
+    }
+
+    #[test]
+    fn test_font_with_encoding_clone() {
+        let font1 =
+            FontWithEncoding::with_encoding(Font::TimesRoman, FontEncoding::StandardEncoding);
+        let font2 = font1.clone();
+        assert_eq!(font1, font2);
+    }
+
+    #[test]
+    fn test_font_with_encoding_copy() {
+        let font1 = FontWithEncoding::with_encoding(Font::Courier, FontEncoding::WinAnsiEncoding);
+        let font2 = font1; // Copy semantics
+        assert_eq!(font1, font2);
+
+        // Both variables should still be usable
+        assert_eq!(font1.font, Font::Courier);
+        assert_eq!(font2.font, Font::Courier);
+    }
+
+    #[test]
+    fn test_custom_encoding() {
+        let custom_enc = FontEncoding::Custom("MyCustomEncoding");
+        assert_eq!(custom_enc.pdf_name(), "MyCustomEncoding");
+
+        let font_with_custom = FontWithEncoding::with_encoding(Font::Helvetica, custom_enc);
+        assert_eq!(font_with_custom.encoding, Some(custom_enc));
     }
 }

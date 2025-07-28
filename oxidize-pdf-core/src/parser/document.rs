@@ -394,7 +394,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
         }
 
-        // Load the page
+        // Load the page (reference stack will handle circular detection automatically)
         let page = self.load_page_at_index(index)?;
 
         // Cache it
@@ -416,119 +416,203 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(page_info)
     }
 
-    /// Find a page in the page tree
+    /// Find a page in the page tree (iterative implementation for stack safety)
     fn find_page_in_tree(
         &self,
-        node: &PdfDictionary,
+        root_node: &PdfDictionary,
         target_index: u32,
-        current_index: u32,
-        inherited: Option<&PdfDictionary>,
+        initial_current_index: u32,
+        initial_inherited: Option<&PdfDictionary>,
     ) -> ParseResult<ParsedPage> {
-        let node_type = node
-            .get_type()
-            .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
+        // Work item for the traversal queue
+        #[derive(Debug)]
+        struct WorkItem {
+            node_dict: PdfDictionary,
+            node_ref: Option<(u32, u16)>,
+            current_index: u32,
+            inherited: Option<PdfDictionary>,
+        }
 
-        match node_type {
-            "Pages" => {
-                // This is a page tree node
-                let kids = node
-                    .get("Kids")
-                    .and_then(|obj| obj.as_array())
-                    .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
+        // Initialize work queue with root node
+        let mut work_queue = Vec::new();
+        work_queue.push(WorkItem {
+            node_dict: root_node.clone(),
+            node_ref: None,
+            current_index: initial_current_index,
+            inherited: initial_inherited.cloned(),
+        });
 
-                // Merge inherited attributes
-                let mut merged_inherited = inherited.cloned().unwrap_or_else(PdfDictionary::new);
+        // Iterative traversal
+        while let Some(work_item) = work_queue.pop() {
+            let WorkItem {
+                node_dict,
+                node_ref,
+                current_index,
+                inherited,
+            } = work_item;
 
-                // Inheritable attributes
-                for key in ["Resources", "MediaBox", "CropBox", "Rotate"] {
-                    if let Some(value) = node.get(key) {
-                        if !merged_inherited.contains_key(key) {
-                            merged_inherited.insert(key.to_string(), value.clone());
+            let node_type = node_dict
+                .get_type()
+                .or_else(|| {
+                    // If Type is missing, try to infer from content
+                    if node_dict.contains_key("Kids") && node_dict.contains_key("Count") {
+                        Some("Pages")
+                    } else if node_dict.contains_key("Contents")
+                        || node_dict.contains_key("MediaBox")
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| {
+                    // If Type is missing, try to infer from structure
+                    if node_dict.contains_key("Kids") {
+                        Some("Pages")
+                    } else if node_dict.contains_key("Contents")
+                        || (node_dict.contains_key("MediaBox") && !node_dict.contains_key("Kids"))
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
+
+            match node_type {
+                "Pages" => {
+                    // This is a page tree node
+                    let kids = node_dict
+                        .get("Kids")
+                        .and_then(|obj| obj.as_array())
+                        .or_else(|| {
+                            // If Kids is missing, use empty array
+                            eprintln!(
+                                "Warning: Missing Kids array in Pages node, using empty array"
+                            );
+                            Some(&super::objects::EMPTY_PDF_ARRAY)
+                        })
+                        .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
+
+                    // Merge inherited attributes
+                    let mut merged_inherited = inherited.unwrap_or_else(PdfDictionary::new);
+
+                    // Inheritable attributes
+                    for key in ["Resources", "MediaBox", "CropBox", "Rotate"] {
+                        if let Some(value) = node_dict.get(key) {
+                            if !merged_inherited.contains_key(key) {
+                                merged_inherited.insert(key.to_string(), value.clone());
+                            }
                         }
                     }
-                }
 
-                // Find which kid contains our target page
-                let mut current_idx = current_index;
-                for kid_ref in &kids.0 {
-                    let kid_ref =
-                        kid_ref
-                            .as_reference()
-                            .ok_or_else(|| ParseError::SyntaxError {
+                    // Process kids in reverse order (since we're using a stack/Vec::pop())
+                    // This ensures we process them in the correct order
+                    let mut current_idx = current_index;
+                    let mut pending_kids = Vec::new();
+
+                    for kid_ref in &kids.0 {
+                        let kid_ref =
+                            kid_ref
+                                .as_reference()
+                                .ok_or_else(|| ParseError::SyntaxError {
+                                    position: 0,
+                                    message: "Kids array must contain references".to_string(),
+                                })?;
+
+                        // Get the kid object
+                        let kid_obj = self.get_object(kid_ref.0, kid_ref.1)?;
+                        let kid_dict =
+                            kid_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
                                 position: 0,
-                                message: "Kids array must contain references".to_string(),
+                                message: "Page tree node must be a dictionary".to_string(),
                             })?;
 
-                    // Get the kid object
-                    let kid_obj = self.get_object(kid_ref.0, kid_ref.1)?;
-                    let kid_dict = kid_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
-                        position: 0,
-                        message: "Page tree node must be a dictionary".to_string(),
-                    })?;
+                        let kid_type = kid_dict
+                            .get_type()
+                            .or_else(|| {
+                                // If Type is missing, try to infer from content
+                                if kid_dict.contains_key("Kids") && kid_dict.contains_key("Count") {
+                                    Some("Pages")
+                                } else if kid_dict.contains_key("Contents")
+                                    || kid_dict.contains_key("MediaBox")
+                                {
+                                    Some("Page")
+                                } else {
+                                    None
+                                }
+                            })
+                            .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
-                    let kid_type = kid_dict
-                        .get_type()
-                        .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
-
-                    let count = if kid_type == "Pages" {
-                        kid_dict
-                            .get("Count")
-                            .and_then(|obj| obj.as_integer())
-                            .ok_or_else(|| ParseError::MissingKey("Count".to_string()))?
-                            as u32
-                    } else {
-                        1
-                    };
-
-                    if target_index < current_idx + count {
-                        // Found the right subtree/page
-                        if kid_type == "Page" {
-                            // This is the page we want
-                            return self.create_parsed_page(
-                                kid_ref,
-                                kid_dict,
-                                Some(&merged_inherited),
-                            );
+                        let count = if kid_type == "Pages" {
+                            kid_dict
+                                .get("Count")
+                                .and_then(|obj| obj.as_integer())
+                                .unwrap_or(1) // Fallback to 1 if Count is missing (defensive)
+                                as u32
                         } else {
-                            // Recurse into this subtree
-                            return self.find_page_in_tree(
-                                kid_dict,
-                                target_index,
-                                current_idx,
-                                Some(&merged_inherited),
-                            );
+                            1
+                        };
+
+                        if target_index < current_idx + count {
+                            // Found the right subtree/page
+                            if kid_type == "Page" {
+                                // This is the page we want
+                                return self.create_parsed_page(
+                                    kid_ref,
+                                    kid_dict,
+                                    Some(&merged_inherited),
+                                );
+                            } else {
+                                // Need to traverse this subtree - add to queue
+                                pending_kids.push(WorkItem {
+                                    node_dict: kid_dict.clone(),
+                                    node_ref: Some(kid_ref),
+                                    current_index: current_idx,
+                                    inherited: Some(merged_inherited.clone()),
+                                });
+                                break; // Found our target subtree, no need to continue
+                            }
                         }
+
+                        current_idx += count;
                     }
 
-                    current_idx += count;
+                    // Add pending kids to work queue in reverse order for correct processing
+                    work_queue.extend(pending_kids.into_iter().rev());
                 }
+                "Page" => {
+                    // This is a page object
+                    if target_index != current_index {
+                        return Err(ParseError::SyntaxError {
+                            position: 0,
+                            message: "Page index mismatch".to_string(),
+                        });
+                    }
 
-                Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: "Page not found in tree".to_string(),
-                })
-            }
-            "Page" => {
-                // This is a page object
-                if target_index != current_index {
+                    // We need the reference for creating the parsed page
+                    if let Some(page_ref) = node_ref {
+                        return self.create_parsed_page(page_ref, &node_dict, inherited.as_ref());
+                    } else {
+                        return Err(ParseError::SyntaxError {
+                            position: 0,
+                            message: "Direct page object without reference".to_string(),
+                        });
+                    }
+                }
+                _ => {
                     return Err(ParseError::SyntaxError {
                         position: 0,
-                        message: "Page index mismatch".to_string(),
+                        message: format!("Invalid page tree node type: {node_type}"),
                     });
                 }
-
-                // We need the reference, but we don't have it here
-                // This case shouldn't happen if we're navigating properly
-                Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: "Direct page object without reference".to_string(),
-                })
             }
-            _ => Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!("Invalid page tree node type: {node_type}"),
-            }),
         }
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: "Page not found in tree".to_string(),
+        })
     }
 
     /// Create a ParsedPage from a page dictionary
@@ -538,10 +622,19 @@ impl<R: Read + Seek> PdfDocument<R> {
         page_dict: &PdfDictionary,
         inherited: Option<&PdfDictionary>,
     ) -> ParseResult<ParsedPage> {
-        // Extract page attributes
-        let media_box = self
-            .get_rectangle(page_dict, inherited, "MediaBox")?
-            .ok_or_else(|| ParseError::MissingKey("MediaBox".to_string()))?;
+        // Extract page attributes with fallback for missing MediaBox
+        let media_box = match self.get_rectangle(page_dict, inherited, "MediaBox")? {
+            Some(mb) => mb,
+            None => {
+                // Use default Letter size if MediaBox is missing
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Warning: Page {} {} R missing MediaBox, using default Letter size",
+                    obj_ref.0, obj_ref.1
+                );
+                [0.0, 0.0, 612.0, 792.0]
+            }
+        };
 
         let crop_box = self.get_rectangle(page_dict, inherited, "CropBox")?;
 

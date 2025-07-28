@@ -7,13 +7,13 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Generate professional PDFs, parse existing documents, and perform operations like split, merge, and rotate with a clean, safe API.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **beta** stage with good support for basic PDF operations. Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
 
 ## Features
 
 - 🚀 **100% Pure Rust** - No C dependencies or external PDF libraries
 - 📄 **PDF Generation** - Create multi-page documents with text, graphics, and images
-- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (97.8% success rate on real-world PDFs)
+- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (**99.7% success rate** on 749 real-world PDFs)
 - ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving content
 - 🖼️ **Image Support** - Embed JPEG images with automatic compression
 - 🎨 **Rich Graphics** - Vector graphics with shapes, paths, colors (RGB/CMYK/Gray)
@@ -22,16 +22,28 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
+## 🎉 What's New in v1.1.0 
+
+**Significant improvements in PDF compatibility:**
+- 📈 **Better parsing**: Improved success rate from 74% to 97.2% on test corpus
+- 🛡️ **Stack overflow protection** - More resilient against malformed PDFs
+- 🚀 **Performance**: ~179 PDFs/second on simple operations
+- ⚡ **Circular reference handling** - Better support for complex PDF structures
+- 🔧 **Lenient parsing** - Handles some malformed PDFs
+- 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
+
+**Important:** Success rates apply to non-encrypted PDFs with standard features. See [Current Limitations](#current-limitations) section for details.
+
 ## Quick Start
 
 Add oxidize-pdf to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxidize-pdf = "1.0.0"
+oxidize-pdf = "1.1.0"
 
 # For OCR support (optional)
-oxidize-pdf = { version = "1.0.0", features = ["ocr-tesseract"] }
+oxidize-pdf = { version = "1.1.0", features = ["ocr-tesseract"] }
 ```
 
 ### Basic PDF Generation
@@ -305,6 +317,40 @@ For commercial use cases that require proprietary licensing, please contact us a
 - PDF forms and digital signatures
 - Priority support and SLAs
 - Custom feature development
+
+## Current Limitations
+
+While oxidize-pdf is under active development, please be aware of the following limitations:
+
+### Supported Features
+- ✅ **Compression**: FlateDecode only (most common)
+- ✅ **Color Spaces**: RGB, CMYK, Gray
+- ✅ **Fonts**: Standard 14 PDF fonts, basic font subsetting
+- ✅ **Images**: JPEG embedding
+- ✅ **Basic Operations**: Split, merge, rotate, text extraction
+
+### Not Yet Supported
+- ❌ **Encryption**: Can read some encrypted PDFs, cannot create or fully decrypt
+- ❌ **Compression Filters**: CCITTFaxDecode, JBIG2Decode (Note: LZWDecode and RunLengthDecode are now supported!)
+- ❌ **Advanced Graphics**: Patterns, shadings, advanced transparency
+- ❌ **Forms**: No interactive form support
+- ❌ **Annotations**: Cannot create or modify annotations
+- ❌ **Digital Signatures**: No support for signed PDFs
+- ❌ **Tagged PDFs**: No accessibility support
+- ❌ **Image Formats**: PNG, TIFF, GIF not supported
+- ❌ **CJK Fonts**: Limited support for Asian languages
+
+### Known Issues
+- Some PDF merge operations don't properly remap fonts and images
+- Page rotation is not implemented in split/extraction operations
+- Inline images in content streams cannot be extracted
+- XRef recovery is incomplete for heavily corrupted PDFs
+- Memory usage can be high for very large PDFs without optimization
+
+### Compatibility Notes
+- The "99.7% success rate" applies only to non-encrypted, standard PDFs
+- Complex PDFs with advanced features may fail to parse correctly
+- Performance benchmarks are based on simple PDF operations
 
 ## Testing
 

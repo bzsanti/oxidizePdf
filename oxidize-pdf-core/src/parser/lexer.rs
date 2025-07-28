@@ -2,8 +2,8 @@
 //!
 //! Tokenizes PDF syntax according to ISO 32000-1 Section 7.2
 
-use super::{ParseError, ParseResult};
-use std::io::Read;
+use super::{ParseError, ParseOptions, ParseResult, ParseWarning};
+use std::io::{Read, Seek, SeekFrom};
 
 /// PDF Token types
 #[derive(Debug, Clone, PartialEq)]
@@ -64,25 +64,39 @@ pub enum Token {
 }
 
 /// PDF Lexer for tokenizing PDF content
-pub struct Lexer<R: Read> {
+pub struct Lexer<R> {
     reader: std::io::BufReader<R>,
     #[allow(dead_code)]
     buffer: Vec<u8>,
     position: usize,
     peek_buffer: Option<u8>,
     token_buffer: Vec<Token>,
+    options: ParseOptions,
+    warnings: Vec<ParseWarning>,
 }
 
 impl<R: Read> Lexer<R> {
-    /// Create a new lexer from a reader
+    /// Create a new lexer from a reader with default options
     pub fn new(reader: R) -> Self {
+        Self::new_with_options(reader, ParseOptions::default())
+    }
+
+    /// Create a new lexer from a reader with custom options
+    pub fn new_with_options(reader: R, options: ParseOptions) -> Self {
         Self {
             reader: std::io::BufReader::new(reader),
             buffer: Vec::with_capacity(1024),
             position: 0,
             peek_buffer: None,
             token_buffer: Vec::new(),
+            options,
+            warnings: Vec::new(),
         }
+    }
+
+    /// Get warnings collected during lexing (if enabled)
+    pub fn warnings(&self) -> &[ParseWarning] {
+        &self.warnings
     }
 
     /// Get the next token
@@ -133,10 +147,17 @@ impl<R: Read> Lexer<R> {
                 Ok(Token::Name("R".to_string()))
             }
             _ if ch.is_ascii_alphabetic() => self.read_keyword(),
-            _ => Err(ParseError::SyntaxError {
-                position: self.position,
-                message: format!("Unexpected character: {}", ch as char),
-            }),
+            _ => {
+                // Check if this is a problematic encoding character
+                if self.is_problematic_encoding_char(ch) {
+                    self.handle_encoding_char_in_token_stream(ch)
+                } else {
+                    Err(ParseError::SyntaxError {
+                        position: self.position,
+                        message: format!("Unexpected character: {}", ch as char),
+                    })
+                }
+            }
         }
     }
 
@@ -248,12 +269,28 @@ impl<R: Read> Lexer<R> {
         let mut escape = false;
 
         while paren_depth > 0 {
-            let ch = self
-                .consume_char()?
-                .ok_or_else(|| ParseError::SyntaxError {
-                    position: self.position,
-                    message: "Unterminated string".to_string(),
-                })?;
+            let ch = match self.consume_char()? {
+                Some(c) => c,
+                None => {
+                    if self.options.lenient_syntax {
+                        // In lenient mode, return what we have so far
+                        if self.options.collect_warnings {
+                            self.warnings.push(ParseWarning::SyntaxErrorRecovered {
+                                position: self.position,
+                                expected: "closing parenthesis".to_string(),
+                                found: "EOF".to_string(),
+                                recovery_action: "returned partial string content".to_string(),
+                            });
+                        }
+                        break;
+                    } else {
+                        return Err(ParseError::SyntaxError {
+                            position: self.position,
+                            message: "Unterminated string".to_string(),
+                        });
+                    }
+                }
+            };
 
             if escape {
                 let escaped = match ch {
@@ -302,7 +339,14 @@ impl<R: Read> Lexer<R> {
             }
         }
 
-        Ok(Token::String(string))
+        // Apply character encoding recovery if enabled
+        let processed_string = if self.options.lenient_encoding {
+            self.process_string_with_encoding_recovery(&string)?
+        } else {
+            string
+        };
+
+        Ok(Token::String(processed_string))
     }
 
     /// Read angle bracket tokens (hex strings or dict markers)
@@ -327,18 +371,42 @@ impl<R: Read> Lexer<R> {
                 if ch.is_ascii_hexdigit() {
                     hex_chars.push(ch as char);
                 } else if !ch.is_ascii_whitespace() {
-                    return Err(ParseError::SyntaxError {
-                        position: self.position,
-                        message: "Invalid character in hex string".to_string(),
-                    });
+                    if self.options.lenient_syntax {
+                        // In lenient mode, skip invalid characters
+                        if self.options.collect_warnings {
+                            self.warnings.push(ParseWarning::SyntaxErrorRecovered {
+                                position: self.position,
+                                expected: "hex digit".to_string(),
+                                found: format!("'{}'", ch as char),
+                                recovery_action: "skipped invalid character".to_string(),
+                            });
+                        }
+                    } else {
+                        return Err(ParseError::SyntaxError {
+                            position: self.position,
+                            message: "Invalid character in hex string".to_string(),
+                        });
+                    }
                 }
             }
 
             if !found_end {
-                return Err(ParseError::SyntaxError {
-                    position: self.position,
-                    message: "Unterminated hex string".to_string(),
-                });
+                if self.options.lenient_syntax {
+                    // In lenient mode, return what we have so far
+                    if self.options.collect_warnings {
+                        self.warnings.push(ParseWarning::SyntaxErrorRecovered {
+                            position: self.position,
+                            expected: ">".to_string(),
+                            found: "EOF".to_string(),
+                            recovery_action: "returned partial hex string".to_string(),
+                        });
+                    }
+                } else {
+                    return Err(ParseError::SyntaxError {
+                        position: self.position,
+                        message: "Unterminated hex string".to_string(),
+                    });
+                }
             }
 
             // Pad with 0 if odd number of digits
@@ -555,6 +623,38 @@ impl<R: Read> Lexer<R> {
     }
 
     /// Read exactly n bytes
+    /// Peek at the next byte without consuming it
+    pub fn peek_byte(&mut self) -> ParseResult<u8> {
+        match self.peek_char()? {
+            Some(b) => Ok(b),
+            None => Err(ParseError::UnexpectedToken {
+                expected: "byte".to_string(),
+                found: "EOF".to_string(),
+            }),
+        }
+    }
+
+    /// Read a single byte
+    pub fn read_byte(&mut self) -> ParseResult<u8> {
+        match self.consume_char()? {
+            Some(b) => Ok(b),
+            None => Err(ParseError::UnexpectedToken {
+                expected: "byte".to_string(),
+                found: "EOF".to_string(),
+            }),
+        }
+    }
+
+    /// Seek to a specific position
+    pub fn seek(&mut self, pos: u64) -> ParseResult<()>
+    where
+        R: Seek,
+    {
+        self.reader.seek(SeekFrom::Start(pos))?;
+        self.position = pos as usize;
+        Ok(())
+    }
+
     pub fn read_bytes(&mut self, n: usize) -> ParseResult<Vec<u8>> {
         let mut bytes = vec![0u8; n];
         self.reader.read_exact(&mut bytes)?;
@@ -602,6 +702,344 @@ impl<R: Read> Lexer<R> {
     /// Push back a token to be returned by the next call to next_token
     pub fn push_token(&mut self, token: Token) {
         self.token_buffer.push(token);
+    }
+
+    /// Expect a specific keyword token
+    pub fn expect_keyword(&mut self, keyword: &str) -> ParseResult<()> {
+        let token = self.next_token()?;
+        match (keyword, &token) {
+            ("endstream", Token::EndStream) => Ok(()),
+            ("stream", Token::Stream) => Ok(()),
+            ("endobj", Token::EndObj) => Ok(()),
+            ("obj", Token::Obj) => Ok(()),
+            ("startxref", Token::StartXRef) => Ok(()),
+            _ => Err(ParseError::UnexpectedToken {
+                expected: format!("keyword '{keyword}'"),
+                found: format!("{token:?}"),
+            }),
+        }
+    }
+
+    /// Find a keyword ahead in the stream without consuming bytes
+    /// Returns the number of bytes until the keyword is found
+    pub fn find_keyword_ahead(
+        &mut self,
+        keyword: &str,
+        max_bytes: usize,
+    ) -> ParseResult<Option<usize>>
+    where
+        R: Seek,
+    {
+        use std::io::{Read, Seek, SeekFrom};
+
+        // Save current position
+        let current_pos = self.reader.stream_position()?;
+        let start_buffer_state = self.peek_buffer;
+
+        let keyword_bytes = keyword.as_bytes();
+        let mut bytes_read = 0;
+        let mut match_buffer = Vec::new();
+
+        // Search for the keyword
+        while bytes_read < max_bytes {
+            let mut byte = [0u8; 1];
+            match self.reader.read_exact(&mut byte) {
+                Ok(_) => {
+                    bytes_read += 1;
+                    match_buffer.push(byte[0]);
+
+                    // Keep only the last keyword.len() bytes in match_buffer
+                    if match_buffer.len() > keyword_bytes.len() {
+                        match_buffer.remove(0);
+                    }
+
+                    // Check if we found the keyword
+                    if match_buffer.len() == keyword_bytes.len() && match_buffer == keyword_bytes {
+                        // Restore position
+                        self.reader.seek(SeekFrom::Start(current_pos))?;
+                        self.peek_buffer = start_buffer_state;
+                        return Ok(Some(bytes_read - keyword_bytes.len()));
+                    }
+                }
+                Err(_) => break, // EOF or error
+            }
+        }
+
+        // Restore position
+        self.reader.seek(SeekFrom::Start(current_pos))?;
+        self.peek_buffer = start_buffer_state;
+        Ok(None)
+    }
+
+    /// Peek ahead n bytes without consuming them
+    pub fn peek_ahead(&mut self, n: usize) -> ParseResult<Vec<u8>>
+    where
+        R: Seek,
+    {
+        use std::io::{Read, Seek, SeekFrom};
+
+        // Save current position
+        let current_pos = self.reader.stream_position()?;
+        let start_buffer_state = self.peek_buffer;
+
+        // Read n bytes
+        let mut bytes = vec![0u8; n];
+        let bytes_read = self.reader.read(&mut bytes)?;
+        bytes.truncate(bytes_read);
+
+        // Restore position
+        self.reader.seek(SeekFrom::Start(current_pos))?;
+        self.peek_buffer = start_buffer_state;
+
+        Ok(bytes)
+    }
+
+    /// Save the current position for later restoration
+    pub fn save_position(&mut self) -> ParseResult<(u64, Option<u8>)>
+    where
+        R: Seek,
+    {
+        use std::io::Seek;
+        let pos = self.reader.stream_position()?;
+        Ok((pos, self.peek_buffer))
+    }
+
+    /// Restore a previously saved position
+    pub fn restore_position(&mut self, saved: (u64, Option<u8>)) -> ParseResult<()>
+    where
+        R: Seek,
+    {
+        use std::io::{Seek, SeekFrom};
+        self.reader.seek(SeekFrom::Start(saved.0))?;
+        self.peek_buffer = saved.1;
+        self.position = saved.0 as usize;
+        Ok(())
+    }
+
+    /// Peek the next token without consuming it
+    pub fn peek_token(&mut self) -> ParseResult<Token>
+    where
+        R: Seek,
+    {
+        let saved_pos = self.save_position()?;
+        let token = self.next_token()?;
+        self.restore_position(saved_pos)?;
+        Ok(token)
+    }
+
+    /// Process string bytes with enhanced character encoding recovery
+    fn process_string_with_encoding_recovery(
+        &mut self,
+        string_bytes: &[u8],
+    ) -> ParseResult<Vec<u8>> {
+        use super::encoding::{CharacterDecoder, EncodingOptions, EncodingType, EnhancedDecoder};
+
+        // First check for common problematic bytes that need special handling
+        let has_problematic_chars = string_bytes.iter().any(|&b| {
+            // Control characters and Latin-1 supplement range that often cause issues
+            (0x80..=0x9F).contains(&b)
+                || b == 0x07
+                || (b <= 0x1F && b != 0x09 && b != 0x0A && b != 0x0D)
+        });
+
+        let decoder = EnhancedDecoder::new();
+
+        // Use more aggressive encoding options if problematic characters detected
+        let encoding_options = if has_problematic_chars {
+            EncodingOptions {
+                lenient_mode: true, // Always use lenient mode for problematic chars
+                preferred_encoding: Some(EncodingType::Windows1252), // Try Windows-1252 first for control chars
+                max_replacements: std::cmp::max(100, string_bytes.len() / 10), // More generous replacement limit
+                log_issues: self.options.collect_warnings,
+            }
+        } else {
+            EncodingOptions {
+                lenient_mode: self.options.lenient_encoding,
+                preferred_encoding: self.options.preferred_encoding,
+                max_replacements: 50,
+                log_issues: self.options.collect_warnings,
+            }
+        };
+
+        match decoder.decode(string_bytes, &encoding_options) {
+            Ok(result) => {
+                // Log warning if replacements were made or problematic chars detected
+                if (result.replacement_count > 0 || has_problematic_chars)
+                    && self.options.collect_warnings
+                {
+                    self.warnings.push(ParseWarning::InvalidEncoding {
+                        position: self.position,
+                        recovered_text: if result.text.len() > 50 {
+                            // Safe character boundary truncation
+                            let truncate_at = result
+                                .text
+                                .char_indices()
+                                .map(|(i, _)| i)
+                                .nth(47)
+                                .unwrap_or(result.text.len().min(47));
+                            format!(
+                                "{}... (truncated, {} chars total)",
+                                &result.text[..truncate_at],
+                                result.text.chars().count()
+                            )
+                        } else {
+                            result.text.clone()
+                        },
+                        encoding_used: result.detected_encoding,
+                        replacement_count: result.replacement_count,
+                    });
+                }
+
+                // Convert back to bytes
+                Ok(result.text.into_bytes())
+            }
+            Err(encoding_error) => {
+                if self.options.lenient_encoding {
+                    // Enhanced fallback strategy
+                    let fallback_result = self.apply_fallback_encoding_strategy(string_bytes);
+
+                    if self.options.collect_warnings {
+                        self.warnings.push(ParseWarning::InvalidEncoding {
+                            position: self.position,
+                            recovered_text: format!(
+                                "Fallback strategy applied: {} -> {} chars",
+                                string_bytes.len(),
+                                fallback_result.len()
+                            ),
+                            encoding_used: None,
+                            replacement_count: string_bytes.len(),
+                        });
+                    }
+                    Ok(fallback_result)
+                } else {
+                    Err(ParseError::CharacterEncodingError {
+                        position: self.position,
+                        message: format!(
+                            "Failed to decode string with any supported encoding: {encoding_error}"
+                        ),
+                    })
+                }
+            }
+        }
+    }
+
+    /// Apply fallback encoding strategy for severely corrupted strings
+    fn apply_fallback_encoding_strategy(&self, string_bytes: &[u8]) -> Vec<u8> {
+        let mut result = Vec::with_capacity(string_bytes.len());
+
+        for &byte in string_bytes {
+            match byte {
+                // Replace common problematic control characters with safe alternatives
+                0x00..=0x08 | 0x0B | 0x0C | 0x0E..=0x1F => {
+                    result.push(b' '); // Replace control chars with space
+                }
+                0x80..=0x9F => {
+                    // Windows-1252 control character range - try to map to reasonable alternatives
+                    let replacement = match byte {
+                        0x80 => b'E',  // Euro sign -> E
+                        0x81 => b' ',  // Undefined -> space
+                        0x82 => b',',  // Single low-9 quotation mark -> comma
+                        0x83 => b'f',  // Latin small letter f with hook -> f
+                        0x84 => b'"',  // Double low-9 quotation mark -> quote
+                        0x85 => b'.',  // Horizontal ellipsis -> period
+                        0x86 => b'+',  // Dagger -> plus
+                        0x87 => b'+',  // Double dagger -> plus
+                        0x88 => b'^',  // Modifier letter circumflex accent -> caret
+                        0x89 => b'%',  // Per mille sign -> percent
+                        0x8A => b'S',  // Latin capital letter S with caron -> S
+                        0x8B => b'<',  // Single left-pointing angle quotation mark
+                        0x8C => b'O',  // Latin capital ligature OE -> O
+                        0x8D => b' ',  // Undefined -> space
+                        0x8E => b'Z',  // Latin capital letter Z with caron -> Z
+                        0x8F => b' ',  // Undefined -> space
+                        0x90 => b' ',  // Undefined -> space
+                        0x91 => b'\'', // Left single quotation mark
+                        0x92 => b'\'', // Right single quotation mark
+                        0x93 => b'"',  // Left double quotation mark
+                        0x94 => b'"',  // Right double quotation mark
+                        0x95 => b'*',  // Bullet -> asterisk
+                        0x96 => b'-',  // En dash -> hyphen
+                        0x97 => b'-',  // Em dash -> hyphen
+                        0x98 => b'~',  // Small tilde
+                        0x99 => b'T',  // Trade mark sign -> T
+                        0x9A => b's',  // Latin small letter s with caron -> s
+                        0x9B => b'>',  // Single right-pointing angle quotation mark
+                        0x9C => b'o',  // Latin small ligature oe -> o
+                        0x9D => b' ',  // Undefined -> space
+                        0x9E => b'z',  // Latin small letter z with caron -> z
+                        0x9F => b'Y',  // Latin capital letter Y with diaeresis -> Y
+                        _ => b'?',     // Fallback
+                    };
+                    result.push(replacement);
+                }
+                _ => {
+                    result.push(byte); // Keep valid bytes as-is
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Check if a character is likely a problematic encoding character
+    fn is_problematic_encoding_char(&self, ch: u8) -> bool {
+        // Control characters and Latin-1 supplement range that often indicate encoding issues
+        (0x80..=0x9F).contains(&ch) ||
+        ch == 0x07 || // Bell character
+        (ch <= 0x1F && ch != 0x09 && ch != 0x0A && ch != 0x0D) // Control chars except tab, LF, CR
+    }
+
+    /// Handle problematic encoding characters in the main token stream
+    fn handle_encoding_char_in_token_stream(&mut self, ch: u8) -> ParseResult<Token> {
+        if self.options.lenient_encoding {
+            // Consume the problematic character and continue
+            self.consume_char()?;
+
+            // Log warning about the character recovery
+            if self.options.collect_warnings {
+                let replacement_char = match ch {
+                    0x07 => "bell",
+                    0x00..=0x1F => "control",
+                    0x80..=0x9F => "latin1-supplement",
+                    _ => "unknown",
+                };
+
+                self.warnings.push(ParseWarning::InvalidEncoding {
+                    position: self.position,
+                    recovered_text: format!(
+                        "Skipped problematic {replacement_char} character (0x{ch:02X})"
+                    ),
+                    encoding_used: None,
+                    replacement_count: 1,
+                });
+            }
+
+            // Skip this character and try to get the next token
+            self.skip_whitespace()?;
+            if let Ok(Some(_)) = self.peek_char() {
+                self.next_token() // Recursively try next token
+            } else {
+                Err(ParseError::SyntaxError {
+                    position: self.position,
+                    message: "Unexpected end of file after problematic character".to_string(),
+                })
+            }
+        } else {
+            // In strict mode, generate a more descriptive error
+            let char_description = match ch {
+                0x07 => "Bell character (\\u{07})".to_string(),
+                0x00..=0x1F => format!("Control character (\\u{{{ch:02X}}})"),
+                0x80..=0x9F => format!("Latin-1 supplement character (\\u{{{ch:02X}}})"),
+                _ => format!("Problematic character (\\u{{{ch:02X}}})"),
+            };
+
+            Err(ParseError::CharacterEncodingError {
+                position: self.position,
+                message: format!(
+                    "Unexpected character: {char_description} - Consider using lenient parsing mode"
+                ),
+            })
+        }
     }
 }
 
@@ -1246,6 +1684,121 @@ mod tests {
 
             assert_eq!(count, 3000); // 1000 repetitions * 3 tokens each
             assert!(elapsed.as_millis() < 1000); // Should complete within 1 second
+        }
+    }
+
+    #[test]
+    fn test_lexer_find_keyword_ahead() {
+        let input = b"some data here endstream more data";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Find endstream keyword
+        let result = lexer.find_keyword_ahead("endstream", 100);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(15)); // Position of endstream
+
+        // Try to find non-existent keyword
+        let result2 = lexer.find_keyword_ahead("notfound", 100);
+        assert!(result2.is_ok());
+        assert_eq!(result2.unwrap(), None);
+
+        // Test with limited search distance
+        let result3 = lexer.find_keyword_ahead("endstream", 10);
+        assert!(result3.is_ok());
+        assert_eq!(result3.unwrap(), None); // Not found within 10 bytes
+    }
+
+    #[test]
+    fn test_lexer_peek_token() {
+        let input = b"123 456 /Name";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Peek first token
+        let peeked = lexer.peek_token();
+        assert!(peeked.is_ok());
+        assert_eq!(peeked.unwrap(), Token::Integer(123));
+
+        // Verify peek doesn't consume
+        let next = lexer.next_token();
+        assert!(next.is_ok());
+        assert_eq!(next.unwrap(), Token::Integer(123));
+
+        // Peek and consume next tokens
+        assert_eq!(lexer.peek_token().unwrap(), Token::Integer(456));
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(456));
+
+        assert_eq!(lexer.peek_token().unwrap(), Token::Name("Name".to_string()));
+        assert_eq!(lexer.next_token().unwrap(), Token::Name("Name".to_string()));
+    }
+
+    #[test]
+    fn test_lexer_expect_keyword() {
+        let input = b"endstream obj endobj";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Expect correct keyword
+        assert!(lexer.expect_keyword("endstream").is_ok());
+
+        // Expect another correct keyword
+        assert!(lexer.expect_keyword("obj").is_ok());
+
+        // Expect wrong keyword (should fail)
+        let result = lexer.expect_keyword("stream");
+        assert!(result.is_err());
+        match result {
+            Err(ParseError::UnexpectedToken { expected, found }) => {
+                assert!(expected.contains("stream"));
+                assert!(found.contains("EndObj"));
+            }
+            _ => panic!("Expected UnexpectedToken error"),
+        }
+    }
+
+    #[test]
+    fn test_lexer_save_restore_position() {
+        let input = b"123 456 789";
+        let mut lexer = Lexer::new(Cursor::new(input));
+
+        // Read first token
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(123));
+
+        // Save position
+        let saved = lexer.save_position();
+        assert!(saved.is_ok());
+        let saved_pos = saved.unwrap();
+
+        // Read more tokens
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(456));
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(789));
+
+        // Restore position
+        assert!(lexer.restore_position(saved_pos).is_ok());
+
+        // Should be back at second token
+        assert_eq!(lexer.next_token().unwrap(), Token::Integer(456));
+    }
+
+    #[test]
+    fn test_lexer_character_encoding_recovery() {
+        // Test string with encoding issues (Windows-1252 bytes)
+        let input = b"(Caf\x80 \x91Hello\x92)"; // "Café 'Hello'"
+        let options = ParseOptions::lenient();
+        let mut lexer = Lexer::new_with_options(Cursor::new(input), options);
+
+        match lexer.next_token().unwrap() {
+            Token::String(bytes) => {
+                // Should contain the text, potentially with encoding recovery
+                let text = String::from_utf8_lossy(&bytes);
+                println!("Recovered text: {}", text);
+                assert!(text.len() > 0); // Should not be empty
+            }
+            other => panic!("Expected String token, got {:?}", other),
+        }
+
+        // Check that warnings were collected
+        let warnings = lexer.warnings();
+        if !warnings.is_empty() {
+            println!("Encoding warnings: {:?}", warnings);
         }
     }
 }

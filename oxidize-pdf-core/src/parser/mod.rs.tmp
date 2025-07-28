@@ -1,0 +1,174 @@
+/// Options for parsing PDF files with different levels of strictness
+///
+/// # Example
+///
+/// ```rust
+/// use oxidize_pdf::parser::ParseOptions;
+///
+/// // Create tolerant options for handling corrupted PDFs
+/// let options = ParseOptions::tolerant();
+/// assert!(!options.strict_mode);
+/// assert!(options.recover_from_stream_errors);
+///
+/// // Create custom options
+/// let custom = ParseOptions {
+///     strict_mode: false,
+///     recover_from_stream_errors: true,
+///     ignore_corrupt_streams: false, // Still report errors but try to recover
+///     partial_content_allowed: true,
+///     max_recovery_attempts: 10,     // Try harder to recover
+///     log_recovery_details: false,   // Quiet recovery
+///     lenient_streams: true,
+///     max_recovery_bytes: 5000,
+///     collect_warnings: true,
+///     lenient_encoding: true,
+///     preferred_encoding: None,
+///     lenient_syntax: true,
+/// };
+/// ```
+#[derive(Debug, Clone)]
+pub struct ParseOptions {
+    /// Strict mode enforces PDF specification compliance (default: true)
+    pub strict_mode: bool,
+    /// Attempt to recover from stream decoding errors (default: false)
+    ///
+    /// When enabled, the parser will try multiple strategies to decode
+    /// corrupted streams, including:
+    /// - Raw deflate without zlib wrapper
+    /// - Decompression with checksum validation disabled
+    /// - Skipping corrupted header bytes
+    pub recover_from_stream_errors: bool,
+    /// Skip corrupted streams instead of failing (default: false)
+    ///
+    /// When enabled, corrupted streams will return empty data instead
+    /// of causing parsing to fail entirely.
+    pub ignore_corrupt_streams: bool,
+    /// Allow partial content when full parsing fails (default: false)
+    pub partial_content_allowed: bool,
+    /// Maximum number of recovery attempts for corrupted data (default: 3)
+    pub max_recovery_attempts: usize,
+    /// Enable detailed logging of recovery attempts (default: false)
+    ///
+    /// Note: Requires the "logging" feature to be enabled
+    pub log_recovery_details: bool,
+    /// Enable lenient parsing for malformed streams with incorrect Length fields
+    pub lenient_streams: bool,
+    /// Maximum number of bytes to search ahead when recovering from stream errors
+    pub max_recovery_bytes: usize,
+    /// Collect warnings instead of failing on recoverable errors
+    pub collect_warnings: bool,
+    /// Enable lenient character encoding (use replacement characters for invalid sequences)
+    pub lenient_encoding: bool,
+    /// Preferred character encoding for text decoding
+    pub preferred_encoding: Option<encoding::EncodingType>,
+    /// Enable automatic syntax error recovery
+    pub lenient_syntax: bool,
+}
+
+impl Default for ParseOptions {
+    fn default() -> Self {
+        Self {
+            strict_mode: true,
+            recover_from_stream_errors: false,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: false,
+            max_recovery_attempts: 3,
+            log_recovery_details: false,
+            lenient_streams: false,   // Strict mode by default
+            max_recovery_bytes: 1000, // Search up to 1KB ahead
+            collect_warnings: false,  // Don't collect warnings by default
+            lenient_encoding: true,   // Enable lenient encoding by default
+            preferred_encoding: None, // Auto-detect encoding
+            lenient_syntax: false,    // Strict syntax parsing by default
+        }
+    }
+}
+
+impl ParseOptions {
+    /// Create options for strict parsing (default)
+    pub fn strict() -> Self {
+        Self {
+            strict_mode: true,
+            recover_from_stream_errors: false,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: false,
+            max_recovery_attempts: 0,
+            log_recovery_details: false,
+            lenient_streams: false,
+            max_recovery_bytes: 0,
+            collect_warnings: false,
+            lenient_encoding: false,
+            preferred_encoding: None,
+            lenient_syntax: false,
+        }
+    }
+
+    /// Create options for tolerant parsing that attempts recovery
+    pub fn tolerant() -> Self {
+        Self {
+            strict_mode: false,
+            recover_from_stream_errors: true,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: true,
+            max_recovery_attempts: 5,
+            log_recovery_details: true,
+            lenient_streams: true,
+            max_recovery_bytes: 5000,
+            collect_warnings: true,
+            lenient_encoding: true,
+            preferred_encoding: None,
+            lenient_syntax: true,
+        }
+    }
+
+    /// Create lenient parsing options for maximum compatibility (alias for tolerant)
+    pub fn lenient() -> Self {
+        Self::tolerant()
+    }
+
+    /// Create options that skip corrupted content
+    pub fn skip_errors() -> Self {
+        Self {
+            strict_mode: false,
+            recover_from_stream_errors: true,
+            ignore_corrupt_streams: true,
+            partial_content_allowed: true,
+            max_recovery_attempts: 1,
+            log_recovery_details: false,
+            lenient_streams: true,
+            max_recovery_bytes: 5000,
+            collect_warnings: false,
+            lenient_encoding: true,
+            preferred_encoding: None,
+            lenient_syntax: true,
+        }
+    }
+}
+
+/// Warnings that can be collected during lenient parsing
+#[derive(Debug, Clone)]
+pub struct ParseWarning {
+    /// Type of warning
+    pub warning_type: ParseWarningType,
+    /// Context where the warning occurred
+    pub context: String,
+    /// Detailed message about the warning
+    pub message: String,
+    /// Byte offset where the warning occurred (if available)
+    pub offset: Option<usize>,
+}
+
+/// Types of warnings that can occur during lenient parsing
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParseWarningType {
+    /// Invalid stream length was corrected
+    InvalidStreamLength,
+    /// Missing required object
+    MissingObject,
+    /// Invalid character encoding
+    InvalidEncoding,
+    /// Malformed syntax was recovered
+    MalformedSyntax,
+    /// Other warnings
+    Other,
+}

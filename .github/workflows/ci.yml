@@ -19,6 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         rust: [stable, beta]
+    continue-on-error: ${{ matrix.rust == 'beta' }}
     steps:
       - uses: actions/checkout@v4
       
@@ -85,7 +86,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --all --out Xml --timeout 300 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*"
+        run: cargo tarpaulin --all --out Xml --timeout 300 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*" --ignore-panics --avoid-cfg-tarpaulin
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

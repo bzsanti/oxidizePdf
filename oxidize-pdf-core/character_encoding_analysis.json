@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-07-21T17:06:44.080370+00:00",
+  "total_files": 749,
+  "analysis_duration": 18.61,
+  "encoding_statistics": {
+    "total_encoding_errors": 0,
+    "successful_recoveries": 728,
+    "failed_recoveries": 21,
+    "utf8_issues": 0,
+    "windows1252_issues": 0,
+    "latin1_issues": 0
+  },
+  "character_issues_count": 0,
+  "encoding_patterns_count": 0
+}

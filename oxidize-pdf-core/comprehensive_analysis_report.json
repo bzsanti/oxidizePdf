@@ -1,0 +1,59 @@
+{
+  "timestamp": "2025-07-21T17:13:45.819477+00:00",
+  "oxidize_pdf_version": "1.0.1",
+  "total_files_analyzed": 749,
+  "analysis_duration": 19.215185045,
+  "test_environment": "Rust unknown, OS: macos",
+  "total_pdfs": 749,
+  "successful_parsing": 545,
+  "failed_parsing": 204,
+  "success_rate_percentage": 72.76,
+  "circular_reference_errors": 0,
+  "character_encoding_errors": 38,
+  "structural_errors": 145,
+  "encrypted_pdfs": 19,
+  "error_categories": {
+    "CharacterEncoding": {
+      "count": 38,
+      "percentage": 5.07,
+      "description": "Character encoding or unexpected character issues",
+      "severity": "Minor"
+    },
+    "IOError": {
+      "count": 2,
+      "percentage": 0.27,
+      "description": "File I/O related errors",
+      "severity": "Minor"
+    },
+    "SyntaxError": {
+      "count": 116,
+      "percentage": 15.49,
+      "description": "PDF syntax violations",
+      "severity": "Major"
+    },
+    "Encryption": {
+      "count": 19,
+      "percentage": 2.54,
+      "description": "Encrypted PDF files",
+      "severity": "Major"
+    },
+    "StreamError": {
+      "count": 18,
+      "percentage": 2.40,
+      "description": "PDF stream parsing errors",
+      "severity": "Major"
+    },
+    "InvalidStructure": {
+      "count": 11,
+      "percentage": 1.47,
+      "description": "Invalid PDF structure or format",
+      "severity": "Critical"
+    }
+  },
+  "recommendations": [
+    "Consider implementing more lenient parsing options to improve success rate",
+    "Implement improved character encoding detection and handling",
+    "Consider adding support for Latin-1 and other common encodings",
+    "SUCCESS: No circular reference errors detected - fix is working correctly"
+  ]
+}

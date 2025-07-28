@@ -1,0 +1,35 @@
+{
+  "timestamp": "2025-07-21T18:08:06.600947+00:00",
+  "oxidize_pdf_version": "1.0.1",
+  "total_files_analyzed": 3,
+  "analysis_duration": 0.020623502,
+  "test_environment": "Rust unknown, OS: macos",
+  "total_pdfs": 3,
+  "successful_parsing": 1,
+  "failed_parsing": 2,
+  "success_rate_percentage": 33.33,
+  "circular_reference_errors": 0,
+  "character_encoding_errors": 1,
+  "structural_errors": 0,
+  "encrypted_pdfs": 1,
+  "error_categories": {
+    "CharacterEncoding": {
+      "count": 1,
+      "percentage": 33.33,
+      "description": "Character encoding or unexpected character issues",
+      "severity": "Minor"
+    },
+    "Encryption": {
+      "count": 1,
+      "percentage": 33.33,
+      "description": "Encrypted PDF files",
+      "severity": "Major"
+    }
+  },
+  "recommendations": [
+    "Consider implementing more lenient parsing options to improve success rate",
+    "Implement improved character encoding detection and handling",
+    "Consider adding support for Latin-1 and other common encodings",
+    "SUCCESS: No circular reference errors detected - fix is working correctly"
+  ]
+}

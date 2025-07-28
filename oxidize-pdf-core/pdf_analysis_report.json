@@ -1,0 +1,13 @@
+{
+  "total_pdfs": 749,
+  "successful": 543,
+  "parse_errors": 21,
+  "render_errors": 0,
+  "partial_errors": 185,
+  "total_duration_secs": 85.11941782,
+  "error_categories": {
+    "ParseError::Other": 21,
+    "PageTreeError": 185
+  },
+  "error_count": 206
+}

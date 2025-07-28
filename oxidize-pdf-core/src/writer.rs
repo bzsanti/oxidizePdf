@@ -80,13 +80,12 @@ impl<W: Write> PdfWriter<W> {
         self.write_object(pages_id, Object::Dictionary(pages_dict))?;
 
         // Write individual pages
-        let total_pages = document.pages.len();
         for (i, page) in document.pages.iter().enumerate() {
             let page_id = ObjectId::new(next_id + i as u32 * 2, 0);
             let content_id = ObjectId::new(next_id + i as u32 * 2 + 1, 0);
 
-            self.write_page(page_id, pages_id, content_id, page)?;
-            self.write_page_content(content_id, page, i + 1, total_pages)?;
+            self.write_page(page_id, pages_id, content_id, page, document)?;
+            self.write_page_content(content_id, page)?;
         }
 
         Ok(pages_id)
@@ -98,6 +97,7 @@ impl<W: Write> PdfWriter<W> {
         parent_id: ObjectId,
         content_id: ObjectId,
         page: &crate::page::Page,
+        document: &Document,
     ) -> Result<()> {
         let mut page_dict = Dictionary::new();
         page_dict.set("Type", Object::Name("Page".to_string()));
@@ -113,24 +113,31 @@ impl<W: Write> PdfWriter<W> {
         );
         page_dict.set("Contents", Object::Reference(content_id));
 
-        // Create resources dictionary with standard fonts
+        // Create resources dictionary with fonts from document
         let mut resources = Dictionary::new();
         let mut font_dict = Dictionary::new();
 
-        // Add standard fonts (including those potentially used in headers/footers)
-        for font_name in &[
-            "Helvetica",
-            "Helvetica-Bold",
-            "Times-Roman",
-            "Times-Bold",
-            "Courier",
-            "Courier-Bold",
-        ] {
+        // Get fonts with encodings from the document
+        let fonts_with_encodings = document.get_fonts_with_encodings();
+
+        for font_with_encoding in fonts_with_encodings {
             let mut font_entry = Dictionary::new();
             font_entry.set("Type", Object::Name("Font".to_string()));
             font_entry.set("Subtype", Object::Name("Type1".to_string()));
-            font_entry.set("BaseFont", Object::Name(font_name.to_string()));
-            font_dict.set(*font_name, Object::Dictionary(font_entry));
+            font_entry.set(
+                "BaseFont",
+                Object::Name(font_with_encoding.font.pdf_name().to_string()),
+            );
+
+            // Add encoding if specified
+            if let Some(encoding) = font_with_encoding.encoding {
+                font_entry.set("Encoding", Object::Name(encoding.pdf_name().to_string()));
+            }
+
+            font_dict.set(
+                font_with_encoding.font.pdf_name(),
+                Object::Dictionary(font_entry),
+            );
         }
 
         resources.set("Font", Object::Dictionary(font_dict));
@@ -160,19 +167,9 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
-    fn write_page_content(
-        &mut self,
-        content_id: ObjectId,
-        page: &crate::page::Page,
-        page_number: usize,
-        total_pages: usize,
-    ) -> Result<()> {
+    fn write_page_content(&mut self, content_id: ObjectId, page: &crate::page::Page) -> Result<()> {
         let mut page_copy = page.clone();
-        let content = page_copy.generate_content_with_page_info(
-            Some(page_number),
-            Some(total_pages),
-            None,
-        )?;
+        let content = page_copy.generate_content()?;
 
         // Create stream with compression if enabled
         #[cfg(feature = "compression")]

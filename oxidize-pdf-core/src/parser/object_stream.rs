@@ -58,6 +58,7 @@ impl ObjectStream {
 
         // Create a cursor for reading
         let mut cursor = Cursor::new(&data);
+        // TODO: Accept options parameter in parse() to pass here
         let mut lexer = Lexer::new(&mut cursor);
 
         // Read object number/offset pairs
@@ -98,6 +99,7 @@ impl ObjectStream {
             let mut obj_lexer = Lexer::new(&mut cursor);
 
             // Parse the object
+            // TODO: Accept options parameter in parse() to pass here
             let obj = PdfObject::parse(&mut obj_lexer)?;
 
             // Store in cache

@@ -170,6 +170,35 @@ impl PageTree {
     ) -> ParseResult<ParsedPage> {
         let node_type = node
             .get_type()
+            .or_else(|| {
+                // If Type is missing, try to infer from content
+                if node.contains_key("Kids") && node.contains_key("Count") {
+                    Some("Pages")
+                } else if node.contains_key("Contents") || node.contains_key("MediaBox") {
+                    Some("Page")
+                } else {
+                    None
+                }
+            })
+            .or_else(|| {
+                // If Type is missing and we have lenient parsing, try to infer
+                if reader.options().lenient_syntax {
+                    // If it has Kids, it's likely a Pages node
+                    if node.contains_key("Kids") {
+                        Some("Pages")
+                    }
+                    // If it has Contents or MediaBox but no Kids, it's likely a Page
+                    else if node.contains_key("Contents")
+                        || (node.contains_key("MediaBox") && !node.contains_key("Kids"))
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
         match node_type {
@@ -178,6 +207,19 @@ impl PageTree {
                 let kids = node
                     .get("Kids")
                     .and_then(|obj| obj.as_array())
+                    .or_else(|| {
+                        // If Kids is missing and we have lenient parsing, use empty array
+                        if reader.options().lenient_syntax {
+                            if reader.options().collect_warnings {
+                                eprintln!(
+                                    "Warning: Missing Kids array in Pages node, using empty array"
+                                );
+                            }
+                            Some(&super::objects::EMPTY_PDF_ARRAY)
+                        } else {
+                            None
+                        }
+                    })
                     .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
 
                 // Merge inherited attributes
@@ -227,15 +269,30 @@ impl PageTree {
 
                         let kid_type = kid_dict
                             .get_type()
+                            .or_else(|| {
+                                // If Type is missing, try to infer from content
+                                if kid_dict.contains_key("Kids") && kid_dict.contains_key("Count") {
+                                    Some("Pages")
+                                } else if kid_dict.contains_key("Contents")
+                                    || kid_dict.contains_key("MediaBox")
+                                {
+                                    Some("Page")
+                                } else {
+                                    None
+                                }
+                            })
                             .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
                         let count = if kid_type == "Pages" {
                             // This is another page tree node
-                            kid_dict
-                                .get("Count")
-                                .and_then(|obj| obj.as_integer())
-                                .ok_or_else(|| ParseError::MissingKey("Count".to_string()))?
-                                as u32
+                            if let Some(count_obj) = kid_dict.get("Count") {
+                                count_obj.as_integer().unwrap_or(0) as u32
+                            } else {
+                                // Missing Count - need to traverse kids to count manually
+                                // For now, estimate based on context
+                                // TODO: Implement proper recursive counting
+                                1
+                            }
                         } else {
                             // This is a page
                             1
@@ -283,8 +340,16 @@ impl PageTree {
                 let obj_ref = node_ref;
 
                 // Extract page attributes
-                let media_box = Self::get_rectangle(node, inherited, "MediaBox")?
-                    .ok_or_else(|| ParseError::MissingKey("MediaBox".to_string()))?;
+                let media_box =
+                    Self::get_rectangle(node, inherited, "MediaBox")?.unwrap_or_else(|| {
+                        // Use default Letter size if MediaBox is missing
+                        #[cfg(debug_assertions)]
+                        eprintln!(
+                            "Warning: Page {} {} R missing MediaBox, using default Letter size",
+                            obj_ref.0, obj_ref.1
+                        );
+                        [0.0, 0.0, 612.0, 792.0]
+                    });
 
                 let crop_box = Self::get_rectangle(node, inherited, "CropBox")?;
 
