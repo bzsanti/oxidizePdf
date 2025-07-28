@@ -18,7 +18,7 @@ pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
 pub use header_footer::{HeaderFooter, HeaderFooterOptions, HeaderFooterPosition};
 pub use layout::{ColumnContent, ColumnLayout, ColumnOptions, TextFormat};
-pub use list::{ListElement, ListStyle};
+pub use list::{BulletStyle, ListElement, ListOptions, ListStyle, OrderedList, OrderedListStyle, UnorderedList};
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
     FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError, OcrOptions,
