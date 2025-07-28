@@ -1,13 +1,16 @@
 name: Benchmarks
 
 on:
-  push:
-    branches: [ development, main ]
-  pull_request:
-    branches: [ development, main ]
   schedule:
     # Run benchmarks weekly on Sundays at 2 AM UTC
     - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      create_baseline:
+        description: 'Create baseline benchmark results'
+        required: false
+        type: boolean
+        default: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -66,6 +69,22 @@ jobs:
         path: |
           target/criterion/
           
+    - name: Save baseline (if requested)
+      if: github.event.inputs.create_baseline == 'true'
+      run: |
+        mkdir -p .github/benchmarks/baseline
+        cp -r target/criterion/* .github/benchmarks/baseline/
+        echo "Baseline created at $(date)" > .github/benchmarks/baseline/timestamp.txt
+        
+    - name: Commit baseline
+      if: github.event.inputs.create_baseline == 'true'
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add .github/benchmarks/baseline
+        git commit -m "chore: update benchmark baseline"
+        git push
+          
     - name: Performance regression check
       if: github.event_name == 'pull_request'
       run: |
@@ -76,7 +95,7 @@ jobs:
   benchmark-comparison:
     name: Compare with baseline
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout PR
@@ -94,26 +113,43 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
         
-    - name: Run PR benchmarks
+    - name: Check for baseline
+      id: check_baseline
+      run: |
+        if [ -d ".github/benchmarks/baseline" ]; then
+          echo "baseline_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "baseline_exists=false" >> $GITHUB_OUTPUT
+          echo "No baseline found. Run workflow with 'create_baseline' to create one."
+        fi
+        
+    - name: Run current benchmarks
+      if: steps.check_baseline.outputs.baseline_exists == 'true'
       run: |
         cargo build --release --bin oxidizepdf
         cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
         
-    - name: Checkout main branch
+    - name: Install critcmp
+      if: steps.check_baseline.outputs.baseline_exists == 'true'
       run: |
-        git fetch origin main
-        git checkout main
-        
-    - name: Run main branch benchmarks
-      run: |
-        cargo build --release --bin oxidizepdf
-        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
+        cargo install critcmp
         
     - name: Compare benchmarks
+      if: steps.check_baseline.outputs.baseline_exists == 'true'
       run: |
-        echo "Benchmark comparison between main and PR"
-        echo "This would typically use a tool like critcmp to compare results"
-        echo "For now, both benchmark runs are saved for manual inspection"
+        echo "Comparing current benchmarks with baseline"
+        # Copy baseline to compare
+        mkdir -p target/criterion_baseline
+        cp -r .github/benchmarks/baseline/* target/criterion_baseline/
+        
+        # Use critcmp to compare
+        critcmp target/criterion_baseline target/criterion > comparison.txt || true
+        cat comparison.txt
+        
+        # Check for significant regressions (>10% slower)
+        if grep -E "\+[0-9]{2,}\.[0-9]+%" comparison.txt; then
+          echo "::warning::Performance regression detected"
+        fi
         
     - name: Upload comparison results
       uses: actions/upload-artifact@v4
