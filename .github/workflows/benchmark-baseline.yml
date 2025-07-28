@@ -56,23 +56,33 @@ jobs:
         
     - name: Create baseline directory
       run: |
-        mkdir -p .github/benchmarks/baseline
-        cp -r target/criterion/* .github/benchmarks/baseline/
-        echo "Baseline created from branch: ${{ github.event.inputs.branch }}" > .github/benchmarks/baseline/info.txt
-        echo "Date: $(date)" >> .github/benchmarks/baseline/info.txt
-        echo "Commit: $(git rev-parse HEAD)" >> .github/benchmarks/baseline/info.txt
+        # Create temporary directory to preserve files across checkout
+        mkdir -p /tmp/baseline
+        cp -r target/criterion/* /tmp/baseline/
+        echo "Baseline created from branch: ${{ github.event.inputs.branch }}" > /tmp/baseline/info.txt
+        echo "Date: $(date)" >> /tmp/baseline/info.txt
+        echo "Commit: $(git rev-parse HEAD)" >> /tmp/baseline/info.txt
         
     - name: Commit baseline
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        
+        # Fetch and checkout the benchmark-baselines branch
+        git fetch origin benchmark-baselines:benchmark-baselines || git checkout -b benchmark-baselines
+        git checkout benchmark-baselines
+        
+        # Copy baseline files
+        mkdir -p .github/benchmarks/baseline
+        cp -r /tmp/baseline/* .github/benchmarks/baseline/ 2>/dev/null || true
+        
         git add .github/benchmarks/baseline
         git commit -m "chore: create benchmark baseline from ${{ github.event.inputs.branch }}
         
         Baseline created for performance comparison
         Branch: ${{ github.event.inputs.branch }}
-        Commit: $(git rev-parse HEAD)"
-        git push origin ${{ github.ref_name }}
+        Commit: $(git rev-parse HEAD)" || echo "No changes to commit"
+        git push origin benchmark-baselines
         
     - name: Upload baseline artifact
       uses: actions/upload-artifact@v4
