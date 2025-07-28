@@ -169,9 +169,59 @@ pub use self::reader::{DocumentMetadata, PdfReader};
 /// Result type for parser operations
 pub type ParseResult<T> = Result<T, ParseError>;
 
-/// Options for parsing PDF files
+/// Options for parsing PDF files with different levels of strictness
+///
+/// # Example
+///
+/// ```rust
+/// use oxidize_pdf::parser::ParseOptions;
+///
+/// // Create tolerant options for handling corrupted PDFs
+/// let options = ParseOptions::tolerant();
+/// assert!(!options.strict_mode);
+/// assert!(options.recover_from_stream_errors);
+///
+/// // Create custom options
+/// let custom = ParseOptions {
+///     strict_mode: false,
+///     recover_from_stream_errors: true,
+///     ignore_corrupt_streams: false, // Still report errors but try to recover
+///     partial_content_allowed: true,
+///     max_recovery_attempts: 10,     // Try harder to recover
+///     log_recovery_details: false,   // Quiet recovery
+///     lenient_streams: true,
+///     max_recovery_bytes: 5000,
+///     collect_warnings: true,
+///     lenient_encoding: true,
+///     preferred_encoding: None,
+///     lenient_syntax: true,
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct ParseOptions {
+    /// Strict mode enforces PDF specification compliance (default: true)
+    pub strict_mode: bool,
+    /// Attempt to recover from stream decoding errors (default: false)
+    ///
+    /// When enabled, the parser will try multiple strategies to decode
+    /// corrupted streams, including:
+    /// - Raw deflate without zlib wrapper
+    /// - Decompression with checksum validation disabled
+    /// - Skipping corrupted header bytes
+    pub recover_from_stream_errors: bool,
+    /// Skip corrupted streams instead of failing (default: false)
+    ///
+    /// When enabled, corrupted streams will return empty data instead
+    /// of causing parsing to fail entirely.
+    pub ignore_corrupt_streams: bool,
+    /// Allow partial content when full parsing fails (default: false)
+    pub partial_content_allowed: bool,
+    /// Maximum number of recovery attempts for corrupted data (default: 3)
+    pub max_recovery_attempts: usize,
+    /// Enable detailed logging of recovery attempts (default: false)
+    ///
+    /// Note: Requires the "logging" feature to be enabled
+    pub log_recovery_details: bool,
     /// Enable lenient parsing for malformed streams with incorrect Length fields
     pub lenient_streams: bool,
     /// Maximum number of bytes to search ahead when recovering from stream errors
@@ -189,6 +239,12 @@ pub struct ParseOptions {
 impl Default for ParseOptions {
     fn default() -> Self {
         Self {
+            strict_mode: true,
+            recover_from_stream_errors: false,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: false,
+            max_recovery_attempts: 3,
+            log_recovery_details: false,
             lenient_streams: false,   // Strict mode by default
             max_recovery_bytes: 1000, // Search up to 1KB ahead
             collect_warnings: false,  // Don't collect warnings by default
@@ -200,9 +256,33 @@ impl Default for ParseOptions {
 }
 
 impl ParseOptions {
-    /// Create lenient parsing options for maximum compatibility
-    pub fn lenient() -> Self {
+    /// Create options for strict parsing (default)
+    pub fn strict() -> Self {
         Self {
+            strict_mode: true,
+            recover_from_stream_errors: false,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: false,
+            max_recovery_attempts: 0,
+            log_recovery_details: false,
+            lenient_streams: false,
+            max_recovery_bytes: 0,
+            collect_warnings: false,
+            lenient_encoding: false,
+            preferred_encoding: None,
+            lenient_syntax: false,
+        }
+    }
+
+    /// Create options for tolerant parsing that attempts recovery
+    pub fn tolerant() -> Self {
+        Self {
+            strict_mode: false,
+            recover_from_stream_errors: true,
+            ignore_corrupt_streams: false,
+            partial_content_allowed: true,
+            max_recovery_attempts: 5,
+            log_recovery_details: true,
             lenient_streams: true,
             max_recovery_bytes: 5000,
             collect_warnings: true,
@@ -212,15 +292,26 @@ impl ParseOptions {
         }
     }
 
-    /// Create strict parsing options for maximum correctness
-    pub fn strict() -> Self {
+    /// Create lenient parsing options for maximum compatibility (alias for tolerant)
+    pub fn lenient() -> Self {
+        Self::tolerant()
+    }
+
+    /// Create options that skip corrupted content
+    pub fn skip_errors() -> Self {
         Self {
-            lenient_streams: false,
-            max_recovery_bytes: 0,
+            strict_mode: false,
+            recover_from_stream_errors: true,
+            ignore_corrupt_streams: true,
+            partial_content_allowed: true,
+            max_recovery_attempts: 1,
+            log_recovery_details: false,
+            lenient_streams: true,
+            max_recovery_bytes: 5000,
             collect_warnings: false,
-            lenient_encoding: false,
+            lenient_encoding: true,
             preferred_encoding: None,
-            lenient_syntax: false,
+            lenient_syntax: true,
         }
     }
 }
@@ -279,6 +370,41 @@ pub enum ParseWarning {
 ///     Err(ParseError::InvalidHeader) => println!("Not a valid PDF"),
 ///     Err(e) => println!("Other error: {}", e),
 /// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Error Recovery and Tolerant Parsing
+///
+/// The parser supports different levels of error tolerance for handling corrupted or
+/// non-standard PDF files:
+///
+/// ```rust,no_run
+/// use oxidize_pdf::parser::{PdfReader, ParseOptions};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // Strict parsing (default) - fails on any deviation from PDF spec
+/// let strict_reader = PdfReader::open("document.pdf")?;
+///
+/// // Tolerant parsing - attempts to recover from errors
+/// let tolerant_reader = PdfReader::open_tolerant("corrupted.pdf")?;
+///
+/// // Custom parsing options
+/// let options = ParseOptions {
+///     strict_mode: false,
+///     recover_from_stream_errors: true,
+///     ignore_corrupt_streams: true,
+///     partial_content_allowed: true,
+///     max_recovery_attempts: 5,
+///     log_recovery_details: true,
+///     lenient_streams: true,
+///     max_recovery_bytes: 5000,
+///     collect_warnings: true,
+///     lenient_encoding: true,
+///     preferred_encoding: None,
+///     lenient_syntax: true,
+/// };
+/// let custom_reader = PdfReader::open_with_options("problematic.pdf", options)?;
 /// # Ok(())
 /// # }
 /// ```

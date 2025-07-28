@@ -8,6 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Added
+- **Headers and Footers** - Simple text headers and footers with page numbering (Community Edition - Phase 5)
+  - New `HeaderFooter` type with configurable position, alignment, and formatting
+  - Dynamic placeholders: `{{page_number}}`, `{{total_pages}}`, `{{date}}`, `{{time}}`, `{{year}}`, etc.
+  - Support for custom placeholders via HashMap
+  - Automatic rendering during PDF generation with proper positioning
+  - Full test coverage and comprehensive example
+
+### Fixed
+- **Issue #20** - "Invalid element in dash array" error when extracting text from PDFs
+  - Fixed `pop_array` method to correctly handle `ArrayEnd` tokens
+  - Arrays now properly exclude end markers from their content
+  - Resolves parsing errors with Russian/Cyrillic text PDFs
+  - Text extraction now works correctly without spurious warnings
+- **lib.rs Issues** - Resolved all reported issues for crate publication
+  - Updated oxidize-pdf dependency version from ^0.1.2 to 1.1.3 in sub-crates
+  - Fixed implicit feature exposure for leptonica-plumbing dependency
+  - Ensured all workspace dependencies use consistent versions
+  - READMEs and Cargo.lock already present, ready for publication
+
+## [1.1.3] - 2025-07-24
+
+### Added
+- **Robust FlateDecode Error Recovery** - Improved handling of corrupted PDF streams
+  - `ParseOptions` structure for controlling parsing strictness
+  - Multiple recovery strategies for FlateDecode streams
+  - Support for raw deflate streams without zlib wrapper
+  - Checksum validation bypass for corrupted streams
+  - Header byte skipping for damaged streams
+  - Configurable recovery attempts and logging
+- **Tolerant Parsing Mode** - New API methods for handling problematic PDFs
+  - `PdfReader::open_tolerant()` - Opens PDFs with error recovery enabled
+  - `PdfReader::open_with_options()` - Custom parsing options
+  - `ParseOptions::tolerant()` - Preset for maximum compatibility
+  - `ParseOptions::skip_errors()` - Ignores corrupt streams entirely
+
+### Fixed
+- Version mismatch in workspace Cargo.toml that prevented release
+
 ## [1.1.2] - 2025-07-24
 
 ### Added

@@ -3,7 +3,7 @@
 //! Parses xref tables according to ISO 32000-1 Section 7.5.4
 
 use super::xref_types::{XRefEntryInfo, XRefEntryType};
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 use crate::parser::reader::PDFLines;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
@@ -967,7 +967,7 @@ impl XRefStream {
             .collect::<ParseResult<Vec<_>>>()?;
 
         // Decode the stream data
-        let data = self.stream.decode()?;
+        let data = self.stream.decode(&ParseOptions::default())?;
         let mut offset = 0;
 
         // Process each subsection

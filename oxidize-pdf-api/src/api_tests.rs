@@ -10,20 +10,36 @@ mod tests {
     use serde_json::json;
     use tower::ServiceExt;
 
+    #[test]
+    fn test_sync_simple() {
+        // Basic synchronous test to verify tests run
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[tokio::test]
+    async fn test_async_simple() {
+        // Basic async test to verify tokio runtime works
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), async { 42 }).await;
+        assert_eq!(result.unwrap(), 42);
+    }
+
     #[tokio::test]
     async fn test_health_check() {
         let app = app();
 
-        let response = app
-            .oneshot(
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            app.oneshot(
                 Request::builder()
                     .uri("/api/health")
                     .method("GET")
                     .body(Body::empty())
                     .unwrap(),
-            )
-            .await
-            .unwrap();
+            ),
+        )
+        .await
+        .expect("Request timed out")
+        .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 

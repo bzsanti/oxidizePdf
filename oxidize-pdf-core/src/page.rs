@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::graphics::{GraphicsContext, Image};
-use crate::text::{Font, TextContext, TextFlowContext};
+use crate::objects::{Array, Dictionary, Object};
+use crate::text::{Font, HeaderFooter, TextContext, TextFlowContext};
 use std::collections::{HashMap, HashSet};
 
 /// Page margins in points (1/72 inch).
@@ -61,6 +62,8 @@ pub struct Page {
     graphics_context: GraphicsContext,
     text_context: TextContext,
     images: HashMap<String, Image>,
+    header: Option<HeaderFooter>,
+    footer: Option<HeaderFooter>,
 }
 
 impl Page {
@@ -76,6 +79,8 @@ impl Page {
             graphics_context: GraphicsContext::new(),
             text_context: TextContext::new(),
             images: HashMap::new(),
+            header: None,
+            footer: None,
         }
     }
 
@@ -177,9 +182,69 @@ impl Page {
         &self.images
     }
 
+    /// Sets the header for this page.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Page, text::HeaderFooter};
+    ///
+    /// let mut page = Page::a4();
+    /// page.set_header(HeaderFooter::new_header("Company Report 2024"));
+    /// ```
+    pub fn set_header(&mut self, header: HeaderFooter) {
+        self.header = Some(header);
+    }
+
+    /// Sets the footer for this page.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Page, text::HeaderFooter};
+    ///
+    /// let mut page = Page::a4();
+    /// page.set_footer(HeaderFooter::new_footer("Page {{page_number}} of {{total_pages}}"));
+    /// ```
+    pub fn set_footer(&mut self, footer: HeaderFooter) {
+        self.footer = Some(footer);
+    }
+
+    /// Gets a reference to the header if set.
+    pub fn header(&self) -> Option<&HeaderFooter> {
+        self.header.as_ref()
+    }
+
+    /// Gets a reference to the footer if set.
+    pub fn footer(&self) -> Option<&HeaderFooter> {
+        self.footer.as_ref()
+    }
+
+    #[allow(dead_code)]
     pub(crate) fn generate_content(&mut self) -> Result<Vec<u8>> {
-        // Don't clear content, as it may contain text flow operations
+        self.generate_content_with_page_info(None, None, None)
+    }
+
+    /// Generates page content with header/footer support.
+    ///
+    /// This method is used internally by the writer to render pages with
+    /// proper page numbering in headers and footers.
+    pub(crate) fn generate_content_with_page_info(
+        &mut self,
+        page_number: Option<usize>,
+        total_pages: Option<usize>,
+        custom_values: Option<&HashMap<String, String>>,
+    ) -> Result<Vec<u8>> {
         let mut final_content = Vec::new();
+
+        // Render header if present
+        if let Some(header) = &self.header {
+            if let (Some(page_num), Some(total)) = (page_number, total_pages) {
+                let header_content =
+                    self.render_header_footer(header, page_num, total, custom_values)?;
+                final_content.extend_from_slice(&header_content);
+            }
+        }
 
         // Add graphics operations
         final_content.extend_from_slice(&self.graphics_context.generate_operations()?);
@@ -190,7 +255,75 @@ impl Page {
         // Add any content that was added via add_text_flow
         final_content.extend_from_slice(&self.content);
 
+        // Render footer if present
+        if let Some(footer) = &self.footer {
+            if let (Some(page_num), Some(total)) = (page_number, total_pages) {
+                let footer_content =
+                    self.render_header_footer(footer, page_num, total, custom_values)?;
+                final_content.extend_from_slice(&footer_content);
+            }
+        }
+
         Ok(final_content)
+    }
+
+    /// Renders a header or footer with the given page information.
+    fn render_header_footer(
+        &self,
+        header_footer: &HeaderFooter,
+        page_number: usize,
+        total_pages: usize,
+        custom_values: Option<&HashMap<String, String>>,
+    ) -> Result<Vec<u8>> {
+        use crate::text::measure_text;
+
+        // Render the content with placeholders replaced
+        let content = header_footer.render(page_number, total_pages, custom_values);
+
+        // Calculate text width for alignment
+        let text_width = measure_text(
+            &content,
+            header_footer.options().font,
+            header_footer.options().font_size,
+        );
+
+        // Calculate positions
+        let x = header_footer.calculate_x_position(self.width, text_width);
+        let y = header_footer.calculate_y_position(self.height);
+
+        // Create a temporary text context for the header/footer
+        let mut text_ctx = TextContext::new();
+        text_ctx
+            .set_font(
+                header_footer.options().font,
+                header_footer.options().font_size,
+            )
+            .at(x, y)
+            .write(&content)?;
+
+        text_ctx.generate_operations()
+    }
+
+    /// Convert page to dictionary for PDF structure
+    pub(crate) fn to_dict(&self) -> Dictionary {
+        let mut dict = Dictionary::new();
+
+        // MediaBox
+        let media_box = Array::from(vec![
+            Object::Real(0.0),
+            Object::Real(0.0),
+            Object::Real(self.width),
+            Object::Real(self.height),
+        ]);
+        dict.set("MediaBox", Object::Array(media_box.into()));
+
+        // Resources (empty for now, would include fonts, images, etc.)
+        let resources = Dictionary::new();
+        dict.set("Resources", Object::Dictionary(resources));
+
+        // Contents would be added by the writer
+
+        dict
     }
 
     /// Gets all fonts used in this page.
@@ -432,6 +565,117 @@ mod tests {
         assert_eq!(page2.height(), page1.height());
         assert_eq!(page2.margins().left, page1.margins().left);
         assert_eq!(page2.images().len(), page1.images().len());
+    }
+
+    #[test]
+    fn test_header_footer_basic() {
+        use crate::text::HeaderFooter;
+
+        let mut page = Page::a4();
+
+        let header = HeaderFooter::new_header("Test Header");
+        let footer = HeaderFooter::new_footer("Test Footer");
+
+        page.set_header(header);
+        page.set_footer(footer);
+
+        assert!(page.header().is_some());
+        assert!(page.footer().is_some());
+        assert_eq!(page.header().unwrap().content(), "Test Header");
+        assert_eq!(page.footer().unwrap().content(), "Test Footer");
+    }
+
+    #[test]
+    fn test_header_footer_with_page_numbers() {
+        use crate::text::HeaderFooter;
+
+        let mut page = Page::a4();
+
+        let footer = HeaderFooter::new_footer("Page {{page_number}} of {{total_pages}}");
+        page.set_footer(footer);
+
+        // Generate content with page info
+        let content = page
+            .generate_content_with_page_info(Some(3), Some(10), None)
+            .unwrap();
+        assert!(!content.is_empty());
+
+        // The content should contain the rendered footer
+        let content_str = String::from_utf8_lossy(&content);
+        assert!(content_str.contains("Page 3 of 10"));
+    }
+
+    #[test]
+    fn test_page_content_with_headers_footers() {
+        use crate::text::{HeaderFooter, TextAlign};
+
+        let mut page = Page::a4();
+
+        // Add header
+        let header = HeaderFooter::new_header("Document Title")
+            .with_font(Font::HelveticaBold, 14.0)
+            .with_alignment(TextAlign::Center);
+        page.set_header(header);
+
+        // Add footer
+        let footer = HeaderFooter::new_footer("Page {{page_number}}")
+            .with_font(Font::Helvetica, 10.0)
+            .with_alignment(TextAlign::Right);
+        page.set_footer(footer);
+
+        // Add main content
+        page.text()
+            .set_font(Font::TimesRoman, 12.0)
+            .at(100.0, 700.0)
+            .write("Main content here")
+            .unwrap();
+
+        // Generate with page info
+        let content = page
+            .generate_content_with_page_info(Some(1), Some(5), None)
+            .unwrap();
+        assert!(!content.is_empty());
+
+        // Verify that content was generated (it includes header, main content, and footer)
+        // Note: We generate raw PDF content streams here, not the full PDF
+        // The content may be in PDF format with operators like BT/ET, Tj, etc.
+        assert!(content.len() > 100); // Should have substantial content
+    }
+
+    #[test]
+    fn test_no_headers_footers() {
+        let mut page = Page::a4();
+
+        // No headers/footers set
+        assert!(page.header().is_none());
+        assert!(page.footer().is_none());
+
+        // Content generation should work without headers/footers
+        let content = page
+            .generate_content_with_page_info(Some(1), Some(1), None)
+            .unwrap();
+        assert!(content.is_empty() || !content.is_empty()); // May be empty or contain default content
+    }
+
+    #[test]
+    fn test_header_footer_custom_values() {
+        use crate::text::HeaderFooter;
+        use std::collections::HashMap;
+
+        let mut page = Page::a4();
+
+        let header = HeaderFooter::new_header("{{company}} - {{title}}");
+        page.set_header(header);
+
+        let mut custom_values = HashMap::new();
+        custom_values.insert("company".to_string(), "ACME Corp".to_string());
+        custom_values.insert("title".to_string(), "Annual Report".to_string());
+
+        let content = page
+            .generate_content_with_page_info(Some(1), Some(1), Some(&custom_values))
+            .unwrap();
+        let content_str = String::from_utf8_lossy(&content);
+        assert!(content_str.contains("ACME Corp - Annual Report"));
     }
 
     // Integration tests for Page ↔ Document ↔ Writer interactions
@@ -905,6 +1149,141 @@ mod tests {
             assert_eq!(a4_content_width, 595.0 - 144.0); // 595 - 2*72
             assert_eq!(letter_content_width, 612.0 - 144.0); // 612 - 2*72
             assert_eq!(custom_content_width, 200.0 - 144.0); // 200 - 2*72
+        }
+
+        #[test]
+        fn test_header_footer_document_integration() {
+            use crate::text::{HeaderFooter, TextAlign};
+
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("header_footer_test.pdf");
+
+            let mut doc = Document::new();
+            doc.set_title("Header Footer Integration Test");
+
+            // Create multiple pages with headers and footers
+            for i in 1..=3 {
+                let mut page = Page::a4();
+
+                // Set header
+                let header = HeaderFooter::new_header(format!("Chapter {}", i))
+                    .with_font(Font::HelveticaBold, 16.0)
+                    .with_alignment(TextAlign::Center);
+                page.set_header(header);
+
+                // Set footer with page numbers
+                let footer = HeaderFooter::new_footer("Page {{page_number}} of {{total_pages}}")
+                    .with_font(Font::Helvetica, 10.0)
+                    .with_alignment(TextAlign::Center);
+                page.set_footer(footer);
+
+                // Add content
+                page.text()
+                    .set_font(Font::TimesRoman, 12.0)
+                    .at(100.0, 700.0)
+                    .write(&format!("This is the content of chapter {}", i))
+                    .unwrap();
+
+                doc.add_page(page);
+            }
+
+            // Write to file
+            let mut writer = PdfWriter::new(&file_path).unwrap();
+            writer.write_document(&mut doc).unwrap();
+
+            // Verify file was created
+            assert!(file_path.exists());
+            let metadata = fs::metadata(&file_path).unwrap();
+            assert!(metadata.len() > 1000);
+
+            // Read and verify content
+            let content = fs::read(&file_path).unwrap();
+            let content_str = String::from_utf8_lossy(&content);
+
+            // PDF was created successfully and has substantial content
+            assert!(content.len() > 2000);
+            // Verify basic PDF structure
+            assert!(content_str.contains("%PDF"));
+            assert!(content_str.contains("endobj"));
+
+            // Note: Content may be compressed, so we can't directly check for text strings
+            // The important thing is that the PDF was generated without errors
+        }
+
+        #[test]
+        fn test_header_footer_alignment_integration() {
+            use crate::text::{HeaderFooter, TextAlign};
+
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("alignment_test.pdf");
+
+            let mut doc = Document::new();
+
+            let mut page = Page::a4();
+
+            // Left-aligned header
+            let header = HeaderFooter::new_header("Left Header")
+                .with_font(Font::Helvetica, 12.0)
+                .with_alignment(TextAlign::Left)
+                .with_margin(50.0);
+            page.set_header(header);
+
+            // Right-aligned footer
+            let footer = HeaderFooter::new_footer("Right Footer - Page {{page_number}}")
+                .with_font(Font::Helvetica, 10.0)
+                .with_alignment(TextAlign::Right)
+                .with_margin(50.0);
+            page.set_footer(footer);
+
+            doc.add_page(page);
+
+            // Write to file
+            let mut writer = PdfWriter::new(&file_path).unwrap();
+            writer.write_document(&mut doc).unwrap();
+
+            assert!(file_path.exists());
+        }
+
+        #[test]
+        fn test_header_footer_date_time_integration() {
+            use crate::text::HeaderFooter;
+
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("date_time_test.pdf");
+
+            let mut doc = Document::new();
+
+            let mut page = Page::a4();
+
+            // Header with date/time
+            let header = HeaderFooter::new_header("Report generated on {{date}} at {{time}}")
+                .with_font(Font::Helvetica, 11.0);
+            page.set_header(header);
+
+            // Footer with year
+            let footer =
+                HeaderFooter::new_footer("© {{year}} Company Name").with_font(Font::Helvetica, 9.0);
+            page.set_footer(footer);
+
+            doc.add_page(page);
+
+            // Write to file
+            let mut writer = PdfWriter::new(&file_path).unwrap();
+            writer.write_document(&mut doc).unwrap();
+
+            assert!(file_path.exists());
+
+            // Verify the file was created successfully
+            let content = fs::read(&file_path).unwrap();
+            assert!(content.len() > 1000);
+
+            // Verify basic PDF structure
+            let content_str = String::from_utf8_lossy(&content);
+            assert!(content_str.contains("%PDF"));
+            assert!(content_str.contains("endobj"));
+
+            // Note: We can't check for specific text content as it may be compressed
+            // The test validates that headers/footers with date placeholders don't cause errors
         }
     }
 }

@@ -2,8 +2,12 @@ mod encoding;
 mod extraction;
 mod flow;
 mod font;
+mod header_footer;
+mod layout;
+mod list;
 mod metrics;
 pub mod ocr;
+mod table;
 
 #[cfg(feature = "ocr-tesseract")]
 pub mod tesseract_provider;
@@ -12,11 +16,15 @@ pub use encoding::TextEncoding;
 pub use extraction::{ExtractedText, ExtractionOptions, TextExtractor, TextFragment};
 pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
+pub use header_footer::{HeaderFooter, HeaderFooterOptions, HeaderFooterPosition};
+pub use layout::{ColumnContent, ColumnLayout};
+pub use list::{ListElement, ListStyle};
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
     FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError, OcrOptions,
     OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
 };
+pub use table::Table;
 
 use crate::error::Result;
 use std::fmt::Write;

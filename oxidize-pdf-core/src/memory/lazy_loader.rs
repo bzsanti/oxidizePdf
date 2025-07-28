@@ -300,4 +300,539 @@ mod tests {
         // Should have no pages for minimal PDF
         assert!(iterator.next().is_none());
     }
+
+    #[test]
+    fn test_lazy_object_not_loaded() {
+        let obj = LazyObject::NotLoaded { offset: 42 };
+
+        match obj {
+            LazyObject::NotLoaded { offset } => {
+                assert_eq!(offset, 42);
+            }
+            _ => panic!("Expected NotLoaded variant"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_object_loaded() {
+        let pdf_obj = Arc::new(PdfObject::Boolean(true));
+        let obj = LazyObject::Loaded(pdf_obj.clone());
+
+        match obj {
+            LazyObject::Loaded(arc_obj) => {
+                assert_eq!(*arc_obj, PdfObject::Boolean(true));
+                assert!(Arc::ptr_eq(&arc_obj, &pdf_obj));
+            }
+            _ => panic!("Expected Loaded variant"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_object_loading() {
+        let obj = LazyObject::Loading;
+
+        match obj {
+            LazyObject::Loading => {
+                // Success - no additional assertions needed
+            }
+            _ => panic!("Expected Loading variant"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_page_count() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+
+        assert_eq!(lazy_doc.page_count(), 0);
+    }
+
+    #[test]
+    fn test_lazy_document_get_page_invalid_index() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+
+        // Try to get page 0 when document has 0 pages
+        let result = lazy_doc.get_page(0);
+        assert!(result.is_err());
+
+        match result {
+            Err(PdfError::InvalidPageNumber(num)) => {
+                assert_eq!(num, 0);
+            }
+            _ => panic!("Expected InvalidPageNumber error"),
+        }
+
+        // Try to get page 5 when document has 0 pages
+        let result = lazy_doc.get_page(5);
+        assert!(result.is_err());
+
+        match result {
+            Err(PdfError::InvalidPageNumber(num)) => {
+                assert_eq!(num, 5);
+            }
+            _ => panic!("Expected InvalidPageNumber error"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_get_object_not_found() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(999, 0);
+
+        let result = lazy_doc.get_object(&obj_id);
+        assert!(result.is_err());
+
+        match result {
+            Err(PdfError::InvalidObjectReference(num, gen)) => {
+                assert_eq!(num, 999);
+                assert_eq!(gen, 0);
+            }
+            _ => panic!("Expected InvalidObjectReference error"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_get_object_circular_reference() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Manually insert a Loading object to simulate circular reference
+        {
+            let mut map = lazy_doc.object_map.write().unwrap();
+            map.insert(obj_id, LazyObject::Loading);
+        }
+
+        let result = lazy_doc.get_object(&obj_id);
+        assert!(result.is_err());
+
+        match result {
+            Err(PdfError::ParseError(msg)) => {
+                assert!(msg.contains("Circular reference"));
+            }
+            _ => panic!("Expected ParseError for circular reference"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_get_object_not_loaded_then_loaded() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Manually insert a NotLoaded object
+        {
+            let mut map = lazy_doc.object_map.write().unwrap();
+            map.insert(obj_id, LazyObject::NotLoaded { offset: 100 });
+        }
+
+        let result = lazy_doc.get_object(&obj_id);
+        assert!(result.is_ok());
+
+        let obj = result.unwrap();
+        assert_eq!(*obj, PdfObject::Null); // load_object_at_offset returns Null
+
+        // Object should now be cached as Loaded
+        {
+            let map = lazy_doc.object_map.read().unwrap();
+            match map.get(&obj_id) {
+                Some(LazyObject::Loaded(_)) => {}
+                _ => panic!("Expected object to be cached as Loaded"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_get_object_already_loaded() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(1, 0);
+        let test_obj = Arc::new(PdfObject::Boolean(true));
+
+        // Manually insert a Loaded object
+        {
+            let mut map = lazy_doc.object_map.write().unwrap();
+            map.insert(obj_id, LazyObject::Loaded(test_obj.clone()));
+        }
+
+        let result = lazy_doc.get_object(&obj_id);
+        assert!(result.is_ok());
+
+        let obj = result.unwrap();
+        assert_eq!(*obj, PdfObject::Boolean(true));
+        assert!(Arc::ptr_eq(&obj, &test_obj));
+    }
+
+    #[test]
+    fn test_lazy_document_preload_page_invalid_index() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+
+        let result = lazy_doc.preload_page(0);
+        assert!(result.is_err());
+
+        match result {
+            Err(PdfError::InvalidPageNumber(num)) => {
+                assert_eq!(num, 0);
+            }
+            _ => panic!("Expected InvalidPageNumber error"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_memory_stats_initial() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let stats = lazy_doc.memory_stats();
+
+        // Initial stats should be zero
+        assert_eq!(stats.cache_hits, 0);
+        assert_eq!(stats.cache_misses, 0);
+        assert_eq!(stats.allocated_bytes, 0);
+    }
+
+    #[test]
+    fn test_lazy_document_memory_stats_after_operations() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default().with_cache_size(10);
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Try to get an object (should result in cache miss)
+        let _ = lazy_doc.get_object(&obj_id);
+
+        let stats = lazy_doc.memory_stats();
+        assert!(stats.cache_misses > 0);
+    }
+
+    #[test]
+    fn test_lazy_document_clear_cache_empty() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+
+        // Clear cache on empty document should not panic
+        lazy_doc.clear_cache();
+
+        // Verify object map is still accessible
+        let map = lazy_doc.object_map.read().unwrap();
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn test_lazy_document_clear_cache_with_objects() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default().with_cache_size(10);
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id1 = ObjectId::new(1, 0);
+        let obj_id2 = ObjectId::new(2, 0);
+        let obj_id3 = ObjectId::new(3, 0);
+
+        // Add different types of objects
+        {
+            let mut map = lazy_doc.object_map.write().unwrap();
+            map.insert(obj_id1, LazyObject::NotLoaded { offset: 100 });
+            map.insert(
+                obj_id2,
+                LazyObject::Loaded(Arc::new(PdfObject::Integer(42))),
+            );
+            map.insert(obj_id3, LazyObject::Loading);
+        }
+
+        lazy_doc.clear_cache();
+
+        // Verify that only NotLoaded objects remain
+        {
+            let map = lazy_doc.object_map.read().unwrap();
+            assert_eq!(map.len(), 1); // Only NotLoaded should remain
+            assert!(matches!(
+                map.get(&obj_id1),
+                Some(LazyObject::NotLoaded { .. })
+            ));
+            assert!(!map.contains_key(&obj_id2));
+            assert!(!map.contains_key(&obj_id3));
+        }
+    }
+
+    #[test]
+    fn test_lazy_page_iterator_creation() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = Arc::new(LazyDocument::new(reader, options).unwrap());
+        let iterator = LazyPageIterator::new(lazy_doc.clone());
+
+        assert_eq!(iterator.current, 0);
+        assert_eq!(iterator.total, 0); // Minimal PDF has 0 pages
+        assert!(Arc::ptr_eq(&iterator.document, &lazy_doc));
+    }
+
+    #[test]
+    fn test_lazy_page_iterator_empty_document() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = Arc::new(LazyDocument::new(reader, options).unwrap());
+        let mut iterator = LazyPageIterator::new(lazy_doc);
+
+        // Should immediately return None for empty document
+        assert!(iterator.next().is_none());
+        assert!(iterator.next().is_none()); // Multiple calls should be safe
+    }
+
+    #[test]
+    fn test_lazy_page_iterator_multiple_calls() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = Arc::new(LazyDocument::new(reader, options).unwrap());
+        let mut iterator = LazyPageIterator::new(lazy_doc);
+
+        // Multiple calls on empty iterator should return None
+        for _ in 0..5 {
+            assert!(iterator.next().is_none());
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_with_different_memory_options() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+
+        // Test with custom memory options
+        let options = MemoryOptions::default().with_cache_size(100);
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+
+        assert_eq!(lazy_doc.page_count(), 0);
+
+        let stats = lazy_doc.memory_stats();
+        assert_eq!(stats.cache_hits, 0);
+        assert_eq!(stats.cache_misses, 0);
+    }
+
+    #[test]
+    fn test_lazy_document_load_object_at_offset() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+
+        // Test the private method through public interface
+        let obj_id = ObjectId::new(1, 0);
+
+        // Add NotLoaded object to trigger load_object_at_offset
+        {
+            let mut map = lazy_doc.object_map.write().unwrap();
+            map.insert(obj_id, LazyObject::NotLoaded { offset: 1234 });
+        }
+
+        let result = lazy_doc.get_object(&obj_id);
+        assert!(result.is_ok());
+
+        let obj = result.unwrap();
+        assert_eq!(*obj, PdfObject::Null); // Current implementation returns Null
+    }
+
+    #[test]
+    fn test_lazy_document_cache_hit_path() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default().with_cache_size(10);
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(1, 0);
+        let test_obj = Arc::new(PdfObject::Real(3.14));
+
+        // Manually add object to cache
+        if let Some(cache) = lazy_doc.memory_manager.cache() {
+            cache.put(obj_id, test_obj.clone());
+        }
+
+        let result = lazy_doc.get_object(&obj_id);
+        assert!(result.is_ok());
+
+        let obj = result.unwrap();
+        assert_eq!(*obj, PdfObject::Real(3.14));
+        assert!(Arc::ptr_eq(&obj, &test_obj));
+
+        // Should have recorded a cache hit
+        let stats = lazy_doc.memory_stats();
+        assert!(stats.cache_hits > 0);
+    }
+
+    #[test]
+    fn test_lazy_document_object_map_locking() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = LazyDocument::new(reader, options).unwrap();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Test that we can acquire read and write locks
+        {
+            let _read_lock = lazy_doc.object_map.read().unwrap();
+        }
+
+        {
+            let mut write_lock = lazy_doc.object_map.write().unwrap();
+            write_lock.insert(obj_id, LazyObject::NotLoaded { offset: 500 });
+        }
+
+        // Verify the insertion worked
+        {
+            let read_lock = lazy_doc.object_map.read().unwrap();
+            assert!(read_lock.contains_key(&obj_id));
+        }
+    }
+
+    #[test]
+    fn test_lazy_document_open_nonexistent_file() {
+        let nonexistent_path = "/path/that/does/not/exist.pdf";
+        let options = MemoryOptions::default();
+
+        let result = LazyDocument::open(nonexistent_path, options);
+        assert!(result.is_err());
+
+        match result {
+            Err(PdfError::ParseError(_)) => {}
+            _ => panic!("Expected ParseError for nonexistent file"),
+        }
+    }
+
+    #[test]
+    fn test_lazy_object_enum_all_variants() {
+        // Test all variants of LazyObject enum
+        let variants = vec![
+            LazyObject::NotLoaded { offset: 12345 },
+            LazyObject::Loaded(Arc::new(PdfObject::String(crate::parser::PdfString::new(
+                b"test".to_vec(),
+            )))),
+            LazyObject::Loading,
+        ];
+
+        for (i, variant) in variants.into_iter().enumerate() {
+            match variant {
+                LazyObject::NotLoaded { offset } if i == 0 => {
+                    assert_eq!(offset, 12345);
+                }
+                LazyObject::Loaded(obj) if i == 1 => match &*obj {
+                    PdfObject::String(_) => {}
+                    _ => panic!("Expected String object"),
+                },
+                LazyObject::Loading if i == 2 => {
+                    // Success
+                }
+                _ => panic!("Unexpected variant at index {}", i),
+            }
+        }
+    }
+
+    #[test]
+    fn test_lazy_page_iterator_with_document_reference() {
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default();
+
+        let lazy_doc = Arc::new(LazyDocument::new(reader, options).unwrap());
+        let _iterator = LazyPageIterator::new(lazy_doc.clone());
+
+        // Verify the document is still accessible after creating iterator
+        assert_eq!(lazy_doc.page_count(), 0);
+    }
+
+    #[test]
+    fn test_lazy_document_concurrent_access_simulation() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let pdf_data = test_helpers::create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let reader = PdfReader::new(cursor).unwrap();
+        let options = MemoryOptions::default().with_cache_size(10);
+
+        let lazy_doc = Arc::new(LazyDocument::new(reader, options).unwrap());
+        let mut handles = vec![];
+
+        // Simulate concurrent access
+        for i in 0..3 {
+            let doc_clone = lazy_doc.clone();
+            let handle = thread::spawn(move || {
+                let obj_id = ObjectId::new(i + 1, 0);
+
+                // Try to get object (will fail but shouldn't panic)
+                let _result = doc_clone.get_object(&obj_id);
+
+                // Get memory stats
+                let _stats = doc_clone.memory_stats();
+
+                // Clear cache
+                doc_clone.clear_cache();
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // Document should still be accessible
+        assert_eq!(lazy_doc.page_count(), 0);
+    }
 }

@@ -295,7 +295,7 @@ mod tests {
         let result = rotate_all_pages(&input_path, &output_path, RotationAngle::Clockwise90);
         assert!(result.is_err());
         match result {
-            Err(OperationError::ParseError(_)) => assert!(true),
+            Err(OperationError::ParseError(_)) => {}
             _ => panic!("Expected ParseError"),
         }
     }
@@ -342,7 +342,7 @@ mod tests {
         let _rotator = PageRotator::new(document);
 
         // Just verify we can create a rotator
-        assert!(true);
+        // Test passes if no panic occurs
     }
 
     #[test]

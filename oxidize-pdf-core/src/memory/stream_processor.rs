@@ -385,4 +385,531 @@ mod tests {
 
         assert_eq!(page_count, 2);
     }
+
+    #[test]
+    fn test_streaming_options_custom() {
+        let options = StreamingOptions {
+            buffer_size: 1024,
+            max_stream_size: 2048,
+            skip_images: true,
+            skip_fonts: true,
+        };
+
+        assert_eq!(options.buffer_size, 1024);
+        assert_eq!(options.max_stream_size, 2048);
+        assert!(options.skip_images);
+        assert!(options.skip_fonts);
+    }
+
+    #[test]
+    fn test_streaming_options_debug_clone() {
+        let options = StreamingOptions {
+            buffer_size: 512,
+            max_stream_size: 1024,
+            skip_images: false,
+            skip_fonts: true,
+        };
+
+        let debug_str = format!("{:?}", options);
+        assert!(debug_str.contains("StreamingOptions"));
+        assert!(debug_str.contains("512"));
+        assert!(debug_str.contains("1024"));
+
+        let cloned = options.clone();
+        assert_eq!(cloned.buffer_size, 512);
+        assert_eq!(cloned.max_stream_size, 1024);
+        assert!(!cloned.skip_images);
+        assert!(cloned.skip_fonts);
+    }
+
+    #[test]
+    fn test_processing_event_debug() {
+        let events = vec![
+            ProcessingEvent::Start,
+            ProcessingEvent::Header {
+                version: "1.7".to_string(),
+            },
+            ProcessingEvent::Object {
+                id: (1, 0),
+                object: PdfObject::Null,
+            },
+            ProcessingEvent::Page(PageData {
+                number: 0,
+                width: 595.0,
+                height: 842.0,
+                text: Some("test".to_string()),
+                operations: vec![],
+            }),
+            ProcessingEvent::Resource {
+                name: "Font1".to_string(),
+                resource_type: ResourceType::Font,
+            },
+            ProcessingEvent::End,
+        ];
+
+        for event in events {
+            let debug_str = format!("{:?}", event);
+            assert!(!debug_str.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_page_data_debug() {
+        let page_data = PageData {
+            number: 5,
+            width: 612.0,
+            height: 792.0,
+            text: Some("Page content".to_string()),
+            operations: vec![ContentOperation::BeginText],
+        };
+
+        let debug_str = format!("{:?}", page_data);
+        assert!(debug_str.contains("PageData"));
+        assert!(debug_str.contains("5"));
+        assert!(debug_str.contains("612.0"));
+        assert!(debug_str.contains("Page content"));
+    }
+
+    #[test]
+    fn test_resource_type_debug_clone() {
+        let resource_types = vec![
+            ResourceType::Font,
+            ResourceType::Image,
+            ResourceType::ColorSpace,
+            ResourceType::Pattern,
+            ResourceType::XObject,
+        ];
+
+        for resource_type in resource_types {
+            let debug_str = format!("{:?}", resource_type);
+            assert!(!debug_str.is_empty());
+
+            let cloned = resource_type.clone();
+            let cloned_debug = format!("{:?}", cloned);
+            assert_eq!(debug_str, cloned_debug);
+        }
+    }
+
+    #[test]
+    fn test_processing_action_debug_partial_eq() {
+        let action = ProcessingAction::Continue;
+
+        let debug_str = format!("{:?}", action);
+        assert!(debug_str.contains("Continue"));
+
+        assert_eq!(ProcessingAction::Continue, ProcessingAction::Continue);
+        assert_eq!(ProcessingAction::Skip, ProcessingAction::Skip);
+        assert_eq!(ProcessingAction::Stop, ProcessingAction::Stop);
+
+        assert_ne!(ProcessingAction::Continue, ProcessingAction::Skip);
+        assert_ne!(ProcessingAction::Skip, ProcessingAction::Stop);
+        assert_ne!(ProcessingAction::Stop, ProcessingAction::Continue);
+    }
+
+    #[test]
+    fn test_stream_processor_invalid_header() {
+        let data = b"Not a PDF\n";
+        let cursor = Cursor::new(data);
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        let result = processor.process_with(|_event| Ok(ProcessingAction::Continue));
+
+        assert!(result.is_err());
+        match result {
+            Err(PdfError::InvalidHeader) => {}
+            _ => panic!("Expected InvalidHeader error"),
+        }
+    }
+
+    #[test]
+    fn test_stream_processor_header_parsing() {
+        let data = b"%PDF-2.0\n";
+        let cursor = Cursor::new(data);
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        let mut header_version = String::new();
+
+        processor
+            .process_with(|event| {
+                if let ProcessingEvent::Header { version } = event {
+                    header_version = version;
+                }
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        assert_eq!(header_version, "2.0");
+    }
+
+    #[test]
+    fn test_skip_processing_action() {
+        let data = b"%PDF-1.7\n";
+        let cursor = Cursor::new(data);
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        let mut page_count = 0;
+        let mut skipped_count = 0;
+
+        processor
+            .process_pages(|index, _page| {
+                if index % 2 == 0 {
+                    page_count += 1;
+                    Ok(ProcessingAction::Continue)
+                } else {
+                    skipped_count += 1;
+                    Ok(ProcessingAction::Skip)
+                }
+            })
+            .unwrap();
+
+        assert!(page_count > 0);
+        assert!(skipped_count > 0);
+    }
+
+    #[test]
+    fn test_extract_text_streaming_with_output() {
+        let data = b"%PDF-1.7\n";
+        let cursor = Cursor::new(data);
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        let mut output = Vec::new();
+        processor.extract_text_streaming(&mut output).unwrap();
+
+        let text = String::from_utf8(output).unwrap();
+
+        // Should contain text from multiple pages
+        assert!(text.contains("Page 1 content"));
+        assert!(text.contains("Page 2 content"));
+        assert!(text.contains("Page 3 content"));
+
+        // Should have newlines between pages
+        assert!(text.contains('\n'));
+    }
+
+    #[test]
+    fn test_content_stream_processor_creation() {
+        let options = StreamingOptions {
+            buffer_size: 2048,
+            max_stream_size: 4096,
+            skip_images: true,
+            skip_fonts: false,
+        };
+
+        let processor = ContentStreamProcessor::new(options.clone());
+
+        assert_eq!(processor.buffer.capacity(), options.buffer_size);
+        assert_eq!(processor.options.buffer_size, 2048);
+        assert_eq!(processor.options.max_stream_size, 4096);
+        assert!(processor.options.skip_images);
+        assert!(!processor.options.skip_fonts);
+    }
+
+    #[test]
+    fn test_content_stream_processor_empty_stream() {
+        let options = StreamingOptions::default();
+        let mut processor = ContentStreamProcessor::new(options);
+
+        let content = b"";
+        let cursor = Cursor::new(content);
+
+        let mut op_count = 0;
+        processor
+            .process_stream(cursor, |_op| {
+                op_count += 1;
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        assert_eq!(op_count, 0);
+    }
+
+    #[test]
+    fn test_content_stream_processor_large_stream_error() {
+        let options = StreamingOptions {
+            buffer_size: 1024,
+            max_stream_size: 10, // Very small limit
+            skip_images: false,
+            skip_fonts: false,
+        };
+
+        let mut processor = ContentStreamProcessor::new(options);
+
+        // Create content larger than max_stream_size
+        let content = b"BT /F1 12 Tf 100 700 Td (This is a long content stream) Tj ET";
+        let cursor = Cursor::new(content);
+
+        let result = processor.process_stream(cursor, |_op| Ok(ProcessingAction::Continue));
+
+        assert!(result.is_err());
+        match result {
+            Err(PdfError::ContentStreamTooLarge(size)) => {
+                assert_eq!(size, content.len());
+            }
+            _ => panic!("Expected ContentStreamTooLarge error"),
+        }
+    }
+
+    #[test]
+    fn test_content_stream_processor_skip_action() {
+        let options = StreamingOptions::default();
+        let mut processor = ContentStreamProcessor::new(options);
+
+        let content = b"BT /F1 12 Tf 100 700 Td (Hello) Tj 50 0 Td (World) Tj ET";
+        let cursor = Cursor::new(content);
+
+        let mut processed_count = 0;
+        let mut skipped_count = 0;
+
+        processor
+            .process_stream(cursor, |op| match op {
+                ContentOperation::ShowText(_) => {
+                    skipped_count += 1;
+                    Ok(ProcessingAction::Skip)
+                }
+                _ => {
+                    processed_count += 1;
+                    Ok(ProcessingAction::Continue)
+                }
+            })
+            .unwrap();
+
+        assert!(processed_count > 0);
+        assert!(skipped_count > 0);
+    }
+
+    #[test]
+    fn test_content_stream_processor_stop_action() {
+        let options = StreamingOptions::default();
+        let mut processor = ContentStreamProcessor::new(options);
+
+        let content = b"BT /F1 12 Tf 100 700 Td (Hello) Tj 50 0 Td (World) Tj ET";
+        let cursor = Cursor::new(content);
+
+        let mut op_count = 0;
+
+        processor
+            .process_stream(cursor, |_op| {
+                op_count += 1;
+                if op_count >= 3 {
+                    Ok(ProcessingAction::Stop)
+                } else {
+                    Ok(ProcessingAction::Continue)
+                }
+            })
+            .unwrap();
+
+        assert_eq!(op_count, 3);
+    }
+
+    #[test]
+    fn test_content_stream_processor_invalid_content() {
+        let options = StreamingOptions::default();
+        let mut processor = ContentStreamProcessor::new(options);
+
+        let content = b"Invalid PDF content that cannot be parsed";
+        let cursor = Cursor::new(content);
+
+        let result = processor.process_stream(cursor, |_op| Ok(ProcessingAction::Continue));
+
+        // Should handle parse errors gracefully
+        match result {
+            Ok(_) => {}                        // If parser is lenient and returns empty operations
+            Err(PdfError::ParseError(_)) => {} // If parser returns error
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_content_stream_processor_callback_error() {
+        let options = StreamingOptions::default();
+        let mut processor = ContentStreamProcessor::new(options);
+
+        let content = b"BT /F1 12 Tf ET";
+        let cursor = Cursor::new(content);
+
+        let result = processor.process_stream(cursor, |_op| {
+            Err(PdfError::ParseError("Test error".to_string()))
+        });
+
+        assert!(result.is_err());
+        match result {
+            Err(PdfError::ParseError(msg)) => {
+                assert_eq!(msg, "Test error");
+            }
+            _ => panic!("Expected ParseError"),
+        }
+    }
+
+    #[test]
+    fn test_stream_processor_with_custom_buffer_size() {
+        let options = StreamingOptions {
+            buffer_size: 128,
+            max_stream_size: 1024,
+            skip_images: false,
+            skip_fonts: false,
+        };
+
+        let data = b"%PDF-1.4\n";
+        let cursor = Cursor::new(data);
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        let mut header_found = false;
+
+        processor
+            .process_with(|event| {
+                if let ProcessingEvent::Header { version } = event {
+                    assert_eq!(version, "1.4");
+                    header_found = true;
+                }
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        assert!(header_found);
+    }
+
+    #[test]
+    fn test_processing_with_all_event_types() {
+        let data = b"%PDF-1.7\n";
+        let cursor = Cursor::new(data);
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        let mut event_types = Vec::new();
+
+        processor
+            .process_with(|event| {
+                match event {
+                    ProcessingEvent::Start => event_types.push("start"),
+                    ProcessingEvent::Header { .. } => event_types.push("header"),
+                    ProcessingEvent::Object { .. } => event_types.push("object"),
+                    ProcessingEvent::Page(_) => event_types.push("page"),
+                    ProcessingEvent::Resource { .. } => event_types.push("resource"),
+                    ProcessingEvent::End => event_types.push("end"),
+                }
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        assert!(event_types.contains(&"start"));
+        assert!(event_types.contains(&"header"));
+        assert!(event_types.contains(&"page"));
+        assert!(event_types.contains(&"end"));
+    }
+
+    #[test]
+    fn test_page_data_with_operations() {
+        let page_data = PageData {
+            number: 0,
+            width: 595.0,
+            height: 842.0,
+            text: Some("Test page".to_string()),
+            operations: vec![ContentOperation::BeginText, ContentOperation::EndText],
+        };
+
+        assert_eq!(page_data.number, 0);
+        assert_eq!(page_data.width, 595.0);
+        assert_eq!(page_data.height, 842.0);
+        assert_eq!(page_data.text, Some("Test page".to_string()));
+        assert_eq!(page_data.operations.len(), 2);
+    }
+
+    #[test]
+    fn test_page_data_without_text() {
+        let page_data = PageData {
+            number: 1,
+            width: 612.0,
+            height: 792.0,
+            text: None,
+            operations: vec![],
+        };
+
+        assert_eq!(page_data.number, 1);
+        assert_eq!(page_data.text, None);
+        assert!(page_data.operations.is_empty());
+    }
+
+    #[test]
+    fn test_extract_text_streaming_no_text() {
+        // Mock a scenario where pages don't have text
+        let data = b"%PDF-1.7\n";
+        let cursor = Cursor::new(data);
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(cursor, options);
+
+        // Override the process_pages method behavior by testing direct page processing
+        let mut pages_processed = 0;
+
+        processor
+            .process_pages(|_index, page| {
+                pages_processed += 1;
+                assert!(page.text.is_some()); // Current implementation always has text
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        assert!(pages_processed > 0);
+    }
+
+    #[test]
+    fn test_stream_processor_io_error() {
+        use std::io::Error;
+
+        struct ErrorReader;
+        impl Read for ErrorReader {
+            fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+                Err(Error::other("IO Error"))
+            }
+        }
+        impl Seek for ErrorReader {
+            fn seek(&mut self, _pos: std::io::SeekFrom) -> std::io::Result<u64> {
+                Ok(0)
+            }
+        }
+
+        let options = StreamingOptions::default();
+        let mut processor = StreamProcessor::new(ErrorReader, options);
+
+        let result = processor.process_with(|_event| Ok(ProcessingAction::Continue));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_content_stream_processor_buffer_reuse() {
+        let options = StreamingOptions::default();
+        let mut processor = ContentStreamProcessor::new(options);
+
+        // Process first stream
+        let content1 = b"BT (First) Tj ET";
+        let cursor1 = Cursor::new(content1);
+
+        let mut first_ops = Vec::new();
+        processor
+            .process_stream(cursor1, |op| {
+                first_ops.push(format!("{:?}", op));
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        // Process second stream - buffer should be cleared and reused
+        let content2 = b"BT (Second) Tj ET";
+        let cursor2 = Cursor::new(content2);
+
+        let mut second_ops = Vec::new();
+        processor
+            .process_stream(cursor2, |op| {
+                second_ops.push(format!("{:?}", op));
+                Ok(ProcessingAction::Continue)
+            })
+            .unwrap();
+
+        assert!(!first_ops.is_empty());
+        assert!(!second_ops.is_empty());
+        // Operations should be different for different content
+        assert_ne!(first_ops, second_ops);
+    }
 }

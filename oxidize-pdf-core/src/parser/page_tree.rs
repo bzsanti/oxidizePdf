@@ -399,7 +399,7 @@ impl PageTree {
             }
 
             let rect = [
-                array.get(0).unwrap().as_real().unwrap_or(0.0),
+                array.0.first().unwrap().as_real().unwrap_or(0.0),
                 array.get(1).unwrap().as_real().unwrap_or(0.0),
                 array.get(2).unwrap().as_real().unwrap_or(0.0),
                 array.get(3).unwrap().as_real().unwrap_or(0.0),
@@ -543,11 +543,12 @@ impl ParsedPage {
                 _ => "other",
             };
 
+            let options = reader.options().clone();
             match contents_type {
                 "stream" => {
                     let resolved = reader.resolve(contents)?;
                     if let PdfObject::Stream(stream) = resolved {
-                        streams.push(stream.decode()?);
+                        streams.push(stream.decode(&options)?);
                     }
                 }
                 "array" => {
@@ -575,7 +576,7 @@ impl ParsedPage {
                     for (obj_num, gen_num) in refs {
                         let obj = reader.get_object(obj_num, gen_num)?;
                         if let PdfObject::Stream(stream) = obj {
-                            streams.push(stream.decode()?);
+                            streams.push(stream.decode(&options)?);
                         }
                     }
                 }

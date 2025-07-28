@@ -726,11 +726,13 @@ impl PageContentAnalyzer {
                             {
                                 if subtype.0 == "Image" {
                                     // Get the raw image data
-                                    let image_data = stream.decode().map_err(|e| {
-                                        OperationError::ParseError(format!(
-                                            "Failed to decode image: {e}"
-                                        ))
-                                    })?;
+                                    let parse_options = self.document.options();
+                                    let image_data =
+                                        stream.decode(&parse_options).map_err(|e| {
+                                            OperationError::ParseError(format!(
+                                                "Failed to decode image: {e}"
+                                            ))
+                                        })?;
 
                                     // Return the first (and typically only) image for scanned pages
                                     return Ok(image_data);
@@ -1196,7 +1198,7 @@ startxref
         let result = PdfReader::new(file);
         if result.is_err() {
             // If we can't parse the PDF, just verify that empty results are handled properly
-            assert!(true); // Empty document case is handled
+            // Empty document case is handled
             return;
         }
 
@@ -2080,7 +2082,7 @@ startxref
         }
 
         // If this test completes without issues, resource cleanup is working
-        assert!(true);
+        // Test passes if no panic occurs
     }
 
     // Test 45: Complete workflow integration test

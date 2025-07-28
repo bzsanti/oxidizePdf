@@ -33,7 +33,7 @@
 //! ```
 
 use super::lexer::{Lexer, Token};
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 use std::collections::HashMap;
 use std::io::Read;
 
@@ -167,11 +167,13 @@ pub struct PdfDictionary(pub HashMap<PdfName, PdfObject>);
 ///
 /// ```rust
 /// use oxidize_pdf::parser::objects::{PdfStream, PdfDictionary};
+/// use oxidize_pdf::parser::ParseOptions;
 ///
 /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let stream = PdfStream { dict: PdfDictionary::new(), data: vec![] };
 /// // Get decompressed data
-/// let decoded = stream.decode()?;
+/// let options = ParseOptions::default();
+/// let decoded = stream.decode(&options)?;
 /// println!("Decoded {} bytes", decoded.len());
 ///
 /// // Access raw data
@@ -197,6 +199,10 @@ impl PdfStream {
     /// Automatically applies filters specified in the stream dictionary
     /// (FlateDecode, ASCIIHexDecode, etc.) to decompress the data.
     ///
+    /// # Arguments
+    ///
+    /// * `options` - Parse options controlling error recovery behavior
+    ///
     /// # Returns
     ///
     /// The decoded/decompressed stream bytes.
@@ -212,16 +218,18 @@ impl PdfStream {
     ///
     /// ```rust,no_run
     /// # use oxidize_pdf::parser::objects::PdfStream;
+    /// # use oxidize_pdf::parser::ParseOptions;
     /// # fn example(stream: &PdfStream) -> Result<(), Box<dyn std::error::Error>> {
-    /// match stream.decode() {
+    /// let options = ParseOptions::default();
+    /// match stream.decode(&options) {
     ///     Ok(data) => println!("Decoded {} bytes", data.len()),
     ///     Err(e) => println!("Decode error: {}", e),
     /// }
     /// # Ok(())
     /// # }
     /// ```
-    pub fn decode(&self) -> ParseResult<Vec<u8>> {
-        super::filters::decode_stream(&self.data, &self.dict)
+    pub fn decode(&self, options: &ParseOptions) -> ParseResult<Vec<u8>> {
+        super::filters::decode_stream(&self.data, &self.dict, options)
     }
 
     /// Get the raw (possibly compressed) stream data.
@@ -1518,7 +1526,8 @@ mod tests {
 
             // Test decode method (this might fail if filters aren't implemented)
             // but we'll test that it returns a result
-            let decode_result = stream.decode();
+            let options = ParseOptions::default();
+            let decode_result = stream.decode(&options);
             assert!(decode_result.is_ok() || decode_result.is_err());
         }
 

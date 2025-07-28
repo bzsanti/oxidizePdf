@@ -218,7 +218,7 @@ mod tests {
         let _analyzer = PageContentAnalyzer::with_options(document, custom_options);
 
         // We can't directly access the options, but we can verify the analyzer was created
-        assert!(true); // Placeholder assertion
+        // Test passes if analyzer is created successfully
     }
 
     #[test]

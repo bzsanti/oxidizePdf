@@ -5,7 +5,7 @@
 use super::lexer::Lexer;
 use super::objects::{PdfObject, PdfStream};
 use super::xref::XRefEntry;
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 use std::collections::HashMap;
 use std::io::Cursor;
 
@@ -24,7 +24,7 @@ pub struct ObjectStream {
 
 impl ObjectStream {
     /// Parse an object stream
-    pub fn parse(stream: PdfStream) -> ParseResult<Self> {
+    pub fn parse(stream: PdfStream, options: &ParseOptions) -> ParseResult<Self> {
         // Get required entries from stream dictionary
         let dict = &stream.dict;
 
@@ -46,15 +46,15 @@ impl ObjectStream {
         };
 
         // Parse all objects eagerly
-        obj_stream.parse_objects()?;
+        obj_stream.parse_objects(options)?;
 
         Ok(obj_stream)
     }
 
     /// Parse all objects in the stream
-    fn parse_objects(&mut self) -> ParseResult<()> {
+    fn parse_objects(&mut self, options: &ParseOptions) -> ParseResult<()> {
         // Decode the stream data
-        let data = self.stream.decode()?;
+        let data = self.stream.decode(options)?;
 
         // Create a cursor for reading
         let mut cursor = Cursor::new(&data);

@@ -52,7 +52,7 @@
 use super::objects::{PdfDictionary, PdfObject};
 use super::page_tree::{PageTree, ParsedPage};
 use super::reader::PdfReader;
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -245,6 +245,11 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// ```
     pub fn version(&self) -> ParseResult<String> {
         Ok(self.reader.borrow().version().to_string())
+    }
+
+    /// Get the parse options
+    pub fn options(&self) -> ParseOptions {
+        self.reader.borrow().options().clone()
     }
 
     /// Get the total number of pages in the document.
@@ -675,7 +680,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
 
             let rect = [
-                array.get(0).unwrap().as_real().unwrap_or(0.0),
+                array.0.first().unwrap().as_real().unwrap_or(0.0),
                 array.get(1).unwrap().as_real().unwrap_or(0.0),
                 array.get(2).unwrap().as_real().unwrap_or(0.0),
                 array.get(3).unwrap().as_real().unwrap_or(0.0),
@@ -876,19 +881,20 @@ impl<R: Read + Seek> PdfDocument<R> {
 
     pub fn get_page_content_streams(&self, page: &ParsedPage) -> ParseResult<Vec<Vec<u8>>> {
         let mut streams = Vec::new();
+        let options = self.options();
 
         if let Some(contents) = page.dict.get("Contents") {
             let resolved_contents = self.resolve(contents)?;
 
             match &resolved_contents {
                 PdfObject::Stream(stream) => {
-                    streams.push(stream.decode()?);
+                    streams.push(stream.decode(&options)?);
                 }
                 PdfObject::Array(array) => {
                     for item in &array.0 {
                         let resolved = self.resolve(item)?;
                         if let PdfObject::Stream(stream) = resolved {
-                            streams.push(stream.decode()?);
+                            streams.push(stream.decode(&options)?);
                         }
                     }
                 }

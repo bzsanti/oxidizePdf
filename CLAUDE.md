@@ -5,6 +5,12 @@
 - Before pushing changes to origin, ensure all tests pass successfully
 - Aim for 95% coverage of documentation, unit tests, and integration tests, with a minimum acceptable threshold of 80%
 
+## Release Process - IMPORTANTE
+- **NUNCA usar cargo-release localmente** - Las releases SIEMPRE se hacen a través del pipeline de GitHub Actions
+- El proceso es: crear un tag git (ej: v1.1.4) y hacer push, esto activa automáticamente el pipeline de release
+- El pipeline se encarga de: tests, build, publicación en crates.io, crear GitHub Release, merge a main
+- Si el pipeline tarda, esperamos - no intentar hacerlo manualmente
+
 ## Project Status - Session 21/07/2025 - PRODUCTION READY: 99.7% Success Rate!
 
 ### BREAKTHROUGH ACHIEVEMENT 🎉
@@ -26,9 +32,9 @@
 
 ### Session 19/07/2025 - CI/CD Pipeline Critical Fixes
 
-### Completed ✅
+#### Completed ✅
 - **CI/CD Pipeline Fixes**: Ver detalles completos en PROJECT_PROGRESS.md
-- **Tests Status**: 387 tests + 67 doctests, ~75% coverage
+- **Tests Status**: 387 tests + 67 doctests, ~50% coverage (REAL)
 - **Issues Pendientes**: Ver lib.rs feed issues documentadas en PROJECT_PROGRESS.md
 
 ### Referencias de Documentación
@@ -36,6 +42,7 @@
 - **API Documentation**: oxidize-pdf-api/API_DOCUMENTATION.md  
 - **Roadmap y Features**: ROADMAP.md
 - **Issues Pendientes**: PROJECT_PROGRESS.md (sección próximos pasos)
+- **GitFlow y Contribución**: CONTRIBUTING.md (sección GitFlow Workflow)
 
 ## CI/CD Pipeline Guidelines
 
@@ -170,7 +177,7 @@ Total PDFs analizados: 749
   - Añadidos 19 tests completos para oxidize-pdf-api
   - Añadidos 45 tests para módulos semantic (entity, export, marking)
   - Total de tests aumentado de 1053 a 1274+ tests (221 nuevos tests)
-  - Coverage estimado mejorado de ~75% a ~85%+
+  - Coverage estimado mejorado de ~50% a ~55% (REAL)
 - **Todas las features Q2 2025 completadas**:
   - ✅ PDF Merge (26 tests)
   - ✅ PDF Split (28 tests)
@@ -288,7 +295,7 @@ Total PDFs analizados: 749
   - 19 tests comprehensivos (100% funcionalidad cubierta)
 
 ### Estado Actual del Código - Session 18/07/2025
-- **Test Coverage**: ~85%+ estimado (vs 43.42% inicial) - Mejora del +96%
+- **Test Coverage**: ~50% REAL (vs 43.42% inicial) - Mejora del +16%
 - **Tests**: 1274+ tests totales pasando (vs 175 al inicio)
 - **CI/CD**: Todos los checks de formato y clippy pasando
 - **Warnings**: 0 warnings (build completamente limpio)
@@ -369,7 +376,7 @@ Total PDFs analizados: 749
 
 ### Objetivos de Coverage 🎯
 - **Objetivo**: 95% coverage (80% mínimo aceptable)
-- **Logrado total**: ~75%+ (vs 43.42% inicial) - Mejora del +75%
+- **Logrado total**: ~50% REAL (vs 43.42% inicial) - Mejora del +16%
 - **Áreas completadas**: CLI, object_stream, array, OCR modules, page_extraction, merge, split completamente
 - **Tests totales**: 387 (vs 175 al inicio de sesión) - +121% más tests
 - **Funcionalidad OCR**: Sistema completo de análisis de páginas y OCR
@@ -388,7 +395,7 @@ Total PDFs analizados: 749
 ### Métricas de Calidad - Session 18/07/2025
 - Tests totales: 1274+ ✅ (vs 175 inicial)
 - Tests añadidos hoy: 221 tests nuevos ✅
-- Coverage: ~85%+ ✅ (objetivo 95%, mejora del +96%)
+- Coverage: ~50% REAL ⚠️ (objetivo 95%, mejora del +16%)
 - Warnings: 0/0 ✅ (build completamente limpio)
 - Benchmarks: 5 suites completas con CI automation ✅
 - Pipeline: funcionando sin timeouts ✅

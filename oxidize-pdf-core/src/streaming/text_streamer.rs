@@ -320,4 +320,348 @@ mod tests {
         assert_eq!(collected[0], "Page 1");
         assert_eq!(collected[1], "Page 2");
     }
+
+    #[test]
+    fn test_text_chunk_debug_clone() {
+        let chunk = TextChunk {
+            text: "Test".to_string(),
+            x: 50.0,
+            y: 100.0,
+            font_size: 10.0,
+            font_name: Some("Arial".to_string()),
+        };
+
+        let debug_str = format!("{:?}", chunk);
+        assert!(debug_str.contains("TextChunk"));
+        assert!(debug_str.contains("Test"));
+
+        let cloned = chunk.clone();
+        assert_eq!(cloned.text, chunk.text);
+        assert_eq!(cloned.x, chunk.x);
+        assert_eq!(cloned.y, chunk.y);
+        assert_eq!(cloned.font_size, chunk.font_size);
+        assert_eq!(cloned.font_name, chunk.font_name);
+    }
+
+    #[test]
+    fn test_text_stream_options_custom() {
+        let options = TextStreamOptions {
+            min_font_size: 8.0,
+            max_buffer_size: 2048,
+            preserve_formatting: false,
+            sort_by_position: false,
+        };
+
+        assert_eq!(options.min_font_size, 8.0);
+        assert_eq!(options.max_buffer_size, 2048);
+        assert!(!options.preserve_formatting);
+        assert!(!options.sort_by_position);
+    }
+
+    #[test]
+    fn test_text_stream_options_debug_clone() {
+        let options = TextStreamOptions::default();
+
+        let debug_str = format!("{:?}", options);
+        assert!(debug_str.contains("TextStreamOptions"));
+
+        let cloned = options.clone();
+        assert_eq!(cloned.min_font_size, options.min_font_size);
+        assert_eq!(cloned.max_buffer_size, options.max_buffer_size);
+        assert_eq!(cloned.preserve_formatting, options.preserve_formatting);
+        assert_eq!(cloned.sort_by_position, options.sort_by_position);
+    }
+
+    #[test]
+    fn test_text_streamer_process_empty_chunk() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+        let chunks = streamer.process_chunk(b"").unwrap();
+        assert!(chunks.is_empty());
+    }
+
+    #[test]
+    fn test_text_streamer_process_invalid_content() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+        // Invalid PDF content should be handled gracefully
+        let content = b"Not valid PDF content";
+        let result = streamer.process_chunk(content);
+        // Should either succeed with no chunks or return an error
+        match result {
+            Ok(chunks) => assert!(chunks.is_empty()),
+            Err(_) => {} // Error is also acceptable
+        }
+    }
+
+    #[test]
+    fn test_text_streamer_font_tracking() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Set font operation
+        let content = b"BT /Helvetica-Bold 16 Tf ET";
+        let _ = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(streamer.current_font, Some("Helvetica-Bold".to_string()));
+        assert_eq!(streamer.current_font_size, 16.0);
+    }
+
+    #[test]
+    fn test_text_streamer_position_tracking() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Move text position
+        let content = b"BT 50 100 Td ET";
+        let _ = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(streamer.current_x, 50.0);
+        assert_eq!(streamer.current_y, 100.0);
+    }
+
+    #[test]
+    fn test_text_streamer_begin_text_resets_position() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Set position
+        streamer.current_x = 100.0;
+        streamer.current_y = 200.0;
+
+        // BeginText should reset position
+        let content = b"BT ET";
+        let _ = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(streamer.current_x, 0.0);
+        assert_eq!(streamer.current_y, 0.0);
+    }
+
+    #[test]
+    fn test_text_streamer_clear_buffer() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Add some chunks
+        streamer.buffer.push_back(TextChunk {
+            text: "Chunk1".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+        streamer.buffer.push_back(TextChunk {
+            text: "Chunk2".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        assert_eq!(streamer.buffer.len(), 2);
+
+        streamer.clear_buffer();
+        assert!(streamer.buffer.is_empty());
+    }
+
+    #[test]
+    fn test_text_streamer_get_buffered_chunks() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        let chunk1 = TextChunk {
+            text: "First".to_string(),
+            x: 10.0,
+            y: 20.0,
+            font_size: 14.0,
+            font_name: Some("Times".to_string()),
+        };
+        let chunk2 = TextChunk {
+            text: "Second".to_string(),
+            x: 30.0,
+            y: 40.0,
+            font_size: 16.0,
+            font_name: Some("Arial".to_string()),
+        };
+
+        streamer.buffer.push_back(chunk1.clone());
+        streamer.buffer.push_back(chunk2.clone());
+
+        let chunks = streamer.get_buffered_chunks();
+        assert_eq!(chunks.len(), 2);
+        assert_eq!(chunks[0].text, "First");
+        assert_eq!(chunks[1].text, "Second");
+    }
+
+    #[test]
+    fn test_extract_text_no_sorting() {
+        let mut options = TextStreamOptions::default();
+        options.sort_by_position = false;
+        let mut streamer = TextStreamer::new(options);
+
+        // Add text in specific order
+        streamer.buffer.push_back(TextChunk {
+            text: "First".to_string(),
+            x: 200.0,
+            y: 100.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+        streamer.buffer.push_back(TextChunk {
+            text: "Second".to_string(),
+            x: 100.0,
+            y: 200.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        let text = streamer.extract_text();
+        assert_eq!(text, "First Second"); // Should maintain insertion order
+    }
+
+    #[test]
+    fn test_extract_text_horizontal_sorting() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Add text on same line, different X positions
+        streamer.buffer.push_back(TextChunk {
+            text: "Right".to_string(),
+            x: 300.0,
+            y: 500.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+        streamer.buffer.push_back(TextChunk {
+            text: "Left".to_string(),
+            x: 100.0,
+            y: 500.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+        streamer.buffer.push_back(TextChunk {
+            text: "Middle".to_string(),
+            x: 200.0,
+            y: 500.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        let text = streamer.extract_text();
+        assert_eq!(text, "Left Middle Right");
+    }
+
+    #[test]
+    fn test_check_buffer_size_edge_cases() {
+        let mut options = TextStreamOptions::default();
+        options.max_buffer_size = 20;
+        let mut streamer = TextStreamer::new(options);
+
+        // Add chunk that exactly fills buffer
+        streamer.buffer.push_back(TextChunk {
+            text: "a".repeat(20),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        streamer.check_buffer_size();
+        assert_eq!(streamer.buffer.len(), 1); // Should keep the chunk
+
+        // Add another chunk to exceed limit
+        streamer.buffer.push_back(TextChunk {
+            text: "b".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        streamer.check_buffer_size();
+        // Should have removed the first chunk
+        assert!(streamer.buffer.len() <= 1);
+    }
+
+    #[test]
+    fn test_stream_text_with_error_callback() {
+        let content = b"BT /F1 12 Tf 100 700 Td (Test) Tj ET".to_vec();
+        let streams = vec![content];
+
+        let result = stream_text(streams, |_chunk| {
+            Err(crate::error::PdfError::ParseError("Test error".to_string()))
+        });
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stream_text_empty_streams() {
+        let streams: Vec<Vec<u8>> = vec![];
+
+        let mut collected = Vec::new();
+        stream_text(streams, |chunk| {
+            collected.push(chunk);
+            Ok(())
+        })
+        .unwrap();
+
+        assert!(collected.is_empty());
+    }
+
+    #[test]
+    fn test_text_chunk_without_font_name() {
+        let chunk = TextChunk {
+            text: "No Font".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        };
+
+        assert_eq!(chunk.font_name, None);
+    }
+
+    #[test]
+    fn test_process_chunk_multiple_operations() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Content with multiple text operations
+        let content = b"BT /F1 10 Tf 100 700 Td (First) Tj 50 0 Td (Second) Tj ET";
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(chunks.len(), 2);
+        assert_eq!(chunks[0].text, "First");
+        assert_eq!(chunks[1].text, "Second");
+        assert_eq!(chunks[0].x, 100.0);
+        assert_eq!(chunks[1].x, 150.0); // 100 + 50
+    }
+
+    #[test]
+    fn test_buffer_size_calculation() {
+        let mut options = TextStreamOptions::default();
+        options.max_buffer_size = 100;
+        let mut streamer = TextStreamer::new(options);
+
+        // Add chunks with known sizes
+        for _i in 0..10 {
+            streamer.buffer.push_back(TextChunk {
+                text: "1234567890".to_string(), // 10 bytes each
+                x: 0.0,
+                y: 0.0,
+                font_size: 12.0,
+                font_name: None,
+            });
+        }
+
+        // Total size is 100 bytes
+        streamer.check_buffer_size();
+
+        // Add one more to exceed
+        streamer.buffer.push_back(TextChunk {
+            text: "x".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        streamer.check_buffer_size();
+
+        // Should have removed oldest chunks
+        let total_size: usize = streamer.buffer.iter().map(|c| c.text.len()).sum();
+        assert!(total_size <= 100);
+    }
 }

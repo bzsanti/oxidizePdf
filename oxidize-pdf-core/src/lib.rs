@@ -171,17 +171,24 @@
 //! # }
 //! ```
 
+pub mod actions;
+pub mod annotations;
 pub mod batch;
 pub mod document;
+pub mod encryption;
 pub mod error;
+pub mod forms;
+pub mod geometry;
 pub mod graphics;
 pub mod memory;
 pub mod objects;
 pub mod operations;
 pub mod page;
+pub mod page_labels;
 pub mod parser;
 pub mod recovery;
 pub mod streaming;
+pub mod structure;
 pub mod text;
 pub mod writer;
 
@@ -191,6 +198,7 @@ pub mod semantic;
 // Re-export generation types
 pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
+pub use geometry::{Point, Rectangle};
 pub use graphics::{Color, GraphicsContext, Image, ImageColorSpace, ImageFormat};
 pub use page::{Margins, Page};
 pub use text::{
@@ -232,6 +240,21 @@ pub use recovery::{
     CorruptionReport, CorruptionType, ObjectScanner, PartialRecovery, PdfRecovery, RecoveredPage,
     RecoveryOptions, RepairResult, RepairStrategy, ScanResult, ValidationError, ValidationResult,
 };
+
+// Re-export structure types
+pub use structure::{
+    Destination, DestinationType, NameTree, NameTreeNode, NamedDestinations, OutlineBuilder,
+    OutlineItem, OutlineTree, PageDestination, PageTree, PageTreeBuilder, PageTreeNode,
+};
+
+// Re-export action types
+pub use actions::{
+    Action, ActionDictionary, ActionType, GoToAction, LaunchAction, LaunchParameters, NamedAction,
+    RemoteGoToAction, StandardNamedAction, UriAction, UriActionFlags,
+};
+
+// Re-export page label types
+pub use page_labels::{PageLabel, PageLabelBuilder, PageLabelRange, PageLabelStyle, PageLabelTree};
 
 /// Current version of oxidize-pdf
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

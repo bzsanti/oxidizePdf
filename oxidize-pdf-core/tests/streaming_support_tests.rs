@@ -118,8 +118,10 @@ fn test_text_streamer() {
 
 #[test]
 fn test_text_extraction_sorted() {
-    let mut options = TextStreamOptions::default();
-    options.sort_by_position = true;
+    let options = TextStreamOptions {
+        sort_by_position: true,
+        ..Default::default()
+    };
 
     let mut streamer = TextStreamer::new(options);
 
@@ -219,8 +221,10 @@ fn test_page_cache_eviction() {
 
 #[test]
 fn test_chunk_type_filtering() {
-    let mut options = ChunkOptions::default();
-    options.chunk_types = vec![ChunkType::Image]; // Only process images
+    let options = ChunkOptions {
+        chunk_types: vec![ChunkType::Image], // Only process images
+        ..Default::default()
+    };
 
     let mut processor = ChunkProcessor::new(options);
 
@@ -258,8 +262,10 @@ fn test_streaming_page_methods() {
 
 #[test]
 fn test_text_chunk_with_font_filter() {
-    let mut options = TextStreamOptions::default();
-    options.min_font_size = 12.0;
+    let options = TextStreamOptions {
+        min_font_size: 12.0,
+        ..Default::default()
+    };
 
     let mut streamer = TextStreamer::new(options);
 

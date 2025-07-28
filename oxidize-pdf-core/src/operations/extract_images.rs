@@ -196,7 +196,8 @@ impl ImageExtractor {
         }
 
         // Get the decoded image data
-        let data = stream.decode().map_err(|e| {
+        let parse_options = self.document.options();
+        let data = stream.decode(&parse_options).map_err(|e| {
             OperationError::ParseError(format!("Failed to decode image stream: {e}"))
         })?;
 

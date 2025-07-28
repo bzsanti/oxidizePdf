@@ -71,7 +71,7 @@ mod tests {
 
         // Test pattern matching
         match from_first {
-            MetadataMode::FromFirst => assert!(true),
+            MetadataMode::FromFirst => {}
             _ => panic!("Wrong variant"),
         }
 
@@ -81,7 +81,7 @@ mod tests {
         }
 
         match none {
-            MetadataMode::None => assert!(true),
+            MetadataMode::None => {}
             _ => panic!("Wrong variant"),
         }
     }
@@ -129,7 +129,7 @@ mod tests {
 
         assert!(result.is_err());
         match result {
-            Err(crate::operations::OperationError::NoPagesToProcess) => assert!(true),
+            Err(crate::operations::OperationError::NoPagesToProcess) => {}
             _ => panic!("Expected NoPagesToProcess error"),
         }
     }
