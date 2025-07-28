@@ -19,6 +19,8 @@ jobs:
   benchmark:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout code
@@ -72,28 +74,18 @@ jobs:
     - name: Save baseline (if requested)
       if: github.event.inputs.create_baseline == 'true'
       run: |
-        # Create temporary directory to preserve files across checkout
-        mkdir -p /tmp/baseline
-        cp -r target/criterion/* /tmp/baseline/
-        echo "Baseline created at $(date)" > /tmp/baseline/timestamp.txt
+        mkdir -p .github/benchmarks/baseline
+        cp -r target/criterion/* .github/benchmarks/baseline/
+        echo "Baseline created at $(date)" > .github/benchmarks/baseline/timestamp.txt
         
     - name: Commit baseline
       if: github.event.inputs.create_baseline == 'true'
       run: |
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        
-        # Fetch and checkout the benchmark-baselines branch
-        git fetch origin benchmark-baselines:benchmark-baselines || git checkout -b benchmark-baselines
-        git checkout benchmark-baselines
-        
-        # Copy baseline files
-        mkdir -p .github/benchmarks/baseline
-        cp -r /tmp/baseline/* .github/benchmarks/baseline/ 2>/dev/null || true
-        
         git add .github/benchmarks/baseline
-        git commit -m "chore: update benchmark baseline" || echo "No changes to commit"
-        git push origin benchmark-baselines
+        git commit -m "chore: update benchmark baseline"
+        git push
           
     - name: Performance regression check
       if: github.event_name == 'pull_request'
@@ -106,6 +98,8 @@ jobs:
     name: Compare with baseline
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout PR
@@ -126,14 +120,8 @@ jobs:
     - name: Check for baseline
       id: check_baseline
       run: |
-        # Fetch the benchmark-baselines branch
-        git fetch origin benchmark-baselines:benchmark-baselines || true
-        
-        # Check if baseline exists in the benchmark-baselines branch
-        if git show benchmark-baselines:.github/benchmarks/baseline/info.txt &>/dev/null; then
+        if [ -d ".github/benchmarks/baseline" ]; then
           echo "baseline_exists=true" >> $GITHUB_OUTPUT
-          # Checkout baseline files from benchmark-baselines branch
-          git checkout benchmark-baselines -- .github/benchmarks/baseline || true
         else
           echo "baseline_exists=false" >> $GITHUB_OUTPUT
           echo "No baseline found. Run workflow with 'create_baseline' to create one."
