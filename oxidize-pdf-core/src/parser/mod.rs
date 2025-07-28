@@ -381,30 +381,19 @@ pub enum ParseWarning {
 ///
 /// ```rust,no_run
 /// use oxidize_pdf::parser::{PdfReader, ParseOptions};
+/// use std::fs::File;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // Strict parsing (default) - fails on any deviation from PDF spec
 /// let strict_reader = PdfReader::open("document.pdf")?;
 ///
 /// // Tolerant parsing - attempts to recover from errors
-/// let tolerant_reader = PdfReader::open_tolerant("corrupted.pdf")?;
+/// let file = File::open("corrupted.pdf")?;
+/// let tolerant_reader = PdfReader::new_with_options(file, ParseOptions::tolerant())?;
 ///
-/// // Custom parsing options
-/// let options = ParseOptions {
-///     strict_mode: false,
-///     recover_from_stream_errors: true,
-///     ignore_corrupt_streams: true,
-///     partial_content_allowed: true,
-///     max_recovery_attempts: 5,
-///     log_recovery_details: true,
-///     lenient_streams: true,
-///     max_recovery_bytes: 5000,
-///     collect_warnings: true,
-///     lenient_encoding: true,
-///     preferred_encoding: None,
-///     lenient_syntax: true,
-/// };
-/// let custom_reader = PdfReader::open_with_options("problematic.pdf", options)?;
+/// // Skip errors mode - ignores corrupt streams and returns partial content
+/// let file = File::open("problematic.pdf")?;
+/// let skip_errors_reader = PdfReader::new_with_options(file, ParseOptions::skip_errors())?;
 /// # Ok(())
 /// # }
 /// ```
