@@ -19,6 +19,8 @@ jobs:
   benchmark:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout code
@@ -96,6 +98,8 @@ jobs:
     name: Compare with baseline
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout PR
