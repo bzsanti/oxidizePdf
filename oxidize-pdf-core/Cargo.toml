@@ -124,7 +124,7 @@ default = ["compression"]
 compression = ["dep:flate2"]
 
 # OCR features
-ocr-tesseract = ["dep:tesseract", "leptonica-plumbing"]
+ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]
 ocr-full = ["ocr-tesseract"]
 
 # Test features
