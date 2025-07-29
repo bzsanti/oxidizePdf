@@ -1,11 +1,18 @@
-# Progreso del Proyecto - 2025-07-28 19:00:00
+# Progreso del Proyecto - 2025-07-29 11:00:00
 
 ## Estado Actual
 - Rama: main
-- Último commit: docs: update ISO 32000 compliance to reflect reality (25-30%)
+- Último commit: fix: resolve lib.rs unintentional feature exposure for leptonica-plumbing
 - Tests: ✅ Pasando (2116 tests unitarios + 87 doctests)
 - Pipelines: ✅ CI/CD funcionando correctamente
 - Coverage: ~25-30% ISO 32000-1:2008 compliance (documentado)
+
+## Sesión de Trabajo - 2025-07-29
+
+### Fix de lib.rs Feature Exposure
+- **Issue Resuelto**: lib.rs alertó sobre exposición no intencional de feature `leptonica-plumbing`
+- **Solución**: Agregado prefijo `dep:` a la dependencia en Cargo.toml
+- **Resultado**: Feature ahora correctamente oculta del API público
 
 ## Sesión de Trabajo - 2025-07-28
 
