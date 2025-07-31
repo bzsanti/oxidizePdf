@@ -64,7 +64,7 @@ impl PageForms for Page {
         default_value: Option<&str>,
     ) -> Result<()> {
         // Create the field dictionary
-        let field_dict = create_text_field_dict(name, rect.clone(), default_value);
+        let field_dict = create_text_field_dict(name, rect, default_value);
 
         // Create annotation with the field properties
         let mut annotation = Annotation::new(AnnotationType::Widget, rect);
@@ -80,7 +80,7 @@ impl PageForms for Page {
 
     fn add_checkbox(&mut self, name: &str, rect: Rectangle, checked: bool) -> Result<()> {
         // Create the field dictionary
-        let field_dict = create_checkbox_dict(name, rect.clone(), checked);
+        let field_dict = create_checkbox_dict(name, rect, checked);
 
         // Create annotation with the field properties
         let mut annotation = Annotation::new(AnnotationType::Widget, rect);
@@ -102,7 +102,7 @@ impl PageForms for Page {
         checked: bool,
     ) -> Result<()> {
         // Create the field dictionary
-        let field_dict = create_radio_button_dict(name, rect.clone(), export_value, checked);
+        let field_dict = create_radio_button_dict(name, rect, export_value, checked);
 
         // Create annotation with the field properties
         let mut annotation = Annotation::new(AnnotationType::Widget, rect);
@@ -124,7 +124,7 @@ impl PageForms for Page {
         default_value: Option<&str>,
     ) -> Result<()> {
         // Create the field dictionary
-        let field_dict = create_combo_box_dict(name, rect.clone(), options, default_value);
+        let field_dict = create_combo_box_dict(name, rect, options, default_value);
 
         // Create annotation with the field properties
         let mut annotation = Annotation::new(AnnotationType::Widget, rect);
@@ -147,7 +147,7 @@ impl PageForms for Page {
         multi_select: bool,
     ) -> Result<()> {
         // Create the field dictionary
-        let field_dict = create_list_box_dict(name, rect.clone(), options, selected, multi_select);
+        let field_dict = create_list_box_dict(name, rect, options, selected, multi_select);
 
         // Create annotation with the field properties
         let mut annotation = Annotation::new(AnnotationType::Widget, rect);
@@ -163,7 +163,7 @@ impl PageForms for Page {
 
     fn add_push_button(&mut self, name: &str, rect: Rectangle, caption: &str) -> Result<()> {
         // Create the field dictionary
-        let field_dict = create_push_button_dict(name, rect.clone(), caption);
+        let field_dict = create_push_button_dict(name, rect, caption);
 
         // Create annotation with the field properties
         let mut annotation = Annotation::new(AnnotationType::Widget, rect);

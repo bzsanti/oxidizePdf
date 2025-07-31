@@ -521,13 +521,11 @@ impl TrueTypeFont {
 
         // Build glyph mapping (old index -> new index)
         let mut glyph_map: HashMap<u16, u16> = HashMap::new();
-        let mut new_index = 0;
         let mut sorted_glyphs: Vec<u16> = subset_glyphs.iter().copied().collect();
         sorted_glyphs.sort();
 
-        for &old_index in &sorted_glyphs {
-            glyph_map.insert(old_index, new_index);
-            new_index += 1;
+        for (new_index, &old_index) in sorted_glyphs.iter().enumerate() {
+            glyph_map.insert(old_index, new_index as u16);
         }
 
         // Start building the subset font
@@ -789,7 +787,7 @@ impl TrueTypeFont {
                         start as u16,
                         end as u16,
                         start_glyph,
-                        (start_glyph as i16 - start as i16) as i16,
+                        (start_glyph as i16 - start as i16),
                     ));
                     start = ch;
                     end = ch;
@@ -800,7 +798,7 @@ impl TrueTypeFont {
                 start as u16,
                 end as u16,
                 start_glyph,
-                (start_glyph as i16 - start as i16) as i16,
+                (start_glyph as i16 - start as i16),
             ));
         }
 

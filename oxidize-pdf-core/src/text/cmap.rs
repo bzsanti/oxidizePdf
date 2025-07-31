@@ -77,6 +77,12 @@ pub struct CMap {
     single_mappings: HashMap<Vec<u8>, Vec<u8>>,
 }
 
+impl Default for CMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CMap {
     /// Create a new empty CMap
     pub fn new() -> Self {
@@ -129,12 +135,12 @@ impl CMap {
                 message: format!("Invalid UTF-8 in CMap: {}", e),
             })?;
 
-        let mut lines = content.lines();
+        let lines = content.lines();
         let mut in_codespace_range = false;
         let mut in_bf_char = false;
         let mut in_bf_range = false;
 
-        while let Some(line) = lines.next() {
+        for line in lines {
             let line = line.trim();
 
             // Skip comments
@@ -436,7 +442,7 @@ impl ToUnicodeCMapBuilder {
                     content.push_str(&format!(
                         "<{}> <{}>\n",
                         hex_string(code),
-                        hex_string(&unicode_bytes)
+                        hex_string(unicode_bytes)
                     ));
                 }
                 content.push_str("endbfchar\n");

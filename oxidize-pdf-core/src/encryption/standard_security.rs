@@ -277,10 +277,7 @@ impl StandardSecurityHandler {
         match self.revision {
             SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
                 // For AES, use encrypt_aes and handle the Result
-                match self.encrypt_aes(data, key, obj_id) {
-                    Ok(encrypted) => encrypted,
-                    Err(_) => Vec::new(), // Return empty on error for now
-                }
+                self.encrypt_aes(data, key, obj_id).unwrap_or_default()
             }
             _ => {
                 // For RC4
@@ -296,10 +293,7 @@ impl StandardSecurityHandler {
         match self.revision {
             SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
                 // For AES, use decrypt_aes and handle the Result
-                match self.decrypt_aes(data, key, obj_id) {
-                    Ok(decrypted) => decrypted,
-                    Err(_) => Vec::new(), // Return empty on error for now
-                }
+                self.decrypt_aes(data, key, obj_id).unwrap_or_default()
             }
             _ => {
                 // RC4 is symmetric
@@ -319,10 +313,7 @@ impl StandardSecurityHandler {
         match self.revision {
             SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
                 // For AES, use decrypt_aes and handle the Result
-                match self.decrypt_aes(data, key, obj_id) {
-                    Ok(decrypted) => decrypted,
-                    Err(_) => Vec::new(), // Return empty on error for now
-                }
+                self.decrypt_aes(data, key, obj_id).unwrap_or_default()
             }
             _ => {
                 // For RC4, decrypt is same as encrypt

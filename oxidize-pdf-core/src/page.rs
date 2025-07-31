@@ -143,10 +143,12 @@ impl Page {
         )
     }
 
+    #[allow(dead_code)]
     pub(crate) fn width(&self) -> f64 {
         self.width
     }
 
+    #[allow(dead_code)]
     pub(crate) fn height(&self) -> f64 {
         self.height
     }
@@ -235,10 +237,7 @@ impl Page {
         );
 
         // Convert widget to annotation
-        let mut annot = Annotation::new(
-            crate::annotations::AnnotationType::Widget,
-            widget.rect.clone(),
-        );
+        let mut annot = Annotation::new(crate::annotations::AnnotationType::Widget, widget.rect);
 
         // Add widget-specific properties
         for (key, value) in widget.to_annotation_dict().iter() {

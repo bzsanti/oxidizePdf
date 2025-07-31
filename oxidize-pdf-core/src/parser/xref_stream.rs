@@ -280,6 +280,12 @@ pub struct XRefStreamBuilder {
     trailer_entries: PdfDictionary,
 }
 
+impl Default for XRefStreamBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl XRefStreamBuilder {
     /// Create a new XRef stream builder
     pub fn new() -> Self {
@@ -308,7 +314,7 @@ impl XRefStreamBuilder {
         let mut max_offset = 0u64;
         let mut max_obj_num = 0u32;
         let mut max_gen = 0u16;
-        let mut has_compressed = false;
+        let mut _has_compressed = false;
 
         for (obj_num, entry) in &self.entries {
             max_obj_num = max_obj_num.max(*obj_num);
@@ -324,7 +330,7 @@ impl XRefStreamBuilder {
                     stream_object_number,
                     index_within_stream,
                 } => {
-                    has_compressed = true;
+                    _has_compressed = true;
                     max_obj_num = max_obj_num.max(*stream_object_number);
                     max_offset = max_offset.max(*index_within_stream as u64);
                 }
@@ -332,7 +338,7 @@ impl XRefStreamBuilder {
         }
 
         // Calculate minimum bytes needed for each field
-        let w1 = if has_compressed { 1 } else { 1 }; // Type field (0, 1, or 2)
+        let w1 = 1; // Type field (0, 1, or 2)
         let w2 = bytes_needed(max_offset.max(max_obj_num as u64));
         let w3 = bytes_needed(max_gen as u64);
 
@@ -421,7 +427,7 @@ fn bytes_needed(value: u64) -> usize {
     if value == 0 {
         1
     } else {
-        ((64 - value.leading_zeros() + 7) / 8) as usize
+        ((64 - value.leading_zeros()).div_ceil(8)) as usize
     }
 }
 

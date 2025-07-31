@@ -393,7 +393,7 @@ impl PatternManager {
 
         let mut dict = String::from("/Pattern <<");
 
-        for (name, _pattern) in &self.patterns {
+        for name in self.patterns.keys() {
             // In a real implementation, this would reference the pattern object
             dict.push_str(&format!(" /{} {} 0 R", name, self.next_id));
         }

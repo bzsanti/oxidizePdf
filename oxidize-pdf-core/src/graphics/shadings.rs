@@ -638,7 +638,7 @@ impl ShadingManager {
         // Shadings
         if !self.shadings.is_empty() {
             dict.push_str("/Shading <<");
-            for (name, _shading) in &self.shadings {
+            for name in self.shadings.keys() {
                 dict.push_str(&format!(" /{} {} 0 R", name, self.next_id));
             }
             dict.push_str(" >>");
@@ -650,7 +650,7 @@ impl ShadingManager {
                 dict.push('\n');
             }
             dict.push_str("/Pattern <<");
-            for (name, _pattern) in &self.patterns {
+            for name in self.patterns.keys() {
                 dict.push_str(&format!(" /{} {} 0 R", name, self.next_id));
             }
             dict.push_str(" >>");

@@ -7,18 +7,10 @@ use crate::parser::objects::PdfDictionary;
 use crate::parser::{ParseError, ParseResult};
 
 /// JBIG2 decode parameters from DecodeParms dictionary
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Jbig2DecodeParams {
     /// JBIG2Globals dictionary containing global data
     pub jbig2_globals: Option<Vec<u8>>,
-}
-
-impl Default for Jbig2DecodeParams {
-    fn default() -> Self {
-        Self {
-            jbig2_globals: None,
-        }
-    }
 }
 
 impl Jbig2DecodeParams {
@@ -42,12 +34,14 @@ impl Jbig2DecodeParams {
 #[derive(Debug, Clone)]
 struct Jbig2SegmentHeader {
     /// Segment number
+    #[allow(dead_code)]
     segment_number: u32,
     /// Segment header flags
     flags: u8,
     /// Segment type
     segment_type: u8,
     /// Page association
+    #[allow(dead_code)]
     page_association: u32,
     /// Data length
     data_length: u32,
@@ -75,7 +69,7 @@ impl Jbig2Decoder {
 
         // Check file ID (first 8 bytes should be specific pattern)
         let file_id = &data[0..8];
-        if file_id != &[0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A] {
+        if file_id != [0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A] {
             // Not a standard JBIG2 file, try to decode as embedded stream
             return self.decode_embedded_stream(data);
         }
@@ -259,11 +253,14 @@ impl Jbig2Decoder {
     fn get_segment_header_length(&self, segment: &Jbig2SegmentHeader) -> usize {
         // Base header is 11 bytes, but can be shorter for short form
         let has_long_page_assoc = (segment.flags & 0x40) != 0;
-        let base_length = if has_long_page_assoc { 11 } else { 7 };
 
         // Add referred-to segments count if present
         // This is a simplified calculation
-        base_length
+        if has_long_page_assoc {
+            11
+        } else {
+            7
+        }
     }
 }
 

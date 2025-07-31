@@ -346,8 +346,8 @@ impl Aes {
         for i in 1..num_rounds {
             let mut new_key = round_keys[i - 1].clone();
             // Simple key derivation (not secure, just for demo)
-            for j in 0..new_key.len() {
-                new_key[j] = new_key[j].wrapping_add((i as u8).wrapping_mul(j as u8 + 1));
+            for (j, item) in new_key.iter_mut().enumerate() {
+                *item = item.wrapping_add((i as u8).wrapping_mul(j as u8 + 1));
             }
             round_keys.push(new_key);
         }

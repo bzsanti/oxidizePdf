@@ -16,10 +16,12 @@ pub struct PdfWriter<W: Write> {
     pages_id: Option<ObjectId>,
     info_id: Option<ObjectId>,
     // Maps for tracking form fields and their widgets
+    #[allow(dead_code)]
     field_widget_map: HashMap<String, Vec<ObjectId>>, // field name -> widget IDs
-    field_id_map: HashMap<String, ObjectId>,          // field name -> field ID
-    form_field_ids: Vec<ObjectId>,                    // form field IDs to add to page annotations
-    page_ids: Vec<ObjectId>,                          // page IDs for form field references
+    #[allow(dead_code)]
+    field_id_map: HashMap<String, ObjectId>, // field name -> field ID
+    form_field_ids: Vec<ObjectId>, // form field IDs to add to page annotations
+    page_ids: Vec<ObjectId>,       // page IDs for form field references
 }
 
 impl<W: Write> PdfWriter<W> {
@@ -377,6 +379,7 @@ impl<W: Write> PdfWriter<W> {
         Ok(outline_root_id)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_outline_item(
         &mut self,
         item: &crate::structure::OutlineItem,
@@ -664,6 +667,7 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn create_widget_appearance_stream(&mut self, widget_dict: &Dictionary) -> Result<ObjectId> {
         // Get widget rectangle
         let rect = if let Some(Object::Array(rect_array)) = widget_dict.get("Rect") {
@@ -674,7 +678,7 @@ impl<W: Write> PdfWriter<W> {
                     Some(Object::Real(x2)),
                     Some(Object::Real(y2)),
                 ) = (
-                    rect_array.get(0),
+                    rect_array.first(),
                     rect_array.get(1),
                     rect_array.get(2),
                     rect_array.get(3),
@@ -738,6 +742,7 @@ impl<W: Write> PdfWriter<W> {
         Ok(stream_id)
     }
 
+    #[allow(dead_code)]
     fn create_field_appearance_stream(
         &mut self,
         field_dict: &Dictionary,

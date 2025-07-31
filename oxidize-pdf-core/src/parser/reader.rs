@@ -196,12 +196,8 @@ impl<R: Read + Seek> PdfReader<R> {
                     // Get file ID from trailer
                     let file_id = trailer.id().and_then(|id_obj| {
                         if let PdfObject::Array(ref id_array) = id_obj {
-                            if let Some(first_id) = id_array.get(0) {
-                                if let PdfObject::String(ref id_bytes) = first_id {
-                                    Some(id_bytes.as_bytes().to_vec())
-                                } else {
-                                    None
-                                }
+                            if let Some(PdfObject::String(ref id_bytes)) = id_array.get(0) {
+                                Some(id_bytes.as_bytes().to_vec())
                             } else {
                                 None
                             }
@@ -218,12 +214,12 @@ impl<R: Read + Seek> PdfReader<R> {
                         }
                         Err(_) => {
                             // Move reader back and continue without encryption
-                            buf_reader = temp_reader.reader;
+                            let _ = temp_reader.reader;
                             return Err(ParseError::EncryptionNotSupported);
                         }
                     }
                 } else {
-                    buf_reader = temp_reader.reader;
+                    let _ = temp_reader.reader;
                     return Err(ParseError::EncryptionNotSupported);
                 }
             } else {

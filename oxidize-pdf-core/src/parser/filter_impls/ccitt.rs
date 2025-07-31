@@ -271,8 +271,8 @@ impl Group3OneDDecoder {
             let color = if is_white { 0 } else { 1 };
             let end_pos = (position + run_length).min(row.len());
 
-            for i in position..end_pos {
-                row[i] = color;
+            for item in row.iter_mut().take(end_pos).skip(position) {
+                *item = color;
             }
 
             position = end_pos;
@@ -453,7 +453,7 @@ impl Group4Decoder {
         // For now, return a basic implementation
         // A full Group 4 implementation would be much more complex
 
-        let bytes_per_row = (self.params.columns + 7) / 8;
+        let bytes_per_row = self.params.columns.div_ceil(8);
         let total_rows = if self.params.rows > 0 {
             self.params.rows
         } else {

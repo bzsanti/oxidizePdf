@@ -13,6 +13,7 @@ use std::io::{Read, Seek};
 
 /// Font information with CMap support
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct FontInfo {
     /// Font name
     pub name: String,
@@ -31,6 +32,7 @@ pub struct FontInfo {
 }
 
 /// Enhanced text extractor with CMap support
+#[allow(dead_code)]
 pub struct CMapTextExtractor<R: Read + Seek> {
     /// Base text extractor
     base_extractor: TextExtractor,
@@ -42,6 +44,7 @@ pub struct CMapTextExtractor<R: Read + Seek> {
 
 impl<R: Read + Seek> CMapTextExtractor<R> {
     /// Create a new CMap-aware text extractor
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             base_extractor: TextExtractor::new(),
@@ -51,6 +54,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Extract font information from a font dictionary
+    #[allow(dead_code)]
     pub fn extract_font_info(
         &mut self,
         font_dict: &PdfDictionary,
@@ -101,11 +105,10 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         // Extract ToUnicode CMap
         if let Some(to_unicode_obj) = font_dict.get("ToUnicode") {
             if let Some(stream_ref) = to_unicode_obj.as_reference() {
-                if let Ok(stream_obj) = document.get_object(stream_ref.0, stream_ref.1) {
-                    if let PdfObject::Stream(stream) = stream_obj {
-                        font_info.to_unicode =
-                            Some(self.parse_tounicode_stream(&stream, document)?);
-                    }
+                if let Ok(PdfObject::Stream(stream)) =
+                    document.get_object(stream_ref.0, stream_ref.1)
+                {
+                    font_info.to_unicode = Some(self.parse_tounicode_stream(&stream, document)?);
                 }
             }
         }
@@ -128,6 +131,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Parse encoding differences array
+    #[allow(dead_code)]
     fn parse_encoding_differences(
         &self,
         differences: &[PdfObject],
@@ -152,6 +156,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Parse ToUnicode stream
+    #[allow(dead_code)]
     fn parse_tounicode_stream(
         &self,
         stream: &PdfStream,
@@ -162,6 +167,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Decode text using font information and CMap
+    #[allow(dead_code)]
     pub fn decode_text_with_font(
         &self,
         text_bytes: &[u8],
@@ -184,6 +190,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Decode text using CMap
+    #[allow(dead_code)]
     fn decode_with_cmap(&self, text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
         let mut result = String::new();
         let mut i = 0;
@@ -215,6 +222,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Decode text using encoding
+    #[allow(dead_code)]
     fn decode_with_encoding(&self, text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
         let mut result = String::new();
 
@@ -244,6 +252,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Extract text from a page with CMap support
+    #[allow(dead_code)]
     pub fn extract_text_from_page(
         &mut self,
         document: &PdfDocument<R>,
@@ -280,6 +289,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
 }
 
 /// Convert glyph name to Unicode character
+#[allow(dead_code)]
 fn glyph_name_to_unicode(name: &str) -> Option<char> {
     // Adobe Glyph List mapping (simplified subset)
     match name {
@@ -325,6 +335,7 @@ fn glyph_name_to_unicode(name: &str) -> Option<char> {
 }
 
 /// Decode WinAnsiEncoding
+#[allow(dead_code)]
 fn decode_winansi(byte: u8) -> char {
     // WinAnsiEncoding is mostly Latin-1 with some differences in 0x80-0x9F range
     match byte {
@@ -360,6 +371,7 @@ fn decode_winansi(byte: u8) -> char {
 }
 
 /// Decode MacRomanEncoding
+#[allow(dead_code)]
 fn decode_macroman(byte: u8) -> char {
     // MacRomanEncoding differs from Latin-1 in the 0x80-0xFF range
     match byte {
@@ -401,6 +413,7 @@ fn decode_macroman(byte: u8) -> char {
 }
 
 /// Decode StandardEncoding
+#[allow(dead_code)]
 fn decode_standard(byte: u8) -> char {
     // StandardEncoding is similar to Latin-1 with some differences
     // For simplicity, using Latin-1 as approximation

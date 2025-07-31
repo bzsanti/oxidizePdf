@@ -378,7 +378,7 @@ impl IccProfileManager {
 
         let mut dict = String::from("/ColorSpace <<");
 
-        for (name, _profile) in &self.profiles {
+        for name in self.profiles.keys() {
             // In a real implementation, this would reference the color space object
             dict.push_str(&format!(" /{} {} 0 R", name, self.next_id));
         }
