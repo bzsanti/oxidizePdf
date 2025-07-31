@@ -1,14 +1,10 @@
 //! Example demonstrating PDF forms support
 //!
-//! This example shows how to add various types of form fields to a PDF page.
+//! This example shows how to add various types of form fields to a PDF page using the PageForms trait.
 
 use oxidize_pdf::{
-    forms::{
-        CheckBox, ComboBox, FieldOptions, FormField, ListBox, PushButton, RadioButton, TextField,
-        Widget,
-    },
     geometry::{Point, Rectangle},
-    graphics::Color,
+    page_forms::PageForms,
     Document, Font, Page, Result,
 };
 
@@ -18,116 +14,118 @@ fn main() -> Result<()> {
     doc.set_title("Forms Example");
     doc.set_author("oxidize-pdf");
 
-    // Enable forms
-    let acro_form = doc.enable_forms();
-
-    // Create a page
+    // Add a page
     let mut page = Page::a4();
+    let font = Font::Helvetica;
 
-    // Add title
+    // Set up page dimensions
     page.text()
-        .set_font(Font::Helvetica, 24.0)
+        .set_font(font, 14.0)
         .at(50.0, 750.0)
         .write("PDF Forms Example")?;
 
+    // Add a text field
     page.text()
-        .set_font(Font::Helvetica, 12.0)
+        .set_font(font, 12.0)
         .at(50.0, 700.0)
-        .write("Please fill out the form below:")?;
+        .write("Name:")?;
 
-    // 1. Text Field
-    page.text().at(50.0, 650.0).write("Name:")?;
+    page.add_text_field(
+        "name",
+        Rectangle::new(Point::new(100.0, 695.0), Point::new(300.0, 715.0)),
+        Some("Enter your name"),
+    )?;
 
-    let name_field = TextField::new("name")
-        .with_value("Enter your name")
-        .with_max_length(50)
-        .to_field();
-
-    // Add widget to page
-    let name_widget = Widget::new(Rectangle::new(
-        Point::new(150.0, 640.0),
-        Point::new(350.0, 660.0),
-    ));
-
-    // TODO: Need to add form field to page and document
-    // This shows the API is incomplete - we need a way to:
-    // 1. Add the field to the AcroForm
-    // 2. Add the widget to the page
-    // 3. Link them together
-
-    // 2. Checkbox
+    // Add a checkbox
     page.text()
-        .at(50.0, 600.0)
+        .set_font(font, 12.0)
+        .at(50.0, 650.0)
         .write("Subscribe to newsletter:")?;
 
-    let subscribe_field = CheckBox::new("subscribe").checked().to_field();
+    page.add_checkbox(
+        "subscribe",
+        Rectangle::new(Point::new(200.0, 645.0), Point::new(215.0, 660.0)),
+        true,
+    )?;
 
-    // 3. Radio Buttons
+    // Add radio buttons
     page.text()
-        .at(50.0, 550.0)
-        .write("Preferred contact method:")?;
+        .set_font(font, 12.0)
+        .at(50.0, 600.0)
+        .write("Contact method:")?;
 
-    let email_radio = RadioButton::new("contact", "email").checked().to_field();
+    page.add_radio_button(
+        "contact",
+        Rectangle::new(Point::new(50.0, 570.0), Point::new(65.0, 585.0)),
+        "email",
+        true,
+    )?;
 
-    let phone_radio = RadioButton::new("contact", "phone").to_field();
-
-    // 4. Push Button
-    page.text().at(50.0, 450.0).write("Actions:")?;
-
-    let submit_button = PushButton::new("submit")
-        .with_caption("Submit Form")
-        .to_field();
-
-    // 5. Dropdown (ComboBox)
-    page.text().at(50.0, 350.0).write("Country:")?;
-
-    let mut options = FieldOptions::new();
-    options.add_option("us", "United States");
-    options.add_option("uk", "United Kingdom");
-    options.add_option("ca", "Canada");
-    options.add_option("au", "Australia");
-
-    let country_field = ComboBox::new("country")
-        .with_options(options)
-        .editable()
-        .to_field();
-
-    // 6. List Box
     page.text()
-        .at(50.0, 250.0)
-        .write("Interests (select multiple):")?;
+        .set_font(font, 12.0)
+        .at(70.0, 575.0)
+        .write("Email")?;
 
-    let mut interests = FieldOptions::new();
-    interests.add_option("tech", "Technology");
-    interests.add_option("sports", "Sports");
-    interests.add_option("music", "Music");
-    interests.add_option("art", "Art");
-    interests.add_option("travel", "Travel");
+    page.add_radio_button(
+        "contact",
+        Rectangle::new(Point::new(130.0, 570.0), Point::new(145.0, 585.0)),
+        "phone",
+        false,
+    )?;
 
-    let interests_field = ListBox::new("interests")
-        .with_options(interests)
-        .multi_select()
-        .to_field();
+    page.text()
+        .set_font(font, 12.0)
+        .at(150.0, 575.0)
+        .write("Phone")?;
+
+    // Add a dropdown/combo box
+    page.text()
+        .set_font(font, 12.0)
+        .at(50.0, 520.0)
+        .write("Country:")?;
+
+    page.add_combo_box(
+        "country",
+        Rectangle::new(Point::new(100.0, 515.0), Point::new(200.0, 535.0)),
+        vec![
+            ("US", "United States"),
+            ("CA", "Canada"),
+            ("UK", "United Kingdom"),
+        ],
+        Some("US"),
+    )?;
+
+    // Add a listbox
+    page.text()
+        .set_font(font, 12.0)
+        .at(50.0, 470.0)
+        .write("Interests:")?;
+
+    page.add_list_box(
+        "interests",
+        Rectangle::new(Point::new(100.0, 420.0), Point::new(200.0, 480.0)),
+        vec![
+            ("tech", "Technology"),
+            ("sports", "Sports"),
+            ("music", "Music"),
+        ],
+        vec![0, 2],
+        true,
+    )?;
+
+    // Add a push button
+    page.add_push_button(
+        "submit",
+        Rectangle::new(Point::new(50.0, 350.0), Point::new(150.0, 380.0)),
+        "Submit Form",
+    )?;
 
     // Add the page to the document
     doc.add_page(page);
 
     // Save the document
     doc.save("forms_example.pdf")?;
-    println!("Created forms_example.pdf");
-
-    // Print summary
-    println!("\nForm fields created:");
-    println!("- Text field for name");
-    println!("- Checkbox for newsletter subscription");
-    println!("- Radio buttons for contact preference");
-    println!("- Submit button");
-    println!("- Dropdown for country selection");
-    println!("- Multi-select list for interests");
-
-    println!("\nNote: This example shows the forms API design.");
-    println!("The actual integration between forms and pages needs");
-    println!("to be completed for the fields to appear in the PDF.");
+    println!("Created forms_example.pdf with interactive form fields");
 
     Ok(())
 }

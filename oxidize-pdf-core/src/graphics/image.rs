@@ -1595,12 +1595,14 @@ mod tests {
                         0x02, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x00, 0x00, // Next IFD offset (0 = none)
                     ],
+                    ImageFormat::Raw => Vec::new(), // Raw format not supported in tests
                 };
 
                 let image = match expected_format {
                     ImageFormat::Jpeg => Image::from_jpeg_data(data.clone()).unwrap(),
                     ImageFormat::Png => Image::from_png_data(data.clone()).unwrap(),
                     ImageFormat::Tiff => Image::from_tiff_data(data.clone()).unwrap(),
+                    ImageFormat::Raw => continue, // Skip raw format in tests
                 };
 
                 // Verify image properties

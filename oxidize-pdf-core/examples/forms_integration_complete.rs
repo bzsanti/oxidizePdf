@@ -6,12 +6,11 @@
 
 use oxidize_pdf::{
     forms::{
-        BorderStyle, CheckBox, ComboBox, FieldOptions, FormField, FormManager, PushButton,
-        RadioButton, TextField, Widget, WidgetAppearance,
+        BorderStyle, CheckBox, FieldOptions, FormManager, PushButton, RadioButton, TextField,
+        Widget, WidgetAppearance,
     },
     geometry::{Point, Rectangle},
     graphics::Color,
-    objects::ObjectReference,
     Document, Font, Page, Result,
 };
 
@@ -122,7 +121,9 @@ fn main() -> Result<()> {
     // Email radio button
     page.text().at(70.0, 470.0).write("Email")?;
 
-    let email_radio = RadioButton::new("contact_method", "email").checked();
+    let email_radio = RadioButton::new("contact_method")
+        .add_option("email", "Email")
+        .with_selected(0);
 
     let email_radio_widget = Widget::new(Rectangle::new(
         Point::new(50.0, 465.0),
@@ -134,7 +135,7 @@ fn main() -> Result<()> {
     // Phone radio button
     page.text().at(150.0, 470.0).write("Phone")?;
 
-    let phone_radio = RadioButton::new("contact_method", "phone");
+    let phone_radio = RadioButton::new("contact_method").add_option("phone", "Phone");
 
     let phone_radio_widget = Widget::new(Rectangle::new(
         Point::new(130.0, 465.0),

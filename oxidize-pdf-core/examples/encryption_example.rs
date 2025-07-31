@@ -6,11 +6,7 @@
 //! - Reading content from encrypted PDFs
 //! - Interactive password prompting
 
-use oxidize_pdf::parser::{
-    ConsolePasswordProvider, EncryptionHandler, InteractiveDecryption, PasswordResult, PdfReader,
-};
 use oxidize_pdf::{Document, Page, Result};
-use std::path::Path;
 
 fn main() -> Result<()> {
     println!("PDF Encryption Support Example");

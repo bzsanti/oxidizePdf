@@ -1318,7 +1318,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "oxidize-pdf"
-version = "1.1.4"
+version = "1.1.5"
 dependencies = [
  "chrono",
  "criterion",

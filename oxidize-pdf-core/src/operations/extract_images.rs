@@ -638,6 +638,7 @@ mod tests {
                 ImageFormat::Jpeg => "jpg",
                 ImageFormat::Png => "png",
                 ImageFormat::Tiff => "tiff",
+                ImageFormat::Raw => "raw",
             };
             assert_eq!(extension, expected_ext);
         }
