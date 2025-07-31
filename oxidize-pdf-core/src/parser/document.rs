@@ -52,7 +52,7 @@
 use super::objects::{PdfDictionary, PdfObject};
 use super::page_tree::{PageTree, ParsedPage};
 use super::reader::PdfReader;
-use super::{ParseError, ParseResult};
+use super::{ParseError, ParseOptions, ParseResult};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
@@ -247,6 +247,11 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(self.reader.borrow().version().to_string())
     }
 
+    /// Get the parse options
+    pub fn options(&self) -> ParseOptions {
+        self.reader.borrow().options().clone()
+    }
+
     /// Get the total number of pages in the document.
     ///
     /// # Returns
@@ -389,7 +394,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
         }
 
-        // Load the page
+        // Load the page (reference stack will handle circular detection automatically)
         let page = self.load_page_at_index(index)?;
 
         // Cache it
@@ -411,119 +416,203 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(page_info)
     }
 
-    /// Find a page in the page tree
+    /// Find a page in the page tree (iterative implementation for stack safety)
     fn find_page_in_tree(
         &self,
-        node: &PdfDictionary,
+        root_node: &PdfDictionary,
         target_index: u32,
-        current_index: u32,
-        inherited: Option<&PdfDictionary>,
+        initial_current_index: u32,
+        initial_inherited: Option<&PdfDictionary>,
     ) -> ParseResult<ParsedPage> {
-        let node_type = node
-            .get_type()
-            .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
+        // Work item for the traversal queue
+        #[derive(Debug)]
+        struct WorkItem {
+            node_dict: PdfDictionary,
+            node_ref: Option<(u32, u16)>,
+            current_index: u32,
+            inherited: Option<PdfDictionary>,
+        }
 
-        match node_type {
-            "Pages" => {
-                // This is a page tree node
-                let kids = node
-                    .get("Kids")
-                    .and_then(|obj| obj.as_array())
-                    .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
+        // Initialize work queue with root node
+        let mut work_queue = Vec::new();
+        work_queue.push(WorkItem {
+            node_dict: root_node.clone(),
+            node_ref: None,
+            current_index: initial_current_index,
+            inherited: initial_inherited.cloned(),
+        });
 
-                // Merge inherited attributes
-                let mut merged_inherited = inherited.cloned().unwrap_or_else(PdfDictionary::new);
+        // Iterative traversal
+        while let Some(work_item) = work_queue.pop() {
+            let WorkItem {
+                node_dict,
+                node_ref,
+                current_index,
+                inherited,
+            } = work_item;
 
-                // Inheritable attributes
-                for key in ["Resources", "MediaBox", "CropBox", "Rotate"] {
-                    if let Some(value) = node.get(key) {
-                        if !merged_inherited.contains_key(key) {
-                            merged_inherited.insert(key.to_string(), value.clone());
+            let node_type = node_dict
+                .get_type()
+                .or_else(|| {
+                    // If Type is missing, try to infer from content
+                    if node_dict.contains_key("Kids") && node_dict.contains_key("Count") {
+                        Some("Pages")
+                    } else if node_dict.contains_key("Contents")
+                        || node_dict.contains_key("MediaBox")
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| {
+                    // If Type is missing, try to infer from structure
+                    if node_dict.contains_key("Kids") {
+                        Some("Pages")
+                    } else if node_dict.contains_key("Contents")
+                        || (node_dict.contains_key("MediaBox") && !node_dict.contains_key("Kids"))
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
+
+            match node_type {
+                "Pages" => {
+                    // This is a page tree node
+                    let kids = node_dict
+                        .get("Kids")
+                        .and_then(|obj| obj.as_array())
+                        .or_else(|| {
+                            // If Kids is missing, use empty array
+                            eprintln!(
+                                "Warning: Missing Kids array in Pages node, using empty array"
+                            );
+                            Some(&super::objects::EMPTY_PDF_ARRAY)
+                        })
+                        .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
+
+                    // Merge inherited attributes
+                    let mut merged_inherited = inherited.unwrap_or_else(PdfDictionary::new);
+
+                    // Inheritable attributes
+                    for key in ["Resources", "MediaBox", "CropBox", "Rotate"] {
+                        if let Some(value) = node_dict.get(key) {
+                            if !merged_inherited.contains_key(key) {
+                                merged_inherited.insert(key.to_string(), value.clone());
+                            }
                         }
                     }
-                }
 
-                // Find which kid contains our target page
-                let mut current_idx = current_index;
-                for kid_ref in &kids.0 {
-                    let kid_ref =
-                        kid_ref
-                            .as_reference()
-                            .ok_or_else(|| ParseError::SyntaxError {
+                    // Process kids in reverse order (since we're using a stack/Vec::pop())
+                    // This ensures we process them in the correct order
+                    let mut current_idx = current_index;
+                    let mut pending_kids = Vec::new();
+
+                    for kid_ref in &kids.0 {
+                        let kid_ref =
+                            kid_ref
+                                .as_reference()
+                                .ok_or_else(|| ParseError::SyntaxError {
+                                    position: 0,
+                                    message: "Kids array must contain references".to_string(),
+                                })?;
+
+                        // Get the kid object
+                        let kid_obj = self.get_object(kid_ref.0, kid_ref.1)?;
+                        let kid_dict =
+                            kid_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
                                 position: 0,
-                                message: "Kids array must contain references".to_string(),
+                                message: "Page tree node must be a dictionary".to_string(),
                             })?;
 
-                    // Get the kid object
-                    let kid_obj = self.get_object(kid_ref.0, kid_ref.1)?;
-                    let kid_dict = kid_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
-                        position: 0,
-                        message: "Page tree node must be a dictionary".to_string(),
-                    })?;
+                        let kid_type = kid_dict
+                            .get_type()
+                            .or_else(|| {
+                                // If Type is missing, try to infer from content
+                                if kid_dict.contains_key("Kids") && kid_dict.contains_key("Count") {
+                                    Some("Pages")
+                                } else if kid_dict.contains_key("Contents")
+                                    || kid_dict.contains_key("MediaBox")
+                                {
+                                    Some("Page")
+                                } else {
+                                    None
+                                }
+                            })
+                            .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
-                    let kid_type = kid_dict
-                        .get_type()
-                        .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
-
-                    let count = if kid_type == "Pages" {
-                        kid_dict
-                            .get("Count")
-                            .and_then(|obj| obj.as_integer())
-                            .ok_or_else(|| ParseError::MissingKey("Count".to_string()))?
-                            as u32
-                    } else {
-                        1
-                    };
-
-                    if target_index < current_idx + count {
-                        // Found the right subtree/page
-                        if kid_type == "Page" {
-                            // This is the page we want
-                            return self.create_parsed_page(
-                                kid_ref,
-                                kid_dict,
-                                Some(&merged_inherited),
-                            );
+                        let count = if kid_type == "Pages" {
+                            kid_dict
+                                .get("Count")
+                                .and_then(|obj| obj.as_integer())
+                                .unwrap_or(1) // Fallback to 1 if Count is missing (defensive)
+                                as u32
                         } else {
-                            // Recurse into this subtree
-                            return self.find_page_in_tree(
-                                kid_dict,
-                                target_index,
-                                current_idx,
-                                Some(&merged_inherited),
-                            );
+                            1
+                        };
+
+                        if target_index < current_idx + count {
+                            // Found the right subtree/page
+                            if kid_type == "Page" {
+                                // This is the page we want
+                                return self.create_parsed_page(
+                                    kid_ref,
+                                    kid_dict,
+                                    Some(&merged_inherited),
+                                );
+                            } else {
+                                // Need to traverse this subtree - add to queue
+                                pending_kids.push(WorkItem {
+                                    node_dict: kid_dict.clone(),
+                                    node_ref: Some(kid_ref),
+                                    current_index: current_idx,
+                                    inherited: Some(merged_inherited.clone()),
+                                });
+                                break; // Found our target subtree, no need to continue
+                            }
                         }
+
+                        current_idx += count;
                     }
 
-                    current_idx += count;
+                    // Add pending kids to work queue in reverse order for correct processing
+                    work_queue.extend(pending_kids.into_iter().rev());
                 }
+                "Page" => {
+                    // This is a page object
+                    if target_index != current_index {
+                        return Err(ParseError::SyntaxError {
+                            position: 0,
+                            message: "Page index mismatch".to_string(),
+                        });
+                    }
 
-                Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: "Page not found in tree".to_string(),
-                })
-            }
-            "Page" => {
-                // This is a page object
-                if target_index != current_index {
+                    // We need the reference for creating the parsed page
+                    if let Some(page_ref) = node_ref {
+                        return self.create_parsed_page(page_ref, &node_dict, inherited.as_ref());
+                    } else {
+                        return Err(ParseError::SyntaxError {
+                            position: 0,
+                            message: "Direct page object without reference".to_string(),
+                        });
+                    }
+                }
+                _ => {
                     return Err(ParseError::SyntaxError {
                         position: 0,
-                        message: "Page index mismatch".to_string(),
+                        message: format!("Invalid page tree node type: {node_type}"),
                     });
                 }
-
-                // We need the reference, but we don't have it here
-                // This case shouldn't happen if we're navigating properly
-                Err(ParseError::SyntaxError {
-                    position: 0,
-                    message: "Direct page object without reference".to_string(),
-                })
             }
-            _ => Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!("Invalid page tree node type: {node_type}"),
-            }),
         }
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: "Page not found in tree".to_string(),
+        })
     }
 
     /// Create a ParsedPage from a page dictionary
@@ -533,10 +622,19 @@ impl<R: Read + Seek> PdfDocument<R> {
         page_dict: &PdfDictionary,
         inherited: Option<&PdfDictionary>,
     ) -> ParseResult<ParsedPage> {
-        // Extract page attributes
-        let media_box = self
-            .get_rectangle(page_dict, inherited, "MediaBox")?
-            .ok_or_else(|| ParseError::MissingKey("MediaBox".to_string()))?;
+        // Extract page attributes with fallback for missing MediaBox
+        let media_box = match self.get_rectangle(page_dict, inherited, "MediaBox")? {
+            Some(mb) => mb,
+            None => {
+                // Use default Letter size if MediaBox is missing
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Warning: Page {} {} R missing MediaBox, using default Letter size",
+                    obj_ref.0, obj_ref.1
+                );
+                [0.0, 0.0, 612.0, 792.0]
+            }
+        };
 
         let crop_box = self.get_rectangle(page_dict, inherited, "CropBox")?;
 
@@ -554,6 +652,12 @@ impl<R: Read + Seek> PdfDocument<R> {
             None
         };
 
+        // Get annotations if present
+        let annotations = page_dict
+            .get("Annots")
+            .and_then(|obj| obj.as_array())
+            .cloned();
+
         Ok(ParsedPage {
             obj_ref,
             dict: page_dict.clone(),
@@ -561,6 +665,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             media_box,
             crop_box,
             rotation,
+            annotations,
         })
     }
 
@@ -582,7 +687,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
 
             let rect = [
-                array.get(0).unwrap().as_real().unwrap_or(0.0),
+                array.0.first().unwrap().as_real().unwrap_or(0.0),
                 array.get(1).unwrap().as_real().unwrap_or(0.0),
                 array.get(2).unwrap().as_real().unwrap_or(0.0),
                 array.get(3).unwrap().as_real().unwrap_or(0.0),
@@ -783,19 +888,20 @@ impl<R: Read + Seek> PdfDocument<R> {
 
     pub fn get_page_content_streams(&self, page: &ParsedPage) -> ParseResult<Vec<Vec<u8>>> {
         let mut streams = Vec::new();
+        let options = self.options();
 
         if let Some(contents) = page.dict.get("Contents") {
             let resolved_contents = self.resolve(contents)?;
 
             match &resolved_contents {
                 PdfObject::Stream(stream) => {
-                    streams.push(stream.decode()?);
+                    streams.push(stream.decode(&options)?);
                 }
                 PdfObject::Array(array) => {
                     for item in &array.0 {
                         let resolved = self.resolve(item)?;
                         if let PdfObject::Stream(stream) = resolved {
-                            streams.push(stream.decode()?);
+                            streams.push(stream.decode(&options)?);
                         }
                     }
                 }
@@ -924,6 +1030,103 @@ impl<R: Read + Seek> PdfDocument<R> {
     ) -> ParseResult<Vec<crate::text::ExtractedText>> {
         let extractor = crate::text::TextExtractor::with_options(options);
         extractor.extract_from_document(self)
+    }
+
+    /// Get annotations from a specific page.
+    ///
+    /// Returns a vector of annotation dictionaries for the specified page.
+    /// Each annotation dictionary contains properties like Type, Rect, Contents, etc.
+    ///
+    /// # Arguments
+    ///
+    /// * `page_index` - Zero-based page index
+    ///
+    /// # Returns
+    ///
+    /// A vector of PdfDictionary objects representing annotations, or an empty vector
+    /// if the page has no annotations.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let reader = PdfReader::open("document.pdf")?;
+    /// # let document = PdfDocument::new(reader);
+    /// let annotations = document.get_page_annotations(0)?;
+    /// for annot in &annotations {
+    ///     if let Some(contents) = annot.get("Contents").and_then(|c| c.as_string()) {
+    ///         println!("Annotation: {}", contents);
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_page_annotations(&self, page_index: u32) -> ParseResult<Vec<PdfDictionary>> {
+        let page = self.get_page(page_index)?;
+
+        if let Some(annots_array) = page.get_annotations() {
+            let mut annotations = Vec::new();
+            let mut reader = self.reader.borrow_mut();
+
+            for annot_ref in &annots_array.0 {
+                if let Some(ref_nums) = annot_ref.as_reference() {
+                    match reader.get_object(ref_nums.0, ref_nums.1) {
+                        Ok(obj) => {
+                            if let Some(dict) = obj.as_dict() {
+                                annotations.push(dict.clone());
+                            }
+                        }
+                        Err(_) => {
+                            // Skip annotations that can't be loaded
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            Ok(annotations)
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    /// Get all annotations from all pages in the document.
+    ///
+    /// Returns a vector of tuples containing (page_index, annotations) for each page
+    /// that has annotations.
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples where the first element is the page index and the second
+    /// is a vector of annotation dictionaries for that page.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let reader = PdfReader::open("document.pdf")?;
+    /// # let document = PdfDocument::new(reader);
+    /// let all_annotations = document.get_all_annotations()?;
+    /// for (page_idx, annotations) in all_annotations {
+    ///     println!("Page {} has {} annotations", page_idx, annotations.len());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_all_annotations(&self) -> ParseResult<Vec<(u32, Vec<PdfDictionary>)>> {
+        let page_count = self.page_count()?;
+        let mut all_annotations = Vec::new();
+
+        for i in 0..page_count {
+            let annotations = self.get_page_annotations(i)?;
+            if !annotations.is_empty() {
+                all_annotations.push((i, annotations));
+            }
+        }
+
+        Ok(all_annotations)
     }
 }
 

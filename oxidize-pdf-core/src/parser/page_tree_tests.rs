@@ -60,6 +60,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         tree.cache_page(0, page.clone());
@@ -83,6 +84,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         assert_eq!(page.width(), 612.0);
@@ -98,6 +100,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 90,
+            annotations: None,
         };
 
         // Width and height should be swapped
@@ -114,6 +117,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 270,
+            annotations: None,
         };
 
         // Width and height should be swapped
@@ -130,6 +134,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 180,
+            annotations: None,
         };
 
         // Dimensions should remain the same
@@ -158,6 +163,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         let resources = page.get_resources();
@@ -180,6 +186,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         let resources = page.get_resources();
@@ -202,6 +209,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         let cloned = page.clone_with_resources();
@@ -241,6 +249,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         let cloned = page.clone_with_resources();
@@ -293,6 +302,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         // Test that content_streams returns empty vec when no Contents
@@ -395,6 +405,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: Some([10.0, 10.0, 602.0, 782.0]),
             rotation: 90,
+            annotations: None,
         };
 
         let debug_str = format!("{:?}", page);
@@ -418,6 +429,7 @@ startxref\n\
             media_box: [0.0, 0.0, 595.0, 842.0], // A4
             crop_box: Some([20.0, 20.0, 575.0, 822.0]),
             rotation: 180,
+            annotations: None,
         };
 
         let cloned = page.clone();
@@ -441,6 +453,7 @@ startxref\n\
                 media_box: [0.0, 0.0, 612.0, 792.0],
                 crop_box: None,
                 rotation: 0,
+                annotations: None,
             };
             tree.cache_page(i, page);
         }
@@ -466,6 +479,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: Some([50.0, 50.0, 562.0, 742.0]),
             rotation: 0,
+            annotations: None,
         };
 
         assert_eq!(page.width(), 612.0); // width is based on MediaBox
@@ -483,6 +497,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         // Test 0 degrees
@@ -536,6 +551,7 @@ startxref\n\
             media_box: [0.0, 0.0, 595.0, 842.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
         assert_eq!(page_a4.width(), 595.0);
         assert_eq!(page_a4.height(), 842.0);
@@ -548,6 +564,7 @@ startxref\n\
             media_box: [0.0, 0.0, 842.0, 595.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
         assert_eq!(page_a4_landscape.width(), 842.0);
         assert_eq!(page_a4_landscape.height(), 595.0);
@@ -560,6 +577,7 @@ startxref\n\
             media_box: [100.0, 50.0, 700.0, 900.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
         assert_eq!(page_custom.width(), 600.0); // 700 - 100
         assert_eq!(page_custom.height(), 850.0); // 900 - 50
@@ -674,6 +692,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         assert!(page.get_resources().is_none());
@@ -707,6 +726,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         let resources = page.get_resources().unwrap();
@@ -737,6 +757,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         tree.cache_page(large_index, page);
@@ -766,6 +787,7 @@ startxref\n\
             media_box: [0.0, 0.0, 612.0, 792.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
 
         tree.cache_page(0, page);
@@ -782,6 +804,7 @@ startxref\n\
             media_box: [0.0, 0.0, 1.0, 1.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
         assert_eq!(small_page.width(), 1.0);
         assert_eq!(small_page.height(), 1.0);
@@ -794,6 +817,7 @@ startxref\n\
             media_box: [0.0, 0.0, 14400.0, 14400.0], // 200x200 inches at 72 DPI
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
         assert_eq!(large_page.width(), 14400.0);
         assert_eq!(large_page.height(), 14400.0);
@@ -806,6 +830,7 @@ startxref\n\
             media_box: [-100.0, -50.0, 500.0, 700.0],
             crop_box: None,
             rotation: 0,
+            annotations: None,
         };
         assert_eq!(negative_page.width(), 600.0); // 500 - (-100)
         assert_eq!(negative_page.height(), 750.0); // 700 - (-50)

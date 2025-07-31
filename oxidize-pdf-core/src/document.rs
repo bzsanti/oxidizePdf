@@ -1,9 +1,16 @@
 use crate::error::Result;
+use crate::forms::{AcroForm, FormManager};
 use crate::objects::{Object, ObjectId};
 use crate::page::Page;
+use crate::page_labels::PageLabelTree;
+use crate::structure::{NamedDestinations, OutlineTree, PageTree};
+use crate::text::{FontEncoding, FontWithEncoding};
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+mod encryption;
+pub use encryption::{DocumentEncryption, EncryptionStrength};
 
 /// A PDF document that can contain multiple pages and metadata.
 ///
@@ -28,6 +35,18 @@ pub struct Document {
     #[allow(dead_code)]
     pub(crate) next_object_id: u32,
     pub(crate) metadata: DocumentMetadata,
+    pub(crate) encryption: Option<DocumentEncryption>,
+    pub(crate) outline: Option<OutlineTree>,
+    pub(crate) named_destinations: Option<NamedDestinations>,
+    #[allow(dead_code)]
+    pub(crate) page_tree: Option<PageTree>,
+    pub(crate) page_labels: Option<PageLabelTree>,
+    /// Default font encoding to use for fonts when no encoding is specified
+    pub(crate) default_font_encoding: Option<FontEncoding>,
+    /// Interactive form data (AcroForm)
+    pub(crate) acro_form: Option<AcroForm>,
+    /// Form manager for handling interactive forms
+    pub(crate) form_manager: Option<FormManager>,
 }
 
 /// Metadata for a PDF document.
@@ -75,6 +94,14 @@ impl Document {
             objects: HashMap::new(),
             next_object_id: 1,
             metadata: DocumentMetadata::default(),
+            encryption: None,
+            outline: None,
+            named_destinations: None,
+            page_tree: None,
+            page_labels: None,
+            default_font_encoding: None,
+            acro_form: None,
+            form_manager: None,
         }
     }
 
@@ -101,6 +128,91 @@ impl Document {
     /// Sets the document keywords.
     pub fn set_keywords(&mut self, keywords: impl Into<String>) {
         self.metadata.keywords = Some(keywords.into());
+    }
+
+    /// Set document encryption
+    pub fn set_encryption(&mut self, encryption: DocumentEncryption) {
+        self.encryption = Some(encryption);
+    }
+
+    /// Set simple encryption with passwords
+    pub fn encrypt_with_passwords(
+        &mut self,
+        user_password: impl Into<String>,
+        owner_password: impl Into<String>,
+    ) {
+        self.encryption = Some(DocumentEncryption::with_passwords(
+            user_password,
+            owner_password,
+        ));
+    }
+
+    /// Check if document is encrypted
+    pub fn is_encrypted(&self) -> bool {
+        self.encryption.is_some()
+    }
+
+    /// Set document outline (bookmarks)
+    pub fn set_outline(&mut self, outline: OutlineTree) {
+        self.outline = Some(outline);
+    }
+
+    /// Get document outline
+    pub fn outline(&self) -> Option<&OutlineTree> {
+        self.outline.as_ref()
+    }
+
+    /// Get mutable document outline
+    pub fn outline_mut(&mut self) -> Option<&mut OutlineTree> {
+        self.outline.as_mut()
+    }
+
+    /// Set named destinations
+    pub fn set_named_destinations(&mut self, destinations: NamedDestinations) {
+        self.named_destinations = Some(destinations);
+    }
+
+    /// Get named destinations
+    pub fn named_destinations(&self) -> Option<&NamedDestinations> {
+        self.named_destinations.as_ref()
+    }
+
+    /// Get mutable named destinations
+    pub fn named_destinations_mut(&mut self) -> Option<&mut NamedDestinations> {
+        self.named_destinations.as_mut()
+    }
+
+    /// Set page labels
+    pub fn set_page_labels(&mut self, labels: PageLabelTree) {
+        self.page_labels = Some(labels);
+    }
+
+    /// Get page labels
+    pub fn page_labels(&self) -> Option<&PageLabelTree> {
+        self.page_labels.as_ref()
+    }
+
+    /// Get mutable page labels
+    pub fn page_labels_mut(&mut self) -> Option<&mut PageLabelTree> {
+        self.page_labels.as_mut()
+    }
+
+    /// Get page label for a specific page
+    pub fn get_page_label(&self, page_index: u32) -> String {
+        self.page_labels
+            .as_ref()
+            .and_then(|labels| labels.get_label(page_index))
+            .unwrap_or_else(|| (page_index + 1).to_string())
+    }
+
+    /// Get all page labels
+    pub fn get_all_page_labels(&self) -> Vec<String> {
+        let page_count = self.pages.len() as u32;
+        if let Some(labels) = &self.page_labels {
+            labels.get_all_labels(page_count)
+        } else {
+            (1..=page_count).map(|i| i.to_string()).collect()
+        }
     }
 
     /// Sets the document creator (software that created the original document).
@@ -138,9 +250,82 @@ impl Document {
         self.metadata.modification_date = Some(Utc::now());
     }
 
+    /// Sets the default font encoding for fonts that don't specify an encoding.
+    ///
+    /// This encoding will be applied to fonts in the PDF font dictionary when
+    /// no explicit encoding is specified. Setting this to `None` (the default)
+    /// means no encoding metadata will be added to fonts unless explicitly specified.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, text::FontEncoding};
+    ///
+    /// let mut doc = Document::new();
+    /// doc.set_default_font_encoding(Some(FontEncoding::WinAnsiEncoding));
+    /// ```
+    pub fn set_default_font_encoding(&mut self, encoding: Option<FontEncoding>) {
+        self.default_font_encoding = encoding;
+    }
+
+    /// Gets the current default font encoding.
+    pub fn default_font_encoding(&self) -> Option<FontEncoding> {
+        self.default_font_encoding
+    }
+
+    /// Gets all fonts used in the document with their encodings.
+    ///
+    /// This scans all pages and collects the unique fonts used, applying
+    /// the default encoding where no explicit encoding is specified.
+    pub(crate) fn get_fonts_with_encodings(&self) -> Vec<FontWithEncoding> {
+        let mut fonts_used = HashSet::new();
+
+        // Collect fonts from all pages
+        for page in &self.pages {
+            // Get fonts from text content
+            for font in page.get_used_fonts() {
+                let font_with_encoding = match self.default_font_encoding {
+                    Some(default_encoding) => FontWithEncoding::new(font, Some(default_encoding)),
+                    None => FontWithEncoding::without_encoding(font),
+                };
+                fonts_used.insert(font_with_encoding);
+            }
+        }
+
+        fonts_used.into_iter().collect()
+    }
+
     /// Gets the number of pages in the document.
     pub fn page_count(&self) -> usize {
         self.pages.len()
+    }
+
+    /// Gets a reference to the AcroForm (interactive form) if present.
+    pub fn acro_form(&self) -> Option<&AcroForm> {
+        self.acro_form.as_ref()
+    }
+
+    /// Gets a mutable reference to the AcroForm (interactive form) if present.
+    pub fn acro_form_mut(&mut self) -> Option<&mut AcroForm> {
+        self.acro_form.as_mut()
+    }
+
+    /// Enables interactive forms by creating a FormManager if not already present.
+    /// The FormManager handles both the AcroForm and the connection with page widgets.
+    pub fn enable_forms(&mut self) -> &mut FormManager {
+        if self.form_manager.is_none() {
+            self.form_manager = Some(FormManager::new());
+        }
+        if self.acro_form.is_none() {
+            self.acro_form = Some(AcroForm::new());
+        }
+        self.form_manager.as_mut().unwrap()
+    }
+
+    /// Disables interactive forms by removing both the AcroForm and FormManager.
+    pub fn disable_forms(&mut self) {
+        self.acro_form = None;
+        self.form_manager = None;
     }
 
     /// Saves the document to a file.
@@ -536,7 +721,7 @@ mod tests {
             // Add objects and verify they're managed properly
             let obj1 = Object::Boolean(true);
             let obj2 = Object::Integer(42);
-            let obj3 = Object::Real(3.14);
+            let obj3 = Object::Real(std::f64::consts::PI);
 
             let id1 = doc.add_object(obj1.clone());
             let id2 = doc.add_object(obj2.clone());

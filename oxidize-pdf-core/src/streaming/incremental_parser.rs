@@ -349,4 +349,414 @@ mod tests {
         parser.feed(b"%%EOF\n").unwrap();
         assert!(parser.is_complete());
     }
+
+    #[test]
+    fn test_incremental_parser_default() {
+        let parser = IncrementalParser::default();
+        assert!(!parser.is_complete());
+        assert!(matches!(parser.state, ParserState::Initial));
+    }
+
+    #[test]
+    fn test_parse_event_debug() {
+        let events = vec![
+            ParseEvent::Header {
+                version: "1.7".to_string(),
+            },
+            ParseEvent::ObjectStart {
+                id: 1,
+                generation: 0,
+            },
+            ParseEvent::ObjectEnd {
+                id: 1,
+                generation: 0,
+                object: PdfObject::Null,
+            },
+            ParseEvent::StreamData {
+                object_id: 1,
+                data: vec![1, 2, 3],
+            },
+            ParseEvent::XRef { entries: vec![] },
+            ParseEvent::Trailer {
+                dict: PdfDictionary::new(),
+            },
+            ParseEvent::EndOfFile,
+        ];
+
+        for event in events {
+            let debug_str = format!("{:?}", event);
+            assert!(!debug_str.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_xref_entry_debug_clone() {
+        let entry = XRefEntry {
+            object_number: 5,
+            generation: 2,
+            offset: 1024,
+            in_use: true,
+        };
+
+        let debug_str = format!("{:?}", entry);
+        assert!(debug_str.contains("XRefEntry"));
+        assert!(debug_str.contains("5"));
+
+        let cloned = entry.clone();
+        assert_eq!(cloned.object_number, entry.object_number);
+        assert_eq!(cloned.generation, entry.generation);
+        assert_eq!(cloned.offset, entry.offset);
+        assert_eq!(cloned.in_use, entry.in_use);
+    }
+
+    #[test]
+    fn test_parser_state_debug() {
+        let states = vec![
+            ParserState::Initial,
+            ParserState::InObject {
+                id: 1,
+                generation: 0,
+            },
+            ParserState::InStream { object_id: 2 },
+            ParserState::InXRef,
+            ParserState::InTrailer,
+            ParserState::Complete,
+        ];
+
+        for state in states {
+            let debug_str = format!("{:?}", state);
+            assert!(!debug_str.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_feed_empty_data() {
+        let mut parser = IncrementalParser::new();
+        parser.feed(b"").unwrap();
+
+        let events = parser.take_events();
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_feed_partial_lines() {
+        let mut parser = IncrementalParser::new();
+
+        // Feed partial line
+        parser.feed(b"%PDF-").unwrap();
+        let events1 = parser.take_events();
+        assert!(events1.is_empty());
+
+        // Complete the line
+        parser.feed(b"1.7\n").unwrap();
+        let events2 = parser.take_events();
+        assert_eq!(events2.len(), 1);
+
+        match &events2[0] {
+            ParseEvent::Header { version } => assert_eq!(version, "1.7"),
+            _ => panic!("Expected Header event"),
+        }
+    }
+
+    #[test]
+    fn test_feed_multiple_lines() {
+        let mut parser = IncrementalParser::new();
+        let data = b"%PDF-1.7\n1 0 obj\nendobj\n";
+
+        parser.feed(data).unwrap();
+        let events = parser.take_events();
+
+        assert!(events.len() >= 3); // Header, ObjectStart, ObjectEnd
+    }
+
+    #[test]
+    fn test_parse_object_header_valid() {
+        let parser = IncrementalParser::new();
+
+        assert_eq!(parser.parse_object_header("1 0 obj"), Some((1, 0)));
+        assert_eq!(parser.parse_object_header("42 5 obj"), Some((42, 5)));
+        assert_eq!(
+            parser.parse_object_header("999 65535 obj"),
+            Some((999, 65535))
+        );
+    }
+
+    #[test]
+    fn test_parse_object_header_invalid() {
+        let parser = IncrementalParser::new();
+
+        assert_eq!(parser.parse_object_header("1 0"), None);
+        assert_eq!(parser.parse_object_header("1 obj"), None);
+        assert_eq!(parser.parse_object_header("obj"), None);
+        assert_eq!(parser.parse_object_header("not an object"), None);
+        assert_eq!(parser.parse_object_header("abc 0 obj"), None);
+        assert_eq!(parser.parse_object_header("1 abc obj"), None);
+    }
+
+    #[test]
+    fn test_parse_xref_entry_valid() {
+        let parser = IncrementalParser::new();
+
+        let entry = parser.parse_xref_entry("0000000000 65535 f").unwrap();
+        assert_eq!(entry.offset, 0);
+        assert_eq!(entry.generation, 65535);
+        assert!(!entry.in_use);
+
+        let entry = parser.parse_xref_entry("0000001024 00000 n").unwrap();
+        assert_eq!(entry.offset, 1024);
+        assert_eq!(entry.generation, 0);
+        assert!(entry.in_use);
+    }
+
+    #[test]
+    fn test_parse_xref_entry_invalid() {
+        let parser = IncrementalParser::new();
+
+        assert!(parser.parse_xref_entry("invalid").is_none());
+        assert!(parser.parse_xref_entry("123 456").is_none());
+        assert!(parser.parse_xref_entry("abc def ghi").is_none());
+        assert!(parser.parse_xref_entry("").is_none());
+    }
+
+    #[test]
+    fn test_object_to_stream_transition() {
+        let mut parser = IncrementalParser::new();
+        parser.state = ParserState::InObject {
+            id: 3,
+            generation: 1,
+        };
+
+        parser.feed(b"stream\n").unwrap();
+        assert!(matches!(
+            parser.state,
+            ParserState::InStream { object_id: 3 }
+        ));
+    }
+
+    #[test]
+    fn test_stream_data_collection() {
+        let mut parser = IncrementalParser::new();
+        parser.state = ParserState::InStream { object_id: 5 };
+
+        parser.feed(b"line1\nline2\nendstream\n").unwrap();
+        let events = parser.take_events();
+
+        let stream_events: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, ParseEvent::StreamData { .. }))
+            .collect();
+
+        assert_eq!(stream_events.len(), 2);
+
+        match &stream_events[0] {
+            ParseEvent::StreamData { object_id, data } => {
+                assert_eq!(*object_id, 5);
+                assert_eq!(data, b"line1");
+            }
+            _ => panic!("Expected StreamData"),
+        }
+    }
+
+    #[test]
+    fn test_stream_to_object_transition() {
+        let mut parser = IncrementalParser::new();
+        parser.state = ParserState::InStream { object_id: 7 };
+
+        parser.feed(b"endstream\n").unwrap();
+        assert!(matches!(
+            parser.state,
+            ParserState::InObject {
+                id: 7,
+                generation: 0
+            }
+        ));
+    }
+
+    #[test]
+    fn test_xref_to_trailer_transition() {
+        let mut parser = IncrementalParser::new();
+        parser.state = ParserState::InXRef;
+
+        parser.feed(b"trailer\n").unwrap();
+        assert!(matches!(parser.state, ParserState::InTrailer));
+    }
+
+    #[test]
+    fn test_ignore_input_after_completion() {
+        let mut parser = IncrementalParser::new();
+        parser.state = ParserState::Complete;
+
+        parser.feed(b"any additional input\n").unwrap();
+        let events = parser.take_events();
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_process_incrementally_with_io_error() {
+        use std::io::Error;
+
+        struct ErrorReader;
+
+        impl Read for ErrorReader {
+            fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+                Err(Error::other("Test error"))
+            }
+        }
+
+        let reader = ErrorReader;
+        let result = process_incrementally(reader, |_event| Ok(()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_process_incrementally_with_callback_error() {
+        use std::io::Cursor;
+
+        let data = b"%PDF-1.7\n";
+        let cursor = Cursor::new(data);
+
+        let result = process_incrementally(cursor, |_event| {
+            Err(PdfError::ParseError("Callback error".to_string()))
+        });
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_process_incrementally_empty_reader() {
+        use std::io::Cursor;
+
+        let data = b"";
+        let cursor = Cursor::new(data);
+
+        let mut event_count = 0;
+        process_incrementally(cursor, |_event| {
+            event_count += 1;
+            Ok(())
+        })
+        .unwrap();
+
+        assert_eq!(event_count, 0);
+    }
+
+    #[test]
+    fn test_take_events_clears_buffer() {
+        let mut parser = IncrementalParser::new();
+        parser.feed(b"%PDF-1.7\n").unwrap();
+
+        assert!(!parser.events.is_empty());
+
+        let events = parser.take_events();
+        assert_eq!(events.len(), 1);
+        assert!(parser.events.is_empty());
+
+        // Subsequent call should return empty
+        let events2 = parser.take_events();
+        assert!(events2.is_empty());
+    }
+
+    #[test]
+    fn test_parser_with_whitespace_handling() {
+        let mut parser = IncrementalParser::new();
+
+        // Test with extra whitespace
+        parser.feed(b"   %PDF-1.7   \n").unwrap();
+        let events = parser.take_events();
+
+        match &events[0] {
+            ParseEvent::Header { version } => assert_eq!(version, "1.7"),
+            _ => panic!("Expected Header event"),
+        }
+    }
+
+    #[test]
+    fn test_object_parsing_with_generation() {
+        let mut parser = IncrementalParser::new();
+        parser.feed(b"123 456 obj\n").unwrap();
+
+        let events = parser.take_events();
+        match &events[0] {
+            ParseEvent::ObjectStart { id, generation } => {
+                assert_eq!(*id, 123);
+                assert_eq!(*generation, 456);
+            }
+            _ => panic!("Expected ObjectStart event"),
+        }
+    }
+
+    #[test]
+    fn test_complete_pdf_parsing_sequence() {
+        let mut parser = IncrementalParser::new();
+
+        let pdf_content = b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n0 1\n0000000000 65535 f\ntrailer\n<< /Size 1 >>\n%%EOF\n";
+
+        parser.feed(pdf_content).unwrap();
+        let events = parser.take_events();
+
+        // Should have header, object start, object end, and eof events
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::Header { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::ObjectStart { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ParseEvent::ObjectEnd { .. })));
+        assert!(events.iter().any(|e| matches!(e, ParseEvent::EndOfFile)));
+
+        assert!(parser.is_complete());
+    }
+
+    #[test]
+    fn test_xref_state_from_any_state() {
+        let mut parser = IncrementalParser::new();
+
+        // Start in object state
+        parser.state = ParserState::InObject {
+            id: 1,
+            generation: 0,
+        };
+
+        // xref should transition from any state
+        parser.feed(b"xref\n").unwrap();
+        assert!(matches!(parser.state, ParserState::InXRef));
+    }
+
+    #[test]
+    fn test_buffer_management() {
+        let mut parser = IncrementalParser::new();
+
+        // Feed data without newlines
+        parser.feed(b"partial").unwrap();
+        assert!(parser.buffer.contains("partial"));
+
+        // Feed completion with newline
+        parser.feed(b" line\n").unwrap();
+
+        // Buffer should be cleared after processing the line
+        assert!(!parser.buffer.contains("partial"));
+    }
+
+    #[test]
+    fn test_multiple_objects_in_sequence() {
+        let mut parser = IncrementalParser::new();
+
+        let content = b"1 0 obj\n<< >>\nendobj\n2 0 obj\n<< >>\nendobj\n";
+        parser.feed(content).unwrap();
+
+        let events = parser.take_events();
+
+        let object_starts: Vec<_> = events
+            .iter()
+            .filter_map(|e| match e {
+                ParseEvent::ObjectStart { id, generation } => Some((*id, *generation)),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(object_starts.len(), 2);
+        assert_eq!(object_starts[0], (1, 0));
+        assert_eq!(object_starts[1], (2, 0));
+    }
 }

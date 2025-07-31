@@ -1,12 +1,30 @@
 mod color;
+mod color_profiles;
 mod image;
 mod path;
+mod patterns;
+mod shadings;
+mod state;
 
 pub use color::Color;
+pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
 pub use image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
 pub use path::{LineCap, LineJoin, PathBuilder};
+pub use patterns::{
+    PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
+    TilingType,
+};
+pub use shadings::{
+    AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
+    ShadingManager, ShadingPattern, ShadingType,
+};
+pub use state::{
+    BlendMode, ExtGState, ExtGStateFont, ExtGStateManager, Halftone, LineDashPattern,
+    RenderingIntent, SoftMask, TransferFunction,
+};
 
 use crate::error::Result;
+use crate::text::{ColumnContent, ColumnLayout, Font, ListElement, Table};
 use std::fmt::Write;
 
 #[derive(Clone)]
@@ -17,6 +35,15 @@ pub struct GraphicsContext {
     line_width: f64,
     fill_opacity: f64,
     stroke_opacity: f64,
+    // Extended Graphics State support
+    extgstate_manager: ExtGStateManager,
+    current_dash_pattern: Option<LineDashPattern>,
+    current_miter_limit: f64,
+    current_line_cap: LineCap,
+    current_line_join: LineJoin,
+    current_rendering_intent: RenderingIntent,
+    current_flatness: f64,
+    current_smoothness: f64,
 }
 
 impl Default for GraphicsContext {
@@ -34,6 +61,15 @@ impl GraphicsContext {
             line_width: 1.0,
             fill_opacity: 1.0,
             stroke_opacity: 1.0,
+            // Extended Graphics State defaults
+            extgstate_manager: ExtGStateManager::new(),
+            current_dash_pattern: None,
+            current_miter_limit: 10.0,
+            current_line_cap: LineCap::Butt,
+            current_line_join: LineJoin::Miter,
+            current_rendering_intent: RenderingIntent::RelativeColorimetric,
+            current_flatness: 1.0,
+            current_smoothness: 0.0,
         }
     }
 
@@ -118,11 +154,13 @@ impl GraphicsContext {
     }
 
     pub fn set_line_cap(&mut self, cap: LineCap) -> &mut Self {
+        self.current_line_cap = cap;
         writeln!(&mut self.operations, "{} J", cap as u8).unwrap();
         self
     }
 
     pub fn set_line_join(&mut self, join: LineJoin) -> &mut Self {
+        self.current_line_join = join;
         writeln!(&mut self.operations, "{} j", join as u8).unwrap();
         self
     }
@@ -310,6 +348,239 @@ impl GraphicsContext {
     /// Clear all operations
     pub fn clear(&mut self) {
         self.operations.clear();
+    }
+
+    /// Begin a text object
+    pub fn begin_text(&mut self) -> &mut Self {
+        self.operations.push_str("BT\n");
+        self
+    }
+
+    /// End a text object
+    pub fn end_text(&mut self) -> &mut Self {
+        self.operations.push_str("ET\n");
+        self
+    }
+
+    /// Set font and size
+    pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
+        writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size).unwrap();
+        self
+    }
+
+    /// Set text position
+    pub fn set_text_position(&mut self, x: f64, y: f64) -> &mut Self {
+        writeln!(&mut self.operations, "{x:.2} {y:.2} Td").unwrap();
+        self
+    }
+
+    /// Show text
+    pub fn show_text(&mut self, text: &str) -> Result<&mut Self> {
+        // Escape special characters in PDF string
+        self.operations.push('(');
+        for ch in text.chars() {
+            match ch {
+                '(' => self.operations.push_str("\\("),
+                ')' => self.operations.push_str("\\)"),
+                '\\' => self.operations.push_str("\\\\"),
+                '\n' => self.operations.push_str("\\n"),
+                '\r' => self.operations.push_str("\\r"),
+                '\t' => self.operations.push_str("\\t"),
+                _ => self.operations.push(ch),
+            }
+        }
+        self.operations.push_str(") Tj\n");
+        Ok(self)
+    }
+
+    /// Render a table
+    pub fn render_table(&mut self, table: &Table) -> Result<()> {
+        table.render(self)
+    }
+
+    /// Render a list
+    pub fn render_list(&mut self, list: &ListElement) -> Result<()> {
+        match list {
+            ListElement::Ordered(ordered) => ordered.render(self),
+            ListElement::Unordered(unordered) => unordered.render(self),
+        }
+    }
+
+    /// Render column layout
+    pub fn render_column_layout(
+        &mut self,
+        layout: &ColumnLayout,
+        content: &ColumnContent,
+        x: f64,
+        y: f64,
+        height: f64,
+    ) -> Result<()> {
+        layout.render(self, content, x, y, height)
+    }
+
+    // Extended Graphics State methods
+
+    /// Set line dash pattern
+    pub fn set_line_dash_pattern(&mut self, pattern: LineDashPattern) -> &mut Self {
+        self.current_dash_pattern = Some(pattern.clone());
+        writeln!(&mut self.operations, "{} d", pattern.to_pdf_string()).unwrap();
+        self
+    }
+
+    /// Set line dash pattern to solid (no dashes)
+    pub fn set_line_solid(&mut self) -> &mut Self {
+        self.current_dash_pattern = None;
+        self.operations.push_str("[] 0 d\n");
+        self
+    }
+
+    /// Set miter limit
+    pub fn set_miter_limit(&mut self, limit: f64) -> &mut Self {
+        self.current_miter_limit = limit.max(1.0);
+        writeln!(&mut self.operations, "{:.2} M", self.current_miter_limit).unwrap();
+        self
+    }
+
+    /// Set rendering intent
+    pub fn set_rendering_intent(&mut self, intent: RenderingIntent) -> &mut Self {
+        self.current_rendering_intent = intent;
+        writeln!(&mut self.operations, "/{} ri", intent.pdf_name()).unwrap();
+        self
+    }
+
+    /// Set flatness tolerance
+    pub fn set_flatness(&mut self, flatness: f64) -> &mut Self {
+        self.current_flatness = flatness.clamp(0.0, 100.0);
+        writeln!(&mut self.operations, "{:.2} i", self.current_flatness).unwrap();
+        self
+    }
+
+    /// Apply an ExtGState dictionary
+    pub fn apply_extgstate(&mut self, state: ExtGState) -> Result<&mut Self> {
+        let state_name = self.extgstate_manager.add_state(state)?;
+        writeln!(&mut self.operations, "/{state_name} gs").unwrap();
+        Ok(self)
+    }
+
+    /// Create and apply a custom ExtGState
+    pub fn with_extgstate<F>(&mut self, builder: F) -> Result<&mut Self>
+    where
+        F: FnOnce(ExtGState) -> ExtGState,
+    {
+        let state = builder(ExtGState::new());
+        self.apply_extgstate(state)
+    }
+
+    /// Set blend mode for transparency
+    pub fn set_blend_mode(&mut self, mode: BlendMode) -> Result<&mut Self> {
+        let state = ExtGState::new().with_blend_mode(mode);
+        self.apply_extgstate(state)
+    }
+
+    /// Set alpha for both stroke and fill operations
+    pub fn set_alpha(&mut self, alpha: f64) -> Result<&mut Self> {
+        let state = ExtGState::new().with_alpha(alpha);
+        self.apply_extgstate(state)
+    }
+
+    /// Set alpha for stroke operations only
+    pub fn set_alpha_stroke(&mut self, alpha: f64) -> Result<&mut Self> {
+        let state = ExtGState::new().with_alpha_stroke(alpha);
+        self.apply_extgstate(state)
+    }
+
+    /// Set alpha for fill operations only
+    pub fn set_alpha_fill(&mut self, alpha: f64) -> Result<&mut Self> {
+        let state = ExtGState::new().with_alpha_fill(alpha);
+        self.apply_extgstate(state)
+    }
+
+    /// Set overprint for stroke operations
+    pub fn set_overprint_stroke(&mut self, overprint: bool) -> Result<&mut Self> {
+        let state = ExtGState::new().with_overprint_stroke(overprint);
+        self.apply_extgstate(state)
+    }
+
+    /// Set overprint for fill operations
+    pub fn set_overprint_fill(&mut self, overprint: bool) -> Result<&mut Self> {
+        let state = ExtGState::new().with_overprint_fill(overprint);
+        self.apply_extgstate(state)
+    }
+
+    /// Set stroke adjustment
+    pub fn set_stroke_adjustment(&mut self, adjustment: bool) -> Result<&mut Self> {
+        let state = ExtGState::new().with_stroke_adjustment(adjustment);
+        self.apply_extgstate(state)
+    }
+
+    /// Set smoothness tolerance
+    pub fn set_smoothness(&mut self, smoothness: f64) -> Result<&mut Self> {
+        self.current_smoothness = smoothness.clamp(0.0, 1.0);
+        let state = ExtGState::new().with_smoothness(self.current_smoothness);
+        self.apply_extgstate(state)
+    }
+
+    // Getters for extended graphics state
+
+    /// Get current line dash pattern
+    pub fn line_dash_pattern(&self) -> Option<&LineDashPattern> {
+        self.current_dash_pattern.as_ref()
+    }
+
+    /// Get current miter limit
+    pub fn miter_limit(&self) -> f64 {
+        self.current_miter_limit
+    }
+
+    /// Get current line cap
+    pub fn line_cap(&self) -> LineCap {
+        self.current_line_cap
+    }
+
+    /// Get current line join
+    pub fn line_join(&self) -> LineJoin {
+        self.current_line_join
+    }
+
+    /// Get current rendering intent
+    pub fn rendering_intent(&self) -> RenderingIntent {
+        self.current_rendering_intent
+    }
+
+    /// Get current flatness tolerance
+    pub fn flatness(&self) -> f64 {
+        self.current_flatness
+    }
+
+    /// Get current smoothness tolerance
+    pub fn smoothness(&self) -> f64 {
+        self.current_smoothness
+    }
+
+    /// Get the ExtGState manager (for advanced usage)
+    pub fn extgstate_manager(&self) -> &ExtGStateManager {
+        &self.extgstate_manager
+    }
+
+    /// Get mutable ExtGState manager (for advanced usage)
+    pub fn extgstate_manager_mut(&mut self) -> &mut ExtGStateManager {
+        &mut self.extgstate_manager
+    }
+
+    /// Generate ExtGState resource dictionary for PDF
+    pub fn generate_extgstate_resources(&self) -> Result<String> {
+        self.extgstate_manager.to_resource_dictionary()
+    }
+
+    /// Check if any extended graphics states are defined
+    pub fn has_extgstates(&self) -> bool {
+        self.extgstate_manager.count() > 0
+    }
+
+    /// Add a command to the operations
+    pub fn add_command(&mut self, command: &str) {
+        self.operations.push_str(command);
+        self.operations.push('\n');
     }
 }
 
@@ -761,5 +1032,72 @@ mod tests {
         assert!(ops.contains("10.00 10.00 100.00 100.00 re"));
         assert!(ops.contains("1.000 0.000 0.000 rg")); // Red color
         assert!(ops.contains("f")); // Fill
+    }
+
+    #[test]
+    fn test_begin_end_text() {
+        let mut ctx = GraphicsContext::new();
+        ctx.begin_text();
+        assert!(ctx.operations().contains("BT\n"));
+
+        ctx.end_text();
+        assert!(ctx.operations().contains("ET\n"));
+    }
+
+    #[test]
+    fn test_set_font() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+        assert!(ctx.operations().contains("/Helvetica 12 Tf\n"));
+
+        ctx.set_font(Font::TimesBold, 14.5);
+        assert!(ctx.operations().contains("/Times-Bold 14.5 Tf\n"));
+    }
+
+    #[test]
+    fn test_set_text_position() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_text_position(100.0, 200.0);
+        assert!(ctx.operations().contains("100.00 200.00 Td\n"));
+    }
+
+    #[test]
+    fn test_show_text() {
+        let mut ctx = GraphicsContext::new();
+        ctx.show_text("Hello World").unwrap();
+        assert!(ctx.operations().contains("(Hello World) Tj\n"));
+    }
+
+    #[test]
+    fn test_show_text_with_escaping() {
+        let mut ctx = GraphicsContext::new();
+        ctx.show_text("Test (parentheses)").unwrap();
+        assert!(ctx.operations().contains("(Test \\(parentheses\\)) Tj\n"));
+
+        ctx.clear();
+        ctx.show_text("Back\\slash").unwrap();
+        assert!(ctx.operations().contains("(Back\\\\slash) Tj\n"));
+
+        ctx.clear();
+        ctx.show_text("Line\nBreak").unwrap();
+        assert!(ctx.operations().contains("(Line\\nBreak) Tj\n"));
+    }
+
+    #[test]
+    fn test_text_operations_chaining() {
+        let mut ctx = GraphicsContext::new();
+        ctx.begin_text()
+            .set_font(Font::Courier, 10.0)
+            .set_text_position(50.0, 100.0)
+            .show_text("Test")
+            .unwrap()
+            .end_text();
+
+        let ops = ctx.operations();
+        assert!(ops.contains("BT\n"));
+        assert!(ops.contains("/Courier 10 Tf\n"));
+        assert!(ops.contains("50.00 100.00 Td\n"));
+        assert!(ops.contains("(Test) Tj\n"));
+        assert!(ops.contains("ET\n"));
     }
 }

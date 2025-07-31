@@ -43,9 +43,19 @@ pub enum PdfError {
 
     #[error("Operation cancelled")]
     OperationCancelled,
+
+    #[error("Encryption error: {0}")]
+    EncryptionError(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;
+
+// Convert AesError to PdfError
+impl From<crate::encryption::AesError> for PdfError {
+    fn from(err: crate::encryption::AesError) -> Self {
+        PdfError::EncryptionError(err.to_string())
+    }
+}
 
 // Separate error type for oxidize-pdf-core
 #[derive(Error, Debug)]

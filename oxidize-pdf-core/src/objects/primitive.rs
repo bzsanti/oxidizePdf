@@ -315,9 +315,9 @@ mod tests {
 
     #[test]
     fn test_from_floats() {
-        let obj: Object = 3.14f32.into();
+        let obj: Object = std::f32::consts::PI.into();
         if let Object::Real(val) = obj {
-            assert!((val - 3.14).abs() < 0.001);
+            assert!((val - std::f64::consts::PI).abs() < 0.001);
         } else {
             panic!("Expected Real object");
         }

@@ -88,9 +88,17 @@ pub struct PdfMerger {
     options: MergeOptions,
     /// Object number mapping for each input document
     object_mappings: Vec<HashMap<u32, u32>>,
+    /// Font name mapping for each input document (original name -> new unique name)
+    font_mappings: Vec<HashMap<String, String>>,
+    /// XObject name mapping for each input document (original name -> new unique name)
+    xobject_mappings: Vec<HashMap<String, String>>,
     /// Next available object number
     #[allow(dead_code)]
     next_object_num: u32,
+    /// Next available font index for unique naming
+    next_font_index: u32,
+    /// Next available XObject index for unique naming
+    next_xobject_index: u32,
 }
 
 impl PdfMerger {
@@ -100,7 +108,11 @@ impl PdfMerger {
             inputs: Vec::new(),
             options,
             object_mappings: Vec::new(),
+            font_mappings: Vec::new(),
+            xobject_mappings: Vec::new(),
             next_object_num: 1,
+            next_font_index: 1,
+            next_xobject_index: 1,
         }
     }
 
@@ -122,12 +134,23 @@ impl PdfMerger {
 
         let mut output_doc = Document::new();
 
+        // Initialize font and XObject mappings for each input
+        self.font_mappings.clear();
+        self.xobject_mappings.clear();
+        for _ in &self.inputs {
+            self.font_mappings.push(HashMap::new());
+            self.xobject_mappings.push(HashMap::new());
+        }
+
         // Process each input file
-        for (input_idx, input) in self.inputs.iter().enumerate() {
-            let document = PdfReader::open_document(&input.path).map_err(|e| {
+        for input_idx in 0..self.inputs.len() {
+            let input_path = self.inputs[input_idx].path.clone();
+            let input_pages = self.inputs[input_idx].pages.clone();
+
+            let document = PdfReader::open_document(&input_path).map_err(|e| {
                 OperationError::ParseError(format!(
                     "Failed to open {}: {}",
-                    input.path.display(),
+                    input_path.display(),
                     e
                 ))
             })?;
@@ -141,7 +164,7 @@ impl PdfMerger {
                 .map_err(|e| OperationError::ParseError(e.to_string()))?
                 as usize;
 
-            let page_range = input.pages.as_ref().unwrap_or(&PageRange::All);
+            let page_range = input_pages.as_ref().unwrap_or(&PageRange::All);
 
             let page_indices = page_range.get_indices(total_pages)?;
 
@@ -201,7 +224,7 @@ impl PdfMerger {
 
     /// Convert a page for merging, handling object renumbering
     fn convert_page_for_merge(
-        &self,
+        &mut self,
         parsed_page: &ParsedPage,
         document: &PdfDocument<File>,
         input_idx: usize,
@@ -210,6 +233,37 @@ impl PdfMerger {
         let width = parsed_page.width();
         let height = parsed_page.height();
         let mut page = Page::new(width, height);
+
+        // Extract and map fonts from page resources
+        if let Some(resources) = parsed_page.get_resources() {
+            // Map fonts
+            if let Some(fonts_dict) = resources.get("Font").and_then(|f| f.as_dict()) {
+                for (font_name, _font_obj) in fonts_dict.0.iter() {
+                    // Map font names to unique names for this merge
+                    let font_name_str = font_name.0.as_str();
+                    if !self.font_mappings[input_idx].contains_key(font_name_str) {
+                        let new_font_name = format!("MF{}", self.next_font_index);
+                        self.font_mappings[input_idx]
+                            .insert(font_name_str.to_string(), new_font_name);
+                        self.next_font_index += 1;
+                    }
+                }
+            }
+
+            // Map XObjects (images, forms)
+            if let Some(xobjects_dict) = resources.get("XObject").and_then(|x| x.as_dict()) {
+                for (xobject_name, _xobject_obj) in xobjects_dict.0.iter() {
+                    // Map XObject names to unique names for this merge
+                    let xobject_name_str = xobject_name.0.as_str();
+                    if !self.xobject_mappings[input_idx].contains_key(xobject_name_str) {
+                        let new_xobject_name = format!("MX{}", self.next_xobject_index);
+                        self.xobject_mappings[input_idx]
+                            .insert(xobject_name_str.to_string(), new_xobject_name);
+                        self.next_xobject_index += 1;
+                    }
+                }
+            }
+        }
 
         // Get content streams
         let content_streams = document
@@ -257,7 +311,7 @@ impl PdfMerger {
         &self,
         page: &mut Page,
         operators: &[ContentOperation],
-        _input_idx: usize,
+        input_idx: usize,
     ) -> OperationResult<()> {
         // Track graphics state
         let mut text_object = false;
@@ -275,13 +329,22 @@ impl PdfMerger {
                     text_object = false;
                 }
                 ContentOperation::SetFont(name, size) => {
-                    // Map PDF font names to our fonts
-                    // TODO: Handle font resource remapping for merged documents
-                    current_font = match name.as_str() {
+                    // Use font mapping if available
+                    let mapped_name = self
+                        .font_mappings
+                        .get(input_idx)
+                        .and_then(|mapping| mapping.get(name))
+                        .unwrap_or(name);
+
+                    // Map PDF font names to our standard fonts
+                    // Note: In a full implementation, we would preserve custom fonts
+                    // by copying font resources and updating references
+                    current_font = match mapped_name.as_str() {
                         "Times-Roman" => crate::text::Font::TimesRoman,
                         "Times-Bold" => crate::text::Font::TimesBold,
                         "Times-Italic" => crate::text::Font::TimesItalic,
                         "Times-BoldItalic" => crate::text::Font::TimesBoldItalic,
+                        "Helvetica" => crate::text::Font::Helvetica,
                         "Helvetica-Bold" => crate::text::Font::HelveticaBold,
                         "Helvetica-Oblique" => crate::text::Font::HelveticaOblique,
                         "Helvetica-BoldOblique" => crate::text::Font::HelveticaBoldOblique,
@@ -289,7 +352,14 @@ impl PdfMerger {
                         "Courier-Bold" => crate::text::Font::CourierBold,
                         "Courier-Oblique" => crate::text::Font::CourierOblique,
                         "Courier-BoldOblique" => crate::text::Font::CourierBoldOblique,
-                        _ => crate::text::Font::Helvetica,
+                        _ => {
+                            // For non-standard fonts, default to Helvetica
+                            // A complete implementation would preserve the original font
+                            eprintln!(
+                                "Warning: Font '{mapped_name}' not supported, using Helvetica"
+                            );
+                            crate::text::Font::Helvetica
+                        }
                     };
                     current_font_size = *size;
                 }
@@ -338,9 +408,33 @@ impl PdfMerger {
                 ContentOperation::SetLineWidth(width) => {
                     page.graphics().set_line_width(*width as f64);
                 }
-                // TODO: Handle XObject references (images, forms) with remapping
-                ContentOperation::PaintXObject(_name) => {
-                    // Would need to remap XObject references
+                ContentOperation::PaintXObject(name) => {
+                    // Use XObject mapping if available
+                    let mapped_name = self
+                        .xobject_mappings
+                        .get(input_idx)
+                        .and_then(|mapping| mapping.get(name))
+                        .unwrap_or(name);
+
+                    // Note: In a complete implementation, we would copy the XObject
+                    // resource (image or form) and paint it with the new reference.
+                    // For now, we'll add a placeholder comment
+                    eprintln!(
+                        "Info: XObject '{name}' (mapped to '{mapped_name}') would be painted here. \
+                         Full XObject support requires resource copying."
+                    );
+
+                    // Add a visual placeholder for missing XObjects
+                    page.graphics()
+                        .set_fill_color(crate::graphics::Color::Rgb(0.9, 0.9, 0.9))
+                        .rect(current_x as f64, current_y as f64, 100.0, 100.0)
+                        .fill();
+
+                    page.text()
+                        .set_font(crate::text::Font::Helvetica, 10.0)
+                        .at(current_x as f64 + 10.0, current_y as f64 + 50.0)
+                        .write(&format!("[Image: {name}]"))
+                        .map_err(OperationError::PdfError)?;
                 }
                 _ => {
                     // Silently skip unimplemented operators for now

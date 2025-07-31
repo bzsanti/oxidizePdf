@@ -8,6 +8,7 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use oxidize_pdf::objects::{Array, Object};
 use oxidize_pdf::parser::object_stream::{ObjectStream, XRefEntryType};
 use oxidize_pdf::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
+use oxidize_pdf::parser::ParseOptions;
 use std::collections::HashMap;
 
 /// Generate test objects for benchmarking
@@ -208,7 +209,8 @@ fn benchmark_object_stream(c: &mut Criterion) {
                 b.iter(|| {
                     // Simulate parsing attempt (will likely fail but measures effort)
                     // Simulate parsing attempt (will likely fail but measures effort)
-                    let _ = ObjectStream::parse(black_box(stream.clone()));
+                    let _ =
+                        ObjectStream::parse(black_box(stream.clone()), &ParseOptions::default());
                 });
             },
         );

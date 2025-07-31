@@ -168,26 +168,32 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-      # Merge to main branch after successful release
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge to main
-        run: |
-          # Fetch the latest main branch
-          git fetch origin main:main
-          
-          # Checkout main
-          git checkout main
-          
-          # Merge the tag into main (using theirs strategy to prefer development version in conflicts)
-          git merge --no-ff --allow-unrelated-histories -X theirs ${{ github.ref }} -m "chore: merge release ${{ steps.get_version.outputs.VERSION }} to main
-
-          Automated merge after successful release of v${{ steps.get_version.outputs.VERSION }}
-          
-          [skip ci]"
-          
-          # Push to main
-          git push origin main
+      # Create PR to merge to main branch after successful release
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: merge release v${{ steps.get_version.outputs.VERSION }} to main"
+          title: "🚀 Release v${{ steps.get_version.outputs.VERSION }}"
+          body: |
+            ## Automated Release Merge
+            
+            This PR merges the release changes from development to main after successful release of v${{ steps.get_version.outputs.VERSION }}.
+            
+            ### Release Details:
+            - 📦 Packages published to crates.io
+            - 🏷️ GitHub Release created
+            - ✅ All tests passed
+            
+            ### Next Steps:
+            1. Review the changes
+            2. Approve and merge this PR
+            3. The release cycle will be complete
+            
+            ---
+            *This is an automated PR created by the release workflow.*
+          branch: release-v${{ steps.get_version.outputs.VERSION }}
+          base: main
+          labels: |
+            release
+            automated

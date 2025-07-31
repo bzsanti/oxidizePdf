@@ -1163,6 +1163,12 @@ impl ContentParser {
     }
 
     fn pop_array(&self, operands: &mut Vec<Token>) -> ParseResult<Vec<Token>> {
+        // First check if we have an ArrayEnd at the top (which we should for a complete array)
+        let has_array_end = matches!(operands.last(), Some(Token::ArrayEnd));
+        if has_array_end {
+            operands.pop(); // Remove the ArrayEnd
+        }
+
         let mut array = Vec::new();
         let mut found_start = false;
 
@@ -1172,6 +1178,10 @@ impl ContentParser {
                 Token::ArrayStart => {
                     found_start = true;
                     break;
+                }
+                Token::ArrayEnd => {
+                    // Skip any additional ArrayEnd tokens (shouldn't happen in well-formed PDFs)
+                    continue;
                 }
                 _ => array.push(token),
             }
@@ -1189,10 +1199,54 @@ impl ContentParser {
     }
 
     fn pop_dict_or_name(&self, operands: &mut Vec<Token>) -> ParseResult<HashMap<String, String>> {
-        // For now, we'll just return an empty map
-        // Full dictionary parsing would be more complex
-        operands.pop();
-        Ok(HashMap::new())
+        if let Some(token) = operands.pop() {
+            match token {
+                Token::Name(name) => {
+                    // Name token - this is a reference to properties in the resource dictionary
+                    // For now, we'll store it as a special entry to indicate it's a resource reference
+                    let mut props = HashMap::new();
+                    props.insert("__resource_ref".to_string(), name);
+                    Ok(props)
+                }
+                Token::DictStart => {
+                    // Inline dictionary - parse key-value pairs
+                    let mut props = HashMap::new();
+
+                    // Look for dictionary entries in remaining operands
+                    while let Some(value_token) = operands.pop() {
+                        if matches!(value_token, Token::DictEnd) {
+                            break;
+                        }
+
+                        // Expect key-value pairs
+                        if let Token::Name(key) = value_token {
+                            if let Some(value_token) = operands.pop() {
+                                let value = match value_token {
+                                    Token::Name(name) => name,
+                                    Token::String(s) => String::from_utf8_lossy(&s).to_string(),
+                                    Token::Integer(i) => i.to_string(),
+                                    Token::Number(f) => f.to_string(),
+                                    _ => continue, // Skip unsupported value types
+                                };
+                                props.insert(key, value);
+                            }
+                        }
+                    }
+
+                    Ok(props)
+                }
+                _ => {
+                    // Unexpected token type, treat as empty properties
+                    Ok(HashMap::new())
+                }
+            }
+        } else {
+            // No operand available
+            Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Expected dictionary or name for marked content properties".to_string(),
+            })
+        }
     }
 
     fn pop_color_components(&self, operands: &mut Vec<Token>) -> ParseResult<Vec<f32>> {
@@ -1286,12 +1340,15 @@ mod tests {
 
     #[test]
     fn test_tokenize_numbers() {
-        let input = b"123 -45 3.14 -0.5 .5";
+        let input = b"123 -45 3.14159 -0.5 .5";
         let mut tokenizer = ContentTokenizer::new(input);
 
         assert_eq!(tokenizer.next_token().unwrap(), Some(Token::Integer(123)));
         assert_eq!(tokenizer.next_token().unwrap(), Some(Token::Integer(-45)));
-        assert_eq!(tokenizer.next_token().unwrap(), Some(Token::Number(3.14)));
+        assert_eq!(
+            tokenizer.next_token().unwrap(),
+            Some(Token::Number(3.14159))
+        );
         assert_eq!(tokenizer.next_token().unwrap(), Some(Token::Number(-0.5)));
         assert_eq!(tokenizer.next_token().unwrap(), Some(Token::Number(0.5)));
         assert_eq!(tokenizer.next_token().unwrap(), None);
@@ -1904,6 +1961,62 @@ mod tests {
             let result = ContentParser::parse(content);
             // This should fail since dash pattern needs array, but test the error handling
             assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_pop_array_removes_array_end() {
+            // Test that pop_array correctly handles ArrayEnd tokens
+            let parser = ContentParser::new(b"");
+
+            // Test normal array: [1 2 3]
+            let mut operands = vec![
+                Token::ArrayStart,
+                Token::Integer(1),
+                Token::Integer(2),
+                Token::Integer(3),
+                Token::ArrayEnd,
+            ];
+            let result = parser.pop_array(&mut operands).unwrap();
+            assert_eq!(result.len(), 3);
+            assert!(operands.is_empty());
+
+            // Test array without ArrayEnd (backwards compatibility)
+            let mut operands = vec![Token::ArrayStart, Token::Number(1.5), Token::Number(2.5)];
+            let result = parser.pop_array(&mut operands).unwrap();
+            assert_eq!(result.len(), 2);
+            assert!(operands.is_empty());
+        }
+
+        #[test]
+        fn test_dash_array_parsing_valid() {
+            // Test that parser correctly parses valid dash arrays
+            let parser = ContentParser::new(b"");
+
+            // Test with valid numbers only
+            let valid_tokens = vec![Token::Number(3.0), Token::Integer(2)];
+            let result = parser.parse_dash_array(valid_tokens).unwrap();
+            assert_eq!(result, vec![3.0, 2.0]);
+
+            // Test empty dash array
+            let empty_tokens = vec![];
+            let result = parser.parse_dash_array(empty_tokens).unwrap();
+            let expected: Vec<f32> = vec![];
+            assert_eq!(result, expected);
+        }
+
+        #[test]
+        fn test_text_array_parsing_valid() {
+            // Test that parser correctly parses valid text arrays
+            let parser = ContentParser::new(b"");
+
+            // Test with valid elements only
+            let valid_tokens = vec![
+                Token::String(b"Hello".to_vec()),
+                Token::Number(-100.0),
+                Token::String(b"World".to_vec()),
+            ];
+            let result = parser.parse_text_array(valid_tokens).unwrap();
+            assert_eq!(result.len(), 3);
         }
 
         #[test]

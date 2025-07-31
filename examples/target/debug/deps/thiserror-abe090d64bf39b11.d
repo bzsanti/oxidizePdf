@@ -1,0 +1,10 @@
+/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf/examples/target/debug/deps/libthiserror-abe090d64bf39b11.rmeta: /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs
+
+/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf/examples/target/debug/deps/libthiserror-abe090d64bf39b11.rlib: /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs
+
+/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf/examples/target/debug/deps/thiserror-abe090d64bf39b11.d: /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs /Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs
+
+/Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs:
+/Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs:
+/Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs:
+/Users/santifdezmunoz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs:

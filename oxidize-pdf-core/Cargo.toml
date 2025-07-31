@@ -43,6 +43,9 @@ libc = "0.2"
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
 
+# Image processing dependencies (optional)
+image = { workspace = true, optional = true }
+
 # OCR dependencies (optional)
 tesseract = { version = "0.15", optional = true }
 leptonica-plumbing = { version = "1.0", optional = true }
@@ -110,6 +113,9 @@ name = "batch_processing"
 [[example]]
 name = "error_recovery"
 
+[[example]]
+name = "analyze_pdf_rendering"
+
 [[bench]]
 name = "ocr_benchmarks"
 harness = false
@@ -120,9 +126,15 @@ default = ["compression"]
 # Basic features
 compression = ["dep:flate2"]
 
+# Image processing features
+external-images = ["dep:image"]
+
 # OCR features
-ocr-tesseract = ["tesseract", "leptonica-plumbing"]
+ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]
 ocr-full = ["ocr-tesseract"]
+
+# Test features
+real-pdf-tests = []  # Enable tests with real PDF files from fixtures
 
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde", "dep:serde_json"]

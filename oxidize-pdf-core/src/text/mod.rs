@@ -1,9 +1,19 @@
+pub mod cmap;
 mod encoding;
 mod extraction;
+mod extraction_cmap;
 mod flow;
 mod font;
+pub mod fonts;
+mod header_footer;
+mod layout;
+mod list;
 mod metrics;
 pub mod ocr;
+mod table;
+
+#[cfg(test)]
+mod cmap_tests;
 
 #[cfg(feature = "ocr-tesseract")]
 pub mod tesseract_provider;
@@ -11,12 +21,18 @@ pub mod tesseract_provider;
 pub use encoding::TextEncoding;
 pub use extraction::{ExtractedText, ExtractionOptions, TextExtractor, TextFragment};
 pub use flow::{TextAlign, TextFlowContext};
-pub use font::{Font, FontFamily};
+pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
+pub use header_footer::{HeaderFooter, HeaderFooterOptions, HeaderFooterPosition};
+pub use layout::{ColumnContent, ColumnLayout, ColumnOptions, TextFormat};
+pub use list::{
+    BulletStyle, ListElement, ListOptions, ListStyle, OrderedList, OrderedListStyle, UnorderedList,
+};
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
     FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError, OcrOptions,
     OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
 };
+pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 
 use crate::error::Result;
 use std::fmt::Write;
@@ -49,6 +65,11 @@ impl TextContext {
         self.current_font = font;
         self.font_size = size;
         self
+    }
+
+    /// Get the current font
+    pub(crate) fn current_font(&self) -> Font {
+        self.current_font
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
@@ -139,11 +160,6 @@ impl TextContext {
 
     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
         Ok(self.operations.as_bytes().to_vec())
-    }
-
-    /// Get the current font
-    pub fn current_font(&self) -> Font {
-        self.current_font
     }
 
     /// Get the current font size

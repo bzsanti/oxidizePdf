@@ -10,6 +10,10 @@ use std::fs;
 
 /// Test PDF fixture detection and basic functionality
 #[test]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_pdf_parsing_with_fixtures() {
     log_fixture_status();
 
@@ -72,6 +76,10 @@ fn test_pdf_parsing_with_fixtures() {
 
 /// Test fixture statistics and reporting
 #[test]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_fixture_statistics() {
     log_fixture_status();
 
@@ -97,7 +105,10 @@ fn test_fixture_statistics() {
 
 /// Test PDF content analysis (when fixtures available)
 #[test]
-#[ignore = "requires local PDF fixtures"]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_pdf_content_analysis() {
     if !fixtures_available() {
         println!("⏭️ Skipping content analysis - no fixtures available");
@@ -175,7 +186,10 @@ fn test_pdf_content_analysis() {
 
 /// Performance test with real PDFs (when available)
 #[test]
-#[ignore = "performance benchmark - run with --ignored"]
+#[cfg_attr(
+    not(feature = "real-pdf-tests"),
+    ignore = "real-pdf-tests feature not enabled"
+)]
 fn test_pdf_performance_benchmark() {
     if !fixtures_available() {
         println!("⏭️ Skipping performance benchmark - no fixtures available");

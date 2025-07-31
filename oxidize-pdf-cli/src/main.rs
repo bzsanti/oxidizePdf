@@ -465,6 +465,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Info { input, detailed } => {
+            eprintln!("Opening PDF file: {}", input.display());
             match PdfReader::open(&input) {
                 Ok(mut reader) => {
                     println!("PDF Information for: {}", input.display());

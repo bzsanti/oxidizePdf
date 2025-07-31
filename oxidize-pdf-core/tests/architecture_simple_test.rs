@@ -1,6 +1,6 @@
 //! Simple test for the new architecture without file I/O
 
-use oxidize_pdf::parser::objects::PdfDictionary;
+use oxidize_pdf::parser::objects::{PdfArray, PdfDictionary};
 use oxidize_pdf::parser::page_tree::{PageTree, ParsedPage};
 use oxidize_pdf::parser::ResourceManager;
 
@@ -42,6 +42,7 @@ fn test_page_tree_caching() {
         media_box: [0.0, 0.0, 612.0, 792.0],
         crop_box: None,
         rotation: 0,
+        annotations: None,
     };
 
     // Cache it
@@ -67,6 +68,7 @@ fn test_parsed_page_dimensions() {
         media_box: [0.0, 0.0, 612.0, 792.0],
         crop_box: None,
         rotation: 0,
+        annotations: None,
     };
 
     assert_eq!(page.width(), 612.0);
@@ -80,6 +82,7 @@ fn test_parsed_page_dimensions() {
         media_box: [0.0, 0.0, 612.0, 792.0],
         crop_box: None,
         rotation: 90,
+        annotations: None,
     };
 
     assert_eq!(rotated_page.width(), 792.0);
@@ -93,6 +96,7 @@ fn test_parsed_page_dimensions() {
         media_box: [0.0, 0.0, 612.0, 792.0],
         crop_box: None,
         rotation: 270,
+        annotations: None,
     };
 
     assert_eq!(rotated_page_270.width(), 792.0);
@@ -106,6 +110,7 @@ fn test_parsed_page_dimensions() {
         media_box: [0.0, 0.0, 612.0, 792.0],
         crop_box: None,
         rotation: 180,
+        annotations: None,
     };
 
     assert_eq!(rotated_page_180.width(), 612.0);

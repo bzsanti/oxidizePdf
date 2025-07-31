@@ -4,6 +4,8 @@
 
 oxidize-pdf uses **independent versioning** for each package, allowing them to evolve at their own pace while maintaining clear compatibility relationships.
 
+**Important Note**: oxidize-pdf is in early beta with ~25-30% ISO 32000-1:2008 compliance. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed compliance information.
+
 ## Package Versions
 
 ### Current Versions
@@ -119,7 +121,8 @@ oxidize-pdf-api = "^0.1.0"  # Gets latest 0.1.x
 ### Future Major Versions (1.0.x)
 - Stable API guarantees
 - Performance optimizations
-- Full PDF 2.0 support
+- Target 60% ISO 32000-1:2008 compliance
+- Enhanced PDF structure support
 
 ## Support Policy
 

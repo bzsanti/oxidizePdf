@@ -1,0 +1,14 @@
+[package]
+name = "real_images_example"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[[bin]]
+name = "real_images_test"
+path = "real_images_test.rs"
+
+[dependencies]
+oxidize-pdf = { path = "../oxidize-pdf-core" }
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }

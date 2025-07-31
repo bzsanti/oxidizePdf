@@ -7,14 +7,14 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Generate professional PDFs, parse existing documents, and perform operations like split, merge, and rotate with a clean, safe API.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **early beta** stage implementing ~25-30% of ISO 32000-1:2008 specification. Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
 
 ## Features
 
 - 🚀 **100% Pure Rust** - No C dependencies or external PDF libraries
 - 📄 **PDF Generation** - Create multi-page documents with text, graphics, and images
-- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (97.8% success rate on real-world PDFs)
-- ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving content
+- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (tested on 749 real-world PDFs*)
+- ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving basic content
 - 🖼️ **Image Support** - Embed JPEG images with automatic compression
 - 🎨 **Rich Graphics** - Vector graphics with shapes, paths, colors (RGB/CMYK/Gray)
 - 📝 **Advanced Text** - Multiple fonts, text flow with automatic wrapping, alignment
@@ -22,16 +22,28 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
+## 🎉 What's New in v1.1.0 
+
+**Significant improvements in PDF compatibility:**
+- 📈 **Better parsing**: Handles more PDF structures including circular references
+- 🛡️ **Stack overflow protection** - More resilient against malformed PDFs
+- 🚀 **Performance**: Fast parsing for basic PDF operations
+- ⚡ **Error recovery** - Better handling of corrupted files
+- 🔧 **Lenient parsing** - Handles some malformed PDFs
+- 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
+
+**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently implements ~25-30% of ISO 32000-1:2008. See [Current Limitations](#current-limitations) and [ISO Compliance](ISO_COMPLIANCE.md) for details.
+
 ## Quick Start
 
 Add oxidize-pdf to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxidize-pdf = "1.0.0"
+oxidize-pdf = "1.1.0"
 
 # For OCR support (optional)
-oxidize-pdf = { version = "1.0.0", features = ["ocr-tesseract"] }
+oxidize-pdf = { version = "1.1.0", features = ["ocr-tesseract"] }
 ```
 
 ### Basic PDF Generation
@@ -234,14 +246,14 @@ Download from: https://github.com/UB-Mannheim/tesseract/wiki
 - ✅ FlateDecode compression
 
 ### PDF Parsing
-- ✅ PDF 1.0 - 1.7 support
+- ✅ PDF 1.0 - 1.7 basic structure support
 - ✅ Cross-reference table parsing
 - ✅ Object and stream parsing
-- ✅ Page tree navigation
-- ✅ Content stream parsing
-- ✅ Text extraction
+- ✅ Page tree navigation (simple)
+- ✅ Content stream parsing (basic operators)
+- ✅ Text extraction (simple cases)
 - ✅ Document metadata extraction
-- ✅ Basic filter support (FlateDecode, ASCIIHexDecode, ASCII85Decode)
+- ✅ Filter support (FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode)
 
 ### PDF Operations
 - ✅ Split by pages, ranges, or size
@@ -263,10 +275,10 @@ Download from: https://github.com/UB-Mannheim/tesseract/wiki
 
 ## Performance
 
-- **Parsing**: < 50ms for typical PDFs
-- **Generation**: < 20ms for 10-page documents
-- **Memory efficient**: Streaming operations for large files
-- **Zero-copy**: Where possible for optimal performance
+- **Parsing**: Fast for PDFs with basic features
+- **Generation**: Efficient for simple documents
+- **Memory efficient**: Streaming operations available
+- **Pure Rust**: No external C dependencies
 
 ## Examples
 
@@ -305,6 +317,45 @@ For commercial use cases that require proprietary licensing, please contact us a
 - PDF forms and digital signatures
 - Priority support and SLAs
 - Custom feature development
+
+## Current Limitations & ISO 32000 Compliance
+
+oxidize-pdf currently implements approximately **25-30% of ISO 32000-1:2008**. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed compliance information.
+
+### Supported Features
+- ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode
+- ✅ **Color Spaces**: DeviceRGB, DeviceCMYK, DeviceGray (basic)
+- ✅ **Fonts**: Standard 14 PDF fonts only
+- ✅ **Images**: JPEG embedding only
+- ✅ **Basic Operations**: Split, merge, rotate, simple text extraction
+- ✅ **Graphics**: Basic vector operations
+- ✅ **Transparency**: Simple opacity (CA/ca parameters)
+
+### Major Missing Features (ISO 32000)
+- ❌ **Rendering**: No PDF to image conversion
+- ❌ **Font Embedding**: No TrueType/OpenType embedding
+- ❌ **Encryption**: Very limited support
+- ❌ **Compression**: DCTDecode, CCITTFaxDecode, JBIG2Decode missing
+- ❌ **Advanced Graphics**: Patterns, shadings, gradients, blend modes
+- ❌ **Forms**: No interactive form support (AcroForms)
+- ❌ **Annotations**: Cannot create or modify annotations
+- ❌ **Digital Signatures**: No support
+- ❌ **Tagged PDFs**: No accessibility/structure support
+- ❌ **CJK Support**: No CID fonts or CMaps
+- ❌ **Advanced Color**: No ICC profiles, spot colors
+- ❌ **JavaScript**: No support for PDF JavaScript
+
+### Known Issues
+- Font/image references may break during merge operations
+- Text extraction fails on complex layouts
+- No support for right-to-left or vertical text
+- Limited error recovery for malformed PDFs
+- High memory usage for large files without optimization
+
+### Important Notes
+- Parsing success doesn't mean full feature support
+- Many PDFs will parse but advanced features will be ignored
+- This is early beta software with significant limitations
 
 ## Testing
 

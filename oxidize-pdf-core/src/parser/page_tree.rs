@@ -37,7 +37,7 @@
 //! ```
 
 use super::document::PdfDocument;
-use super::objects::{PdfDictionary, PdfObject, PdfStream};
+use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfStream};
 use super::reader::PdfReader;
 use super::{ParseError, ParseResult};
 use std::collections::HashMap;
@@ -108,6 +108,10 @@ pub struct ParsedPage {
     /// Page rotation in degrees. Valid values are 0, 90, 180, or 270.
     /// The rotation is applied clockwise.
     pub rotation: i32,
+
+    /// Annotations array containing references to annotation objects.
+    /// This is parsed from the page's /Annots entry.
+    pub annotations: Option<PdfArray>,
 }
 
 /// Page tree navigator
@@ -170,6 +174,35 @@ impl PageTree {
     ) -> ParseResult<ParsedPage> {
         let node_type = node
             .get_type()
+            .or_else(|| {
+                // If Type is missing, try to infer from content
+                if node.contains_key("Kids") && node.contains_key("Count") {
+                    Some("Pages")
+                } else if node.contains_key("Contents") || node.contains_key("MediaBox") {
+                    Some("Page")
+                } else {
+                    None
+                }
+            })
+            .or_else(|| {
+                // If Type is missing and we have lenient parsing, try to infer
+                if reader.options().lenient_syntax {
+                    // If it has Kids, it's likely a Pages node
+                    if node.contains_key("Kids") {
+                        Some("Pages")
+                    }
+                    // If it has Contents or MediaBox but no Kids, it's likely a Page
+                    else if node.contains_key("Contents")
+                        || (node.contains_key("MediaBox") && !node.contains_key("Kids"))
+                    {
+                        Some("Page")
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
         match node_type {
@@ -178,6 +211,19 @@ impl PageTree {
                 let kids = node
                     .get("Kids")
                     .and_then(|obj| obj.as_array())
+                    .or_else(|| {
+                        // If Kids is missing and we have lenient parsing, use empty array
+                        if reader.options().lenient_syntax {
+                            if reader.options().collect_warnings {
+                                eprintln!(
+                                    "Warning: Missing Kids array in Pages node, using empty array"
+                                );
+                            }
+                            Some(&super::objects::EMPTY_PDF_ARRAY)
+                        } else {
+                            None
+                        }
+                    })
                     .ok_or_else(|| ParseError::MissingKey("Kids".to_string()))?;
 
                 // Merge inherited attributes
@@ -227,15 +273,30 @@ impl PageTree {
 
                         let kid_type = kid_dict
                             .get_type()
+                            .or_else(|| {
+                                // If Type is missing, try to infer from content
+                                if kid_dict.contains_key("Kids") && kid_dict.contains_key("Count") {
+                                    Some("Pages")
+                                } else if kid_dict.contains_key("Contents")
+                                    || kid_dict.contains_key("MediaBox")
+                                {
+                                    Some("Page")
+                                } else {
+                                    None
+                                }
+                            })
                             .ok_or_else(|| ParseError::MissingKey("Type".to_string()))?;
 
                         let count = if kid_type == "Pages" {
                             // This is another page tree node
-                            kid_dict
-                                .get("Count")
-                                .and_then(|obj| obj.as_integer())
-                                .ok_or_else(|| ParseError::MissingKey("Count".to_string()))?
-                                as u32
+                            if let Some(count_obj) = kid_dict.get("Count") {
+                                count_obj.as_integer().unwrap_or(0) as u32
+                            } else {
+                                // Missing Count - need to traverse kids to count manually
+                                // For now, estimate based on context
+                                // TODO: Implement proper recursive counting
+                                1
+                            }
                         } else {
                             // This is a page
                             1
@@ -259,6 +320,7 @@ impl PageTree {
                             media_box: [0.0, 0.0, 612.0, 792.0],
                             crop_box: None,
                             rotation: 0,
+                            annotations: None,
                         });
                     }
 
@@ -283,8 +345,16 @@ impl PageTree {
                 let obj_ref = node_ref;
 
                 // Extract page attributes
-                let media_box = Self::get_rectangle(node, inherited, "MediaBox")?
-                    .ok_or_else(|| ParseError::MissingKey("MediaBox".to_string()))?;
+                let media_box =
+                    Self::get_rectangle(node, inherited, "MediaBox")?.unwrap_or_else(|| {
+                        // Use default Letter size if MediaBox is missing
+                        #[cfg(debug_assertions)]
+                        eprintln!(
+                            "Warning: Page {} {} R missing MediaBox, using default Letter size",
+                            obj_ref.0, obj_ref.1
+                        );
+                        [0.0, 0.0, 612.0, 792.0]
+                    });
 
                 let crop_box = Self::get_rectangle(node, inherited, "CropBox")?;
 
@@ -300,6 +370,9 @@ impl PageTree {
                     None
                 };
 
+                // Get annotations if present
+                let annotations = node.get("Annots").and_then(|obj| obj.as_array()).cloned();
+
                 Ok(ParsedPage {
                     obj_ref,
                     dict: node.clone(),
@@ -307,6 +380,7 @@ impl PageTree {
                     media_box,
                     crop_box,
                     rotation,
+                    annotations,
                 })
             }
             _ => Err(ParseError::SyntaxError {
@@ -334,7 +408,7 @@ impl PageTree {
             }
 
             let rect = [
-                array.get(0).unwrap().as_real().unwrap_or(0.0),
+                array.0.first().unwrap().as_real().unwrap_or(0.0),
                 array.get(1).unwrap().as_real().unwrap_or(0.0),
                 array.get(2).unwrap().as_real().unwrap_or(0.0),
                 array.get(3).unwrap().as_real().unwrap_or(0.0),
@@ -478,11 +552,12 @@ impl ParsedPage {
                 _ => "other",
             };
 
+            let options = reader.options().clone();
             match contents_type {
                 "stream" => {
                     let resolved = reader.resolve(contents)?;
                     if let PdfObject::Stream(stream) = resolved {
-                        streams.push(stream.decode()?);
+                        streams.push(stream.decode(&options)?);
                     }
                 }
                 "array" => {
@@ -510,7 +585,7 @@ impl ParsedPage {
                     for (obj_num, gen_num) in refs {
                         let obj = reader.get_object(obj_num, gen_num)?;
                         if let PdfObject::Stream(stream) = obj {
-                            streams.push(stream.decode()?);
+                            streams.push(stream.decode(&options)?);
                         }
                     }
                 }
@@ -657,6 +732,57 @@ impl ParsedPage {
         }
 
         cloned
+    }
+
+    /// Get the annotations array for this page.
+    ///
+    /// Returns a reference to the annotations array if present.
+    /// Each element in the array is typically a reference to an annotation dictionary.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let reader = PdfReader::open("document.pdf")?;
+    /// # let document = PdfDocument::new(reader);
+    /// # let page = document.get_page(0)?;
+    /// if let Some(annots) = page.get_annotations() {
+    ///     println!("Page has {} annotations", annots.len());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_annotations(&self) -> Option<&PdfArray> {
+        self.annotations.as_ref()
+    }
+
+    /// Check if the page has annotations.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the page has an annotations array with at least one annotation,
+    /// `false` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let reader = PdfReader::open("document.pdf")?;
+    /// # let document = PdfDocument::new(reader);
+    /// # let page = document.get_page(0)?;
+    /// if page.has_annotations() {
+    ///     println!("This page contains annotations");
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn has_annotations(&self) -> bool {
+        self.annotations
+            .as_ref()
+            .map(|arr| !arr.is_empty())
+            .unwrap_or(false)
     }
 
     /// Get all objects referenced by this page (for extraction or analysis).

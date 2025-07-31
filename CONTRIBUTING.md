@@ -27,6 +27,15 @@ Thank you for your interest in contributing to oxidizePdf! This document provide
    cargo test --workspace
    ```
 
+4. **Running Tests with Real PDFs (Optional)**
+   ```bash
+   # Enable tests with real PDF fixtures
+   cargo test --workspace --features real-pdf-tests
+   
+   # Note: This requires PDF fixtures in tests/fixtures/
+   # Without the feature, these tests are ignored
+   ```
+
 ## Development Workflow
 
 ### Before Making Changes
@@ -98,6 +107,145 @@ cargo build --workspace
    - Use the GitHub web interface
    - Fill out the PR template
    - Link related issues
+
+## GitFlow Workflow
+
+This project follows a strict GitFlow workflow. Understanding and following this workflow is **mandatory** for all contributions.
+
+### Branch Structure
+
+```
+main (production-ready code)
+│
+└── development (integration branch)
+    │
+    ├── feature/* (new features)
+    ├── release/* (release preparation)
+    └── hotfix/* (critical production fixes)
+```
+
+### GitFlow Rules
+
+#### 1. Feature Development
+
+**All new features MUST:**
+- Be created from `development` branch
+- Be merged back to `development` branch
+- NEVER be merged directly to `main`
+
+```bash
+# Create feature branch
+git checkout development
+git pull origin development
+git checkout -b feature/new-feature
+
+# Work on feature
+git add .
+git commit -m "feat: implement new feature"
+
+# Merge back to development
+git checkout development
+git merge feature/new-feature
+git push origin development
+```
+
+#### 2. Release Process
+
+**Releases are created from `development` and merged to BOTH `main` and `development`:**
+
+```bash
+# Create release branch
+git checkout development
+git checkout -b release/v1.2.0
+
+# Bump version, final fixes
+# Update CHANGELOG.md
+git commit -m "chore: prepare release v1.2.0"
+
+# Merge to main
+git checkout main
+git merge --no-ff release/v1.2.0
+git tag v1.2.0
+git push origin main --tags
+
+# Merge back to development
+git checkout development
+git merge --no-ff release/v1.2.0
+git push origin development
+
+# Delete release branch
+git branch -d release/v1.2.0
+```
+
+#### 3. Hotfix Process
+
+**Hotfixes are the ONLY branches that can be created from `main`:**
+
+```bash
+# Create hotfix from main
+git checkout main
+git checkout -b hotfix/critical-bug
+
+# Fix the bug
+git commit -m "fix: resolve critical production issue"
+
+# Merge to main
+git checkout main
+git merge --no-ff hotfix/critical-bug
+git tag v1.1.1
+git push origin main --tags
+
+# IMMEDIATELY merge to development
+git checkout development
+git merge --no-ff hotfix/critical-bug
+git push origin development
+
+# Delete hotfix branch
+git branch -d hotfix/critical-bug
+```
+
+### Critical Rules
+
+1. **NEVER create feature branches from tags or `main`**
+2. **NEVER merge features directly to `main`**
+3. **ALWAYS ensure `development` contains everything in `main`**
+4. **Hotfixes MUST be merged to both `main` AND `development`**
+
+### Common Mistakes to Avoid
+
+❌ **Wrong:**
+```bash
+# Creating feature from main or tag
+git checkout main
+git checkout -b feature/new-feature
+
+# Merging feature directly to main
+git checkout main
+git merge feature/new-feature
+```
+
+✅ **Correct:**
+```bash
+# Always from development
+git checkout development
+git checkout -b feature/new-feature
+
+# Always back to development
+git checkout development
+git merge feature/new-feature
+```
+
+### Branch Naming Conventions
+
+- Features: `feature/descriptive-name`
+- Releases: `release/vX.Y.Z`
+- Hotfixes: `hotfix/critical-issue-name`
+
+### Pull Request Guidelines for GitFlow
+
+1. **Feature PRs**: Target `development` branch
+2. **Release PRs**: Create two PRs - one to `main`, one to `development`
+3. **Hotfix PRs**: Create two PRs - one to `main`, one to `development`
 
 ## CI/CD Pipeline
 
@@ -174,6 +322,29 @@ cargo test --test integration_test_name
 - Add integration tests for complex workflows
 - Use descriptive test names: `test_merge_preserves_bookmarks`
 - Mock external dependencies appropriately
+
+#### Real PDF Testing
+Tests that require real PDF files are gated behind the `real-pdf-tests` feature flag:
+
+```rust
+#[test]
+#[cfg_attr(not(feature = "real-pdf-tests"), ignore = "real-pdf-tests feature not enabled")]
+fn test_with_real_pdfs() {
+    // Test code that requires actual PDF files
+}
+```
+
+To run tests with real PDFs:
+```bash
+# Place PDF files in tests/fixtures/
+# Run tests with the feature enabled
+cargo test --features real-pdf-tests
+```
+
+This approach ensures:
+- CI/CD pipelines run quickly with synthetic PDFs
+- Local development can test against real PDFs when needed
+- No copyrighted material is checked into the repository
 
 ## Community Guidelines
 

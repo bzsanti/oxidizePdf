@@ -329,17 +329,17 @@ mod tests {
         // Seek to position 5
         assert_eq!(reader.seek(SeekFrom::Start(5)).unwrap(), 5);
         let mut buf = [0u8; 2];
-        reader.read(&mut buf).unwrap();
+        let _bytes_read = reader.read(&mut buf).unwrap();
         assert_eq!(&buf, b"56");
 
         // Seek relative
         assert_eq!(reader.seek(SeekFrom::Current(-3)).unwrap(), 4);
-        reader.read(&mut buf).unwrap();
+        let _bytes_read = reader.read(&mut buf).unwrap();
         assert_eq!(&buf, b"45");
 
         // Seek from end
         assert_eq!(reader.seek(SeekFrom::End(-2)).unwrap(), 8);
-        reader.read(&mut buf).unwrap();
+        let _bytes_read = reader.read(&mut buf).unwrap();
         assert_eq!(&buf, b"89");
     }
 
@@ -362,5 +362,515 @@ mod tests {
         // Out of bounds
         assert_eq!(reader.get_slice(10, 20), None);
         assert_eq!(reader.get_slice(5, 3), None); // start > end
+    }
+
+    #[test]
+    fn test_memory_mapped_file_empty() {
+        let temp_file = NamedTempFile::new().unwrap();
+        // Don't write anything to create empty file
+
+        let result = MemoryMappedFile::new(temp_file.path());
+
+        // Should fail to map empty file
+        assert!(result.is_err());
+        match result {
+            Err(PdfError::InvalidFormat(msg)) => {
+                assert!(msg.contains("empty file"));
+            }
+            _ => panic!("Expected InvalidFormat error for empty file"),
+        }
+    }
+
+    #[test]
+    fn test_memory_mapped_file_nonexistent() {
+        let nonexistent_path = "/path/that/does/not/exist.pdf";
+        let result = MemoryMappedFile::new(nonexistent_path);
+
+        assert!(result.is_err());
+        match result {
+            Err(PdfError::Io(_)) => {}
+            _ => panic!("Expected IO error for nonexistent file"),
+        }
+    }
+
+    #[test]
+    fn test_memory_mapped_file_large() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let large_data = vec![0xAB; 10000];
+        temp_file.write_all(&large_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
+
+        assert_eq!(mmap.len(), 10000);
+        assert!(!mmap.is_empty());
+        assert_eq!(mmap[0], 0xAB);
+        assert_eq!(mmap[9999], 0xAB);
+        assert_eq!(&mmap[..100], &large_data[..100]);
+    }
+
+    #[test]
+    fn test_memory_mapped_file_deref() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Deref test data";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
+
+        // Test Deref implementation
+        let slice: &[u8] = &*mmap;
+        assert_eq!(slice, test_data);
+
+        // Test indexing (uses Deref)
+        assert_eq!(mmap[0], b'D');
+        assert_eq!(mmap[5], b' ');
+        assert_eq!(mmap[test_data.len() - 1], b'a');
+
+        // Test AsRef implementation
+        let as_ref: &[u8] = mmap.as_ref();
+        assert_eq!(as_ref, test_data);
+    }
+
+    #[test]
+    fn test_memory_mapped_file_binary_data() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let binary_data = vec![0x00, 0xFF, 0x7F, 0x80, 0x01, 0xFE];
+        temp_file.write_all(&binary_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
+
+        assert_eq!(mmap.len(), 6);
+        assert_eq!(mmap[0], 0x00);
+        assert_eq!(mmap[1], 0xFF);
+        assert_eq!(mmap[2], 0x7F);
+        assert_eq!(mmap[3], 0x80);
+        assert_eq!(mmap[4], 0x01);
+        assert_eq!(mmap[5], 0xFE);
+    }
+
+    #[test]
+    fn test_memory_mapped_file_single_byte() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&[42]).unwrap();
+        temp_file.flush().unwrap();
+
+        let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
+
+        assert_eq!(mmap.len(), 1);
+        assert!(!mmap.is_empty());
+        assert_eq!(mmap[0], 42);
+    }
+
+    #[test]
+    fn test_mapped_reader_creation() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Reader creation test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let reader = MappedReader::new(temp_file.path()).unwrap();
+
+        assert_eq!(reader.mmap.len(), test_data.len());
+        assert_eq!(reader.position, 0);
+    }
+
+    #[test]
+    fn test_mapped_reader_read_entire_file() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Complete file read test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        let mut buf = vec![0u8; test_data.len()];
+        let bytes_read = reader.read(&mut buf).unwrap();
+
+        assert_eq!(bytes_read, test_data.len());
+        assert_eq!(&buf, test_data);
+        assert_eq!(reader.position, test_data.len());
+    }
+
+    #[test]
+    fn test_mapped_reader_read_beyond_eof() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Short";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Read entire file
+        let mut buf = vec![0u8; test_data.len()];
+        assert_eq!(reader.read(&mut buf).unwrap(), test_data.len());
+
+        // Try to read more - should return 0
+        let mut buf = vec![0u8; 10];
+        assert_eq!(reader.read(&mut buf).unwrap(), 0);
+        assert_eq!(reader.position, test_data.len());
+    }
+
+    #[test]
+    fn test_mapped_reader_partial_reads() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"0123456789ABCDEF";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Read in chunks
+        let mut buf = [0u8; 4];
+
+        assert_eq!(reader.read(&mut buf).unwrap(), 4);
+        assert_eq!(&buf, b"0123");
+        assert_eq!(reader.position, 4);
+
+        assert_eq!(reader.read(&mut buf).unwrap(), 4);
+        assert_eq!(&buf, b"4567");
+        assert_eq!(reader.position, 8);
+
+        assert_eq!(reader.read(&mut buf).unwrap(), 4);
+        assert_eq!(&buf, b"89AB");
+        assert_eq!(reader.position, 12);
+
+        assert_eq!(reader.read(&mut buf).unwrap(), 4);
+        assert_eq!(&buf, b"CDEF");
+        assert_eq!(reader.position, 16);
+
+        // EOF
+        assert_eq!(reader.read(&mut buf).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_mapped_reader_seek_start() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Seek test data";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Seek to different positions from start
+        assert_eq!(reader.seek(SeekFrom::Start(0)).unwrap(), 0);
+        assert_eq!(reader.position, 0);
+
+        assert_eq!(reader.seek(SeekFrom::Start(5)).unwrap(), 5);
+        assert_eq!(reader.position, 5);
+
+        assert_eq!(
+            reader
+                .seek(SeekFrom::Start(test_data.len() as u64))
+                .unwrap(),
+            test_data.len() as u64
+        );
+        assert_eq!(reader.position, test_data.len());
+    }
+
+    #[test]
+    fn test_mapped_reader_seek_current() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Current seek test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Move forward
+        assert_eq!(reader.seek(SeekFrom::Current(5)).unwrap(), 5);
+        assert_eq!(reader.position, 5);
+
+        // Move forward more
+        assert_eq!(reader.seek(SeekFrom::Current(3)).unwrap(), 8);
+        assert_eq!(reader.position, 8);
+
+        // Move backward
+        assert_eq!(reader.seek(SeekFrom::Current(-2)).unwrap(), 6);
+        assert_eq!(reader.position, 6);
+
+        // Move to start
+        assert_eq!(
+            reader
+                .seek(SeekFrom::Current(-(reader.position as i64)))
+                .unwrap(),
+            0
+        );
+        assert_eq!(reader.position, 0);
+    }
+
+    #[test]
+    fn test_mapped_reader_seek_end() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"End seek test data";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Seek to end
+        assert_eq!(
+            reader.seek(SeekFrom::End(0)).unwrap(),
+            test_data.len() as u64
+        );
+        assert_eq!(reader.position, test_data.len());
+
+        // Seek backward from end
+        assert_eq!(
+            reader.seek(SeekFrom::End(-5)).unwrap(),
+            (test_data.len() - 5) as u64
+        );
+        assert_eq!(reader.position, test_data.len() - 5);
+
+        // Seek to specific position from end
+        assert_eq!(
+            reader
+                .seek(SeekFrom::End(-(test_data.len() as i64)))
+                .unwrap(),
+            0
+        );
+        assert_eq!(reader.position, 0);
+    }
+
+    #[test]
+    fn test_mapped_reader_seek_out_of_bounds() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Bounds test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Negative position
+        let result = reader.seek(SeekFrom::Start(u64::MAX));
+        assert!(result.is_err());
+        assert_eq!(reader.position, 0); // Position should remain unchanged
+
+        // Beyond file end
+        let result = reader.seek(SeekFrom::Start((test_data.len() + 1) as u64));
+        assert!(result.is_err());
+        assert_eq!(reader.position, 0);
+
+        // Negative from current
+        let result = reader.seek(SeekFrom::Current(-1));
+        assert!(result.is_err());
+        assert_eq!(reader.position, 0);
+
+        // Too far from end
+        let result = reader.seek(SeekFrom::End(-((test_data.len() + 1) as i64)));
+        assert!(result.is_err());
+        assert_eq!(reader.position, 0);
+    }
+
+    #[test]
+    fn test_mapped_reader_seek_and_read_combination() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"0123456789";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Seek and read from middle
+        reader.seek(SeekFrom::Start(3)).unwrap();
+        let mut buf = [0u8; 3];
+        let _bytes_read = reader.read(&mut buf).unwrap();
+        assert_eq!(&buf, b"345");
+
+        // Seek back and read
+        reader.seek(SeekFrom::Start(1)).unwrap();
+        let _bytes_read = reader.read(&mut buf).unwrap();
+        assert_eq!(&buf, b"123");
+
+        // Seek from current position
+        reader.seek(SeekFrom::Current(2)).unwrap(); // Now at position 6
+        let mut buf = [0u8; 2];
+        let _bytes_read = reader.read(&mut buf).unwrap();
+        assert_eq!(&buf, b"67");
+    }
+
+    #[test]
+    fn test_get_slice_edge_cases() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Edge case testing";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Empty slice
+        assert_eq!(reader.get_slice(5, 5), Some(&b""[..]));
+
+        // Single byte
+        assert_eq!(reader.get_slice(0, 1), Some(&b"E"[..]));
+        assert_eq!(
+            reader.get_slice(test_data.len() - 1, test_data.len()),
+            Some(&b"g"[..])
+        );
+
+        // Full file
+        assert_eq!(
+            reader.get_slice(0, test_data.len()),
+            Some(test_data.as_ref())
+        );
+
+        // At boundary
+        assert_eq!(
+            reader.get_slice(test_data.len(), test_data.len()),
+            Some(&b""[..])
+        );
+
+        // Out of bounds scenarios
+        assert_eq!(reader.get_slice(test_data.len(), test_data.len() + 1), None);
+        assert_eq!(
+            reader.get_slice(test_data.len() + 1, test_data.len() + 2),
+            None
+        );
+        assert_eq!(reader.get_slice(10, 5), None); // start > end
+    }
+
+    #[test]
+    fn test_mapped_reader_zero_length_read() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Zero length test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Read zero bytes
+        let mut buf = [];
+        assert_eq!(reader.read(&mut buf).unwrap(), 0);
+        assert_eq!(reader.position, 0); // Position should not change
+    }
+
+    #[test]
+    fn test_mapped_reader_large_buffer_read() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Small data";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Try to read more than available
+        let mut buf = vec![0u8; 100];
+        let bytes_read = reader.read(&mut buf).unwrap();
+
+        assert_eq!(bytes_read, test_data.len());
+        assert_eq!(&buf[..bytes_read], test_data);
+        assert_eq!(reader.position, test_data.len());
+    }
+
+    #[test]
+    fn test_memory_mapped_file_utf8_content() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = "Hello, 世界! 🦀".as_bytes();
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
+
+        assert_eq!(mmap.len(), test_data.len());
+        assert_eq!(&mmap[..], test_data);
+
+        // Verify UTF-8 content
+        let content = String::from_utf8_lossy(&mmap);
+        assert_eq!(content, "Hello, 世界! 🦀");
+    }
+
+    #[test]
+    fn test_mapped_reader_error_propagation() {
+        let nonexistent_path = "/definitely/does/not/exist/test.pdf";
+        let result = MappedReader::new(nonexistent_path);
+
+        assert!(result.is_err());
+        match result {
+            Err(PdfError::Io(_)) => {}
+            _ => panic!("Expected IO error"),
+        }
+    }
+
+    #[test]
+    fn test_get_slice_exact_boundaries() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Boundary test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let reader = MappedReader::new(temp_file.path()).unwrap();
+
+        // Test exact boundaries
+        let len = test_data.len();
+
+        // First character
+        assert_eq!(reader.get_slice(0, 1), Some(&b"B"[..]));
+
+        // Last character
+        assert_eq!(reader.get_slice(len - 1, len), Some(&b"t"[..]));
+
+        // Whole string
+        assert_eq!(reader.get_slice(0, len), Some(test_data.as_ref()));
+
+        // Empty at end
+        assert_eq!(reader.get_slice(len, len), Some(&b""[..]));
+
+        // One past end should fail
+        assert_eq!(reader.get_slice(len, len + 1), None);
+        assert_eq!(reader.get_slice(len + 1, len + 1), None);
+    }
+
+    #[test]
+    fn test_memory_mapped_file_clone_and_share() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Shared mmap test data";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mmap = Arc::new(MemoryMappedFile::new(temp_file.path()).unwrap());
+        let mmap_clone = mmap.clone();
+
+        let handle = thread::spawn(move || {
+            assert_eq!(mmap_clone.len(), test_data.len());
+            assert_eq!(&mmap_clone[..5], b"Share");
+        });
+
+        handle.join().unwrap();
+
+        // Original still works
+        assert_eq!(&mmap[..], test_data);
+    }
+
+    #[test]
+    fn test_mapped_reader_position_consistency() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        let test_data = b"Position consistency test";
+        temp_file.write_all(test_data).unwrap();
+        temp_file.flush().unwrap();
+
+        let mut reader = MappedReader::new(temp_file.path()).unwrap();
+
+        assert_eq!(reader.position, 0);
+
+        // Read some data
+        let mut buf = [0u8; 8];
+        let _bytes_read = reader.read(&mut buf).unwrap();
+        assert_eq!(reader.position, 8);
+
+        // Seek and verify position
+        reader.seek(SeekFrom::Start(5)).unwrap();
+        assert_eq!(reader.position, 5);
+
+        // Read more and verify position updates
+        let _bytes_read = reader.read(&mut buf).unwrap();
+        assert_eq!(reader.position, 13);
+
+        // Seek relative and verify
+        reader.seek(SeekFrom::Current(-3)).unwrap();
+        assert_eq!(reader.position, 10);
     }
 }

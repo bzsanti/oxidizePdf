@@ -3,6 +3,7 @@
 //! This module provides traits and implementations for testing PDF compliance
 //! with various versions of the PDF specification (ISO 32000).
 
+use oxidize_pdf::parser::reader::PDFLines;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -158,7 +159,7 @@ impl SpecificationTest for Pdf17ComplianceTester {
 
             // Basic xref table format validation
             let xref_section = &pdf_str[xref_pos..];
-            let lines: Vec<&str> = xref_section.lines().collect();
+            let lines: Vec<&str> = xref_section.pdf_lines().collect();
 
             if lines.len() < 2 {
                 return TestResult::fail(

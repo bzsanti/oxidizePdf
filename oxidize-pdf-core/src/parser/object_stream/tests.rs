@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
+use crate::parser::ParseOptions;
 use std::collections::HashMap;
 
 /// Helper to create a test stream dictionary with required entries
@@ -45,7 +46,8 @@ fn test_object_stream_parse_valid() {
     let data = b"1 0 2 4 42 null".to_vec(); // obj1 at 0, obj2 at 4, then "42" and "null"
 
     let stream = PdfStream { dict, data };
-    let result = ObjectStream::parse(stream);
+    let options = ParseOptions::default();
+    let result = ObjectStream::parse(stream, &options);
 
     assert!(result.is_ok(), "Should parse valid object stream");
     let obj_stream = result.unwrap();
@@ -60,7 +62,8 @@ fn test_object_stream_parse_missing_n() {
     dict.insert("First".to_string(), PdfObject::Integer(10));
 
     let stream = PdfStream { dict, data: vec![] };
-    let result = ObjectStream::parse(stream);
+    let options = ParseOptions::default();
+    let result = ObjectStream::parse(stream, &options);
 
     assert!(result.is_err(), "Should fail when N is missing");
     if let Err(ParseError::MissingKey(key)) = result {
@@ -76,7 +79,8 @@ fn test_object_stream_parse_missing_first() {
     dict.insert("N".to_string(), PdfObject::Integer(2));
 
     let stream = PdfStream { dict, data: vec![] };
-    let result = ObjectStream::parse(stream);
+    let options = ParseOptions::default();
+    let result = ObjectStream::parse(stream, &options);
 
     assert!(result.is_err(), "Should fail when First is missing");
     if let Err(ParseError::MissingKey(key)) = result {
@@ -96,7 +100,8 @@ fn test_object_stream_parse_invalid_n_type() {
     dict.insert("First".to_string(), PdfObject::Integer(10));
 
     let stream = PdfStream { dict, data: vec![] };
-    let result = ObjectStream::parse(stream);
+    let options = ParseOptions::default();
+    let result = ObjectStream::parse(stream, &options);
 
     assert!(result.is_err(), "Should fail when N is not an integer");
 }
@@ -111,7 +116,8 @@ fn test_object_stream_parse_invalid_first_type() {
     );
 
     let stream = PdfStream { dict, data: vec![] };
-    let result = ObjectStream::parse(stream);
+    let options = ParseOptions::default();
+    let result = ObjectStream::parse(stream, &options);
 
     assert!(result.is_err(), "Should fail when First is not an integer");
 }

@@ -209,7 +209,7 @@ fn parse_object_header(buffer: &[u8]) -> Option<(u32, u16)> {
 
 fn detect_object_type(content: &[u8]) -> Option<ObjectType> {
     // Simple type detection based on content
-    if content.len() < 20 {
+    if content.is_empty() {
         return None;
     }
 
@@ -300,5 +300,468 @@ mod tests {
 
         let invalid = b"<< /Type /Page >>";
         assert!(!validate_object(invalid));
+    }
+
+    #[test]
+    fn test_object_scanner_default() {
+        let scanner = ObjectScanner::default();
+        assert_eq!(scanner.stats.objects_found, 0);
+        assert_eq!(scanner.stats.valid_objects, 0);
+        assert_eq!(scanner.stats.bytes_scanned, 0);
+        assert_eq!(scanner.stats.pages_found, 0);
+        assert_eq!(scanner.stats.duration_ms, 0);
+    }
+
+    #[test]
+    fn test_scanned_object_creation() {
+        let obj = ScannedObject {
+            id: 42,
+            generation: 0,
+            offset: 1024,
+            object_type: Some(ObjectType::Page),
+            is_valid: true,
+        };
+
+        assert_eq!(obj.id, 42);
+        assert_eq!(obj.generation, 0);
+        assert_eq!(obj.offset, 1024);
+        assert_eq!(obj.object_type, Some(ObjectType::Page));
+        assert!(obj.is_valid);
+    }
+
+    #[test]
+    fn test_scanned_object_debug_clone() {
+        let obj = ScannedObject {
+            id: 123,
+            generation: 5,
+            offset: 2048,
+            object_type: Some(ObjectType::Font),
+            is_valid: false,
+        };
+
+        let debug_str = format!("{:?}", obj);
+        assert!(debug_str.contains("ScannedObject"));
+        assert!(debug_str.contains("123"));
+
+        let cloned = obj.clone();
+        assert_eq!(cloned.id, obj.id);
+        assert_eq!(cloned.generation, obj.generation);
+        assert_eq!(cloned.offset, obj.offset);
+        assert_eq!(cloned.object_type, obj.object_type);
+        assert_eq!(cloned.is_valid, obj.is_valid);
+    }
+
+    #[test]
+    fn test_object_type_variants() {
+        let types = vec![
+            ObjectType::Page,
+            ObjectType::Pages,
+            ObjectType::Catalog,
+            ObjectType::Font,
+            ObjectType::Image,
+            ObjectType::Stream,
+            ObjectType::Dictionary,
+            ObjectType::Array,
+            ObjectType::Other("Custom".to_string()),
+        ];
+
+        for obj_type in types {
+            let debug_str = format!("{:?}", obj_type);
+            assert!(!debug_str.is_empty());
+
+            let cloned = obj_type.clone();
+            assert_eq!(obj_type, cloned);
+        }
+    }
+
+    #[test]
+    fn test_object_type_equality() {
+        assert_eq!(ObjectType::Page, ObjectType::Page);
+        assert_ne!(ObjectType::Page, ObjectType::Pages);
+        assert_ne!(ObjectType::Font, ObjectType::Image);
+
+        assert_eq!(
+            ObjectType::Other("Test".to_string()),
+            ObjectType::Other("Test".to_string())
+        );
+        assert_ne!(
+            ObjectType::Other("Test1".to_string()),
+            ObjectType::Other("Test2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_scan_stats_default() {
+        let stats = ScanStats::default();
+        assert_eq!(stats.bytes_scanned, 0);
+        assert_eq!(stats.objects_found, 0);
+        assert_eq!(stats.valid_objects, 0);
+        assert_eq!(stats.pages_found, 0);
+        assert_eq!(stats.duration_ms, 0);
+    }
+
+    #[test]
+    fn test_scan_stats_debug_clone() {
+        let stats = ScanStats {
+            bytes_scanned: 1024 * 1024,
+            objects_found: 100,
+            valid_objects: 95,
+            pages_found: 10,
+            duration_ms: 250,
+        };
+
+        let debug_str = format!("{:?}", stats);
+        assert!(debug_str.contains("ScanStats"));
+
+        let cloned = stats.clone();
+        assert_eq!(cloned.bytes_scanned, stats.bytes_scanned);
+        assert_eq!(cloned.objects_found, stats.objects_found);
+        assert_eq!(cloned.valid_objects, stats.valid_objects);
+        assert_eq!(cloned.pages_found, stats.pages_found);
+        assert_eq!(cloned.duration_ms, stats.duration_ms);
+    }
+
+    #[test]
+    fn test_scan_result_creation() {
+        let objects = vec![
+            ScannedObject {
+                id: 1,
+                generation: 0,
+                offset: 100,
+                object_type: Some(ObjectType::Catalog),
+                is_valid: true,
+            },
+            ScannedObject {
+                id: 2,
+                generation: 0,
+                offset: 200,
+                object_type: Some(ObjectType::Pages),
+                is_valid: true,
+            },
+        ];
+
+        let result = ScanResult {
+            objects: objects.clone(),
+            total_objects: 2,
+            valid_objects: 2,
+            estimated_pages: 1,
+            stats: ScanStats::default(),
+        };
+
+        assert_eq!(result.objects.len(), 2);
+        assert_eq!(result.total_objects, 2);
+        assert_eq!(result.valid_objects, 2);
+        assert_eq!(result.estimated_pages, 1);
+    }
+
+    #[test]
+    fn test_scan_result_debug() {
+        let result = ScanResult {
+            objects: vec![],
+            total_objects: 0,
+            valid_objects: 0,
+            estimated_pages: 0,
+            stats: ScanStats::default(),
+        };
+
+        let debug_str = format!("{:?}", result);
+        assert!(debug_str.contains("ScanResult"));
+    }
+
+    #[test]
+    fn test_scanner_reset() {
+        let mut scanner = ObjectScanner::new();
+
+        // Add some data
+        scanner.objects.insert(
+            1,
+            ScannedObject {
+                id: 1,
+                generation: 0,
+                offset: 100,
+                object_type: Some(ObjectType::Page),
+                is_valid: true,
+            },
+        );
+        scanner.stats.objects_found = 5;
+        scanner.stats.valid_objects = 4;
+        scanner.stats.bytes_scanned = 1000;
+
+        assert!(!scanner.objects.is_empty());
+        assert_eq!(scanner.stats.objects_found, 5);
+
+        // Reset
+        scanner.reset();
+
+        assert!(scanner.objects.is_empty());
+        assert_eq!(scanner.stats.objects_found, 0);
+        assert_eq!(scanner.stats.valid_objects, 0);
+        assert_eq!(scanner.stats.bytes_scanned, 0);
+    }
+
+    #[test]
+    fn test_detect_object_type_all_types() {
+        // Test Pages type (must check before Page)
+        let pages = b"<< /Type /Pages /Kids [1 0 R 2 0 R] >>";
+        assert_eq!(detect_object_type(pages), Some(ObjectType::Pages));
+
+        // Test Font
+        let font = b"<< /Type /Font /Subtype /Type1 >>";
+        assert_eq!(detect_object_type(font), Some(ObjectType::Font));
+
+        // Test Image
+        let image = b"<< /Subtype /Image /Width 100 >>";
+        assert_eq!(detect_object_type(image), Some(ObjectType::Image));
+
+        // Test Dictionary
+        let dict = b"<< /Key /Value >>";
+        assert_eq!(detect_object_type(dict), Some(ObjectType::Dictionary));
+
+        // Test Array
+        let array = b"[1 2 3 4]";
+        assert_eq!(detect_object_type(array), Some(ObjectType::Array));
+
+        // Test short content
+        let short = b"abc";
+        assert_eq!(detect_object_type(short), None);
+
+        // Test empty
+        let empty = b"";
+        assert_eq!(detect_object_type(empty), None);
+    }
+
+    #[test]
+    fn test_validate_object_various_cases() {
+        // Valid with spaces
+        assert!(validate_object(b"<< /Type /Page >>   endobj   "));
+
+        // Valid with newlines
+        assert!(validate_object(b"<< /Type /Page >>\nendobj"));
+
+        // Valid in middle of content
+        assert!(validate_object(
+            b"<< /Type /Page >> stuff endobj more stuff"
+        ));
+
+        // Invalid - too short
+        assert!(!validate_object(b"short"));
+
+        // Invalid - no endobj
+        assert!(!validate_object(b"<< /Type /Page >> no end marker"));
+
+        // Invalid - partial endobj
+        assert!(!validate_object(b"<< /Type /Page >> endob"));
+    }
+
+    #[test]
+    fn test_parse_object_header_edge_cases() {
+        // Normal case
+        assert_eq!(parse_object_header(b"42 0"), Some((42, 0)));
+
+        // With extra whitespace
+        assert_eq!(parse_object_header(b"  42   0  "), Some((42, 0)));
+
+        // With newlines
+        assert_eq!(parse_object_header(b"42\n0"), Some((42, 0)));
+
+        // Large numbers
+        assert_eq!(parse_object_header(b"999999 65535"), Some((999999, 65535)));
+
+        // Invalid - not numbers
+        assert_eq!(parse_object_header(b"abc def"), None);
+
+        // Invalid - only one number
+        assert_eq!(parse_object_header(b"42"), None);
+
+        // Invalid - empty
+        assert_eq!(parse_object_header(b""), None);
+
+        // Invalid - non-UTF8
+        assert_eq!(parse_object_header(&[0xFF, 0xFE, 0xFD]), None);
+    }
+
+    #[test]
+    fn test_find_object_start_multiple() {
+        let buffer = b"first obj at 9 obj and another obj";
+        assert_eq!(find_object_start(buffer), Some(6)); // First " obj"
+
+        // Find next occurrence
+        let next_search = &buffer[7..];
+        assert_eq!(find_object_start(next_search), Some(8));
+
+        // No obj pattern
+        assert_eq!(find_object_start(b"no_object_pattern_here"), None);
+
+        // obj at the very end
+        assert_eq!(find_object_start(b"ends with obj"), Some(10));
+
+        // obj at the beginning
+        assert_eq!(find_object_start(b" obj starts here"), Some(1));
+    }
+
+    #[test]
+    fn test_scanner_stats_access() {
+        let scanner = ObjectScanner::new();
+        let stats = scanner.stats();
+        assert_eq!(stats.objects_found, 0);
+        assert_eq!(stats.valid_objects, 0);
+        assert_eq!(stats.bytes_scanned, 0);
+        assert_eq!(stats.pages_found, 0);
+        assert_eq!(stats.duration_ms, 0);
+    }
+
+    #[test]
+    fn test_quick_scan_nonexistent_file() {
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("nonexistent_scanner_test.pdf");
+
+        let result = quick_scan(&temp_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_scan_file_empty() {
+        use std::fs::File;
+
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("empty_scan_test.pdf");
+        let _file = File::create(&temp_path).unwrap();
+
+        let mut scanner = ObjectScanner::new();
+        let result = scanner.scan_file(&temp_path).unwrap();
+
+        assert_eq!(result.total_objects, 0);
+        assert_eq!(result.valid_objects, 0);
+        assert_eq!(result.estimated_pages, 0);
+        assert!(result.objects.is_empty());
+
+        // Cleanup
+        let _ = std::fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_scan_file_with_objects() {
+        use std::fs::File;
+        use std::io::Write;
+
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("objects_scan_test.pdf");
+        let mut file = File::create(&temp_path).unwrap();
+
+        // Write some PDF-like content
+        file.write_all(b"%PDF-1.7\n").unwrap();
+        file.write_all(b"1 0 obj\n<< /Type /Catalog >>\nendobj\n")
+            .unwrap();
+        file.write_all(b"2 0 obj\n<< /Type /Pages >>\nendobj\n")
+            .unwrap();
+        file.write_all(b"3 0 obj\n<< /Type /Page >>\nendobj\n")
+            .unwrap();
+        file.write_all(b"%%EOF").unwrap();
+
+        let result = quick_scan(&temp_path).unwrap();
+
+        assert!(result.total_objects > 0);
+        assert_eq!(result.estimated_pages, 1); // One page found
+        assert!(!result.objects.is_empty());
+
+        // Cleanup
+        let _ = std::fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_scan_buffer_various_objects() {
+        let mut scanner = ObjectScanner::new();
+
+        let buffer = b"1 0 obj\n<< /Type /Page >>\nendobj\n2 0 obj\n<< /Type /Font >>\nendobj";
+        scanner.scan_buffer(buffer, 0).unwrap();
+
+        assert_eq!(scanner.stats.objects_found, 2);
+        assert_eq!(scanner.stats.valid_objects, 2);
+        assert_eq!(scanner.stats.pages_found, 1);
+        assert_eq!(scanner.objects.len(), 2);
+    }
+
+    #[test]
+    fn test_scan_buffer_invalid_objects() {
+        let mut scanner = ObjectScanner::new();
+
+        // Objects without endobj
+        let buffer = b"1 0 obj\n<< /Type /Page >>\n2 0 obj\n<< /Type /Font >>";
+        scanner.scan_buffer(buffer, 100).unwrap();
+
+        assert_eq!(scanner.stats.objects_found, 2);
+        assert_eq!(scanner.stats.valid_objects, 0); // No valid objects (missing endobj)
+        assert_eq!(scanner.stats.pages_found, 1); // Page type still detected
+    }
+
+    #[test]
+    fn test_scanned_object_with_offset() {
+        let obj1 = ScannedObject {
+            id: 1,
+            generation: 0,
+            offset: 0,
+            object_type: Some(ObjectType::Catalog),
+            is_valid: true,
+        };
+
+        let obj2 = ScannedObject {
+            id: 2,
+            generation: 0,
+            offset: 1024,
+            object_type: Some(ObjectType::Page),
+            is_valid: true,
+        };
+
+        assert!(obj1.offset < obj2.offset);
+        assert_ne!(obj1.object_type, obj2.object_type);
+    }
+
+    #[test]
+    fn test_object_type_other_variant() {
+        let other1 = ObjectType::Other("CustomType".to_string());
+        let other2 = ObjectType::Other("CustomType".to_string());
+        let other3 = ObjectType::Other("DifferentType".to_string());
+
+        assert_eq!(other1, other2);
+        assert_ne!(other1, other3);
+
+        match &other1 {
+            ObjectType::Other(name) => assert_eq!(name, "CustomType"),
+            _ => panic!("Expected Other variant"),
+        }
+    }
+
+    #[test]
+    fn test_scan_result_sorting() {
+        let mut objects = vec![
+            ScannedObject {
+                id: 3,
+                generation: 0,
+                offset: 300,
+                object_type: Some(ObjectType::Page),
+                is_valid: true,
+            },
+            ScannedObject {
+                id: 1,
+                generation: 0,
+                offset: 100,
+                object_type: Some(ObjectType::Catalog),
+                is_valid: true,
+            },
+            ScannedObject {
+                id: 2,
+                generation: 0,
+                offset: 200,
+                object_type: Some(ObjectType::Pages),
+                is_valid: true,
+            },
+        ];
+
+        // Simulate what scan_file does
+        objects.sort_by_key(|obj| obj.id);
+
+        assert_eq!(objects[0].id, 1);
+        assert_eq!(objects[1].id, 2);
+        assert_eq!(objects[2].id, 3);
     }
 }

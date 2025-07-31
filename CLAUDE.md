@@ -5,11 +5,48 @@
 - Before pushing changes to origin, ensure all tests pass successfully
 - Aim for 95% coverage of documentation, unit tests, and integration tests, with a minimum acceptable threshold of 80%
 
-## Project Status - Session 19/07/2025 - CI/CD Pipeline Critical Fixes
+## Release Process - IMPORTANTE
+- **NUNCA usar cargo-release localmente** - Las releases SIEMPRE se hacen a través del pipeline de GitHub Actions
+- El proceso es: crear un tag git (ej: v1.1.4) y hacer push, esto activa automáticamente el pipeline de release
+- El pipeline se encarga de: tests, build, publicación en crates.io, crear GitHub Release, merge a main
+- Si el pipeline tarda, esperamos - no intentar hacerlo manualmente
+
+## Project Status - Session 28/07/2025 - ISO Compliance Documentation Update
 
 ### Completed Today ✅
+- **ISO 32000-1:2008 Compliance Analysis**: Documented real compliance ~25-30% (vs claimed 60%)
+- **Documentation Updated**: README.md, ROADMAP.md, ISO_COMPLIANCE.md with accurate info
+- **Automated Tests**: Created iso_compliance_tests.rs confirming actual compliance
+- **lib.rs Issue Fixed**: Resolved unintentional feature exposure for leptonica-plumbing
+
+### Key Finding 🔍
+- Real ISO 32000 compliance is ~25-30%, not the 60% previously claimed
+- Updated all documentation to reflect this reality
+- Created roadmap to reach 60% compliance by Q4 2026
+
+## Project Status - Session 21/07/2025 - PDF Parsing Success Rate
+
+### PDF Parsing Achievement
+- **Success Rate**: De 74.0% a **97.2%** de éxito (+23.2% mejora)
+- **Circular References**: Todos los 170 errores de referencia circular resueltos
+- **XRef Issues**: Todos los errores reales de XRef resueltos
+- **Command Slash `/analyze-pdfs`**: Implementado para análisis completo automatizado
+- **Performance**: 215+ PDFs/segundo con procesamiento paralelo
+
+### Current Status ✅
+- **Total PDFs**: 749 
+- **Success Rate**: **728/749 (97.2%)** 
+- **Remaining Errors**: 21 PDFs (2.8%) - TODOS esperados:
+  - EncryptionNotSupported: 19 casos (2.5%) - comportamiento correcto
+  - EmptyFile: 2 casos (0.3%) - archivos vacíos (0 bytes)
+- **InvalidXRef**: **0 casos** ✅ - COMPLETAMENTE RESUELTO
+- **Issues Críticos Resueltos**: #11, #12 completamente resueltos
+
+## Project Status - Session 19/07/2025 - CI/CD Pipeline Critical Fixes
+
+#### Completed ✅
 - **CI/CD Pipeline Fixes**: Ver detalles completos en PROJECT_PROGRESS.md
-- **Tests Status**: 387 tests + 67 doctests, ~75% coverage
+- **Tests Status**: 387 tests + 67 doctests, ~50% coverage (REAL)
 - **Issues Pendientes**: Ver lib.rs feed issues documentadas en PROJECT_PROGRESS.md
 
 ### Referencias de Documentación
@@ -17,6 +54,7 @@
 - **API Documentation**: oxidize-pdf-api/API_DOCUMENTATION.md  
 - **Roadmap y Features**: ROADMAP.md
 - **Issues Pendientes**: PROJECT_PROGRESS.md (sección próximos pasos)
+- **GitFlow y Contribución**: CONTRIBUTING.md (sección GitFlow Workflow)
 
 ## CI/CD Pipeline Guidelines
 
@@ -33,9 +71,59 @@
 
 ### Comandos de Desarrollo
 - Build completo: `cargo build --workspace`
+- Build release: `cargo build --release` (requerido para análisis de rendimiento)
 - Tests completos: `cargo test --workspace`
 - Clippy estricto: `cargo clippy --all -- -D warnings`
 - Formato: `cargo fmt --all`
+
+## Comandos Slash Personalizados
+
+### `/analyze-pdfs` - Análisis Completo de PDFs con Validación de Rendering
+Ejecuta análisis completo de todos los PDFs en tests/fixtures/ con las siguientes características:
+- **Procesamiento Paralelo**: 8 workers, procesa ~214 PDFs/segundo
+- **Timeout**: 5 segundos por PDF para evitar bloqueos  
+- **Categorización**: Agrupa errores por tipo (InvalidXRef, CharacterEncoding, etc.)
+- **Comparación**: Muestra mejoras vs baseline (74.0%)
+- **Output JSON**: Guarda resultados detallados para análisis posterior
+- **NUEVO: Validación con Rendering**: Opción para verificar compatibilidad con oxidize-pdf-render
+
+**Uso**: 
+- Análisis básico: `/analyze-pdfs`
+- Con validación de rendering: `/analyze-pdfs --with-render`
+- Script completo de verificación: `./verify_pdf_compatibility.sh`
+
+**Output típico (modo extendido)**:
+```
+🔍 PDF Compatibility Analysis with Rendering
+Total PDFs analizados: 749
+📄 Parsing (oxidize-pdf):
+  ✅ Exitosos: 727 (97.1%)
+  ❌ Errores: 22 (2.9%)
+
+🎨 Rendering (oxidize-pdf-render):
+  ✅ Exitosos: 695 (92.8%)
+  ❌ Errores: 54 (7.2%)
+
+🔄 Análisis Combinado:
+  ✅✅ Ambos exitosos: 690 (92.1%)
+  ✅❌ Solo parsing: 37 (4.9%)
+  ❌✅ Solo render: 5 (0.7%)
+  ❌❌ Ambos fallan: 17 (2.3%)
+
+⚠️ Compatibilidad: 37 PDFs parsean pero no renderizan
+```
+
+**Scripts de verificación disponibles**:
+1. `python3 analyze_pdfs_with_render.py` - Análisis detallado con Python
+2. `cargo run --example analyze_pdf_with_render` - Análisis con Rust
+3. `./verify_pdf_compatibility.sh` - Script completo de verificación
+
+**Cuándo usar**:
+- Después de implementar mejoras al parser
+- Para verificar regresiones
+- Para identificar próximas prioridades de desarrollo
+- Para detectar problemas de compatibilidad entre parsing y rendering
+- Para validar que PDFs parseados se pueden renderizar correctamente
 
 ### Troubleshooting CI/CD
 - Si fallan pipelines, ejecutar comandos localmente primero
@@ -101,7 +189,7 @@
   - Añadidos 19 tests completos para oxidize-pdf-api
   - Añadidos 45 tests para módulos semantic (entity, export, marking)
   - Total de tests aumentado de 1053 a 1274+ tests (221 nuevos tests)
-  - Coverage estimado mejorado de ~75% a ~85%+
+  - Coverage estimado mejorado de ~50% a ~55% (REAL)
 - **Todas las features Q2 2025 completadas**:
   - ✅ PDF Merge (26 tests)
   - ✅ PDF Split (28 tests)
@@ -219,7 +307,7 @@
   - 19 tests comprehensivos (100% funcionalidad cubierta)
 
 ### Estado Actual del Código - Session 18/07/2025
-- **Test Coverage**: ~85%+ estimado (vs 43.42% inicial) - Mejora del +96%
+- **Test Coverage**: ~50% REAL (vs 43.42% inicial) - Mejora del +16%
 - **Tests**: 1274+ tests totales pasando (vs 175 al inicio)
 - **CI/CD**: Todos los checks de formato y clippy pasando
 - **Warnings**: 0 warnings (build completamente limpio)
@@ -300,7 +388,7 @@
 
 ### Objetivos de Coverage 🎯
 - **Objetivo**: 95% coverage (80% mínimo aceptable)
-- **Logrado total**: ~75%+ (vs 43.42% inicial) - Mejora del +75%
+- **Logrado total**: ~50% REAL (vs 43.42% inicial) - Mejora del +16%
 - **Áreas completadas**: CLI, object_stream, array, OCR modules, page_extraction, merge, split completamente
 - **Tests totales**: 387 (vs 175 al inicio de sesión) - +121% más tests
 - **Funcionalidad OCR**: Sistema completo de análisis de páginas y OCR
@@ -319,7 +407,7 @@
 ### Métricas de Calidad - Session 18/07/2025
 - Tests totales: 1274+ ✅ (vs 175 inicial)
 - Tests añadidos hoy: 221 tests nuevos ✅
-- Coverage: ~85%+ ✅ (objetivo 95%, mejora del +96%)
+- Coverage: ~50% REAL ⚠️ (objetivo 95%, mejora del +16%)
 - Warnings: 0/0 ✅ (build completamente limpio)
 - Benchmarks: 5 suites completas con CI automation ✅
 - Pipeline: funcionando sin timeouts ✅

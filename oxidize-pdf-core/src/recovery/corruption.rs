@@ -268,6 +268,9 @@ fn determine_corruption_type(report: &mut CorruptionReport) {
 }
 
 fn find_pattern(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() {
+        return Some(0);
+    }
     haystack
         .windows(needle.len())
         .position(|window| window == needle)
@@ -310,5 +313,480 @@ mod tests {
         assert_eq!(stats.readable_bytes, 0);
         assert_eq!(stats.estimated_objects, 0);
         assert_eq!(stats.found_pages, 0);
+    }
+
+    #[test]
+    fn test_corruption_type_debug_clone_eq() {
+        let corruption = CorruptionType::InvalidHeader;
+        let debug_str = format!("{:?}", corruption);
+        assert!(debug_str.contains("InvalidHeader"));
+
+        let cloned = corruption.clone();
+        assert_eq!(corruption, cloned);
+
+        // Test all variants
+        let variants = vec![
+            CorruptionType::InvalidHeader,
+            CorruptionType::CorruptXRef,
+            CorruptionType::MissingEOF,
+            CorruptionType::BrokenReferences,
+            CorruptionType::CorruptStreams,
+            CorruptionType::InvalidPageTree,
+            CorruptionType::TruncatedFile,
+            CorruptionType::Unknown,
+        ];
+
+        for variant in variants {
+            let _ = format!("{:?}", variant);
+            let _ = variant.clone();
+        }
+    }
+
+    #[test]
+    fn test_corruption_type_multiple() {
+        let types = vec![
+            CorruptionType::InvalidHeader,
+            CorruptionType::CorruptXRef,
+            CorruptionType::MissingEOF,
+        ];
+        let multiple = CorruptionType::Multiple(types.clone());
+
+        match &multiple {
+            CorruptionType::Multiple(inner) => {
+                assert_eq!(inner.len(), 3);
+                assert_eq!(inner[0], CorruptionType::InvalidHeader);
+            }
+            _ => panic!("Should be Multiple variant"),
+        }
+    }
+
+    #[test]
+    fn test_section_type_debug_clone() {
+        let sections = vec![
+            SectionType::Header,
+            SectionType::Body,
+            SectionType::XRef,
+            SectionType::Trailer,
+            SectionType::Page(42),
+            SectionType::Object(123),
+            SectionType::Stream(456),
+        ];
+
+        for section in sections {
+            let debug_str = format!("{:?}", section);
+            assert!(!debug_str.is_empty());
+
+            let cloned = section.clone();
+            match (section, cloned) {
+                (SectionType::Page(n1), SectionType::Page(n2)) => assert_eq!(n1, n2),
+                (SectionType::Object(n1), SectionType::Object(n2)) => assert_eq!(n1, n2),
+                (SectionType::Stream(n1), SectionType::Stream(n2)) => assert_eq!(n1, n2),
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn test_recoverable_section_creation() {
+        let section = RecoverableSection {
+            section_type: SectionType::Page(1),
+            start_offset: 100,
+            end_offset: 500,
+            confidence: 0.95,
+        };
+
+        assert_eq!(section.start_offset, 100);
+        assert_eq!(section.end_offset, 500);
+        assert_eq!(section.confidence, 0.95);
+
+        let debug_str = format!("{:?}", section);
+        assert!(debug_str.contains("RecoverableSection"));
+    }
+
+    #[test]
+    fn test_corruption_report_creation() {
+        let report = CorruptionReport {
+            corruption_type: CorruptionType::CorruptXRef,
+            severity: 7,
+            errors: vec!["Error 1".to_string(), "Error 2".to_string()],
+            recoverable_sections: vec![RecoverableSection {
+                section_type: SectionType::Header,
+                start_offset: 0,
+                end_offset: 10,
+                confidence: 1.0,
+            }],
+            file_stats: FileStats {
+                file_size: 1000,
+                readable_bytes: 900,
+                estimated_objects: 10,
+                found_pages: 3,
+            },
+        };
+
+        assert_eq!(report.severity, 7);
+        assert_eq!(report.errors.len(), 2);
+        assert_eq!(report.recoverable_sections.len(), 1);
+        assert_eq!(report.file_stats.file_size, 1000);
+    }
+
+    #[test]
+    fn test_find_pattern_various_cases() {
+        // Pattern at start
+        assert_eq!(find_pattern(b"xref table", b"xref"), Some(0));
+
+        // Pattern at end
+        assert_eq!(find_pattern(b"table xref", b"xref"), Some(6));
+
+        // Pattern in middle
+        assert_eq!(find_pattern(b"PDF xref table", b"xref"), Some(4));
+
+        // Pattern not found
+        assert_eq!(find_pattern(b"PDF table", b"xref"), None);
+
+        // Empty haystack
+        assert_eq!(find_pattern(b"", b"xref"), None);
+
+        // Empty needle (edge case)
+        assert_eq!(find_pattern(b"test", b""), Some(0));
+    }
+
+    #[test]
+    fn test_determine_corruption_type_single() {
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 5,
+            errors: vec!["Invalid header found".to_string()],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        determine_corruption_type(&mut report);
+        assert_eq!(report.corruption_type, CorruptionType::InvalidHeader);
+    }
+
+    #[test]
+    fn test_determine_corruption_type_multiple() {
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 8,
+            errors: vec![
+                "Invalid header".to_string(),
+                "Missing EOF marker".to_string(),
+                "Corrupt cross-reference table".to_string(),
+            ],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        determine_corruption_type(&mut report);
+        match report.corruption_type {
+            CorruptionType::Multiple(types) => {
+                assert_eq!(types.len(), 3);
+                assert!(types.contains(&CorruptionType::InvalidHeader));
+                assert!(types.contains(&CorruptionType::MissingEOF));
+                assert!(types.contains(&CorruptionType::CorruptXRef));
+            }
+            _ => panic!("Should be Multiple corruption type"),
+        }
+    }
+
+    #[test]
+    fn test_determine_corruption_type_unknown() {
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 3,
+            errors: vec!["Some generic error".to_string()],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        determine_corruption_type(&mut report);
+        assert_eq!(report.corruption_type, CorruptionType::Unknown);
+    }
+
+    #[test]
+    fn test_check_header_valid() {
+        use std::io::Cursor;
+
+        let data = b"%PDF-1.7\nrest of content";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        let result = check_header(&mut cursor, &mut report).unwrap();
+        assert!(result);
+        assert_eq!(report.recoverable_sections.len(), 1);
+        assert_eq!(report.recoverable_sections[0].confidence, 1.0);
+    }
+
+    #[test]
+    fn test_check_header_invalid() {
+        use std::io::Cursor;
+
+        let data = b"INVALID HEADER\nrest of content";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        let result = check_header(&mut cursor, &mut report).unwrap();
+        assert!(!result);
+        assert!(!report.errors.is_empty());
+        assert!(report.errors[0].contains("Invalid PDF header"));
+    }
+
+    #[test]
+    fn test_check_header_too_short() {
+        use std::io::Cursor;
+
+        let data = b"PDF"; // Too short
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        let result = check_header(&mut cursor, &mut report).unwrap();
+        assert!(!result);
+        assert!(!report.errors.is_empty());
+    }
+
+    #[test]
+    fn test_check_eof_present() {
+        use std::io::Cursor;
+
+        let data = b"%PDF-1.7\nsome content\n%%EOF\n";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats {
+                file_size: data.len() as u64,
+                ..Default::default()
+            },
+        };
+
+        check_eof(&mut cursor, &mut report).unwrap();
+        // Should add "analysis complete" message
+        assert_eq!(report.errors.len(), 1);
+        assert!(report.errors[0].contains("analysis complete"));
+        assert_eq!(report.severity, 0);
+    }
+
+    #[test]
+    fn test_check_eof_missing() {
+        use std::io::Cursor;
+
+        let data = b"%PDF-1.7\nsome content without eof";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats {
+                file_size: data.len() as u64,
+                ..Default::default()
+            },
+        };
+
+        check_eof(&mut cursor, &mut report).unwrap();
+        assert!(!report.errors.is_empty());
+        assert!(report.errors[0].contains("Missing %%EOF"));
+        assert_eq!(report.severity, 5);
+    }
+
+    #[test]
+    fn test_scan_xref_found() {
+        use std::io::Cursor;
+
+        let data = b"%PDF-1.7\nxref\n0 1\n0000000000 65535 f\ntrailer\n";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        scan_xref(&mut cursor, &mut report).unwrap();
+        assert!(report
+            .recoverable_sections
+            .iter()
+            .any(|s| matches!(s.section_type, SectionType::XRef)));
+        assert!(report.errors.is_empty() || !report.errors[0].contains("No cross-reference"));
+    }
+
+    #[test]
+    fn test_scan_xref_not_found() {
+        use std::io::Cursor;
+
+        let data = b"%PDF-1.7\nNo cross reference table here";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        scan_xref(&mut cursor, &mut report).unwrap();
+        assert!(!report.errors.is_empty());
+        assert!(report.errors[0].contains("No cross-reference tables found"));
+        assert_eq!(report.severity, 8);
+    }
+
+    #[test]
+    fn test_analyze_objects_with_pages() {
+        use std::io::Cursor;
+
+        let data = b"1 0 obj\n<< /Type /Page >>\nendobj\n2 0 obj\n<< /Type /Catalog >>\nendobj";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        analyze_objects(&mut cursor, &mut report).unwrap();
+        assert_eq!(report.file_stats.estimated_objects, 2);
+        assert_eq!(report.file_stats.found_pages, 1);
+        assert_eq!(report.file_stats.readable_bytes, data.len() as u64);
+    }
+
+    #[test]
+    fn test_analyze_objects_no_objects() {
+        use std::io::Cursor;
+
+        let data = b"No PDF items here";
+        let mut cursor = Cursor::new(data);
+        let mut report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 0,
+            errors: vec![],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        analyze_objects(&mut cursor, &mut report).unwrap();
+        assert_eq!(report.file_stats.estimated_objects, 0);
+        assert!(!report.errors.is_empty());
+        assert!(report.errors[0].contains("No PDF objects"));
+        assert_eq!(report.severity, 10);
+    }
+
+    #[test]
+    fn test_is_corrupted_valid_file() {
+        use std::fs::File;
+        use std::io::Write;
+
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("valid_test.pdf");
+        let mut file = File::create(&temp_path).unwrap();
+        file.write_all(b"%PDF-1.7\n1 0 obj\n<< >>\nendobj\nxref\n0 1\n0000000000 65535 f\ntrailer\n<< >>\nstartxref\n0\n%%EOF").unwrap();
+
+        let corrupted = is_corrupted(&temp_path);
+        // May be false or true depending on analysis
+        let _ = corrupted;
+
+        // Cleanup
+        let _ = std::fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_is_corrupted_invalid_file() {
+        use std::fs::File;
+        use std::io::Write;
+
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("invalid_test.pdf");
+        let mut file = File::create(&temp_path).unwrap();
+        file.write_all(b"This is not a PDF").unwrap();
+
+        let corrupted = is_corrupted(&temp_path);
+        assert!(corrupted);
+
+        // Cleanup
+        let _ = std::fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_is_corrupted_nonexistent_file() {
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("nonexistent_test.pdf");
+
+        let corrupted = is_corrupted(&temp_path);
+        assert!(corrupted); // Should return true for error case
+    }
+
+    #[test]
+    fn test_detect_corruption_comprehensive() {
+        use std::fs::File;
+        use std::io::Write;
+
+        let temp_dir = std::env::temp_dir();
+        let temp_path = temp_dir.join("comprehensive_test.pdf");
+        let mut file = File::create(&temp_path).unwrap();
+        // Missing EOF marker
+        file.write_all(b"%PDF-1.7\n1 0 obj\n<< /Type /Page >>\nendobj")
+            .unwrap();
+
+        let report = detect_corruption(&temp_path).unwrap();
+        assert!(report.severity > 0);
+        assert!(!report.errors.is_empty());
+
+        // Cleanup
+        let _ = std::fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_file_stats_debug() {
+        let stats = FileStats {
+            file_size: 1000,
+            readable_bytes: 950,
+            estimated_objects: 10,
+            found_pages: 3,
+        };
+
+        let debug_str = format!("{:?}", stats);
+        assert!(debug_str.contains("FileStats"));
+        assert!(debug_str.contains("1000"));
+        assert!(debug_str.contains("950"));
+        assert!(debug_str.contains("10"));
+        assert!(debug_str.contains("3"));
+    }
+
+    #[test]
+    fn test_corruption_report_debug() {
+        let report = CorruptionReport {
+            corruption_type: CorruptionType::Unknown,
+            severity: 5,
+            errors: vec!["Test error".to_string()],
+            recoverable_sections: vec![],
+            file_stats: FileStats::default(),
+        };
+
+        let debug_str = format!("{:?}", report);
+        assert!(debug_str.contains("CorruptionReport"));
+        assert!(debug_str.contains("Unknown"));
+        assert!(debug_str.contains("5"));
     }
 }

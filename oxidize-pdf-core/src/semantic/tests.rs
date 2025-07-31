@@ -1,5 +1,6 @@
 //! Tests for semantic marking functionality
 
+#[cfg(test)]
 mod entity_tests {
     use crate::semantic::{Entity, EntityMetadata, EntityType};
 
@@ -174,6 +175,7 @@ mod entity_tests {
     }
 }
 
+#[cfg(test)]
 mod export_tests {
     use crate::semantic::{Entity, EntityMap, EntityMetadata, EntityType, ExportFormat};
 
@@ -615,6 +617,7 @@ mod export_tests {
     }
 }
 
+#[cfg(test)]
 mod marking_tests {
     use crate::semantic::{Entity, EntityMetadata, EntityType};
 
