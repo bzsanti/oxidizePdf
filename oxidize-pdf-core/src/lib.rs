@@ -184,6 +184,7 @@ pub mod memory;
 pub mod objects;
 pub mod operations;
 pub mod page;
+pub mod page_forms;
 pub mod page_labels;
 pub mod parser;
 pub mod recovery;

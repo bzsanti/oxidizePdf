@@ -853,4 +853,367 @@ mod tests {
         assert_eq!(manager.count(), 0);
         assert!(manager.patterns().is_empty());
     }
+
+    #[test]
+    fn test_pattern_type_values() {
+        assert_eq!(PatternType::Tiling as i32, 1);
+        assert_eq!(PatternType::Shading as i32, 2);
+    }
+
+    #[test]
+    fn test_tiling_type_values() {
+        assert_eq!(TilingType::ConstantSpacing as i32, 1);
+        assert_eq!(TilingType::NoDistortion as i32, 2);
+        assert_eq!(TilingType::ConstantSpacingFaster as i32, 3);
+    }
+
+    #[test]
+    fn test_paint_type_values() {
+        assert_eq!(PaintType::Colored as i32, 1);
+        assert_eq!(PaintType::Uncolored as i32, 2);
+    }
+
+    #[test]
+    fn test_pattern_matrix_rotation() {
+        let angle = std::f64::consts::PI / 2.0; // 90 degrees
+        let matrix = PatternMatrix::rotation(angle);
+
+        // cos(90°) ≈ 0, sin(90°) ≈ 1
+        assert!((matrix.matrix[0]).abs() < 1e-10); // cos(90°) ≈ 0
+        assert!((matrix.matrix[1] - 1.0).abs() < 1e-10); // sin(90°) ≈ 1
+        assert!((matrix.matrix[2] + 1.0).abs() < 1e-10); // -sin(90°) ≈ -1
+        assert!((matrix.matrix[3]).abs() < 1e-10); // cos(90°) ≈ 0
+    }
+
+    #[test]
+    fn test_pattern_matrix_complex_multiply() {
+        let translate = PatternMatrix::translation(10.0, 20.0);
+        let scale = PatternMatrix::scale(2.0, 3.0);
+        let rotate = PatternMatrix::rotation(std::f64::consts::PI / 4.0); // 45 degrees
+
+        let result = translate.multiply(&scale).multiply(&rotate);
+
+        // Verify matrix multiplication was performed
+        assert_ne!(result.matrix, PatternMatrix::identity().matrix);
+    }
+
+    #[test]
+    fn test_tiling_pattern_with_matrix() {
+        let pattern = TilingPattern::new(
+            "TestPattern".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            50.0,
+            50.0,
+        );
+
+        let matrix = PatternMatrix::scale(2.0, 2.0);
+        let pattern_with_matrix = pattern.with_matrix(matrix);
+
+        assert_eq!(
+            pattern_with_matrix.matrix.matrix,
+            [2.0, 0.0, 0.0, 2.0, 0.0, 0.0]
+        );
+    }
+
+    #[test]
+    fn test_tiling_pattern_with_resources() {
+        let pattern = TilingPattern::new(
+            "TestPattern".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            50.0,
+            50.0,
+        );
+
+        let mut resources = Dictionary::new();
+        resources.set("Font", Object::Name("F1".to_string()));
+
+        let pattern_with_resources = pattern.with_resources(resources.clone());
+        assert_eq!(pattern_with_resources.resources, Some(resources));
+    }
+
+    #[test]
+    fn test_tiling_pattern_stroke() {
+        let mut pattern = TilingPattern::new(
+            "StrokePattern".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            100.0,
+            100.0,
+        );
+
+        pattern.add_rectangle(10.0, 10.0, 80.0, 80.0);
+        pattern.stroke();
+
+        let content = String::from_utf8(pattern.content_stream).unwrap();
+        assert!(content.contains("S"));
+        assert!(!content.contains("f")); // Should not contain fill
+    }
+
+    #[test]
+    fn test_tiling_pattern_add_command() {
+        let mut pattern = TilingPattern::new(
+            "CommandPattern".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            100.0,
+            100.0,
+        );
+
+        pattern.add_command("0.5 0.5 0.5 rg");
+        pattern.add_command("2 w");
+
+        let content = String::from_utf8(pattern.content_stream).unwrap();
+        assert!(content.contains("0.5 0.5 0.5 rg"));
+        assert!(content.contains("2 w"));
+    }
+
+    #[test]
+    fn test_pattern_manager_remove_pattern() {
+        let mut manager = PatternManager::new();
+        let mut pattern = TilingPattern::new(
+            "RemovablePattern".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            50.0,
+            50.0,
+        );
+
+        pattern.add_rectangle(0.0, 0.0, 50.0, 50.0);
+        manager.add_pattern(pattern).unwrap();
+        assert_eq!(manager.count(), 1);
+
+        let removed = manager.remove_pattern("RemovablePattern");
+        assert!(removed.is_some());
+        assert_eq!(manager.count(), 0);
+
+        let removed_again = manager.remove_pattern("RemovablePattern");
+        assert!(removed_again.is_none());
+    }
+
+    #[test]
+    fn test_pattern_manager_to_resource_dictionary() {
+        let mut manager = PatternManager::new();
+
+        // Empty manager
+        assert_eq!(manager.to_resource_dictionary().unwrap(), "");
+
+        // Add patterns
+        let mut pattern1 = TilingPattern::new(
+            "P1".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 10.0, 10.0],
+            10.0,
+            10.0,
+        );
+        pattern1.add_rectangle(0.0, 0.0, 10.0, 10.0);
+        manager.add_pattern(pattern1).unwrap();
+
+        let dict = manager.to_resource_dictionary().unwrap();
+        assert!(dict.starts_with("/Pattern <<"));
+        assert!(dict.contains("/P1"));
+        assert!(dict.ends_with(">>"));
+    }
+
+    #[test]
+    fn test_pattern_manager_default() {
+        let manager = PatternManager::default();
+        assert_eq!(manager.count(), 0);
+        assert!(manager.patterns().is_empty());
+    }
+
+    #[test]
+    fn test_pattern_graphics_context_extension() {
+        let mut context = GraphicsContext::new();
+
+        // Test fill pattern
+        context.set_fill_pattern("TestPattern").unwrap();
+        let commands = context.operations();
+        assert!(commands.contains("/Pattern cs /TestPattern scn"));
+
+        // Test stroke pattern
+        context.set_stroke_pattern("StrokePattern").unwrap();
+        let commands = context.operations();
+        assert!(commands.contains("/Pattern CS /StrokePattern SCN"));
+    }
+
+    #[test]
+    fn test_tiling_pattern_uncolored() {
+        let pattern = TilingPattern::new(
+            "UncoloredPattern".to_string(),
+            PaintType::Uncolored,
+            TilingType::NoDistortion,
+            [0.0, 0.0, 50.0, 50.0],
+            50.0,
+            50.0,
+        );
+
+        assert_eq!(pattern.paint_type, PaintType::Uncolored);
+        assert_eq!(pattern.tiling_type, TilingType::NoDistortion);
+    }
+
+    #[test]
+    fn test_checkerboard_pattern_content() {
+        let mut manager = PatternManager::new();
+        let name = manager
+            .create_checkerboard_pattern(
+                10.0,
+                [1.0, 1.0, 1.0], // White
+                [0.0, 0.0, 0.0], // Black
+            )
+            .unwrap();
+
+        let pattern = manager.get_pattern(&name).unwrap();
+        let content = String::from_utf8(pattern.content_stream.clone()).unwrap();
+
+        // Should contain color commands
+        assert!(content.contains("1 1 1 rg")); // White
+        assert!(content.contains("0 0 0 rg")); // Black
+                                               // Should contain rectangles
+        assert!(content.contains("re"));
+        assert!(content.contains("f"));
+    }
+
+    #[test]
+    fn test_stripe_pattern_zero_angle() {
+        let mut manager = PatternManager::new();
+        let name = manager
+            .create_stripe_pattern(
+                5.0,
+                0.0, // No rotation
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+            )
+            .unwrap();
+
+        let pattern = manager.get_pattern(&name).unwrap();
+        // With 0 angle, matrix should remain identity
+        assert_eq!(pattern.matrix.matrix, PatternMatrix::identity().matrix);
+    }
+
+    #[test]
+    fn test_dots_pattern_content() {
+        let mut manager = PatternManager::new();
+        let name = manager
+            .create_dots_pattern(
+                3.0,             // Small radius
+                10.0,            // Spacing
+                [0.0, 0.0, 0.0], // Black dots
+                [1.0, 1.0, 1.0], // White background
+            )
+            .unwrap();
+
+        let pattern = manager.get_pattern(&name).unwrap();
+        let content = String::from_utf8(pattern.content_stream.clone()).unwrap();
+
+        // Should draw background rectangle
+        assert!(content.contains("1 1 1 rg")); // White background
+        assert!(content.contains("0 0 10 10 re")); // Background rectangle
+
+        // Should draw circle
+        assert!(content.contains("0 0 0 rg")); // Black dot
+        assert!(content.contains("m")); // Move to
+        assert!(content.contains("c")); // Curve (for circle)
+    }
+
+    #[test]
+    fn test_pattern_validation_negative_step() {
+        let pattern = TilingPattern::new(
+            "NegativeStep".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            50.0,
+            -50.0, // Negative y_step
+        );
+
+        assert!(pattern.validate().is_err());
+    }
+
+    #[test]
+    fn test_circle_approximation() {
+        let mut pattern = TilingPattern::new(
+            "CircleTest".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            100.0,
+            100.0,
+        );
+
+        pattern.add_circle(50.0, 50.0, 0.0); // Zero radius
+        let content = String::from_utf8(pattern.content_stream.clone()).unwrap();
+
+        // Should still generate move command but minimal curves
+        assert!(content.contains("50 50 m"));
+    }
+
+    #[test]
+    fn test_pattern_manager_get_nonexistent() {
+        let manager = PatternManager::new();
+        assert!(manager.get_pattern("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_pattern_type_debug_clone_eq() {
+        let pattern_type = PatternType::Tiling;
+
+        // Test Debug
+        let debug_str = format!("{:?}", pattern_type);
+        assert!(debug_str.contains("Tiling"));
+
+        // Test Clone
+        let cloned = pattern_type.clone();
+        assert_eq!(cloned, PatternType::Tiling);
+
+        // Test PartialEq
+        assert_eq!(PatternType::Tiling, PatternType::Tiling);
+        assert_ne!(PatternType::Tiling, PatternType::Shading);
+    }
+
+    #[test]
+    fn test_tiling_pattern_debug_clone() {
+        let pattern = TilingPattern::new(
+            "TestPattern".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 100.0, 100.0],
+            50.0,
+            50.0,
+        );
+
+        // Test Debug
+        let debug_str = format!("{:?}", pattern);
+        assert!(debug_str.contains("TilingPattern"));
+        assert!(debug_str.contains("TestPattern"));
+
+        // Test Clone
+        let cloned = pattern.clone();
+        assert_eq!(cloned.name, pattern.name);
+        assert_eq!(cloned.paint_type, pattern.paint_type);
+    }
+
+    #[test]
+    fn test_pattern_matrix_debug_clone_eq() {
+        let matrix = PatternMatrix::translation(5.0, 10.0);
+
+        // Test Debug
+        let debug_str = format!("{:?}", matrix);
+        assert!(debug_str.contains("PatternMatrix"));
+
+        // Test Clone
+        let cloned = matrix.clone();
+        assert_eq!(cloned.matrix, matrix.matrix);
+
+        // Test PartialEq
+        assert_eq!(matrix, cloned);
+        assert_ne!(matrix, PatternMatrix::identity());
+    }
 }

@@ -48,6 +48,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Compression (optional)
 flate2 = "1.0"
 
+# Image processing (optional)
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+
 # Testing
 tempfile = "3.0"
 pretty_assertions = "1.0"

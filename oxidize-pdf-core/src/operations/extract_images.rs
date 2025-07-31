@@ -262,6 +262,7 @@ impl ImageExtractor {
             ImageFormat::Jpeg => "jpg",
             ImageFormat::Png => "png",
             ImageFormat::Tiff => "tiff",
+            ImageFormat::Raw => "rgb",
         };
 
         let filename = self
@@ -359,6 +360,7 @@ pub fn extract_images_from_pages<P: AsRef<Path>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[test]
     fn test_extract_options_default() {
@@ -383,6 +385,420 @@ mod tests {
             .replace("{format}", "jpg");
 
         assert_eq!(pattern, "img_1_2.jpg");
+    }
+
+    #[test]
+    fn test_extract_options_custom() {
+        let temp_dir = TempDir::new().unwrap();
+        let options = ExtractImagesOptions {
+            output_dir: temp_dir.path().to_path_buf(),
+            name_pattern: "custom_{page}_{index}.{format}".to_string(),
+            extract_inline: false,
+            min_size: Some(50),
+            create_dir: false,
+        };
+
+        assert_eq!(options.output_dir, temp_dir.path());
+        assert_eq!(options.name_pattern, "custom_{page}_{index}.{format}");
+        assert!(!options.extract_inline);
+        assert_eq!(options.min_size, Some(50));
+        assert!(!options.create_dir);
+    }
+
+    #[test]
+    fn test_extract_options_debug_clone() {
+        let options = ExtractImagesOptions {
+            output_dir: PathBuf::from("/test/path"),
+            name_pattern: "test.{format}".to_string(),
+            extract_inline: true,
+            min_size: None,
+            create_dir: true,
+        };
+
+        let debug_str = format!("{:?}", options);
+        assert!(debug_str.contains("ExtractImagesOptions"));
+        assert!(debug_str.contains("/test/path"));
+
+        let cloned = options.clone();
+        assert_eq!(cloned.output_dir, options.output_dir);
+        assert_eq!(cloned.name_pattern, options.name_pattern);
+        assert_eq!(cloned.extract_inline, options.extract_inline);
+        assert_eq!(cloned.min_size, options.min_size);
+        assert_eq!(cloned.create_dir, options.create_dir);
+    }
+
+    #[test]
+    fn test_extracted_image_struct() {
+        let image = ExtractedImage {
+            page_number: 0,
+            image_index: 1,
+            file_path: PathBuf::from("/test/image.jpg"),
+            width: 100,
+            height: 200,
+            format: ImageFormat::Jpeg,
+        };
+
+        assert_eq!(image.page_number, 0);
+        assert_eq!(image.image_index, 1);
+        assert_eq!(image.file_path, PathBuf::from("/test/image.jpg"));
+        assert_eq!(image.width, 100);
+        assert_eq!(image.height, 200);
+        assert_eq!(image.format, ImageFormat::Jpeg);
+    }
+
+    #[test]
+    fn test_extracted_image_debug() {
+        let image = ExtractedImage {
+            page_number: 5,
+            image_index: 3,
+            file_path: PathBuf::from("output.png"),
+            width: 512,
+            height: 768,
+            format: ImageFormat::Png,
+        };
+
+        let debug_str = format!("{:?}", image);
+        assert!(debug_str.contains("ExtractedImage"));
+        assert!(debug_str.contains("5"));
+        assert!(debug_str.contains("3"));
+        assert!(debug_str.contains("output.png"));
+        assert!(debug_str.contains("512"));
+        assert!(debug_str.contains("768"));
+    }
+
+    #[test]
+    fn test_detect_image_format_png() {
+        // Create a mock ImageExtractor for testing
+        // We need to create a dummy PDF document for this
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // PNG magic bytes
+        let png_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0DIHDR";
+        let format = extractor.detect_image_format_from_data(png_data).unwrap();
+        assert_eq!(format, ImageFormat::Png);
+    }
+
+    #[test]
+    fn test_detect_image_format_jpeg() {
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // JPEG magic bytes
+        let jpeg_data = b"\xFF\xD8\xFF\xE0\x00\x10JFIF";
+        let format = extractor.detect_image_format_from_data(jpeg_data).unwrap();
+        assert_eq!(format, ImageFormat::Jpeg);
+    }
+
+    #[test]
+    fn test_detect_image_format_tiff_little_endian() {
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // TIFF little endian magic bytes
+        let tiff_data = b"II\x2A\x00\x08\x00\x00\x00";
+        let format = extractor.detect_image_format_from_data(tiff_data).unwrap();
+        assert_eq!(format, ImageFormat::Tiff);
+    }
+
+    #[test]
+    fn test_detect_image_format_tiff_big_endian() {
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // TIFF big endian magic bytes
+        let tiff_data = b"MM\x00\x2A\x00\x00\x00\x08";
+        let format = extractor.detect_image_format_from_data(tiff_data).unwrap();
+        assert_eq!(format, ImageFormat::Tiff);
+    }
+
+    #[test]
+    fn test_detect_image_format_unknown() {
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Unknown format - should default to PNG
+        let unknown_data = b"\x00\x01\x02\x03\x04\x05\x06\x07\x08";
+        let format = extractor
+            .detect_image_format_from_data(unknown_data)
+            .unwrap();
+        assert_eq!(format, ImageFormat::Png); // Default fallback
+    }
+
+    #[test]
+    fn test_detect_image_format_short_data() {
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Too short data
+        let short_data = b"\xFF\xD8";
+        let result = extractor.detect_image_format_from_data(short_data);
+        assert!(result.is_err());
+        match result {
+            Err(OperationError::ParseError(msg)) => {
+                assert!(msg.contains("too short"));
+            }
+            _ => panic!("Expected ParseError"),
+        }
+    }
+
+    #[test]
+    fn test_filename_pattern_replacements() {
+        let options = ExtractImagesOptions {
+            name_pattern: "page_{page}_img_{index}_{format}.{format}".to_string(),
+            ..Default::default()
+        };
+
+        let pattern = options
+            .name_pattern
+            .replace("{page}", "10")
+            .replace("{index}", "5")
+            .replace("{format}", "png");
+
+        assert_eq!(pattern, "page_10_img_5_png.png");
+    }
+
+    #[test]
+    fn test_extract_options_no_min_size() {
+        let options = ExtractImagesOptions {
+            min_size: None,
+            ..Default::default()
+        };
+
+        assert_eq!(options.min_size, None);
+    }
+
+    #[test]
+    fn test_create_output_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let output_dir = temp_dir.path().join("new_dir");
+
+        let options = ExtractImagesOptions {
+            output_dir: output_dir.clone(),
+            create_dir: true,
+            ..Default::default()
+        };
+
+        // In real usage, ImageExtractor would create this directory
+        assert!(!output_dir.exists());
+        assert_eq!(options.output_dir, output_dir);
+        assert!(options.create_dir);
+    }
+
+    #[test]
+    fn test_pattern_with_special_chars() {
+        let options = ExtractImagesOptions {
+            name_pattern: "img-{page}_{index}.{format}".to_string(),
+            ..Default::default()
+        };
+
+        let pattern = options
+            .name_pattern
+            .replace("{page}", "1")
+            .replace("{index}", "1")
+            .replace("{format}", "jpg");
+
+        assert_eq!(pattern, "img-1_1.jpg");
+    }
+
+    #[test]
+    fn test_multiple_format_extensions() {
+        let formats = vec![
+            (ImageFormat::Jpeg, "jpg"),
+            (ImageFormat::Png, "png"),
+            (ImageFormat::Tiff, "tiff"),
+        ];
+
+        for (format, expected_ext) in formats {
+            let extension = match format {
+                ImageFormat::Jpeg => "jpg",
+                ImageFormat::Png => "png",
+                ImageFormat::Tiff => "tiff",
+            };
+            assert_eq!(extension, expected_ext);
+        }
+    }
+
+    #[test]
+    fn test_extract_inline_option() {
+        let mut options = ExtractImagesOptions::default();
+        assert!(options.extract_inline);
+
+        options.extract_inline = false;
+        assert!(!options.extract_inline);
+    }
+
+    #[test]
+    fn test_min_size_filtering() {
+        let options_with_min = ExtractImagesOptions {
+            min_size: Some(100),
+            ..Default::default()
+        };
+
+        let options_no_min = ExtractImagesOptions {
+            min_size: None,
+            ..Default::default()
+        };
+
+        assert_eq!(options_with_min.min_size, Some(100));
+        assert_eq!(options_no_min.min_size, None);
+    }
+
+    #[test]
+    fn test_output_path_combinations() {
+        let base_dir = PathBuf::from("/output");
+        let options = ExtractImagesOptions {
+            output_dir: base_dir.clone(),
+            name_pattern: "img_{page}_{index}.{format}".to_string(),
+            ..Default::default()
+        };
+
+        let filename = options
+            .name_pattern
+            .replace("{page}", "1")
+            .replace("{index}", "2")
+            .replace("{format}", "png");
+
+        let full_path = options.output_dir.join(filename);
+        assert_eq!(full_path, PathBuf::from("/output/img_1_2.png"));
+    }
+
+    #[test]
+    fn test_pattern_without_placeholders() {
+        let options = ExtractImagesOptions {
+            name_pattern: "static_name.jpg".to_string(),
+            ..Default::default()
+        };
+
+        let pattern = options
+            .name_pattern
+            .replace("{page}", "1")
+            .replace("{index}", "2")
+            .replace("{format}", "png");
+
+        assert_eq!(pattern, "static_name.jpg"); // No placeholders replaced
+    }
+
+    #[test]
+    fn test_detect_format_edge_cases() {
+        let temp_dir = TempDir::new().unwrap();
+        let temp_file = temp_dir.path().join("test.pdf");
+        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+
+        let document = PdfReader::open_document(&temp_file).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Empty data
+        let empty_data = b"";
+        assert!(extractor.detect_image_format_from_data(empty_data).is_err());
+
+        // Data exactly 8 bytes (minimum for PNG check)
+        let exact_8 = b"\x89PNG\r\n\x1a\n";
+        let format = extractor.detect_image_format_from_data(exact_8).unwrap();
+        assert_eq!(format, ImageFormat::Png);
+
+        // Data exactly 4 bytes (minimum for TIFF check)
+        let exact_4 = b"II\x2A\x00";
+        let format = extractor.detect_image_format_from_data(exact_4).unwrap();
+        assert_eq!(format, ImageFormat::Tiff);
+
+        // Data exactly 2 bytes (minimum for JPEG check)
+        let exact_2 = b"\xFF\xD8";
+        let result = extractor.detect_image_format_from_data(exact_2);
+        assert!(result.is_err()); // Too short (needs at least 8 bytes)
+    }
+
+    #[test]
+    fn test_complex_filename_pattern() {
+        let options = ExtractImagesOptions {
+            name_pattern: "{format}/page{page}/image_{index}_{page}.{format}".to_string(),
+            ..Default::default()
+        };
+
+        let pattern = options
+            .name_pattern
+            .replace("{page}", "5")
+            .replace("{index}", "3")
+            .replace("{format}", "jpeg");
+
+        assert_eq!(pattern, "jpeg/page5/image_3_5.jpeg");
+    }
+
+    #[test]
+    fn test_image_dimensions() {
+        let small_image = ExtractedImage {
+            page_number: 0,
+            image_index: 0,
+            file_path: PathBuf::from("small.jpg"),
+            width: 5,
+            height: 5,
+            format: ImageFormat::Jpeg,
+        };
+
+        let large_image = ExtractedImage {
+            page_number: 0,
+            image_index: 1,
+            file_path: PathBuf::from("large.jpg"),
+            width: 2000,
+            height: 3000,
+            format: ImageFormat::Jpeg,
+        };
+
+        assert_eq!(small_image.width, 5);
+        assert_eq!(small_image.height, 5);
+        assert_eq!(large_image.width, 2000);
+        assert_eq!(large_image.height, 3000);
+    }
+
+    #[test]
+    fn test_page_and_index_numbering() {
+        // Test that page numbers and indices work correctly
+        let image1 = ExtractedImage {
+            page_number: 0, // 0-indexed
+            image_index: 0,
+            file_path: PathBuf::from("first.jpg"),
+            width: 100,
+            height: 100,
+            format: ImageFormat::Jpeg,
+        };
+
+        let image2 = ExtractedImage {
+            page_number: 99,  // Large page number
+            image_index: 255, // Large index
+            file_path: PathBuf::from("last.jpg"),
+            width: 100,
+            height: 100,
+            format: ImageFormat::Jpeg,
+        };
+
+        assert_eq!(image1.page_number, 0);
+        assert_eq!(image1.image_index, 0);
+        assert_eq!(image2.page_number, 99);
+        assert_eq!(image2.image_index, 255);
     }
 }
 

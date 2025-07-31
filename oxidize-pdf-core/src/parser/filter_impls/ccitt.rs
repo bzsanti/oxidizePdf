@@ -645,4 +645,368 @@ mod tests {
         assert_eq!(params.columns, 1); // Should be clamped to minimum 1
         assert_eq!(params.rows, 0); // Should be clamped to minimum 0
     }
+
+    // Additional comprehensive tests
+
+    #[test]
+    fn test_ccitt_decode_params_all_fields() {
+        let mut dict = PdfDictionary::new();
+        dict.insert("K".to_string(), PdfObject::Integer(1));
+        dict.insert("Columns".to_string(), PdfObject::Integer(1000));
+        dict.insert("Rows".to_string(), PdfObject::Integer(500));
+        dict.insert("EndOfLine".to_string(), PdfObject::Boolean(true));
+        dict.insert("EncodedByteAlign".to_string(), PdfObject::Boolean(true));
+        dict.insert("EndOfBlock".to_string(), PdfObject::Boolean(false));
+        dict.insert("BlackIs1".to_string(), PdfObject::Boolean(true));
+        dict.insert("DamagedRowsBeforeError".to_string(), PdfObject::Integer(5));
+
+        let params = CcittDecodeParams::from_dict(&dict);
+        assert_eq!(params.k, CcittK::Group3TwoDimensional);
+        assert_eq!(params.columns, 1000);
+        assert_eq!(params.rows, 500);
+        assert!(params.end_of_line);
+        assert!(params.encoded_byte_align);
+        assert!(!params.end_of_block);
+        assert!(params.black_is_1);
+        assert_eq!(params.damaged_rows_before_error, 5);
+    }
+
+    #[test]
+    fn test_ccitt_decode_params_invalid_k_values() {
+        let mut dict = PdfDictionary::new();
+
+        // Test negative K values other than -1
+        dict.insert("K".to_string(), PdfObject::Integer(-5));
+        let params = CcittDecodeParams::from_dict(&dict);
+        assert_eq!(params.k, CcittK::Group3OneDimensional); // Should default
+
+        // Test large positive K values
+        dict.insert("K".to_string(), PdfObject::Integer(100));
+        let params = CcittDecodeParams::from_dict(&dict);
+        assert_eq!(params.k, CcittK::Group3TwoDimensional);
+    }
+
+    #[test]
+    fn test_bit_reader_empty_data() {
+        let data = vec![];
+        let mut reader = BitReader::new(&data);
+
+        assert_eq!(reader.read_bit(), None);
+        assert_eq!(reader.read_bits(8), None);
+        assert!(!reader.has_data());
+    }
+
+    #[test]
+    fn test_bit_reader_read_beyond_end() {
+        let data = vec![0xFF];
+        let mut reader = BitReader::new(&data);
+
+        // Read all 8 bits
+        for _ in 0..8 {
+            assert_eq!(reader.read_bit(), Some(1));
+        }
+
+        // Try to read more
+        assert_eq!(reader.read_bit(), None);
+    }
+
+    #[test]
+    fn test_bit_reader_read_bits_max() {
+        let data = vec![0xFF, 0xFF, 0xFF];
+        let mut reader = BitReader::new(&data);
+
+        // Read maximum 16 bits
+        assert_eq!(reader.read_bits(16), Some(0xFFFF));
+
+        // Try to read more than 16 bits (should fail)
+        let mut reader = BitReader::new(&data);
+        assert_eq!(reader.read_bits(17), None);
+    }
+
+    #[test]
+    fn test_bit_reader_mixed_operations() {
+        let data = vec![0b10101010, 0b11001100];
+        let mut reader = BitReader::new(&data);
+
+        // Mix single bit and multi-bit reads
+        assert_eq!(reader.read_bit(), Some(1));
+        assert_eq!(reader.read_bits(3), Some(0b010));
+        assert_eq!(reader.read_bit(), Some(1));
+        assert_eq!(reader.read_bits(5), Some(0b01011));
+    }
+
+    #[test]
+    fn test_bit_reader_has_data() {
+        let data = vec![0xFF];
+        let mut reader = BitReader::new(&data);
+
+        assert!(reader.has_data());
+
+        // Read 7 bits
+        for _ in 0..7 {
+            reader.read_bit();
+            assert!(reader.has_data());
+        }
+
+        // Read last bit
+        reader.read_bit();
+        assert!(!reader.has_data());
+    }
+
+    #[test]
+    fn test_group3_decoder_skip_eol() {
+        let params = CcittDecodeParams {
+            end_of_line: true,
+            ..Default::default()
+        };
+        let decoder = Group3OneDDecoder::new(params);
+
+        // Test data with EOL pattern (11 zeros followed by 1)
+        let data = vec![0b00000000, 0b00010000]; // Contains EOL pattern
+        let mut reader = BitReader::new(&data);
+
+        let result = decoder.skip_eol(&mut reader);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group3_decoder_skip_eol_not_required() {
+        let params = CcittDecodeParams {
+            end_of_line: false,
+            ..Default::default()
+        };
+        let decoder = Group3OneDDecoder::new(params);
+
+        // No EOL pattern in data
+        let data = vec![0xFF, 0xFF];
+        let mut reader = BitReader::new(&data);
+
+        let result = decoder.skip_eol(&mut reader);
+        assert!(result.is_ok()); // Should succeed when EOL not required
+    }
+
+    #[test]
+    fn test_group3_decoder_add_row_to_result() {
+        let params = CcittDecodeParams {
+            black_is_1: false,
+            ..Default::default()
+        };
+        let decoder = Group3OneDDecoder::new(params);
+
+        let row = vec![1, 0, 1, 0, 1, 0, 1, 0]; // 8 pixels
+        let mut result = Vec::new();
+
+        decoder.add_row_to_result(&row, &mut result);
+        assert_eq!(result, vec![0b01010101]); // Black is 0, so inverted
+    }
+
+    #[test]
+    fn test_group3_decoder_add_row_to_result_black_is_1() {
+        let params = CcittDecodeParams {
+            black_is_1: true,
+            ..Default::default()
+        };
+        let decoder = Group3OneDDecoder::new(params);
+
+        let row = vec![1, 0, 1, 0, 1, 0, 1, 0]; // 8 pixels
+        let mut result = Vec::new();
+
+        decoder.add_row_to_result(&row, &mut result);
+        assert_eq!(result, vec![0b10101010]); // Black is 1, so direct
+    }
+
+    #[test]
+    fn test_group3_decoder_add_row_partial_byte() {
+        let params = CcittDecodeParams {
+            black_is_1: true,
+            ..Default::default()
+        };
+        let decoder = Group3OneDDecoder::new(params);
+
+        let row = vec![1, 0, 1]; // 3 pixels (partial byte)
+        let mut result = Vec::new();
+
+        decoder.add_row_to_result(&row, &mut result);
+        assert_eq!(result, vec![0b10100000]); // Padded with zeros
+    }
+
+    #[test]
+    fn test_group3_decoder_decode_white_run() {
+        let params = CcittDecodeParams::default();
+        let decoder = Group3OneDDecoder::new(params);
+
+        // Test data for white run
+        let data = vec![0b00110000]; // Simple terminating code
+        let mut reader = BitReader::new(&data);
+
+        let result = decoder.decode_white_run(&mut reader);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group3_decoder_decode_black_run() {
+        let params = CcittDecodeParams::default();
+        let decoder = Group3OneDDecoder::new(params);
+
+        // Test data for black run
+        let data = vec![0b00100000]; // Simple terminating code
+        let mut reader = BitReader::new(&data);
+
+        let result = decoder.decode_black_run(&mut reader);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group4_decoder_basic() {
+        let params = CcittDecodeParams {
+            k: CcittK::Group4,
+            columns: 16,
+            rows: 2,
+            ..Default::default()
+        };
+        let decoder = Group4Decoder::new(params);
+
+        let data = vec![0xFF, 0x00, 0xFF, 0x00];
+        let result = decoder.decode(&data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 4);
+    }
+
+    #[test]
+    fn test_group4_decoder_padding() {
+        let params = CcittDecodeParams {
+            k: CcittK::Group4,
+            columns: 16,
+            rows: 3,
+            ..Default::default()
+        };
+        let decoder = Group4Decoder::new(params);
+
+        let data = vec![0xFF, 0x00]; // Too small for 3 rows
+        let result = decoder.decode(&data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 6); // 16 pixels * 3 rows / 8
+    }
+
+    #[test]
+    fn test_group4_decoder_unlimited_rows() {
+        let params = CcittDecodeParams {
+            k: CcittK::Group4,
+            columns: 8,
+            rows: 0, // Unlimited
+            ..Default::default()
+        };
+        let decoder = Group4Decoder::new(params);
+
+        let data = vec![0xFF, 0x00, 0xFF, 0x00];
+        let result = decoder.decode(&data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 4); // All data used
+    }
+
+    #[test]
+    fn test_decode_ccitt_group3_2d() {
+        let data = vec![0x00, 0x01, 0xFF, 0xFE];
+        let mut dict = PdfDictionary::new();
+        dict.insert("K".to_string(), PdfObject::Integer(1)); // Group 3, 2-D
+        dict.insert("Columns".to_string(), PdfObject::Integer(8));
+        dict.insert("Rows".to_string(), PdfObject::Integer(1));
+
+        let result = decode_ccitt(&data, Some(&dict));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_decode_ccitt_empty_data() {
+        let data = vec![];
+        let result = decode_ccitt(&data, None);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_ccitt_k_debug() {
+        assert_eq!(format!("{:?}", CcittK::Group4), "Group4");
+        assert_eq!(
+            format!("{:?}", CcittK::Group3OneDimensional),
+            "Group3OneDimensional"
+        );
+        assert_eq!(
+            format!("{:?}", CcittK::Group3TwoDimensional),
+            "Group3TwoDimensional"
+        );
+    }
+
+    #[test]
+    fn test_ccitt_k_clone() {
+        let k1 = CcittK::Group4;
+        let k2 = k1.clone();
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn test_ccitt_decode_params_clone() {
+        let params1 = CcittDecodeParams {
+            k: CcittK::Group4,
+            columns: 2048,
+            rows: 1024,
+            end_of_line: true,
+            encoded_byte_align: true,
+            end_of_block: false,
+            black_is_1: true,
+            damaged_rows_before_error: 10,
+        };
+
+        let params2 = params1.clone();
+        assert_eq!(params1.k, params2.k);
+        assert_eq!(params1.columns, params2.columns);
+        assert_eq!(params1.rows, params2.rows);
+        assert_eq!(params1.end_of_line, params2.end_of_line);
+        assert_eq!(params1.encoded_byte_align, params2.encoded_byte_align);
+        assert_eq!(params1.end_of_block, params2.end_of_block);
+        assert_eq!(params1.black_is_1, params2.black_is_1);
+        assert_eq!(
+            params1.damaged_rows_before_error,
+            params2.damaged_rows_before_error
+        );
+    }
+
+    #[test]
+    fn test_ccitt_decode_params_debug() {
+        let params = CcittDecodeParams::default();
+        let debug_str = format!("{:?}", params);
+        assert!(debug_str.contains("CcittDecodeParams"));
+        assert!(debug_str.contains("columns: 1728"));
+    }
+
+    #[test]
+    fn test_decode_ccitt_different_column_sizes() {
+        let data = vec![0xFF; 100];
+
+        // Test small columns
+        let mut dict = PdfDictionary::new();
+        dict.insert("Columns".to_string(), PdfObject::Integer(1));
+        let result = decode_ccitt(&data, Some(&dict));
+        assert!(result.is_ok());
+
+        // Test large columns
+        dict.insert("Columns".to_string(), PdfObject::Integer(10000));
+        let result = decode_ccitt(&data, Some(&dict));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group3_decoder_encoded_byte_align() {
+        let params = CcittDecodeParams {
+            encoded_byte_align: true,
+            columns: 8,
+            rows: 1,
+            ..Default::default()
+        };
+        let decoder = Group3OneDDecoder::new(params);
+
+        let data = vec![0xFF, 0xFF, 0xFF];
+        let result = decoder.decode(&data);
+        assert!(result.is_ok());
+    }
 }

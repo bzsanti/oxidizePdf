@@ -35,6 +35,8 @@ pub enum ImageFormat {
     Png,
     /// TIFF format
     Tiff,
+    /// Raw RGB/Gray data (no compression)
+    Raw,
 }
 
 /// Color spaces for images
@@ -51,10 +53,17 @@ pub enum ColorSpace {
 impl Image {
     /// Load a JPEG image from a file
     pub fn from_jpeg_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut file = File::open(path)?;
-        let mut data = Vec::new();
-        file.read_to_end(&mut data)?;
-        Self::from_jpeg_data(data)
+        #[cfg(feature = "external-images")]
+        {
+            Self::from_external_jpeg_file(path)
+        }
+        #[cfg(not(feature = "external-images"))]
+        {
+            let mut file = File::open(path)?;
+            let mut data = Vec::new();
+            file.read_to_end(&mut data)?;
+            Self::from_jpeg_data(data)
+        }
     }
 
     /// Create an image from JPEG data
@@ -74,10 +83,17 @@ impl Image {
 
     /// Load a PNG image from a file
     pub fn from_png_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut file = File::open(path)?;
-        let mut data = Vec::new();
-        file.read_to_end(&mut data)?;
-        Self::from_png_data(data)
+        #[cfg(feature = "external-images")]
+        {
+            Self::from_external_png_file(path)
+        }
+        #[cfg(not(feature = "external-images"))]
+        {
+            let mut file = File::open(path)?;
+            let mut data = Vec::new();
+            file.read_to_end(&mut data)?;
+            Self::from_png_data(data)
+        }
     }
 
     /// Create an image from PNG data
@@ -138,6 +154,91 @@ impl Image {
         self.format
     }
 
+    /// Create image from raw RGB/Gray data (no encoding/compression)
+    pub fn from_raw_data(
+        data: Vec<u8>,
+        width: u32,
+        height: u32,
+        color_space: ColorSpace,
+        bits_per_component: u8,
+    ) -> Self {
+        Image {
+            data,
+            format: ImageFormat::Raw,
+            width,
+            height,
+            color_space,
+            bits_per_component,
+        }
+    }
+
+    /// Load and decode external PNG file using the `image` crate (requires external-images feature)
+    #[cfg(feature = "external-images")]
+    pub fn from_external_png_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        use image as image_crate;
+
+        let img = image_crate::ImageReader::open(path)?
+            .decode()
+            .map_err(|e| PdfError::InvalidImage(format!("Failed to decode PNG: {}", e)))?;
+
+        Self::from_dynamic_image(img)
+    }
+
+    /// Load and decode external JPEG file using the `image` crate (requires external-images feature)
+    #[cfg(feature = "external-images")]
+    pub fn from_external_jpeg_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        use image as image_crate;
+
+        let img = image_crate::ImageReader::open(path)?
+            .decode()
+            .map_err(|e| PdfError::InvalidImage(format!("Failed to decode JPEG: {}", e)))?;
+
+        Self::from_dynamic_image(img)
+    }
+
+    /// Convert from `image` crate's DynamicImage to our Image struct
+    #[cfg(feature = "external-images")]
+    fn from_dynamic_image(img: image::DynamicImage) -> Result<Self> {
+        use image::DynamicImage;
+
+        let (width, height) = (img.width(), img.height());
+
+        let (rgb_data, color_space) = match img {
+            DynamicImage::ImageLuma8(gray_img) => (gray_img.into_raw(), ColorSpace::DeviceGray),
+            DynamicImage::ImageLumaA8(gray_alpha_img) => {
+                // Convert gray+alpha to RGB (discard alpha for now)
+                let rgb_data: Vec<u8> = gray_alpha_img
+                    .pixels()
+                    .flat_map(|p| [p[0], p[0], p[0]]) // Gray to RGB
+                    .collect();
+                (rgb_data, ColorSpace::DeviceRGB)
+            }
+            DynamicImage::ImageRgb8(rgb_img) => (rgb_img.into_raw(), ColorSpace::DeviceRGB),
+            DynamicImage::ImageRgba8(rgba_img) => {
+                // Convert RGBA to RGB (discard alpha for now)
+                let rgb_data: Vec<u8> = rgba_img
+                    .pixels()
+                    .flat_map(|p| [p[0], p[1], p[2]]) // Drop alpha channel
+                    .collect();
+                (rgb_data, ColorSpace::DeviceRGB)
+            }
+            _ => {
+                // Convert other formats to RGB8
+                let rgb_img = img.to_rgb8();
+                (rgb_img.into_raw(), ColorSpace::DeviceRGB)
+            }
+        };
+
+        Ok(Image {
+            data: rgb_data,
+            format: ImageFormat::Raw,
+            width,
+            height,
+            color_space,
+            bits_per_component: 8,
+        })
+    }
+
     /// Convert to PDF XObject
     pub fn to_pdf_object(&self) -> Object {
         let mut dict = Dictionary::new();
@@ -173,6 +274,9 @@ impl Image {
             ImageFormat::Tiff => {
                 // TIFF can use various filters, but commonly LZW or FlateDecode
                 dict.set("Filter", Object::Name("FlateDecode".to_string()));
+            }
+            ImageFormat::Raw => {
+                // No filter for raw RGB/Gray data
             }
         }
 

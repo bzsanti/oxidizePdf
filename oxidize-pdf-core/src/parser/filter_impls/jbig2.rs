@@ -427,4 +427,349 @@ mod tests {
             assert_eq!(segment.segment_type, seg_type);
         }
     }
+
+    // Additional comprehensive tests
+
+    #[test]
+    fn test_jbig2_decode_params_clone() {
+        let params1 = Jbig2DecodeParams {
+            jbig2_globals: Some(vec![1, 2, 3]),
+        };
+
+        let params2 = params1.clone();
+        assert_eq!(params1.jbig2_globals, params2.jbig2_globals);
+    }
+
+    #[test]
+    fn test_jbig2_decode_params_debug() {
+        let params = Jbig2DecodeParams::default();
+        let debug_str = format!("{:?}", params);
+        assert!(debug_str.contains("Jbig2DecodeParams"));
+    }
+
+    #[test]
+    fn test_jbig2_segment_header_debug() {
+        let segment = Jbig2SegmentHeader {
+            segment_number: 42,
+            flags: 0x45,
+            segment_type: 5,
+            page_association: 1,
+            data_length: 1024,
+        };
+
+        let debug_str = format!("{:?}", segment);
+        assert!(debug_str.contains("Jbig2SegmentHeader"));
+        assert!(debug_str.contains("segment_number: 42"));
+    }
+
+    #[test]
+    fn test_jbig2_segment_header_clone() {
+        let segment1 = Jbig2SegmentHeader {
+            segment_number: 42,
+            flags: 0x45,
+            segment_type: 5,
+            page_association: 1,
+            data_length: 1024,
+        };
+
+        let segment2 = segment1.clone();
+        assert_eq!(segment1.segment_number, segment2.segment_number);
+        assert_eq!(segment1.flags, segment2.flags);
+        assert_eq!(segment1.segment_type, segment2.segment_type);
+        assert_eq!(segment1.page_association, segment2.page_association);
+        assert_eq!(segment1.data_length, segment2.data_length);
+    }
+
+    #[test]
+    fn test_jbig2_decode_empty_data() {
+        let data = vec![];
+        let result = decode_jbig2(&data, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("too short"));
+    }
+
+    #[test]
+    fn test_jbig2_decode_params_from_empty_dict() {
+        let dict = PdfDictionary::new();
+        let params = Jbig2DecodeParams::from_dict(&dict);
+        assert!(params.jbig2_globals.is_none());
+    }
+
+    #[test]
+    fn test_jbig2_decode_non_sequential() {
+        let mut data = vec![0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A]; // File ID
+        data.push(0x01); // File organization flags (random access)
+
+        let result = decode_jbig2(&data, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Random access"));
+    }
+
+    #[test]
+    fn test_jbig2_segment_header_long_page_association() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Create segment header with long page association
+        let data = vec![
+            0x00, 0x00, 0x00, 0x02, // Segment number: 2
+            0x44, // Flags: segment type 4, long page association (bit 6 set)
+            0x00, 0x00, 0x00, 0x10, // Page association: 16 (4 bytes)
+            0x00, 0x00, 0x00, 0x20, // Data length: 32
+        ];
+
+        let result = decoder.parse_segment_header(&data);
+        assert!(result.is_ok());
+
+        let segment = result.unwrap();
+        assert_eq!(segment.segment_number, 2);
+        assert_eq!(segment.segment_type, 4);
+        assert_eq!(segment.page_association, 16);
+        assert_eq!(segment.data_length, 32);
+    }
+
+    #[test]
+    fn test_jbig2_segment_header_incomplete() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Create incomplete segment header (missing data length)
+        let data = vec![
+            0x00, 0x00, 0x00, 0x03, // Segment number: 3
+            0x44, // Flags: long page association
+            0x00, 0x00, 0x00,
+            0x05, // Page association
+                  // Missing data length
+        ];
+
+        let result = decoder.parse_segment_header(&data);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("incomplete"));
+    }
+
+    #[test]
+    fn test_jbig2_get_segment_header_length() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Test short form header
+        let short_segment = Jbig2SegmentHeader {
+            segment_number: 1,
+            flags: 0x04, // No long page association
+            segment_type: 4,
+            page_association: 0,
+            data_length: 10,
+        };
+        assert_eq!(decoder.get_segment_header_length(&short_segment), 7);
+
+        // Test long form header
+        let long_segment = Jbig2SegmentHeader {
+            segment_number: 2,
+            flags: 0x44, // Long page association
+            segment_type: 4,
+            page_association: 100,
+            data_length: 20,
+        };
+        assert_eq!(decoder.get_segment_header_length(&long_segment), 11);
+    }
+
+    #[test]
+    fn test_jbig2_decode_with_segments() {
+        let mut data = vec![0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A]; // File ID
+        data.push(0x00); // Sequential
+
+        // Add a valid segment
+        data.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x01, // Segment number: 1
+            0x00, // Flags: segment type 0 (symbol dictionary)
+            0x00, // Page association: 0
+            0x00, 0x00, 0x00, 0x04, // Data length: 4
+            0x01, 0x02, 0x03, 0x04, // Segment data
+        ]);
+
+        let result = decode_jbig2(&data, None);
+        assert!(result.is_ok());
+        let decoded = result.unwrap();
+        assert!(!decoded.is_empty());
+    }
+
+    #[test]
+    fn test_jbig2_decode_segment_with_unknown_length() {
+        let mut data = vec![0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A]; // File ID
+        data.push(0x00); // Sequential
+
+        // Add segment with unknown length
+        data.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x01, // Segment number: 1
+            0x00, // Flags
+            0x00, // Page association
+            0xFF, 0xFF, 0xFF, 0xFF, // Data length: unknown (0xFFFFFFFF)
+        ]);
+
+        let result = decode_jbig2(&data, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_jbig2_decode_embedded_with_segments() {
+        let mut data = vec![];
+
+        // Add multiple segments of different types
+        let segments = vec![
+            (0, vec![0xAA, 0xBB]),  // Symbol dictionary
+            (4, vec![0xCC, 0xDD]),  // Text region
+            (36, vec![0xEE, 0xFF]), // Halftone region
+        ];
+
+        for (seg_type, seg_data) in segments {
+            data.extend_from_slice(&[
+                0x00,
+                0x00,
+                0x00,
+                0x01,     // Segment number
+                seg_type, // Flags with segment type
+                0x00,     // Page association
+                0x00,
+                0x00,
+                0x00,
+                seg_data.len() as u8, // Data length
+            ]);
+            data.extend_from_slice(&seg_data);
+        }
+
+        let result = decode_jbig2(&data, None);
+        assert!(result.is_ok());
+        let decoded = result.unwrap();
+        assert!(!decoded.is_empty());
+    }
+
+    #[test]
+    fn test_jbig2_decode_segment_beyond_data() {
+        let mut data = vec![0x97, 0x4A, 0x42, 0x32, 0x0D, 0x0A, 0x1A, 0x0A]; // File ID
+        data.push(0x00); // Sequential
+
+        // Add segment with data length beyond available data
+        data.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x01, // Segment number
+            0x00, // Flags
+            0x00, // Page association
+            0x00, 0x00, 0x10, 0x00, // Data length: 4096 (too large)
+        ]);
+
+        let result = decode_jbig2(&data, None);
+        assert!(result.is_ok()); // Should handle gracefully
+    }
+
+    #[test]
+    fn test_jbig2_decoder_with_globals() {
+        let params = Jbig2DecodeParams {
+            jbig2_globals: Some(vec![0x01, 0x02, 0x03]),
+        };
+        let decoder = Jbig2Decoder::new(params);
+
+        let data = vec![0x00; 50];
+        let result = decoder.decode(&data);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_jbig2_embedded_stream_no_valid_segments() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Data that doesn't parse as valid segments
+        let data = vec![0xFF, 0xFE, 0xFD, 0xFC, 0xFB, 0xFA];
+        let result = decoder.decode_embedded_stream(&data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), data); // Should return data as-is
+    }
+
+    #[test]
+    fn test_jbig2_segment_type_extraction() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Test that segment type is properly extracted from flags
+        let data = vec![
+            0x00, 0x00, 0x00, 0x01, // Segment number
+            0x3F, // Flags: segment type 63 (0x3F = 0b00111111)
+            0x00, // Page association
+            0x00, 0x00, 0x00, 0x00, // Data length
+            0x00, // Padding
+        ];
+
+        let result = decoder.parse_segment_header(&data);
+        assert!(result.is_ok());
+        let segment = result.unwrap();
+        assert_eq!(segment.segment_type, 63);
+    }
+
+    #[test]
+    fn test_jbig2_all_text_region_types() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Test text region segment types (4, 6, 7)
+        for text_type in vec![4, 6, 7] {
+            let mut data = vec![];
+            data.extend_from_slice(&[
+                0x00, 0x00, 0x00, 0x01,      // Segment number
+                text_type, // Flags with segment type
+                0x00,      // Page association
+                0x00, 0x00, 0x00, 0x02, // Data length: 2
+                0xAB, 0xCD, // Segment data
+            ]);
+
+            let result = decoder.decode_embedded_stream(&data);
+            assert!(result.is_ok());
+            let decoded = result.unwrap();
+            assert!(decoded.contains(&0xAB));
+            assert!(decoded.contains(&0xCD));
+        }
+    }
+
+    #[test]
+    fn test_jbig2_halftone_region_types() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Test halftone region segment types (36, 38, 39)
+        for halftone_type in vec![36, 38, 39] {
+            let mut data = vec![];
+            data.extend_from_slice(&[
+                0x00,
+                0x00,
+                0x00,
+                0x01,          // Segment number
+                halftone_type, // Flags with segment type
+                0x00,          // Page association
+                0x00,
+                0x00,
+                0x00,
+                0x02, // Data length: 2
+                0x12,
+                0x34, // Segment data
+            ]);
+
+            let result = decoder.decode_embedded_stream(&data);
+            assert!(result.is_ok());
+            let decoded = result.unwrap();
+            assert!(decoded.contains(&0x12));
+            assert!(decoded.contains(&0x34));
+        }
+    }
+
+    #[test]
+    fn test_jbig2_skip_unknown_segment_types() {
+        let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
+
+        // Test that unknown segment types are skipped
+        let mut data = vec![];
+        data.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x01, // Segment number
+            50,   // Unknown segment type
+            0x00, // Page association
+            0x00, 0x00, 0x00, 0x02, // Data length: 2
+            0x99, 0x88, // Segment data (should be skipped)
+        ]);
+
+        let result = decoder.decode_embedded_stream(&data);
+        assert!(result.is_ok());
+        let decoded = result.unwrap();
+        // The unknown segment data should be skipped in embedded mode
+        assert!(decoded.is_empty() || !decoded.contains(&0x99));
+    }
 }

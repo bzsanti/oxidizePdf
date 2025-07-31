@@ -226,10 +226,11 @@ impl Page {
     /// let widget_ref = page.add_form_widget(widget);
     /// ```
     pub fn add_form_widget(&mut self, widget: Widget) -> ObjectReference {
-        // Create a unique object reference for this widget
-        // In a real implementation, this would be managed by the document writer
+        // Create a placeholder object reference for this widget
+        // The actual ObjectId will be assigned by the document writer
+        // We use a placeholder ID that doesn't conflict with real ObjectIds
         let widget_ref = ObjectReference::new(
-            self.annotations.len() as u32 + 1000, // Temporary ID generation
+            0, // Placeholder ID - writer will assign the real ID
             0,
         );
 
@@ -392,16 +393,11 @@ impl Page {
         // Annotations - will be added by the writer with proper object references
         // The Page struct holds the annotation data, but the writer is responsible
         // for creating object references and writing the annotation objects
-        if !self.annotations.is_empty() {
-            // For now, create placeholder references that will be updated by the writer
-            let mut annot_array = Vec::new();
-            for (i, _annotation) in self.annotations.iter().enumerate() {
-                // Create temporary object references that the writer will replace
-                let obj_ref = ObjectReference::new(i as u32 + 1000, 0);
-                annot_array.push(Object::Reference(obj_ref));
-            }
-            dict.set("Annots", Object::Array(annot_array));
-        }
+        //
+        // NOTE: We don't add Annots array here anymore because the writer
+        // will handle this properly with sequential ObjectIds. The temporary
+        // ObjectIds (1000+) were causing invalid references in the final PDF.
+        // The writer now handles all ObjectId allocation and writing.
 
         // Contents would be added by the writer
 
