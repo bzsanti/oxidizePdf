@@ -1,11 +1,23 @@
 mod color;
+mod color_profiles;
 mod image;
 mod path;
+mod patterns;
+mod shadings;
 mod state;
 
 pub use color::Color;
+pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
 pub use image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
 pub use path::{LineCap, LineJoin, PathBuilder};
+pub use patterns::{
+    PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
+    TilingType,
+};
+pub use shadings::{
+    AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
+    ShadingManager, ShadingPattern, ShadingType,
+};
 pub use state::{
     BlendMode, ExtGState, ExtGStateFont, ExtGStateManager, Halftone, LineDashPattern,
     RenderingIntent, SoftMask, TransferFunction,
@@ -563,6 +575,12 @@ impl GraphicsContext {
     /// Check if any extended graphics states are defined
     pub fn has_extgstates(&self) -> bool {
         self.extgstate_manager.count() > 0
+    }
+
+    /// Add a command to the operations
+    pub fn add_command(&mut self, command: &str) {
+        self.operations.push_str(command);
+        self.operations.push('\n');
     }
 }
 

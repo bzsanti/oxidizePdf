@@ -4,6 +4,7 @@
 mod tests {
     use crate::graphics::{Image, ImageFormat};
     use crate::operations::extract_images::*;
+    use crate::parser::filter_impls::dct::{parse_jpeg_info, JpegColorSpace};
     use crate::{Document, Page};
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -397,5 +398,71 @@ mod tests {
             format: ImageFormat::Jpeg,
         };
         assert!(jpeg_extracted.file_path.extension().unwrap() == "jpg");
+    }
+
+    #[test]
+    fn test_dct_decode_jpeg_parsing() {
+        // Test DCTDecode filter functionality with JPEG parsing
+        let jpeg_data = vec![
+            // SOI
+            0xFF, 0xD8, // APP0 (JFIF)
+            0xFF, 0xE0, 0x00, 0x10, // Length = 16
+            b'J', b'F', b'I', b'F', 0x00, // Identifier
+            0x01, 0x01, // Version
+            0x00, // Units
+            0x00, 0x01, 0x00, 0x01, // X/Y density
+            0x00, 0x00, // Thumbnail size
+            // SOF0
+            0xFF, 0xC0, 0x00, 0x11, // Length = 17
+            0x08, // Bits per sample
+            0x00, 0x20, // Height = 32
+            0x00, 0x20, // Width = 32
+            0x03, // Components = 3 (RGB/YCbCr)
+            0x01, 0x11, 0x00, // Component 1
+            0x02, 0x11, 0x00, // Component 2
+            0x03, 0x11, 0x00, // Component 3
+            // SOS
+            0xFF, 0xDA, 0x00, 0x0C, // Length = 12
+            0x03, // Components in scan
+            0x01, 0x00, // Component 1
+            0x02, 0x10, // Component 2
+            0x03, 0x10, // Component 3
+            0x00, 0x3F, 0x00, // Spectral selection
+            // Fake scan data
+            0x00, 0x00, 0x00, 0x00, // EOI
+            0xFF, 0xD9,
+        ];
+
+        // Test JPEG info parsing
+        let info = parse_jpeg_info(&jpeg_data).unwrap();
+        assert_eq!(info.width, 32);
+        assert_eq!(info.height, 32);
+        assert_eq!(info.components, 3);
+        assert_eq!(info.bits_per_component, 8);
+        assert_eq!(info.color_space, JpegColorSpace::YCbCr);
+    }
+
+    #[test]
+    fn test_dct_decode_cmyk_jpeg() {
+        // Test CMYK JPEG detection
+        let cmyk_jpeg = vec![
+            // SOI
+            0xFF, 0xD8, // SOF0 with 4 components (CMYK)
+            0xFF, 0xC0, 0x00, 0x14, // Length = 20
+            0x08, // Bits per sample
+            0x00, 0x10, // Height = 16
+            0x00, 0x10, // Width = 16
+            0x04, // Components = 4 (CMYK)
+            0x01, 0x11, 0x00, // Component 1
+            0x02, 0x11, 0x00, // Component 2
+            0x03, 0x11, 0x00, // Component 3
+            0x04, 0x11, 0x00, // Component 4
+            // EOI
+            0xFF, 0xD9,
+        ];
+
+        let info = parse_jpeg_info(&cmyk_jpeg).unwrap();
+        assert_eq!(info.components, 4);
+        assert_eq!(info.color_space, JpegColorSpace::CMYK);
     }
 }

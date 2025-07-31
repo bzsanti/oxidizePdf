@@ -10,6 +10,16 @@ pub struct PdfWriter<W: Write> {
     writer: W,
     xref_positions: HashMap<ObjectId, u64>,
     current_position: u64,
+    next_object_id: u32,
+    // Maps for tracking object IDs during writing
+    catalog_id: Option<ObjectId>,
+    pages_id: Option<ObjectId>,
+    info_id: Option<ObjectId>,
+    // Maps for tracking form fields and their widgets
+    field_widget_map: HashMap<String, Vec<ObjectId>>, // field name -> widget IDs
+    field_id_map: HashMap<String, ObjectId>,          // field name -> field ID
+    form_field_ids: Vec<ObjectId>,                    // form field IDs to add to page annotations
+    page_ids: Vec<ObjectId>,                          // page IDs for form field references
 }
 
 impl<W: Write> PdfWriter<W> {
@@ -18,23 +28,43 @@ impl<W: Write> PdfWriter<W> {
             writer,
             xref_positions: HashMap::new(),
             current_position: 0,
+            next_object_id: 1, // Start at 1 for sequential numbering
+            catalog_id: None,
+            pages_id: None,
+            info_id: None,
+            field_widget_map: HashMap::new(),
+            field_id_map: HashMap::new(),
+            form_field_ids: Vec::new(),
+            page_ids: Vec::new(),
         }
     }
 
     pub fn write_document(&mut self, document: &mut Document) -> Result<()> {
         self.write_header()?;
 
-        // Write all objects and collect their positions
-        let catalog_id = self.write_catalog()?;
-        let _pages_id = self.write_pages(document)?;
-        let info_id = self.write_info(document)?;
+        // Reserve object IDs for fixed objects (written in order)
+        self.catalog_id = Some(self.allocate_object_id());
+        self.pages_id = Some(self.allocate_object_id());
+        self.info_id = Some(self.allocate_object_id());
+
+        // Write pages first (they contain widget annotations)
+        self.write_pages(document)?;
+
+        // Write form fields (must be after pages so we can track widgets)
+        self.write_form_fields(document)?;
+
+        // Write catalog (must be after forms so AcroForm has correct field references)
+        self.write_catalog(document)?;
+
+        // Write document info
+        self.write_info(document)?;
 
         // Write xref table
         let xref_position = self.current_position;
         self.write_xref()?;
 
         // Write trailer
-        self.write_trailer(catalog_id, info_id, xref_position)?;
+        self.write_trailer(xref_position)?;
 
         if let Ok(()) = self.writer.flush() {
             // Flush succeeded
@@ -49,46 +79,84 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
-    fn write_catalog(&mut self) -> Result<ObjectId> {
-        let catalog_id = ObjectId::new(1, 0);
-        let pages_id = ObjectId::new(2, 0);
+    fn write_catalog(&mut self, document: &mut Document) -> Result<()> {
+        let catalog_id = self.catalog_id.expect("catalog_id must be set");
+        let pages_id = self.pages_id.expect("pages_id must be set");
 
         let mut catalog = Dictionary::new();
         catalog.set("Type", Object::Name("Catalog".to_string()));
         catalog.set("Pages", Object::Reference(pages_id));
 
+        // Process FormManager if present to update AcroForm
+        // We'll write the actual fields after pages are written
+        if let Some(_form_manager) = &document.form_manager {
+            // Ensure AcroForm exists
+            if document.acro_form.is_none() {
+                document.acro_form = Some(crate::forms::AcroForm::new());
+            }
+        }
+
+        // Add AcroForm if present
+        if let Some(acro_form) = &document.acro_form {
+            // Reserve object ID for AcroForm
+            let acro_form_id = self.allocate_object_id();
+
+            // Write AcroForm object
+            self.write_object(acro_form_id, Object::Dictionary(acro_form.to_dict()))?;
+
+            // Reference it in catalog
+            catalog.set("AcroForm", Object::Reference(acro_form_id));
+        }
+
+        // Add Outlines if present
+        if let Some(outline_tree) = &document.outline {
+            if !outline_tree.items.is_empty() {
+                let outline_root_id = self.write_outline_tree(outline_tree)?;
+                catalog.set("Outlines", Object::Reference(outline_root_id));
+            }
+        }
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
-        Ok(catalog_id)
+        Ok(())
     }
 
-    fn write_pages(&mut self, document: &Document) -> Result<ObjectId> {
-        let pages_id = ObjectId::new(2, 0);
+    fn write_pages(&mut self, document: &Document) -> Result<()> {
+        let pages_id = self.pages_id.expect("pages_id must be set");
         let mut pages_dict = Dictionary::new();
         pages_dict.set("Type", Object::Name("Pages".to_string()));
         pages_dict.set("Count", Object::Integer(document.pages.len() as i64));
 
         let mut kids = Vec::new();
-        let next_id = 3;
 
-        for (i, _page) in document.pages.iter().enumerate() {
-            let page_id = ObjectId::new(next_id + i as u32 * 2, 0);
-            kids.push(Object::Reference(page_id));
+        // Allocate page object IDs sequentially
+        let mut page_ids = Vec::new();
+        let mut content_ids = Vec::new();
+        for _ in 0..document.pages.len() {
+            page_ids.push(self.allocate_object_id());
+            content_ids.push(self.allocate_object_id());
+        }
+
+        for page_id in &page_ids {
+            kids.push(Object::Reference(*page_id));
         }
 
         pages_dict.set("Kids", Object::Array(kids));
 
         self.write_object(pages_id, Object::Dictionary(pages_dict))?;
 
-        // Write individual pages
+        // Store page IDs for form field references
+        self.page_ids = page_ids.clone();
+
+        // Write individual pages (but skip form widget annotations for now)
         for (i, page) in document.pages.iter().enumerate() {
-            let page_id = ObjectId::new(next_id + i as u32 * 2, 0);
-            let content_id = ObjectId::new(next_id + i as u32 * 2 + 1, 0);
+            let page_id = page_ids[i];
+            let content_id = content_ids[i];
 
             self.write_page(page_id, pages_id, content_id, page, document)?;
             self.write_page_content(content_id, page)?;
         }
 
-        Ok(pages_id)
+        Ok(())
     }
 
     fn write_page(
@@ -99,19 +167,41 @@ impl<W: Write> PdfWriter<W> {
         page: &crate::page::Page,
         document: &Document,
     ) -> Result<()> {
-        let mut page_dict = Dictionary::new();
+        // Start with the page's dictionary which includes annotations
+        let mut page_dict = page.to_dict();
+
+        // Override/ensure essential fields
         page_dict.set("Type", Object::Name("Page".to_string()));
         page_dict.set("Parent", Object::Reference(parent_id));
-        page_dict.set(
-            "MediaBox",
-            Object::Array(vec![
-                Object::Integer(0),
-                Object::Integer(0),
-                Object::Real(page.width()),
-                Object::Real(page.height()),
-            ]),
-        );
         page_dict.set("Contents", Object::Reference(content_id));
+
+        // Skip form widget annotations - they'll be handled as part of form fields
+        let mut annot_refs = Vec::new();
+        for annotation in page.annotations() {
+            let annot_dict = annotation.to_dict();
+
+            // Skip Widget annotations - they'll be handled by form fields
+            if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
+                if subtype == "Widget" {
+                    continue; // Skip form widgets
+                }
+            }
+
+            // Handle non-form annotations normally
+            let annot_id = self.allocate_object_id();
+            self.write_object(annot_id, Object::Dictionary(annot_dict))?;
+            annot_refs.push(Object::Reference(annot_id));
+        }
+
+        // Add form field annotations to this page
+        for field_id in &self.form_field_ids {
+            annot_refs.push(Object::Reference(*field_id));
+        }
+
+        // Add Annots array if we have any annotations (form fields or others)
+        if !annot_refs.is_empty() {
+            page_dict.set("Annots", Object::Array(annot_refs));
+        }
 
         // Create resources dictionary with fonts from document
         let mut resources = Dictionary::new();
@@ -195,8 +285,238 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
-    fn write_info(&mut self, document: &Document) -> Result<ObjectId> {
-        let info_id = ObjectId::new(100, 0); // Use high ID to avoid conflicts
+    fn write_outline_tree(
+        &mut self,
+        outline_tree: &crate::structure::OutlineTree,
+    ) -> Result<ObjectId> {
+        // Create root outline dictionary
+        let outline_root_id = self.allocate_object_id();
+
+        let mut outline_root = Dictionary::new();
+        outline_root.set("Type", Object::Name("Outlines".to_string()));
+
+        if !outline_tree.items.is_empty() {
+            // Reserve IDs for all outline items
+            let mut item_ids = Vec::new();
+
+            // Count all items and assign IDs
+            fn count_items(items: &[crate::structure::OutlineItem]) -> usize {
+                let mut count = items.len();
+                for item in items {
+                    count += count_items(&item.children);
+                }
+                count
+            }
+
+            let total_items = count_items(&outline_tree.items);
+
+            // Reserve IDs for all items
+            for _ in 0..total_items {
+                item_ids.push(self.allocate_object_id());
+            }
+
+            let mut id_index = 0;
+
+            // Write root items
+            let first_id = item_ids[0];
+            let last_id = item_ids[outline_tree.items.len() - 1];
+
+            outline_root.set("First", Object::Reference(first_id));
+            outline_root.set("Last", Object::Reference(last_id));
+
+            // Visible count
+            let visible_count = outline_tree.visible_count();
+            outline_root.set("Count", Object::Integer(visible_count));
+
+            // Write all items recursively
+            let mut written_items = Vec::new();
+
+            for (i, item) in outline_tree.items.iter().enumerate() {
+                let item_id = item_ids[id_index];
+                id_index += 1;
+
+                let prev_id = if i > 0 { Some(item_ids[i - 1]) } else { None };
+                let next_id = if i < outline_tree.items.len() - 1 {
+                    Some(item_ids[i + 1])
+                } else {
+                    None
+                };
+
+                // Write this item and its children
+                let children_ids = self.write_outline_item(
+                    item,
+                    item_id,
+                    outline_root_id,
+                    prev_id,
+                    next_id,
+                    &mut item_ids,
+                    &mut id_index,
+                )?;
+
+                written_items.extend(children_ids);
+            }
+        }
+
+        self.write_object(outline_root_id, Object::Dictionary(outline_root))?;
+        Ok(outline_root_id)
+    }
+
+    fn write_outline_item(
+        &mut self,
+        item: &crate::structure::OutlineItem,
+        item_id: ObjectId,
+        parent_id: ObjectId,
+        prev_id: Option<ObjectId>,
+        next_id: Option<ObjectId>,
+        all_ids: &mut Vec<ObjectId>,
+        id_index: &mut usize,
+    ) -> Result<Vec<ObjectId>> {
+        let mut written_ids = vec![item_id];
+
+        // Handle children if any
+        let (first_child_id, last_child_id) = if !item.children.is_empty() {
+            let first_idx = *id_index;
+            let first_id = all_ids[first_idx];
+            let last_idx = first_idx + item.children.len() - 1;
+            let last_id = all_ids[last_idx];
+
+            // Write children
+            for (i, child) in item.children.iter().enumerate() {
+                let child_id = all_ids[*id_index];
+                *id_index += 1;
+
+                let child_prev = if i > 0 {
+                    Some(all_ids[first_idx + i - 1])
+                } else {
+                    None
+                };
+                let child_next = if i < item.children.len() - 1 {
+                    Some(all_ids[first_idx + i + 1])
+                } else {
+                    None
+                };
+
+                let child_ids = self.write_outline_item(
+                    child, child_id, item_id, // This item is the parent
+                    child_prev, child_next, all_ids, id_index,
+                )?;
+
+                written_ids.extend(child_ids);
+            }
+
+            (Some(first_id), Some(last_id))
+        } else {
+            (None, None)
+        };
+
+        // Create item dictionary
+        let item_dict = crate::structure::outline_item_to_dict(
+            item,
+            parent_id,
+            first_child_id,
+            last_child_id,
+            prev_id,
+            next_id,
+        );
+
+        self.write_object(item_id, Object::Dictionary(item_dict))?;
+
+        Ok(written_ids)
+    }
+
+    fn write_form_fields(&mut self, document: &mut Document) -> Result<()> {
+        if let Some(form_manager) = &document.form_manager {
+            if let Some(acro_form) = &mut document.acro_form {
+                // Clear existing fields
+                acro_form.fields.clear();
+
+                // Write each field with its widgets as complete form field annotations
+                for (_field_name, form_field) in form_manager.fields() {
+                    let field_id = self.allocate_object_id();
+
+                    // Clone the field dictionary
+                    let mut field_dict = form_field.field_dict.clone();
+
+                    // If this field has widgets, merge everything into a complete annotation
+                    if !form_field.widgets.is_empty() {
+                        let widget = &form_field.widgets[0]; // Use first widget
+
+                        // Essential annotation properties
+                        field_dict.set("Type", Object::Name("Annot".to_string()));
+                        field_dict.set("Subtype", Object::Name("Widget".to_string()));
+
+                        // Add widget rectangle
+                        let rect_array = vec![
+                            Object::Real(widget.rect.lower_left.x),
+                            Object::Real(widget.rect.lower_left.y),
+                            Object::Real(widget.rect.upper_right.x),
+                            Object::Real(widget.rect.upper_right.y),
+                        ];
+                        field_dict.set("Rect", Object::Array(rect_array));
+
+                        // Add page reference - use first page for now
+                        // TODO: Find the actual page this widget belongs to
+                        if !self.page_ids.is_empty() {
+                            field_dict.set("P", Object::Reference(self.page_ids[0]));
+                        }
+
+                        // Add Default Appearance for text fields
+                        if let Some(Object::Name(field_type)) = field_dict.get("FT") {
+                            if field_type == "Tx" {
+                                // Text field
+                                field_dict
+                                    .set("DA", Object::String("/Helv 12 Tf 0 0 0 rg".to_string()));
+                            }
+                        }
+
+                        // Add appearance stream
+                        let ap_stream_id =
+                            self.create_field_appearance_stream(&field_dict, widget)?;
+                        let mut ap_dict = Dictionary::new();
+                        ap_dict.set("N", Object::Reference(ap_stream_id));
+                        field_dict.set("AP", Object::Dictionary(ap_dict));
+
+                        // Add appearance characteristics
+                        let mut mk_dict = Dictionary::new();
+                        if let Some(bc) = &widget.appearance.border_color {
+                            mk_dict.set("BC", bc.to_pdf_array());
+                        }
+                        if let Some(bg) = &widget.appearance.background_color {
+                            mk_dict.set("BG", bg.to_pdf_array());
+                        }
+                        if mk_dict.entries().count() > 0 {
+                            field_dict.set("MK", Object::Dictionary(mk_dict));
+                        }
+
+                        // Add border style
+                        let mut bs_dict = Dictionary::new();
+                        bs_dict.set("W", Object::Real(widget.appearance.border_width));
+                        bs_dict.set(
+                            "S",
+                            Object::Name(widget.appearance.border_style.pdf_name().to_string()),
+                        );
+                        field_dict.set("BS", Object::Dictionary(bs_dict));
+
+                        // Add flags for printing and interaction
+                        field_dict.set("F", Object::Integer(4)); // Print flag
+                    }
+
+                    // Write the field object
+                    self.write_object(field_id, Object::Dictionary(field_dict))?;
+
+                    // Add field reference to AcroForm
+                    acro_form.add_field(field_id);
+
+                    // Store field ID to add to page annotations later
+                    self.form_field_ids.push(field_id);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn write_info(&mut self, document: &Document) -> Result<()> {
+        let info_id = self.info_id.expect("info_id must be set");
         let mut info_dict = Dictionary::new();
 
         if let Some(ref title) = document.metadata.title {
@@ -231,7 +551,7 @@ impl<W: Write> PdfWriter<W> {
         }
 
         self.write_object(info_id, Object::Dictionary(info_dict))?;
-        Ok(info_id)
+        Ok(())
     }
 }
 
@@ -244,11 +564,25 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             writer,
             xref_positions: HashMap::new(),
             current_position: 0,
+            next_object_id: 1,
+            catalog_id: None,
+            pages_id: None,
+            info_id: None,
+            field_widget_map: HashMap::new(),
+            field_id_map: HashMap::new(),
+            form_field_ids: Vec::new(),
+            page_ids: Vec::new(),
         })
     }
 }
 
 impl<W: Write> PdfWriter<W> {
+    fn allocate_object_id(&mut self) -> ObjectId {
+        let id = ObjectId::new(self.next_object_id, 0);
+        self.next_object_id += 1;
+        id
+    }
+
     fn write_object(&mut self, id: ObjectId, object: Object) -> Result<()> {
         self.xref_positions.insert(id, self.current_position);
 
@@ -354,12 +688,9 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
-    fn write_trailer(
-        &mut self,
-        catalog_id: ObjectId,
-        info_id: ObjectId,
-        xref_position: u64,
-    ) -> Result<()> {
+    fn write_trailer(&mut self, xref_position: u64) -> Result<()> {
+        let catalog_id = self.catalog_id.expect("catalog_id must be set");
+        let info_id = self.info_id.expect("info_id must be set");
         // Find the highest object number to determine size
         let max_obj_num = self
             .xref_positions
@@ -386,6 +717,173 @@ impl<W: Write> PdfWriter<W> {
         self.writer.write_all(data)?;
         self.current_position += data.len() as u64;
         Ok(())
+    }
+
+    fn create_widget_appearance_stream(&mut self, widget_dict: &Dictionary) -> Result<ObjectId> {
+        // Get widget rectangle
+        let rect = if let Some(Object::Array(rect_array)) = widget_dict.get("Rect") {
+            if rect_array.len() >= 4 {
+                if let (
+                    Some(Object::Real(x1)),
+                    Some(Object::Real(y1)),
+                    Some(Object::Real(x2)),
+                    Some(Object::Real(y2)),
+                ) = (
+                    rect_array.get(0),
+                    rect_array.get(1),
+                    rect_array.get(2),
+                    rect_array.get(3),
+                ) {
+                    (*x1, *y1, *x2, *y2)
+                } else {
+                    (0.0, 0.0, 100.0, 20.0) // Default
+                }
+            } else {
+                (0.0, 0.0, 100.0, 20.0) // Default
+            }
+        } else {
+            (0.0, 0.0, 100.0, 20.0) // Default
+        };
+
+        let width = rect.2 - rect.0;
+        let height = rect.3 - rect.1;
+
+        // Create appearance stream content
+        let mut content = String::new();
+
+        // Set graphics state
+        content.push_str("q\n");
+
+        // Draw border (black)
+        content.push_str("0 0 0 RG\n"); // Black stroke color
+        content.push_str("1 w\n"); // 1pt line width
+
+        // Draw rectangle border
+        content.push_str(&format!("0 0 {} {} re\n", width, height));
+        content.push_str("S\n"); // Stroke
+
+        // Fill with white background
+        content.push_str("1 1 1 rg\n"); // White fill color
+        content.push_str(&format!("0.5 0.5 {} {} re\n", width - 1.0, height - 1.0));
+        content.push_str("f\n"); // Fill
+
+        // Restore graphics state
+        content.push_str("Q\n");
+
+        // Create stream dictionary
+        let mut stream_dict = Dictionary::new();
+        stream_dict.set("Type", Object::Name("XObject".to_string()));
+        stream_dict.set("Subtype", Object::Name("Form".to_string()));
+        stream_dict.set(
+            "BBox",
+            Object::Array(vec![
+                Object::Real(0.0),
+                Object::Real(0.0),
+                Object::Real(width),
+                Object::Real(height),
+            ]),
+        );
+        stream_dict.set("Resources", Object::Dictionary(Dictionary::new()));
+        stream_dict.set("Length", Object::Integer(content.len() as i64));
+
+        // Write the appearance stream
+        let stream_id = self.allocate_object_id();
+        self.write_object(stream_id, Object::Stream(stream_dict, content.into_bytes()))?;
+
+        Ok(stream_id)
+    }
+
+    fn create_field_appearance_stream(
+        &mut self,
+        field_dict: &Dictionary,
+        widget: &crate::forms::Widget,
+    ) -> Result<ObjectId> {
+        let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
+        let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
+
+        // Create appearance stream content
+        let mut content = String::new();
+
+        // Set graphics state
+        content.push_str("q\n");
+
+        // Draw background if specified
+        if let Some(bg_color) = &widget.appearance.background_color {
+            match bg_color {
+                crate::graphics::Color::Gray(g) => {
+                    content.push_str(&format!("{} g\n", g));
+                }
+                crate::graphics::Color::Rgb(r, g, b) => {
+                    content.push_str(&format!("{} {} {} rg\n", r, g, b));
+                }
+                crate::graphics::Color::Cmyk(c, m, y, k) => {
+                    content.push_str(&format!("{} {} {} {} k\n", c, m, y, k));
+                }
+            }
+            content.push_str(&format!("0 0 {} {} re\n", width, height));
+            content.push_str("f\n");
+        }
+
+        // Draw border
+        if let Some(border_color) = &widget.appearance.border_color {
+            match border_color {
+                crate::graphics::Color::Gray(g) => {
+                    content.push_str(&format!("{} G\n", g));
+                }
+                crate::graphics::Color::Rgb(r, g, b) => {
+                    content.push_str(&format!("{} {} {} RG\n", r, g, b));
+                }
+                crate::graphics::Color::Cmyk(c, m, y, k) => {
+                    content.push_str(&format!("{} {} {} {} K\n", c, m, y, k));
+                }
+            }
+            content.push_str(&format!("{} w\n", widget.appearance.border_width));
+            content.push_str(&format!("0 0 {} {} re\n", width, height));
+            content.push_str("S\n");
+        }
+
+        // For checkboxes, add a checkmark if checked
+        if let Some(Object::Name(ft)) = field_dict.get("FT") {
+            if ft == "Btn" {
+                if let Some(Object::Name(v)) = field_dict.get("V") {
+                    if v == "Yes" {
+                        // Draw checkmark
+                        content.push_str("0 0 0 RG\n"); // Black
+                        content.push_str("2 w\n");
+                        let margin = width * 0.2;
+                        content.push_str(&format!("{} {} m\n", margin, height / 2.0));
+                        content.push_str(&format!("{} {} l\n", width / 2.0, margin));
+                        content.push_str(&format!("{} {} l\n", width - margin, height - margin));
+                        content.push_str("S\n");
+                    }
+                }
+            }
+        }
+
+        // Restore graphics state
+        content.push_str("Q\n");
+
+        // Create stream dictionary
+        let mut stream_dict = Dictionary::new();
+        stream_dict.set("Type", Object::Name("XObject".to_string()));
+        stream_dict.set("Subtype", Object::Name("Form".to_string()));
+        stream_dict.set(
+            "BBox",
+            Object::Array(vec![
+                Object::Real(0.0),
+                Object::Real(0.0),
+                Object::Real(width),
+                Object::Real(height),
+            ]),
+        );
+        stream_dict.set("Resources", Object::Dictionary(Dictionary::new()));
+        stream_dict.set("Length", Object::Integer(content.len() as i64));
+
+        // Write the appearance stream
+        let stream_id = self.allocate_object_id();
+        self.write_object(stream_id, Object::Stream(stream_dict, content.into_bytes()))?;
+
+        Ok(stream_id)
     }
 }
 
@@ -436,8 +934,10 @@ mod tests {
         let mut buffer = Vec::new();
         let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
-        let catalog_id = writer.write_catalog().unwrap();
+        let mut document = Document::new();
+        writer.write_catalog(&mut document).unwrap();
 
+        let catalog_id = writer.catalog_id.unwrap();
         assert_eq!(catalog_id.number(), 1);
         assert_eq!(catalog_id.generation(), 0);
         assert!(!buffer.is_empty());
@@ -495,7 +995,8 @@ mod tests {
 
         {
             let mut writer = PdfWriter::new_with_writer(&mut buffer);
-            let info_id = writer.write_info(&document).unwrap();
+            writer.write_info(&document).unwrap();
+            let info_id = writer.info_id.unwrap();
             assert!(info_id.number() > 0);
         }
 
@@ -604,7 +1105,9 @@ mod tests {
         let catalog_id = ObjectId::new(1, 0);
         let info_id = ObjectId::new(2, 0);
 
-        writer.write_trailer(catalog_id, info_id, 1234).unwrap();
+        writer.catalog_id = Some(catalog_id);
+        writer.info_id = Some(info_id);
+        writer.write_trailer(1234).unwrap();
 
         let content = String::from_utf8_lossy(&buffer);
         assert!(content.contains("trailer"));
@@ -1980,9 +2483,7 @@ mod tests {
             let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
             // Write minimal content
-            writer
-                .write_trailer(ObjectId::new(1, 0), ObjectId::new(2, 0), 1000)
-                .unwrap();
+            writer.write_trailer(1000).unwrap();
 
             let content = String::from_utf8_lossy(&buffer);
 

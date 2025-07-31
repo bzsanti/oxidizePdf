@@ -1,13 +1,19 @@
+pub mod cmap;
 mod encoding;
 mod extraction;
+mod extraction_cmap;
 mod flow;
 mod font;
+pub mod fonts;
 mod header_footer;
 mod layout;
 mod list;
 mod metrics;
 pub mod ocr;
 mod table;
+
+#[cfg(test)]
+mod cmap_tests;
 
 #[cfg(feature = "ocr-tesseract")]
 pub mod tesseract_provider;

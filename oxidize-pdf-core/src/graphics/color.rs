@@ -68,6 +68,23 @@ impl Color {
     pub fn magenta() -> Self {
         Color::Rgb(1.0, 0.0, 1.0)
     }
+
+    /// Convert to PDF array representation
+    pub fn to_pdf_array(&self) -> crate::objects::Object {
+        use crate::objects::Object;
+        match self {
+            Color::Gray(g) => Object::Array(vec![Object::Real(*g)]),
+            Color::Rgb(r, g, b) => {
+                Object::Array(vec![Object::Real(*r), Object::Real(*g), Object::Real(*b)])
+            }
+            Color::Cmyk(c, m, y, k) => Object::Array(vec![
+                Object::Real(*c),
+                Object::Real(*m),
+                Object::Real(*y),
+                Object::Real(*k),
+            ]),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -9,6 +9,15 @@ use super::{ParseError, ParseOptions, ParseResult};
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
+// Import decode functionality from the filter_impls module
+use super::filter_impls::ccitt::decode_ccitt;
+use super::filter_impls::dct::decode_dct;
+use super::filter_impls::jbig2::decode_jbig2;
+// Re-export for public use
+pub use super::filter_impls::ccitt::decode_ccitt as decode_ccitt_public;
+pub use super::filter_impls::dct::{parse_jpeg_info, JpegColorSpace, JpegInfo};
+pub use super::filter_impls::jbig2::decode_jbig2 as decode_jbig2_public;
+
 /// Supported PDF filters
 #[derive(Debug, Clone, PartialEq)]
 pub enum Filter {
@@ -119,13 +128,16 @@ pub fn decode_stream(
 
 /// Apply a single filter to data (legacy function, use apply_filter_with_params)
 #[allow(dead_code)]
-fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> {
+pub(crate) fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> {
     match filter {
         Filter::FlateDecode => decode_flate(data),
         Filter::ASCIIHexDecode => decode_ascii_hex(data),
         Filter::ASCII85Decode => decode_ascii85(data),
         Filter::LZWDecode => decode_lzw(data, None),
         Filter::RunLengthDecode => decode_run_length(data),
+        Filter::CCITTFaxDecode => decode_ccitt(data, None),
+        Filter::JBIG2Decode => decode_jbig2(data, None),
+        Filter::DCTDecode => decode_dct(data),
         _ => Err(ParseError::SyntaxError {
             position: 0,
             message: format!("Filter {filter:?} not yet implemented"),
@@ -486,18 +498,29 @@ mod tests {
     #[test]
     fn test_apply_filter_unsupported() {
         let data = b"test data";
-        let unsupported_filters = vec![
-            Filter::CCITTFaxDecode,
-            Filter::JBIG2Decode,
-            Filter::DCTDecode,
-            Filter::JPXDecode,
-            Filter::Crypt,
-        ];
+        let unsupported_filters = vec![Filter::JPXDecode, Filter::Crypt];
 
         for filter in unsupported_filters {
             let result = apply_filter(data, filter);
             assert!(result.is_err());
         }
+    }
+
+    #[test]
+    fn test_apply_filter_dct_decode() {
+        // DCTDecode should now work but expect valid JPEG data
+        let invalid_data = b"not jpeg data";
+        let result = apply_filter(invalid_data, Filter::DCTDecode);
+        assert!(result.is_err()); // Should fail on invalid JPEG
+
+        // Minimal valid JPEG
+        let valid_jpeg = vec![
+            0xFF, 0xD8, // SOI
+            0xFF, 0xD9, // EOI
+        ];
+        let result = apply_filter(&valid_jpeg, Filter::DCTDecode);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), valid_jpeg); // DCT returns data as-is
     }
 
     // PNG Predictor Tests for Compressed XRef Streams
@@ -1017,6 +1040,9 @@ fn apply_filter_with_params(
         Filter::ASCII85Decode => decode_ascii85(data)?,
         Filter::LZWDecode => decode_lzw(data, params)?,
         Filter::RunLengthDecode => decode_run_length(data)?,
+        Filter::CCITTFaxDecode => decode_ccitt(data, params)?,
+        Filter::JBIG2Decode => decode_jbig2(data, params)?,
+        Filter::DCTDecode => decode_dct(data)?,
         _ => {
             return Err(ParseError::SyntaxError {
                 position: 0,

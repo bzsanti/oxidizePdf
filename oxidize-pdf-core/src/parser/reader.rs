@@ -2,6 +2,7 @@
 //!
 //! Provides a simple interface for reading PDF files
 
+use super::encryption_handler::EncryptionHandler;
 use super::header::PdfHeader;
 use super::object_stream::ObjectStream;
 use super::objects::{PdfDictionary, PdfObject};
@@ -30,12 +31,63 @@ pub struct PdfReader<R: Read + Seek> {
     parse_context: StackSafeContext,
     /// Parsing options
     options: super::ParseOptions,
+    /// Encryption handler (if PDF is encrypted)
+    encryption_handler: Option<EncryptionHandler>,
 }
 
 impl<R: Read + Seek> PdfReader<R> {
     /// Get parsing options
     pub fn options(&self) -> &super::ParseOptions {
         &self.options
+    }
+
+    /// Check if the PDF is encrypted
+    pub fn is_encrypted(&self) -> bool {
+        self.encryption_handler.is_some()
+    }
+
+    /// Check if the PDF is unlocked (can read encrypted content)
+    pub fn is_unlocked(&self) -> bool {
+        match &self.encryption_handler {
+            Some(handler) => handler.is_unlocked(),
+            None => true, // Unencrypted PDFs are always "unlocked"
+        }
+    }
+
+    /// Get mutable access to encryption handler
+    pub fn encryption_handler_mut(&mut self) -> Option<&mut EncryptionHandler> {
+        self.encryption_handler.as_mut()
+    }
+
+    /// Get access to encryption handler
+    pub fn encryption_handler(&self) -> Option<&EncryptionHandler> {
+        self.encryption_handler.as_ref()
+    }
+
+    /// Try to unlock PDF with password
+    pub fn unlock_with_password(&mut self, password: &str) -> ParseResult<bool> {
+        match &mut self.encryption_handler {
+            Some(handler) => {
+                // Try user password first
+                if handler.unlock_with_user_password(password).unwrap_or(false) {
+                    Ok(true)
+                } else {
+                    // Try owner password
+                    Ok(handler
+                        .unlock_with_owner_password(password)
+                        .unwrap_or(false))
+                }
+            }
+            None => Ok(true), // Not encrypted
+        }
+    }
+
+    /// Try to unlock with empty password
+    pub fn try_empty_password(&mut self) -> ParseResult<bool> {
+        match &mut self.encryption_handler {
+            Some(handler) => Ok(handler.try_empty_password().unwrap_or(false)),
+            None => Ok(true), // Not encrypted
+        }
     }
 }
 
@@ -121,6 +173,66 @@ impl<R: Read + Seek> PdfReader<R> {
         // Validate trailer
         trailer.validate()?;
 
+        // Check for encryption
+        let encryption_handler = if EncryptionHandler::detect_encryption(trailer.dict()) {
+            if let Ok(Some((encrypt_obj_num, encrypt_gen_num))) = trailer.encrypt() {
+                // We need to temporarily create the reader to load the encryption dictionary
+                let mut temp_reader = Self {
+                    reader: buf_reader,
+                    header: header.clone(),
+                    xref: xref.clone(),
+                    trailer: trailer.clone(),
+                    object_cache: HashMap::new(),
+                    object_stream_cache: HashMap::new(),
+                    page_tree: None,
+                    parse_context: StackSafeContext::new(),
+                    options: options.clone(),
+                    encryption_handler: None,
+                };
+
+                // Load encryption dictionary
+                let encrypt_obj = temp_reader.get_object(encrypt_obj_num, encrypt_gen_num)?;
+                if let Some(encrypt_dict) = encrypt_obj.as_dict() {
+                    // Get file ID from trailer
+                    let file_id = trailer.id().and_then(|id_obj| {
+                        if let PdfObject::Array(ref id_array) = id_obj {
+                            if let Some(first_id) = id_array.get(0) {
+                                if let PdfObject::String(ref id_bytes) = first_id {
+                                    Some(id_bytes.as_bytes().to_vec())
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    });
+
+                    match EncryptionHandler::new(encrypt_dict, file_id) {
+                        Ok(handler) => {
+                            // Move the reader back out
+                            buf_reader = temp_reader.reader;
+                            Some(handler)
+                        }
+                        Err(_) => {
+                            // Move reader back and continue without encryption
+                            buf_reader = temp_reader.reader;
+                            return Err(ParseError::EncryptionNotSupported);
+                        }
+                    }
+                } else {
+                    buf_reader = temp_reader.reader;
+                    return Err(ParseError::EncryptionNotSupported);
+                }
+            } else {
+                return Err(ParseError::EncryptionNotSupported);
+            }
+        } else {
+            None
+        };
+
         Ok(Self {
             reader: buf_reader,
             header,
@@ -131,6 +243,7 @@ impl<R: Read + Seek> PdfReader<R> {
             page_tree: None,
             parse_context: StackSafeContext::new(),
             options,
+            encryption_handler,
         })
     }
 
@@ -1256,5 +1369,201 @@ startxref
         assert_eq!(cloned.lenient_streams, true);
         assert_eq!(cloned.max_recovery_bytes, 2000);
         assert_eq!(cloned.collect_warnings, true);
+    }
+
+    // ===== ENCRYPTION INTEGRATION TESTS =====
+
+    fn create_encrypted_pdf_dict() -> PdfDictionary {
+        let mut dict = PdfDictionary::new();
+        dict.insert(
+            "Filter".to_string(),
+            PdfObject::Name(PdfName("Standard".to_string())),
+        );
+        dict.insert("V".to_string(), PdfObject::Integer(1));
+        dict.insert("R".to_string(), PdfObject::Integer(2));
+        dict.insert("O".to_string(), PdfObject::String(PdfString(vec![0u8; 32])));
+        dict.insert("U".to_string(), PdfObject::String(PdfString(vec![0u8; 32])));
+        dict.insert("P".to_string(), PdfObject::Integer(-4));
+        dict
+    }
+
+    fn create_pdf_with_encryption() -> Vec<u8> {
+        // Create a minimal PDF with encryption dictionary
+        b"%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>
+endobj
+4 0 obj
+<< /Filter /Standard /V 1 /R 2 /O (32 bytes of owner password hash data) /U (32 bytes of user password hash data) /P -4 >>
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000116 00000 n 
+0000000201 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R /Encrypt 4 0 R /ID [(file id)] >>
+startxref
+295
+%%EOF"
+            .to_vec()
+    }
+
+    #[test]
+    fn test_reader_encryption_detection() {
+        // Test unencrypted PDF
+        let unencrypted_pdf = create_minimal_pdf();
+        let cursor = Cursor::new(unencrypted_pdf);
+        let reader = PdfReader::new(cursor).unwrap();
+        assert!(!reader.is_encrypted());
+        assert!(reader.is_unlocked()); // Unencrypted PDFs are always "unlocked"
+
+        // Test encrypted PDF - this will fail during construction due to encryption
+        let encrypted_pdf = create_pdf_with_encryption();
+        let cursor = Cursor::new(encrypted_pdf);
+        let result = PdfReader::new(cursor);
+        // Should fail because we don't support reading encrypted PDFs yet in construction
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_reader_encryption_methods_unencrypted() {
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let mut reader = PdfReader::new(cursor).unwrap();
+
+        // For unencrypted PDFs, all encryption methods should work
+        assert!(!reader.is_encrypted());
+        assert!(reader.is_unlocked());
+        assert!(reader.encryption_handler().is_none());
+        assert!(reader.encryption_handler_mut().is_none());
+
+        // Password attempts should succeed (no encryption)
+        assert!(reader.unlock_with_password("any_password").unwrap());
+        assert!(reader.try_empty_password().unwrap());
+    }
+
+    #[test]
+    fn test_reader_encryption_handler_access() {
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let mut reader = PdfReader::new(cursor).unwrap();
+
+        // Test handler access methods
+        assert!(reader.encryption_handler().is_none());
+        assert!(reader.encryption_handler_mut().is_none());
+
+        // Verify state consistency
+        assert!(!reader.is_encrypted());
+        assert!(reader.is_unlocked());
+    }
+
+    #[test]
+    fn test_reader_multiple_password_attempts() {
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let mut reader = PdfReader::new(cursor).unwrap();
+
+        // Multiple attempts on unencrypted PDF should all succeed
+        let passwords = vec!["test1", "test2", "admin", "", "password"];
+        for password in passwords {
+            assert!(reader.unlock_with_password(password).unwrap());
+        }
+
+        // Empty password attempts
+        for _ in 0..5 {
+            assert!(reader.try_empty_password().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_reader_encryption_state_consistency() {
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let mut reader = PdfReader::new(cursor).unwrap();
+
+        // Verify initial state
+        assert!(!reader.is_encrypted());
+        assert!(reader.is_unlocked());
+        assert!(reader.encryption_handler().is_none());
+
+        // State should remain consistent after password attempts
+        let _ = reader.unlock_with_password("test");
+        assert!(!reader.is_encrypted());
+        assert!(reader.is_unlocked());
+        assert!(reader.encryption_handler().is_none());
+
+        let _ = reader.try_empty_password();
+        assert!(!reader.is_encrypted());
+        assert!(reader.is_unlocked());
+        assert!(reader.encryption_handler().is_none());
+    }
+
+    #[test]
+    fn test_reader_encryption_error_handling() {
+        // This test verifies that encrypted PDFs are properly rejected during construction
+        let encrypted_pdf = create_pdf_with_encryption();
+        let cursor = Cursor::new(encrypted_pdf);
+
+        // Should fail during construction due to unsupported encryption
+        let result = PdfReader::new(cursor);
+        match result {
+            Err(ParseError::EncryptionNotSupported) => {
+                // Expected - encryption detected but not supported in current flow
+            }
+            Err(_) => {
+                // Other errors are also acceptable as encryption detection may fail parsing
+            }
+            Ok(_) => {
+                panic!("Should not successfully create reader for encrypted PDF without password");
+            }
+        }
+    }
+
+    #[test]
+    fn test_reader_encryption_with_options() {
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+
+        // Test with different parsing options
+        let strict_options = ParseOptions::strict();
+        let mut strict_reader = PdfReader::new_with_options(cursor, strict_options).unwrap();
+        assert!(!strict_reader.is_encrypted());
+        assert!(strict_reader.is_unlocked());
+
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let lenient_options = ParseOptions::lenient();
+        let mut lenient_reader = PdfReader::new_with_options(cursor, lenient_options).unwrap();
+        assert!(!lenient_reader.is_encrypted());
+        assert!(lenient_reader.is_unlocked());
+    }
+
+    #[test]
+    fn test_reader_encryption_integration_edge_cases() {
+        let pdf_data = create_minimal_pdf();
+        let cursor = Cursor::new(pdf_data);
+        let mut reader = PdfReader::new(cursor).unwrap();
+
+        // Test edge cases with empty/special passwords
+        assert!(reader.unlock_with_password("").unwrap());
+        assert!(reader.unlock_with_password("   ").unwrap()); // Spaces
+        assert!(reader
+            .unlock_with_password("very_long_password_that_exceeds_normal_length")
+            .unwrap());
+        assert!(reader.unlock_with_password("unicode_test_ñáéíóú").unwrap());
+
+        // Special characters that might cause issues
+        assert!(reader.unlock_with_password("pass@#$%^&*()").unwrap());
+        assert!(reader.unlock_with_password("pass\nwith\nnewlines").unwrap());
+        assert!(reader.unlock_with_password("pass\twith\ttabs").unwrap());
     }
 }

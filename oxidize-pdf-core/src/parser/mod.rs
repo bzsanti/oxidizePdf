@@ -134,6 +134,8 @@
 pub mod content;
 pub mod document;
 pub mod encoding;
+pub mod encryption_handler;
+pub mod filter_impls;
 pub mod filters;
 pub mod header;
 pub mod lexer;
@@ -146,6 +148,7 @@ pub mod stack_safe;
 pub mod stack_safe_tests;
 pub mod trailer;
 pub mod xref;
+pub mod xref_stream;
 pub mod xref_types;
 
 #[cfg(test)]
@@ -160,6 +163,10 @@ pub use self::content::{ContentOperation, ContentParser, TextElement};
 pub use self::document::{PdfDocument, ResourceManager};
 pub use self::encoding::{
     CharacterDecoder, EncodingOptions, EncodingResult, EncodingType, EnhancedDecoder,
+};
+pub use self::encryption_handler::{
+    ConsolePasswordProvider, EncryptionHandler, EncryptionInfo, InteractiveDecryption,
+    PasswordProvider, PasswordResult,
 };
 pub use self::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString};
 pub use self::optimized_reader::OptimizedPdfReader;

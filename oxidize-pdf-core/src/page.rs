@@ -1,6 +1,8 @@
+use crate::annotations::Annotation;
 use crate::error::Result;
+use crate::forms::Widget;
 use crate::graphics::{GraphicsContext, Image};
-use crate::objects::{Array, Dictionary, Object};
+use crate::objects::{Array, Dictionary, Object, ObjectReference};
 use crate::text::{Font, HeaderFooter, TextContext, TextFlowContext};
 use std::collections::{HashMap, HashSet};
 
@@ -64,6 +66,7 @@ pub struct Page {
     images: HashMap<String, Image>,
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
+    annotations: Vec<Annotation>,
 }
 
 impl Page {
@@ -81,6 +84,7 @@ impl Page {
             images: HashMap::new(),
             header: None,
             footer: None,
+            annotations: Vec::new(),
         }
     }
 
@@ -180,6 +184,70 @@ impl Page {
 
     pub(crate) fn images(&self) -> &HashMap<String, Image> {
         &self.images
+    }
+
+    /// Adds an annotation to this page
+    pub fn add_annotation(&mut self, annotation: Annotation) {
+        self.annotations.push(annotation);
+    }
+
+    /// Returns a reference to the annotations
+    pub fn annotations(&self) -> &[Annotation] {
+        &self.annotations
+    }
+
+    /// Returns a mutable reference to the annotations  
+    pub fn annotations_mut(&mut self) -> &mut Vec<Annotation> {
+        &mut self.annotations
+    }
+
+    /// Add a form field widget to the page.
+    ///
+    /// This method adds a widget annotation and returns the reference ID that
+    /// should be used to link the widget to its corresponding form field.
+    ///
+    /// # Arguments
+    ///
+    /// * `widget` - The widget to add to the page
+    ///
+    /// # Returns
+    ///
+    /// An ObjectReference that should be used to link this widget to a form field
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::{Page, forms::Widget, geometry::{Rectangle, Point}};
+    ///
+    /// let mut page = Page::a4();
+    /// let widget = Widget::new(
+    ///     Rectangle::new(Point::new(100.0, 700.0), Point::new(300.0, 720.0))
+    /// );
+    /// let widget_ref = page.add_form_widget(widget);
+    /// ```
+    pub fn add_form_widget(&mut self, widget: Widget) -> ObjectReference {
+        // Create a unique object reference for this widget
+        // In a real implementation, this would be managed by the document writer
+        let widget_ref = ObjectReference::new(
+            self.annotations.len() as u32 + 1000, // Temporary ID generation
+            0,
+        );
+
+        // Convert widget to annotation
+        let mut annot = Annotation::new(
+            crate::annotations::AnnotationType::Widget,
+            widget.rect.clone(),
+        );
+
+        // Add widget-specific properties
+        for (key, value) in widget.to_annotation_dict().iter() {
+            annot.properties.set(key, value.clone());
+        }
+
+        // Add to page's annotations
+        self.annotations.push(annot);
+
+        widget_ref
     }
 
     /// Sets the header for this page.
@@ -320,6 +388,20 @@ impl Page {
         // Resources (empty for now, would include fonts, images, etc.)
         let resources = Dictionary::new();
         dict.set("Resources", Object::Dictionary(resources));
+
+        // Annotations - will be added by the writer with proper object references
+        // The Page struct holds the annotation data, but the writer is responsible
+        // for creating object references and writing the annotation objects
+        if !self.annotations.is_empty() {
+            // For now, create placeholder references that will be updated by the writer
+            let mut annot_array = Vec::new();
+            for (i, _annotation) in self.annotations.iter().enumerate() {
+                // Create temporary object references that the writer will replace
+                let obj_ref = ObjectReference::new(i as u32 + 1000, 0);
+                annot_array.push(Object::Reference(obj_ref));
+            }
+            dict.set("Annots", Object::Array(annot_array));
+        }
 
         // Contents would be added by the writer
 

@@ -2,20 +2,21 @@
 //!
 //! Parses xref tables according to ISO 32000-1 Section 7.5.4
 
+use super::xref_stream;
 use super::xref_types::{XRefEntryInfo, XRefEntryType};
 use super::{ParseError, ParseOptions, ParseResult};
 use crate::parser::reader::PDFLines;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 
-/// Cross-reference entry
+/// Cross-reference entry (traditional format)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct XRefEntry {
-    /// Byte offset in the file (for in-use entries)
+    /// Byte offset in the file
     pub offset: u64,
     /// Generation number
     pub generation: u16,
-    /// Whether this entry is in use
+    /// Whether the object is in use
     pub in_use: bool,
 }
 
@@ -33,7 +34,7 @@ pub struct XRefEntryExt {
 pub struct XRefTable {
     /// Map of object number to xref entry
     entries: HashMap<u32, XRefEntry>,
-    /// Extended entry information (for compressed objects)
+    /// Extended entries for compressed objects
     extended_entries: HashMap<u32, XRefEntryExt>,
     /// Trailer dictionary
     trailer: Option<super::objects::PdfDictionary>,
@@ -213,7 +214,7 @@ impl XRefTable {
             reader.seek(SeekFrom::Start(pos))?;
 
             // Try to parse as an object
-            let mut lexer = super::lexer::Lexer::new_with_options(reader, options.clone());
+            let mut lexer = super::lexer::Lexer::new_with_options(&mut *reader, options.clone());
 
             // Read object header
             let obj_num = match lexer.next_token()? {
@@ -246,25 +247,76 @@ impl XRefTable {
                     == Some("XRef")
                 {
                     eprintln!("Parsing XRef stream");
-                    let xref_stream = XRefStream::parse(stream.clone())?;
 
-                    eprintln!(
-                        "XRef stream parsed, found {} entries",
-                        xref_stream.entries.len()
-                    );
+                    // Use the new xref_stream module
+                    let xref_stream_parser = xref_stream::XRefStream::parse(
+                        &mut *reader,
+                        stream.dict.clone(),
+                        stream.decode(options)?,
+                        options,
+                    )?;
+
+                    // Convert entries to our format
+                    let entries = xref_stream_parser.to_xref_entries()?;
+                    eprintln!("XRef stream parsed, found {} entries", entries.len());
 
                     // Copy entries from xref stream
-                    for (obj_num, entry) in &xref_stream.entries {
-                        table.entries.insert(*obj_num, *entry);
-                    }
-
-                    // Copy extended entries for compressed objects
-                    for (obj_num, ext_entry) in &xref_stream.extended_entries {
-                        table.extended_entries.insert(*obj_num, ext_entry.clone());
+                    for (obj_num, entry) in entries {
+                        match entry {
+                            xref_stream::XRefEntry::Free {
+                                next_free_object,
+                                generation,
+                            } => {
+                                table.entries.insert(
+                                    obj_num,
+                                    XRefEntry {
+                                        offset: next_free_object as u64,
+                                        generation,
+                                        in_use: false,
+                                    },
+                                );
+                            }
+                            xref_stream::XRefEntry::InUse { offset, generation } => {
+                                table.entries.insert(
+                                    obj_num,
+                                    XRefEntry {
+                                        offset,
+                                        generation,
+                                        in_use: true,
+                                    },
+                                );
+                            }
+                            xref_stream::XRefEntry::Compressed {
+                                stream_object_number,
+                                index_within_stream,
+                            } => {
+                                // Create extended entry for compressed object
+                                let ext_entry = XRefEntryExt {
+                                    basic: XRefEntry {
+                                        offset: 0,
+                                        generation: 0,
+                                        in_use: true,
+                                    },
+                                    compressed_info: Some((
+                                        stream_object_number,
+                                        index_within_stream,
+                                    )),
+                                };
+                                table.extended_entries.insert(obj_num, ext_entry);
+                                table.entries.insert(
+                                    obj_num,
+                                    XRefEntry {
+                                        offset: 0,
+                                        generation: 0,
+                                        in_use: true,
+                                    },
+                                );
+                            }
+                        }
                     }
 
                     // Set trailer from xref stream
-                    table.trailer = Some(xref_stream.trailer().clone());
+                    table.trailer = Some(xref_stream_parser.trailer_dict().clone());
                 } else {
                     return Err(ParseError::InvalidXRef);
                 }
