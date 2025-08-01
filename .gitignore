@@ -33,6 +33,7 @@ test-suite/external-suites/
 # Local PDF fixtures (symbolic links to private PDFs)
 tests/fixtures/
 tests/fixtures
+test-suite/fixtures/valid/GOVPUB-CS1-301ae7b075ad3435b3a7dca00e78e8ff.pdf
 
 # Development and debug scripts
 debug_manual.pdf
