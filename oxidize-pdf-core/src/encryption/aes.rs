@@ -1086,10 +1086,10 @@ mod tests {
         // Test inverse S-box
         for i in 0..=255u8 {
             let sbox_out = aes.sbox(i);
-            let inv_out = aes.inv_sbox(sbox_out);
+            let _inv_out = aes.inv_sbox(sbox_out);
             // Note: Due to simplified implementation, perfect inversion might not hold
             // Just verify no panics occur
-            assert!(inv_out <= 255);
+            // inv_out is u8, so it's always <= 255
         }
     }
 

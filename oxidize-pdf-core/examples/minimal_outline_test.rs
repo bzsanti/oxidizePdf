@@ -1,6 +1,5 @@
 //! Minimal test for outlines to debug viewer compatibility
 
-use oxidize_pdf::graphics::Color;
 use oxidize_pdf::structure::{Destination, OutlineBuilder, OutlineItem, PageDestination};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::{Document, Page};

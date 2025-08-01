@@ -1,6 +1,6 @@
 //! Simple test for the new architecture without file I/O
 
-use oxidize_pdf::parser::objects::{PdfArray, PdfDictionary};
+use oxidize_pdf::parser::objects::PdfDictionary;
 use oxidize_pdf::parser::page_tree::{PageTree, ParsedPage};
 use oxidize_pdf::parser::ResourceManager;
 

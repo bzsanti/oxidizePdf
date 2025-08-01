@@ -1369,6 +1369,7 @@ startxref
 
     // ===== ENCRYPTION INTEGRATION TESTS =====
 
+    #[allow(dead_code)]
     fn create_encrypted_pdf_dict() -> PdfDictionary {
         let mut dict = PdfDictionary::new();
         dict.insert(
@@ -1531,14 +1532,14 @@ startxref
 
         // Test with different parsing options
         let strict_options = ParseOptions::strict();
-        let mut strict_reader = PdfReader::new_with_options(cursor, strict_options).unwrap();
+        let strict_reader = PdfReader::new_with_options(cursor, strict_options).unwrap();
         assert!(!strict_reader.is_encrypted());
         assert!(strict_reader.is_unlocked());
 
         let pdf_data = create_minimal_pdf();
         let cursor = Cursor::new(pdf_data);
         let lenient_options = ParseOptions::lenient();
-        let mut lenient_reader = PdfReader::new_with_options(cursor, lenient_options).unwrap();
+        let lenient_reader = PdfReader::new_with_options(cursor, lenient_options).unwrap();
         assert!(!lenient_reader.is_encrypted());
         assert!(lenient_reader.is_unlocked());
     }

@@ -212,6 +212,7 @@ fn show_xref_stream_benefits() {
 }
 
 /// Show hybrid reference file structure
+#[allow(dead_code)]
 fn demonstrate_hybrid_reference() {
     println!("\n\nHybrid Reference Files:");
     println!("======================");

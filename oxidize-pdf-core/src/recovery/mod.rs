@@ -536,9 +536,8 @@ mod tests {
         let result = analyze_corruption(&path);
         // Should either succeed or fail appropriately
         match result {
-            Ok(report) => {
-                // If it succeeds, verify it's a valid report
-                assert!(report.severity >= 0);
+            Ok(_report) => {
+                // If it succeeds, it's a valid report
             }
             Err(_) => {
                 // Failure is also acceptable for invalid file

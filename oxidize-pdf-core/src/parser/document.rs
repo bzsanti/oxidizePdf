@@ -1056,7 +1056,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// let annotations = document.get_page_annotations(0)?;
     /// for annot in &annotations {
     ///     if let Some(contents) = annot.get("Contents").and_then(|c| c.as_string()) {
-    ///         println!("Annotation: {}", contents);
+    ///         println!("Annotation: {:?}", contents);
     ///     }
     /// }
     /// # Ok(())

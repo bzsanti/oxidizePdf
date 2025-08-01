@@ -21,7 +21,7 @@ fn main() -> Result<()> {
     doc.set_author("oxidize-pdf");
 
     // Enable forms and get the AcroForm
-    let acro_form = doc.enable_forms();
+    let _acro_form = doc.enable_forms();
     println!("Enabled interactive forms in document");
 
     // Create a form manager to handle field-widget relationships
@@ -63,7 +63,7 @@ fn main() -> Result<()> {
     let name_widget_ref = page.add_form_widget(name_widget.clone());
 
     // Add field to form manager with proper linking
-    let name_field_ref = form_manager.add_text_field(
+    let _name_field_ref = form_manager.add_text_field(
         name_field,
         name_widget,
         Some(FieldOptions {
@@ -88,8 +88,8 @@ fn main() -> Result<()> {
         Point::new(400.0, 615.0),
     ));
 
-    let email_widget_ref = page.add_form_widget(email_widget.clone());
-    let email_field_ref = form_manager.add_text_field(email_field, email_widget, None)?;
+    let _email_widget_ref = page.add_form_widget(email_widget.clone());
+    let _email_field_ref = form_manager.add_text_field(email_field, email_widget, None)?;
 
     // 3. Checkbox with proper styling
     page.text()
@@ -109,8 +109,8 @@ fn main() -> Result<()> {
         border_style: BorderStyle::Solid,
     });
 
-    let checkbox_widget_ref = page.add_form_widget(checkbox_widget.clone());
-    let checkbox_field_ref =
+    let _checkbox_widget_ref = page.add_form_widget(checkbox_widget.clone());
+    let _checkbox_field_ref =
         form_manager.add_checkbox(subscribe_checkbox, checkbox_widget, None)?;
 
     // 4. Radio Button Group
@@ -121,7 +121,7 @@ fn main() -> Result<()> {
     // Email radio button
     page.text().at(70.0, 470.0).write("Email")?;
 
-    let email_radio = RadioButton::new("contact_method")
+    let _email_radio = RadioButton::new("contact_method")
         .add_option("email", "Email")
         .with_selected(0);
 
@@ -130,24 +130,24 @@ fn main() -> Result<()> {
         Point::new(65.0, 480.0),
     ));
 
-    let email_radio_ref = page.add_form_widget(email_radio_widget.clone());
+    let _email_radio_ref = page.add_form_widget(email_radio_widget.clone());
 
     // Phone radio button
     page.text().at(150.0, 470.0).write("Phone")?;
 
-    let phone_radio = RadioButton::new("contact_method").add_option("phone", "Phone");
+    let _phone_radio = RadioButton::new("contact_method").add_option("phone", "Phone");
 
     let phone_radio_widget = Widget::new(Rectangle::new(
         Point::new(130.0, 465.0),
         Point::new(145.0, 480.0),
     ));
 
-    let phone_radio_ref = page.add_form_widget(phone_radio_widget.clone());
+    let _phone_radio_ref = page.add_form_widget(phone_radio_widget.clone());
 
     // 5. Submit Button
     page.text().at(50.0, 400.0).write("Form Actions:")?;
 
-    let submit_button = PushButton::new("submit").with_caption("Submit Form");
+    let _submit_button = PushButton::new("submit").with_caption("Submit Form");
 
     let submit_widget = Widget::new(Rectangle::new(
         Point::new(50.0, 360.0),
@@ -160,10 +160,10 @@ fn main() -> Result<()> {
         border_style: BorderStyle::Beveled,
     });
 
-    let submit_widget_ref = page.add_form_widget(submit_widget.clone());
+    let _submit_widget_ref = page.add_form_widget(submit_widget.clone());
 
     // 6. Reset Button
-    let reset_button = PushButton::new("reset").with_caption("Reset Form");
+    let _reset_button = PushButton::new("reset").with_caption("Reset Form");
 
     let reset_widget = Widget::new(Rectangle::new(
         Point::new(170.0, 360.0),
@@ -176,7 +176,7 @@ fn main() -> Result<()> {
         border_style: BorderStyle::Beveled,
     });
 
-    let reset_widget_ref = page.add_form_widget(reset_widget.clone());
+    let _reset_widget_ref = page.add_form_widget(reset_widget.clone());
 
     // Add instructional text
     page.text()

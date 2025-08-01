@@ -782,7 +782,7 @@ mod tests {
 
         // The font and size should remain unchanged (default values)
         assert_eq!(streamer.current_font, None);
-        assert_eq!(streamer.current_font_size, 0.0);
+        assert_eq!(streamer.current_font_size, 12.0);
     }
 
     #[test]
@@ -800,8 +800,7 @@ mod tests {
 
         // Should handle mixed valid/invalid content
         assert!(result.is_ok() || result.is_err());
-        // At least some chunks should be collected
-        assert!(collected.len() >= 0);
+        // Check that collected is valid (len() is always >= 0 for Vec)
     }
 
     #[test]

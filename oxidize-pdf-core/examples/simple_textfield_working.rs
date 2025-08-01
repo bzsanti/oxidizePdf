@@ -2,8 +2,7 @@
 //!
 //! This creates a text field using a more direct approach to ensure it works
 
-use oxidize_pdf::objects::{Dictionary, Object, ObjectId};
-use oxidize_pdf::{Document, Page, Result};
+use oxidize_pdf::Result;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
@@ -57,7 +56,7 @@ fn main() -> Result<()> {
     xref_positions.insert(6, current_pos);
     let content = "6 0 obj\n<<\n/Length 85\n>>\nstream\nBT\n/Helv 14 Tf\n50 700 Td\n(Simple Working Text Field) Tj\n0 -50 Td\n(Enter text:) Tj\nET\nendstream\nendobj\n";
     pdf_content.extend_from_slice(content.as_bytes());
-    current_pos += content.len() as u64;
+    // current_pos is tracked for xref table positions
 
     // Write xref table
     let xref_start = pdf_content.len();

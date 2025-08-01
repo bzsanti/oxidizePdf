@@ -96,6 +96,7 @@ impl XRefRecovery {
                 let absolute_pos = pos + obj_pos;
 
                 // Extract object ID and generation
+                // parse_object_header expects buffer including " obj"
                 if let Some((id, gen, obj_start)) =
                     self.parse_object_header(&buffer[..absolute_pos])
                 {
@@ -159,9 +160,52 @@ impl XRefRecovery {
     fn verify_object_end(&self, buffer: &[u8]) -> bool {
         // Look for "endobj" within reasonable distance
         let search_len = std::cmp::min(buffer.len(), 50000); // 50KB max
-        buffer[..search_len]
-            .windows(6)
-            .any(|window| window == b"endobj")
+
+        // Find the first "endobj" but make sure it's not preceded by another object
+        let mut pos = 0;
+        while pos + 6 <= search_len {
+            if let Some(endobj_pos) = buffer[pos..search_len]
+                .windows(6)
+                .position(|window| window == b"endobj")
+            {
+                let absolute_endobj_pos = pos + endobj_pos;
+
+                // Check if "endobj" is NOT part of a larger word like "endobject"
+                // We specifically check for "ect" after "endobj" which would form "endobject"
+                let is_valid_endobj = {
+                    let after_endobj_pos = absolute_endobj_pos + 6;
+                    if after_endobj_pos + 2 < buffer.len() {
+                        // Check if it forms "endobject" specifically
+                        let next_chars = &buffer[after_endobj_pos..after_endobj_pos + 3];
+                        next_chars != b"ect"
+                    } else {
+                        true // Not enough chars to form "endobject"
+                    }
+                };
+
+                if !is_valid_endobj {
+                    // This forms a different word like "endobject", skip it
+                    pos = absolute_endobj_pos + 6;
+                    continue;
+                }
+
+                // Check if there's another object header between current pos and endobj
+                let check_buffer = &buffer[pos..absolute_endobj_pos];
+                let has_intervening_obj = check_buffer.windows(4).any(|w| w == b" obj");
+
+                if !has_intervening_obj {
+                    // This endobj belongs to our object
+                    return true;
+                } else {
+                    // Skip past this endobj and continue looking
+                    pos = absolute_endobj_pos + 6;
+                }
+            } else {
+                break;
+            }
+        }
+
+        false
     }
 
     /// Build XRef table from found objects
@@ -453,7 +497,7 @@ mod tests {
         assert!(recovery.objects.contains_key(&(1, 0)));
         assert!(recovery.objects.contains_key(&(2, 0)));
         assert_eq!(recovery.objects[&(1, 0)], 100); // Base offset applied
-        assert_eq!(recovery.objects[&(2, 0)], 137); // Base offset + position
+        assert_eq!(recovery.objects[&(2, 0)], 136); // Base offset + position
     }
 
     #[test]

@@ -44,7 +44,7 @@ libc = "0.2"
 winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
 
 # Image processing dependencies (optional)
-image = { workspace = true, optional = true }
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"], optional = true }
 
 # OCR dependencies (optional)
 tesseract = { version = "0.15", optional = true }
