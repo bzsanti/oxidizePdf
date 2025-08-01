@@ -293,18 +293,18 @@ impl ImageExtractor {
 
     /// Detect image format from raw data by examining magic bytes
     fn detect_image_format_from_data(&self, data: &[u8]) -> OperationResult<ImageFormat> {
-        if data.len() < 8 {
+        if data.is_empty() {
             return Err(OperationError::ParseError(
                 "Image data too short to detect format".to_string(),
             ));
         }
 
-        // Check for PNG signature
+        // Check for PNG signature (needs 8 bytes)
         if data.len() >= 8 && &data[0..8] == b"\x89PNG\r\n\x1a\n" {
             return Ok(ImageFormat::Png);
         }
 
-        // Check for TIFF signatures
+        // Check for TIFF signatures (needs 4 bytes)
         if data.len() >= 4 {
             if &data[0..2] == b"II" && &data[2..4] == b"\x2A\x00" {
                 return Ok(ImageFormat::Tiff); // Little endian TIFF
@@ -314,9 +314,16 @@ impl ImageExtractor {
             }
         }
 
-        // Check for JPEG signature
+        // Check for JPEG signature (needs 2 bytes)
         if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
             return Ok(ImageFormat::Jpeg);
+        }
+
+        // If data is too short for any meaningful detection
+        if data.len() < 2 {
+            return Err(OperationError::ParseError(
+                "Image data too short to detect format".to_string(),
+            ));
         }
 
         // Default to PNG for FlateDecode if no other format detected

@@ -885,6 +885,10 @@ mod tests {
         let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
         let mut document = Document::new();
+        // Set required IDs before calling write_catalog
+        writer.catalog_id = Some(writer.allocate_object_id());
+        writer.pages_id = Some(writer.allocate_object_id());
+        writer.info_id = Some(writer.allocate_object_id());
         writer.write_catalog(&mut document).unwrap();
 
         let catalog_id = writer.catalog_id.unwrap();
@@ -945,6 +949,8 @@ mod tests {
 
         {
             let mut writer = PdfWriter::new_with_writer(&mut buffer);
+            // Set required info_id before calling write_info
+            writer.info_id = Some(writer.allocate_object_id());
             writer.write_info(&document).unwrap();
             let info_id = writer.info_id.unwrap();
             assert!(info_id.number() > 0);
@@ -979,6 +985,8 @@ mod tests {
 
         {
             let mut writer = PdfWriter::new_with_writer(&mut buffer);
+            // Set required info_id before calling write_info
+            writer.info_id = Some(writer.allocate_object_id());
             writer.write_info(&document).unwrap();
         }
 
@@ -2432,6 +2440,12 @@ mod tests {
             let mut buffer = Vec::new();
             let mut writer = PdfWriter::new_with_writer(&mut buffer);
 
+            // Set required IDs before calling write_trailer
+            writer.catalog_id = Some(ObjectId::new(1, 0));
+            writer.info_id = Some(ObjectId::new(2, 0));
+            writer.xref_positions.insert(ObjectId::new(1, 0), 0);
+            writer.xref_positions.insert(ObjectId::new(2, 0), 0);
+            
             // Write minimal content
             writer.write_trailer(1000).unwrap();
 
