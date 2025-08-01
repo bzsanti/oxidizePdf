@@ -357,6 +357,25 @@ oxidize-pdf currently implements approximately **25-30% of ISO 32000-1:2008**. S
 - Many PDFs will parse but advanced features will be ignored
 - This is early beta software with significant limitations
 
+## Project Structure
+
+```
+oxidize-pdf/
+├── oxidize-pdf-core/     # Core PDF library
+├── oxidize-pdf-cli/      # Command-line interface
+├── oxidize-pdf-api/      # REST API server
+├── test-suite/           # Comprehensive test suite
+├── docs/                 # Documentation
+│   ├── technical/        # Technical docs and implementation details
+│   └── reports/          # Analysis and test reports
+├── tools/                # Development and analysis tools
+├── scripts/              # Build and release scripts
+└── test-pdfs/            # Test PDF files
+
+```
+
+See [REPOSITORY_ARCHITECTURE.md](REPOSITORY_ARCHITECTURE.md) for detailed information.
+
 ## Testing
 
 oxidize-pdf includes comprehensive test suites to ensure reliability:

@@ -1,6 +1,12 @@
+# Build artifacts
 /target
+Cargo.lock
+
+# Test PDFs
+test-pdfs/
 *.pdf
 test_*.pdf
+!test-suite/fixtures/**/*.pdf
 
 # PDF samples for testing
 PDF_Samples/
@@ -29,11 +35,14 @@ tests/fixtures/
 tests/fixtures
 
 # Development and debug scripts
-test_parsing.py
-debug_xref.py
-test_pdf_samples.sh
 debug_manual.pdf
 *.debug.pdf
+
+# Coverage files
+*.profraw
+*.profdata
+cobertura.xml
+tarpaulin-report.html
 
 # Keep GitHub workflows
 !.github/
@@ -56,3 +65,8 @@ comprehensive_analysis_report.json
 character_encoding_analysis.json
 pdf_test_results.txt
 group*.txt
+
+# Temporary test outputs
+test_output/
+test_subset/
+output.pdf
