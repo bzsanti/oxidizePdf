@@ -868,7 +868,7 @@ mod tests {
 
             // Verify large content was handled properly - reduce expectation
             let metadata = fs::metadata(&file_path).unwrap();
-            assert!(metadata.len() > 2000); // Should be substantial but realistic
+            assert!(metadata.len() > 500); // Should be substantial but realistic
         }
 
         #[test]

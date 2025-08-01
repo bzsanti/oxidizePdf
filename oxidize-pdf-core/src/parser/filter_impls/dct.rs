@@ -101,6 +101,8 @@ pub fn parse_jpeg_info(data: &[u8]) -> ParseResult<JpegInfo> {
 
         // Skip padding bytes
         if marker == 0xFF {
+            // Decrement pos by 1 to handle consecutive 0xFF bytes properly
+            pos -= 1;
             continue;
         }
 

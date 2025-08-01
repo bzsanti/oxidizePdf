@@ -1057,27 +1057,39 @@ mod tests {
             // Add specific data for certain tables
             match table {
                 &HEAD_TABLE => {
+                    // Ensure we have enough space for the HEAD table data
+                    while font_data.len() < offset + *min_size {
+                        font_data.push(0);
+                    }
                     // Add units_per_em at offset 18
-                    if offset + 18 < table_start + min_size {
+                    if offset + 19 < font_data.len() {
                         font_data[offset + 18] = 0x04;
                         font_data[offset + 19] = 0x00; // 1024 units
                     }
                     // Add indexToLocFormat at offset 50
-                    if offset + 50 < table_start + min_size {
+                    if offset + 51 < font_data.len() {
                         font_data[offset + 50] = 0x00;
                         font_data[offset + 51] = 0x00; // short format
                     }
                 }
                 &MAXP_TABLE => {
+                    // Ensure we have enough space for the MAXP table data
+                    while font_data.len() < offset + *min_size {
+                        font_data.push(0);
+                    }
                     // Add numGlyphs at offset 4
-                    if offset + 4 < table_start + min_size {
+                    if offset + 5 < font_data.len() {
                         font_data[offset + 4] = 0x01;
                         font_data[offset + 5] = 0x00; // 256 glyphs
                     }
                 }
                 &HHEA_TABLE => {
+                    // Ensure we have enough space for the HHEA table data
+                    while font_data.len() < offset + *min_size {
+                        font_data.push(0);
+                    }
                     // Add numberOfHMetrics at offset 34
-                    if offset + 34 < table_start + min_size {
+                    if offset + 35 < font_data.len() {
                         font_data[offset + 34] = 0x01;
                         font_data[offset + 35] = 0x00; // 256 metrics
                     }

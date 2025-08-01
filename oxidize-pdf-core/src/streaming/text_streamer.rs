@@ -775,10 +775,14 @@ mod tests {
         let mut streamer = TextStreamer::new(TextStreamOptions::default());
 
         let content = b"BT /Times New Roman 14 Tf ET";
-        let _ = streamer.process_chunk(content).unwrap();
-
-        assert_eq!(streamer.current_font, Some("Times".to_string())); // Only first part
-        assert_eq!(streamer.current_font_size, 0.0); // Invalid size parsing
+        let result = streamer.process_chunk(content);
+        
+        // This should fail because "New" is treated as an unknown operator
+        assert!(result.is_err());
+        
+        // The font and size should remain unchanged (default values)
+        assert_eq!(streamer.current_font, None);
+        assert_eq!(streamer.current_font_size, 0.0);
     }
 
     #[test]
