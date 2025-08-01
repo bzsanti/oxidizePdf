@@ -776,10 +776,10 @@ mod tests {
 
         let content = b"BT /Times New Roman 14 Tf ET";
         let result = streamer.process_chunk(content);
-        
+
         // This should fail because "New" is treated as an unknown operator
         assert!(result.is_err());
-        
+
         // The font and size should remain unchanged (default values)
         assert_eq!(streamer.current_font, None);
         assert_eq!(streamer.current_font_size, 0.0);

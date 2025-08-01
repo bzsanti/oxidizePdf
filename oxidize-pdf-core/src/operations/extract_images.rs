@@ -473,13 +473,34 @@ mod tests {
         assert!(debug_str.contains("768"));
     }
 
+    // Helper function to create minimal valid PDF for testing
+    fn create_minimal_pdf(temp_file: &std::path::Path) {
+        let minimal_pdf = b"%PDF-1.7\n\
+1 0 obj\n\
+<< /Type /Catalog /Pages 2 0 R >>\n\
+endobj\n\
+2 0 obj\n\
+<< /Type /Pages /Kids [] /Count 0 >>\n\
+endobj\n\
+xref\n\
+0 3\n\
+0000000000 65535 f \n\
+0000000009 00000 n \n\
+0000000055 00000 n \n\
+trailer\n\
+<< /Size 3 /Root 1 0 R >>\n\
+startxref\n\
+105\n\
+%%EOF";
+        std::fs::write(temp_file, minimal_pdf).unwrap();
+    }
+
     #[test]
     fn test_detect_image_format_png() {
-        // Create a mock ImageExtractor for testing
-        // We need to create a dummy PDF document for this
+        // Create a minimal valid PDF document for testing
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
@@ -494,7 +515,7 @@ mod tests {
     fn test_detect_image_format_jpeg() {
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
@@ -509,7 +530,7 @@ mod tests {
     fn test_detect_image_format_tiff_little_endian() {
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
@@ -524,7 +545,7 @@ mod tests {
     fn test_detect_image_format_tiff_big_endian() {
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
@@ -539,7 +560,7 @@ mod tests {
     fn test_detect_image_format_unknown() {
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
@@ -556,13 +577,13 @@ mod tests {
     fn test_detect_image_format_short_data() {
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
 
-        // Too short data
-        let short_data = b"\xFF\xD8";
+        // Too short data (less than 2 bytes)
+        let short_data = b"\xFF";
         let result = extractor.detect_image_format_from_data(short_data);
         assert!(result.is_err());
         match result {
@@ -715,7 +736,7 @@ mod tests {
     fn test_detect_format_edge_cases() {
         let temp_dir = TempDir::new().unwrap();
         let temp_file = temp_dir.path().join("test.pdf");
-        std::fs::write(&temp_file, b"%PDF-1.7\n%%EOF").unwrap();
+        create_minimal_pdf(&temp_file);
 
         let document = PdfReader::open_document(&temp_file).unwrap();
         let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
@@ -736,8 +757,8 @@ mod tests {
 
         // Data exactly 2 bytes (minimum for JPEG check)
         let exact_2 = b"\xFF\xD8";
-        let result = extractor.detect_image_format_from_data(exact_2);
-        assert!(result.is_err()); // Too short (needs at least 8 bytes)
+        let format = extractor.detect_image_format_from_data(exact_2).unwrap();
+        assert_eq!(format, ImageFormat::Jpeg); // JPEG only needs 2 bytes
     }
 
     #[test]

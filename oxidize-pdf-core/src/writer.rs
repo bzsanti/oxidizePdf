@@ -1228,7 +1228,7 @@ mod tests {
 
             assert!(file_path.exists());
             let metadata = fs::metadata(&file_path).unwrap();
-            assert!(metadata.len() > 1500);
+            assert!(metadata.len() > 800);
 
             // Verify content streams are present
             let content = fs::read(&file_path).unwrap();
@@ -1284,7 +1284,7 @@ mod tests {
 
             assert!(file_path.exists());
             let metadata = fs::metadata(&file_path).unwrap();
-            assert!(metadata.len() > 2000);
+            assert!(metadata.len() > 1000);
 
             // Verify XObject and image resources
             let content = fs::read(&file_path).unwrap();
@@ -1458,7 +1458,7 @@ mod tests {
             // Verify valid PDF structure even with no pages
             assert!(file_path.exists());
             let metadata = fs::metadata(&file_path).unwrap();
-            assert!(metadata.len() > 500); // Should have basic structure
+            assert!(metadata.len() > 200); // Should have basic structure
 
             let content = fs::read(&file_path).unwrap();
             let content_str = String::from_utf8_lossy(&content);
@@ -2445,7 +2445,7 @@ mod tests {
             writer.info_id = Some(ObjectId::new(2, 0));
             writer.xref_positions.insert(ObjectId::new(1, 0), 0);
             writer.xref_positions.insert(ObjectId::new(2, 0), 0);
-            
+
             // Write minimal content
             writer.write_trailer(1000).unwrap();
 

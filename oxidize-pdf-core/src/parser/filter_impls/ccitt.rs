@@ -609,7 +609,7 @@ mod tests {
         // With invalid/minimal data, the decoder should still produce some output
         // even if it's not a valid image
         assert!(result.is_ok() || result.is_err()); // Accept either result for this basic test
-        
+
         // Test with empty data should fail
         let empty_result = decode_ccitt(&[], None);
         assert!(empty_result.is_ok() || empty_result.is_err()); // The decoder handles empty data gracefully
