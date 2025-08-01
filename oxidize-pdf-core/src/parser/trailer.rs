@@ -189,10 +189,10 @@ mod tests {
         dict.insert("Encrypt".to_string(), PdfObject::Reference(10, 0));
 
         let trailer = PdfTrailer::from_dict(dict, 12345).unwrap();
-        assert!(matches!(
-            trailer.validate(),
-            Err(ParseError::EncryptionNotSupported)
-        ));
+        // Encryption is now handled by the reader, not rejected at trailer level
+        assert!(trailer.validate().is_ok());
+        // But we can still detect that encryption is present
+        assert!(trailer.encrypt().unwrap().is_some());
     }
 
     #[test]

@@ -607,12 +607,12 @@ mod tests {
     fn test_multiple_index_ranges() {
         // Test with multiple index ranges
         let entry_data = vec![
-            // First range: objects 0-1
+            // First range: objects 0-1 (each entry: 1+2+2=5 bytes)
             0, 0, 0, 0xFF, 0xFF, // Free object 0
-            1, 0, 0x0A, 0, // InUse object 1 at offset 10
+            1, 0, 0x0A, 0, 0,    // InUse object 1 at offset 10
             // Second range: objects 10-11
-            1, 0, 0x14, 0, // InUse object 10 at offset 20
-            1, 0, 0x1E, 0, // InUse object 11 at offset 30
+            1, 0, 0x14, 0, 0,    // InUse object 10 at offset 20  
+            1, 0, 0x1E, 0, 0,    // InUse object 11 at offset 30
         ];
 
         let xref_stream = XRefStream {
