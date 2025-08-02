@@ -8,7 +8,6 @@
 //! - ToUnicode CMap generation
 
 use oxidize_pdf::error::Result;
-use oxidize_pdf::objects::{Dictionary, Object, ObjectId};
 use oxidize_pdf::text::fonts::embedding::{
     EmbeddingOptions, FontEmbedder, FontEncoding, FontFlags, FontType,
 };
@@ -245,7 +244,7 @@ fn test_font_descriptor_generation() {
 
 #[test]
 fn test_tounicode_cmap_generation() {
-    let mut embedder = FontEmbedder::new();
+    let embedder = FontEmbedder::new();
 
     // Create a font with Unicode mappings
     let mut unicode_mappings = HashMap::new();
@@ -253,7 +252,7 @@ fn test_tounicode_cmap_generation() {
     unicode_mappings.insert(66, "B".to_string());
     unicode_mappings.insert(67, "C".to_string());
 
-    let font_data = oxidize_pdf::text::fonts::embedding::EmbeddedFontData {
+    let _font_data = oxidize_pdf::text::fonts::embedding::EmbeddedFontData {
         pdf_name: "TestFont".to_string(),
         font_type: FontType::TrueType,
         descriptor: oxidize_pdf::text::fonts::embedding::FontDescriptor {
@@ -324,7 +323,8 @@ fn test_complete_embedding_workflow() -> Result<()> {
 
     // Try to use text with embedded font
     // This tests the integration between Document, Page, and FontEmbedder
-    page.text()
+    let _ = page
+        .text()
         .set_font(Font::Helvetica, 12.0)
         .at(100.0, 700.0)
         .write("Test text with embedded font");

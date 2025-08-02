@@ -229,6 +229,7 @@ fn analyze_components(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let mut results = Vec::new();
 
+    #[allow(unused_assignments)]
     for (name, options) in configurations {
         let start = Instant::now();
         let reader = PdfReader::open(path)?;
