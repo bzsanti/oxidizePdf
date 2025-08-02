@@ -91,8 +91,7 @@ pub fn parse_jpeg_info(data: &[u8]) -> ParseResult<JpegInfo> {
         // Check for marker
         if data[pos] != 0xFF {
             return Err(ParseError::StreamDecodeError(format!(
-                "Invalid JPEG marker at position {}",
-                pos
+                "Invalid JPEG marker at position {pos}"
             )));
         }
 
@@ -236,8 +235,7 @@ pub fn parse_jpeg_info(data: &[u8]) -> ParseResult<JpegInfo> {
         4 => JpegColorSpace::CMYK,
         _ => {
             return Err(ParseError::StreamDecodeError(format!(
-                "Unsupported JPEG component count: {}",
-                components
+                "Unsupported JPEG component count: {components}"
             )));
         }
     };

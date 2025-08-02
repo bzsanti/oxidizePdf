@@ -78,7 +78,7 @@ impl EncryptionHandler {
         if filter != "Standard" {
             return Err(ParseError::SyntaxError {
                 position: 0,
-                message: format!("Encryption filter '{}' not supported", filter),
+                message: format!("Encryption filter '{filter}' not supported"),
             });
         }
 
@@ -157,7 +157,7 @@ impl EncryptionHandler {
             )
             .map_err(|e| ParseError::SyntaxError {
                 position: 0,
-                message: format!("Failed to compute user hash: {}", e),
+                message: format!("Failed to compute user hash: {e}"),
             })?;
 
         // Compare with stored U entry (first 16 bytes for R3+)
@@ -177,7 +177,7 @@ impl EncryptionHandler {
                 )
                 .map_err(|e| ParseError::SyntaxError {
                     position: 0,
-                    message: format!("Failed to compute encryption key: {}", e),
+                    message: format!("Failed to compute encryption key: {e}"),
                 })?;
             self.encryption_key = Some(key);
         }
@@ -233,11 +233,11 @@ impl EncryptionHandler {
             self.encryption_info.length.unwrap_or(40),
         ) {
             (2, _) => "RC4 40-bit".to_string(),
-            (3, len) => format!("RC4 {}-bit", len),
-            (4, len) => format!("RC4 {}-bit with metadata control", len),
+            (3, len) => format!("RC4 {len}-bit"),
+            (4, len) => format!("RC4 {len}-bit with metadata control"),
             (5, _) => "AES-256 (Revision 5)".to_string(),
             (6, _) => "AES-256 (Revision 6, Unicode passwords)".to_string(),
-            (r, len) => format!("Unknown revision {} with {}-bit key", r, len),
+            (r, len) => format!("Unknown revision {r} with {len}-bit key"),
         }
     }
 
@@ -298,7 +298,7 @@ impl PasswordProvider for ConsolePasswordProvider {
             .read_line(&mut input)
             .map_err(|e| ParseError::SyntaxError {
                 position: 0,
-                message: format!("Failed to read password: {}", e),
+                message: format!("Failed to read password: {e}"),
             })?;
 
         // Remove trailing newline
@@ -314,7 +314,7 @@ impl PasswordProvider for ConsolePasswordProvider {
             .read_line(&mut input)
             .map_err(|e| ParseError::SyntaxError {
                 position: 0,
-                message: format!("Failed to read password: {}", e),
+                message: format!("Failed to read password: {e}"),
             })?;
 
         // Remove trailing newline

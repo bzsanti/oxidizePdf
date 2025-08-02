@@ -99,7 +99,7 @@ impl TrueTypeFont {
         if !is_otf && !is_ttf && !is_ttc {
             return Err(ParseError::SyntaxError {
                 position: 0,
-                message: format!("Invalid font signature: 0x{:08X}", signature),
+                message: format!("Invalid font signature: 0x{signature:08X}"),
             });
         }
 
@@ -434,7 +434,7 @@ impl TrueTypeFont {
                 // Unsupported format
                 return Err(ParseError::SyntaxError {
                     position: offset,
-                    message: format!("Unsupported cmap format: {}", format),
+                    message: format!("Unsupported cmap format: {format}"),
                 });
             }
         }

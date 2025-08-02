@@ -344,7 +344,7 @@ impl StandardSecurityHandler {
         result.extend_from_slice(&iv);
 
         let encrypted = aes.encrypt_cbc(data, &iv).map_err(|e| {
-            crate::error::PdfError::EncryptionError(format!("AES encryption failed: {}", e))
+            crate::error::PdfError::EncryptionError(format!("AES encryption failed: {e}"))
         })?;
 
         result.extend_from_slice(&encrypted);
@@ -378,7 +378,7 @@ impl StandardSecurityHandler {
         let aes = Aes::new(aes_key);
 
         aes.decrypt_cbc(encrypted_data, iv).map_err(|e| {
-            crate::error::PdfError::EncryptionError(format!("AES decryption failed: {}", e))
+            crate::error::PdfError::EncryptionError(format!("AES decryption failed: {e}"))
         })
     }
 

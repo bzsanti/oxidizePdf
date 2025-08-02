@@ -228,10 +228,10 @@ impl FontEmbedder {
     ) -> Result<String> {
         // Parse the TrueType font
         let font = TrueTypeFont::from_data(font_data)
-            .map_err(|e| PdfError::FontError(format!("Failed to parse font: {}", e)))?;
+            .map_err(|e| PdfError::FontError(format!("Failed to parse font: {e}")))?;
 
         // Generate unique font name
-        let font_name = format!("ABCDEF+Font{}", self.next_font_id);
+        let font_name = format!("ABCDEF+Font{next_id}", next_id = self.next_font_id);
         self.next_font_id += 1;
 
         // Determine if we should subset
@@ -241,7 +241,7 @@ impl FontEmbedder {
         // Create font program (subset or full)
         let font_program = if should_subset {
             font.create_subset(used_glyphs)
-                .map_err(|e| PdfError::FontError(format!("Failed to create subset: {}", e)))?
+                .map_err(|e| PdfError::FontError(format!("Failed to create subset: {e}")))?
         } else {
             font_data.to_vec()
         };
@@ -288,10 +288,10 @@ impl FontEmbedder {
     ) -> Result<String> {
         // Parse the font
         let font = TrueTypeFont::from_data(font_data)
-            .map_err(|e| PdfError::FontError(format!("Failed to parse font: {}", e)))?;
+            .map_err(|e| PdfError::FontError(format!("Failed to parse font: {e}")))?;
 
         // Generate unique font name
-        let font_name = format!("ABCDEF+CIDFont{}", self.next_font_id);
+        let font_name = format!("ABCDEF+CIDFont{next_id}", next_id = self.next_font_id);
         self.next_font_id += 1;
 
         // Convert character codes to glyph indices
@@ -300,7 +300,7 @@ impl FontEmbedder {
         // Create subset if requested
         let font_program = if options.subset {
             font.create_subset(&used_glyphs)
-                .map_err(|e| PdfError::FontError(format!("Failed to create subset: {}", e)))?
+                .map_err(|e| PdfError::FontError(format!("Failed to create subset: {e}")))?
         } else {
             font_data.to_vec()
         };
@@ -337,7 +337,7 @@ impl FontEmbedder {
         let font_data = self
             .embedded_fonts
             .get(font_name)
-            .ok_or_else(|| PdfError::FontError(format!("Font {} not found", font_name)))?;
+            .ok_or_else(|| PdfError::FontError(format!("Font {font_name} not found")))?;
 
         match font_data.font_type {
             FontType::TrueType => self.generate_truetype_dictionary(font_data),
@@ -434,7 +434,7 @@ impl FontEmbedder {
         let font_data = self
             .embedded_fonts
             .get(font_name)
-            .ok_or_else(|| PdfError::FontError(format!("Font {} not found", font_name)))?;
+            .ok_or_else(|| PdfError::FontError(format!("Font {font_name} not found")))?;
 
         let mut desc_dict = Dictionary::new();
 
@@ -489,7 +489,7 @@ impl FontEmbedder {
         let font_data = self
             .embedded_fonts
             .get(font_name)
-            .ok_or_else(|| PdfError::FontError(format!("Font {} not found", font_name)))?;
+            .ok_or_else(|| PdfError::FontError(format!("Font {font_name} not found")))?;
 
         if font_data.unicode_mappings.is_empty() {
             return Err(PdfError::FontError(
@@ -526,7 +526,7 @@ impl FontEmbedder {
                 glyph_id,
                 unicode_string
                     .chars()
-                    .map(|c| format!("{:04X}", c as u32))
+                    .map(|c| format!("{c:04X}", c = c as u32))
                     .collect::<String>()
             ));
         }

@@ -184,13 +184,13 @@ impl TilingPattern {
 
     /// Add rectangle to pattern
     pub fn add_rectangle(&mut self, x: f64, y: f64, width: f64, height: f64) {
-        self.add_command(&format!("{} {} {} {} re", x, y, width, height));
+        self.add_command(&format!("{x} {y} {width} {height} re"));
     }
 
     /// Add line to pattern
     pub fn add_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64) {
-        self.add_command(&format!("{} {} m", x1, y1));
-        self.add_command(&format!("{} {} l", x2, y2));
+        self.add_command(&format!("{x1} {y1} m"));
+        self.add_command(&format!("{x2} {y2} l"));
     }
 
     /// Add circle to pattern (using Bézier curves)
@@ -350,7 +350,7 @@ impl PatternManager {
 
         // Generate unique name if not provided
         if pattern.name.is_empty() {
-            pattern.name = format!("P{}", self.next_id);
+            pattern.name = format!("P{next_id}", next_id = self.next_id);
             self.next_id += 1;
         }
 
@@ -525,13 +525,13 @@ impl PatternGraphicsContext for GraphicsContext {
     fn set_fill_pattern(&mut self, pattern_name: &str) -> Result<()> {
         // In a real implementation, this would set the pattern in the graphics state
         // For now, we'll store it as a command
-        self.add_command(&format!("/Pattern cs /{} scn", pattern_name));
+        self.add_command(&format!("/Pattern cs /{pattern_name} scn"));
         Ok(())
     }
 
     fn set_stroke_pattern(&mut self, pattern_name: &str) -> Result<()> {
         // Set pattern for stroking operations
-        self.add_command(&format!("/Pattern CS /{} SCN", pattern_name));
+        self.add_command(&format!("/Pattern CS /{pattern_name} SCN"));
         Ok(())
     }
 }

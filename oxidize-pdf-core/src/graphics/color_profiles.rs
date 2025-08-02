@@ -254,10 +254,9 @@ impl IccProfile {
             let expected_len = (self.components as usize) * 2;
             if range.len() != expected_len {
                 return Err(PdfError::InvalidStructure(format!(
-                    "Range array length {} does not match expected {} for {} components",
-                    range.len(),
-                    expected_len,
-                    self.components
+                    "Range array length {range_len} does not match expected {expected_len} for {components} components",
+                    range_len = range.len(),
+                    components = self.components
                 )));
             }
 
@@ -267,8 +266,7 @@ impl IccProfile {
                 let max = range[i * 2 + 1];
                 if min > max {
                     return Err(PdfError::InvalidStructure(format!(
-                        "Invalid range for component {}: min {} > max {}",
-                        i, min, max
+                        "Invalid range for component {i}: min {min} > max {max}"
                     )));
                 }
             }

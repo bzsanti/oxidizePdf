@@ -867,7 +867,7 @@ impl<W: Write> PdfWriter<W> {
         content.push_str("1 w\n"); // 1pt line width
 
         // Draw rectangle border
-        content.push_str(&format!("0 0 {} {} re\n", width, height));
+        content.push_str(&format!("0 0 {width} {height} re\n"));
         content.push_str("S\n"); // Stroke
 
         // Fill with white background
@@ -920,16 +920,16 @@ impl<W: Write> PdfWriter<W> {
         if let Some(bg_color) = &widget.appearance.background_color {
             match bg_color {
                 crate::graphics::Color::Gray(g) => {
-                    content.push_str(&format!("{} g\n", g));
+                    content.push_str(&format!("{g} g\n"));
                 }
                 crate::graphics::Color::Rgb(r, g, b) => {
-                    content.push_str(&format!("{} {} {} rg\n", r, g, b));
+                    content.push_str(&format!("{r} {g} {b} rg\n"));
                 }
                 crate::graphics::Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{} {} {} {} k\n", c, m, y, k));
+                    content.push_str(&format!("{c} {m} {y} {k} k\n"));
                 }
             }
-            content.push_str(&format!("0 0 {} {} re\n", width, height));
+            content.push_str(&format!("0 0 {width} {height} re\n"));
             content.push_str("f\n");
         }
 
@@ -937,17 +937,17 @@ impl<W: Write> PdfWriter<W> {
         if let Some(border_color) = &widget.appearance.border_color {
             match border_color {
                 crate::graphics::Color::Gray(g) => {
-                    content.push_str(&format!("{} G\n", g));
+                    content.push_str(&format!("{g} G\n"));
                 }
                 crate::graphics::Color::Rgb(r, g, b) => {
-                    content.push_str(&format!("{} {} {} RG\n", r, g, b));
+                    content.push_str(&format!("{r} {g} {b} RG\n"));
                 }
                 crate::graphics::Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{} {} {} {} K\n", c, m, y, k));
+                    content.push_str(&format!("{c} {m} {y} {k} K\n"));
                 }
             }
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
-            content.push_str(&format!("0 0 {} {} re\n", width, height));
+            content.push_str(&format!("0 0 {width} {height} re\n"));
             content.push_str("S\n");
         }
 
@@ -1375,7 +1375,7 @@ mod tests {
                 page.text()
                     .set_font(Font::TimesRoman, 12.0)
                     .at(100.0, y)
-                    .write(&format!("Text line {}", i + 1))
+                    .write(&format!("Text line {line}", line = i + 1))
                     .unwrap();
             }
 
@@ -1522,7 +1522,7 @@ mod tests {
                 page.text()
                     .set_font(Font::HelveticaBold, 16.0)
                     .at(100.0, 750.0)
-                    .write(&format!("Page {}", i + 1))
+                    .write(&format!("Page {page}", page = i + 1))
                     .unwrap();
 
                 // Add content lines
@@ -1532,7 +1532,11 @@ mod tests {
                         page.text()
                             .set_font(Font::TimesRoman, 10.0)
                             .at(100.0, y)
-                            .write(&format!("Line {} on page {}", j + 1, i + 1))
+                            .write(&format!(
+                                "Line {line} on page {page}",
+                                line = j + 1,
+                                page = i + 1
+                            ))
                             .unwrap();
                     }
                 }
@@ -1658,7 +1662,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(100.0, 700.0)
-                    .write(&format!("Page {}", i + 1))
+                    .write(&format!("Page {page}", page = i + 1))
                     .unwrap();
                 document.add_page(page);
             }
@@ -1771,7 +1775,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(100.0, 700.0)
-                    .write(&format!("Page {}", i + 1))
+                    .write(&format!("Page {page}", page = i + 1))
                     .unwrap();
                 document.add_page(page);
             }
@@ -2187,7 +2191,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(100.0, 700.0)
-                    .write(&format!("Page {}", i + 1))
+                    .write(&format!("Page {page}", page = i + 1))
                     .unwrap();
                 document.add_page(page);
             }
@@ -2577,7 +2581,7 @@ mod tests {
                     page.text()
                         .set_font(Font::Helvetica, 10.0)
                         .at(50.0, 700.0 - (j as f64 * 30.0))
-                        .write(&format!("Line {} on page {}", j, i))
+                        .write(&format!("Line {line} on page {page}", line = j, page = i))
                         .unwrap();
                 }
 
@@ -2987,7 +2991,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(100.0, 700.0)
-                    .write(&format!("Page {}", i + 1))
+                    .write(&format!("Page {page}", page = i + 1))
                     .unwrap();
                 document.add_page(page);
             }

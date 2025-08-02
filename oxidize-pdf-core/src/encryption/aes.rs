@@ -107,22 +107,14 @@ impl std::fmt::Display for AesError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AesError::InvalidKeyLength { expected, actual } => {
-                write!(
-                    f,
-                    "Invalid key length: expected {}, got {}",
-                    expected, actual
-                )
+                write!(f, "Invalid key length: expected {expected}, got {actual}")
             }
             AesError::InvalidIvLength { expected, actual } => {
-                write!(
-                    f,
-                    "Invalid IV length: expected {}, got {}",
-                    expected, actual
-                )
+                write!(f, "Invalid IV length: expected {expected}, got {actual}")
             }
-            AesError::EncryptionFailed(msg) => write!(f, "Encryption failed: {}", msg),
-            AesError::DecryptionFailed(msg) => write!(f, "Decryption failed: {}", msg),
-            AesError::PaddingError(msg) => write!(f, "Padding error: {}", msg),
+            AesError::EncryptionFailed(msg) => write!(f, "Encryption failed: {msg}"),
+            AesError::DecryptionFailed(msg) => write!(f, "Decryption failed: {msg}"),
+            AesError::PaddingError(msg) => write!(f, "Padding error: {msg}"),
         }
     }
 }
@@ -306,8 +298,7 @@ impl Aes {
 
         if padding_len == 0 || padding_len > 16 {
             return Err(AesError::PaddingError(format!(
-                "Invalid padding length: {}",
-                padding_len
+                "Invalid padding length: {padding_len}"
             )));
         }
 

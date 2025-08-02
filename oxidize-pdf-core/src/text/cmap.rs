@@ -132,7 +132,7 @@ impl CMap {
         let content =
             std::str::from_utf8(data).map_err(|e| ParseError::CharacterEncodingError {
                 position: 0,
-                message: format!("Invalid UTF-8 in CMap: {}", e),
+                message: format!("Invalid UTF-8 in CMap: {e}"),
             })?;
 
         let lines = content.lines();
@@ -470,7 +470,7 @@ pub fn string_to_utf16_be_bytes(s: &str) -> Vec<u8> {
 
 /// Convert bytes to hex string
 pub fn hex_string(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02X}", b)).collect()
+    bytes.iter().map(|b| format!("{b:02X}")).collect()
 }
 
 #[cfg(test)]

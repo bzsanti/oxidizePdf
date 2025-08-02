@@ -78,7 +78,10 @@ impl XRefStream {
         if widths.len() != 3 {
             return Err(ParseError::SyntaxError {
                 position: 0,
-                message: format!("W array must have 3 elements, found {}", widths.len()),
+                message: format!(
+                    "W array must have 3 elements, found {len}",
+                    len = widths.len()
+                ),
             });
         }
 
@@ -122,7 +125,7 @@ impl XRefStream {
                 PdfObject::Name(filter_name) => apply_filter(
                     &stream_data,
                     Filter::from_name(filter_name.as_str()).ok_or_else(|| {
-                        ParseError::StreamDecodeError(format!("Unknown filter: {:?}", filter_name))
+                        ParseError::StreamDecodeError(format!("Unknown filter: {filter_name:?}"))
                     })?,
                 )?,
                 PdfObject::Array(filters) => {
@@ -133,8 +136,7 @@ impl XRefStream {
                                 &data,
                                 Filter::from_name(filter_name.as_str()).ok_or_else(|| {
                                     ParseError::StreamDecodeError(format!(
-                                        "Unknown filter: {:?}",
-                                        filter_name
+                                        "Unknown filter: {filter_name:?}"
                                     ))
                                 })?,
                             )?;
@@ -222,7 +224,7 @@ impl XRefStream {
                     _ => {
                         return Err(ParseError::SyntaxError {
                             position: data_offset,
-                            message: format!("Invalid xref entry type: {}", entry_type),
+                            message: format!("Invalid xref entry type: {entry_type}"),
                         });
                     }
                 };
@@ -447,10 +449,10 @@ fn compress_data(data: &[u8]) -> ParseResult<Vec<u8>> {
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
     encoder
         .write_all(data)
-        .map_err(|e| ParseError::StreamDecodeError(format!("Compression failed: {}", e)))?;
+        .map_err(|e| ParseError::StreamDecodeError(format!("Compression failed: {e}")))?;
     encoder
         .finish()
-        .map_err(|e| ParseError::StreamDecodeError(format!("Compression failed: {}", e)))
+        .map_err(|e| ParseError::StreamDecodeError(format!("Compression failed: {e}")))
 }
 
 #[cfg(test)]

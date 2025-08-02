@@ -13,14 +13,14 @@ fn write_object_value<W: Write>(writer: &mut W, object: &Object) -> Result<()> {
     match object {
         Object::Null => write!(writer, "null")?,
         Object::Boolean(b) => write!(writer, "{}", if *b { "true" } else { "false" })?,
-        Object::Integer(i) => write!(writer, "{}", i)?,
-        Object::Real(f) => write!(writer, "{:.6}", f)?,
+        Object::Integer(i) => write!(writer, "{i}")?,
+        Object::Real(f) => write!(writer, "{f:.6}")?,
         Object::String(s) => {
             write!(writer, "(")?;
             writer.write_all(s.as_bytes())?;
             write!(writer, ")")?;
         }
-        Object::Name(n) => write!(writer, "/{}", n)?,
+        Object::Name(n) => write!(writer, "/{n}")?,
         Object::Array(arr) => {
             write!(writer, "[")?;
             for (i, obj) in arr.iter().enumerate() {
@@ -34,7 +34,7 @@ fn write_object_value<W: Write>(writer: &mut W, object: &Object) -> Result<()> {
         Object::Dictionary(dict) => {
             write!(writer, "<<")?;
             for (key, value) in dict.iter() {
-                write!(writer, " /{} ", key)?;
+                write!(writer, " /{key} ")?;
                 write_object_value(writer, value)?;
             }
             write!(writer, " >>")?;
@@ -245,7 +245,7 @@ impl XRefStreamWriter {
         // Write the dictionary as a stream dictionary
         write!(writer, "<<")?;
         for (key, value) in dict.iter() {
-            write!(writer, "\n/{} ", key)?;
+            write!(writer, "\n/{key} ")?;
             write_object_value(writer, value)?;
         }
         write!(writer, "\n>>")?;
