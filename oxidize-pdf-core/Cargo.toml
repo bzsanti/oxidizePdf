@@ -130,7 +130,7 @@ default = ["compression"]
 compression = ["dep:flate2"]
 
 # Image processing features
-external-images = ["image"]
+external-images = ["dep:image"]
 
 # OCR features
 ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]

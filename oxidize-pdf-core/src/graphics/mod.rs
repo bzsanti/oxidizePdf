@@ -1,19 +1,19 @@
 mod color;
 mod color_profiles;
-mod image;
 mod path;
 mod patterns;
+mod pdf_image;
 mod shadings;
 mod state;
 
 pub use color::Color;
 pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
-pub use image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
 pub use path::{LineCap, LineJoin, PathBuilder};
 pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
     TilingType,
 };
+pub use pdf_image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
 pub use shadings::{
     AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
     ShadingManager, ShadingPattern, ShadingType,
