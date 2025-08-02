@@ -1,6 +1,12 @@
+# Build artifacts
 /target
+Cargo.lock
+
+# Test PDFs
+test-pdfs/
 *.pdf
 test_*.pdf
+!test-suite/fixtures/**/*.pdf
 
 # PDF samples for testing
 PDF_Samples/
@@ -13,6 +19,10 @@ CLAUDE.md
 IMPLEMENTATION_*.md
 *_SESSION_*.md
 *_PROGRESS*.md
+SESSION_*.md
+.claude-session-*.md
+**/PROJECT_PROGRESS.md
+!PROJECT_PROGRESS.md
 
 # Private directories
 oxidizePdf-private*/
@@ -23,13 +33,17 @@ test-suite/external-suites/
 # Local PDF fixtures (symbolic links to private PDFs)
 tests/fixtures/
 tests/fixtures
+test-suite/fixtures/valid/GOVPUB-CS1-301ae7b075ad3435b3a7dca00e78e8ff.pdf
 
 # Development and debug scripts
-test_parsing.py
-debug_xref.py
-test_pdf_samples.sh
 debug_manual.pdf
 *.debug.pdf
+
+# Coverage files
+*.profraw
+*.profdata
+cobertura.xml
+tarpaulin-report.html
 
 # Keep GitHub workflows
 !.github/
@@ -42,3 +56,18 @@ pdf_analysis_*.json
 pdf_compatibility_*.json
 test_render_output.png
 batch_analysis_output.log
+
+# Temporary analysis outputs
+analysis_*.txt
+*_analysis_*.txt
+*_analysis_*.json
+analysis_results.txt
+comprehensive_analysis_report.json
+character_encoding_analysis.json
+pdf_test_results.txt
+group*.txt
+
+# Temporary test outputs
+test_output/
+test_subset/
+output.pdf

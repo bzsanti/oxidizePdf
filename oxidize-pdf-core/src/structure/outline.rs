@@ -208,7 +208,6 @@ impl OutlineBuilder {
 }
 
 /// Convert outline item to dictionary (for PDF generation)
-#[allow(dead_code)]
 pub fn outline_item_to_dict(
     item: &OutlineItem,
     parent_ref: ObjectId,

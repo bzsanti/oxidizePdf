@@ -7,14 +7,14 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **beta** stage with good support for basic PDF operations. Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **early beta** stage implementing ~25-30% of ISO 32000-1:2008 specification. Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
 
 ## Features
 
 - 🚀 **100% Pure Rust** - No C dependencies or external PDF libraries
 - 📄 **PDF Generation** - Create multi-page documents with text, graphics, and images
-- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (**99.7% success rate** on 749 real-world PDFs)
-- ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving content
+- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (tested on 749 real-world PDFs*)
+- ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving basic content
 - 🖼️ **Image Support** - Embed JPEG images with automatic compression
 - 🎨 **Rich Graphics** - Vector graphics with shapes, paths, colors (RGB/CMYK/Gray)
 - 📝 **Advanced Text** - Multiple fonts, text flow with automatic wrapping, alignment
@@ -25,14 +25,14 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 ## 🎉 What's New in v1.1.0 
 
 **Significant improvements in PDF compatibility:**
-- 📈 **Better parsing**: Improved success rate from 74% to 97.2% on test corpus
+- 📈 **Better parsing**: Handles more PDF structures including circular references
 - 🛡️ **Stack overflow protection** - More resilient against malformed PDFs
-- 🚀 **Performance**: ~179 PDFs/second on simple operations
-- ⚡ **Circular reference handling** - Better support for complex PDF structures
+- 🚀 **Performance**: Fast parsing for basic PDF operations
+- ⚡ **Error recovery** - Better handling of corrupted files
 - 🔧 **Lenient parsing** - Handles some malformed PDFs
 - 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
 
-**Important:** Success rates apply to non-encrypted PDFs with standard features. See [Current Limitations](#current-limitations) section for details.
+**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently implements ~25-30% of ISO 32000-1:2008. See [Current Limitations](#current-limitations) and [ISO Compliance](ISO_COMPLIANCE.md) for details.
 
 ## Quick Start
 
@@ -246,14 +246,14 @@ Download from: https://github.com/UB-Mannheim/tesseract/wiki
 - ✅ FlateDecode compression
 
 ### PDF Parsing
-- ✅ PDF 1.0 - 1.7 support
+- ✅ PDF 1.0 - 1.7 basic structure support
 - ✅ Cross-reference table parsing
 - ✅ Object and stream parsing
-- ✅ Page tree navigation
-- ✅ Content stream parsing
-- ✅ Text extraction
+- ✅ Page tree navigation (simple)
+- ✅ Content stream parsing (basic operators)
+- ✅ Text extraction (simple cases)
 - ✅ Document metadata extraction
-- ✅ Basic filter support (FlateDecode, ASCIIHexDecode, ASCII85Decode)
+- ✅ Filter support (FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode)
 
 ### PDF Operations
 - ✅ Split by pages, ranges, or size
@@ -275,10 +275,10 @@ Download from: https://github.com/UB-Mannheim/tesseract/wiki
 
 ## Performance
 
-- **Parsing**: < 50ms for typical PDFs
-- **Generation**: < 20ms for 10-page documents
-- **Memory efficient**: Streaming operations for large files
-- **Zero-copy**: Where possible for optimal performance
+- **Parsing**: Fast for PDFs with basic features
+- **Generation**: Efficient for simple documents
+- **Memory efficient**: Streaming operations available
+- **Pure Rust**: No external C dependencies
 
 ## Examples
 
@@ -318,39 +318,63 @@ For commercial use cases that require proprietary licensing, please contact us a
 - Priority support and SLAs
 - Custom feature development
 
-## Current Limitations
+## Current Limitations & ISO 32000 Compliance
 
-While oxidize-pdf is under active development, please be aware of the following limitations:
+oxidize-pdf currently implements approximately **25-30% of ISO 32000-1:2008**. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed compliance information.
 
 ### Supported Features
-- ✅ **Compression**: FlateDecode only (most common)
-- ✅ **Color Spaces**: RGB, CMYK, Gray
-- ✅ **Fonts**: Standard 14 PDF fonts, basic font subsetting
-- ✅ **Images**: JPEG embedding
-- ✅ **Basic Operations**: Split, merge, rotate, text extraction
+- ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode
+- ✅ **Color Spaces**: DeviceRGB, DeviceCMYK, DeviceGray (basic)
+- ✅ **Fonts**: Standard 14 PDF fonts only
+- ✅ **Images**: JPEG embedding only
+- ✅ **Basic Operations**: Split, merge, rotate, simple text extraction
+- ✅ **Graphics**: Basic vector operations
+- ✅ **Transparency**: Simple opacity (CA/ca parameters)
 
-### Not Yet Supported
-- ❌ **Encryption**: Can read some encrypted PDFs, cannot create or fully decrypt
-- ❌ **Compression Filters**: CCITTFaxDecode, JBIG2Decode (Note: LZWDecode and RunLengthDecode are now supported!)
-- ❌ **Advanced Graphics**: Patterns, shadings, advanced transparency
-- ❌ **Forms**: No interactive form support
+### Major Missing Features (ISO 32000)
+- ❌ **Rendering**: No PDF to image conversion
+- ❌ **Font Embedding**: No TrueType/OpenType embedding
+- ❌ **Encryption**: Very limited support
+- ❌ **Compression**: DCTDecode, CCITTFaxDecode, JBIG2Decode missing
+- ❌ **Advanced Graphics**: Patterns, shadings, gradients, blend modes
+- ❌ **Forms**: No interactive form support (AcroForms)
 - ❌ **Annotations**: Cannot create or modify annotations
-- ❌ **Digital Signatures**: No support for signed PDFs
-- ❌ **Tagged PDFs**: No accessibility support
-- ❌ **Image Formats**: PNG, TIFF, GIF not supported
-- ❌ **CJK Fonts**: Limited support for Asian languages
+- ❌ **Digital Signatures**: No support
+- ❌ **Tagged PDFs**: No accessibility/structure support
+- ❌ **CJK Support**: No CID fonts or CMaps
+- ❌ **Advanced Color**: No ICC profiles, spot colors
+- ❌ **JavaScript**: No support for PDF JavaScript
 
 ### Known Issues
-- Some PDF merge operations don't properly remap fonts and images
-- Page rotation is not implemented in split/extraction operations
-- Inline images in content streams cannot be extracted
-- XRef recovery is incomplete for heavily corrupted PDFs
-- Memory usage can be high for very large PDFs without optimization
+- Font/image references may break during merge operations
+- Text extraction fails on complex layouts
+- No support for right-to-left or vertical text
+- Limited error recovery for malformed PDFs
+- High memory usage for large files without optimization
 
-### Compatibility Notes
-- The "99.7% success rate" applies only to non-encrypted, standard PDFs
-- Complex PDFs with advanced features may fail to parse correctly
-- Performance benchmarks are based on simple PDF operations
+### Important Notes
+- Parsing success doesn't mean full feature support
+- Many PDFs will parse but advanced features will be ignored
+- This is early beta software with significant limitations
+
+## Project Structure
+
+```
+oxidize-pdf/
+├── oxidize-pdf-core/     # Core PDF library
+├── oxidize-pdf-cli/      # Command-line interface
+├── oxidize-pdf-api/      # REST API server
+├── test-suite/           # Comprehensive test suite
+├── docs/                 # Documentation
+│   ├── technical/        # Technical docs and implementation details
+│   └── reports/          # Analysis and test reports
+├── tools/                # Development and analysis tools
+├── scripts/              # Build and release scripts
+└── test-pdfs/            # Test PDF files
+
+```
+
+See [REPOSITORY_ARCHITECTURE.md](REPOSITORY_ARCHITECTURE.md) for detailed information.
 
 ## Testing
 

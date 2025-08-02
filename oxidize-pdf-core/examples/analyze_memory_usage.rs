@@ -11,7 +11,6 @@
 //! ```
 
 use oxidize_pdf::memory::{LazyDocument, MemoryOptions, MemoryStats as LibMemoryStats};
-use oxidize_pdf::operations::{merge_pdfs, MergeOptions};
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use std::collections::HashMap;
 use std::fs;
@@ -230,6 +229,7 @@ fn analyze_components(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let mut results = Vec::new();
 
+    #[allow(unused_assignments)]
     for (name, options) in configurations {
         let start = Instant::now();
         let reader = PdfReader::open(path)?;
@@ -267,7 +267,7 @@ fn analyze_components(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     );
     println!("{}", "-".repeat(100));
 
-    for (name, stats, pages, time) in results {
+    for (name, stats, _pages, time) in results {
         let hit_rate = if stats.cache_hits + stats.cache_misses > 0 {
             (stats.cache_hits as f64 / (stats.cache_hits + stats.cache_misses) as f64) * 100.0
         } else {

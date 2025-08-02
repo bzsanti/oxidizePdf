@@ -453,3 +453,10 @@ mod tests {
         assert!(manager.get_field("subscribe").is_some());
     }
 }
+
+impl FormManager {
+    /// Get the number of fields managed by this FormManager
+    pub fn field_count(&self) -> usize {
+        self.fields.len()
+    }
+}

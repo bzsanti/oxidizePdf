@@ -77,8 +77,8 @@ impl PdfTrailer {
     }
 
     /// Get the encryption dictionary reference
-    pub fn encrypt(&self) -> Option<(u32, u16)> {
-        self.dict.get("Encrypt").and_then(|obj| obj.as_reference())
+    pub fn encrypt(&self) -> ParseResult<Option<(u32, u16)>> {
+        Ok(self.dict.get("Encrypt").and_then(|obj| obj.as_reference()))
     }
 
     /// Validate the trailer dictionary
@@ -87,12 +87,14 @@ impl PdfTrailer {
         self.size()?;
         self.root()?;
 
-        // If encrypted, we currently don't support it
-        if self.is_encrypted() {
-            return Err(ParseError::EncryptionNotSupported);
-        }
+        // Note: Encryption is now handled by the reader, not rejected here
 
         Ok(())
+    }
+
+    /// Get access to the trailer dictionary
+    pub fn dict(&self) -> &PdfDictionary {
+        &self.dict
     }
 }
 
@@ -187,10 +189,10 @@ mod tests {
         dict.insert("Encrypt".to_string(), PdfObject::Reference(10, 0));
 
         let trailer = PdfTrailer::from_dict(dict, 12345).unwrap();
-        assert!(matches!(
-            trailer.validate(),
-            Err(ParseError::EncryptionNotSupported)
-        ));
+        // Encryption is now handled by the reader, not rejected at trailer level
+        assert!(trailer.validate().is_ok());
+        // But we can still detect that encryption is present
+        assert!(trailer.encrypt().unwrap().is_some());
     }
 
     #[test]
@@ -287,7 +289,7 @@ mod tests {
         let trailer = PdfTrailer::from_dict(dict, 1000).unwrap();
 
         assert!(trailer.is_encrypted());
-        assert_eq!(trailer.encrypt(), Some((5, 0)));
+        assert_eq!(trailer.encrypt().unwrap(), Some((5, 0)));
     }
 
     #[test]

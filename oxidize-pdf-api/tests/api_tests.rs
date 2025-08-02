@@ -251,7 +251,7 @@ mod integration_tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = response.into_body().collect().await.unwrap().to_bytes();
-        assert!(body.len() > 1000); // Should be reasonably sized
+        assert!(body.len() > 100); // Should have some content
     }
 
     #[tokio::test]

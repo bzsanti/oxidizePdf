@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "1.1.4"
+version = "1.1.5"
 edition = "2021"
 authors = ["Santiago Fernández de Munoz"]
 license = "GPL-3.0"
@@ -47,6 +47,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Compression (optional)
 flate2 = "1.0"
+
+# Image processing (optional)
+image = { version = "0.25.6", default-features = false, features = ["png", "jpeg"] }
 
 # Testing
 tempfile = "3.0"

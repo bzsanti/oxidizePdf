@@ -9,6 +9,7 @@
 //! - **PDF Operations**: Split, merge, rotate, and extract pages
 //! - **Text Extraction**: Extract text with position and formatting information
 //! - **Image Extraction**: Extract images in JPEG, PNG, and TIFF formats
+//! - **Font Embedding**: TrueType and OpenType font embedding with subsetting support (v1.1.6+)
 //! - **Page Analysis**: Detect scanned vs text content with intelligent classification
 //! - **OCR Integration**: Pluggable OCR support with Tesseract for processing scanned documents (v0.1.3+)
 //! - **Resource Access**: Work with fonts, images, and other PDF resources
@@ -174,6 +175,7 @@
 pub mod actions;
 pub mod annotations;
 pub mod batch;
+pub mod compression;
 pub mod document;
 pub mod encryption;
 pub mod error;
@@ -184,6 +186,7 @@ pub mod memory;
 pub mod objects;
 pub mod operations;
 pub mod page;
+pub mod page_forms;
 pub mod page_labels;
 pub mod parser;
 pub mod recovery;
@@ -205,6 +208,12 @@ pub use text::{
     measure_text, split_into_words, Font, FontFamily, FragmentType, ImagePreprocessing,
     MockOcrProvider, OcrEngine, OcrError, OcrOptions, OcrProcessingResult, OcrProvider, OcrResult,
     OcrTextFragment, TextAlign, TextContext, TextFlowContext,
+};
+
+// Re-export font embedding types
+pub use text::fonts::embedding::{
+    EmbeddedFontData, EmbeddingOptions, EncodingDifference, FontDescriptor, FontEmbedder,
+    FontEncoding, FontFlags, FontMetrics, FontType,
 };
 
 // Re-export parsing types
@@ -294,6 +303,44 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// # Ok(())
 /// # }
 /// ```
+///
+/// ### Font Embedding
+///
+/// ```rust,no_run
+/// use oxidize_pdf::{FontEmbedder, EmbeddingOptions, Document, Page, Font};
+/// use std::collections::HashSet;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // Create font embedder
+/// let mut embedder = FontEmbedder::new();
+///
+/// // Define used glyphs (example with basic ASCII)
+/// let mut used_glyphs = HashSet::new();
+/// used_glyphs.insert(65); // 'A'
+/// used_glyphs.insert(66); // 'B'
+/// used_glyphs.insert(67); // 'C'
+///
+/// // Configure embedding options
+/// let options = EmbeddingOptions {
+///     subset: true,                    // Create font subset
+///     compress_font_streams: true,     // Compress font data
+///     ..Default::default()
+/// };
+///
+/// // Load font data (example - you'd load actual TrueType data)
+/// let font_data = std::fs::read("path/to/font.ttf")?;
+///
+/// // Embed the font
+/// let font_name = embedder.embed_truetype_font(&font_data, &used_glyphs, &options)?;
+/// println!("Embedded font as: {}", font_name);
+///
+/// // Generate PDF dictionary for the embedded font
+/// let font_dict = embedder.generate_font_dictionary(&font_name)?;
+/// println!("Font dictionary generated successfully");
+/// # Ok(())
+/// # }
+/// ```
+///
 /// Supported PDF versions
 pub mod pdf_version {
     /// PDF 1.0 - 1.7 are fully supported

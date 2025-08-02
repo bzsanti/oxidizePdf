@@ -1,11 +1,23 @@
 mod color;
-mod image;
+mod color_profiles;
 mod path;
+mod patterns;
+mod pdf_image;
+mod shadings;
 mod state;
 
 pub use color::Color;
-pub use image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
+pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
 pub use path::{LineCap, LineJoin, PathBuilder};
+pub use patterns::{
+    PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
+    TilingType,
+};
+pub use pdf_image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
+pub use shadings::{
+    AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
+    ShadingManager, ShadingPattern, ShadingType,
+};
 pub use state::{
     BlendMode, ExtGState, ExtGStateFont, ExtGStateManager, Halftone, LineDashPattern,
     RenderingIntent, SoftMask, TransferFunction,
@@ -25,6 +37,7 @@ pub struct GraphicsContext {
     stroke_opacity: f64,
     // Extended Graphics State support
     extgstate_manager: ExtGStateManager,
+    pending_extgstate: Option<ExtGState>,
     current_dash_pattern: Option<LineDashPattern>,
     current_miter_limit: f64,
     current_line_cap: LineCap,
@@ -51,6 +64,7 @@ impl GraphicsContext {
             stroke_opacity: 1.0,
             // Extended Graphics State defaults
             extgstate_manager: ExtGStateManager::new(),
+            pending_extgstate: None,
             current_dash_pattern: None,
             current_miter_limit: 10.0,
             current_line_cap: LineCap::Butt,
@@ -107,18 +121,21 @@ impl GraphicsContext {
     }
 
     pub fn stroke(&mut self) -> &mut Self {
+        self.apply_pending_extgstate().unwrap_or_default();
         self.apply_stroke_color();
         self.operations.push_str("S\n");
         self
     }
 
     pub fn fill(&mut self) -> &mut Self {
+        self.apply_pending_extgstate().unwrap_or_default();
         self.apply_fill_color();
         self.operations.push_str("f\n");
         self
     }
 
     pub fn fill_stroke(&mut self) -> &mut Self {
+        self.apply_pending_extgstate().unwrap_or_default();
         self.apply_fill_color();
         self.apply_stroke_color();
         self.operations.push_str("B\n");
@@ -443,11 +460,25 @@ impl GraphicsContext {
         self
     }
 
-    /// Apply an ExtGState dictionary
+    /// Apply an ExtGState dictionary immediately
     pub fn apply_extgstate(&mut self, state: ExtGState) -> Result<&mut Self> {
         let state_name = self.extgstate_manager.add_state(state)?;
         writeln!(&mut self.operations, "/{state_name} gs").unwrap();
         Ok(self)
+    }
+
+    /// Store an ExtGState to be applied before the next drawing operation
+    fn set_pending_extgstate(&mut self, state: ExtGState) {
+        self.pending_extgstate = Some(state);
+    }
+
+    /// Apply any pending ExtGState before drawing
+    fn apply_pending_extgstate(&mut self) -> Result<()> {
+        if let Some(state) = self.pending_extgstate.take() {
+            let state_name = self.extgstate_manager.add_state(state)?;
+            writeln!(&mut self.operations, "/{state_name} gs").unwrap();
+        }
+        Ok(())
     }
 
     /// Create and apply a custom ExtGState
@@ -468,19 +499,22 @@ impl GraphicsContext {
     /// Set alpha for both stroke and fill operations
     pub fn set_alpha(&mut self, alpha: f64) -> Result<&mut Self> {
         let state = ExtGState::new().with_alpha(alpha);
-        self.apply_extgstate(state)
+        self.set_pending_extgstate(state);
+        Ok(self)
     }
 
     /// Set alpha for stroke operations only
     pub fn set_alpha_stroke(&mut self, alpha: f64) -> Result<&mut Self> {
         let state = ExtGState::new().with_alpha_stroke(alpha);
-        self.apply_extgstate(state)
+        self.set_pending_extgstate(state);
+        Ok(self)
     }
 
     /// Set alpha for fill operations only
     pub fn set_alpha_fill(&mut self, alpha: f64) -> Result<&mut Self> {
         let state = ExtGState::new().with_alpha_fill(alpha);
-        self.apply_extgstate(state)
+        self.set_pending_extgstate(state);
+        Ok(self)
     }
 
     /// Set overprint for stroke operations
@@ -563,6 +597,12 @@ impl GraphicsContext {
     /// Check if any extended graphics states are defined
     pub fn has_extgstates(&self) -> bool {
         self.extgstate_manager.count() > 0
+    }
+
+    /// Add a command to the operations
+    pub fn add_command(&mut self, command: &str) {
+        self.operations.push_str(command);
+        self.operations.push('\n');
     }
 }
 

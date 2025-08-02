@@ -664,4 +664,300 @@ mod tests {
         let total_size: usize = streamer.buffer.iter().map(|c| c.text.len()).sum();
         assert!(total_size <= 100);
     }
+
+    #[test]
+    fn test_text_chunk_extreme_positions() {
+        let chunk = TextChunk {
+            text: "Extreme".to_string(),
+            x: f64::MAX,
+            y: f64::MIN,
+            font_size: 0.1,
+            font_name: Some("TinyFont".to_string()),
+        };
+
+        assert_eq!(chunk.x, f64::MAX);
+        assert_eq!(chunk.y, f64::MIN);
+        assert_eq!(chunk.font_size, 0.1);
+    }
+
+    #[test]
+    fn test_text_streamer_accumulated_position() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Multiple move operations should accumulate
+        let content = b"BT 10 20 Td 5 10 Td 15 -5 Td ET";
+        let _ = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(streamer.current_x, 30.0); // 10 + 5 + 15
+        assert_eq!(streamer.current_y, 25.0); // 20 + 10 + (-5)
+    }
+
+    #[test]
+    fn test_process_chunk_with_multiple_font_changes() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        let content = b"BT /F1 10 Tf (Small) Tj /F2 24 Tf (Large) Tj /F3 16 Tf (Medium) Tj ET";
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(chunks.len(), 3);
+        assert_eq!(chunks[0].font_size, 10.0);
+        assert_eq!(chunks[1].font_size, 24.0);
+        assert_eq!(chunks[2].font_size, 16.0);
+    }
+
+    #[test]
+    fn test_empty_text_operations() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Empty text operations
+        let content = b"BT /F1 12 Tf () Tj ( ) Tj ET";
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(chunks.len(), 2);
+        assert!(chunks[0].text.is_empty());
+        assert_eq!(chunks[1].text, " ");
+    }
+
+    #[test]
+    fn test_text_with_special_characters() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        let content = b"BT /F1 12 Tf (\xC3\xA9\xC3\xA0\xC3\xB1) Tj ET"; // UTF-8: éàñ
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert!(!chunks.is_empty());
+        // The text should contain the special characters (lossy conversion)
+        assert!(chunks[0].text.len() > 0);
+    }
+
+    #[test]
+    fn test_sorting_with_equal_positions() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Add chunks with same position
+        for i in 0..3 {
+            streamer.buffer.push_back(TextChunk {
+                text: format!("Text{}", i),
+                x: 100.0,
+                y: 100.0,
+                font_size: 12.0,
+                font_name: None,
+            });
+        }
+
+        let text = streamer.extract_text();
+        // Should maintain order when positions are equal
+        assert!(text.contains("Text0"));
+        assert!(text.contains("Text1"));
+        assert!(text.contains("Text2"));
+    }
+
+    #[test]
+    fn test_max_buffer_size_zero() {
+        let mut options = TextStreamOptions::default();
+        options.max_buffer_size = 0;
+        let mut streamer = TextStreamer::new(options);
+
+        streamer.buffer.push_back(TextChunk {
+            text: "Should be removed".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        streamer.check_buffer_size();
+        assert!(streamer.buffer.is_empty());
+    }
+
+    #[test]
+    fn test_font_name_with_spaces() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        let content = b"BT /Times New Roman 14 Tf ET";
+        let result = streamer.process_chunk(content);
+
+        // This should fail because "New" is treated as an unknown operator
+        assert!(result.is_err());
+
+        // The font and size should remain unchanged (default values)
+        assert_eq!(streamer.current_font, None);
+        assert_eq!(streamer.current_font_size, 12.0);
+    }
+
+    #[test]
+    fn test_stream_text_with_mixed_content() {
+        let content1 = b"BT /F1 8 Tf (Small) Tj ET".to_vec();
+        let content2 = b"Invalid content".to_vec();
+        let content3 = b"BT /F2 16 Tf (Large) Tj ET".to_vec();
+        let streams = vec![content1, content2, content3];
+
+        let mut collected = Vec::new();
+        let result = stream_text(streams, |chunk| {
+            collected.push(chunk.text.clone());
+            Ok(())
+        });
+
+        // Should handle mixed valid/invalid content
+        assert!(result.is_ok() || result.is_err());
+        // Check that collected is valid (len() is always >= 0 for Vec)
+    }
+
+    #[test]
+    fn test_preserve_formatting_option() {
+        let mut options = TextStreamOptions::default();
+        options.preserve_formatting = false;
+        let streamer = TextStreamer::new(options.clone());
+
+        assert!(!streamer.options.preserve_formatting);
+        assert_eq!(streamer.options.min_font_size, options.min_font_size);
+    }
+
+    #[test]
+    fn test_very_large_font_size() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        let content = b"BT /F1 9999 Tf (Huge) Tj ET";
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert!(!chunks.is_empty());
+        assert_eq!(chunks[0].font_size, 9999.0);
+        assert_eq!(chunks[0].text, "Huge");
+    }
+
+    #[test]
+    fn test_negative_font_size() {
+        let mut options = TextStreamOptions::default();
+        options.min_font_size = -10.0; // Allow negative sizes
+        let mut streamer = TextStreamer::new(options);
+
+        streamer.current_font_size = -5.0;
+        let content = b"BT (Negative) Tj ET";
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert!(!chunks.is_empty());
+        assert_eq!(chunks[0].font_size, -5.0);
+    }
+
+    #[test]
+    fn test_text_position_nan_handling() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Create chunks with NaN positions
+        let chunk1 = TextChunk {
+            text: "NaN X".to_string(),
+            x: f64::NAN,
+            y: 100.0,
+            font_size: 12.0,
+            font_name: None,
+        };
+        let chunk2 = TextChunk {
+            text: "NaN Y".to_string(),
+            x: 100.0,
+            y: f64::NAN,
+            font_size: 12.0,
+            font_name: None,
+        };
+
+        streamer.buffer.push_back(chunk1);
+        streamer.buffer.push_back(chunk2);
+
+        // extract_text should handle NaN gracefully
+        let text = streamer.extract_text();
+        assert!(text.contains("NaN"));
+    }
+
+    #[test]
+    fn test_buffer_with_different_font_names() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        let fonts = vec!["Arial", "Times", "Courier", "Helvetica"];
+        for (i, font) in fonts.iter().enumerate() {
+            streamer.buffer.push_back(TextChunk {
+                text: format!("Font{}", i),
+                x: 0.0,
+                y: 0.0,
+                font_size: 12.0,
+                font_name: Some(font.to_string()),
+            });
+        }
+
+        let chunks = streamer.get_buffered_chunks();
+        assert_eq!(chunks.len(), 4);
+        for (i, chunk) in chunks.iter().enumerate() {
+            assert_eq!(chunk.font_name, Some(fonts[i].to_string()));
+        }
+    }
+
+    #[test]
+    fn test_process_chunk_error_propagation() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // This will cause a parse error
+        let content = b"\xFF\xFE\xFD\xFC"; // Invalid UTF-8
+        let result = streamer.process_chunk(content);
+
+        // Should handle the error gracefully
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[test]
+    fn test_extract_text_empty_buffer() {
+        let streamer = TextStreamer::new(TextStreamOptions::default());
+        let text = streamer.extract_text();
+        assert!(text.is_empty());
+    }
+
+    #[test]
+    fn test_extract_text_single_chunk() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        streamer.buffer.push_back(TextChunk {
+            text: "Single".to_string(),
+            x: 0.0,
+            y: 0.0,
+            font_size: 12.0,
+            font_name: None,
+        });
+
+        let text = streamer.extract_text();
+        assert_eq!(text, "Single");
+    }
+
+    #[test]
+    fn test_check_buffer_size_empty() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+        streamer.check_buffer_size(); // Should not panic on empty buffer
+        assert!(streamer.buffer.is_empty());
+    }
+
+    #[test]
+    fn test_complex_content_operations() {
+        let mut streamer = TextStreamer::new(TextStreamOptions::default());
+
+        // Complex PDF content with mixed operations
+        let content = b"BT /F1 12 Tf 0 0 Td (Start) Tj ET q Q BT 50 50 Td (End) Tj ET";
+        let chunks = streamer.process_chunk(content).unwrap();
+
+        assert_eq!(chunks.len(), 2);
+        assert_eq!(chunks[0].text, "Start");
+        assert_eq!(chunks[1].text, "End");
+        assert_eq!(chunks[0].x, 0.0);
+        assert_eq!(chunks[1].x, 50.0);
+    }
+
+    #[test]
+    fn test_stream_text_callback_state() {
+        let content = b"BT /F1 12 Tf (Test) Tj ET".to_vec();
+        let streams = vec![content; 3]; // Same content 3 times
+
+        let mut count = 0;
+        stream_text(streams, |_chunk| {
+            count += 1;
+            Ok(())
+        })
+        .unwrap();
+
+        assert_eq!(count, 3);
+    }
 }

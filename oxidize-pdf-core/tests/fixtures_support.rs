@@ -192,10 +192,13 @@ mod tests {
     fn test_fixture_sampling() {
         let sample = get_fixture_sample(5);
         if fixtures_available() {
-            assert!(sample.len() <= 5, "Sample should not exceed requested size");
+            let total_fixtures = get_fixture_pdfs().len();
+            let expected_size = 5.min(total_fixtures);
             assert!(
-                sample.len() <= get_fixture_pdfs().len(),
-                "Sample should not exceed total"
+                sample.len() <= expected_size,
+                "Sample size {} should not exceed min(5, {})",
+                sample.len(),
+                total_fixtures
             );
         } else {
             assert!(sample.is_empty(), "No fixtures should mean empty sample");

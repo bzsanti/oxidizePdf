@@ -49,7 +49,7 @@ fn test_transparency_effects() -> Result<()> {
         let x = 50.0 + (i as f64 * 90.0);
 
         // Create semi-transparent rectangles
-        let mut graphics = page.graphics();
+        let graphics = page.graphics();
 
         // Set transparency - this tests if the graphics context supports opacity
         // Note: Not all graphics contexts may support set_opacity, so we'll use fill_color with alpha if available
