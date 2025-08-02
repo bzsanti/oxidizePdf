@@ -64,12 +64,12 @@ The Community Edition will provide essential PDF processing capabilities suitabl
 - [x] **Batch Processing** - Process multiple files ✅
 - [x] **Error Recovery** - Handle corrupted PDFs gracefully ✅
 
-#### Phase 5: Critical Missing Features (Q1 2026)
-- [ ] **Font Embedding** - TrueType/OpenType font embedding (ISO §9.6.3)
-- [ ] **DCTDecode** - JPEG compression filter (ISO §7.4.8)
-- [ ] **Encryption Basic** - RC4 128-bit encryption (ISO §7.6.3)
-- [ ] **CMap/ToUnicode** - Proper text extraction (ISO §9.10)
-- [ ] **XRef Streams** - PDF 1.5+ cross-reference streams (ISO §7.5.8)
+#### Phase 5: Critical Missing Features (Q1 2026) ✅ COMPLETED
+- [x] **Font Embedding** - TrueType/OpenType font embedding (ISO §9.6.3) ✅ COMPLETED v1.1.6
+- [x] **XRef Streams** - PDF 1.5+ cross-reference streams (ISO §7.5.8) ✅ COMPLETED v1.1.5
+- [x] **CMap/ToUnicode** - Proper text extraction (ISO §9.10) ✅ COMPLETED
+- [x] **DCTDecode** - JPEG compression filter (ISO §7.4.8) ✅ COMPLETED
+- [x] **Encryption Basic** - RC4 128-bit encryption (ISO §7.6.3) ✅ COMPLETED
 
 #### Phase 6: Document Layout & Forms (Q2 2026)
 - [x] **Headers/Footers Basic** - Simple text headers and footers with page numbers ✅
