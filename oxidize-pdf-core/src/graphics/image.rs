@@ -173,11 +173,15 @@ impl Image {
     }
 
     /// Load and decode external PNG file using the `image` crate (requires external-images feature)
+    ///
+    /// TODO: There's currently a naming conflict between our internal `image` module and the external
+    /// `image` crate. This needs to be resolved before these functions can work properly.
+    /// The dependency has been updated to 0.25.6 in Cargo.toml but the import issue remains.
     #[cfg(feature = "external-images")]
     pub fn from_external_png_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        use image as image_crate;
-
-        let img = image_crate::ImageReader::open(path)?
+        // Use the external image crate (not our internal image module)
+        use ::image as img_crate;
+        let img = img_crate::ImageReader::open(path)?
             .decode()
             .map_err(|e| PdfError::InvalidImage(format!("Failed to decode PNG: {}", e)))?;
 
@@ -187,9 +191,9 @@ impl Image {
     /// Load and decode external JPEG file using the `image` crate (requires external-images feature)
     #[cfg(feature = "external-images")]
     pub fn from_external_jpeg_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        use image as image_crate;
-
-        let img = image_crate::ImageReader::open(path)?
+        // Use the external image crate (not our internal image module)
+        use ::image as img_crate;
+        let img = img_crate::ImageReader::open(path)?
             .decode()
             .map_err(|e| PdfError::InvalidImage(format!("Failed to decode JPEG: {}", e)))?;
 
@@ -198,8 +202,8 @@ impl Image {
 
     /// Convert from `image` crate's DynamicImage to our Image struct
     #[cfg(feature = "external-images")]
-    fn from_dynamic_image(img: image::DynamicImage) -> Result<Self> {
-        use image::DynamicImage;
+    fn from_dynamic_image(img: ::image::DynamicImage) -> Result<Self> {
+        use ::image::DynamicImage;
 
         let (width, height) = (img.width(), img.height());
 

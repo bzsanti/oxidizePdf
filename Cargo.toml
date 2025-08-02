@@ -49,7 +49,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 flate2 = "1.0"
 
 # Image processing (optional)
-image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25.6", default-features = false, features = ["png", "jpeg"] }
 
 # Testing
 tempfile = "3.0"
