@@ -57,6 +57,12 @@ impl From<crate::encryption::AesError> for PdfError {
     }
 }
 
+impl From<crate::parser::ParseError> for PdfError {
+    fn from(err: crate::parser::ParseError) -> Self {
+        PdfError::ParseError(err.to_string())
+    }
+}
+
 // Separate error type for oxidize-pdf-core
 #[derive(Error, Debug)]
 pub enum OxidizePdfError {

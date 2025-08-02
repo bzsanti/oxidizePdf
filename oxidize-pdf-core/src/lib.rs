@@ -174,6 +174,7 @@
 pub mod actions;
 pub mod annotations;
 pub mod batch;
+pub mod compression;
 pub mod document;
 pub mod encryption;
 pub mod error;

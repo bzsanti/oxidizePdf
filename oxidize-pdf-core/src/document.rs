@@ -342,6 +342,27 @@ impl Document {
         Ok(())
     }
 
+    /// Saves the document to a file with custom writer configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created or written.
+    pub fn save_with_config(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        config: crate::writer::WriterConfig,
+    ) -> Result<()> {
+        use std::io::BufWriter;
+
+        // Update modification date before saving
+        self.update_modification_date();
+        let file = std::fs::File::create(path)?;
+        let writer = BufWriter::new(file);
+        let mut pdf_writer = PdfWriter::with_config(writer, config);
+        pdf_writer.write_document(self)?;
+        Ok(())
+    }
+
     /// Writes the document to a buffer.
     ///
     /// # Errors

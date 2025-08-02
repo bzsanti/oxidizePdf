@@ -1,10 +1,29 @@
 use crate::document::Document;
 use crate::error::Result;
 use crate::objects::{Dictionary, Object, ObjectId};
+use crate::writer::XRefStreamWriter;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::Path;
+
+/// Configuration for PDF writer
+#[derive(Debug, Clone)]
+pub struct WriterConfig {
+    /// Use XRef streams instead of traditional XRef tables (PDF 1.5+)
+    pub use_xref_streams: bool,
+    /// PDF version to write (default: 1.7)
+    pub pdf_version: String,
+}
+
+impl Default for WriterConfig {
+    fn default() -> Self {
+        Self {
+            use_xref_streams: false,
+            pdf_version: "1.7".to_string(),
+        }
+    }
+}
 
 pub struct PdfWriter<W: Write> {
     writer: W,
@@ -22,10 +41,16 @@ pub struct PdfWriter<W: Write> {
     field_id_map: HashMap<String, ObjectId>, // field name -> field ID
     form_field_ids: Vec<ObjectId>, // form field IDs to add to page annotations
     page_ids: Vec<ObjectId>,       // page IDs for form field references
+    // Configuration
+    config: WriterConfig,
 }
 
 impl<W: Write> PdfWriter<W> {
     pub fn new_with_writer(writer: W) -> Self {
+        Self::with_config(writer, WriterConfig::default())
+    }
+
+    pub fn with_config(writer: W, config: WriterConfig) -> Self {
         Self {
             writer,
             xref_positions: HashMap::new(),
@@ -38,6 +63,7 @@ impl<W: Write> PdfWriter<W> {
             field_id_map: HashMap::new(),
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
+            config,
         }
     }
 
@@ -61,12 +87,18 @@ impl<W: Write> PdfWriter<W> {
         // Write document info
         self.write_info(document)?;
 
-        // Write xref table
+        // Write xref table or stream
         let xref_position = self.current_position;
-        self.write_xref()?;
+        if self.config.use_xref_streams {
+            self.write_xref_stream()?;
+        } else {
+            self.write_xref()?;
+        }
 
-        // Write trailer
-        self.write_trailer(xref_position)?;
+        // Write trailer (only for traditional xref)
+        if !self.config.use_xref_streams {
+            self.write_trailer(xref_position)?;
+        }
 
         if let Ok(()) = self.writer.flush() {
             // Flush succeeded
@@ -75,7 +107,8 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_header(&mut self) -> Result<()> {
-        self.write_bytes(b"%PDF-1.7\n")?;
+        let header = format!("%PDF-{}\n", self.config.pdf_version);
+        self.write_bytes(header.as_bytes())?;
         // Binary comment to ensure file is treated as binary
         self.write_bytes(&[b'%', 0xE2, 0xE3, 0xCF, 0xD3, b'\n'])?;
         Ok(())
@@ -520,6 +553,7 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             field_id_map: HashMap::new(),
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
+            config: WriterConfig::default(),
         })
     }
 }
@@ -632,6 +666,95 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"0000000000 00000 f \n")?;
             }
         }
+
+        Ok(())
+    }
+
+    fn write_xref_stream(&mut self) -> Result<()> {
+        let catalog_id = self.catalog_id.expect("catalog_id must be set");
+        let info_id = self.info_id.expect("info_id must be set");
+
+        // Allocate object ID for the xref stream
+        let xref_stream_id = self.allocate_object_id();
+        let xref_position = self.current_position;
+
+        // Create XRef stream writer with trailer information
+        let mut xref_writer = XRefStreamWriter::new(xref_stream_id);
+        xref_writer.set_trailer_info(catalog_id, info_id);
+
+        // Add free entry for object 0
+        xref_writer.add_free_entry(0, 65535);
+
+        // Sort entries by object number
+        let mut entries: Vec<_> = self
+            .xref_positions
+            .iter()
+            .map(|(id, pos)| (*id, *pos))
+            .collect();
+        entries.sort_by_key(|(id, _)| id.number());
+
+        // Find the highest object number (including the xref stream itself)
+        let max_obj_num = entries
+            .iter()
+            .map(|(id, _)| id.number())
+            .max()
+            .unwrap_or(0)
+            .max(xref_stream_id.number());
+
+        // Add entries for all objects
+        for obj_num in 1..=max_obj_num {
+            if obj_num == xref_stream_id.number() {
+                // The xref stream entry will be added with the correct position
+                xref_writer.add_in_use_entry(xref_position, 0);
+            } else if let Some((id, position)) =
+                entries.iter().find(|(id, _)| id.number() == obj_num)
+            {
+                xref_writer.add_in_use_entry(*position, id.generation());
+            } else {
+                // Free entry for gap
+                xref_writer.add_free_entry(0, 0);
+            }
+        }
+
+        // Mark position for xref stream object
+        self.xref_positions.insert(xref_stream_id, xref_position);
+
+        // Write object header
+        self.write_bytes(
+            format!(
+                "{} {} obj\n",
+                xref_stream_id.number(),
+                xref_stream_id.generation()
+            )
+            .as_bytes(),
+        )?;
+
+        // Get the encoded data
+        let uncompressed_data = xref_writer.encode_entries();
+        let compressed_data = crate::compression::compress(&uncompressed_data)?;
+
+        // Create and write dictionary
+        let mut dict = xref_writer.create_dictionary(None);
+        dict.set("Length", Object::Integer(compressed_data.len() as i64));
+        self.write_bytes(b"<<")?;
+        for (key, value) in dict.iter() {
+            self.write_bytes(b"\n/")?;
+            self.write_bytes(key.as_bytes())?;
+            self.write_bytes(b" ")?;
+            self.write_object_value(value)?;
+        }
+        self.write_bytes(b"\n>>\n")?;
+
+        // Write stream
+        self.write_bytes(b"stream\n")?;
+        self.write_bytes(&compressed_data)?;
+        self.write_bytes(b"\nendstream\n")?;
+        self.write_bytes(b"endobj\n")?;
+
+        // Write startxref and EOF
+        self.write_bytes(b"\nstartxref\n")?;
+        self.write_bytes(xref_position.to_string().as_bytes())?;
+        self.write_bytes(b"\n%%EOF\n")?;
 
         Ok(())
     }
@@ -2749,6 +2872,107 @@ mod tests {
             } else {
                 panic!("Could not find xref section in generated PDF");
             }
+        }
+
+        #[test]
+        fn test_xref_stream_generation() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+            document.set_title("XRef Stream Test");
+
+            let page = Page::a4();
+            document.add_page(page);
+
+            // Create writer with XRef stream configuration
+            let config = WriterConfig {
+                use_xref_streams: true,
+                pdf_version: "1.5".to_string(),
+            };
+            let mut writer = PdfWriter::with_config(&mut buffer, config);
+            writer.write_document(&mut document).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+
+            // Should have PDF 1.5 header
+            assert!(content.starts_with("%PDF-1.5\n"));
+
+            // Should NOT have traditional xref table
+            assert!(!content.contains("\nxref\n"));
+            assert!(!content.contains("\ntrailer\n"));
+
+            // Should have XRef stream object
+            assert!(content.contains("/Type /XRef"));
+            assert!(content.contains("/Filter /FlateDecode"));
+            assert!(content.contains("/W ["));
+            assert!(content.contains("/Root "));
+            assert!(content.contains("/Info "));
+
+            // Should have startxref pointing to XRef stream
+            assert!(content.contains("\nstartxref\n"));
+            assert!(content.contains("\n%%EOF\n"));
+        }
+
+        #[test]
+        fn test_writer_config_default() {
+            let config = WriterConfig::default();
+            assert_eq!(config.use_xref_streams, false);
+            assert_eq!(config.pdf_version, "1.7");
+        }
+
+        #[test]
+        fn test_pdf_version_in_header() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+
+            let page = Page::a4();
+            document.add_page(page);
+
+            // Test with custom version
+            let config = WriterConfig {
+                use_xref_streams: false,
+                pdf_version: "1.4".to_string(),
+            };
+            let mut writer = PdfWriter::with_config(&mut buffer, config);
+            writer.write_document(&mut document).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.starts_with("%PDF-1.4\n"));
+        }
+
+        #[test]
+        fn test_xref_stream_with_multiple_objects() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+            document.set_title("Multi Object XRef Stream Test");
+
+            // Add multiple pages to create more objects
+            for i in 0..3 {
+                let mut page = Page::a4();
+                page.text()
+                    .set_font(Font::Helvetica, 12.0)
+                    .at(100.0, 700.0)
+                    .write(&format!("Page {}", i + 1))
+                    .unwrap();
+                document.add_page(page);
+            }
+
+            let config = WriterConfig {
+                use_xref_streams: true,
+                pdf_version: "1.5".to_string(),
+            };
+            let mut writer = PdfWriter::with_config(&mut buffer, config);
+            writer.write_document(&mut document).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+
+            // Verify XRef stream contains proper Size entry
+            assert!(content.contains("/Size "));
+
+            // Should have compressed entries (W array)
+            assert!(content.contains("/W ["));
+
+            // Should have Index array
+            assert!(content.contains("/Index ["));
         }
     }
 }
