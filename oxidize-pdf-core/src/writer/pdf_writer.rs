@@ -302,6 +302,42 @@ impl<W: Write> PdfWriter<W> {
             resources.set("XObject", Object::Dictionary(xobject_dict));
         }
 
+        // Add ExtGState resources for transparency
+        if let Some(extgstate_states) = page.get_extgstate_resources() {
+            let mut extgstate_dict = Dictionary::new();
+            for (name, state) in extgstate_states {
+                let mut state_dict = Dictionary::new();
+                state_dict.set("Type", Object::Name("ExtGState".to_string()));
+
+                // Add transparency parameters
+                if let Some(alpha_stroke) = state.alpha_stroke {
+                    state_dict.set("CA", Object::Real(alpha_stroke));
+                }
+                if let Some(alpha_fill) = state.alpha_fill {
+                    state_dict.set("ca", Object::Real(alpha_fill));
+                }
+
+                // Add other parameters as needed
+                if let Some(line_width) = state.line_width {
+                    state_dict.set("LW", Object::Real(line_width));
+                }
+                if let Some(line_cap) = state.line_cap {
+                    state_dict.set("LC", Object::Integer(line_cap as i64));
+                }
+                if let Some(line_join) = state.line_join {
+                    state_dict.set("LJ", Object::Integer(line_join as i64));
+                }
+                if let Some(blend_mode) = &state.blend_mode {
+                    state_dict.set("BM", Object::Name(blend_mode.pdf_name().to_string()));
+                }
+
+                extgstate_dict.set(name, Object::Dictionary(state_dict));
+            }
+            if !extgstate_dict.is_empty() {
+                resources.set("ExtGState", Object::Dictionary(extgstate_dict));
+            }
+        }
+
         page_dict.set("Resources", Object::Dictionary(resources));
 
         self.write_object(page_id, Object::Dictionary(page_dict))?;

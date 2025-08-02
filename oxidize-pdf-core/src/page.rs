@@ -188,6 +188,17 @@ impl Page {
         &self.images
     }
 
+    /// Get ExtGState resources from the graphics context
+    pub(crate) fn get_extgstate_resources(
+        &self,
+    ) -> Option<&std::collections::HashMap<String, crate::graphics::ExtGState>> {
+        if self.graphics_context.has_extgstates() {
+            Some(self.graphics_context.extgstate_manager().states())
+        } else {
+            None
+        }
+    }
+
     /// Adds an annotation to this page
     pub fn add_annotation(&mut self, annotation: Annotation) {
         self.annotations.push(annotation);
