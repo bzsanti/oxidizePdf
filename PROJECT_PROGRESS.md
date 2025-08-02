@@ -5,17 +5,17 @@
 ### Logros de esta Sesión ✅
 - **COMPLETED**: Implementación XRef Streams (sesión anterior) 
 - **COMPLETED**: Actualización dependencia image 0.24 → 0.25.6
-- **IDENTIFIED**: Conflicto de nombres entre módulo interno `image` y crate externo `image`
-- **TODO**: Resolver conflicto para habilitar funciones external-images
+- **COMPLETED**: Resolver conflicto de nombres entre módulo interno `image` y crate externo `image`
+  - Renombrado módulo interno `image.rs` → `pdf_image.rs`
+  - Actualizado referencias en `graphics/mod.rs`
+  - Verificado que compila con y sin feature `external-images`
 
-### Issue Resuelto
-- lib.rs reportaba dependencia image 0.24 desactualizada
-- Actualizado a 0.25.6 en workspace y crate
-
-### Problema Identificado
-- El módulo interno `graphics::image` entra en conflicto con el crate externo `image`
-- Las funciones `from_external_png_file` y `from_external_jpeg_file` no pueden compilar
-- Necesario renombrar módulo interno o usar alias diferente
+### Issues Resueltos
+1. lib.rs reportaba dependencia image 0.24 desactualizada
+   - Actualizado a 0.25.6 en workspace y crate
+2. Conflicto de nombres entre módulos
+   - Resuelto renombrando módulo interno para evitar colisión
+   - Las funciones `from_external_png_file` y `from_external_jpeg_file` ahora funcionan correctamente
 
 ## Estado Anterior - Sesión 01/08/2025 - Implementación XRef Streams
 
