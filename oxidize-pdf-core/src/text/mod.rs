@@ -44,12 +44,40 @@ pub use table_advanced::{
 use crate::error::Result;
 use std::fmt::Write;
 
+/// Text rendering mode for PDF text operations
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextRenderingMode {
+    /// Fill text (default)
+    Fill = 0,
+    /// Stroke text
+    Stroke = 1,
+    /// Fill and stroke text
+    FillStroke = 2,
+    /// Invisible text (for searchable text over images)
+    Invisible = 3,
+    /// Fill text and add to path for clipping
+    FillClip = 4,
+    /// Stroke text and add to path for clipping
+    StrokeClip = 5,
+    /// Fill and stroke text and add to path for clipping
+    FillStrokeClip = 6,
+    /// Add text to path for clipping (invisible)
+    Clip = 7,
+}
+
 #[derive(Clone)]
 pub struct TextContext {
     operations: String,
     current_font: Font,
     font_size: f64,
     text_matrix: [f64; 6],
+    // Text state parameters
+    character_spacing: Option<f64>,
+    word_spacing: Option<f64>,
+    horizontal_scaling: Option<f64>,
+    leading: Option<f64>,
+    text_rise: Option<f64>,
+    rendering_mode: Option<TextRenderingMode>,
 }
 
 impl Default for TextContext {
@@ -65,6 +93,12 @@ impl TextContext {
             current_font: Font::Helvetica,
             font_size: 12.0,
             text_matrix: [1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            character_spacing: None,
+            word_spacing: None,
+            horizontal_scaling: None,
+            leading: None,
+            text_rise: None,
+            rendering_mode: None,
         }
     }
 
@@ -97,6 +131,9 @@ impl TextContext {
             self.font_size
         )
         .unwrap();
+
+        // Apply text state parameters
+        self.apply_text_state_parameters();
 
         // Set text position
         writeln!(
@@ -141,28 +178,67 @@ impl TextContext {
     }
 
     pub fn set_character_spacing(&mut self, spacing: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{spacing:.2} Tc").unwrap();
+        self.character_spacing = Some(spacing);
         self
     }
 
     pub fn set_word_spacing(&mut self, spacing: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{spacing:.2} Tw").unwrap();
+        self.word_spacing = Some(spacing);
         self
     }
 
     pub fn set_horizontal_scaling(&mut self, scale: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{:.2} Tz", scale * 100.0).unwrap();
+        self.horizontal_scaling = Some(scale);
         self
     }
 
     pub fn set_leading(&mut self, leading: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{leading:.2} TL").unwrap();
+        self.leading = Some(leading);
         self
     }
 
     pub fn set_text_rise(&mut self, rise: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{rise:.2} Ts").unwrap();
+        self.text_rise = Some(rise);
         self
+    }
+
+    /// Set the text rendering mode
+    pub fn set_rendering_mode(&mut self, mode: TextRenderingMode) -> &mut Self {
+        self.rendering_mode = Some(mode);
+        self
+    }
+
+    /// Apply text state parameters to the operations string
+    fn apply_text_state_parameters(&mut self) {
+        // Character spacing (Tc)
+        if let Some(spacing) = self.character_spacing {
+            writeln!(&mut self.operations, "{:.2} Tc", spacing).unwrap();
+        }
+
+        // Word spacing (Tw)
+        if let Some(spacing) = self.word_spacing {
+            writeln!(&mut self.operations, "{:.2} Tw", spacing).unwrap();
+        }
+
+        // Horizontal scaling (Tz)
+        if let Some(scale) = self.horizontal_scaling {
+            writeln!(&mut self.operations, "{:.2} Tz", scale * 100.0).unwrap();
+        }
+
+        // Leading (TL)
+        if let Some(leading) = self.leading {
+            writeln!(&mut self.operations, "{:.2} TL", leading).unwrap();
+        }
+
+        // Text rise (Ts)
+        if let Some(rise) = self.text_rise {
+            writeln!(&mut self.operations, "{:.2} Ts", rise).unwrap();
+        }
+
+        // Text rendering mode (Tr)
+        if let Some(mode) = self.rendering_mode {
+            writeln!(&mut self.operations, "{} Tr", mode as u8).unwrap();
+        }
     }
 
     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
@@ -184,14 +260,58 @@ impl TextContext {
         (self.text_matrix[4], self.text_matrix[5])
     }
 
-    /// Clear all operations
+    /// Clear all operations and reset text state parameters
     pub fn clear(&mut self) {
         self.operations.clear();
+        self.character_spacing = None;
+        self.word_spacing = None;
+        self.horizontal_scaling = None;
+        self.leading = None;
+        self.text_rise = None;
+        self.rendering_mode = None;
     }
 
     /// Get the raw operations string
     pub fn operations(&self) -> &str {
         &self.operations
+    }
+
+    /// Generate text state operations for testing purposes
+    #[cfg(test)]
+    pub fn generate_text_state_operations(&self) -> String {
+        let mut ops = String::new();
+
+        // Character spacing (Tc)
+        if let Some(spacing) = self.character_spacing {
+            writeln!(&mut ops, "{:.2} Tc", spacing).unwrap();
+        }
+
+        // Word spacing (Tw)
+        if let Some(spacing) = self.word_spacing {
+            writeln!(&mut ops, "{:.2} Tw", spacing).unwrap();
+        }
+
+        // Horizontal scaling (Tz)
+        if let Some(scale) = self.horizontal_scaling {
+            writeln!(&mut ops, "{:.2} Tz", scale * 100.0).unwrap();
+        }
+
+        // Leading (TL)
+        if let Some(leading) = self.leading {
+            writeln!(&mut ops, "{:.2} TL", leading).unwrap();
+        }
+
+        // Text rise (Ts)
+        if let Some(rise) = self.text_rise {
+            writeln!(&mut ops, "{:.2} Ts", rise).unwrap();
+        }
+
+        // Text rendering mode (Tr)
+        if let Some(mode) = self.rendering_mode {
+            writeln!(&mut ops, "{} Tr", mode as u8).unwrap();
+        }
+
+        ops
     }
 }
 
@@ -272,7 +392,7 @@ mod tests {
         let mut context = TextContext::new();
         context.set_character_spacing(2.5);
 
-        let ops = context.operations();
+        let ops = context.generate_text_state_operations();
         assert!(ops.contains("2.50 Tc"));
     }
 
@@ -281,7 +401,7 @@ mod tests {
         let mut context = TextContext::new();
         context.set_word_spacing(1.5);
 
-        let ops = context.operations();
+        let ops = context.generate_text_state_operations();
         assert!(ops.contains("1.50 Tw"));
     }
 
@@ -290,7 +410,7 @@ mod tests {
         let mut context = TextContext::new();
         context.set_horizontal_scaling(1.25);
 
-        let ops = context.operations();
+        let ops = context.generate_text_state_operations();
         assert!(ops.contains("125.00 Tz")); // 1.25 * 100
     }
 
@@ -299,7 +419,7 @@ mod tests {
         let mut context = TextContext::new();
         context.set_leading(15.0);
 
-        let ops = context.operations();
+        let ops = context.generate_text_state_operations();
         assert!(ops.contains("15.00 TL"));
     }
 
@@ -308,7 +428,7 @@ mod tests {
         let mut context = TextContext::new();
         context.set_text_rise(3.0);
 
-        let ops = context.operations();
+        let ops = context.generate_text_state_operations();
         assert!(ops.contains("3.00 Ts"));
     }
 
@@ -365,5 +485,120 @@ mod tests {
         let ops = context.operations();
         assert!(ops.contains("\\n"));
         assert!(ops.contains("\\t"));
+    }
+
+    #[test]
+    fn test_rendering_mode_fill() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::Fill);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("0 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_stroke() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::Stroke);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("1 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_fill_stroke() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::FillStroke);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("2 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_invisible() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::Invisible);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("3 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_fill_clip() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::FillClip);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("4 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_stroke_clip() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::StrokeClip);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("5 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_fill_stroke_clip() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::FillStrokeClip);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("6 Tr"));
+    }
+
+    #[test]
+    fn test_rendering_mode_clip() {
+        let mut context = TextContext::new();
+        context.set_rendering_mode(TextRenderingMode::Clip);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("7 Tr"));
+    }
+
+    #[test]
+    fn test_text_state_parameters_chaining() {
+        let mut context = TextContext::new();
+        context
+            .set_character_spacing(1.5)
+            .set_word_spacing(2.0)
+            .set_horizontal_scaling(1.1)
+            .set_leading(14.0)
+            .set_text_rise(0.5)
+            .set_rendering_mode(TextRenderingMode::FillStroke);
+
+        let ops = context.generate_text_state_operations();
+        assert!(ops.contains("1.50 Tc"));
+        assert!(ops.contains("2.00 Tw"));
+        assert!(ops.contains("110.00 Tz"));
+        assert!(ops.contains("14.00 TL"));
+        assert!(ops.contains("0.50 Ts"));
+        assert!(ops.contains("2 Tr"));
+    }
+
+    #[test]
+    fn test_all_text_state_operators_generated() {
+        let mut context = TextContext::new();
+        
+        // Test all operators in sequence
+        context.set_character_spacing(1.0);  // Tc
+        context.set_word_spacing(2.0);       // Tw
+        context.set_horizontal_scaling(1.2); // Tz
+        context.set_leading(15.0);           // TL
+        context.set_text_rise(1.0);          // Ts
+        context.set_rendering_mode(TextRenderingMode::Stroke); // Tr
+
+        let ops = context.generate_text_state_operations();
+        
+        // Verify all PDF text state operators are present
+        assert!(ops.contains("Tc"), "Character spacing operator (Tc) not found");
+        assert!(ops.contains("Tw"), "Word spacing operator (Tw) not found");
+        assert!(ops.contains("Tz"), "Horizontal scaling operator (Tz) not found");
+        assert!(ops.contains("TL"), "Leading operator (TL) not found");
+        assert!(ops.contains("Ts"), "Text rise operator (Ts) not found");
+        assert!(ops.contains("Tr"), "Text rendering mode operator (Tr) not found");
     }
 }

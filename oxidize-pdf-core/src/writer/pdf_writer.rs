@@ -14,6 +14,8 @@ pub struct WriterConfig {
     pub use_xref_streams: bool,
     /// PDF version to write (default: 1.7)
     pub pdf_version: String,
+    /// Enable compression for streams (default: true)
+    pub compress_streams: bool,
 }
 
 impl Default for WriterConfig {
@@ -21,6 +23,7 @@ impl Default for WriterConfig {
         Self {
             use_xref_streams: false,
             pdf_version: "1.7".to_string(),
+            compress_streams: true,
         }
     }
 }
@@ -353,7 +356,10 @@ impl<W: Write> PdfWriter<W> {
         {
             use crate::objects::Stream;
             let mut stream = Stream::new(content);
-            stream.compress_flate()?;
+            // Only compress if config allows it
+            if self.config.compress_streams {
+                stream.compress_flate()?;
+            }
 
             self.write_object(
                 content_id,
@@ -767,11 +773,20 @@ impl<W: Write> PdfWriter<W> {
 
         // Get the encoded data
         let uncompressed_data = xref_writer.encode_entries();
-        let compressed_data = crate::compression::compress(&uncompressed_data)?;
+        let final_data = if self.config.compress_streams {
+            crate::compression::compress(&uncompressed_data)?
+        } else {
+            uncompressed_data
+        };
 
         // Create and write dictionary
         let mut dict = xref_writer.create_dictionary(None);
-        dict.set("Length", Object::Integer(compressed_data.len() as i64));
+        dict.set("Length", Object::Integer(final_data.len() as i64));
+        
+        // Add filter if compression is enabled
+        if self.config.compress_streams {
+            dict.set("Filter", Object::Name("FlateDecode".to_string()));
+        }
         self.write_bytes(b"<<")?;
         for (key, value) in dict.iter() {
             self.write_bytes(b"\n/")?;
@@ -783,7 +798,7 @@ impl<W: Write> PdfWriter<W> {
 
         // Write stream
         self.write_bytes(b"stream\n")?;
-        self.write_bytes(&compressed_data)?;
+        self.write_bytes(&final_data)?;
         self.write_bytes(b"\nendstream\n")?;
         self.write_bytes(b"endobj\n")?;
 
@@ -2929,6 +2944,7 @@ mod tests {
             let config = WriterConfig {
                 use_xref_streams: true,
                 pdf_version: "1.5".to_string(),
+                compress_streams: true,
             };
             let mut writer = PdfWriter::with_config(&mut buffer, config);
             writer.write_document(&mut document).unwrap();
@@ -2973,6 +2989,7 @@ mod tests {
             let config = WriterConfig {
                 use_xref_streams: false,
                 pdf_version: "1.4".to_string(),
+                compress_streams: true,
             };
             let mut writer = PdfWriter::with_config(&mut buffer, config);
             writer.write_document(&mut document).unwrap();
@@ -3001,6 +3018,7 @@ mod tests {
             let config = WriterConfig {
                 use_xref_streams: true,
                 pdf_version: "1.5".to_string(),
+                compress_streams: true,
             };
             let mut writer = PdfWriter::with_config(&mut buffer, config);
             writer.write_document(&mut document).unwrap();

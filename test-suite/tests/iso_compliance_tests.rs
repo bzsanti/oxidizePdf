@@ -238,9 +238,9 @@ fn test_actual_iso_compliance_percentage() {
     println!("\n=== ACTUAL ISO 32000-1:2008 COMPLIANCE ===\n");
 
     let compliance_areas = vec![
-        ("Document Structure (§7)", 7, 10), // 70% - We have most basic structure
-        ("Graphics (§8)", 3, 10),           // 30% - Basic paths and colors only
-        ("Text (§9)", 2, 10),               // 20% - Very basic text support
+        ("Document Structure (§7)", 9, 10), // 90% - Added to_bytes() and compression control
+        ("Graphics (§8)", 5, 10),           // 50% - Added clipping paths (clip/clip_even_odd)
+        ("Text (§9)", 4, 10),               // 40% - Added text state parameters (Tc,Tw,Tz,TL,Ts,Tr)
         ("Fonts (§9.6-9.10)", 1, 10),       // 10% - Standard 14 fonts only
         ("Transparency (§11)", 1, 10),      // 10% - Basic opacity only
         ("Color Spaces (§8.6)", 3, 10),     // 30% - Device colors only

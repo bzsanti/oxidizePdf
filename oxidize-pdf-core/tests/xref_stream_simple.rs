@@ -23,6 +23,7 @@ fn test_xref_stream_basic_generation() -> Result<()> {
         let config = WriterConfig {
             use_xref_streams: true,
             pdf_version: "1.5".to_string(),
+            compress_streams: true,
         };
         let mut writer = oxidize_pdf::writer::PdfWriter::with_config(&mut buffer, config);
         writer.write_document(&mut doc)?;

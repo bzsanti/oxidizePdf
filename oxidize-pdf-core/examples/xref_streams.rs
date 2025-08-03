@@ -75,6 +75,7 @@ fn main() -> Result<()> {
     let config = WriterConfig {
         use_xref_streams: true,
         pdf_version: "1.5".to_string(),
+        compress_streams: true,
     };
     doc.save_with_config("output/xref_stream_example.pdf", config)?;
     println!("Created PDF with XRef streams: output/xref_stream_example.pdf");

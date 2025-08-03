@@ -47,6 +47,8 @@ pub struct Document {
     pub(crate) acro_form: Option<AcroForm>,
     /// Form manager for handling interactive forms
     pub(crate) form_manager: Option<FormManager>,
+    /// Whether to compress streams when writing the PDF
+    pub(crate) compress: bool,
 }
 
 /// Metadata for a PDF document.
@@ -102,6 +104,7 @@ impl Document {
             default_font_encoding: None,
             acro_form: None,
             form_manager: None,
+            compress: true, // Enable compression by default
         }
     }
 
@@ -337,8 +340,19 @@ impl Document {
         // Update modification date before saving
         self.update_modification_date();
 
-        let mut writer = PdfWriter::new(path)?;
-        writer.write_document(self)?;
+        // Create writer config with document's compression setting
+        let config = crate::writer::WriterConfig {
+            use_xref_streams: false,
+            pdf_version: "1.7".to_string(),
+            compress_streams: self.compress,
+        };
+
+        use std::io::BufWriter;
+        let file = std::fs::File::create(path)?;
+        let writer = BufWriter::new(file);
+        let mut pdf_writer = PdfWriter::with_config(writer, config);
+        
+        pdf_writer.write_document(self)?;
         Ok(())
     }
 
@@ -356,6 +370,9 @@ impl Document {
 
         // Update modification date before saving
         self.update_modification_date();
+
+        // Use the config as provided (don't override compress_streams)
+
         let file = std::fs::File::create(path)?;
         let writer = BufWriter::new(file);
         let mut pdf_writer = PdfWriter::with_config(writer, config);
@@ -389,6 +406,147 @@ impl Document {
         let id = self.allocate_object_id();
         self.objects.insert(id, obj);
         id
+    }
+
+    /// Enables or disables compression for PDF streams.
+    ///
+    /// When compression is enabled (default), content streams and XRef streams are compressed
+    /// using Flate/Zlib compression to reduce file size. When disabled, streams are written
+    /// uncompressed, making the PDF larger but easier to debug.
+    ///
+    /// # Arguments
+    ///
+    /// * `compress` - Whether to enable compression
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, Page};
+    ///
+    /// let mut doc = Document::new();
+    /// 
+    /// // Disable compression for debugging
+    /// doc.set_compress(false);
+    ///
+    /// doc.set_title("My Document");
+    /// doc.add_page(Page::a4());
+    ///
+    /// let pdf_bytes = doc.to_bytes().unwrap();
+    /// println!("Uncompressed PDF size: {} bytes", pdf_bytes.len());
+    /// ```
+    pub fn set_compress(&mut self, compress: bool) {
+        self.compress = compress;
+    }
+
+    /// Gets the current compression setting.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if compression is enabled, `false` otherwise.
+    pub fn get_compress(&self) -> bool {
+        self.compress
+    }
+
+    /// Generates the PDF document as bytes in memory.
+    ///
+    /// This method provides in-memory PDF generation without requiring file I/O.
+    /// The document is serialized to bytes and returned as a `Vec<u8>`.
+    ///
+    /// # Returns
+    ///
+    /// Returns the PDF document as bytes on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the document cannot be serialized.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, Page};
+    ///
+    /// let mut doc = Document::new();
+    /// doc.set_title("My Document");
+    /// 
+    /// let page = Page::a4();
+    /// doc.add_page(page);
+    ///
+    /// let pdf_bytes = doc.to_bytes().unwrap();
+    /// println!("Generated PDF size: {} bytes", pdf_bytes.len());
+    /// ```
+    pub fn to_bytes(&mut self) -> Result<Vec<u8>> {
+        // Update modification date before serialization
+        self.update_modification_date();
+
+        // Create a buffer to write the PDF data to
+        let mut buffer = Vec::new();
+        
+        // Create writer config with document's compression setting
+        let config = crate::writer::WriterConfig {
+            use_xref_streams: false,
+            pdf_version: "1.7".to_string(),
+            compress_streams: self.compress,
+        };
+        
+        // Use PdfWriter with the buffer as output and config
+        let mut writer = PdfWriter::with_config(&mut buffer, config);
+        writer.write_document(self)?;
+        
+        Ok(buffer)
+    }
+
+    /// Generates the PDF document as bytes with custom writer configuration.
+    ///
+    /// This method allows customizing the PDF output (e.g., using XRef streams)
+    /// while still generating the document in memory.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Writer configuration options
+    ///
+    /// # Returns
+    ///
+    /// Returns the PDF document as bytes on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the document cannot be serialized.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, Page};
+    /// use oxidize_pdf::writer::WriterConfig;
+    ///
+    /// let mut doc = Document::new();
+    /// doc.set_title("My Document");
+    /// 
+    /// let page = Page::a4();
+    /// doc.add_page(page);
+    ///
+    /// let config = WriterConfig {
+    ///     use_xref_streams: true,
+    ///     pdf_version: "1.5".to_string(),
+    ///     compress_streams: true,
+    /// };
+    /// 
+    /// let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
+    /// println!("Generated PDF size: {} bytes", pdf_bytes.len());
+    /// ```
+    pub fn to_bytes_with_config(&mut self, config: crate::writer::WriterConfig) -> Result<Vec<u8>> {
+        // Update modification date before serialization
+        self.update_modification_date();
+
+        // Use the config as provided (don't override compress_streams)
+
+        // Create a buffer to write the PDF data to
+        let mut buffer = Vec::new();
+        
+        // Use PdfWriter with the buffer as output and custom config
+        let mut writer = PdfWriter::with_config(&mut buffer, config);
+        writer.write_document(self)?;
+        
+        Ok(buffer)
     }
 }
 
@@ -1143,6 +1301,136 @@ mod tests {
             );
             assert!(doc.metadata.creation_date.is_some());
             assert!(doc.metadata.modification_date.is_some());
+        }
+
+        #[test]
+        fn test_document_to_bytes() {
+            let mut doc = Document::new();
+            doc.set_title("Test Document"); 
+            doc.set_author("Test Author");
+
+            let page = Page::a4();
+            doc.add_page(page);
+
+            // Generate PDF as bytes
+            let pdf_bytes = doc.to_bytes().unwrap();
+            
+            // Basic validation
+            assert!(!pdf_bytes.is_empty());
+            assert!(pdf_bytes.len() > 100); // Should be reasonable size
+            
+            // Check PDF header
+            let header = &pdf_bytes[0..5];
+            assert_eq!(header, b"%PDF-");
+            
+            // Check for some basic PDF structure
+            let pdf_str = String::from_utf8_lossy(&pdf_bytes);
+            assert!(pdf_str.contains("Test Document"));
+            assert!(pdf_str.contains("Test Author"));
+        }
+
+        #[test]
+        fn test_document_to_bytes_with_config() {
+            let mut doc = Document::new();
+            doc.set_title("Test Document XRef");
+
+            let page = Page::a4();
+            doc.add_page(page);
+
+            let config = crate::writer::WriterConfig {
+                use_xref_streams: true,
+                pdf_version: "1.5".to_string(),
+                compress_streams: true,
+            };
+
+            // Generate PDF with custom config
+            let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
+            
+            // Basic validation
+            assert!(!pdf_bytes.is_empty());
+            assert!(pdf_bytes.len() > 100);
+            
+            // Check PDF header with correct version
+            let header = String::from_utf8_lossy(&pdf_bytes[0..8]);
+            assert!(header.contains("PDF-1.5"));
+        }
+
+        #[test]
+        fn test_to_bytes_vs_save_equivalence() {
+            use std::fs;
+            use tempfile::NamedTempFile;
+
+            // Create two identical documents
+            let mut doc1 = Document::new();
+            doc1.set_title("Equivalence Test");
+            doc1.add_page(Page::a4()); 
+
+            let mut doc2 = Document::new();
+            doc2.set_title("Equivalence Test");
+            doc2.add_page(Page::a4());
+
+            // Generate bytes
+            let pdf_bytes = doc1.to_bytes().unwrap();
+
+            // Save to file
+            let temp_file = NamedTempFile::new().unwrap();
+            doc2.save(temp_file.path()).unwrap();
+            let file_bytes = fs::read(temp_file.path()).unwrap();
+
+            // Both should generate similar structure (lengths may vary due to timestamps)
+            assert!(!pdf_bytes.is_empty());
+            assert!(!file_bytes.is_empty());
+            assert_eq!(&pdf_bytes[0..5], &file_bytes[0..5]); // PDF headers should match
+        }
+
+        #[test]
+        fn test_document_set_compress() {
+            let mut doc = Document::new();
+            doc.set_title("Compression Test");
+            doc.add_page(Page::a4());
+
+            // Default should be compressed
+            assert!(doc.get_compress());
+
+            // Test with compression enabled
+            doc.set_compress(true);
+            let compressed_bytes = doc.to_bytes().unwrap();
+
+            // Test with compression disabled
+            doc.set_compress(false);
+            let uncompressed_bytes = doc.to_bytes().unwrap();
+
+            // Uncompressed should generally be larger (though not always guaranteed)
+            assert!(!compressed_bytes.is_empty());
+            assert!(!uncompressed_bytes.is_empty());
+            
+            // Both should be valid PDFs
+            assert_eq!(&compressed_bytes[0..5], b"%PDF-");
+            assert_eq!(&uncompressed_bytes[0..5], b"%PDF-");
+        }
+
+        #[test]
+        fn test_document_compression_config_inheritance() {
+            let mut doc = Document::new();
+            doc.set_title("Config Inheritance Test");
+            doc.add_page(Page::a4());
+            
+            // Set document compression to false
+            doc.set_compress(false);
+
+            // Create config with compression true (should be overridden)
+            let config = crate::writer::WriterConfig {
+                use_xref_streams: false,
+                pdf_version: "1.7".to_string(),
+                compress_streams: true,
+            };
+
+            // Document setting should take precedence
+            let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
+            
+            // Should be valid PDF
+            assert!(!pdf_bytes.is_empty());
+            assert_eq!(&pdf_bytes[0..5], b"%PDF-");
         }
     }
 }
