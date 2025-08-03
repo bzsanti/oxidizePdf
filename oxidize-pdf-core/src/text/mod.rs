@@ -11,6 +11,7 @@ mod list;
 mod metrics;
 pub mod ocr;
 mod table;
+mod table_advanced;
 
 #[cfg(test)]
 mod cmap_tests;
@@ -25,7 +26,8 @@ pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
 pub use header_footer::{HeaderFooter, HeaderFooterOptions, HeaderFooterPosition};
 pub use layout::{ColumnContent, ColumnLayout, ColumnOptions, TextFormat};
 pub use list::{
-    BulletStyle, ListElement, ListOptions, ListStyle, OrderedList, OrderedListStyle, UnorderedList,
+    BulletStyle, ListElement, ListItem, ListOptions, ListStyle as ListStyleEnum, OrderedList,
+    OrderedListStyle, UnorderedList,
 };
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
@@ -33,6 +35,11 @@ pub use ocr::{
     OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
 };
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
+pub use table_advanced::{
+    AdvancedTable, AdvancedTableCell, AdvancedTableOptions, AlternatingRowColors, BorderLine,
+    BorderStyle, CellContent, CellPadding, ColumnDefinition, ColumnWidth, LineStyle, TableRow,
+    VerticalAlign,
+};
 
 use crate::error::Result;
 use std::fmt::Write;
