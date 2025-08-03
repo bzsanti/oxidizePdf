@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **early beta** stage implementing ~25-30% of ISO 32000-1:2008 specification. Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **early beta** stage with **17.8% ISO 32000-1:2008 compliance** (real API compliance). Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
 
 ## Features
 
@@ -32,7 +32,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🔧 **Lenient parsing** - Handles some malformed PDFs
 - 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
 
-**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently implements ~25-30% of ISO 32000-1:2008. See [Current Limitations](#current-limitations) and [ISO Compliance](ISO_COMPLIANCE.md) for details.
+**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently has **17.8% real ISO 32000-1:2008 compliance** based on API testing. See [Current Limitations](#current-limitations) and [Real ISO Compliance](docs/technical/ISO_COMPLIANCE_REAL.md) for honest assessment.
 
 ## Quick Start
 
@@ -320,7 +320,7 @@ For commercial use cases that require proprietary licensing, please contact us a
 
 ## Current Limitations & ISO 32000 Compliance
 
-oxidize-pdf currently implements approximately **25-30% of ISO 32000-1:2008**. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed compliance information.
+oxidize-pdf currently has **17.8% real ISO 32000-1:2008 compliance** based on comprehensive API testing. While ~25-30% may be implemented internally, only 17.8% is accessible through the public API. See [ISO_COMPLIANCE_REAL.md](docs/technical/ISO_COMPLIANCE_REAL.md) for honest assessment.
 
 ### Supported Features
 - ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode

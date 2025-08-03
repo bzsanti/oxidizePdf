@@ -1,10 +1,13 @@
 //! Automated ISO 32000-1:2008 Compliance Tests
 //!
 //! These tests verify our actual compliance level with the PDF specification.
-//! Current target: ~25-30% compliance
+//! Current target: 60% compliance for Community Edition
+
+// mod iso_32000_compliance; // Module not implemented yet
 
 use oxidize_pdf_test_suite::generators::test_pdf_builder::{PdfVersion, TestPdfBuilder};
 use oxidize_pdf_test_suite::spec_compliance::{Pdf17ComplianceTester, SpecificationTest};
+// use iso_32000_compliance::run_all_compliance_tests; // Module not implemented yet
 
 #[test]
 fn test_basic_document_structure_compliance() {
@@ -198,6 +201,17 @@ fn test_font_limitations() {
 }
 
 #[test]
+#[ignore] // Module not implemented yet
+fn test_comprehensive_iso_compliance() {
+    // Run all ISO compliance tests and generate report
+    // let results = run_all_compliance_tests(); // Function not available yet
+
+    // This test is placeholder until the compliance module is implemented
+    // TODO: Implement comprehensive compliance testing
+    println!("Comprehensive ISO compliance test not yet implemented");
+}
+
+#[test]
 fn test_color_space_limitations() {
     // Test supported color spaces
     let mut builder = TestPdfBuilder::new().with_version(PdfVersion::V1_4);
@@ -254,7 +268,7 @@ fn test_actual_iso_compliance_percentage() {
 
     // Assert we're in the expected range
     assert!(
-        overall_percentage >= 20.0 && overall_percentage <= 35.0,
+        (20.0..=35.0).contains(&overall_percentage),
         "Compliance percentage {:.1}% is outside expected range",
         overall_percentage
     );

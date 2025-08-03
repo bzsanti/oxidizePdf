@@ -1,0 +1,50 @@
+# Codecov configuration for oxidize-pdf
+# This file configures how Codecov processes coverage reports
+
+coverage:
+  # Ignore test-related code from coverage calculations
+  ignore:
+    - "test-suite/**"        # Test suite framework and utilities
+    - "**/tests/**"          # Test directories
+    - "**/benches/**"        # Benchmark code
+    - "**/examples/**"       # Example code
+    - "**/*_test.rs"         # Test files
+    - "**/bin/**"            # Binary targets
+    - "fuzz/**"              # Fuzzing targets
+    
+  # Coverage status checks
+  status:
+    project:
+      default:
+        # Set reasonable targets
+        target: auto        # Automatically set based on previous coverage
+        threshold: 1%       # Allow 1% drop in coverage
+        
+    patch:
+      default:
+        # Ensure new code is well tested
+        target: 80%         # New code should have 80% coverage
+        threshold: 5%       # Allow some flexibility
+
+# Comment settings for PRs
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false    # Post comment even if no coverage change
+  
+# Additional settings
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+# Component configuration (if we want to track different parts separately)
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
