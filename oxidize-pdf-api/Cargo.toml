@@ -36,7 +36,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 # File operations
-zip = "2.2"
+zip = "4.3.0"
 tempfile = "3.8"
 
 [lib]
