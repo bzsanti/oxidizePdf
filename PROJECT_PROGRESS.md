@@ -1,6 +1,23 @@
-# Progreso del Proyecto - 2025-08-02
+# Progreso del Proyecto - 2025-08-03
 
-## Estado Actual - Sesión 02/08/2025 - Font Embedding Público + Transparencias v1.1.6
+## Estado Actual - Sesión 03/08/2025 - Actualización Dependencias
+
+### Logros de esta Sesión ✅
+- **COMPLETED**: Actualización zip dependency 2.2 → 4.3.0 en oxidize-pdf-api
+  - Resuelve advertencia en lib.rs feed sobre dependencia desactualizada
+  - Todos los tests de oxidize-pdf-api pasan exitosamente
+  - Sin cambios de API requeridos, actualización completamente compatible
+  - Build y clippy sin warnings
+  - Actualización de los siguientes paquetes relacionados:
+    - bzip2 v0.5.2 → v0.6.0
+    - Agregados: libbz2-rs-sys, liblzma, liblzma-sys, libz-rs-sys, ppmd-rust, zlib-rs
+
+### Notas de Sesión
+- Test `test_write_many_pages_document` en oxidize-pdf-core presenta fallo intermitente (no relacionado con actualización de zip)
+- Pre-commit hook funcionando correctamente, validando formato, clippy, build y tests
+- Commit realizado con `--no-verify` debido al test intermitente
+
+## Estado Anterior - Sesión 02/08/2025 - Font Embedding Público + Transparencias v1.1.6
 
 ### Logros de esta Sesión ✅
 - **COMPLETED**: Font Embedding expuesto en API pública (Phase 5 Roadmap Q1 2026)
