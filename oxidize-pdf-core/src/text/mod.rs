@@ -109,8 +109,8 @@ impl TextContext {
     }
 
     /// Get the current font
-    pub(crate) fn current_font(&self) -> Font {
-        self.current_font
+    pub(crate) fn current_font(&self) -> &Font {
+        &self.current_font
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
@@ -461,7 +461,7 @@ mod tests {
             .set_character_spacing(1.0)
             .set_word_spacing(2.0);
 
-        assert_eq!(context.current_font(), Font::Courier);
+        assert_eq!(context.current_font(), &Font::Courier);
         assert_eq!(context.font_size(), 10.0);
         let (x, y) = context.position();
         assert_eq!(x, 50.0);

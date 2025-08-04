@@ -33,6 +33,9 @@ tracing = { workspace = true }
 # Hashing
 md5 = "0.8"
 
+# Flags
+bitflags = "2.4"
+
 # Parallel processing
 num_cpus = "1.16"
 

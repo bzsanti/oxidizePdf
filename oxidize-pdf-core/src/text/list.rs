@@ -277,7 +277,7 @@ impl OrderedList {
             // Draw marker
             let marker = self.generate_marker(index);
             graphics.save_state();
-            graphics.set_font(self.options.marker_font, self.options.font_size);
+            graphics.set_font(self.options.marker_font.clone(), self.options.font_size);
             let marker_color = self.options.marker_color.unwrap_or(self.options.text_color);
             graphics.set_fill_color(marker_color);
             graphics.begin_text();
@@ -301,7 +301,7 @@ impl OrderedList {
             let mut line_y = y;
             for (line_index, line) in text_lines.iter().enumerate() {
                 graphics.save_state();
-                graphics.set_font(self.options.font, self.options.font_size);
+                graphics.set_font(self.options.font.clone(), self.options.font_size);
                 graphics.set_fill_color(self.options.text_color);
                 graphics.begin_text();
 
@@ -509,7 +509,7 @@ impl UnorderedList {
         for (index, item) in self.items.iter().enumerate() {
             // Draw bullet
             graphics.save_state();
-            graphics.set_font(self.options.marker_font, self.options.font_size);
+            graphics.set_font(self.options.marker_font.clone(), self.options.font_size);
             let marker_color = self.options.marker_color.unwrap_or(self.options.text_color);
             graphics.set_fill_color(marker_color);
             graphics.begin_text();
@@ -532,7 +532,7 @@ impl UnorderedList {
             let mut line_y = y;
             for (line_index, line) in text_lines.iter().enumerate() {
                 graphics.save_state();
-                graphics.set_font(self.options.font, self.options.font_size);
+                graphics.set_font(self.options.font.clone(), self.options.font_size);
                 graphics.set_fill_color(self.options.text_color);
                 graphics.begin_text();
 

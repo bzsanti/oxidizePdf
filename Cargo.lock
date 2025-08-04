@@ -1285,6 +1285,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 name = "oxidize-pdf"
 version = "1.1.6"
 dependencies = [
+ "bitflags 2.9.1",
  "chrono",
  "criterion",
  "flate2",

@@ -71,7 +71,7 @@ fn main() -> Result<()> {
     for (i, (font, name)) in fonts.iter().enumerate() {
         let y = y_start - (i as f64 * line_height);
         page.text()
-            .set_font(*font, 12.0)
+            .set_font(font.clone(), 12.0)
             .at(70.0, y)
             .write(&format!(
                 "{}: The quick brown fox jumps over the lazy dog",

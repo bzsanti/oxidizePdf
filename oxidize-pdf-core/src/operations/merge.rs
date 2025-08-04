@@ -371,7 +371,7 @@ impl PdfMerger {
                     if text_object {
                         if let Ok(text) = String::from_utf8(text_bytes.clone()) {
                             page.text()
-                                .set_font(current_font, current_font_size as f64)
+                                .set_font(current_font.clone(), current_font_size as f64)
                                 .at(current_x as f64, current_y as f64)
                                 .write(&text)
                                 .map_err(OperationError::PdfError)?;

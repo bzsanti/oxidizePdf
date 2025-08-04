@@ -179,6 +179,7 @@ pub mod compression;
 pub mod document;
 pub mod encryption;
 pub mod error;
+pub mod fonts;
 pub mod forms;
 pub mod geometry;
 pub mod graphics;

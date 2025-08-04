@@ -6,8 +6,10 @@ use crate::page_labels::PageLabelTree;
 use crate::structure::{NamedDestinations, OutlineTree, PageTree};
 use crate::text::{FontEncoding, FontWithEncoding};
 use crate::writer::PdfWriter;
+use crate::fonts::{Font as CustomFont, FontCache};
 use chrono::{DateTime, Local, Utc};
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 mod encryption;
 pub use encryption::{DocumentEncryption, EncryptionStrength};
@@ -49,6 +51,10 @@ pub struct Document {
     pub(crate) form_manager: Option<FormManager>,
     /// Whether to compress streams when writing the PDF
     pub(crate) compress: bool,
+    /// Cache for custom fonts
+    pub(crate) custom_fonts: FontCache,
+    /// Map from font name to embedded font object ID
+    pub(crate) embedded_fonts: HashMap<String, ObjectId>,
 }
 
 /// Metadata for a PDF document.
@@ -105,6 +111,8 @@ impl Document {
             acro_form: None,
             form_manager: None,
             compress: true, // Enable compression by default
+            custom_fonts: FontCache::new(),
+            embedded_fonts: HashMap::new(),
         }
     }
 
@@ -296,6 +304,56 @@ impl Document {
         }
 
         fonts_used.into_iter().collect()
+    }
+    
+    /// Add a custom font from a file path
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::Document;
+    ///
+    /// let mut doc = Document::new();
+    /// doc.add_font("MyFont", "path/to/font.ttf").unwrap();
+    /// ```
+    pub fn add_font(&mut self, name: impl Into<String>, path: impl AsRef<std::path::Path>) -> Result<()> {
+        let name = name.into();
+        let font = CustomFont::from_file(&name, path)?;
+        self.custom_fonts.add_font(name, font)?;
+        Ok(())
+    }
+    
+    /// Add a custom font from byte data
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::Document;
+    ///
+    /// let mut doc = Document::new();
+    /// let font_data = vec![0; 1000]; // Your font data
+    /// doc.add_font_from_bytes("MyFont", font_data).unwrap();
+    /// ```
+    pub fn add_font_from_bytes(&mut self, name: impl Into<String>, data: Vec<u8>) -> Result<()> {
+        let name = name.into();
+        let font = CustomFont::from_bytes(&name, data)?;
+        self.custom_fonts.add_font(name, font)?;
+        Ok(())
+    }
+    
+    /// Get a custom font by name
+    pub(crate) fn get_custom_font(&self, name: &str) -> Option<Arc<CustomFont>> {
+        self.custom_fonts.get_font(name)
+    }
+    
+    /// Check if a custom font is loaded
+    pub fn has_custom_font(&self, name: &str) -> bool {
+        self.custom_fonts.has_font(name)
+    }
+    
+    /// Get all loaded custom font names
+    pub fn custom_font_names(&self) -> Vec<String> {
+        self.custom_fonts.font_names()
     }
 
     /// Gets the number of pages in the document.

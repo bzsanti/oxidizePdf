@@ -319,7 +319,7 @@ fn test_advanced_graphics_typography() -> Result<()> {
 
     for (i, (font, text)) in fonts.iter().enumerate() {
         page.text()
-            .set_font(*font, 11.0)
+            .set_font(font.clone(), 11.0)
             .at(70.0, 550.0 - (i as f64 * 20.0))
             .write(text)?;
     }

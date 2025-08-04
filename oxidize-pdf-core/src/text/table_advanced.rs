@@ -739,7 +739,7 @@ impl AdvancedTable {
         graphics.save_state();
 
         // Set font and color
-        let font = cell.font.unwrap_or(self.options.font);
+        let font = cell.font.clone().unwrap_or(self.options.font.clone());
         let font_size = cell.font_size.unwrap_or(self.options.font_size);
         let text_color = cell.text_color.unwrap_or(self.options.text_color);
 

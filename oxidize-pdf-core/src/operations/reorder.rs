@@ -209,7 +209,7 @@ impl PageReorderer {
                 ContentOperation::ShowText(text) => {
                     if text_object && !text.is_empty() {
                         page.text()
-                            .set_font(current_font, current_font_size as f64)
+                            .set_font(current_font.clone(), current_font_size as f64)
                             .at(current_x as f64, current_y as f64)
                             .write(&String::from_utf8_lossy(text))
                             .map_err(OperationError::PdfError)?;

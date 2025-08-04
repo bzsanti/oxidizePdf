@@ -126,15 +126,17 @@ fn test_font_encoding_pdf_names() {
 fn test_font_with_recommended_encoding() {
     // Test fonts have recommended encoding
     for font in [Font::Helvetica, Font::TimesRoman, Font::Courier] {
+        let font_clone = font.clone();
         let font_with_enc = font.with_recommended_encoding();
-        assert_eq!(font_with_enc.font, font);
+        assert_eq!(font_with_enc.font, font_clone);
         assert_eq!(font_with_enc.encoding, Some(FontEncoding::WinAnsiEncoding));
     }
 
     // Symbol fonts should not have recommended encoding
     for font in [Font::Symbol, Font::ZapfDingbats] {
+        let font_clone = font.clone();
         let font_with_enc = font.with_recommended_encoding();
-        assert_eq!(font_with_enc.font, font);
+        assert_eq!(font_with_enc.font, font_clone);
         assert_eq!(font_with_enc.encoding, None);
     }
 }
@@ -144,8 +146,9 @@ fn test_font_with_custom_encoding() {
     let font = Font::Helvetica;
     let custom_encoding = FontEncoding::Custom("MyCustomEncoding");
 
+    let font_clone = font.clone();
     let font_with_enc = font.with_encoding(custom_encoding);
-    assert_eq!(font_with_enc.font, font);
+    assert_eq!(font_with_enc.font, font_clone);
     assert_eq!(font_with_enc.encoding, Some(custom_encoding));
 }
 
@@ -153,8 +156,9 @@ fn test_font_with_custom_encoding() {
 fn test_font_without_encoding() {
     let font = Font::TimesRoman;
 
+    let font_clone = font.clone();
     let font_with_enc = font.without_encoding();
-    assert_eq!(font_with_enc.font, font);
+    assert_eq!(font_with_enc.font, font_clone);
     assert_eq!(font_with_enc.encoding, None);
 }
 
@@ -173,7 +177,7 @@ fn test_document_with_multiple_encoding_types() {
     {
         let mut page = Page::a4();
         page.text()
-            .set_font(*font, 12.0)
+            .set_font(font.clone(), 12.0)
             .at(100.0, 700.0)
             .write(&format!("Page {} with {}", i + 1, font.pdf_name()))
             .unwrap();
