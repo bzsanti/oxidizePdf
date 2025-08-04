@@ -1,8 +1,8 @@
 //! Font embedding functionality for PDF generation
 
+use super::Font;
 use crate::objects::{Dictionary, Object, ObjectId};
 use crate::Result;
-use super::Font;
 
 /// Font embedding options
 #[derive(Debug, Clone)]
@@ -66,7 +66,7 @@ impl<'a> FontEmbedder<'a> {
             used_chars: Vec::new(),
         }
     }
-    
+
     /// Add characters that will be used with this font
     pub fn add_used_chars(&mut self, text: &str) {
         for ch in text.chars() {
@@ -75,14 +75,18 @@ impl<'a> FontEmbedder<'a> {
             }
         }
     }
-    
+
     /// Create the font dictionary for embedding
-    pub fn create_font_dict(&self, descriptor_id: ObjectId, to_unicode_id: Option<ObjectId>) -> Dictionary {
+    pub fn create_font_dict(
+        &self,
+        descriptor_id: ObjectId,
+        to_unicode_id: Option<ObjectId>,
+    ) -> Dictionary {
         let mut dict = Dictionary::new();
-        
+
         // Type and Subtype
         dict.set("Type", Object::Name("Font".into()));
-        
+
         // Determine font type based on encoding
         if self.options.encoding == FontEncoding::IdentityH {
             // Type 0 (composite) font for Unicode support
@@ -91,85 +95,102 @@ impl<'a> FontEmbedder<'a> {
             // Type 1 or TrueType font
             self.create_simple_font_dict(&mut dict, descriptor_id, to_unicode_id);
         }
-        
+
         dict
     }
-    
+
     /// Create a Type 0 (composite) font dictionary
-    fn create_type0_font_dict(&self, dict: &mut Dictionary, descriptor_id: ObjectId, to_unicode_id: Option<ObjectId>) {
+    fn create_type0_font_dict(
+        &self,
+        dict: &mut Dictionary,
+        descriptor_id: ObjectId,
+        to_unicode_id: Option<ObjectId>,
+    ) {
         dict.set("Subtype", Object::Name("Type0".into()));
         dict.set("BaseFont", Object::Name(self.font.postscript_name().into()));
-        dict.set("Encoding", Object::Name(self.options.encoding.name().into()));
-        
+        dict.set(
+            "Encoding",
+            Object::Name(self.options.encoding.name().into()),
+        );
+
         // DescendantFonts array with CIDFont
         let cid_font_dict = self.create_cid_font_dict(descriptor_id);
-        dict.set("DescendantFonts", Object::Array(vec![
-            Object::Dictionary(cid_font_dict)
-        ]));
-        
+        dict.set(
+            "DescendantFonts",
+            Object::Array(vec![Object::Dictionary(cid_font_dict)]),
+        );
+
         if let Some(to_unicode) = to_unicode_id {
             dict.set("ToUnicode", Object::Reference(to_unicode));
         }
     }
-    
+
     /// Create a CIDFont dictionary
     fn create_cid_font_dict(&self, descriptor_id: ObjectId) -> Dictionary {
         let mut dict = Dictionary::new();
-        
+
         dict.set("Type", Object::Name("Font".into()));
         dict.set("Subtype", Object::Name("CIDFontType2".into()));
         dict.set("BaseFont", Object::Name(self.font.postscript_name().into()));
-        
+
         // CIDSystemInfo
         let mut cid_system_info = Dictionary::new();
         cid_system_info.set("Registry", Object::String("Adobe".into()));
         cid_system_info.set("Ordering", Object::String("Identity".into()));
         cid_system_info.set("Supplement", Object::Integer(0));
         dict.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
-        
+
         dict.set("FontDescriptor", Object::Reference(descriptor_id));
-        
+
         // Default width
         dict.set("DW", Object::Integer(1000));
-        
+
         // Width array (simplified - all glyphs use default width)
         // TODO: Implement actual glyph widths
         dict.set("W", Object::Array(vec![]));
-        
+
         dict
     }
-    
+
     /// Create a simple font dictionary (Type1/TrueType)
-    fn create_simple_font_dict(&self, dict: &mut Dictionary, descriptor_id: ObjectId, to_unicode_id: Option<ObjectId>) {
+    fn create_simple_font_dict(
+        &self,
+        dict: &mut Dictionary,
+        descriptor_id: ObjectId,
+        to_unicode_id: Option<ObjectId>,
+    ) {
         dict.set("Subtype", Object::Name("TrueType".into()));
         dict.set("BaseFont", Object::Name(self.font.postscript_name().into()));
-        dict.set("Encoding", Object::Name(self.options.encoding.name().into()));
-        
+        dict.set(
+            "Encoding",
+            Object::Name(self.options.encoding.name().into()),
+        );
+
         dict.set("FontDescriptor", Object::Reference(descriptor_id));
-        
+
         // FirstChar and LastChar
         let (first_char, last_char) = self.get_char_range();
         dict.set("FirstChar", Object::Integer(first_char as i64));
         dict.set("LastChar", Object::Integer(last_char as i64));
-        
+
         // Widths array
         let widths = self.create_widths_array(first_char, last_char);
         dict.set("Widths", Object::Array(widths));
-        
+
         if let Some(to_unicode) = to_unicode_id {
             dict.set("ToUnicode", Object::Reference(to_unicode));
         }
     }
-    
+
     /// Get the range of characters used
     fn get_char_range(&self) -> (u8, u8) {
         if self.used_chars.is_empty() {
             return (32, 126); // Default ASCII range
         }
-        
+
         let mut min = 255;
         let mut max = 0;
-        
+
         for &ch in &self.used_chars {
             if ch as u32 <= 255 {
                 let byte = ch as u8;
@@ -181,14 +202,14 @@ impl<'a> FontEmbedder<'a> {
                 }
             }
         }
-        
+
         (min, max)
     }
-    
+
     /// Create widths array for the font
     fn create_widths_array(&self, first_char: u8, last_char: u8) -> Vec<Object> {
         let mut widths = Vec::new();
-        
+
         for ch in first_char..=last_char {
             if let Some(width) = self.font.glyph_mapping.get_char_width(char::from(ch)) {
                 // Convert from font units to PDF units (1/1000)
@@ -199,14 +220,14 @@ impl<'a> FontEmbedder<'a> {
                 widths.push(Object::Integer(600));
             }
         }
-        
+
         widths
     }
-    
+
     /// Create ToUnicode CMap for text extraction
     pub fn create_to_unicode_cmap(&self) -> Vec<u8> {
         let mut cmap = String::new();
-        
+
         // CMap header
         cmap.push_str("/CIDInit /ProcSet findresource begin\n");
         cmap.push_str("12 dict begin\n");
@@ -221,7 +242,7 @@ impl<'a> FontEmbedder<'a> {
         cmap.push_str("1 begincodespacerange\n");
         cmap.push_str("<0000> <FFFF>\n");
         cmap.push_str("endcodespacerange\n");
-        
+
         // Character mappings
         let mut mappings = Vec::new();
         for &ch in &self.used_chars {
@@ -229,7 +250,7 @@ impl<'a> FontEmbedder<'a> {
                 mappings.push((glyph, ch));
             }
         }
-        
+
         if !mappings.is_empty() {
             cmap.push_str(&format!("{} beginbfchar\n", mappings.len()));
             for (glyph, ch) in mappings {
@@ -237,16 +258,16 @@ impl<'a> FontEmbedder<'a> {
             }
             cmap.push_str("endbfchar\n");
         }
-        
+
         // CMap footer
         cmap.push_str("endcmap\n");
         cmap.push_str("CMapName currentdict /CMap defineresource pop\n");
         cmap.push_str("end\n");
         cmap.push_str("end\n");
-        
+
         cmap.into_bytes()
     }
-    
+
     /// Get the font data for embedding
     pub fn get_font_data(&self) -> Result<Vec<u8>> {
         if self.options.subset {
@@ -262,14 +283,14 @@ impl<'a> FontEmbedder<'a> {
 mod tests {
     use super::*;
     use crate::fonts::{Font, FontDescriptor, FontFormat, FontMetrics, GlyphMapping};
-    
+
     fn create_test_font() -> Font {
         let mut glyph_mapping = GlyphMapping::default();
         for ch in 32..127 {
             glyph_mapping.add_mapping(char::from(ch), ch as u16);
             glyph_mapping.set_glyph_width(ch as u16, 600);
         }
-        
+
         Font {
             name: "TestFont".to_string(),
             data: vec![0; 1000],
@@ -286,41 +307,41 @@ mod tests {
             glyph_mapping,
         }
     }
-    
+
     #[test]
     fn test_font_embedder_creation() {
         let font = create_test_font();
         let options = EmbeddingOptions::default();
         let embedder = FontEmbedder::new(&font, options);
-        
+
         assert_eq!(embedder.used_chars.len(), 0);
     }
-    
+
     #[test]
     fn test_add_used_chars() {
         let font = create_test_font();
         let options = EmbeddingOptions::default();
         let mut embedder = FontEmbedder::new(&font, options);
-        
+
         embedder.add_used_chars("Hello");
-        assert_eq!(embedder.used_chars.len(), 5);
-        
+        assert_eq!(embedder.used_chars.len(), 4); // H, e, l, o (l appears twice but is deduplicated)
+
         embedder.add_used_chars("World");
-        assert_eq!(embedder.used_chars.len(), 8); // H,e,l,o,W,r,d (no duplicates)
+        assert_eq!(embedder.used_chars.len(), 7); // H,e,l,o,W,r,d (o and l overlap between Hello and World)
     }
-    
+
     #[test]
     fn test_char_range() {
         let font = create_test_font();
         let options = EmbeddingOptions::default();
         let mut embedder = FontEmbedder::new(&font, options);
-        
+
         embedder.add_used_chars("AZ");
         let (first, last) = embedder.get_char_range();
         assert_eq!(first, b'A');
         assert_eq!(last, b'Z');
     }
-    
+
     #[test]
     fn test_font_encoding_names() {
         assert_eq!(FontEncoding::WinAnsiEncoding.name(), "WinAnsiEncoding");
