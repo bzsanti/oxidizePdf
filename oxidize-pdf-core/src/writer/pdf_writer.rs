@@ -782,7 +782,7 @@ impl<W: Write> PdfWriter<W> {
         // Create and write dictionary
         let mut dict = xref_writer.create_dictionary(None);
         dict.set("Length", Object::Integer(final_data.len() as i64));
-        
+
         // Add filter if compression is enabled
         if self.config.compress_streams {
             dict.set("Filter", Object::Name("FlateDecode".to_string()));

@@ -351,7 +351,7 @@ impl Document {
         let file = std::fs::File::create(path)?;
         let writer = BufWriter::new(file);
         let mut pdf_writer = PdfWriter::with_config(writer, config);
-        
+
         pdf_writer.write_document(self)?;
         Ok(())
     }
@@ -424,7 +424,7 @@ impl Document {
     /// use oxidize_pdf::{Document, Page};
     ///
     /// let mut doc = Document::new();
-    /// 
+    ///
     /// // Disable compression for debugging
     /// doc.set_compress(false);
     ///
@@ -467,7 +467,7 @@ impl Document {
     ///
     /// let mut doc = Document::new();
     /// doc.set_title("My Document");
-    /// 
+    ///
     /// let page = Page::a4();
     /// doc.add_page(page);
     ///
@@ -480,18 +480,18 @@ impl Document {
 
         // Create a buffer to write the PDF data to
         let mut buffer = Vec::new();
-        
+
         // Create writer config with document's compression setting
         let config = crate::writer::WriterConfig {
             use_xref_streams: false,
             pdf_version: "1.7".to_string(),
             compress_streams: self.compress,
         };
-        
+
         // Use PdfWriter with the buffer as output and config
         let mut writer = PdfWriter::with_config(&mut buffer, config);
         writer.write_document(self)?;
-        
+
         Ok(buffer)
     }
 
@@ -520,7 +520,7 @@ impl Document {
     ///
     /// let mut doc = Document::new();
     /// doc.set_title("My Document");
-    /// 
+    ///
     /// let page = Page::a4();
     /// doc.add_page(page);
     ///
@@ -529,7 +529,7 @@ impl Document {
     ///     pdf_version: "1.5".to_string(),
     ///     compress_streams: true,
     /// };
-    /// 
+    ///
     /// let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
     /// println!("Generated PDF size: {} bytes", pdf_bytes.len());
     /// ```
@@ -541,11 +541,11 @@ impl Document {
 
         // Create a buffer to write the PDF data to
         let mut buffer = Vec::new();
-        
+
         // Use PdfWriter with the buffer as output and custom config
         let mut writer = PdfWriter::with_config(&mut buffer, config);
         writer.write_document(self)?;
-        
+
         Ok(buffer)
     }
 }
@@ -1306,7 +1306,7 @@ mod tests {
         #[test]
         fn test_document_to_bytes() {
             let mut doc = Document::new();
-            doc.set_title("Test Document"); 
+            doc.set_title("Test Document");
             doc.set_author("Test Author");
 
             let page = Page::a4();
@@ -1314,15 +1314,15 @@ mod tests {
 
             // Generate PDF as bytes
             let pdf_bytes = doc.to_bytes().unwrap();
-            
+
             // Basic validation
             assert!(!pdf_bytes.is_empty());
             assert!(pdf_bytes.len() > 100); // Should be reasonable size
-            
+
             // Check PDF header
             let header = &pdf_bytes[0..5];
             assert_eq!(header, b"%PDF-");
-            
+
             // Check for some basic PDF structure
             let pdf_str = String::from_utf8_lossy(&pdf_bytes);
             assert!(pdf_str.contains("Test Document"));
@@ -1345,11 +1345,11 @@ mod tests {
 
             // Generate PDF with custom config
             let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
-            
+
             // Basic validation
             assert!(!pdf_bytes.is_empty());
             assert!(pdf_bytes.len() > 100);
-            
+
             // Check PDF header with correct version
             let header = String::from_utf8_lossy(&pdf_bytes[0..8]);
             assert!(header.contains("PDF-1.5"));
@@ -1363,7 +1363,7 @@ mod tests {
             // Create two identical documents
             let mut doc1 = Document::new();
             doc1.set_title("Equivalence Test");
-            doc1.add_page(Page::a4()); 
+            doc1.add_page(Page::a4());
 
             let mut doc2 = Document::new();
             doc2.set_title("Equivalence Test");
@@ -1403,7 +1403,7 @@ mod tests {
             // Uncompressed should generally be larger (though not always guaranteed)
             assert!(!compressed_bytes.is_empty());
             assert!(!uncompressed_bytes.is_empty());
-            
+
             // Both should be valid PDFs
             assert_eq!(&compressed_bytes[0..5], b"%PDF-");
             assert_eq!(&uncompressed_bytes[0..5], b"%PDF-");
@@ -1414,7 +1414,7 @@ mod tests {
             let mut doc = Document::new();
             doc.set_title("Config Inheritance Test");
             doc.add_page(Page::a4());
-            
+
             // Set document compression to false
             doc.set_compress(false);
 
@@ -1427,7 +1427,7 @@ mod tests {
 
             // Document setting should take precedence
             let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
-            
+
             // Should be valid PDF
             assert!(!pdf_bytes.is_empty());
             assert_eq!(&pdf_bytes[0..5], b"%PDF-");

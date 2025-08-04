@@ -1152,11 +1152,10 @@ mod tests {
     #[test]
     fn test_clipping_with_path() {
         let mut ctx = GraphicsContext::new();
-        
+
         // Create a rectangular clipping path
-        ctx.rect(10.0, 10.0, 100.0, 50.0)
-            .clip();
-        
+        ctx.rect(10.0, 10.0, 100.0, 50.0).clip();
+
         let ops = ctx.operations();
         assert!(ops.contains("10.00 10.00 100.00 50.00 re\n"));
         assert!(ops.contains("W\n"));
@@ -1165,7 +1164,7 @@ mod tests {
     #[test]
     fn test_clipping_even_odd_with_path() {
         let mut ctx = GraphicsContext::new();
-        
+
         // Create a complex path and clip with even-odd rule
         ctx.move_to(0.0, 0.0)
             .line_to(100.0, 0.0)
@@ -1173,7 +1172,7 @@ mod tests {
             .line_to(0.0, 100.0)
             .close_path()
             .clip_even_odd();
-        
+
         let ops = ctx.operations();
         assert!(ops.contains("0.00 0.00 m\n"));
         assert!(ops.contains("100.00 0.00 l\n"));
@@ -1186,7 +1185,7 @@ mod tests {
     #[test]
     fn test_clipping_chaining() {
         let mut ctx = GraphicsContext::new();
-        
+
         // Test method chaining with clipping
         ctx.save_state()
             .rect(20.0, 20.0, 60.0, 60.0)
@@ -1195,7 +1194,7 @@ mod tests {
             .rect(0.0, 0.0, 100.0, 100.0)
             .fill()
             .restore_state();
-        
+
         let ops = ctx.operations();
         assert!(ops.contains("q\n"));
         assert!(ops.contains("20.00 20.00 60.00 60.00 re\n"));
@@ -1209,7 +1208,7 @@ mod tests {
     #[test]
     fn test_multiple_clipping_regions() {
         let mut ctx = GraphicsContext::new();
-        
+
         // Test nested clipping regions
         ctx.save_state()
             .rect(0.0, 0.0, 200.0, 200.0)
@@ -1222,14 +1221,14 @@ mod tests {
             .fill()
             .restore_state()
             .restore_state();
-        
+
         let ops = ctx.operations();
         // Check for nested save/restore states
         let q_count = ops.matches("q\n").count();
         let q_restore_count = ops.matches("Q\n").count();
         assert_eq!(q_count, 2);
         assert_eq!(q_restore_count, 2);
-        
+
         // Check for both clipping operations
         assert!(ops.contains("W\n"));
         assert!(ops.contains("W*\n"));

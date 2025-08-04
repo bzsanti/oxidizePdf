@@ -582,23 +582,32 @@ mod tests {
     #[test]
     fn test_all_text_state_operators_generated() {
         let mut context = TextContext::new();
-        
+
         // Test all operators in sequence
-        context.set_character_spacing(1.0);  // Tc
-        context.set_word_spacing(2.0);       // Tw
+        context.set_character_spacing(1.0); // Tc
+        context.set_word_spacing(2.0); // Tw
         context.set_horizontal_scaling(1.2); // Tz
-        context.set_leading(15.0);           // TL
-        context.set_text_rise(1.0);          // Ts
+        context.set_leading(15.0); // TL
+        context.set_text_rise(1.0); // Ts
         context.set_rendering_mode(TextRenderingMode::Stroke); // Tr
 
         let ops = context.generate_text_state_operations();
-        
+
         // Verify all PDF text state operators are present
-        assert!(ops.contains("Tc"), "Character spacing operator (Tc) not found");
+        assert!(
+            ops.contains("Tc"),
+            "Character spacing operator (Tc) not found"
+        );
         assert!(ops.contains("Tw"), "Word spacing operator (Tw) not found");
-        assert!(ops.contains("Tz"), "Horizontal scaling operator (Tz) not found");
+        assert!(
+            ops.contains("Tz"),
+            "Horizontal scaling operator (Tz) not found"
+        );
         assert!(ops.contains("TL"), "Leading operator (TL) not found");
         assert!(ops.contains("Ts"), "Text rise operator (Ts) not found");
-        assert!(ops.contains("Tr"), "Text rendering mode operator (Tr) not found");
+        assert!(
+            ops.contains("Tr"),
+            "Text rendering mode operator (Tr) not found"
+        );
     }
 }
