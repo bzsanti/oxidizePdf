@@ -386,7 +386,7 @@ impl OrderedList {
             let test_line = if current_line.is_empty() {
                 word.to_string()
             } else {
-                format!("{} {}", current_line, word)
+                format!("{current_line} {word}")
             };
 
             if test_line.len() <= chars_per_line {
@@ -612,7 +612,7 @@ impl UnorderedList {
             let test_line = if current_line.is_empty() {
                 word.to_string()
             } else {
-                format!("{} {}", current_line, word)
+                format!("{current_line} {word}")
             };
 
             if test_line.len() <= chars_per_line {
@@ -726,7 +726,7 @@ fn get_chinese_number(num: u32) -> String {
     if num <= 20 {
         numbers[(num - 1) as usize].to_string()
     } else {
-        format!("{}", num) // Fallback to Arabic for larger numbers
+        format!("{num}") // Fallback to Arabic for larger numbers
     }
 }
 

@@ -212,12 +212,12 @@ impl TextContext {
     fn apply_text_state_parameters(&mut self) {
         // Character spacing (Tc)
         if let Some(spacing) = self.character_spacing {
-            writeln!(&mut self.operations, "{:.2} Tc", spacing).unwrap();
+            writeln!(&mut self.operations, "{spacing:.2} Tc").unwrap();
         }
 
         // Word spacing (Tw)
         if let Some(spacing) = self.word_spacing {
-            writeln!(&mut self.operations, "{:.2} Tw", spacing).unwrap();
+            writeln!(&mut self.operations, "{spacing:.2} Tw").unwrap();
         }
 
         // Horizontal scaling (Tz)
@@ -227,12 +227,12 @@ impl TextContext {
 
         // Leading (TL)
         if let Some(leading) = self.leading {
-            writeln!(&mut self.operations, "{:.2} TL", leading).unwrap();
+            writeln!(&mut self.operations, "{leading:.2} TL").unwrap();
         }
 
         // Text rise (Ts)
         if let Some(rise) = self.text_rise {
-            writeln!(&mut self.operations, "{:.2} Ts", rise).unwrap();
+            writeln!(&mut self.operations, "{rise:.2} Ts").unwrap();
         }
 
         // Text rendering mode (Tr)
@@ -283,12 +283,12 @@ impl TextContext {
 
         // Character spacing (Tc)
         if let Some(spacing) = self.character_spacing {
-            writeln!(&mut ops, "{:.2} Tc", spacing).unwrap();
+            writeln!(&mut ops, "{spacing:.2} Tc").unwrap();
         }
 
         // Word spacing (Tw)
         if let Some(spacing) = self.word_spacing {
-            writeln!(&mut ops, "{:.2} Tw", spacing).unwrap();
+            writeln!(&mut ops, "{spacing:.2} Tw").unwrap();
         }
 
         // Horizontal scaling (Tz)
@@ -298,12 +298,12 @@ impl TextContext {
 
         // Leading (TL)
         if let Some(leading) = self.leading {
-            writeln!(&mut ops, "{:.2} TL", leading).unwrap();
+            writeln!(&mut ops, "{leading:.2} TL").unwrap();
         }
 
         // Text rise (Ts)
         if let Some(rise) = self.text_rise {
-            writeln!(&mut ops, "{:.2} Ts", rise).unwrap();
+            writeln!(&mut ops, "{rise:.2} Ts").unwrap();
         }
 
         // Text rendering mode (Tr)
