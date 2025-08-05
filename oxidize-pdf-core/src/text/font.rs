@@ -35,7 +35,7 @@ impl FontEncoding {
 
     /// Get the recommended encoding for a specific font
     /// Returns None if the font doesn't typically need explicit encoding
-    pub fn recommended_for_font(font: Font) -> Option<Self> {
+    pub fn recommended_for_font(font: &Font) -> Option<Self> {
         match font {
             // Text fonts typically use WinAnsiEncoding for broad compatibility
             Font::Helvetica
@@ -52,6 +52,8 @@ impl FontEncoding {
             | Font::CourierBoldOblique => Some(FontEncoding::WinAnsiEncoding),
             // Symbol fonts don't use text encodings
             Font::Symbol | Font::ZapfDingbats => None,
+            // Custom fonts typically use Identity-H for full Unicode support
+            Font::Custom(_) => Some(FontEncoding::Custom("Identity-H")),
         }
     }
 }
@@ -60,7 +62,7 @@ impl FontEncoding {
 ///
 /// This allows specifying encoding for fonts when needed, while maintaining
 /// backward compatibility with the simple Font enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FontWithEncoding {
     /// The font to use
     pub font: Font,
@@ -78,8 +80,8 @@ impl FontWithEncoding {
     /// Create a font with recommended encoding
     pub fn with_recommended_encoding(font: Font) -> Self {
         Self {
-            font,
-            encoding: FontEncoding::recommended_for_font(font),
+            font: font.clone(),
+            encoding: FontEncoding::recommended_for_font(&font),
         }
     }
 
@@ -107,11 +109,11 @@ impl From<Font> for FontWithEncoding {
     }
 }
 
-/// Standard PDF fonts (Type 1 base 14 fonts).
+/// PDF fonts - either standard Type 1 fonts or custom fonts.
 ///
-/// These fonts are guaranteed to be available in all PDF readers
-/// and don't need to be embedded in the document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Standard fonts are guaranteed to be available in all PDF readers
+/// and don't need to be embedded. Custom fonts must be loaded and embedded.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Font {
     // Standard 14 PDF fonts
     /// Helvetica (sans-serif)
@@ -142,26 +144,29 @@ pub enum Font {
     Symbol,
     /// ZapfDingbats (decorative symbols)
     ZapfDingbats,
+    /// Custom font loaded from file or bytes
+    Custom(String),
 }
 
 impl Font {
     /// Get the PDF name for this font
-    pub fn pdf_name(&self) -> &'static str {
+    pub fn pdf_name(&self) -> String {
         match self {
-            Font::Helvetica => "Helvetica",
-            Font::HelveticaBold => "Helvetica-Bold",
-            Font::HelveticaOblique => "Helvetica-Oblique",
-            Font::HelveticaBoldOblique => "Helvetica-BoldOblique",
-            Font::TimesRoman => "Times-Roman",
-            Font::TimesBold => "Times-Bold",
-            Font::TimesItalic => "Times-Italic",
-            Font::TimesBoldItalic => "Times-BoldItalic",
-            Font::Courier => "Courier",
-            Font::CourierBold => "Courier-Bold",
-            Font::CourierOblique => "Courier-Oblique",
-            Font::CourierBoldOblique => "Courier-BoldOblique",
-            Font::Symbol => "Symbol",
-            Font::ZapfDingbats => "ZapfDingbats",
+            Font::Helvetica => "Helvetica".to_string(),
+            Font::HelveticaBold => "Helvetica-Bold".to_string(),
+            Font::HelveticaOblique => "Helvetica-Oblique".to_string(),
+            Font::HelveticaBoldOblique => "Helvetica-BoldOblique".to_string(),
+            Font::TimesRoman => "Times-Roman".to_string(),
+            Font::TimesBold => "Times-Bold".to_string(),
+            Font::TimesItalic => "Times-Italic".to_string(),
+            Font::TimesBoldItalic => "Times-BoldItalic".to_string(),
+            Font::Courier => "Courier".to_string(),
+            Font::CourierBold => "Courier-Bold".to_string(),
+            Font::CourierOblique => "Courier-Oblique".to_string(),
+            Font::CourierBoldOblique => "Courier-BoldOblique".to_string(),
+            Font::Symbol => "Symbol".to_string(),
+            Font::ZapfDingbats => "ZapfDingbats".to_string(),
+            Font::Custom(name) => name.clone(),
         }
     }
 
@@ -183,6 +188,16 @@ impl Font {
     /// Create this font without explicit encoding
     pub fn without_encoding(self) -> FontWithEncoding {
         FontWithEncoding::without_encoding(self)
+    }
+
+    /// Check if this is a custom font
+    pub fn is_custom(&self) -> bool {
+        matches!(self, Font::Custom(_))
+    }
+
+    /// Create a custom font reference
+    pub fn custom(name: impl Into<String>) -> Self {
+        Font::Custom(name.into())
     }
 }
 
@@ -283,7 +298,7 @@ mod tests {
     #[test]
     fn test_font_clone() {
         let font1 = Font::TimesItalic;
-        let font2 = font1;
+        let font2 = font1.clone();
         assert_eq!(font1, font2);
     }
 
@@ -419,21 +434,24 @@ mod tests {
     fn test_font_encoding_recommended_for_font() {
         // Text fonts should have recommended encoding
         assert_eq!(
-            FontEncoding::recommended_for_font(Font::Helvetica),
+            FontEncoding::recommended_for_font(&Font::Helvetica),
             Some(FontEncoding::WinAnsiEncoding)
         );
         assert_eq!(
-            FontEncoding::recommended_for_font(Font::TimesRoman),
+            FontEncoding::recommended_for_font(&Font::TimesRoman),
             Some(FontEncoding::WinAnsiEncoding)
         );
         assert_eq!(
-            FontEncoding::recommended_for_font(Font::CourierBold),
+            FontEncoding::recommended_for_font(&Font::CourierBold),
             Some(FontEncoding::WinAnsiEncoding)
         );
 
         // Symbol fonts should not have recommended encoding
-        assert_eq!(FontEncoding::recommended_for_font(Font::Symbol), None);
-        assert_eq!(FontEncoding::recommended_for_font(Font::ZapfDingbats), None);
+        assert_eq!(FontEncoding::recommended_for_font(&Font::Symbol), None);
+        assert_eq!(
+            FontEncoding::recommended_for_font(&Font::ZapfDingbats),
+            None
+        );
     }
 
     #[test]
@@ -548,7 +566,7 @@ mod tests {
     #[test]
     fn test_font_with_encoding_copy() {
         let font1 = FontWithEncoding::with_encoding(Font::Courier, FontEncoding::WinAnsiEncoding);
-        let font2 = font1; // Copy semantics
+        let font2 = font1.clone(); // Clone instead of Copy
         assert_eq!(font1, font2);
 
         // Both variables should still be usable

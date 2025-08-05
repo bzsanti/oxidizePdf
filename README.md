@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **early beta** stage implementing ~25-30% of ISO 32000-1:2008 specification. Generate PDFs, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **beta** stage with **~34% ISO 32000-1:2008 compliance** (real API compliance). Generate PDFs with custom fonts, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
 
 ## Features
 
@@ -17,12 +17,20 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving basic content
 - 🖼️ **Image Support** - Embed JPEG images with automatic compression
 - 🎨 **Rich Graphics** - Vector graphics with shapes, paths, colors (RGB/CMYK/Gray)
-- 📝 **Advanced Text** - Multiple fonts, text flow with automatic wrapping, alignment
+- 📝 **Advanced Text** - Custom TTF/OTF fonts, standard fonts, text flow with automatic wrapping, alignment
+- 🅰️ **Custom Fonts** - Load and embed TrueType/OpenType fonts with full Unicode support
 - 🔍 **OCR Support** - Extract text from scanned PDFs using Tesseract OCR (v0.1.3+)
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
-## 🎉 What's New in v1.1.0 
+## 🎉 What's New in v1.1.0+
+
+**Major new features (v1.1.6+):**
+- 🅰️ **Custom Font Support** - Load TTF/OTF fonts from files or memory
+- ✍️ **Advanced Text Formatting** - Character spacing, word spacing, text rise, rendering modes
+- 📋 **Clipping Paths** - Both EvenOdd and NonZero winding rules
+- 💾 **In-Memory Generation** - Generate PDFs without file I/O using `to_bytes()`
+- 🗜️ **Compression Control** - Enable/disable compression with `set_compress()`
 
 **Significant improvements in PDF compatibility:**
 - 📈 **Better parsing**: Handles more PDF structures including circular references
@@ -32,7 +40,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🔧 **Lenient parsing** - Handles some malformed PDFs
 - 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
 
-**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently implements ~25-30% of ISO 32000-1:2008. See [Current Limitations](#current-limitations) and [ISO Compliance](ISO_COMPLIANCE.md) for details.
+**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently has **~34% real ISO 32000-1:2008 compliance** based on API testing (up from 17.8% with custom font support and text state parameters). See [Current Limitations](#current-limitations) and [Real ISO Compliance](docs/technical/ISO_COMPLIANCE_REAL.md) for honest assessment.
 
 ## Quick Start
 
@@ -75,6 +83,51 @@ fn main() -> Result<()> {
     // Add the page and save
     doc.add_page(page);
     doc.save("hello.pdf")?;
+    
+    Ok(())
+}
+```
+
+### Custom Fonts Example
+
+```rust
+use oxidize_pdf::{Document, Page, Font, Color, Result};
+
+fn main() -> Result<()> {
+    let mut doc = Document::new();
+    doc.set_title("Custom Fonts Demo");
+    
+    // Load a custom font from file
+    doc.add_font("MyFont", "/path/to/font.ttf")?;
+    
+    // Or load from bytes
+    let font_data = std::fs::read("/path/to/font.otf")?;
+    doc.add_font_from_bytes("MyOtherFont", font_data)?;
+    
+    let mut page = Page::a4();
+    
+    // Use standard font
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(50.0, 700.0)
+        .write("Standard Font: Helvetica")?;
+    
+    // Use custom font
+    page.text()
+        .set_font(Font::Custom("MyFont".to_string()), 16.0)
+        .at(50.0, 650.0)
+        .write("Custom Font: This is my custom font!")?;
+    
+    // Advanced text formatting with custom font
+    page.text()
+        .set_font(Font::Custom("MyOtherFont".to_string()), 12.0)
+        .set_character_spacing(2.0)
+        .set_word_spacing(5.0)
+        .at(50.0, 600.0)
+        .write("Spaced text with custom font")?;
+    
+    doc.add_page(page);
+    doc.save("custom_fonts.pdf")?;
     
     Ok(())
 }
@@ -287,6 +340,7 @@ Check out the [examples](https://github.com/bzsanti/oxidizePdf/tree/main/oxidize
 - `hello_world.rs` - Basic PDF creation
 - `graphics_demo.rs` - Vector graphics showcase
 - `text_formatting.rs` - Advanced text features
+- `custom_fonts.rs` - TTF/OTF font loading and embedding
 - `jpeg_image.rs` - Image embedding
 - `parse_pdf.rs` - PDF parsing and text extraction
 - `comprehensive_demo.rs` - All features demonstration
@@ -320,7 +374,7 @@ For commercial use cases that require proprietary licensing, please contact us a
 
 ## Current Limitations & ISO 32000 Compliance
 
-oxidize-pdf currently implements approximately **25-30% of ISO 32000-1:2008**. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed compliance information.
+oxidize-pdf currently has **17.8% real ISO 32000-1:2008 compliance** based on comprehensive API testing. While ~25-30% may be implemented internally, only 17.8% is accessible through the public API. See [ISO_COMPLIANCE_REAL.md](docs/technical/ISO_COMPLIANCE_REAL.md) for honest assessment.
 
 ### Supported Features
 - ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode

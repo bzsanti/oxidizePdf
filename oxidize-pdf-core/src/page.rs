@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::forms::Widget;
 use crate::graphics::{GraphicsContext, Image};
 use crate::objects::{Array, Dictionary, Object, ObjectReference};
-use crate::text::{Font, HeaderFooter, TextContext, TextFlowContext};
+use crate::text::{Font, HeaderFooter, Table, TextContext, TextFlowContext};
 use std::collections::{HashMap, HashSet};
 
 /// Page margins in points (1/72 inch).
@@ -188,6 +188,49 @@ impl Page {
         &self.images
     }
 
+    /// Add a table to the page.
+    ///
+    /// This method renders a table at the specified position using the current
+    /// graphics context. The table will be drawn with borders, text, and any
+    /// configured styling options.
+    ///
+    /// # Arguments
+    ///
+    /// * `table` - The table to render on the page
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Page, text::{Table, TableOptions}};
+    ///
+    /// let mut page = Page::a4();
+    ///
+    /// // Create a table with 3 columns
+    /// let mut table = Table::new(vec![100.0, 150.0, 100.0]);
+    /// table.set_position(50.0, 700.0);
+    ///
+    /// // Add header row
+    /// table.add_header_row(vec![
+    ///     "Name".to_string(),
+    ///     "Description".to_string(),
+    ///     "Price".to_string()
+    /// ])?;
+    ///
+    /// // Add data rows
+    /// table.add_row(vec![
+    ///     "Item 1".to_string(),
+    ///     "First item description".to_string(),
+    ///     "$10.00".to_string()
+    /// ])?;
+    ///
+    /// // Render the table on the page
+    /// page.add_table(&table)?;
+    /// # Ok::<(), oxidize_pdf::PdfError>(())
+    /// ```
+    pub fn add_table(&mut self, table: &Table) -> Result<()> {
+        self.graphics_context.render_table(table)
+    }
+
     /// Get ExtGState resources from the graphics context
     pub(crate) fn get_extgstate_resources(
         &self,
@@ -362,7 +405,7 @@ impl Page {
         // Calculate text width for alignment
         let text_width = measure_text(
             &content,
-            header_footer.options().font,
+            header_footer.options().font.clone(),
             header_footer.options().font_size,
         );
 
@@ -374,7 +417,7 @@ impl Page {
         let mut text_ctx = TextContext::new();
         text_ctx
             .set_font(
-                header_footer.options().font,
+                header_footer.options().font.clone(),
                 header_footer.options().font_size,
             )
             .at(x, y)
@@ -423,7 +466,7 @@ impl Page {
         let mut fonts = HashSet::new();
 
         // Add the current font from text context
-        fonts.insert(self.text_context.current_font());
+        fonts.insert(self.text_context.current_font().clone());
 
         // TODO: In a full implementation, we would:
         // 1. Parse the content stream to find all Tf (set font) operations

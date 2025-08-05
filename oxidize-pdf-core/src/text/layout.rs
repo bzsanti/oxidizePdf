@@ -322,7 +322,7 @@ impl ColumnLayout {
         let mut current_y = start_y;
 
         graphics.save_state();
-        graphics.set_font(self.options.font, self.options.font_size);
+        graphics.set_font(self.options.font.clone(), self.options.font_size);
         graphics.set_fill_color(self.options.text_color);
 
         for line in lines {

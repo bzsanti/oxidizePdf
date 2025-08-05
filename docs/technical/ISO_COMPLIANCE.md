@@ -1,14 +1,18 @@
 # ISO 32000-1:2008 Compliance Status
 
+> ⚠️ **IMPORTANT DISCLAIMER**: This document represents theoretical compliance including internal implementations. For actual API compliance, see [ISO_COMPLIANCE_REAL.md](ISO_COMPLIANCE_REAL.md) which shows **17.8% real compliance** based on comprehensive testing.
+
 This document provides a detailed breakdown of oxidize-pdf's compliance with the ISO 32000-1:2008 (PDF 1.7) specification.
 
-**Current Overall Compliance: ~60-64%**
+**Theoretical Compliance (including internals): ~60-64%**  
+**Actual API Compliance: 17.8%** (see [real assessment](ISO_COMPLIANCE_REAL.md))
 
 ## Compliance Key
-- ✅ Fully implemented
+- ✅ Fully implemented (may not be exposed in API)
 - 🟡 Partially implemented
 - ❌ Not implemented
 - 🚧 Work in progress
+- 🔒 Implemented but NOT exposed in public API
 
 ## Table of Contents
 1. [Document Structure](#1-document-structure)
@@ -486,17 +490,17 @@ This document provides a detailed breakdown of oxidize-pdf's compliance with the
 
 ## Summary by Category
 
-| Category | Compliance | Key Missing Features |
-|----------|------------|---------------------|
-| Document Structure | ~75% | Linearization, hybrid xref files |
-| Graphics | ~80% | Complex mesh shadings, advanced form XObjects |
-| Text | ~60% | Advanced text extraction algorithms |
-| Fonts | ~85% | Type 1 font programs, Type 3 fonts |
-| Transparency | ~70% | Transparency groups, advanced soft masks |
-| Color Spaces | ~60% | CIE-based spaces, special color spaces |
-| Images | ~30% | Multiple formats beyond JPEG, inline images |
-| Interactive | ~5% | Forms, digital signatures |
-| Rendering | 0% | No rendering capability |
+| Category | Theoretical | API Exposed | Key Missing Features |
+|----------|-------------|-------------|---------------------|
+| Document Structure | ~75% | ~19% | `to_bytes()`, compression control, filters not exposed |
+| Graphics | ~80% | ~29% | `clip()` method, patterns, images |
+| Text | ~60% | ~17% | Text formatting methods, custom fonts |
+| Fonts | ~85% | ~17% | Font loading methods not exposed |
+| Transparency | ~70% | ~10% | Only constant alpha exposed |
+| Color Spaces | ~60% | ~25% | Only basic RGB/CMYK/Gray exposed |
+| Images | ~30% | 0% | No image API exposed |
+| Interactive | ~5% | 0% | No interactive features exposed |
+| Rendering | 0% | 0% | No rendering capability |
 
 ## Next Steps for Compliance
 

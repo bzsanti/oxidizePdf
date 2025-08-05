@@ -46,6 +46,9 @@ pub enum PdfError {
 
     #[error("Encryption error: {0}")]
     EncryptionError(String),
+
+    #[error("Permission denied: {0}")]
+    PermissionDenied(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;

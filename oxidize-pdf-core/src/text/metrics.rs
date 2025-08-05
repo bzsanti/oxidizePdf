@@ -357,7 +357,7 @@ mod tests {
 
         for font in &fonts {
             // Should not panic - all fonts should have metrics
-            let _width = measure_text("A", *font, 12.0);
+            let _width = measure_text("A", font.clone(), 12.0);
         }
     }
 

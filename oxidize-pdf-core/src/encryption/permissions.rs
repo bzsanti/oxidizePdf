@@ -100,6 +100,11 @@ impl Permissions {
         Self { bits }
     }
 
+    /// Check if contains all the specified permissions
+    pub fn contains(&self, other: Permissions) -> bool {
+        (self.bits & other.bits) == other.bits
+    }
+
     /// Allow/disallow printing (bit 3)
     pub fn set_print(&mut self, allow: bool) -> &mut Self {
         if allow {

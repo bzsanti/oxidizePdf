@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-api/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-api/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-cli/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-cli/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-core/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-core/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-core/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/oxidize-pdf-core/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/test-suite/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/test-suite/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test-suite/tests" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

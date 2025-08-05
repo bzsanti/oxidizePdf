@@ -1060,4 +1060,454 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn test_annotation_manager_empty() {
+        let manager = AnnotationManager::new();
+
+        // Test empty manager
+        assert!(manager.all_annotations().is_empty());
+
+        // Test non-existent page
+        let page_ref = ObjectReference::new(999, 0);
+        assert!(manager.get_page_annotations(&page_ref).is_none());
+    }
+
+    #[test]
+    fn test_annotation_manager_large_scale() {
+        let mut manager = AnnotationManager::new();
+        let num_pages = 100;
+        let annotations_per_page = 50;
+
+        // Add many annotations
+        for page_num in 1..=num_pages {
+            let page_ref = ObjectReference::new(page_num, 0);
+
+            for annot_num in 0..annotations_per_page {
+                let rect = Rectangle::new(
+                    Point::new(annot_num as f64 * 10.0, page_num as f64 * 10.0),
+                    Point::new((annot_num + 1) as f64 * 10.0, (page_num + 1) as f64 * 10.0),
+                );
+                let annotation = Annotation::new(AnnotationType::Text, rect);
+                manager.add_annotation(page_ref, annotation);
+            }
+        }
+
+        // Verify counts
+        assert_eq!(manager.all_annotations().len(), num_pages as usize);
+
+        for page_num in 1..=num_pages {
+            let page_ref = ObjectReference::new(page_num, 0);
+            let annotations = manager.get_page_annotations(&page_ref).unwrap();
+            assert_eq!(annotations.len(), annotations_per_page);
+        }
+    }
+
+    #[test]
+    fn test_annotation_to_dict_minimal() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(1.0, 1.0));
+        let annotation = Annotation::new(AnnotationType::Circle, rect);
+
+        let dict = annotation.to_dict();
+
+        // Only required fields should be present
+        assert!(dict.contains_key("Type"));
+        assert!(dict.contains_key("Subtype"));
+        assert!(dict.contains_key("Rect"));
+        assert!(dict.contains_key("F")); // Default print flag
+
+        // Optional fields should not be present
+        assert!(!dict.contains_key("Contents"));
+        assert!(!dict.contains_key("NM"));
+        assert!(!dict.contains_key("M"));
+        assert!(!dict.contains_key("BS"));
+        assert!(!dict.contains_key("C"));
+        assert!(!dict.contains_key("P"));
+    }
+
+    #[test]
+    fn test_annotation_with_all_fields() {
+        let rect = Rectangle::new(Point::new(10.0, 20.0), Point::new(110.0, 70.0));
+        let border = BorderStyle {
+            width: 2.5,
+            style: BorderStyleType::Inset,
+            dash_pattern: Some(vec![6.0, 3.0, 2.0, 3.0]),
+        };
+        let flags = AnnotationFlags {
+            invisible: false,
+            hidden: false,
+            print: true,
+            no_zoom: true,
+            no_rotate: false,
+            no_view: false,
+            read_only: true,
+            locked: true,
+            locked_contents: false,
+        };
+
+        let mut annotation = Annotation::new(AnnotationType::Polygon, rect)
+            .with_contents("Polygon annotation with all fields")
+            .with_name("polygon_001")
+            .with_color(Color::Cmyk(0.1, 0.2, 0.3, 0.0))
+            .with_border(border)
+            .with_flags(flags);
+
+        annotation.modified = Some("D:20240101120000Z".to_string());
+        annotation.page = Some(ObjectReference::new(7, 0));
+        annotation.properties.set(
+            "Vertices",
+            Object::Array(vec![
+                Object::Real(10.0),
+                Object::Real(20.0),
+                Object::Real(60.0),
+                Object::Real(20.0),
+                Object::Real(110.0),
+                Object::Real(45.0),
+                Object::Real(60.0),
+                Object::Real(70.0),
+                Object::Real(10.0),
+                Object::Real(70.0),
+            ]),
+        );
+
+        let dict = annotation.to_dict();
+
+        // Verify all fields are present
+        assert!(dict.contains_key("Type"));
+        assert!(dict.contains_key("Subtype"));
+        assert!(dict.contains_key("Rect"));
+        assert!(dict.contains_key("Contents"));
+        assert!(dict.contains_key("NM"));
+        assert!(dict.contains_key("M"));
+        assert!(dict.contains_key("F"));
+        assert!(dict.contains_key("BS"));
+        assert!(dict.contains_key("C"));
+        assert!(dict.contains_key("P"));
+        assert!(dict.contains_key("Vertices"));
+    }
+
+    #[test]
+    fn test_annotation_rectangle_edge_cases() {
+        // Test with zero-size rectangle
+        let zero_rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(100.0, 100.0));
+        let zero_annotation = Annotation::new(AnnotationType::Text, zero_rect);
+        let dict = zero_annotation.to_dict();
+
+        if let Some(Object::Array(rect_array)) = dict.get("Rect") {
+            assert_eq!(rect_array[0], Object::Real(100.0));
+            assert_eq!(rect_array[1], Object::Real(100.0));
+            assert_eq!(rect_array[2], Object::Real(100.0));
+            assert_eq!(rect_array[3], Object::Real(100.0));
+        }
+
+        // Test with negative coordinates
+        let neg_rect = Rectangle::new(Point::new(-50.0, -100.0), Point::new(-10.0, -20.0));
+        let neg_annotation = Annotation::new(AnnotationType::Square, neg_rect);
+        let dict = neg_annotation.to_dict();
+
+        if let Some(Object::Array(rect_array)) = dict.get("Rect") {
+            assert_eq!(rect_array[0], Object::Real(-50.0));
+            assert_eq!(rect_array[1], Object::Real(-100.0));
+            assert_eq!(rect_array[2], Object::Real(-10.0));
+            assert_eq!(rect_array[3], Object::Real(-20.0));
+        }
+
+        // Test with very large coordinates
+        let large_rect = Rectangle::new(Point::new(1e10, 1e10), Point::new(1e11, 1e11));
+        let large_annotation = Annotation::new(AnnotationType::Circle, large_rect);
+        let dict = large_annotation.to_dict();
+
+        assert!(dict.contains_key("Rect"));
+    }
+
+    #[test]
+    fn test_border_style_edge_cases() {
+        // Test with zero width
+        let zero_border = BorderStyle {
+            width: 0.0,
+            style: BorderStyleType::Solid,
+            dash_pattern: None,
+        };
+        assert_eq!(zero_border.width, 0.0);
+
+        // Test with very large width
+        let large_border = BorderStyle {
+            width: 1000.0,
+            style: BorderStyleType::Dashed,
+            dash_pattern: Some(vec![100.0, 50.0]),
+        };
+        assert_eq!(large_border.width, 1000.0);
+
+        // Test with empty dash pattern
+        let empty_dash = BorderStyle {
+            width: 1.0,
+            style: BorderStyleType::Dashed,
+            dash_pattern: Some(vec![]),
+        };
+        assert!(empty_dash.dash_pattern.as_ref().unwrap().is_empty());
+
+        // Test with single value dash pattern
+        let single_dash = BorderStyle {
+            width: 1.0,
+            style: BorderStyleType::Dashed,
+            dash_pattern: Some(vec![5.0]),
+        };
+        assert_eq!(single_dash.dash_pattern.as_ref().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_annotation_contents_edge_cases() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 50.0));
+
+        // Test with very long contents
+        let long_string = "a".repeat(10000);
+        let long_annotation =
+            Annotation::new(AnnotationType::FreeText, rect).with_contents(long_string.clone());
+        assert_eq!(long_annotation.contents, Some(long_string));
+
+        // Test with unicode contents
+        let unicode_contents = "Hello 世界 🌍 مرحبا мир";
+        let unicode_annotation =
+            Annotation::new(AnnotationType::Text, rect).with_contents(unicode_contents);
+        assert_eq!(
+            unicode_annotation.contents,
+            Some(unicode_contents.to_string())
+        );
+
+        // Test with control characters
+        let control_contents = "Line1\nLine2\tTabbed\rCarriage\0Null";
+        let control_annotation =
+            Annotation::new(AnnotationType::Text, rect).with_contents(control_contents);
+        assert_eq!(
+            control_annotation.contents,
+            Some(control_contents.to_string())
+        );
+    }
+
+    #[test]
+    fn test_annotation_manager_references() {
+        let mut manager = AnnotationManager::new();
+        let page1 = ObjectReference::new(10, 0);
+        let page2 = ObjectReference::new(10, 1); // Same number, different generation
+
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 100.0));
+
+        // Add annotations to pages with same number but different generation
+        let annot1 = Annotation::new(AnnotationType::Text, rect);
+        let annot2 = Annotation::new(AnnotationType::Link, rect);
+
+        manager.add_annotation(page1, annot1);
+        manager.add_annotation(page2, annot2);
+
+        // Verify they are stored separately
+        let page1_annotations = manager.get_page_annotations(&page1).unwrap();
+        let page2_annotations = manager.get_page_annotations(&page2).unwrap();
+
+        assert_eq!(page1_annotations.len(), 1);
+        assert_eq!(page2_annotations.len(), 1);
+        assert_eq!(page1_annotations[0].annotation_type, AnnotationType::Text);
+        assert_eq!(page2_annotations[0].annotation_type, AnnotationType::Link);
+    }
+
+    #[test]
+    fn test_annotation_type_exhaustive() {
+        // Ensure all annotation types have correct PDF names
+        let type_name_pairs = vec![
+            (AnnotationType::Text, "Text"),
+            (AnnotationType::Link, "Link"),
+            (AnnotationType::FreeText, "FreeText"),
+            (AnnotationType::Line, "Line"),
+            (AnnotationType::Square, "Square"),
+            (AnnotationType::Circle, "Circle"),
+            (AnnotationType::Polygon, "Polygon"),
+            (AnnotationType::PolyLine, "PolyLine"),
+            (AnnotationType::Highlight, "Highlight"),
+            (AnnotationType::Underline, "Underline"),
+            (AnnotationType::Squiggly, "Squiggly"),
+            (AnnotationType::StrikeOut, "StrikeOut"),
+            (AnnotationType::Stamp, "Stamp"),
+            (AnnotationType::Caret, "Caret"),
+            (AnnotationType::Ink, "Ink"),
+            (AnnotationType::Popup, "Popup"),
+            (AnnotationType::FileAttachment, "FileAttachment"),
+            (AnnotationType::Sound, "Sound"),
+            (AnnotationType::Movie, "Movie"),
+            (AnnotationType::Widget, "Widget"),
+            (AnnotationType::Screen, "Screen"),
+            (AnnotationType::PrinterMark, "PrinterMark"),
+            (AnnotationType::TrapNet, "TrapNet"),
+            (AnnotationType::Watermark, "Watermark"),
+        ];
+
+        for (annotation_type, expected_name) in type_name_pairs {
+            assert_eq!(annotation_type.pdf_name(), expected_name);
+
+            // Also test that it round-trips through annotation creation
+            let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(10.0, 10.0));
+            let annotation = Annotation::new(annotation_type, rect);
+            let dict = annotation.to_dict();
+
+            assert_eq!(
+                dict.get("Subtype"),
+                Some(&Object::Name(expected_name.to_string()))
+            );
+        }
+    }
+
+    #[test]
+    fn test_annotation_flags_bit_positions() {
+        // Test each flag individually to ensure correct bit position
+        let flag_bit_tests = vec![
+            (
+                AnnotationFlags {
+                    invisible: true,
+                    ..Default::default()
+                },
+                0,
+            ),
+            (
+                AnnotationFlags {
+                    hidden: true,
+                    ..Default::default()
+                },
+                1,
+            ),
+            (
+                AnnotationFlags {
+                    print: true,
+                    ..Default::default()
+                },
+                2,
+            ),
+            (
+                AnnotationFlags {
+                    no_zoom: true,
+                    ..Default::default()
+                },
+                3,
+            ),
+            (
+                AnnotationFlags {
+                    no_rotate: true,
+                    ..Default::default()
+                },
+                4,
+            ),
+            (
+                AnnotationFlags {
+                    no_view: true,
+                    ..Default::default()
+                },
+                5,
+            ),
+            (
+                AnnotationFlags {
+                    read_only: true,
+                    ..Default::default()
+                },
+                6,
+            ),
+            (
+                AnnotationFlags {
+                    locked: true,
+                    ..Default::default()
+                },
+                7,
+            ),
+            (
+                AnnotationFlags {
+                    locked_contents: true,
+                    ..Default::default()
+                },
+                9,
+            ),
+        ];
+
+        for (flags, expected_bit) in flag_bit_tests {
+            let value = flags.to_flags();
+            assert_eq!(value, 1u32 << expected_bit);
+        }
+    }
+
+    #[test]
+    fn test_annotation_manager_concurrent_additions() {
+        let mut manager = AnnotationManager::new();
+        let page_ref = ObjectReference::new(1, 0);
+
+        // Simulate concurrent-like additions
+        let mut refs = Vec::new();
+        for i in 0..100 {
+            let rect = Rectangle::new(
+                Point::new(i as f64, i as f64),
+                Point::new((i + 10) as f64, (i + 10) as f64),
+            );
+            let annotation = Annotation::new(AnnotationType::Text, rect)
+                .with_contents(format!("Annotation {}", i));
+            let annot_ref = manager.add_annotation(page_ref, annotation);
+            refs.push(annot_ref);
+        }
+
+        // Verify all references are unique and sequential
+        for (i, annot_ref) in refs.iter().enumerate() {
+            assert_eq!(annot_ref.number(), (i + 1) as u32);
+            assert_eq!(annot_ref.generation(), 0);
+        }
+
+        // Verify all annotations are stored
+        let annotations = manager.get_page_annotations(&page_ref).unwrap();
+        assert_eq!(annotations.len(), 100);
+    }
+
+    #[test]
+    fn test_annotation_builder_pattern_comprehensive() {
+        let rect = Rectangle::new(Point::new(50.0, 100.0), Point::new(250.0, 200.0));
+
+        // Test builder pattern with all methods
+        let annotation = Annotation::new(AnnotationType::FileAttachment, rect)
+            .with_contents("Attached document")
+            .with_name("attachment_001")
+            .with_color(Color::Rgb(0.8, 0.2, 0.2))
+            .with_border(BorderStyle {
+                width: 1.5,
+                style: BorderStyleType::Solid,
+                dash_pattern: None,
+            })
+            .with_flags(AnnotationFlags {
+                print: true,
+                read_only: true,
+                ..Default::default()
+            });
+
+        // Verify all properties were set
+        assert_eq!(annotation.contents, Some("Attached document".to_string()));
+        assert_eq!(annotation.name, Some("attachment_001".to_string()));
+        assert!(matches!(annotation.color, Some(Color::Rgb(0.8, 0.2, 0.2))));
+        assert!(annotation.border.is_some());
+        assert!(annotation.flags.print);
+        assert!(annotation.flags.read_only);
+    }
+
+    #[test]
+    fn test_annotation_dict_color_precision() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(50.0, 50.0));
+
+        // Test with precise color values
+        let colors = vec![
+            Color::Gray(0.123456789),
+            Color::Rgb(0.111111111, 0.222222222, 0.333333333),
+            Color::Cmyk(0.1234, 0.2345, 0.3456, 0.4567),
+        ];
+
+        for color in colors {
+            let annotation = Annotation::new(AnnotationType::Square, rect).with_color(color);
+            let dict = annotation.to_dict();
+
+            if let Some(Object::Array(color_array)) = dict.get("C") {
+                // Verify all values are Real objects
+                for component in color_array {
+                    assert!(matches!(component, Object::Real(_)));
+                }
+            }
+        }
+    }
 }
