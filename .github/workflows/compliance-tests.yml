@@ -2,9 +2,9 @@ name: ISO Compliance Tests
 
 on:
   push:
-    branches: [ main, development, develop_santi ]
+    branches: [ main, develop, develop_santi ]
   pull_request:
-    branches: [ main, development ]
+    branches: [ main, develop ]
   schedule:
     # Run weekly to catch regressions
     - cron: '0 0 * * 0'
