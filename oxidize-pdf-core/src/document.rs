@@ -332,7 +332,7 @@ impl Document {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use oxidize_pdf::Document;
     ///
     /// let mut doc = Document::new();

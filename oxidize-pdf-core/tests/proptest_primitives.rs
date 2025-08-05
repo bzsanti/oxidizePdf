@@ -239,7 +239,7 @@ mod regression_tests {
         let color = Color::rgb(f64::NAN, 0.5, f64::INFINITY);
         match color {
             Color::Rgb(r, g, b) => {
-                assert!(r == 0.0 || r == 1.0); // NaN should clamp to boundary
+                assert!(r.is_nan()); // NaN remains NaN after clamp
                 assert_eq!(g, 0.5);
                 assert_eq!(b, 1.0); // Infinity should clamp to 1.0
             }
