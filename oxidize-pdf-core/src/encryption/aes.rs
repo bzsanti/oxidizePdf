@@ -206,6 +206,24 @@ impl Aes {
         self.remove_pkcs7_padding(&decrypted)
     }
 
+    /// Encrypt data using AES-ECB mode (for Perms entry)
+    pub fn encrypt_ecb(&self, data: &[u8]) -> Result<Vec<u8>, AesError> {
+        if data.len() % 16 != 0 {
+            return Err(AesError::EncryptionFailed(
+                "Data length must be multiple of 16 bytes for ECB mode".to_string(),
+            ));
+        }
+
+        let mut encrypted = Vec::new();
+
+        for chunk in data.chunks(16) {
+            let encrypted_block = self.encrypt_block(chunk)?;
+            encrypted.extend_from_slice(&encrypted_block);
+        }
+
+        Ok(encrypted)
+    }
+
     /// Encrypt single 16-byte block
     fn encrypt_block(&self, block: &[u8]) -> Result<Vec<u8>, AesError> {
         if block.len() != 16 {

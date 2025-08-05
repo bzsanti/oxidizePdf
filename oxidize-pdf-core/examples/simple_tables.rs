@@ -7,8 +7,8 @@
 //! - Create tables with merged cells (colspan)
 //! - Mix tables with other content on a page
 
-use oxidize_pdf::{Color, Document, Font, Page, Result};
 use oxidize_pdf::text::{HeaderStyle, Table, TableCell, TableOptions, TextAlign};
+use oxidize_pdf::{Color, Document, Font, Page, Result};
 
 fn main() -> Result<()> {
     // Create a new document
@@ -62,7 +62,7 @@ fn create_invoice_page(doc: &mut Document) -> Result<()> {
     options.border_width = 1.5;
     options.cell_padding = 8.0;
     options.font_size = 11.0;
-    
+
     // Header style
     options.header_style = Some(HeaderStyle {
         background_color: Color::rgb(0.2, 0.4, 0.6),
@@ -150,7 +150,7 @@ fn create_employee_page(doc: &mut Document) -> Result<()> {
     options.font = Font::TimesRoman;
     options.font_size = 10.0;
     options.row_height = 25.0; // Fixed row height
-    
+
     options.header_style = Some(HeaderStyle {
         background_color: Color::gray(0.9),
         text_color: Color::black(),
@@ -171,10 +171,22 @@ fn create_employee_page(doc: &mut Document) -> Result<()> {
 
     // Employee data
     let employees = vec![
-        ("E001", "Alice Johnson", "Engineering", "Sr. Developer", "Active"),
+        (
+            "E001",
+            "Alice Johnson",
+            "Engineering",
+            "Sr. Developer",
+            "Active",
+        ),
         ("E002", "Bob Smith", "Sales", "Account Manager", "Active"),
         ("E003", "Carol White", "HR", "HR Manager", "Active"),
-        ("E004", "David Brown", "Engineering", "Jr. Developer", "Training"),
+        (
+            "E004",
+            "David Brown",
+            "Engineering",
+            "Jr. Developer",
+            "Training",
+        ),
         ("E005", "Eve Davis", "Marketing", "Content Writer", "Active"),
         ("E006", "Frank Miller", "Finance", "Accountant", "Active"),
         ("E007", "Grace Lee", "Engineering", "Tech Lead", "Active"),
@@ -225,7 +237,7 @@ fn create_financial_report(doc: &mut Document) -> Result<()> {
     let mut options = TableOptions::default();
     options.font = Font::Courier;
     options.font_size = 10.0;
-    
+
     options.header_style = Some(HeaderStyle {
         background_color: Color::rgb(0.1, 0.3, 0.1),
         text_color: Color::white(),
@@ -272,7 +284,7 @@ fn create_financial_report(doc: &mut Document) -> Result<()> {
 
     let mut growth_table = Table::new(vec![200.0, 150.0, 100.0]);
     growth_table.set_position(50.0, 420.0);
-    
+
     // Simpler style for this table
     let mut growth_options = TableOptions::default();
     growth_options.border_width = 0.5;

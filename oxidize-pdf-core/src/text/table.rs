@@ -320,8 +320,9 @@ impl Table {
                         } else {
                             self.options.font.clone()
                         };
-                        
-                        let text_width_measured = measure_text(&cell.content, font_to_measure, self.options.font_size);
+
+                        let text_width_measured =
+                            measure_text(&cell.content, font_to_measure, self.options.font_size);
                         let centered_x = text_x + (text_width - text_width_measured) / 2.0;
                         graphics.begin_text();
                         graphics.set_text_position(centered_x, text_y);
@@ -348,8 +349,9 @@ impl Table {
                         } else {
                             self.options.font.clone()
                         };
-                        
-                        let text_width_measured = measure_text(&cell.content, font_to_measure, self.options.font_size);
+
+                        let text_width_measured =
+                            measure_text(&cell.content, font_to_measure, self.options.font_size);
                         let right_x = text_x + text_width - text_width_measured;
                         graphics.begin_text();
                         graphics.set_text_position(right_x, text_y);

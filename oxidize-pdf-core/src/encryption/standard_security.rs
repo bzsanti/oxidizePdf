@@ -42,6 +42,11 @@ impl EncryptionKey {
     pub fn is_empty(&self) -> bool {
         self.key.is_empty()
     }
+
+    /// Get key as bytes
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.key
+    }
 }
 
 /// Security handler revision
@@ -62,9 +67,9 @@ pub enum SecurityHandlerRevision {
 /// Standard Security Handler
 pub struct StandardSecurityHandler {
     /// Revision
-    revision: SecurityHandlerRevision,
+    pub revision: SecurityHandlerRevision,
     /// Key length in bytes
-    key_length: usize,
+    pub key_length: usize,
 }
 
 impl StandardSecurityHandler {

@@ -1,7 +1,7 @@
 //! Integration tests for table functionality
 
-use oxidize_pdf::{Color, Document, Font, Page, Result};
 use oxidize_pdf::text::{HeaderStyle, Table, TableCell, TableOptions, TextAlign};
+use oxidize_pdf::{Color, Document, Font, Page, Result};
 use std::fs;
 use tempfile::TempDir;
 
@@ -81,7 +81,7 @@ fn test_table_with_custom_options() -> Result<()> {
     options.font = Font::TimesRoman;
     options.font_size = 11.0;
     options.text_color = Color::rgb(0.1, 0.1, 0.1);
-    
+
     // Header style
     options.header_style = Some(HeaderStyle {
         background_color: Color::rgb(0.9, 0.9, 0.95),
@@ -116,7 +116,7 @@ fn test_table_with_custom_options() -> Result<()> {
     ])?;
 
     page.add_table(&table)?;
-    
+
     doc.add_page(page);
     doc.save(&file_path)?;
 
@@ -164,7 +164,7 @@ fn test_table_alignment() -> Result<()> {
     table.add_custom_row(cells)?;
 
     page.add_table(&table)?;
-    
+
     doc.add_page(page);
     doc.save(&file_path)?;
 
@@ -214,15 +214,13 @@ fn test_table_with_colspan() -> Result<()> {
     table.add_custom_row(cells)?;
 
     // Full width cell
-    let cells = vec![
-        TableCell::with_colspan("Full width cell".to_string(), 4)
-            .set_align(TextAlign::Center)
-            .clone(),
-    ];
+    let cells = vec![TableCell::with_colspan("Full width cell".to_string(), 4)
+        .set_align(TextAlign::Center)
+        .clone()];
     table.add_custom_row(cells)?;
 
     page.add_table(&table)?;
-    
+
     doc.add_page(page);
     doc.save(&file_path)?;
 
@@ -243,16 +241,8 @@ fn test_multiple_tables_on_page() -> Result<()> {
     // First table
     let mut table1 = Table::with_equal_columns(3, 300.0);
     table1.set_position(50.0, 750.0);
-    table1.add_header_row(vec![
-        "A".to_string(),
-        "B".to_string(),
-        "C".to_string(),
-    ])?;
-    table1.add_row(vec![
-        "1".to_string(),
-        "2".to_string(),
-        "3".to_string(),
-    ])?;
+    table1.add_header_row(vec!["A".to_string(), "B".to_string(), "C".to_string()])?;
+    table1.add_row(vec!["1".to_string(), "2".to_string(), "3".to_string()])?;
 
     page.add_table(&table1)?;
 
@@ -265,7 +255,7 @@ fn test_multiple_tables_on_page() -> Result<()> {
     // Second table
     let mut table2 = Table::new(vec![80.0, 120.0, 100.0, 80.0]);
     table2.set_position(50.0, 600.0);
-    
+
     let mut options = TableOptions::default();
     options.border_color = Color::rgb(0.8, 0.2, 0.2);
     options.font_size = 9.0;
@@ -277,7 +267,7 @@ fn test_multiple_tables_on_page() -> Result<()> {
         "Value".to_string(),
         "Unit".to_string(),
     ])?;
-    
+
     table2.add_row(vec![
         "Speed".to_string(),
         "Maximum velocity".to_string(),
@@ -286,7 +276,7 @@ fn test_multiple_tables_on_page() -> Result<()> {
     ])?;
 
     page.add_table(&table2)?;
-    
+
     doc.add_page(page);
     doc.save(&file_path)?;
 
@@ -318,32 +308,24 @@ fn test_table_error_handling() {
 #[test]
 fn test_table_dimensions() -> Result<()> {
     let mut table = Table::new(vec![100.0, 150.0, 200.0]);
-    
+
     // Test width calculation
     assert_eq!(table.get_width(), 450.0);
-    
+
     // Add rows and test height calculation
-    table.add_row(vec![
-        "A".to_string(),
-        "B".to_string(),
-        "C".to_string(),
-    ])?;
-    table.add_row(vec![
-        "D".to_string(),
-        "E".to_string(),
-        "F".to_string(),
-    ])?;
-    
+    table.add_row(vec!["A".to_string(), "B".to_string(), "C".to_string()])?;
+    table.add_row(vec!["D".to_string(), "E".to_string(), "F".to_string()])?;
+
     // With default font size 10 and padding 5, each row should be 20 points
     assert_eq!(table.get_height(), 40.0);
-    
+
     // Test with custom row height
     let mut options = TableOptions::default();
     options.row_height = 30.0;
     table.set_options(options);
-    
+
     assert_eq!(table.get_height(), 60.0);
-    
+
     Ok(())
 }
 
@@ -366,7 +348,7 @@ fn test_table_with_custom_fonts() -> Result<()> {
     let mut options = TableOptions::default();
     options.font = Font::Courier;
     options.font_size = 10.0;
-    
+
     options.header_style = Some(HeaderStyle {
         background_color: Color::gray(0.85),
         text_color: Color::black(),
@@ -395,7 +377,7 @@ fn test_table_with_custom_fonts() -> Result<()> {
     ])?;
 
     page.add_table(&table)?;
-    
+
     doc.add_page(page);
     doc.save(&file_path)?;
 

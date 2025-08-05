@@ -456,7 +456,7 @@ pub fn estimate_object_size(obj: &PdfObject) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::objects::{PdfArray, PdfDictionary, PdfStream, PdfString, PdfName};
+    use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfStream, PdfString};
     use std::io::Cursor;
 
     fn create_minimal_pdf() -> Vec<u8> {
@@ -480,7 +480,8 @@ trailer\n\
 << /Size 4 /Root 1 0 R >>\n\
 startxref\n\
 193\n\
-%%EOF".to_vec()
+%%EOF"
+            .to_vec()
     }
 
     fn create_empty_pdf() -> Vec<u8> {
@@ -495,7 +496,7 @@ startxref\n\
     fn test_memory_options_integration() {
         let options = MemoryOptions::default().with_cache_size(100);
         assert_eq!(options.cache_size, 100);
-        
+
         let options = MemoryOptions::default().with_cache_size(0);
         assert_eq!(options.cache_size, 0);
     }
@@ -509,14 +510,14 @@ startxref\n\
         // Boolean
         let obj = PdfObject::Boolean(true);
         assert_eq!(estimate_object_size(&obj), 16);
-        
+
         let obj = PdfObject::Boolean(false);
         assert_eq!(estimate_object_size(&obj), 16);
 
         // Integer
         let obj = PdfObject::Integer(42);
         assert_eq!(estimate_object_size(&obj), 16);
-        
+
         let obj = PdfObject::Integer(-1000);
         assert_eq!(estimate_object_size(&obj), 16);
 
@@ -547,14 +548,14 @@ startxref\n\
         // Name objects
         let obj = PdfObject::Name(PdfName::new("Type".to_string()));
         assert_eq!(estimate_object_size(&obj), 24 + 4);
-        
+
         let obj = PdfObject::Name(PdfName::new("".to_string()));
         assert_eq!(estimate_object_size(&obj), 24 + 0);
     }
 
     #[test]
     fn test_object_size_estimation_array() {
-        // Empty array  
+        // Empty array
         let obj = PdfObject::Array(PdfArray(vec![]));
         assert_eq!(estimate_object_size(&obj), 24 + 0);
 
@@ -571,10 +572,7 @@ startxref\n\
             PdfObject::Integer(10),
             PdfObject::Integer(20),
         ]));
-        let obj = PdfObject::Array(PdfArray(vec![
-            PdfObject::Integer(1),
-            inner_array,
-        ]));
+        let obj = PdfObject::Array(PdfArray(vec![PdfObject::Integer(1), inner_array]));
         let expected = 24 + 2 * 8 + 16 + (24 + 2 * 8 + 2 * 16);
         assert_eq!(estimate_object_size(&obj), expected);
     }
@@ -587,9 +585,12 @@ startxref\n\
 
         // Simple dictionary
         let mut dict = PdfDictionary::new();
-        dict.insert("Type".to_string(), PdfObject::Name(PdfName::new("Catalog".to_string())));
+        dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName::new("Catalog".to_string())),
+        );
         dict.insert("Count".to_string(), PdfObject::Integer(5));
-        
+
         let obj = PdfObject::Dictionary(dict);
         let expected = 24 + 2 * 16 + (4 + 24 + 7) + (5 + 16);
         assert_eq!(estimate_object_size(&obj), expected);
@@ -599,12 +600,12 @@ startxref\n\
     fn test_object_size_estimation_stream() {
         let mut dict = PdfDictionary::new();
         dict.insert("Length".to_string(), PdfObject::Integer(10));
-        
+
         let stream = PdfObject::Stream(PdfStream {
             dict: dict.clone(),
             data: b"Hello Test".to_vec(),
         });
-        
+
         let dict_size = estimate_object_size(&PdfObject::Dictionary(dict));
         let expected = 48 + 10 + dict_size;
         assert_eq!(estimate_object_size(&stream), expected);
@@ -614,7 +615,10 @@ startxref\n\
     fn test_object_size_estimation_complex_structure() {
         // Complex nested structure
         let mut inner_dict = PdfDictionary::new();
-        inner_dict.insert("Font".to_string(), PdfObject::Name(PdfName::new("Helvetica".to_string())));
+        inner_dict.insert(
+            "Font".to_string(),
+            PdfObject::Name(PdfName::new("Helvetica".to_string())),
+        );
         inner_dict.insert("Size".to_string(), PdfObject::Integer(12));
 
         let array = PdfObject::Array(PdfArray(vec![
@@ -624,11 +628,14 @@ startxref\n\
         ]));
 
         let mut main_dict = PdfDictionary::new();
-        main_dict.insert("Type".to_string(), PdfObject::Name(PdfName::new("Page".to_string())));
+        main_dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName::new("Page".to_string())),
+        );
         main_dict.insert("Contents".to_string(), array);
 
         let obj = PdfObject::Dictionary(main_dict);
-        
+
         // The size should be > 0 and reasonable
         let size = estimate_object_size(&obj);
         assert!(size > 100);
@@ -639,7 +646,7 @@ startxref\n\
     fn test_optimized_reader_empty_file() {
         let data = create_empty_pdf();
         let cursor = Cursor::new(data);
-        
+
         let result = OptimizedPdfReader::new(cursor);
         assert!(result.is_err());
         if let Err(ParseError::EmptyFile) = result {
@@ -653,7 +660,7 @@ startxref\n\
     fn test_optimized_reader_invalid_file() {
         let data = create_invalid_pdf();
         let cursor = Cursor::new(data);
-        
+
         let result = OptimizedPdfReader::new(cursor);
         assert!(result.is_err());
         // Should fail during header parsing
@@ -663,21 +670,21 @@ startxref\n\
     fn test_optimized_reader_creation_with_options() {
         let data = create_minimal_pdf();
         let cursor = Cursor::new(data);
-        
+
         let parse_options = ParseOptions {
             lenient_syntax: true,
             collect_warnings: false,
             ..Default::default()
         };
-        
+
         let memory_options = MemoryOptions::default().with_cache_size(50);
-        
+
         let result = OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options);
         if result.is_err() {
             // Skip test if PDF parsing fails due to incomplete implementation
             return;
         }
-        
+
         let reader = result.unwrap();
         assert_eq!(reader.options().lenient_syntax, true);
         assert_eq!(reader.options().collect_warnings, false);
@@ -687,16 +694,16 @@ startxref\n\
     fn test_optimized_reader_version_access() {
         let data = create_minimal_pdf();
         let cursor = Cursor::new(data);
-        
+
         let result = OptimizedPdfReader::new(cursor);
         if result.is_err() {
             // Skip test if PDF parsing fails
             return;
         }
-        
+
         let reader = result.unwrap();
         let version = reader.version();
-        
+
         // Should have parsed version from %PDF-1.4
         assert_eq!(version.major, 1);
         assert_eq!(version.minor, 4);
@@ -706,11 +713,11 @@ startxref\n\
     fn test_memory_options_validation() {
         let data = create_minimal_pdf();
         let cursor = Cursor::new(data);
-        
+
         // Test that cache size of 0 gets converted to 1
         let memory_options = MemoryOptions::default().with_cache_size(0);
         let parse_options = ParseOptions::default();
-        
+
         let result = OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options);
         if result.is_err() {
             // The memory option validation should still work even if PDF parsing fails
@@ -724,18 +731,17 @@ startxref\n\
     #[test]
     fn test_estimate_object_size_edge_cases() {
         // Very large array
-        let large_array = PdfObject::Array(PdfArray(
-            (0..1000).map(|i| PdfObject::Integer(i)).collect()
-        ));
+        let large_array =
+            PdfObject::Array(PdfArray((0..1000).map(|i| PdfObject::Integer(i)).collect()));
         let size = estimate_object_size(&large_array);
         assert!(size > 16000); // Should be substantial
-        
+
         // Very large dictionary
         let mut large_dict = PdfDictionary::new();
         for i in 0..100 {
             large_dict.insert(
                 format!("Key{}", i),
-                PdfObject::String(PdfString::new(format!("Value{}", i).as_bytes().to_vec()))
+                PdfObject::String(PdfString::new(format!("Value{}", i).as_bytes().to_vec())),
             );
         }
         let obj = PdfObject::Dictionary(large_dict);
@@ -746,7 +752,7 @@ startxref\n\
     #[test]
     fn test_memory_options_default_values() {
         let options = MemoryOptions::default();
-        
+
         // Verify reasonable defaults
         assert!(options.cache_size > 0);
         assert!(options.cache_size < 10000); // Should be reasonable
@@ -754,9 +760,8 @@ startxref\n\
 
     #[test]
     fn test_memory_options_builder_pattern() {
-        let options = MemoryOptions::default()
-            .with_cache_size(500);
-            
+        let options = MemoryOptions::default().with_cache_size(500);
+
         assert_eq!(options.cache_size, 500);
     }
 
@@ -765,9 +770,9 @@ startxref\n\
         // Same objects should have same size
         let obj1 = PdfObject::String(PdfString::new(b"Test".to_vec()));
         let obj2 = PdfObject::String(PdfString::new(b"Test".to_vec()));
-        
+
         assert_eq!(estimate_object_size(&obj1), estimate_object_size(&obj2));
-        
+
         // Different content should have different sizes
         let obj3 = PdfObject::String(PdfString::new(b"Different".to_vec()));
         assert_ne!(estimate_object_size(&obj1), estimate_object_size(&obj3));
@@ -778,11 +783,11 @@ startxref\n\
         // Integer zero
         let obj = PdfObject::Integer(0);
         assert_eq!(estimate_object_size(&obj), 16);
-        
+
         // Real zero
         let obj = PdfObject::Real(0.0);
         assert_eq!(estimate_object_size(&obj), 16);
-        
+
         // Reference zero
         let obj = PdfObject::Reference(0, 0);
         assert_eq!(estimate_object_size(&obj), 16);
@@ -792,7 +797,7 @@ startxref\n\
     fn test_object_size_estimation_negative_values() {
         let obj = PdfObject::Integer(-42);
         assert_eq!(estimate_object_size(&obj), 16);
-        
+
         let obj = PdfObject::Real(-3.14159);
         assert_eq!(estimate_object_size(&obj), 16);
     }
@@ -817,7 +822,7 @@ startxref\n\
             PdfObject::Name(PdfName::new("Name".to_string())),
             PdfObject::Reference(1, 0),
         ]));
-        
+
         let expected = 24 + 7 * 8 + 8 + 16 + 16 + 16 + (24 + 4) + (24 + 4) + 16;
         assert_eq!(estimate_object_size(&obj), expected);
     }
@@ -828,7 +833,7 @@ startxref\n\
         // This is mainly testing the logic bounds - it scans objects 1-99
         let data = create_minimal_pdf();
         let cursor = Cursor::new(data);
-        
+
         // We can't easily test the actual scanning without a real PDF,
         // but we can verify the implementation exists and has reasonable bounds
         if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
@@ -844,7 +849,7 @@ startxref\n\
         // Test that memory stats are properly initialized
         let data = create_minimal_pdf();
         let cursor = Cursor::new(data);
-        
+
         if let Ok(reader) = OptimizedPdfReader::new(cursor) {
             // Memory stats should be initialized
             assert_eq!(reader.memory_stats.cache_hits, 0);

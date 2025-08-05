@@ -1,4 +1,5 @@
 use crate::error::Result;
+use crate::fonts::{Font as CustomFont, FontCache};
 use crate::forms::{AcroForm, FormManager};
 use crate::objects::{Object, ObjectId};
 use crate::page::Page;
@@ -6,7 +7,6 @@ use crate::page_labels::PageLabelTree;
 use crate::structure::{NamedDestinations, OutlineTree, PageTree};
 use crate::text::{FontEncoding, FontWithEncoding};
 use crate::writer::PdfWriter;
-use crate::fonts::{Font as CustomFont, FontCache};
 use chrono::{DateTime, Local, Utc};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -54,6 +54,7 @@ pub struct Document {
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
     /// Map from font name to embedded font object ID
+    #[allow(dead_code)]
     pub(crate) embedded_fonts: HashMap<String, ObjectId>,
 }
 
@@ -305,7 +306,7 @@ impl Document {
 
         fonts_used.into_iter().collect()
     }
-    
+
     /// Add a custom font from a file path
     ///
     /// # Example
@@ -316,13 +317,17 @@ impl Document {
     /// let mut doc = Document::new();
     /// doc.add_font("MyFont", "path/to/font.ttf").unwrap();
     /// ```
-    pub fn add_font(&mut self, name: impl Into<String>, path: impl AsRef<std::path::Path>) -> Result<()> {
+    pub fn add_font(
+        &mut self,
+        name: impl Into<String>,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<()> {
         let name = name.into();
         let font = CustomFont::from_file(&name, path)?;
         self.custom_fonts.add_font(name, font)?;
         Ok(())
     }
-    
+
     /// Add a custom font from byte data
     ///
     /// # Example
@@ -340,17 +345,18 @@ impl Document {
         self.custom_fonts.add_font(name, font)?;
         Ok(())
     }
-    
+
     /// Get a custom font by name
+    #[allow(dead_code)]
     pub(crate) fn get_custom_font(&self, name: &str) -> Option<Arc<CustomFont>> {
         self.custom_fonts.get_font(name)
     }
-    
+
     /// Check if a custom font is loaded
     pub fn has_custom_font(&self, name: &str) -> bool {
         self.custom_fonts.has_font(name)
     }
-    
+
     /// Get all loaded custom font names
     pub fn custom_font_names(&self) -> Vec<String> {
         self.custom_fonts.font_names()

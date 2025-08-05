@@ -10,13 +10,12 @@ mod markup;
 mod text;
 
 pub use annotation::{
-    Annotation, AnnotationFlags, AnnotationManager, AnnotationType,
-    BorderStyle as AnnotationBorderStyle,
+    Annotation, AnnotationFlags, AnnotationManager, AnnotationType, BorderStyle, BorderStyleType,
 };
 pub use annotation_type::{
-    FreeTextAnnotation, HighlightAnnotation, InkAnnotation, LineAnnotation, SquareAnnotation,
-    StampAnnotation, StampName,
+    FreeTextAnnotation, HighlightAnnotation, InkAnnotation, LineAnnotation, LineEndingStyle,
+    SquareAnnotation, StampAnnotation, StampName,
 };
-pub use link::{LinkAction, LinkAnnotation, LinkDestination};
+pub use link::{HighlightMode, LinkAction, LinkAnnotation, LinkDestination};
 pub use markup::{MarkupAnnotation, MarkupType, QuadPoints};
 pub use text::{Icon, TextAnnotation};

@@ -189,12 +189,12 @@ impl Font {
     pub fn without_encoding(self) -> FontWithEncoding {
         FontWithEncoding::without_encoding(self)
     }
-    
+
     /// Check if this is a custom font
     pub fn is_custom(&self) -> bool {
         matches!(self, Font::Custom(_))
     }
-    
+
     /// Create a custom font reference
     pub fn custom(name: impl Into<String>) -> Self {
         Font::Custom(name.into())
@@ -448,7 +448,10 @@ mod tests {
 
         // Symbol fonts should not have recommended encoding
         assert_eq!(FontEncoding::recommended_for_font(&Font::Symbol), None);
-        assert_eq!(FontEncoding::recommended_for_font(&Font::ZapfDingbats), None);
+        assert_eq!(
+            FontEncoding::recommended_for_font(&Font::ZapfDingbats),
+            None
+        );
     }
 
     #[test]

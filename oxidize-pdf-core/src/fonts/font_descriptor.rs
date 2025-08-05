@@ -1,7 +1,7 @@
 //! Font descriptor structures for PDF font embedding
 
-use bitflags::bitflags;
 use crate::objects::{Dictionary, Object, ObjectId};
+use bitflags::bitflags;
 
 bitflags! {
     /// Font descriptor flags as defined in PDF specification
@@ -70,36 +70,39 @@ impl FontDescriptor {
             missing_width: 250.0,
         }
     }
-    
+
     /// Convert to PDF dictionary
     pub fn to_dict(&self, font_file_ref: Option<ObjectId>) -> Dictionary {
         let mut dict = Dictionary::new();
-        
+
         dict.set("Type", Object::Name("FontDescriptor".into()));
         dict.set("FontName", Object::Name(self.font_name.clone()));
         dict.set("FontFamily", Object::String(self.font_family.clone()));
         dict.set("Flags", Object::Integer(self.flags.bits() as i64));
-        
+
         // Font bounding box
-        dict.set("FontBBox", Object::Array(vec![
-            Object::Real(self.font_bbox[0] as f64),
-            Object::Real(self.font_bbox[1] as f64),
-            Object::Real(self.font_bbox[2] as f64),
-            Object::Real(self.font_bbox[3] as f64),
-        ]));
-        
+        dict.set(
+            "FontBBox",
+            Object::Array(vec![
+                Object::Real(self.font_bbox[0] as f64),
+                Object::Real(self.font_bbox[1] as f64),
+                Object::Real(self.font_bbox[2] as f64),
+                Object::Real(self.font_bbox[3] as f64),
+            ]),
+        );
+
         dict.set("ItalicAngle", Object::Real(self.italic_angle as f64));
         dict.set("Ascent", Object::Real(self.ascent as f64));
         dict.set("Descent", Object::Real(self.descent as f64));
         dict.set("CapHeight", Object::Real(self.cap_height as f64));
         dict.set("StemV", Object::Real(self.stem_v as f64));
         dict.set("MissingWidth", Object::Real(self.missing_width as f64));
-        
+
         // Add font file reference if provided
         if let Some(font_file_id) = font_file_ref {
             dict.set("FontFile2", Object::Reference(font_file_id));
         }
-        
+
         dict
     }
 }
@@ -107,7 +110,7 @@ impl FontDescriptor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_font_flags() {
         let flags = FontFlags::FIXED_PITCH | FontFlags::SERIF;
@@ -115,7 +118,7 @@ mod tests {
         assert!(flags.contains(FontFlags::SERIF));
         assert!(!flags.contains(FontFlags::ITALIC));
     }
-    
+
     #[test]
     fn test_font_descriptor_creation() {
         let desc = FontDescriptor::new("Helvetica");
@@ -123,19 +126,16 @@ mod tests {
         assert_eq!(desc.font_family, "Helvetica");
         assert!(desc.flags.contains(FontFlags::NONSYMBOLIC));
     }
-    
+
     #[test]
     fn test_font_descriptor_to_dict() {
         let desc = FontDescriptor::new("TestFont");
         let dict = desc.to_dict(None);
-        
+
         assert_eq!(
             dict.get("Type"),
             Some(&Object::Name("FontDescriptor".into()))
         );
-        assert_eq!(
-            dict.get("FontName"),
-            Some(&Object::Name("TestFont".into()))
-        );
+        assert_eq!(dict.get("FontName"), Some(&Object::Name("TestFont".into())));
     }
 }

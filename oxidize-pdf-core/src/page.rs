@@ -204,25 +204,25 @@ impl Page {
     /// use oxidize_pdf::{Page, text::{Table, TableOptions}};
     ///
     /// let mut page = Page::a4();
-    /// 
+    ///
     /// // Create a table with 3 columns
     /// let mut table = Table::new(vec![100.0, 150.0, 100.0]);
     /// table.set_position(50.0, 700.0);
-    /// 
+    ///
     /// // Add header row
     /// table.add_header_row(vec![
     ///     "Name".to_string(),
-    ///     "Description".to_string(), 
+    ///     "Description".to_string(),
     ///     "Price".to_string()
     /// ])?;
-    /// 
+    ///
     /// // Add data rows
     /// table.add_row(vec![
     ///     "Item 1".to_string(),
     ///     "First item description".to_string(),
     ///     "$10.00".to_string()
     /// ])?;
-    /// 
+    ///
     /// // Render the table on the page
     /// page.add_table(&table)?;
     /// # Ok::<(), oxidize_pdf::PdfError>(())

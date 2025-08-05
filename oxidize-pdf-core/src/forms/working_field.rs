@@ -398,11 +398,17 @@ mod tests {
 
         // Check annotation properties
         assert_eq!(dict.get("Type"), Some(&Object::Name("Annot".to_string())));
-        assert_eq!(dict.get("Subtype"), Some(&Object::Name("Widget".to_string())));
+        assert_eq!(
+            dict.get("Subtype"),
+            Some(&Object::Name("Widget".to_string()))
+        );
 
         // Check field properties
         assert_eq!(dict.get("FT"), Some(&Object::Name("Tx".to_string())));
-        assert_eq!(dict.get("T"), Some(&Object::String("test_field".to_string())));
+        assert_eq!(
+            dict.get("T"),
+            Some(&Object::String("test_field".to_string()))
+        );
 
         // Check rectangle
         let expected_rect = Object::Array(vec![
@@ -414,7 +420,10 @@ mod tests {
         assert_eq!(dict.get("Rect"), Some(&expected_rect));
 
         // Check appearance
-        assert_eq!(dict.get("DA"), Some(&Object::String("/Helv 12 Tf 0 g".to_string())));
+        assert_eq!(
+            dict.get("DA"),
+            Some(&Object::String("/Helv 12 Tf 0 g".to_string()))
+        );
 
         // Check flags
         assert_eq!(dict.get("F"), Some(&Object::Integer(4)));
@@ -430,8 +439,14 @@ mod tests {
         let dict = create_text_field_dict("test_field", rect, Some("default text"));
 
         // Check that value and default value are set
-        assert_eq!(dict.get("V"), Some(&Object::String("default text".to_string())));
-        assert_eq!(dict.get("DV"), Some(&Object::String("default text".to_string())));
+        assert_eq!(
+            dict.get("V"),
+            Some(&Object::String("default text".to_string()))
+        );
+        assert_eq!(
+            dict.get("DV"),
+            Some(&Object::String("default text".to_string()))
+        );
     }
 
     #[test]
@@ -528,7 +543,7 @@ mod tests {
         // Check options array
         if let Some(Object::Array(opt_array)) = dict.get("Opt") {
             assert_eq!(opt_array.len(), 2);
-            
+
             // First option (different export/display values)
             if let Object::Array(first_opt) = &opt_array[0] {
                 assert_eq!(first_opt[0], Object::String("val1".to_string()));
@@ -590,7 +605,11 @@ mod tests {
     #[test]
     fn test_create_list_box_dict_multi_select() {
         let rect = create_test_rect();
-        let options = vec![("val1", "Display 1"), ("val2", "Display 2"), ("val3", "Display 3")];
+        let options = vec![
+            ("val1", "Display 1"),
+            ("val2", "Display 2"),
+            ("val3", "Display 3"),
+        ];
         let selected = vec![0, 2];
         let dict = create_list_box_dict("list_field", rect, options, selected, true);
 
@@ -673,7 +692,7 @@ mod tests {
     #[test]
     fn test_all_fields_have_required_properties() {
         let rect = create_test_rect();
-        
+
         let fields = vec![
             create_text_field_dict("text", rect, None),
             create_checkbox_dict("checkbox", rect, false),
@@ -718,21 +737,27 @@ mod tests {
                 upper_right: Point { x: 50.0, y: 25.0 },
             },
             Rectangle {
-                lower_left: Point { x: 200.5, y: 300.75 },
-                upper_right: Point { x: 400.25, y: 500.125 },
+                lower_left: Point {
+                    x: 200.5,
+                    y: 300.75,
+                },
+                upper_right: Point {
+                    x: 400.25,
+                    y: 500.125,
+                },
             },
         ];
 
         for rect in rects {
             let dict = create_text_field_dict("test", rect, None);
-            
+
             let expected_rect = Object::Array(vec![
                 Object::Real(rect.lower_left.x),
                 Object::Real(rect.lower_left.y),
                 Object::Real(rect.upper_right.x),
                 Object::Real(rect.upper_right.y),
             ]);
-            
+
             assert_eq!(dict.get("Rect"), Some(&expected_rect));
         }
     }
