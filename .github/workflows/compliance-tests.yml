@@ -63,7 +63,7 @@ jobs:
         echo "ISO 32000 Compliance: $COMPLIANCE"
     
     - name: Upload Compliance Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: compliance-reports
         path: |
