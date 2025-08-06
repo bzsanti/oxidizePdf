@@ -5,6 +5,28 @@
 - Before pushing changes to origin, ensure all tests pass successfully
 - Aim for 95% coverage of documentation, unit tests, and integration tests, with a minimum acceptable threshold of 80%
 
+## Test Organization Guidelines - ESTRICTO
+
+### REGLAS OBLIGATORIAS:
+1. **TODOS los PDFs generados van a**: `oxidize-pdf-core/test-pdfs/`
+2. **NUNCA generar PDFs en**:
+   - El directorio raíz del proyecto
+   - oxidize-pdf-core/ directamente
+   - Cualquier otro lugar aleatorio
+3. **Archivos .rs de ejemplo**: `oxidize-pdf-core/examples/`
+4. **Tests unitarios**: `oxidize-pdf-core/tests/`
+
+### RUTINA DE GENERACIÓN:
+1. Crear ejemplo en `examples/nombre_ejemplo.rs`
+2. El ejemplo DEBE guardar PDFs en `test-pdfs/nombre_ejemplo.pdf`
+3. Ejecutar con `cargo run --example nombre_ejemplo`
+4. Verificar PDF en `test-pdfs/`
+
+### PROHIBIDO:
+- Crear nuevos directorios de prueba
+- Guardar PDFs sin la ruta `test-pdfs/`
+- Dejar archivos PDF dispersos por el proyecto
+
 ## Release Process - IMPORTANTE
 - **NUNCA usar cargo-release localmente** - Las releases SIEMPRE se hacen a través del pipeline de GitHub Actions
 - El proceso es: crear un tag git (ej: v1.1.4) y hacer push, esto activa automáticamente el pipeline de release

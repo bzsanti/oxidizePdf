@@ -184,6 +184,7 @@ impl Page {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn images(&self) -> &HashMap<String, Image> {
         &self.images
     }
@@ -232,6 +233,7 @@ impl Page {
     }
 
     /// Get ExtGState resources from the graphics context
+    #[allow(dead_code)]
     pub(crate) fn get_extgstate_resources(
         &self,
     ) -> Option<&std::collections::HashMap<String, crate::graphics::ExtGState>> {
@@ -457,11 +459,17 @@ impl Page {
         dict
     }
 
+    /// Gets all characters used in this page.
+    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
+        self.graphics_context.get_used_characters()
+    }
+
     /// Gets all fonts used in this page.
     ///
     /// This method scans the page content to identify which fonts are being used.
     /// For now, it returns a simple set based on the current text context font,
     /// but in a full implementation it would parse all text operations.
+    #[allow(dead_code)]
     pub(crate) fn get_used_fonts(&self) -> Vec<Font> {
         let mut fonts = HashSet::new();
 

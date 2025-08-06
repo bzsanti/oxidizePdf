@@ -46,6 +46,8 @@ pub struct PdfWriter<W: Write> {
     page_ids: Vec<ObjectId>,       // page IDs for form field references
     // Configuration
     config: WriterConfig,
+    // Characters used in document (for font subsetting)
+    document_used_chars: Option<std::collections::HashSet<char>>,
 }
 
 impl<W: Write> PdfWriter<W> {
@@ -67,10 +69,16 @@ impl<W: Write> PdfWriter<W> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config,
+            document_used_chars: None,
         }
     }
 
     pub fn write_document(&mut self, document: &mut Document) -> Result<()> {
+        // Store used characters for font subsetting
+        if !document.used_characters.is_empty() {
+            self.document_used_chars = Some(document.used_characters.clone());
+        }
+
         self.write_header()?;
 
         // Reserve object IDs for fixed objects (written in order)
@@ -78,8 +86,11 @@ impl<W: Write> PdfWriter<W> {
         self.pages_id = Some(self.allocate_object_id());
         self.info_id = Some(self.allocate_object_id());
 
-        // Write pages first (they contain widget annotations)
-        self.write_pages(document)?;
+        // Write custom fonts first (so pages can reference them)
+        let font_refs = self.write_fonts(document)?;
+
+        // Write pages (they contain widget annotations and font references)
+        self.write_pages_with_fonts(document, &font_refs)?;
 
         // Write form fields (must be after pages so we can track widgets)
         self.write_form_fields(document)?;
@@ -158,6 +169,7 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn write_pages(&mut self, document: &Document) -> Result<()> {
         let pages_id = self.pages_id.expect("pages_id must be set");
         let mut pages_dict = Dictionary::new();
@@ -197,6 +209,7 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn write_page(
         &mut self,
         page_id: ObjectId,
@@ -576,6 +589,722 @@ impl<W: Write> PdfWriter<W> {
         self.write_object(info_id, Object::Dictionary(info_dict))?;
         Ok(())
     }
+
+    fn write_fonts(&mut self, document: &Document) -> Result<HashMap<String, ObjectId>> {
+        let mut font_refs = HashMap::new();
+
+        // Write custom fonts from the document
+        for font_name in document.custom_font_names() {
+            if let Some(font) = document.get_custom_font(&font_name) {
+                // For now, write all custom fonts as TrueType with Identity-H for Unicode support
+                // The font from document is Arc<fonts::Font>, not text::font_manager::CustomFont
+                let font_id = self.write_font_with_unicode_support(&font_name, &font)?;
+                font_refs.insert(font_name.clone(), font_id);
+            }
+        }
+
+        Ok(font_refs)
+    }
+
+    /// Write font with automatic Unicode support detection
+    fn write_font_with_unicode_support(
+        &mut self,
+        font_name: &str,
+        font: &crate::fonts::Font,
+    ) -> Result<ObjectId> {
+        // Check if any text in the document needs Unicode
+        // For simplicity, always use Type0 for full Unicode support
+        self.write_type0_font_from_font(font_name, font)
+    }
+
+    /// Write a Type0 font with CID support from fonts::Font
+    fn write_type0_font_from_font(
+        &mut self,
+        font_name: &str,
+        font: &crate::fonts::Font,
+    ) -> Result<ObjectId> {
+        // Get used characters from document for subsetting
+        let used_chars = self.document_used_chars.clone().unwrap_or_else(|| {
+            // If no tracking, include common characters as fallback
+            let mut chars = std::collections::HashSet::new();
+            for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?".chars()
+            {
+                chars.insert(ch);
+            }
+            chars
+        });
+        // Allocate IDs for all font objects
+        let font_id = self.allocate_object_id();
+        let descendant_font_id = self.allocate_object_id();
+        let descriptor_id = self.allocate_object_id();
+        let font_file_id = self.allocate_object_id();
+        let to_unicode_id = self.allocate_object_id();
+
+        // Write font file (embedded TTF data with subsetting for large fonts)
+        let font_data_to_embed = if font.data.len() > 1_000_000 && !used_chars.is_empty() {
+            // Large font - try to subset it
+            match crate::text::fonts::truetype_subsetter::subset_font(
+                font.data.clone(),
+                &used_chars,
+            ) {
+                Ok(subset_data) => {
+                    // Successfully subsetted
+                    subset_data
+                }
+                Err(_) => {
+                    // Subsetting failed, use original if under 25MB
+                    if font.data.len() < 25_000_000 {
+                        font.data.clone()
+                    } else {
+                        // Too large even for fallback
+                        Vec::new()
+                    }
+                }
+            }
+        } else {
+            // Small font or no character tracking - use as-is
+            font.data.clone()
+        };
+
+        if !font_data_to_embed.is_empty() {
+            let mut font_file_dict = Dictionary::new();
+            font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+            let font_stream_obj = Object::Stream(font_file_dict, font_data_to_embed);
+            self.write_object(font_file_id, font_stream_obj)?;
+        } else {
+            // No font data to embed
+            let font_file_dict = Dictionary::new();
+            let font_stream_obj = Object::Stream(font_file_dict, Vec::new());
+            self.write_object(font_file_id, font_stream_obj)?;
+        }
+
+        // Write font descriptor
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontName", Object::Name(font_name.to_string()));
+        descriptor.set("Flags", Object::Integer(4)); // Symbolic font
+        descriptor.set(
+            "FontBBox",
+            Object::Array(vec![
+                Object::Integer(font.descriptor.font_bbox[0] as i64),
+                Object::Integer(font.descriptor.font_bbox[1] as i64),
+                Object::Integer(font.descriptor.font_bbox[2] as i64),
+                Object::Integer(font.descriptor.font_bbox[3] as i64),
+            ]),
+        );
+        descriptor.set(
+            "ItalicAngle",
+            Object::Real(font.descriptor.italic_angle as f64),
+        );
+        descriptor.set("Ascent", Object::Real(font.descriptor.ascent as f64));
+        descriptor.set("Descent", Object::Real(font.descriptor.descent as f64));
+        descriptor.set("CapHeight", Object::Real(font.descriptor.cap_height as f64));
+        descriptor.set("StemV", Object::Real(font.descriptor.stem_v as f64));
+        descriptor.set("FontFile2", Object::Reference(font_file_id));
+        self.write_object(descriptor_id, Object::Dictionary(descriptor))?;
+
+        // Write CIDFont (descendant font)
+        let mut cid_font = Dictionary::new();
+        cid_font.set("Type", Object::Name("Font".to_string()));
+        cid_font.set("Subtype", Object::Name("CIDFontType2".to_string()));
+        cid_font.set("BaseFont", Object::Name(font_name.to_string()));
+
+        // CIDSystemInfo
+        let mut cid_system_info = Dictionary::new();
+        cid_system_info.set("Registry", Object::String("Adobe".to_string()));
+        cid_system_info.set("Ordering", Object::String("Identity".to_string()));
+        cid_system_info.set("Supplement", Object::Integer(0));
+        cid_font.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
+
+        cid_font.set("FontDescriptor", Object::Reference(descriptor_id));
+        // Use a more reasonable default width based on font metrics
+        let default_width = 600; // More reasonable default
+        cid_font.set("DW", Object::Integer(default_width));
+
+        // Generate proper width array from font metrics
+        let w_array = self.generate_width_array(font, default_width);
+        cid_font.set("W", Object::Array(w_array));
+
+        // CIDToGIDMap - Generate proper mapping from CID (Unicode) to GlyphID
+        // This is critical for Type0 fonts to work correctly
+        let cid_to_gid_map = self.generate_cid_to_gid_map(font)?;
+        if !cid_to_gid_map.is_empty() {
+            // Write the CIDToGIDMap as a stream
+            let cid_to_gid_map_id = self.allocate_object_id();
+            let mut map_dict = Dictionary::new();
+            map_dict.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
+            let map_stream = Object::Stream(map_dict, cid_to_gid_map);
+            self.write_object(cid_to_gid_map_id, map_stream)?;
+            cid_font.set("CIDToGIDMap", Object::Reference(cid_to_gid_map_id));
+        } else {
+            cid_font.set("CIDToGIDMap", Object::Name("Identity".to_string()));
+        }
+
+        self.write_object(descendant_font_id, Object::Dictionary(cid_font))?;
+
+        // Write ToUnicode CMap
+        let cmap_data = self.generate_tounicode_cmap_from_font(font);
+        let cmap_dict = Dictionary::new();
+        let cmap_stream = Object::Stream(cmap_dict, cmap_data);
+        self.write_object(to_unicode_id, cmap_stream)?;
+
+        // Write Type0 font (main font)
+        let mut type0_font = Dictionary::new();
+        type0_font.set("Type", Object::Name("Font".to_string()));
+        type0_font.set("Subtype", Object::Name("Type0".to_string()));
+        type0_font.set("BaseFont", Object::Name(font_name.to_string()));
+        type0_font.set("Encoding", Object::Name("Identity-H".to_string()));
+        type0_font.set(
+            "DescendantFonts",
+            Object::Array(vec![Object::Reference(descendant_font_id)]),
+        );
+        type0_font.set("ToUnicode", Object::Reference(to_unicode_id));
+
+        self.write_object(font_id, Object::Dictionary(type0_font))?;
+
+        Ok(font_id)
+    }
+
+    /// Generate width array for CID font
+    fn generate_width_array(&self, font: &crate::fonts::Font, _default_width: i64) -> Vec<Object> {
+        use crate::text::fonts::truetype::TrueTypeFont;
+
+        let mut w_array = Vec::new();
+
+        // Try to get actual glyph widths from the font
+        if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+            if let Ok(cmap_tables) = tt_font.parse_cmap() {
+                // Find the best cmap table (Unicode)
+                if let Some(cmap) = cmap_tables
+                    .iter()
+                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
+                {
+                    // Get actual widths from the font
+                    if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
+                        // Group consecutive characters with same width for efficiency
+                        let mut sorted_chars: Vec<_> = widths.iter().collect();
+                        sorted_chars.sort_by_key(|(unicode, _)| *unicode);
+
+                        let mut i = 0;
+                        while i < sorted_chars.len() {
+                            let start_unicode = *sorted_chars[i].0;
+                            let width = *sorted_chars[i].1;
+
+                            // Find consecutive characters with same width
+                            let mut end_unicode = start_unicode;
+                            let mut j = i + 1;
+                            while j < sorted_chars.len()
+                                && *sorted_chars[j].0 == end_unicode + 1
+                                && *sorted_chars[j].1 == width
+                            {
+                                end_unicode = *sorted_chars[j].0;
+                                j += 1;
+                            }
+
+                            // Add to W array
+                            if start_unicode == end_unicode {
+                                // Single character
+                                w_array.push(Object::Integer(start_unicode as i64));
+                                w_array.push(Object::Array(vec![Object::Integer(width as i64)]));
+                            } else {
+                                // Range of characters
+                                w_array.push(Object::Integer(start_unicode as i64));
+                                w_array.push(Object::Integer(end_unicode as i64));
+                                w_array.push(Object::Integer(width as i64));
+                            }
+
+                            i = j;
+                        }
+
+                        return w_array;
+                    }
+                }
+            }
+        }
+
+        // Fallback to reasonable default widths if we can't parse the font
+        let ranges = vec![
+            // Space character should be narrower
+            (0x20, 0x20, 250), // Space
+            (0x21, 0x2F, 333), // Punctuation
+            (0x30, 0x39, 500), // Numbers (0-9)
+            (0x3A, 0x40, 333), // More punctuation
+            (0x41, 0x5A, 667), // Uppercase letters (A-Z)
+            (0x5B, 0x60, 333), // Brackets
+            (0x61, 0x7A, 500), // Lowercase letters (a-z)
+            (0x7B, 0x7E, 333), // More brackets
+            // Extended Latin
+            (0xA0, 0xA0, 250), // Non-breaking space
+            (0xA1, 0xBF, 333), // Latin-1 punctuation
+            (0xC0, 0xD6, 667), // Latin-1 uppercase
+            (0xD7, 0xD7, 564), // Multiplication sign
+            (0xD8, 0xDE, 667), // More Latin-1 uppercase
+            (0xDF, 0xF6, 500), // Latin-1 lowercase
+            (0xF7, 0xF7, 564), // Division sign
+            (0xF8, 0xFF, 500), // More Latin-1 lowercase
+            // Latin Extended-A
+            (0x100, 0x17F, 500), // Latin Extended-A
+            // Symbols and special characters
+            (0x2000, 0x200F, 250), // Various spaces
+            (0x2010, 0x2027, 333), // Hyphens and dashes
+            (0x2028, 0x202F, 250), // More spaces
+            (0x2030, 0x206F, 500), // General Punctuation
+            (0x2070, 0x209F, 400), // Superscripts
+            (0x20A0, 0x20CF, 600), // Currency symbols
+            (0x2100, 0x214F, 700), // Letterlike symbols
+            (0x2190, 0x21FF, 600), // Arrows
+            (0x2200, 0x22FF, 600), // Mathematical operators
+            (0x2300, 0x23FF, 600), // Miscellaneous technical
+            (0x2500, 0x257F, 500), // Box drawing
+            (0x2580, 0x259F, 500), // Block elements
+            (0x25A0, 0x25FF, 600), // Geometric shapes
+            (0x2600, 0x26FF, 600), // Miscellaneous symbols
+            (0x2700, 0x27BF, 600), // Dingbats
+        ];
+
+        // Convert ranges to W array format
+        for (start, end, width) in ranges {
+            if start == end {
+                // Single character
+                w_array.push(Object::Integer(start));
+                w_array.push(Object::Array(vec![Object::Integer(width)]));
+            } else {
+                // Range of characters
+                w_array.push(Object::Integer(start));
+                w_array.push(Object::Integer(end));
+                w_array.push(Object::Integer(width));
+            }
+        }
+
+        w_array
+    }
+
+    /// Generate CIDToGIDMap for Type0 font
+    fn generate_cid_to_gid_map(&mut self, font: &crate::fonts::Font) -> Result<Vec<u8>> {
+        use crate::text::fonts::truetype::TrueTypeFont;
+
+        // Parse the font to get the cmap table
+        let tt_font = TrueTypeFont::parse(font.data.clone())?;
+        let cmap_tables = tt_font.parse_cmap()?;
+
+        // Find the best cmap table (Unicode)
+        let cmap = cmap_tables
+            .iter()
+            .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode
+            .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0)) // Unicode
+            .ok_or_else(|| {
+                crate::error::PdfError::FontError("No Unicode cmap table found".to_string())
+            })?;
+
+        // Build the CIDToGIDMap
+        // Since we use Unicode code points as CIDs, we need to map Unicode → GlyphID
+        // The map is a binary array where index = CID (Unicode) * 2, value = GlyphID (big-endian)
+
+        // Find the maximum Unicode value we need to support
+        let max_unicode = cmap
+            .mappings
+            .keys()
+            .max()
+            .copied()
+            .unwrap_or(0xFFFF)
+            .min(0xFFFF) as usize;
+
+        // Create the map: 2 bytes per entry
+        let mut map = vec![0u8; (max_unicode + 1) * 2];
+
+        // Fill in the mappings
+        let mut sample_mappings = Vec::new();
+        for (&unicode, &glyph_id) in &cmap.mappings {
+            if unicode <= max_unicode as u32 {
+                let idx = (unicode as usize) * 2;
+                // Write glyph_id in big-endian format
+                map[idx] = (glyph_id >> 8) as u8;
+                map[idx + 1] = (glyph_id & 0xFF) as u8;
+
+                // Collect some sample mappings for debugging
+                if unicode == 0x0041 || unicode == 0x0061 || unicode == 0x00E1 || unicode == 0x00F1
+                {
+                    sample_mappings.push((unicode, glyph_id));
+                }
+            }
+        }
+
+        // Debug output
+        println!(
+            "Generated CIDToGIDMap: {} bytes for {} mappings",
+            map.len(),
+            cmap.mappings.len()
+        );
+
+        // Show mappings for test characters
+        let test_chars = "Hello áéíóú";
+        println!("Sample mappings:");
+        for ch in test_chars.chars() {
+            let unicode = ch as u32;
+            if let Some(&glyph_id) = cmap.mappings.get(&unicode) {
+                println!("  '{}' (U+{:04X}) → GlyphID {}", ch, unicode, glyph_id);
+            } else {
+                println!("  '{}' (U+{:04X}) → NOT FOUND", ch, unicode);
+            }
+        }
+
+        Ok(map)
+    }
+
+    /// Generate ToUnicode CMap for Type0 font from fonts::Font
+    fn generate_tounicode_cmap_from_font(&self, font: &crate::fonts::Font) -> Vec<u8> {
+        use crate::text::fonts::truetype::TrueTypeFont;
+
+        let mut cmap = String::new();
+
+        // CMap header
+        cmap.push_str("/CIDInit /ProcSet findresource begin\n");
+        cmap.push_str("12 dict begin\n");
+        cmap.push_str("begincmap\n");
+        cmap.push_str("/CIDSystemInfo\n");
+        cmap.push_str("<< /Registry (Adobe)\n");
+        cmap.push_str("   /Ordering (UCS)\n");
+        cmap.push_str("   /Supplement 0\n");
+        cmap.push_str(">> def\n");
+        cmap.push_str("/CMapName /Adobe-Identity-UCS def\n");
+        cmap.push_str("/CMapType 2 def\n");
+        cmap.push_str("1 begincodespacerange\n");
+        cmap.push_str("<0000> <FFFF>\n");
+        cmap.push_str("endcodespacerange\n");
+
+        // Try to get actual mappings from the font
+        let mut mappings = Vec::new();
+        let mut has_font_mappings = false;
+
+        if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+            if let Ok(cmap_tables) = tt_font.parse_cmap() {
+                // Find the best cmap table (Unicode)
+                if let Some(cmap_table) = cmap_tables
+                    .iter()
+                    .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode
+                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
+                // Unicode
+                {
+                    // For Identity-H encoding, we use Unicode code points as CIDs
+                    // So the ToUnicode CMap should map CID (=Unicode) → Unicode
+                    for (&unicode, &glyph_id) in &cmap_table.mappings {
+                        if glyph_id > 0 && unicode <= 0xFFFF {
+                            // Only non-.notdef glyphs
+                            // Map CID (which is Unicode value) to Unicode
+                            mappings.push((unicode, unicode));
+                        }
+                    }
+                    has_font_mappings = true;
+                }
+            }
+        }
+
+        // If we couldn't get font mappings, use identity mapping for common ranges
+        if !has_font_mappings {
+            // Basic Latin and Latin-1 Supplement (0x0020-0x00FF)
+            for i in 0x0020..=0x00FF {
+                mappings.push((i, i));
+            }
+
+            // Latin Extended-A (0x0100-0x017F)
+            for i in 0x0100..=0x017F {
+                mappings.push((i, i));
+            }
+
+            // Common symbols and punctuation
+            for i in 0x2000..=0x206F {
+                mappings.push((i, i));
+            }
+
+            // Mathematical symbols
+            for i in 0x2200..=0x22FF {
+                mappings.push((i, i));
+            }
+
+            // Arrows
+            for i in 0x2190..=0x21FF {
+                mappings.push((i, i));
+            }
+
+            // Box drawing
+            for i in 0x2500..=0x259F {
+                mappings.push((i, i));
+            }
+
+            // Geometric shapes
+            for i in 0x25A0..=0x25FF {
+                mappings.push((i, i));
+            }
+
+            // Miscellaneous symbols
+            for i in 0x2600..=0x26FF {
+                mappings.push((i, i));
+            }
+        }
+
+        // Sort mappings by CID for better organization
+        mappings.sort_by_key(|&(cid, _)| cid);
+
+        // Use more efficient bfrange where possible
+        let mut i = 0;
+        while i < mappings.len() {
+            // Check if we can use a range
+            let start_cid = mappings[i].0;
+            let start_unicode = mappings[i].1;
+            let mut end_idx = i;
+
+            // Find consecutive mappings
+            while end_idx + 1 < mappings.len()
+                && mappings[end_idx + 1].0 == mappings[end_idx].0 + 1
+                && mappings[end_idx + 1].1 == mappings[end_idx].1 + 1
+                && end_idx - i < 99
+            // Max 100 per block
+            {
+                end_idx += 1;
+            }
+
+            if end_idx > i {
+                // Use bfrange for consecutive mappings
+                cmap.push_str("1 beginbfrange\n");
+                cmap.push_str(&format!(
+                    "<{:04X}> <{:04X}> <{:04X}>\n",
+                    start_cid, mappings[end_idx].0, start_unicode
+                ));
+                cmap.push_str("endbfrange\n");
+                i = end_idx + 1;
+            } else {
+                // Use bfchar for individual mappings
+                let mut chars = Vec::new();
+                let chunk_end = (i + 100).min(mappings.len());
+
+                for item in &mappings[i..chunk_end] {
+                    chars.push(*item);
+                }
+
+                if !chars.is_empty() {
+                    cmap.push_str(&format!("{} beginbfchar\n", chars.len()));
+                    for (cid, unicode) in chars {
+                        cmap.push_str(&format!("<{:04X}> <{:04X}>\n", cid, unicode));
+                    }
+                    cmap.push_str("endbfchar\n");
+                }
+
+                i = chunk_end;
+            }
+        }
+
+        // CMap footer
+        cmap.push_str("endcmap\n");
+        cmap.push_str("CMapName currentdict /CMap defineresource pop\n");
+        cmap.push_str("end\n");
+        cmap.push_str("end\n");
+
+        cmap.into_bytes()
+    }
+
+    /// Write a regular TrueType font
+    #[allow(dead_code)]
+    fn write_truetype_font(
+        &mut self,
+        font_name: &str,
+        font: &crate::text::font_manager::CustomFont,
+    ) -> Result<ObjectId> {
+        // Allocate IDs for font objects
+        let font_id = self.allocate_object_id();
+        let descriptor_id = self.allocate_object_id();
+        let font_file_id = self.allocate_object_id();
+
+        // Write font file (embedded TTF data)
+        if let Some(ref data) = font.font_data {
+            let mut font_file_dict = Dictionary::new();
+            font_file_dict.set("Length1", Object::Integer(data.len() as i64));
+            let font_stream_obj = Object::Stream(font_file_dict, data.clone());
+            self.write_object(font_file_id, font_stream_obj)?;
+        }
+
+        // Write font descriptor
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontName", Object::Name(font_name.to_string()));
+        descriptor.set("Flags", Object::Integer(32)); // Non-symbolic font
+        descriptor.set(
+            "FontBBox",
+            Object::Array(vec![
+                Object::Integer(-1000),
+                Object::Integer(-1000),
+                Object::Integer(2000),
+                Object::Integer(2000),
+            ]),
+        );
+        descriptor.set("ItalicAngle", Object::Integer(0));
+        descriptor.set("Ascent", Object::Integer(font.descriptor.ascent as i64));
+        descriptor.set("Descent", Object::Integer(font.descriptor.descent as i64));
+        descriptor.set(
+            "CapHeight",
+            Object::Integer(font.descriptor.cap_height as i64),
+        );
+        descriptor.set("StemV", Object::Integer(font.descriptor.stem_v as i64));
+        descriptor.set("FontFile2", Object::Reference(font_file_id));
+        self.write_object(descriptor_id, Object::Dictionary(descriptor))?;
+
+        // Write font dictionary
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("Subtype", Object::Name("TrueType".to_string()));
+        font_dict.set("BaseFont", Object::Name(font_name.to_string()));
+        font_dict.set("FirstChar", Object::Integer(0));
+        font_dict.set("LastChar", Object::Integer(255));
+
+        // Create widths array (simplified - all 600)
+        let widths: Vec<Object> = (0..256).map(|_| Object::Integer(600)).collect();
+        font_dict.set("Widths", Object::Array(widths));
+        font_dict.set("FontDescriptor", Object::Reference(descriptor_id));
+
+        // Use WinAnsiEncoding for regular TrueType
+        font_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+
+        self.write_object(font_id, Object::Dictionary(font_dict))?;
+
+        Ok(font_id)
+    }
+
+    fn write_pages_with_fonts(
+        &mut self,
+        document: &Document,
+        font_refs: &HashMap<String, ObjectId>,
+    ) -> Result<()> {
+        let pages_id = self.pages_id.expect("pages_id must be set");
+        let mut pages_dict = Dictionary::new();
+        pages_dict.set("Type", Object::Name("Pages".to_string()));
+        pages_dict.set("Count", Object::Integer(document.pages.len() as i64));
+
+        let mut kids = Vec::new();
+
+        // Allocate page object IDs sequentially
+        let mut page_ids = Vec::new();
+        let mut content_ids = Vec::new();
+        for _ in 0..document.pages.len() {
+            page_ids.push(self.allocate_object_id());
+            content_ids.push(self.allocate_object_id());
+        }
+
+        for page_id in &page_ids {
+            kids.push(Object::Reference(*page_id));
+        }
+
+        pages_dict.set("Kids", Object::Array(kids));
+
+        self.write_object(pages_id, Object::Dictionary(pages_dict))?;
+
+        // Store page IDs for form field references
+        self.page_ids = page_ids.clone();
+
+        // Write individual pages with font references
+        for (i, page) in document.pages.iter().enumerate() {
+            let page_id = page_ids[i];
+            let content_id = content_ids[i];
+
+            self.write_page_with_fonts(page_id, pages_id, content_id, page, document, font_refs)?;
+            self.write_page_content(content_id, page)?;
+        }
+
+        Ok(())
+    }
+
+    fn write_page_with_fonts(
+        &mut self,
+        page_id: ObjectId,
+        parent_id: ObjectId,
+        content_id: ObjectId,
+        page: &crate::page::Page,
+        _document: &Document,
+        font_refs: &HashMap<String, ObjectId>,
+    ) -> Result<()> {
+        // Start with the page's dictionary which includes annotations
+        let mut page_dict = page.to_dict();
+
+        page_dict.set("Type", Object::Name("Page".to_string()));
+        page_dict.set("Parent", Object::Reference(parent_id));
+        page_dict.set("Contents", Object::Reference(content_id));
+
+        // Get resources dictionary or create new one
+        let mut resources = if let Some(Object::Dictionary(res)) = page_dict.get("Resources") {
+            res.clone()
+        } else {
+            Dictionary::new()
+        };
+
+        // Add font resources
+        let mut font_dict = Dictionary::new();
+
+        // Add standard PDF fonts (Type1) with proper dictionary structure
+        let mut helvetica_dict = Dictionary::new();
+        helvetica_dict.set("Type", Object::Name("Font".to_string()));
+        helvetica_dict.set("Subtype", Object::Name("Type1".to_string()));
+        helvetica_dict.set("BaseFont", Object::Name("Helvetica".to_string()));
+        font_dict.set("Helvetica", Object::Dictionary(helvetica_dict));
+
+        let mut times_dict = Dictionary::new();
+        times_dict.set("Type", Object::Name("Font".to_string()));
+        times_dict.set("Subtype", Object::Name("Type1".to_string()));
+        times_dict.set("BaseFont", Object::Name("Times-Roman".to_string()));
+        font_dict.set("Times-Roman", Object::Dictionary(times_dict));
+
+        let mut courier_dict = Dictionary::new();
+        courier_dict.set("Type", Object::Name("Font".to_string()));
+        courier_dict.set("Subtype", Object::Name("Type1".to_string()));
+        courier_dict.set("BaseFont", Object::Name("Courier".to_string()));
+        font_dict.set("Courier", Object::Dictionary(courier_dict));
+
+        // Add custom fonts (Type0 fonts for Unicode support)
+        for (font_name, font_id) in font_refs {
+            font_dict.set(font_name, Object::Reference(*font_id));
+        }
+
+        resources.set("Font", Object::Dictionary(font_dict));
+
+        page_dict.set("Resources", Object::Dictionary(resources));
+
+        // Handle form widget annotations
+        if let Some(Object::Array(annots)) = page_dict.get("Annots") {
+            let mut new_annots = Vec::new();
+
+            for annot in annots {
+                if let Object::Dictionary(ref annot_dict) = annot {
+                    if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
+                        if subtype == "Widget" {
+                            // Process widget annotation
+                            let widget_id = self.allocate_object_id();
+                            self.write_object(widget_id, annot.clone())?;
+                            new_annots.push(Object::Reference(widget_id));
+
+                            // Track widget for form fields
+                            if let Some(Object::Name(_ft)) = annot_dict.get("FT") {
+                                if let Some(Object::String(field_name)) = annot_dict.get("T") {
+                                    self.field_widget_map
+                                        .entry(field_name.clone())
+                                        .or_default()
+                                        .push(widget_id);
+                                    self.field_id_map.insert(field_name.clone(), widget_id);
+                                    self.form_field_ids.push(widget_id);
+                                }
+                            }
+                            continue;
+                        }
+                    }
+                }
+                new_annots.push(annot.clone());
+            }
+
+            if !new_annots.is_empty() {
+                page_dict.set("Annots", Object::Array(new_annots));
+            }
+        }
+
+        self.write_object(page_id, Object::Dictionary(page_dict))?;
+        Ok(())
+    }
 }
 
 impl PdfWriter<BufWriter<std::fs::File>> {
@@ -596,6 +1325,7 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config: WriterConfig::default(),
+            document_used_chars: None,
         })
     }
 }

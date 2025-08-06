@@ -1,12 +1,19 @@
 # Build artifacts
 /target
+**/target/
 Cargo.lock
 
-# Test PDFs
-test-pdfs/
+# Test PDFs - ONLY in designated directories
 *.pdf
-test_*.pdf
+!oxidize-pdf-core/test-pdfs/*.pdf
+!test-pdfs/*.pdf
 !test-suite/fixtures/**/*.pdf
+!test-files/*.pdf
+
+# Temporary output directories (should not exist)
+output/
+**/output/
+test-output/
 
 # PDF samples for testing
 PDF_Samples/
