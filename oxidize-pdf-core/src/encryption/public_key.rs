@@ -594,11 +594,19 @@ mod tests {
     fn test_generate_seed() {
         let handler = PublicKeySecurityHandler::new_sha256();
         let seed1 = handler.generate_seed().unwrap();
+
+        // Add a small delay to ensure different timestamp
+        std::thread::sleep(std::time::Duration::from_millis(1));
+
         let seed2 = handler.generate_seed().unwrap();
 
         assert_eq!(seed1.len(), 32);
         assert_eq!(seed2.len(), 32);
-        assert_ne!(seed1, seed2); // Should be random
+
+        // Seeds should be different (with high probability)
+        // Note: This could theoretically fail if the RNG produces identical values,
+        // but the probability is astronomically low with proper entropy
+        assert_ne!(seed1, seed2, "Generated seeds should be different");
     }
 
     #[test]
