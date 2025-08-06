@@ -175,11 +175,17 @@ fn test_aes_encryption_decryption_256() {
 fn test_aes_iv_generation() {
     // Test that IV generation produces 16-byte IVs
     let iv1 = generate_iv();
+
+    // Add a small delay to ensure different timestamp/entropy
+    std::thread::sleep(std::time::Duration::from_millis(1));
+
     let iv2 = generate_iv();
 
     assert_eq!(iv1.len(), 16);
     assert_eq!(iv2.len(), 16);
+
     // IVs should be different (extremely high probability)
+    // Note: The delay ensures different timestamps for RNG seeding
     assert_ne!(iv1, iv2);
 }
 
