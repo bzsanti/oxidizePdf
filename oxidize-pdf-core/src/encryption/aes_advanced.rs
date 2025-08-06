@@ -681,13 +681,13 @@ mod tests {
         let handler_r5 = AdvancedAesHandler::revision_5();
 
         // Try to use R5 method with R4 handler
-        let result = handler_r4.compute_r5_encryption_key(b"password", b"salt", &vec![0u8; 48]);
+        let result = handler_r4.compute_r5_encryption_key(b"password", b"salt", &[0u8; 48]);
         assert!(result.is_err());
 
         // Try to use R4 method with R5 handler
         let result = handler_r5.compute_r4_encryption_key(
             b"password",
-            &vec![0u8; 32],
+            &[0u8; 32],
             Permissions::new(),
             b"file_id",
             true,

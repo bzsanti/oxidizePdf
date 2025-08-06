@@ -384,7 +384,7 @@ mod tests {
         ];
 
         for event in events {
-            let debug_str = format!("{:?}", event);
+            let debug_str = format!("{event:?}");
             assert!(!debug_str.is_empty());
         }
     }
@@ -398,7 +398,7 @@ mod tests {
             in_use: true,
         };
 
-        let debug_str = format!("{:?}", entry);
+        let debug_str = format!("{entry:?}");
         assert!(debug_str.contains("XRefEntry"));
         assert!(debug_str.contains("5"));
 
@@ -424,7 +424,7 @@ mod tests {
         ];
 
         for state in states {
-            let debug_str = format!("{:?}", state);
+            let debug_str = format!("{state:?}");
             assert!(!debug_str.is_empty());
         }
     }

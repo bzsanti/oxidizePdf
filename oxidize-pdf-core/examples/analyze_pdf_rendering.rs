@@ -48,13 +48,13 @@ fn main() {
     // Increase stack size to handle deeply nested PDFs
     let result = std::thread::Builder::new()
         .stack_size(32 * 1024 * 1024) // 32MB stack
-        .spawn(|| run_analysis())
+        .spawn(run_analysis)
         .unwrap()
         .join()
         .unwrap();
 
     if let Err(e) = result {
-        eprintln!("Error: {}", e);
+        eprintln!("Error: {e}");
         std::process::exit(1);
     }
 }
@@ -261,7 +261,7 @@ fn analyze_pdf(path: &Path) -> FileAnalysis {
                 let mut error_chain = String::new();
                 let mut current_error: &dyn std::error::Error = &e;
                 while let Some(source) = current_error.source() {
-                    error_chain.push_str(&format!("\n  Caused by: {}", source));
+                    error_chain.push_str(&format!("\n  Caused by: {source}"));
                     current_error = source;
                 }
                 if !error_chain.is_empty() {
@@ -329,7 +329,7 @@ fn analyze_error_patterns(report: &AnalysisReport) -> Vec<ErrorPattern> {
 
             pattern_map
                 .entry(pattern.to_string())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(error.filename.clone());
         }
     }
@@ -374,7 +374,7 @@ fn generate_json_report(
         if !first {
             json.push_str(",\n");
         }
-        json.push_str(&format!("    \"{}\": {}", category, count));
+        json.push_str(&format!("    \"{category}\": {count}"));
         first = false;
     }
     json.push_str("\n  },\n");
@@ -454,9 +454,9 @@ fn generate_markdown_report(
             ));
             markdown.push_str("Example files:\n");
             for file in &pattern.example_files {
-                markdown.push_str(&format!("- {}\n", file));
+                markdown.push_str(&format!("- {file}\n"));
             }
-            markdown.push_str("\n");
+            markdown.push('\n');
         }
     }
 
@@ -465,21 +465,21 @@ fn generate_markdown_report(
         markdown.push_str(&format!("### {}. {}\n", i + 1, error.filename));
         markdown.push_str(&format!("- **Size**: {} bytes\n", error.file_size));
         if let Some(version) = &error.pdf_version {
-            markdown.push_str(&format!("- **PDF Version**: {}\n", version));
+            markdown.push_str(&format!("- **PDF Version**: {version}\n"));
         }
         if let Some(error_type) = &error.error_type {
-            markdown.push_str(&format!("- **Error Type**: {}\n", error_type));
+            markdown.push_str(&format!("- **Error Type**: {error_type}\n"));
         }
         if let Some(error_msg) = &error.error_message {
-            markdown.push_str(&format!("- **Error**: {}\n", error_msg));
+            markdown.push_str(&format!("- **Error**: {error_msg}\n"));
         }
         if let Some(details) = &error.error_details {
-            markdown.push_str(&format!("- **Details**: {}\n", details));
+            markdown.push_str(&format!("- **Details**: {details}\n"));
         }
         if !error.features.is_empty() {
             markdown.push_str(&format!("- **Features**: {}\n", error.features.join(", ")));
         }
-        markdown.push_str("\n");
+        markdown.push('\n');
     }
 
     markdown.push_str("\n## Recommendations\n\n");
@@ -489,7 +489,6 @@ fn generate_markdown_report(
     let top_errors: Vec<_> = report
         .error_categories
         .iter()
-        .map(|(k, v)| (k, v))
         .collect::<Vec<_>>()
         .into_iter()
         .take(5)
@@ -547,7 +546,7 @@ fn print_summary(report: &AnalysisReport) {
     categories.sort_by(|a, b| b.1.cmp(a.1));
 
     for (category, count) in categories.iter().take(5) {
-        println!("  - {}: {} PDFs", category, count);
+        println!("  - {category}: {count} PDFs");
     }
 
     println!("\nReports generated:");

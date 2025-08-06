@@ -256,7 +256,7 @@ impl CMap {
         match self.cmap_type {
             CMapType::ToUnicode => {
                 // Interpret as UTF-16BE
-                if mapped.len() % 2 == 0 {
+                if mapped.len().is_multiple_of(2) {
                     let utf16_values: Vec<u16> = mapped
                         .chunks(2)
                         .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))

@@ -55,16 +55,12 @@ fn test_iso_compliance_pragmatic() {
         } else {
             0.0
         };
-        println!(
-            "{}: {}/{} = {:.1}%",
-            section, implemented, total, percentage
-        );
+        println!("{section}: {implemented}/{total} = {percentage:.1}%");
     }
 
     let overall_percentage = (implemented_features as f64 / total_features as f64) * 100.0;
     println!(
-        "\nOverall REAL Compliance: {}/{} = {:.1}%",
-        implemented_features, total_features, overall_percentage
+        "\nOverall REAL Compliance: {implemented_features}/{total_features} = {overall_percentage:.1}%"
     );
 
     // Generate report
@@ -478,8 +474,7 @@ fn generate_real_compliance_report(
 
     report.push_str("## Summary\n\n");
     report.push_str(&format!(
-        "**Real Compliance: {:.1}%**\n\n",
-        overall_percentage
+        "**Real Compliance: {overall_percentage:.1}%**\n\n"
     ));
 
     report.push_str("| Section | Features Tested | Working | Percentage |\n");
@@ -492,8 +487,7 @@ fn generate_real_compliance_report(
             0.0
         };
         report.push_str(&format!(
-            "| {} | {} | {} | {:.1}% |\n",
-            section, total, implemented, percentage
+            "| {section} | {total} | {implemented} | {percentage:.1}% |\n"
         ));
     }
 
@@ -535,8 +529,7 @@ fn generate_real_compliance_report(
     report.push_str("## Comparison with Claims\n\n");
     report.push_str("- **Claimed in ISO_COMPLIANCE.md**: 60-64%\n");
     report.push_str(&format!(
-        "- **Actual API compliance**: {:.1}%\n",
-        overall_percentage
+        "- **Actual API compliance**: {overall_percentage:.1}%\n"
     ));
     report.push_str("- **Gap**: ~35-40 percentage points\n\n");
 

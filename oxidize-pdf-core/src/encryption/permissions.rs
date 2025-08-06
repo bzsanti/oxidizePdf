@@ -409,7 +409,7 @@ mod tests {
         };
 
         // Test that debug formatting works
-        let debug_str = format!("{:?}", flags);
+        let debug_str = format!("{flags:?}");
         assert!(debug_str.contains("PermissionFlags"));
     }
 
@@ -426,7 +426,7 @@ mod tests {
             print_high_quality: true,
         };
 
-        let cloned_flags = flags.clone();
+        let cloned_flags = flags;
         assert_eq!(flags.print, cloned_flags.print);
         assert_eq!(flags.copy, cloned_flags.copy);
         assert_eq!(flags.fill_forms, cloned_flags.fill_forms);

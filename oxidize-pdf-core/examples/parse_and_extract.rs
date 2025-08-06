@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let pdf_path = &args[1];
-    println!("Parsing PDF: {}", pdf_path);
+    println!("Parsing PDF: {pdf_path}");
     println!("{}", "=".repeat(50));
 
     // Open and parse the PDF
@@ -28,22 +28,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nDocument Metadata:");
     println!("-----------------");
     if let Some(title) = metadata.title {
-        println!("Title: {}", title);
+        println!("Title: {title}");
     }
     if let Some(author) = metadata.author {
-        println!("Author: {}", author);
+        println!("Author: {author}");
     }
     if let Some(subject) = metadata.subject {
-        println!("Subject: {}", subject);
+        println!("Subject: {subject}");
     }
     if let Some(keywords) = metadata.keywords {
-        println!("Keywords: {}", keywords);
+        println!("Keywords: {keywords}");
     }
     if let Some(creator) = metadata.creator {
-        println!("Creator: {}", creator);
+        println!("Creator: {creator}");
     }
     if let Some(producer) = metadata.producer {
-        println!("Producer: {}", producer);
+        println!("Producer: {producer}");
     }
 
     // Convert to document for more operations
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         text.text.clone()
                     };
-                    println!("{}", preview);
+                    println!("{preview}");
                 }
 
                 // Show text statistics
@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            eprintln!("Error extracting text: {}", e);
+            eprintln!("Error extracting text: {e}");
             eprintln!("This PDF might use advanced features not yet supported.");
         }
     }

@@ -387,7 +387,7 @@ mod tests {
             top: Some(20.0),
             zoom: None,
         };
-        let debug_str = format!("{:?}", dest_type);
+        let debug_str = format!("{dest_type:?}");
         assert!(debug_str.contains("XYZ"));
 
         let cloned = dest_type.clone();
@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn test_page_destination_debug_clone() {
         let page_dest = PageDestination::PageNumber(10);
-        let debug_str = format!("{:?}", page_dest);
+        let debug_str = format!("{page_dest:?}");
         assert!(debug_str.contains("PageNumber"));
         assert!(debug_str.contains("10"));
 
@@ -433,7 +433,7 @@ mod tests {
     #[test]
     fn test_destination_debug_clone() {
         let dest = Destination::fit(PageDestination::PageNumber(3));
-        let debug_str = format!("{:?}", dest);
+        let debug_str = format!("{dest:?}");
         assert!(debug_str.contains("Destination"));
         assert!(debug_str.contains("Fit"));
 
@@ -609,8 +609,8 @@ mod tests {
             Destination::fit_bv(PageDestination::PageNumber(6), Some(125.0)),
         ];
 
-        let expected_names = vec!["Fit", "FitH", "FitV", "FitR", "FitB", "FitBH", "FitBV"];
-        let expected_lengths = vec![2, 3, 3, 6, 2, 3, 3];
+        let expected_names = ["Fit", "FitH", "FitV", "FitR", "FitB", "FitBH", "FitBV"];
+        let expected_lengths = [2, 3, 3, 6, 2, 3, 3];
 
         for (dest, (expected_name, expected_len)) in destinations
             .iter()
@@ -642,7 +642,7 @@ mod tests {
         ];
 
         for variant in variants {
-            let _ = format!("{:?}", variant); // Test Debug
+            let _ = format!("{variant:?}"); // Test Debug
             let _ = variant.clone(); // Test Clone
         }
     }

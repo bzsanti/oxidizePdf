@@ -88,10 +88,7 @@ fn main() -> Result<()> {
     if compressed_bytes.len() < uncompressed_bytes.len() {
         let savings = uncompressed_bytes.len() - compressed_bytes.len();
         let percent = (savings as f64 / uncompressed_bytes.len() as f64) * 100.0;
-        println!(
-            "   ✅ SUCCESS: Compression working - saved {} bytes ({:.1}%)",
-            savings, percent
-        );
+        println!("   ✅ SUCCESS: Compression working - saved {savings} bytes ({percent:.1}%)");
     } else {
         println!("   ⚠️  WARNING: Compression might not be working effectively for small files");
     }

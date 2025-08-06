@@ -24,7 +24,7 @@ fn test_fuzz_targets_exist() {
 
     for target in &expected_targets {
         let target_path = targets_dir.join(target);
-        assert!(target_path.exists(), "Fuzz target {} should exist", target);
+        assert!(target_path.exists(), "Fuzz target {target} should exist");
     }
 }
 
@@ -56,10 +56,9 @@ fn test_fuzz_corpus_seeds() {
     for (name, pdf) in seeds {
         assert!(
             pdf.starts_with(b"%PDF-"),
-            "{} should start with PDF header",
-            name
+            "{name} should start with PDF header"
         );
-        assert!(pdf.len() > 100, "{} should have reasonable size", name);
+        assert!(pdf.len() > 100, "{name} should have reasonable size");
     }
 }
 

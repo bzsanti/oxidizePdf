@@ -746,9 +746,9 @@ mod tests {
             let png = ImageFormat::Png;
             let tiff = ImageFormat::Tiff;
 
-            assert_eq!(format!("{:?}", jpeg), "Jpeg");
-            assert_eq!(format!("{:?}", png), "Png");
-            assert_eq!(format!("{:?}", tiff), "Tiff");
+            assert_eq!(format!("{jpeg:?}"), "Jpeg");
+            assert_eq!(format!("{png:?}"), "Png");
+            assert_eq!(format!("{tiff:?}"), "Tiff");
         }
 
         #[test]
@@ -783,9 +783,9 @@ mod tests {
             let rgb = ColorSpace::DeviceRGB;
             let cmyk = ColorSpace::DeviceCMYK;
 
-            assert_eq!(format!("{:?}", gray), "DeviceGray");
-            assert_eq!(format!("{:?}", rgb), "DeviceRGB");
-            assert_eq!(format!("{:?}", cmyk), "DeviceCMYK");
+            assert_eq!(format!("{gray:?}"), "DeviceGray");
+            assert_eq!(format!("{rgb:?}"), "DeviceRGB");
+            assert_eq!(format!("{cmyk:?}"), "DeviceCMYK");
         }
 
         #[test]
@@ -1142,7 +1142,7 @@ mod tests {
             ];
 
             let image = Image::from_jpeg_data(jpeg_data).unwrap();
-            let debug_str = format!("{:?}", image);
+            let debug_str = format!("{image:?}");
 
             assert!(debug_str.contains("Image"));
             assert!(debug_str.contains("width"));
@@ -1631,7 +1631,7 @@ mod tests {
                     assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(8));
                     assert_eq!(stream_data, data);
                 } else {
-                    panic!("Expected Stream object for format {:?}", expected_format);
+                    panic!("Expected Stream object for format {expected_format:?}");
                 }
             }
         }

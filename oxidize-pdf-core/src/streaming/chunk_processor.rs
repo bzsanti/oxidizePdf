@@ -381,7 +381,7 @@ mod tests {
         ];
 
         for chunk_type in types {
-            let debug_str = format!("{:?}", chunk_type);
+            let debug_str = format!("{chunk_type:?}");
             assert!(!debug_str.is_empty());
 
             let cloned = chunk_type.clone();
@@ -399,7 +399,7 @@ mod tests {
             page_number: 2,
         };
 
-        let debug_str = format!("{:?}", chunk);
+        let debug_str = format!("{chunk:?}");
         assert!(debug_str.contains("ContentChunk"));
         assert!(debug_str.contains("Graphics"));
 
@@ -420,7 +420,7 @@ mod tests {
             chunk_types: vec![ChunkType::Text, ChunkType::Image],
         };
 
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("ChunkOptions"));
 
         let cloned = options.clone();

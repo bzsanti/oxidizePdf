@@ -425,8 +425,7 @@ mod tests {
         for version in expected_versions {
             assert!(
                 pdf_version::SUPPORTED_VERSIONS.contains(&version),
-                "Expected PDF version {} to be supported",
-                version
+                "Expected PDF version {version} to be supported"
             );
         }
 

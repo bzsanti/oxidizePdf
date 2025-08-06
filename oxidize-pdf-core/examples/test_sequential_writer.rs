@@ -140,7 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     writeln!(file, "/Root 1 0 R")?;
     writeln!(file, ">>")?;
     writeln!(file, "startxref")?;
-    writeln!(file, "{}", xref_offset)?;
+    writeln!(file, "{xref_offset}")?;
     writeln!(file, "%%EOF")?;
 
     println!("✓ Created test_sequential.pdf with proper object ordering");

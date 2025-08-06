@@ -30,7 +30,7 @@ fn main() -> Result<(), PdfError> {
     let mut y_position = 680.0;
 
     if image1_path.exists() {
-        match oxidize_pdf::graphics::Image::from_png_file(&image1_path) {
+        match oxidize_pdf::graphics::Image::from_png_file(image1_path) {
             Ok(image) => {
                 // Add the image to the page
                 page.add_image("Image1", image.clone());
@@ -64,7 +64,7 @@ fn main() -> Result<(), PdfError> {
             Err(e) => {
                 page.text()
                     .at(50.0, y_position)
-                    .write(&format!("❌ Image 1 error: {}", e))?;
+                    .write(&format!("❌ Image 1 error: {e}"))?;
                 y_position -= 40.0;
             }
         }
@@ -77,7 +77,7 @@ fn main() -> Result<(), PdfError> {
     }
 
     if image2_path.exists() {
-        match oxidize_pdf::graphics::Image::from_png_file(&image2_path) {
+        match oxidize_pdf::graphics::Image::from_png_file(image2_path) {
             Ok(image) => {
                 // Add the second image to the page
                 page.add_image("Image2", image.clone());
@@ -111,7 +111,7 @@ fn main() -> Result<(), PdfError> {
             Err(e) => {
                 page.text()
                     .at(50.0, y_position)
-                    .write(&format!("❌ Image 2 error: {}", e))?;
+                    .write(&format!("❌ Image 2 error: {e}"))?;
                 y_position -= 40.0;
             }
         }
@@ -150,7 +150,7 @@ fn main() -> Result<(), PdfError> {
     let output_file = "image_embedding_test.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("\n📊 This PDF demonstrates:");
     println!("   • Image file detection and loading");
     println!("   • Fixed ObjectId allocation system");

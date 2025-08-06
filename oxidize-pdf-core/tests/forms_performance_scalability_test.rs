@@ -13,12 +13,12 @@
 //! - Field lookup and retrieval efficiency
 
 use oxidize_pdf::forms::{
-    AcroForm, CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormField, FormManager,
-    ListBox, PushButton, RadioButton, TextField, Widget, WidgetAppearance,
+    CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormManager, PushButton, RadioButton,
+    TextField, Widget, WidgetAppearance,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::graphics::Color;
-use oxidize_pdf::objects::{Dictionary, Object, ObjectReference};
+use oxidize_pdf::objects::Object;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -39,8 +39,8 @@ fn test_large_form_creation_performance() {
             match field_type {
                 0 => {
                     // Text field
-                    let field = TextField::new(&format!("text_field_{}", i))
-                        .with_value(&format!("Value {}", i))
+                    let field = TextField::new(format!("text_field_{i}"))
+                        .with_value(format!("Value {i}"))
                         .with_max_length(100);
 
                     let widget = Widget::new(Rectangle::new(
@@ -55,7 +55,7 @@ fn test_large_form_creation_performance() {
                 }
                 1 => {
                     // Checkbox
-                    let field = CheckBox::new(&format!("check_field_{}", i))
+                    let field = CheckBox::new(format!("check_field_{i}"))
                         .checked()
                         .with_export_value("Yes");
 
@@ -74,7 +74,7 @@ fn test_large_form_creation_performance() {
                 }
                 2 => {
                     // ComboBox
-                    let field = ComboBox::new(&format!("combo_field_{}", i))
+                    let field = ComboBox::new(format!("combo_field_{i}"))
                         .add_option("opt1", "Option 1")
                         .add_option("opt2", "Option 2")
                         .add_option("opt3", "Option 3")
@@ -95,8 +95,8 @@ fn test_large_form_creation_performance() {
                 }
                 3 => {
                     // PushButton
-                    let field = PushButton::new(&format!("button_field_{}", i))
-                        .with_caption(&format!("Button {}", i));
+                    let field = PushButton::new(format!("button_field_{i}"))
+                        .with_caption(format!("Button {i}"));
 
                     let widget = Widget::new(Rectangle::new(
                         Point::new(
@@ -126,15 +126,11 @@ fn test_large_form_creation_performance() {
 
         assert!(
             actual_time_per_field < max_time_per_field,
-            "Creation time per field too slow: {:?} > {:?} for {} fields",
-            actual_time_per_field,
-            max_time_per_field,
-            field_count
+            "Creation time per field too slow: {actual_time_per_field:?} > {max_time_per_field:?} for {field_count} fields"
         );
 
         println!(
-            "Created {} fields in {:?} ({:?}/field)",
-            field_count, creation_time, actual_time_per_field
+            "Created {field_count} fields in {creation_time:?} ({actual_time_per_field:?}/field)"
         );
     }
 
@@ -151,8 +147,8 @@ fn test_field_lookup_performance() {
     let start_creation = Instant::now();
 
     for i in 0..field_count {
-        let field = TextField::new(&format!("lookup_field_{:06}", i))
-            .with_value(&format!("Value {}", i))
+        let field = TextField::new(format!("lookup_field_{i:06}"))
+            .with_value(format!("Value {i}"))
             .with_max_length(50);
 
         let widget = Widget::new(Rectangle::new(
@@ -164,10 +160,7 @@ fn test_field_lookup_performance() {
     }
 
     let creation_time = start_creation.elapsed();
-    println!(
-        "Created {} fields for lookup test in {:?}",
-        field_count, creation_time
-    );
+    println!("Created {field_count} fields for lookup test in {creation_time:?}");
 
     // Test lookup performance
     let lookup_tests = vec![
@@ -186,8 +179,7 @@ fn test_field_lookup_performance() {
             let found = form_manager.get_field(field_name).is_some();
             assert_eq!(
                 found, *should_exist,
-                "Lookup result mismatch for field {}",
-                field_name
+                "Lookup result mismatch for field {field_name}"
             );
         }
     }
@@ -199,13 +191,11 @@ fn test_field_lookup_performance() {
     // Lookup should be very fast (sub-microsecond)
     assert!(
         time_per_lookup < std::time::Duration::from_micros(10),
-        "Field lookup too slow: {:?} per lookup",
-        time_per_lookup
+        "Field lookup too slow: {time_per_lookup:?} per lookup"
     );
 
     println!(
-        "Performed {} field lookups in {:?} ({:?}/lookup)",
-        total_lookups, lookup_time, time_per_lookup
+        "Performed {total_lookups} field lookups in {lookup_time:?} ({time_per_lookup:?}/lookup)"
     );
 
     println!("Field lookup performance test completed");
@@ -221,8 +211,8 @@ fn test_memory_usage_patterns() {
     let mut form_manager1 = FormManager::new();
 
     for i in 0..1000 {
-        let field = TextField::new(&format!("mem_field_{}", i))
-            .with_value(&format!("Value {}", i))
+        let field = TextField::new(format!("mem_field_{i}"))
+            .with_value(format!("Value {i}"))
             .with_max_length(100);
 
         let widget = Widget::new(Rectangle::new(
@@ -261,8 +251,8 @@ fn test_memory_usage_patterns() {
 
     let bulk_fields: Vec<_> = (0..1000)
         .map(|i| {
-            let field = TextField::new(&format!("bulk_field_{}", i))
-                .with_value(&format!("Bulk Value {}", i))
+            let field = TextField::new(format!("bulk_field_{i}"))
+                .with_value(format!("Bulk Value {i}"))
                 .with_max_length(100);
 
             let widget = Widget::new(Rectangle::new(
@@ -290,9 +280,7 @@ fn test_memory_usage_patterns() {
     // Bulk addition shouldn't use significantly more memory
     assert!(
         pattern2_growth <= pattern1_growth + 200,
-        "Bulk addition used excessive memory: {} vs {}",
-        pattern2_growth,
-        pattern1_growth
+        "Bulk addition used excessive memory: {pattern2_growth} vs {pattern1_growth}"
     );
 
     // Pattern 3: Field creation and destruction
@@ -303,8 +291,8 @@ fn test_memory_usage_patterns() {
 
         // Add fields
         for i in 0..100 {
-            let field = TextField::new(&format!("temp_field_{}_{}", cycle, i))
-                .with_value(&format!("Temp Value {} {}", cycle, i))
+            let field = TextField::new(format!("temp_field_{cycle}_{i}"))
+                .with_value(format!("Temp Value {cycle} {i}"))
                 .with_max_length(50);
 
             let widget = Widget::new(Rectangle::new(
@@ -331,8 +319,7 @@ fn test_memory_usage_patterns() {
     // Create/destroy cycles should not accumulate memory
     assert!(
         pattern3_growth < 500,
-        "Create/destroy cycles accumulated too much memory: {}",
-        pattern3_growth
+        "Create/destroy cycles accumulated too much memory: {pattern3_growth}"
     );
 
     println!("Memory usage patterns test completed");
@@ -357,9 +344,9 @@ fn test_concurrent_form_operations() {
             let mut failures = 0;
 
             for i in 0..fields_per_thread {
-                let field_name = format!("thread_{}_{}", thread_id, i);
+                let field_name = format!("thread_{thread_id}_{i}");
                 let field = TextField::new(&field_name)
-                    .with_value(&format!("Thread {} Field {}", thread_id, i))
+                    .with_value(format!("Thread {thread_id} Field {i}"))
                     .with_max_length(50);
 
                 let widget = Widget::new(Rectangle::new(
@@ -405,8 +392,7 @@ fn test_concurrent_form_operations() {
         match handle.join() {
             Ok((thread_id, successes, failures)) => {
                 println!(
-                    "Thread {} completed: {} successes, {} failures",
-                    thread_id, successes, failures
+                    "Thread {thread_id} completed: {successes} successes, {failures} failures"
                 );
                 total_successes += successes;
                 total_failures += failures;
@@ -424,7 +410,7 @@ fn test_concurrent_form_operations() {
     let expected_operations = thread_count * fields_per_thread;
     let success_rate = total_successes as f64 / expected_operations as f64;
 
-    println!("Concurrent operations completed in {:?}", total_time);
+    println!("Concurrent operations completed in {total_time:?}");
     println!(
         "Success rate: {:.1}% ({}/{})",
         success_rate * 100.0,
@@ -443,11 +429,10 @@ fn test_concurrent_form_operations() {
     let final_manager = form_manager.lock().unwrap();
     let final_count = final_manager.field_count();
 
-    println!("Final form manager has {} fields", final_count);
+    println!("Final form manager has {final_count} fields");
     assert_eq!(
         final_count, total_successes,
-        "Field count mismatch: expected {}, got {}",
-        total_successes, final_count
+        "Field count mismatch: expected {total_successes}, got {final_count}"
     );
 
     println!("Concurrent form operations test completed");
@@ -465,8 +450,8 @@ fn test_acroform_serialization_performance() {
         let creation_start = Instant::now();
 
         for i in 0..field_count {
-            let field = TextField::new(&format!("serial_field_{}", i))
-                .with_value(&format!("Serialization test {}", i))
+            let field = TextField::new(format!("serial_field_{i}"))
+                .with_value(format!("Serialization test {i}"))
                 .with_max_length(100);
 
             let widget = Widget::new(Rectangle::new(
@@ -497,15 +482,11 @@ fn test_acroform_serialization_performance() {
         let max_serialization_time = std::time::Duration::from_millis(field_count as u64 / 10); // 0.1ms per field
         assert!(
             serialization_time < max_serialization_time,
-            "Serialization too slow: {:?} > {:?} for {} fields",
-            serialization_time,
-            max_serialization_time,
-            field_count
+            "Serialization too slow: {serialization_time:?} > {max_serialization_time:?} for {field_count} fields"
         );
 
         println!(
-            "Serialized {} fields: creation {:?}, serialization {:?}",
-            field_count, creation_time, serialization_time
+            "Serialized {field_count} fields: creation {creation_time:?}, serialization {serialization_time:?}"
         );
     }
 
@@ -587,19 +568,15 @@ fn test_widget_rendering_performance() {
     let max_rendering_time = std::time::Duration::from_millis(widget_count as u64 / 5); // 0.2ms per widget
     assert!(
         rendering_time < max_rendering_time,
-        "Widget rendering preparation too slow: {:?} > {:?} for {} widgets",
-        rendering_time,
-        max_rendering_time,
-        widget_count
+        "Widget rendering preparation too slow: {rendering_time:?} > {max_rendering_time:?} for {widget_count} widgets"
     );
 
     let time_per_widget = rendering_time / widget_count as u32;
 
     println!(
-        "Widget rendering performance: {} widgets in {:?} ({:?}/widget)",
-        widget_count, rendering_time, time_per_widget
+        "Widget rendering performance: {widget_count} widgets in {rendering_time:?} ({time_per_widget:?}/widget)"
     );
-    println!("Creation time: {:?}", creation_time);
+    println!("Creation time: {creation_time:?}");
 
     println!("Widget rendering performance test completed");
 }
@@ -616,8 +593,8 @@ fn test_form_data_performance() {
         let insertion_start = Instant::now();
 
         for i in 0..data_size {
-            let key = format!("data_key_{:06}", i);
-            let value = format!("Data value {} with some content to make it realistic", i);
+            let key = format!("data_key_{i:06}");
+            let value = format!("Data value {i} with some content to make it realistic");
             form_data.set_value(&key, &value);
         }
 
@@ -628,7 +605,7 @@ fn test_form_data_performance() {
         let mut retrieved_count = 0;
 
         for i in 0..data_size {
-            let key = format!("data_key_{:06}", i);
+            let key = format!("data_key_{i:06}");
             if form_data.get_value(&key).is_some() {
                 retrieved_count += 1;
             }
@@ -657,31 +634,21 @@ fn test_form_data_performance() {
 
         assert!(
             insertion_time < max_insertion_time,
-            "Data insertion too slow: {:?} > {:?} for {} items",
-            insertion_time,
-            max_insertion_time,
-            data_size
+            "Data insertion too slow: {insertion_time:?} > {max_insertion_time:?} for {data_size} items"
         );
 
         assert!(
             retrieval_time < max_retrieval_time,
-            "Data retrieval too slow: {:?} > {:?} for {} items",
-            retrieval_time,
-            max_retrieval_time,
-            data_size
+            "Data retrieval too slow: {retrieval_time:?} > {max_retrieval_time:?} for {data_size} items"
         );
 
         assert!(
             iteration_time < max_iteration_time,
-            "Data iteration too slow: {:?} > {:?} for {} items",
-            iteration_time,
-            max_iteration_time,
-            data_size
+            "Data iteration too slow: {iteration_time:?} > {max_iteration_time:?} for {data_size} items"
         );
 
         println!(
-            "FormData performance ({} items): insert {:?}, retrieve {:?}, iterate {:?}",
-            data_size, insertion_time, retrieval_time, iteration_time
+            "FormData performance ({data_size} items): insert {insertion_time:?}, retrieve {retrieval_time:?}, iterate {iteration_time:?}"
         );
     }
 
@@ -700,8 +667,8 @@ fn test_complex_form_structure_performance() {
         // Create complex form structure
         for section in 0..complexity {
             // Section header (as read-only text field)
-            let header_field = TextField::new(&format!("section_header_{}", section))
-                .with_value(&format!("Section {} - Complex Form Data", section));
+            let header_field = TextField::new(format!("section_header_{section}"))
+                .with_value(format!("Section {section} - Complex Form Data"));
 
             let header_flags = FieldFlags {
                 read_only: true,
@@ -731,8 +698,8 @@ fn test_complex_form_structure_performance() {
                 match field_num {
                     0 => {
                         // Text field with validation
-                        let text_field = TextField::new(&format!("text_{}_{}", section, field_num))
-                            .with_value(&format!("Text data {} {}", section, field_num))
+                        let text_field = TextField::new(format!("text_{section}_{field_num}"))
+                            .with_value(format!("Text data {section} {field_num}"))
                             .with_max_length(200);
 
                         let text_widget = Widget::new(Rectangle::new(
@@ -747,12 +714,12 @@ fn test_complex_form_structure_performance() {
                     1 => {
                         // Choice field with many options
                         let mut choice_field =
-                            ComboBox::new(&format!("choice_{}_{}", section, field_num));
+                            ComboBox::new(format!("choice_{section}_{field_num}"));
 
                         for opt in 0..10 {
                             choice_field = choice_field.add_option(
-                                &format!("opt_{}", opt),
-                                &format!("Option {} for section {}", opt, section),
+                                format!("opt_{opt}"),
+                                format!("Option {opt} for section {section}"),
                             );
                         }
 
@@ -769,12 +736,11 @@ fn test_complex_form_structure_performance() {
                     }
                     2 => {
                         // Radio button group
-                        let radio_field =
-                            RadioButton::new(&format!("radio_{}_{}", section, field_num))
-                                .add_option("yes", "Yes")
-                                .add_option("no", "No")
-                                .add_option("maybe", "Maybe")
-                                .with_selected(0);
+                        let radio_field = RadioButton::new(format!("radio_{section}_{field_num}"))
+                            .add_option("yes", "Yes")
+                            .add_option("no", "No")
+                            .add_option("maybe", "Maybe")
+                            .with_selected(0);
 
                         let radio_widgets = vec![
                             Widget::new(Rectangle::new(
@@ -799,8 +765,8 @@ fn test_complex_form_structure_performance() {
                         // Checkbox group
                         for cb in 0..3 {
                             let checkbox =
-                                CheckBox::new(&format!("check_{}_{}_{}", section, field_num, cb))
-                                    .with_export_value(&format!("CB{}", cb));
+                                CheckBox::new(format!("check_{section}_{field_num}_{cb}"))
+                                    .with_export_value(format!("CB{cb}"));
 
                             let cb_widget = Widget::new(Rectangle::new(
                                 Point::new(200.0 + cb as f64 * 30.0, field_y),
@@ -814,8 +780,8 @@ fn test_complex_form_structure_performance() {
                     }
                     4 => {
                         // Button for section
-                        let button = PushButton::new(&format!("button_{}_{}", section, field_num))
-                            .with_caption(&format!("Process Section {}", section));
+                        let button = PushButton::new(format!("button_{section}_{field_num}"))
+                            .with_caption(format!("Process Section {section}"));
 
                         let button_widget = Widget::new(Rectangle::new(
                             Point::new(350.0, field_y),
@@ -853,25 +819,19 @@ fn test_complex_form_structure_performance() {
         let expected_fields = complexity * 8; // 8 fields per section (1 header + 1 text + 1 combo + 1 radio + 3 checkboxes + 1 button)
         assert!(
             field_count >= expected_fields,
-            "Expected at least {} fields, got {}",
-            expected_fields,
-            field_count
+            "Expected at least {expected_fields} fields, got {field_count}"
         );
 
         let max_creation_time = std::time::Duration::from_millis(complexity as u64 * 10);
         assert!(
             creation_time < max_creation_time,
-            "Complex form creation too slow: {:?} > {:?}",
-            creation_time,
-            max_creation_time
+            "Complex form creation too slow: {creation_time:?} > {max_creation_time:?}"
         );
 
         let max_operations_time = std::time::Duration::from_millis(50);
         assert!(
             operations_time < max_operations_time,
-            "Complex form operations too slow: {:?} > {:?}",
-            operations_time,
-            max_operations_time
+            "Complex form operations too slow: {operations_time:?} > {max_operations_time:?}"
         );
 
         // Verify AcroForm structure
@@ -880,8 +840,7 @@ fn test_complex_form_structure_performance() {
         }
 
         println!(
-            "Complex form (level {}): {} fields created in {:?}, operations in {:?}",
-            complexity, field_count, creation_time, operations_time
+            "Complex form (level {complexity}): {field_count} fields created in {creation_time:?}, operations in {operations_time:?}"
         );
     }
 
@@ -899,10 +858,9 @@ fn test_memory_pressure_handling() {
         let mut form_manager = FormManager::new();
 
         for i in 0..200 {
-            let field = TextField::new(&format!("pressure_{}_{}", iteration, i))
-                .with_value(&format!(
-                    "Memory pressure test iteration {} field {}",
-                    iteration, i
+            let field = TextField::new(format!("pressure_{iteration}_{i}"))
+                .with_value(format!(
+                    "Memory pressure test iteration {iteration} field {i}"
                 ))
                 .with_max_length(100);
 
@@ -950,15 +908,13 @@ fn test_memory_pressure_handling() {
     let total_growth = final_memory.saturating_sub(initial_memory);
 
     println!(
-        "Memory pressure test completed: {} iterations, total growth = {} units",
-        iterations, total_growth
+        "Memory pressure test completed: {iterations} iterations, total growth = {total_growth} units"
     );
 
     // After all iterations, memory growth should be minimal
     assert!(
         total_growth < 1000,
-        "Too much memory retained after pressure test: {} units",
-        total_growth
+        "Too much memory retained after pressure test: {total_growth} units"
     );
 
     println!("Memory pressure handling test completed");
@@ -975,8 +931,8 @@ fn test_scalability_limits() {
     let mut created_count = 0;
 
     for i in 0..max_fields {
-        let field = TextField::new(&format!("scale_field_{}", i))
-            .with_value(&format!("Scalability test {}", i))
+        let field = TextField::new(format!("scale_field_{i}"))
+            .with_value(format!("Scalability test {i}"))
             .with_max_length(50);
 
         let widget = Widget::new(Rectangle::new(
@@ -987,7 +943,7 @@ fn test_scalability_limits() {
         match form_manager.add_text_field(field, widget, None) {
             Ok(_) => created_count += 1,
             Err(_) => {
-                println!("Hit limit at {} fields", i);
+                println!("Hit limit at {i} fields");
                 break;
             }
         }
@@ -1004,16 +960,12 @@ fn test_scalability_limits() {
 
     let creation_time = start_time.elapsed();
 
-    println!(
-        "Scalability test: created {} fields in {:?}",
-        created_count, creation_time
-    );
+    println!("Scalability test: created {created_count} fields in {creation_time:?}");
 
     // Should be able to create at least 5000 fields reasonably
     assert!(
         created_count >= 5000,
-        "Should be able to create at least 5000 fields, created {}",
-        created_count
+        "Should be able to create at least 5000 fields, created {created_count}"
     );
 
     // Test field operations at scale
@@ -1029,11 +981,10 @@ fn test_scalability_limits() {
     ];
 
     for &index in &test_indices {
-        let field_name = format!("scale_field_{}", index);
+        let field_name = format!("scale_field_{index}");
         assert!(
             form_manager.get_field(&field_name).is_some(),
-            "Could not find field at index {}",
-            index
+            "Could not find field at index {index}"
         );
     }
 
@@ -1048,13 +999,12 @@ fn test_scalability_limits() {
 
     let operations_time = operations_start.elapsed();
 
-    println!("Scale operations completed in {:?}", operations_time);
+    println!("Scale operations completed in {operations_time:?}");
 
     // Operations should complete in reasonable time even at scale
     assert!(
         operations_time < std::time::Duration::from_secs(5),
-        "Scale operations too slow: {:?}",
-        operations_time
+        "Scale operations too slow: {operations_time:?}"
     );
 
     println!("Scalability limits test completed");

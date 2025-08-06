@@ -13,17 +13,17 @@ fn pdf_string_strategy() -> impl Strategy<Value = String> {
         // Simple ASCII strings
         "[a-zA-Z0-9 ]{0,100}",
         // Strings with PDF escape sequences
-        "[a-zA-Z0-9]{0,50}".prop_map(|s| format!("({})", s)),
+        "[a-zA-Z0-9]{0,50}".prop_map(|s| format!("({s})")),
         // Hex strings
-        "[0-9A-Fa-f]{0,100}".prop_map(|s| format!("<{}>", s)),
+        "[0-9A-Fa-f]{0,100}".prop_map(|s| format!("<{s}>")),
         // Strings with parentheses
-        "[a-zA-Z0-9]{0,20}".prop_map(|s| format!("(Hello {} World)", s)),
+        "[a-zA-Z0-9]{0,20}".prop_map(|s| format!("(Hello {s} World)")),
     ]
 }
 
 // Strategy for generating PDF names
 fn pdf_name_strategy() -> impl Strategy<Value = String> {
-    "[a-zA-Z][a-zA-Z0-9._-]{0,50}".prop_map(|s| format!("/{}", s))
+    "[a-zA-Z][a-zA-Z0-9._-]{0,50}".prop_map(|s| format!("/{s}"))
 }
 
 // Strategy for generating simple PDF documents
@@ -41,10 +41,10 @@ fn simple_pdf_strategy() -> impl Strategy<Value = Vec<u8>> {
 
             // Add some objects
             for i in 1..=num_objects.min(10) {
-                pdf.extend_from_slice(format!("{} 0 obj\n", i).as_bytes());
+                pdf.extend_from_slice(format!("{i} 0 obj\n").as_bytes());
                 pdf.extend_from_slice(b"<<\n");
-                pdf.extend_from_slice(format!("/Type /Page\n").as_bytes());
-                pdf.extend_from_slice(format!("/Parent 2 0 R\n").as_bytes());
+                pdf.extend_from_slice("/Type /Page\n".to_string().as_bytes());
+                pdf.extend_from_slice("/Parent 2 0 R\n".to_string().as_bytes());
                 pdf.extend_from_slice(b">>\n");
                 pdf.extend_from_slice(b"endobj\n");
             }
@@ -66,7 +66,7 @@ fn simple_pdf_strategy() -> impl Strategy<Value = Vec<u8>> {
             pdf.extend_from_slice(b"/Root 1 0 R\n");
             pdf.extend_from_slice(b">>\n");
             pdf.extend_from_slice(b"startxref\n");
-            pdf.extend_from_slice(format!("{}\n", xref_pos).as_bytes());
+            pdf.extend_from_slice(format!("{xref_pos}\n").as_bytes());
             pdf.extend_from_slice(b"%%EOF\n");
 
             pdf
@@ -149,9 +149,9 @@ proptest! {
 
         // Test hex string format
         let hex: String = content.bytes()
-            .map(|b| format!("{:02X}", b))
+            .map(|b| format!("{b:02X}"))
             .collect();
-        let hex_string = format!("<{}>", hex);
+        let hex_string = format!("<{hex}>");
 
         // Both formats should represent the same content
         // (This is more of a conceptual test - actual parsing would need full context)
@@ -162,10 +162,10 @@ proptest! {
 
     fn test_number_parsing_ranges(n in any::<i64>()) {
         // PDF integers should handle full i64 range
-        let int_str = format!("{}", n);
+        let int_str = format!("{n}");
 
         // Floats from integers
-        let float_str = format!("{}.0", n);
+        let float_str = format!("{n}.0");
 
         prop_assert!(int_str.parse::<i64>().is_ok());
         prop_assert!(float_str.parse::<f64>().is_ok());
@@ -210,7 +210,7 @@ proptest! {
         num in 1u32..=999999u32,
         gen in 0u16..=65535u16
     ) {
-        let ref_str = format!("{} {} R", num, gen);
+        let ref_str = format!("{num} {gen} R");
 
         // Reference string should parse back to same values
         let parts: Vec<&str> = ref_str.split_whitespace().collect();

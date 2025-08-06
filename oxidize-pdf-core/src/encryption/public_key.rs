@@ -567,10 +567,7 @@ mod tests {
 
         // Create a mock certificate (at least 100 bytes)
         let certificate = vec![0x30; 200]; // DER-like data
-        let permissions = Permissions::new()
-            .set_print(true)
-            .set_modify_contents(true)
-            .clone();
+        let permissions = *Permissions::new().set_print(true).set_modify_contents(true);
 
         let result = handler.add_recipient(certificate.clone(), permissions);
         assert!(result.is_ok());
@@ -627,7 +624,7 @@ mod tests {
         let mut handler = PublicKeySecurityHandler::new_sha1();
 
         let cert1 = vec![0x30; 200];
-        let perms1 = Permissions::new().set_print(true).clone();
+        let perms1 = *Permissions::new().set_print(true);
         handler.add_recipient(cert1, perms1).unwrap();
 
         let cert2 = vec![0x31; 200];
@@ -655,13 +652,13 @@ mod tests {
         let mut handler = PublicKeySecurityHandler::new_sha1();
 
         let certificate = vec![0x30; 200];
-        let permissions = Permissions::new().set_print(true).set_copy(true).clone();
+        let permissions = *Permissions::new().set_print(true).set_copy(true);
         handler.add_recipient(certificate, permissions).unwrap();
 
-        assert!(handler.verify_permission(0, Permissions::new().set_print(true).clone()));
-        assert!(handler.verify_permission(0, Permissions::new().set_copy(true).clone()));
-        assert!(!handler.verify_permission(0, Permissions::new().set_modify_contents(true).clone()));
-        assert!(!handler.verify_permission(1, Permissions::new().set_print(true).clone()));
+        assert!(handler.verify_permission(0, *Permissions::new().set_print(true)));
+        assert!(handler.verify_permission(0, *Permissions::new().set_copy(true)));
+        assert!(!handler.verify_permission(0, *Permissions::new().set_modify_contents(true)));
+        assert!(!handler.verify_permission(1, *Permissions::new().set_print(true)));
         // Invalid index
     }
 
@@ -747,10 +744,10 @@ mod tests {
 
         // Add three recipients with different permissions
         let certs_and_perms = vec![
-            (vec![0x30; 200], Permissions::new().set_print(true).clone()),
+            (vec![0x30; 200], *Permissions::new().set_print(true)),
             (
                 vec![0x31; 200],
-                Permissions::new().set_print(true).set_copy(true).clone(),
+                *Permissions::new().set_print(true).set_copy(true),
             ),
             (vec![0x32; 200], Permissions::all()),
         ];
@@ -762,12 +759,12 @@ mod tests {
         assert_eq!(handler.recipients.len(), 3);
 
         // Verify each recipient's permissions
-        assert!(handler.verify_permission(0, Permissions::new().set_print(true).clone()));
-        assert!(!handler.verify_permission(0, Permissions::new().set_copy(true).clone()));
+        assert!(handler.verify_permission(0, *Permissions::new().set_print(true)));
+        assert!(!handler.verify_permission(0, *Permissions::new().set_copy(true)));
 
-        assert!(handler.verify_permission(1, Permissions::new().set_print(true).clone()));
-        assert!(handler.verify_permission(1, Permissions::new().set_copy(true).clone()));
-        assert!(!handler.verify_permission(1, Permissions::new().set_modify_contents(true).clone()));
+        assert!(handler.verify_permission(1, *Permissions::new().set_print(true)));
+        assert!(handler.verify_permission(1, *Permissions::new().set_copy(true)));
+        assert!(!handler.verify_permission(1, *Permissions::new().set_modify_contents(true)));
 
         assert!(handler.verify_permission(2, Permissions::all()));
     }

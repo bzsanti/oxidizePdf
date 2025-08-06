@@ -1048,8 +1048,8 @@ mod tests {
             if let (Object::Boolean(start_extend), Object::Boolean(end_extend)) =
                 (&extend[0], &extend[1])
             {
-                assert_eq!(*start_extend, true);
-                assert_eq!(*end_extend, false);
+                assert!(*start_extend);
+                assert!(!(*end_extend));
             }
         }
     }

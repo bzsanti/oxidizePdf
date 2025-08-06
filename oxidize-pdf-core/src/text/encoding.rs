@@ -510,15 +510,10 @@ mod tests {
 
         for (text, expected_byte) in &special_chars {
             let encoded = encoding.encode(text);
-            assert_eq!(
-                encoded,
-                vec![*expected_byte],
-                "Failed for character {}",
-                text
-            );
+            assert_eq!(encoded, vec![*expected_byte], "Failed for character {text}");
 
             let decoded = encoding.decode(&encoded);
-            assert_eq!(decoded, *text, "Round trip failed for character {}", text);
+            assert_eq!(decoded, *text, "Round trip failed for character {text}");
         }
     }
 
@@ -540,7 +535,7 @@ mod tests {
     #[test]
     fn test_encoding_debug() {
         let encoding = TextEncoding::WinAnsiEncoding;
-        let debug_str = format!("{:?}", encoding);
+        let debug_str = format!("{encoding:?}");
         assert_eq!(debug_str, "WinAnsiEncoding");
     }
 
@@ -589,8 +584,7 @@ mod tests {
             let decoded = encoding.decode(&[byte]);
             assert_eq!(
                 decoded, "?",
-                "Undefined byte 0x{:02X} should decode to '?'",
-                byte
+                "Undefined byte 0x{byte:02X} should decode to '?'"
             );
         }
     }

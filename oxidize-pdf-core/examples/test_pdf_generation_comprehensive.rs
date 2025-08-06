@@ -76,7 +76,7 @@ fn test_basic_pdf_creation() -> Result<()> {
     doc.save("test_output/basic_pdf_test.pdf")?;
 
     let duration = start.elapsed();
-    println!("  ✅ Basic PDF created successfully in {:?}", duration);
+    println!("  ✅ Basic PDF created successfully in {duration:?}");
     println!("  📄 Output: test_output/basic_pdf_test.pdf");
 
     Ok(())
@@ -104,7 +104,7 @@ fn test_multi_page_document() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 18.0)
             .at(50.0, 750.0)
-            .write(&format!("Page {} of 3", page_num))?;
+            .write(&format!("Page {page_num} of 3"))?;
 
         page.graphics()
             .set_stroke_color(Color::rgb(0.3, 0.3, 0.3))
@@ -238,7 +238,7 @@ fn test_multi_page_document() -> Result<()> {
     doc.save("test_output/multi_page_test.pdf")?;
 
     let duration = start.elapsed();
-    println!("  ✅ Multi-page PDF created successfully in {:?}", duration);
+    println!("  ✅ Multi-page PDF created successfully in {duration:?}");
     println!("  📄 Output: test_output/multi_page_test.pdf (3 pages)");
 
     Ok(())
@@ -388,10 +388,7 @@ fn test_advanced_graphics_typography() -> Result<()> {
     doc.save("test_output/advanced_graphics_test.pdf")?;
 
     let duration = start.elapsed();
-    println!(
-        "  ✅ Advanced graphics PDF created successfully in {:?}",
-        duration
-    );
+    println!("  ✅ Advanced graphics PDF created successfully in {duration:?}");
     println!("  📄 Output: test_output/advanced_graphics_test.pdf");
 
     Ok(())
@@ -476,7 +473,7 @@ fn test_complex_business_document() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 10.0)
             .at(x + 5.0, 455.0 - bar_height)
-            .write(&format!("{}%", value))?;
+            .write(&format!("{value}%"))?;
 
         // Category label
         page.text()
@@ -501,10 +498,7 @@ fn test_complex_business_document() -> Result<()> {
     doc.save("test_output/business_report_test.pdf")?;
 
     let duration = start.elapsed();
-    println!(
-        "  ✅ Business document created successfully in {:?}",
-        duration
-    );
+    println!("  ✅ Business document created successfully in {duration:?}");
     println!("  📄 Output: test_output/business_report_test.pdf");
 
     Ok(())
@@ -528,7 +522,7 @@ fn run_comprehensive_tests() -> Result<()> {
     let total_duration = total_start.elapsed();
 
     println!("\n🎉 ALL TESTS COMPLETED SUCCESSFULLY!");
-    println!("⏱️  Total time: {:?}", total_duration);
+    println!("⏱️  Total time: {total_duration:?}");
     println!("📁 Output directory: test_output/");
     println!("📄 Generated files:");
     println!("   • basic_pdf_test.pdf - Basic functionality validation");

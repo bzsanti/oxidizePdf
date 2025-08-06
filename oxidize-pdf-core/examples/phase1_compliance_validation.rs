@@ -121,8 +121,7 @@ fn main() -> Result<()> {
         println!("      ✅ SUCCESS: Both clipping operators (W, W*) generated correctly");
     } else {
         println!(
-            "      ❌ FAILED: Clipping operators not generated (W: {}, W*: {})",
-            w_success, w_star_success
+            "      ❌ FAILED: Clipping operators not generated (W: {w_success}, W*: {w_star_success})"
         );
         return Ok(());
     }

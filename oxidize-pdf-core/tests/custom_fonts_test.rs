@@ -93,7 +93,7 @@ fn test_custom_font_with_text() -> Result<()> {
 
     // Save to memory
     let pdf_bytes = doc.to_bytes()?;
-    assert!(pdf_bytes.len() > 0);
+    assert!(!pdf_bytes.is_empty());
 
     Ok(())
 }

@@ -38,7 +38,7 @@ fn create_sample_pdfs() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 24.0)
             .at(100.0, 700.0)
-            .write(&format!("Document 1 - Page {}", i))?;
+            .write(&format!("Document 1 - Page {i}"))?;
         doc1.add_page(page);
     }
     doc1.save("sample1.pdf")?;
@@ -50,7 +50,7 @@ fn create_sample_pdfs() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 24.0)
             .at(100.0, 700.0)
-            .write(&format!("Document 2 - Page {}", i))?;
+            .write(&format!("Document 2 - Page {i}"))?;
         page.graphics()
             .set_fill_color(Color::rgb(0.9, 0.9, 1.0))
             .rect(50.0, 50.0, 495.0, 100.0)
@@ -79,7 +79,7 @@ fn split_example() -> Result<()> {
                 println!("    - {}", file.display());
             }
         }
-        Err(e) => eprintln!("  Error splitting PDF: {}", e),
+        Err(e) => eprintln!("  Error splitting PDF: {e}"),
     }
 
     // Split into chunks of 2 pages
@@ -97,7 +97,7 @@ fn split_example() -> Result<()> {
                 println!("    - {}", file.display());
             }
         }
-        Err(e) => eprintln!("  Error splitting PDF: {}", e),
+        Err(e) => eprintln!("  Error splitting PDF: {e}"),
     }
 
     Ok(())
@@ -109,7 +109,7 @@ fn merge_example() -> Result<()> {
 
     match merge_pdf_files(&files, "merged_all.pdf") {
         Ok(_) => println!("  Created merged_all.pdf with all pages"),
-        Err(e) => eprintln!("  Error merging PDFs: {}", e),
+        Err(e) => eprintln!("  Error merging PDFs: {e}"),
     }
 
     // Merge with specific page ranges
@@ -120,7 +120,7 @@ fn merge_example() -> Result<()> {
 
     match oxidize_pdf::operations::merge_pdfs(inputs, "merged_selected.pdf", Default::default()) {
         Ok(_) => println!("  Created merged_selected.pdf with selected pages"),
-        Err(e) => eprintln!("  Error merging PDFs: {}", e),
+        Err(e) => eprintln!("  Error merging PDFs: {e}"),
     }
 
     Ok(())
@@ -136,7 +136,7 @@ fn rotate_example() -> Result<()> {
 
     match rotate_pdf_pages("sample1.pdf", "rotated_90.pdf", options) {
         Ok(_) => println!("  Created rotated_90.pdf with all pages rotated 90°"),
-        Err(e) => eprintln!("  Error rotating PDF: {}", e),
+        Err(e) => eprintln!("  Error rotating PDF: {e}"),
     }
 
     // Rotate specific pages 180 degrees
@@ -148,7 +148,7 @@ fn rotate_example() -> Result<()> {
 
     match rotate_pdf_pages("sample1.pdf", "rotated_selective.pdf", selective_options) {
         Ok(_) => println!("  Created rotated_selective.pdf with pages 1,3 rotated 180°"),
-        Err(e) => eprintln!("  Error rotating PDF: {}", e),
+        Err(e) => eprintln!("  Error rotating PDF: {e}"),
     }
 
     Ok(())
@@ -218,7 +218,7 @@ fn advanced_example() -> Result<()> {
                 println!("    - {}", file.display());
             }
         }
-        Err(e) => eprintln!("  Error: {}", e),
+        Err(e) => eprintln!("  Error: {e}"),
     }
 
     // 2. Merge with custom metadata
@@ -239,7 +239,7 @@ fn advanced_example() -> Result<()> {
 
     match oxidize_pdf::operations::merge_pdfs(inputs, "final_combined.pdf", merge_options) {
         Ok(_) => println!("  Created final_combined.pdf with custom metadata"),
-        Err(e) => eprintln!("  Error: {}", e),
+        Err(e) => eprintln!("  Error: {e}"),
     }
 
     Ok(())

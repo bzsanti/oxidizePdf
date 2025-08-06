@@ -58,10 +58,7 @@ fn test_iso_compliance_comprehensive() {
         } else {
             0.0
         };
-        println!(
-            "{:<40} {:>10} {:>12} {:>10.1}%",
-            section, total, implemented, percentage
-        );
+        println!("{section:<40} {total:>10} {implemented:>12} {percentage:>10.1}%");
     }
 
     let overall_percentage = (implemented_features as f64 / total_features as f64) * 100.0;
@@ -925,17 +922,12 @@ fn generate_comprehensive_report(
     report.push_str("Based on testing ALL major features from the ISO specification.\n\n");
 
     report.push_str("## Executive Summary\n\n");
+    report.push_str(&format!("- **Total Features Tested**: {total_features}\n"));
     report.push_str(&format!(
-        "- **Total Features Tested**: {}\n",
-        total_features
+        "- **Features Accessible via API**: {implemented_features}\n"
     ));
     report.push_str(&format!(
-        "- **Features Accessible via API**: {}\n",
-        implemented_features
-    ));
-    report.push_str(&format!(
-        "- **Real Compliance**: {:.1}%\n\n",
-        overall_percentage
+        "- **Real Compliance**: {overall_percentage:.1}%\n\n"
     ));
 
     report.push_str("## Detailed Results by Section\n\n");
@@ -953,8 +945,7 @@ fn generate_comprehensive_report(
             0.0
         };
         report.push_str(&format!(
-            "| {} | {} | {} | {:.1}% |\n",
-            section, total, implemented, percentage
+            "| {section} | {total} | {implemented} | {percentage:.1}% |\n"
         ));
     }
 
@@ -998,14 +989,12 @@ fn generate_comprehensive_report(
         60.0 - overall_percentage
     ));
     report.push_str(&format!(
-        "| This Test | N/A | {:.1}% | Accurate |\n\n",
-        overall_percentage
+        "| This Test | N/A | {overall_percentage:.1}% | Accurate |\n\n"
     ));
 
     report.push_str("## Conclusion\n\n");
     report.push_str(&format!(
-        "The oxidize-pdf library has a **real ISO 32000-1:2008 compliance of {:.1}%**. ",
-        overall_percentage
+        "The oxidize-pdf library has a **real ISO 32000-1:2008 compliance of {overall_percentage:.1}%**. "
     ));
     report.push_str("While the library provides solid basic PDF generation capabilities, ");
     report.push_str("it lacks many features that would be expected from a library claiming 60%+ compliance.\n\n");

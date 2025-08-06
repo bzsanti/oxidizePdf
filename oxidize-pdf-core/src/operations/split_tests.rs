@@ -279,12 +279,7 @@ mod tests {
             };
 
             let result = split_pdf(&input_path, options);
-            assert!(
-                result.is_ok(),
-                "Pattern '{}' failed: {}",
-                pattern,
-                description
-            );
+            assert!(result.is_ok(), "Pattern '{pattern}' failed: {description}");
         }
     }
 
@@ -426,7 +421,7 @@ mod tests {
         };
 
         let result = split_pdf(&input_path, options);
-        assert!(result.is_ok(), "Split operation failed: {:?}", result);
+        assert!(result.is_ok(), "Split operation failed: {result:?}");
 
         let output_files = result.unwrap();
         // 15 pages / 4 per chunk = 4 files (last one has 3 pages)
@@ -548,15 +543,15 @@ mod tests {
     fn test_split_debug_implementations() {
         // Test Debug implementations
         let options = SplitOptions::default();
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("SplitOptions"));
 
         let mode = SplitMode::SinglePages;
-        let debug_str = format!("{:?}", mode);
+        let debug_str = format!("{mode:?}");
         assert!(debug_str.contains("SinglePages"));
 
         let mode = SplitMode::ChunkSize(5);
-        let debug_str = format!("{:?}", mode);
+        let debug_str = format!("{mode:?}");
         assert!(debug_str.contains("ChunkSize"));
     }
 

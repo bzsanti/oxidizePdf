@@ -301,6 +301,457 @@ fn decode_ascii85(data: &[u8]) -> ParseResult<Vec<u8>> {
     Ok(result)
 }
 
+/// Apply a single filter to data with parameters (enhanced version)
+fn apply_filter_with_params(
+    data: &[u8],
+    filter: Filter,
+    params: Option<&PdfDictionary>,
+) -> ParseResult<Vec<u8>> {
+    let result = match filter {
+        Filter::FlateDecode => decode_flate(data)?,
+        Filter::ASCIIHexDecode => decode_ascii_hex(data)?,
+        Filter::ASCII85Decode => decode_ascii85(data)?,
+        Filter::LZWDecode => decode_lzw(data, params)?,
+        Filter::RunLengthDecode => decode_run_length(data)?,
+        Filter::CCITTFaxDecode => decode_ccitt(data, params)?,
+        Filter::JBIG2Decode => decode_jbig2(data, params)?,
+        Filter::DCTDecode => decode_dct(data)?,
+        _ => {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!("Filter {filter:?} not yet implemented"),
+            });
+        }
+    };
+
+    // Apply predictor if specified in decode parameters
+    if let Some(params_dict) = params {
+        if let Some(predictor_obj) = params_dict.get("Predictor") {
+            if let Some(predictor) = predictor_obj.as_integer() {
+                return apply_predictor(&result, predictor as u32, params_dict);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// Get filter parameters for a specific filter index
+fn get_filter_params(decode_params: Option<&PdfObject>, _index: usize) -> Option<&PdfDictionary> {
+    match decode_params {
+        Some(PdfObject::Dictionary(dict)) => Some(dict),
+        Some(PdfObject::Array(array)) => {
+            // For multiple filters, each can have its own decode params
+            // For now, use the first one
+            array.0.first().and_then(|obj| obj.as_dict())
+        }
+        _ => None,
+    }
+}
+
+/// Apply predictor function to decoded data
+fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
+    match predictor {
+        1 => {
+            // No prediction
+            Ok(data.to_vec())
+        }
+        10..=15 => {
+            // PNG predictor functions
+            apply_png_predictor(data, predictor, params)
+        }
+        _ => {
+            // Unknown predictor - return data as-is with warning
+            #[cfg(debug_assertions)]
+            eprintln!("Warning: Unknown predictor {predictor}, returning data as-is");
+            Ok(data.to_vec())
+        }
+    }
+}
+
+/// Apply PNG predictor functions (values 10-15)
+fn apply_png_predictor(
+    data: &[u8],
+    _predictor: u32,
+    params: &PdfDictionary,
+) -> ParseResult<Vec<u8>> {
+    // Get columns (width of a row in bytes)
+    let columns = params
+        .get("Columns")
+        .and_then(|obj| obj.as_integer())
+        .unwrap_or(1) as usize;
+
+    // Get BitsPerComponent (defaults to 8)
+    let bpc = params
+        .get("BitsPerComponent")
+        .and_then(|obj| obj.as_integer())
+        .unwrap_or(8) as usize;
+
+    // Get Colors (number of color components, defaults to 1)
+    let colors = params
+        .get("Colors")
+        .and_then(|obj| obj.as_integer())
+        .unwrap_or(1) as usize;
+
+    // Calculate bytes per pixel
+    let bytes_per_pixel = (bpc * colors).div_ceil(8);
+
+    // Calculate row size (columns + 1 for predictor byte)
+    let row_size = columns + 1;
+
+    if data.len() % row_size != 0 {
+        return Err(ParseError::StreamDecodeError(
+            "PNG predictor: data length not multiple of row size".to_string(),
+        ));
+    }
+
+    let num_rows = data.len() / row_size;
+    let mut result = Vec::with_capacity(columns * num_rows);
+
+    for row in 0..num_rows {
+        let row_start = row * row_size;
+        let predictor_byte = data[row_start];
+        let row_data = &data[row_start + 1..row_start + row_size];
+
+        // Apply PNG filter based on predictor byte
+        let filtered_row = match predictor_byte {
+            0 => {
+                // None filter - no prediction
+                row_data.to_vec()
+            }
+            1 => {
+                // Sub filter - each byte is prediction from byte to the left
+                apply_png_sub_filter(row_data, bytes_per_pixel)
+            }
+            2 => {
+                // Up filter - each byte is prediction from byte above
+                let prev_row = if row > 0 {
+                    Some(&result[(row - 1) * columns..row * columns])
+                } else {
+                    None
+                };
+                apply_png_up_filter(row_data, prev_row)
+            }
+            3 => {
+                // Average filter
+                let prev_row = if row > 0 {
+                    Some(&result[(row - 1) * columns..row * columns])
+                } else {
+                    None
+                };
+                apply_png_average_filter(row_data, prev_row, bytes_per_pixel)
+            }
+            4 => {
+                // Paeth filter
+                let prev_row = if row > 0 {
+                    Some(&result[(row - 1) * columns..row * columns])
+                } else {
+                    None
+                };
+                apply_png_paeth_filter(row_data, prev_row, bytes_per_pixel)
+            }
+            _ => {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "PNG predictor: unknown filter type {predictor_byte}"
+                )));
+            }
+        };
+
+        result.extend_from_slice(&filtered_row);
+    }
+
+    Ok(result)
+}
+
+/// Apply PNG Sub filter (predictor 1)
+fn apply_png_sub_filter(data: &[u8], bytes_per_pixel: usize) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        if i < bytes_per_pixel {
+            result.push(byte);
+        } else {
+            result.push(byte.wrapping_add(result[i - bytes_per_pixel]));
+        }
+    }
+
+    result
+}
+
+/// Apply PNG Up filter (predictor 2)
+fn apply_png_up_filter(data: &[u8], prev_row: Option<&[u8]>) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
+        result.push(byte.wrapping_add(*up_byte));
+    }
+
+    result
+}
+
+/// Apply PNG Average filter (predictor 3)
+fn apply_png_average_filter(
+    data: &[u8],
+    prev_row: Option<&[u8]>,
+    bytes_per_pixel: usize,
+) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        let left_byte = if i < bytes_per_pixel {
+            0
+        } else {
+            result[i - bytes_per_pixel]
+        };
+        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
+        let average = ((left_byte as u16 + *up_byte as u16) / 2) as u8;
+        result.push(byte.wrapping_add(average));
+    }
+
+    result
+}
+
+/// Apply PNG Paeth filter (predictor 4)
+fn apply_png_paeth_filter(data: &[u8], prev_row: Option<&[u8]>, bytes_per_pixel: usize) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len());
+
+    for (i, &byte) in data.iter().enumerate() {
+        let left_byte = if i < bytes_per_pixel {
+            0
+        } else {
+            result[i - bytes_per_pixel]
+        };
+        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
+        let up_left_byte = if i < bytes_per_pixel {
+            0
+        } else {
+            *prev_row
+                .and_then(|row| row.get(i - bytes_per_pixel))
+                .unwrap_or(&0)
+        };
+
+        let paeth = paeth_predictor(left_byte, *up_byte, up_left_byte);
+        result.push(byte.wrapping_add(paeth));
+    }
+
+    result
+}
+
+/// Paeth predictor algorithm
+fn paeth_predictor(left: u8, up: u8, up_left: u8) -> u8 {
+    let p = left as i16 + up as i16 - up_left as i16;
+    let pa = (p - left as i16).abs();
+    let pb = (p - up as i16).abs();
+    let pc = (p - up_left as i16).abs();
+
+    if pa <= pb && pa <= pc {
+        left
+    } else if pb <= pc {
+        up
+    } else {
+        up_left
+    }
+}
+
+/// Decode LZWDecode compressed data
+///
+/// Implements the LZW decompression algorithm as specified in PDF Reference 1.7
+/// Section 3.3.3. The PDF variant of LZW uses variable-length codes starting at
+/// 9 bits and growing up to 12 bits.
+fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
+    // Get parameters
+    let early_change = params
+        .and_then(|p| p.get("EarlyChange"))
+        .and_then(|v| v.as_integer())
+        .map(|v| v != 0)
+        .unwrap_or(true); // Default is 1 (true) for PDF
+
+    // LZW constants
+    const MIN_BITS: u32 = 9;
+    const MAX_BITS: u32 = 12;
+    const CLEAR_CODE: u16 = 256;
+    const EOD_CODE: u16 = 257;
+    #[allow(dead_code)]
+    const FIRST_CODE: u16 = 258;
+
+    // Initialize the dictionary with single-byte strings
+    let mut dictionary: Vec<Vec<u8>> = Vec::with_capacity(4096);
+    for i in 0..=255 {
+        dictionary.push(vec![i]);
+    }
+    // Add clear and EOD codes
+    dictionary.push(vec![]); // 256 - Clear
+    dictionary.push(vec![]); // 257 - EOD
+
+    let mut result = Vec::new();
+    let mut bit_reader = LzwBitReader::new(data);
+    let mut code_size = MIN_BITS;
+    let mut prev_code: Option<u16> = None;
+
+    while let Some(c) = bit_reader.read_bits(code_size) {
+        let code = c as u16;
+
+        if code == EOD_CODE {
+            break;
+        }
+
+        if code == CLEAR_CODE {
+            // Reset dictionary and code size
+            dictionary.truncate(258);
+            code_size = MIN_BITS;
+            prev_code = None;
+            continue;
+        }
+
+        // Handle the code
+        if let Some(prev) = prev_code {
+            let string = if (code as usize) < dictionary.len() {
+                // Code is in dictionary
+                dictionary[code as usize].clone()
+            } else if code as usize == dictionary.len() {
+                // Special case: code == next entry to be added
+                let mut s = dictionary[prev as usize].clone();
+                s.push(dictionary[prev as usize][0]);
+                s
+            } else {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decode error: invalid code {code}"
+                )));
+            };
+
+            // Output the string
+            result.extend_from_slice(&string);
+
+            // Add new entry to dictionary
+            if dictionary.len() < 4096 {
+                let mut new_entry = dictionary[prev as usize].clone();
+                new_entry.push(string[0]);
+                dictionary.push(new_entry);
+
+                // Increase code size if necessary
+                let dict_size = dictionary.len();
+                let threshold = if early_change {
+                    1 << code_size
+                } else {
+                    (1 << code_size) + 1
+                };
+
+                if dict_size >= threshold as usize && code_size < MAX_BITS {
+                    code_size += 1;
+                }
+            }
+        } else {
+            // First code after clear
+            if (code as usize) < dictionary.len() {
+                result.extend_from_slice(&dictionary[code as usize]);
+            } else {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decode error: invalid first code {code}"
+                )));
+            }
+        }
+
+        prev_code = Some(code);
+    }
+
+    Ok(result)
+}
+
+/// Bit reader for LZW decompression
+struct LzwBitReader<'a> {
+    data: &'a [u8],
+    byte_pos: usize,
+    bit_pos: u8,
+}
+
+impl<'a> LzwBitReader<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self {
+            data,
+            byte_pos: 0,
+            bit_pos: 0,
+        }
+    }
+
+    /// Read n bits from the stream (MSB first)
+    fn read_bits(&mut self, n: u32) -> Option<u32> {
+        if n == 0 || n > 16 {
+            return None;
+        }
+
+        let mut result = 0u32;
+        let mut bits_read = 0;
+
+        while bits_read < n {
+            if self.byte_pos >= self.data.len() {
+                return None;
+            }
+
+            let bits_available = 8 - self.bit_pos;
+            let bits_to_read = (n - bits_read).min(bits_available as u32);
+
+            // Extract bits from current byte
+            let mask = ((1u32 << bits_to_read) - 1) as u8;
+            let shift = bits_available - bits_to_read as u8;
+            let bits = (self.data[self.byte_pos] >> shift) & mask;
+
+            result = (result << bits_to_read) | (bits as u32);
+            bits_read += bits_to_read;
+            self.bit_pos += bits_to_read as u8;
+
+            if self.bit_pos >= 8 {
+                self.bit_pos = 0;
+                self.byte_pos += 1;
+            }
+        }
+
+        Some(result)
+    }
+}
+
+/// Decode RunLengthDecode compressed data
+///
+/// Implements the Run Length Encoding decompression as specified in PDF Reference 1.7
+/// Section 3.3.4. Run-length encoding compresses sequences of identical bytes.
+fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
+    let mut result = Vec::new();
+    let mut i = 0;
+
+    while i < data.len() {
+        let length = data[i] as i8;
+        i += 1;
+
+        if length == -128 {
+            // EOD marker
+            break;
+        } else if length >= 0 {
+            // Copy next length+1 bytes literally
+            let count = (length as usize) + 1;
+            if i + count > data.len() {
+                return Err(ParseError::StreamDecodeError(
+                    "RunLength decode error: insufficient data for literal copy".to_string(),
+                ));
+            }
+            result.extend_from_slice(&data[i..i + count]);
+            i += count;
+        } else {
+            // Repeat next byte (-length)+1 times
+            if i >= data.len() {
+                return Err(ParseError::StreamDecodeError(
+                    "RunLength decode error: missing byte to repeat".to_string(),
+                ));
+            }
+            let repeat_byte = data[i];
+            let count = ((-length) as usize) + 1;
+            result.extend(std::iter::repeat_n(repeat_byte, count));
+            i += 1;
+        }
+    }
+
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1026,455 +1477,4 @@ mod tests {
         let result = apply_filter_with_params(&data, Filter::RunLengthDecode, None).unwrap();
         assert_eq!(result, b"AAABC");
     }
-}
-
-/// Apply a single filter to data with parameters (enhanced version)
-fn apply_filter_with_params(
-    data: &[u8],
-    filter: Filter,
-    params: Option<&PdfDictionary>,
-) -> ParseResult<Vec<u8>> {
-    let result = match filter {
-        Filter::FlateDecode => decode_flate(data)?,
-        Filter::ASCIIHexDecode => decode_ascii_hex(data)?,
-        Filter::ASCII85Decode => decode_ascii85(data)?,
-        Filter::LZWDecode => decode_lzw(data, params)?,
-        Filter::RunLengthDecode => decode_run_length(data)?,
-        Filter::CCITTFaxDecode => decode_ccitt(data, params)?,
-        Filter::JBIG2Decode => decode_jbig2(data, params)?,
-        Filter::DCTDecode => decode_dct(data)?,
-        _ => {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!("Filter {filter:?} not yet implemented"),
-            });
-        }
-    };
-
-    // Apply predictor if specified in decode parameters
-    if let Some(params_dict) = params {
-        if let Some(predictor_obj) = params_dict.get("Predictor") {
-            if let Some(predictor) = predictor_obj.as_integer() {
-                return apply_predictor(&result, predictor as u32, params_dict);
-            }
-        }
-    }
-
-    Ok(result)
-}
-
-/// Get filter parameters for a specific filter index
-fn get_filter_params(decode_params: Option<&PdfObject>, _index: usize) -> Option<&PdfDictionary> {
-    match decode_params {
-        Some(PdfObject::Dictionary(dict)) => Some(dict),
-        Some(PdfObject::Array(array)) => {
-            // For multiple filters, each can have its own decode params
-            // For now, use the first one
-            array.0.first().and_then(|obj| obj.as_dict())
-        }
-        _ => None,
-    }
-}
-
-/// Apply predictor function to decoded data
-fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> ParseResult<Vec<u8>> {
-    match predictor {
-        1 => {
-            // No prediction
-            Ok(data.to_vec())
-        }
-        10..=15 => {
-            // PNG predictor functions
-            apply_png_predictor(data, predictor, params)
-        }
-        _ => {
-            // Unknown predictor - return data as-is with warning
-            #[cfg(debug_assertions)]
-            eprintln!("Warning: Unknown predictor {predictor}, returning data as-is");
-            Ok(data.to_vec())
-        }
-    }
-}
-
-/// Apply PNG predictor functions (values 10-15)
-fn apply_png_predictor(
-    data: &[u8],
-    _predictor: u32,
-    params: &PdfDictionary,
-) -> ParseResult<Vec<u8>> {
-    // Get columns (width of a row in bytes)
-    let columns = params
-        .get("Columns")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(1) as usize;
-
-    // Get BitsPerComponent (defaults to 8)
-    let bpc = params
-        .get("BitsPerComponent")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(8) as usize;
-
-    // Get Colors (number of color components, defaults to 1)
-    let colors = params
-        .get("Colors")
-        .and_then(|obj| obj.as_integer())
-        .unwrap_or(1) as usize;
-
-    // Calculate bytes per pixel
-    let bytes_per_pixel = (bpc * colors).div_ceil(8);
-
-    // Calculate row size (columns + 1 for predictor byte)
-    let row_size = columns + 1;
-
-    if data.len() % row_size != 0 {
-        return Err(ParseError::StreamDecodeError(
-            "PNG predictor: data length not multiple of row size".to_string(),
-        ));
-    }
-
-    let num_rows = data.len() / row_size;
-    let mut result = Vec::with_capacity(columns * num_rows);
-
-    for row in 0..num_rows {
-        let row_start = row * row_size;
-        let predictor_byte = data[row_start];
-        let row_data = &data[row_start + 1..row_start + row_size];
-
-        // Apply PNG filter based on predictor byte
-        let filtered_row = match predictor_byte {
-            0 => {
-                // None filter - no prediction
-                row_data.to_vec()
-            }
-            1 => {
-                // Sub filter - each byte is prediction from byte to the left
-                apply_png_sub_filter(row_data, bytes_per_pixel)
-            }
-            2 => {
-                // Up filter - each byte is prediction from byte above
-                let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
-                } else {
-                    None
-                };
-                apply_png_up_filter(row_data, prev_row)
-            }
-            3 => {
-                // Average filter
-                let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
-                } else {
-                    None
-                };
-                apply_png_average_filter(row_data, prev_row, bytes_per_pixel)
-            }
-            4 => {
-                // Paeth filter
-                let prev_row = if row > 0 {
-                    Some(&result[(row - 1) * columns..row * columns])
-                } else {
-                    None
-                };
-                apply_png_paeth_filter(row_data, prev_row, bytes_per_pixel)
-            }
-            _ => {
-                return Err(ParseError::StreamDecodeError(format!(
-                    "PNG predictor: unknown filter type {predictor_byte}"
-                )));
-            }
-        };
-
-        result.extend_from_slice(&filtered_row);
-    }
-
-    Ok(result)
-}
-
-/// Apply PNG Sub filter (predictor 1)
-fn apply_png_sub_filter(data: &[u8], bytes_per_pixel: usize) -> Vec<u8> {
-    let mut result = Vec::with_capacity(data.len());
-
-    for (i, &byte) in data.iter().enumerate() {
-        if i < bytes_per_pixel {
-            result.push(byte);
-        } else {
-            result.push(byte.wrapping_add(result[i - bytes_per_pixel]));
-        }
-    }
-
-    result
-}
-
-/// Apply PNG Up filter (predictor 2)
-fn apply_png_up_filter(data: &[u8], prev_row: Option<&[u8]>) -> Vec<u8> {
-    let mut result = Vec::with_capacity(data.len());
-
-    for (i, &byte) in data.iter().enumerate() {
-        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
-        result.push(byte.wrapping_add(*up_byte));
-    }
-
-    result
-}
-
-/// Apply PNG Average filter (predictor 3)
-fn apply_png_average_filter(
-    data: &[u8],
-    prev_row: Option<&[u8]>,
-    bytes_per_pixel: usize,
-) -> Vec<u8> {
-    let mut result = Vec::with_capacity(data.len());
-
-    for (i, &byte) in data.iter().enumerate() {
-        let left_byte = if i < bytes_per_pixel {
-            0
-        } else {
-            result[i - bytes_per_pixel]
-        };
-        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
-        let average = ((left_byte as u16 + *up_byte as u16) / 2) as u8;
-        result.push(byte.wrapping_add(average));
-    }
-
-    result
-}
-
-/// Apply PNG Paeth filter (predictor 4)
-fn apply_png_paeth_filter(data: &[u8], prev_row: Option<&[u8]>, bytes_per_pixel: usize) -> Vec<u8> {
-    let mut result = Vec::with_capacity(data.len());
-
-    for (i, &byte) in data.iter().enumerate() {
-        let left_byte = if i < bytes_per_pixel {
-            0
-        } else {
-            result[i - bytes_per_pixel]
-        };
-        let up_byte = prev_row.and_then(|row| row.get(i)).unwrap_or(&0);
-        let up_left_byte = if i < bytes_per_pixel {
-            0
-        } else {
-            *prev_row
-                .and_then(|row| row.get(i - bytes_per_pixel))
-                .unwrap_or(&0)
-        };
-
-        let paeth = paeth_predictor(left_byte, *up_byte, up_left_byte);
-        result.push(byte.wrapping_add(paeth));
-    }
-
-    result
-}
-
-/// Paeth predictor algorithm
-fn paeth_predictor(left: u8, up: u8, up_left: u8) -> u8 {
-    let p = left as i16 + up as i16 - up_left as i16;
-    let pa = (p - left as i16).abs();
-    let pb = (p - up as i16).abs();
-    let pc = (p - up_left as i16).abs();
-
-    if pa <= pb && pa <= pc {
-        left
-    } else if pb <= pc {
-        up
-    } else {
-        up_left
-    }
-}
-
-/// Decode LZWDecode compressed data
-///
-/// Implements the LZW decompression algorithm as specified in PDF Reference 1.7
-/// Section 3.3.3. The PDF variant of LZW uses variable-length codes starting at
-/// 9 bits and growing up to 12 bits.
-fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8>> {
-    // Get parameters
-    let early_change = params
-        .and_then(|p| p.get("EarlyChange"))
-        .and_then(|v| v.as_integer())
-        .map(|v| v != 0)
-        .unwrap_or(true); // Default is 1 (true) for PDF
-
-    // LZW constants
-    const MIN_BITS: u32 = 9;
-    const MAX_BITS: u32 = 12;
-    const CLEAR_CODE: u16 = 256;
-    const EOD_CODE: u16 = 257;
-    #[allow(dead_code)]
-    const FIRST_CODE: u16 = 258;
-
-    // Initialize the dictionary with single-byte strings
-    let mut dictionary: Vec<Vec<u8>> = Vec::with_capacity(4096);
-    for i in 0..=255 {
-        dictionary.push(vec![i]);
-    }
-    // Add clear and EOD codes
-    dictionary.push(vec![]); // 256 - Clear
-    dictionary.push(vec![]); // 257 - EOD
-
-    let mut result = Vec::new();
-    let mut bit_reader = LzwBitReader::new(data);
-    let mut code_size = MIN_BITS;
-    let mut prev_code: Option<u16> = None;
-
-    while let Some(c) = bit_reader.read_bits(code_size) {
-        let code = c as u16;
-
-        if code == EOD_CODE {
-            break;
-        }
-
-        if code == CLEAR_CODE {
-            // Reset dictionary and code size
-            dictionary.truncate(258);
-            code_size = MIN_BITS;
-            prev_code = None;
-            continue;
-        }
-
-        // Handle the code
-        if let Some(prev) = prev_code {
-            let string = if (code as usize) < dictionary.len() {
-                // Code is in dictionary
-                dictionary[code as usize].clone()
-            } else if code as usize == dictionary.len() {
-                // Special case: code == next entry to be added
-                let mut s = dictionary[prev as usize].clone();
-                s.push(dictionary[prev as usize][0]);
-                s
-            } else {
-                return Err(ParseError::StreamDecodeError(format!(
-                    "LZW decode error: invalid code {code}"
-                )));
-            };
-
-            // Output the string
-            result.extend_from_slice(&string);
-
-            // Add new entry to dictionary
-            if dictionary.len() < 4096 {
-                let mut new_entry = dictionary[prev as usize].clone();
-                new_entry.push(string[0]);
-                dictionary.push(new_entry);
-
-                // Increase code size if necessary
-                let dict_size = dictionary.len();
-                let threshold = if early_change {
-                    1 << code_size
-                } else {
-                    (1 << code_size) + 1
-                };
-
-                if dict_size >= threshold as usize && code_size < MAX_BITS {
-                    code_size += 1;
-                }
-            }
-        } else {
-            // First code after clear
-            if (code as usize) < dictionary.len() {
-                result.extend_from_slice(&dictionary[code as usize]);
-            } else {
-                return Err(ParseError::StreamDecodeError(format!(
-                    "LZW decode error: invalid first code {code}"
-                )));
-            }
-        }
-
-        prev_code = Some(code);
-    }
-
-    Ok(result)
-}
-
-/// Bit reader for LZW decompression
-struct LzwBitReader<'a> {
-    data: &'a [u8],
-    byte_pos: usize,
-    bit_pos: u8,
-}
-
-impl<'a> LzwBitReader<'a> {
-    fn new(data: &'a [u8]) -> Self {
-        Self {
-            data,
-            byte_pos: 0,
-            bit_pos: 0,
-        }
-    }
-
-    /// Read n bits from the stream (MSB first)
-    fn read_bits(&mut self, n: u32) -> Option<u32> {
-        if n == 0 || n > 16 {
-            return None;
-        }
-
-        let mut result = 0u32;
-        let mut bits_read = 0;
-
-        while bits_read < n {
-            if self.byte_pos >= self.data.len() {
-                return None;
-            }
-
-            let bits_available = 8 - self.bit_pos;
-            let bits_to_read = (n - bits_read).min(bits_available as u32);
-
-            // Extract bits from current byte
-            let mask = ((1u32 << bits_to_read) - 1) as u8;
-            let shift = bits_available - bits_to_read as u8;
-            let bits = (self.data[self.byte_pos] >> shift) & mask;
-
-            result = (result << bits_to_read) | (bits as u32);
-            bits_read += bits_to_read;
-            self.bit_pos += bits_to_read as u8;
-
-            if self.bit_pos >= 8 {
-                self.bit_pos = 0;
-                self.byte_pos += 1;
-            }
-        }
-
-        Some(result)
-    }
-}
-
-/// Decode RunLengthDecode compressed data
-///
-/// Implements the Run Length Encoding decompression as specified in PDF Reference 1.7
-/// Section 3.3.4. Run-length encoding compresses sequences of identical bytes.
-fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
-    let mut result = Vec::new();
-    let mut i = 0;
-
-    while i < data.len() {
-        let length = data[i] as i8;
-        i += 1;
-
-        if length == -128 {
-            // EOD marker
-            break;
-        } else if length >= 0 {
-            // Copy next length+1 bytes literally
-            let count = (length as usize) + 1;
-            if i + count > data.len() {
-                return Err(ParseError::StreamDecodeError(
-                    "RunLength decode error: insufficient data for literal copy".to_string(),
-                ));
-            }
-            result.extend_from_slice(&data[i..i + count]);
-            i += count;
-        } else {
-            // Repeat next byte (-length)+1 times
-            if i >= data.len() {
-                return Err(ParseError::StreamDecodeError(
-                    "RunLength decode error: missing byte to repeat".to_string(),
-                ));
-            }
-            let repeat_byte = data[i];
-            let count = ((-length) as usize) + 1;
-            result.extend(std::iter::repeat_n(repeat_byte, count));
-            i += 1;
-        }
-    }
-
-    Ok(result)
 }

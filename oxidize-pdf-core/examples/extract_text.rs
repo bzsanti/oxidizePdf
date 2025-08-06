@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let page_number = args.get(2).and_then(|s| s.parse::<u32>().ok());
 
     // Open the PDF file
-    println!("Opening PDF file: {}", pdf_path);
+    println!("Opening PDF file: {pdf_path}");
     let reader = PdfReader::open(pdf_path)?;
     let document = PdfDocument::new(reader);
 
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Extract text
     if let Some(page_num) = page_number {
         // Extract from specific page
-        println!("Extracting text from page {}...", page_num);
+        println!("Extracting text from page {page_num}...");
         println!("{}", "=".repeat(50));
 
         match extractor.extract_from_page(&document, page_num) {
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                eprintln!("Error extracting text from page {}: {}", page_num, e);
+                eprintln!("Error extracting text from page {page_num}: {e}");
             }
         }
     } else {
@@ -73,13 +73,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match extractor.extract_from_document(&document) {
             Ok(all_pages) => {
                 for (i, extracted) in all_pages.iter().enumerate() {
-                    println!("\n\n=== Page {} ===", i);
+                    println!("\n\n=== Page {i} ===");
                     println!("{}", "=".repeat(50));
                     println!("{}", extracted.text);
                 }
             }
             Err(e) => {
-                eprintln!("Error extracting text: {}", e);
+                eprintln!("Error extracting text: {e}");
             }
         }
     }

@@ -210,7 +210,7 @@ fn create_employee_page(doc: &mut Document) -> Result<()> {
     page.text()
         .set_font(Font::Helvetica, 11.0)
         .at(50.0, 450.0)
-        .write(&format!("Total Employees: {}", employee_count))?;
+        .write(&format!("Total Employees: {employee_count}"))?;
 
     doc.add_page(page);
     Ok(())

@@ -887,13 +887,13 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 16.0)
                     .at(50.0, 750.0)
-                    .write(&format!("Page {}", i))
+                    .write(&format!("Page {i}"))
                     .unwrap();
 
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(50.0, 700.0)
-                    .write(&format!("This is the content for page {}", i))
+                    .write(&format!("This is the content for page {i}"))
                     .unwrap();
 
                 // Add unique graphics for each page
@@ -1187,7 +1187,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(50.0, 750.0)
-                    .write(&format!("Concurrent page {}", i))
+                    .write(&format!("Concurrent page {i}"))
                     .unwrap();
                 pages.push(page);
             }
@@ -1217,7 +1217,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(50.0, 700.0)
-                    .write(&format!("Memory test page {}", i))
+                    .write(&format!("Memory test page {i}"))
                     .unwrap();
                 doc.add_page(page);
             }

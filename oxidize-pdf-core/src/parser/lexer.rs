@@ -1154,7 +1154,7 @@ mod tests {
         #[test]
         fn test_token_debug_trait() {
             let token = Token::Integer(42);
-            let debug_str = format!("{:?}", token);
+            let debug_str = format!("{token:?}");
             assert!(debug_str.contains("Integer"));
             assert!(debug_str.contains("42"));
         }
@@ -1615,7 +1615,7 @@ mod tests {
         #[test]
         fn test_lexer_very_long_string() {
             let long_str = "A".repeat(1000);
-            let input = format!("({})", long_str);
+            let input = format!("({long_str})");
             let mut lexer = Lexer::new(Cursor::new(input.as_bytes()));
 
             if let Token::String(s) = lexer.next_token().unwrap() {
@@ -1629,7 +1629,7 @@ mod tests {
         #[test]
         fn test_lexer_very_long_name() {
             let long_name = "A".repeat(500);
-            let input = format!("/{}", long_name);
+            let input = format!("/{long_name}");
             let mut lexer = Lexer::new(Cursor::new(input.as_bytes()));
 
             if let Token::Name(name) = lexer.next_token().unwrap() {
@@ -1789,16 +1789,16 @@ mod tests {
             Token::String(bytes) => {
                 // Should contain the text, potentially with encoding recovery
                 let text = String::from_utf8_lossy(&bytes);
-                println!("Recovered text: {}", text);
-                assert!(text.len() > 0); // Should not be empty
+                println!("Recovered text: {text}");
+                assert!(!text.is_empty()); // Should not be empty
             }
-            other => panic!("Expected String token, got {:?}", other),
+            other => panic!("Expected String token, got {other:?}"),
         }
 
         // Check that warnings were collected
         let warnings = lexer.warnings();
         if !warnings.is_empty() {
-            println!("Encoding warnings: {:?}", warnings);
+            println!("Encoding warnings: {warnings:?}");
         }
     }
 }

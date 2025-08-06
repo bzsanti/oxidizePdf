@@ -361,7 +361,7 @@ fn main() -> Result<()> {
 
     // Get field count for verification
     let field_count = form_manager.field_count();
-    println!("✅ Created {} form fields", field_count);
+    println!("✅ Created {field_count} form fields");
 
     // Save the document
     document.save("comprehensive_forms_test.pdf")?;

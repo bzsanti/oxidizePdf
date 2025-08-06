@@ -225,14 +225,14 @@ fn test_font_cache_thread_safety() {
             barrier_clone.wait();
 
             // Each thread adds its own font
-            let font_name = format!("Font{}", i);
+            let font_name = format!("Font{i}");
             cache_clone
                 .add_font(&font_name, create_test_font("Helvetica"))
                 .unwrap();
 
             // Try to read other fonts
             for j in 0..10 {
-                let other_font = format!("Font{}", j);
+                let other_font = format!("Font{j}");
                 let _ = cache_clone.get_font(&other_font);
             }
         });
@@ -504,7 +504,7 @@ fn test_font_cache_memory_stress() {
 
     // Add many fonts to stress the cache
     for i in 0..1000 {
-        let font_name = format!("StressFont{}", i);
+        let font_name = format!("StressFont{i}");
         cache
             .add_font(font_name, create_test_font("Helvetica"))
             .unwrap();
@@ -595,7 +595,7 @@ fn test_font_cache_performance() {
     let start = std::time::Instant::now();
     for i in 0..iterations {
         cache
-            .add_font(format!("PerfFont{}", i), create_test_font("Helvetica"))
+            .add_font(format!("PerfFont{i}"), create_test_font("Helvetica"))
             .unwrap();
     }
     let write_duration = start.elapsed();
@@ -603,16 +603,13 @@ fn test_font_cache_performance() {
     // Measure read performance
     let start = std::time::Instant::now();
     for i in 0..iterations {
-        let _ = cache.get_font(&format!("PerfFont{}", i));
+        let _ = cache.get_font(&format!("PerfFont{i}"));
     }
     let read_duration = start.elapsed();
 
     println!("Font cache performance:");
-    println!(
-        "  Writes: {:?} for {} operations",
-        write_duration, iterations
-    );
-    println!("  Reads: {:?} for {} operations", read_duration, iterations);
+    println!("  Writes: {write_duration:?} for {iterations} operations");
+    println!("  Reads: {read_duration:?} for {iterations} operations");
 
     // Basic sanity checks
     assert!(write_duration.as_secs() < 5);

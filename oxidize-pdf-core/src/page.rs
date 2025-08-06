@@ -1115,7 +1115,7 @@ mod tests {
                 page.text()
                     .set_font(Font::HelveticaBold, 12.0)
                     .at(70.0, y_pos + 5.0)
-                    .write(&format!("Section {}", i))
+                    .write(&format!("Section {i}"))
                     .unwrap();
 
                 y_pos -= 30.0;
@@ -1125,8 +1125,7 @@ mod tests {
                     .set_font(Font::TimesRoman, 10.0)
                     .at(70.0, y_pos)
                     .write(&format!(
-                        "This is the content for section {}. It demonstrates mixed content.",
-                        i
+                        "This is the content for section {i}. It demonstrates mixed content."
                     ))
                     .unwrap();
 
@@ -1182,7 +1181,7 @@ mod tests {
                     page.text()
                         .set_font(Font::Helvetica, 8.0)
                         .at(50.0, y)
-                        .write(&format!("Performance test line {}", i))
+                        .write(&format!("Performance test line {i}"))
                         .unwrap();
                 }
             }
@@ -1242,7 +1241,7 @@ mod tests {
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(100.0, 700.0)
-                    .write(&format!("Page {}", i))
+                    .write(&format!("Page {i}"))
                     .unwrap();
 
                 pages.push(page);
@@ -1297,7 +1296,7 @@ mod tests {
                 let mut page = Page::a4();
 
                 // Set header
-                let header = HeaderFooter::new_header(format!("Chapter {}", i))
+                let header = HeaderFooter::new_header(format!("Chapter {i}"))
                     .with_font(Font::HelveticaBold, 16.0)
                     .with_alignment(TextAlign::Center);
                 page.set_header(header);
@@ -1312,7 +1311,7 @@ mod tests {
                 page.text()
                     .set_font(Font::TimesRoman, 12.0)
                     .at(100.0, 700.0)
-                    .write(&format!("This is the content of chapter {}", i))
+                    .write(&format!("This is the content of chapter {i}"))
                     .unwrap();
 
                 doc.add_page(page);

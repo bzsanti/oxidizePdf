@@ -3,8 +3,8 @@
 //! Tests mathematical properties and invariants of graphics operations,
 //! transformations, and path construction.
 
-use oxidize_pdf::graphics::{Color, Point};
-use oxidize_pdf::{Document, Page};
+use oxidize_pdf::graphics::Color;
+use oxidize_pdf::Page;
 use proptest::prelude::*;
 
 // Strategy for finite floating point values suitable for graphics

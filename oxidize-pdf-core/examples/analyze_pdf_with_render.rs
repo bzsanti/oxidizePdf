@@ -65,13 +65,13 @@ fn main() {
     // Increase stack size for deeply nested PDFs
     let result = std::thread::Builder::new()
         .stack_size(32 * 1024 * 1024) // 32MB stack
-        .spawn(|| run_analysis())
+        .spawn(run_analysis)
         .unwrap()
         .join()
         .unwrap();
 
     if let Err(e) = result {
-        eprintln!("Error: {}", e);
+        eprintln!("Error: {e}");
         std::process::exit(1);
     }
 }
@@ -83,20 +83,14 @@ fn run_analysis() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Find fixtures directory
     let fixtures_path =
         find_fixtures_directory().map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            ))
+            Box::new(std::io::Error::other(e.to_string()))
         })?;
     println!("Analyzing PDFs in: {}\n", fixtures_path.display());
 
     // Collect all PDF files
     let pdf_files = collect_pdf_files(&fixtures_path).map_err(
         |e| -> Box<dyn std::error::Error + Send + Sync> {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e.to_string(),
-            ))
+            Box::new(std::io::Error::other(e.to_string()))
         },
     )?;
     println!("Found {} PDF files to analyze\n", pdf_files.len());
@@ -113,17 +107,14 @@ fn run_analysis() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             println!("Progress: {}/{} PDFs analyzed...", index, pdf_files.len());
         }
 
-        analyze_pdf_compatibility(&pdf_path, &mut report);
+        analyze_pdf_compatibility(pdf_path, &mut report);
     }
 
     report.total_duration = start_time.elapsed();
 
     // Generate and save report
     generate_report(&report).map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-        Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string(),
-        ))
+        Box::new(std::io::Error::other(e.to_string()))
     })?;
 
     Ok(())
@@ -162,8 +153,7 @@ fn analyze_pdf_compatibility(pdf_path: &Path, report: &mut CompatibilityReport) 
                 parse_error: None,
                 render_error: Some(error_type),
                 details: Some(format!(
-                    "Parses correctly but rendering fails: {}",
-                    render_err
+                    "Parses correctly but rendering fails: {render_err}"
                 )),
             });
         }
@@ -180,10 +170,7 @@ fn analyze_pdf_compatibility(pdf_path: &Path, report: &mut CompatibilityReport) 
                 issue_type: IssueType::RenderOnlySuccess,
                 parse_error: Some(error_type),
                 render_error: None,
-                details: Some(format!(
-                    "Renders correctly but parsing fails: {}",
-                    parse_err
-                )),
+                details: Some(format!("Renders correctly but parsing fails: {parse_err}")),
             });
         }
         (Err(parse_err), Err(render_err)) => {
@@ -218,7 +205,7 @@ fn analyze_pdf_compatibility(pdf_path: &Path, report: &mut CompatibilityReport) 
 
 fn test_pdf_parsing(pdf_path: &Path) -> Result<(), String> {
     // Try with lenient parsing first
-    let file = File::open(pdf_path).map_err(|e| format!("IO error: {}", e))?;
+    let file = File::open(pdf_path).map_err(|e| format!("IO error: {e}"))?;
     let options = ParseOptions::lenient();
 
     match PdfReader::new_with_options(file, options) {
@@ -226,10 +213,10 @@ fn test_pdf_parsing(pdf_path: &Path) -> Result<(), String> {
             // Try to get page count as basic validation
             match reader.page_count() {
                 Ok(_) => Ok(()),
-                Err(e) => Err(format!("Page count error: {:?}", e)),
+                Err(e) => Err(format!("Page count error: {e:?}")),
             }
         }
-        Err(e) => Err(format!("Parse error: {:?}", e)),
+        Err(e) => Err(format!("Parse error: {e:?}")),
     }
 }
 
@@ -239,7 +226,7 @@ fn test_pdf_rendering(pdf_path: &Path) -> Result<(), String> {
 
     // Use cargo to run the test_render example
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--manifest-path",
             &render_path.join("Cargo.toml").to_string_lossy(),
@@ -251,7 +238,7 @@ fn test_pdf_rendering(pdf_path: &Path) -> Result<(), String> {
             "/tmp/test_render_output.png",
         ])
         .output()
-        .map_err(|e| format!("Failed to execute render command: {}", e))?;
+        .map_err(|e| format!("Failed to execute render command: {e}"))?;
 
     if output.status.success() {
         // Clean up test output
@@ -363,7 +350,7 @@ fn generate_report(report: &CompatibilityReport) -> Result<(), Box<dyn std::erro
         let mut errors: Vec<_> = report.parse_errors.iter().collect();
         errors.sort_by_key(|(_, count)| std::cmp::Reverse(**count));
         for (error_type, count) in errors {
-            println!("  {}: {} PDFs", error_type, count);
+            println!("  {error_type}: {count} PDFs");
         }
     }
 
@@ -372,7 +359,7 @@ fn generate_report(report: &CompatibilityReport) -> Result<(), Box<dyn std::erro
         let mut errors: Vec<_> = report.render_errors.iter().collect();
         errors.sort_by_key(|(_, count)| std::cmp::Reverse(**count));
         for (error_type, count) in errors {
-            println!("  {}: {} PDFs", error_type, count);
+            println!("  {error_type}: {count} PDFs");
         }
     }
 
@@ -441,11 +428,11 @@ fn generate_report(report: &CompatibilityReport) -> Result<(), Box<dyn std::erro
     for issue in &report.compatibility_issues {
         writeln!(file, "\n{}", issue.filename)?;
         if let Some(details) = &issue.details {
-            writeln!(file, "  {}", details)?;
+            writeln!(file, "  {details}")?;
         }
     }
 
-    println!("\n💾 Detailed report saved to: {}", report_path);
+    println!("\n💾 Detailed report saved to: {report_path}");
 
     Ok(())
 }

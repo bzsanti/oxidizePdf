@@ -18,8 +18,8 @@ fn generate_test_objects(count: usize) -> Vec<Object> {
         match i % 4 {
             0 => objects.push(Object::Integer(i as i64)),
             1 => objects.push(Object::Boolean(i % 2 == 0)),
-            2 => objects.push(Object::String(format!("String {}", i))),
-            _ => objects.push(Object::Name(format!("Name{}", i))),
+            2 => objects.push(Object::String(format!("String {i}"))),
+            _ => objects.push(Object::Name(format!("Name{i}"))),
         }
     }
     objects
@@ -316,13 +316,13 @@ fn benchmark_dictionary_operations(c: &mut Criterion) {
         // Create test dictionary
         let mut test_dict = PdfDictionary::new();
         for i in 0..size {
-            let key = format!("Key{}", i);
+            let key = format!("Key{i}");
             let value = match i % 4 {
                 0 => PdfObject::Integer(i as i64),
                 1 => PdfObject::Boolean(i % 2 == 0),
-                2 => PdfObject::Name(PdfName::new(format!("Name{}", i))),
+                2 => PdfObject::Name(PdfName::new(format!("Name{i}"))),
                 _ => PdfObject::String(oxidize_pdf::parser::objects::PdfString::new(
-                    format!("String{}", i).into_bytes(),
+                    format!("String{i}").into_bytes(),
                 )),
             };
             test_dict.insert(key, value);
@@ -336,7 +336,7 @@ fn benchmark_dictionary_operations(c: &mut Criterion) {
                 b.iter(|| {
                     let mut found = 0;
                     for i in (0..size).step_by(3) {
-                        let key = format!("Key{}", i);
+                        let key = format!("Key{i}");
                         if dict.get(&key).is_some() {
                             found += 1;
                         }

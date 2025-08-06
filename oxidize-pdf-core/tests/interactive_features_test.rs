@@ -65,7 +65,7 @@ fn test_annotations_integration() {
         if let Some(annot_array) = page.get_annotations() {
             // We can verify that annotations exist but detailed access would require
             // more parser API methods
-            assert!(annot_array.len() > 0, "Page should have annotations");
+            assert!(!annot_array.is_empty(), "Page should have annotations");
         } else {
             panic!("Expected annotations on page");
         }
@@ -354,7 +354,10 @@ fn test_combined_interactive_features() {
         let page1 = pdf_doc.get_page(0).unwrap();
 
         if let Some(annot_array) = page1.get_annotations() {
-            assert!(annot_array.len() > 0, "First page should have annotations");
+            assert!(
+                !annot_array.is_empty(),
+                "First page should have annotations"
+            );
         } else {
             panic!("Expected annotations on first page");
         }

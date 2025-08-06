@@ -93,10 +93,10 @@ fn main() -> Result<()> {
 
     let mut all_present = true;
     for (op, description) in &operators {
-        if pdf_content.contains(&format!("{}\n", op)) || pdf_content.contains(&format!("{} ", op)) {
-            println!("   ✅ {} operator ({}) - FOUND", op, description);
+        if pdf_content.contains(&format!("{op}\n")) || pdf_content.contains(&format!("{op} ")) {
+            println!("   ✅ {op} operator ({description}) - FOUND");
         } else {
-            println!("   ❌ {} operator ({}) - NOT FOUND", op, description);
+            println!("   ❌ {op} operator ({description}) - NOT FOUND");
             all_present = false;
         }
     }
@@ -119,9 +119,9 @@ fn main() -> Result<()> {
 
     for (op, description) in &operators {
         if operations.contains(op) {
-            println!("   ✅ {} operator ({}) - GENERATED", op, description);
+            println!("   ✅ {op} operator ({description}) - GENERATED");
         } else {
-            println!("   ❌ {} operator ({}) - NOT GENERATED", op, description);
+            println!("   ❌ {op} operator ({description}) - NOT GENERATED");
             all_present = false;
         }
     }

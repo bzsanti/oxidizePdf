@@ -419,7 +419,7 @@ mod tests {
         let mmap = MemoryMappedFile::new(temp_file.path()).unwrap();
 
         // Test Deref implementation
-        let slice: &[u8] = &*mmap;
+        let slice: &[u8] = &mmap;
         assert_eq!(slice, test_data);
 
         // Test indexing (uses Deref)

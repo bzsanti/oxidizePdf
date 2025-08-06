@@ -62,7 +62,7 @@ fn test_transparency_effects() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 10.0)
             .at(x + 20.0, 600.0)
-            .write(&format!("{:.1}", opacity))?;
+            .write(&format!("{opacity:.1}"))?;
     }
 
     // Overlapping shapes to demonstrate transparency
@@ -203,10 +203,7 @@ fn test_transparency_effects() -> Result<()> {
     doc.save("test_output/transparency_effects_test.pdf")?;
 
     let duration = start.elapsed();
-    println!(
-        "  ✅ Transparency effects PDF created successfully in {:?}",
-        duration
-    );
+    println!("  ✅ Transparency effects PDF created successfully in {duration:?}");
     println!("  📄 Output: test_output/transparency_effects_test.pdf");
 
     Ok(())
@@ -222,7 +219,7 @@ fn main() -> Result<()> {
     let total_duration = total_start.elapsed();
 
     println!("\n🎉 TRANSPARENCY TESTS COMPLETED!");
-    println!("⏱️  Total time: {:?}", total_duration);
+    println!("⏱️  Total time: {total_duration:?}");
     println!("🎨 Visual effects and transparency features validated");
     println!("✅ Ready for advanced PDF rendering applications");
 

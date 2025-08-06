@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let pdf_path = &args[1];
-    println!("Extracting pages from: {}", pdf_path);
+    println!("Extracting pages from: {pdf_path}");
     println!("{}", "=".repeat(50));
 
     // Open and parse the PDF
@@ -23,10 +23,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Get basic information
     let version = reader.version();
-    println!("PDF Version: {}", version);
+    println!("PDF Version: {version}");
 
     let page_count = reader.page_count()?;
-    println!("Total Pages: {}\n", page_count);
+    println!("Total Pages: {page_count}\n");
 
     // Extract information about each page
     for i in 0..page_count {
@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // See parse_and_extract.rs example for content extraction
             }
             Err(e) => {
-                println!("  Error extracting page: {}", e);
+                println!("  Error extracting page: {e}");
             }
         }
 

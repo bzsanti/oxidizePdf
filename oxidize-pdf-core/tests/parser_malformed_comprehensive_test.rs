@@ -44,18 +44,18 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             // Try to read the stream object
             match doc.get_object(1, 0) {
                 Ok(_) => println!("Unexpectedly succeeded reading negative length stream"),
                 Err(e) => {
-                    println!("Expected error: {}", e);
+                    println!("Expected error: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("Parser error (expected): {}", e);
+            println!("Parser error (expected): {e}");
         }
     }
 }
@@ -74,14 +74,14 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Unexpectedly succeeded with excessive stream length"),
             Err(e) => {
-                println!("Expected error: {}", e);
+                println!("Expected error: {e}");
             }
         },
-        Err(e) => println!("Parser error (expected): {}", e),
+        Err(e) => println!("Parser error (expected): {e}"),
     }
 }
 
@@ -98,14 +98,14 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed stream without endstream"),
             Err(e) => {
-                println!("Expected error: {}", e);
+                println!("Expected error: {e}");
             }
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -125,12 +125,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Unexpectedly parsed corrupted object stream"),
-            Err(e) => println!("Expected error: {}", e),
+            Err(e) => println!("Expected error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -148,10 +148,10 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Parser created, xref stream handling tested"),
         Err(e) => {
-            println!("Expected error: {}", e);
+            println!("Expected error: {e}");
         }
     }
 }
@@ -174,9 +174,9 @@ endobj
     let cursor = Cursor::new(pdf);
 
     // Should handle linearized PDFs gracefully even if corrupted
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled linearized PDF"),
-        Err(e) => println!("Error with linearized PDF: {}", e),
+        Err(e) => println!("Error with linearized PDF: {e}"),
     }
 }
 
@@ -198,10 +198,10 @@ fn test_incremental_update_invalid_prev() {
     pdf.extend_from_slice(b"startxref\n150\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled incremental update"),
         Err(e) => {
-            println!("Expected error: {}", e);
+            println!("Expected error: {e}");
         }
     }
 }
@@ -220,17 +220,17 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             // Try to read font objects
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(_) => println!("Read font object {}", i),
-                    Err(e) => println!("Font {} error: {}", i, e),
+                    Ok(_) => println!("Read font object {i}"),
+                    Err(e) => println!("Font {i} error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -248,12 +248,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled recursive form XObject"),
-            Err(e) => println!("Expected recursion error: {}", e),
+            Err(e) => println!("Expected recursion error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -274,10 +274,10 @@ endobj
     pdf.splice(insert_pos..insert_pos, encrypt_dict.iter().cloned());
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled corrupted encryption"),
         Err(e) => {
-            println!("Expected encryption error: {}", e);
+            println!("Expected encryption error: {e}");
         }
     }
 }
@@ -299,12 +299,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(3, 0) {
             Ok(_) => println!("Read incomplete page object"),
-            Err(e) => println!("Expected page error: {}", e),
+            Err(e) => println!("Expected page error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -325,12 +325,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled circular color space"),
-            Err(e) => println!("Expected circular reference error: {}", e),
+            Err(e) => println!("Expected circular reference error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -345,12 +345,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
-            Ok(obj) => println!("Parsed malformed hex strings: {:?}", obj),
-            Err(e) => println!("Hex string error: {}", e),
+            Ok(obj) => println!("Parsed malformed hex strings: {obj:?}"),
+            Err(e) => println!("Hex string error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -368,16 +368,16 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(obj) => println!("Object {} parsed: {:?}", i, obj),
-                    Err(e) => println!("Object {} error: {}", i, e),
+                    Ok(obj) => println!("Object {i} parsed: {obj:?}"),
+                    Err(e) => println!("Object {i} error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -392,14 +392,14 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
-                println!("Dictionary parsed with duplicate keys: {:?}", obj);
+                println!("Dictionary parsed with duplicate keys: {obj:?}");
             }
-            Err(e) => println!("Dictionary error: {}", e),
+            Err(e) => println!("Dictionary error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -414,12 +414,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
-            Ok(obj) => println!("Parsed names with special characters: {:?}", obj),
-            Err(e) => println!("Name parsing error: {}", e),
+            Ok(obj) => println!("Parsed names with special characters: {obj:?}"),
+            Err(e) => println!("Name parsing error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -434,12 +434,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
-            Ok(obj) => println!("Parsed unbalanced strings: {:?}", obj),
-            Err(e) => println!("String parsing error: {}", e),
+            Ok(obj) => println!("Parsed unbalanced strings: {obj:?}"),
+            Err(e) => println!("String parsing error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -456,10 +456,10 @@ fn test_xref_invalid_subsection() {
     pdf.extend_from_slice(b"startxref\n40\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled huge xref subsection"),
         Err(e) => {
-            println!("Expected xref error: {}", e);
+            println!("Expected xref error: {e}");
         }
     }
 }
@@ -478,9 +478,9 @@ fn test_multiple_eof_markers() {
     pdf.extend_from_slice(b"%%EOF\n"); // Third EOF
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled multiple EOF markers"),
-        Err(e) => println!("EOF handling error: {}", e),
+        Err(e) => println!("EOF handling error: {e}"),
     }
 }
 
@@ -498,12 +498,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Read catalog with invalid generation"),
-            Err(e) => println!("Expected reference error: {}", e),
+            Err(e) => println!("Expected reference error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -521,12 +521,12 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled self-referencing object stream"),
-            Err(e) => println!("Expected self-reference error: {}", e),
+            Err(e) => println!("Expected self-reference error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -544,14 +544,14 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed invalid filter chain"),
             Err(e) => {
-                println!("Expected filter error: {}", e);
+                println!("Expected filter error: {e}");
             }
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -572,16 +572,16 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=3 {
                 match doc.get_object(i, 0) {
-                    Ok(obj) => println!("Page {} with rotation: {:?}", i, obj),
-                    Err(e) => println!("Page {} error: {}", i, e),
+                    Ok(obj) => println!("Page {i} with rotation: {obj:?}"),
+                    Err(e) => println!("Page {i} error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -599,16 +599,16 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(obj) => println!("Object {} with nulls: {:?}", i, obj),
-                    Err(e) => println!("Object {} error: {}", i, e),
+                    Ok(obj) => println!("Object {i} with nulls: {obj:?}"),
+                    Err(e) => println!("Object {i} error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -632,16 +632,16 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(_) => println!("Object {} parsed without decode params", i),
-                    Err(e) => println!("Object {} decode error: {}", i, e),
+                    Ok(_) => println!("Object {i} parsed without decode params"),
+                    Err(e) => println!("Object {i} decode error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 

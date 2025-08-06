@@ -291,7 +291,7 @@ proptest! {
         let pdf_str = String::from_utf8_lossy(&pdf);
 
         // Check that MediaBox contains our dimensions (allowing for floating point values)
-        let mediabox_pattern = format!("/MediaBox [0 0 {} {}]", width, height);
+        let mediabox_pattern = format!("/MediaBox [0 0 {width} {height}]");
         prop_assert!(pdf_str.contains(&mediabox_pattern),
                     "Expected to find '{}' in PDF content", mediabox_pattern);
 

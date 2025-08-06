@@ -562,15 +562,15 @@ mod tests {
     fn test_merge_debug_implementations() {
         // Test Debug implementations
         let options = MergeOptions::default();
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("MergeOptions"));
 
         let metadata_mode = MetadataMode::FromFirst;
-        let debug_str = format!("{:?}", metadata_mode);
+        let debug_str = format!("{metadata_mode:?}");
         assert!(debug_str.contains("FromFirst"));
 
         let input = MergeInput::new("test.pdf");
-        let debug_str = format!("{:?}", input);
+        let debug_str = format!("{input:?}");
         assert!(debug_str.contains("MergeInput"));
     }
 

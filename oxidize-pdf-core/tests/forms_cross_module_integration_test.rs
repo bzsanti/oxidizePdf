@@ -122,7 +122,7 @@ fn test_forms_graphics_integration() {
         };
 
         let field = TextField::new(*field_name)
-            .with_value(&format!("Graphics integration test {}", i))
+            .with_value(format!("Graphics integration test {i}"))
             .with_max_length(50);
 
         let widget = Widget::new(Rectangle::new(
@@ -153,11 +153,11 @@ fn test_forms_graphics_integration() {
 
                 // Verify color arrays have correct structure
                 if let Some(Object::Array(bc_array)) = mk_dict.get("BC") {
-                    assert!(bc_array.len() >= 1 && bc_array.len() <= 4); // Valid color space
+                    assert!(!bc_array.is_empty() && bc_array.len() <= 4); // Valid color space
                 }
 
                 if let Some(Object::Array(bg_array)) = mk_dict.get("BG") {
-                    assert!(bg_array.len() >= 1 && bg_array.len() <= 4); // Valid color space
+                    assert!(!bg_array.is_empty() && bg_array.len() <= 4); // Valid color space
                 }
             }
 
@@ -182,7 +182,7 @@ fn test_forms_text_integration() {
     let mut form_manager = FormManager::new();
 
     // Test different text configurations with forms
-    let text_configurations = vec![
+    let text_configurations = [
         ("helvetica_field", Font::Helvetica, 12.0, TextAlign::Left),
         ("times_field", Font::TimesRoman, 14.0, TextAlign::Center),
         ("courier_field", Font::Courier, 10.0, TextAlign::Right),
@@ -220,7 +220,7 @@ fn test_forms_text_integration() {
         };
 
         let field = TextField::new(*field_name)
-            .with_value(&format!(
+            .with_value(format!(
                 "Text integration with {} at {}pt",
                 match font {
                     Font::Helvetica => "Helvetica",
@@ -249,7 +249,7 @@ fn test_forms_text_integration() {
 
             // Check default appearance
             if let Some(Object::String(da)) = field_dict.get("DA") {
-                assert!(da.contains(&format!("{}", size)));
+                assert!(da.contains(&format!("{size}")));
                 assert!(da.contains("Tf")); // Font operator
                 assert!(da.contains("g")); // Color operator
             }
@@ -478,8 +478,8 @@ fn test_forms_memory_integration() {
 
         // Create a moderate number of fields
         for i in 0..50 {
-            let field = TextField::new(&format!("mem_field_{}_{}", iteration, i))
-                .with_value(&format!("Memory test {} field {}", iteration, i))
+            let field = TextField::new(format!("mem_field_{iteration}_{i}"))
+                .with_value(format!("Memory test {iteration} field {i}"))
                 .with_max_length(100);
 
             let widget = Widget::new(Rectangle::new(
@@ -505,16 +505,13 @@ fn test_forms_memory_integration() {
                 let growth = current_memory.saturating_sub(prev_memory);
 
                 println!(
-                    "Iteration {}: memory indicator = {}, growth = {}",
-                    iteration, current_memory, growth
+                    "Iteration {iteration}: memory indicator = {current_memory}, growth = {growth}"
                 );
 
                 // Memory growth should be bounded
                 assert!(
                     growth < 100,
-                    "Excessive memory growth: {} at iteration {}",
-                    growth,
-                    iteration
+                    "Excessive memory growth: {growth} at iteration {iteration}"
                 );
             }
         }
@@ -532,15 +529,13 @@ fn test_forms_memory_integration() {
         let total_growth = final_memory.saturating_sub(initial_memory);
 
         println!(
-            "Memory integration: initial = {}, final = {}, growth = {}",
-            initial_memory, final_memory, total_growth
+            "Memory integration: initial = {initial_memory}, final = {final_memory}, growth = {total_growth}"
         );
 
         // Total memory growth should be reasonable
         assert!(
             total_growth < 500,
-            "Total memory growth too high: {}",
-            total_growth
+            "Total memory growth too high: {total_growth}"
         );
     }
 
@@ -574,7 +569,7 @@ fn test_forms_document_structure_integration() {
 
         // Add form fields specific to this page
         for field_num in 0..3 {
-            let field_name = format!("page_{}_{}", page_num, field_num);
+            let field_name = format!("page_{page_num}_{field_num}");
             let field_value = format!("Page {} Field {}", page_num + 1, field_num + 1);
 
             let field = TextField::new(&field_name)
@@ -631,11 +626,10 @@ fn test_forms_document_structure_integration() {
     // Verify specific fields from each page
     for page_num in 0..page_count {
         for field_num in 0..3 {
-            let field_name = format!("page_{}_{}", page_num, field_num);
+            let field_name = format!("page_{page_num}_{field_num}");
             assert!(
                 total_form_manager.get_field(&field_name).is_some(),
-                "Field {} not found",
-                field_name
+                "Field {field_name} not found"
             );
         }
     }
@@ -783,15 +777,12 @@ fn test_forms_error_handling_integration() {
 
         match result {
             Ok(_) => {
-                println!(
-                    "Field '{}' with problematic rectangle was accepted",
-                    field_name
-                );
+                println!("Field '{field_name}' with problematic rectangle was accepted");
                 // Verify field was actually added
                 assert!(form_manager.get_field(field_name).is_some());
             }
             Err(e) => {
-                println!("Field '{}' properly rejected: {}", field_name, e);
+                println!("Field '{field_name}' properly rejected: {e}");
                 // Error was handled gracefully
             }
         }
@@ -842,7 +833,7 @@ fn test_forms_concurrent_integration() {
                     .text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(50.0, 800.0)
-                    .write(&format!("Thread {} Page {}", thread_id, i))
+                    .write(&format!("Thread {thread_id} Page {i}"))
                     .is_ok()
                 {
                     // Add graphics
@@ -852,9 +843,9 @@ fn test_forms_concurrent_integration() {
                         .stroke();
 
                     // Add form field
-                    let field_name = format!("concurrent_{}_{}", thread_id, i);
+                    let field_name = format!("concurrent_{thread_id}_{i}");
                     let field = TextField::new(&field_name)
-                        .with_value(&format!("Concurrent test {} {}", thread_id, i))
+                        .with_value(format!("Concurrent test {thread_id} {i}"))
                         .with_max_length(100);
 
                     let widget = Widget::new(Rectangle::new(
@@ -890,10 +881,7 @@ fn test_forms_concurrent_integration() {
     for handle in handles {
         match handle.join() {
             Ok((thread_id, successes)) => {
-                println!(
-                    "Concurrent thread {} completed: {} successes",
-                    thread_id, successes
-                );
+                println!("Concurrent thread {thread_id} completed: {successes} successes");
                 total_successes += successes;
             }
             Err(_) => {
@@ -906,11 +894,8 @@ fn test_forms_concurrent_integration() {
     let _final_document = document.lock().unwrap();
     let final_forms = form_manager.lock().unwrap();
 
-    println!(
-        "Concurrent integration: {} total successes",
-        total_successes
-    );
-    println!("Final document pages: {}", "[pages not accessible]");
+    println!("Concurrent integration: {total_successes} total successes");
+    println!("Final document pages: [pages not accessible]");
     println!("Final form fields: {}", final_forms.field_count());
 
     // Results should be consistent

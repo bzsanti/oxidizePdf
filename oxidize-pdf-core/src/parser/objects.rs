@@ -1735,12 +1735,12 @@ mod tests {
         #[test]
         fn test_debug_formatting() {
             let obj = PdfObject::Integer(42);
-            let debug_str = format!("{:?}", obj);
+            let debug_str = format!("{obj:?}");
             assert!(debug_str.contains("Integer"));
             assert!(debug_str.contains("42"));
 
             let name = PdfName("Type".to_string());
-            let debug_str2 = format!("{:?}", name);
+            let debug_str2 = format!("{name:?}");
             assert!(debug_str2.contains("PdfName"));
             assert!(debug_str2.contains("Type"));
         }
@@ -1765,7 +1765,7 @@ mod tests {
         fn test_performance_large_dictionary() {
             let mut dict = PdfDictionary::new();
             for i in 0..1000 {
-                dict.insert(format!("Key{}", i), PdfObject::Integer(i));
+                dict.insert(format!("Key{i}"), PdfObject::Integer(i));
             }
 
             assert_eq!(dict.0.len(), 1000);
@@ -1774,7 +1774,7 @@ mod tests {
 
             // Test lookup performance
             for i in 0..1000 {
-                assert!(dict.contains_key(&format!("Key{}", i)));
+                assert!(dict.contains_key(&format!("Key{i}")));
             }
         }
     }
@@ -1812,7 +1812,7 @@ mod tests {
 
         let result = PdfObject::parse_stream_data_with_options(&mut lexer, &dict, &options);
         if let Err(e) = &result {
-            eprintln!("Error in test_lenient_stream_parsing_too_short: {:?}", e);
+            eprintln!("Error in test_lenient_stream_parsing_too_short: {e:?}");
             eprintln!("Warning: Stream length mismatch expected, checking if lenient parsing is working correctly");
         }
         assert!(result.is_ok());

@@ -24,7 +24,7 @@ fn _create_test_stream_data(objects: &[(u32, &str)]) -> Vec<u8> {
     // Write object number/offset pairs
     let mut current_offset = 0u32;
     for (obj_num, _) in objects {
-        data.extend_from_slice(format!("{} {} ", obj_num, current_offset).as_bytes());
+        data.extend_from_slice(format!("{obj_num} {current_offset} ").as_bytes());
         current_offset += 10; // Assume each object takes 10 bytes for simplicity
     }
 
@@ -273,7 +273,7 @@ fn test_object_stream_debug() {
         objects: HashMap::new(),
     };
 
-    let debug_str = format!("{:?}", obj_stream);
+    let debug_str = format!("{obj_stream:?}");
     assert!(
         debug_str.contains("ObjectStream"),
         "Debug output should contain struct name"
@@ -306,7 +306,7 @@ fn test_xref_entry_type_debug() {
     ];
 
     for entry in &entries {
-        let debug_str = format!("{:?}", entry);
+        let debug_str = format!("{entry:?}");
         assert!(!debug_str.is_empty(), "Debug output should not be empty");
         // Each variant should show its specific field names
         match entry {

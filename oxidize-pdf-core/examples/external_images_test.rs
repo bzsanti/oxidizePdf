@@ -24,7 +24,7 @@ fn main() -> Result<(), PdfError> {
     // Test PNG image
     let image1_path = Path::new("tests/images/1.png");
     if image1_path.exists() {
-        match Image::from_png_file(&image1_path) {
+        match Image::from_png_file(image1_path) {
             Ok(image) => {
                 println!(
                     "📷 Loaded PNG: {}x{} pixels, {} bytes",
@@ -53,11 +53,11 @@ fn main() -> Result<(), PdfError> {
                 y_position -= 200.0;
             }
             Err(e) => {
-                println!("❌ Error loading PNG: {}", e);
+                println!("❌ Error loading PNG: {e}");
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(50.0, y_position)
-                    .write(&format!("❌ PNG error: {}", e))?;
+                    .write(&format!("❌ PNG error: {e}"))?;
                 y_position -= 30.0;
             }
         }
@@ -71,7 +71,7 @@ fn main() -> Result<(), PdfError> {
     // Test second PNG image
     let image2_path = Path::new("tests/images/2.png");
     if image2_path.exists() {
-        match Image::from_png_file(&image2_path) {
+        match Image::from_png_file(image2_path) {
             Ok(image) => {
                 println!(
                     "📷 Loaded PNG: {}x{} pixels, {} bytes",
@@ -100,11 +100,11 @@ fn main() -> Result<(), PdfError> {
                 y_position -= 150.0;
             }
             Err(e) => {
-                println!("❌ Error loading PNG: {}", e);
+                println!("❌ Error loading PNG: {e}");
                 page.text()
                     .set_font(Font::Helvetica, 12.0)
                     .at(50.0, y_position)
-                    .write(&format!("❌ PNG error: {}", e))?;
+                    .write(&format!("❌ PNG error: {e}"))?;
                 y_position -= 30.0;
             }
         }
@@ -136,7 +136,7 @@ fn main() -> Result<(), PdfError> {
     let output_file = "external_images_test.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("🔍 This PDF should show the actual PNG images, not black rectangles");
 
     Ok(())

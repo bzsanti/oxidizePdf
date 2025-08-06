@@ -77,7 +77,7 @@ fn test_batch_split_pdfs() {
     // Create test PDFs
     let mut files = vec![];
     for i in 0..3 {
-        let pdf_path = temp_dir.path().join(format!("test{}.pdf", i));
+        let pdf_path = temp_dir.path().join(format!("test{i}.pdf"));
         create_test_pdf(&pdf_path, 4).unwrap();
         files.push(pdf_path);
     }
@@ -157,7 +157,7 @@ fn test_batch_with_progress_callback() {
     // Add multiple quick jobs
     for i in 0..5 {
         processor.add_job(BatchJob::Custom {
-            name: format!("Job {}", i),
+            name: format!("Job {i}"),
             operation: Box::new(|| {
                 std::thread::sleep(Duration::from_millis(50));
                 Ok(())
@@ -311,7 +311,7 @@ fn test_batch_process_files() {
     // Create test PDFs
     let mut files = vec![];
     for i in 0..4 {
-        let pdf_path = temp_dir.path().join(format!("file{}.pdf", i));
+        let pdf_path = temp_dir.path().join(format!("file{i}.pdf"));
         create_test_pdf(&pdf_path, 2).unwrap();
         files.push(pdf_path);
     }
@@ -421,7 +421,7 @@ fn test_batch_parallelism() {
     // Add 8 jobs that each take 100ms
     for i in 0..8 {
         processor.add_job(BatchJob::Custom {
-            name: format!("Parallel Job {}", i),
+            name: format!("Parallel Job {i}"),
             operation: Box::new(|| {
                 std::thread::sleep(Duration::from_millis(100));
                 Ok(())

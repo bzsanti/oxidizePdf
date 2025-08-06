@@ -101,7 +101,7 @@ impl MemoryAnalyzer {
 
 fn format_bytes(bytes: usize) -> String {
     if bytes < 1024 {
-        format!("{} B", bytes)
+        format!("{bytes} B")
     } else if bytes < 1024 * 1024 {
         format!("{:.2} KB", bytes as f64 / 1024.0)
     } else {
@@ -110,12 +110,12 @@ fn format_bytes(bytes: usize) -> String {
 }
 
 fn format_bytes_signed(bytes: i64) -> String {
-    let abs_bytes = bytes.abs() as usize;
+    let abs_bytes = bytes.unsigned_abs() as usize;
     let formatted = format_bytes(abs_bytes);
     if bytes < 0 {
-        format!("-{}", formatted)
+        format!("-{formatted}")
     } else {
-        format!("+{}", formatted)
+        format!("+{formatted}")
     }
 }
 
@@ -315,10 +315,7 @@ fn analyze_memory_patterns(path: &Path) -> Result<(), Box<dyn std::error::Error>
 
     // Print object distribution
     println!("\n{}", "=".repeat(60));
-    println!(
-        "OBJECT TYPE DISTRIBUTION (sampled from {} pages)",
-        sample_size
-    );
+    println!("OBJECT TYPE DISTRIBUTION (sampled from {sample_size} pages)");
     println!("{}", "=".repeat(60));
     println!("{:<40} {:>10}", "Object Type", "Count");
     println!("{}", "-".repeat(60));
@@ -327,7 +324,7 @@ fn analyze_memory_patterns(path: &Path) -> Result<(), Box<dyn std::error::Error>
     sorted_stats.sort_by(|a, b| b.1 .0.cmp(&a.1 .0));
 
     for (obj_type, (count, _)) in sorted_stats.iter().take(20) {
-        println!("{:<40} {:>10}", obj_type, count);
+        println!("{obj_type:<40} {count:>10}");
     }
 
     Ok(())
@@ -367,7 +364,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "--components" => analyze_components(path)?,
         "--patterns" => analyze_memory_patterns(path)?,
         _ => {
-            eprintln!("Unknown mode: {}", mode);
+            eprintln!("Unknown mode: {mode}");
             return Ok(());
         }
     }

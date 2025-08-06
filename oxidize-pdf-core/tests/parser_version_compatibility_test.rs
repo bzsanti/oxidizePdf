@@ -7,8 +7,7 @@
 //! - Hybrid reference formats
 //! - Unicode and encoding edge cases
 
-use oxidize_pdf::parser::{PdfDocument, PdfObject, PdfReader};
-use oxidize_pdf::Document;
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use std::io::Cursor;
 
 /// Test 1: PDF versions from 1.0 to 2.0
@@ -33,7 +32,7 @@ fn test_pdf_version_compatibility() {
 
     for (version, should_succeed) in versions {
         let mut pdf = Vec::new();
-        pdf.extend_from_slice(format!("%PDF-{}\n", version).as_bytes());
+        pdf.extend_from_slice(format!("%PDF-{version}\n").as_bytes());
         pdf.extend_from_slice(b"%\xE2\xE3\xCF\xD3\n");
         pdf.extend_from_slice(b"1 0 obj\n<</Type /Catalog>>\nendobj\n");
         pdf.extend_from_slice(b"xref\n0 2\n0000000000 65535 f \n0000000010 00000 n \n");
@@ -41,17 +40,17 @@ fn test_pdf_version_compatibility() {
         pdf.extend_from_slice(b"startxref\n50\n%%EOF\n");
 
         let cursor = Cursor::new(pdf);
-        let result = PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader)));
+        let result = PdfReader::new(cursor).map(|reader| PdfDocument::new(reader));
 
         if should_succeed {
             match result {
-                Ok(_) => println!("Successfully parsed PDF version {}", version),
-                Err(e) => println!("Failed to parse PDF {} (unexpected): {}", version, e),
+                Ok(_) => println!("Successfully parsed PDF version {version}"),
+                Err(e) => println!("Failed to parse PDF {version} (unexpected): {e}"),
             }
         } else {
             match result {
-                Ok(_) => println!("Unexpectedly parsed invalid PDF version {}", version),
-                Err(e) => println!("Correctly rejected PDF {} : {}", version, e),
+                Ok(_) => println!("Unexpectedly parsed invalid PDF version {version}"),
+                Err(e) => println!("Correctly rejected PDF {version} : {e}"),
             }
         }
     }
@@ -78,9 +77,9 @@ fn test_hybrid_xref_format() {
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled hybrid xref format"),
-        Err(e) => println!("Hybrid xref error: {}", e),
+        Err(e) => println!("Hybrid xref error: {e}"),
     }
 }
 
@@ -107,16 +106,16 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(obj) => println!("Unicode object {}: {:?}", i, obj),
-                    Err(e) => println!("Unicode parsing error: {}", e),
+                    Ok(obj) => println!("Unicode object {i}: {obj:?}"),
+                    Err(e) => println!("Unicode parsing error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -127,7 +126,7 @@ fn test_deeply_nested_structures() {
 
     // Create deeply nested dictionaries
     for i in 0..100 {
-        content.push_str(&format!("<</Level{} ", i));
+        content.push_str(&format!("<</Level{i} "));
     }
     content.push_str("null");
     for _ in 0..100 {
@@ -138,11 +137,11 @@ fn test_deeply_nested_structures() {
     // Create deeply nested arrays
     content.push_str("2 0 obj\n");
     for _ in 0..100 {
-        content.push_str("[");
+        content.push('[');
     }
     content.push_str("42");
     for _ in 0..100 {
-        content.push_str("]");
+        content.push(']');
     }
     content.push_str("\nendobj\n");
 
@@ -156,17 +155,17 @@ fn test_deeply_nested_structures() {
     pdf.extend_from_slice(b"startxref\n2000\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             // Should handle deep nesting without stack overflow
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(_) => println!("Parsed deeply nested object {}", i),
-                    Err(e) => println!("Nesting limit error: {}", e),
+                    Ok(_) => println!("Parsed deeply nested object {i}"),
+                    Err(e) => println!("Nesting limit error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -206,16 +205,16 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=3 {
                 match doc.get_object(i, 0) {
-                    Ok(_) => println!("Object {} with corrupted compression parsed", i),
-                    Err(e) => println!("Compression error in object {}: {}", i, e),
+                    Ok(_) => println!("Object {i} with corrupted compression parsed"),
+                    Err(e) => println!("Compression error in object {i}: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -245,9 +244,9 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Parser created with invalid object numbers"),
-        Err(e) => println!("Object number validation error: {}", e),
+        Err(e) => println!("Object number validation error: {e}"),
     }
 }
 
@@ -280,7 +279,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             println!("Parser created with corrupted page tree");
             // Try to traverse the page tree
@@ -288,7 +287,7 @@ endobj
             // Note: Document::from_pdf API may not be available
             println!("Document parsing completed successfully");
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -304,9 +303,9 @@ fn test_mixed_line_endings() {
     pdf.extend_from_slice(b"trailer\r<</Size 2>>\rstaartxref\n50\r\n%%EOF");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Handled mixed line endings"),
-        Err(e) => println!("Line ending error: {}", e),
+        Err(e) => println!("Line ending error: {e}"),
     }
 }
 
@@ -345,16 +344,16 @@ endobj
     pdf.extend_from_slice(b"startxref\n400\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=3 {
                 match doc.get_object(i, 0) {
-                    Ok(_) => println!("Parsed object {} with invalid stream keywords", i),
-                    Err(e) => println!("Stream keyword error in object {}: {}", i, e),
+                    Ok(_) => println!("Parsed object {i} with invalid stream keywords"),
+                    Err(e) => println!("Stream keyword error in object {i}: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -382,9 +381,9 @@ endobject
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(_) => println!("Parser created with corrupted indirect syntax"),
-        Err(e) => println!("Indirect object syntax error: {}", e),
+        Err(e) => println!("Indirect object syntax error: {e}"),
     }
 }
 
@@ -405,14 +404,14 @@ endobj
     pdf.extend_from_slice(b"startxref\n150\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
-                println!("Object parsed successfully: {:?}", obj);
+                println!("Object parsed successfully: {obj:?}");
             }
-            Err(e) => println!("Boolean parsing error: {}", e),
+            Err(e) => println!("Boolean parsing error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -433,14 +432,14 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
-                println!("Number formats parsed successfully: {:?}", obj);
+                println!("Number formats parsed successfully: {obj:?}");
             }
-            Err(e) => println!("Number parsing error: {}", e),
+            Err(e) => println!("Number parsing error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -457,12 +456,12 @@ fn test_whitespace_variations() {
     pdf.extend_from_slice(b"startxref\n100\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled various whitespace characters"),
-            Err(e) => println!("Whitespace handling error: {}", e),
+            Err(e) => println!("Whitespace handling error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -490,12 +489,12 @@ endobj% Comment after endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled various comment placements"),
-            Err(e) => println!("Comment parsing error: {}", e),
+            Err(e) => println!("Comment parsing error: {e}"),
         },
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
@@ -528,22 +527,21 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
+    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
         Ok(doc) => {
             for i in 1..=4 {
                 match doc.get_object(i, 0) {
-                    Ok(obj) => println!("Empty structure {}: {:?}", i, obj),
-                    Err(e) => println!("Empty structure {} error: {}", i, e),
+                    Ok(obj) => println!("Empty structure {i}: {obj:?}"),
+                    Err(e) => println!("Empty structure {i} error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Parser error: {}", e),
+        Err(e) => println!("Parser error: {e}"),
     }
 }
 
 #[cfg(test)]
 mod version_tests {
-    use super::*;
 
     /// Meta-test to ensure version compatibility tests work
     #[test]

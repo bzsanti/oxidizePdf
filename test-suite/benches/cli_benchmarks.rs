@@ -143,7 +143,7 @@ fn benchmark_create_command(c: &mut Criterion) {
 
     for (name, mut args) in creation_types {
         // Add output file
-        let output_path = temp_dir.path().join(format!("{}.pdf", name));
+        let output_path = temp_dir.path().join(format!("{name}.pdf"));
         let output_str = output_path.to_str().unwrap();
         args.extend_from_slice(&["--output", output_str]);
 
@@ -195,7 +195,7 @@ fn benchmark_rotate_command(c: &mut Criterion) {
 
     for (name, path) in test_files {
         // Create a copy for rotation (since it modifies the file)
-        let rotate_path = temp_dir.path().join(format!("rotate_{}.pdf", name));
+        let rotate_path = temp_dir.path().join(format!("rotate_{name}.pdf"));
 
         group.bench_with_input(
             BenchmarkId::new("rotate_90", &name),
@@ -232,7 +232,7 @@ fn benchmark_demo_command(c: &mut Criterion) {
     ];
 
     for (name, mut args) in demo_types {
-        let output_path = temp_dir.path().join(format!("demo_{}.pdf", name));
+        let output_path = temp_dir.path().join(format!("demo_{name}.pdf"));
         let output_str = output_path.to_str().unwrap();
         args.extend_from_slice(&["--output", output_str]);
 
@@ -333,7 +333,7 @@ fn benchmark_file_operations(c: &mut Criterion) {
     // Test file writing (create command)
     let sizes = vec![1, 5, 10, 20];
     for size in sizes {
-        let output_path = temp_dir.path().join(format!("output_{}.pdf", size));
+        let output_path = temp_dir.path().join(format!("output_{size}.pdf"));
         let output_str = output_path.to_str().unwrap();
 
         group.bench_with_input(

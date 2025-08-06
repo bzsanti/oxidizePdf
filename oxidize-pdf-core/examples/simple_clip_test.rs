@@ -38,7 +38,7 @@ fn main() -> Result<()> {
         if line == "endstream" {
             if !stream_content.trim().is_empty() {
                 println!("Content stream found:");
-                println!("{}", stream_content);
+                println!("{stream_content}");
                 println!("---");
 
                 // Check for clipping operator
@@ -67,8 +67,8 @@ fn main() -> Result<()> {
 
     let ops_after = test_page.graphics().operations().to_string();
 
-    println!("Operations before: '{}'", ops_before);
-    println!("Operations after: '{}'", ops_after);
+    println!("Operations before: '{ops_before}'");
+    println!("Operations after: '{ops_after}'");
 
     if ops_after.contains("W\n") {
         println!("✅ SUCCESS: 'W' operator found in graphics operations");

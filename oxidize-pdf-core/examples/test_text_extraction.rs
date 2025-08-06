@@ -65,12 +65,12 @@ startxref
                     }
                 }
                 Err(e) => {
-                    println!("✗ Text extraction failed: {:?}", e);
+                    println!("✗ Text extraction failed: {e:?}");
                 }
             }
         }
         Err(e) => {
-            println!("✗ PDF parsing failed: {:?}", e);
+            println!("✗ PDF parsing failed: {e:?}");
             println!("\nThis indicates an issue with the PDF parser xref handling.");
         }
     }

@@ -9,8 +9,7 @@ pub fn create_minimal_pdf() -> Vec<u8> {
     let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n";
     let xref_start = obj2_start + obj2.len();
 
-    let xref = format!("xref\n0 3\n0000000000 65535 f \n{:010} 00000 n \n{:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{}\n%%EOF", 
-        obj1_start, obj2_start, xref_start);
+    let xref = format!("xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF");
 
     let mut content = Vec::new();
     content.extend_from_slice(header);
@@ -22,15 +21,14 @@ pub fn create_minimal_pdf() -> Vec<u8> {
 
 /// Creates a PDF with specific version
 pub fn create_pdf_with_version(version: &str) -> Vec<u8> {
-    let header = format!("%PDF-{}\n", version);
+    let header = format!("%PDF-{version}\n");
     let obj1_start = header.len();
     let obj1 = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
     let obj2_start = obj1_start + obj1.len();
     let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n";
     let xref_start = obj2_start + obj2.len();
 
-    let xref = format!("xref\n0 3\n0000000000 65535 f \n{:010} 00000 n \n{:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{}\n%%EOF", 
-        obj1_start, obj2_start, xref_start);
+    let xref = format!("xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF");
 
     let mut content = header.into_bytes();
     content.extend_from_slice(obj1);
@@ -51,8 +49,7 @@ pub fn create_pdf_with_info() -> Vec<u8> {
         b"3 0 obj\n<< /Title (Test PDF) /Author (Test Author) /Subject (Testing) >>\nendobj\n";
     let xref_start = obj3_start + obj3.len();
 
-    let xref = format!("xref\n0 4\n0000000000 65535 f \n{:010} 00000 n \n{:010} 00000 n \n{:010} 00000 n \ntrailer\n<< /Size 4 /Root 1 0 R /Info 3 0 R >>\nstartxref\n{}\n%%EOF",
-        obj1_start, obj2_start, obj3_start, xref_start);
+    let xref = format!("xref\n0 4\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \n{obj3_start:010} 00000 n \ntrailer\n<< /Size 4 /Root 1 0 R /Info 3 0 R >>\nstartxref\n{xref_start}\n%%EOF");
 
     let mut content = Vec::new();
     content.extend_from_slice(header);
@@ -72,8 +69,7 @@ pub fn create_pdf_with_binary_marker() -> Vec<u8> {
     let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n";
     let xref_start = obj2_start + obj2.len();
 
-    let xref = format!("xref\n0 3\n0000000000 65535 f \n{:010} 00000 n \n{:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{}\n%%EOF",
-        obj1_start, obj2_start, xref_start);
+    let xref = format!("xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF");
 
     let mut content = Vec::new();
     content.extend_from_slice(header);

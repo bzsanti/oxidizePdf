@@ -368,6 +368,13 @@ impl Default for FormManager {
     }
 }
 
+impl FormManager {
+    /// Get the number of fields managed by this FormManager
+    pub fn field_count(&self) -> usize {
+        self.fields.len()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -524,7 +531,7 @@ mod tests {
         acro_form.add_field(ObjectReference::new(1, 0));
         acro_form.sig_flags = Some(1);
 
-        let debug_str = format!("{:?}", acro_form);
+        let debug_str = format!("{acro_form:?}");
         assert!(debug_str.contains("AcroForm"));
 
         let cloned = acro_form.clone();
@@ -607,7 +614,7 @@ mod tests {
         let default_form = FormData::new();
         assert_eq!(form_data.values.len(), default_form.values.len());
 
-        let debug_str = format!("{:?}", form_data);
+        let debug_str = format!("{form_data:?}");
         assert!(debug_str.contains("FormData"));
 
         let cloned = form_data.clone();
@@ -928,7 +935,7 @@ mod tests {
     #[test]
     fn test_form_manager_debug_default() {
         let manager = FormManager::new();
-        let debug_str = format!("{:?}", manager);
+        let debug_str = format!("{manager:?}");
         assert!(debug_str.contains("FormManager"));
 
         let default_manager = FormManager::default();
@@ -1008,12 +1015,5 @@ mod tests {
         assert!(dict.get("Fields").is_some());
         assert!(dict.get("NeedAppearances").is_some());
         assert!(dict.get("DA").is_some());
-    }
-}
-
-impl FormManager {
-    /// Get the number of fields managed by this FormManager
-    pub fn field_count(&self) -> usize {
-        self.fields.len()
     }
 }

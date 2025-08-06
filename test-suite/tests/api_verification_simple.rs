@@ -145,8 +145,8 @@ fn test_actual_functionality() {
     let temp_path = temp_dir.join("test_api_verification.pdf");
 
     match doc.save(&temp_path) {
-        Ok(()) => println!("✅ Successfully saved PDF to {:?}", temp_path),
-        Err(e) => println!("❌ Failed to save PDF: {}", e),
+        Ok(()) => println!("✅ Successfully saved PDF to {temp_path:?}"),
+        Err(e) => println!("❌ Failed to save PDF: {e}"),
     }
 
     // Clean up

@@ -1069,8 +1069,8 @@ mod tests {
             }
 
             // Add specific data for certain tables
-            match table {
-                &HEAD_TABLE => {
+            match *table {
+                HEAD_TABLE => {
                     // Ensure we have enough space for the HEAD table data
                     while font_data.len() < offset + *min_size {
                         font_data.push(0);
@@ -1086,7 +1086,7 @@ mod tests {
                         font_data[offset + 51] = 0x00; // short format
                     }
                 }
-                &MAXP_TABLE => {
+                MAXP_TABLE => {
                     // Ensure we have enough space for the MAXP table data
                     while font_data.len() < offset + *min_size {
                         font_data.push(0);
@@ -1097,7 +1097,7 @@ mod tests {
                         font_data[offset + 5] = 0x00; // 256 glyphs
                     }
                 }
-                &HHEA_TABLE => {
+                HHEA_TABLE => {
                     // Ensure we have enough space for the HHEA table data
                     while font_data.len() < offset + *min_size {
                         font_data.push(0);

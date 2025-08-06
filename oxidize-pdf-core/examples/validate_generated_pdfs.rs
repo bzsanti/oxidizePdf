@@ -9,7 +9,7 @@ use std::time::Instant;
 
 /// Validate a specific PDF file by parsing it and extracting basic information
 fn validate_pdf_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    println!("📄 Validating: {}", file_path);
+    println!("📄 Validating: {file_path}");
     let start = Instant::now();
 
     // Try to open and parse the PDF
@@ -20,8 +20,8 @@ fn validate_pdf_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>> 
     let version = reader.version().to_string();
     let page_count = reader.page_count()?;
 
-    println!("   📋 PDF Version: {}", version);
-    println!("   📄 Page Count: {}", page_count);
+    println!("   📋 PDF Version: {version}");
+    println!("   📄 Page Count: {page_count}");
 
     // Try to parse the document structure
     let document = reader.into_document();
@@ -40,19 +40,16 @@ fn validate_pdf_file(file_path: &str) -> Result<(), Box<dyn std::error::Error>> 
                 }
             }
             Err(e) => {
-                println!(
-                    "   ⚠️  Warning: Could not extract text from page {}: {}",
-                    page_idx, e
-                );
+                println!("   ⚠️  Warning: Could not extract text from page {page_idx}: {e}");
             }
         }
     }
 
-    println!("   📝 Pages with text: {}/{}", pages_with_text, page_count);
-    println!("   🔢 Total characters extracted: {}", total_chars);
+    println!("   📝 Pages with text: {pages_with_text}/{page_count}");
+    println!("   🔢 Total characters extracted: {total_chars}");
 
     let duration = start.elapsed();
-    println!("   ✅ Validation completed in {:?}", duration);
+    println!("   ✅ Validation completed in {duration:?}");
     println!();
 
     Ok(())
@@ -80,7 +77,7 @@ fn validate_all_generated_pdfs() -> Result<(), Box<dyn std::error::Error>> {
                 successful_validations += 1;
             }
             Err(e) => {
-                println!("❌ VALIDATION FAILED for {}: {}", file_path, e);
+                println!("❌ VALIDATION FAILED for {file_path}: {e}");
                 failed_validations += 1;
             }
         }
@@ -95,8 +92,8 @@ fn validate_all_generated_pdfs() -> Result<(), Box<dyn std::error::Error>> {
         successful_validations,
         test_files.len()
     );
-    println!("❌ Failed validations: {}", failed_validations);
-    println!("⏱️  Total validation time: {:?}", total_duration);
+    println!("❌ Failed validations: {failed_validations}");
+    println!("⏱️  Total validation time: {total_duration:?}");
 
     if failed_validations == 0 {
         println!("\n🎉 ALL PDFs VALIDATED SUCCESSFULLY!");

@@ -957,7 +957,7 @@ mod tests {
     #[test]
     fn test_ccitt_k_clone() {
         let k1 = CcittK::Group4;
-        let k2 = k1.clone();
+        let k2 = k1;
         assert_eq!(k1, k2);
     }
 
@@ -991,7 +991,7 @@ mod tests {
     #[test]
     fn test_ccitt_decode_params_debug() {
         let params = CcittDecodeParams::default();
-        let debug_str = format!("{:?}", params);
+        let debug_str = format!("{params:?}");
         assert!(debug_str.contains("CcittDecodeParams"));
         assert!(debug_str.contains("columns: 1728"));
     }

@@ -592,7 +592,7 @@ mod tests {
     #[test]
     fn test_field_type_clone() {
         let field_type = FieldType::Text;
-        let cloned = field_type.clone();
+        let cloned = field_type;
         assert_eq!(field_type.pdf_name(), cloned.pdf_name());
     }
 

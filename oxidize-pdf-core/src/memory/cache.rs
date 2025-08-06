@@ -334,14 +334,14 @@ mod tests {
 
         // Fill cache with items
         for i in 0..500 {
-            cache.put(i, format!("value_{}", i));
+            cache.put(i, format!("value_{i}"));
         }
 
         assert_eq!(cache.len(), 500);
 
         // Access all items to verify they're all there
         for i in 0..500 {
-            assert_eq!(cache.get(&i), Some(&format!("value_{}", i)));
+            assert_eq!(cache.get(&i), Some(&format!("value_{i}")));
         }
     }
 
@@ -530,7 +530,7 @@ mod tests {
             capacity: 10,
         };
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("CacheStats"));
         assert!(debug_str.contains("5"));
         assert!(debug_str.contains("10"));
@@ -589,7 +589,7 @@ mod tests {
 
         // Fill cache beyond capacity
         for i in 0..200 {
-            cache.put(i, format!("value_{}", i));
+            cache.put(i, format!("value_{i}"));
         }
 
         // Should only contain last 100 items
@@ -600,7 +600,7 @@ mod tests {
         }
 
         for i in 100..200 {
-            assert_eq!(cache.get(&i), Some(&format!("value_{}", i)));
+            assert_eq!(cache.get(&i), Some(&format!("value_{i}")));
         }
     }
 

@@ -88,14 +88,14 @@ mod tests {
     #[test]
     fn test_line_cap_debug() {
         let butt = LineCap::Butt;
-        let debug_str = format!("{:?}", butt);
+        let debug_str = format!("{butt:?}");
         assert_eq!(debug_str, "Butt");
 
         let round = LineCap::Round;
-        assert_eq!(format!("{:?}", round), "Round");
+        assert_eq!(format!("{round:?}"), "Round");
 
         let square = LineCap::Square;
-        assert_eq!(format!("{:?}", square), "Square");
+        assert_eq!(format!("{square:?}"), "Square");
     }
 
     #[test]
@@ -133,14 +133,14 @@ mod tests {
     #[test]
     fn test_line_join_debug() {
         let miter = LineJoin::Miter;
-        let debug_str = format!("{:?}", miter);
+        let debug_str = format!("{miter:?}");
         assert_eq!(debug_str, "Miter");
 
         let round = LineJoin::Round;
-        assert_eq!(format!("{:?}", round), "Round");
+        assert_eq!(format!("{round:?}"), "Round");
 
         let bevel = LineJoin::Bevel;
-        assert_eq!(format!("{:?}", bevel), "Bevel");
+        assert_eq!(format!("{bevel:?}"), "Bevel");
     }
 
     #[test]
@@ -296,21 +296,21 @@ mod tests {
     #[test]
     fn test_path_command_debug() {
         let move_cmd = PathCommand::MoveTo(10.0, 20.0);
-        let debug_str = format!("{:?}", move_cmd);
+        let debug_str = format!("{move_cmd:?}");
         assert!(debug_str.contains("MoveTo"));
         assert!(debug_str.contains("10.0"));
         assert!(debug_str.contains("20.0"));
 
         let line_cmd = PathCommand::LineTo(30.0, 40.0);
-        let line_debug = format!("{:?}", line_cmd);
+        let line_debug = format!("{line_cmd:?}");
         assert!(line_debug.contains("LineTo"));
 
         let curve_cmd = PathCommand::CurveTo(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
-        let curve_debug = format!("{:?}", curve_cmd);
+        let curve_debug = format!("{curve_cmd:?}");
         assert!(curve_debug.contains("CurveTo"));
 
         let close_cmd = PathCommand::ClosePath;
-        let close_debug = format!("{:?}", close_cmd);
+        let close_debug = format!("{close_cmd:?}");
         assert!(close_debug.contains("ClosePath"));
     }
 

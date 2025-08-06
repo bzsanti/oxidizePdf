@@ -164,7 +164,7 @@ fn test_pdf_content_analysis() {
     }
 
     println!("📊 Content Analysis Results:");
-    println!("   Analyzed: {} PDFs", analyzed);
+    println!("   Analyzed: {analyzed} PDFs");
     println!(
         "   With text: {} ({:.1}%)",
         with_text,
@@ -234,7 +234,7 @@ fn test_pdf_performance_benchmark() {
     let elapsed = start_time.elapsed();
 
     println!("⏱️ Performance Results:");
-    println!("   Processed: {} PDFs", successful_reads);
+    println!("   Processed: {successful_reads} PDFs");
     println!("   Total size: {:.2} MB", total_bytes as f64 / 1_048_576.0);
     println!("   Total time: {:.2}s", elapsed.as_secs_f64());
     println!(

@@ -174,19 +174,19 @@ mod tests {
     #[test]
     fn test_color_debug() {
         let rgb = Color::rgb(0.1, 0.2, 0.3);
-        let debug_str = format!("{:?}", rgb);
+        let debug_str = format!("{rgb:?}");
         assert!(debug_str.contains("Rgb"));
         assert!(debug_str.contains("0.1"));
         assert!(debug_str.contains("0.2"));
         assert!(debug_str.contains("0.3"));
 
         let gray = Color::gray(0.5);
-        let gray_debug = format!("{:?}", gray);
+        let gray_debug = format!("{gray:?}");
         assert!(gray_debug.contains("Gray"));
         assert!(gray_debug.contains("0.5"));
 
         let cmyk = Color::cmyk(0.1, 0.2, 0.3, 0.4);
-        let cmyk_debug = format!("{:?}", cmyk);
+        let cmyk_debug = format!("{cmyk:?}");
         assert!(cmyk_debug.contains("Cmyk"));
         assert!(cmyk_debug.contains("0.1"));
         assert!(cmyk_debug.contains("0.2"));

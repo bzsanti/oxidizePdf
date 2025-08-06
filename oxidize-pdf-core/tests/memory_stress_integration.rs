@@ -122,7 +122,7 @@ fn test_stream_processing_large_pdf() -> Result<()> {
     output_doc.save(&output_path)?;
     let duration = start.elapsed();
 
-    println!("Streamed 100-page PDF in {:?}", duration);
+    println!("Streamed 100-page PDF in {duration:?}");
 
     Ok(())
 }
@@ -142,7 +142,7 @@ fn test_concurrent_pdf_operations() -> Result<()> {
             thread::spawn(move || -> Result<()> {
                 // Each thread creates its own document
                 let mut doc = Document::new();
-                doc.set_title(&format!("Concurrent Document {}", thread_id));
+                doc.set_title(format!("Concurrent Document {thread_id}"));
 
                 // Add 5 pages per document
                 for page_num in 0..5 {
@@ -167,9 +167,7 @@ fn test_concurrent_pdf_operations() -> Result<()> {
                 }
 
                 // Save document
-                let file_path = temp_dir
-                    .path()
-                    .join(format!("concurrent_{}.pdf", thread_id));
+                let file_path = temp_dir.path().join(format!("concurrent_{thread_id}.pdf"));
                 doc.save(&file_path)?;
 
                 Ok(())
@@ -196,7 +194,7 @@ fn test_concurrent_pdf_operations() -> Result<()> {
 
     // Verify all files were created
     for i in 0..50 {
-        let file_path = temp_dir.path().join(format!("concurrent_{}.pdf", i));
+        let file_path = temp_dir.path().join(format!("concurrent_{i}.pdf"));
         assert!(file_path.exists());
     }
 
@@ -212,14 +210,14 @@ fn test_memory_leak_detection() -> Result<()> {
     for cycle in 0..1000 {
         // Create document
         let mut doc = Document::new();
-        doc.set_title(&format!("Memory Leak Test {}", cycle));
+        doc.set_title(format!("Memory Leak Test {cycle}"));
 
         // Add content
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(100.0, 700.0)
-            .write(&format!("Cycle {}", cycle))?;
+            .write(&format!("Cycle {cycle}"))?;
 
         // Add graphics
         for i in 0..10 {
@@ -241,7 +239,7 @@ fn test_memory_leak_detection() -> Result<()> {
         // Small delay to allow OS to reclaim memory
         if cycle % 100 == 0 {
             std::thread::sleep(Duration::from_millis(10));
-            println!("Completed {} cycles", cycle);
+            println!("Completed {cycle} cycles");
         }
     }
 
@@ -256,7 +254,7 @@ fn test_cache_thrashing() -> Result<()> {
     let mut doc = Document::new();
 
     // Add many fonts to thrash font cache
-    let _font_names = vec![
+    let _font_names = [
         "TestFont1",
         "TestFont2",
         "TestFont3",
@@ -297,7 +295,7 @@ fn test_cache_thrashing() -> Result<()> {
             page.text()
                 .set_font(font, 8.0)
                 .at(50.0, y)
-                .write(&format!("Cache thrash test - Page {} Line {}", page_num, i))?;
+                .write(&format!("Cache thrash test - Page {page_num} Line {i}"))?;
 
             y -= 15.0;
         }
@@ -313,7 +311,7 @@ fn test_cache_thrashing() -> Result<()> {
     doc.save(&file_path)?;
     let duration = start.elapsed();
 
-    println!("Cache thrashing test completed in {:?}", duration);
+    println!("Cache thrashing test completed in {duration:?}");
 
     Ok(())
 }
@@ -357,10 +355,7 @@ fn test_object_deduplication_stress() -> Result<()> {
     let metadata = std::fs::metadata(&file_path)?;
     let size_mb = metadata.len() as f64 / 1_048_576.0;
 
-    println!(
-        "Deduplication test: {:.2} MB (should be optimized)",
-        size_mb
-    );
+    println!("Deduplication test: {size_mb:.2} MB (should be optimized)");
 
     // File should be reasonably sized despite duplicate content
     assert!(metadata.len() < 10_000_000); // Less than 10MB
@@ -401,7 +396,7 @@ fn test_unicode_font_subsetting_stress() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 12.0)
             .at(50.0, y)
-            .write(&format!("{} Test:", name))?;
+            .write(&format!("{name} Test:"))?;
         y -= 20.0;
 
         // Build string with characters from range
@@ -446,7 +441,7 @@ fn test_compression_stress() -> Result<()> {
     for compressed in [true, false] {
         let mut doc = Document::new();
         doc.set_compress(compressed);
-        doc.set_title(&format!(
+        doc.set_title(format!(
             "Compression Test - {}",
             if compressed { "ON" } else { "OFF" }
         ));
@@ -519,7 +514,7 @@ fn test_page_tree_balancing_stress() -> Result<()> {
             page.text()
                 .set_font(Font::Helvetica, 10.0)
                 .at(50.0, 700.0)
-                .write(&format!("Group {} - Page {}", group, page_in_group))?;
+                .write(&format!("Group {group} - Page {page_in_group}"))?;
 
             // Add nested graphics states to stress the tree
             let graphics = page.graphics();
@@ -550,7 +545,7 @@ fn test_page_tree_balancing_stress() -> Result<()> {
     doc.save(&file_path)?;
     let save_duration = save_start.elapsed();
 
-    println!("Saved 1000-page unbalanced tree in {:?}", save_duration);
+    println!("Saved 1000-page unbalanced tree in {save_duration:?}");
 
     Ok(())
 }

@@ -973,7 +973,7 @@ mod tests {
             ];
 
             for error in errors {
-                let display = format!("{}", error);
+                let display = format!("{error}");
                 assert!(!display.is_empty());
 
                 // Verify error messages contain expected content
@@ -1003,7 +1003,7 @@ mod tests {
 
             match ocr_error {
                 OcrError::Io(_) => {
-                    let display = format!("{}", ocr_error);
+                    let display = format!("{ocr_error}");
                     assert!(display.contains("IO error"));
                 }
                 _ => panic!("Expected OcrError::Io variant"),
@@ -1013,7 +1013,7 @@ mod tests {
         #[test]
         fn test_ocr_error_debug_format() {
             let error = OcrError::ProcessingFailed("Test error".to_string());
-            let debug_str = format!("{:?}", error);
+            let debug_str = format!("{error:?}");
             assert!(debug_str.contains("ProcessingFailed"));
             assert!(debug_str.contains("Test error"));
         }
@@ -1434,7 +1434,7 @@ mod tests {
             let mut fragments = Vec::new();
             for i in 0..1000 {
                 fragments.push(OcrTextFragment {
-                    text: format!("Fragment{}", i),
+                    text: format!("Fragment{i}"),
                     x: (i % 10) as f64 * 50.0,
                     y: (i / 10) as f64 * 20.0,
                     width: 45.0,
@@ -1666,9 +1666,7 @@ mod tests {
                     assert_eq!(
                         engine.supports_format(*format),
                         expected_support[i],
-                        "Engine {:?} format {:?} support mismatch",
-                        engine,
-                        format
+                        "Engine {engine:?} format {format:?} support mismatch"
                     );
                 }
             }
@@ -1798,14 +1796,14 @@ mod tests {
             let io_error = IoError::new(ErrorKind::PermissionDenied, "Access denied to image file");
             let ocr_error: OcrError = io_error.into();
 
-            let error_chain = format!("{}", ocr_error);
+            let error_chain = format!("{ocr_error}");
             assert!(error_chain.contains("IO error"));
 
             // Test custom error with context
             let processing_error = OcrError::ProcessingFailed(
                 "Failed to process page 5: insufficient memory".to_string(),
             );
-            let error_msg = format!("{}", processing_error);
+            let error_msg = format!("{processing_error}");
             assert!(error_msg.contains("page 5"));
             assert!(error_msg.contains("insufficient memory"));
         }

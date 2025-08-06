@@ -1,4 +1,3 @@
-use oxidize_pdf::text::TextRenderingMode;
 use oxidize_pdf::writer::WriterConfig;
 use oxidize_pdf::{Document, Page, Result};
 

@@ -44,7 +44,7 @@ fn create_sample_pdfs() -> Result<(), Box<dyn std::error::Error>> {
 
     for i in 1..=5 {
         let mut doc = Document::new();
-        doc.set_title(format!("Sample Document {}", i));
+        doc.set_title(format!("Sample Document {i}"));
         doc.set_author("Batch Processing Example");
 
         // Create pages with different content
@@ -55,7 +55,7 @@ fn create_sample_pdfs() -> Result<(), Box<dyn std::error::Error>> {
             page.text()
                 .set_font(Font::HelveticaBold, 24.0)
                 .at(50.0, 750.0)
-                .write(&format!("Document {} - Page {}", i, page_num))?;
+                .write(&format!("Document {i} - Page {page_num}"))?;
 
             // Add some graphics
             page.graphics()
@@ -72,7 +72,7 @@ fn create_sample_pdfs() -> Result<(), Box<dyn std::error::Error>> {
             doc.add_page(page);
         }
 
-        doc.save(format!("output/batch/sample_{}.pdf", i))?;
+        doc.save(format!("output/batch/sample_{i}.pdf"))?;
     }
 
     println!("✓ Created 5 sample PDFs\n");
@@ -86,7 +86,7 @@ fn example_batch_split() -> Result<(), Box<dyn std::error::Error>> {
 
     // Collect PDFs to split
     let files: Vec<PathBuf> = (1..=3)
-        .map(|i| PathBuf::from(format!("output/batch/sample_{}.pdf", i)))
+        .map(|i| PathBuf::from(format!("output/batch/sample_{i}.pdf")))
         .collect();
 
     // Configure batch options with progress callback
@@ -189,7 +189,7 @@ fn example_custom_batch() -> Result<(), Box<dyn std::error::Error>> {
         let total_clone = Arc::clone(&total_pages);
 
         processor.add_job(BatchJob::Custom {
-            name: format!("Analyze sample_{}.pdf", i),
+            name: format!("Analyze sample_{i}.pdf"),
             operation: Box::new(move || {
                 // Simulate page analysis
                 let num_pages = 4; // Each sample has 4 pages
@@ -271,7 +271,7 @@ fn example_mixed_operations() -> Result<(), Box<dyn std::error::Error>> {
     // Add some custom jobs
     for i in 1..=3 {
         processor.add_job(BatchJob::Custom {
-            name: format!("Custom task {}", i),
+            name: format!("Custom task {i}"),
             operation: Box::new(move || {
                 // Simulate work
                 std::thread::sleep(Duration::from_millis(200));

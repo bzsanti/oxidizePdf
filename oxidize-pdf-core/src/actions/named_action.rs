@@ -262,14 +262,14 @@ mod tests {
     #[test]
     fn test_standard_named_action_debug() {
         let action = StandardNamedAction::Print;
-        let debug_str = format!("{:?}", action);
+        let debug_str = format!("{action:?}");
         assert!(debug_str.contains("Print"));
     }
 
     #[test]
     fn test_standard_named_action_clone() {
         let action = StandardNamedAction::FullScreen;
-        let cloned = action.clone();
+        let cloned = action;
         assert_eq!(action, cloned);
         assert_eq!(action.to_name(), cloned.to_name());
     }
@@ -285,12 +285,12 @@ mod tests {
     #[test]
     fn test_named_action_debug() {
         let action = NamedAction::print();
-        let debug_str = format!("{:?}", action);
+        let debug_str = format!("{action:?}");
         assert!(debug_str.contains("Standard"));
         assert!(debug_str.contains("Print"));
 
         let custom_action = NamedAction::custom("MyCustomAction");
-        let debug_str = format!("{:?}", custom_action);
+        let debug_str = format!("{custom_action:?}");
         assert!(debug_str.contains("Custom"));
         assert!(debug_str.contains("MyCustomAction"));
     }

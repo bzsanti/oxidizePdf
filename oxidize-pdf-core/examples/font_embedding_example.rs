@@ -74,8 +74,7 @@ fn main() -> Result<()> {
             .set_font(font.clone(), 12.0)
             .at(70.0, y)
             .write(&format!(
-                "{}: The quick brown fox jumps over the lazy dog",
-                name
+                "{name}: The quick brown fox jumps over the lazy dog"
             ))?;
     }
 
@@ -155,7 +154,7 @@ fn main() -> Result<()> {
     let output_path = "font_embedding_example.pdf";
     doc.save(output_path)?;
 
-    println!("✅ Font embedding example saved to: {}", output_path);
+    println!("✅ Font embedding example saved to: {output_path}");
     println!("📄 The PDF demonstrates both built-in fonts and the font embedding system");
 
     Ok(())

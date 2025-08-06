@@ -318,7 +318,7 @@ mod tests {
     #[test]
     fn test_corruption_type_debug_clone_eq() {
         let corruption = CorruptionType::InvalidHeader;
-        let debug_str = format!("{:?}", corruption);
+        let debug_str = format!("{corruption:?}");
         assert!(debug_str.contains("InvalidHeader"));
 
         let cloned = corruption.clone();
@@ -337,7 +337,7 @@ mod tests {
         ];
 
         for variant in variants {
-            let _ = format!("{:?}", variant);
+            let _ = format!("{variant:?}");
             let _ = variant.clone();
         }
     }
@@ -373,7 +373,7 @@ mod tests {
         ];
 
         for section in sections {
-            let debug_str = format!("{:?}", section);
+            let debug_str = format!("{section:?}");
             assert!(!debug_str.is_empty());
 
             let cloned = section.clone();
@@ -399,7 +399,7 @@ mod tests {
         assert_eq!(section.end_offset, 500);
         assert_eq!(section.confidence, 0.95);
 
-        let debug_str = format!("{:?}", section);
+        let debug_str = format!("{section:?}");
         assert!(debug_str.contains("RecoverableSection"));
     }
 
@@ -766,7 +766,7 @@ mod tests {
             found_pages: 3,
         };
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("FileStats"));
         assert!(debug_str.contains("1000"));
         assert!(debug_str.contains("950"));
@@ -784,7 +784,7 @@ mod tests {
             file_stats: FileStats::default(),
         };
 
-        let debug_str = format!("{:?}", report);
+        let debug_str = format!("{report:?}");
         assert!(debug_str.contains("CorruptionReport"));
         assert!(debug_str.contains("Unknown"));
         assert!(debug_str.contains("5"));

@@ -146,7 +146,7 @@ fn create_pdf_report(
         .text()
         .set_font(Font::Helvetica, 12.0)
         .at(50.0, 700.0)
-        .write(&format!("Generated: {}", date))?;
+        .write(&format!("Generated: {date}"))?;
     restore_state(&mut page1);
 
     // Draw a circle for the compliance percentage
@@ -178,7 +178,7 @@ fn create_pdf_report(
         .text()
         .set_font(Font::HelveticaBold, 48.0)
         .at(250.0, 540.0)
-        .write(&format!("{:.1}%", compliance))?;
+        .write(&format!("{compliance:.1}%"))?;
     page1.graphics().restore_state();
 
     // Black text below circle
@@ -274,10 +274,7 @@ fn create_pdf_report(
             .save_state()
             .set_fill_color(percent_color)
             .set_fill_opacity(1.0);
-        page1
-            .text()
-            .at(480.0, y)
-            .write(&format!("{:.1}%", percent))?;
+        page1.text().at(480.0, y).write(&format!("{percent:.1}%"))?;
         page1.graphics().restore_state();
 
         y -= 20.0;
@@ -318,7 +315,7 @@ fn create_pdf_report(
     page1
         .text()
         .at(480.0, y - 10.0)
-        .write(&format!("{:.1}%", compliance))?;
+        .write(&format!("{compliance:.1}%"))?;
     restore_state(&mut page1);
 
     doc.add_page(page1);
@@ -458,7 +455,7 @@ fn create_pdf_report(
     page2
         .text()
         .at(60.0, 160.0)
-        .write(&format!("Real API compliance: {:.1}%", compliance))?;
+        .write(&format!("Real API compliance: {compliance:.1}%"))?;
     page2.graphics().restore_state();
 
     setup_text_state(&mut page2);
@@ -483,27 +480,24 @@ fn create_pdf_report(
     // Also generate a summary markdown
     let summary = format!(
         "# ISO 32000 Compliance Summary\n\n\
-        Generated: {}\n\n\
-        ## Overall Compliance: {:.1}%\n\n\
+        Generated: {date}\n\n\
+        ## Overall Compliance: {compliance:.1}%\n\n\
         ## Section Breakdown\n\n\
         | Section | Features | Implemented | Compliance |\n\
-        |---------|----------|-------------|------------|\n",
-        date, compliance
+        |---------|----------|-------------|------------|\n"
     );
 
     let mut summary = sections
         .iter()
         .fold(summary, |mut acc, (section, total, impl_, percent)| {
             acc.push_str(&format!(
-                "| {} | {} | {} | {:.1}% |\n",
-                section, total, impl_, percent
+                "| {section} | {total} | {impl_} | {percent:.1}% |\n"
             ));
             acc
         });
 
     summary.push_str(&format!(
-        "\n**Total**: {} features tested, {} implemented\n",
-        total_features, total_implemented
+        "\n**Total**: {total_features} features tested, {total_implemented} implemented\n"
     ));
 
     fs::write("ISO_32000_COMPLIANCE_SUMMARY.md", summary)?;

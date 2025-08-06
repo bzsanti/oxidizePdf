@@ -57,7 +57,7 @@ fn main() -> Result<()> {
     // Add field to form manager
     println!("  Adding field to form manager...");
     let field_ref = form_manager.add_text_field(text_field, widget, None)?;
-    println!("  Field reference: {:?}", field_ref);
+    println!("  Field reference: {field_ref:?}");
 
     let field_count = form_manager.field_count();
     let has_acro_form = document.acro_form().is_some();
@@ -68,8 +68,8 @@ fn main() -> Result<()> {
 
     println!("\n✅ Created minimal_textfield_test.pdf");
     println!("\n🔍 Debug info:");
-    println!("  - Document has AcroForm: {}", has_acro_form);
-    println!("  - Form manager field count: {}", field_count);
+    println!("  - Document has AcroForm: {has_acro_form}");
+    println!("  - Form manager field count: {field_count}");
 
     println!("\n📋 Expected behavior:");
     println!("  - Should see a text field with black border");

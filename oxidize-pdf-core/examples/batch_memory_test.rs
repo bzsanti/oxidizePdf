@@ -184,7 +184,7 @@ fn test_pdf_memory(path: &Path) -> Result<PdfTestResult, String> {
             result.standard_memory = Some(file_size * 3 + objects_accessed * 500);
         }
         Err(e) => {
-            result.error_message = Some(format!("Standard reader error: {}", e));
+            result.error_message = Some(format!("Standard reader error: {e}"));
             return Ok(result);
         }
     }
@@ -212,7 +212,7 @@ fn test_pdf_memory(path: &Path) -> Result<PdfTestResult, String> {
             result.optimized_memory = Some(file_size / 2 + stats.cached_objects * 400);
         }
         Err(e) => {
-            result.error_message = Some(format!("Optimized reader error: {}", e));
+            result.error_message = Some(format!("Optimized reader error: {e}"));
             return Ok(result);
         }
     }
@@ -269,7 +269,7 @@ fn process_batch(
     let total_files = batch_files.len();
 
     // Process files with parallel threads (max 4)
-    let chunk_size = (batch_files.len() + 3) / 4; // Divide into 4 chunks
+    let chunk_size = batch_files.len().div_ceil(4); // Divide into 4 chunks
     let mut handles = Vec::new();
 
     for (i, chunk) in batch_files.chunks(chunk_size).enumerate() {
@@ -304,7 +304,7 @@ fn process_batch(
 
                 let current = processed_clone.fetch_add(1, Ordering::SeqCst) + 1;
                 if current % 5 == 0 || current == total_files {
-                    println!("    Progress: {}/{} files completed", current, total_files);
+                    println!("    Progress: {current}/{total_files} files completed");
                 }
             }
         });
@@ -505,7 +505,7 @@ fn print_batch_report(stats: &BatchStatistics) {
     if !stats.errors.is_empty() {
         println!("\n🚨 ERROR BREAKDOWN:");
         for (error_type, count) in &stats.errors {
-            println!("  {}: {} files", error_type, count);
+            println!("  {error_type}: {count} files");
         }
     }
 }
@@ -515,10 +515,7 @@ fn run_batch_range(start: usize, end: usize, category: SizeCategory) -> Result<(
     let categorized_files = get_pdf_files_by_category(fixtures_dir);
     let files = categorized_files.get(&category).unwrap();
 
-    println!(
-        "🚀 Starting batch range {}-{} for {:?} files",
-        start, end, category
-    );
+    println!("🚀 Starting batch range {start}-{end} for {category:?} files");
     println!("📂 Total {:?} files available: {}", category, files.len());
 
     let batch_size = 20;
@@ -529,7 +526,7 @@ fn run_batch_range(start: usize, end: usize, category: SizeCategory) -> Result<(
         let end_idx = std::cmp::min(start_idx + batch_size, files.len());
 
         if start_idx >= files.len() {
-            println!("⚠️  Batch {} exceeds available files, stopping", batch_num);
+            println!("⚠️  Batch {batch_num} exceeds available files, stopping");
             break;
         }
 
@@ -557,10 +554,7 @@ fn print_range_summary(
         return;
     }
 
-    println!(
-        "\n🎯 RANGE SUMMARY (Batches {}-{}, {:?})",
-        start, end, category
-    );
+    println!("\n🎯 RANGE SUMMARY (Batches {start}-{end}, {category:?})");
     println!("{}", "=".repeat(80));
 
     let total_files: usize = stats.iter().map(|s| s.total_files).sum();
@@ -577,10 +571,10 @@ fn print_range_summary(
         stats.iter().map(|s| s.avg_file_size as f64).sum::<f64>() / stats.len() as f64;
 
     println!("📊 Overall Results:");
-    println!("  Total files processed: {}", total_files);
-    println!("  Success rate: {:.1}%", overall_success_rate);
-    println!("  Average memory reduction: {:.1}%", avg_reduction);
-    println!("  Best memory reduction: {:.1}%", max_reduction);
+    println!("  Total files processed: {total_files}");
+    println!("  Success rate: {overall_success_rate:.1}%");
+    println!("  Average memory reduction: {avg_reduction:.1}%");
+    println!("  Best memory reduction: {max_reduction:.1}%");
     println!("  Average file size: {:.1} KB", avg_file_size / 1024.0);
 
     // Collect all errors
@@ -594,7 +588,7 @@ fn print_range_summary(
     if !all_errors.is_empty() {
         println!("\n❌ Error Summary:");
         for (error, count) in all_errors {
-            println!("  {}: {} files", error, count);
+            println!("  {error}: {count} files");
         }
     }
 }
@@ -619,7 +613,7 @@ fn full_analysis() -> Result<(), String> {
         );
 
         // Process first 2 batches of each category for full analysis
-        let max_batches = std::cmp::min(2, (files.len() + 19) / 20);
+        let max_batches = std::cmp::min(2, files.len().div_ceil(20));
 
         for batch_num in 1..=max_batches {
             let start_idx = (batch_num - 1) * 20;
@@ -681,10 +675,10 @@ fn main() -> Result<(), String> {
 
             let start: usize = range_parts[0]
                 .parse()
-                .map_err(|e| format!("Parse error: {}", e))?;
+                .map_err(|e| format!("Parse error: {e}"))?;
             let end: usize = range_parts[1]
                 .parse()
-                .map_err(|e| format!("Parse error: {}", e))?;
+                .map_err(|e| format!("Parse error: {e}"))?;
 
             if args[3] != "--size-category" {
                 eprintln!("Error: Expected --size-category after range");

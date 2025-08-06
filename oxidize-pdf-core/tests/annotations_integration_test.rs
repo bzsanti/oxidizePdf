@@ -111,8 +111,8 @@ fn test_annotations_document_integration() {
     let mut document = Document::new();
     document.set_title("Annotations Integration Test");
 
-    let mut page1 = Page::a4();
-    let mut page2 = Page::letter();
+    let page1 = Page::a4();
+    let page2 = Page::letter();
 
     let mut manager = AnnotationManager::new();
 
@@ -232,8 +232,8 @@ fn test_annotation_performance_large_datasets() {
             };
 
             let annotation = Annotation::new(annotation_type, rect)
-                .with_contents(format!("Annotation {} on page {}", annot_num, page_num))
-                .with_name(format!("perf_test_{}_{}", page_num, annot_num));
+                .with_contents(format!("Annotation {annot_num} on page {page_num}"))
+                .with_name(format!("perf_test_{page_num}_{annot_num}"));
 
             manager.add_annotation(page_ref, annotation);
         }
@@ -276,22 +276,19 @@ fn test_annotation_performance_large_datasets() {
     // Performance assertions (should complete within reasonable time)
     assert!(
         creation_time.as_millis() < 5000,
-        "Creation took too long: {:?}",
-        creation_time
+        "Creation took too long: {creation_time:?}"
     );
     assert!(
         retrieval_time.as_millis() < 1000,
-        "Retrieval took too long: {:?}",
-        retrieval_time
+        "Retrieval took too long: {retrieval_time:?}"
     );
     assert!(
         serialization_time.as_millis() < 3000,
-        "Serialization took too long: {:?}",
-        serialization_time
+        "Serialization took too long: {serialization_time:?}"
     );
 
     println!("Performance test completed:");
-    println!("  {} annotations across {} pages", TOTAL_ANNOTATIONS, PAGES);
+    println!("  {TOTAL_ANNOTATIONS} annotations across {PAGES} pages");
     println!(
         "  Creation: {:?} ({:.2} annotations/sec)",
         creation_time,
@@ -307,7 +304,7 @@ fn test_annotation_performance_large_datasets() {
         serialization_time,
         TOTAL_ANNOTATIONS as f64 / serialization_time.as_secs_f64()
     );
-    println!("  Total time: {:?}", total_time);
+    println!("  Total time: {total_time:?}");
 }
 
 /// Test 4: Cross-annotation relationships and dependencies
@@ -425,7 +422,7 @@ fn test_annotation_ordering_z_index() {
     let base_point = Point::new(100.0, 100.0);
     let size = 100.0;
 
-    let annotations_data = vec![
+    let annotations_data = [
         (AnnotationType::Square, "background", 0),
         (AnnotationType::Circle, "middle", 1),
         (AnnotationType::FreeText, "foreground", 2),
@@ -450,13 +447,13 @@ fn test_annotation_ordering_z_index() {
         let mut annotation = if *annot_type == AnnotationType::Stamp {
             StampAnnotation::new(rect, StampName::Draft).to_annotation()
         } else if *annot_type == AnnotationType::FreeText {
-            FreeTextAnnotation::new(rect, format!("Layer {}", name)).to_annotation()
+            FreeTextAnnotation::new(rect, format!("Layer {name}")).to_annotation()
         } else if *annot_type == AnnotationType::Text {
             TextAnnotation::new(rect.lower_left)
-                .with_contents(format!("Layer {}", name))
+                .with_contents(format!("Layer {name}"))
                 .to_annotation()
         } else {
-            Annotation::new(*annot_type, rect).with_name(format!("layer_{}", name))
+            Annotation::new(*annot_type, rect).with_name(format!("layer_{name}"))
         };
 
         // Add custom Z-order property
@@ -479,7 +476,7 @@ fn test_annotation_ordering_z_index() {
         }
 
         // Verify types are in expected order
-        let expected_types = vec![
+        let expected_types = [
             AnnotationType::Square,
             AnnotationType::Circle,
             AnnotationType::FreeText,
@@ -517,7 +514,7 @@ fn test_annotation_geometric_transformations() {
         );
 
         let annotation = Annotation::new(AnnotationType::Square, rotated_rect)
-            .with_name(format!("rotated_{}", i))
+            .with_name(format!("rotated_{i}"))
             .with_color(Color::Rgb(
                 (angle.sin() + 1.0) / 2.0,
                 (angle.cos() + 1.0) / 2.0,
@@ -569,7 +566,7 @@ fn test_annotation_geometric_transformations() {
     for (name, rect) in boundary_annotations {
         let annotation = Annotation::new(AnnotationType::Text, rect)
             .with_name(name.to_string())
-            .with_contents(format!("Boundary annotation: {}", name));
+            .with_contents(format!("Boundary annotation: {name}"));
 
         manager.add_annotation(page_ref, annotation);
     }
@@ -581,7 +578,7 @@ fn test_annotation_geometric_transformations() {
         // Verify rotated annotations have correct names
         let rotated_count = page_annotations
             .iter()
-            .filter(|a| a.name.as_ref().map_or(false, |n| n.starts_with("rotated_")))
+            .filter(|a| a.name.as_ref().is_some_and(|n| n.starts_with("rotated_")))
             .count();
         assert_eq!(rotated_count, num_annotations);
 
@@ -633,7 +630,7 @@ fn test_annotation_memory_efficiency() {
 
             let annotation = Annotation::new(AnnotationType::FreeText, rect)
                 .with_contents(large_content)
-                .with_name(format!("batch_{}_{}", batch, i));
+                .with_name(format!("batch_{batch}_{i}"));
 
             let annot_ref = manager.add_annotation(page_ref, annotation);
             annotation_refs.push(annot_ref);

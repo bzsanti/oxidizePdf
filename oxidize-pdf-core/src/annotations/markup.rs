@@ -477,11 +477,11 @@ mod tests {
         let markup_type = MarkupType::Highlight;
 
         // Test Debug
-        let debug_str = format!("{:?}", markup_type);
+        let debug_str = format!("{markup_type:?}");
         assert!(debug_str.contains("Highlight"));
 
         // Test Clone
-        let cloned = markup_type.clone();
+        let cloned = markup_type;
         assert!(matches!(cloned, MarkupType::Highlight));
 
         // Test Copy
@@ -496,7 +496,7 @@ mod tests {
         };
 
         // Test Debug
-        let debug_str = format!("{:?}", quad_points);
+        let debug_str = format!("{quad_points:?}");
         assert!(debug_str.contains("QuadPoints"));
         assert!(debug_str.contains("1.0"));
 
@@ -511,7 +511,7 @@ mod tests {
         let markup = MarkupAnnotation::highlight(rect).with_author("Test Author");
 
         // Test Debug
-        let debug_str = format!("{:?}", markup);
+        let debug_str = format!("{markup:?}");
         assert!(debug_str.contains("MarkupAnnotation"));
         assert!(debug_str.contains("Highlight"));
 

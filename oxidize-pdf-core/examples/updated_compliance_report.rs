@@ -1,5 +1,5 @@
 use oxidize_pdf::writer::WriterConfig;
-use oxidize_pdf::{Color, Document, Page, Result};
+use oxidize_pdf::{Document, Page, Result};
 
 fn main() -> Result<()> {
     println!("Generating Updated ISO 32000-1:2008 Compliance Report...");
@@ -196,7 +196,7 @@ fn main() -> Result<()> {
             .text()
             .set_font(oxidize_pdf::Font::Helvetica, 10.0)
             .at(60.0, y_pos)
-            .write(&format!("• {}", feature))?;
+            .write(&format!("• {feature}"))?;
         y_pos -= 15.0;
     }
 
@@ -222,7 +222,7 @@ fn main() -> Result<()> {
             .text()
             .set_font(oxidize_pdf::Font::Helvetica, 10.0)
             .at(60.0, y_pos)
-            .write(&format!("• {}", feature))?;
+            .write(&format!("• {feature}"))?;
         y_pos -= 15.0;
     }
 

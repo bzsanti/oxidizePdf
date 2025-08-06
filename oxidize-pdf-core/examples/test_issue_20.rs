@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("Error extracting text: {:?}", e);
+            println!("Error extracting text: {e:?}");
         }
     }
 

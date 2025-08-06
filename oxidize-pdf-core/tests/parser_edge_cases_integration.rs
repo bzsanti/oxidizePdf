@@ -28,7 +28,7 @@ fn test_empty_file_handling() {
     assert!(result.is_err());
 
     if let Err(error) = result {
-        println!("Empty file error: {}", error);
+        println!("Empty file error: {error}");
         // Should get a specific error, not panic
         assert!(error.to_string().contains("empty") || error.to_string().contains("Invalid"));
     }
@@ -44,7 +44,7 @@ fn test_whitespace_only_file() {
     assert!(result.is_err());
 
     if let Err(error) = result {
-        println!("Whitespace-only file error: {}", error);
+        println!("Whitespace-only file error: {error}");
         assert!(!error.to_string().is_empty());
     }
 }
@@ -74,10 +74,10 @@ fn test_invalid_pdf_header() {
         let cursor = Cursor::new(invalid_header.clone());
         let result = PdfReader::new(cursor);
 
-        assert!(result.is_err(), "Invalid header {} should fail parsing", i);
+        assert!(result.is_err(), "Invalid header {i} should fail parsing");
 
         if let Err(error) = result {
-            println!("  Error: {}", error);
+            println!("  Error: {error}");
             assert!(
                 error.to_string().contains("header")
                     || error.to_string().contains("Invalid")
@@ -114,7 +114,7 @@ fn test_truncated_after_header() {
         match result {
             Ok(_) => println!("  Unexpectedly succeeded"),
             Err(error) => {
-                println!("  Error (expected): {}", error);
+                println!("  Error (expected): {error}");
                 assert!(!error.to_string().is_empty());
             }
         }
@@ -144,7 +144,7 @@ fn test_malformed_xref_table() {
     ];
 
     for (i, pdf_data) in malformed_xrefs.iter().enumerate() {
-        println!("Testing malformed xref {}", i);
+        println!("Testing malformed xref {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
         let result = PdfReader::new(cursor);
@@ -153,7 +153,7 @@ fn test_malformed_xref_table() {
         match result {
             Ok(_) => println!("  Unexpectedly succeeded"),
             Err(error) => {
-                println!("  Error (expected): {}", error);
+                println!("  Error (expected): {error}");
                 assert!(
                     error.to_string().contains("xref")
                         || error.to_string().contains("Invalid")
@@ -194,7 +194,7 @@ fn test_circular_references() {
                     }
                     Err(_) => {
                         // Try next object
-                        if let Ok(_) = reader.get_object(2, 0) {
+                        if reader.get_object(2, 0).is_ok() {
                             object_accessed = true;
                             break;
                         }
@@ -207,13 +207,10 @@ fn test_circular_references() {
                 panic!("Timeout accessing objects - possible infinite loop");
             }
 
-            println!(
-                "  Circular reference handled safely (accessed object: {})",
-                object_accessed
-            );
+            println!("  Circular reference handled safely (accessed object: {object_accessed})");
         }
         Err(error) => {
-            println!("  Parse error (acceptable): {}", error);
+            println!("  Parse error (acceptable): {error}");
         }
     }
 }
@@ -229,7 +226,7 @@ fn test_memory_exhaustion_protection() {
     ];
 
     for (i, pdf_data) in large_object_pdfs.iter().enumerate() {
-        println!("Testing memory exhaustion protection {}", i);
+        println!("Testing memory exhaustion protection {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
         let result = PdfReader::new(cursor);
@@ -237,7 +234,7 @@ fn test_memory_exhaustion_protection() {
         match result {
             Ok(_) => println!("  Large object handled"),
             Err(error) => {
-                println!("  Error (may be expected): {}", error);
+                println!("  Error (may be expected): {error}");
                 // Should get a proper error, not run out of memory
                 assert!(
                     error.to_string().contains("too large")
@@ -274,7 +271,7 @@ fn test_malformed_dictionaries() {
     ];
 
     for (i, pdf_data) in malformed_dicts.iter().enumerate() {
-        println!("Testing malformed dictionary {}", i);
+        println!("Testing malformed dictionary {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
         let result = PdfReader::new(cursor);
@@ -284,11 +281,11 @@ fn test_malformed_dictionaries() {
                 println!("  Reader created, trying to access objects...");
                 match reader.get_object(1, 0) {
                     Ok(_) => println!("    Object access succeeded"),
-                    Err(error) => println!("    Object access error: {}", error),
+                    Err(error) => println!("    Object access error: {error}"),
                 }
             }
             Err(error) => {
-                println!("  Parse error: {}", error);
+                println!("  Parse error: {error}");
                 assert!(!error.to_string().is_empty());
             }
         }
@@ -315,7 +312,7 @@ fn test_malformed_arrays() {
     ];
 
     for (i, pdf_data) in malformed_arrays.iter().enumerate() {
-        println!("Testing malformed array {}", i);
+        println!("Testing malformed array {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
         let result = PdfReader::new(cursor);
@@ -325,11 +322,11 @@ fn test_malformed_arrays() {
                 println!("  Reader created, trying to access objects...");
                 match reader.get_object(1, 0) {
                     Ok(_) => println!("    Object access succeeded"),
-                    Err(error) => println!("    Object access error: {}", error),
+                    Err(error) => println!("    Object access error: {error}"),
                 }
             }
             Err(error) => {
-                println!("  Parse error: {}", error);
+                println!("  Parse error: {error}");
                 assert!(
                     error.to_string().contains("array")
                         || error.to_string().contains("Invalid")
@@ -361,7 +358,7 @@ fn test_invalid_encodings() {
     ];
 
     for (i, pdf_data) in invalid_encodings.iter().enumerate() {
-        println!("Testing invalid encoding {}", i);
+        println!("Testing invalid encoding {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
         let result = PdfReader::new(cursor);
@@ -370,12 +367,12 @@ fn test_invalid_encodings() {
             Ok(mut reader) => {
                 println!("  Reader created, trying to access string object...");
                 match reader.get_object(1, 0) {
-                    Ok(obj) => println!("    Object accessed: {:?}", obj),
-                    Err(error) => println!("    Object access error: {}", error),
+                    Ok(obj) => println!("    Object accessed: {obj:?}"),
+                    Err(error) => println!("    Object access error: {error}"),
                 }
             }
             Err(error) => {
-                println!("  Parse error: {}", error);
+                println!("  Parse error: {error}");
                 assert!(
                     error.to_string().contains("encoding")
                         || error.to_string().contains("string")
@@ -404,7 +401,7 @@ fn test_parser_limits() {
     ];
 
     for (i, pdf_data) in limit_cases.iter().enumerate() {
-        println!("Testing parser limit case {}", i);
+        println!("Testing parser limit case {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
         let start_time = std::time::Instant::now();
@@ -412,7 +409,7 @@ fn test_parser_limits() {
         let result = PdfReader::new(cursor);
         let parse_time = start_time.elapsed();
 
-        println!("  Parse time: {:?}", parse_time);
+        println!("  Parse time: {parse_time:?}");
 
         // Should not take too long (prevent infinite loops)
         assert!(
@@ -423,7 +420,7 @@ fn test_parser_limits() {
         match result {
             Ok(_) => println!("  Limit case handled successfully"),
             Err(error) => {
-                println!("  Parse error: {}", error);
+                println!("  Parse error: {error}");
                 assert!(
                     error.to_string().contains("limit")
                         || error.to_string().contains("too large")
@@ -452,7 +449,7 @@ fn test_error_recovery() {
     ];
 
     for (i, pdf_data) in recovery_cases.iter().enumerate() {
-        println!("Testing error recovery case {}", i);
+        println!("Testing error recovery case {i}");
 
         let cursor = Cursor::new(pdf_data.clone());
 
@@ -477,7 +474,7 @@ fn test_error_recovery() {
                 );
             }
             Err(error) => {
-                println!("  Recovery failed: {}", error);
+                println!("  Recovery failed: {error}");
                 // Even with recovery, some files might be too corrupt
                 assert!(!error.to_string().is_empty());
             }
@@ -517,7 +514,7 @@ fn test_real_world_corrupted_samples() {
     ];
 
     for (i, corrupted_data) in corrupted_versions.iter().enumerate() {
-        println!("Testing real-world corruption scenario {}", i);
+        println!("Testing real-world corruption scenario {i}");
 
         let cursor = Cursor::new(corrupted_data.clone());
         let result = PdfReader::new(cursor);
@@ -532,10 +529,10 @@ fn test_real_world_corrupted_samples() {
                         accessible_objects += 1;
                     }
                 }
-                println!("  Accessible objects: {}", accessible_objects);
+                println!("  Accessible objects: {accessible_objects}");
             }
             Err(error) => {
-                println!("  Corruption detected: {}", error);
+                println!("  Corruption detected: {error}");
                 assert!(!error.to_string().is_empty());
                 // Make sure we get proper error message
                 assert!(
@@ -554,28 +551,24 @@ fn test_real_world_corrupted_samples() {
 
 fn create_pdf_with_xref(xref_content: &str) -> Vec<u8> {
     format!(
-        "%PDF-1.4\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n{}\ntrailer\n<</Size 1 /Root 1 0 R>>\nstartxref\n100\n%%EOF",
-        xref_content
+        "%PDF-1.4\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n{xref_content}\ntrailer\n<</Size 1 /Root 1 0 R>>\nstartxref\n100\n%%EOF"
     ).into_bytes()
 }
 
 fn create_pdf_with_circular_refs() -> Vec<u8> {
-    format!(
-        "%PDF-1.4\n\
+    "%PDF-1.4\n\
         1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n\
         2 0 obj\n<</Type /Pages /Kids [3 0 R] /Count 1 /Parent 4 0 R>>\nendobj\n\
         3 0 obj\n<</Type /Page /Parent 2 0 R /Next 4 0 R>>\nendobj\n\
         4 0 obj\n<</Type /Page /Parent 2 0 R /Next 3 0 R>>\nendobj\n\
         xref\n0 5\n0000000000 65535 f \n0000000015 00000 n \n0000000068 00000 n \n0000000125 00000 n \n0000000180 00000 n \n\
-        trailer\n<</Size 5 /Root 1 0 R>>\nstartxref\n230\n%%EOF"
-    ).into_bytes()
+        trailer\n<</Size 5 /Root 1 0 R>>\nstartxref\n230\n%%EOF".to_string().into_bytes()
 }
 
 fn create_pdf_with_large_string(size: usize) -> Vec<u8> {
     let large_string = "A".repeat(size);
     format!(
-        "%PDF-1.4\n1 0 obj\n({})\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF",
-        large_string
+        "%PDF-1.4\n1 0 obj\n({large_string})\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF"
     ).into_bytes()
 }
 
@@ -585,30 +578,26 @@ fn create_pdf_with_large_array(elements: usize) -> Vec<u8> {
         .collect::<Vec<_>>()
         .join(" ");
     format!(
-        "%PDF-1.4\n1 0 obj\n[{}]\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF",
-        array_content
+        "%PDF-1.4\n1 0 obj\n[{array_content}]\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF"
     ).into_bytes()
 }
 
 fn create_pdf_with_large_stream(size: usize) -> Vec<u8> {
     let stream_data = "x".repeat(size);
     format!(
-        "%PDF-1.4\n1 0 obj\n<</Length {}>>\nstream\n{}\nendstream\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n100\n%%EOF",
-        size, stream_data
+        "%PDF-1.4\n1 0 obj\n<</Length {size}>>\nstream\n{stream_data}\nendstream\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n100\n%%EOF"
     ).into_bytes()
 }
 
 fn create_pdf_with_dict(dict_content: &str) -> Vec<u8> {
     format!(
-        "%PDF-1.4\n1 0 obj\n{}\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF",
-        dict_content
+        "%PDF-1.4\n1 0 obj\n{dict_content}\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF"
     ).into_bytes()
 }
 
 fn create_pdf_with_array(array_content: &str) -> Vec<u8> {
     format!(
-        "%PDF-1.4\n1 0 obj\n{}\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF",
-        array_content
+        "%PDF-1.4\n1 0 obj\n{array_content}\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF"
     ).into_bytes()
 }
 
@@ -621,8 +610,7 @@ fn create_pdf_with_string(bytes: Vec<u8>) -> Vec<u8> {
 
 fn create_pdf_with_hex_string(hex_content: &str) -> Vec<u8> {
     format!(
-        "%PDF-1.4\n1 0 obj\n<{}>\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF",
-        hex_content
+        "%PDF-1.4\n1 0 obj\n<{hex_content}>\nendobj\nxref\n0 2\n0000000000 65535 f \n0000000015 00000 n \ntrailer\n<</Size 2>>\nstartxref\n50\n%%EOF"
     ).into_bytes()
 }
 
@@ -641,17 +629,14 @@ fn create_deeply_nested_pdf(depth: usize) -> Vec<u8> {
 
 fn create_pdf_with_long_name(length: usize) -> Vec<u8> {
     let long_name = format!("/{}", "A".repeat(length));
-    create_pdf_with_dict(&format!("<</LongName {}>>", long_name))
+    create_pdf_with_dict(&format!("<</LongName {long_name}>>"))
 }
 
 fn create_pdf_with_many_objects(count: usize) -> Vec<u8> {
     let mut pdf = String::from("%PDF-1.4\n");
 
     for i in 1..=count {
-        pdf.push_str(&format!(
-            "{} 0 obj\n<</Type /Test /Index {}>>\nendobj\n",
-            i, i
-        ));
+        pdf.push_str(&format!("{i} 0 obj\n<</Type /Test /Index {i}>>\nendobj\n"));
     }
 
     pdf.push_str("xref\n");
@@ -660,12 +645,12 @@ fn create_pdf_with_many_objects(count: usize) -> Vec<u8> {
 
     let mut offset = 15; // Start after header
     for i in 1..=count {
-        pdf.push_str(&format!("{:010} 00000 n \n", offset));
-        offset += format!("{} 0 obj\n<</Type /Test /Index {}>>\nendobj\n", i, i).len();
+        pdf.push_str(&format!("{offset:010} 00000 n \n"));
+        offset += format!("{i} 0 obj\n<</Type /Test /Index {i}>>\nendobj\n").len();
     }
 
     pdf.push_str(&format!("trailer\n<</Size {}>>\nstartxref\n", count + 1));
-    pdf.push_str(&format!("{}\n%%EOF", offset));
+    pdf.push_str(&format!("{offset}\n%%EOF"));
 
     pdf.into_bytes()
 }
@@ -680,36 +665,32 @@ fn create_pdf_with_extreme_numbers() -> Vec<u8> {
 }
 
 fn create_pdf_with_mixed_validity() -> Vec<u8> {
-    format!(
-        "%PDF-1.4\n\
+    "%PDF-1.4\n\
         1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n\
         2 0 obj\n<</Type /Pages>>\nendobj\n\
         3 0 obj\n<<INVALID OBJECT\nendobj\n\
         4 0 obj\n<</Type /Font /Name /Arial>>\nendobj\n\
         xref\n0 5\n0000000000 65535 f \n0000000015 00000 n \n0000000068 00000 n \n0000000100 00000 n \n0000000130 00000 n \n\
-        trailer\n<</Size 5 /Root 1 0 R>>\nstartxref\n180\n%%EOF"
-    ).into_bytes()
+        trailer\n<</Size 5 /Root 1 0 R>>\nstartxref\n180\n%%EOF".to_string().into_bytes()
 }
 
 fn create_pdf_with_recoverable_xref() -> Vec<u8> {
-    format!(
-        "%PDF-1.4\n\
+    "%PDF-1.4\n\
         1 0 obj\n<</Type /Catalog>>\nendobj\n\
         xref\n0 2\n0000000000 65535 f \n0000000015 00000 n \n\
         trailer\n<</Size 2 /Root 1 0 R>>\nstartxref\n50\n%%EOF"
-    )
-    .into_bytes()
+        .to_string()
+        .into_bytes()
 }
 
 fn create_pdf_with_corrupt_streams() -> Vec<u8> {
-    format!(
-        "%PDF-1.4\n\
+    "%PDF-1.4\n\
         1 0 obj\n<</Type /Catalog>>\nendobj\n\
         2 0 obj\n<</Length 100>>\nstream\nCORRUPT_STREAM_DATA_HERE\nendstream\nendobj\n\
         xref\n0 3\n0000000000 65535 f \n0000000015 00000 n \n0000000050 00000 n \n\
         trailer\n<</Size 3 /Root 1 0 R>>\nstartxref\n120\n%%EOF"
-    )
-    .into_bytes()
+        .to_string()
+        .into_bytes()
 }
 
 // Functions to corrupt existing valid PDFs

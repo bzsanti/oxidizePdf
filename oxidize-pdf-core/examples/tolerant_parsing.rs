@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pdf_path = &args[1];
 
-    println!("Attempting to open PDF: {}", pdf_path);
+    println!("Attempting to open PDF: {pdf_path}");
     println!("=====================================\n");
 
     // First, try with strict parsing (default)
@@ -25,12 +25,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✅ Success with strict parsing!");
             println!("   PDF Version: {}", reader.version());
             match reader.page_count() {
-                Ok(count) => println!("   Pages: {}", count),
-                Err(e) => println!("   Error getting page count: {}", e),
+                Ok(count) => println!("   Pages: {count}"),
+                Err(e) => println!("   Error getting page count: {e}"),
             }
         }
         Err(e) => {
-            println!("❌ Failed with strict parsing: {}", e);
+            println!("❌ Failed with strict parsing: {e}");
         }
     }
 
@@ -42,8 +42,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✅ Success with tolerant parsing!");
             println!("   PDF Version: {}", reader.version());
             match reader.page_count() {
-                Ok(count) => println!("   Pages: {}", count),
-                Err(e) => println!("   Error getting page count: {}", e),
+                Ok(count) => println!("   Pages: {count}"),
+                Err(e) => println!("   Error getting page count: {e}"),
             }
 
             // Try to read the document info
@@ -52,21 +52,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("\n   Document Info:");
                     if let Some(title) = info.get("Title").and_then(|o| o.as_string()) {
                         if let Ok(title_str) = title.as_str() {
-                            println!("   - Title: {}", title_str);
+                            println!("   - Title: {title_str}");
                         }
                     }
                     if let Some(author) = info.get("Author").and_then(|o| o.as_string()) {
                         if let Ok(author_str) = author.as_str() {
-                            println!("   - Author: {}", author_str);
+                            println!("   - Author: {author_str}");
                         }
                     }
                 }
                 Ok(None) => println!("   No document info available"),
-                Err(e) => println!("   Error reading document info: {}", e),
+                Err(e) => println!("   Error reading document info: {e}"),
             }
         }
         Err(e) => {
-            println!("❌ Failed even with tolerant parsing: {}", e);
+            println!("❌ Failed even with tolerant parsing: {e}");
         }
     }
 
@@ -78,8 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✅ Success with skip_errors mode!");
             println!("   PDF Version: {}", reader.version());
             match reader.page_count() {
-                Ok(count) => println!("   Pages: {}", count),
-                Err(e) => println!("   Error getting page count: {}", e),
+                Ok(count) => println!("   Pages: {count}"),
+                Err(e) => println!("   Error getting page count: {e}"),
             }
 
             let doc = reader.into_document();
@@ -100,11 +100,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 }
-                Err(e) => println!("   Error extracting text: {}", e),
+                Err(e) => println!("   Error extracting text: {e}"),
             }
         }
         Err(e) => {
-            println!("❌ Failed even with skip_errors mode: {}", e);
+            println!("❌ Failed even with skip_errors mode: {e}");
             println!("   This PDF might be encrypted or severely corrupted.");
         }
     }

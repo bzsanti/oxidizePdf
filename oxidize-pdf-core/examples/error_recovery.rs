@@ -107,9 +107,9 @@ fn example_detect_corruption() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (filename, description) in test_files {
-        let path = format!("output/recovery/{}", filename);
+        let path = format!("output/recovery/{filename}");
 
-        print!("Analyzing {} ({})... ", filename, description);
+        print!("Analyzing {filename} ({description})... ");
 
         match detect_corruption(&path) {
             Ok(report) => {
@@ -128,7 +128,7 @@ fn example_detect_corruption() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            Err(e) => println!("✗ Error analyzing file: {}", e),
+            Err(e) => println!("✗ Error analyzing file: {e}"),
         }
     }
 
@@ -160,7 +160,7 @@ fn example_basic_recovery() -> Result<(), Box<dyn std::error::Error>> {
             println!("  - Saved as: no_eof_recovered.pdf");
         }
         Err(e) => {
-            println!("✗ Full recovery failed: {}", e);
+            println!("✗ Full recovery failed: {e}");
             println!("  Warnings: {:?}", recovery.warnings());
         }
     }
@@ -217,7 +217,7 @@ fn example_partial_recovery() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("✗ Partial recovery failed: {}", e);
+            println!("✗ Partial recovery failed: {e}");
         }
     }
 
@@ -233,13 +233,13 @@ fn example_validation() -> Result<(), Box<dyn std::error::Error>> {
     let files = vec!["valid.pdf", "no_header.pdf", "no_eof_recovered.pdf"];
 
     for filename in files {
-        let path = format!("output/recovery/{}", filename);
+        let path = format!("output/recovery/{filename}");
 
         if !Path::new(&path).exists() {
             continue;
         }
 
-        print!("Validating {}... ", filename);
+        print!("Validating {filename}... ");
 
         match validate_pdf(&path) {
             Ok(result) => {
@@ -249,14 +249,14 @@ fn example_validation() -> Result<(), Box<dyn std::error::Error>> {
                     println!("✗ Invalid");
                     println!("  - Errors: {}", result.errors.len());
                     for error in &result.errors {
-                        println!("    • {:?}", error);
+                        println!("    • {error:?}");
                     }
                 }
 
                 if !result.warnings.is_empty() {
                     println!("  - Warnings: {}", result.warnings.len());
                     for warning in &result.warnings {
-                        println!("    • {}", warning);
+                        println!("    • {warning}");
                     }
                 }
 
@@ -265,7 +265,7 @@ fn example_validation() -> Result<(), Box<dyn std::error::Error>> {
                     result.stats.objects_checked, result.stats.pages_validated
                 );
             }
-            Err(e) => println!("✗ Validation error: {}", e),
+            Err(e) => println!("✗ Validation error: {e}"),
         }
     }
 
@@ -328,7 +328,7 @@ fn example_aggressive_recovery() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nRecovery warnings:");
     for warning in recovery.warnings() {
-        println!("  • {}", warning);
+        println!("  • {warning}");
     }
 
     println!();

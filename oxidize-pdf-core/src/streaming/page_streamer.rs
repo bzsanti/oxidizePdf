@@ -282,7 +282,7 @@ mod tests {
             content_length: 1024,
         };
 
-        let debug_str = format!("{:?}", page);
+        let debug_str = format!("{page:?}");
         assert!(debug_str.contains("StreamingPage"));
         assert!(debug_str.contains("1"));
 
@@ -559,7 +559,7 @@ mod tests {
         let mut iterator = PageIterator::new(cursor);
 
         // Consume all pages
-        while let Some(_) = iterator.next() {}
+        for _ in iterator.by_ref() {}
 
         // Iterator should be exhausted
         assert!(iterator.next().is_none());

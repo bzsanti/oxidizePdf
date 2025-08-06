@@ -22,7 +22,7 @@ fn main() -> Result<(), PdfError> {
     let image_path = Path::new("tests/images/1.png");
 
     if image_path.exists() {
-        match oxidize_pdf::graphics::Image::from_png_file(&image_path) {
+        match oxidize_pdf::graphics::Image::from_png_file(image_path) {
             Ok(image) => {
                 println!(
                     "📷 Loading image: {}x{} pixels",
@@ -44,10 +44,10 @@ fn main() -> Result<(), PdfError> {
                 println!("✅ Image embedded successfully");
             }
             Err(e) => {
-                println!("❌ Error loading image: {}", e);
+                println!("❌ Error loading image: {e}");
                 page.text()
                     .at(50.0, 400.0)
-                    .write(&format!("❌ Error: {}", e))?;
+                    .write(&format!("❌ Error: {e}"))?;
             }
         }
     } else {
@@ -63,7 +63,7 @@ fn main() -> Result<(), PdfError> {
     let output_file = "simple_image_test.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("🔍 Please open this PDF to verify the image appears correctly");
 
     Ok(())

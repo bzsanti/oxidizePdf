@@ -158,18 +158,18 @@ fn demonstrate_xref_stream_structure() {
         Ok((dict, data)) => {
             println!("\nXRef Stream Dictionary:");
             if let Some(w_array) = dict.get("W") {
-                println!("  /W {:?} (field widths)", w_array);
+                println!("  /W {w_array:?} (field widths)");
             }
             if let Some(size) = dict.get("Size") {
-                println!("  /Size {:?} (number of entries)", size);
+                println!("  /Size {size:?} (number of entries)");
             }
             if let Some(filter) = dict.get("Filter") {
-                println!("  /Filter {:?} (compression)", filter);
+                println!("  /Filter {filter:?} (compression)");
             }
             println!("  Stream data size: {} bytes (compressed)", data.len());
         }
         Err(e) => {
-            println!("Error building xref stream: {}", e);
+            println!("Error building xref stream: {e}");
         }
     }
 }
@@ -205,10 +205,10 @@ fn show_xref_stream_benefits() {
     let xref_stream_size = num_objects * 4; // average compressed
     let savings = ((traditional_size - xref_stream_size) as f64 / traditional_size as f64) * 100.0;
 
-    println!("\n5. Example with {} objects:", num_objects);
-    println!("   Traditional: {} bytes", traditional_size);
-    println!("   XRef stream: {} bytes", xref_stream_size);
-    println!("   Space saved: {:.1}%", savings);
+    println!("\n5. Example with {num_objects} objects:");
+    println!("   Traditional: {traditional_size} bytes");
+    println!("   XRef stream: {xref_stream_size} bytes");
+    println!("   Space saved: {savings:.1}%");
 }
 
 /// Show hybrid reference file structure

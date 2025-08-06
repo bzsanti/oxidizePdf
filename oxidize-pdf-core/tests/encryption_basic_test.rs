@@ -201,7 +201,7 @@ fn test_aes_invalid_iv_length() {
             assert_eq!(expected, 16);
             assert_eq!(actual, len);
         } else {
-            panic!("Expected InvalidIvLength error for IV length {}", len);
+            panic!("Expected InvalidIvLength error for IV length {len}");
         }
     }
 }
@@ -366,7 +366,7 @@ fn test_aes_error_display() {
         expected: 16,
         actual: 8,
     };
-    let error_str = format!("{}", error);
+    let error_str = format!("{error}");
     assert!(error_str.contains("Invalid key length"));
     assert!(error_str.contains("16"));
     assert!(error_str.contains("8"));
@@ -375,17 +375,17 @@ fn test_aes_error_display() {
         expected: 16,
         actual: 12,
     };
-    let iv_error_str = format!("{}", iv_error);
+    let iv_error_str = format!("{iv_error}");
     assert!(iv_error_str.contains("Invalid IV length"));
 
     let enc_error = AesError::EncryptionFailed("test".to_string());
-    assert!(format!("{}", enc_error).contains("Encryption failed"));
+    assert!(format!("{enc_error}").contains("Encryption failed"));
 
     let dec_error = AesError::DecryptionFailed("test".to_string());
-    assert!(format!("{}", dec_error).contains("Decryption failed"));
+    assert!(format!("{dec_error}").contains("Decryption failed"));
 
     let pad_error = AesError::PaddingError("test".to_string());
-    assert!(format!("{}", pad_error).contains("Padding error"));
+    assert!(format!("{pad_error}").contains("Padding error"));
 }
 
 // ===== Security Tests =====
