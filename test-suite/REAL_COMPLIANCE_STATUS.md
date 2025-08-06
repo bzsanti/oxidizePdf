@@ -8,11 +8,11 @@ Based on actual testing of the oxidize-pdf public API.
 
 | Section | Features Tested | Working | Percentage |
 |---------|----------------|---------|------------|
+| Section 7: Document Structure | 8 | 6 | 75.0% |
 | Section 9: Text and Fonts | 6 | 6 | 100.0% |
 | Section 8: Graphics | 20 | 19 | 95.0% |
-| Section 11: Transparency | 2 | 2 | 100.0% |
-| Section 7: Document Structure | 8 | 6 | 75.0% |
 | Section 12: Interactive Features | 0 | 0 | 0.0% |
+| Section 11: Transparency | 2 | 2 | 100.0% |
 
 ## What Actually Works
 

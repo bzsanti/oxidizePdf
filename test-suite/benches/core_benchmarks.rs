@@ -229,7 +229,7 @@ fn benchmark_object_stream(c: &mut Criterion) {
                     // Simulate random lookups
                     let mut found = 0;
                     for i in (0..obj_count).step_by(3) {
-                        if cache.get(&i).is_some() {
+                        if cache.contains_key(&i) {
                             found += 1;
                         }
                     }
