@@ -526,7 +526,10 @@ fn test_full_aes_workflow() {
         if decrypt_result.is_ok() {
             let decrypted = decrypt_result.unwrap();
             // Compare with original plaintext
-            assert_eq!(decrypted, plaintext, "Decrypted data should match original plaintext");
+            assert_eq!(
+                decrypted, plaintext,
+                "Decrypted data should match original plaintext"
+            );
         } else {
             // If decryption fails, at least encryption worked
             println!(
