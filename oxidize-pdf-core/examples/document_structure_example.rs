@@ -95,7 +95,7 @@ fn create_document_with_outline() -> Result<()> {
                     .begin_text()
                     .set_font(Font::Helvetica, 12.0)
                     .set_text_position(50.0, 700.0)
-                    .show_text(&format!("This is the content for {}.", section_title))?
+                    .show_text(&format!("This is the content for {section_title}."))?
                     .set_text_position(50.0, 680.0)
                     .show_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit.")?
                     .end_text();
@@ -131,7 +131,7 @@ fn create_document_with_outline() -> Result<()> {
 
     println!("Created document with outline (document_outline_example.pdf)");
     println!("  - {} chapters", chapters.len());
-    println!("  - {} total pages", page_num);
+    println!("  - {page_num} total pages");
     println!("  - Hierarchical bookmarks with different styles");
 
     doc.save("document_outline_example.pdf")?;
@@ -174,7 +174,7 @@ fn create_document_with_named_destinations() -> Result<()> {
                 .set_font(Font::Helvetica, 14.0)
                 .set_fill_color(Color::rgb(0.0, 0.0, 1.0))
                 .set_text_position(70.0, y)
-                .show_text(&format!("→ {}", title))?
+                .show_text(&format!("→ {title}"))?
                 .end_text();
 
             // Note: In a complete implementation, we would add link annotations here

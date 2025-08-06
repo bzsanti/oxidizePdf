@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         page.text()
             .set_font(Font::Helvetica, 24.0)
             .at(50.0, 750.0)
-            .write(&format!("Page {}", i))?;
+            .write(&format!("Page {i}"))?;
         document.add_page(page);
     }
 

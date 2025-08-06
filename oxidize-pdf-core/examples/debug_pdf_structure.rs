@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let file_path = &args[1];
-    println!("🔍 Analyzing PDF structure: {}", file_path);
+    println!("🔍 Analyzing PDF structure: {file_path}");
 
     let reader = PdfReader::open(file_path)?;
     let pdf_doc = PdfDocument::new(reader);
@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Check for AcroForm
             if let Some(acro_form_ref) = catalog.get("AcroForm") {
-                println!("  ✓ AcroForm present: {:?}", acro_form_ref);
+                println!("  ✓ AcroForm present: {acro_form_ref:?}");
 
                 // Try to get AcroForm object
                 if let PdfObject::Reference(obj_num, gen_num) = acro_form_ref {
@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Check for Outlines
             if let Some(outlines_ref) = catalog.get("Outlines") {
-                println!("  ✓ Outlines present: {:?}", outlines_ref);
+                println!("  ✓ Outlines present: {outlines_ref:?}");
 
                 // Try to get Outlines object
                 if let PdfObject::Reference(obj_num, gen_num) = outlines_ref {
@@ -66,14 +66,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(PdfObject::Reference(first_num, first_gen)) =
                                 outlines.get("First")
                             {
-                                match pdf_doc.get_object(*first_num, *first_gen) {
-                                    Ok(PdfObject::Dictionary(first_item)) => {
-                                        println!("\n    First outline item:");
-                                        println!("      - Title: {:?}", first_item.get("Title"));
-                                        println!("      - Dest: {:?}", first_item.get("Dest"));
-                                        println!("      - Parent: {:?}", first_item.get("Parent"));
-                                    }
-                                    _ => {}
+                                if let Ok(PdfObject::Dictionary(first_item)) =
+                                    pdf_doc.get_object(*first_num, *first_gen)
+                                {
+                                    println!("\n    First outline item:");
+                                    println!("      - Title: {:?}", first_item.get("Title"));
+                                    println!("      - Dest: {:?}", first_item.get("Dest"));
+                                    println!("      - Parent: {:?}", first_item.get("Parent"));
                                 }
                             }
                         }
@@ -97,18 +96,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("    ✓ Has {} annotations", annots.len());
 
             // Try to examine first annotation
-            if annots.len() > 0 {
+            if !annots.is_empty() {
                 if let Some(first_annot) = annots.get(0) {
                     if let PdfObject::Reference(obj_num, gen_num) = first_annot {
-                        match pdf_doc.get_object(*obj_num, *gen_num) {
-                            Ok(PdfObject::Dictionary(annot_dict)) => {
-                                println!("      First annotation:");
-                                println!("        - Type: {:?}", annot_dict.get("Type"));
-                                println!("        - Subtype: {:?}", annot_dict.get("Subtype"));
-                                println!("        - Rect: {:?}", annot_dict.get("Rect"));
-                                println!("        - Parent: {:?}", annot_dict.get("Parent"));
-                            }
-                            _ => {}
+                        if let Ok(PdfObject::Dictionary(annot_dict)) =
+                            pdf_doc.get_object(*obj_num, *gen_num)
+                        {
+                            println!("      First annotation:");
+                            println!("        - Type: {:?}", annot_dict.get("Type"));
+                            println!("        - Subtype: {:?}", annot_dict.get("Subtype"));
+                            println!("        - Rect: {:?}", annot_dict.get("Rect"));
+                            println!("        - Parent: {:?}", annot_dict.get("Parent"));
                         }
                     }
                 }

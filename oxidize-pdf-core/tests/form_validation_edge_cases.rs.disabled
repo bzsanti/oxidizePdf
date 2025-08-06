@@ -1,0 +1,896 @@
+//! Form Validation Edge Cases Tests
+//!
+//! Comprehensive tests for form field validation and edge cases.
+//! These tests ensure the library handles invalid form configurations gracefully.
+//!
+//! Test categories:
+//! - Invalid field types
+//! - Field name conflicts
+//! - Deeply nested fields
+//! - Invalid field values
+//! - Field size limits
+//! - Circular field dependencies
+//! - Invalid appearance streams
+//! - JavaScript edge cases
+//! - Radio button groups
+//! - Field calculation order
+
+use oxidize_pdf::forms::{CheckBox, ComboBox, PushButton, RadioButton, TextField};
+use oxidize_pdf::geometry::{Point, Rectangle};
+use oxidize_pdf::text::Font;
+use oxidize_pdf::{Document, Page, Result};
+use std::collections::HashSet;
+use tempfile::TempDir;
+
+/// Test handling of duplicate field names
+#[test]
+fn test_duplicate_field_names() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+
+    // Try to add multiple fields with the same name
+    let rect1 = Rectangle::new(Point::new(100.0, 700.0), Point::new(300.0, 720.0));
+    let rect2 = Rectangle::new(Point::new(100.0, 650.0), Point::new(300.0, 670.0));
+    let rect3 = Rectangle::new(Point::new(100.0, 600.0), Point::new(300.0, 620.0));
+
+    // First field should succeed
+    page.add_text_field("duplicate_name", rect1, Some("First field"))?;
+
+    // Try to add another text field with same name
+    match page.add_text_field("duplicate_name", rect2, Some("Second field")) {
+        Ok(_) => {
+            println!("Warning: Duplicate field name was allowed");
+        }
+        Err(e) => {
+            println!("Duplicate field name rejected (expected): {}", e);
+        }
+    }
+
+    // Try different field type with same name
+    match page.add_check_box("duplicate_name", rect3, false) {
+        Ok(_) => {
+            println!("Warning: Different field type with duplicate name was allowed");
+        }
+        Err(e) => {
+            println!("Different type duplicate rejected (expected): {}", e);
+        }
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("duplicate_field_names.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test deeply nested form field hierarchies
+#[test]
+fn test_deeply_nested_form_fields() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+
+    // Create hierarchical field names
+    let mut field_name = String::from("root");
+    let mut y = 750.0;
+
+    // Create 15 levels of nesting
+    for level in 0..15 {
+        field_name.push_str(&format!(".level{}", level));
+
+        let rect = Rectangle::new(
+            Point::new(50.0 + level as f32 * 10.0, y - 20.0),
+            Point::new(300.0, y),
+        );
+
+        match page.add_text_field(&field_name, rect, Some(&format!("Level {}", level))) {
+            Ok(_) => {
+                if level > 10 {
+                    println!("Deep nesting level {} allowed", level);
+                }
+            }
+            Err(e) => {
+                println!("Nesting level {} rejected: {}", level, e);
+                break;
+            }
+        }
+
+        y -= 30.0;
+    }
+
+    // Try extremely long hierarchical name
+    let long_hierarchy = (0..50)
+        .map(|i| format!("field{}", i))
+        .collect::<Vec<_>>()
+        .join(".");
+
+    match page.add_text_field(
+        &long_hierarchy,
+        Rectangle::new(Point::new(50.0, 300.0), Point::new(300.0, 320.0)),
+        Some("Long hierarchy"),
+    ) {
+        Ok(_) => {
+            println!(
+                "Extremely long hierarchy accepted: {} chars",
+                long_hierarchy.len()
+            );
+        }
+        Err(e) => {
+            println!("Long hierarchy rejected: {}", e);
+        }
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("nested_form_fields.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test invalid field values and types
+#[test]
+fn test_invalid_field_values() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    // Test 1: Text field with extremely long default value
+    let long_text = "A".repeat(10000); // 10KB of text
+    page.add_text_field(
+        "long_text",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(500.0, y)),
+        Some(&long_text),
+    )?;
+    y -= 40.0;
+
+    // Test 2: Combo box with empty options
+    match page.add_combo_box(
+        "empty_combo",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(300.0, y)),
+        vec![], // Empty options
+        None,
+    ) {
+        Ok(_) => {
+            println!("Warning: Empty combo box was allowed");
+        }
+        Err(e) => {
+            println!("Empty combo box rejected (expected): {}", e);
+        }
+    }
+    y -= 40.0;
+
+    // Test 3: Combo box with duplicate options
+    let duplicate_options = vec![
+        "Option A".to_string(),
+        "Option B".to_string(),
+        "Option A".to_string(), // Duplicate
+        "Option C".to_string(),
+        "Option B".to_string(), // Another duplicate
+    ];
+
+    page.add_combo_box(
+        "duplicate_options",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(300.0, y)),
+        duplicate_options,
+        Some(0),
+    )?;
+    y -= 40.0;
+
+    // Test 4: Combo box with out-of-range selected index
+    let options = vec!["A".to_string(), "B".to_string(), "C".to_string()];
+    match page.add_combo_box(
+        "invalid_index",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(300.0, y)),
+        options.clone(),
+        Some(99), // Out of range
+    ) {
+        Ok(_) => {
+            println!("Warning: Out-of-range combo box index was allowed");
+        }
+        Err(e) => {
+            println!("Out-of-range index rejected (expected): {}", e);
+        }
+    }
+    y -= 40.0;
+
+    // Test 5: Text field with control characters in default
+    let control_chars = "Line1\x00Null\x01SOH\x02STX\x03ETX\nLine2";
+    page.add_text_field(
+        "control_chars",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(500.0, y)),
+        Some(control_chars),
+    )?;
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("invalid_field_values.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test field size limits
+#[test]
+fn test_field_size_limits() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+
+    // Test 1: Zero-size field
+    match page.add_text_field(
+        "zero_size",
+        Rectangle::new(Point::new(100.0, 700.0), Point::new(100.0, 700.0)), // Zero size
+        None,
+    ) {
+        Ok(_) => {
+            println!("Warning: Zero-size field was allowed");
+        }
+        Err(e) => {
+            println!("Zero-size field rejected (expected): {}", e);
+        }
+    }
+
+    // Test 2: Negative size field
+    match page.add_text_field(
+        "negative_size",
+        Rectangle::new(Point::new(200.0, 700.0), Point::new(100.0, 650.0)), // Negative width
+        None,
+    ) {
+        Ok(_) => {
+            println!("Note: Negative size field was allowed (coords may be normalized)");
+        }
+        Err(e) => {
+            println!("Negative size field rejected: {}", e);
+        }
+    }
+
+    // Test 3: Extremely large field
+    page.add_text_field(
+        "huge_field",
+        Rectangle::new(Point::new(-1000.0, -1000.0), Point::new(2000.0, 2000.0)),
+        Some("Huge field"),
+    )?;
+
+    // Test 4: Field outside page bounds
+    page.add_text_field(
+        "outside_bounds",
+        Rectangle::new(Point::new(1000.0, 1000.0), Point::new(1200.0, 1050.0)),
+        Some("Outside page"),
+    )?;
+
+    // Test 5: Many tiny fields
+    for i in 0..100 {
+        let x = 50.0 + (i % 10) as f32 * 50.0;
+        let y = 600.0 - (i / 10) as f32 * 15.0;
+
+        page.add_check_box(
+            &format!("tiny_{}", i),
+            Rectangle::new(Point::new(x, y), Point::new(x + 5.0, y + 5.0)), // 5x5 points
+            false,
+        )?;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("field_size_limits.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test radio button group edge cases
+#[test]
+fn test_radio_button_group_edge_cases() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    // Test 1: Radio group with single option
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Single option group:")?;
+
+    page.add_radio_button(
+        "single_group",
+        "only_option",
+        Rectangle::new(Point::new(200.0, y - 5.0), Point::new(215.0, y + 10.0)),
+    )?;
+    y -= 30.0;
+
+    // Test 2: Radio group with many options
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Large group (50 options):")?;
+    y -= 20.0;
+
+    for i in 0..50 {
+        let x = 50.0 + (i % 10) as f32 * 50.0;
+        let row_y = y - (i / 10) as f32 * 20.0;
+
+        page.add_radio_button(
+            "large_group",
+            &format!("option_{}", i),
+            Rectangle::new(
+                Point::new(x, row_y - 5.0),
+                Point::new(x + 15.0, row_y + 10.0),
+            ),
+        )?;
+    }
+    y -= 120.0;
+
+    // Test 3: Radio buttons with same value in same group
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Duplicate values:")?;
+
+    page.add_radio_button(
+        "dup_group",
+        "value_a",
+        Rectangle::new(Point::new(200.0, y - 5.0), Point::new(215.0, y + 10.0)),
+    )?;
+
+    page.add_radio_button(
+        "dup_group",
+        "value_b",
+        Rectangle::new(Point::new(250.0, y - 5.0), Point::new(265.0, y + 10.0)),
+    )?;
+
+    // Try to add another with same value
+    match page.add_radio_button(
+        "dup_group",
+        "value_a", // Duplicate value
+        Rectangle::new(Point::new(300.0, y - 5.0), Point::new(315.0, y + 10.0)),
+    ) {
+        Ok(_) => {
+            println!("Warning: Duplicate radio button value was allowed");
+        }
+        Err(e) => {
+            println!("Duplicate radio value rejected (expected): {}", e);
+        }
+    }
+    y -= 30.0;
+
+    // Test 4: Radio buttons with special characters in values
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Special char values:")?;
+
+    let special_values = vec!["space value", "slash/value", "hash#value", "paren(value)"];
+
+    for (i, value) in special_values.iter().enumerate() {
+        let x = 200.0 + i as f32 * 60.0;
+        page.add_radio_button(
+            "special_group",
+            value,
+            Rectangle::new(Point::new(x, y - 5.0), Point::new(x + 15.0, y + 10.0)),
+        )?;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("radio_button_edge_cases.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test form fields with invalid rectangles
+#[test]
+fn test_invalid_field_rectangles() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+
+    // Test various invalid rectangles
+    struct RectTest {
+        name: &'static str,
+        rect: Rectangle,
+        description: &'static str,
+    }
+
+    let tests = vec![
+        RectTest {
+            name: "infinite_width",
+            rect: Rectangle::new(Point::new(100.0, 700.0), Point::new(f32::INFINITY, 720.0)),
+            description: "Infinite width",
+        },
+        RectTest {
+            name: "nan_coords",
+            rect: Rectangle::new(Point::new(f32::NAN, 650.0), Point::new(300.0, 670.0)),
+            description: "NaN coordinates",
+        },
+        RectTest {
+            name: "negative_infinity",
+            rect: Rectangle::new(
+                Point::new(f32::NEG_INFINITY, 600.0),
+                Point::new(300.0, 620.0),
+            ),
+            description: "Negative infinity",
+        },
+    ];
+
+    let mut y = 750.0;
+    for test in tests {
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(50.0, y)
+            .write(&format!("{}: ", test.description))?;
+
+        match page.add_text_field(test.name, test.rect, Some("Test")) {
+            Ok(_) => {
+                println!("Warning: {} was allowed", test.description);
+            }
+            Err(e) => {
+                println!("{} rejected (expected): {}", test.description, e);
+            }
+        }
+
+        y -= 25.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("invalid_rectangles.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test push button edge cases
+#[test]
+fn test_push_button_edge_cases() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    // Test 1: Button with empty label
+    page.add_push_button(
+        "empty_label",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(200.0, y)),
+        "", // Empty label
+    )?;
+    y -= 40.0;
+
+    // Test 2: Button with very long label
+    let long_label = "Click Me! ".repeat(50); // 500 chars
+    page.add_push_button(
+        "long_label",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(500.0, y)),
+        &long_label,
+    )?;
+    y -= 40.0;
+
+    // Test 3: Button with multiline label
+    page.add_push_button(
+        "multiline",
+        Rectangle::new(Point::new(100.0, y - 40.0), Point::new(300.0, y)),
+        "Line 1\nLine 2\nLine 3",
+    )?;
+    y -= 60.0;
+
+    // Test 4: Button with Unicode label
+    page.add_push_button(
+        "unicode",
+        Rectangle::new(Point::new(100.0, y - 20.0), Point::new(300.0, y)),
+        "🔘 Unicode Button 🎯",
+    )?;
+    y -= 40.0;
+
+    // Test 5: Many small buttons
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, y)
+        .write("Grid of 100 tiny buttons:")?;
+    y -= 20.0;
+
+    for i in 0..100 {
+        let x = 100.0 + (i % 20) as f32 * 20.0;
+        let row_y = y - (i / 20) as f32 * 20.0;
+
+        page.add_push_button(
+            &format!("tiny_{}", i),
+            Rectangle::new(Point::new(x, row_y - 15.0), Point::new(x + 15.0, row_y)),
+            &i.to_string(),
+        )?;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("push_button_edge_cases.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test form field names with special characters
+#[test]
+fn test_special_character_field_names() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+
+    // Test various special characters in field names
+    let special_names = vec![
+        ("field with spaces", "Field with spaces"),
+        ("field.with.dots", "Field with dots"),
+        ("field_with_underscores", "Field with underscores"),
+        ("field-with-dashes", "Field with dashes"),
+        ("field@with@at", "Field with @"),
+        ("field$with$dollar", "Field with $"),
+        ("field%with%percent", "Field with %"),
+        ("field&with&ampersand", "Field with &"),
+        ("field*with*asterisk", "Field with *"),
+        ("field+with+plus", "Field with +"),
+        ("field=with=equals", "Field with ="),
+        ("field[with]brackets", "Field with []"),
+        ("field{with}braces", "Field with {}"),
+        ("field<with>angles", "Field with <>"),
+        ("field|with|pipe", "Field with |"),
+        ("field\\with\\backslash", "Field with \\"),
+        ("field/with/slash", "Field with /"),
+        ("field?with?question", "Field with ?"),
+        ("field:with:colon", "Field with :"),
+        ("field;with;semicolon", "Field with ;"),
+        ("field'with'quote", "Field with '"),
+        ("field\"with\"doublequote", "Field with \""),
+        ("field`with`backtick", "Field with `"),
+        ("field~with~tilde", "Field with ~"),
+        ("field!with!exclamation", "Field with !"),
+        ("field#with#hash", "Field with #"),
+        ("field^with^caret", "Field with ^"),
+        ("field(with)parens", "Field with ()"),
+        ("field,with,comma", "Field with ,"),
+    ];
+
+    let mut y = 750.0;
+    let mut success_count = 0;
+    let mut failure_count = 0;
+
+    for (name, label) in special_names {
+        match page.add_text_field(
+            name,
+            Rectangle::new(Point::new(100.0, y - 15.0), Point::new(400.0, y)),
+            Some(label),
+        ) {
+            Ok(_) => {
+                success_count += 1;
+                if y > 100.0 {
+                    page.text()
+                        .set_font(Font::Helvetica, 8.0)
+                        .at(50.0, y - 5.0)
+                        .write(&format!("✓ {}", label))?;
+                }
+            }
+            Err(e) => {
+                failure_count += 1;
+                println!("Field '{}' rejected: {}", name, e);
+            }
+        }
+
+        y -= 20.0;
+        if y < 50.0 {
+            break; // Move to next page if needed
+        }
+    }
+
+    println!(
+        "Special character field names: {} success, {} failed",
+        success_count, failure_count
+    );
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("special_char_field_names.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test checkbox edge cases
+#[test]
+fn test_checkbox_edge_cases() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    // Test 1: Grid of checkboxes with various states
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Checkbox grid (alternating states):")?;
+    y -= 20.0;
+
+    for row in 0..10 {
+        for col in 0..10 {
+            let x = 100.0 + col as f32 * 40.0;
+            let row_y = y - row as f32 * 30.0;
+            let checked = (row + col) % 2 == 0;
+
+            page.add_check_box(
+                &format!("check_{}_{}", row, col),
+                Rectangle::new(
+                    Point::new(x, row_y - 10.0),
+                    Point::new(x + 15.0, row_y + 5.0),
+                ),
+                checked,
+            )?;
+
+            // Add label
+            page.text()
+                .set_font(Font::Helvetica, 8.0)
+                .at(x + 20.0, row_y - 5.0)
+                .write(&format!("{},{}", row, col))?;
+        }
+    }
+    y -= 320.0;
+
+    // Test 2: Checkbox with same name as existing field
+    let existing_rect = Rectangle::new(Point::new(100.0, y - 10.0), Point::new(115.0, y + 5.0));
+    page.add_check_box("duplicate_test", existing_rect, true)?;
+
+    // Try to add text field with same name
+    match page.add_text_field(
+        "duplicate_test",
+        Rectangle::new(Point::new(150.0, y - 10.0), Point::new(300.0, y + 5.0)),
+        Some("Duplicate name"),
+    ) {
+        Ok(_) => {
+            println!("Warning: Text field with checkbox name was allowed");
+        }
+        Err(e) => {
+            println!(
+                "Duplicate name with different type rejected (expected): {}",
+                e
+            );
+        }
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("checkbox_edge_cases.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test combo box with extreme configurations
+#[test]
+fn test_combo_box_extreme_configs() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    // Test 1: Combo box with 1000 options
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Combo with 1000 options:")?;
+
+    let many_options: Vec<String> = (0..1000).map(|i| format!("Option {:04}", i)).collect();
+
+    page.add_combo_box(
+        "thousand_options",
+        Rectangle::new(Point::new(250.0, y - 20.0), Point::new(450.0, y)),
+        many_options,
+        Some(500), // Select middle option
+    )?;
+    y -= 40.0;
+
+    // Test 2: Combo box with very long option strings
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Long option strings:")?;
+
+    let long_options = vec![
+        "Short".to_string(),
+        "Medium length option".to_string(),
+        "This is a very long option that might cause display issues in the combo box".to_string(),
+        "A".repeat(200), // 200 character option
+    ];
+
+    page.add_combo_box(
+        "long_strings",
+        Rectangle::new(Point::new(250.0, y - 20.0), Point::new(500.0, y)),
+        long_options,
+        Some(2),
+    )?;
+    y -= 40.0;
+
+    // Test 3: Combo box with Unicode options
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Unicode options:")?;
+
+    let unicode_options = vec![
+        "English".to_string(),
+        "Español".to_string(),
+        "Français".to_string(),
+        "Deutsch".to_string(),
+        "中文".to_string(),
+        "日本語".to_string(),
+        "한국어".to_string(),
+        "العربية".to_string(),
+        "עברית".to_string(),
+        "🌍 Earth".to_string(),
+        "🌙 Moon".to_string(),
+        "⭐ Star".to_string(),
+    ];
+
+    page.add_combo_box(
+        "unicode_combo",
+        Rectangle::new(Point::new(250.0, y - 20.0), Point::new(450.0, y)),
+        unicode_options,
+        Some(0),
+    )?;
+    y -= 40.0;
+
+    // Test 4: Combo box with single option
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Single option:")?;
+
+    page.add_combo_box(
+        "single_option",
+        Rectangle::new(Point::new(250.0, y - 20.0), Point::new(400.0, y)),
+        vec!["Only Choice".to_string()],
+        Some(0),
+    )?;
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("combo_box_extreme.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test form submission and reset actions
+#[test]
+fn test_form_actions_edge_cases() -> Result<()> {
+    let mut doc = Document::new();
+    doc.init_forms();
+
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    // Add various form fields
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(50.0, y)
+        .write("Form Action Test")?;
+    y -= 30.0;
+
+    // Text fields
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Name:")?;
+    page.add_text_field(
+        "name",
+        Rectangle::new(Point::new(150.0, y - 15.0), Point::new(400.0, y + 5.0)),
+        Some("John Doe"),
+    )?;
+    y -= 30.0;
+
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Email:")?;
+    page.add_text_field(
+        "email",
+        Rectangle::new(Point::new(150.0, y - 15.0), Point::new(400.0, y + 5.0)),
+        Some("john@example.com"),
+    )?;
+    y -= 30.0;
+
+    // Checkboxes
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Options:")?;
+
+    let options = vec!["Subscribe", "Notify", "Public"];
+    for (i, option) in options.iter().enumerate() {
+        let x = 150.0 + i as f32 * 100.0;
+        page.add_check_box(
+            &format!("option_{}", option.to_lowercase()),
+            Rectangle::new(Point::new(x, y - 10.0), Point::new(x + 15.0, y + 5.0)),
+            i == 0, // First option checked
+        )?;
+
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(x + 20.0, y - 5.0)
+            .write(option)?;
+    }
+    y -= 30.0;
+
+    // Radio buttons
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, y)
+        .write("Priority:")?;
+
+    let priorities = vec!["Low", "Medium", "High"];
+    for (i, priority) in priorities.iter().enumerate() {
+        let x = 150.0 + i as f32 * 80.0;
+        page.add_radio_button(
+            "priority",
+            priority,
+            Rectangle::new(Point::new(x, y - 10.0), Point::new(x + 15.0, y + 5.0)),
+        )?;
+
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(x + 20.0, y - 5.0)
+            .write(priority)?;
+    }
+    y -= 40.0;
+
+    // Submit and reset buttons
+    page.add_push_button(
+        "submit",
+        Rectangle::new(Point::new(150.0, y - 25.0), Point::new(250.0, y)),
+        "Submit Form",
+    )?;
+
+    page.add_push_button(
+        "reset",
+        Rectangle::new(Point::new(270.0, y - 25.0), Point::new(370.0, y)),
+        "Reset Form",
+    )?;
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("form_actions.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}

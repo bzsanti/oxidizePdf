@@ -165,10 +165,10 @@ mod tests {
     #[test]
     fn test_object_id_display() {
         let id = ObjectId::new(10, 0);
-        assert_eq!(format!("{}", id), "10 0 R");
+        assert_eq!(format!("{id}"), "10 0 R");
 
         let id2 = ObjectId::new(999, 65535);
-        assert_eq!(format!("{}", id2), "999 65535 R");
+        assert_eq!(format!("{id2}"), "999 65535 R");
     }
 
     #[test]

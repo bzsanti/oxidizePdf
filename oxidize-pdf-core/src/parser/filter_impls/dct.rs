@@ -374,7 +374,7 @@ mod tests {
 
         let result = parse_jpeg_info(&data);
         if let Err(e) = &result {
-            println!("Parse error in test_color_space_detection: {}", e);
+            println!("Parse error in test_color_space_detection: {e}");
         }
         assert!(result.is_ok());
         let info = result.unwrap();
@@ -462,7 +462,7 @@ mod tests {
             color_space: JpegColorSpace::RGB,
         };
 
-        let debug_str = format!("{:?}", info);
+        let debug_str = format!("{info:?}");
         assert!(debug_str.contains("JpegInfo"));
         assert!(debug_str.contains("width: 100"));
         assert!(debug_str.contains("height: 200"));

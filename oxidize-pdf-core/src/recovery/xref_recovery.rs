@@ -386,7 +386,7 @@ mod tests {
             trailer_found: true,
         };
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("RecoveryStats"));
         assert!(debug_str.contains("10"));
         assert!(debug_str.contains("8"));
@@ -593,7 +593,7 @@ mod tests {
         writeln!(file, "%%EOF").unwrap();
 
         let xref_table = recover_xref(&path).unwrap();
-        assert!(xref_table.len() > 0);
+        assert!(!xref_table.is_empty());
     }
 
     #[test]

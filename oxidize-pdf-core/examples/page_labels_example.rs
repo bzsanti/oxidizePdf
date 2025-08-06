@@ -84,8 +84,8 @@ fn create_book_document() -> Result<()> {
         let mut page = Page::a4();
         add_page_content(
             &mut page,
-            &format!("Chapter {}", chapter),
-            &format!("This is the content for chapter {}...", chapter),
+            &format!("Chapter {chapter}"),
+            &format!("This is the content for chapter {chapter}..."),
         )?;
         doc.add_page(page);
     }
@@ -176,7 +176,7 @@ fn create_technical_manual() -> Result<()> {
                 .begin_text()
                 .set_font(Font::Helvetica, 14.0)
                 .set_text_position(70.0, y)
-                .show_text(&format!("{}....{}", title, page_ref))?
+                .show_text(&format!("{title}....{page_ref}"))?
                 .end_text();
             y -= 30.0;
         }
@@ -189,7 +189,7 @@ fn create_technical_manual() -> Result<()> {
         add_page_content(
             &mut page,
             "Executive Summary",
-            &format!("Key point #{}: Important information...", i),
+            &format!("Key point #{i}: Important information..."),
         )?;
         doc.add_page(page);
     }
@@ -199,8 +199,8 @@ fn create_technical_manual() -> Result<()> {
         let mut page = Page::a4();
         add_page_content(
             &mut page,
-            &format!("Part A: Installation Step {}", i),
-            &format!("Installation instructions for step {}...", i),
+            &format!("Part A: Installation Step {i}"),
+            &format!("Installation instructions for step {i}..."),
         )?;
         doc.add_page(page);
     }
@@ -210,8 +210,8 @@ fn create_technical_manual() -> Result<()> {
         let mut page = Page::a4();
         add_page_content(
             &mut page,
-            &format!("Part B: Configuration {}", i),
-            &format!("Configuration details for component {}...", i),
+            &format!("Part B: Configuration {i}"),
+            &format!("Configuration details for component {i}..."),
         )?;
         doc.add_page(page);
     }

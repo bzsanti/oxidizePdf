@@ -315,10 +315,7 @@ mod tests {
             assert_eq!(
                 flags.to_flags(),
                 expected,
-                "Failed for read_only={}, required={}, no_export={}",
-                read_only,
-                required,
-                no_export
+                "Failed for read_only={read_only}, required={required}, no_export={no_export}"
             );
         }
     }
@@ -326,10 +323,10 @@ mod tests {
     #[test]
     fn test_field_flags_debug_clone_default() {
         let flags = FieldFlags::default();
-        let debug_str = format!("{:?}", flags);
+        let debug_str = format!("{flags:?}");
         assert!(debug_str.contains("FieldFlags"));
 
-        let cloned = flags.clone();
+        let cloned = flags;
         assert_eq!(flags.read_only, cloned.read_only);
         assert_eq!(flags.required, cloned.required);
         assert_eq!(flags.no_export, cloned.no_export);
@@ -342,10 +339,10 @@ mod tests {
     #[test]
     fn test_border_style_debug_clone_copy() {
         let style = BorderStyle::Solid;
-        let debug_str = format!("{:?}", style);
+        let debug_str = format!("{style:?}");
         assert!(debug_str.contains("Solid"));
 
-        let cloned = style.clone();
+        let cloned = style;
         assert_eq!(style.pdf_name(), cloned.pdf_name());
 
         // Test Copy trait
@@ -389,7 +386,7 @@ mod tests {
             border_style: BorderStyle::Dashed,
         };
 
-        let debug_str = format!("{:?}", appearance);
+        let debug_str = format!("{appearance:?}");
         assert!(debug_str.contains("WidgetAppearance"));
 
         let cloned = appearance.clone();
@@ -403,7 +400,7 @@ mod tests {
         let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 50.0));
         let widget = Widget::new(rect);
 
-        let debug_str = format!("{:?}", widget);
+        let debug_str = format!("{widget:?}");
         assert!(debug_str.contains("Widget"));
 
         let cloned = widget.clone();
@@ -603,7 +600,7 @@ mod tests {
     #[test]
     fn test_field_options_debug_clone_default() {
         let options = FieldOptions::default();
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("FieldOptions"));
 
         let cloned = options.clone();
@@ -652,7 +649,7 @@ mod tests {
         let field_dict = Dictionary::new();
         let form_field = FormField::new(field_dict);
 
-        let debug_str = format!("{:?}", form_field);
+        let debug_str = format!("{form_field:?}");
         assert!(debug_str.contains("FormField"));
 
         let cloned = form_field.clone();
@@ -729,7 +726,7 @@ mod tests {
                 quadding,
             };
 
-            assert_eq!(options.quadding, quadding, "Failed for {}", description);
+            assert_eq!(options.quadding, quadding, "Failed for {description}");
         }
     }
 }

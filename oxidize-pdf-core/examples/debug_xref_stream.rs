@@ -23,6 +23,7 @@ fn main() -> Result<()> {
         let config = WriterConfig {
             use_xref_streams: true,
             pdf_version: "1.5".to_string(),
+            compress_streams: true,
         };
         let mut writer = oxidize_pdf::writer::PdfWriter::with_config(&mut buffer, config);
         writer.write_document(&mut doc)?;
@@ -40,14 +41,14 @@ fn main() -> Result<()> {
         if let Some(eof_pos) = after_startxref.find("\n%%EOF") {
             let xref_offset_str = &after_startxref[..eof_pos];
             if let Ok(xref_offset) = xref_offset_str.trim().parse::<usize>() {
-                println!("XRef stream offset: {}", xref_offset);
+                println!("XRef stream offset: {xref_offset}");
 
                 // Show the xref stream object
                 if xref_offset < buffer.len() {
                     // Show context around xref position
                     let start = xref_offset.saturating_sub(50);
                     let end = (xref_offset + 200).min(buffer.len());
-                    println!("\nContext around XRef position {}:", xref_offset);
+                    println!("\nContext around XRef position {xref_offset}:");
                     println!("---");
                     println!("{}", String::from_utf8_lossy(&buffer[start..end]));
                     println!("---");
@@ -56,7 +57,7 @@ fn main() -> Result<()> {
                     if let Some(endobj_pos) = xref_content.find("\nendobj\n") {
                         let xref_obj = &xref_content[..endobj_pos + 8];
                         println!("\nXRef stream object:");
-                        println!("{}", xref_obj);
+                        println!("{xref_obj}");
 
                         // Show hex dump of stream data
                         if let Some(stream_start) = xref_obj.find("\nstream\n") {
@@ -65,8 +66,7 @@ fn main() -> Result<()> {
                                 let endstream_abs = xref_offset + endstream_pos;
 
                                 println!(
-                                    "\nStream positions: start={}, end={}",
-                                    stream_start_abs, endstream_abs
+                                    "\nStream positions: start={stream_start_abs}, end={endstream_abs}"
                                 );
 
                                 // Get the actual stream data
@@ -77,7 +77,7 @@ fn main() -> Result<()> {
                                 for (i, chunk) in stream_bytes.chunks(16).enumerate().take(4) {
                                     print!("{:04x}: ", i * 16);
                                     for byte in chunk {
-                                        print!("{:02x} ", byte);
+                                        print!("{byte:02x} ");
                                     }
                                     println!();
                                 }
@@ -90,7 +90,7 @@ fn main() -> Result<()> {
                                 use flate2::read::ZlibDecoder;
                                 use std::io::Read;
 
-                                let mut decoder = ZlibDecoder::new(&stream_bytes[..]);
+                                let mut decoder = ZlibDecoder::new(stream_bytes);
                                 let mut decompressed = Vec::new();
                                 match decoder.read_to_end(&mut decompressed) {
                                     Ok(_) => {
@@ -107,13 +107,13 @@ fn main() -> Result<()> {
                                         {
                                             print!("{:04x}: ", i * 16);
                                             for byte in chunk {
-                                                print!("{:02x} ", byte);
+                                                print!("{byte:02x} ");
                                             }
                                             println!();
                                         }
                                     }
                                     Err(e) => {
-                                        println!("Decompression failed: {}", e);
+                                        println!("Decompression failed: {e}");
                                     }
                                 }
                             }

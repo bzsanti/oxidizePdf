@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pdf_path = &args[1];
     let output_dir = PathBuf::from("extracted_images");
 
-    println!("Extracting images from: {}", pdf_path);
+    println!("Extracting images from: {pdf_path}");
     println!("Output directory: {}", output_dir.display());
 
     // Configure extraction options
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            eprintln!("Error extracting images: {}", e);
+            eprintln!("Error extracting images: {e}");
             std::process::exit(1);
         }
     }

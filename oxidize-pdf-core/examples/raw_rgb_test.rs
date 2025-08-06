@@ -63,7 +63,7 @@ fn main() -> Result<(), PdfError> {
     let output_file = "raw_rgb_test.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("🔍 This should show a red square with blue border");
 
     Ok(())

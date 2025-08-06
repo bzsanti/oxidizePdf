@@ -42,10 +42,10 @@ fn main() -> Result<(), PdfError> {
             println!("✅ JPEG embedded successfully");
         }
         Err(e) => {
-            println!("❌ Error creating JPEG: {}", e);
+            println!("❌ Error creating JPEG: {e}");
             page.text()
                 .at(50.0, 400.0)
-                .write(&format!("❌ Error: {}", e))?;
+                .write(&format!("❌ Error: {e}"))?;
         }
     }
 
@@ -55,7 +55,7 @@ fn main() -> Result<(), PdfError> {
     let output_file = "simple_jpeg_test.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("🔍 Please open this PDF to verify the JPEG appears correctly");
 
     Ok(())

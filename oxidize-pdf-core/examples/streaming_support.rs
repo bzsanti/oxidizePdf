@@ -75,7 +75,7 @@ fn demo_streaming_document() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("\nTotal pages processed: {}", page_count);
+    println!("\nTotal pages processed: {page_count}");
     println!("[Demo mode - actual PDF processing would show real content]");
 
     Ok(())
@@ -111,13 +111,13 @@ fn demo_incremental_parsing() -> Result<(), Box<dyn std::error::Error>> {
     process_incrementally(cursor, |event| {
         match event {
             ParseEvent::Header { version } => {
-                println!("  Found PDF header: version {}", version);
+                println!("  Found PDF header: version {version}");
             }
             ParseEvent::ObjectStart { id, generation } => {
-                println!("  Object start: {} {} obj", id, generation);
+                println!("  Object start: {id} {generation} obj");
             }
             ParseEvent::ObjectEnd { id, .. } => {
-                println!("  Object end: {} endobj", id);
+                println!("  Object end: {id} endobj");
             }
             ParseEvent::XRef { .. } => {
                 println!("  Found cross-reference table");
@@ -185,8 +185,8 @@ fn demo_chunk_processing() -> Result<(), Box<dyn std::error::Error>> {
     })?;
 
     println!("\nChunk summary:");
-    println!("  Text chunks: {}", text_chunks);
-    println!("  Graphics chunks: {}", graphics_chunks);
+    println!("  Text chunks: {text_chunks}");
+    println!("  Graphics chunks: {graphics_chunks}");
 
     Ok(())
 }
@@ -234,7 +234,7 @@ fn demo_text_streaming() -> Result<(), Box<dyn std::error::Error>> {
     // Extract all text
     println!("\nExtracted text (sorted by position):");
     let full_text = streamer.extract_text();
-    println!("  {}", full_text);
+    println!("  {full_text}");
 
     // Alternative: Stream text with callback
     println!("\nStreaming with callback:");
@@ -251,7 +251,7 @@ fn demo_text_streaming() -> Result<(), Box<dyn std::error::Error>> {
 #[allow(dead_code)]
 fn format_bytes(bytes: usize) -> String {
     if bytes < 1024 {
-        format!("{} B", bytes)
+        format!("{bytes} B")
     } else if bytes < 1024 * 1024 {
         format!("{:.1} KB", bytes as f64 / 1024.0)
     } else {

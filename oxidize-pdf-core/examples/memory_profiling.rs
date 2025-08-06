@@ -41,7 +41,7 @@ impl MemoryStats {
 
     fn format_bytes(bytes: usize) -> String {
         if bytes < 1024 {
-            format!("{} B", bytes)
+            format!("{bytes} B")
         } else if bytes < 1024 * 1024 {
             format!("{:.2} KB", bytes as f64 / 1024.0)
         } else if bytes < 1024 * 1024 * 1024 {
@@ -52,7 +52,7 @@ impl MemoryStats {
     }
 
     fn print_report(&self, title: &str) {
-        println!("\n{}", title);
+        println!("\n{title}");
         println!("{}", "=".repeat(60));
         println!(
             "Estimated Memory:   {}",
@@ -82,7 +82,7 @@ fn profile_eager_loading(path: &Path) -> Result<MemoryStats, Box<dyn std::error:
 
     // Force loading all pages
     let page_count = document.page_count()?;
-    println!("Document has {} pages", page_count);
+    println!("Document has {page_count} pages");
 
     let mut total_text_len = 0;
     let mut objects_loaded = 0;
@@ -130,8 +130,8 @@ fn profile_lazy_loading(path: &Path) -> Result<MemoryStats, Box<dyn std::error::
     let document = LazyDocument::new(reader, options)?;
 
     // Get page count without loading all pages
-    let page_count = document.page_count() as u32;
-    println!("Document has {} pages (lazy)", page_count);
+    let page_count = document.page_count();
+    println!("Document has {page_count} pages (lazy)");
 
     let mut objects_loaded = 0;
 
@@ -195,16 +195,13 @@ fn profile_streaming(path: &Path) -> Result<MemoryStats, Box<dyn std::error::Err
         }
 
         if page_num % 10 == 0 {
-            println!("Streaming: processed {} pages", page_num);
+            println!("Streaming: processed {page_num} pages");
         }
 
         Ok(ProcessingAction::Continue)
     })?;
 
-    println!(
-        "Streamed {} pages, extracted {} characters",
-        page_count, total_text_len
-    );
+    println!("Streamed {page_count} pages, extracted {total_text_len} characters");
 
     // Estimate memory usage for streaming
     // Only buffer size + current page in memory
@@ -257,9 +254,9 @@ fn compare_strategies(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let streaming_ratio = streaming_stats.estimated_bytes as f64 / file_size as f64;
 
     println!("Memory Usage Ratio (Peak Memory / File Size):");
-    println!("  Eager Loading:    {:.2}x", eager_ratio);
-    println!("  Lazy Loading:     {:.2}x", lazy_ratio);
-    println!("  Streaming:        {:.2}x", streaming_ratio);
+    println!("  Eager Loading:    {eager_ratio:.2}x");
+    println!("  Lazy Loading:     {lazy_ratio:.2}x");
+    println!("  Streaming:        {streaming_ratio:.2}x");
 
     println!("\nMemory Savings:");
     let lazy_savings =
@@ -267,8 +264,8 @@ fn compare_strategies(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let streaming_savings =
         (1.0 - streaming_stats.estimated_bytes as f64 / eager_stats.estimated_bytes as f64) * 100.0;
 
-    println!("  Lazy vs Eager:     {:.1}% reduction", lazy_savings);
-    println!("  Streaming vs Eager: {:.1}% reduction", streaming_savings);
+    println!("  Lazy vs Eager:     {lazy_savings:.1}% reduction");
+    println!("  Streaming vs Eager: {streaming_savings:.1}% reduction");
 
     println!("\nPerformance:");
     println!("  Eager Loading:    {} ms", eager_stats.elapsed_ms);
@@ -304,7 +301,7 @@ fn profile_batch(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
                     ));
                 }
                 Err(e) => {
-                    println!("  Error: {}", e);
+                    println!("  Error: {e}");
                 }
             }
         }

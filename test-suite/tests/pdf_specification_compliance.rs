@@ -41,7 +41,7 @@ fn test_all_pdf_versions() {
     for version in versions {
         let pdf_path = utils::fixtures_dir()
             .join("valid/minimal")
-            .join(format!("minimal_v{}.pdf", version));
+            .join(format!("minimal_v{version}.pdf"));
 
         if pdf_path.exists() {
             let pdf_data = std::fs::read(&pdf_path).unwrap();
@@ -57,7 +57,7 @@ fn test_all_pdf_versions() {
                 .find(|r| r.test_name.contains("Header"))
                 .unwrap();
 
-            assert!(header_test.passed, "Version {} header test failed", version);
+            assert!(header_test.passed, "Version {version} header test failed");
         }
     }
 }

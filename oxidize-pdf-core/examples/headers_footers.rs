@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         page.text()
             .set_font(Font::Helvetica, 24.0)
             .at(100.0, 700.0)
-            .write(&format!("Chapter {}", i))?
+            .write(&format!("Chapter {i}"))?
             .set_font(Font::TimesRoman, 12.0)
             .at(100.0, 650.0)
             .write("This is the main content of the page.")?

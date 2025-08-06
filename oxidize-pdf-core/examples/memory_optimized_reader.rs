@@ -33,14 +33,14 @@ fn compare_memory_usage(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Access multiple objects to populate cache
     let mut objects_accessed = 0;
     for obj_num in 1..100 {
-        if let Ok(_) = reader.get_object(obj_num, 0) {
+        if reader.get_object(obj_num, 0).is_ok() {
             objects_accessed += 1;
         }
     }
 
     let elapsed1 = start.elapsed();
-    println!("  Objects accessed: {}", objects_accessed);
-    println!("  Time elapsed: {:?}", elapsed1);
+    println!("  Objects accessed: {objects_accessed}");
+    println!("  Time elapsed: {elapsed1:?}");
     println!(
         "  Estimated memory: ~{} KB (unbounded)",
         (objects_accessed * 500) / 1024
@@ -61,18 +61,18 @@ fn compare_memory_usage(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     objects_accessed = 0;
     for obj_num in 1..100 {
-        if let Ok(_) = opt_reader.get_object(obj_num, 0) {
+        if opt_reader.get_object(obj_num, 0).is_ok() {
             objects_accessed += 1;
         }
     }
 
     let elapsed2 = start.elapsed();
     let stats = opt_reader.memory_stats();
-    println!("  Objects accessed: {}", objects_accessed);
+    println!("  Objects accessed: {objects_accessed}");
     println!("  Objects cached: {}", stats.cached_objects);
     println!("  Cache hits: {}", stats.cache_hits);
     println!("  Cache misses: {}", stats.cache_misses);
-    println!("  Time elapsed: {:?}", elapsed2);
+    println!("  Time elapsed: {elapsed2:?}");
     println!("  Estimated memory: ~{} KB (bounded)", (50 * 500) / 1024);
 
     drop(opt_reader);
@@ -90,18 +90,18 @@ fn compare_memory_usage(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     objects_accessed = 0;
     for obj_num in 1..100 {
-        if let Ok(_) = opt_reader.get_object(obj_num, 0) {
+        if opt_reader.get_object(obj_num, 0).is_ok() {
             objects_accessed += 1;
         }
     }
 
     let elapsed3 = start.elapsed();
     let stats = opt_reader.memory_stats();
-    println!("  Objects accessed: {}", objects_accessed);
+    println!("  Objects accessed: {objects_accessed}");
     println!("  Objects cached: {}", stats.cached_objects);
     println!("  Cache hits: {}", stats.cache_hits);
     println!("  Cache misses: {}", stats.cache_misses);
-    println!("  Time elapsed: {:?}", elapsed3);
+    println!("  Time elapsed: {elapsed3:?}");
     println!(
         "  Estimated memory: ~{} KB (bounded)",
         (stats.cached_objects * 500) / 1024
@@ -120,10 +120,7 @@ fn compare_memory_usage(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     } else {
         0.0
     };
-    println!(
-        "\nCache effectiveness (size=1000): {:.1}% hit rate",
-        cache_hit_rate
-    );
+    println!("\nCache effectiveness (size=1000): {cache_hit_rate:.1}% hit rate");
 
     Ok(())
 }
@@ -140,7 +137,7 @@ fn demonstrate_cache_eviction(path: &Path) -> Result<(), Box<dyn std::error::Err
     println!("\nAccessing objects 1-10...");
 
     for obj_num in 1..=10 {
-        if let Ok(_) = reader.get_object(obj_num, 0) {
+        if reader.get_object(obj_num, 0).is_ok() {
             let stats = reader.memory_stats();
             println!(
                 "  After accessing obj {}: cached={}, hits={}, misses={}",
@@ -152,7 +149,7 @@ fn demonstrate_cache_eviction(path: &Path) -> Result<(), Box<dyn std::error::Err
     println!("\nRe-accessing objects 1-5 (should be cache misses due to eviction)...");
     for obj_num in 1..=5 {
         let cache_hits_before = reader.memory_stats().cache_hits;
-        if let Ok(_) = reader.get_object(obj_num, 0) {
+        if reader.get_object(obj_num, 0).is_ok() {
             let stats_after = reader.memory_stats();
             let was_hit = stats_after.cache_hits > cache_hits_before;
             println!(
@@ -167,7 +164,7 @@ fn demonstrate_cache_eviction(path: &Path) -> Result<(), Box<dyn std::error::Err
     println!("\nRe-accessing objects 6-10 (should be cache hits)...");
     for obj_num in 6..=10 {
         let cache_hits_before = reader.memory_stats().cache_hits;
-        if let Ok(_) = reader.get_object(obj_num, 0) {
+        if reader.get_object(obj_num, 0).is_ok() {
             let stats_after = reader.memory_stats();
             let was_hit = stats_after.cache_hits > cache_hits_before;
             println!(
@@ -208,7 +205,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "--compare" => compare_memory_usage(path)?,
         "--eviction" => demonstrate_cache_eviction(path)?,
         _ => {
-            eprintln!("Unknown mode: {}", mode);
+            eprintln!("Unknown mode: {mode}");
             return Ok(());
         }
     }

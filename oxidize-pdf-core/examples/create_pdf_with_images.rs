@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "test_with_images.pdf"
     };
 
-    println!("Creating PDF with images: {}", output_path);
+    println!("Creating PDF with images: {output_path}");
 
     // Create a simple JPEG image data (minimal valid JPEG)
     let jpeg_data = create_minimal_jpeg();
@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Save the document
     doc.save(output_path)?;
 
-    println!("Successfully created PDF: {}", output_path);
+    println!("Successfully created PDF: {output_path}");
     println!("Note: Direct image embedding is not yet implemented in the current API.");
     println!("This example demonstrates the structure for future image support.");
 

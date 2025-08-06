@@ -26,7 +26,7 @@ fn test_course_glossary_circular_ref() {
 
     // Get page count
     let page_count = document.page_count().expect("Should get page count");
-    println!("PDF has {} pages", page_count);
+    println!("PDF has {page_count} pages");
 
     // Try to access each page
     let mut successful_pages = 0;
@@ -42,9 +42,9 @@ fn test_course_glossary_circular_ref() {
                 );
             }
             Err(e) => {
-                eprintln!("Failed to load page {}: {}", i, e);
+                eprintln!("Failed to load page {i}: {e}");
                 // This should not happen with our fix
-                panic!("Page {} failed with: {}", i, e);
+                panic!("Page {i} failed with: {e}");
             }
         }
     }
@@ -76,7 +76,7 @@ fn test_liars_and_outliers_circular_ref() {
 
     // Get page count
     let page_count = document.page_count().expect("Should get page count");
-    println!("PDF has {} pages", page_count);
+    println!("PDF has {page_count} pages");
 
     // Try to access first and last pages at minimum
     let first_page = document
@@ -122,14 +122,14 @@ fn test_cryptography_engineering_circular_ref() {
 
     // Get page count
     let page_count = document.page_count().expect("Should get page count");
-    println!("PDF has {} pages", page_count);
+    println!("PDF has {page_count} pages");
 
     // Try to access a few pages
     for i in [0, page_count / 2, page_count - 1].iter() {
         if *i < page_count {
             let page = document
                 .get_page(*i)
-                .expect(&format!("Should be able to get page {}", i));
+                .unwrap_or_else(|_| panic!("Should be able to get page {i}"));
             println!("Page {} size: {}x{}", i, page.width(), page.height());
         }
     }
@@ -159,11 +159,11 @@ fn test_circular_ref_batch() {
         let path = Path::new("tests/fixtures").join(pdf_name);
 
         if !path.exists() {
-            eprintln!("Skipping {}: not found", pdf_name);
+            eprintln!("Skipping {pdf_name}: not found");
             continue;
         }
 
-        println!("\nTesting {}", pdf_name);
+        println!("\nTesting {pdf_name}");
 
         // Open the PDF
         match PdfReader::open(&path) {
@@ -173,7 +173,7 @@ fn test_circular_ref_batch() {
                 // Get page count
                 match document.page_count() {
                     Ok(page_count) => {
-                        println!("  {} has {} pages", pdf_name, page_count);
+                        println!("  {pdf_name} has {page_count} pages");
 
                         // Try to get first page
                         match document.get_page(0) {
@@ -185,18 +185,18 @@ fn test_circular_ref_batch() {
                                 );
                             }
                             Err(e) => {
-                                eprintln!("  ERROR getting first page: {}", e);
-                                panic!("Should be able to get first page of {}", pdf_name);
+                                eprintln!("  ERROR getting first page: {e}");
+                                panic!("Should be able to get first page of {pdf_name}");
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("  ERROR getting page count: {}", e);
+                        eprintln!("  ERROR getting page count: {e}");
                     }
                 }
             }
             Err(e) => {
-                eprintln!("  ERROR opening PDF: {}", e);
+                eprintln!("  ERROR opening PDF: {e}");
             }
         }
     }

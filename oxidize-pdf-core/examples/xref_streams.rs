@@ -23,7 +23,7 @@ fn main() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 24.0)
             .at(50.0, 750.0)
-            .write(&format!("Page {}", i))?;
+            .write(&format!("Page {i}"))?;
 
         // Add some content
         page.text()
@@ -62,7 +62,7 @@ fn main() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 14.0)
             .at(297.5 - 50.0, 570.0) // Center text
-            .write(&format!("Object Count Example {}", i))?;
+            .write(&format!("Object Count Example {i}"))?;
 
         doc.add_page(page);
     }
@@ -75,6 +75,7 @@ fn main() -> Result<()> {
     let config = WriterConfig {
         use_xref_streams: true,
         pdf_version: "1.5".to_string(),
+        compress_streams: true,
     };
     doc.save_with_config("output/xref_stream_example.pdf", config)?;
     println!("Created PDF with XRef streams: output/xref_stream_example.pdf");
@@ -84,18 +85,18 @@ fn main() -> Result<()> {
     let stream_size = fs::metadata("output/xref_stream_example.pdf")?.len();
 
     println!("\nFile size comparison:");
-    println!("  Traditional XRef table: {} bytes", table_size);
-    println!("  XRef stream:           {} bytes", stream_size);
+    println!("  Traditional XRef table: {table_size} bytes");
+    println!("  XRef stream:           {stream_size} bytes");
 
     let savings = if stream_size < table_size {
         let saved = table_size - stream_size;
         let percent = (saved as f64 / table_size as f64) * 100.0;
-        format!("{} bytes ({:.1}% smaller)", saved, percent)
+        format!("{saved} bytes ({percent:.1}% smaller)")
     } else {
         "No savings (document too small)".to_string()
     };
 
-    println!("  Savings:               {}", savings);
+    println!("  Savings:               {savings}");
 
     Ok(())
 }

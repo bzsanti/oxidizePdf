@@ -1362,9 +1362,9 @@ startxref
         options.max_recovery_bytes = 2000;
         options.collect_warnings = true;
         let cloned = options.clone();
-        assert_eq!(cloned.lenient_streams, true);
+        assert!(cloned.lenient_streams);
         assert_eq!(cloned.max_recovery_bytes, 2000);
-        assert_eq!(cloned.collect_warnings, true);
+        assert!(cloned.collect_warnings);
     }
 
     // ===== ENCRYPTION INTEGRATION TESTS =====

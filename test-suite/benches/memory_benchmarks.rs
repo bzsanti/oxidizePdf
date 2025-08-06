@@ -29,8 +29,8 @@ fn benchmark_array_memory_patterns(c: &mut Criterion) {
                         let obj = match i % 5 {
                             0 => Object::Integer(i as i64),
                             1 => Object::Boolean(i % 2 == 0),
-                            2 => Object::String(format!("String_{}", i)),
-                            3 => Object::Name(format!("Name_{}", i)),
+                            2 => Object::String(format!("String_{i}")),
+                            3 => Object::Name(format!("Name_{i}")),
                             _ => Object::Real(i as f64 * 0.1),
                         };
                         array.push(black_box(obj));
@@ -49,7 +49,7 @@ fn benchmark_array_memory_patterns(c: &mut Criterion) {
                     let objects: Vec<Object> = (0..size)
                         .map(|i| match i % 3 {
                             0 => Object::Integer(i as i64),
-                            1 => Object::String(format!("Str{}", i)),
+                            1 => Object::String(format!("Str{i}")),
                             _ => Object::Boolean(i % 2 == 0),
                         })
                         .collect();
@@ -64,7 +64,7 @@ fn benchmark_array_memory_patterns(c: &mut Criterion) {
         if size <= 10000 {
             // Limit for clone benchmarks
             let test_objects: Vec<Object> = (0..size)
-                .map(|i| Object::String(format!("CloneTest_{}", i)))
+                .map(|i| Object::String(format!("CloneTest_{i}")))
                 .collect();
             let large_array = Array::from(test_objects);
 
@@ -100,13 +100,13 @@ fn benchmark_dictionary_memory_patterns(c: &mut Criterion) {
                 b.iter(|| {
                     let mut dict = PdfDictionary::new();
                     for i in 0..size {
-                        let key = format!("Key_{:06}", i); // Fixed width for consistent memory
+                        let key = format!("Key_{i:06}"); // Fixed width for consistent memory
                         let value = match i % 4 {
                             0 => PdfObject::Integer(i as i64),
                             1 => PdfObject::Boolean(i % 2 == 0),
-                            2 => PdfObject::Name(PdfName::new(format!("Name_{}", i))),
+                            2 => PdfObject::Name(PdfName::new(format!("Name_{i}"))),
                             _ => PdfObject::String(oxidize_pdf::parser::objects::PdfString::new(
-                                format!("Value_{}", i).into_bytes(),
+                                format!("Value_{i}").into_bytes(),
                             )),
                         };
                         dict.insert(black_box(key), black_box(value));
@@ -124,7 +124,7 @@ fn benchmark_dictionary_memory_patterns(c: &mut Criterion) {
                 b.iter(|| {
                     let mut dict = PdfDictionary::new();
                     for i in 0..size {
-                        let key = format!("LargeKey_{}", i);
+                        let key = format!("LargeKey_{i}");
                         // Create larger string values to test memory pressure
                         let large_value = "x".repeat(100 + (i % 500));
                         dict.insert(
@@ -144,9 +144,9 @@ fn benchmark_dictionary_memory_patterns(c: &mut Criterion) {
             let mut test_dict = PdfDictionary::new();
             for i in 0..size {
                 test_dict.insert(
-                    format!("Key{}", i),
+                    format!("Key{i}"),
                     PdfObject::String(oxidize_pdf::parser::objects::PdfString::new(
-                        format!("ComplexValue_{}_with_content", i).into_bytes(),
+                        format!("ComplexValue_{i}_with_content").into_bytes(),
                     )),
                 );
             }
@@ -350,7 +350,7 @@ fn benchmark_string_memory_patterns(c: &mut Criterion) {
         for str_size in &string_sizes {
             // Memory allocation for PdfObject strings
             group.bench_with_input(
-                BenchmarkId::new("pdf_strings", format!("{}x{}", count, str_size)),
+                BenchmarkId::new("pdf_strings", format!("{count}x{str_size}")),
                 &(count, *str_size),
                 |b, &(count, size)| {
                     b.iter(|| {
@@ -369,7 +369,7 @@ fn benchmark_string_memory_patterns(c: &mut Criterion) {
 
             // Memory allocation for PdfName objects
             group.bench_with_input(
-                BenchmarkId::new("pdf_names", format!("{}x{}", count, str_size)),
+                BenchmarkId::new("pdf_names", format!("{count}x{str_size}")),
                 &(count, *str_size),
                 |b, &(count, size)| {
                     b.iter(|| {
@@ -413,7 +413,7 @@ fn benchmark_nested_structure_memory(c: &mut Criterion) {
                         dict.insert(
                             "Data".to_string(),
                             PdfObject::String(oxidize_pdf::parser::objects::PdfString::new(
-                                format!("Level_{}_content", remaining_depth).into_bytes(),
+                                format!("Level_{remaining_depth}_content").into_bytes(),
                             )),
                         );
 
@@ -443,7 +443,7 @@ fn benchmark_nested_structure_memory(c: &mut Criterion) {
                         let mut array_items = vec![
                             PdfObject::Integer(remaining_depth as i64),
                             PdfObject::String(oxidize_pdf::parser::objects::PdfString::new(
-                                format!("ArrayLevel_{}", remaining_depth).into_bytes(),
+                                format!("ArrayLevel_{remaining_depth}").into_bytes(),
                             )),
                         ];
 

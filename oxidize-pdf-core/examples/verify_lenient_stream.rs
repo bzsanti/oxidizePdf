@@ -54,14 +54,14 @@ startxref
                     println!("  ✓ Object 4 retrieved");
                     if let Some(stream) = obj.as_stream() {
                         let content = String::from_utf8_lossy(&stream.data);
-                        println!("  Stream content: '{}'", content);
+                        println!("  Stream content: '{content}'");
                         println!("  Stream length: {} bytes", stream.data.len());
                     }
                 }
-                Err(e) => println!("  ✗ Failed to get object 4: {}", e),
+                Err(e) => println!("  ✗ Failed to get object 4: {e}"),
             }
         }
-        Err(e) => println!("  ✗ Failed to parse PDF: {}", e),
+        Err(e) => println!("  ✗ Failed to parse PDF: {e}"),
     }
 
     // Test with lenient mode
@@ -79,7 +79,7 @@ startxref
                     println!("  ✓ Object 4 retrieved");
                     if let Some(stream) = obj.as_stream() {
                         let content = String::from_utf8_lossy(&stream.data);
-                        println!("  Stream content: '{}'", content);
+                        println!("  Stream content: '{content}'");
                         println!("  Stream length: {} bytes", stream.data.len());
 
                         if stream.data.len() > 20 {
@@ -93,9 +93,9 @@ startxref
                         }
                     }
                 }
-                Err(e) => println!("  ✗ Failed to get object 4: {}", e),
+                Err(e) => println!("  ✗ Failed to get object 4: {e}"),
             }
         }
-        Err(e) => println!("  ✗ Failed to parse PDF: {}", e),
+        Err(e) => println!("  ✗ Failed to parse PDF: {e}"),
     }
 }

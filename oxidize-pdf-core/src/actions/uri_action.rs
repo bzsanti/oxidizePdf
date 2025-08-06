@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn test_uri_action_flags_debug() {
         let flags = UriActionFlags { is_map: true };
-        let debug_str = format!("{:?}", flags);
+        let debug_str = format!("{flags:?}");
         assert!(debug_str.contains("UriActionFlags"));
         assert!(debug_str.contains("is_map: true"));
     }
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn test_uri_action_debug() {
         let action = UriAction::web("https://example.com");
-        let debug_str = format!("{:?}", action);
+        let debug_str = format!("{action:?}");
         assert!(debug_str.contains("UriAction"));
         assert!(debug_str.contains("https://example.com"));
     }

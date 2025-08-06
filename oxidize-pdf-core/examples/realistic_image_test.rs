@@ -88,7 +88,7 @@ fn main() -> Result<(), PdfError> {
     let output_file = "realistic_image_test.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("🔍 Open this PDF to verify that images display correctly:");
     println!("   • Rainbow gradient should show smooth color transitions");
     println!("   • Checkerboard should show clear black and white squares");

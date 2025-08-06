@@ -1125,7 +1125,7 @@ mod comprehensive_tests {
             let result = analyzer.document.page_count();
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), 1);
-            println!("Analyzer {} works correctly", i);
+            println!("Analyzer {i} works correctly");
         }
     }
 
@@ -1529,7 +1529,7 @@ startxref
             let analyzer = PageContentAnalyzer::new(doc);
             let result = analyzer.analyze_page(0);
             assert!(result.is_ok());
-            println!("Analyzer {} completed analysis", i);
+            println!("Analyzer {i} completed analysis");
         }
     }
 
@@ -1664,7 +1664,7 @@ startxref
 
         // Verify all analyzers produced consistent results
         for (i, page_type) in &all_results {
-            println!("Analyzer {} detected page type: {:?}", i, page_type);
+            println!("Analyzer {i} detected page type: {page_type:?}");
         }
     }
 

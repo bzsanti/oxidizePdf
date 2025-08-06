@@ -101,7 +101,7 @@ fn create_navigation_document() -> Result<()> {
     doc.add_page(toc_page);
 
     // Create content pages
-    let chapters = vec![
+    let chapters = [
         ("Introduction", "Welcome to this PDF navigation example."),
         ("Chapter One", "This chapter demonstrates GoTo actions."),
         (

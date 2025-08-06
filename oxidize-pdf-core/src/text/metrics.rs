@@ -357,7 +357,7 @@ mod tests {
 
         for font in &fonts {
             // Should not panic - all fonts should have metrics
-            let _width = measure_text("A", *font, 12.0);
+            let _width = measure_text("A", font.clone(), 12.0);
         }
     }
 
@@ -383,10 +383,7 @@ mod tests {
             let expected = *expected_width as f64;
             assert!(
                 (width - expected).abs() < 0.1,
-                "Character '{}' width mismatch: {} vs {}",
-                ch,
-                width,
-                expected
+                "Character '{ch}' width mismatch: {width} vs {expected}"
             );
         }
     }
@@ -411,7 +408,7 @@ mod tests {
         for (ch, expected_width) in &chars {
             let width = measure_char(*ch, Font::TimesRoman, 1000.0);
             let expected = *expected_width as f64;
-            assert_eq!(width, expected, "Character '{}' width mismatch", ch);
+            assert_eq!(width, expected, "Character '{ch}' width mismatch");
         }
     }
 
@@ -423,11 +420,7 @@ mod tests {
 
         for ch in &chars {
             let width = measure_char(*ch, Font::Courier, 1000.0);
-            assert_eq!(
-                width, 600.0,
-                "Courier character '{}' should be 600 units",
-                ch
-            );
+            assert_eq!(width, 600.0, "Courier character '{ch}' should be 600 units");
         }
     }
 
@@ -440,8 +433,7 @@ mod tests {
             let expected = 667.0 * size / 1000.0; // Helvetica 'A' = 667 units
             assert!(
                 (width - expected).abs() < 0.01,
-                "Size {} scaling incorrect",
-                size
+                "Size {size} scaling incorrect"
             );
         }
     }

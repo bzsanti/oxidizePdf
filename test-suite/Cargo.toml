@@ -37,6 +37,27 @@ path = "src/lib.rs"
 name = "generate-test-pdfs"
 path = "src/bin/generate_test_pdfs.rs"
 
+[[bin]]
+name = "iso-compliance-report"
+path = "src/bin/iso_compliance_report.rs"
+
+[[bin]]
+name = "iso-compliance-report-fixed"
+path = "src/bin/iso_compliance_report_fixed.rs"
+
+[[bin]]
+name = "iso-compliance-report-v2"
+path = "src/bin/iso_compliance_report_v2.rs"
+
+[[bin]]
+name = "iso-compliance-report-v3"
+path = "src/bin/iso_compliance_report_v3.rs"
+
+[[bin]]
+name = "iso-compliance-report-final"
+path = "src/bin/iso_compliance_report_final.rs"
+
+
 [[bench]]
 name = "parser_bench"
 harness = false

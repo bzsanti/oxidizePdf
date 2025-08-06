@@ -16,12 +16,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let filename = &args[1];
     if !Path::new(filename).exists() {
-        eprintln!("Error: File '{}' not found", filename);
+        eprintln!("Error: File '{filename}' not found");
         std::process::exit(1);
     }
 
     // Open the PDF document
-    println!("Opening PDF: {}", filename);
+    println!("Opening PDF: {filename}");
     let reader = PdfReader::open(filename)?;
     let document = PdfDocument::new(reader);
 
@@ -33,10 +33,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get metadata
     let metadata = document.metadata()?;
     if let Some(title) = metadata.title {
-        println!("  Title: {}", title);
+        println!("  Title: {title}");
     }
     if let Some(author) = metadata.author {
-        println!("  Author: {}", author);
+        println!("  Author: {author}");
     }
 
     // Process all annotations
@@ -60,17 +60,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Get annotation type
                 if let Some(subtype) = annot.get("Subtype").and_then(|t| t.as_name()) {
-                    println!("      Type: {:?}", subtype);
+                    println!("      Type: {subtype:?}");
                 }
 
                 // Get annotation contents
                 if let Some(contents) = annot.get("Contents").and_then(|c| c.as_string()) {
-                    println!("      Contents: {:?}", contents);
+                    println!("      Contents: {contents:?}");
                 }
 
                 // Get annotation title/author
                 if let Some(title) = annot.get("T").and_then(|t| t.as_string()) {
-                    println!("      Author: {:?}", title);
+                    println!("      Author: {title:?}");
                 }
 
                 // Get annotation rectangle
@@ -113,25 +113,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Special handling for specific annotation types
                 if let Some(subtype) = annot.get("Subtype").and_then(|t| t.as_name()) {
-                    let subtype_str = format!("{:?}", subtype);
+                    let subtype_str = format!("{subtype:?}");
                     match subtype_str.as_str() {
                         "PdfName(\"Link\")" => {
                             if let Some(action) = annot.get("A").and_then(|a| a.as_dict()) {
                                 if let Some(s) = action.get("S").and_then(|s| s.as_name()) {
-                                    let s_str = format!("{:?}", s);
+                                    let s_str = format!("{s:?}");
                                     match s_str.as_str() {
                                         s if s.contains("URI") => {
                                             if let Some(uri) =
                                                 action.get("URI").and_then(|u| u.as_string())
                                             {
-                                                println!("      Link URL: {:?}", uri);
+                                                println!("      Link URL: {uri:?}");
                                             }
                                         }
                                         s if s.contains("GoTo") => {
                                             println!("      Link Type: Internal navigation");
                                         }
                                         _ => {
-                                            println!("      Link Type: {:?}", s);
+                                            println!("      Link Type: {s:?}");
                                         }
                                     }
                                 }
@@ -139,7 +139,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         "PdfName(\"Text\")" => {
                             if let Some(icon) = annot.get("Name").and_then(|n| n.as_name()) {
-                                println!("      Icon: {:?}", icon);
+                                println!("      Icon: {icon:?}");
                             }
                         }
                         s if s.contains("Highlight")
@@ -151,7 +151,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 annot.get("QuadPoints").and_then(|q| q.as_array())
                             {
                                 let num_quads = quad_points.len() / 8;
-                                println!("      Highlighted regions: {}", num_quads);
+                                println!("      Highlighted regions: {num_quads}");
                             }
                         }
                         _ => {}

@@ -150,7 +150,7 @@ fn demonstrate_interactive_decryption() {
     println!("```rust");
     println!("let provider = ConsolePasswordProvider;");
     println!("let interactive = InteractiveDecryption::new(provider);");
-    println!("");
+    println!();
     println!("match interactive.unlock_pdf(&mut handler)? {{");
     println!("  PasswordResult::Success => {{");
     println!("    println!(\"PDF unlocked successfully!\");");

@@ -187,7 +187,7 @@ fn add_table_of_contents(doc: &mut Document) -> Result<()> {
             .begin_text()
             .set_font(Font::Helvetica, 14.0)
             .set_text_position(70.0, y)
-            .show_text(&format!("{}....{}", section, page_num))?
+            .show_text(&format!("{section}....{page_num}"))?
             .end_text();
         y -= 30.0;
     }
@@ -427,18 +427,18 @@ fn create_test_documents_for_operations() -> Result<()> {
     // Create simple test docs
     for i in 1..=3 {
         let mut doc = Document::new();
-        doc.set_title(&format!("Test Document {}", i));
+        doc.set_title(format!("Test Document {i}"));
 
         let mut page = Page::a4();
         page.graphics()
             .begin_text()
             .set_font(Font::Helvetica, 18.0)
             .set_text_position(100.0, 400.0)
-            .show_text(&format!("This is test document {}", i))?
+            .show_text(&format!("This is test document {i}"))?
             .end_text();
 
         doc.add_page(page);
-        doc.save(&format!("showcase_test_{}.pdf", i))?;
+        doc.save(format!("showcase_test_{i}.pdf"))?;
     }
 
     Ok(())

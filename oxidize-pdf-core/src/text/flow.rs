@@ -78,7 +78,7 @@ impl TextFlowContext {
 
         // Build lines based on width constraints
         for word in words {
-            let word_width = measure_text(word, self.current_font, self.font_size);
+            let word_width = measure_text(word, self.current_font.clone(), self.font_size);
 
             // Check if we need to start a new line
             if !current_line.is_empty() && current_width + word_width > content_width {
@@ -98,7 +98,7 @@ impl TextFlowContext {
         // Render each line
         for (i, line) in lines.iter().enumerate() {
             let line_text = line.join("");
-            let line_width = measure_text(&line_text, self.current_font, self.font_size);
+            let line_width = measure_text(&line_text, self.current_font.clone(), self.font_size);
 
             // Calculate x position based on alignment
             let x = match self.alignment {
@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn test_text_align_debug() {
         let align = TextAlign::Center;
-        let debug_str = format!("{:?}", align);
+        let debug_str = format!("{align:?}");
         assert_eq!(debug_str, "Center");
     }
 
@@ -672,11 +672,12 @@ mod tests {
 
         for font in fonts {
             context.clear();
+            let font_name = font.pdf_name();
             context.set_font(font, 14.0);
             context.write_wrapped("Test text").unwrap();
 
             let ops = context.operations();
-            assert!(ops.contains(&format!("/{} 14 Tf", font.pdf_name())));
+            assert!(ops.contains(&format!("/{font_name} 14 Tf")));
         }
     }
 
@@ -693,7 +694,7 @@ mod tests {
             context.write_wrapped("Test").unwrap();
 
             let ops = context.operations();
-            assert!(ops.contains(&format!("/Helvetica {} Tf", size)));
+            assert!(ops.contains(&format!("/Helvetica {size} Tf")));
         }
     }
 

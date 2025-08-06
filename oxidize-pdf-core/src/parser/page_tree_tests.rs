@@ -408,7 +408,7 @@ startxref\n\
             annotations: None,
         };
 
-        let debug_str = format!("{:?}", page);
+        let debug_str = format!("{page:?}");
         assert!(debug_str.contains("ParsedPage"));
         assert!(debug_str.contains("(1, 0)"));
         assert!(debug_str.contains("rotation: 90"));

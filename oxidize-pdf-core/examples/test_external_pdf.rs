@@ -45,17 +45,17 @@ fn test_single_pdf(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
             match reader.metadata() {
                 Ok(metadata) => {
                     if let Some(title) = &metadata.title {
-                        println!("  Title: {}", title);
+                        println!("  Title: {title}");
                     }
                     if let Some(author) = &metadata.author {
-                        println!("  Author: {}", author);
+                        println!("  Author: {author}");
                     }
                     if let Some(pages) = metadata.page_count {
-                        println!("  Pages: {}", pages);
+                        println!("  Pages: {pages}");
                     }
                 }
                 Err(e) => {
-                    println!("  ⚠ Warning: Could not read metadata: {:?}", e);
+                    println!("  ⚠ Warning: Could not read metadata: {e:?}");
                 }
             }
 
@@ -65,7 +65,7 @@ fn test_single_pdf(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
             // Try to get page count
             match document.page_count() {
                 Ok(count) => {
-                    println!("  Page count: {}", count);
+                    println!("  Page count: {count}");
 
                     // Try to access first page
                     if count > 0 {
@@ -74,13 +74,13 @@ fn test_single_pdf(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
                                 println!("  ✓ First page accessible");
                             }
                             Err(e) => {
-                                println!("  ✗ Could not access first page: {:?}", e);
+                                println!("  ✗ Could not access first page: {e:?}");
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    println!("  ✗ Could not get page count: {:?}", e);
+                    println!("  ✗ Could not get page count: {e:?}");
                 }
             }
 
@@ -97,15 +97,15 @@ fn test_single_pdf(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 Err(e) => {
-                    println!("  ⚠ Text extraction failed: {:?}", e);
+                    println!("  ⚠ Text extraction failed: {e:?}");
                 }
             }
         }
         Err(e) => {
-            println!("✗ Failed to parse PDF: {:?}", e);
+            println!("✗ Failed to parse PDF: {e:?}");
 
             // Try to identify the specific issue
-            let error_str = format!("{:?}", e);
+            let error_str = format!("{e:?}");
             if error_str.contains("InvalidHeader") {
                 println!("  Issue: Invalid PDF header (not a PDF file?)");
             } else if error_str.contains("InvalidXref") {
@@ -154,7 +154,7 @@ fn test_directory(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\nSummary:");
-    println!("  Total PDFs: {}", total);
+    println!("  Total PDFs: {total}");
     println!(
         "  Passed: {} ({:.1}%)",
         passed,

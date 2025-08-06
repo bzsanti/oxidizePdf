@@ -53,7 +53,7 @@ fn main() {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
 
         // Simple test: can we open and get basic info?
-        match PdfReader::open(&path) {
+        match PdfReader::open(path) {
             Ok(mut reader) => {
                 // Try to get page count
                 match reader.page_count() {
@@ -98,7 +98,7 @@ fn main() {
     errors.sort_by(|a, b| b.1.cmp(a.1));
 
     for (error, count) in errors.iter().take(10) {
-        println!("  {}: {} PDFs", error, count);
+        println!("  {error}: {count} PDFs");
     }
 
     // Save detailed report
@@ -123,12 +123,12 @@ fn main() {
 
     writeln!(file, "Error Categories:").unwrap();
     for (error, count) in errors.iter() {
-        writeln!(file, "  {}: {} PDFs", error, count).unwrap();
+        writeln!(file, "  {error}: {count} PDFs").unwrap();
     }
 
     writeln!(file, "\nFirst 100 Failed PDFs:").unwrap();
     for (filename, error) in report.error_files.iter().take(100) {
-        writeln!(file, "  {}: {}", filename, error).unwrap();
+        writeln!(file, "  {filename}: {error}").unwrap();
     }
 
     println!("\nReport saved to: simple_pdf_analysis.txt");

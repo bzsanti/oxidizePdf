@@ -16,11 +16,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let filename = &args[1];
     if !Path::new(filename).exists() {
-        eprintln!("Error: File '{}' not found", filename);
+        eprintln!("Error: File '{filename}' not found");
         std::process::exit(1);
     }
 
-    println!("🔍 Checking for forms in: {}", filename);
+    println!("🔍 Checking for forms in: {filename}");
 
     let reader = PdfReader::open(filename)?;
     let document = PdfDocument::new(reader);
@@ -50,8 +50,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\n📊 Summary:");
-    println!("• Total pages with annotations: {}", pages_with_annotations);
-    println!("• Total annotations found: {}", total_annotations);
+    println!("• Total pages with annotations: {pages_with_annotations}");
+    println!("• Total annotations found: {total_annotations}");
 
     if total_annotations > 0 {
         println!("✅ PDF contains annotations (potential form fields)");

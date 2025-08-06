@@ -114,7 +114,7 @@ impl PdfRenderer {
 
         // Process each content stream
         for (stream_idx, stream) in streams.iter().enumerate() {
-            println!("Processing content stream {}", stream_idx);
+            println!("Processing content stream {stream_idx}");
             let operations = ContentParser::parse(stream)?;
             self.process_operations(operations)?;
         }
@@ -130,10 +130,7 @@ impl PdfRenderer {
                     font,
                     size,
                 } => {
-                    println!(
-                        "Text at ({:.2}, {:.2}): '{}' [Font: {}, Size: {}]",
-                        x, y, text, font, size
-                    );
+                    println!("Text at ({x:.2}, {y:.2}): '{text}' [Font: {font}, Size: {size}]");
                 }
                 RenderItem::Path {
                     commands,
@@ -143,13 +140,10 @@ impl PdfRenderer {
                 } => {
                     println!("Path with {} commands", commands.len());
                     if let Some((r, g, b)) = stroke {
-                        println!(
-                            "  Stroke: RGB({:.2}, {:.2}, {:.2}), Width: {}",
-                            r, g, b, line_width
-                        );
+                        println!("  Stroke: RGB({r:.2}, {g:.2}, {b:.2}), Width: {line_width}");
                     }
                     if let Some((r, g, b)) = fill {
-                        println!("  Fill: RGB({:.2}, {:.2}, {:.2})", r, g, b);
+                        println!("  Fill: RGB({r:.2}, {g:.2}, {b:.2})");
                     }
                 }
                 RenderItem::Image {
@@ -159,10 +153,7 @@ impl PdfRenderer {
                     height,
                     xobject_name,
                 } => {
-                    println!(
-                        "Image '{}' at ({:.2}, {:.2}) size {}x{}",
-                        xobject_name, x, y, width, height
-                    );
+                    println!("Image '{xobject_name}' at ({x:.2}, {y:.2}) size {width}x{height}");
                 }
             }
         }
@@ -221,7 +212,7 @@ impl PdfRenderer {
                                     .get("Height")
                                     .and_then(|h| h.as_integer())
                                     .unwrap_or(0);
-                                println!("    Image dimensions: {}x{}", width, height);
+                                println!("    Image dimensions: {width}x{height}");
                             }
                         }
                     }
@@ -469,14 +460,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let page_count = document.page_count()?;
     let metadata = document.metadata()?;
 
-    println!("PDF Document: {}", pdf_path);
+    println!("PDF Document: {pdf_path}");
     println!("Version: {}", document.version()?);
-    println!("Pages: {}", page_count);
+    println!("Pages: {page_count}");
     if let Some(title) = &metadata.title {
-        println!("Title: {}", title);
+        println!("Title: {title}");
     }
     if let Some(author) = &metadata.author {
-        println!("Author: {}", author);
+        println!("Author: {author}");
     }
     println!();
 

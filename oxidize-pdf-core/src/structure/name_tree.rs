@@ -134,7 +134,7 @@ impl NameTree {
         if let Some(Object::Array(names_array)) = dict.get("Names") {
             let items: Vec<&Object> = names_array.iter().collect();
 
-            if items.len() % 2 != 0 {
+            if !items.len().is_multiple_of(2) {
                 return Err(PdfError::InvalidStructure(
                     "Names array must have even length".to_string(),
                 ));
@@ -267,7 +267,7 @@ mod tests {
         names.insert("Test".to_string(), Object::Boolean(true));
         let node = NameTreeNode::leaf(names);
 
-        let debug_str = format!("{:?}", node);
+        let debug_str = format!("{node:?}");
         assert!(debug_str.contains("NameTreeNode"));
 
         let cloned = node.clone();
@@ -311,7 +311,7 @@ mod tests {
         match dict.get("Kids") {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 2);
-                assert!(matches!(arr.get(0), Some(Object::Reference(_))));
+                assert!(matches!(arr.first(), Some(Object::Reference(_))));
             }
             _ => panic!("Kids should be an array"),
         }
@@ -320,7 +320,7 @@ mod tests {
         match dict.get("Limits") {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 2);
-                assert_eq!(arr.get(0), Some(&Object::String("A".to_string())));
+                assert_eq!(arr.first(), Some(&Object::String("A".to_string())));
                 assert_eq!(arr.get(1), Some(&Object::String("M".to_string())));
             }
             _ => panic!("Limits should be an array"),
@@ -411,7 +411,7 @@ mod tests {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 6); // 3 key-value pairs = 6 elements
                                           // Names array should be: ["First", 1, "Second", 2, "Third", 3]
-                assert_eq!(arr.get(0), Some(&Object::String("First".to_string())));
+                assert_eq!(arr.first(), Some(&Object::String("First".to_string())));
                 assert_eq!(arr.get(1), Some(&Object::Integer(1)));
                 assert_eq!(arr.get(2), Some(&Object::String("Second".to_string())));
                 assert_eq!(arr.get(3), Some(&Object::Integer(2)));
@@ -622,7 +622,7 @@ mod tests {
         match tree.get("ArrayEntry") {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 3);
-                assert_eq!(arr.get(0), Some(&Object::Integer(1)));
+                assert_eq!(arr.first(), Some(&Object::Integer(1)));
             }
             _ => panic!("Should get array value"),
         }
@@ -633,7 +633,7 @@ mod tests {
         let mut tree = NameTree::new();
 
         // Add items in random order
-        let items = vec!["Zebra", "Alpha", "Mike", "Charlie", "Bravo"];
+        let items = ["Zebra", "Alpha", "Mike", "Charlie", "Bravo"];
         for (i, name) in items.iter().enumerate() {
             tree.add(name.to_string(), Object::Integer(i as i64));
         }
@@ -643,7 +643,7 @@ mod tests {
         match dict.get("Names") {
             Some(Object::Array(arr)) => {
                 // BTreeMap should maintain sorted order
-                assert_eq!(arr.get(0), Some(&Object::String("Alpha".to_string())));
+                assert_eq!(arr.first(), Some(&Object::String("Alpha".to_string())));
                 assert_eq!(arr.get(2), Some(&Object::String("Bravo".to_string())));
                 assert_eq!(arr.get(4), Some(&Object::String("Charlie".to_string())));
                 assert_eq!(arr.get(6), Some(&Object::String("Mike".to_string())));

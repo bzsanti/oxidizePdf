@@ -35,7 +35,7 @@ mod tests {
         let original = b"Hello, this is a test string that should be compressed and decompressed!";
 
         let compressed = compress(original).unwrap();
-        assert!(compressed.len() > 0);
+        assert!(!compressed.is_empty());
 
         let decompressed = decompress(&compressed).unwrap();
         assert_eq!(decompressed, original);
@@ -44,7 +44,7 @@ mod tests {
     #[test]
     fn test_compress_empty() {
         let compressed = compress(b"").unwrap();
-        assert!(compressed.len() > 0); // Even empty data has headers
+        assert!(!compressed.is_empty()); // Even empty data has headers
 
         let decompressed = decompress(&compressed).unwrap();
         assert_eq!(decompressed, b"");

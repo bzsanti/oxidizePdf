@@ -42,6 +42,11 @@ impl EncryptionKey {
     pub fn is_empty(&self) -> bool {
         self.key.is_empty()
     }
+
+    /// Get key as bytes
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.key
+    }
 }
 
 /// Security handler revision
@@ -62,9 +67,9 @@ pub enum SecurityHandlerRevision {
 /// Standard Security Handler
 pub struct StandardSecurityHandler {
     /// Revision
-    revision: SecurityHandlerRevision,
+    pub revision: SecurityHandlerRevision,
     /// Key length in bytes
-    key_length: usize,
+    pub key_length: usize,
 }
 
 impl StandardSecurityHandler {
@@ -699,7 +704,7 @@ mod tests {
     #[test]
     fn test_user_password_debug() {
         let pwd = UserPassword("debug_test".to_string());
-        let debug_str = format!("{:?}", pwd);
+        let debug_str = format!("{pwd:?}");
         assert!(debug_str.contains("UserPassword"));
         assert!(debug_str.contains("debug_test"));
     }
@@ -707,7 +712,7 @@ mod tests {
     #[test]
     fn test_owner_password_debug() {
         let pwd = OwnerPassword("owner_debug".to_string());
-        let debug_str = format!("{:?}", pwd);
+        let debug_str = format!("{pwd:?}");
         assert!(debug_str.contains("OwnerPassword"));
         assert!(debug_str.contains("owner_debug"));
     }
@@ -715,7 +720,7 @@ mod tests {
     #[test]
     fn test_encryption_key_debug() {
         let key = EncryptionKey::new(vec![0x01, 0x02, 0x03]);
-        let debug_str = format!("{:?}", key);
+        let debug_str = format!("{key:?}");
         assert!(debug_str.contains("EncryptionKey"));
     }
 

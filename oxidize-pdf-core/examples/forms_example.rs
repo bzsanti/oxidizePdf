@@ -16,17 +16,17 @@ fn main() -> Result<()> {
 
     // Add a page
     let mut page = Page::a4();
-    let font = Font::Helvetica;
+    // Using Font::Helvetica directly to avoid move issues
 
     // Set up page dimensions
     page.text()
-        .set_font(font, 14.0)
+        .set_font(Font::Helvetica, 14.0)
         .at(50.0, 750.0)
         .write("PDF Forms Example")?;
 
     // Add a text field
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(50.0, 700.0)
         .write("Name:")?;
 
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
 
     // Add a checkbox
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(50.0, 650.0)
         .write("Subscribe to newsletter:")?;
 
@@ -50,7 +50,7 @@ fn main() -> Result<()> {
 
     // Add radio buttons
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(50.0, 600.0)
         .write("Contact method:")?;
 
@@ -62,7 +62,7 @@ fn main() -> Result<()> {
     )?;
 
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(70.0, 575.0)
         .write("Email")?;
 
@@ -74,13 +74,13 @@ fn main() -> Result<()> {
     )?;
 
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(150.0, 575.0)
         .write("Phone")?;
 
     // Add a dropdown/combo box
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(50.0, 520.0)
         .write("Country:")?;
 
@@ -97,7 +97,7 @@ fn main() -> Result<()> {
 
     // Add a listbox
     page.text()
-        .set_font(font, 12.0)
+        .set_font(Font::Helvetica, 12.0)
         .at(50.0, 470.0)
         .write("Interests:")?;
 

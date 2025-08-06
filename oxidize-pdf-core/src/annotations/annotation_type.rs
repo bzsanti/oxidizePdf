@@ -549,4 +549,535 @@ mod tests {
         assert_eq!(ink.ink_lists.len(), 1);
         assert_eq!(ink.ink_lists[0].len(), 3);
     }
+
+    #[test]
+    fn test_free_text_annotation_justification() {
+        let rect = Rectangle::new(Point::new(100.0, 200.0), Point::new(400.0, 300.0));
+
+        // Test all justification values
+        for quadding in 0..=2 {
+            let free_text = FreeTextAnnotation::new(rect, "Test text").with_justification(quadding);
+
+            assert_eq!(free_text.quadding, quadding);
+
+            let annotation = free_text.to_annotation();
+            let dict = annotation.to_dict();
+
+            assert_eq!(dict.get("Q"), Some(&Object::Integer(quadding as i64)));
+        }
+
+        // Test clamping of invalid values
+        let clamped_low = FreeTextAnnotation::new(rect, "Test").with_justification(-1);
+        assert_eq!(clamped_low.quadding, 0);
+
+        let clamped_high = FreeTextAnnotation::new(rect, "Test").with_justification(5);
+        assert_eq!(clamped_high.quadding, 2);
+    }
+
+    #[test]
+    fn test_free_text_font_variations() {
+        let rect = Rectangle::new(Point::new(50.0, 50.0), Point::new(350.0, 150.0));
+
+        let fonts_and_sizes = [
+            (Font::Helvetica, 12.0),
+            (Font::TimesRoman, 10.0),
+            (Font::Courier, 14.0),
+        ];
+
+        let colors = [
+            Color::Gray(0.0),
+            Color::Rgb(1.0, 0.0, 0.0),
+            Color::Cmyk(0.0, 1.0, 1.0, 0.0),
+        ];
+
+        for ((font, size), color) in fonts_and_sizes.iter().zip(colors.iter()) {
+            let free_text =
+                FreeTextAnnotation::new(rect, "Test text").with_font(font.clone(), *size, *color);
+
+            let annotation = free_text.to_annotation();
+            let dict = annotation.to_dict();
+
+            if let Some(Object::String(da)) = dict.get("DA") {
+                assert!(da.contains(&font.pdf_name()));
+                assert!(da.contains(&format!("{size} Tf")));
+            } else {
+                panic!("DA field not found");
+            }
+        }
+    }
+
+    #[test]
+    fn test_free_text_rich_text() {
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(300.0, 200.0));
+
+        let mut free_text = FreeTextAnnotation::new(rect, "Plain text content");
+        free_text.rich_text = Some("<p>Rich <b>text</b> content</p>".to_string());
+        free_text.default_style = Some("font-family: Arial; font-size: 12pt;".to_string());
+
+        let annotation = free_text.to_annotation();
+        let dict = annotation.to_dict();
+
+        assert_eq!(
+            dict.get("RC"),
+            Some(&Object::String(
+                "<p>Rich <b>text</b> content</p>".to_string()
+            ))
+        );
+        assert_eq!(
+            dict.get("DS"),
+            Some(&Object::String(
+                "font-family: Arial; font-size: 12pt;".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn test_line_ending_styles_comprehensive() {
+        let styles = [
+            LineEndingStyle::None,
+            LineEndingStyle::Square,
+            LineEndingStyle::Circle,
+            LineEndingStyle::Diamond,
+            LineEndingStyle::OpenArrow,
+            LineEndingStyle::ClosedArrow,
+            LineEndingStyle::Butt,
+            LineEndingStyle::ROpenArrow,
+            LineEndingStyle::RClosedArrow,
+            LineEndingStyle::Slash,
+        ];
+
+        let expected_names = [
+            "None",
+            "Square",
+            "Circle",
+            "Diamond",
+            "OpenArrow",
+            "ClosedArrow",
+            "Butt",
+            "ROpenArrow",
+            "RClosedArrow",
+            "Slash",
+        ];
+
+        for (style, expected) in styles.iter().zip(expected_names.iter()) {
+            assert_eq!(style.pdf_name(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_line_annotation_comprehensive() {
+        let start = Point::new(50.0, 100.0);
+        let end = Point::new(250.0, 300.0);
+
+        let line = LineAnnotation::new(start, end)
+            .with_endings(LineEndingStyle::Diamond, LineEndingStyle::OpenArrow)
+            .with_interior_color(Color::Rgb(0.5, 0.5, 1.0));
+
+        // Verify bounding rectangle is calculated correctly
+        assert_eq!(line.annotation.rect.lower_left.x, 50.0);
+        assert_eq!(line.annotation.rect.lower_left.y, 100.0);
+        assert_eq!(line.annotation.rect.upper_right.x, 250.0);
+        assert_eq!(line.annotation.rect.upper_right.y, 300.0);
+
+        let annotation = line.to_annotation();
+        let dict = annotation.to_dict();
+
+        // Verify line coordinates
+        if let Some(Object::Array(coords)) = dict.get("L") {
+            assert_eq!(coords.len(), 4);
+            assert_eq!(coords[0], Object::Real(50.0));
+            assert_eq!(coords[1], Object::Real(100.0));
+            assert_eq!(coords[2], Object::Real(250.0));
+            assert_eq!(coords[3], Object::Real(300.0));
+        }
+
+        // Verify line endings
+        if let Some(Object::Array(endings)) = dict.get("LE") {
+            assert_eq!(endings[0], Object::Name("Diamond".to_string()));
+            assert_eq!(endings[1], Object::Name("OpenArrow".to_string()));
+        }
+
+        // Verify interior color
+        if let Some(Object::Array(color)) = dict.get("IC") {
+            assert_eq!(color.len(), 3);
+            assert_eq!(color[0], Object::Real(0.5));
+            assert_eq!(color[1], Object::Real(0.5));
+            assert_eq!(color[2], Object::Real(1.0));
+        }
+    }
+
+    #[test]
+    fn test_line_annotation_edge_cases() {
+        // Test with same start and end point (zero-length line)
+        let point = Point::new(100.0, 100.0);
+        let zero_line = LineAnnotation::new(point, point);
+        assert_eq!(zero_line.annotation.rect.lower_left, point);
+        assert_eq!(zero_line.annotation.rect.upper_right, point);
+
+        // Test with negative coordinates
+        let neg_start = Point::new(-100.0, -200.0);
+        let neg_end = Point::new(-50.0, -150.0);
+        let neg_line = LineAnnotation::new(neg_start, neg_end);
+        assert_eq!(neg_line.annotation.rect.lower_left.x, -100.0);
+        assert_eq!(neg_line.annotation.rect.lower_left.y, -200.0);
+
+        // Test with reversed coordinates (end < start)
+        let reversed_line = LineAnnotation::new(Point::new(200.0, 300.0), Point::new(100.0, 200.0));
+        assert_eq!(reversed_line.annotation.rect.lower_left.x, 100.0);
+        assert_eq!(reversed_line.annotation.rect.lower_left.y, 200.0);
+        assert_eq!(reversed_line.annotation.rect.upper_right.x, 200.0);
+        assert_eq!(reversed_line.annotation.rect.upper_right.y, 300.0);
+    }
+
+    #[test]
+    fn test_square_annotation_border_effects() {
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(300.0, 200.0));
+
+        // Test without border effect
+        let plain_square = SquareAnnotation::new(rect);
+        assert!(plain_square.border_effect.is_none());
+
+        let annotation = plain_square.to_annotation();
+        let dict = annotation.to_dict();
+        assert!(!dict.contains_key("BE"));
+
+        // Test with cloudy border
+        let cloudy_square = SquareAnnotation::new(rect).with_cloudy_border(1.5);
+
+        assert!(cloudy_square.border_effect.is_some());
+        if let Some(effect) = &cloudy_square.border_effect {
+            assert!(matches!(effect.style, BorderEffectStyle::Cloudy));
+            assert_eq!(effect.intensity, 1.5);
+        }
+
+        let annotation = cloudy_square.to_annotation();
+        let dict = annotation.to_dict();
+
+        if let Some(Object::Dictionary(be_dict)) = dict.get("BE") {
+            assert_eq!(be_dict.get("S"), Some(&Object::Name("C".to_string())));
+            assert_eq!(be_dict.get("I"), Some(&Object::Real(1.5)));
+        }
+    }
+
+    #[test]
+    fn test_square_annotation_interior_colors() {
+        let rect = Rectangle::new(Point::new(50.0, 50.0), Point::new(150.0, 150.0));
+
+        let colors = vec![
+            Color::Gray(0.75),
+            Color::Rgb(0.9, 0.9, 1.0),
+            Color::Cmyk(0.05, 0.05, 0.0, 0.0),
+        ];
+
+        for color in colors {
+            let square = SquareAnnotation::new(rect).with_interior_color(color);
+
+            let annotation = square.to_annotation();
+            let dict = annotation.to_dict();
+
+            if let Some(Object::Array(ic_array)) = dict.get("IC") {
+                match color {
+                    Color::Gray(_) => assert_eq!(ic_array.len(), 1),
+                    Color::Rgb(_, _, _) => assert_eq!(ic_array.len(), 3),
+                    Color::Cmyk(_, _, _, _) => assert_eq!(ic_array.len(), 4),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_border_effect_intensity_clamping() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 100.0));
+
+        // Test clamping to 0.0
+        let low_intensity = SquareAnnotation::new(rect).with_cloudy_border(-1.0);
+        if let Some(effect) = &low_intensity.border_effect {
+            assert_eq!(effect.intensity, 0.0);
+        }
+
+        // Test clamping to 2.0
+        let high_intensity = SquareAnnotation::new(rect).with_cloudy_border(5.0);
+        if let Some(effect) = &high_intensity.border_effect {
+            assert_eq!(effect.intensity, 2.0);
+        }
+
+        // Test valid intensity
+        let valid_intensity = SquareAnnotation::new(rect).with_cloudy_border(1.0);
+        if let Some(effect) = &valid_intensity.border_effect {
+            assert_eq!(effect.intensity, 1.0);
+        }
+    }
+
+    #[test]
+    fn test_all_stamp_names() {
+        let stamps = vec![
+            StampName::Approved,
+            StampName::Experimental,
+            StampName::NotApproved,
+            StampName::AsIs,
+            StampName::Expired,
+            StampName::NotForPublicRelease,
+            StampName::Confidential,
+            StampName::Final,
+            StampName::Sold,
+            StampName::Departmental,
+            StampName::ForComment,
+            StampName::TopSecret,
+            StampName::Draft,
+            StampName::ForPublicRelease,
+            StampName::Custom("MyCustomStamp".to_string()),
+        ];
+
+        let expected_names = vec![
+            "Approved",
+            "Experimental",
+            "NotApproved",
+            "AsIs",
+            "Expired",
+            "NotForPublicRelease",
+            "Confidential",
+            "Final",
+            "Sold",
+            "Departmental",
+            "ForComment",
+            "TopSecret",
+            "Draft",
+            "ForPublicRelease",
+            "MyCustomStamp",
+        ];
+
+        for (stamp, expected) in stamps.iter().zip(expected_names.iter()) {
+            assert_eq!(stamp.pdf_name(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_stamp_annotation_variations() {
+        let rect = Rectangle::new(Point::new(400.0, 700.0), Point::new(500.0, 750.0));
+
+        // Test standard stamp
+        let standard_stamp = StampAnnotation::new(rect, StampName::Confidential);
+        let annotation = standard_stamp.to_annotation();
+        let dict = annotation.to_dict();
+        assert_eq!(
+            dict.get("Name"),
+            Some(&Object::Name("Confidential".to_string()))
+        );
+
+        // Test custom stamp
+        let custom_stamp =
+            StampAnnotation::new(rect, StampName::Custom("ReviewedByManager".to_string()));
+        let annotation = custom_stamp.to_annotation();
+        let dict = annotation.to_dict();
+        assert_eq!(
+            dict.get("Name"),
+            Some(&Object::Name("ReviewedByManager".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_ink_annotation_bounding_box() {
+        let mut ink = InkAnnotation::new();
+
+        // Add multiple strokes
+        ink = ink.add_stroke(vec![
+            Point::new(100.0, 100.0),
+            Point::new(150.0, 120.0),
+            Point::new(200.0, 100.0),
+        ]);
+
+        ink = ink.add_stroke(vec![
+            Point::new(120.0, 80.0),
+            Point::new(180.0, 90.0),
+            Point::new(220.0, 110.0),
+        ]);
+
+        ink = ink.add_stroke(vec![Point::new(90.0, 95.0), Point::new(210.0, 105.0)]);
+
+        let annotation = ink.to_annotation();
+
+        // Verify bounding box encompasses all points
+        assert_eq!(annotation.rect.lower_left.x, 90.0); // min x
+        assert_eq!(annotation.rect.lower_left.y, 80.0); // min y
+        assert_eq!(annotation.rect.upper_right.x, 220.0); // max x
+        assert_eq!(annotation.rect.upper_right.y, 120.0); // max y
+
+        let dict = annotation.to_dict();
+
+        if let Some(Object::Array(ink_list)) = dict.get("InkList") {
+            assert_eq!(ink_list.len(), 3); // 3 strokes
+
+            // Check first stroke
+            if let Object::Array(stroke1) = &ink_list[0] {
+                assert_eq!(stroke1.len(), 6); // 3 points * 2 coords
+                assert_eq!(stroke1[0], Object::Real(100.0));
+                assert_eq!(stroke1[1], Object::Real(100.0));
+            }
+        }
+    }
+
+    #[test]
+    fn test_ink_annotation_empty_strokes() {
+        let ink = InkAnnotation::new();
+        let annotation = ink.to_annotation();
+
+        // With no strokes, rect should be at origin
+        assert_eq!(annotation.rect.lower_left.x, 0.0);
+        assert_eq!(annotation.rect.lower_left.y, 0.0);
+        assert_eq!(annotation.rect.upper_right.x, 0.0);
+        assert_eq!(annotation.rect.upper_right.y, 0.0);
+    }
+
+    #[test]
+    fn test_highlight_annotation_convenience() {
+        let rect = Rectangle::new(Point::new(100.0, 500.0), Point::new(400.0, 515.0));
+        let highlight = HighlightAnnotation::new(rect);
+
+        assert_eq!(
+            highlight.annotation.annotation_type,
+            crate::annotations::AnnotationType::Highlight
+        );
+
+        let annotation = highlight.to_annotation();
+        let dict = annotation.to_dict();
+
+        assert_eq!(
+            dict.get("Subtype"),
+            Some(&Object::Name("Highlight".to_string()))
+        );
+        assert!(dict.get("QuadPoints").is_some());
+
+        // Verify QuadPoints match the rectangle
+        if let Some(Object::Array(points)) = dict.get("QuadPoints") {
+            assert_eq!(points.len(), 8);
+            assert_eq!(points[0], Object::Real(100.0));
+            assert_eq!(points[1], Object::Real(500.0));
+            assert_eq!(points[4], Object::Real(400.0));
+            assert_eq!(points[5], Object::Real(515.0));
+        }
+    }
+
+    #[test]
+    fn test_free_text_debug_clone() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 100.0));
+        let free_text = FreeTextAnnotation::new(rect, "Debug test")
+            .with_font(Font::Helvetica, 14.0, Color::black())
+            .with_justification(1);
+
+        let debug_str = format!("{free_text:?}");
+        assert!(debug_str.contains("FreeTextAnnotation"));
+        assert!(debug_str.contains("Debug test"));
+
+        let cloned = free_text.clone();
+        assert_eq!(cloned.quadding, 1);
+        assert_eq!(cloned.annotation.contents, Some("Debug test".to_string()));
+    }
+
+    #[test]
+    fn test_line_annotation_debug_clone() {
+        let line = LineAnnotation::new(Point::new(0.0, 0.0), Point::new(100.0, 100.0))
+            .with_endings(LineEndingStyle::Circle, LineEndingStyle::Square);
+
+        let debug_str = format!("{line:?}");
+        assert!(debug_str.contains("LineAnnotation"));
+
+        let cloned = line.clone();
+        assert!(matches!(cloned.start_style, LineEndingStyle::Circle));
+        assert!(matches!(cloned.end_style, LineEndingStyle::Square));
+    }
+
+    #[test]
+    fn test_border_effect_debug_clone() {
+        let effect = BorderEffect {
+            style: BorderEffectStyle::Cloudy,
+            intensity: 1.2,
+        };
+
+        let debug_str = format!("{effect:?}");
+        assert!(debug_str.contains("BorderEffect"));
+        assert!(debug_str.contains("Cloudy"));
+
+        let cloned = effect.clone();
+        assert!(matches!(cloned.style, BorderEffectStyle::Cloudy));
+        assert_eq!(cloned.intensity, 1.2);
+    }
+
+    #[test]
+    fn test_stamp_name_debug_clone() {
+        let stamp = StampName::TopSecret;
+
+        let debug_str = format!("{stamp:?}");
+        assert!(debug_str.contains("TopSecret"));
+
+        let cloned = stamp.clone();
+        assert!(matches!(cloned, StampName::TopSecret));
+
+        let custom = StampName::Custom("TestStamp".to_string());
+        let custom_clone = custom.clone();
+        if let StampName::Custom(name) = custom_clone {
+            assert_eq!(name, "TestStamp");
+        }
+    }
+
+    #[test]
+    fn test_ink_annotation_default() {
+        let default_ink = InkAnnotation::default();
+        assert!(default_ink.ink_lists.is_empty());
+        assert_eq!(
+            default_ink.annotation.annotation_type,
+            crate::annotations::AnnotationType::Ink
+        );
+    }
+
+    #[test]
+    fn test_all_annotations_to_dict() {
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(200.0, 150.0));
+
+        // Test each annotation type produces valid dictionary
+        let annotations: Vec<Annotation> = vec![
+            FreeTextAnnotation::new(rect, "Test").to_annotation(),
+            LineAnnotation::new(Point::new(100.0, 100.0), Point::new(200.0, 150.0)).to_annotation(),
+            SquareAnnotation::new(rect).to_annotation(),
+            StampAnnotation::new(rect, StampName::Draft).to_annotation(),
+            InkAnnotation::new()
+                .add_stroke(vec![Point::new(100.0, 100.0), Point::new(200.0, 150.0)])
+                .to_annotation(),
+            HighlightAnnotation::new(rect).to_annotation(),
+        ];
+
+        for annotation in annotations {
+            let dict = annotation.to_dict();
+            assert!(dict.contains_key("Type"));
+            assert!(dict.contains_key("Subtype"));
+            assert!(dict.contains_key("Rect"));
+        }
+    }
+
+    #[test]
+    fn test_line_ending_style_debug_clone_copy() {
+        let style = LineEndingStyle::ClosedArrow;
+
+        let debug_str = format!("{style:?}");
+        assert!(debug_str.contains("ClosedArrow"));
+
+        let cloned = style;
+        assert!(matches!(cloned, LineEndingStyle::ClosedArrow));
+
+        let copied: LineEndingStyle = style;
+        assert!(matches!(copied, LineEndingStyle::ClosedArrow));
+    }
+
+    #[test]
+    fn test_border_effect_style_debug_clone_copy() {
+        let style = BorderEffectStyle::Cloudy;
+
+        let debug_str = format!("{style:?}");
+        assert!(debug_str.contains("Cloudy"));
+
+        let cloned = style;
+        assert!(matches!(cloned, BorderEffectStyle::Cloudy));
+
+        let copied: BorderEffectStyle = style;
+        assert!(matches!(copied, BorderEffectStyle::Cloudy));
+    }
 }

@@ -18,14 +18,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
-        print!("Testing {}: ", file);
+        print!("Testing {file}: ");
         match PdfReader::open(file) {
             Ok(_) => println!("✓ Not encrypted - parsed successfully"),
             Err(e) => {
                 if e.to_string().contains("EncryptionNotSupported") {
                     println!("🔒 Encrypted PDF detected!");
                 } else {
-                    println!("✗ Other error: {}", e);
+                    println!("✗ Other error: {e}");
                 }
             }
         }

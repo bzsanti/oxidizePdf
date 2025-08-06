@@ -102,7 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let lines: Vec<&str> = ocr_result.text.lines().take(3).collect();
                     println!("      Preview:");
                     for line in lines {
-                        println!("        \"{}\"", line);
+                        println!("        \"{line}\"");
                     }
 
                     // Show fragment details
@@ -119,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ OCR failed: {}", e);
+                    println!("   ❌ OCR failed: {e}");
                     println!("      (This is expected with the demo PDF as it doesn't contain real scanned content)");
                 }
             }

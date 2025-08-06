@@ -1166,11 +1166,11 @@ mod tests {
         let pattern_type = PatternType::Tiling;
 
         // Test Debug
-        let debug_str = format!("{:?}", pattern_type);
+        let debug_str = format!("{pattern_type:?}");
         assert!(debug_str.contains("Tiling"));
 
         // Test Clone
-        let cloned = pattern_type.clone();
+        let cloned = pattern_type;
         assert_eq!(cloned, PatternType::Tiling);
 
         // Test PartialEq
@@ -1190,7 +1190,7 @@ mod tests {
         );
 
         // Test Debug
-        let debug_str = format!("{:?}", pattern);
+        let debug_str = format!("{pattern:?}");
         assert!(debug_str.contains("TilingPattern"));
         assert!(debug_str.contains("TestPattern"));
 
@@ -1205,7 +1205,7 @@ mod tests {
         let matrix = PatternMatrix::translation(5.0, 10.0);
 
         // Test Debug
-        let debug_str = format!("{:?}", matrix);
+        let debug_str = format!("{matrix:?}");
         assert!(debug_str.contains("PatternMatrix"));
 
         // Test Clone

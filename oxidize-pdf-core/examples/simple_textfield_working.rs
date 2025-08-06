@@ -66,7 +66,7 @@ fn main() -> Result<()> {
 
     for i in 1..=6 {
         let pos = xref_positions.get(&i).unwrap();
-        let entry = format!("{:010} 00000 n \n", pos);
+        let entry = format!("{pos:010} 00000 n \n");
         pdf_content.extend_from_slice(entry.as_bytes());
     }
 
@@ -77,7 +77,7 @@ fn main() -> Result<()> {
     pdf_content.extend_from_slice(b"/Root 1 0 R\n");
     pdf_content.extend_from_slice(b">>\n");
     pdf_content.extend_from_slice(b"startxref\n");
-    pdf_content.extend_from_slice(format!("{}\n", xref_start).as_bytes());
+    pdf_content.extend_from_slice(format!("{xref_start}\n").as_bytes());
     pdf_content.extend_from_slice(b"%%EOF\n");
 
     // Write to file

@@ -139,9 +139,9 @@ fn test_document_with_standard_fonts() -> Result<()> {
     let mut y = 750.0;
     for (font, name) in &fonts {
         page.text()
-            .set_font(*font, 12.0)
+            .set_font(font.clone(), 12.0)
             .at(50.0, y)
-            .write(&format!("{}: Test text", name))?;
+            .write(&format!("{name}: Test text"))?;
         y -= 20.0;
     }
 
@@ -400,7 +400,7 @@ fn test_font_subset_glyph_management() -> Result<()> {
     for &glyph in &subset_glyph_set {
         if glyph != 0 {
             // .notdef might not be in the range
-            assert!(glyph >= 32 && glyph <= 90);
+            assert!((32..=90).contains(&glyph));
         }
     }
 

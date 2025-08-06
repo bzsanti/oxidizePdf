@@ -422,7 +422,7 @@ mod tests {
             create_dir: true,
         };
 
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("ExtractImagesOptions"));
         assert!(debug_str.contains("/test/path"));
 
@@ -464,7 +464,7 @@ mod tests {
             format: ImageFormat::Png,
         };
 
-        let debug_str = format!("{:?}", image);
+        let debug_str = format!("{image:?}");
         assert!(debug_str.contains("ExtractedImage"));
         assert!(debug_str.contains("5"));
         assert!(debug_str.contains("3"));

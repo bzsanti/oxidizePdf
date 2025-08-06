@@ -73,10 +73,7 @@ fn main() -> Result<()> {
         }),
     )?;
 
-    println!(
-        "Created text field 'fullname' with widget reference {:?}",
-        name_widget_ref
-    );
+    println!("Created text field 'fullname' with widget reference {name_widget_ref:?}");
 
     // 2. Email Field
     page.text().at(50.0, 600.0).write("Email Address:")?;

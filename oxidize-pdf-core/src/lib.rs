@@ -179,6 +179,7 @@ pub mod compression;
 pub mod document;
 pub mod encryption;
 pub mod error;
+pub mod fonts;
 pub mod forms;
 pub mod geometry;
 pub mod graphics;
@@ -188,6 +189,8 @@ pub mod operations;
 pub mod page;
 pub mod page_forms;
 pub mod page_labels;
+pub mod page_lists;
+pub mod page_tables;
 pub mod parser;
 pub mod recovery;
 pub mod streaming;
@@ -204,10 +207,51 @@ pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
 pub use graphics::{Color, GraphicsContext, Image, ImageColorSpace, ImageFormat};
 pub use page::{Margins, Page};
+pub use page_lists::{ListStyle, ListType, PageLists};
+pub use page_tables::{PageTables, TableStyle};
 pub use text::{
-    measure_text, split_into_words, Font, FontFamily, FragmentType, ImagePreprocessing,
-    MockOcrProvider, OcrEngine, OcrError, OcrOptions, OcrProcessingResult, OcrProvider, OcrResult,
-    OcrTextFragment, TextAlign, TextContext, TextFlowContext,
+    measure_text,
+    split_into_words,
+    AdvancedTable,
+    AdvancedTableCell,
+    AdvancedTableOptions,
+    AlternatingRowColors,
+    BorderLine,
+    BorderStyle as TableBorderStyle,
+    BulletStyle,
+    CellContent,
+    CellPadding,
+    ColumnDefinition,
+    ColumnWidth,
+    Font,
+    FontFamily,
+    FragmentType,
+    HeaderStyle,
+    ImagePreprocessing,
+    LineStyle,
+    ListElement,
+    ListOptions,
+    MockOcrProvider,
+    OcrEngine,
+    OcrError,
+    OcrOptions,
+    OcrProcessingResult,
+    OcrProvider,
+    OcrResult,
+    OcrTextFragment,
+    // List exports
+    OrderedList,
+    OrderedListStyle,
+    // Table exports
+    Table,
+    TableCell,
+    TableOptions,
+    TableRow,
+    TextAlign,
+    TextContext,
+    TextFlowContext,
+    UnorderedList,
+    VerticalAlign,
 };
 
 // Re-export font embedding types
@@ -381,8 +425,7 @@ mod tests {
         for version in expected_versions {
             assert!(
                 pdf_version::SUPPORTED_VERSIONS.contains(&version),
-                "Expected PDF version {} to be supported",
-                version
+                "Expected PDF version {version} to be supported"
             );
         }
 

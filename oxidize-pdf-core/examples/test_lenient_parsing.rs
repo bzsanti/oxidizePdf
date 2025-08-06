@@ -17,11 +17,11 @@ fn test_pdf_with_options(path: &Path, lenient: bool) -> Result<(), Box<dyn std::
             let page_count = reader.page_count().unwrap_or(0);
             let version = reader.version();
 
-            println!("  ✓ Success - Pages: {}, Version: {}", page_count, version);
+            println!("  ✓ Success - Pages: {page_count}, Version: {version}");
             Ok(())
         }
         Err(e) => {
-            println!("  ✗ Failed: {}", e);
+            println!("  ✗ Failed: {e}");
             Err(Box::new(e))
         }
     }
@@ -42,7 +42,7 @@ fn main() {
     for pattern in &test_patterns {
         let path = fixtures_dir.join(pattern);
         if path.exists() {
-            println!("{}", pattern);
+            println!("{pattern}");
             print!("  Strict:  ");
             let strict_ok = test_pdf_with_options(&path, false).is_ok();
             print!("  Lenient: ");
@@ -90,7 +90,7 @@ fn main() {
     }
 
     println!("\n=== Summary ===");
-    println!("Total PDFs tested: {}", total);
+    println!("Total PDFs tested: {total}");
     println!(
         "Strict mode success: {} ({:.1}%)",
         strict_success,
@@ -121,7 +121,7 @@ fn main() {
         );
         for (i, pdf) in still_failing.iter().enumerate() {
             if i < 5 {
-                println!("  - {}", pdf);
+                println!("  - {pdf}");
             }
         }
         if still_failing.len() > 5 {

@@ -1,0 +1,653 @@
+//! Font Error Handling Integration Tests
+//!
+//! Comprehensive tests for font-related error conditions and edge cases.
+//! These tests ensure the library handles font errors gracefully without panics.
+//!
+//! Test categories:
+//! - Corrupted font files (invalid TTF/OTF)
+//! - Missing font tables
+//! - Invalid encodings
+//! - Font size extremes
+//! - Invalid font names
+//! - Font cache overflow
+//! - Unicode edge cases
+//! - Font fallback mechanisms
+//! - Thread safety
+
+use oxidize_pdf::text::{Font, TextContext};
+use oxidize_pdf::{Document, Page, Result};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use tempfile::TempDir;
+
+/// Test handling of corrupted font files
+#[test]
+fn test_corrupted_font_files() {
+    let mut doc = Document::new();
+
+    // Test 1: Empty font data
+    let empty_data = Vec::new();
+    match doc.add_font_from_bytes("EmptyFont", empty_data) {
+        Ok(_) => panic!("Should fail with empty font data"),
+        Err(e) => {
+            println!("Empty font error (expected): {}", e);
+            assert!(e.to_string().contains("font") || e.to_string().contains("invalid"));
+        }
+    }
+
+    // Test 2: Random bytes (not a font)
+    let random_data = vec![0xFF, 0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x42, 0x13];
+    match doc.add_font_from_bytes("RandomFont", random_data) {
+        Ok(_) => panic!("Should fail with random data"),
+        Err(e) => {
+            println!("Random data error (expected): {}", e);
+        }
+    }
+
+    // Test 3: Truncated TrueType header
+    let truncated_ttf = vec![
+        0x00, 0x01, 0x00, 0x00, // TTF signature
+        0x00, 0x05, // Incomplete table count
+              // Missing data...
+    ];
+    match doc.add_font_from_bytes("TruncatedFont", truncated_ttf) {
+        Ok(_) => panic!("Should fail with truncated font"),
+        Err(e) => {
+            println!("Truncated font error (expected): {}", e);
+        }
+    }
+
+    // Test 4: Invalid OpenType signature
+    let invalid_otf = vec![
+        b'I', b'N', b'V', b'L', // Invalid signature (should be 'OTTO')
+        0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    match doc.add_font_from_bytes("InvalidOTF", invalid_otf) {
+        Ok(_) => panic!("Should fail with invalid OTF signature"),
+        Err(e) => {
+            println!("Invalid OTF error (expected): {}", e);
+        }
+    }
+}
+
+/// Test fonts with missing required tables
+#[test]
+fn test_missing_font_tables() {
+    let mut doc = Document::new();
+
+    // Create a minimal TTF structure but missing required tables
+    let mut font_data = Vec::new();
+
+    // TTF header
+    font_data.extend_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version
+    font_data.extend_from_slice(&[0x00, 0x02]); // numTables = 2
+    font_data.extend_from_slice(&[0x00, 0x20]); // searchRange
+    font_data.extend_from_slice(&[0x00, 0x01]); // entrySelector
+    font_data.extend_from_slice(&[0x00, 0x00]); // rangeShift
+
+    // Table directory - only 'head' and 'maxp', missing required 'cmap'
+    font_data.extend_from_slice(b"head"); // tag
+    font_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // checksum
+    font_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x20]); // offset
+    font_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x36]); // length
+
+    font_data.extend_from_slice(b"maxp"); // tag
+    font_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // checksum
+    font_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x60]); // offset
+    font_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x20]); // length
+
+    // Pad to minimum size
+    while font_data.len() < 0x80 {
+        font_data.push(0);
+    }
+
+    match doc.add_font_from_bytes("MissingCmap", font_data) {
+        Ok(_) => {
+            // Some implementations might allow fonts without cmap
+            println!("Warning: Font without cmap was accepted");
+        }
+        Err(e) => {
+            println!("Missing cmap error (expected): {}", e);
+            assert!(
+                e.to_string().contains("cmap")
+                    || e.to_string().contains("table")
+                    || e.to_string().contains("missing")
+            );
+        }
+    }
+}
+
+/// Test invalid font encodings
+#[test]
+fn test_invalid_font_encodings() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Test standard fonts with various problematic strings
+    let test_strings = vec![
+        // Invalid UTF-8 sequences
+        &[0xFF, 0xFE, 0xFD][..],
+        &[0xC0, 0x80][..],       // Overlong encoding
+        &[0xED, 0xA0, 0x80][..], // UTF-16 surrogate
+        // Control characters
+        &[0x00, 0x01, 0x02, 0x03][..],
+        // Mixed valid and invalid
+        &[0x48, 0x65, 0x6C, 0x6C, 0x6F, 0xFF, 0xFE][..], // "Hello" + invalid
+    ];
+
+    let mut y = 750.0;
+    for (i, bytes) in test_strings.iter().enumerate() {
+        // Try to write invalid string
+        match std::str::from_utf8(bytes) {
+            Ok(s) => {
+                // Valid UTF-8, should work
+                page.text()
+                    .set_font(Font::Helvetica, 12.0)
+                    .at(50.0, y)
+                    .write(s)?;
+            }
+            Err(_) => {
+                // Invalid UTF-8 - convert with replacement
+                let s = String::from_utf8_lossy(bytes);
+                page.text()
+                    .set_font(Font::Helvetica, 12.0)
+                    .at(50.0, y)
+                    .write(&format!("Test {}: {}", i, s))?;
+            }
+        }
+        y -= 20.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("invalid_encodings.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test extreme font sizes
+#[test]
+fn test_extreme_font_sizes() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Test various extreme font sizes
+    let font_sizes = vec![
+        0.0,           // Zero size
+        0.001,         // Very tiny
+        0.1,           // Still tiny
+        1.0,           // Minimum readable
+        1000.0,        // Very large
+        10000.0,       // Extremely large
+        f32::NAN,      // Invalid size
+        f32::INFINITY, // Infinite size
+        -12.0,         // Negative size
+    ];
+
+    let mut y = 750.0;
+    for size in font_sizes {
+        // Some sizes might be rejected
+        let result = page
+            .text()
+            .set_font(Font::Helvetica, size)
+            .at(50.0, y)
+            .write(&format!("Size: {}", size));
+
+        match result {
+            Ok(_) => {
+                println!("Font size {} was accepted", size);
+                if size <= 0.0 || !size.is_finite() {
+                    println!("Warning: Invalid size {} should have been rejected", size);
+                }
+            }
+            Err(e) => {
+                println!("Font size {} rejected (expected): {}", size, e);
+            }
+        }
+
+        y -= 20.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("extreme_font_sizes.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test invalid font names
+#[test]
+fn test_invalid_font_names() {
+    let mut doc = Document::new();
+
+    // Test various problematic font names
+    let invalid_names = vec![
+        "",                   // Empty name
+        " ",                  // Just whitespace
+        "\t\n\r",             // Control characters
+        "A".repeat(1000),     // Very long name
+        "Font/With/Slashes",  // PDF name special chars
+        "Font#With#Hash",     // More special chars
+        "Font[With]Brackets", // Brackets
+        "Font<With>Angles",   // Angle brackets
+        "Font{With}Braces",   // Braces
+        "Font(With)Parens",   // Parentheses
+        "Font%With%Percent",  // Percent signs
+        "🎨ColorfulFont🎨",   // Unicode emoji
+        "\0NullFont",         // Null character
+    ];
+
+    // Create minimal valid font data
+    let font_data = create_minimal_font_data();
+
+    for name in invalid_names {
+        match doc.add_font_from_bytes(name, font_data.clone()) {
+            Ok(_) => {
+                println!("Font name '{}' was accepted", name);
+                if name.is_empty() || name.trim().is_empty() {
+                    println!("Warning: Empty/whitespace name should be rejected");
+                }
+            }
+            Err(e) => {
+                println!("Font name '{}' rejected: {}", name, e);
+            }
+        }
+    }
+}
+
+/// Test font cache overflow behavior
+#[test]
+fn test_font_cache_overflow() -> Result<()> {
+    let mut doc = Document::new();
+
+    // Try to add many custom fonts to overflow cache
+    let font_data = create_minimal_font_data();
+
+    for i in 0..200 {
+        let font_name = format!("TestFont{}", i);
+
+        match doc.add_font_from_bytes(&font_name, font_data.clone()) {
+            Ok(_) => {
+                // Successfully added
+                if i % 50 == 0 {
+                    println!("Added {} fonts to cache", i + 1);
+                }
+            }
+            Err(e) => {
+                println!("Failed to add font {} (cache full?): {}", i, e);
+                break;
+            }
+        }
+    }
+
+    // Create a page using some of the fonts
+    let mut page = Page::a4();
+
+    // Try to use fonts from cache
+    for i in 0..10 {
+        let font_name = format!("TestFont{}", i * 20);
+        match Font::custom(&font_name) {
+            Ok(font) => {
+                page.text()
+                    .set_font(font, 10.0)
+                    .at(50.0, 700.0 - i as f32 * 20.0)
+                    .write(&format!("Using {}", font_name))?;
+            }
+            Err(e) => {
+                println!("Could not use {}: {}", font_name, e);
+            }
+        }
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("font_cache_stress.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test Unicode edge cases in fonts
+#[test]
+fn test_unicode_edge_cases() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Test various Unicode edge cases
+    let unicode_tests = vec![
+        // Basic Latin
+        "Hello World",
+        // Latin-1 Supplement
+        "Café naïve résumé",
+        // Combining characters
+        "a\u{0300}e\u{0301}i\u{0302}o\u{0303}u\u{0308}", // àéîõü with combining
+        // Zero-width characters
+        "Zero\u{200B}Width\u{200C}Space\u{200D}Chars",
+        // Right-to-left marks
+        "Hello\u{200F}مرحبا\u{200E}World",
+        // Emoji (may not render in PDF)
+        "Hello 👋 World 🌍",
+        // CJK characters
+        "你好世界 こんにちは世界 안녕하세요",
+        // Mathematical symbols
+        "∑∏∫∂∇≈≠±∞",
+        // Box drawing
+        "┌─┬─┐│ ││ │├─┼─┤│ ││ │└─┴─┘",
+        // Control characters (should be handled gracefully)
+        "Line\nBreak\tTab\rReturn",
+    ];
+
+    let mut y = 750.0;
+    for (i, text) in unicode_tests.iter().enumerate() {
+        let result = page
+            .text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(50.0, y)
+            .write(&format!("{}: {}", i, text));
+
+        match result {
+            Ok(_) => {
+                // Success - some characters might not render but shouldn't error
+            }
+            Err(e) => {
+                println!("Unicode test {} failed: {}", i, e);
+            }
+        }
+
+        y -= 15.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("unicode_edge_cases.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test font fallback mechanisms
+#[test]
+fn test_font_fallback_behavior() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Test using non-existent fonts
+    let non_existent_fonts = vec![
+        "NonExistentFont",
+        "FakeFont123",
+        "CustomFont_NotLoaded",
+        "MySpecialFont",
+    ];
+
+    let mut y = 750.0;
+    for font_name in non_existent_fonts {
+        // Try to use a custom font that doesn't exist
+        match Font::custom(font_name) {
+            Ok(font) => {
+                // This should fail
+                println!("Warning: Non-existent font '{}' was found", font_name);
+                let _ = page
+                    .text()
+                    .set_font(font, 12.0)
+                    .at(50.0, y)
+                    .write(&format!("Using {}", font_name));
+            }
+            Err(e) => {
+                // Expected error - use fallback
+                println!("Font '{}' not found (expected): {}", font_name, e);
+
+                // Use Helvetica as fallback
+                page.text()
+                    .set_font(Font::Helvetica, 12.0)
+                    .at(50.0, y)
+                    .write(&format!("Fallback for {}", font_name))?;
+            }
+        }
+
+        y -= 20.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("font_fallback.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test thread safety of font operations
+#[test]
+fn test_font_thread_safety() -> Result<()> {
+    let doc = Arc::new(Mutex::new(Document::new()));
+    let font_data = Arc::new(create_minimal_font_data());
+
+    // Create multiple threads that try to add fonts
+    let handles: Vec<_> = (0..10)
+        .map(|thread_id| {
+            let doc_clone = Arc::clone(&doc);
+            let font_data_clone = Arc::clone(&font_data);
+
+            thread::spawn(move || {
+                for i in 0..10 {
+                    let font_name = format!("ThreadFont_{}_{}", thread_id, i);
+
+                    // Try to add font
+                    match doc_clone.lock() {
+                        Ok(mut doc) => {
+                            if let Err(e) =
+                                doc.add_font_from_bytes(&font_name, (*font_data_clone).clone())
+                            {
+                                println!("Thread {} failed to add font {}: {}", thread_id, i, e);
+                            }
+                        }
+                        Err(e) => {
+                            println!("Thread {} failed to lock document: {}", thread_id, e);
+                        }
+                    }
+
+                    // Small delay to increase contention
+                    thread::sleep(std::time::Duration::from_millis(1));
+                }
+            })
+        })
+        .collect();
+
+    // Wait for all threads
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // Create a page using fonts from different threads
+    let mut page = Page::a4();
+    let mut y = 750.0;
+
+    for thread_id in 0..5 {
+        let font_name = format!("ThreadFont_{}_5", thread_id);
+        match Font::custom(&font_name) {
+            Ok(font) => {
+                page.text()
+                    .set_font(font, 12.0)
+                    .at(50.0, y)
+                    .write(&format!("Font from thread {}", thread_id))?;
+            }
+            Err(_) => {
+                // Use fallback
+                page.text()
+                    .set_font(Font::Helvetica, 12.0)
+                    .at(50.0, y)
+                    .write(&format!("Thread {} (fallback)", thread_id))?;
+            }
+        }
+        y -= 20.0;
+    }
+
+    // Add page and save
+    match doc.lock() {
+        Ok(mut doc) => {
+            doc.add_page(page);
+
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("font_thread_safety.pdf");
+            doc.save(&file_path)?;
+        }
+        Err(e) => {
+            panic!("Failed to lock document for saving: {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+/// Test font metrics edge cases
+#[test]
+fn test_font_metrics_edge_cases() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Test text measurement with edge cases
+    let test_strings = vec![
+        "",        // Empty string
+        " ",       // Single space
+        "   ",     // Multiple spaces
+        "\t",      // Tab
+        "i" * 100, // Many narrow characters
+        "W" * 100, // Many wide characters
+        "." * 200, // Many tiny characters
+        "|" * 50,  // Vertical lines
+        "_" * 50,  // Underscores
+    ];
+
+    let mut y = 750.0;
+    for (i, text) in test_strings.iter().enumerate() {
+        // Measure text width
+        let font = Font::Helvetica;
+        let size = 12.0;
+
+        // Note: Real width calculation would happen in the library
+        let estimated_width = text.len() as f32 * size * 0.5;
+
+        page.text()
+            .set_font(font, size)
+            .at(50.0, y)
+            .write(&format!(
+                "Test {}: '{}' (~{:.1}pt)",
+                i, text, estimated_width
+            ))?;
+
+        y -= 15.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("font_metrics_edge.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+/// Test font substitution scenarios
+#[test]
+fn test_font_substitution_scenarios() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Test various font substitution scenarios
+    struct FontTest {
+        requested: &'static str,
+        fallback: Font,
+        text: &'static str,
+    }
+
+    let tests = vec![
+        FontTest {
+            requested: "Arial",
+            fallback: Font::Helvetica,
+            text: "Arial → Helvetica substitution",
+        },
+        FontTest {
+            requested: "Times New Roman",
+            fallback: Font::TimesRoman,
+            text: "Times New Roman → Times substitution",
+        },
+        FontTest {
+            requested: "Consolas",
+            fallback: Font::Courier,
+            text: "Consolas → Courier substitution",
+        },
+        FontTest {
+            requested: "Wingdings",
+            fallback: Font::ZapfDingbats,
+            text: "Wingdings → ZapfDingbats substitution",
+        },
+    ];
+
+    let mut y = 750.0;
+    for test in tests {
+        // Since we can't load the requested font, use the fallback
+        page.text()
+            .set_font(test.fallback, 12.0)
+            .at(50.0, y)
+            .write(test.text)?;
+
+        y -= 20.0;
+    }
+
+    doc.add_page(page);
+
+    // Save and verify
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("font_substitution.pdf");
+    doc.save(&file_path)?;
+
+    Ok(())
+}
+
+// Helper functions
+
+/// Create minimal valid font data for testing
+fn create_minimal_font_data() -> Vec<u8> {
+    let mut data = Vec::new();
+
+    // Minimal TrueType font structure
+    data.extend_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version
+    data.extend_from_slice(&[0x00, 0x04]); // numTables = 4
+    data.extend_from_slice(&[0x00, 0x40]); // searchRange
+    data.extend_from_slice(&[0x00, 0x02]); // entrySelector
+    data.extend_from_slice(&[0x00, 0x00]); // rangeShift
+
+    // Table directory entries (simplified)
+    let tables = [
+        (b"cmap", 0x40u32, 0x20u32),
+        (b"head", 0x60, 0x36),
+        (b"hhea", 0x96, 0x24),
+        (b"maxp", 0xBA, 0x20),
+    ];
+
+    for (tag, offset, length) in &tables {
+        data.extend_from_slice(*tag);
+        data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // checksum
+        data.extend_from_slice(&offset.to_be_bytes());
+        data.extend_from_slice(&length.to_be_bytes());
+    }
+
+    // Pad to minimum size
+    while data.len() < 0xDA {
+        data.push(0);
+    }
+
+    data
+}

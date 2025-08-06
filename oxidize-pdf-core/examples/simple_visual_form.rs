@@ -153,16 +153,13 @@ fn main() -> Result<(), PdfError> {
     let output_file = "simple_visual_form.pdf";
     document.save(output_file)?;
 
-    println!("✅ Created {}", output_file);
+    println!("✅ Created {output_file}");
     println!("\n🎯 This PDF is designed for easy visual verification:");
     println!("   📋 4 form fields (2 text, 1 checkbox, 1 button)");
     println!("   ✅ Clean, simple layout");
     println!("   🔧 Technical validation info included");
     println!("   📖 Testing instructions provided");
-    println!(
-        "\n📁 Open {} in any PDF reader to verify functionality!",
-        output_file
-    );
+    println!("\n📁 Open {output_file} in any PDF reader to verify functionality!");
 
     Ok(())
 }

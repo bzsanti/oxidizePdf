@@ -30,8 +30,7 @@ fn main() -> Result<()> {
     let text_rect = Rectangle::new(Point::new(150.0, 610.0), Point::new(400.0, 630.0));
 
     // Create a working text field dictionary
-    let text_field_dict =
-        create_text_field_dict("name_field", text_rect.clone(), Some("Enter your name"));
+    let text_field_dict = create_text_field_dict("name_field", text_rect, Some("Enter your name"));
 
     // Add as annotation to page
     let mut text_annot = Annotation::new(AnnotationType::Widget, text_rect);
@@ -48,7 +47,7 @@ fn main() -> Result<()> {
     // Create a working checkbox dictionary
     let checkbox_dict = create_checkbox_dict(
         "agree_checkbox",
-        check_rect.clone(),
+        check_rect,
         false, // unchecked by default
     );
 

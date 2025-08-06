@@ -186,7 +186,7 @@ fn benchmark_generation(c: &mut Criterion) {
         b.iter(|| {
             let mut builder = TestPdfBuilder::new();
             for i in 0..10 {
-                builder.add_text_page(&format!("Page {}", i), 12.0);
+                builder.add_text_page(&format!("Page {i}"), 12.0);
             }
             builder.build()
         });
@@ -205,7 +205,7 @@ fn benchmark_generation(c: &mut Criterion) {
 
     for version in versions {
         group.bench_with_input(
-            BenchmarkId::new("version", format!("{:?}", version)),
+            BenchmarkId::new("version", format!("{version:?}")),
             &version,
             |b, &version| {
                 b.iter(|| TestPdfBuilder::minimal().with_version(version).build());

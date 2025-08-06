@@ -58,22 +58,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let text_field = TextField::new("test_field").with_default_value("Type here...");
 
         let field_ref = form_manager.add_text_field(text_field, text_widget, None)?;
-        println!("✓ Created text field with reference: {:?}", field_ref);
+        println!("✓ Created text field with reference: {field_ref:?}");
 
         // Test 2: Add a checkbox
         let checkbox_field = CheckBox::new("test_checkbox");
 
         let checkbox_ref = form_manager.add_checkbox(checkbox_field, checkbox_widget, None)?;
-        println!("✓ Created checkbox with reference: {:?}", checkbox_ref);
+        println!("✓ Created checkbox with reference: {checkbox_ref:?}");
 
         // Test 3: Add a button
         let button_field = PushButton::new("test_button").with_caption("Click Me");
 
         let button_ref = form_manager.add_push_button(button_field, button_widget, None)?;
-        println!("✓ Created button with reference: {:?}", button_ref);
+        println!("✓ Created button with reference: {button_ref:?}");
 
         let count = form_manager.field_count();
-        println!("✓ Form manager has {} fields", count);
+        println!("✓ Form manager has {count} fields");
         count
     };
 
@@ -110,7 +110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     page.text()
         .set_font(Font::Helvetica, 9.0)
         .at(50.0, 470.0)
-        .write(&format!("• Form manager field count: {}", field_count))?;
+        .write(&format!("• Form manager field count: {field_count}"))?;
 
     page.text()
         .set_font(Font::Helvetica, 9.0)
@@ -130,10 +130,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("3. Try interacting with them");
 
     if field_count > 0 {
-        println!(
-            "\n✓ Form manager successfully created {} fields",
-            field_count
-        );
+        println!("\n✓ Form manager successfully created {field_count} fields");
     } else {
         println!("\n✗ Form manager has no fields - integration may be incomplete");
     }

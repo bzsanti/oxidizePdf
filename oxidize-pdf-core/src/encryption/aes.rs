@@ -179,7 +179,7 @@ impl Aes {
             });
         }
 
-        if data.len() % 16 != 0 {
+        if !data.len().is_multiple_of(16) {
             return Err(AesError::DecryptionFailed(
                 "Data length must be multiple of 16 bytes".to_string(),
             ));
@@ -204,6 +204,24 @@ impl Aes {
 
         // Remove PKCS#7 padding
         self.remove_pkcs7_padding(&decrypted)
+    }
+
+    /// Encrypt data using AES-ECB mode (for Perms entry)
+    pub fn encrypt_ecb(&self, data: &[u8]) -> Result<Vec<u8>, AesError> {
+        if !data.len().is_multiple_of(16) {
+            return Err(AesError::EncryptionFailed(
+                "Data length must be multiple of 16 bytes for ECB mode".to_string(),
+            ));
+        }
+
+        let mut encrypted = Vec::new();
+
+        for chunk in data.chunks(16) {
+            let encrypted_block = self.encrypt_block(chunk)?;
+            encrypted.extend_from_slice(&encrypted_block);
+        }
+
+        Ok(encrypted)
     }
 
     /// Encrypt single 16-byte block
@@ -626,7 +644,7 @@ mod tests {
         assert!(aes.encrypt_cbc(data, &iv_short).is_err());
         assert!(aes.encrypt_cbc(data, &iv_long).is_err());
 
-        let encrypted = aes.encrypt_cbc(data, &vec![0u8; 16]).unwrap();
+        let encrypted = aes.encrypt_cbc(data, &[0u8; 16]).unwrap();
         assert!(aes.decrypt_cbc(&encrypted, &iv_short).is_err());
         assert!(aes.decrypt_cbc(&encrypted, &iv_long).is_err());
     }
@@ -714,7 +732,7 @@ mod tests {
     #[test]
     fn test_aes_key_size_clone() {
         let size = AesKeySize::Aes128;
-        let cloned = size.clone();
+        let cloned = size;
         assert_eq!(size, cloned);
     }
 
@@ -727,7 +745,7 @@ mod tests {
     #[test]
     fn test_aes_key_debug() {
         let key = AesKey::new_128(vec![1u8; 16]).unwrap();
-        let debug_str = format!("{:?}", key);
+        let debug_str = format!("{key:?}");
         assert!(debug_str.contains("AesKey"));
         assert!(debug_str.contains("key:"));
         assert!(debug_str.contains("size:"));
@@ -821,7 +839,7 @@ mod tests {
             expected: 16,
             actual: 15,
         };
-        let debug_str = format!("{:?}", error);
+        let debug_str = format!("{error:?}");
         assert!(debug_str.contains("InvalidKeyLength"));
         assert!(debug_str.contains("expected: 16"));
         assert!(debug_str.contains("actual: 15"));
@@ -925,10 +943,10 @@ mod tests {
 
             // Encrypted size should be padded to next multiple of 16
             // PKCS#7 always adds padding, even for exact multiples
-            let expected_size = if size % 16 == 0 {
+            let expected_size = if size.is_multiple_of(16) {
                 size + 16
             } else {
-                ((size + 15) / 16) * 16
+                size.div_ceil(16) * 16
             };
             assert_eq!(encrypted.len(), expected_size);
         }
@@ -992,9 +1010,7 @@ mod tests {
             let result = aes.remove_pkcs7_padding(bad_padding);
             assert!(
                 result.is_err(),
-                "Bad padding {} should fail but got {:?}",
-                i,
-                result
+                "Bad padding {i} should fail but got {result:?}"
             );
         }
 
@@ -1217,12 +1233,12 @@ mod tests {
         let aes = Aes::new(key);
 
         // Test encryption with invalid IV
-        let result = aes.encrypt_cbc(b"test", &vec![0u8; 15]);
+        let result = aes.encrypt_cbc(b"test", &[0u8; 15]);
         assert!(matches!(result, Err(AesError::InvalidIvLength { .. })));
 
         // Test decryption with invalid IV
         let valid_encrypted = vec![0u8; 16];
-        let result = aes.decrypt_cbc(&valid_encrypted, &vec![0u8; 17]);
+        let result = aes.decrypt_cbc(&valid_encrypted, &[0u8; 17]);
         assert!(matches!(result, Err(AesError::InvalidIvLength { .. })));
     }
 

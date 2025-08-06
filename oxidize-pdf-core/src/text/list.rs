@@ -1,11 +1,17 @@
 //! List rendering support for PDF documents
 //!
 //! This module provides ordered and unordered list functionality
-//! with basic formatting options.
+//! with advanced formatting options including:
+//! - Multiple numbering styles (decimal, alphabetic, roman)
+//! - Custom bullet styles and symbols
+//! - Nested lists with automatic indentation
+//! - Text wrapping for long items
+//! - Custom spacing and alignment
+//! - Rich formatting options
 
 use crate::error::PdfError;
 use crate::graphics::{Color, GraphicsContext};
-use crate::text::Font;
+use crate::text::{Font, TextAlign};
 
 /// List style for ordered lists
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -20,6 +26,20 @@ pub enum OrderedListStyle {
     LowerRoman,
     /// Uppercase Roman numerals (I, II, III, ...)
     UpperRoman,
+    /// Decimal with leading zeros (01, 02, 03, ...)
+    DecimalLeadingZero,
+    /// Greek lowercase letters (α, β, γ, ...)
+    GreekLower,
+    /// Greek uppercase letters (Α, Β, Γ, ...)
+    GreekUpper,
+    /// Hebrew letters (א, ב, ג, ...)
+    Hebrew,
+    /// Japanese hiragana (あ, い, う, ...)
+    Hiragana,
+    /// Japanese katakana (ア, イ, ウ, ...)
+    Katakana,
+    /// Chinese numbers (一, 二, 三, ...)
+    ChineseSimplified,
 }
 
 /// Bullet style for unordered lists
@@ -61,6 +81,26 @@ pub struct ListOptions {
     pub line_spacing: f64,
     /// Space between bullet/number and text
     pub marker_spacing: f64,
+    /// Maximum width for text wrapping (None = no wrapping)
+    pub max_width: Option<f64>,
+    /// Text alignment for wrapped lines
+    pub text_align: TextAlign,
+    /// Font for markers (bullets/numbers)
+    pub marker_font: Font,
+    /// Marker color (None = same as text)
+    pub marker_color: Option<Color>,
+    /// Paragraph spacing after each item
+    pub paragraph_spacing: f64,
+    /// Whether to draw a line after each item
+    pub draw_separator: bool,
+    /// Separator line color
+    pub separator_color: Color,
+    /// Separator line width
+    pub separator_width: f64,
+    /// Custom prefix before markers (e.g., "Chapter ", "Section ")
+    pub marker_prefix: String,
+    /// Custom suffix after markers (e.g., ")", "]", ":")
+    pub marker_suffix: String,
 }
 
 impl Default for ListOptions {
@@ -72,6 +112,16 @@ impl Default for ListOptions {
             indent: 20.0,
             line_spacing: 1.2,
             marker_spacing: 10.0,
+            max_width: None,
+            text_align: TextAlign::Left,
+            marker_font: Font::Helvetica,
+            marker_color: None,
+            paragraph_spacing: 0.0,
+            draw_separator: false,
+            separator_color: Color::gray(0.8),
+            separator_width: 0.5,
+            marker_prefix: String::new(),
+            marker_suffix: ".".to_string(),
         }
     }
 }
@@ -161,19 +211,31 @@ impl OrderedList {
     /// Generate the marker for a given index
     fn generate_marker(&self, index: usize) -> String {
         let number = self.start_number + index as u32;
-        match self.style {
-            OrderedListStyle::Decimal => format!("{number}."),
+        let marker_core = match self.style {
+            OrderedListStyle::Decimal => format!("{number}"),
+            OrderedListStyle::DecimalLeadingZero => format!("{number:02}"),
             OrderedListStyle::LowerAlpha => {
                 let letter = char::from_u32('a' as u32 + (number - 1) % 26).unwrap_or('?');
-                format!("{letter}.")
+                format!("{letter}")
             }
             OrderedListStyle::UpperAlpha => {
                 let letter = char::from_u32('A' as u32 + (number - 1) % 26).unwrap_or('?');
-                format!("{letter}.")
+                format!("{letter}")
             }
-            OrderedListStyle::LowerRoman => format!("{}.", to_roman(number).to_lowercase()),
-            OrderedListStyle::UpperRoman => format!("{}.", to_roman(number)),
-        }
+            OrderedListStyle::LowerRoman => to_roman(number).to_lowercase(),
+            OrderedListStyle::UpperRoman => to_roman(number),
+            OrderedListStyle::GreekLower => get_greek_letter(number, false),
+            OrderedListStyle::GreekUpper => get_greek_letter(number, true),
+            OrderedListStyle::Hebrew => get_hebrew_letter(number),
+            OrderedListStyle::Hiragana => get_hiragana_letter(number),
+            OrderedListStyle::Katakana => get_katakana_letter(number),
+            OrderedListStyle::ChineseSimplified => get_chinese_number(number),
+        };
+
+        format!(
+            "{}{}{}",
+            self.options.marker_prefix, marker_core, self.options.marker_suffix
+        )
     }
 
     /// Calculate the total height of the list
@@ -215,27 +277,70 @@ impl OrderedList {
             // Draw marker
             let marker = self.generate_marker(index);
             graphics.save_state();
-            graphics.set_font(self.options.font, self.options.font_size);
-            graphics.set_fill_color(self.options.text_color);
+            graphics.set_font(self.options.marker_font.clone(), self.options.font_size);
+            let marker_color = self.options.marker_color.unwrap_or(self.options.text_color);
+            graphics.set_fill_color(marker_color);
             graphics.begin_text();
             graphics.set_text_position(indent, y);
             graphics.show_text(&marker)?;
             graphics.end_text();
             graphics.restore_state();
 
-            // Draw text
+            // Draw text (with wrapping support)
             let text_x =
                 indent + self.calculate_marker_width(&marker) + self.options.marker_spacing;
-            graphics.save_state();
-            graphics.set_font(self.options.font, self.options.font_size);
-            graphics.set_fill_color(self.options.text_color);
-            graphics.begin_text();
-            graphics.set_text_position(text_x, y);
-            graphics.show_text(&item.text)?;
-            graphics.end_text();
-            graphics.restore_state();
 
-            y += self.options.font_size * self.options.line_spacing;
+            let text_lines = if let Some(max_width) = self.options.max_width {
+                let available_width = max_width - text_x;
+                self.wrap_text(&item.text, available_width)
+            } else {
+                vec![item.text.clone()]
+            };
+
+            // Draw each line of text
+            let mut line_y = y;
+            for (line_index, line) in text_lines.iter().enumerate() {
+                graphics.save_state();
+                graphics.set_font(self.options.font.clone(), self.options.font_size);
+                graphics.set_fill_color(self.options.text_color);
+                graphics.begin_text();
+
+                // For wrapped lines (not the first), add extra indent
+                let line_x = if line_index == 0 {
+                    text_x
+                } else {
+                    text_x + self.options.font_size // Additional indent for wrapped lines
+                };
+
+                graphics.set_text_position(line_x, line_y);
+                graphics.show_text(line)?;
+                graphics.end_text();
+                graphics.restore_state();
+
+                if line_index < text_lines.len() - 1 {
+                    line_y += self.options.font_size * self.options.line_spacing;
+                }
+            }
+
+            y = line_y;
+
+            y +=
+                self.options.font_size * self.options.line_spacing + self.options.paragraph_spacing;
+
+            // Draw separator if enabled
+            if self.options.draw_separator && index < self.items.len() - 1 {
+                graphics.save_state();
+                graphics.set_stroke_color(self.options.separator_color);
+                graphics.set_line_width(self.options.separator_width);
+                graphics.move_to(indent, y + 2.0);
+                graphics.line_to(
+                    indent + (self.options.max_width.unwrap_or(500.0) - indent),
+                    y + 2.0,
+                );
+                graphics.stroke();
+                graphics.restore_state();
+                y += 5.0;
+            }
 
             // Render children
             for child in &item.children {
@@ -260,6 +365,45 @@ impl OrderedList {
     fn calculate_marker_width(&self, marker: &str) -> f64 {
         // Simple approximation: average character width * marker length
         marker.len() as f64 * self.options.font_size * 0.5
+    }
+
+    /// Wrap text to fit within the given width
+    fn wrap_text(&self, text: &str, max_width: f64) -> Vec<String> {
+        // Simple character-based wrapping
+        // In a real implementation, this would use proper font metrics
+        let avg_char_width = self.options.font_size * 0.5;
+        let chars_per_line = (max_width / avg_char_width) as usize;
+
+        if chars_per_line == 0 || text.len() <= chars_per_line {
+            return vec![text.to_string()];
+        }
+
+        let mut lines = Vec::new();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let mut current_line = String::new();
+
+        for word in words {
+            let test_line = if current_line.is_empty() {
+                word.to_string()
+            } else {
+                format!("{current_line} {word}")
+            };
+
+            if test_line.len() <= chars_per_line {
+                current_line = test_line;
+            } else {
+                if !current_line.is_empty() {
+                    lines.push(current_line);
+                }
+                current_line = word.to_string();
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        lines
     }
 }
 
@@ -362,29 +506,72 @@ impl UnorderedList {
         let indent = x + (level as f64 * self.options.indent);
         let bullet = self.get_bullet_char();
 
-        for item in &self.items {
+        for (index, item) in self.items.iter().enumerate() {
             // Draw bullet
             graphics.save_state();
-            graphics.set_font(self.options.font, self.options.font_size);
-            graphics.set_fill_color(self.options.text_color);
+            graphics.set_font(self.options.marker_font.clone(), self.options.font_size);
+            let marker_color = self.options.marker_color.unwrap_or(self.options.text_color);
+            graphics.set_fill_color(marker_color);
             graphics.begin_text();
             graphics.set_text_position(indent, y);
             graphics.show_text(bullet)?;
             graphics.end_text();
             graphics.restore_state();
 
-            // Draw text
+            // Draw text (with wrapping support)
             let text_x = indent + self.options.font_size + self.options.marker_spacing;
-            graphics.save_state();
-            graphics.set_font(self.options.font, self.options.font_size);
-            graphics.set_fill_color(self.options.text_color);
-            graphics.begin_text();
-            graphics.set_text_position(text_x, y);
-            graphics.show_text(&item.text)?;
-            graphics.end_text();
-            graphics.restore_state();
 
-            y += self.options.font_size * self.options.line_spacing;
+            let text_lines = if let Some(max_width) = self.options.max_width {
+                let available_width = max_width - text_x;
+                self.wrap_text(&item.text, available_width)
+            } else {
+                vec![item.text.clone()]
+            };
+
+            // Draw each line of text
+            let mut line_y = y;
+            for (line_index, line) in text_lines.iter().enumerate() {
+                graphics.save_state();
+                graphics.set_font(self.options.font.clone(), self.options.font_size);
+                graphics.set_fill_color(self.options.text_color);
+                graphics.begin_text();
+
+                // For wrapped lines (not the first), add extra indent
+                let line_x = if line_index == 0 {
+                    text_x
+                } else {
+                    text_x + self.options.font_size // Additional indent for wrapped lines
+                };
+
+                graphics.set_text_position(line_x, line_y);
+                graphics.show_text(line)?;
+                graphics.end_text();
+                graphics.restore_state();
+
+                if line_index < text_lines.len() - 1 {
+                    line_y += self.options.font_size * self.options.line_spacing;
+                }
+            }
+
+            y = line_y;
+
+            y +=
+                self.options.font_size * self.options.line_spacing + self.options.paragraph_spacing;
+
+            // Draw separator if enabled
+            if self.options.draw_separator && (index < self.items.len() - 1) {
+                graphics.save_state();
+                graphics.set_stroke_color(self.options.separator_color);
+                graphics.set_line_width(self.options.separator_width);
+                graphics.move_to(indent, y + 2.0);
+                graphics.line_to(
+                    indent + (self.options.max_width.unwrap_or(500.0) - indent),
+                    y + 2.0,
+                );
+                graphics.stroke();
+                graphics.restore_state();
+                y += 5.0;
+            }
 
             // Render children
             for child in &item.children {
@@ -404,6 +591,45 @@ impl UnorderedList {
         }
 
         Ok(y)
+    }
+
+    /// Wrap text to fit within the given width
+    fn wrap_text(&self, text: &str, max_width: f64) -> Vec<String> {
+        // Simple character-based wrapping
+        // In a real implementation, this would use proper font metrics
+        let avg_char_width = self.options.font_size * 0.5;
+        let chars_per_line = (max_width / avg_char_width) as usize;
+
+        if chars_per_line == 0 || text.len() <= chars_per_line {
+            return vec![text.to_string()];
+        }
+
+        let mut lines = Vec::new();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let mut current_line = String::new();
+
+        for word in words {
+            let test_line = if current_line.is_empty() {
+                word.to_string()
+            } else {
+                format!("{current_line} {word}")
+            };
+
+            if test_line.len() <= chars_per_line {
+                current_line = test_line;
+            } else {
+                if !current_line.is_empty() {
+                    lines.push(current_line);
+                }
+                current_line = word.to_string();
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        lines
     }
 }
 
@@ -436,6 +662,72 @@ fn to_roman(num: u32) -> String {
     }
 
     result
+}
+
+/// Get Greek letter for a given number
+fn get_greek_letter(num: u32, uppercase: bool) -> String {
+    let lower = [
+        "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", "σ",
+        "τ", "υ", "φ", "χ", "ψ", "ω",
+    ];
+    let upper = [
+        "Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ", "Ν", "Ξ", "Ο", "Π", "Ρ", "Σ",
+        "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω",
+    ];
+
+    let index = ((num - 1) % 24) as usize;
+    if uppercase {
+        upper[index].to_string()
+    } else {
+        lower[index].to_string()
+    }
+}
+
+/// Get Hebrew letter for a given number
+fn get_hebrew_letter(num: u32) -> String {
+    let letters = [
+        "א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י", "כ", "ל", "מ", "נ", "ס", "ע", "פ", "צ",
+        "ק", "ר", "ש", "ת",
+    ];
+    let index = ((num - 1) % 22) as usize;
+    letters[index].to_string()
+}
+
+/// Get Hiragana letter for a given number
+fn get_hiragana_letter(num: u32) -> String {
+    let letters = [
+        "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し", "す", "せ", "そ",
+        "た", "ち", "つ", "て", "と", "な", "に", "ぬ", "ね", "の", "は", "ひ", "ふ", "へ", "ほ",
+        "ま", "み", "む", "め", "も", "や", "ゆ", "よ", "ら", "り", "る", "れ", "ろ", "わ", "を",
+        "ん",
+    ];
+    let index = ((num - 1) % 46) as usize;
+    letters[index].to_string()
+}
+
+/// Get Katakana letter for a given number
+fn get_katakana_letter(num: u32) -> String {
+    let letters = [
+        "ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ", "サ", "シ", "ス", "セ", "ソ",
+        "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ", "ヒ", "フ", "ヘ", "ホ",
+        "マ", "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ", "ル", "レ", "ロ", "ワ", "ヲ",
+        "ン",
+    ];
+    let index = ((num - 1) % 46) as usize;
+    letters[index].to_string()
+}
+
+/// Get Chinese simplified number for a given number
+fn get_chinese_number(num: u32) -> String {
+    let numbers = [
+        "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二", "十三", "十四",
+        "十五", "十六", "十七", "十八", "十九", "二十",
+    ];
+    if num <= 20 {
+        numbers[(num - 1) as usize].to_string()
+    } else {
+        format!("{num}") // Fallback to Arabic for larger numbers
+    }
 }
 
 #[cfg(test)]
@@ -628,5 +920,267 @@ mod tests {
             ListElement::Unordered(_) => (),
             _ => panic!("Expected unordered list"),
         }
+    }
+
+    #[test]
+    fn test_advanced_numbering_styles() {
+        // Test decimal with leading zeros
+        let list = OrderedList::new(OrderedListStyle::DecimalLeadingZero);
+        assert_eq!(list.generate_marker(0), "01.");
+        assert_eq!(list.generate_marker(8), "09.");
+        assert_eq!(list.generate_marker(9), "10.");
+        assert_eq!(list.generate_marker(99), "100.");
+
+        // Test Greek lowercase
+        let greek_lower = OrderedList::new(OrderedListStyle::GreekLower);
+        assert_eq!(greek_lower.generate_marker(0), "α.");
+        assert_eq!(greek_lower.generate_marker(1), "β.");
+        assert_eq!(greek_lower.generate_marker(23), "ω.");
+        assert_eq!(greek_lower.generate_marker(24), "α."); // Wraps around
+
+        // Test Greek uppercase
+        let greek_upper = OrderedList::new(OrderedListStyle::GreekUpper);
+        assert_eq!(greek_upper.generate_marker(0), "Α.");
+        assert_eq!(greek_upper.generate_marker(1), "Β.");
+        assert_eq!(greek_upper.generate_marker(23), "Ω.");
+
+        // Test Hebrew
+        let hebrew = OrderedList::new(OrderedListStyle::Hebrew);
+        assert_eq!(hebrew.generate_marker(0), "א.");
+        assert_eq!(hebrew.generate_marker(1), "ב.");
+        assert_eq!(hebrew.generate_marker(21), "ת.");
+
+        // Test Hiragana
+        let hiragana = OrderedList::new(OrderedListStyle::Hiragana);
+        assert_eq!(hiragana.generate_marker(0), "あ.");
+        assert_eq!(hiragana.generate_marker(1), "い.");
+        assert_eq!(hiragana.generate_marker(4), "お.");
+
+        // Test Katakana
+        let katakana = OrderedList::new(OrderedListStyle::Katakana);
+        assert_eq!(katakana.generate_marker(0), "ア.");
+        assert_eq!(katakana.generate_marker(1), "イ.");
+        assert_eq!(katakana.generate_marker(4), "オ.");
+
+        // Test Chinese simplified
+        let chinese = OrderedList::new(OrderedListStyle::ChineseSimplified);
+        assert_eq!(chinese.generate_marker(0), "一.");
+        assert_eq!(chinese.generate_marker(1), "二.");
+        assert_eq!(chinese.generate_marker(9), "十.");
+        assert_eq!(chinese.generate_marker(19), "二十.");
+        assert_eq!(chinese.generate_marker(20), "21."); // Fallback to Arabic
+    }
+
+    #[test]
+    fn test_custom_prefix_suffix() {
+        let mut list = OrderedList::new(OrderedListStyle::Decimal);
+        let mut options = ListOptions::default();
+        options.marker_prefix = "Chapter ".to_string();
+        options.marker_suffix = ":".to_string();
+        list.set_options(options);
+
+        assert_eq!(list.generate_marker(0), "Chapter 1:");
+        assert_eq!(list.generate_marker(1), "Chapter 2:");
+
+        // Test with Roman numerals
+        let mut roman_list = OrderedList::new(OrderedListStyle::UpperRoman);
+        let mut roman_options = ListOptions::default();
+        roman_options.marker_prefix = "Part ".to_string();
+        roman_options.marker_suffix = " -".to_string();
+        roman_list.set_options(roman_options);
+
+        assert_eq!(roman_list.generate_marker(0), "Part I -");
+        assert_eq!(roman_list.generate_marker(3), "Part IV -");
+    }
+
+    #[test]
+    fn test_text_wrapping() {
+        let list = OrderedList::new(OrderedListStyle::Decimal);
+
+        // Test short text (no wrapping)
+        let wrapped = list.wrap_text("Short text", 100.0);
+        assert_eq!(wrapped.len(), 1);
+        assert_eq!(wrapped[0], "Short text");
+
+        // Test long text with wrapping
+        let long_text =
+            "This is a very long line that should be wrapped because it exceeds the maximum width";
+        let wrapped = list.wrap_text(long_text, 50.0); // ~10 chars per line at font size 10
+        assert!(wrapped.len() > 1);
+
+        // Test empty text
+        let wrapped = list.wrap_text("", 100.0);
+        assert_eq!(wrapped.len(), 1);
+        assert_eq!(wrapped[0], "");
+
+        // Test zero width (no wrapping possible)
+        let wrapped = list.wrap_text("Test", 0.0);
+        assert_eq!(wrapped.len(), 1);
+        assert_eq!(wrapped[0], "Test");
+    }
+
+    #[test]
+    fn test_list_options_advanced() {
+        let mut options = ListOptions::default();
+
+        // Test all new fields
+        options.max_width = Some(300.0);
+        options.text_align = TextAlign::Center;
+        options.marker_font = Font::HelveticaBold;
+        options.marker_color = Some(Color::red());
+        options.paragraph_spacing = 5.0;
+        options.draw_separator = true;
+        options.separator_color = Color::gray(0.5);
+        options.separator_width = 2.0;
+        options.marker_prefix = "Item ".to_string();
+        options.marker_suffix = ")".to_string();
+
+        assert_eq!(options.max_width, Some(300.0));
+        assert_eq!(options.text_align, TextAlign::Center);
+        assert_eq!(options.marker_font, Font::HelveticaBold);
+        assert!(options.marker_color.is_some());
+        assert_eq!(options.paragraph_spacing, 5.0);
+        assert!(options.draw_separator);
+        assert_eq!(options.separator_width, 2.0);
+        assert_eq!(options.marker_prefix, "Item ");
+        assert_eq!(options.marker_suffix, ")");
+    }
+
+    #[test]
+    fn test_unordered_list_custom_bullets() {
+        // Test standard bullets
+        let disc_list = UnorderedList::new(BulletStyle::Disc);
+        assert_eq!(disc_list.get_bullet_char(), "•");
+
+        let circle_list = UnorderedList::new(BulletStyle::Circle);
+        assert_eq!(circle_list.get_bullet_char(), "○");
+
+        let square_list = UnorderedList::new(BulletStyle::Square);
+        assert_eq!(square_list.get_bullet_char(), "■");
+
+        let dash_list = UnorderedList::new(BulletStyle::Dash);
+        assert_eq!(dash_list.get_bullet_char(), "-");
+
+        // Test custom bullets
+        let arrow_list = UnorderedList::new(BulletStyle::Custom('→'));
+        assert_eq!(arrow_list.get_bullet_char(), "→");
+
+        let star_list = UnorderedList::new(BulletStyle::Custom('★'));
+        assert_eq!(star_list.get_bullet_char(), "★");
+
+        // Test fallback for unknown custom character
+        let unknown_list = UnorderedList::new(BulletStyle::Custom('Z'));
+        assert_eq!(unknown_list.get_bullet_char(), "•"); // Falls back to disc
+    }
+
+    #[test]
+    fn test_deeply_nested_lists() {
+        let mut level1 = OrderedList::new(OrderedListStyle::Decimal);
+
+        // Create level 2
+        let mut level2 = UnorderedList::new(BulletStyle::Circle);
+
+        // Create level 3
+        let mut level3 = OrderedList::new(OrderedListStyle::LowerAlpha);
+        level3.add_item("Deep item a".to_string());
+        level3.add_item("Deep item b".to_string());
+
+        // Add level 3 to level 2
+        level2.add_item_with_children(
+            "Level 2 item with children".to_string(),
+            vec![ListElement::Ordered(level3)],
+        );
+        level2.add_item("Level 2 item without children".to_string());
+
+        // Add level 2 to level 1
+        level1.add_item_with_children(
+            "Level 1 item with nested list".to_string(),
+            vec![ListElement::Unordered(level2)],
+        );
+
+        assert_eq!(level1.items.len(), 1);
+        assert_eq!(level1.items[0].children.len(), 1);
+
+        // Verify the structure
+        if let ListElement::Unordered(ref list) = level1.items[0].children[0] {
+            assert_eq!(list.items.len(), 2);
+            assert_eq!(list.items[0].children.len(), 1);
+        } else {
+            panic!("Expected unordered list at level 2");
+        }
+    }
+
+    #[test]
+    fn test_height_calculation_with_nested() {
+        let mut list = OrderedList::new(OrderedListStyle::Decimal);
+        list.add_item("Item 1".to_string());
+        list.add_item("Item 2".to_string());
+
+        let height_simple = list.get_height();
+        let expected_simple = 2.0 * 10.0 * 1.2; // 2 items * font_size * line_spacing
+        assert_eq!(height_simple, expected_simple);
+
+        // Add nested list
+        let mut nested = UnorderedList::new(BulletStyle::Dash);
+        nested.add_item("Nested 1".to_string());
+        nested.add_item("Nested 2".to_string());
+
+        list.add_item_with_children(
+            "Item 3 with children".to_string(),
+            vec![ListElement::Unordered(nested)],
+        );
+
+        let height_with_nested = list.get_height();
+        let expected_with_nested = 5.0 * 10.0 * 1.2; // 5 total items * font_size * line_spacing
+        assert_eq!(height_with_nested, expected_with_nested);
+    }
+
+    #[test]
+    fn test_helper_functions() {
+        // Test Greek letter generation
+        assert_eq!(get_greek_letter(1, false), "α");
+        assert_eq!(get_greek_letter(2, false), "β");
+        assert_eq!(get_greek_letter(24, false), "ω");
+        assert_eq!(get_greek_letter(25, false), "α"); // Wraps
+
+        assert_eq!(get_greek_letter(1, true), "Α");
+        assert_eq!(get_greek_letter(2, true), "Β");
+        assert_eq!(get_greek_letter(24, true), "Ω");
+
+        // Test Hebrew letter generation
+        assert_eq!(get_hebrew_letter(1), "א");
+        assert_eq!(get_hebrew_letter(22), "ת");
+        assert_eq!(get_hebrew_letter(23), "א"); // Wraps
+
+        // Test Hiragana generation
+        assert_eq!(get_hiragana_letter(1), "あ");
+        assert_eq!(get_hiragana_letter(5), "お");
+        assert_eq!(get_hiragana_letter(46), "ん");
+        assert_eq!(get_hiragana_letter(47), "あ"); // Wraps
+
+        // Test Katakana generation
+        assert_eq!(get_katakana_letter(1), "ア");
+        assert_eq!(get_katakana_letter(5), "オ");
+        assert_eq!(get_katakana_letter(46), "ン");
+
+        // Test Chinese number generation
+        assert_eq!(get_chinese_number(1), "一");
+        assert_eq!(get_chinese_number(10), "十");
+        assert_eq!(get_chinese_number(20), "二十");
+        assert_eq!(get_chinese_number(21), "21"); // Fallback
+    }
+
+    #[test]
+    fn test_list_cloning() {
+        let mut original = OrderedList::new(OrderedListStyle::Decimal);
+        original.add_item("Item 1".to_string());
+        original.set_position(100.0, 200.0);
+        original.set_start_number(5);
+
+        let cloned = original.clone();
+        assert_eq!(cloned.items.len(), 1);
+        assert_eq!(cloned.position, (100.0, 200.0));
+        assert_eq!(cloned.start_number, 5);
+        assert_eq!(cloned.style, OrderedListStyle::Decimal);
     }
 }

@@ -5,7 +5,7 @@
 
 use crate::error::PdfError;
 use crate::graphics::{Color, GraphicsContext};
-use crate::text::{Font, TextAlign};
+use crate::text::{measure_text, Font, TextAlign};
 
 /// Represents a simple table in a PDF document
 #[derive(Debug, Clone)]
@@ -279,16 +279,16 @@ impl Table {
                                 Font::Helvetica => Font::HelveticaBold,
                                 Font::TimesRoman => Font::TimesBold,
                                 Font::Courier => Font::CourierBold,
-                                _ => style.font,
+                                _ => style.font.clone(),
                             }
                         } else {
-                            style.font
+                            style.font.clone()
                         };
                         graphics.set_font(font, self.options.font_size);
                         graphics.set_fill_color(style.text_color);
                     }
                 } else {
-                    graphics.set_font(self.options.font, self.options.font_size);
+                    graphics.set_font(self.options.font.clone(), self.options.font_size);
                     graphics.set_fill_color(self.options.text_color);
                 }
 
@@ -301,16 +301,58 @@ impl Table {
                         graphics.end_text();
                     }
                     TextAlign::Center => {
-                        let text_len = cell.content.len() as f64 * self.options.font_size * 0.5;
-                        let centered_x = text_x + (text_width - text_len) / 2.0;
+                        // Determine which font to use based on header style
+                        let font_to_measure = if use_header_style {
+                            if let Some(style) = header_style {
+                                if style.bold {
+                                    match style.font {
+                                        Font::Helvetica => Font::HelveticaBold,
+                                        Font::TimesRoman => Font::TimesBold,
+                                        Font::Courier => Font::CourierBold,
+                                        _ => style.font.clone(),
+                                    }
+                                } else {
+                                    style.font.clone()
+                                }
+                            } else {
+                                self.options.font.clone()
+                            }
+                        } else {
+                            self.options.font.clone()
+                        };
+
+                        let text_width_measured =
+                            measure_text(&cell.content, font_to_measure, self.options.font_size);
+                        let centered_x = text_x + (text_width - text_width_measured) / 2.0;
                         graphics.begin_text();
                         graphics.set_text_position(centered_x, text_y);
                         graphics.show_text(&cell.content)?;
                         graphics.end_text();
                     }
                     TextAlign::Right => {
-                        let text_len = cell.content.len() as f64 * self.options.font_size * 0.5;
-                        let right_x = text_x + text_width - text_len;
+                        // Determine which font to use based on header style
+                        let font_to_measure = if use_header_style {
+                            if let Some(style) = header_style {
+                                if style.bold {
+                                    match style.font {
+                                        Font::Helvetica => Font::HelveticaBold,
+                                        Font::TimesRoman => Font::TimesBold,
+                                        Font::Courier => Font::CourierBold,
+                                        _ => style.font.clone(),
+                                    }
+                                } else {
+                                    style.font.clone()
+                                }
+                            } else {
+                                self.options.font.clone()
+                            }
+                        } else {
+                            self.options.font.clone()
+                        };
+
+                        let text_width_measured =
+                            measure_text(&cell.content, font_to_measure, self.options.font_size);
+                        let right_x = text_x + text_width - text_width_measured;
                         graphics.begin_text();
                         graphics.set_text_position(right_x, text_y);
                         graphics.show_text(&cell.content)?;
