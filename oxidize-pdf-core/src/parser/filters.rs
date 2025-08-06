@@ -399,7 +399,7 @@ fn apply_png_predictor(
     // Calculate row size (columns + 1 for predictor byte)
     let row_size = columns + 1;
 
-    if data.len() % row_size != 0 {
+    if !data.len().is_multiple_of(row_size) {
         return Err(ParseError::StreamDecodeError(
             "PNG predictor: data length not multiple of row size".to_string(),
         ));

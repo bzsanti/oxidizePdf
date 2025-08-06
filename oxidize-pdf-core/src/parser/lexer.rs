@@ -410,7 +410,7 @@ impl<R: Read> Lexer<R> {
             }
 
             // Pad with 0 if odd number of digits
-            if hex_chars.len() % 2 != 0 {
+            if !hex_chars.len().is_multiple_of(2) {
                 hex_chars.push('0');
             }
 
