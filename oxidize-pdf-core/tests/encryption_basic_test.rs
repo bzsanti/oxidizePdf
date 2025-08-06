@@ -525,9 +525,8 @@ fn test_full_aes_workflow() {
 
         if decrypt_result.is_ok() {
             let decrypted = decrypt_result.unwrap();
-            // Remove potential padding for comparison
-            let trimmed: Vec<u8> = decrypted.iter().take_while(|&&b| b != 0).cloned().collect();
-            assert!(trimmed.starts_with(b"AES encrypted"));
+            // Compare with original plaintext
+            assert_eq!(decrypted, plaintext, "Decrypted data should match original plaintext");
         } else {
             // If decryption fails, at least encryption worked
             println!(
