@@ -53,6 +53,12 @@ pub struct FontDescriptor {
     pub missing_width: f32,
 }
 
+impl Default for FontDescriptor {
+    fn default() -> Self {
+        Self::new("DefaultFont")
+    }
+}
+
 impl FontDescriptor {
     /// Create a new font descriptor with default values
     pub fn new(font_name: impl Into<String>) -> Self {

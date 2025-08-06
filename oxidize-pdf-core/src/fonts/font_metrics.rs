@@ -19,6 +19,19 @@ pub struct FontMetrics {
     pub x_height: i16,
 }
 
+impl Default for FontMetrics {
+    fn default() -> Self {
+        FontMetrics {
+            units_per_em: 1000,
+            ascent: 750,
+            descent: -250,
+            line_gap: 200,
+            cap_height: 700,
+            x_height: 500,
+        }
+    }
+}
+
 impl FontMetrics {
     /// Convert font units to user space units at given font size
     pub fn to_user_space(&self, value: i16, font_size: f32) -> f32 {

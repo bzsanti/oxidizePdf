@@ -56,6 +56,8 @@ pub struct Document {
     /// Map from font name to embedded font object ID
     #[allow(dead_code)]
     pub(crate) embedded_fonts: HashMap<String, ObjectId>,
+    /// Characters used in the document (for font subsetting)
+    pub(crate) used_characters: HashSet<char>,
 }
 
 /// Metadata for a PDF document.
@@ -114,11 +116,16 @@ impl Document {
             compress: true, // Enable compression by default
             custom_fonts: FontCache::new(),
             embedded_fonts: HashMap::new(),
+            used_characters: HashSet::new(),
         }
     }
 
     /// Adds a page to the document.
     pub fn add_page(&mut self, page: Page) {
+        // Collect used characters from the page
+        if let Some(used_chars) = page.get_used_characters() {
+            self.used_characters.extend(used_chars);
+        }
         self.pages.push(page);
     }
 
@@ -289,6 +296,7 @@ impl Document {
     ///
     /// This scans all pages and collects the unique fonts used, applying
     /// the default encoding where no explicit encoding is specified.
+    #[allow(dead_code)]
     pub(crate) fn get_fonts_with_encodings(&self) -> Vec<FontWithEncoding> {
         let mut fonts_used = HashSet::new();
 

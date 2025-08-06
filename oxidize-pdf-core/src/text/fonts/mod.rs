@@ -2,6 +2,7 @@
 
 pub mod embedding;
 pub mod truetype;
+pub mod truetype_subsetter;
 
 #[cfg(test)]
 mod truetype_tests;

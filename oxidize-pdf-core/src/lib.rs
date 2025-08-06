@@ -260,6 +260,9 @@ pub use text::fonts::embedding::{
     FontEncoding, FontFlags, FontMetrics, FontType,
 };
 
+// Re-export font management types
+pub use text::font_manager::{CustomFont, FontManager};
+
 // Re-export parsing types
 pub use parser::{
     ContentOperation, ContentParser, DocumentMetadata as ParsedDocumentMetadata, ParseOptions,

@@ -24,8 +24,10 @@ pub use state::{
 };
 
 use crate::error::Result;
-use crate::text::{ColumnContent, ColumnLayout, Font, ListElement, Table};
+use crate::text::{ColumnContent, ColumnLayout, Font, FontManager, ListElement, Table};
+use std::collections::HashSet;
 use std::fmt::Write;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct GraphicsContext {
@@ -45,6 +47,12 @@ pub struct GraphicsContext {
     current_rendering_intent: RenderingIntent,
     current_flatness: f64,
     current_smoothness: f64,
+    // Font management
+    font_manager: Option<Arc<FontManager>>,
+    current_font_name: Option<String>,
+    current_font_size: f64,
+    // Character tracking for font subsetting
+    used_characters: HashSet<char>,
 }
 
 impl Default for GraphicsContext {
@@ -72,6 +80,11 @@ impl GraphicsContext {
             current_rendering_intent: RenderingIntent::RelativeColorimetric,
             current_flatness: 1.0,
             current_smoothness: 0.0,
+            // Font defaults
+            font_manager: None,
+            current_font_name: None,
+            current_font_size: 12.0,
+            used_characters: HashSet::new(),
         }
     }
 
@@ -615,6 +628,348 @@ impl GraphicsContext {
     pub fn clip_even_odd(&mut self) -> &mut Self {
         self.operations.push_str("W*\n");
         self
+    }
+
+    /// Set the font manager for custom fonts
+    pub fn set_font_manager(&mut self, font_manager: Arc<FontManager>) -> &mut Self {
+        self.font_manager = Some(font_manager);
+        self
+    }
+
+    /// Set the current font to a custom font
+    pub fn set_custom_font(&mut self, font_name: &str, size: f64) -> &mut Self {
+        self.current_font_name = Some(font_name.to_string());
+        self.current_font_size = size;
+        self
+    }
+
+    /// Draw text at the specified position with automatic encoding detection
+    pub fn draw_text(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Track used characters for font subsetting
+        self.used_characters.extend(text.chars());
+
+        // Check if we're using a custom font (which will be Type0/Unicode)
+        // Custom fonts are those that are not the standard PDF fonts (Helvetica, Times, etc.)
+        let using_custom_font = if let Some(ref font_name) = self.current_font_name {
+            // If font name doesn't start with standard PDF font names, it's custom
+            !matches!(
+                font_name.as_str(),
+                "Helvetica"
+                    | "Times"
+                    | "Courier"
+                    | "Symbol"
+                    | "ZapfDingbats"
+                    | "Helvetica-Bold"
+                    | "Helvetica-Oblique"
+                    | "Helvetica-BoldOblique"
+                    | "Times-Roman"
+                    | "Times-Bold"
+                    | "Times-Italic"
+                    | "Times-BoldItalic"
+                    | "Courier-Bold"
+                    | "Courier-Oblique"
+                    | "Courier-BoldOblique"
+            )
+        } else {
+            false
+        };
+
+        // Detect if text needs Unicode encoding
+        let needs_unicode = text.chars().any(|c| c as u32 > 255) || using_custom_font;
+
+        // Use appropriate encoding based on content and font type
+        if needs_unicode {
+            self.draw_with_unicode_encoding(text, x, y)
+        } else {
+            self.draw_with_simple_encoding(text, x, y)
+        }
+    }
+
+    /// Internal: Draw text with simple encoding (Latin-1)
+    fn draw_with_simple_encoding(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Check if text contains characters outside Latin-1
+        let has_unicode = text.chars().any(|c| c as u32 > 255);
+
+        if has_unicode {
+            // Warning: Text contains Unicode characters but no Unicode font is set
+            eprintln!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
+        }
+
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Use hex encoding for better control
+        self.operations.push('<');
+        for ch in text.chars() {
+            if ch as u32 <= 255 {
+                write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+            } else {
+                // Fallback for characters outside Latin-1
+                write!(&mut self.operations, "3F").unwrap(); // '?'
+            }
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Internal: Draw text with Unicode encoding (Type0/CID)
+    fn draw_with_unicode_encoding(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font - ensure it's a Type0 font for Unicode
+        if let Some(font_name) = &self.current_font_name {
+            // The font should be converted to Type0 by FontManager if needed
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Use 2-byte hex encoding for glyph IDs
+        // IMPORTANT: With Identity CIDToGIDMap, we write glyph IDs directly,
+        // not Unicode code points. The glyph IDs come from the font's cmap table.
+        self.operations.push('<');
+
+        for ch in text.chars() {
+            let code = ch as u32;
+
+            // For now, since we're using Identity CIDToGIDMap and not subsetting,
+            // we need to write the actual glyph ID from the font.
+            // Since we don't have access to the font's cmap here, we'll use
+            // a simple mapping for testing: Unicode = GlyphID for common characters
+
+            // This is a temporary solution - the proper fix requires passing
+            // the font's cmap mapping through to this method
+            let glyph_id = if code < 256 {
+                // For ASCII and Latin-1, many fonts have direct mapping
+                code as u16
+            } else if code <= 0xFFFF {
+                // For other BMP characters, use the Unicode value
+                // This may work for some fonts with direct Unicode mapping
+                code as u16
+            } else {
+                // Characters outside BMP - use .notdef (0)
+                0u16
+            };
+
+            // Write the glyph ID as a 2-byte hex value
+            write!(&mut self.operations, "{:04X}", glyph_id).unwrap();
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Legacy: Draw text with hex encoding (kept for compatibility)
+    #[deprecated(note = "Use draw_text() which automatically detects encoding")]
+    pub fn draw_text_hex(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            // Fallback to Helvetica if no font is set
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Encode text as hex string
+        // For TrueType fonts with Identity-H encoding, we need UTF-16BE
+        // But we'll use single-byte encoding for now to fix spacing
+        self.operations.push('<');
+        for ch in text.chars() {
+            if ch as u32 <= 255 {
+                // For characters in the Latin-1 range, use single byte
+                write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+            } else {
+                // For characters outside Latin-1, we need proper glyph mapping
+                // For now, use a placeholder
+                write!(&mut self.operations, "3F").unwrap(); // '?' character
+            }
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Legacy: Draw text with Type0 font encoding (kept for compatibility)
+    #[deprecated(note = "Use draw_text() which automatically detects encoding")]
+    pub fn draw_text_cid(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        use crate::fonts::needs_type0_font;
+
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Check if text needs Type0 encoding
+        if needs_type0_font(text) {
+            // Use 2-byte hex encoding for CIDs with identity mapping
+            self.operations.push('<');
+            for ch in text.chars() {
+                let code = ch as u32;
+
+                // Handle all Unicode characters
+                if code <= 0xFFFF {
+                    // Direct identity mapping for BMP characters
+                    write!(&mut self.operations, "{:04X}", code).unwrap();
+                } else if code <= 0x10FFFF {
+                    // For characters outside BMP - use surrogate pairs
+                    let code = code - 0x10000;
+                    let high = ((code >> 10) & 0x3FF) + 0xD800;
+                    let low = (code & 0x3FF) + 0xDC00;
+                    write!(&mut self.operations, "{:04X}{:04X}", high, low).unwrap();
+                } else {
+                    // Invalid Unicode - use replacement character
+                    write!(&mut self.operations, "FFFD").unwrap();
+                }
+            }
+            self.operations.push_str("> Tj\n");
+        } else {
+            // Use regular single-byte encoding for Latin-1
+            self.operations.push('<');
+            for ch in text.chars() {
+                if ch as u32 <= 255 {
+                    write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+                } else {
+                    write!(&mut self.operations, "3F").unwrap();
+                }
+            }
+            self.operations.push_str("> Tj\n");
+        }
+
+        // End text object
+        self.operations.push_str("ET\n");
+        Ok(self)
+    }
+
+    /// Legacy: Draw text with UTF-16BE encoding (kept for compatibility)
+    #[deprecated(note = "Use draw_text() which automatically detects encoding")]
+    pub fn draw_text_unicode(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            // Fallback to Helvetica if no font is set
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Encode text as UTF-16BE hex string
+        self.operations.push('<');
+        let mut utf16_buffer = [0u16; 2];
+        for ch in text.chars() {
+            let encoded = ch.encode_utf16(&mut utf16_buffer);
+            for unit in encoded {
+                // Write UTF-16BE (big-endian)
+                write!(&mut self.operations, "{:04X}", unit).unwrap();
+            }
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Get the characters used in this graphics context
+    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
+        if self.used_characters.is_empty() {
+            None
+        } else {
+            Some(self.used_characters.clone())
+        }
     }
 }
 
