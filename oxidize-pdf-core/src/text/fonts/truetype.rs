@@ -1012,7 +1012,7 @@ impl TrueTypeFont {
             entry_selector += 1;
         }
         search_range *= 2;
-        let range_shift = seg_count_x2 - search_range as u16;
+        let range_shift = seg_count_x2.saturating_sub(search_range as u16);
 
         cmap.extend(&(search_range as u16).to_be_bytes());
         cmap.extend(&entry_selector.to_be_bytes());

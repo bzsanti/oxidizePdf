@@ -601,6 +601,83 @@ impl ExtGState {
             && self.text_knockout.is_none()
             && self.use_black_point_compensation.is_none()
     }
+
+    /// Convert to Dictionary object for PDF writer
+    pub fn to_dict(&self) -> crate::objects::Dictionary {
+        use crate::objects::{Dictionary, Object};
+
+        let mut dict = Dictionary::new();
+        dict.set("Type", Object::Name("ExtGState".to_string()));
+
+        // Line parameters
+        if let Some(width) = self.line_width {
+            dict.set("LW", Object::Real(width));
+        }
+
+        if let Some(cap) = self.line_cap {
+            dict.set("LC", Object::Integer(cap as i64));
+        }
+
+        if let Some(join) = self.line_join {
+            dict.set("LJ", Object::Integer(join as i64));
+        }
+
+        if let Some(limit) = self.miter_limit {
+            dict.set("ML", Object::Real(limit));
+        }
+
+        // Transparency parameters
+        if let Some(mode) = &self.blend_mode {
+            dict.set("BM", Object::Name(mode.pdf_name().to_string()));
+        }
+
+        if let Some(alpha) = self.alpha_stroke {
+            dict.set("CA", Object::Real(alpha));
+        }
+
+        if let Some(alpha) = self.alpha_fill {
+            dict.set("ca", Object::Real(alpha));
+        }
+
+        if let Some(ais) = self.alpha_is_shape {
+            dict.set("AIS", Object::Boolean(ais));
+        }
+
+        if let Some(tk) = self.text_knockout {
+            dict.set("TK", Object::Boolean(tk));
+        }
+
+        // Other parameters
+        if let Some(intent) = &self.rendering_intent {
+            dict.set("RI", Object::Name(intent.pdf_name().to_string()));
+        }
+
+        if let Some(op) = self.overprint_stroke {
+            dict.set("OP", Object::Boolean(op));
+        }
+
+        if let Some(op) = self.overprint_fill {
+            dict.set("op", Object::Boolean(op));
+        }
+
+        if let Some(mode) = self.overprint_mode {
+            dict.set("OPM", Object::Integer(mode as i64));
+        }
+
+        if let Some(flatness) = self.flatness {
+            dict.set("FL", Object::Real(flatness));
+        }
+
+        if let Some(smoothness) = self.smoothness {
+            dict.set("SM", Object::Real(smoothness));
+        }
+
+        if let Some(sa) = self.stroke_adjustment {
+            dict.set("SA", Object::Boolean(sa));
+        }
+
+        dict
+    }
 }
 
 /// ExtGState manager for handling multiple graphics states
