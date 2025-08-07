@@ -25,7 +25,7 @@ pub use state::{
 
 use crate::error::Result;
 use crate::text::{ColumnContent, ColumnLayout, Font, FontManager, ListElement, Table};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::sync::Arc;
 
@@ -53,6 +53,8 @@ pub struct GraphicsContext {
     current_font_size: f64,
     // Character tracking for font subsetting
     used_characters: HashSet<char>,
+    // Glyph mapping for Unicode fonts (Unicode code point -> Glyph ID)
+    glyph_mapping: Option<HashMap<u32, u16>>,
 }
 
 impl Default for GraphicsContext {
@@ -85,6 +87,7 @@ impl GraphicsContext {
             current_font_name: None,
             current_font_size: 12.0,
             used_characters: HashSet::new(),
+            glyph_mapping: None,
         }
     }
 
@@ -640,6 +643,20 @@ impl GraphicsContext {
     pub fn set_custom_font(&mut self, font_name: &str, size: f64) -> &mut Self {
         self.current_font_name = Some(font_name.to_string());
         self.current_font_size = size;
+
+        // Try to get the glyph mapping from the font manager
+        if let Some(ref font_manager) = self.font_manager {
+            if let Some(mapping) = font_manager.get_font_glyph_mapping(font_name) {
+                self.glyph_mapping = Some(mapping);
+            }
+        }
+
+        self
+    }
+
+    /// Set the glyph mapping for Unicode fonts (Unicode -> GlyphID)
+    pub fn set_glyph_mapping(&mut self, mapping: HashMap<u32, u16>) -> &mut Self {
+        self.glyph_mapping = Some(mapping);
         self
     }
 
@@ -763,30 +780,29 @@ impl GraphicsContext {
         writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
 
         // Use 2-byte hex encoding for glyph IDs
-        // IMPORTANT: With Identity CIDToGIDMap, we write glyph IDs directly,
-        // not Unicode code points. The glyph IDs come from the font's cmap table.
+        // With proper glyph mapping, we write the actual glyph IDs from the font's cmap table
         self.operations.push('<');
 
         for ch in text.chars() {
             let code = ch as u32;
 
-            // For now, since we're using Identity CIDToGIDMap and not subsetting,
-            // we need to write the actual glyph ID from the font.
-            // Since we don't have access to the font's cmap here, we'll use
-            // a simple mapping for testing: Unicode = GlyphID for common characters
-
-            // This is a temporary solution - the proper fix requires passing
-            // the font's cmap mapping through to this method
-            let glyph_id = if code < 256 {
-                // For ASCII and Latin-1, many fonts have direct mapping
-                code as u16
-            } else if code <= 0xFFFF {
-                // For other BMP characters, use the Unicode value
-                // This may work for some fonts with direct Unicode mapping
-                code as u16
+            // Use the actual glyph mapping if available, otherwise fall back to simple mapping
+            let glyph_id = if let Some(ref mapping) = self.glyph_mapping {
+                // Use the actual glyph ID from the font's cmap table
+                mapping.get(&code).copied().unwrap_or(0)
             } else {
-                // Characters outside BMP - use .notdef (0)
-                0u16
+                // Fallback: simple mapping for basic fonts
+                if code < 256 {
+                    // For ASCII and Latin-1, many fonts have direct mapping
+                    code as u16
+                } else if code <= 0xFFFF {
+                    // For other BMP characters, use the Unicode value
+                    // This may work for some fonts with direct Unicode mapping
+                    code as u16
+                } else {
+                    // Characters outside BMP - use .notdef (0)
+                    0u16
+                }
             };
 
             // Write the glyph ID as a 2-byte hex value

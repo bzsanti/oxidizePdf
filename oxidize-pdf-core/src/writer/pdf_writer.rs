@@ -647,9 +647,10 @@ impl<W: Write> PdfWriter<W> {
                 font.data.clone(),
                 &used_chars,
             ) {
-                Ok(subset_data) => {
-                    // Successfully subsetted
-                    subset_data
+                Ok(subset_result) => {
+                    // Successfully subsetted - use the font data
+                    // Note: The glyph mapping is already handled elsewhere
+                    subset_result.font_data
                 }
                 Err(_) => {
                     // Subsetting failed, use original if under 25MB
