@@ -386,6 +386,19 @@ impl GraphicsContext {
     /// Set font and size
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
         writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size).unwrap();
+
+        // Track font name and size for Unicode detection and proper font handling
+        match &font {
+            Font::Custom(name) => {
+                self.current_font_name = Some(name.clone());
+                self.current_font_size = size;
+            }
+            _ => {
+                self.current_font_name = Some(font.pdf_name());
+                self.current_font_size = size;
+            }
+        }
+
         self
     }
 
@@ -702,7 +715,7 @@ impl GraphicsContext {
         }
     }
 
-    /// Internal: Draw text with simple encoding (Latin-1)
+    /// Internal: Draw text with simple encoding (WinAnsiEncoding for standard fonts)
     fn draw_with_simple_encoding(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
         // Check if text contains characters outside Latin-1
         let has_unicode = text.chars().any(|c| c as u32 > 255);
@@ -735,17 +748,32 @@ impl GraphicsContext {
         // Set text position
         writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
 
-        // Use hex encoding for better control
-        self.operations.push('<');
+        // Use parentheses encoding for Latin-1 text (standard PDF fonts use WinAnsiEncoding)
+        // This allows proper rendering of accented characters
+        self.operations.push('(');
         for ch in text.chars() {
-            if ch as u32 <= 255 {
-                write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+            let code = ch as u32;
+            if code <= 127 {
+                // ASCII characters - handle special characters that need escaping
+                match ch {
+                    '(' => self.operations.push_str("\\("),
+                    ')' => self.operations.push_str("\\)"),
+                    '\\' => self.operations.push_str("\\\\"),
+                    '\n' => self.operations.push_str("\\n"),
+                    '\r' => self.operations.push_str("\\r"),
+                    '\t' => self.operations.push_str("\\t"),
+                    _ => self.operations.push(ch),
+                }
+            } else if code <= 255 {
+                // Latin-1 characters (128-255)
+                // For WinAnsiEncoding, we can use octal notation for high-bit characters
+                write!(&mut self.operations, "\\{:03o}", code).unwrap();
             } else {
-                // Fallback for characters outside Latin-1
-                write!(&mut self.operations, "3F").unwrap(); // '?'
+                // Characters outside Latin-1 - replace with '?'
+                self.operations.push('?');
             }
         }
-        self.operations.push_str("> Tj\n");
+        self.operations.push_str(") Tj\n");
 
         // End text object
         self.operations.push_str("ET\n");
@@ -779,34 +807,24 @@ impl GraphicsContext {
         // Set text position
         writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
 
-        // Use 2-byte hex encoding for glyph IDs
-        // With proper glyph mapping, we write the actual glyph IDs from the font's cmap table
+        // IMPORTANT: For Type0 fonts with Identity-H encoding, we write CIDs (Character IDs),
+        // NOT GlyphIDs. The CIDToGIDMap in the font handles the CID -> GlyphID conversion.
+        // In our case, we use Unicode code points as CIDs.
         self.operations.push('<');
 
         for ch in text.chars() {
             let code = ch as u32;
 
-            // Use the actual glyph mapping if available, otherwise fall back to simple mapping
-            let glyph_id = if let Some(ref mapping) = self.glyph_mapping {
-                // Use the actual glyph ID from the font's cmap table
-                mapping.get(&code).copied().unwrap_or(0)
+            // For Type0 fonts with Identity-H encoding, write the Unicode code point as CID
+            // The CIDToGIDMap will handle the conversion to the actual glyph ID
+            if code <= 0xFFFF {
+                // Write the Unicode code point as a 2-byte hex value (CID)
+                write!(&mut self.operations, "{:04X}", code).unwrap();
             } else {
-                // Fallback: simple mapping for basic fonts
-                if code < 256 {
-                    // For ASCII and Latin-1, many fonts have direct mapping
-                    code as u16
-                } else if code <= 0xFFFF {
-                    // For other BMP characters, use the Unicode value
-                    // This may work for some fonts with direct Unicode mapping
-                    code as u16
-                } else {
-                    // Characters outside BMP - use .notdef (0)
-                    0u16
-                }
-            };
-
-            // Write the glyph ID as a 2-byte hex value
-            write!(&mut self.operations, "{:04X}", glyph_id).unwrap();
+                // Characters outside BMP - use replacement character
+                // Most PDF viewers don't handle supplementary planes well
+                write!(&mut self.operations, "FFFD").unwrap(); // Unicode replacement character
+            }
         }
         self.operations.push_str("> Tj\n");
 
