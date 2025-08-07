@@ -384,6 +384,26 @@ impl CustomFont {
         }
     }
 
+    /// Get the glyph mapping (Unicode -> GlyphID) from the font's cmap table
+    pub fn get_glyph_mapping(&self) -> Option<HashMap<u32, u16>> {
+        if let Some(ref ttf) = self.truetype_font {
+            // Parse the cmap table to get Unicode to GlyphID mappings
+            if let Ok(cmap_tables) = ttf.parse_cmap() {
+                // Prefer Windows Unicode mapping (platform 3, encoding 1)
+                // or fallback to Unicode mapping (platform 0)
+                let cmap = cmap_tables
+                    .iter()
+                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0));
+
+                if let Some(cmap) = cmap {
+                    return Some(cmap.mappings.clone());
+                }
+            }
+        }
+        None
+    }
+
     /// Load font data from file for embedding
     pub fn load_font_file<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let data = fs::read(path.as_ref())?;
@@ -694,6 +714,15 @@ impl FontManager {
     /// Get a registered font
     pub fn get_font(&self, name: &str) -> Option<&CustomFont> {
         self.fonts.get(name)
+    }
+
+    /// Get the glyph mapping for a registered font
+    pub fn get_font_glyph_mapping(&self, name: &str) -> Option<HashMap<u32, u16>> {
+        if let Some(font) = self.fonts.get(name) {
+            font.get_glyph_mapping()
+        } else {
+            None
+        }
     }
 
     /// Get all registered fonts

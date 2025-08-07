@@ -61,6 +61,14 @@ fn calculate_checksum(data: &[u8]) -> u32 {
     sum
 }
 
+/// Result of font subsetting operation
+pub struct SubsetResult {
+    /// Subsetted font data
+    pub font_data: Vec<u8>,
+    /// Unicode to GlyphID mapping for the subsetted font
+    pub glyph_mapping: HashMap<u32, u16>,
+}
+
 /// TrueType font subsetter
 pub struct TrueTypeSubsetter {
     /// Original font data
@@ -77,10 +85,33 @@ impl TrueTypeSubsetter {
     }
 
     /// Subset the font to include only the specified characters
-    pub fn subset(&self, _used_chars: &HashSet<char>) -> ParseResult<Vec<u8>> {
-        // DISABLED: Subsetting breaks glyph ID mapping
-        // TODO: Need to pass the new glyph ID mapping to the graphics context
-        return Ok(self.font_data.clone());
+    /// Returns the subsetted font data and the Unicode to GlyphID mapping
+    pub fn subset(&self, used_chars: &HashSet<char>) -> ParseResult<SubsetResult> {
+        // Get the cmap table to find which glyphs we need
+        let cmap_tables = self.font.parse_cmap()?;
+        let cmap = cmap_tables
+            .iter()
+            .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+            .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "No suitable cmap table found".to_string(),
+            })?;
+
+        // If we're not really subsetting (empty or small char set), return original with full mapping
+        if used_chars.is_empty() || used_chars.len() < 10 {
+            return Ok(SubsetResult {
+                font_data: self.font_data.clone(),
+                glyph_mapping: cmap.mappings.clone(),
+            });
+        }
+
+        // For now, return the full font with the complete mapping
+        // TODO: Implement actual subsetting when needed
+        return Ok(SubsetResult {
+            font_data: self.font_data.clone(),
+            glyph_mapping: cmap.mappings.clone(),
+        });
 
         #[allow(
             unreachable_code,
@@ -115,7 +146,7 @@ impl TrueTypeSubsetter {
             let mut new_glyph_id = 1u16;
             let mut new_cmap_mappings = HashMap::new();
 
-            for ch in _used_chars {
+            for ch in used_chars {
                 let unicode = *ch as u32;
                 if let Some(&old_glyph_id) = cmap.mappings.get(&unicode) {
                     if !glyph_map.contains_key(&old_glyph_id) {
@@ -141,7 +172,11 @@ impl TrueTypeSubsetter {
             let subset_data =
                 self.build_subset_font(&needed_glyphs, &glyph_map, &new_cmap_mappings)?;
 
-            Ok(subset_data)
+            // Return SubsetResult with the new Unicode to GlyphID mapping
+            Ok(SubsetResult {
+                font_data: subset_data,
+                glyph_mapping: new_cmap_mappings,
+            })
         }
     }
 
@@ -493,7 +528,7 @@ impl TrueTypeSubsetter {
 }
 
 /// Convenience function to subset a font
-pub fn subset_font(font_data: Vec<u8>, used_chars: &HashSet<char>) -> ParseResult<Vec<u8>> {
+pub fn subset_font(font_data: Vec<u8>, used_chars: &HashSet<char>) -> ParseResult<SubsetResult> {
     let subsetter = TrueTypeSubsetter::new(font_data)?;
     subsetter.subset(used_chars)
 }
