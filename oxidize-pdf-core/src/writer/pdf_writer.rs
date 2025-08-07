@@ -641,7 +641,7 @@ impl<W: Write> PdfWriter<W> {
         let to_unicode_id = self.allocate_object_id();
 
         // Write font file (embedded TTF data with subsetting for large fonts)
-        let font_data_to_embed = if font.data.len() > 1_000_000 && !used_chars.is_empty() {
+        let font_data_to_embed = if font.data.len() > 100_000 && !used_chars.is_empty() {
             // Large font - try to subset it
             match crate::text::fonts::truetype_subsetter::subset_font(
                 font.data.clone(),
@@ -1239,23 +1239,26 @@ impl<W: Write> PdfWriter<W> {
         // Add font resources
         let mut font_dict = Dictionary::new();
 
-        // Add standard PDF fonts (Type1) with proper dictionary structure
+        // Add standard PDF fonts (Type1) with WinAnsiEncoding for Latin-1 support
         let mut helvetica_dict = Dictionary::new();
         helvetica_dict.set("Type", Object::Name("Font".to_string()));
         helvetica_dict.set("Subtype", Object::Name("Type1".to_string()));
         helvetica_dict.set("BaseFont", Object::Name("Helvetica".to_string()));
+        helvetica_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
         font_dict.set("Helvetica", Object::Dictionary(helvetica_dict));
 
         let mut times_dict = Dictionary::new();
         times_dict.set("Type", Object::Name("Font".to_string()));
         times_dict.set("Subtype", Object::Name("Type1".to_string()));
         times_dict.set("BaseFont", Object::Name("Times-Roman".to_string()));
+        times_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
         font_dict.set("Times-Roman", Object::Dictionary(times_dict));
 
         let mut courier_dict = Dictionary::new();
         courier_dict.set("Type", Object::Name("Font".to_string()));
         courier_dict.set("Subtype", Object::Name("Type1".to_string()));
         courier_dict.set("BaseFont", Object::Name("Courier".to_string()));
+        courier_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
         font_dict.set("Courier", Object::Dictionary(courier_dict));
 
         // Add custom fonts (Type0 fonts for Unicode support)

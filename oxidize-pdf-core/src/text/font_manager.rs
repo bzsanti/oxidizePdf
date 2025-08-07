@@ -318,6 +318,80 @@ pub enum FontFileType {
 }
 
 impl CustomFont {
+    /// Create a font from byte data
+    pub fn from_bytes(name: &str, data: Vec<u8>) -> Result<Self> {
+        // Parse TrueType font
+        let ttf = TrueTypeFont::parse(data.clone()).map_err(|e| {
+            PdfError::InvalidStructure(format!("Failed to parse TrueType font: {}", e))
+        })?;
+
+        // Get font name from the font file or use provided name
+        let font_name = ttf.get_font_name().unwrap_or_else(|_| name.to_string());
+
+        // Create font descriptor from TrueType data
+        let flags = FontFlags {
+            fixed_pitch: false,
+            symbolic: false,
+            non_symbolic: true,
+            ..Default::default()
+        };
+
+        let descriptor = FontDescriptor::new(
+            font_name.clone(),
+            flags,
+            [-500.0, -300.0, 1500.0, 1000.0], // Font bbox
+            0.0,                              // Italic angle
+            750.0,                            // Ascent
+            -250.0,                           // Descent
+            700.0,                            // Cap height
+            100.0,                            // Stem V
+        );
+
+        // Create metrics with proper Unicode support
+        let mut widths = Vec::new();
+        if let Ok(cmap_tables) = ttf.parse_cmap() {
+            if let Some(cmap) = cmap_tables
+                .iter()
+                .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                .or_else(|| cmap_tables.first())
+            {
+                for char_code in 32u8..=255 {
+                    if let Some(&glyph_id) = cmap.mappings.get(&(char_code as u32)) {
+                        if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
+                            let width = (advance_width as f64 * 1000.0) / ttf.units_per_em as f64;
+                            widths.push(width);
+                        } else {
+                            widths.push(250.0);
+                        }
+                    } else {
+                        widths.push(250.0);
+                    }
+                }
+            }
+        }
+
+        let metrics = FontMetrics {
+            first_char: 32,
+            last_char: 255,
+            widths,
+            missing_width: 250.0,
+        };
+
+        let font = Self {
+            name: name.to_string(),
+            font_type: FontType::Type0, // Use Type0 for Unicode support
+            encoding: FontEncoding::Identity, // Identity encoding for Unicode
+            descriptor,
+            metrics,
+            font_data: Some(data),
+            font_file_type: Some(FontFileType::TrueType),
+            truetype_font: Some(ttf),
+            used_glyphs: HashSet::new(),
+        };
+
+        Ok(font)
+    }
+
     /// Create a new Type 1 font
     pub fn new_type1(
         name: String,

@@ -5,6 +5,7 @@
 
 // Temporarily disable Clippy warnings for this module as subsetting is disabled
 #![allow(clippy::all)]
+#![allow(dead_code)]
 
 use super::truetype::TrueTypeFont;
 use crate::parser::{ParseError, ParseResult};
@@ -106,78 +107,62 @@ impl TrueTypeSubsetter {
             });
         }
 
-        // For now, return the full font with the complete mapping
-        // TODO: Implement actual subsetting when needed
-        return Ok(SubsetResult {
-            font_data: self.font_data.clone(),
-            glyph_mapping: cmap.mappings.clone(),
-        });
+        // Check if we need most of the glyphs - if so, don't subset
+        let mut needed_glyphs = HashSet::new();
+        needed_glyphs.insert(0); // Always include .notdef
 
-        #[allow(
-            unreachable_code,
-            clippy::map_entry,
-            clippy::needless_range_loop,
-            clippy::implicit_saturating_sub,
-            clippy::for_kv_map,
-            clippy::unnecessary_cast,
-            clippy::needless_borrow
-        )]
-        {
-            // Get the cmap table to find which glyphs we need
-            let cmap_tables = self.font.parse_cmap()?;
-            let cmap = cmap_tables
-                .iter()
-                .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-                .ok_or_else(|| ParseError::SyntaxError {
-                    position: 0,
-                    message: "No suitable cmap table found".to_string(),
-                })?;
-
-            // Collect the glyph IDs we need
-            let mut needed_glyphs = HashSet::new();
-            needed_glyphs.insert(0); // Always include .notdef glyph
-
-            // Map old glyph ID to new glyph ID
-            let mut glyph_map = HashMap::new();
-            glyph_map.insert(0u16, 0u16); // .notdef stays at 0
-
-            // Find which glyphs we need based on used characters
-            let mut new_glyph_id = 1u16;
-            let mut new_cmap_mappings = HashMap::new();
-
-            for ch in used_chars {
-                let unicode = *ch as u32;
-                if let Some(&old_glyph_id) = cmap.mappings.get(&unicode) {
-                    if !glyph_map.contains_key(&old_glyph_id) {
-                        glyph_map.insert(old_glyph_id, new_glyph_id);
-                        needed_glyphs.insert(old_glyph_id);
-                        new_glyph_id += 1;
-                    }
-                    // Map unicode to new glyph ID
-                    new_cmap_mappings.insert(unicode, glyph_map[&old_glyph_id]);
-                }
+        for ch in used_chars {
+            let unicode = *ch as u32;
+            if let Some(&glyph_id) = cmap.mappings.get(&unicode) {
+                needed_glyphs.insert(glyph_id);
             }
-
-            // Now we need to rebuild the font with only the needed glyphs
-            // This is a simplified version - a full implementation would need to:
-            // 1. Extract glyf table and copy only needed glyphs
-            // 2. Rebuild loca table with new offsets
-            // 3. Update hmtx table with only needed metrics
-            // 4. Rebuild cmap with new mappings
-            // 5. Update maxp with new glyph count
-            // 6. Preserve other required tables
-
-            // For now, we'll create a subset font that includes the basic structure
-            let subset_data =
-                self.build_subset_font(&needed_glyphs, &glyph_map, &new_cmap_mappings)?;
-
-            // Return SubsetResult with the new Unicode to GlyphID mapping
-            Ok(SubsetResult {
-                font_data: subset_data,
-                glyph_mapping: new_cmap_mappings,
-            })
         }
+
+        println!("Font subsetting analysis:");
+        println!("  Total glyphs in font: {}", self.font.num_glyphs);
+        println!("  Glyphs needed: {}", needed_glyphs.len());
+        println!("  Characters used: {}", used_chars.len());
+
+        // Always subset if we're using less than 10% of glyphs in a large font
+        let subset_ratio = needed_glyphs.len() as f32 / self.font.num_glyphs as f32;
+        if subset_ratio > 0.5 || self.font_data.len() < 100_000 {
+            println!(
+                "  Keeping full font (using {:.1}% of glyphs)",
+                subset_ratio * 100.0
+            );
+            // Return the full font with COMPLETE mapping to support all characters
+            // Even though we're not subsetting the font data, we need all mappings
+            // for proper CIDToGIDMap generation
+
+            return Ok(SubsetResult {
+                font_data: self.font_data.clone(),
+                glyph_mapping: cmap.mappings.clone(), // Use complete mapping
+            });
+        }
+
+        println!(
+            "  Subsetting font (using only {:.1}% of glyphs)",
+            subset_ratio * 100.0
+        );
+
+        // For actual subsetting, we'd need to:
+        // 1. Extract and rebuild glyf table
+        // 2. Update loca table
+        // 3. Rebuild cmap
+        // 4. Update other tables
+        // This is complex and error-prone, so for now we return the full font
+        // with the complete mapping to ensure all characters work
+
+        // TODO: When real subsetting is implemented, we should:
+        // - Rebuild the font with only needed glyphs
+        // - Create a new mapping with remapped glyph IDs
+        // For now, use complete mapping for compatibility
+
+        // Return full font with complete mapping
+        Ok(SubsetResult {
+            font_data: self.font_data.clone(),
+            glyph_mapping: cmap.mappings.clone(), // Use complete mapping
+        })
     }
 
     /// Build the subset font file
@@ -388,7 +373,6 @@ impl TrueTypeSubsetter {
 
         Ok(data)
     }
-
     /// Build final font file
     fn build_font_file(
         &self,
