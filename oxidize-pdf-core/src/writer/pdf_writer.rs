@@ -1268,105 +1268,37 @@ impl<W: Write> PdfWriter<W> {
 
         resources.set("Font", Object::Dictionary(font_dict));
 
-        // Add images as XObjects
-        if !page.images().is_empty() {
-            let mut xobject_dict = Dictionary::new();
-
-            for (name, image) in page.images() {
-                // Use sequential ObjectId allocation to avoid conflicts
-                let image_id = self.allocate_object_id();
-
-                // Write the image XObject
-                self.write_object(image_id, image.to_pdf_object())?;
-
-                // Add reference to XObject dictionary
-                xobject_dict.set(name, Object::Reference(image_id));
-            }
-
-            resources.set("XObject", Object::Dictionary(xobject_dict));
-        }
-
-        // Add ExtGState resources for transparency
-        if let Some(extgstate_states) = page.get_extgstate_resources() {
-            let mut extgstate_dict = Dictionary::new();
-            for (name, state_dict) in extgstate_states {
-                // Allocate ID for this ExtGState object
-                let state_id = self.allocate_object_id();
-
-                // Write the ExtGState object
-                self.write_object(state_id, Object::Dictionary(state_dict.to_dict()))?;
-
-                // Add reference to ExtGState dictionary
-                extgstate_dict.set(name, Object::Reference(state_id));
-            }
-            resources.set("ExtGState", Object::Dictionary(extgstate_dict));
-        }
-
         page_dict.set("Resources", Object::Dictionary(resources));
 
-        // Process all annotations from the page (including forms, highlights, etc.)
-        let annotations = page.annotations();
-        if !annotations.is_empty() {
-            let mut annot_refs = Vec::new();
-            for annotation in annotations {
-                let annot_dict = annotation.to_dict();
-                let annot_id = self.allocate_object_id();
-                self.write_object(annot_id, Object::Dictionary(annot_dict.clone()))?;
-                annot_refs.push(Object::Reference(annot_id));
-
-                // Special handling for widget annotations
-                if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
-                    if subtype == "Widget" {
-                        // Track widget for form fields
-                        if let Some(Object::Name(_ft)) = annot_dict.get("FT") {
-                            if let Some(Object::String(field_name)) = annot_dict.get("T") {
-                                self.field_widget_map
-                                    .entry(field_name.clone())
-                                    .or_default()
-                                    .push(annot_id);
-                                self.field_id_map.insert(field_name.clone(), annot_id);
-                                self.form_field_ids.push(annot_id);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if !annot_refs.is_empty() {
-                page_dict.set("Annots", Object::Array(annot_refs));
-            }
-        }
-        // Also handle any annotations already in the page dict (legacy support)
-        else if let Some(Object::Array(annots)) = page_dict.get("Annots") {
+        // Handle form widget annotations
+        if let Some(Object::Array(annots)) = page_dict.get("Annots") {
             let mut new_annots = Vec::new();
 
             for annot in annots {
                 if let Object::Dictionary(ref annot_dict) = annot {
-                    // All annotations need to be written as objects
-                    let annot_id = self.allocate_object_id();
-                    self.write_object(annot_id, annot.clone())?;
-                    new_annots.push(Object::Reference(annot_id));
-
-                    // Special handling for widget annotations
                     if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
                         if subtype == "Widget" {
+                            // Process widget annotation
+                            let widget_id = self.allocate_object_id();
+                            self.write_object(widget_id, annot.clone())?;
+                            new_annots.push(Object::Reference(widget_id));
+
                             // Track widget for form fields
                             if let Some(Object::Name(_ft)) = annot_dict.get("FT") {
                                 if let Some(Object::String(field_name)) = annot_dict.get("T") {
                                     self.field_widget_map
                                         .entry(field_name.clone())
                                         .or_default()
-                                        .push(annot_id);
-                                    self.field_id_map.insert(field_name.clone(), annot_id);
-                                    self.form_field_ids.push(annot_id);
+                                        .push(widget_id);
+                                    self.field_id_map.insert(field_name.clone(), widget_id);
+                                    self.form_field_ids.push(widget_id);
                                 }
                             }
+                            continue;
                         }
                     }
-                } else {
-                    // Non-dictionary annotations (shouldn't happen normally)
-                    new_annots.push(annot.clone());
                 }
+                new_annots.push(annot.clone());
             }
 
             if !new_annots.is_empty() {
