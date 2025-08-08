@@ -57,9 +57,9 @@ fn main() -> Result<()> {
     create_page_3(&mut document, &font_manager_arc, &font_name)?;
 
     // Save the PDF
-    document.save("unicode_comprehensive.pdf")?;
+    document.save("test-pdfs/unicode_comprehensive.pdf")?;
 
-    println!("PDF saved as unicode_comprehensive.pdf");
+    println!("PDF saved as test-pdfs/unicode_comprehensive.pdf");
     println!("\nTest includes:");
     println!("- Page 1: Latin scripts and European languages");
     println!("- Page 2: Symbols, arrows, and mathematical operators");
