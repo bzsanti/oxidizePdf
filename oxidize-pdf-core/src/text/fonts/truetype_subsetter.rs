@@ -145,24 +145,50 @@ impl TrueTypeSubsetter {
             subset_ratio * 100.0
         );
 
-        // For actual subsetting, we'd need to:
-        // 1. Extract and rebuild glyf table
-        // 2. Update loca table
-        // 3. Rebuild cmap
-        // 4. Update other tables
-        // This is complex and error-prone, so for now we return the full font
-        // with the complete mapping to ensure all characters work
+        // Create glyph remapping: old_glyph_id -> new_glyph_id
+        let mut glyph_map: HashMap<u16, u16> = HashMap::new();
+        let mut sorted_glyphs: Vec<u16> = needed_glyphs.iter().copied().collect();
+        sorted_glyphs.sort(); // Ensure glyph 0 (.notdef) comes first
 
-        // TODO: When real subsetting is implemented, we should:
-        // - Rebuild the font with only needed glyphs
-        // - Create a new mapping with remapped glyph IDs
-        // For now, use complete mapping for compatibility
+        for (new_id, &old_id) in sorted_glyphs.iter().enumerate() {
+            glyph_map.insert(old_id, new_id as u16);
+        }
 
-        // Return full font with complete mapping
-        Ok(SubsetResult {
-            font_data: self.font_data.clone(),
-            glyph_mapping: cmap.mappings.clone(), // Use complete mapping
-        })
+        // Create new cmap with remapped glyph IDs
+        let mut new_cmap: HashMap<u32, u16> = HashMap::new();
+        for ch in used_chars {
+            let unicode = *ch as u32;
+            if let Some(&old_glyph_id) = cmap.mappings.get(&unicode) {
+                if let Some(&new_glyph_id) = glyph_map.get(&old_glyph_id) {
+                    new_cmap.insert(unicode, new_glyph_id);
+                }
+            }
+        }
+
+        // Build the actual subset font
+        match self.build_subset_font(&needed_glyphs, &glyph_map, &new_cmap) {
+            Ok(subset_font_data) => {
+                println!(
+                    "  Successfully subsetted: {} -> {} bytes ({:.1}% reduction)",
+                    self.font_data.len(),
+                    subset_font_data.len(),
+                    (1.0 - subset_font_data.len() as f32 / self.font_data.len() as f32) * 100.0
+                );
+
+                Ok(SubsetResult {
+                    font_data: subset_font_data,
+                    glyph_mapping: new_cmap,
+                })
+            }
+            Err(e) => {
+                println!("  Subsetting failed: {:?}, using full font as fallback", e);
+                // Fallback to full font if subsetting fails
+                Ok(SubsetResult {
+                    font_data: self.font_data.clone(),
+                    glyph_mapping: cmap.mappings.clone(),
+                })
+            }
+        }
     }
 
     /// Build the subset font file
