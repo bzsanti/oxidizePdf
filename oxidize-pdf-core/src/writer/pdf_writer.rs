@@ -718,8 +718,9 @@ impl<W: Write> PdfWriter<W> {
         cid_font.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
 
         cid_font.set("FontDescriptor", Object::Reference(descriptor_id));
-        // Use a more reasonable default width based on font metrics
-        let default_width = 600; // More reasonable default
+        
+        // Calculate a better default width based on font metrics
+        let default_width = self.calculate_default_width(font);
         cid_font.set("DW", Object::Integer(default_width));
 
         // Generate proper width array from font metrics
@@ -766,6 +767,46 @@ impl<W: Write> PdfWriter<W> {
         Ok(font_id)
     }
 
+    /// Calculate default width based on common characters
+    fn calculate_default_width(&self, font: &crate::fonts::Font) -> i64 {
+        use crate::text::fonts::truetype::TrueTypeFont;
+        
+        // Try to calculate from actual font metrics
+        if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+            if let Ok(cmap_tables) = tt_font.parse_cmap() {
+                if let Some(cmap) = cmap_tables
+                    .iter()
+                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
+                {
+                    if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
+                        // NOTE: get_glyph_widths already returns widths in PDF units (1000 per em)
+                        
+                        // Calculate average width of common Latin characters
+                        let common_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+                        let mut total_width = 0;
+                        let mut count = 0;
+                        
+                        for ch in common_chars.chars() {
+                            let unicode = ch as u32;
+                            if let Some(&pdf_width) = widths.get(&unicode) {
+                                total_width += pdf_width as i64;
+                                count += 1;
+                            }
+                        }
+                        
+                        if count > 0 {
+                            return total_width / count;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback default if we can't calculate
+        500
+    }
+    
     /// Generate width array for CID font
     fn generate_width_array(&self, font: &crate::fonts::Font, _default_width: i64) -> Vec<Object> {
         use crate::text::fonts::truetype::TrueTypeFont;
@@ -783,6 +824,9 @@ impl<W: Write> PdfWriter<W> {
                 {
                     // Get actual widths from the font
                     if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
+                        // NOTE: get_glyph_widths already returns widths scaled to PDF units (1000 per em)
+                        // So we DON'T need to scale them again here
+                        
                         // Group consecutive characters with same width for efficiency
                         let mut sorted_chars: Vec<_> = widths.iter().collect();
                         sorted_chars.sort_by_key(|(unicode, _)| *unicode);
@@ -790,29 +834,34 @@ impl<W: Write> PdfWriter<W> {
                         let mut i = 0;
                         while i < sorted_chars.len() {
                             let start_unicode = *sorted_chars[i].0;
-                            let width = *sorted_chars[i].1;
+                            // Width is already in PDF units from get_glyph_widths
+                            let pdf_width = *sorted_chars[i].1 as i64;
 
                             // Find consecutive characters with same width
                             let mut end_unicode = start_unicode;
                             let mut j = i + 1;
                             while j < sorted_chars.len()
                                 && *sorted_chars[j].0 == end_unicode + 1
-                                && *sorted_chars[j].1 == width
                             {
-                                end_unicode = *sorted_chars[j].0;
-                                j += 1;
+                                let next_pdf_width = *sorted_chars[j].1 as i64;
+                                if next_pdf_width == pdf_width {
+                                    end_unicode = *sorted_chars[j].0;
+                                    j += 1;
+                                } else {
+                                    break;
+                                }
                             }
 
                             // Add to W array
                             if start_unicode == end_unicode {
                                 // Single character
                                 w_array.push(Object::Integer(start_unicode as i64));
-                                w_array.push(Object::Array(vec![Object::Integer(width as i64)]));
+                                w_array.push(Object::Array(vec![Object::Integer(pdf_width)]));
                             } else {
                                 // Range of characters
                                 w_array.push(Object::Integer(start_unicode as i64));
                                 w_array.push(Object::Integer(end_unicode as i64));
-                                w_array.push(Object::Integer(width as i64));
+                                w_array.push(Object::Integer(pdf_width));
                             }
 
                             i = j;
