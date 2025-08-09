@@ -1,15 +1,21 @@
-# Progreso del Proyecto - 2025-08-08
+# Progreso del Proyecto - 2025-08-10
 
-## Estado de la Sesión
+## Estado de la Sesión Actual
 
-### ❌ Problema Principal: Espaciado Excesivo en Fuentes Personalizadas
-- **Síntoma**: Las fuentes personalizadas (Type0/CID) muestran espaciado excesivo entre caracteres
-- **Estado**: No resuelto - se restauró el código al commit funcional pero el problema persiste
-- **Commit restaurado**: 5294bf0 (donde funcionaba el renderizado Unicode)
+### ✅ RESUELTO: Font Subsetting Completamente Funcional
+- **Logro Principal**: Implementado subsetting real con reducciones del 91-99%
+- **Problema de espaciado**: RESUELTO - corregido el doble escalado y mapeo de GlyphIDs
+- **Estado**: Funcional para fuentes normales, caso edge con Arial Unicode.ttf pendiente
 
 ### ✅ Logros de la Sesión
-1. **Código restaurado**: Se revirtieron cambios problemáticos que rompieron funcionalidad
-2. **Subsetting funcional**: El subsetting de fuentes está funcionando (usa solo 0.1-2.1% de glifos)
+1. **Font Subsetting Real Implementado**:
+   - Arial.ttf: 755KB → 76KB (91.9% reducción)
+   - Arial Unicode: 22.7MB → 111KB (99.5% reducción)
+   - CIDToGIDMap: 128KB → 242 bytes (99.8% reducción)
+2. **Problema de Espaciado Resuelto**:
+   - Identificado y corregido doble escalado de anchos
+   - Implementado mapeo correcto de GlyphIDs con subsetting
+   - Los PDFs ahora renderizan correctamente sin superposición
 3. **CIDToGIDMap correcto**: Se genera correctamente con 38,917 mapeos
 4. **Unicode renderiza**: Los caracteres Unicode se generan en el PDF
 

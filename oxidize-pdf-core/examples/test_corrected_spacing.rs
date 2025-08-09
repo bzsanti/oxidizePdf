@@ -23,13 +23,13 @@ fn main() -> Result<()> {
     // Test simple
     graphics.draw_text("Test: ABCDEFG", 50.0, y)?;
     y -= 40.0;
-    
+
     graphics.draw_text("Hello World", 50.0, y)?;
     y -= 40.0;
-    
+
     graphics.draw_text("1234567890", 50.0, y)?;
     y -= 40.0;
-    
+
     graphics.draw_text("Mixed: ABC 123 xyz", 50.0, y)?;
     y -= 60.0;
 

@@ -641,31 +641,38 @@ impl<W: Write> PdfWriter<W> {
         let to_unicode_id = self.allocate_object_id();
 
         // Write font file (embedded TTF data with subsetting for large fonts)
-        let font_data_to_embed = if font.data.len() > 100_000 && !used_chars.is_empty() {
-            // Large font - try to subset it
-            match crate::text::fonts::truetype_subsetter::subset_font(
-                font.data.clone(),
-                &used_chars,
-            ) {
-                Ok(subset_result) => {
-                    // Successfully subsetted - use the font data
-                    // Note: The glyph mapping is already handled elsewhere
-                    subset_result.font_data
-                }
-                Err(_) => {
-                    // Subsetting failed, use original if under 25MB
-                    if font.data.len() < 25_000_000 {
-                        font.data.clone()
-                    } else {
-                        // Too large even for fallback
-                        Vec::new()
+        // Keep track of the glyph mapping if we subset the font
+        // IMPORTANT: We need the ORIGINAL font for width calculations, not the subset
+        let (font_data_to_embed, subset_glyph_mapping, original_font_for_widths) =
+            if font.data.len() > 100_000 && !used_chars.is_empty() {
+                // Large font - try to subset it
+                match crate::text::fonts::truetype_subsetter::subset_font(
+                    font.data.clone(),
+                    &used_chars,
+                ) {
+                    Ok(subset_result) => {
+                        // Successfully subsetted - keep both font data and mapping
+                        // Also keep reference to original font for width calculations
+                        (
+                            subset_result.font_data,
+                            Some(subset_result.glyph_mapping),
+                            font.clone(),
+                        )
+                    }
+                    Err(_) => {
+                        // Subsetting failed, use original if under 25MB
+                        if font.data.len() < 25_000_000 {
+                            (font.data.clone(), None, font.clone())
+                        } else {
+                            // Too large even for fallback
+                            (Vec::new(), None, font.clone())
+                        }
                     }
                 }
-            }
-        } else {
-            // Small font or no character tracking - use as-is
-            font.data.clone()
-        };
+            } else {
+                // Small font or no character tracking - use as-is
+                (font.data.clone(), None, font.clone())
+            };
 
         if !font_data_to_embed.is_empty() {
             let mut font_file_dict = Dictionary::new();
@@ -718,18 +725,25 @@ impl<W: Write> PdfWriter<W> {
         cid_font.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
 
         cid_font.set("FontDescriptor", Object::Reference(descriptor_id));
-        
+
         // Calculate a better default width based on font metrics
         let default_width = self.calculate_default_width(font);
         cid_font.set("DW", Object::Integer(default_width));
 
         // Generate proper width array from font metrics
-        let w_array = self.generate_width_array(font, default_width);
+        // IMPORTANT: Use the ORIGINAL font for width calculations, not the subset
+        // But pass the subset mapping to know which characters we're using
+        let w_array = self.generate_width_array(
+            &original_font_for_widths,
+            default_width,
+            subset_glyph_mapping.as_ref(),
+        );
         cid_font.set("W", Object::Array(w_array));
 
         // CIDToGIDMap - Generate proper mapping from CID (Unicode) to GlyphID
         // This is critical for Type0 fonts to work correctly
-        let cid_to_gid_map = self.generate_cid_to_gid_map(font)?;
+        // If we subsetted the font, use the new glyph mapping
+        let cid_to_gid_map = self.generate_cid_to_gid_map(font, subset_glyph_mapping.as_ref())?;
         if !cid_to_gid_map.is_empty() {
             // Write the CIDToGIDMap as a stream
             let cid_to_gid_map_id = self.allocate_object_id();
@@ -770,7 +784,7 @@ impl<W: Write> PdfWriter<W> {
     /// Calculate default width based on common characters
     fn calculate_default_width(&self, font: &crate::fonts::Font) -> i64 {
         use crate::text::fonts::truetype::TrueTypeFont;
-        
+
         // Try to calculate from actual font metrics
         if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
             if let Ok(cmap_tables) = tt_font.parse_cmap() {
@@ -781,12 +795,13 @@ impl<W: Write> PdfWriter<W> {
                 {
                     if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
                         // NOTE: get_glyph_widths already returns widths in PDF units (1000 per em)
-                        
+
                         // Calculate average width of common Latin characters
-                        let common_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+                        let common_chars =
+                            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
                         let mut total_width = 0;
                         let mut count = 0;
-                        
+
                         for ch in common_chars.chars() {
                             let unicode = ch as u32;
                             if let Some(&pdf_width) = widths.get(&unicode) {
@@ -794,7 +809,7 @@ impl<W: Write> PdfWriter<W> {
                                 count += 1;
                             }
                         }
-                        
+
                         if count > 0 {
                             return total_width / count;
                         }
@@ -802,73 +817,101 @@ impl<W: Write> PdfWriter<W> {
                 }
             }
         }
-        
+
         // Fallback default if we can't calculate
         500
     }
-    
+
     /// Generate width array for CID font
-    fn generate_width_array(&self, font: &crate::fonts::Font, _default_width: i64) -> Vec<Object> {
+    fn generate_width_array(
+        &self,
+        font: &crate::fonts::Font,
+        _default_width: i64,
+        subset_mapping: Option<&HashMap<u32, u16>>,
+    ) -> Vec<Object> {
         use crate::text::fonts::truetype::TrueTypeFont;
 
         let mut w_array = Vec::new();
 
         // Try to get actual glyph widths from the font
         if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
-            if let Ok(cmap_tables) = tt_font.parse_cmap() {
-                // Find the best cmap table (Unicode)
-                if let Some(cmap) = cmap_tables
-                    .iter()
-                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-                {
-                    // Get actual widths from the font
-                    if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
-                        // NOTE: get_glyph_widths already returns widths scaled to PDF units (1000 per em)
-                        // So we DON'T need to scale them again here
-                        
-                        // Group consecutive characters with same width for efficiency
-                        let mut sorted_chars: Vec<_> = widths.iter().collect();
-                        sorted_chars.sort_by_key(|(unicode, _)| *unicode);
-
-                        let mut i = 0;
-                        while i < sorted_chars.len() {
-                            let start_unicode = *sorted_chars[i].0;
-                            // Width is already in PDF units from get_glyph_widths
-                            let pdf_width = *sorted_chars[i].1 as i64;
-
-                            // Find consecutive characters with same width
-                            let mut end_unicode = start_unicode;
-                            let mut j = i + 1;
-                            while j < sorted_chars.len()
-                                && *sorted_chars[j].0 == end_unicode + 1
-                            {
-                                let next_pdf_width = *sorted_chars[j].1 as i64;
-                                if next_pdf_width == pdf_width {
-                                    end_unicode = *sorted_chars[j].0;
-                                    j += 1;
-                                } else {
-                                    break;
+            // IMPORTANT: Always use ORIGINAL mappings for width calculation
+            // The subset_mapping has NEW GlyphIDs which don't correspond to the right glyphs
+            // in the original font's width table
+            let char_to_glyph = {
+                // Parse cmap to get original mappings
+                if let Ok(cmap_tables) = tt_font.parse_cmap() {
+                    if let Some(cmap) = cmap_tables
+                        .iter()
+                        .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                        .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
+                    {
+                        // If we have subset_mapping, filter to only include used characters
+                        if let Some(subset_map) = subset_mapping {
+                            let mut filtered = HashMap::new();
+                            for unicode in subset_map.keys() {
+                                // Get the ORIGINAL GlyphID for this Unicode
+                                if let Some(&orig_glyph) = cmap.mappings.get(unicode) {
+                                    filtered.insert(*unicode, orig_glyph);
                                 }
                             }
+                            filtered
+                        } else {
+                            cmap.mappings.clone()
+                        }
+                    } else {
+                        HashMap::new()
+                    }
+                } else {
+                    HashMap::new()
+                }
+            };
 
-                            // Add to W array
-                            if start_unicode == end_unicode {
-                                // Single character
-                                w_array.push(Object::Integer(start_unicode as i64));
-                                w_array.push(Object::Array(vec![Object::Integer(pdf_width)]));
+            if !char_to_glyph.is_empty() {
+                // Get actual widths from the font
+                if let Ok(widths) = tt_font.get_glyph_widths(&char_to_glyph) {
+                    // NOTE: get_glyph_widths already returns widths scaled to PDF units (1000 per em)
+                    // So we DON'T need to scale them again here
+
+                    // Group consecutive characters with same width for efficiency
+                    let mut sorted_chars: Vec<_> = widths.iter().collect();
+                    sorted_chars.sort_by_key(|(unicode, _)| *unicode);
+
+                    let mut i = 0;
+                    while i < sorted_chars.len() {
+                        let start_unicode = *sorted_chars[i].0;
+                        // Width is already in PDF units from get_glyph_widths
+                        let pdf_width = *sorted_chars[i].1 as i64;
+
+                        // Find consecutive characters with same width
+                        let mut end_unicode = start_unicode;
+                        let mut j = i + 1;
+                        while j < sorted_chars.len() && *sorted_chars[j].0 == end_unicode + 1 {
+                            let next_pdf_width = *sorted_chars[j].1 as i64;
+                            if next_pdf_width == pdf_width {
+                                end_unicode = *sorted_chars[j].0;
+                                j += 1;
                             } else {
-                                // Range of characters
-                                w_array.push(Object::Integer(start_unicode as i64));
-                                w_array.push(Object::Integer(end_unicode as i64));
-                                w_array.push(Object::Integer(pdf_width));
+                                break;
                             }
-
-                            i = j;
                         }
 
-                        return w_array;
+                        // Add to W array
+                        if start_unicode == end_unicode {
+                            // Single character
+                            w_array.push(Object::Integer(start_unicode as i64));
+                            w_array.push(Object::Array(vec![Object::Integer(pdf_width)]));
+                        } else {
+                            // Range of characters
+                            w_array.push(Object::Integer(start_unicode as i64));
+                            w_array.push(Object::Integer(end_unicode as i64));
+                            w_array.push(Object::Integer(pdf_width));
+                        }
+
+                        i = j;
                     }
+
+                    return w_array;
                 }
             }
         }
@@ -931,41 +974,68 @@ impl<W: Write> PdfWriter<W> {
     }
 
     /// Generate CIDToGIDMap for Type0 font
-    fn generate_cid_to_gid_map(&mut self, font: &crate::fonts::Font) -> Result<Vec<u8>> {
+    fn generate_cid_to_gid_map(
+        &mut self,
+        font: &crate::fonts::Font,
+        subset_mapping: Option<&HashMap<u32, u16>>,
+    ) -> Result<Vec<u8>> {
         use crate::text::fonts::truetype::TrueTypeFont;
 
-        // Parse the font to get the cmap table
-        let tt_font = TrueTypeFont::parse(font.data.clone())?;
-        let cmap_tables = tt_font.parse_cmap()?;
+        // If we have a subset mapping, use it directly
+        // Otherwise, parse the font to get the original cmap table
+        let cmap_mappings = if let Some(subset_map) = subset_mapping {
+            // Use the subset mapping directly
+            subset_map.clone()
+        } else {
+            // Parse the font to get the original cmap table
+            let tt_font = TrueTypeFont::parse(font.data.clone())?;
+            let cmap_tables = tt_font.parse_cmap()?;
 
-        // Find the best cmap table (Unicode)
-        let cmap = cmap_tables
-            .iter()
-            .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode
-            .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0)) // Unicode
-            .ok_or_else(|| {
-                crate::error::PdfError::FontError("No Unicode cmap table found".to_string())
-            })?;
+            // Find the best cmap table (Unicode)
+            let cmap = cmap_tables
+                .iter()
+                .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode
+                .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0)) // Unicode
+                .ok_or_else(|| {
+                    crate::error::PdfError::FontError("No Unicode cmap table found".to_string())
+                })?;
+
+            cmap.mappings.clone()
+        };
 
         // Build the CIDToGIDMap
         // Since we use Unicode code points as CIDs, we need to map Unicode → GlyphID
         // The map is a binary array where index = CID (Unicode) * 2, value = GlyphID (big-endian)
 
-        // Find the maximum Unicode value we need to support
-        let max_unicode = cmap
-            .mappings
-            .keys()
-            .max()
-            .copied()
-            .unwrap_or(0xFFFF)
-            .min(0xFFFF) as usize;
+        // OPTIMIZATION: Only create map for characters actually used in the document
+        // Get used characters from document tracking
+        let used_chars = self.document_used_chars.clone().unwrap_or_default();
+
+        // Find the maximum Unicode value from used characters or full font
+        let max_unicode = if !used_chars.is_empty() {
+            // If we have used chars tracking, only map up to the highest used character
+            used_chars
+                .iter()
+                .map(|ch| *ch as u32)
+                .max()
+                .unwrap_or(0x00FF) // At least Basic Latin
+                .min(0xFFFF) as usize
+        } else {
+            // Fallback to original behavior if no tracking
+            cmap_mappings
+                .keys()
+                .max()
+                .copied()
+                .unwrap_or(0xFFFF)
+                .min(0xFFFF) as usize
+        };
 
         // Create the map: 2 bytes per entry
         let mut map = vec![0u8; (max_unicode + 1) * 2];
 
         // Fill in the mappings
         let mut sample_mappings = Vec::new();
-        for (&unicode, &glyph_id) in &cmap.mappings {
+        for (&unicode, &glyph_id) in &cmap_mappings {
             if unicode <= max_unicode as u32 {
                 let idx = (unicode as usize) * 2;
                 // Write glyph_id in big-endian format
@@ -981,10 +1051,24 @@ impl<W: Write> PdfWriter<W> {
         }
 
         // Debug output
+        let optimization_ratio = if !used_chars.is_empty() {
+            let full_size = (0xFFFF + 1) * 2;
+            let optimized_size = map.len();
+            format!(
+                " (optimized from {} KB to {} KB, {:.1}% reduction)",
+                full_size / 1024,
+                optimized_size / 1024,
+                (1.0 - optimized_size as f32 / full_size as f32) * 100.0
+            )
+        } else {
+            String::new()
+        };
+
         println!(
-            "Generated CIDToGIDMap: {} bytes for {} mappings",
+            "Generated CIDToGIDMap: {} bytes for max CID {:#06X}{}",
             map.len(),
-            cmap.mappings.len()
+            max_unicode,
+            optimization_ratio
         );
 
         // Show mappings for test characters
@@ -992,7 +1076,7 @@ impl<W: Write> PdfWriter<W> {
         println!("Sample mappings:");
         for ch in test_chars.chars() {
             let unicode = ch as u32;
-            if let Some(&glyph_id) = cmap.mappings.get(&unicode) {
+            if let Some(&glyph_id) = cmap_mappings.get(&unicode) {
                 println!("  '{}' (U+{:04X}) → GlyphID {}", ch, unicode, glyph_id);
             } else {
                 println!("  '{}' (U+{:04X}) → NOT FOUND", ch, unicode);
