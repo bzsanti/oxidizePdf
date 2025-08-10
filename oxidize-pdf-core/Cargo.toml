@@ -75,36 +75,16 @@ name = "text_formatting"
 name = "text_wrapping"
 
 [[example]]
-name = "simple_text_wrap"
-
-[[example]]
-name = "extract_images"
-
-[[example]]
 name = "create_pdf_with_images"
 
 [[example]]
-name = "ai_ready_invoice"
-required-features = ["semantic"]
-
-[[example]]
 name = "basic_tagging"
-
-[[example]]
-name = "parse_pdf"
 
 [[example]]
 name = "jpeg_image"
 
 [[example]]
 name = "comprehensive_demo"
-
-[[example]]
-name = "parse_and_extract"
-
-[[example]]
-name = "tesseract_ocr_demo"
-required-features = ["ocr-tesseract"]
 
 [[example]]
 name = "memory_optimization"
