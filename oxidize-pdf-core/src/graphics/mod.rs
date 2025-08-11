@@ -1,14 +1,16 @@
+pub mod clipping;
 mod color;
 mod color_profiles;
 mod path;
 mod patterns;
 mod pdf_image;
 mod shadings;
-mod state;
+pub mod state;
 
+pub use clipping::{ClippingPath, ClippingRegion};
 pub use color::Color;
 pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
-pub use path::{LineCap, LineJoin, PathBuilder};
+pub use path::{LineCap, LineJoin, PathBuilder, PathCommand, WindingRule};
 pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
     TilingType,
@@ -47,6 +49,8 @@ pub struct GraphicsContext {
     current_rendering_intent: RenderingIntent,
     current_flatness: f64,
     current_smoothness: f64,
+    // Clipping support
+    clipping_region: ClippingRegion,
     // Font management
     font_manager: Option<Arc<FontManager>>,
     current_font_name: Option<String>,
@@ -82,6 +86,8 @@ impl GraphicsContext {
             current_rendering_intent: RenderingIntent::RelativeColorimetric,
             current_flatness: 1.0,
             current_smoothness: 0.0,
+            // Clipping defaults
+            clipping_region: ClippingRegion::new(),
             // Font defaults
             font_manager: None,
             current_font_name: None,
@@ -208,11 +214,13 @@ impl GraphicsContext {
 
     pub fn save_state(&mut self) -> &mut Self {
         self.operations.push_str("q\n");
+        self.save_clipping_state();
         self
     }
 
     pub fn restore_state(&mut self) -> &mut Self {
         self.operations.push_str("Q\n");
+        self.restore_clipping_state();
         self
     }
 
@@ -644,6 +652,65 @@ impl GraphicsContext {
     pub fn clip_even_odd(&mut self) -> &mut Self {
         self.operations.push_str("W*\n");
         self
+    }
+
+    /// Create clipping path and stroke it
+    pub fn clip_stroke(&mut self) -> &mut Self {
+        self.apply_stroke_color();
+        self.operations.push_str("W S\n");
+        self
+    }
+
+    /// Set a custom clipping path
+    pub fn set_clipping_path(&mut self, path: ClippingPath) -> Result<&mut Self> {
+        let ops = path.to_pdf_operations()?;
+        self.operations.push_str(&ops);
+        self.clipping_region.set_clip(path);
+        Ok(self)
+    }
+
+    /// Clear the current clipping path
+    pub fn clear_clipping(&mut self) -> &mut Self {
+        self.clipping_region.clear_clip();
+        self
+    }
+
+    /// Save the current clipping state (called automatically by save_state)
+    fn save_clipping_state(&mut self) {
+        self.clipping_region.save();
+    }
+
+    /// Restore the previous clipping state (called automatically by restore_state)
+    fn restore_clipping_state(&mut self) {
+        self.clipping_region.restore();
+    }
+
+    /// Create a rectangular clipping region
+    pub fn clip_rect(&mut self, x: f64, y: f64, width: f64, height: f64) -> Result<&mut Self> {
+        let path = ClippingPath::rect(x, y, width, height);
+        self.set_clipping_path(path)
+    }
+
+    /// Create a circular clipping region
+    pub fn clip_circle(&mut self, cx: f64, cy: f64, radius: f64) -> Result<&mut Self> {
+        let path = ClippingPath::circle(cx, cy, radius);
+        self.set_clipping_path(path)
+    }
+
+    /// Create an elliptical clipping region
+    pub fn clip_ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64) -> Result<&mut Self> {
+        let path = ClippingPath::ellipse(cx, cy, rx, ry);
+        self.set_clipping_path(path)
+    }
+
+    /// Check if a clipping path is active
+    pub fn has_clipping(&self) -> bool {
+        self.clipping_region.has_clip()
+    }
+
+    /// Get the current clipping path
+    pub fn clipping_path(&self) -> Option<&ClippingPath> {
+        self.clipping_region.current()
     }
 
     /// Set the font manager for custom fonts

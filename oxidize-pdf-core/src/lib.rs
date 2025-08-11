@@ -191,6 +191,7 @@ pub mod page_forms;
 pub mod page_labels;
 pub mod page_lists;
 pub mod page_tables;
+pub mod page_tree;
 pub mod parser;
 pub mod recovery;
 pub mod streaming;

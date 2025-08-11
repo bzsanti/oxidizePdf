@@ -152,6 +152,23 @@ pub struct ButtonField {
     pub pushbutton: bool,
 }
 
+impl ButtonField {
+    /// Check if this is a checkbox
+    pub fn is_checkbox(&self) -> bool {
+        !self.radio && !self.pushbutton
+    }
+
+    /// Check if this is a radio button
+    pub fn is_radio(&self) -> bool {
+        self.radio
+    }
+
+    /// Check if this is a push button
+    pub fn is_pushbutton(&self) -> bool {
+        self.pushbutton
+    }
+}
+
 /// Push button field
 #[derive(Debug, Clone)]
 pub struct PushButton {

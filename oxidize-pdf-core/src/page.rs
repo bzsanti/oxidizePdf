@@ -143,13 +143,11 @@ impl Page {
         )
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn width(&self) -> f64 {
+    pub fn width(&self) -> f64 {
         self.width
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn height(&self) -> f64 {
+    pub fn height(&self) -> f64 {
         self.height
     }
 
