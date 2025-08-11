@@ -63,34 +63,12 @@ criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1.7"
 
 [[example]]
-name = "hello_world"
+name = "font_spacing_test"
+path = "../examples/src/font_spacing_test.rs"
 
 [[example]]
-name = "graphics_demo"
-
-[[example]]
-name = "text_formatting"
-
-[[example]]
-name = "text_wrapping"
-
-[[example]]
-name = "create_pdf_with_images"
-
-[[example]]
-name = "basic_tagging"
-
-[[example]]
-name = "jpeg_image"
-
-[[example]]
-name = "comprehensive_demo"
-
-[[example]]
-name = "memory_optimization"
-
-[[example]]
-name = "metadata"
+name = "font_subsetting_test"
+path = "../examples/src/font_subsetting_test.rs"
 
 # Temporarily disabled examples with compilation errors
 # [[example]]
