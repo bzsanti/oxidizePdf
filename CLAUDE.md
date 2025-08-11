@@ -8,24 +8,35 @@
 ## Test Organization Guidelines - ESTRICTO
 
 ### REGLAS OBLIGATORIAS:
-1. **TODOS los PDFs generados van a**: `oxidize-pdf-core/test-pdfs/`
+1. **TODOS los PDFs generados van a**: `examples/results/`
 2. **NUNCA generar PDFs en**:
    - El directorio raíz del proyecto
    - oxidize-pdf-core/ directamente
+   - oxidize-pdf-core/test-pdfs/
    - Cualquier otro lugar aleatorio
-3. **Archivos .rs de ejemplo**: `oxidize-pdf-core/examples/`
-4. **Tests unitarios**: `oxidize-pdf-core/tests/`
+3. **Archivos .rs de ejemplo**: `examples/src/`
+4. **Documentación de ejemplos**: `examples/doc/`
+5. **Tests unitarios**: `oxidize-pdf-core/tests/`
+
+### ESTRUCTURA DE EJEMPLOS:
+```
+examples/           # En la raíz del proyecto
+  ├── src/         # Archivos .rs de ejemplo
+  ├── doc/         # Documentación
+  └── results/     # PDFs generados
+```
 
 ### RUTINA DE GENERACIÓN:
-1. Crear ejemplo en `examples/nombre_ejemplo.rs`
-2. El ejemplo DEBE guardar PDFs en `test-pdfs/nombre_ejemplo.pdf`
+1. Crear ejemplo en `examples/src/nombre_ejemplo.rs`
+2. El ejemplo DEBE guardar PDFs en `examples/results/nombre_ejemplo.pdf`
 3. Ejecutar con `cargo run --example nombre_ejemplo`
-4. Verificar PDF en `test-pdfs/`
+4. Verificar PDF en `examples/results/`
 
 ### PROHIBIDO:
 - Crear nuevos directorios de prueba
-- Guardar PDFs sin la ruta `test-pdfs/`
+- Guardar PDFs fuera de `examples/results/`
 - Dejar archivos PDF dispersos por el proyecto
+- Usar rutas como oxidize-pdf-core/test-pdfs/ (deprecated)
 
 ## Release Process - IMPORTANTE
 - **NUNCA usar cargo-release localmente** - Las releases SIEMPRE se hacen a través del pipeline de GitHub Actions
