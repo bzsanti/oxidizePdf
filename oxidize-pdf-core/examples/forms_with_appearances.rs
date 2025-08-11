@@ -101,13 +101,10 @@ fn create_text_field(form_manager: &mut FormManager, page: &mut Page) -> Result<
     form_manager.add_text_field(text_field, widget, None).ok();
 
     // Add label to page
-    page.add_text(
-        Point::new(100.0, 740.0),
-        "Name:",
-        Font::HelveticaBold,
-        12.0,
-        Color::black(),
-    );
+    page.text()
+        .set_font(Font::HelveticaBold, 12.0)
+        .at(100.0, 740.0)
+        .write("Name:")?;
 
     Ok(())
 }
@@ -155,13 +152,10 @@ fn create_checkboxes(form_manager: &mut FormManager, page: &mut Page) -> Result<
         form_manager.add_checkbox(checkbox, widget, None).ok();
 
         // Add label
-        page.add_text(
-            Point::new(*x, 625.0),
-            label,
-            Font::Helvetica,
-            10.0,
-            Color::black(),
-        );
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(*x, 625.0)
+            .write(label)?;
     }
 
     Ok(())
@@ -214,18 +208,15 @@ fn create_radio_buttons(form_manager: &mut FormManager, page: &mut Page) -> Resu
     form_manager.add_radio_button(radio_group, None, None).ok();
 
     // Add label
-    page.add_text(
-        Point::new(100.0, 525.0),
-        "Choose a color:",
-        Font::HelveticaBold,
-        12.0,
-        Color::black(),
-    );
+    page.text()
+        .set_font(Font::HelveticaBold, 12.0)
+        .at(100.0, 525.0)
+        .write("Choose a color:")?;
 
     Ok(())
 }
 
-fn create_push_buttons(form_manager: &mut FormManager, page: &mut Page) -> Result<()> {
+fn create_push_buttons(form_manager: &mut FormManager, _page: &mut Page) -> Result<()> {
     // Submit button
     let submit_button = PushButton::new("submit_button").with_caption("Submit Form");
 

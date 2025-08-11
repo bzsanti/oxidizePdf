@@ -139,6 +139,11 @@ impl Document {
         self.metadata.author = Some(author.into());
     }
 
+    /// Sets the form manager for the document.
+    pub fn set_form_manager(&mut self, form_manager: FormManager) {
+        self.form_manager = Some(form_manager);
+    }
+
     /// Sets the document subject.
     pub fn set_subject(&mut self, subject: impl Into<String>) {
         self.metadata.subject = Some(subject.into());

@@ -842,6 +842,56 @@ fn parse_tiff_header(data: &[u8]) -> Result<(u32, u32, ColorSpace, u8)> {
 mod tests {
     use super::*;
 
+    /// Helper to create a minimal valid PNG for testing
+    fn create_minimal_png(width: u32, height: u32, color_type: u8) -> Vec<u8> {
+        let mut png = vec![
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        ];
+
+        // IHDR chunk
+        png.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
+            0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+        ]);
+        png.extend_from_slice(&width.to_be_bytes());
+        png.extend_from_slice(&height.to_be_bytes());
+        png.extend_from_slice(&[
+            0x08,       // Bit depth (8)
+            color_type, // Color type
+            0x00,       // Compression method
+            0x00,       // Filter method
+            0x00,       // Interlace method
+            0x00, 0x00, 0x00, 0x00, // CRC (placeholder)
+        ]);
+
+        // PLTE chunk for palette images
+        if color_type == 3 {
+            png.extend_from_slice(&[
+                0x00, 0x00, 0x00, 0x03, // PLTE chunk length (3)
+                0x50, 0x4C, 0x54, 0x45, // PLTE chunk type
+                0xFF, 0x00, 0x00, // One red color
+                0x00, 0x00, 0x00, 0x00, // CRC (placeholder)
+            ]);
+        }
+
+        // IDAT chunk with minimal compressed data
+        png.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x0C, // IDAT chunk length
+            0x49, 0x44, 0x41, 0x54, // IDAT chunk type
+            0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x01, 0x00, // Minimal zlib data
+            0x00, 0x05, 0x00, 0x01, // CRC (placeholder)
+        ]);
+
+        // IEND chunk
+        png.extend_from_slice(&[
+            0x00, 0x00, 0x00, 0x00, // IEND chunk length (0)
+            0x49, 0x45, 0x4E, 0x44, // IEND chunk type
+            0xAE, 0x42, 0x60, 0x82, // CRC
+        ]);
+
+        png
+    }
+
     #[test]
     fn test_parse_jpeg_header() {
         // Minimal JPEG header for testing
@@ -1465,19 +1515,7 @@ mod tests {
 
         #[test]
         fn test_png_grayscale_image() {
-            let png_data = vec![
-                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
-                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
-                0x00, 0x00, 0x00, 0x50, // Width (80)
-                0x00, 0x00, 0x00, 0x50, // Height (80)
-                0x08, // Bit depth (8)
-                0x00, // Color type (0 = Grayscale)
-                0x00, // Compression method
-                0x00, // Filter method
-                0x00, // Interlace method
-                0x5C, 0x72, 0x6E, 0x38, // CRC
-            ];
+            let png_data = create_minimal_png(1, 1, 0); // Grayscale
 
             let image = Image::from_png_data(png_data).unwrap();
             let pdf_obj = image.to_pdf_object();
