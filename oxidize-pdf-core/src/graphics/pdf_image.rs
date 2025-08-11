@@ -24,6 +24,10 @@ pub struct Image {
     color_space: ColorSpace,
     /// Bits per component
     bits_per_component: u8,
+    /// Alpha channel data (for transparency)
+    alpha_data: Option<Vec<u8>>,
+    /// SMask (soft mask) for alpha transparency
+    soft_mask: Option<Box<Image>>,
 }
 
 /// Supported image formats
@@ -37,6 +41,15 @@ pub enum ImageFormat {
     Tiff,
     /// Raw RGB/Gray data (no compression)
     Raw,
+}
+
+/// Image mask type for transparency
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MaskType {
+    /// Soft mask (grayscale alpha channel)
+    Soft,
+    /// Stencil mask (1-bit transparency)
+    Stencil,
 }
 
 /// Color spaces for images
@@ -78,6 +91,8 @@ impl Image {
             height,
             color_space,
             bits_per_component,
+            alpha_data: None,
+            soft_mask: None,
         })
     }
 
@@ -96,18 +111,46 @@ impl Image {
         }
     }
 
-    /// Create an image from PNG data
+    /// Create an image from PNG data with full transparency support
     pub fn from_png_data(data: Vec<u8>) -> Result<Self> {
-        // Parse PNG header to get dimensions and color info
-        let (width, height, color_space, bits_per_component) = parse_png_header(&data)?;
+        use crate::graphics::png_decoder::{decode_png, PngColorType};
+
+        // Decode PNG with our new decoder
+        let decoded = decode_png(&data)?;
+
+        // Map PNG color type to PDF color space
+        let color_space = match decoded.color_type {
+            PngColorType::Grayscale | PngColorType::GrayscaleAlpha => ColorSpace::DeviceGray,
+            PngColorType::Rgb | PngColorType::RgbAlpha | PngColorType::Palette => {
+                ColorSpace::DeviceRGB
+            }
+        };
+
+        // Create soft mask if we have alpha data
+        let soft_mask = if let Some(alpha) = &decoded.alpha_data {
+            Some(Box::new(Image {
+                data: alpha.clone(),
+                format: ImageFormat::Raw,
+                width: decoded.width,
+                height: decoded.height,
+                color_space: ColorSpace::DeviceGray,
+                bits_per_component: 8,
+                alpha_data: None,
+                soft_mask: None,
+            }))
+        } else {
+            None
+        };
 
         Ok(Image {
-            data,
-            format: ImageFormat::Png,
-            width,
-            height,
+            data: decoded.image_data,
+            format: ImageFormat::Raw, // Decoded data is raw RGB/Gray
+            width: decoded.width,
+            height: decoded.height,
             color_space,
-            bits_per_component,
+            bits_per_component: 8, // Always 8 after decoding
+            alpha_data: decoded.alpha_data,
+            soft_mask,
         })
     }
 
@@ -131,6 +174,8 @@ impl Image {
             height,
             color_space,
             bits_per_component,
+            alpha_data: None,
+            soft_mask: None,
         })
     }
 
@@ -154,6 +199,11 @@ impl Image {
         self.format
     }
 
+    /// Get bits per component
+    pub fn bits_per_component(&self) -> u8 {
+        self.bits_per_component
+    }
+
     /// Create image from raw RGB/Gray data (no encoding/compression)
     pub fn from_raw_data(
         data: Vec<u8>,
@@ -169,7 +219,72 @@ impl Image {
             height,
             color_space,
             bits_per_component,
+            alpha_data: None,
+            soft_mask: None,
         }
+    }
+
+    /// Create an image from RGBA data (with alpha channel)
+    pub fn from_rgba_data(rgba_data: Vec<u8>, width: u32, height: u32) -> Result<Self> {
+        if rgba_data.len() != (width * height * 4) as usize {
+            return Err(PdfError::InvalidImage(
+                "RGBA data size doesn't match dimensions".to_string(),
+            ));
+        }
+
+        // Split RGBA into RGB and alpha channels
+        let mut rgb_data = Vec::with_capacity((width * height * 3) as usize);
+        let mut alpha_data = Vec::with_capacity((width * height) as usize);
+
+        for chunk in rgba_data.chunks(4) {
+            rgb_data.push(chunk[0]); // R
+            rgb_data.push(chunk[1]); // G
+            rgb_data.push(chunk[2]); // B
+            alpha_data.push(chunk[3]); // A
+        }
+
+        // Create soft mask from alpha channel
+        let soft_mask = Some(Box::new(Image {
+            data: alpha_data.clone(),
+            format: ImageFormat::Raw,
+            width,
+            height,
+            color_space: ColorSpace::DeviceGray,
+            bits_per_component: 8,
+            alpha_data: None,
+            soft_mask: None,
+        }));
+
+        Ok(Image {
+            data: rgb_data,
+            format: ImageFormat::Raw,
+            width,
+            height,
+            color_space: ColorSpace::DeviceRGB,
+            bits_per_component: 8,
+            alpha_data: Some(alpha_data),
+            soft_mask,
+        })
+    }
+
+    /// Create a grayscale image from gray data
+    pub fn from_gray_data(gray_data: Vec<u8>, width: u32, height: u32) -> Result<Self> {
+        if gray_data.len() != (width * height) as usize {
+            return Err(PdfError::InvalidImage(
+                "Gray data size doesn't match dimensions".to_string(),
+            ));
+        }
+
+        Ok(Image {
+            data: gray_data,
+            format: ImageFormat::Raw,
+            width,
+            height,
+            color_space: ColorSpace::DeviceGray,
+            bits_per_component: 8,
+            alpha_data: None,
+            soft_mask: None,
+        })
     }
 
     /// Load and decode external PNG file using the `image` crate (requires external-images feature)
@@ -272,12 +387,152 @@ impl Image {
                 dict.set("Filter", Object::Name("FlateDecode".to_string()));
             }
             ImageFormat::Raw => {
-                // No filter for raw RGB/Gray data
+                // No filter for raw RGB/Gray data - may need FlateDecode for compression
             }
         }
 
         // Create stream with image data
         Object::Stream(dict, self.data.clone())
+    }
+
+    /// Convert to PDF XObject with SMask for transparency
+    pub fn to_pdf_object_with_transparency(&self) -> (Object, Option<Object>) {
+        let mut main_dict = Dictionary::new();
+
+        // Required entries for image XObject
+        main_dict.set("Type", Object::Name("XObject".to_string()));
+        main_dict.set("Subtype", Object::Name("Image".to_string()));
+        main_dict.set("Width", Object::Integer(self.width as i64));
+        main_dict.set("Height", Object::Integer(self.height as i64));
+
+        // Color space
+        let color_space_name = match self.color_space {
+            ColorSpace::DeviceGray => "DeviceGray",
+            ColorSpace::DeviceRGB => "DeviceRGB",
+            ColorSpace::DeviceCMYK => "DeviceCMYK",
+        };
+        main_dict.set("ColorSpace", Object::Name(color_space_name.to_string()));
+
+        // Bits per component
+        main_dict.set(
+            "BitsPerComponent",
+            Object::Integer(self.bits_per_component as i64),
+        );
+
+        // Filter based on image format
+        match self.format {
+            ImageFormat::Jpeg => {
+                main_dict.set("Filter", Object::Name("DCTDecode".to_string()));
+            }
+            ImageFormat::Png | ImageFormat::Raw => {
+                // Use FlateDecode for PNG decoded data and raw data
+                main_dict.set("Filter", Object::Name("FlateDecode".to_string()));
+            }
+            ImageFormat::Tiff => {
+                main_dict.set("Filter", Object::Name("FlateDecode".to_string()));
+            }
+        }
+
+        // Create soft mask if present
+        let smask_obj = if let Some(mask) = &self.soft_mask {
+            let mut mask_dict = Dictionary::new();
+            mask_dict.set("Type", Object::Name("XObject".to_string()));
+            mask_dict.set("Subtype", Object::Name("Image".to_string()));
+            mask_dict.set("Width", Object::Integer(mask.width as i64));
+            mask_dict.set("Height", Object::Integer(mask.height as i64));
+            mask_dict.set("ColorSpace", Object::Name("DeviceGray".to_string()));
+            mask_dict.set("BitsPerComponent", Object::Integer(8));
+            mask_dict.set("Filter", Object::Name("FlateDecode".to_string()));
+
+            Some(Object::Stream(mask_dict, mask.data.clone()))
+        } else {
+            None
+        };
+
+        // Note: The SMask reference would need to be set by the caller
+        // as it requires object references which we don't have here
+
+        (Object::Stream(main_dict, self.data.clone()), smask_obj)
+    }
+
+    /// Check if this image has transparency
+    pub fn has_transparency(&self) -> bool {
+        self.soft_mask.is_some() || self.alpha_data.is_some()
+    }
+
+    /// Create a stencil mask from this image
+    /// A stencil mask uses 1-bit per pixel for transparency
+    pub fn create_stencil_mask(&self, threshold: u8) -> Option<Image> {
+        if let Some(alpha) = &self.alpha_data {
+            // Convert alpha channel to 1-bit stencil mask
+            let mut mask_data = Vec::new();
+            let mut current_byte = 0u8;
+            let mut bit_count = 0;
+
+            for &alpha_value in alpha.iter() {
+                // Set bit if alpha is above threshold
+                if alpha_value > threshold {
+                    current_byte |= 1 << (7 - bit_count);
+                }
+
+                bit_count += 1;
+                if bit_count == 8 {
+                    mask_data.push(current_byte);
+                    current_byte = 0;
+                    bit_count = 0;
+                }
+            }
+
+            // Push last byte if needed
+            if bit_count > 0 {
+                mask_data.push(current_byte);
+            }
+
+            Some(Image {
+                data: mask_data,
+                format: ImageFormat::Raw,
+                width: self.width,
+                height: self.height,
+                color_space: ColorSpace::DeviceGray,
+                bits_per_component: 1,
+                alpha_data: None,
+                soft_mask: None,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Create an image mask for transparency
+    pub fn create_mask(&self, mask_type: MaskType, threshold: Option<u8>) -> Option<Image> {
+        match mask_type {
+            MaskType::Soft => self.soft_mask.as_ref().map(|m| m.as_ref().clone()),
+            MaskType::Stencil => self.create_stencil_mask(threshold.unwrap_or(128)),
+        }
+    }
+
+    /// Apply a mask to this image
+    pub fn with_mask(mut self, mask: Image, mask_type: MaskType) -> Self {
+        match mask_type {
+            MaskType::Soft => {
+                self.soft_mask = Some(Box::new(mask));
+            }
+            MaskType::Stencil => {
+                // For stencil masks, we store them as soft masks with 1-bit depth
+                self.soft_mask = Some(Box::new(mask));
+            }
+        }
+        self
+    }
+
+    /// Get the soft mask if present
+    pub fn soft_mask(&self) -> Option<&Image> {
+        self.soft_mask.as_ref().map(|m| m.as_ref())
+    }
+
+    /// Get the alpha data if present
+    pub fn alpha_data(&self) -> Option<&[u8]> {
+        self.alpha_data.as_deref()
     }
 }
 
@@ -364,6 +619,7 @@ fn parse_jpeg_header(data: &[u8]) -> Result<(u32, u32, ColorSpace, u8)> {
 }
 
 /// Parse PNG header to extract image information
+#[allow(dead_code)]
 fn parse_png_header(data: &[u8]) -> Result<(u32, u32, ColorSpace, u8)> {
     // PNG signature: 8 bytes
     if data.len() < 8 || &data[0..8] != b"\x89PNG\r\n\x1a\n" {

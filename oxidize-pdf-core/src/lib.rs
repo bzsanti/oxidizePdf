@@ -206,7 +206,7 @@ pub mod semantic;
 pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
-pub use graphics::{Color, GraphicsContext, Image, ImageColorSpace, ImageFormat};
+pub use graphics::{Color, ColorSpace, GraphicsContext, Image, ImageFormat, MaskType};
 pub use page::{Margins, Page};
 pub use page_lists::{ListStyle, ListType, PageLists};
 pub use page_tables::{PageTables, TableStyle};
@@ -578,7 +578,7 @@ mod tests {
     fn test_image_types() {
         // Test image-related types
         let _format = ImageFormat::Jpeg;
-        let _color_space = ImageColorSpace::DeviceRGB;
+        let _color_space = ColorSpace::DeviceRGB;
 
         // Test that image creation doesn't panic
         let image_data = vec![0u8; 100];

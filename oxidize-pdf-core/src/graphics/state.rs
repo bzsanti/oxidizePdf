@@ -433,6 +433,21 @@ impl ExtGState {
         self
     }
 
+    /// Set soft mask for transparency
+    pub fn set_soft_mask(&mut self, mask: SoftMask) {
+        self.soft_mask = Some(mask);
+    }
+
+    /// Set soft mask with a named XObject
+    pub fn set_soft_mask_name(&mut self, name: String) {
+        self.soft_mask = Some(SoftMask::Custom(name));
+    }
+
+    /// Remove soft mask (set to None)
+    pub fn set_soft_mask_none(&mut self) {
+        self.soft_mask = Some(SoftMask::None);
+    }
+
     /// Set black point compensation (PDF 2.0)
     pub fn with_black_point_compensation(mut self, use_compensation: bool) -> Self {
         self.use_black_point_compensation = Some(use_compensation);
@@ -541,6 +556,21 @@ impl ExtGState {
             write!(&mut dict, " /BM /{}", mode.pdf_name()).map_err(|_| {
                 PdfError::InvalidStructure("Failed to write blend mode".to_string())
             })?;
+        }
+
+        if let Some(ref mask) = self.soft_mask {
+            match mask {
+                SoftMask::None => {
+                    write!(&mut dict, " /SMask /None").map_err(|_| {
+                        PdfError::InvalidStructure("Failed to write soft mask".to_string())
+                    })?;
+                }
+                SoftMask::Custom(name) => {
+                    write!(&mut dict, " /SMask /{name}").map_err(|_| {
+                        PdfError::InvalidStructure("Failed to write soft mask".to_string())
+                    })?;
+                }
+            }
         }
 
         if let Some(alpha) = self.alpha_stroke {

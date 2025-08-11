@@ -814,6 +814,236 @@ impl AppearanceGenerator for PushButtonAppearance {
     }
 }
 
+/// Appearance generator for ComboBox fields
+#[derive(Debug, Clone)]
+pub struct ComboBoxAppearance {
+    /// Font for text
+    pub font: Font,
+    /// Font size
+    pub font_size: f64,
+    /// Text color
+    pub text_color: Color,
+    /// Selected option
+    pub selected_text: Option<String>,
+    /// Show dropdown arrow
+    pub show_arrow: bool,
+}
+
+impl Default for ComboBoxAppearance {
+    fn default() -> Self {
+        Self {
+            font: Font::Helvetica,
+            font_size: 12.0,
+            text_color: Color::black(),
+            selected_text: None,
+            show_arrow: true,
+        }
+    }
+}
+
+impl AppearanceGenerator for ComboBoxAppearance {
+    fn generate_appearance(
+        &self,
+        widget: &Widget,
+        value: Option<&str>,
+        _state: AppearanceState,
+    ) -> Result<AppearanceStream> {
+        let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
+        let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
+
+        let mut content = String::new();
+
+        // Draw background
+        content.push_str("1 1 1 rg\n"); // White background
+        content.push_str(&format!("0 0 {} {} re\n", width, height));
+        content.push_str("f\n");
+
+        // Draw border
+        if let Some(ref border_color) = widget.appearance.border_color {
+            match border_color {
+                Color::Gray(g) => content.push_str(&format!("{} G\n", g)),
+                Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} RG\n", r, g, b)),
+                Color::Cmyk(c, m, y, k) => {
+                    content.push_str(&format!("{} {} {} {} K\n", c, m, y, k))
+                }
+            }
+            content.push_str(&format!("{} w\n", widget.appearance.border_width));
+            content.push_str(&format!("0 0 {} {} re\n", width, height));
+            content.push_str("S\n");
+        }
+
+        // Draw dropdown arrow if enabled
+        if self.show_arrow {
+            let arrow_x = width - 15.0;
+            let arrow_y = height / 2.0;
+            content.push_str("0.5 0.5 0.5 rg\n"); // Gray arrow
+            content.push_str(&format!("{} {} m\n", arrow_x, arrow_y + 3.0));
+            content.push_str(&format!("{} {} l\n", arrow_x + 8.0, arrow_y + 3.0));
+            content.push_str(&format!("{} {} l\n", arrow_x + 4.0, arrow_y - 3.0));
+            content.push_str("f\n");
+        }
+
+        // Draw selected text
+        let text_to_show = value.or(self.selected_text.as_deref());
+        if let Some(text) = text_to_show {
+            content.push_str("BT\n");
+            content.push_str(&format!(
+                "/{} {} Tf\n",
+                self.font.pdf_name(),
+                self.font_size
+            ));
+            match self.text_color {
+                Color::Gray(g) => content.push_str(&format!("{} g\n", g)),
+                Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} rg\n", r, g, b)),
+                Color::Cmyk(c, m, y, k) => {
+                    content.push_str(&format!("{} {} {} {} k\n", c, m, y, k))
+                }
+            }
+            content.push_str(&format!("5 {} Td\n", (height - self.font_size) / 2.0));
+
+            // Escape special characters in PDF strings
+            let escaped = text
+                .replace('\\', "\\\\")
+                .replace('(', "\\(")
+                .replace(')', "\\)")
+                .replace('\n', "\\n")
+                .replace('\r', "\\r")
+                .replace('\t', "\\t");
+            content.push_str(&format!("({}) Tj\n", escaped));
+            content.push_str("ET\n");
+        }
+
+        let bbox = [0.0, 0.0, width, height];
+        Ok(AppearanceStream::new(content.into_bytes(), bbox))
+    }
+}
+
+/// Appearance generator for ListBox fields
+#[derive(Debug, Clone)]
+pub struct ListBoxAppearance {
+    /// Font for text
+    pub font: Font,
+    /// Font size
+    pub font_size: f64,
+    /// Text color
+    pub text_color: Color,
+    /// Background color for selected items
+    pub selection_color: Color,
+    /// Options to display
+    pub options: Vec<String>,
+    /// Selected indices
+    pub selected: Vec<usize>,
+    /// Item height
+    pub item_height: f64,
+}
+
+impl Default for ListBoxAppearance {
+    fn default() -> Self {
+        Self {
+            font: Font::Helvetica,
+            font_size: 12.0,
+            text_color: Color::black(),
+            selection_color: Color::rgb(0.2, 0.4, 0.8),
+            options: Vec::new(),
+            selected: Vec::new(),
+            item_height: 16.0,
+        }
+    }
+}
+
+impl AppearanceGenerator for ListBoxAppearance {
+    fn generate_appearance(
+        &self,
+        widget: &Widget,
+        _value: Option<&str>,
+        _state: AppearanceState,
+    ) -> Result<AppearanceStream> {
+        let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
+        let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
+
+        let mut content = String::new();
+
+        // Draw background
+        content.push_str("1 1 1 rg\n"); // White background
+        content.push_str(&format!("0 0 {} {} re\n", width, height));
+        content.push_str("f\n");
+
+        // Draw border
+        if let Some(ref border_color) = widget.appearance.border_color {
+            match border_color {
+                Color::Gray(g) => content.push_str(&format!("{} G\n", g)),
+                Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} RG\n", r, g, b)),
+                Color::Cmyk(c, m, y, k) => {
+                    content.push_str(&format!("{} {} {} {} K\n", c, m, y, k))
+                }
+            }
+            content.push_str(&format!("{} w\n", widget.appearance.border_width));
+            content.push_str(&format!("0 0 {} {} re\n", width, height));
+            content.push_str("S\n");
+        }
+
+        // Draw list items
+        let mut y = height - self.item_height;
+        for (index, option) in self.options.iter().enumerate() {
+            if y < 0.0 {
+                break; // Stop if we've filled the visible area
+            }
+
+            // Draw selection background if selected
+            if self.selected.contains(&index) {
+                match self.selection_color {
+                    Color::Gray(g) => content.push_str(&format!("{} g\n", g)),
+                    Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} rg\n", r, g, b)),
+                    Color::Cmyk(c, m, y_val, k) => {
+                        content.push_str(&format!("{} {} {} {} k\n", c, m, y_val, k))
+                    }
+                }
+                content.push_str(&format!("0 {} {} {} re\n", y, width, self.item_height));
+                content.push_str("f\n");
+            }
+
+            // Draw text
+            content.push_str("BT\n");
+            content.push_str(&format!(
+                "/{} {} Tf\n",
+                self.font.pdf_name(),
+                self.font_size
+            ));
+
+            // Use white text for selected items, black for others
+            if self.selected.contains(&index) {
+                content.push_str("1 1 1 rg\n");
+            } else {
+                match self.text_color {
+                    Color::Gray(g) => content.push_str(&format!("{} g\n", g)),
+                    Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} rg\n", r, g, b)),
+                    Color::Cmyk(c, m, y_val, k) => {
+                        content.push_str(&format!("{} {} {} {} k\n", c, m, y_val, k))
+                    }
+                }
+            }
+
+            content.push_str(&format!("5 {} Td\n", y + 2.0));
+
+            // Escape special characters in PDF strings
+            let escaped = option
+                .replace('\\', "\\\\")
+                .replace('(', "\\(")
+                .replace(')', "\\)")
+                .replace('\n', "\\n")
+                .replace('\r', "\\r")
+                .replace('\t', "\\t");
+            content.push_str(&format!("({}) Tj\n", escaped));
+            content.push_str("ET\n");
+
+            y -= self.item_height;
+        }
+
+        let bbox = [0.0, 0.0, width, height];
+        Ok(AppearanceStream::new(content.into_bytes(), bbox))
+    }
+}
+
 /// Generate default appearance stream for a field type
 pub fn generate_default_appearance(
     field_type: FieldType,
@@ -832,8 +1062,8 @@ pub fn generate_default_appearance(
             generator.generate_appearance(widget, value, AppearanceState::Normal)
         }
         FieldType::Choice => {
-            // Use text field appearance for choice fields (simplified)
-            let generator = TextFieldAppearance::default();
+            // Default to ComboBox appearance for choice fields
+            let generator = ComboBoxAppearance::default();
             generator.generate_appearance(widget, value, AppearanceState::Normal)
         }
         FieldType::Signature => {
