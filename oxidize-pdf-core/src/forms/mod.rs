@@ -3,11 +3,17 @@
 //! This module provides basic interactive form fields including text fields,
 //! checkboxes, radio buttons, and push buttons.
 
+mod appearance;
 mod field;
 mod field_type;
 mod form_data;
 mod working_field;
 
+pub use appearance::{
+    generate_default_appearance, AppearanceDictionary, AppearanceGenerator, AppearanceState,
+    AppearanceStream, CheckBoxAppearance, CheckStyle, PushButtonAppearance, RadioButtonAppearance,
+    TextFieldAppearance,
+};
 pub use field::{
     BorderStyle, Field, FieldFlags, FieldOptions, FormField, Widget, WidgetAppearance,
 };

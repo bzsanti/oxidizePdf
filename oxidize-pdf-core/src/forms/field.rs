@@ -104,6 +104,8 @@ pub struct Widget {
     pub appearance: WidgetAppearance,
     /// Parent field reference (will be set by FormManager)
     pub parent: Option<String>,
+    /// Appearance streams (Normal, Rollover, Down)
+    pub appearance_streams: Option<crate::forms::AppearanceDictionary>,
 }
 
 impl Widget {
@@ -113,6 +115,7 @@ impl Widget {
             rect,
             appearance: WidgetAppearance::default(),
             parent: None,
+            appearance_streams: None,
         }
     }
 
@@ -120,6 +123,39 @@ impl Widget {
     pub fn with_appearance(mut self, appearance: WidgetAppearance) -> Self {
         self.appearance = appearance;
         self
+    }
+
+    /// Set appearance streams
+    pub fn with_appearance_streams(mut self, streams: crate::forms::AppearanceDictionary) -> Self {
+        self.appearance_streams = Some(streams);
+        self
+    }
+
+    /// Generate default appearance streams based on field type
+    pub fn generate_appearance(
+        &mut self,
+        field_type: crate::forms::FieldType,
+        value: Option<&str>,
+    ) -> crate::error::Result<()> {
+        use crate::forms::{generate_default_appearance, AppearanceDictionary, AppearanceState};
+
+        let mut app_dict = AppearanceDictionary::new();
+
+        // Generate normal appearance
+        let normal_stream = generate_default_appearance(field_type, self, value)?;
+        app_dict.set_appearance(AppearanceState::Normal, normal_stream);
+
+        // For buttons, also generate rollover and down states
+        if field_type == crate::forms::FieldType::Button {
+            let rollover_stream = generate_default_appearance(field_type, self, value)?;
+            app_dict.set_appearance(AppearanceState::Rollover, rollover_stream);
+
+            let down_stream = generate_default_appearance(field_type, self, value)?;
+            app_dict.set_appearance(AppearanceState::Down, down_stream);
+        }
+
+        self.appearance_streams = Some(app_dict);
+        Ok(())
     }
 
     /// Convert to annotation dictionary
@@ -183,6 +219,11 @@ impl Widget {
 
         // Flags - print flag
         dict.set("F", Object::Integer(4));
+
+        // Add appearance dictionary if present
+        if let Some(ref app_streams) = self.appearance_streams {
+            dict.set("AP", Object::Dictionary(app_streams.to_dict()));
+        }
 
         dict
     }
