@@ -11,8 +11,8 @@ mod working_field;
 
 pub use appearance::{
     generate_default_appearance, AppearanceDictionary, AppearanceGenerator, AppearanceState,
-    AppearanceStream, CheckBoxAppearance, CheckStyle, PushButtonAppearance, RadioButtonAppearance,
-    TextFieldAppearance,
+    AppearanceStream, CheckBoxAppearance, CheckStyle, ComboBoxAppearance, ListBoxAppearance,
+    PushButtonAppearance, RadioButtonAppearance, TextFieldAppearance,
 };
 pub use field::{
     BorderStyle, Field, FieldFlags, FieldOptions, FormField, Widget, WidgetAppearance,

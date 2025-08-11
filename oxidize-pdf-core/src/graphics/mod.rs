@@ -4,6 +4,7 @@ mod color_profiles;
 mod path;
 mod patterns;
 mod pdf_image;
+mod png_decoder;
 mod shadings;
 pub mod state;
 
@@ -15,7 +16,7 @@ pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
     TilingType,
 };
-pub use pdf_image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
+pub use pdf_image::{ColorSpace, Image, ImageFormat, MaskType};
 pub use shadings::{
     AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
     ShadingManager, ShadingPattern, ShadingType,
@@ -197,18 +198,51 @@ impl GraphicsContext {
         let opacity = opacity.clamp(0.0, 1.0);
         self.fill_opacity = opacity;
         self.stroke_opacity = opacity;
+
+        // Create pending ExtGState if opacity is not 1.0
+        if opacity < 1.0 {
+            let mut state = ExtGState::new();
+            state.alpha_fill = Some(opacity);
+            state.alpha_stroke = Some(opacity);
+            self.pending_extgstate = Some(state);
+        }
+
         self
     }
 
     /// Set the fill opacity (0.0 to 1.0)
     pub fn set_fill_opacity(&mut self, opacity: f64) -> &mut Self {
         self.fill_opacity = opacity.clamp(0.0, 1.0);
+
+        // Update or create pending ExtGState
+        if opacity < 1.0 {
+            if let Some(ref mut state) = self.pending_extgstate {
+                state.alpha_fill = Some(opacity);
+            } else {
+                let mut state = ExtGState::new();
+                state.alpha_fill = Some(opacity);
+                self.pending_extgstate = Some(state);
+            }
+        }
+
         self
     }
 
     /// Set the stroke opacity (0.0 to 1.0)
     pub fn set_stroke_opacity(&mut self, opacity: f64) -> &mut Self {
         self.stroke_opacity = opacity.clamp(0.0, 1.0);
+
+        // Update or create pending ExtGState
+        if opacity < 1.0 {
+            if let Some(ref mut state) = self.pending_extgstate {
+                state.alpha_stroke = Some(opacity);
+            } else {
+                let mut state = ExtGState::new();
+                state.alpha_stroke = Some(opacity);
+                self.pending_extgstate = Some(state);
+            }
+        }
+
         self
     }
 
@@ -280,6 +314,63 @@ impl GraphicsContext {
 
         // Draw the image XObject
         writeln!(&mut self.operations, "/{image_name} Do").unwrap();
+
+        // Restore graphics state
+        self.restore_state();
+
+        self
+    }
+
+    /// Draw an image with transparency support (soft mask)
+    /// This method handles images with alpha channels or soft masks
+    pub fn draw_image_with_transparency(
+        &mut self,
+        image_name: &str,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        mask_name: Option<&str>,
+    ) -> &mut Self {
+        // Save graphics state
+        self.save_state();
+
+        // If we have a mask, we need to set up an ExtGState with SMask
+        if let Some(mask) = mask_name {
+            // Create an ExtGState for the soft mask
+            let mut extgstate = ExtGState::new();
+            extgstate.set_soft_mask_name(mask.to_string());
+
+            // Register and apply the ExtGState
+            let gs_name = self
+                .extgstate_manager
+                .add_state(extgstate)
+                .unwrap_or_else(|_| "GS1".to_string());
+            writeln!(&mut self.operations, "/{} gs", gs_name).unwrap();
+        }
+
+        // Set up transformation matrix for image placement
+        writeln!(
+            &mut self.operations,
+            "{width:.2} 0 0 {height:.2} {x:.2} {y:.2} cm"
+        )
+        .unwrap();
+
+        // Draw the image XObject
+        writeln!(&mut self.operations, "/{image_name} Do").unwrap();
+
+        // If we had a mask, reset the soft mask to None
+        if mask_name.is_some() {
+            // Create an ExtGState that removes the soft mask
+            let mut reset_extgstate = ExtGState::new();
+            reset_extgstate.set_soft_mask_none();
+
+            let gs_name = self
+                .extgstate_manager
+                .add_state(reset_extgstate)
+                .unwrap_or_else(|_| "GS2".to_string());
+            writeln!(&mut self.operations, "/{} gs", gs_name).unwrap();
+        }
 
         // Restore graphics state
         self.restore_state();
@@ -371,6 +462,11 @@ impl GraphicsContext {
 
     /// Get the operations string
     pub fn operations(&self) -> &str {
+        &self.operations
+    }
+
+    /// Get the operations string (alias for testing)
+    pub fn get_operations(&self) -> &str {
         &self.operations
     }
 

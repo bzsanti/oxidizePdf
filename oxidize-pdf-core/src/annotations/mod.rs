@@ -13,8 +13,9 @@ pub use annotation::{
     Annotation, AnnotationFlags, AnnotationManager, AnnotationType, BorderStyle, BorderStyleType,
 };
 pub use annotation_type::{
-    FreeTextAnnotation, HighlightAnnotation, InkAnnotation, LineAnnotation, LineEndingStyle,
-    SquareAnnotation, StampAnnotation, StampName,
+    CircleAnnotation, FileAttachmentAnnotation, FileAttachmentIcon, FreeTextAnnotation,
+    HighlightAnnotation, InkAnnotation, LineAnnotation, LineEndingStyle, SquareAnnotation,
+    StampAnnotation, StampName,
 };
 pub use link::{HighlightMode, LinkAction, LinkAnnotation, LinkDestination};
 pub use markup::{MarkupAnnotation, MarkupType, QuadPoints};
