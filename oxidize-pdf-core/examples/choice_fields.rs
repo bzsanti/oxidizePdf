@@ -113,21 +113,16 @@ fn create_combo_box(form_manager: &mut FormManager, page: &mut Page) -> Result<(
     app_dict.set_appearance(AppearanceState::Normal, appearance_stream);
     widget = widget.with_appearance_streams(app_dict);
 
-    // Add to form (this would be add_combo_box in a full implementation)
-    // For now, we'll use the generic field method
-    let field = oxidize_pdf::forms::Field {
-        field_type: FieldType::Choice,
-        name: "country".to_string(),
-        value: Some(oxidize_pdf::objects::Object::String("US".to_string())),
-        default_value: None,
-        rect: Some(rect),
-        flags: Some(oxidize_pdf::forms::FieldFlags::COMBO),
-        options: None,
-        max_len: None,
-        appearance: Some(widget.appearance.clone()),
-    };
+    // Create ComboBox field
+    let combo = ComboBox::new("country")
+        .add_option("US", "United States")
+        .add_option("CA", "Canada")
+        .add_option("MX", "Mexico")
+        .add_option("UK", "United Kingdom")
+        .add_option("FR", "France")
+        .with_selected(0); // Default to United States
 
-    form_manager.add_field(field, None).ok();
+    form_manager.add_combo_box(combo, widget, None).ok();
 
     Ok(())
 }
@@ -172,19 +167,15 @@ fn create_editable_combo_box(form_manager: &mut FormManager, page: &mut Page) ->
     app_dict.set_appearance(AppearanceState::Normal, appearance_stream);
     widget = widget.with_appearance_streams(app_dict);
 
-    let field = oxidize_pdf::forms::Field {
-        field_type: FieldType::Choice,
-        name: "city".to_string(),
-        value: Some(oxidize_pdf::objects::Object::String("NYC".to_string())),
-        default_value: None,
-        rect: Some(rect),
-        flags: Some(oxidize_pdf::forms::FieldFlags::COMBO | oxidize_pdf::forms::FieldFlags::EDIT),
-        options: None,
-        max_len: None,
-        appearance: Some(widget.appearance.clone()),
-    };
+    // Create editable ComboBox field
+    let combo = ComboBox::new("city")
+        .add_option("NYC", "New York City")
+        .add_option("LA", "Los Angeles")
+        .add_option("CHI", "Chicago")
+        .editable() // Allow custom input
+        .with_selected(0); // Default to NYC
 
-    form_manager.add_field(field, None).ok();
+    form_manager.add_combo_box(combo, widget, None).ok();
 
     Ok(())
 }

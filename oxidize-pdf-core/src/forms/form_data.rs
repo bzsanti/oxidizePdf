@@ -182,6 +182,111 @@ impl FormManager {
         Ok(obj_ref)
     }
 
+    /// Add a combo box field
+    pub fn add_combo_box(
+        &mut self,
+        combo: ComboBox,
+        widget: Widget,
+        options: Option<FieldOptions>,
+    ) -> Result<ObjectReference> {
+        let mut field_dict = combo.to_dict();
+
+        // Apply options
+        if let Some(opts) = options {
+            if opts.flags.to_flags() != 0 {
+                field_dict.set("Ff", Object::Integer(opts.flags.to_flags() as i64));
+            }
+            if let Some(da) = opts.default_appearance {
+                field_dict.set("DA", Object::String(da));
+            }
+        }
+
+        let field_name = combo.name.clone();
+        let mut form_field = FormField::new(field_dict);
+        form_field.add_widget(widget);
+
+        self.fields.insert(field_name, form_field);
+
+        // Create object reference
+        let obj_ref = ObjectReference::new(self.next_field_id, 0);
+        self.next_field_id += 1;
+        self.acro_form.add_field(obj_ref);
+
+        Ok(obj_ref)
+    }
+
+    /// Add a list box field
+    pub fn add_list_box(
+        &mut self,
+        listbox: ListBox,
+        widget: Widget,
+        options: Option<FieldOptions>,
+    ) -> Result<ObjectReference> {
+        let mut field_dict = listbox.to_dict();
+
+        // Apply options
+        if let Some(opts) = options {
+            if opts.flags.to_flags() != 0 {
+                field_dict.set("Ff", Object::Integer(opts.flags.to_flags() as i64));
+            }
+            if let Some(da) = opts.default_appearance {
+                field_dict.set("DA", Object::String(da));
+            }
+        }
+
+        let field_name = listbox.name.clone();
+        let mut form_field = FormField::new(field_dict);
+        form_field.add_widget(widget);
+
+        self.fields.insert(field_name, form_field);
+
+        // Create object reference
+        let obj_ref = ObjectReference::new(self.next_field_id, 0);
+        self.next_field_id += 1;
+        self.acro_form.add_field(obj_ref);
+
+        Ok(obj_ref)
+    }
+
+    /// Add a radio button group
+    pub fn add_radio_button(
+        &mut self,
+        radio: RadioButton,
+        widgets: Option<Vec<Widget>>,
+        options: Option<FieldOptions>,
+    ) -> Result<ObjectReference> {
+        let mut field_dict = radio.to_dict();
+
+        // Apply options
+        if let Some(opts) = options {
+            if opts.flags.to_flags() != 0 {
+                field_dict.set("Ff", Object::Integer(opts.flags.to_flags() as i64));
+            }
+            if let Some(da) = opts.default_appearance {
+                field_dict.set("DA", Object::String(da));
+            }
+        }
+
+        let field_name = radio.name.clone();
+        let mut form_field = FormField::new(field_dict);
+
+        // Add widgets if provided
+        if let Some(widgets) = widgets {
+            for widget in widgets {
+                form_field.add_widget(widget);
+            }
+        }
+
+        self.fields.insert(field_name, form_field);
+
+        // Create object reference
+        let obj_ref = ObjectReference::new(self.next_field_id, 0);
+        self.next_field_id += 1;
+        self.acro_form.add_field(obj_ref);
+
+        Ok(obj_ref)
+    }
+
     /// Add a checkbox
     pub fn add_checkbox(
         &mut self,
@@ -265,66 +370,6 @@ impl FormManager {
         for widget in widgets {
             form_field.add_widget(widget);
         }
-
-        self.fields.insert(field_name, form_field);
-
-        // Create object reference
-        let obj_ref = ObjectReference::new(self.next_field_id, 0);
-        self.next_field_id += 1;
-        self.acro_form.add_field(obj_ref);
-
-        Ok(obj_ref)
-    }
-
-    /// Add a list box
-    pub fn add_list_box(
-        &mut self,
-        listbox: ListBox,
-        widget: Widget,
-        options: Option<FieldOptions>,
-    ) -> Result<ObjectReference> {
-        let mut field_dict = listbox.to_dict();
-
-        // Apply options
-        if let Some(opts) = options {
-            if opts.flags.to_flags() != 0 {
-                field_dict.set("Ff", Object::Integer(opts.flags.to_flags() as i64));
-            }
-        }
-
-        let field_name = listbox.name.clone();
-        let mut form_field = FormField::new(field_dict);
-        form_field.add_widget(widget);
-
-        self.fields.insert(field_name, form_field);
-
-        // Create object reference
-        let obj_ref = ObjectReference::new(self.next_field_id, 0);
-        self.next_field_id += 1;
-        self.acro_form.add_field(obj_ref);
-
-        Ok(obj_ref)
-    }
-
-    /// Add a combo box
-    pub fn add_combo_box(
-        &mut self,
-        combo: ComboBox,
-        widget: Widget,
-        options: Option<FieldOptions>,
-    ) -> Result<ObjectReference> {
-        let mut field_dict = combo.to_dict();
-
-        // Apply options
-        if let Some(opts) = options {
-            if opts.flags.to_flags() != 0 {
-                field_dict.set("Ff", Object::Integer(opts.flags.to_flags() as i64));
-            }
-        }
-
-        let field_name = combo.name.clone();
-        let mut form_field = FormField::new(field_dict);
-        form_field.add_widget(widget);
 
         self.fields.insert(field_name, form_field);
 

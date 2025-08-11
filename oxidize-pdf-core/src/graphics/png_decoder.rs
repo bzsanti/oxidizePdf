@@ -136,18 +136,40 @@ impl<'a> PngDecoder<'a> {
     }
 
     fn decode(&mut self) -> Result<DecodedPng> {
+        let mut has_ihdr = false;
+
         // Process chunks
         while self.pos < self.data.len() {
             let (chunk_type, chunk_data) = self.read_chunk()?;
 
             match &chunk_type {
-                b"IHDR" => self.process_ihdr(chunk_data)?,
+                b"IHDR" => {
+                    self.process_ihdr(chunk_data)?;
+                    has_ihdr = true;
+                }
                 b"PLTE" => self.process_plte(chunk_data)?,
                 b"IDAT" => self.idat_chunks.push(chunk_data.to_vec()),
                 b"tRNS" => self.process_trns(chunk_data)?,
                 b"IEND" => break,
                 _ => {} // Ignore unknown chunks
             }
+        }
+
+        // Validate we got required chunks
+        if !has_ihdr {
+            return Err(PdfError::InvalidImage("PNG missing IHDR chunk".to_string()));
+        }
+
+        if self.width == 0 || self.height == 0 {
+            return Err(PdfError::InvalidImage(
+                "PNG has invalid dimensions".to_string(),
+            ));
+        }
+
+        if self.idat_chunks.is_empty() {
+            return Err(PdfError::InvalidImage(
+                "PNG missing IDAT chunks".to_string(),
+            ));
         }
 
         // Decompress and decode image data
@@ -477,11 +499,17 @@ mod tests {
 
     #[test]
     fn test_paeth_predictor() {
-        assert_eq!(paeth_predictor(10, 20, 15), 10);
-        assert_eq!(paeth_predictor(20, 10, 15), 10);
+        // Test cases based on PNG specification
+        // paeth_predictor(10, 20, 15): p=15, pa=5, pb=5, pc=0 -> c wins
+        assert_eq!(paeth_predictor(10, 20, 15), 15);
+        // paeth_predictor(20, 10, 15): p=15, pa=5, pb=5, pc=0 -> c wins
+        assert_eq!(paeth_predictor(20, 10, 15), 15);
+        // All equal returns a
         assert_eq!(paeth_predictor(10, 10, 10), 10);
         assert_eq!(paeth_predictor(0, 0, 0), 0);
         assert_eq!(paeth_predictor(255, 255, 255), 255);
+        // Additional test cases
+        assert_eq!(paeth_predictor(10, 20, 30), 10); // pa=20, pb=10, pc=0 -> c wins? No, pc=20. Actually a wins
     }
 
     #[test]
