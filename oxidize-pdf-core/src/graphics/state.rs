@@ -166,22 +166,210 @@ impl ExtGStateFont {
     }
 }
 
-/// Transfer function specification (simplified for basic implementation)
+/// Transfer function specification according to ISO 32000-1
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum TransferFunction {
-    /// Identity transfer function
+    /// Identity transfer function (no transformation)
     Identity,
-    /// Custom transfer function (placeholder for advanced implementation)
-    Custom(String),
+    /// Single transfer function for all components
+    Single(TransferFunctionData),
+    /// Separate transfer functions for each color component (C, M, Y, K or R, G, B)
+    Separate {
+        /// Function for first component (Cyan or Red)
+        c_or_r: TransferFunctionData,
+        /// Function for second component (Magenta or Green)
+        m_or_g: TransferFunctionData,
+        /// Function for third component (Yellow or Blue)
+        y_or_b: TransferFunctionData,
+        /// Function for fourth component (Black) - optional for RGB
+        k: Option<TransferFunctionData>,
+    },
 }
 
-/// Halftone specification (simplified for basic implementation)
+/// Data for a single transfer function
+#[derive(Debug, Clone, PartialEq)]
+pub struct TransferFunctionData {
+    /// Function type (0, 2, 3, or 4)
+    pub function_type: u32,
+    /// Domain of the function
+    pub domain: Vec<f64>,
+    /// Range of the function
+    pub range: Vec<f64>,
+    /// Function-specific parameters
+    pub params: TransferFunctionParams,
+}
+
+/// Parameters for different transfer function types
+#[derive(Debug, Clone, PartialEq)]
+pub enum TransferFunctionParams {
+    /// Type 0: Sampled function
+    Sampled {
+        /// Sample values
+        samples: Vec<f64>,
+        /// Number of samples in each dimension
+        size: Vec<u32>,
+        /// Bits per sample
+        bits_per_sample: u32,
+    },
+    /// Type 2: Exponential interpolation
+    Exponential {
+        /// C0 values
+        c0: Vec<f64>,
+        /// C1 values
+        c1: Vec<f64>,
+        /// Exponent
+        n: f64,
+    },
+    /// Type 3: Stitching function
+    Stitching {
+        /// Functions to stitch together
+        functions: Vec<TransferFunctionData>,
+        /// Bounds for stitching
+        bounds: Vec<f64>,
+        /// Encode values
+        encode: Vec<f64>,
+    },
+    /// Type 4: PostScript calculator function
+    PostScript {
+        /// PostScript code
+        code: String,
+    },
+}
+
+impl TransferFunction {
+    /// Create an identity transfer function
+    pub fn identity() -> Self {
+        TransferFunction::Identity
+    }
+
+    /// Create a gamma correction transfer function
+    pub fn gamma(gamma_value: f64) -> Self {
+        TransferFunction::Single(TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![0.0],
+                c1: vec![1.0],
+                n: gamma_value,
+            },
+        })
+    }
+
+    /// Create a linear transfer function with slope and intercept
+    pub fn linear(slope: f64, intercept: f64) -> Self {
+        TransferFunction::Single(TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![intercept],
+                c1: vec![slope + intercept],
+                n: 1.0,
+            },
+        })
+    }
+}
+
+/// Halftone specification according to ISO 32000-1
 #[derive(Debug, Clone, PartialEq)]
 pub enum Halftone {
     /// Default halftone
     Default,
-    /// Custom halftone (placeholder for advanced implementation)
+    /// Type 1: Simple halftone
+    Type1 {
+        /// Halftone frequency
+        frequency: f64,
+        /// Halftone angle in degrees
+        angle: f64,
+        /// Spot function name
+        spot_function: SpotFunction,
+    },
+    /// Type 5: Halftone with multiple colorants
+    Type5 {
+        /// Halftone for each colorant
+        colorants: HashMap<String, HalftoneColorant>,
+        /// Default halftone
+        default: Box<Halftone>,
+    },
+    /// Type 6: Threshold array
+    Type6 {
+        /// Width of threshold array
+        width: u32,
+        /// Height of threshold array
+        height: u32,
+        /// Threshold values
+        thresholds: Vec<u8>,
+    },
+    /// Type 10: Stochastic (FM) screening
+    Type10 {
+        /// Halftone frequency
+        frequency: f64,
+    },
+    /// Type 16: Multiple threshold arrays
+    Type16 {
+        /// Width of threshold arrays
+        width: u32,
+        /// Height of threshold arrays  
+        height: u32,
+        /// Multiple threshold arrays
+        thresholds: Vec<Vec<u8>>,
+    },
+}
+
+/// Spot function for halftone screening
+#[derive(Debug, Clone, PartialEq)]
+pub enum SpotFunction {
+    /// Simple dot
+    SimpleDot,
+    /// Inverted simple dot
+    InvertedSimpleDot,
+    /// Round dot
+    Round,
+    /// Inverted round dot
+    InvertedRound,
+    /// Ellipse
+    Ellipse,
+    /// Square
+    Square,
+    /// Cross
+    Cross,
+    /// Diamond
+    Diamond,
+    /// Line
+    Line,
+    /// Custom spot function
     Custom(String),
+}
+
+impl SpotFunction {
+    /// Get the PDF name for this spot function
+    pub fn pdf_name(&self) -> String {
+        match self {
+            SpotFunction::SimpleDot => "SimpleDot".to_string(),
+            SpotFunction::InvertedSimpleDot => "InvertedSimpleDot".to_string(),
+            SpotFunction::Round => "Round".to_string(),
+            SpotFunction::InvertedRound => "InvertedRound".to_string(),
+            SpotFunction::Ellipse => "Ellipse".to_string(),
+            SpotFunction::Square => "Square".to_string(),
+            SpotFunction::Cross => "Cross".to_string(),
+            SpotFunction::Diamond => "Diamond".to_string(),
+            SpotFunction::Line => "Line".to_string(),
+            SpotFunction::Custom(name) => name.clone(),
+        }
+    }
+}
+
+/// Halftone specification for a single colorant
+#[derive(Debug, Clone, PartialEq)]
+pub struct HalftoneColorant {
+    /// Halftone frequency
+    pub frequency: f64,
+    /// Halftone angle in degrees
+    pub angle: f64,
+    /// Spot function
+    pub spot_function: SpotFunction,
 }
 
 /// Soft mask specification for transparency

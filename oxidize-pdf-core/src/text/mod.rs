@@ -7,11 +7,12 @@ mod font;
 pub mod font_manager;
 pub mod fonts;
 mod header_footer;
+pub mod header_footer_advanced;
 mod layout;
 mod list;
 mod metrics;
 pub mod ocr;
-mod table;
+pub mod table;
 mod table_advanced;
 
 #[cfg(test)]

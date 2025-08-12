@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **beta** stage with **~34% ISO 32000-1:2008 compliance** (real API compliance). Generate PDFs with custom fonts, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Currently in **beta** stage with **~40% ISO 32000-1:2008 compliance** (pragmatic API compliance). Generate PDFs with custom fonts, parse standard documents, and perform operations like split, merge, and rotate with a clean, safe API.
 
 ## Features
 
@@ -40,7 +40,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🔧 **Lenient parsing** - Handles some malformed PDFs
 - 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
 
-**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently has **~34% real ISO 32000-1:2008 compliance** based on API testing (up from 17.8% with custom font support and text state parameters). See [Current Limitations](#current-limitations) and [Real ISO Compliance](docs/technical/ISO_COMPLIANCE_REAL.md) for honest assessment.
+**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library currently has **~40% pragmatic ISO 32000-1:2008 compliance** based on API testing. See [Known Limitations](#known-limitations) for a transparent assessment of current capabilities and issues.
 
 ## Quick Start
 
@@ -372,39 +372,39 @@ For commercial use cases that require proprietary licensing, please contact us a
 - Priority support and SLAs
 - Custom feature development
 
-## Current Limitations & ISO 32000 Compliance
+## Known Limitations
 
-oxidize-pdf currently has **17.8% real ISO 32000-1:2008 compliance** based on comprehensive API testing. While ~25-30% may be implemented internally, only 17.8% is accessible through the public API. See [ISO_COMPLIANCE_REAL.md](docs/technical/ISO_COMPLIANCE_REAL.md) for honest assessment.
+oxidize-pdf currently has **~40% pragmatic ISO 32000-1:2008 compliance**. We prioritize transparency about what works and what doesn't. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed status.
 
-### Supported Features
-- ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode
-- ✅ **Color Spaces**: DeviceRGB, DeviceCMYK, DeviceGray (basic)
-- ✅ **Fonts**: Standard 14 PDF fonts only
-- ✅ **Images**: JPEG embedding only
-- ✅ **Basic Operations**: Split, merge, rotate, simple text extraction
-- ✅ **Graphics**: Basic vector operations
-- ✅ **Transparency**: Simple opacity (CA/ca parameters)
+### Working Features
+- ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode, DCTDecode (JPEG)
+- ✅ **Color Spaces**: DeviceRGB, DeviceCMYK, DeviceGray
+- ✅ **Fonts**: Standard 14 fonts + TTF/OTF custom font loading and embedding
+- ✅ **Images**: JPEG embedding, raw RGB/Gray data
+- 🚧 **PNG Support**: Basic functionality (7 tests failing - compression issues)
+- ✅ **Operations**: Split, merge, rotate, page extraction, text extraction
+- ✅ **Graphics**: Vector operations, clipping paths, transparency (CA/ca)
+- ✅ **Encryption**: RC4 40/128-bit, AES-128/256 with permissions
+- ✅ **Forms**: Basic text fields, checkboxes, radio buttons, combo boxes, list boxes
 
-### Major Missing Features (ISO 32000)
+### Known Issues & Missing Features
+- 🐛 **PNG Compression**: 7 tests consistently failing - use JPEG for now
+- 🚧 **Form Interactions**: Forms can be created but not edited interactively
 - ❌ **Rendering**: No PDF to image conversion
-- ❌ **Font Embedding**: No TrueType/OpenType embedding
-- ❌ **Encryption**: Very limited support
-- ❌ **Compression**: DCTDecode, CCITTFaxDecode, JBIG2Decode missing
-- ❌ **Advanced Graphics**: Patterns, shadings, gradients, blend modes
-- ❌ **Forms**: No interactive form support (AcroForms)
-- ❌ **Annotations**: Cannot create or modify annotations
-- ❌ **Digital Signatures**: No support
-- ❌ **Tagged PDFs**: No accessibility/structure support
-- ❌ **CJK Support**: No CID fonts or CMaps
-- ❌ **Advanced Color**: No ICC profiles, spot colors
-- ❌ **JavaScript**: No support for PDF JavaScript
+- ❌ **Advanced Compression**: CCITTFaxDecode, JBIG2Decode, JPXDecode
+- ❌ **Advanced Graphics**: Complex patterns, shadings, gradients, advanced blend modes
+- ❌ **Digital Signatures**: Signature fields exist but no signing capability
+- ❌ **Tagged PDFs**: No accessibility/structure support yet
+- ❌ **Advanced Color**: ICC profiles, spot colors, Lab color space
+- ❌ **JavaScript**: No form calculations or validation scripts
+- ❌ **Multimedia**: No sound, video, or 3D content support
 
-### Known Issues
-- Font/image references may break during merge operations
-- Text extraction fails on complex layouts
-- No support for right-to-left or vertical text
-- Limited error recovery for malformed PDFs
-- High memory usage for large files without optimization
+### Examples Status
+We're actively adding more examples for core features. New examples include:
+- `merge_pdfs.rs` - PDF merging with various options
+- `split_pdf.rs` - Different splitting strategies
+- `extract_text.rs` - Text extraction with layout preservation
+- `encryption.rs` - RC4 and AES encryption demonstrations
 
 ### Important Notes
 - Parsing success doesn't mean full feature support

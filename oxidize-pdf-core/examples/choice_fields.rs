@@ -5,7 +5,7 @@
 
 use oxidize_pdf::error::Result;
 use oxidize_pdf::forms::{
-    AppearanceState, ComboBox, ComboBoxAppearance, FieldType, FormManager, ListBox,
+    AppearanceGenerator, AppearanceState, ComboBox, ComboBoxAppearance, FormManager, ListBox,
     ListBoxAppearance, Widget, WidgetAppearance,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
@@ -113,15 +113,7 @@ fn create_combo_box(form_manager: &mut FormManager, page: &mut Page) -> Result<(
     app_dict.set_appearance(AppearanceState::Normal, appearance_stream);
     widget = widget.with_appearance_streams(app_dict);
 
-    // Create ComboBox field
-    let combo = ComboBox::new("country")
-        .add_option("US", "United States")
-        .add_option("CA", "Canada")
-        .add_option("MX", "Mexico")
-        .add_option("UK", "United Kingdom")
-        .add_option("FR", "France")
-        .with_selected(0); // Default to United States
-
+    // Add ComboBox to form manager
     form_manager.add_combo_box(combo, widget, None).ok();
 
     Ok(())
@@ -167,14 +159,7 @@ fn create_editable_combo_box(form_manager: &mut FormManager, page: &mut Page) ->
     app_dict.set_appearance(AppearanceState::Normal, appearance_stream);
     widget = widget.with_appearance_streams(app_dict);
 
-    // Create editable ComboBox field
-    let combo = ComboBox::new("city")
-        .add_option("NYC", "New York City")
-        .add_option("LA", "Los Angeles")
-        .add_option("CHI", "Chicago")
-        .editable() // Allow custom input
-        .with_selected(0); // Default to NYC
-
+    // Add editable ComboBox to form manager
     form_manager.add_combo_box(combo, widget, None).ok();
 
     Ok(())
@@ -229,19 +214,8 @@ fn create_single_list_box(form_manager: &mut FormManager, page: &mut Page) -> Re
     app_dict.set_appearance(AppearanceState::Normal, appearance_stream);
     widget = widget.with_appearance_streams(app_dict);
 
-    let field = oxidize_pdf::forms::Field {
-        field_type: FieldType::Choice,
-        name: "color".to_string(),
-        value: Some(oxidize_pdf::objects::Object::String("green".to_string())),
-        default_value: None,
-        rect: Some(rect),
-        flags: Some(0), // No special flags for single-select list
-        options: None,
-        max_len: None,
-        appearance: Some(widget.appearance.clone()),
-    };
-
-    form_manager.add_field(field, None).ok();
+    // Add ListBox to form manager
+    form_manager.add_list_box(listbox, widget, None).ok();
 
     Ok(())
 }
@@ -301,19 +275,8 @@ fn create_multi_list_box(form_manager: &mut FormManager, page: &mut Page) -> Res
     app_dict.set_appearance(AppearanceState::Normal, appearance_stream);
     widget = widget.with_appearance_streams(app_dict);
 
-    let field = oxidize_pdf::forms::Field {
-        field_type: FieldType::Choice,
-        name: "interests".to_string(),
-        value: None, // Multiple values would be an array
-        default_value: None,
-        rect: Some(rect),
-        flags: Some(oxidize_pdf::forms::FieldFlags::MULTISELECT),
-        options: None,
-        max_len: None,
-        appearance: Some(widget.appearance.clone()),
-    };
-
-    form_manager.add_field(field, None).ok();
+    // Add multi-select ListBox to form manager
+    form_manager.add_list_box(listbox, widget, None).ok();
 
     Ok(())
 }

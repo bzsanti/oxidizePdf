@@ -4,9 +4,13 @@
 //! checkboxes, radio buttons, and push buttons.
 
 mod appearance;
+pub mod calculations;
 mod field;
 mod field_type;
 mod form_data;
+pub mod javascript_engine;
+pub mod signature_field;
+pub mod signature_handler;
 mod working_field;
 
 pub use appearance::{
