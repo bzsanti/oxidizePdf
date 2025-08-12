@@ -343,6 +343,13 @@ impl Page {
         self.footer.as_ref()
     }
 
+    /// Sets the page content directly.
+    ///
+    /// This is used internally when processing headers and footers.
+    pub(crate) fn set_content(&mut self, content: Vec<u8>) {
+        self.content = content;
+    }
+
     #[allow(dead_code)]
     pub(crate) fn generate_content(&mut self) -> Result<Vec<u8>> {
         // First, get operations from graphics context as bytes

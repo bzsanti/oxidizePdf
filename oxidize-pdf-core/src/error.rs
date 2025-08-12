@@ -49,6 +49,15 @@ pub enum PdfError {
 
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
+
+    #[error("Invalid operation: {0}")]
+    InvalidOperation(String),
+
+    #[error("Duplicate field: {0}")]
+    DuplicateField(String),
+
+    #[error("Field not found: {0}")]
+    FieldNotFound(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;

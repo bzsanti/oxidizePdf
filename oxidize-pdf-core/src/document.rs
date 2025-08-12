@@ -457,6 +457,41 @@ impl Document {
         Ok(())
     }
 
+    /// Saves the document to a file with custom values for headers/footers.
+    ///
+    /// This method processes all pages to replace custom placeholders in headers
+    /// and footers before saving the document.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path where the document should be saved
+    /// * `custom_values` - A map of placeholder names to their replacement values
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created or written.
+    pub fn save_with_custom_values(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        custom_values: &std::collections::HashMap<String, String>,
+    ) -> Result<()> {
+        // Process all pages with custom values
+        let total_pages = self.pages.len();
+        for (index, page) in self.pages.iter_mut().enumerate() {
+            // Generate content with page info and custom values
+            let page_content = page.generate_content_with_page_info(
+                Some(index + 1),
+                Some(total_pages),
+                Some(custom_values),
+            )?;
+            // Update the page content
+            page.set_content(page_content);
+        }
+
+        // Save the document normally
+        self.save(path)
+    }
+
     /// Writes the document to a buffer.
     ///
     /// # Errors

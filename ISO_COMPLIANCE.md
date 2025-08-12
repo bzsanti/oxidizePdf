@@ -3,9 +3,9 @@
 ## Overview
 This document tracks the implementation status of ISO 32000-1:2008 (PDF 1.7) features in oxidize-pdf.
 
-**Current Compliance: ~37% (Pragmatic API Compliance)**
-- Previous: ~34% (before Quick Wins implementation)
-- Improvement: +3% from PNG transparency, image masks, form fields, and annotations
+**Current Compliance: ~41% (Pragmatic API Compliance)**
+- Previous: ~40% (before header/footer template enhancements)
+- Improvement: +1% from advanced header/footer templates with variables, odd/even pages, and multi-line support
 
 ## Compliance Methodology
 
@@ -97,7 +97,7 @@ We measure "pragmatic compliance" based on features exposed through our public A
 #### 8.9 Images
 - ✅ Image dictionaries
 - ✅ JPEG images (DCTDecode)
-- ✅ PNG images (native decoder)
+- 🚧 PNG images (native decoder - 7 tests failing, compression issues)
 - ✅ Raw RGB/Gray data
 - ✅ Image masks
 - ✅ Soft masks (SMask)
@@ -290,10 +290,10 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - 🚧 Incremental updates
 - ❌ Linearization
 
-### Graphics & Imaging (42% complete)
+### Graphics & Imaging (40% complete)
 - ✅ Basic shapes and paths
 - ✅ Colors and color spaces
-- ✅ Images (JPEG, PNG, raw)
+- 🚧 Images (JPEG ✅, PNG 🚧, raw ✅)
 - ✅ Transparency and blend modes
 - ✅ Soft masks
 - ✅ ExtGState
@@ -412,10 +412,12 @@ We measure "pragmatic compliance" based on features exposed through our public A
 
 ## Known Limitations
 
-1. **PNG Support**: While we have a native decoder, some advanced PNG features like interlacing are not supported
+1. **PNG Support**: Native decoder has compression issues - 7 tests consistently failing. Advanced features like interlacing not supported
 2. **Form Fields**: Appearance streams are generated but interactive editing is not fully implemented
 3. **Annotations**: Basic types work but advanced features like reply threads are missing
 4. **Transparency**: Basic soft masks work but complex transparency groups are incomplete
+5. **Examples**: Missing examples for core features (merge, split, text extraction) - being added
+6. **Documentation**: Some features marked as complete may have partial implementations - ongoing audit
 
 ## Conclusion
 

@@ -55,11 +55,50 @@ fn main() -> Result<()> {
 fn create_transparency_page(doc: &mut Document) -> Result<()> {
     let mut page = Page::new(612.0, 792.0);
 
-    // Add title
-    let text = page.text();
-    text.set_font(Font::HelveticaBold, 20.0);
-    text.at(50.0, 750.0);
-    text.write("PNG Transparency & Image Masks")?;
+    // Create and demonstrate PNG with transparency
+    let png_data = create_sample_png_with_alpha()?;
+    let image = Image::from_png_data(png_data)?;
+
+    // Add all text content first
+    {
+        let text = page.text();
+        text.set_font(Font::HelveticaBold, 20.0);
+        text.at(50.0, 750.0);
+        text.write("PNG Transparency & Image Masks")?;
+
+        // Add description
+        text.set_font(Font::Helvetica, 12.0);
+        text.at(50.0, 480.0);
+        text.write("PNG with alpha channel (transparency visible on checkerboard)")?;
+
+        // Demonstrate soft mask
+        if let Some(_soft_mask) = image.create_mask(MaskType::Soft, None) {
+            text.at(50.0, 400.0);
+            text.write("Soft mask extracted from PNG alpha channel")?;
+        }
+
+        // Demonstrate stencil mask
+        if let Some(_stencil_mask) = image.create_mask(MaskType::Stencil, Some(128)) {
+            text.at(50.0, 350.0);
+            text.write("Stencil mask (1-bit) with threshold = 128")?;
+        }
+
+        // Create RGB image and apply mask
+        let rgb_data = vec![255, 0, 0, 0, 255, 0, 0, 0, 255]; // 3 RGB pixels
+        let rgb_image = Image::from_raw_data(rgb_data, 3, 1, ColorSpace::DeviceRGB, 8);
+
+        // Create a simple mask
+        let mask_data = vec![255, 128, 0]; // 3 grayscale values
+        let mask = Image::from_raw_data(mask_data, 3, 1, ColorSpace::DeviceGray, 8);
+
+        let masked_image = rgb_image.with_mask(mask, MaskType::Soft);
+
+        text.at(50.0, 300.0);
+        text.write(&format!(
+            "Image with mask applied: has_transparency = {}",
+            masked_image.has_transparency()
+        ))?;
+    }
 
     let gc = page.graphics();
 
@@ -81,43 +120,6 @@ fn create_transparency_page(doc: &mut Document) -> Result<()> {
         }
     }
     gc.restore_state();
-
-    // Create and demonstrate PNG with transparency
-    let png_data = create_sample_png_with_alpha()?;
-    let image = Image::from_png_data(png_data)?;
-
-    // Add description
-    text.set_font(Font::Helvetica, 12.0);
-    text.at(50.0, 480.0);
-    text.write("PNG with alpha channel (transparency visible on checkerboard)")?;
-
-    // Demonstrate soft mask
-    if let Some(soft_mask) = image.create_mask(MaskType::Soft, None) {
-        text.at(50.0, 400.0);
-        text.write("Soft mask extracted from PNG alpha channel")?;
-    }
-
-    // Demonstrate stencil mask
-    if let Some(stencil_mask) = image.create_mask(MaskType::Stencil, Some(128)) {
-        text.at(50.0, 350.0);
-        text.write("Stencil mask (1-bit) with threshold = 128")?;
-    }
-
-    // Create RGB image and apply mask
-    let rgb_data = vec![255, 0, 0, 0, 255, 0, 0, 0, 255]; // 3 RGB pixels
-    let rgb_image = Image::from_raw_data(rgb_data, 3, 1, ColorSpace::DeviceRGB, 8);
-
-    // Create a simple mask
-    let mask_data = vec![255, 128, 0]; // 3 grayscale values
-    let mask = Image::from_raw_data(mask_data, 3, 1, ColorSpace::DeviceGray, 8);
-
-    let masked_image = rgb_image.with_mask(mask, MaskType::Soft);
-
-    text.at(50.0, 300.0);
-    text.write(&format!(
-        "Image with mask applied: has_transparency = {}",
-        masked_image.has_transparency()
-    ))?;
 
     doc.add_page(page);
     Ok(())
