@@ -161,7 +161,7 @@ impl JavaScriptEngine {
                     if chars.peek() == Some(&'/') {
                         // Skip line comment
                         chars.next();
-                        while let Some(c) = chars.next() {
+                        for c in chars.by_ref() {
                             if c == '\n' {
                                 break;
                             }
