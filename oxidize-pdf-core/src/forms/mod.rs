@@ -11,6 +11,7 @@ mod form_data;
 pub mod javascript_engine;
 pub mod signature_field;
 pub mod signature_handler;
+pub mod signature_widget;
 mod working_field;
 
 pub use appearance::{
