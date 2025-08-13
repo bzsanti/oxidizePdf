@@ -3,9 +3,9 @@
 ## Overview
 This document tracks the implementation status of ISO 32000-1:2008 (PDF 1.7) features in oxidize-pdf.
 
-**Current Compliance: ~46% (Pragmatic API Compliance)**
-- Previous: ~43% (before signature fields improvements)
-- Improvement: +3% from enhanced signature fields with widget annotations
+**Current Compliance: ~48% (Pragmatic API Compliance)**
+- Previous: ~46% (before form calculations)
+- Improvement: +2% from form calculations and dependencies
 
 ## Compliance Methodology
 
@@ -232,8 +232,9 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - ✅ Field appearance streams
 - 🚧 Form filling
 - 🚧 Form flattening
-- ❌ Form calculations
-- ❌ Form validation
+- ✅ Form calculations (AFSimple, AFPercent, AFDate)
+- ✅ Field dependencies and automatic recalculation
+- 🚧 Form validation (partial)
 
 #### 12.8 Digital Signatures
 - ✅ Signature dictionaries
@@ -341,6 +342,16 @@ We measure "pragmatic compliance" based on features exposed through our public A
 ## Recent Improvements
 
 ### Phase 2 (Forms Enhancement): 2025-08-13
+- ✅ Form Calculations (+2%)
+  - JavaScript calculations (AFSimple_Calculate, AFPercent_Calculate, AFDate_Calculate)
+  - Field dependencies with automatic recalculation
+  - Calculation order management (topological sort)
+  - Support for Sum, Product, Average, Min, Max operations
+  - Percentage calculations with multiple modes
+  - Custom arithmetic expressions
+  - Event logging and tracking
+  - Complete examples with invoice, loan, and grade calculators
+
 - ✅ Enhanced Signature Fields (+3%)
   - Widget annotations for signature fields
   - Multiple visual signature types (text, graphic, mixed, ink)

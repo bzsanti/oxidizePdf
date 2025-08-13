@@ -23,10 +23,10 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 ## 📊 Product Tiers & ISO 32000 Compliance
 
 ### Current Status (August 2025)
-- **Current Implementation**: ~46% ISO 32000-1:2008 compliance (real API compliance)
-- **Previous Session**: ~43% (before signature fields enhancements)
-- **Total Improvement**: +28.2% from initial 17.8%
-- **Recent Achievements**: Enhanced signature fields with widget annotations, ink signatures, appearance streams
+- **Current Implementation**: ~48% ISO 32000-1:2008 compliance (real API compliance)
+- **Previous Session**: ~46% (before form calculations)
+- **Total Improvement**: +30.2% from initial 17.8%
+- **Recent Achievements**: Form calculations with JavaScript support, field dependencies, automatic recalculation
 - **Focus**: Reaching 60% compliance for production viability
 
 ### Target ISO 32000 Compliance Goals
@@ -43,10 +43,11 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 - [x] **Headers/Footers** (+1%) - ✅ Advanced templates with variables, odd/even pages
 - [x] **Inline Images** (+1%) - ✅ BI/ID/EI operators fully implemented
 
-#### 🎯 Phase 2: Forms Complete (46% → 50%) - 2-3 weeks [IN PROGRESS]
+#### 🎯 Phase 2: Forms Complete (48% → 52%) - 1-2 weeks [IN PROGRESS]
 - [x] **Signature Fields** (+3%) - ✅ Widget annotations, appearance streams, ink signatures
-- [ ] **Form Calculations** (+2%) - JavaScript basics, field dependencies
+- [x] **Form Calculations** (+2%) - ✅ JavaScript basics, field dependencies, AFSimple/AFPercent
 - [ ] **Form Validation** (+2%) - Format masks, required fields
+- [ ] **Field Actions** (+2%) - Focus, blur, format, validate, calculate events
 
 #### 🎯 Phase 3: Color Spaces (50% → 55%) - 2-3 weeks
 - [ ] **ICCBased Profiles** (+2%) - ICC v4 support
