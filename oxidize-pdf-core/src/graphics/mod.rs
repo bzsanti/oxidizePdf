@@ -1,6 +1,7 @@
 pub mod clipping;
 mod color;
 mod color_profiles;
+mod indexed_color;
 mod path;
 mod patterns;
 mod pdf_image;
@@ -11,6 +12,7 @@ pub mod state;
 pub use clipping::{ClippingPath, ClippingRegion};
 pub use color::Color;
 pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
+pub use indexed_color::{BaseColorSpace, ColorLookupTable, IndexedColorManager, IndexedColorSpace};
 pub use path::{LineCap, LineJoin, PathBuilder, PathCommand, WindingRule};
 pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,

@@ -5,11 +5,12 @@
 //! Section 12.7.4.5 (Signature Fields).
 
 use crate::error::PdfError;
-use crate::forms::{Widget, WidgetAppearance};
+use crate::forms::Widget;
+#[cfg(test)]
+use crate::geometry::Point;
 use crate::geometry::Rectangle;
-use crate::graphics::{Color, GraphicsContext};
+use crate::graphics::Color;
 use crate::objects::{Dictionary, Object, ObjectReference};
-use crate::Page;
 
 /// Enhanced signature widget with full annotation support
 #[derive(Debug, Clone)]
@@ -217,6 +218,7 @@ impl SignatureWidget {
     }
 
     /// Generate text-only appearance
+    #[allow(clippy::too_many_arguments)]
     fn generate_text_appearance(
         &self,
         stream: &mut Vec<u8>,
@@ -253,22 +255,28 @@ impl SignatureWidget {
                     format!("(Digitally signed by: {}) Tj\n", signer_name.unwrap()).as_bytes(),
                 );
                 y_offset -= 12.0;
+                // Track y_offset for future use
+                let _ = y_offset;
             }
 
             if show_date && date.is_some() {
-                stream.extend(format!("0 -12 Td\n").as_bytes());
+                stream.extend(b"0 -12 Td\n");
                 stream.extend(format!("(Date: {}) Tj\n", date.unwrap()).as_bytes());
                 y_offset -= 12.0;
+                // Track y_offset for future use
+                let _ = y_offset;
             }
 
             if show_reason && reason.is_some() {
-                stream.extend(format!("0 -12 Td\n").as_bytes());
+                stream.extend(b"0 -12 Td\n");
                 stream.extend(format!("(Reason: {}) Tj\n", reason.unwrap()).as_bytes());
                 y_offset -= 12.0;
+                // Track y_offset for future use
+                let _ = y_offset;
             }
 
             if show_location && location.is_some() {
-                stream.extend(format!("0 -12 Td\n").as_bytes());
+                stream.extend(b"0 -12 Td\n");
                 stream.extend(format!("(Location: {}) Tj\n", location.unwrap()).as_bytes());
             }
         } else {
@@ -287,8 +295,8 @@ impl SignatureWidget {
     fn generate_graphic_appearance(
         &self,
         stream: &mut Vec<u8>,
-        image_data: &[u8],
-        format: ImageFormat,
+        _image_data: &[u8],
+        _format: ImageFormat,
         maintain_aspect: bool,
     ) -> Result<(), PdfError> {
         let rect = &self.widget.rect;
@@ -314,16 +322,17 @@ impl SignatureWidget {
     }
 
     /// Generate mixed text and graphic appearance
+    #[allow(clippy::too_many_arguments)]
     fn generate_mixed_appearance(
         &self,
         stream: &mut Vec<u8>,
-        image_data: &[u8],
-        format: ImageFormat,
+        _image_data: &[u8],
+        _format: ImageFormat,
         text_position: TextPosition,
         show_details: bool,
         signed: bool,
         signer_name: Option<&str>,
-        reason: Option<&str>,
+        _reason: Option<&str>,
         date: Option<&str>,
     ) -> Result<(), PdfError> {
         let rect = &self.widget.rect;
@@ -387,10 +396,12 @@ impl SignatureWidget {
                 stream.extend(format!("{} {} Td\n", text_rect.0 + 2.0, y_pos).as_bytes());
                 stream.extend(format!("({}) Tj\n", name).as_bytes());
                 y_pos -= 10.0;
+                // Track y_pos for future use
+                let _ = y_pos;
             }
 
             if let Some(d) = date {
-                stream.extend(format!("0 -10 Td\n").as_bytes());
+                stream.extend(b"0 -10 Td\n");
                 stream.extend(format!("({}) Tj\n", d).as_bytes());
             }
 
@@ -540,7 +551,7 @@ mod tests {
 
     #[test]
     fn test_signature_widget_creation() {
-        let rect = Rectangle::new(100.0, 100.0, 300.0, 150.0);
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(300.0, 150.0));
         let visual = SignatureVisualType::Text {
             show_name: true,
             show_date: true,
@@ -555,7 +566,7 @@ mod tests {
 
     #[test]
     fn test_text_appearance_generation() {
-        let rect = Rectangle::new(0.0, 0.0, 200.0, 50.0);
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 50.0));
         let visual = SignatureVisualType::Text {
             show_name: true,
             show_date: true,
@@ -585,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_ink_signature_appearance() {
-        let rect = Rectangle::new(0.0, 0.0, 150.0, 50.0);
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(150.0, 50.0));
         let stroke1 = InkStroke {
             points: vec![(10.0, 10.0), (20.0, 20.0), (30.0, 15.0)],
             pressures: None,
@@ -616,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_widget_dict_generation() {
-        let rect = Rectangle::new(100.0, 100.0, 300.0, 150.0);
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(300.0, 150.0));
         let visual = SignatureVisualType::Text {
             show_name: true,
             show_date: false,

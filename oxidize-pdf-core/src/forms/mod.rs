@@ -7,12 +7,14 @@ mod appearance;
 pub mod calculation_system;
 pub mod calculations;
 mod field;
+pub mod field_actions;
 mod field_type;
 mod form_data;
 pub mod javascript_engine;
 pub mod signature_field;
 pub mod signature_handler;
 pub mod signature_widget;
+pub mod validation;
 mod working_field;
 
 pub use appearance::{
