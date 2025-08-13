@@ -3,9 +3,9 @@
 ## Overview
 This document tracks the implementation status of ISO 32000-1:2008 (PDF 1.7) features in oxidize-pdf.
 
-**Current Compliance: ~43% (Pragmatic API Compliance)**
-- Previous: ~41% (before transfer functions and inline images)
-- Improvement: +2% from transfer functions (+1%) and inline images (+1%)
+**Current Compliance: ~46% (Pragmatic API Compliance)**
+- Previous: ~43% (before signature fields improvements)
+- Improvement: +3% from enhanced signature fields with widget annotations
 
 ## Compliance Methodology
 
@@ -236,9 +236,14 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - ❌ Form validation
 
 #### 12.8 Digital Signatures
-- ❌ Signature dictionaries
-- ❌ Signature handlers
-- ❌ Certificate validation
+- ✅ Signature dictionaries
+- ✅ Signature handlers
+- ✅ Signature fields with widget annotations
+- ✅ Appearance streams for signatures
+- ✅ Ink signatures (handwritten)
+- 🚧 Certificate validation (placeholder implementation)
+- ❌ Actual cryptographic signing
+- ❌ Certificate chain verification
 
 ### Chapter 13: Multimedia
 
@@ -333,9 +338,19 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - ❌ Logical structure
 - ❌ Accessibility
 
-## Recent Improvements (Quick Wins Phase)
+## Recent Improvements
 
-### Phase 1 Completed: 2025-08-13
+### Phase 2 (Forms Enhancement): 2025-08-13
+- ✅ Enhanced Signature Fields (+3%)
+  - Widget annotations for signature fields
+  - Multiple visual signature types (text, graphic, mixed, ink)
+  - Appearance stream generation
+  - Ink signatures with stroke support
+  - Signature handler with field locking
+  - Multiple signatures per document
+  - Complete examples demonstrating all features
+
+### Phase 1 (Quick Wins): 2025-08-13
 - ✅ Transfer Functions
   - Gamma correction support
   - Linear transfer functions
