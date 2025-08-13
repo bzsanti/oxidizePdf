@@ -389,6 +389,168 @@ mod tests {
         // Note: This test would need a valid PDF file to work properly
         // For now, we're just testing the logic
     }
+
+    // ============= Additional Split Tests =============
+    
+    #[test]
+    fn test_split_mode_variants() {
+        // Test SinglePages variant
+        let single_pages = SplitMode::SinglePages;
+        assert!(matches!(single_pages, SplitMode::SinglePages));
+        
+        // Test Ranges variant
+        let ranges = SplitMode::Ranges(vec![
+            super::PageRange::Single(0),
+            super::PageRange::Range(5, 10),
+        ]);
+        assert!(matches!(ranges, SplitMode::Ranges(_)));
+        
+        // Test ChunkSize variant
+        let chunk = SplitMode::ChunkSize(5);
+        if let SplitMode::ChunkSize(size) = chunk {
+            assert_eq!(size, 5);
+        } else {
+            panic!("Expected ChunkSize");
+        }
+        
+        // Test SplitAt variant
+        let split_at = SplitMode::SplitAt(vec![5, 10, 15]);
+        assert!(matches!(split_at, SplitMode::SplitAt(_)));
+    }
+
+    #[test]
+    fn test_split_options_with_modes() {
+        let options = SplitOptions {
+            mode: SplitMode::ChunkSize(10),
+            output_pattern: "chunk_{}.pdf".to_string(),
+            preserve_metadata: true,
+            optimize: true,
+        };
+        
+        assert!(matches!(options.mode, SplitMode::ChunkSize(10)));
+        assert_eq!(options.output_pattern, "chunk_{}.pdf");
+        assert!(options.preserve_metadata);
+        assert!(options.optimize);
+    }
+
+    #[test]
+    fn test_split_options_page_range() {
+        let ranges = vec![
+            super::PageRange::All,
+            super::PageRange::Single(5),
+            super::PageRange::Range(10, 20),
+            super::PageRange::List(vec![1, 3, 5, 7, 9]),
+        ];
+        
+        let options = SplitOptions {
+            mode: SplitMode::Ranges(ranges),
+            ..Default::default()
+        };
+        
+        if let SplitMode::Ranges(r) = options.mode {
+            assert_eq!(r.len(), 4);
+        } else {
+            panic!("Expected Ranges mode");
+        }
+    }
+
+    #[test]
+    fn test_split_options_split_at() {
+        let split_points = vec![3, 6, 9, 12]; // Split at these page numbers
+        
+        let options = SplitOptions {
+            mode: SplitMode::SplitAt(split_points.clone()),
+            output_pattern: "part_{}.pdf".to_string(),
+            ..Default::default()
+        };
+        
+        if let SplitMode::SplitAt(points) = options.mode {
+            assert_eq!(points.len(), 4);
+            assert_eq!(points, split_points);
+        } else {
+            panic!("Expected SplitAt mode");
+        }
+    }
+
+    #[test]
+    fn test_output_pattern_formatting() {
+        // Test various output patterns
+        let patterns = vec![
+            "output_{}.pdf",
+            "page_{}.pdf",
+            "document_part_{}.pdf",
+            "{}_split.pdf",
+        ];
+        
+        for pattern in patterns {
+            let options = SplitOptions {
+                output_pattern: pattern.to_string(),
+                ..Default::default()
+            };
+            assert!(options.output_pattern.contains("{")); // Just check for placeholder
+        }
+    }
+
+    #[test]
+    fn test_split_options_preserve_metadata() {
+        // Test preserve_metadata flag
+        let with_metadata = SplitOptions {
+            preserve_metadata: true,
+            ..Default::default()
+        };
+        assert!(with_metadata.preserve_metadata);
+        
+        let without_metadata = SplitOptions {
+            preserve_metadata: false,
+            ..Default::default()
+        };
+        assert!(!without_metadata.preserve_metadata);
+    }
+
+    #[test]
+    fn test_split_single_pages_mode() {
+        let options = SplitOptions {
+            mode: SplitMode::SinglePages,
+            output_pattern: "page_{:04}.pdf".to_string(),
+            ..Default::default()
+        };
+        
+        assert!(matches!(options.mode, SplitMode::SinglePages));
+        assert!(options.output_pattern.contains("{"));
+    }
+
+    #[test]
+    fn test_split_chunk_size_validation() {
+        // Test various chunk sizes
+        let chunk_sizes = vec![1, 5, 10, 50, 100];
+        
+        for size in chunk_sizes {
+            let options = SplitOptions {
+                mode: SplitMode::ChunkSize(size),
+                ..Default::default()
+            };
+            
+            if let SplitMode::ChunkSize(s) = options.mode {
+                assert_eq!(s, size);
+                assert!(s > 0); // Chunk size should be positive
+            }
+        }
+    }
+
+    #[test]
+    fn test_split_options_optimization() {
+        let optimized = SplitOptions {
+            optimize: true,
+            ..Default::default()
+        };
+        assert!(optimized.optimize);
+        
+        let not_optimized = SplitOptions {
+            optimize: false,
+            ..Default::default()
+        };
+        assert!(!not_optimized.optimize);
+    }
 }
 
 #[cfg(test)]
