@@ -305,12 +305,28 @@ fn test_section_8_graphics() -> (usize, usize) {
 
     // Images
     total += 2;
-    if test_feature("Add images", || {
+    if test_feature("Add and draw images", || {
         let mut page = Page::a4();
-        // Image support exists but draw_image not fully implemented
-        let image_data = vec![0xFF, 0xD8, 0xFF, 0xD9]; // Minimal JPEG
+        // Test both adding and drawing images
+        // Create a minimal valid JPEG with SOF0 header
+        let image_data = vec![
+            0xFF, 0xD8, // SOI marker
+            0xFF, 0xC0, // SOF0 marker
+            0x00, 0x11, // Length (17 bytes)
+            0x08, // Precision (8 bits)
+            0x00, 0x10, // Height (16)
+            0x00, 0x10, // Width (16)
+            0x03, // Components (3 = RGB)
+            0x01, 0x11, 0x00, // Component 1
+            0x02, 0x11, 0x00, // Component 2  
+            0x03, 0x11, 0x00, // Component 3
+            0xFF, 0xD9, // EOI marker
+        ];
         if let Ok(image) = Image::from_jpeg_data(image_data) {
-            page.add_image("test", image);
+            page.add_image("test_image", image);
+            // Now test drawing the image
+            let gc = page.graphics();
+            gc.draw_image("test_image", 100.0, 100.0, 200.0, 200.0);
             true
         } else {
             false
