@@ -7,9 +7,7 @@
 //! - Format validation
 
 use crate::error::PdfError;
-use crate::forms::calculations::{
-    ArithmeticExpression, Calculation, CalculationEngine, FieldValue,
-};
+use crate::forms::calculations::{CalculationEngine, FieldValue};
 use crate::objects::{Dictionary, Object};
 use chrono::{DateTime, NaiveDate, Utc};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -150,6 +148,7 @@ pub enum SpecialFormat {
 
 /// Calculation event for logging
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CalculationEvent {
     /// Timestamp
     timestamp: DateTime<Utc>,

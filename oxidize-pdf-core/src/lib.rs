@@ -255,6 +255,20 @@ pub use text::{
     VerticalAlign,
 };
 
+// Re-export forms types
+pub use forms::{
+    calculations::FieldValue,
+    field_actions::{
+        ActionSettings, FieldAction, FieldActionSystem, FieldActions, FormatActionType,
+        SpecialFormatType, ValidateActionType,
+    },
+    validation::{
+        DateFormat, FieldValidator, FormValidationSystem, FormatMask, PhoneCountry,
+        RequiredFieldInfo, RequirementCondition, TimeFormat, ValidationRule, ValidationSettings,
+    },
+    BorderStyle, FieldType, TextField, Widget,
+};
+
 // Re-export font embedding types
 pub use text::fonts::embedding::{
     EmbeddedFontData, EmbeddingOptions, EncodingDifference, FontDescriptor, FontEmbedder,

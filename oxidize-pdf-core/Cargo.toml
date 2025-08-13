@@ -43,6 +43,9 @@ bitflags = "2.4"
 # Parallel processing
 num_cpus = "1.16"
 
+# Regular expressions for validation
+regex = "1.10"
+
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -69,6 +72,14 @@ path = "../examples/src/font_spacing_test.rs"
 [[example]]
 name = "font_subsetting_test"
 path = "../examples/src/font_subsetting_test.rs"
+
+[[example]]
+name = "field_actions"
+path = "../examples/src/field_actions.rs"
+
+[[example]]
+name = "form_validation"
+path = "../examples/src/form_validation.rs"
 
 # Temporarily disabled examples with compilation errors
 # [[example]]
