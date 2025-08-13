@@ -21,13 +21,19 @@ pub struct TemplateEngine {
     enable_conditionals: bool,
 }
 
-impl TemplateEngine {
-    /// Create a new template engine
-    pub fn new() -> Self {
+impl Default for TemplateEngine {
+    fn default() -> Self {
         Self {
             variables: HashMap::new(),
             enable_conditionals: true,
         }
+    }
+}
+
+impl TemplateEngine {
+    /// Create a new template engine
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Add a custom variable
@@ -155,7 +161,7 @@ impl TemplateEngine {
 }
 
 /// Section layout for headers and footers
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SectionLayout {
     /// Left-aligned content
     pub left: Option<String>,
@@ -168,11 +174,7 @@ pub struct SectionLayout {
 impl SectionLayout {
     /// Create a new empty section layout
     pub fn new() -> Self {
-        Self {
-            left: None,
-            center: None,
-            right: None,
-        }
+        Self::default()
     }
 
     /// Set left content
@@ -335,16 +337,13 @@ impl AdvancedHeaderFooter {
             )?;
 
             // Move to next line position
-            if is_header {
-                y_pos -= self.line_spacing;
-            } else {
-                y_pos -= self.line_spacing;
-            }
+            y_pos -= self.line_spacing;
         }
 
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn render_section(
         &self,
         graphics: &mut GraphicsContext,

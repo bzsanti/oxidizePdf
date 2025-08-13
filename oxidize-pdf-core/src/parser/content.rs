@@ -54,6 +54,7 @@
 //! - Marked content operators (BMC, BDC, EMC, etc.)
 
 use super::{ParseError, ParseResult};
+use crate::objects::Object;
 use std::collections::HashMap;
 
 /// Represents a single operator in a PDF content stream.
@@ -309,8 +310,15 @@ pub enum ContentOperation {
     ShadingFill(String), // sh
 
     // Inline image operators
-    BeginInlineImage,         // BI
-    InlineImageData(Vec<u8>), // ID...EI
+    /// Begin inline image (BI operator)
+    BeginInlineImage,
+    /// Inline image with parsed dictionary and data
+    InlineImage {
+        /// Image parameters (width, height, colorspace, etc.)
+        params: HashMap<String, Object>,
+        /// Raw image data
+        data: Vec<u8>,
+    },
 
     // XObject operators
     /// Paint external object (Do operator).
@@ -1317,9 +1325,56 @@ impl ContentParser {
     }
 
     fn parse_inline_image(&mut self) -> ParseResult<ContentOperation> {
-        // For now, we'll skip inline images
-        // This would require parsing the image dictionary and data
-        // Skip tokens until we find EI
+        // Parse inline image dictionary until we find ID
+        let mut params = HashMap::new();
+
+        while self.position < self.tokens.len() {
+            // Check if we've reached the ID operator
+            if let Token::Operator(op) = &self.tokens[self.position] {
+                if op == "ID" {
+                    self.position += 1;
+                    break;
+                }
+            }
+
+            // Parse key-value pairs for image parameters
+            // Keys are abbreviated in inline images:
+            // /W -> Width, /H -> Height, /CS -> ColorSpace, /BPC -> BitsPerComponent
+            // /F -> Filter, /DP -> DecodeParms, /IM -> ImageMask, /I -> Interpolate
+            if let Token::Name(key) = &self.tokens[self.position] {
+                self.position += 1;
+                if self.position >= self.tokens.len() {
+                    break;
+                }
+
+                // Parse the value
+                let value = match &self.tokens[self.position] {
+                    Token::Integer(n) => Object::Integer(*n as i64),
+                    Token::Number(n) => Object::Real(*n as f64),
+                    Token::Name(s) => Object::Name(expand_inline_name(s)),
+                    Token::String(s) => Object::String(String::from_utf8_lossy(s).to_string()),
+                    Token::HexString(s) => Object::String(String::from_utf8_lossy(s).to_string()),
+                    _ => Object::Null,
+                };
+
+                // Expand abbreviated keys to full names
+                let full_key = expand_inline_key(key);
+                params.insert(full_key, value);
+                self.position += 1;
+            } else {
+                self.position += 1;
+            }
+        }
+
+        // Now we should be at the image data
+        // Collect bytes until we find EI
+        let mut data = Vec::new();
+
+        // For inline images, we need to read raw bytes until EI
+        // This is tricky because EI could appear in the image data
+        // We need to look for EI followed by a whitespace or operator
+
+        // Simplified approach: collect all tokens until we find EI operator
         while self.position < self.tokens.len() {
             if let Token::Operator(op) = &self.tokens[self.position] {
                 if op == "EI" {
@@ -1327,10 +1382,56 @@ impl ContentParser {
                     break;
                 }
             }
+
+            // Convert token to bytes (simplified - real implementation would need raw byte access)
+            match &self.tokens[self.position] {
+                Token::String(bytes) => data.extend_from_slice(bytes),
+                Token::HexString(bytes) => data.extend_from_slice(bytes),
+                Token::Integer(n) => data.extend_from_slice(n.to_string().as_bytes()),
+                Token::Number(n) => data.extend_from_slice(n.to_string().as_bytes()),
+                Token::Name(s) => data.extend_from_slice(s.as_bytes()),
+                Token::Operator(s) if s != "EI" => data.extend_from_slice(s.as_bytes()),
+                _ => {}
+            }
             self.position += 1;
         }
 
-        Ok(ContentOperation::BeginInlineImage)
+        Ok(ContentOperation::InlineImage { params, data })
+    }
+}
+
+/// Expand abbreviated inline image key names to full names
+fn expand_inline_key(key: &str) -> String {
+    match key {
+        "W" => "Width".to_string(),
+        "H" => "Height".to_string(),
+        "CS" | "ColorSpace" => "ColorSpace".to_string(),
+        "BPC" | "BitsPerComponent" => "BitsPerComponent".to_string(),
+        "F" => "Filter".to_string(),
+        "DP" | "DecodeParms" => "DecodeParms".to_string(),
+        "IM" => "ImageMask".to_string(),
+        "I" => "Interpolate".to_string(),
+        "Intent" => "Intent".to_string(),
+        "D" => "Decode".to_string(),
+        _ => key.to_string(),
+    }
+}
+
+/// Expand abbreviated inline image color space names
+fn expand_inline_name(name: &str) -> String {
+    match name {
+        "G" => "DeviceGray".to_string(),
+        "RGB" => "DeviceRGB".to_string(),
+        "CMYK" => "DeviceCMYK".to_string(),
+        "I" => "Indexed".to_string(),
+        "AHx" => "ASCIIHexDecode".to_string(),
+        "A85" => "ASCII85Decode".to_string(),
+        "LZW" => "LZWDecode".to_string(),
+        "Fl" => "FlateDecode".to_string(),
+        "RL" => "RunLengthDecode".to_string(),
+        "DCT" => "DCTDecode".to_string(),
+        "CCF" => "CCITTFaxDecode".to_string(),
+        _ => name.to_string(),
     }
 }
 
@@ -2025,7 +2126,45 @@ mod tests {
             let operators = ContentParser::parse(content).unwrap();
 
             assert_eq!(operators.len(), 1);
-            assert_eq!(operators[0], ContentOperation::BeginInlineImage);
+            match &operators[0] {
+                ContentOperation::InlineImage { params, data } => {
+                    // Check parsed parameters
+                    assert_eq!(params.get("Width"), Some(&Object::Integer(100)));
+                    assert_eq!(params.get("Height"), Some(&Object::Integer(100)));
+                    assert_eq!(params.get("BitsPerComponent"), Some(&Object::Integer(8)));
+                    assert_eq!(
+                        params.get("ColorSpace"),
+                        Some(&Object::Name("DeviceRGB".to_string()))
+                    );
+                    // Data should contain something (simplified test)
+                    assert!(!data.is_empty());
+                }
+                _ => panic!("Expected InlineImage operation"),
+            }
+        }
+
+        #[test]
+        fn test_inline_image_with_filter() {
+            let content = b"BI /W 50 /H 50 /CS /G /BPC 1 /F /AHx ID 00FF00FF EI";
+            let operators = ContentParser::parse(content).unwrap();
+
+            assert_eq!(operators.len(), 1);
+            match &operators[0] {
+                ContentOperation::InlineImage { params, data } => {
+                    assert_eq!(params.get("Width"), Some(&Object::Integer(50)));
+                    assert_eq!(params.get("Height"), Some(&Object::Integer(50)));
+                    assert_eq!(
+                        params.get("ColorSpace"),
+                        Some(&Object::Name("DeviceGray".to_string()))
+                    );
+                    assert_eq!(params.get("BitsPerComponent"), Some(&Object::Integer(1)));
+                    assert_eq!(
+                        params.get("Filter"),
+                        Some(&Object::Name("ASCIIHexDecode".to_string()))
+                    );
+                }
+                _ => panic!("Expected InlineImage operation"),
+            }
         }
 
         #[test]

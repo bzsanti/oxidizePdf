@@ -270,6 +270,144 @@ impl TransferFunction {
             },
         })
     }
+
+    /// Convert transfer function to PDF representation
+    pub fn to_pdf_string(&self) -> String {
+        match self {
+            TransferFunction::Identity => "/Identity".to_string(),
+            TransferFunction::Single(data) => data.to_pdf_string(),
+            TransferFunction::Separate {
+                c_or_r,
+                m_or_g,
+                y_or_b,
+                k,
+            } => {
+                let mut result = String::from("[");
+                result.push_str(&c_or_r.to_pdf_string());
+                result.push(' ');
+                result.push_str(&m_or_g.to_pdf_string());
+                result.push(' ');
+                result.push_str(&y_or_b.to_pdf_string());
+                if let Some(k_func) = k {
+                    result.push(' ');
+                    result.push_str(&k_func.to_pdf_string());
+                }
+                result.push(']');
+                result
+            }
+        }
+    }
+}
+
+impl TransferFunctionData {
+    /// Convert transfer function data to PDF representation
+    pub fn to_pdf_string(&self) -> String {
+        let mut dict = String::from("<<");
+
+        // Function type
+        dict.push_str(&format!(" /FunctionType {}", self.function_type));
+
+        // Domain
+        dict.push_str(" /Domain [");
+        for (i, val) in self.domain.iter().enumerate() {
+            if i > 0 {
+                dict.push(' ');
+            }
+            dict.push_str(&format!("{:.3}", val));
+        }
+        dict.push(']');
+
+        // Range
+        dict.push_str(" /Range [");
+        for (i, val) in self.range.iter().enumerate() {
+            if i > 0 {
+                dict.push(' ');
+            }
+            dict.push_str(&format!("{:.3}", val));
+        }
+        dict.push(']');
+
+        // Function-specific parameters
+        match &self.params {
+            TransferFunctionParams::Exponential { c0, c1, n } => {
+                // Type 2: Exponential interpolation function
+                dict.push_str(" /C0 [");
+                for (i, val) in c0.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str("] /C1 [");
+                for (i, val) in c1.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str(&format!("] /N {:.3}", n));
+            }
+            TransferFunctionParams::Sampled {
+                size,
+                bits_per_sample,
+                samples,
+                ..
+            } => {
+                // Type 0: Sampled function
+                dict.push_str(" /Size [");
+                for (i, val) in size.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{}", val));
+                }
+                dict.push_str(&format!("] /BitsPerSample {}", bits_per_sample));
+                // Samples would be encoded as a stream
+                dict.push_str(" /Length ");
+                dict.push_str(&format!("{}", samples.len()));
+            }
+            TransferFunctionParams::Stitching {
+                bounds,
+                encode,
+                functions,
+            } => {
+                // Type 3: Stitching function
+                dict.push_str(" /Bounds [");
+                for (i, val) in bounds.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str("] /Encode [");
+                for (i, val) in encode.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str("] /Functions [");
+                for (i, func) in functions.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&func.to_pdf_string());
+                }
+                dict.push(']');
+            }
+            TransferFunctionParams::PostScript { code } => {
+                // Type 4: PostScript calculator function
+                dict.push_str(&format!(
+                    " /Length {} stream\n{}\nendstream",
+                    code.len(),
+                    code
+                ));
+            }
+        }
+
+        dict.push_str(" >>");
+        dict
+    }
 }
 
 /// Halftone specification according to ISO 32000-1
@@ -642,6 +780,43 @@ impl ExtGState {
         self
     }
 
+    // Transfer function setters
+    /// Set transfer function for output device gamma correction
+    pub fn with_transfer_function(mut self, func: TransferFunction) -> Self {
+        self.transfer_function = Some(func);
+        self
+    }
+
+    /// Set gamma correction transfer function
+    pub fn with_gamma_correction(mut self, gamma: f64) -> Self {
+        self.transfer_function = Some(TransferFunction::gamma(gamma));
+        self
+    }
+
+    /// Set linear transfer function with slope and intercept
+    pub fn with_linear_transfer(mut self, slope: f64, intercept: f64) -> Self {
+        self.transfer_function = Some(TransferFunction::linear(slope, intercept));
+        self
+    }
+
+    /// Set alternative transfer function (TR2)
+    pub fn with_transfer_function_2(mut self, func: TransferFunction) -> Self {
+        self.transfer_function_2 = Some(func);
+        self
+    }
+
+    /// Set black generation function
+    pub fn with_black_generation(mut self, func: TransferFunction) -> Self {
+        self.black_generation = Some(func);
+        self
+    }
+
+    /// Set undercolor removal function
+    pub fn with_undercolor_removal(mut self, func: TransferFunction) -> Self {
+        self.undercolor_removal = Some(func);
+        self
+    }
+
     /// Check if any transparency parameters are set
     pub fn uses_transparency(&self) -> bool {
         self.alpha_stroke.is_some_and(|a| a < 1.0)
@@ -785,6 +960,43 @@ impl ExtGState {
             })?;
         }
 
+        // Transfer functions
+        if let Some(ref tf) = self.transfer_function {
+            write!(&mut dict, " /TR {}", tf.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write transfer function".to_string())
+            })?;
+        }
+
+        if let Some(ref tf) = self.transfer_function_2 {
+            write!(&mut dict, " /TR2 {}", tf.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write transfer function 2".to_string())
+            })?;
+        }
+
+        if let Some(ref bg) = self.black_generation {
+            write!(&mut dict, " /BG {}", bg.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write black generation".to_string())
+            })?;
+        }
+
+        if let Some(ref bg) = self.black_generation_2 {
+            write!(&mut dict, " /BG2 {}", bg.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write black generation 2".to_string())
+            })?;
+        }
+
+        if let Some(ref ucr) = self.undercolor_removal {
+            write!(&mut dict, " /UCR {}", ucr.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write undercolor removal".to_string())
+            })?;
+        }
+
+        if let Some(ref ucr) = self.undercolor_removal_2 {
+            write!(&mut dict, " /UCR2 {}", ucr.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write undercolor removal 2".to_string())
+            })?;
+        }
+
         // PDF 2.0 parameters
         if let Some(use_comp) = self.use_black_point_compensation {
             write!(&mut dict, " /UseBlackPtComp {use_comp}").map_err(|_| {
@@ -817,6 +1029,12 @@ impl ExtGState {
             && self.alpha_fill.is_none()
             && self.alpha_is_shape.is_none()
             && self.text_knockout.is_none()
+            && self.transfer_function.is_none()
+            && self.transfer_function_2.is_none()
+            && self.black_generation.is_none()
+            && self.black_generation_2.is_none()
+            && self.undercolor_removal.is_none()
+            && self.undercolor_removal_2.is_none()
             && self.use_black_point_compensation.is_none()
     }
 
@@ -1292,5 +1510,93 @@ mod tests {
         assert!(dict.contains("/ca 0.600"));
         assert!(dict.contains("/AIS true"));
         assert!(dict.contains("/TK false"));
+    }
+
+    #[test]
+    fn test_transfer_function_identity() {
+        let tf = TransferFunction::identity();
+        assert_eq!(tf.to_pdf_string(), "/Identity");
+    }
+
+    #[test]
+    fn test_transfer_function_gamma() {
+        let tf = TransferFunction::gamma(2.2);
+        let pdf = tf.to_pdf_string();
+        assert!(pdf.contains("/FunctionType 2"));
+        assert!(pdf.contains("/N 2.200"));
+        assert!(pdf.contains("/Domain [0.000 1.000]"));
+        assert!(pdf.contains("/Range [0.000 1.000]"));
+        assert!(pdf.contains("/C0 [0.000]"));
+        assert!(pdf.contains("/C1 [1.000]"));
+    }
+
+    #[test]
+    fn test_transfer_function_linear() {
+        let tf = TransferFunction::linear(0.8, 0.1);
+        let pdf = tf.to_pdf_string();
+        assert!(pdf.contains("/FunctionType 2"));
+        assert!(pdf.contains("/N 1.000"));
+        assert!(pdf.contains("/C0 [0.100]")); // intercept
+        assert!(pdf.contains("/C1 [0.900]")); // slope + intercept
+    }
+
+    #[test]
+    fn test_extgstate_with_transfer_functions() {
+        let state = ExtGState::new()
+            .with_gamma_correction(1.8)
+            .with_transfer_function_2(TransferFunction::identity())
+            .with_black_generation(TransferFunction::linear(1.0, 0.0))
+            .with_undercolor_removal(TransferFunction::gamma(2.2));
+
+        assert!(!state.is_empty());
+
+        let dict = state.to_pdf_dictionary().unwrap();
+        assert!(dict.contains("/TR"));
+        assert!(dict.contains("/TR2 /Identity"));
+        assert!(dict.contains("/BG"));
+        assert!(dict.contains("/UCR"));
+        assert!(dict.contains("/N 1.800")); // gamma value for TR
+        assert!(dict.contains("/N 2.200")); // gamma value for UCR
+    }
+
+    #[test]
+    fn test_transfer_function_separate() {
+        let c_func = TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![0.0],
+                c1: vec![1.0],
+                n: 1.5,
+            },
+        };
+
+        let m_func = c_func.clone();
+        let y_func = c_func.clone();
+        let k_func = Some(TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![0.1],
+                c1: vec![0.9],
+                n: 2.0,
+            },
+        });
+
+        let tf = TransferFunction::Separate {
+            c_or_r: c_func,
+            m_or_g: m_func,
+            y_or_b: y_func,
+            k: k_func,
+        };
+
+        let pdf = tf.to_pdf_string();
+        assert!(pdf.starts_with('['));
+        assert!(pdf.ends_with(']'));
+        assert!(pdf.contains("/FunctionType 2"));
+        // Should have 4 functions for CMYK
+        assert_eq!(pdf.matches("/FunctionType 2").count(), 4);
     }
 }

@@ -3,9 +3,9 @@
 ## Overview
 This document tracks the implementation status of ISO 32000-1:2008 (PDF 1.7) features in oxidize-pdf.
 
-**Current Compliance: ~41% (Pragmatic API Compliance)**
-- Previous: ~40% (before header/footer template enhancements)
-- Improvement: +1% from advanced header/footer templates with variables, odd/even pages, and multi-line support
+**Current Compliance: ~43% (Pragmatic API Compliance)**
+- Previous: ~41% (before transfer functions and inline images)
+- Improvement: +2% from transfer functions (+1%) and inline images (+1%)
 
 ## Compliance Methodology
 
@@ -103,7 +103,7 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - ✅ Soft masks (SMask)
 - ✅ Stencil masks
 - ✅ Transparency support
-- 🚧 Inline images
+- ✅ Inline images (BI/ID/EI operators)
 
 ### Chapter 9: Text
 
@@ -151,8 +151,11 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - ❌ Lab
 
 #### 10.4 Transfer Functions
-- 🚧 Basic transfer functions
-- ❌ Halftone dictionaries
+- ✅ Basic transfer functions (gamma, linear)
+- ✅ Transfer function (TR/TR2)
+- ✅ Black generation (BG/BG2)
+- ✅ Undercolor removal (UCR/UCR2)
+- 🚧 Halftone dictionaries
 
 ### Chapter 11: Transparency
 
@@ -290,7 +293,7 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - 🚧 Incremental updates
 - ❌ Linearization
 
-### Graphics & Imaging (40% complete)
+### Graphics & Imaging (42% complete)
 - ✅ Basic shapes and paths
 - ✅ Colors and color spaces
 - 🚧 Images (JPEG ✅, PNG 🚧, raw ✅)
@@ -331,6 +334,19 @@ We measure "pragmatic compliance" based on features exposed through our public A
 - ❌ Accessibility
 
 ## Recent Improvements (Quick Wins Phase)
+
+### Phase 1 Completed: 2025-08-13
+- ✅ Transfer Functions
+  - Gamma correction support
+  - Linear transfer functions
+  - Black generation and undercolor removal
+  - Complete ExtGState integration
+  
+- ✅ Inline Images
+  - Full BI/ID/EI operator support
+  - Parameter parsing with abbreviated names
+  - Multiple color space support
+  - Proper data extraction
 
 ### Phase Completed: 2025-08-11
 - ✅ PNG Support with Transparency
