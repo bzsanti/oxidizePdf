@@ -127,7 +127,7 @@ fn create_transparency_page(doc: &mut Document) -> Result<()> {
 
 fn create_forms_page(doc: &mut Document) -> Result<()> {
     let mut page = Page::new(612.0, 792.0);
-    let mut form_manager = FormManager::new();
+    let form_manager = FormManager::new();
 
     // Add title
     let text = page.text();
