@@ -86,6 +86,23 @@ examples/results/
 oxidize-pdf-core/*.pdf
 
 # ====================
+# Scripts in Wrong Location
+# ====================
+/*.py            # Python scripts should be in tools/
+/*.rs            # Rust scripts should be in dev-tools/
+test_*.txt       # Test output files
+*_test.txt
+
+# ====================
+# Obsolete Documentation
+# ====================
+SESSION_*.md
+*_SESSION_*.md
+COVERAGE_AUDIT.md
+*_UPDATE.md
+*_SUMMARY.md
+
+# ====================
 # Benchmarks & Performance
 # ====================
 benches/

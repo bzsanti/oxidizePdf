@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf/generate_test_pngs.py", line 5, in <module>
-    from PIL import Image
-ModuleNotFoundError: No module named 'PIL'
