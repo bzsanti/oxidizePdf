@@ -72,11 +72,21 @@ cargo build --release                 # Production build
 2. Example .rs files → `examples/src/`
 3. Documentation → `examples/doc/`
 4. Unit tests → `oxidize-pdf-core/tests/`
+5. Python analysis scripts → `tools/analysis/`
+6. Python utility scripts → `tools/scripts/`
+7. Rust debug tools → `dev-tools/`
 
 **FORBIDDEN:**
-- Creating PDFs in project root
+- Creating PDFs in project root or oxidize-pdf-core/
 - Using `oxidize-pdf-core/test-pdfs/` (deprecated)
 - Leaving PDF files scattered
+- Placing scripts in project root
+- Creating SESSION_NOTES or temporary MD files in root
+
+**CLEANUP RULES:**
+- Run `find . -name "*.pdf" -not -path "./examples/results/*" -not -path "./test-pdfs/*"` to find stray PDFs
+- Delete any test PDFs after running tests
+- Move all scripts to appropriate directories
 
 ## 📦 Release Process
 ```bash
