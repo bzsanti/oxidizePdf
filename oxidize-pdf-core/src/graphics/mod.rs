@@ -1789,14 +1789,12 @@ mod tests {
     }
 
     // ============= Additional Critical Method Tests =============
-    
+
     #[test]
     fn test_move_to_and_line_to() {
         let mut ctx = GraphicsContext::new();
-        ctx.move_to(100.0, 200.0)
-           .line_to(300.0, 400.0)
-           .stroke();
-        
+        ctx.move_to(100.0, 200.0).line_to(300.0, 400.0).stroke();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("100.00 200.00 m"));
@@ -1808,9 +1806,9 @@ mod tests {
     fn test_bezier_curve() {
         let mut ctx = GraphicsContext::new();
         ctx.move_to(0.0, 0.0)
-           .curve_to(10.0, 20.0, 30.0, 40.0, 50.0, 60.0)
-           .stroke();
-        
+            .curve_to(10.0, 20.0, 30.0, 40.0, 50.0, 60.0)
+            .stroke();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("0.00 0.00 m"));
@@ -1821,9 +1819,8 @@ mod tests {
     #[test]
     fn test_circle_path() {
         let mut ctx = GraphicsContext::new();
-        ctx.circle(100.0, 100.0, 50.0)
-           .fill();
-        
+        ctx.circle(100.0, 100.0, 50.0).fill();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         // Circle should use bezier curves (c operator)
@@ -1835,11 +1832,11 @@ mod tests {
     fn test_path_closing() {
         let mut ctx = GraphicsContext::new();
         ctx.move_to(0.0, 0.0)
-           .line_to(100.0, 0.0)
-           .line_to(100.0, 100.0)
-           .close_path()
-           .stroke();
-        
+            .line_to(100.0, 0.0)
+            .line_to(100.0, 100.0)
+            .close_path()
+            .stroke();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("h")); // close path operator
@@ -1849,9 +1846,8 @@ mod tests {
     #[test]
     fn test_fill_and_stroke() {
         let mut ctx = GraphicsContext::new();
-        ctx.rect(10.0, 10.0, 50.0, 50.0)
-           .fill_stroke();
-        
+        ctx.rect(10.0, 10.0, 50.0, 50.0).fill_stroke();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("10.00 10.00 50.00 50.00 re"));
@@ -1862,13 +1858,13 @@ mod tests {
     fn test_color_settings() {
         let mut ctx = GraphicsContext::new();
         ctx.set_fill_color(Color::rgb(1.0, 0.0, 0.0))
-           .set_stroke_color(Color::rgb(0.0, 1.0, 0.0))
-           .rect(10.0, 10.0, 50.0, 50.0)
-           .fill_stroke(); // This will write the colors
-        
+            .set_stroke_color(Color::rgb(0.0, 1.0, 0.0))
+            .rect(10.0, 10.0, 50.0, 50.0)
+            .fill_stroke(); // This will write the colors
+
         assert_eq!(ctx.fill_color(), Color::rgb(1.0, 0.0, 0.0));
         assert_eq!(ctx.stroke_color(), Color::rgb(0.0, 1.0, 0.0));
-        
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1.000 0.000 0.000 rg")); // red fill
@@ -1879,30 +1875,29 @@ mod tests {
     fn test_line_styles() {
         let mut ctx = GraphicsContext::new();
         ctx.set_line_width(2.5)
-           .set_line_cap(LineCap::Round)
-           .set_line_join(LineJoin::Bevel);
-        
+            .set_line_cap(LineCap::Round)
+            .set_line_join(LineJoin::Bevel);
+
         assert_eq!(ctx.line_width(), 2.5);
-        
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
-        assert!(ops_str.contains("2.50 w"));  // line width
-        assert!(ops_str.contains("1 J"));    // round line cap
-        assert!(ops_str.contains("2 j"));    // bevel line join
+        assert!(ops_str.contains("2.50 w")); // line width
+        assert!(ops_str.contains("1 J")); // round line cap
+        assert!(ops_str.contains("2 j")); // bevel line join
     }
 
     #[test]
     fn test_opacity_settings() {
         let mut ctx = GraphicsContext::new();
         ctx.set_opacity(0.5);
-        
+
         assert_eq!(ctx.fill_opacity(), 0.5);
         assert_eq!(ctx.stroke_opacity(), 0.5);
         assert!(ctx.uses_transparency());
-        
-        ctx.set_fill_opacity(0.7)
-           .set_stroke_opacity(0.3);
-        
+
+        ctx.set_fill_opacity(0.7).set_stroke_opacity(0.3);
+
         assert_eq!(ctx.fill_opacity(), 0.7);
         assert_eq!(ctx.stroke_opacity(), 0.3);
     }
@@ -1911,34 +1906,32 @@ mod tests {
     fn test_state_save_restore() {
         let mut ctx = GraphicsContext::new();
         ctx.save_state()
-           .set_fill_color(Color::rgb(1.0, 0.0, 0.0))
-           .restore_state();
-        
+            .set_fill_color(Color::rgb(1.0, 0.0, 0.0))
+            .restore_state();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
-        assert!(ops_str.contains("q"));  // save state
-        assert!(ops_str.contains("Q"));  // restore state
+        assert!(ops_str.contains("q")); // save state
+        assert!(ops_str.contains("Q")); // restore state
     }
 
     #[test]
     fn test_transformations() {
         let mut ctx = GraphicsContext::new();
-        ctx.translate(100.0, 200.0)
-           .scale(2.0, 3.0)
-           .rotate(45.0);
-        
+        ctx.translate(100.0, 200.0).scale(2.0, 3.0).rotate(45.0);
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1 0 0 1 100.00 200.00 cm")); // translate
-        assert!(ops_str.contains("2.00 0 0 3.00 0 0 cm"));      // scale
-        assert!(ops_str.contains("cm"));                   // rotate matrix
+        assert!(ops_str.contains("2.00 0 0 3.00 0 0 cm")); // scale
+        assert!(ops_str.contains("cm")); // rotate matrix
     }
 
     #[test]
     fn test_custom_transform() {
         let mut ctx = GraphicsContext::new();
         ctx.transform(1.0, 0.5, 0.5, 1.0, 10.0, 20.0);
-        
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1.00 0.50 0.50 1.00 10.00 20.00 cm"));
@@ -1947,9 +1940,8 @@ mod tests {
     #[test]
     fn test_rectangle_path() {
         let mut ctx = GraphicsContext::new();
-        ctx.rectangle(25.0, 25.0, 150.0, 100.0)
-           .stroke();
-        
+        ctx.rectangle(25.0, 25.0, 150.0, 100.0).stroke();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("25.00 25.00 150.00 100.00 re"));
@@ -1967,12 +1959,12 @@ mod tests {
     fn test_complex_path_operations() {
         let mut ctx = GraphicsContext::new();
         ctx.move_to(50.0, 50.0)
-           .line_to(100.0, 50.0)
-           .curve_to(125.0, 50.0, 150.0, 75.0, 150.0, 100.0)
-           .line_to(150.0, 150.0)
-           .close_path()
-           .fill();
-        
+            .line_to(100.0, 50.0)
+            .curve_to(125.0, 50.0, 150.0, 75.0, 150.0, 100.0)
+            .line_to(150.0, 150.0)
+            .close_path()
+            .fill();
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("50.00 50.00 m"));
@@ -1986,10 +1978,10 @@ mod tests {
     #[test]
     fn test_graphics_state_dict_generation() {
         let mut ctx = GraphicsContext::new();
-        
+
         // Without transparency, should return None
         assert!(ctx.generate_graphics_state_dict().is_none());
-        
+
         // With transparency, should generate dict
         ctx.set_opacity(0.5);
         let dict = ctx.generate_graphics_state_dict();
@@ -2007,7 +1999,7 @@ mod tests {
             phase: 0.0,
         };
         ctx.set_line_dash_pattern(pattern);
-        
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("[3.00 2.00] 0.00 d"));
@@ -2017,7 +2009,7 @@ mod tests {
     fn test_miter_limit_setting() {
         let mut ctx = GraphicsContext::new();
         ctx.set_miter_limit(4.0);
-        
+
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("4.00 M"));

@@ -318,7 +318,7 @@ fn test_section_8_graphics() -> (usize, usize) {
             0x00, 0x10, // Width (16)
             0x03, // Components (3 = RGB)
             0x01, 0x11, 0x00, // Component 1
-            0x02, 0x11, 0x00, // Component 2  
+            0x02, 0x11, 0x00, // Component 2
             0x03, 0x11, 0x00, // Component 3
             0xFF, 0xD9, // EOI marker
         ];

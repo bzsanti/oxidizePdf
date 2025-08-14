@@ -540,7 +540,7 @@ mod tests {
     }
 
     // ============= Additional MergeOptions Tests =============
-    
+
     #[test]
     fn test_merge_options_with_custom_metadata() {
         let options = MergeOptions {
@@ -555,12 +555,12 @@ mod tests {
                 keywords: Some("merge, pdf".to_string()),
             },
         };
-        
+
         assert!(options.page_ranges.is_some());
         assert!(!options.preserve_bookmarks);
         assert!(options.preserve_forms);
         assert!(options.optimize);
-        
+
         if let MetadataMode::Custom { title, .. } = options.metadata_mode {
             assert_eq!(title, Some("Merged Document".to_string()));
         } else {
@@ -574,7 +574,7 @@ mod tests {
             metadata_mode: MetadataMode::FromDocument(2),
             ..Default::default()
         };
-        
+
         if let MetadataMode::FromDocument(idx) = options.metadata_mode {
             assert_eq!(idx, 2);
         } else {
@@ -587,7 +587,7 @@ mod tests {
         // Test All variant
         let all_pages = PageRange::All;
         assert!(matches!(all_pages, PageRange::All));
-        
+
         // Test Single page
         let single = PageRange::Single(5);
         if let PageRange::Single(page) = single {
@@ -595,7 +595,7 @@ mod tests {
         } else {
             panic!("Expected Single page range");
         }
-        
+
         // Test Range
         let range = PageRange::Range(1, 10);
         if let PageRange::Range(start, end) = range {
@@ -604,7 +604,7 @@ mod tests {
         } else {
             panic!("Expected Range");
         }
-        
+
         // Test List
         let list = PageRange::List(vec![1, 3, 5, 7]);
         if let PageRange::List(pages) = list {
@@ -643,10 +643,10 @@ mod tests {
         // Test all MetadataMode variants
         let from_first = MetadataMode::FromFirst;
         assert!(matches!(from_first, MetadataMode::FromFirst));
-        
+
         let from_doc = MetadataMode::FromDocument(3);
         assert!(matches!(from_doc, MetadataMode::FromDocument(3)));
-        
+
         let custom = MetadataMode::Custom {
             title: Some("Title".to_string()),
             author: None,
@@ -671,7 +671,7 @@ mod tests {
             optimize: true,
             metadata_mode: MetadataMode::FromFirst,
         };
-        
+
         assert!(options.page_ranges.is_some());
         let ranges = options.page_ranges.unwrap();
         assert_eq!(ranges.len(), 3);

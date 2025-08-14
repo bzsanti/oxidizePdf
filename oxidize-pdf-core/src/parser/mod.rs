@@ -529,7 +529,7 @@ mod tests {
     }
 
     // ============= ParseOptions Tests =============
-    
+
     #[test]
     fn test_parse_options_default() {
         let opts = ParseOptions::default();
@@ -610,7 +610,7 @@ mod tests {
         opts.recover_from_stream_errors = true;
         opts.max_recovery_attempts = 10;
         opts.lenient_encoding = true;
-        
+
         assert!(!opts.strict_mode);
         assert!(opts.recover_from_stream_errors);
         assert_eq!(opts.max_recovery_attempts, 10);
@@ -632,17 +632,29 @@ mod tests {
             ParseError::EncryptionNotSupported,
             ParseError::EmptyFile,
             ParseError::StreamDecodeError("decode error".to_string()),
-            ParseError::StreamLengthMismatch { declared: 100, actual: 50 },
-            ParseError::CharacterEncodingError { position: 10, message: "invalid UTF-8".to_string() },
-            ParseError::SyntaxError { position: 100, message: "unexpected token".to_string() },
-            ParseError::UnexpectedToken { expected: "dict".to_string(), found: "array".to_string() },
+            ParseError::StreamLengthMismatch {
+                declared: 100,
+                actual: 50,
+            },
+            ParseError::CharacterEncodingError {
+                position: 10,
+                message: "invalid UTF-8".to_string(),
+            },
+            ParseError::SyntaxError {
+                position: 100,
+                message: "unexpected token".to_string(),
+            },
+            ParseError::UnexpectedToken {
+                expected: "dict".to_string(),
+                found: "array".to_string(),
+            },
         ];
 
         for error in errors {
             // Test Display implementation
             let display = format!("{}", error);
             assert!(!display.is_empty());
-            
+
             // Test conversion to OxidizePdfError
             let _oxidize_err: OxidizePdfError = error.into();
         }
@@ -654,26 +666,26 @@ mod tests {
         let null = PdfObject::Null;
         let boolean = PdfObject::Boolean(true);
         let integer = PdfObject::Integer(42);
-        let real = PdfObject::Real(3.14);
-        let string = PdfObject::String(PdfString::new(b"test".to_vec()));
-        let name = PdfObject::Name(PdfName::new("Test".to_string()));
-        let array = PdfObject::Array(PdfArray::new());
-        let dict = PdfObject::Dictionary(PdfDictionary::new());
+        let _real = PdfObject::Real(3.14);
+        let _string = PdfObject::String(PdfString::new(b"test".to_vec()));
+        let _name = PdfObject::Name(PdfName::new("Test".to_string()));
+        let _array = PdfObject::Array(PdfArray::new());
+        let _dict = PdfObject::Dictionary(PdfDictionary::new());
         // PdfStream doesn't have a public constructor, skip it for now
         // let stream = PdfObject::Stream(...);
-        let reference = PdfObject::Reference(1, 0);
-        
+        let _reference = PdfObject::Reference(1, 0);
+
         // Test pattern matching
         match null {
             PdfObject::Null => assert!(true),
             _ => panic!("Expected Null"),
         }
-        
+
         match boolean {
             PdfObject::Boolean(v) => assert!(v),
             _ => panic!("Expected Boolean"),
         }
-        
+
         match integer {
             PdfObject::Integer(v) => assert_eq!(v, 42),
             _ => panic!("Expected Integer"),
@@ -683,20 +695,23 @@ mod tests {
     #[test]
     fn test_pdf_dictionary_operations() {
         let mut dict = PdfDictionary::new();
-        
+
         // Test insertion
-        dict.insert("Type".to_string(), PdfObject::Name(PdfName::new("Page".to_string())));
+        dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName::new("Page".to_string())),
+        );
         dict.insert("Count".to_string(), PdfObject::Integer(10));
-        
+
         // Test retrieval
         assert!(dict.get("Type").is_some());
         assert!(dict.get("Count").is_some());
         assert!(dict.get("Missing").is_none());
-        
+
         // Test contains
         assert!(dict.contains_key("Type"));
         assert!(!dict.contains_key("Missing"));
-        
+
         // Test get_type
         let type_name = dict.get_type();
         assert_eq!(type_name, Some("Page"));
@@ -705,22 +720,22 @@ mod tests {
     #[test]
     fn test_pdf_array_operations() {
         let mut array = PdfArray::new();
-        
+
         // Test push (direct access to inner Vec)
         array.0.push(PdfObject::Integer(1));
         array.0.push(PdfObject::Integer(2));
         array.0.push(PdfObject::Integer(3));
-        
+
         // Test length
         assert_eq!(array.len(), 3);
-        
+
         // Test is_empty
         assert!(!array.is_empty());
-        
+
         // Test get
         assert!(array.get(0).is_some());
         assert!(array.get(10).is_none());
-        
+
         // Test iteration (direct access to inner Vec)
         let mut sum = 0;
         for obj in array.0.iter() {
@@ -736,11 +751,11 @@ mod tests {
         let name1 = PdfName::new("Type".to_string());
         let name2 = PdfName::new("Type".to_string());
         let name3 = PdfName::new("Subtype".to_string());
-        
+
         // Test equality
         assert_eq!(name1, name2);
         assert_ne!(name1, name3);
-        
+
         // Test inner field access (PdfName.0 is pub)
         assert_eq!(name1.0, "Type");
     }
@@ -751,7 +766,7 @@ mod tests {
         let literal = PdfString::new(b"Hello World".to_vec());
         // PdfString has public inner field
         assert_eq!(literal.0, b"Hello World");
-        
+
         // Test empty string
         let empty = PdfString::new(Vec::new());
         assert!(empty.0.is_empty());
@@ -762,20 +777,20 @@ mod tests {
     #[test]
     fn test_parse_options_modifications() {
         let mut opts = ParseOptions::default();
-        
+
         // Test field modifications
         opts.strict_mode = false;
         assert!(!opts.strict_mode);
-        
+
         opts.recover_from_stream_errors = true;
         assert!(opts.recover_from_stream_errors);
-        
+
         opts.max_recovery_attempts = 20;
         assert_eq!(opts.max_recovery_attempts, 20);
-        
+
         opts.lenient_streams = true;
         assert!(opts.lenient_streams);
-        
+
         // Skip encoding type test - types not matching
         // opts.preferred_encoding = Some(...);
     }
@@ -786,17 +801,17 @@ mod tests {
     fn test_resource_types() {
         // Test that we can create resource dictionaries
         let mut resources = PdfDictionary::new();
-        
+
         // Add Font resources
         let mut fonts = PdfDictionary::new();
         fonts.insert("F1".to_string(), PdfObject::Reference(10, 0));
         resources.insert("Font".to_string(), PdfObject::Dictionary(fonts));
-        
+
         // Add XObject resources
         let mut xobjects = PdfDictionary::new();
         xobjects.insert("Im1".to_string(), PdfObject::Reference(20, 0));
         resources.insert("XObject".to_string(), PdfObject::Dictionary(xobjects));
-        
+
         // Verify resources structure
         assert!(resources.contains_key("Font"));
         assert!(resources.contains_key("XObject"));
