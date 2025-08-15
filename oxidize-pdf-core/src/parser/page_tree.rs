@@ -154,6 +154,11 @@ impl PageTree {
         self.pages.insert(index, page);
     }
 
+    /// Clear all cached pages
+    pub fn clear_cache(&mut self) {
+        self.pages.clear();
+    }
+
     /// Get the total page count
     pub fn page_count(&self) -> u32 {
         self.page_count
@@ -685,6 +690,10 @@ impl ParsedPage {
     /// # Ok(())
     /// # }
     /// ```
+    pub fn get_contents(&self) -> Option<&PdfObject> {
+        self.dict.get("Contents")
+    }
+
     pub fn get_resources(&self) -> Option<&PdfDictionary> {
         self.dict
             .get("Resources")
@@ -887,6 +896,150 @@ impl ParsedPage {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::objects::{PdfArray, PdfDictionary, PdfName, PdfObject};
+    use super::*;
+    use std::collections::HashMap;
+
+    fn create_test_page() -> ParsedPage {
+        let mut dict = PdfDictionary(HashMap::new());
+        dict.0.insert(
+            PdfName("Type".to_string()),
+            PdfObject::Name(PdfName("Page".to_string())),
+        );
+        dict.0
+            .insert(PdfName("Parent".to_string()), PdfObject::Reference(2, 0));
+
+        ParsedPage {
+            obj_ref: (3, 0),
+            dict,
+            inherited_resources: None,
+            media_box: [0.0, 0.0, 612.0, 792.0],
+            crop_box: None,
+            rotation: 0,
+            annotations: None,
+        }
+    }
+
+    fn create_test_page_with_resources() -> ParsedPage {
+        let mut dict = PdfDictionary(HashMap::new());
+        dict.0.insert(
+            PdfName("Type".to_string()),
+            PdfObject::Name(PdfName("Page".to_string())),
+        );
+
+        let mut resources = PdfDictionary(HashMap::new());
+        resources.0.insert(
+            PdfName("Font".to_string()),
+            PdfObject::Dictionary(PdfDictionary(HashMap::new())),
+        );
+
+        ParsedPage {
+            obj_ref: (4, 0),
+            dict,
+            inherited_resources: Some(resources),
+            media_box: [0.0, 0.0, 595.0, 842.0],
+            crop_box: Some([10.0, 10.0, 585.0, 832.0]),
+            rotation: 90,
+            annotations: Some(PdfArray(vec![])),
+        }
+    }
+
+    #[test]
+    fn test_page_tree_new() {
+        let tree = PageTree::new(10);
+        assert_eq!(tree.page_count, 10);
+        assert_eq!(tree.pages.len(), 0);
+        assert!(tree.pages_dict.is_none());
+    }
+
+    #[test]
+    fn test_page_tree_new_with_pages_dict() {
+        let pages_dict = PdfDictionary(HashMap::new());
+        let tree = PageTree::new_with_pages_dict(5, pages_dict);
+        assert_eq!(tree.page_count, 5);
+        assert_eq!(tree.pages.len(), 0);
+        assert!(tree.pages_dict.is_some());
+    }
+
+    #[test]
+    fn test_get_cached_page_empty() {
+        let tree = PageTree::new(10);
+        assert!(tree.get_cached_page(0).is_none());
+        assert!(tree.get_cached_page(5).is_none());
+    }
+
+    #[test]
+    fn test_cache_and_get_page() {
+        let mut tree = PageTree::new(10);
+        let page = create_test_page();
+
+        tree.cache_page(0, page.clone());
+
+        let cached = tree.get_cached_page(0);
+        assert!(cached.is_some());
+        let cached_page = cached.unwrap();
+        assert_eq!(cached_page.obj_ref, (3, 0));
+        assert_eq!(cached_page.media_box, [0.0, 0.0, 612.0, 792.0]);
+    }
+
+    #[test]
+    fn test_cache_multiple_pages() {
+        let mut tree = PageTree::new(10);
+        let page1 = create_test_page();
+        let page2 = create_test_page_with_resources();
+
+        tree.cache_page(0, page1);
+        tree.cache_page(1, page2);
+
+        assert!(tree.get_cached_page(0).is_some());
+        assert!(tree.get_cached_page(1).is_some());
+        assert!(tree.get_cached_page(2).is_none());
+
+        let cached1 = tree.get_cached_page(0).unwrap();
+        assert_eq!(cached1.rotation, 0);
+
+        let cached2 = tree.get_cached_page(1).unwrap();
+        assert_eq!(cached2.rotation, 90);
+    }
+
+    #[test]
+    fn test_get_page_count() {
+        let tree = PageTree::new(25);
+        assert_eq!(tree.page_count, 25);
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        let mut tree = PageTree::new(10);
+        let page = create_test_page();
+
+        tree.cache_page(0, page.clone());
+        tree.cache_page(1, page.clone());
+        assert_eq!(tree.pages.len(), 2);
+
+        tree.clear_cache();
+        assert_eq!(tree.pages.len(), 0);
+        assert!(tree.get_cached_page(0).is_none());
+        assert!(tree.get_cached_page(1).is_none());
+    }
+
+    #[test]
+    fn test_parsed_page_properties() {
+        let page = create_test_page_with_resources();
+
+        assert_eq!(page.obj_ref, (4, 0));
+        assert_eq!(page.rotation, 90);
+        assert!(page.inherited_resources.is_some());
+        assert!(page.crop_box.is_some());
+        assert!(page.annotations.is_some());
+
+        let crop_box = page.crop_box.unwrap();
+        assert_eq!(crop_box, [10.0, 10.0, 585.0, 832.0]);
     }
 }
 

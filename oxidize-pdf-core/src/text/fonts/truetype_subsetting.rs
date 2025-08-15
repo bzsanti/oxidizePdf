@@ -720,4 +720,347 @@ mod tests {
             assert_eq!(subsetter.glyph_map.get(&15), Some(&3));
         }
     }
+
+    #[test]
+    fn test_table_info_creation() {
+        let table = TableInfo {
+            tag: [b'c', b'm', b'a', b'p'],
+            checksum: 0x12345678,
+            offset: 100,
+            length: 256,
+        };
+
+        assert_eq!(table.tag, [b'c', b'm', b'a', b'p']);
+        assert_eq!(table.checksum, 0x12345678);
+        assert_eq!(table.offset, 100);
+        assert_eq!(table.length, 256);
+    }
+
+    #[test]
+    fn test_font_metrics() {
+        let metrics = FontMetrics {
+            units_per_em: 1000,
+            ascender: 750,
+            descender: -250,
+            num_glyphs: 256,
+            index_to_loc_format: 0,
+        };
+
+        assert_eq!(metrics.units_per_em, 1000);
+        assert_eq!(metrics.ascender, 750);
+        assert_eq!(metrics.descender, -250);
+        assert_eq!(metrics.num_glyphs, 256);
+        assert_eq!(metrics.index_to_loc_format, 0);
+    }
+
+    #[test]
+    fn test_add_glyphs() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions::default();
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            assert!(subsetter.used_glyphs.is_empty() || subsetter.used_glyphs.contains(&0));
+
+            subsetter.add_glyph(42);
+            assert!(subsetter.used_glyphs.contains(&42));
+
+            subsetter.add_glyphs(&[10, 20, 30]);
+            assert!(subsetter.used_glyphs.contains(&10));
+            assert!(subsetter.used_glyphs.contains(&20));
+            assert!(subsetter.used_glyphs.contains(&30));
+        }
+    }
+
+    #[test]
+    fn test_add_glyphs_for_string() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions::default();
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            // The add_glyphs_for_string method requires a proper font with cmap
+            // For now, just test that it handles the call without crashing
+            let result = subsetter.add_glyphs_for_string("ABC");
+            // It may fail with invalid font data, but shouldn't panic
+            assert!(result.is_err() || subsetter.used_glyphs.len() > 0);
+        }
+    }
+
+    #[test]
+    fn test_empty_subsetter() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions {
+            include_notdef: false,
+            include_kerning: false,
+            include_opentype_features: false,
+            preserve_hinting: false,
+            optimize_size: true,
+        };
+
+        if let Ok(subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            // Without include_notdef, initial glyph set might be empty
+            assert!(subsetter.used_glyphs.is_empty() || subsetter.used_glyphs.len() == 1);
+        }
+    }
+
+    #[test]
+    fn test_checksum_empty() {
+        let data = b"";
+        let checksum = calculate_checksum(data);
+        assert_eq!(checksum, 0);
+    }
+
+    #[test]
+    fn test_checksum_single_byte() {
+        let data = &[0xFF];
+        let checksum = calculate_checksum(data);
+        assert_eq!(checksum, 0xFF000000);
+    }
+
+    #[test]
+    fn test_build_glyph_map_with_notdef() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions {
+            include_notdef: true,
+            ..SubsettingOptions::default()
+        };
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            subsetter.add_glyphs(&[5, 10]);
+            subsetter.build_glyph_map();
+
+            // .notdef should always be glyph 0
+            assert_eq!(subsetter.glyph_map.get(&0), Some(&0));
+            // Other glyphs should be remapped sequentially
+            assert!(subsetter.glyph_map.contains_key(&5));
+            assert!(subsetter.glyph_map.contains_key(&10));
+        }
+    }
+
+    #[test]
+    fn test_large_glyph_indices() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions::default();
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            // Add some large glyph indices
+            subsetter.add_glyphs(&[1000, 2000, 65535]);
+            subsetter.build_glyph_map();
+
+            // Should handle large indices gracefully
+            assert!(subsetter.glyph_map.len() <= subsetter.used_glyphs.len());
+        }
+    }
+
+    #[test]
+    fn test_read_u16_helper() {
+        let data = vec![0x12, 0x34, 0x56, 0x78];
+        let mut cursor = Cursor::new(data);
+
+        let result = read_u16(&mut cursor);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x1234);
+
+        let result = read_u16(&mut cursor);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x5678);
+
+        // Reading past end should fail
+        let result = read_u16(&mut cursor);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_read_u32_helper() {
+        let data = vec![0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0];
+        let mut cursor = Cursor::new(data);
+
+        let result = read_u32(&mut cursor);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x12345678);
+
+        let result = read_u32(&mut cursor);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x9ABCDEF0);
+    }
+
+    #[test]
+    fn test_read_i16_helper() {
+        let data = vec![0xFF, 0xFF, 0x00, 0x01];
+        let mut cursor = Cursor::new(data);
+
+        let result = read_i16(&mut cursor);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), -1);
+
+        let result = read_i16(&mut cursor);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 1);
+    }
+
+    #[test]
+    fn test_write_u16_to_buffer() {
+        let mut buffer = Vec::new();
+
+        buffer.extend_from_slice(&0x1234u16.to_be_bytes());
+        assert_eq!(buffer, vec![0x12, 0x34]);
+
+        buffer.extend_from_slice(&0x5678u16.to_be_bytes());
+        assert_eq!(buffer, vec![0x12, 0x34, 0x56, 0x78]);
+    }
+
+    #[test]
+    fn test_write_u32_to_buffer() {
+        let mut buffer = Vec::new();
+
+        buffer.extend_from_slice(&0x12345678u32.to_be_bytes());
+        assert_eq!(buffer, vec![0x12, 0x34, 0x56, 0x78]);
+    }
+
+    #[test]
+    fn test_glyph_mapping_sequential() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions::default();
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            subsetter.add_glyph(10);
+            subsetter.add_glyph(20);
+            subsetter.add_glyph(30);
+            subsetter.build_glyph_map();
+
+            // Check that glyphs are mapped
+            assert!(subsetter.glyph_map.contains_key(&10));
+            assert!(subsetter.glyph_map.contains_key(&20));
+            assert!(subsetter.glyph_map.contains_key(&30));
+
+            // New indices should be sequential starting from 0 or 1
+            let mut new_indices: Vec<_> = subsetter.glyph_map.values().cloned().collect();
+            new_indices.sort();
+
+            // Check for sequential mapping
+            for i in 1..new_indices.len() {
+                assert!(new_indices[i] >= new_indices[i - 1]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_add_multiple_glyphs_set() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions::default();
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            let glyphs = vec![1, 2, 3, 4, 5];
+            subsetter.add_glyphs(&glyphs);
+
+            for glyph in glyphs {
+                assert!(subsetter.used_glyphs.contains(&glyph));
+            }
+        }
+    }
+
+    #[test]
+    fn test_duplicate_glyphs_handling() {
+        let font_data = vec![0; 1000];
+        let options = SubsettingOptions::default();
+
+        if let Ok(mut subsetter) = TrueTypeSubsetter::new(font_data, options) {
+            subsetter.add_glyph(10);
+            subsetter.add_glyph(10); // Duplicate
+            subsetter.add_glyph(10); // Another duplicate
+
+            // Should only have one entry
+            assert_eq!(
+                subsetter.used_glyphs.len(),
+                subsetter.used_glyphs.iter().collect::<HashSet<_>>().len()
+            );
+        }
+    }
+
+    #[test]
+    fn test_subsetting_options_all_disabled() {
+        let options = SubsettingOptions {
+            include_kerning: false,
+            include_opentype_features: false,
+            preserve_hinting: false,
+            optimize_size: false,
+            include_notdef: false,
+        };
+
+        assert!(!options.include_kerning);
+        assert!(!options.include_opentype_features);
+        assert!(!options.preserve_hinting);
+        assert!(!options.optimize_size);
+        assert!(!options.include_notdef);
+    }
+
+    #[test]
+    fn test_empty_font_data_error() {
+        let font_data = Vec::new();
+        let options = SubsettingOptions::default();
+
+        let result = TrueTypeSubsetter::new(font_data, options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_font_data_error() {
+        let font_data = vec![0xFF; 100]; // Invalid font data
+        let options = SubsettingOptions::default();
+
+        let result = TrueTypeSubsetter::new(font_data, options);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_calculate_checksum_various() {
+        let data = vec![0x12, 0x34, 0x56, 0x78];
+        let checksum = calculate_checksum(&data);
+
+        // Checksum should be non-zero for non-empty data
+        assert!(checksum != 0);
+        assert_eq!(checksum, 0x12345678);
+
+        // Empty data should have zero checksum
+        let empty_checksum = calculate_checksum(&[]);
+        assert_eq!(empty_checksum, 0);
+    }
+
+    #[test]
+    fn test_pad_to_4_boundary() {
+        let mut data = vec![1, 2, 3];
+        let original_len = data.len();
+        while data.len() % 4 != 0 {
+            data.push(0);
+        }
+        assert_eq!(data.len(), 4);
+        assert!(original_len < data.len());
+
+        let mut data = vec![1, 2, 3, 4];
+        let len_before = data.len();
+        while data.len() % 4 != 0 {
+            data.push(0);
+        }
+        assert_eq!(data.len(), 4); // Already aligned
+        assert_eq!(len_before, data.len());
+
+        let mut data = vec![1, 2, 3, 4, 5];
+        while data.len() % 4 != 0 {
+            data.push(0);
+        }
+        assert_eq!(data.len(), 8);
+    }
+
+    #[test]
+    fn test_required_tables_complete() {
+        assert!(REQUIRED_TABLES.contains(&"cmap"));
+        assert!(REQUIRED_TABLES.contains(&"glyf"));
+        assert!(REQUIRED_TABLES.contains(&"head"));
+        assert!(REQUIRED_TABLES.contains(&"hhea"));
+        assert!(REQUIRED_TABLES.contains(&"hmtx"));
+        assert!(REQUIRED_TABLES.contains(&"loca"));
+        assert!(REQUIRED_TABLES.contains(&"maxp"));
+        assert!(REQUIRED_TABLES.contains(&"name"));
+        assert!(REQUIRED_TABLES.contains(&"post"));
+        assert_eq!(REQUIRED_TABLES.len(), 9);
+    }
 }

@@ -732,4 +732,375 @@ mod tests {
             ActionEventType::Blur
         );
     }
+
+    #[test]
+    fn test_format_action_types() {
+        // Test Number format
+        let number_format = FormatActionType::Number {
+            decimals: 2,
+            currency: Some("USD".to_string()),
+        };
+
+        match number_format {
+            FormatActionType::Number { decimals, currency } => {
+                assert_eq!(decimals, 2);
+                assert_eq!(currency, Some("USD".to_string()));
+            }
+            _ => panic!("Expected Number format"),
+        }
+
+        // Test Percent format
+        let percent_format = FormatActionType::Percent { decimals: 1 };
+
+        match percent_format {
+            FormatActionType::Percent { decimals } => assert_eq!(decimals, 1),
+            _ => panic!("Expected Percent format"),
+        }
+
+        // Test Date format
+        let date_format = FormatActionType::Date {
+            format: "mm/dd/yyyy".to_string(),
+        };
+
+        match date_format {
+            FormatActionType::Date { format } => assert_eq!(format, "mm/dd/yyyy"),
+            _ => panic!("Expected Date format"),
+        }
+
+        // Test Special format
+        let special_format = FormatActionType::Special {
+            format: SpecialFormatType::ZipCode,
+        };
+
+        match special_format {
+            FormatActionType::Special { format } => {
+                matches!(format, SpecialFormatType::ZipCode);
+            }
+            _ => panic!("Expected Special format"),
+        }
+    }
+
+    #[test]
+    fn test_validate_action_types() {
+        // Test Range validation
+        let range_validate = ValidateActionType::Range {
+            min: Some(0.0),
+            max: Some(100.0),
+        };
+
+        match range_validate {
+            ValidateActionType::Range { min, max } => {
+                assert_eq!(min, Some(0.0));
+                assert_eq!(max, Some(100.0));
+            }
+            _ => panic!("Expected Range validation"),
+        }
+
+        // Test Custom validation
+        let custom_validate = ValidateActionType::Custom {
+            script: "return value > 0;".to_string(),
+        };
+
+        match custom_validate {
+            ValidateActionType::Custom { script } => {
+                assert!(script.contains("return"));
+            }
+            _ => panic!("Expected Custom validation"),
+        }
+    }
+
+    #[test]
+    fn test_action_result() {
+        // Test Success
+        let success_result = ActionResult::Success;
+        matches!(success_result, ActionResult::Success);
+
+        // Test Failed
+        let failed_result = ActionResult::Failed("Test error".to_string());
+        match failed_result {
+            ActionResult::Failed(msg) => assert_eq!(msg, "Test error"),
+            _ => panic!("Expected Failed result"),
+        }
+
+        // Test Cancelled
+        let cancelled_result = ActionResult::Cancelled;
+        matches!(cancelled_result, ActionResult::Cancelled);
+
+        // Test Modified
+        let modified_result = ActionResult::Modified(FieldValue::Text("Modified".to_string()));
+        match modified_result {
+            ActionResult::Modified(value) => {
+                assert_eq!(value, FieldValue::Text("Modified".to_string()));
+            }
+            _ => panic!("Expected Modified result"),
+        }
+    }
+
+    #[test]
+    fn test_action_settings() {
+        let settings = ActionSettings::default();
+        assert!(settings.enable_javascript);
+        assert!(!settings.enable_form_submit); // Default is false
+        assert!(settings.enable_sound);
+        assert!(settings.log_events);
+        assert_eq!(settings.max_event_history, 1000);
+
+        // Test with custom settings
+        let custom_settings = ActionSettings {
+            enable_javascript: false,
+            enable_form_submit: true,
+            enable_sound: false,
+            log_events: false,
+            max_event_history: 500,
+        };
+        assert!(!custom_settings.enable_javascript);
+        assert!(custom_settings.enable_form_submit);
+        assert!(!custom_settings.enable_sound);
+        assert!(!custom_settings.log_events);
+        assert_eq!(custom_settings.max_event_history, 500);
+    }
+
+    #[test]
+    fn test_field_action_system_settings() {
+        let system = FieldActionSystem::new();
+
+        // Test default settings
+        assert!(system.settings.enable_javascript);
+        assert!(!system.settings.enable_form_submit);
+        assert!(system.settings.enable_sound);
+        assert!(system.settings.log_events);
+        assert_eq!(system.settings.max_event_history, 1000);
+
+        // Create with custom settings
+        let custom_settings = ActionSettings {
+            enable_javascript: false,
+            enable_form_submit: true,
+            enable_sound: false,
+            log_events: false,
+            max_event_history: 100,
+        };
+        let system_with_settings = FieldActionSystem::with_settings(custom_settings);
+        assert!(!system_with_settings.settings.enable_javascript);
+        assert!(system_with_settings.settings.enable_form_submit);
+    }
+
+    #[test]
+    fn test_clear_event_history() {
+        let mut system = FieldActionSystem::new();
+
+        // Add some events
+        let actions = FieldActions {
+            on_focus: Some(FieldAction::Custom {
+                action_type: "test".to_string(),
+                parameters: HashMap::new(),
+            }),
+            ..Default::default()
+        };
+
+        system.register_field_actions("field1", actions);
+        system.handle_focus("field1").unwrap();
+
+        assert!(system.get_event_history().len() > 0);
+
+        // Clear history
+        system.clear_event_history();
+        assert_eq!(system.get_event_history().len(), 0);
+    }
+
+    #[test]
+    fn test_mouse_actions() {
+        let mut system = FieldActionSystem::new();
+
+        let actions = FieldActions {
+            on_mouse_enter: Some(FieldAction::Custom {
+                action_type: "highlight".to_string(),
+                parameters: HashMap::from([("color".to_string(), "yellow".to_string())]),
+            }),
+            on_mouse_exit: Some(FieldAction::Custom {
+                action_type: "unhighlight".to_string(),
+                parameters: HashMap::new(),
+            }),
+            on_mouse_down: Some(FieldAction::Custom {
+                action_type: "pressed".to_string(),
+                parameters: HashMap::new(),
+            }),
+            on_mouse_up: Some(FieldAction::Custom {
+                action_type: "released".to_string(),
+                parameters: HashMap::new(),
+            }),
+            ..Default::default()
+        };
+
+        system.register_field_actions("button1", actions);
+
+        // Mouse events aren't directly handled - they would be triggered through
+        // focus/blur or other events. Just verify the actions were registered.
+        assert!(system.actions.contains_key("button1"));
+        let registered_actions = &system.actions["button1"];
+        assert!(registered_actions.on_mouse_enter.is_some());
+        assert!(registered_actions.on_mouse_exit.is_some());
+        assert!(registered_actions.on_mouse_down.is_some());
+        assert!(registered_actions.on_mouse_up.is_some());
+    }
+
+    #[test]
+    fn test_submit_form_action() {
+        let action = FieldAction::SubmitForm {
+            url: "https://example.com/submit".to_string(),
+            fields: vec!["name".to_string(), "email".to_string()],
+            include_empty: false,
+        };
+
+        match action {
+            FieldAction::SubmitForm {
+                url,
+                fields,
+                include_empty,
+            } => {
+                assert_eq!(url, "https://example.com/submit");
+                assert_eq!(fields.len(), 2);
+                assert!(!include_empty);
+            }
+            _ => panic!("Expected SubmitForm action"),
+        }
+    }
+
+    #[test]
+    fn test_reset_form_action() {
+        let action = FieldAction::ResetForm {
+            fields: vec!["field1".to_string(), "field2".to_string()],
+            exclude: true,
+        };
+
+        match action {
+            FieldAction::ResetForm { fields, exclude } => {
+                assert_eq!(fields.len(), 2);
+                assert!(exclude);
+            }
+            _ => panic!("Expected ResetForm action"),
+        }
+    }
+
+    #[test]
+    fn test_field_value_action() {
+        let action = FieldAction::SetField {
+            target_field: "total".to_string(),
+            value: FieldValue::Number(100.0),
+        };
+
+        match action {
+            FieldAction::SetField {
+                target_field,
+                value,
+            } => {
+                assert_eq!(target_field, "total");
+                assert_eq!(value, FieldValue::Number(100.0));
+            }
+            _ => panic!("Expected SetField action"),
+        }
+    }
+
+    #[test]
+    fn test_action_event_types() {
+        // Test enum variants
+        let focus = ActionEventType::Focus;
+        let blur = ActionEventType::Blur;
+        let format = ActionEventType::Format;
+        let keystroke = ActionEventType::Keystroke;
+        let calculate = ActionEventType::Calculate;
+        let validate = ActionEventType::Validate;
+
+        // Test equality
+        assert_eq!(focus, ActionEventType::Focus);
+        assert_eq!(blur, ActionEventType::Blur);
+        assert_eq!(format, ActionEventType::Format);
+        assert_eq!(keystroke, ActionEventType::Keystroke);
+        assert_eq!(calculate, ActionEventType::Calculate);
+        assert_eq!(validate, ActionEventType::Validate);
+        assert_ne!(focus, blur);
+    }
+
+    #[test]
+    fn test_special_format_types() {
+        let zip = SpecialFormatType::ZipCode;
+        let zip_plus = SpecialFormatType::ZipPlus4;
+        let phone = SpecialFormatType::Phone;
+        let ssn = SpecialFormatType::SSN;
+
+        // Just verify they exist and can be created
+        matches!(zip, SpecialFormatType::ZipCode);
+        matches!(zip_plus, SpecialFormatType::ZipPlus4);
+        matches!(phone, SpecialFormatType::Phone);
+        matches!(ssn, SpecialFormatType::SSN);
+    }
+
+    #[test]
+    fn test_play_sound_action() {
+        let action = FieldAction::PlaySound {
+            sound_name: "beep".to_string(),
+            volume: 0.5,
+        };
+
+        match action {
+            FieldAction::PlaySound { sound_name, volume } => {
+                assert_eq!(sound_name, "beep");
+                assert_eq!(volume, 0.5);
+            }
+            _ => panic!("Expected PlaySound action"),
+        }
+    }
+
+    #[test]
+    fn test_import_data_action() {
+        let action = FieldAction::ImportData {
+            file_path: "/path/to/data.fdf".to_string(),
+        };
+
+        match action {
+            FieldAction::ImportData { file_path } => {
+                assert_eq!(file_path, "/path/to/data.fdf");
+            }
+            _ => panic!("Expected ImportData action"),
+        }
+    }
+
+    #[test]
+    fn test_show_hide_action() {
+        let action = FieldAction::ShowHide {
+            fields: vec!["field1".to_string(), "field2".to_string()],
+            show: true,
+        };
+
+        match action {
+            FieldAction::ShowHide { fields, show } => {
+                assert_eq!(fields.len(), 2);
+                assert!(show);
+            }
+            _ => panic!("Expected ShowHide action"),
+        }
+    }
+
+    #[test]
+    fn test_custom_action() {
+        let mut params = HashMap::new();
+        params.insert("key1".to_string(), "value1".to_string());
+        params.insert("key2".to_string(), "value2".to_string());
+
+        let action = FieldAction::Custom {
+            action_type: "custom_type".to_string(),
+            parameters: params.clone(),
+        };
+
+        match action {
+            FieldAction::Custom {
+                action_type,
+                parameters,
+            } => {
+                assert_eq!(action_type, "custom_type");
+                assert_eq!(parameters.len(), 2);
+                assert_eq!(parameters.get("key1"), Some(&"value1".to_string()));
+            }
+            _ => panic!("Expected Custom action"),
+        }
+    }
 }

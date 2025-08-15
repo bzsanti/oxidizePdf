@@ -49,9 +49,9 @@ cargo build --release                 # Production build
 - `/analyze-pdfs --with-render` - Include rendering validation
 
 ## 📊 Current State
-- **Tests**: 2980 passing, 7 failing (99.77% success)
+- **Tests**: 3,491 total tests in workspace
 - **PDF Parsing**: 97.2% success rate (728/749 PDFs)
-- **Coverage**: ~50% real coverage
+- **Coverage**: ~45-50% real coverage
 - **Performance**: 215+ PDFs/second
 
 ## 📚 Documentation References

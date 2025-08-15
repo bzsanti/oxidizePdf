@@ -144,4 +144,208 @@ mod tests {
         );
         assert_eq!(dict.get("FontName"), Some(&Object::Name("TestFont".into())));
     }
+
+    #[test]
+    fn test_font_descriptor_default() {
+        let desc = FontDescriptor::default();
+        assert_eq!(desc.font_name, "DefaultFont");
+        assert_eq!(desc.font_family, "DefaultFont");
+        assert_eq!(desc.flags, FontFlags::NONSYMBOLIC);
+        assert_eq!(desc.font_bbox, [0.0, 0.0, 1000.0, 1000.0]);
+        assert_eq!(desc.italic_angle, 0.0);
+        assert_eq!(desc.ascent, 800.0);
+        assert_eq!(desc.descent, -200.0);
+        assert_eq!(desc.cap_height, 700.0);
+        assert_eq!(desc.stem_v, 80.0);
+        assert_eq!(desc.missing_width, 250.0);
+    }
+
+    #[test]
+    fn test_font_flags_combinations() {
+        // Test individual flags
+        assert_eq!(FontFlags::FIXED_PITCH.bits(), 1);
+        assert_eq!(FontFlags::SERIF.bits(), 2);
+        assert_eq!(FontFlags::SYMBOLIC.bits(), 4);
+        assert_eq!(FontFlags::SCRIPT.bits(), 8);
+        assert_eq!(FontFlags::NONSYMBOLIC.bits(), 32);
+        assert_eq!(FontFlags::ITALIC.bits(), 64);
+        assert_eq!(FontFlags::ALL_CAP.bits(), 1 << 16);
+        assert_eq!(FontFlags::SMALL_CAP.bits(), 1 << 17);
+        assert_eq!(FontFlags::FORCE_BOLD.bits(), 1 << 18);
+
+        // Test combinations
+        let serif_italic = FontFlags::SERIF | FontFlags::ITALIC;
+        assert_eq!(serif_italic.bits(), 2 | 64);
+        assert!(serif_italic.contains(FontFlags::SERIF));
+        assert!(serif_italic.contains(FontFlags::ITALIC));
+        assert!(!serif_italic.contains(FontFlags::FIXED_PITCH));
+
+        // Test all flags
+        let all_flags = FontFlags::all();
+        assert!(all_flags.contains(FontFlags::FIXED_PITCH));
+        assert!(all_flags.contains(FontFlags::FORCE_BOLD));
+    }
+
+    #[test]
+    fn test_font_descriptor_complete_dict() {
+        let mut desc = FontDescriptor::new("CustomFont");
+        desc.font_family = "CustomFamily".to_string();
+        desc.flags = FontFlags::FIXED_PITCH | FontFlags::ITALIC | FontFlags::FORCE_BOLD;
+        desc.font_bbox = [-100.0, -250.0, 1100.0, 850.0];
+        desc.italic_angle = -15.0;
+        desc.ascent = 750.0;
+        desc.descent = -250.0;
+        desc.cap_height = 650.0;
+        desc.stem_v = 100.0;
+        desc.missing_width = 300.0;
+
+        let dict = desc.to_dict(None);
+
+        // Check all fields
+        assert_eq!(
+            dict.get("FontName"),
+            Some(&Object::Name("CustomFont".into()))
+        );
+        assert_eq!(
+            dict.get("FontFamily"),
+            Some(&Object::String("CustomFamily".into()))
+        );
+
+        let expected_flags =
+            (FontFlags::FIXED_PITCH | FontFlags::ITALIC | FontFlags::FORCE_BOLD).bits() as i64;
+        assert_eq!(dict.get("Flags"), Some(&Object::Integer(expected_flags)));
+
+        // Check FontBBox array
+        if let Some(Object::Array(bbox)) = dict.get("FontBBox") {
+            assert_eq!(bbox.len(), 4);
+            assert_eq!(bbox[0], Object::Real(-100.0));
+            assert_eq!(bbox[1], Object::Real(-250.0));
+            assert_eq!(bbox[2], Object::Real(1100.0));
+            assert_eq!(bbox[3], Object::Real(850.0));
+        } else {
+            panic!("FontBBox should be an array");
+        }
+
+        assert_eq!(dict.get("ItalicAngle"), Some(&Object::Real(-15.0)));
+        assert_eq!(dict.get("Ascent"), Some(&Object::Real(750.0)));
+        assert_eq!(dict.get("Descent"), Some(&Object::Real(-250.0)));
+        assert_eq!(dict.get("CapHeight"), Some(&Object::Real(650.0)));
+        assert_eq!(dict.get("StemV"), Some(&Object::Real(100.0)));
+        assert_eq!(dict.get("MissingWidth"), Some(&Object::Real(300.0)));
+    }
+
+    #[test]
+    fn test_font_descriptor_with_font_file() {
+        let desc = FontDescriptor::new("EmbeddedFont");
+        let font_file_id = ObjectId::new(10, 0);
+        let dict = desc.to_dict(Some(font_file_id));
+
+        // Check that FontFile2 reference is added
+        assert_eq!(
+            dict.get("FontFile2"),
+            Some(&Object::Reference(font_file_id))
+        );
+    }
+
+    #[test]
+    fn test_font_descriptor_without_font_file() {
+        let desc = FontDescriptor::new("NonEmbeddedFont");
+        let dict = desc.to_dict(None);
+
+        // Check that FontFile2 is not present
+        assert!(dict.get("FontFile2").is_none());
+    }
+
+    #[test]
+    fn test_font_flags_remove() {
+        let mut flags = FontFlags::FIXED_PITCH | FontFlags::SERIF | FontFlags::ITALIC;
+
+        // Remove a flag
+        flags.remove(FontFlags::SERIF);
+        assert!(flags.contains(FontFlags::FIXED_PITCH));
+        assert!(!flags.contains(FontFlags::SERIF));
+        assert!(flags.contains(FontFlags::ITALIC));
+    }
+
+    #[test]
+    fn test_font_flags_toggle() {
+        let mut flags = FontFlags::NONSYMBOLIC;
+
+        // Toggle italic on
+        flags.toggle(FontFlags::ITALIC);
+        assert!(flags.contains(FontFlags::ITALIC));
+
+        // Toggle italic off
+        flags.toggle(FontFlags::ITALIC);
+        assert!(!flags.contains(FontFlags::ITALIC));
+    }
+
+    #[test]
+    fn test_font_flags_empty() {
+        let flags = FontFlags::empty();
+        assert_eq!(flags.bits(), 0);
+        assert!(!flags.contains(FontFlags::FIXED_PITCH));
+        assert!(!flags.contains(FontFlags::SERIF));
+    }
+
+    #[test]
+    fn test_font_descriptor_special_characters() {
+        let desc = FontDescriptor::new("Font-Name_123.Bold");
+        assert_eq!(desc.font_name, "Font-Name_123.Bold");
+
+        let dict = desc.to_dict(None);
+        assert_eq!(
+            dict.get("FontName"),
+            Some(&Object::Name("Font-Name_123.Bold".into()))
+        );
+    }
+
+    #[test]
+    fn test_font_descriptor_unicode_name() {
+        let desc = FontDescriptor::new("日本語フォント");
+        assert_eq!(desc.font_name, "日本語フォント");
+        assert_eq!(desc.font_family, "日本語フォント");
+    }
+
+    #[test]
+    fn test_font_flags_intersection() {
+        let flags1 = FontFlags::FIXED_PITCH | FontFlags::SERIF | FontFlags::ITALIC;
+        let flags2 = FontFlags::SERIF | FontFlags::ITALIC | FontFlags::FORCE_BOLD;
+
+        let intersection = flags1.intersection(flags2);
+        assert!(intersection.contains(FontFlags::SERIF));
+        assert!(intersection.contains(FontFlags::ITALIC));
+        assert!(!intersection.contains(FontFlags::FIXED_PITCH));
+        assert!(!intersection.contains(FontFlags::FORCE_BOLD));
+    }
+
+    #[test]
+    fn test_font_flags_difference() {
+        let flags1 = FontFlags::FIXED_PITCH | FontFlags::SERIF | FontFlags::ITALIC;
+        let flags2 = FontFlags::SERIF | FontFlags::ITALIC;
+
+        let difference = flags1.difference(flags2);
+        assert!(difference.contains(FontFlags::FIXED_PITCH));
+        assert!(!difference.contains(FontFlags::SERIF));
+        assert!(!difference.contains(FontFlags::ITALIC));
+    }
+
+    #[test]
+    fn test_font_descriptor_extreme_values() {
+        let mut desc = FontDescriptor::new("ExtremeFont");
+        desc.font_bbox = [-10000.0, -10000.0, 10000.0, 10000.0];
+        desc.italic_angle = -90.0;
+        desc.ascent = 10000.0;
+        desc.descent = -10000.0;
+        desc.cap_height = 10000.0;
+        desc.stem_v = 1000.0;
+        desc.missing_width = 10000.0;
+
+        let dict = desc.to_dict(None);
+
+        // Verify extreme values are preserved
+        assert_eq!(dict.get("ItalicAngle"), Some(&Object::Real(-90.0)));
+        assert_eq!(dict.get("Ascent"), Some(&Object::Real(10000.0)));
+        assert_eq!(dict.get("Descent"), Some(&Object::Real(-10000.0)));
+    }
 }

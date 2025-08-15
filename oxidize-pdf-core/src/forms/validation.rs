@@ -913,4 +913,439 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "(555) 123-4567");
     }
+
+    #[test]
+    fn test_validation_settings() {
+        let settings = ValidationSettings::default();
+        assert!(settings.real_time_validation);
+        assert!(settings.highlight_errors);
+        assert!(settings.show_error_messages);
+    }
+
+    #[test]
+    fn test_url_validation() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "website".to_string(),
+            rules: vec![ValidationRule::Url],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // Valid URLs
+        let valid = system.validate_field(
+            "website",
+            &FieldValue::Text("https://example.com".to_string()),
+        );
+        assert!(valid.is_valid);
+
+        let valid_http =
+            system.validate_field("website", &FieldValue::Text("http://test.org".to_string()));
+        assert!(valid_http.is_valid);
+
+        // Invalid URLs
+        let invalid = system.validate_field("website", &FieldValue::Text("not-a-url".to_string()));
+        assert!(!invalid.is_valid);
+    }
+
+    #[test]
+    fn test_length_validation() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "comment".to_string(),
+            rules: vec![ValidationRule::Length {
+                min: Some(10),
+                max: Some(100),
+            }],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // Valid length
+        let valid = system.validate_field(
+            "comment",
+            &FieldValue::Text("This is a valid comment.".to_string()),
+        );
+        assert!(valid.is_valid);
+
+        // Too short
+        let too_short = system.validate_field("comment", &FieldValue::Text("Short".to_string()));
+        assert!(!too_short.is_valid);
+
+        // Too long
+        let too_long = system.validate_field("comment", &FieldValue::Text("x".repeat(150)));
+        assert!(!too_long.is_valid);
+    }
+
+    #[test]
+    fn test_pattern_validation() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "code".to_string(),
+            rules: vec![ValidationRule::Pattern(r"^[A-Z]{3}-\d{3}$".to_string())],
+            format_mask: None,
+            error_message: Some("Code must be in format ABC-123".to_string()),
+        };
+
+        system.add_validator(validator);
+
+        // Valid pattern
+        let valid = system.validate_field("code", &FieldValue::Text("ABC-123".to_string()));
+        assert!(valid.is_valid);
+
+        // Invalid pattern
+        let invalid = system.validate_field("code", &FieldValue::Text("abc-123".to_string()));
+        assert!(!invalid.is_valid);
+        assert!(invalid.errors[0].message.contains("ABC-123"));
+    }
+
+    #[test]
+    fn test_date_validation() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "birthdate".to_string(),
+            rules: vec![ValidationRule::Date {
+                min: Some(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap()),
+                max: Some(NaiveDate::from_ymd_opt(2020, 12, 31).unwrap()),
+            }],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // Valid date
+        let valid = system.validate_field("birthdate", &FieldValue::Text("1990-05-15".to_string()));
+        assert!(valid.is_valid);
+
+        // Date too early
+        let too_early =
+            system.validate_field("birthdate", &FieldValue::Text("1850-01-01".to_string()));
+        assert!(!too_early.is_valid);
+    }
+
+    #[test]
+    fn test_time_validation() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "appointment".to_string(),
+            rules: vec![ValidationRule::Time {
+                min: Some(NaiveTime::from_hms_opt(9, 0, 0).unwrap()),
+                max: Some(NaiveTime::from_hms_opt(17, 0, 0).unwrap()),
+            }],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // Valid time (business hours)
+        let valid = system.validate_field("appointment", &FieldValue::Text("14:30".to_string()));
+        assert!(valid.is_valid);
+
+        // Too early
+        let too_early =
+            system.validate_field("appointment", &FieldValue::Text("08:00".to_string()));
+        assert!(!too_early.is_valid);
+    }
+
+    #[test]
+    fn test_phone_number_uk() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "phone_uk".to_string(),
+            rules: vec![ValidationRule::PhoneNumber {
+                country: PhoneCountry::UK,
+            }],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // Valid UK phone
+        let valid =
+            system.validate_field("phone_uk", &FieldValue::Text("441234567890".to_string()));
+        assert!(valid.is_valid);
+
+        // Invalid UK phone (too short)
+        let invalid = system.validate_field("phone_uk", &FieldValue::Text("12345".to_string()));
+        assert!(!invalid.is_valid);
+    }
+
+    #[test]
+    fn test_zip_format_with_plus_four() {
+        let system = FormValidationSystem::new();
+
+        // ZIP+4 format
+        let result_plus = system.format_zip("123456789", true);
+        assert!(result_plus.is_ok());
+        assert_eq!(result_plus.unwrap(), "12345-6789");
+
+        // Regular ZIP
+        let result_regular = system.format_zip("12345", false);
+        assert!(result_regular.is_ok());
+        assert_eq!(result_regular.unwrap(), "12345");
+
+        // Invalid ZIP+4 (too short)
+        let invalid = system.format_zip("12345", true);
+        assert!(invalid.is_err());
+    }
+
+    #[test]
+    fn test_number_format_mask() {
+        let system = FormValidationSystem::new();
+
+        let mask = FormatMask::Number {
+            decimals: 2,
+            thousands_separator: true,
+            allow_negative: true,
+            prefix: Some("$".to_string()),
+            suffix: Some(" USD".to_string()),
+        };
+
+        let result = system.apply_format_mask(&FieldValue::Number(1234567.89), &mask);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "$1,234,567.89 USD");
+
+        // Test negative number
+        let negative_result = system.apply_format_mask(&FieldValue::Number(-1234.56), &mask);
+        assert!(negative_result.is_ok());
+        assert_eq!(negative_result.unwrap(), "$-1,234.56 USD");
+    }
+
+    #[test]
+    fn test_date_format_mask() {
+        let system = FormValidationSystem::new();
+
+        // Test MDY format
+        let mask_mdy = FormatMask::Date {
+            format: DateFormat::MDY,
+        };
+        let result_mdy =
+            system.apply_format_mask(&FieldValue::Text("01152022".to_string()), &mask_mdy);
+        assert!(result_mdy.is_ok());
+        assert_eq!(result_mdy.unwrap(), "01/15/2022");
+
+        // Test YMD format
+        let mask_ymd = FormatMask::Date {
+            format: DateFormat::YMD,
+        };
+        let result_ymd =
+            system.apply_format_mask(&FieldValue::Text("20220115".to_string()), &mask_ymd);
+        assert!(result_ymd.is_ok());
+        assert_eq!(result_ymd.unwrap(), "2022-01-15");
+    }
+
+    #[test]
+    fn test_time_format_mask() {
+        let system = FormValidationSystem::new();
+
+        // Test 24-hour format
+        let mask_24 = FormatMask::Time {
+            format: TimeFormat::HMS,
+            use_24_hour: true,
+        };
+        let result_24 = system.apply_format_mask(&FieldValue::Text("143045".to_string()), &mask_24);
+        assert!(result_24.is_ok());
+        assert_eq!(result_24.unwrap(), "14:30:45");
+
+        // Test 12-hour format
+        let mask_12 = FormatMask::Time {
+            format: TimeFormat::HMSAM,
+            use_24_hour: false,
+        };
+        let result_12 = system.apply_format_mask(&FieldValue::Text("143045".to_string()), &mask_12);
+        assert!(result_12.is_ok());
+        assert_eq!(result_12.unwrap(), "02:30:45 PM");
+    }
+
+    #[test]
+    fn test_validation_cache() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "cached_field".to_string(),
+            rules: vec![ValidationRule::Required],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // First validation
+        let result1 = system.validate_field("cached_field", &FieldValue::Text("value".to_string()));
+        assert!(result1.is_valid);
+
+        // Check cache
+        let cached = system.get_cached_result("cached_field");
+        assert!(cached.is_some());
+        assert!(cached.unwrap().is_valid);
+
+        // Clear cache
+        system.clear_cache();
+        let cached_after_clear = system.get_cached_result("cached_field");
+        assert!(cached_after_clear.is_none());
+    }
+
+    #[test]
+    fn test_validation_error_types() {
+        let error_required = ValidationError {
+            field_name: "test".to_string(),
+            error_type: ValidationErrorType::Required,
+            message: "Field is required".to_string(),
+            details: None,
+        };
+        assert_eq!(error_required.error_type, ValidationErrorType::Required);
+
+        let error_range = ValidationError {
+            field_name: "test".to_string(),
+            error_type: ValidationErrorType::Range,
+            message: "Value out of range".to_string(),
+            details: Some("Must be between 1 and 100".to_string()),
+        };
+        assert_eq!(error_range.error_type, ValidationErrorType::Range);
+        assert!(error_range.details.is_some());
+    }
+
+    #[test]
+    fn test_field_validator_with_multiple_rules() {
+        let mut system = FormValidationSystem::new();
+
+        let validator = FieldValidator {
+            field_name: "username".to_string(),
+            rules: vec![
+                ValidationRule::Required,
+                ValidationRule::Length {
+                    min: Some(3),
+                    max: Some(20),
+                },
+                ValidationRule::Pattern(r"^[a-zA-Z0-9_]+$".to_string()),
+            ],
+            format_mask: None,
+            error_message: None,
+        };
+
+        system.add_validator(validator);
+
+        // Valid username
+        let valid = system.validate_field("username", &FieldValue::Text("user_123".to_string()));
+        assert!(valid.is_valid);
+
+        // Too short
+        let too_short = system.validate_field("username", &FieldValue::Text("ab".to_string()));
+        assert!(!too_short.is_valid);
+
+        // Invalid characters
+        let invalid_chars =
+            system.validate_field("username", &FieldValue::Text("user@123".to_string()));
+        assert!(!invalid_chars.is_valid);
+    }
+
+    #[test]
+    fn test_credit_card_format() {
+        let system = FormValidationSystem::new();
+
+        let result = system.format_credit_card("4532015112830366");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "4532 0151 1283 0366");
+
+        // Invalid length
+        let too_short = system.format_credit_card("123");
+        assert!(too_short.is_err());
+
+        let too_long = system.format_credit_card("12345678901234567890");
+        assert!(too_long.is_err());
+    }
+
+    #[test]
+    fn test_required_field_with_group() {
+        let mut system = FormValidationSystem::new();
+
+        let info = RequiredFieldInfo {
+            field_name: "address".to_string(),
+            error_message: "Address is required".to_string(),
+            group: Some("contact_info".to_string()),
+            condition: None,
+        };
+
+        system.add_required_field(info);
+
+        let result = system.validate_field("address", &FieldValue::Empty);
+        assert!(!result.is_valid);
+        assert_eq!(result.errors[0].error_type, ValidationErrorType::Required);
+    }
+
+    #[test]
+    fn test_validation_result_display() {
+        let valid_result = ValidationResult {
+            field_name: "test".to_string(),
+            is_valid: true,
+            errors: vec![],
+            formatted_value: None,
+        };
+        assert_eq!(format!("{}", valid_result), "Valid");
+
+        let invalid_result = ValidationResult {
+            field_name: "test".to_string(),
+            is_valid: false,
+            errors: vec![
+                ValidationError {
+                    field_name: "test".to_string(),
+                    error_type: ValidationErrorType::Required,
+                    message: "Required".to_string(),
+                    details: None,
+                },
+                ValidationError {
+                    field_name: "test".to_string(),
+                    error_type: ValidationErrorType::Length,
+                    message: "Too short".to_string(),
+                    details: None,
+                },
+            ],
+            formatted_value: None,
+        };
+        assert_eq!(format!("{}", invalid_result), "Invalid: 2 errors");
+    }
+
+    #[test]
+    fn test_validate_all_fields() {
+        let mut system = FormValidationSystem::new();
+
+        // Add validators
+        system.add_validator(FieldValidator {
+            field_name: "name".to_string(),
+            rules: vec![ValidationRule::Required],
+            format_mask: None,
+            error_message: None,
+        });
+
+        system.add_validator(FieldValidator {
+            field_name: "age".to_string(),
+            rules: vec![ValidationRule::Range {
+                min: Some(0.0),
+                max: Some(120.0),
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let mut fields = HashMap::new();
+        fields.insert("name".to_string(), FieldValue::Text("John".to_string()));
+        fields.insert("age".to_string(), FieldValue::Number(30.0));
+
+        let results = system.validate_all(&fields);
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.is_valid));
+    }
 }
