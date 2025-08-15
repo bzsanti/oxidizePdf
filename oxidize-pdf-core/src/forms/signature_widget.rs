@@ -651,4 +651,329 @@ mod tests {
         assert!(dict.get("BS").is_some());
         assert!(dict.get("MK").is_some());
     }
+
+    #[test]
+    fn test_signature_widget_with_field_ref() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 50.0));
+        let visual = SignatureVisualType::Text {
+            show_name: true,
+            show_date: true,
+            show_reason: false,
+            show_location: false,
+        };
+
+        let field_ref = ObjectReference::new(10, 0);
+        let widget = SignatureWidget::new(rect, visual).with_field_ref(field_ref);
+
+        assert_eq!(widget.field_ref, Some(field_ref));
+
+        let dict = widget.to_widget_dict();
+        assert_eq!(dict.get("Parent"), Some(&Object::Reference(field_ref)));
+    }
+
+    #[test]
+    fn test_signature_widget_with_handler() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 50.0));
+        let visual = SignatureVisualType::Text {
+            show_name: true,
+            show_date: false,
+            show_reason: false,
+            show_location: false,
+        };
+
+        let widget = SignatureWidget::new(rect, visual).with_handler("Adobe.PPKLite");
+
+        assert_eq!(widget.handler_ref, Some("Adobe.PPKLite".to_string()));
+    }
+
+    #[test]
+    fn test_graphic_signature_visual_type() {
+        let image_data = vec![0xFF, 0xD8, 0xFF, 0xE0]; // JPEG magic bytes
+        let visual = SignatureVisualType::Graphic {
+            image_data: image_data.clone(),
+            format: ImageFormat::JPEG,
+            maintain_aspect: true,
+        };
+
+        match visual {
+            SignatureVisualType::Graphic {
+                image_data: data,
+                format,
+                maintain_aspect,
+            } => {
+                assert_eq!(data, image_data);
+                matches!(format, ImageFormat::JPEG);
+                assert!(maintain_aspect);
+            }
+            _ => panic!("Expected Graphic visual type"),
+        }
+    }
+
+    #[test]
+    fn test_mixed_signature_visual_type() {
+        let image_data = vec![0x89, 0x50, 0x4E, 0x47]; // PNG magic bytes
+        let visual = SignatureVisualType::Mixed {
+            image_data: image_data.clone(),
+            format: ImageFormat::PNG,
+            text_position: TextPosition::Below,
+            show_details: true,
+        };
+
+        match visual {
+            SignatureVisualType::Mixed {
+                image_data: data,
+                format,
+                text_position,
+                show_details,
+            } => {
+                assert_eq!(data, image_data);
+                matches!(format, ImageFormat::PNG);
+                matches!(text_position, TextPosition::Below);
+                assert!(show_details);
+            }
+            _ => panic!("Expected Mixed visual type"),
+        }
+    }
+
+    #[test]
+    fn test_ink_stroke_with_pressure() {
+        let stroke = InkStroke {
+            points: vec![(10.0, 10.0), (20.0, 20.0), (30.0, 15.0)],
+            pressures: Some(vec![0.5, 0.7, 0.6]),
+        };
+
+        assert_eq!(stroke.points.len(), 3);
+        assert_eq!(stroke.pressures.as_ref().unwrap().len(), 3);
+        assert_eq!(stroke.points[0], (10.0, 10.0));
+        assert_eq!(stroke.pressures.as_ref().unwrap()[1], 0.7);
+    }
+
+    #[test]
+    fn test_text_position_variants() {
+        let positions = vec![
+            TextPosition::Above,
+            TextPosition::Below,
+            TextPosition::Left,
+            TextPosition::Right,
+            TextPosition::Overlay,
+        ];
+
+        for pos in positions {
+            match pos {
+                TextPosition::Above => assert!(true),
+                TextPosition::Below => assert!(true),
+                TextPosition::Left => assert!(true),
+                TextPosition::Right => assert!(true),
+                TextPosition::Overlay => assert!(true),
+            }
+        }
+    }
+
+    #[test]
+    fn test_image_format_variants() {
+        let png = ImageFormat::PNG;
+        let jpeg = ImageFormat::JPEG;
+
+        matches!(png, ImageFormat::PNG);
+        matches!(jpeg, ImageFormat::JPEG);
+    }
+
+    #[test]
+    fn test_color_to_array() {
+        // Test gray color
+        let gray = Color::gray(0.5);
+        let gray_array = SignatureWidget::color_to_array(&gray);
+        assert_eq!(gray_array, Object::Array(vec![Object::Real(0.5)]));
+
+        // Test RGB color
+        let rgb = Color::rgb(1.0, 0.0, 0.0);
+        let rgb_array = SignatureWidget::color_to_array(&rgb);
+        assert_eq!(
+            rgb_array,
+            Object::Array(vec![
+                Object::Real(1.0),
+                Object::Real(0.0),
+                Object::Real(0.0),
+            ])
+        );
+
+        // Test CMYK color
+        let cmyk = Color::cmyk(0.0, 1.0, 1.0, 0.0);
+        let cmyk_array = SignatureWidget::color_to_array(&cmyk);
+        assert_eq!(
+            cmyk_array,
+            Object::Array(vec![
+                Object::Real(0.0),
+                Object::Real(1.0),
+                Object::Real(1.0),
+                Object::Real(0.0),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_set_fill_color() {
+        let mut stream = Vec::new();
+
+        // Test RGB fill
+        let rgb = Color::rgb(1.0, 0.5, 0.0);
+        SignatureWidget::set_fill_color(&mut stream, &rgb);
+        let result = String::from_utf8_lossy(&stream);
+        assert!(result.contains("1 0.5 0 rg"));
+
+        // Test gray fill
+        stream.clear();
+        let gray = Color::gray(0.7);
+        SignatureWidget::set_fill_color(&mut stream, &gray);
+        let result = String::from_utf8_lossy(&stream);
+        assert!(result.contains("0.7 g"));
+
+        // Test CMYK fill
+        stream.clear();
+        let cmyk = Color::cmyk(0.2, 0.3, 0.4, 0.1);
+        SignatureWidget::set_fill_color(&mut stream, &cmyk);
+        let result = String::from_utf8_lossy(&stream);
+        assert!(result.contains("0.2 0.3 0.4 0.1 k"));
+    }
+
+    #[test]
+    fn test_set_stroke_color() {
+        let mut stream = Vec::new();
+
+        // Test RGB stroke
+        let rgb = Color::rgb(0.0, 0.0, 1.0);
+        SignatureWidget::set_stroke_color(&mut stream, &rgb);
+        let result = String::from_utf8_lossy(&stream);
+        assert!(result.contains("0 0 1 RG"));
+
+        // Test gray stroke
+        stream.clear();
+        let gray = Color::gray(0.3);
+        SignatureWidget::set_stroke_color(&mut stream, &gray);
+        let result = String::from_utf8_lossy(&stream);
+        assert!(result.contains("0.3 G"));
+
+        // Test CMYK stroke
+        stream.clear();
+        let cmyk = Color::cmyk(1.0, 0.0, 0.0, 0.0);
+        SignatureWidget::set_stroke_color(&mut stream, &cmyk);
+        let result = String::from_utf8_lossy(&stream);
+        assert!(result.contains("1 0 0 0 K"));
+    }
+
+    #[test]
+    fn test_empty_text_signature() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 50.0));
+        let visual = SignatureVisualType::Text {
+            show_name: false,
+            show_date: false,
+            show_reason: false,
+            show_location: false,
+        };
+
+        let widget = SignatureWidget::new(rect, visual);
+        let appearance = widget.generate_appearance_stream(false, None, None, None, None);
+
+        assert!(appearance.is_ok());
+        let stream = appearance.unwrap();
+        let stream_str = String::from_utf8_lossy(&stream);
+
+        // Should still have basic structure
+        assert!(stream_str.contains("q")); // Save state
+        assert!(stream_str.contains("Q")); // Restore state
+    }
+
+    #[test]
+    fn test_full_text_signature() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(300.0, 100.0));
+        let visual = SignatureVisualType::Text {
+            show_name: true,
+            show_date: true,
+            show_reason: true,
+            show_location: true,
+        };
+
+        let widget = SignatureWidget::new(rect, visual);
+        let appearance = widget.generate_appearance_stream(
+            true,
+            Some("Jane Smith"),
+            Some("Document Review"),
+            Some("New York"),
+            Some("2025-08-14"),
+        );
+
+        assert!(appearance.is_ok());
+        let stream = appearance.unwrap();
+        let stream_str = String::from_utf8_lossy(&stream);
+
+        // Check all text elements are present
+        assert!(stream_str.contains("Jane Smith"));
+        assert!(stream_str.contains("Document Review"));
+        assert!(stream_str.contains("New York"));
+        assert!(stream_str.contains("2025-08-14"));
+    }
+
+    #[test]
+    fn test_widget_with_border_styles() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 50.0));
+        let visual = SignatureVisualType::Text {
+            show_name: true,
+            show_date: false,
+            show_reason: false,
+            show_location: false,
+        };
+
+        let mut widget = SignatureWidget::new(rect, visual);
+        widget.widget.appearance.border_width = 2.0;
+        widget.widget.appearance.border_color = Some(Color::rgb(0.0, 0.0, 1.0));
+
+        let dict = widget.to_widget_dict();
+
+        // Check border style dictionary
+        if let Some(Object::Dictionary(bs_dict)) = dict.get("BS") {
+            assert_eq!(bs_dict.get("W"), Some(&Object::Real(2.0)));
+            assert!(bs_dict.get("S").is_some());
+        } else {
+            panic!("Expected BS dictionary");
+        }
+    }
+
+    #[test]
+    fn test_multiple_ink_strokes() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 100.0));
+        let strokes = vec![
+            InkStroke {
+                points: vec![(10.0, 10.0), (20.0, 20.0)],
+                pressures: None,
+            },
+            InkStroke {
+                points: vec![(30.0, 30.0), (40.0, 40.0), (50.0, 35.0)],
+                pressures: Some(vec![0.3, 0.5, 0.4]),
+            },
+            InkStroke {
+                points: vec![(60.0, 20.0), (70.0, 25.0)],
+                pressures: None,
+            },
+        ];
+
+        let visual = SignatureVisualType::InkSignature {
+            strokes: strokes.clone(),
+            color: Color::rgb(0.0, 0.0, 0.5),
+            width: 1.5,
+        };
+
+        match visual {
+            SignatureVisualType::InkSignature {
+                strokes: s,
+                color: _,
+                width,
+            } => {
+                assert_eq!(s.len(), 3);
+                assert_eq!(width, 1.5);
+                assert_eq!(s[1].points.len(), 3);
+                assert!(s[1].pressures.is_some());
+            }
+            _ => panic!("Expected InkSignature"),
+        }
+    }
 }

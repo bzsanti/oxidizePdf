@@ -35,3 +35,6 @@ pub use rc4::{Rc4, Rc4Key};
 pub use standard_security::{
     EncryptionKey, OwnerPassword, SecurityHandlerRevision, StandardSecurityHandler, UserPassword,
 };
+
+#[cfg(test)]
+mod tests;

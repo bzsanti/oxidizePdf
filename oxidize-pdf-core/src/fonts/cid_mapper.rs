@@ -226,7 +226,8 @@ pub fn analyze_unicode_ranges(text: &str) -> UnicodeRanges {
             ranges.miscellaneous_symbols = true;
         } else if (0x2700..=0x27BF).contains(&code) {
             ranges.dingbats = true;
-        } else if code >= 0x1F600 {
+        } else if code >= 0x1F000 {
+            // Emoji and other symbols in supplementary planes
             ranges.emoji = true;
         }
     }
@@ -307,6 +308,215 @@ mod tests {
         assert!(!ranges.needs_type0());
 
         let ranges = analyze_unicode_ranges("→ Test");
+        assert!(ranges.needs_type0());
+    }
+
+    #[test]
+    fn test_cid_mapping_new() {
+        let mapping = CidMapping::new();
+        assert!(mapping.unicode_to_cid.is_empty());
+        assert!(mapping.cid_to_unicode.is_empty());
+        assert!(mapping.cid_to_gid.is_empty());
+        assert_eq!(mapping.max_cid, 0);
+        assert!(mapping.unmapped_chars.is_empty());
+    }
+
+    #[test]
+    fn test_cid_mapping_default() {
+        let mapping = CidMapping::default();
+        assert!(mapping.unicode_to_cid.is_empty());
+        assert!(mapping.cid_to_unicode.is_empty());
+        assert!(mapping.cid_to_gid.is_empty());
+        assert_eq!(mapping.max_cid, 0);
+        assert!(mapping.unmapped_chars.is_empty());
+    }
+
+    #[test]
+    fn test_get_cid() {
+        let mut mapping = CidMapping::new();
+        mapping.unicode_to_cid.insert(65, 1); // 'A' -> CID 1
+        mapping.unicode_to_cid.insert(66, 2); // 'B' -> CID 2
+
+        assert_eq!(mapping.get_cid(65), Some(1));
+        assert_eq!(mapping.get_cid(66), Some(2));
+        assert_eq!(mapping.get_cid(67), None); // 'C' not mapped
+    }
+
+    #[test]
+    fn test_is_identity_mapping() {
+        let mut mapping = CidMapping::new();
+
+        // Identity mapping: CID == GID
+        mapping.cid_to_gid.insert(1, 1);
+        mapping.cid_to_gid.insert(2, 2);
+        mapping.cid_to_gid.insert(3, 3);
+        assert!(mapping.is_identity_mapping());
+
+        // Non-identity mapping
+        mapping.cid_to_gid.insert(4, 5);
+        assert!(!mapping.is_identity_mapping());
+    }
+
+    #[test]
+    fn test_generate_cid_to_gid_map_identity() {
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_gid.insert(1, 1);
+        mapping.max_cid = 1;
+
+        let map = mapping.generate_cid_to_gid_map();
+        assert!(map.is_empty()); // Identity mapping returns empty vec
+    }
+
+    #[test]
+    fn test_generate_cid_to_gid_map_custom() {
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_gid.insert(1, 10);
+        mapping.cid_to_gid.insert(2, 20);
+        mapping.max_cid = 2;
+
+        let map = mapping.generate_cid_to_gid_map();
+        assert_eq!(map.len(), 6); // (max_cid + 1) * 2 = 3 * 2 = 6
+
+        // Check CID 1 -> GID 10 (0x000A)
+        assert_eq!(map[2], 0x00);
+        assert_eq!(map[3], 0x0A);
+
+        // Check CID 2 -> GID 20 (0x0014)
+        assert_eq!(map[4], 0x00);
+        assert_eq!(map[5], 0x14);
+    }
+
+    #[test]
+    fn test_generate_tounicode_cmap() {
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_unicode.insert(1, 0x41); // CID 1 -> 'A'
+        mapping.cid_to_unicode.insert(2, 0x42); // CID 2 -> 'B'
+        mapping.max_cid = 2;
+
+        let cmap = mapping.generate_tounicode_cmap();
+        let cmap_str = String::from_utf8_lossy(&cmap);
+
+        // Check CMap structure
+        assert!(cmap_str.contains("/CIDInit"));
+        assert!(cmap_str.contains("begincmap"));
+        assert!(cmap_str.contains("endcmap"));
+        assert!(cmap_str.contains("/Adobe-Identity-UCS"));
+
+        // Check mappings
+        assert!(cmap_str.contains("<0001> <0041>")); // CID 1 -> U+0041
+        assert!(cmap_str.contains("<0002> <0042>")); // CID 2 -> U+0042
+    }
+
+    #[test]
+    fn test_generate_tounicode_cmap_with_non_bmp() {
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_unicode.insert(1, 0x1F600); // Emoji (non-BMP)
+        mapping.max_cid = 1;
+
+        let cmap = mapping.generate_tounicode_cmap();
+        let cmap_str = String::from_utf8_lossy(&cmap);
+
+        // Check that surrogate pair is used for non-BMP character
+        assert!(cmap_str.contains("<0001> <D83DDE00>")); // UTF-16 surrogate pair for U+1F600
+    }
+
+    #[test]
+    fn test_unicode_ranges_new() {
+        let ranges = UnicodeRanges::new();
+        assert!(!ranges.basic_latin);
+        assert!(!ranges.latin1_supplement);
+        assert!(!ranges.emoji);
+    }
+
+    #[test]
+    fn test_analyze_unicode_ranges_latin() {
+        let ranges = analyze_unicode_ranges("ABC");
+        assert!(ranges.basic_latin);
+        assert!(!ranges.latin1_supplement);
+
+        let ranges = analyze_unicode_ranges("café");
+        assert!(ranges.basic_latin);
+        assert!(ranges.latin1_supplement);
+    }
+
+    #[test]
+    fn test_analyze_unicode_ranges_extended() {
+        let ranges = analyze_unicode_ranges("Ā");
+        assert!(ranges.latin_extended_a);
+
+        let ranges = analyze_unicode_ranges("Ȁ");
+        assert!(ranges.latin_extended_b);
+    }
+
+    #[test]
+    fn test_analyze_unicode_ranges_symbols() {
+        let ranges = analyze_unicode_ranges("—"); // em dash
+        assert!(ranges.general_punctuation);
+
+        let ranges = analyze_unicode_ranges("™");
+        assert!(ranges.letterlike_symbols);
+
+        let ranges = analyze_unicode_ranges("■□▲▼");
+        assert!(ranges.geometric_shapes);
+
+        let ranges = analyze_unicode_ranges("☀☁☂");
+        assert!(ranges.miscellaneous_symbols);
+
+        let ranges = analyze_unicode_ranges("✓✗");
+        assert!(ranges.dingbats);
+    }
+
+    #[test]
+    fn test_analyze_unicode_ranges_box_drawing() {
+        let ranges = analyze_unicode_ranges("┌─┐│└┘");
+        assert!(ranges.box_drawing);
+
+        let ranges = analyze_unicode_ranges("█▀▄");
+        assert!(ranges.block_elements);
+    }
+
+    #[test]
+    fn test_analyze_unicode_ranges_emoji() {
+        let ranges = analyze_unicode_ranges("😀😃");
+        assert!(ranges.emoji);
+    }
+
+    #[test]
+    fn test_needs_type0_comprehensive() {
+        // Test each condition that triggers Type0 requirement
+        let mut ranges = UnicodeRanges::new();
+        assert!(!ranges.needs_type0());
+
+        ranges.latin_extended_a = true;
+        assert!(ranges.needs_type0());
+        ranges.latin_extended_a = false;
+
+        ranges.latin_extended_b = true;
+        assert!(ranges.needs_type0());
+        ranges.latin_extended_b = false;
+
+        ranges.arrows = true;
+        assert!(ranges.needs_type0());
+        ranges.arrows = false;
+
+        ranges.mathematical_operators = true;
+        assert!(ranges.needs_type0());
+        ranges.mathematical_operators = false;
+
+        ranges.emoji = true;
+        assert!(ranges.needs_type0());
+    }
+
+    #[test]
+    fn test_mixed_unicode_text() {
+        let text = "Hello 世界 €→∑📚";
+        let ranges = analyze_unicode_ranges(text);
+
+        assert!(ranges.basic_latin);
+        assert!(ranges.currency_symbols);
+        assert!(ranges.arrows);
+        assert!(ranges.mathematical_operators);
+        assert!(ranges.emoji);
         assert!(ranges.needs_type0());
     }
 }

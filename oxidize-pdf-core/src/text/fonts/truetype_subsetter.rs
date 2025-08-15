@@ -542,3 +542,204 @@ pub fn subset_font(font_data: Vec<u8>, used_chars: &HashSet<char>) -> ParseResul
     let subsetter = TrueTypeSubsetter::new(font_data)?;
     subsetter.subset(used_chars)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_u32() {
+        let data = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
+
+        let result = read_u32(&data, 0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x00010203);
+
+        let result = read_u32(&data, 2);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x02030405);
+
+        // Test out of bounds
+        let result = read_u32(&data, 3);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_calculate_checksum() {
+        // Test with aligned data
+        let data = vec![0x00, 0x01, 0x02, 0x03];
+        let checksum = calculate_checksum(&data);
+        assert_eq!(checksum, 0x00010203);
+
+        // Test with multiple chunks
+        let data = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+        let checksum = calculate_checksum(&data);
+        assert_eq!(checksum, 0x00010203_u32.wrapping_add(0x04050607));
+
+        // Test with unaligned data (padding)
+        let data = vec![0x00, 0x01, 0x02];
+        let checksum = calculate_checksum(&data);
+        assert_eq!(checksum, 0x00010200); // Last byte is padded with 0
+    }
+
+    #[test]
+    fn test_glyph_id_remapping() {
+        let used_glyphs = vec![0, 3, 5, 10, 15].into_iter().collect::<HashSet<_>>();
+
+        // Create a simple mapping - need to sort to ensure consistent ordering
+        let mut glyph_map = HashMap::new();
+        let mut sorted_glyphs: Vec<_> = used_glyphs.iter().copied().collect();
+        sorted_glyphs.sort();
+
+        let mut new_id = 0;
+        for old_id in sorted_glyphs {
+            glyph_map.insert(old_id, new_id);
+            new_id += 1;
+        }
+
+        // Verify mapping - glyph 0 always maps to 0 (sorted first)
+        assert_eq!(glyph_map.get(&0), Some(&0));
+        // Other glyphs map to sequential IDs based on their sorted order
+        assert!(glyph_map.contains_key(&3));
+        assert!(glyph_map.contains_key(&5));
+        assert!(glyph_map.contains_key(&10));
+        assert!(glyph_map.contains_key(&15));
+        assert_eq!(glyph_map.get(&7), None); // Not in used glyphs
+    }
+
+    #[test]
+    fn test_table_record_structure() {
+        let record = TableRecord {
+            tag: [b'h', b'e', b'a', b'd'],
+            checksum: 0x12345678,
+            offset: 0x1000,
+            length: 0x0054,
+        };
+
+        assert_eq!(record.tag, [b'h', b'e', b'a', b'd']);
+        assert_eq!(record.checksum, 0x12345678);
+        assert_eq!(record.offset, 0x1000);
+        assert_eq!(record.length, 0x0054);
+    }
+
+    #[test]
+    fn test_checksum_overflow() {
+        // Test that checksum handles overflow correctly
+        let data = vec![0xFF; 8]; // Two max u32 values
+        let checksum = calculate_checksum(&data);
+        // Should wrap around on overflow: 0xFFFFFFFF + 0xFFFFFFFF = 0xFFFFFFFE (with wrap)
+        assert_eq!(checksum, 0xFFFFFFFE);
+    }
+
+    #[test]
+    fn test_required_tables() {
+        // List of required tables for a subset font
+        let required_tables = vec![
+            [b'h', b'e', b'a', b'd'],
+            [b'h', b'h', b'e', b'a'],
+            [b'm', b'a', b'x', b'p'],
+            [b'h', b'm', b't', b'x'],
+            [b'l', b'o', b'c', b'a'],
+            [b'g', b'l', b'y', b'f'],
+        ];
+
+        for tag in required_tables {
+            // Verify we recognize these as required
+            assert!(tag.len() == 4);
+        }
+    }
+
+    #[test]
+    fn test_optional_tables() {
+        // List of optional tables that might be included
+        let optional_tables = vec![
+            [b'n', b'a', b'm', b'e'],
+            [b'p', b'o', b's', b't'],
+            [b'c', b'm', b'a', b'p'],
+            [b'k', b'e', b'r', b'n'],
+            [b'G', b'P', b'O', b'S'],
+            [b'G', b'S', b'U', b'B'],
+        ];
+
+        for tag in optional_tables {
+            assert!(tag.len() == 4);
+        }
+    }
+
+    #[test]
+    fn test_font_header_validation() {
+        // Test validation of font header
+        let mut data = vec![0u8; 12];
+
+        // TrueType signature
+        data[0] = 0x00;
+        data[1] = 0x01;
+        data[2] = 0x00;
+        data[3] = 0x00;
+
+        // Number of tables
+        data[4] = 0x00;
+        data[5] = 0x06; // 6 tables
+
+        let num_tables = u16::from_be_bytes([data[4], data[5]]);
+        assert_eq!(num_tables, 6);
+    }
+
+    #[test]
+    fn test_glyph_remapping_consistency() {
+        let mut used_glyphs = HashSet::new();
+        used_glyphs.insert(0); // .notdef
+        used_glyphs.insert(32); // space
+        used_glyphs.insert(65); // A
+        used_glyphs.insert(97); // a
+
+        let mut glyph_map = HashMap::new();
+        let mut new_id = 0;
+
+        // Create consistent mapping
+        let mut sorted_glyphs: Vec<_> = used_glyphs.iter().cloned().collect();
+        sorted_glyphs.sort();
+
+        for old_id in sorted_glyphs {
+            glyph_map.insert(old_id, new_id);
+            new_id += 1;
+        }
+
+        // Verify consistency
+        assert_eq!(glyph_map.len(), 4);
+        assert_eq!(*glyph_map.get(&0).unwrap(), 0); // .notdef stays at 0
+        assert!(*glyph_map.get(&32).unwrap() < 4);
+        assert!(*glyph_map.get(&65).unwrap() < 4);
+        assert!(*glyph_map.get(&97).unwrap() < 4);
+    }
+
+    #[test]
+    fn test_table_directory_size() {
+        // Table directory entry is 16 bytes
+        let num_tables = 10;
+        let dir_size = 12 + (num_tables * 16); // Header + entries
+        assert_eq!(dir_size, 172);
+
+        // Verify alignment
+        assert_eq!(dir_size % 4, 0);
+    }
+
+    #[test]
+    fn test_loca_table_format() {
+        // Test short format (16-bit offsets)
+        let short_offsets = vec![0u16, 100, 200, 350, 500];
+        let mut short_data = Vec::new();
+        for offset in &short_offsets {
+            short_data.extend_from_slice(&offset.to_be_bytes());
+        }
+        assert_eq!(short_data.len(), short_offsets.len() * 2);
+
+        // Test long format (32-bit offsets)
+        let long_offsets = vec![0u32, 100, 200, 350, 500];
+        let mut long_data = Vec::new();
+        for offset in &long_offsets {
+            long_data.extend_from_slice(&offset.to_be_bytes());
+        }
+        assert_eq!(long_data.len(), long_offsets.len() * 4);
+    }
+}

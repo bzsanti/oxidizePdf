@@ -522,4 +522,353 @@ mod tests {
         tree.set_max_kids(1); // Should be clamped to minimum of 2
         assert_eq!(tree.max_kids, 2);
     }
+
+    #[test]
+    fn test_page_tree_get_page() {
+        let mut tree = PageTree::new();
+
+        // Add multiple pages
+        tree.add_page(Page::new(612.0, 792.0)).unwrap();
+        tree.add_page(Page::new(595.0, 842.0)).unwrap();
+        tree.add_page(Page::new(420.0, 595.0)).unwrap();
+
+        // Get pages by index
+        let page0 = tree.get_page(0);
+        assert!(page0.is_some());
+        let page0 = page0.unwrap();
+        assert_eq!(page0.attributes.media_box.unwrap().upper_right.x, 612.0);
+
+        let page1 = tree.get_page(1);
+        assert!(page1.is_some());
+        let page1 = page1.unwrap();
+        assert_eq!(page1.attributes.media_box.unwrap().upper_right.x, 595.0);
+
+        let page2 = tree.get_page(2);
+        assert!(page2.is_some());
+        let page2 = page2.unwrap();
+        assert_eq!(page2.attributes.media_box.unwrap().upper_right.x, 420.0);
+
+        // Out of bounds
+        assert!(tree.get_page(3).is_none());
+        assert!(tree.get_page(100).is_none());
+    }
+
+    #[test]
+    fn test_page_tree_empty() {
+        let tree = PageTree::new();
+        assert_eq!(tree.page_count(), 0);
+        assert!(tree.get_page(0).is_none());
+
+        let dict = tree.to_dict();
+        assert_eq!(dict.get("Type"), Some(&Object::Name("Pages".to_string())));
+        assert_eq!(dict.get("Count"), Some(&Object::Integer(0)));
+    }
+
+    #[test]
+    fn test_page_tree_large_number_of_pages() {
+        let mut tree = PageTree::new();
+
+        // Add 100 pages
+        for _ in 0..100 {
+            tree.add_page(Page::new(612.0, 792.0)).unwrap();
+        }
+
+        assert_eq!(tree.page_count(), 100);
+
+        // Check first, middle, and last pages
+        assert!(tree.get_page(0).is_some());
+        assert!(tree.get_page(49).is_some());
+        assert!(tree.get_page(99).is_some());
+        assert!(tree.get_page(100).is_none());
+    }
+
+    #[test]
+    fn test_page_node_creation() {
+        let page_node = PageNode {
+            contents: vec![Object::Integer(1), Object::Integer(2)],
+            attributes: InheritableAttributes::new(),
+            parent: None,
+            annotations: vec![Object::Name("Annot".to_string())],
+            metadata: Some(Dictionary::new()),
+        };
+
+        assert_eq!(page_node.contents.len(), 2);
+        assert_eq!(page_node.annotations.len(), 1);
+        assert!(page_node.metadata.is_some());
+    }
+
+    #[test]
+    fn test_pages_node_creation() {
+        let pages_node = PagesNode {
+            kids: vec![],
+            count: 0,
+            attributes: InheritableAttributes::new(),
+            parent: None,
+        };
+
+        assert_eq!(pages_node.kids.len(), 0);
+        assert_eq!(pages_node.count, 0);
+    }
+
+    #[test]
+    fn test_inheritable_attributes_default() {
+        let attrs = InheritableAttributes::default();
+        assert!(attrs.resources.is_none());
+        assert!(attrs.media_box.is_none());
+        assert!(attrs.crop_box.is_none());
+        assert!(attrs.rotate.is_none());
+    }
+
+    #[test]
+    fn test_inheritable_attributes_complete() {
+        let attrs = InheritableAttributes {
+            resources: Some(Dictionary::new()),
+            media_box: Some(Rectangle::new(
+                Point::new(0.0, 0.0),
+                Point::new(612.0, 792.0),
+            )),
+            crop_box: Some(Rectangle::new(
+                Point::new(36.0, 36.0),
+                Point::new(576.0, 756.0),
+            )),
+            rotate: Some(90),
+        };
+
+        let dict = attrs.to_dict();
+        assert!(dict.get("Resources").is_some());
+        assert!(dict.get("MediaBox").is_some());
+        assert!(dict.get("CropBox").is_some());
+        assert_eq!(dict.get("Rotate"), Some(&Object::Integer(90)));
+    }
+
+    #[test]
+    fn test_merge_with_parent_override() {
+        let parent = InheritableAttributes {
+            resources: Some(Dictionary::new()),
+            media_box: Some(Rectangle::new(
+                Point::new(0.0, 0.0),
+                Point::new(612.0, 792.0),
+            )),
+            crop_box: Some(Rectangle::new(
+                Point::new(0.0, 0.0),
+                Point::new(612.0, 792.0),
+            )),
+            rotate: Some(0),
+        };
+
+        let mut child_resources = Dictionary::new();
+        child_resources.set("Font", Object::Name("F1".to_string()));
+
+        let child = InheritableAttributes {
+            resources: Some(child_resources.clone()),
+            media_box: Some(Rectangle::new(
+                Point::new(0.0, 0.0),
+                Point::new(595.0, 842.0),
+            )),
+            crop_box: None,
+            rotate: Some(180),
+        };
+
+        let merged = child.merge_with_parent(&parent);
+
+        // Child values should override parent
+        assert_eq!(
+            merged.resources.unwrap().get("Font"),
+            Some(&Object::Name("F1".to_string()))
+        );
+        assert_eq!(merged.media_box.unwrap().upper_right.x, 595.0);
+        assert_eq!(merged.crop_box.unwrap().upper_right.x, 612.0); // From parent
+        assert_eq!(merged.rotate, Some(180));
+    }
+
+    #[test]
+    fn test_merge_with_parent_inherit_all() {
+        let parent = InheritableAttributes {
+            resources: Some(Dictionary::new()),
+            media_box: Some(Rectangle::new(
+                Point::new(0.0, 0.0),
+                Point::new(612.0, 792.0),
+            )),
+            crop_box: Some(Rectangle::new(
+                Point::new(36.0, 36.0),
+                Point::new(576.0, 756.0),
+            )),
+            rotate: Some(90),
+        };
+
+        let child = InheritableAttributes::new();
+        let merged = child.merge_with_parent(&parent);
+
+        // All values should be inherited from parent
+        assert!(merged.resources.is_some());
+        assert_eq!(merged.media_box.unwrap().upper_right.x, 612.0);
+        assert_eq!(merged.crop_box.unwrap().upper_right.x, 576.0);
+        assert_eq!(merged.rotate, Some(90));
+    }
+
+    #[test]
+    fn test_page_tree_builder_comprehensive() {
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(595.0, 842.0));
+        let mut resources = Dictionary::new();
+        resources.set("Font", Object::Name("F1".to_string()));
+
+        let tree = PageTreeBuilder::new()
+            .with_media_box(rect)
+            .with_resources(resources.clone())
+            .with_rotation(90)
+            .add_page(Page::new(595.0, 842.0))
+            .add_page(Page::new(595.0, 842.0))
+            .add_page(Page::new(595.0, 842.0))
+            .build();
+
+        assert_eq!(tree.page_count(), 3);
+        assert_eq!(tree.root.attributes.media_box.unwrap().upper_right.x, 595.0);
+        // Note: rotate is not set at root level in current implementation
+        assert!(tree.root.attributes.resources.is_some());
+    }
+
+    #[test]
+    fn test_find_pages_complex_predicate() {
+        let mut tree = PageTree::new();
+
+        // Add pages with different sizes
+        tree.add_page(Page::new(612.0, 792.0)).unwrap(); // Letter
+        tree.add_page(Page::new(595.0, 842.0)).unwrap(); // A4
+        tree.add_page(Page::new(420.0, 595.0)).unwrap(); // A5
+        tree.add_page(Page::new(612.0, 792.0)).unwrap(); // Letter
+        tree.add_page(Page::new(595.0, 842.0)).unwrap(); // A4
+
+        // Find all A4 pages
+        let a4_pages = tree.find_pages(|page| {
+            page.attributes
+                .media_box
+                .map(|mb| mb.upper_right.x == 595.0 && mb.upper_right.y == 842.0)
+                .unwrap_or(false)
+        });
+
+        assert_eq!(a4_pages.len(), 2);
+        assert_eq!(a4_pages[0], 1);
+        assert_eq!(a4_pages[1], 4);
+
+        // Find all pages smaller than A4
+        let small_pages = tree.find_pages(|page| {
+            page.attributes
+                .media_box
+                .map(|mb| mb.upper_right.x < 595.0 || mb.upper_right.y < 842.0)
+                .unwrap_or(false)
+        });
+
+        assert_eq!(small_pages.len(), 3); // 2 Letter + 1 A5
+    }
+
+    #[test]
+    fn test_page_tree_node_to_dict_page() {
+        let tree = PageTree::new();
+        let mut page_node = PageNode {
+            contents: vec![Object::Integer(1)],
+            attributes: InheritableAttributes {
+                media_box: Some(Rectangle::new(
+                    Point::new(0.0, 0.0),
+                    Point::new(612.0, 792.0),
+                )),
+                crop_box: None,
+                rotate: Some(0),
+                resources: None,
+            },
+            parent: None,
+            annotations: vec![Object::Name("Annot1".to_string())],
+            metadata: None,
+        };
+
+        let dict = tree.node_to_dict(&PageTreeNode::Page(page_node));
+        assert_eq!(dict.get("Type"), Some(&Object::Name("Page".to_string())));
+        assert_eq!(dict.get("Contents"), Some(&Object::Integer(1)));
+        assert!(dict.get("Annots").is_some());
+        assert!(dict.get("MediaBox").is_some());
+    }
+
+    #[test]
+    fn test_page_tree_node_to_dict_pages() {
+        let tree = PageTree::new();
+        let pages_node = PagesNode {
+            kids: vec![],
+            count: 5,
+            attributes: InheritableAttributes::new(),
+            parent: None,
+        };
+
+        let dict = tree.node_to_dict(&PageTreeNode::Pages(pages_node));
+        assert_eq!(dict.get("Type"), Some(&Object::Name("Pages".to_string())));
+        assert_eq!(dict.get("Count"), Some(&Object::Integer(5)));
+        assert!(dict.get("Kids").is_some());
+    }
+
+    #[test]
+    fn test_rotation_values() {
+        let attrs = InheritableAttributes {
+            resources: None,
+            media_box: None,
+            crop_box: None,
+            rotate: Some(270), // Valid rotation
+        };
+
+        let dict = attrs.to_dict();
+        assert_eq!(dict.get("Rotate"), Some(&Object::Integer(270)));
+
+        // Test all valid rotation values
+        for rotation in &[0, 90, 180, 270] {
+            let attrs = InheritableAttributes {
+                resources: None,
+                media_box: None,
+                crop_box: None,
+                rotate: Some(*rotation),
+            };
+            let dict = attrs.to_dict();
+            assert_eq!(dict.get("Rotate"), Some(&Object::Integer(*rotation as i64)));
+        }
+    }
+
+    #[test]
+    fn test_balance_method() {
+        let mut tree = PageTree::new();
+
+        // Add many pages
+        for _ in 0..50 {
+            tree.add_page(Page::new(612.0, 792.0)).unwrap();
+        }
+
+        let count_before = tree.page_count();
+        tree.balance();
+        let count_after = tree.page_count();
+
+        // Balance should not change page count
+        assert_eq!(count_before, count_after);
+        assert_eq!(count_after, 50);
+    }
+
+    #[test]
+    fn test_set_default_methods() {
+        let mut tree = PageTree::new();
+
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(420.0, 595.0));
+        tree.set_default_media_box(rect);
+        assert_eq!(tree.root.attributes.media_box.unwrap().upper_right.x, 420.0);
+
+        let mut resources = Dictionary::new();
+        resources.set(
+            "ProcSet",
+            Object::Array(vec![Object::Name("PDF".to_string())]),
+        );
+        tree.set_default_resources(resources.clone());
+        assert!(tree.root.attributes.resources.is_some());
+        assert_eq!(
+            tree.root
+                .attributes
+                .resources
+                .as_ref()
+                .unwrap()
+                .get("ProcSet"),
+            Some(&Object::Array(vec![Object::Name("PDF".to_string())]))
+        );
+    }
 }

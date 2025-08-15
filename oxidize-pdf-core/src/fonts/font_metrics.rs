@@ -163,4 +163,177 @@ mod tests {
         assert_eq!(measurement.width, 36.0); // 5 chars * 600/1000 * 12
         assert_eq!(measurement.height, 14.4);
     }
+
+    #[test]
+    fn test_font_metrics_default() {
+        let metrics = FontMetrics::default();
+        assert_eq!(metrics.units_per_em, 1000);
+        assert_eq!(metrics.ascent, 750);
+        assert_eq!(metrics.descent, -250);
+        assert_eq!(metrics.line_gap, 200);
+        assert_eq!(metrics.cap_height, 700);
+        assert_eq!(metrics.x_height, 500);
+    }
+
+    #[test]
+    fn test_to_user_space_different_units() {
+        let metrics = FontMetrics {
+            units_per_em: 2048,
+            ascent: 1638,
+            descent: -410,
+            line_gap: 400,
+            cap_height: 1434,
+            x_height: 1024,
+        };
+
+        // Test with 2048 units per em (common for TrueType)
+        assert_eq!(metrics.to_user_space(2048, 24.0), 24.0);
+        assert_eq!(metrics.to_user_space(1024, 24.0), 12.0);
+        assert_eq!(metrics.to_user_space(512, 24.0), 6.0);
+    }
+
+    #[test]
+    fn test_text_measurement_missing_glyphs() {
+        let metrics = FontMetrics::default();
+        let glyph_mapping = GlyphMapping::default(); // Empty mapping
+
+        // All characters missing - uses fallback width
+        let measurement = metrics.measure_text("Test", 10.0, &glyph_mapping);
+        assert_eq!(measurement.glyph_count, 0);
+        assert_eq!(measurement.width, 24.0); // 4 chars * 0.6 * 10
+    }
+
+    #[test]
+    fn test_text_measurement_mixed_glyphs() {
+        let metrics = FontMetrics::default();
+        let mut glyph_mapping = GlyphMapping::default();
+
+        // Only map some characters
+        glyph_mapping.add_mapping('T', 1);
+        glyph_mapping.set_glyph_width(1, 700);
+        glyph_mapping.add_mapping('s', 2);
+        glyph_mapping.set_glyph_width(2, 500);
+
+        // "Test" - T and s mapped, e and t unmapped
+        let measurement = metrics.measure_text("Test", 10.0, &glyph_mapping);
+        assert_eq!(measurement.glyph_count, 2);
+        // T(700/1000*10) + e(0.6*10) + s(500/1000*10) + t(0.6*10)
+        assert_eq!(measurement.width, 7.0 + 6.0 + 5.0 + 6.0);
+    }
+
+    #[test]
+    fn test_text_measurement_baseline_offset() {
+        let metrics = FontMetrics {
+            units_per_em: 1000,
+            ascent: 800,
+            descent: -200,
+            line_gap: 200,
+            cap_height: 700,
+            x_height: 500,
+        };
+
+        let glyph_mapping = GlyphMapping::default();
+        let measurement = metrics.measure_text("", 12.0, &glyph_mapping);
+
+        assert_eq!(measurement.baseline_offset(), 9.6); // Same as ascent
+        assert_eq!(measurement.ascent, 9.6);
+    }
+
+    #[test]
+    fn test_text_measurement_bounding_box() {
+        let metrics = FontMetrics {
+            units_per_em: 1000,
+            ascent: 800,
+            descent: -200,
+            line_gap: 200,
+            cap_height: 700,
+            x_height: 500,
+        };
+
+        let mut glyph_mapping = GlyphMapping::default();
+        glyph_mapping.add_mapping('A', 1);
+        glyph_mapping.set_glyph_width(1, 1000);
+
+        let measurement = metrics.measure_text("A", 10.0, &glyph_mapping);
+        let bbox = measurement.bounding_box();
+
+        assert_eq!(bbox[0], 0.0); // x
+        assert_eq!(bbox[1], -2.0); // y (negative descent)
+        assert_eq!(bbox[2], 10.0); // width
+        assert_eq!(bbox[3], 12.0); // height
+    }
+
+    #[test]
+    fn test_line_height_zero_line_gap() {
+        let metrics = FontMetrics {
+            units_per_em: 1000,
+            ascent: 800,
+            descent: -200,
+            line_gap: 0,
+            cap_height: 700,
+            x_height: 500,
+        };
+
+        assert_eq!(metrics.line_height(10.0), 10.0); // (800 - (-200) + 0) * 10 / 1000
+    }
+
+    #[test]
+    fn test_negative_values() {
+        let metrics = FontMetrics {
+            units_per_em: 1000,
+            ascent: 800,
+            descent: -200,
+            line_gap: -100, // Negative line gap
+            cap_height: 700,
+            x_height: 500,
+        };
+
+        // Line height with negative line gap
+        assert_eq!(metrics.line_height(10.0), 9.0); // (800 - (-200) + (-100)) * 10 / 1000
+    }
+
+    #[test]
+    fn test_very_small_font_size() {
+        let metrics = FontMetrics::default();
+
+        assert_eq!(metrics.to_user_space(1000, 0.1), 0.1);
+        assert_eq!(metrics.get_ascent(0.1), 0.075);
+        assert_eq!(metrics.get_descent(0.1), 0.025);
+    }
+
+    #[test]
+    fn test_very_large_font_size() {
+        let metrics = FontMetrics::default();
+
+        assert_eq!(metrics.to_user_space(1000, 1000.0), 1000.0);
+        assert_eq!(metrics.get_ascent(1000.0), 750.0);
+        assert_eq!(metrics.get_descent(1000.0), 250.0);
+    }
+
+    #[test]
+    fn test_empty_text_measurement() {
+        let metrics = FontMetrics::default();
+        let glyph_mapping = GlyphMapping::default();
+
+        let measurement = metrics.measure_text("", 12.0, &glyph_mapping);
+        assert_eq!(measurement.width, 0.0);
+        assert_eq!(measurement.glyph_count, 0);
+        assert_eq!(measurement.height, 14.4); // Still has height
+    }
+
+    #[test]
+    fn test_unicode_text_measurement() {
+        let metrics = FontMetrics::default();
+        let mut glyph_mapping = GlyphMapping::default();
+
+        // Map some Unicode characters
+        glyph_mapping.add_mapping('€', 100);
+        glyph_mapping.set_glyph_width(100, 800);
+        glyph_mapping.add_mapping('™', 101);
+        glyph_mapping.set_glyph_width(101, 900);
+
+        let measurement = metrics.measure_text("€™", 10.0, &glyph_mapping);
+        assert_eq!(measurement.glyph_count, 2);
+        assert_eq!(measurement.width, 17.0); // (800 + 900) / 1000 * 10
+    }
 }

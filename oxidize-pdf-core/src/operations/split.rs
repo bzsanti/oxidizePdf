@@ -551,6 +551,133 @@ mod tests {
         };
         assert!(!not_optimized.optimize);
     }
+
+    #[test]
+    fn test_split_options_with_custom_pattern() {
+        let options = SplitOptions {
+            output_pattern: "document_part_{}.pdf".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(options.output_pattern, "document_part_{}.pdf");
+    }
+
+    #[test]
+    fn test_split_mode_ranges() {
+        let ranges = vec![
+            PageRange::Single(0),
+            PageRange::Range(1, 3),
+            PageRange::Single(5),
+        ];
+        let mode = SplitMode::Ranges(ranges.clone());
+
+        match mode {
+            SplitMode::Ranges(r) => {
+                assert_eq!(r.len(), 3);
+                assert!(matches!(r[0], PageRange::Single(0)));
+                assert!(matches!(r[1], PageRange::Range(1, 3)));
+                assert!(matches!(r[2], PageRange::Single(5)));
+            }
+            _ => panic!("Wrong mode"),
+        }
+    }
+
+    #[test]
+    fn test_split_mode_split_at() {
+        let split_points = vec![5, 10, 15];
+        let mode = SplitMode::SplitAt(split_points.clone());
+
+        match mode {
+            SplitMode::SplitAt(points) => assert_eq!(points, split_points),
+            _ => panic!("Wrong mode"),
+        }
+    }
+
+    #[test]
+    fn test_page_range_parse() {
+        // Test all pages
+        let range = PageRange::parse("all").unwrap();
+        assert!(matches!(range, PageRange::All));
+
+        // Test single page
+        let range = PageRange::parse("5").unwrap();
+        assert!(matches!(range, PageRange::Single(4))); // 0-indexed
+
+        // Test range
+        let range = PageRange::parse("3-7").unwrap();
+        assert!(matches!(range, PageRange::Range(2, 6))); // 0-indexed
+
+        // Test list
+        let range = PageRange::parse("1,3,5").unwrap();
+        match range {
+            PageRange::List(pages) => assert_eq!(pages, vec![0, 2, 4]),
+            _ => panic!("Expected List"),
+        }
+    }
+
+    #[test]
+    fn test_page_range_invalid_parse() {
+        assert!(PageRange::parse("").is_err());
+        assert!(PageRange::parse("abc").is_err());
+        assert!(PageRange::parse("5-3").is_err()); // Invalid range
+        assert!(PageRange::parse("0").is_err()); // Page numbers start at 1
+    }
+
+    #[test]
+    fn test_split_options_all_fields() {
+        let options = SplitOptions {
+            mode: SplitMode::ChunkSize(5),
+            output_pattern: "chunk_{}.pdf".to_string(),
+            preserve_metadata: false,
+            optimize: true,
+        };
+
+        match options.mode {
+            SplitMode::ChunkSize(size) => assert_eq!(size, 5),
+            _ => panic!("Wrong mode"),
+        }
+        assert_eq!(options.output_pattern, "chunk_{}.pdf");
+        assert!(!options.preserve_metadata);
+        assert!(options.optimize);
+    }
+
+    #[test]
+    fn test_split_mode_chunk_size_edge_cases() {
+        // Chunk size of 1 should be like single pages
+        let mode = SplitMode::ChunkSize(1);
+        match mode {
+            SplitMode::ChunkSize(size) => assert_eq!(size, 1),
+            _ => panic!("Wrong mode"),
+        }
+
+        // Large chunk size
+        let mode = SplitMode::ChunkSize(1000);
+        match mode {
+            SplitMode::ChunkSize(size) => assert_eq!(size, 1000),
+            _ => panic!("Wrong mode"),
+        }
+    }
+
+    #[test]
+    fn test_split_mode_empty_ranges() {
+        let ranges = Vec::new();
+        let mode = SplitMode::Ranges(ranges);
+
+        match mode {
+            SplitMode::Ranges(r) => assert!(r.is_empty()),
+            _ => panic!("Wrong mode"),
+        }
+    }
+
+    #[test]
+    fn test_split_mode_empty_split_points() {
+        let split_points = Vec::new();
+        let mode = SplitMode::SplitAt(split_points);
+
+        match mode {
+            SplitMode::SplitAt(points) => assert!(points.is_empty()),
+            _ => panic!("Wrong mode"),
+        }
+    }
 }
 
 #[cfg(test)]
