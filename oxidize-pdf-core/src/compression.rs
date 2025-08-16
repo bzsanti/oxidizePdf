@@ -245,4 +245,197 @@ mod tests {
         // Just verify that compression happened
         assert!(compressed_random.len() > 0);
     }
+
+    #[test]
+    fn test_compress_different_compression_levels() {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        let data = b"This is test data that will be compressed at different levels. ".repeat(100);
+
+        // Test different compression levels manually
+        let levels = vec![
+            Compression::none(),
+            Compression::fast(),
+            Compression::default(),
+            Compression::best(),
+        ];
+
+        let mut sizes = Vec::new();
+        for level in levels {
+            let mut encoder = ZlibEncoder::new(Vec::new(), level);
+            encoder.write_all(&data).unwrap();
+            let compressed = encoder.finish().unwrap();
+            sizes.push(compressed.len());
+
+            // Verify decompression works regardless of level
+            let decompressed = decompress(&compressed).unwrap();
+            assert_eq!(decompressed, data);
+        }
+
+        // Verify that compression levels work (none should be larger than compressed)
+        // none() should give largest size
+        assert!(
+            sizes[0] >= sizes[1],
+            "none() compression should be >= fast()"
+        );
+        // Note: best() vs default() may vary based on data, so we just verify they compress
+        assert!(
+            sizes[2] < sizes[0],
+            "default() should compress better than none()"
+        );
+        assert!(
+            sizes[3] < sizes[0],
+            "best() should compress better than none()"
+        );
+    }
+
+    #[test]
+    fn test_compress_with_null_bytes() {
+        // PDF files often contain null bytes
+        let mut data = Vec::new();
+        data.extend_from_slice(b"PDF-1.4\n");
+        data.extend_from_slice(&[0x00; 100]);
+        data.extend_from_slice(b"\n%%EOF");
+
+        let compressed = compress(&data).unwrap();
+        let decompressed = decompress(&compressed).unwrap();
+        assert_eq!(decompressed, data);
+    }
+
+    #[test]
+    fn test_compress_pdf_like_content() {
+        // Simulate typical PDF content stream
+        let pdf_content = b"q\n\
+            1 0 0 1 0 0 cm\n\
+            BT\n\
+            /F1 12 Tf\n\
+            100 700 Td\n\
+            (Hello World) Tj\n\
+            ET\n\
+            Q\n\
+            q\n\
+            0.5 0 0 0.5 200 400 cm\n\
+            1 0 0 rg\n\
+            0 0 100 100 re\n\
+            f\n\
+            Q"
+        .repeat(10);
+
+        let compressed = compress(&pdf_content).unwrap();
+        // PDF content should compress well due to repetitive commands
+        assert!(compressed.len() < pdf_content.len() / 2);
+
+        let decompressed = decompress(&compressed).unwrap();
+        assert_eq!(decompressed, pdf_content);
+    }
+
+    #[test]
+    fn test_decompress_invalid_zlib_header() {
+        // Invalid zlib header
+        let invalid = vec![0xFF, 0xFF, 0x00, 0x00];
+        let result = decompress(&invalid);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decompress_truncated_stream() {
+        // Create valid compressed data then truncate it
+        let original = b"This is valid data that will be compressed then truncated";
+        let compressed = compress(original).unwrap();
+
+        // Test severe truncation (should definitely fail)
+        if compressed.len() > 10 {
+            let severely_truncated = &compressed[..compressed.len() / 4];
+            let result = decompress(severely_truncated);
+            // Severe truncation should either fail or produce wrong data
+            assert!(
+                result.is_err() || result.unwrap() != original,
+                "Severely truncated data should fail or produce incorrect result"
+            );
+        }
+
+        // Test removing last byte (may or may not fail depending on padding)
+        if compressed.len() > 1 {
+            let truncated = &compressed[..compressed.len() - 1];
+            let result = decompress(truncated);
+            // May succeed with wrong data or fail
+            if let Ok(decompressed) = result {
+                // If it succeeds, it shouldn't match original (in most cases)
+                // Note: In rare cases it might match if last byte was padding
+                // So we just verify decompression attempted
+                assert!(decompressed.len() <= original.len());
+            }
+        }
+    }
+
+    #[test]
+    fn test_compress_maximum_size() {
+        // Test with maximum practical size (1MB)
+        let large_data = vec![b'X'; 1024 * 1024];
+
+        let compressed = compress(&large_data).unwrap();
+        assert!(compressed.len() > 0);
+        assert!(compressed.len() < large_data.len()); // Should compress repeated data
+
+        let decompressed = decompress(&compressed).unwrap();
+        assert_eq!(decompressed.len(), large_data.len());
+        assert_eq!(decompressed, large_data);
+    }
+
+    #[test]
+    fn test_compress_unicode_utf8() {
+        // Test compression of UTF-8 encoded text (common in modern PDFs)
+        let unicode_data = "Hello 世界 مرحبا мир שלום 🌍🎉📝".as_bytes();
+
+        let compressed = compress(unicode_data).unwrap();
+        let decompressed = decompress(&compressed).unwrap();
+
+        assert_eq!(decompressed, unicode_data);
+
+        // Verify the text is preserved
+        let text = String::from_utf8(decompressed).unwrap();
+        assert_eq!(text, "Hello 世界 مرحبا мир שלום 🌍🎉📝");
+    }
+
+    #[test]
+    fn test_compress_binary_image_data() {
+        // Simulate binary data like embedded images in PDFs
+        let mut image_data = Vec::new();
+
+        // JPEG-like header
+        image_data.extend_from_slice(&[0xFF, 0xD8, 0xFF, 0xE0]);
+
+        // Random-ish binary data
+        for i in 0..1000 {
+            image_data.push(((i * 7 + 13) % 256) as u8);
+        }
+
+        // JPEG-like footer
+        image_data.extend_from_slice(&[0xFF, 0xD9]);
+
+        let compressed = compress(&image_data).unwrap();
+        let decompressed = decompress(&compressed).unwrap();
+        assert_eq!(decompressed, image_data);
+    }
+
+    #[test]
+    fn test_compress_alternating_patterns() {
+        // Test alternating byte patterns (common in some PDF structures)
+        let patterns = vec![
+            vec![0x00, 0xFF].repeat(1000),
+            vec![0xAA, 0x55].repeat(1000),
+            vec![0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80].repeat(250),
+        ];
+
+        for pattern in patterns {
+            let compressed = compress(&pattern).unwrap();
+            // Patterns should compress well
+            assert!(compressed.len() < pattern.len() / 3);
+
+            let decompressed = decompress(&compressed).unwrap();
+            assert_eq!(decompressed, pattern);
+        }
+    }
 }

@@ -1544,5 +1544,306 @@ mod tests {
             assert!(!pdf_bytes.is_empty());
             assert_eq!(&pdf_bytes[0..5], b"%PDF-");
         }
+
+        #[test]
+        fn test_document_metadata_all_fields() {
+            let mut doc = Document::new();
+
+            // Set all metadata fields
+            doc.set_title("Test Document");
+            doc.set_author("John Doe");
+            doc.set_subject("Testing PDF metadata");
+            doc.set_keywords("test, pdf, metadata");
+            doc.set_creator("Test Suite");
+            doc.set_producer("oxidize_pdf tests");
+
+            // Verify all fields are set
+            assert_eq!(doc.metadata.title.as_deref(), Some("Test Document"));
+            assert_eq!(doc.metadata.author.as_deref(), Some("John Doe"));
+            assert_eq!(
+                doc.metadata.subject.as_deref(),
+                Some("Testing PDF metadata")
+            );
+            assert_eq!(
+                doc.metadata.keywords.as_deref(),
+                Some("test, pdf, metadata")
+            );
+            assert_eq!(doc.metadata.creator.as_deref(), Some("Test Suite"));
+            assert_eq!(doc.metadata.producer.as_deref(), Some("oxidize_pdf tests"));
+            assert!(doc.metadata.creation_date.is_some());
+            assert!(doc.metadata.modification_date.is_some());
+        }
+
+        #[test]
+        fn test_document_add_pages() {
+            let mut doc = Document::new();
+
+            // Initially empty
+            assert_eq!(doc.page_count(), 0);
+
+            // Add pages
+            let page1 = Page::a4();
+            let page2 = Page::letter();
+            let page3 = Page::legal();
+
+            doc.add_page(page1);
+            assert_eq!(doc.page_count(), 1);
+
+            doc.add_page(page2);
+            assert_eq!(doc.page_count(), 2);
+
+            doc.add_page(page3);
+            assert_eq!(doc.page_count(), 3);
+
+            // Verify we can convert to PDF with multiple pages
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_default_font_encoding() {
+            let mut doc = Document::new();
+
+            // Initially no default encoding
+            assert!(doc.default_font_encoding.is_none());
+
+            // Set default encoding
+            doc.set_default_font_encoding(Some(FontEncoding::WinAnsiEncoding));
+            assert_eq!(
+                doc.default_font_encoding(),
+                Some(FontEncoding::WinAnsiEncoding)
+            );
+
+            // Change encoding
+            doc.set_default_font_encoding(Some(FontEncoding::MacRomanEncoding));
+            assert_eq!(
+                doc.default_font_encoding(),
+                Some(FontEncoding::MacRomanEncoding)
+            );
+        }
+
+        #[test]
+        fn test_document_compression_setting() {
+            let mut doc = Document::new();
+
+            // Default should compress
+            assert!(doc.compress);
+
+            // Disable compression
+            doc.set_compress(false);
+            assert!(!doc.compress);
+
+            // Re-enable compression
+            doc.set_compress(true);
+            assert!(doc.compress);
+        }
+
+        #[test]
+        fn test_document_with_empty_pages() {
+            let mut doc = Document::new();
+
+            // Add empty page
+            doc.add_page(Page::a4());
+
+            // Should be able to convert to bytes
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+
+            let pdf_bytes = result.unwrap();
+            assert!(!pdf_bytes.is_empty());
+            assert!(pdf_bytes.starts_with(b"%PDF-"));
+        }
+
+        #[test]
+        fn test_document_with_multiple_page_sizes() {
+            let mut doc = Document::new();
+
+            // Add pages with different sizes
+            doc.add_page(Page::a4()); // 595 x 842
+            doc.add_page(Page::letter()); // 612 x 792
+            doc.add_page(Page::legal()); // 612 x 1008
+            doc.add_page(Page::a4()); // Another A4
+            doc.add_page(Page::new(200.0, 300.0)); // Custom size
+
+            assert_eq!(doc.page_count(), 5);
+
+            // Verify we have 5 pages
+            // Note: Direct page access is not available in public API
+            // We verify by successful PDF generation
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_metadata_dates() {
+            use chrono::Duration;
+
+            let doc = Document::new();
+
+            // Should have creation and modification dates
+            assert!(doc.metadata.creation_date.is_some());
+            assert!(doc.metadata.modification_date.is_some());
+
+            if let (Some(created), Some(modified)) =
+                (doc.metadata.creation_date, doc.metadata.modification_date)
+            {
+                // Dates should be very close (created during construction)
+                let diff = modified - created;
+                assert!(diff < Duration::seconds(1));
+            }
+        }
+
+        #[test]
+        fn test_document_builder_pattern() {
+            // Test fluent API style
+            let mut doc = Document::new();
+            doc.set_title("Fluent");
+            doc.set_author("Builder");
+            doc.set_compress(true);
+
+            assert_eq!(doc.metadata.title.as_deref(), Some("Fluent"));
+            assert_eq!(doc.metadata.author.as_deref(), Some("Builder"));
+            assert!(doc.compress);
+        }
+
+        #[test]
+        fn test_document_save_to_vec() {
+            let mut doc = Document::new();
+            doc.set_title("Test Save");
+            doc.add_page(Page::a4());
+
+            // Test to_bytes
+            let bytes_result = doc.to_bytes();
+            assert!(bytes_result.is_ok());
+
+            let bytes = bytes_result.unwrap();
+            assert!(!bytes.is_empty());
+            assert!(bytes.starts_with(b"%PDF-"));
+            assert!(bytes.ends_with(b"%%EOF") || bytes.ends_with(b"%%EOF\n"));
+        }
+
+        #[test]
+        fn test_document_unicode_metadata() {
+            let mut doc = Document::new();
+
+            // Set metadata with Unicode characters
+            doc.set_title("日本語のタイトル");
+            doc.set_author("作者名 😀");
+            doc.set_subject("Тема документа");
+            doc.set_keywords("كلمات, מפתח, 关键词");
+
+            assert_eq!(doc.metadata.title.as_deref(), Some("日本語のタイトル"));
+            assert_eq!(doc.metadata.author.as_deref(), Some("作者名 😀"));
+            assert_eq!(doc.metadata.subject.as_deref(), Some("Тема документа"));
+            assert_eq!(
+                doc.metadata.keywords.as_deref(),
+                Some("كلمات, מפתח, 关键词")
+            );
+        }
+
+        #[test]
+        fn test_document_page_iteration() {
+            let mut doc = Document::new();
+
+            // Add multiple pages
+            for i in 0..5 {
+                let mut page = Page::a4();
+                let gc = page.graphics();
+                gc.begin_text();
+                gc.show_text(&format!("Page {}", i + 1));
+                gc.end_text();
+                doc.add_page(page);
+            }
+
+            // Verify page count
+            assert_eq!(doc.page_count(), 5);
+
+            // Verify we can generate PDF with all pages
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_with_graphics_content() {
+            let mut doc = Document::new();
+
+            let mut page = Page::a4();
+            {
+                let gc = page.graphics();
+
+                // Add various graphics operations
+                gc.save_state();
+
+                // Draw rectangle
+                gc.rectangle(100.0, 100.0, 200.0, 150.0);
+                gc.stroke();
+
+                // Draw circle (approximated)
+                gc.move_to(300.0, 300.0);
+                gc.circle(300.0, 300.0, 50.0);
+                gc.fill();
+
+                // Add text
+                gc.begin_text();
+                gc.set_text_position(100.0, 500.0);
+                gc.show_text("Graphics Test");
+                gc.end_text();
+
+                gc.restore_state();
+            }
+
+            doc.add_page(page);
+
+            // Should produce valid PDF
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_producer_version() {
+            let doc = Document::new();
+
+            // Producer should contain version
+            assert!(doc.metadata.producer.is_some());
+            if let Some(producer) = &doc.metadata.producer {
+                assert!(producer.contains("oxidize_pdf"));
+                assert!(producer.contains(env!("CARGO_PKG_VERSION")));
+            }
+        }
+
+        #[test]
+        fn test_document_empty_metadata_fields() {
+            let mut doc = Document::new();
+
+            // Set empty strings
+            doc.set_title("");
+            doc.set_author("");
+            doc.set_subject("");
+            doc.set_keywords("");
+
+            // Empty strings should be stored as Some("")
+            assert_eq!(doc.metadata.title.as_deref(), Some(""));
+            assert_eq!(doc.metadata.author.as_deref(), Some(""));
+            assert_eq!(doc.metadata.subject.as_deref(), Some(""));
+            assert_eq!(doc.metadata.keywords.as_deref(), Some(""));
+        }
+
+        #[test]
+        fn test_document_very_long_metadata() {
+            let mut doc = Document::new();
+
+            // Create very long strings
+            let long_title = "A".repeat(1000);
+            let long_author = "B".repeat(500);
+            let long_keywords = vec!["keyword"; 100].join(", ");
+
+            doc.set_title(&long_title);
+            doc.set_author(&long_author);
+            doc.set_keywords(&long_keywords);
+
+            assert_eq!(doc.metadata.title.as_deref(), Some(long_title.as_str()));
+            assert_eq!(doc.metadata.author.as_deref(), Some(long_author.as_str()));
+            assert!(doc.metadata.keywords.as_ref().unwrap().len() > 500);
+        }
     }
 }

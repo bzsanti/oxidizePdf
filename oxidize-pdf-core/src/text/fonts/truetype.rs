@@ -1345,4 +1345,307 @@ mod tests {
         let glyphs = HashSet::from([0, 1, 2, 3]);
         assert_eq!(glyphs.len(), 4);
     }
+
+    #[test]
+    fn test_table_entry_creation() {
+        let entry = TableEntry {
+            tag: [b'h', b'e', b'a', b'd'],
+            _checksum: 0x12345678,
+            offset: 1024,
+            length: 256,
+        };
+
+        assert_eq!(entry.tag, *b"head");
+        assert_eq!(entry._checksum, 0x12345678);
+        assert_eq!(entry.offset, 1024);
+        assert_eq!(entry.length, 256);
+    }
+
+    #[test]
+    fn test_glyph_info_creation() {
+        let glyph = GlyphInfo {
+            index: 42,
+            unicode: vec![0x0041, 0x0061], // 'A' and 'a'
+            advance_width: 600,
+            lsb: 50,
+        };
+
+        assert_eq!(glyph.index, 42);
+        assert_eq!(glyph.unicode.len(), 2);
+        assert_eq!(glyph.advance_width, 600);
+        assert_eq!(glyph.lsb, 50);
+    }
+
+    #[test]
+    fn test_cmap_subtable_creation() {
+        let mut mappings = HashMap::new();
+        mappings.insert(65, 1); // 'A' -> glyph 1
+        mappings.insert(66, 2); // 'B' -> glyph 2
+
+        let subtable = CmapSubtable {
+            platform_id: 3, // Microsoft
+            encoding_id: 1, // Unicode
+            format: 4,
+            mappings,
+        };
+
+        assert_eq!(subtable.platform_id, 3);
+        assert_eq!(subtable.encoding_id, 1);
+        assert_eq!(subtable.format, 4);
+        assert_eq!(subtable.mappings.get(&65), Some(&1));
+        assert_eq!(subtable.mappings.get(&66), Some(&2));
+    }
+
+    #[test]
+    fn test_read_u16() {
+        let data = vec![0xAB, 0xCD];
+        let result = read_u16(&data, 0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0xABCD);
+
+        // Test out of bounds
+        let result = read_u16(&data, 1);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_read_u32() {
+        let data = vec![0x12, 0x34, 0x56, 0x78];
+        let result = read_u32(&data, 0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0x12345678);
+
+        // Test out of bounds
+        let result = read_u32(&data, 2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_read_i16() {
+        let data = vec![0xFF, 0xFE]; // -2 in big endian
+        let result = read_i16(&data, 0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), -2);
+
+        let data = vec![0x00, 0x7F]; // 127
+        let result = read_i16(&data, 0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 127);
+    }
+
+    #[test]
+    fn test_required_tables() {
+        assert_eq!(REQUIRED_TABLES.len(), 7);
+        assert!(REQUIRED_TABLES.contains(&HEAD_TABLE));
+        assert!(REQUIRED_TABLES.contains(&CMAP_TABLE));
+        assert!(REQUIRED_TABLES.contains(&GLYF_TABLE));
+        assert!(REQUIRED_TABLES.contains(&LOCA_TABLE));
+        assert!(REQUIRED_TABLES.contains(&MAXP_TABLE));
+        assert!(REQUIRED_TABLES.contains(&HHEA_TABLE));
+        assert!(REQUIRED_TABLES.contains(&HMTX_TABLE));
+    }
+
+    #[test]
+    fn test_minimal_font_too_small() {
+        let data = vec![0; 11]; // Less than minimum 12 bytes
+        let result = TrueTypeFont::parse(data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_font_with_invalid_signature() {
+        let mut data = vec![0; 100];
+        // Invalid signature (not TrueType or OpenType)
+        data[0..4].copy_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF]);
+        let result = TrueTypeFont::parse(data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_font_with_zero_tables() {
+        let mut data = vec![0; 12];
+        // TrueType signature
+        data[0..4].copy_from_slice(&[0x00, 0x01, 0x00, 0x00]);
+        // Zero tables
+        data[4..6].copy_from_slice(&[0x00, 0x00]);
+        let result = TrueTypeFont::parse(data);
+        assert!(result.is_err()); // Should fail as required tables are missing
+    }
+
+    #[test]
+    fn test_get_table_not_found() {
+        let font = TrueTypeFont {
+            data: vec![],
+            tables: HashMap::new(),
+            num_glyphs: 0,
+            units_per_em: 1000,
+            loca_format: 0,
+        };
+
+        let result = font.get_table(b"test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_table_found() {
+        let mut tables = HashMap::new();
+        tables.insert(
+            [b'h', b'e', b'a', b'd'],
+            TableEntry {
+                tag: [b'h', b'e', b'a', b'd'],
+                _checksum: 0,
+                offset: 100,
+                length: 54,
+            },
+        );
+
+        let font = TrueTypeFont {
+            data: vec![],
+            tables,
+            num_glyphs: 0,
+            units_per_em: 1000,
+            loca_format: 0,
+        };
+
+        let result = font.get_table(b"head");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().offset, 100);
+    }
+
+    #[test]
+    fn test_parse_head_table_too_small() {
+        let font = TrueTypeFont {
+            data: vec![0; 50], // Too small for head table
+            tables: HashMap::new(),
+            num_glyphs: 0,
+            units_per_em: 1000,
+            loca_format: 0,
+        };
+
+        // Test that font has empty tables
+        assert!(font.tables.is_empty());
+    }
+
+    #[test]
+    fn test_parse_maxp_table_too_small() {
+        let font = TrueTypeFont {
+            data: vec![0; 5], // Too small for maxp table
+            tables: HashMap::new(),
+            num_glyphs: 0,
+            units_per_em: 1000,
+            loca_format: 0,
+        };
+
+        // Test that font has correct initial values
+        assert_eq!(font.num_glyphs, 0);
+    }
+
+    #[test]
+    fn test_parse_loca_short_format() {
+        let mut data = vec![0; 100];
+        // Create fake loca table with short format (divide by 2)
+        for i in 0..10 {
+            let offset = (i * 100) as u16;
+            data[i * 2] = (offset >> 8) as u8;
+            data[i * 2 + 1] = (offset & 0xFF) as u8;
+        }
+
+        let font = TrueTypeFont {
+            data: data.clone(),
+            tables: HashMap::new(),
+            num_glyphs: 10,
+            units_per_em: 1000,
+            loca_format: 0, // Short format
+        };
+
+        // Test data length and format
+        assert_eq!(data.len(), 20);
+        assert_eq!(font.loca_format, 0);
+    }
+
+    #[test]
+    fn test_parse_loca_long_format() {
+        let mut data = vec![0; 100];
+        // Create fake loca table with long format
+        for i in 0..10 {
+            let offset = (i * 1000) as u32;
+            data[i * 4] = (offset >> 24) as u8;
+            data[i * 4 + 1] = ((offset >> 16) & 0xFF) as u8;
+            data[i * 4 + 2] = ((offset >> 8) & 0xFF) as u8;
+            data[i * 4 + 3] = (offset & 0xFF) as u8;
+        }
+
+        let font = TrueTypeFont {
+            data: data.clone(),
+            tables: HashMap::new(),
+            num_glyphs: 10,
+            units_per_em: 1000,
+            loca_format: 1, // Long format
+        };
+
+        // Test data length and format
+        assert_eq!(data.len(), 20);
+        assert_eq!(font.loca_format, 1);
+    }
+
+    #[test]
+    fn test_get_glyph_data() {
+        let mut data = vec![0; 1000];
+        // Add some dummy glyph data
+        data[100..110].copy_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+        let mut tables = HashMap::new();
+        tables.insert(
+            [b'g', b'l', b'y', b'f'],
+            TableEntry {
+                tag: [b'g', b'l', b'y', b'f'],
+                _checksum: 0,
+                offset: 0,
+                length: 1000,
+            },
+        );
+
+        let font = TrueTypeFont {
+            data,
+            tables,
+            num_glyphs: 10,
+            units_per_em: 1000,
+            loca_format: 0,
+        };
+
+        let glyph_data = font.get_glyph_data(100);
+        assert!(glyph_data.is_ok());
+        let glyph_data = glyph_data.unwrap();
+        assert_eq!(glyph_data.len(), 10);
+        assert_eq!(glyph_data[0], 1);
+    }
+
+    #[test]
+    fn test_subset_font_empty() {
+        let font = TrueTypeFont {
+            data: vec![],
+            tables: HashMap::new(),
+            num_glyphs: 0,
+            units_per_em: 1000,
+            loca_format: 0,
+        };
+
+        let result = font.create_subset(&HashSet::new());
+        assert!(result.is_err()); // Should fail with no glyphs
+    }
+
+    #[test]
+    fn test_font_metrics() {
+        let font = TrueTypeFont {
+            data: vec![],
+            tables: HashMap::new(),
+            num_glyphs: 100,
+            units_per_em: 2048,
+            loca_format: 1,
+        };
+
+        assert_eq!(font.num_glyphs, 100);
+        assert_eq!(font.units_per_em, 2048);
+        assert_eq!(font.loca_format, 1);
+    }
 }

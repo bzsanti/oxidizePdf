@@ -49,9 +49,9 @@
 //! # }
 //! ```
 
-use super::objects::{PdfDictionary, PdfObject};
 #[cfg(test)]
-use super::objects::{PdfName, PdfString};
+use super::objects::{PdfArray, PdfName, PdfString};
+use super::objects::{PdfDictionary, PdfObject};
 use super::page_tree::{PageTree, ParsedPage};
 use super::reader::PdfReader;
 use super::{ParseError, ParseOptions, ParseResult};
@@ -1986,17 +1986,17 @@ mod tests {
             (3, 0),
             PdfObject::String(PdfString::new(b"Hello PDF".to_vec())),
         );
-        resources.cache_object((4, 0), PdfObject::Name(PdfName::new("Type")));
+        resources.cache_object((4, 0), PdfObject::Name(PdfName::new("Type".to_string())));
 
         let mut dict = PdfDictionary::new();
         dict.insert(
-            PdfName::new("Key"),
+            "Key".to_string(),
             PdfObject::String(PdfString::new(b"Value".to_vec())),
         );
         resources.cache_object((5, 0), PdfObject::Dictionary(dict));
 
         let array = vec![PdfObject::Integer(1), PdfObject::Integer(2)];
-        resources.cache_object((6, 0), PdfObject::Array(array));
+        resources.cache_object((6, 0), PdfObject::Array(PdfArray(array)));
 
         // Verify all cached correctly
         assert_eq!(
@@ -2013,7 +2013,7 @@ mod tests {
         );
         assert_eq!(
             resources.get_cached((4, 0)).unwrap(),
-            PdfObject::Name(PdfName::new("Type"))
+            PdfObject::Name(PdfName::new("Type".to_string()))
         );
         assert!(matches!(
             resources.get_cached((5, 0)).unwrap(),

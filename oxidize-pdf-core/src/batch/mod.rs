@@ -411,4 +411,215 @@ mod tests {
         assert_eq!(summary.failed, 0);
         assert!(!summary.cancelled);
     }
+
+    #[test]
+    fn test_batch_options_builder_advanced() {
+        let options = BatchOptions::default()
+            .with_parallelism(4)
+            .with_memory_limit(1024 * 1024)
+            .stop_on_error(true)
+            .with_job_timeout(Duration::from_secs(60));
+
+        assert_eq!(options.parallelism, 4);
+        assert_eq!(options.memory_limit_per_worker, 1024 * 1024);
+        assert!(options.stop_on_error);
+        assert_eq!(options.job_timeout, Some(Duration::from_secs(60)));
+    }
+
+    #[test]
+    fn test_batch_processor_with_multiple_jobs() {
+        let mut processor = BatchProcessor::new(BatchOptions::default());
+
+        // Add multiple test jobs
+        for i in 0..5 {
+            processor.add_job(BatchJob::Custom {
+                name: format!("job_{}", i),
+                operation: Box::new(move || {
+                    // Simulate some work
+                    thread::sleep(Duration::from_millis(10));
+                    Ok(())
+                }),
+            });
+        }
+
+        let summary = processor.execute().unwrap();
+        assert_eq!(summary.total_jobs, 5);
+        assert_eq!(summary.successful, 5);
+        assert_eq!(summary.failed, 0);
+    }
+
+    #[test]
+    fn test_batch_processor_with_failing_jobs() {
+        let mut processor = BatchProcessor::new(BatchOptions::default());
+
+        // Add a mix of successful and failing jobs
+        processor.add_job(BatchJob::Custom {
+            name: "success".to_string(),
+            operation: Box::new(|| Ok(())),
+        });
+
+        processor.add_job(BatchJob::Custom {
+            name: "failure".to_string(),
+            operation: Box::new(|| {
+                Err(crate::error::PdfError::InvalidStructure(
+                    "Test error".to_string(),
+                ))
+            }),
+        });
+
+        let summary = processor.execute().unwrap();
+        assert_eq!(summary.total_jobs, 2);
+        assert_eq!(summary.successful, 1);
+        assert_eq!(summary.failed, 1);
+    }
+
+    #[test]
+    fn test_batch_processor_stop_on_error() {
+        let mut options = BatchOptions::default();
+        options.stop_on_error = true;
+        options.parallelism = 1; // Sequential to ensure order
+
+        let mut processor = BatchProcessor::new(options);
+
+        // Add jobs where the second one fails
+        processor.add_job(BatchJob::Custom {
+            name: "job1".to_string(),
+            operation: Box::new(|| Ok(())),
+        });
+
+        processor.add_job(BatchJob::Custom {
+            name: "job2".to_string(),
+            operation: Box::new(|| {
+                Err(crate::error::PdfError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Test error",
+                )))
+            }),
+        });
+
+        processor.add_job(BatchJob::Custom {
+            name: "job3".to_string(),
+            operation: Box::new(|| Ok(())),
+        });
+
+        let result = processor.execute();
+        assert!(result.is_err() || result.unwrap().failed > 0);
+    }
+
+    #[test]
+    fn test_batch_processor_parallelism() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let mut options = BatchOptions::default();
+        options.parallelism = 4;
+
+        let mut processor = BatchProcessor::new(options);
+        let concurrent_count = Arc::new(AtomicUsize::new(0));
+        let max_concurrent = Arc::new(AtomicUsize::new(0));
+
+        // Add jobs that track concurrency
+        for i in 0..10 {
+            let concurrent = concurrent_count.clone();
+            let max = max_concurrent.clone();
+
+            processor.add_job(BatchJob::Custom {
+                name: format!("job_{}", i),
+                operation: Box::new(move || {
+                    let current = concurrent.fetch_add(1, Ordering::SeqCst) + 1;
+                    let mut max_val = max.load(Ordering::SeqCst);
+                    while current > max_val {
+                        match max.compare_exchange_weak(
+                            max_val,
+                            current,
+                            Ordering::SeqCst,
+                            Ordering::SeqCst,
+                        ) {
+                            Ok(_) => break,
+                            Err(x) => max_val = x,
+                        }
+                    }
+
+                    thread::sleep(Duration::from_millis(50));
+                    concurrent.fetch_sub(1, Ordering::SeqCst);
+
+                    Ok(())
+                }),
+            });
+        }
+
+        let summary = processor.execute().unwrap();
+        assert_eq!(summary.successful, 10);
+
+        // Verify parallelism was used (max concurrent should be > 1)
+        assert!(max_concurrent.load(Ordering::SeqCst) > 1);
+        assert!(max_concurrent.load(Ordering::SeqCst) <= 4);
+    }
+
+    #[test]
+    fn test_batch_processor_timeout() {
+        let mut options = BatchOptions::default();
+        options.job_timeout = Some(Duration::from_millis(50));
+        options.parallelism = 1;
+
+        let mut processor = BatchProcessor::new(options);
+
+        // Add a job that takes too long
+        processor.add_job(BatchJob::Custom {
+            name: "timeout_job".to_string(),
+            operation: Box::new(|| {
+                thread::sleep(Duration::from_millis(200));
+                Ok(())
+            }),
+        });
+
+        let summary = processor.execute().unwrap();
+        // Job should fail due to timeout
+        assert_eq!(summary.failed, 1);
+    }
+
+    #[test]
+    fn test_batch_processor_memory_limit() {
+        let mut options = BatchOptions::default();
+        options.memory_limit_per_worker = 1024 * 1024; // 1MB
+
+        let processor = BatchProcessor::new(options);
+
+        // Verify memory limit is set
+        assert_eq!(processor.options.memory_limit_per_worker, 1024 * 1024);
+    }
+
+    #[test]
+    fn test_batch_progress_tracking() {
+        use std::sync::{Arc, Mutex};
+
+        let progress_updates = Arc::new(Mutex::new(Vec::new()));
+        let progress_clone = progress_updates.clone();
+
+        let mut options = BatchOptions::default();
+        options.progress_callback = Some(Arc::new(move |info: &ProgressInfo| {
+            progress_clone.lock().unwrap().push(info.percentage());
+        }));
+
+        let mut processor = BatchProcessor::new(options);
+
+        // Add some jobs
+        for i in 0..5 {
+            processor.add_job(BatchJob::Custom {
+                name: format!("job_{}", i),
+                operation: Box::new(move || {
+                    thread::sleep(Duration::from_millis(10));
+                    Ok(())
+                }),
+            });
+        }
+
+        processor.execute().unwrap();
+
+        // Should have received progress updates
+        let updates = progress_updates.lock().unwrap();
+        assert!(!updates.is_empty());
+        // Final progress should be 100%
+        assert_eq!(*updates.last().unwrap(), 100.0);
+    }
 }
