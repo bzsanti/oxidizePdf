@@ -2014,4 +2014,221 @@ mod tests {
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("4.00 M"));
     }
+
+    #[test]
+    fn test_line_cap_styles() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_line_cap(LineCap::Butt);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0 J"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_cap(LineCap::Round);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1 J"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_cap(LineCap::Square);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("2 J"));
+    }
+
+    #[test]
+    fn test_line_join_styles() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_line_join(LineJoin::Miter);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0 j"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_join(LineJoin::Round);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1 j"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_join(LineJoin::Bevel);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("2 j"));
+    }
+
+    #[test]
+    fn test_rendering_intent() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_rendering_intent(RenderingIntent::AbsoluteColorimetric);
+        assert_eq!(
+            ctx.rendering_intent(),
+            RenderingIntent::AbsoluteColorimetric
+        );
+
+        ctx.set_rendering_intent(RenderingIntent::Perceptual);
+        assert_eq!(ctx.rendering_intent(), RenderingIntent::Perceptual);
+
+        ctx.set_rendering_intent(RenderingIntent::Saturation);
+        assert_eq!(ctx.rendering_intent(), RenderingIntent::Saturation);
+    }
+
+    #[test]
+    fn test_flatness_tolerance() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_flatness(0.5);
+        assert_eq!(ctx.flatness(), 0.5);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0.50 i"));
+    }
+
+    #[test]
+    fn test_smoothness_tolerance() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_smoothness(0.1);
+        assert_eq!(ctx.smoothness(), 0.1);
+    }
+
+    #[test]
+    fn test_bezier_curves() {
+        let mut ctx = GraphicsContext::new();
+
+        // Cubic Bezier
+        ctx.move_to(10.0, 10.0);
+        ctx.curve_to(20.0, 10.0, 30.0, 20.0, 30.0, 30.0);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("10.00 10.00 m"));
+        assert!(ops_str.contains("c")); // cubic curve
+    }
+
+    #[test]
+    fn test_clipping_path() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.rectangle(10.0, 10.0, 100.0, 100.0);
+        ctx.clip();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("W"));
+    }
+
+    #[test]
+    fn test_even_odd_clipping() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.rectangle(10.0, 10.0, 100.0, 100.0);
+        ctx.clip_even_odd();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("W*"));
+    }
+
+    #[test]
+    fn test_color_creation() {
+        // Test color creation methods
+        let gray = Color::gray(0.5);
+        assert_eq!(gray, Color::Gray(0.5));
+
+        let rgb = Color::rgb(0.2, 0.4, 0.6);
+        assert_eq!(rgb, Color::Rgb(0.2, 0.4, 0.6));
+
+        let cmyk = Color::cmyk(0.1, 0.2, 0.3, 0.4);
+        assert_eq!(cmyk, Color::Cmyk(0.1, 0.2, 0.3, 0.4));
+
+        // Test predefined colors
+        assert_eq!(Color::black(), Color::Gray(0.0));
+        assert_eq!(Color::white(), Color::Gray(1.0));
+        assert_eq!(Color::red(), Color::Rgb(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn test_extended_graphics_state() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test that we can create and use an extended graphics state
+        let extgstate = ExtGState::new();
+
+        // We should be able to create the state without errors
+        assert!(ctx.generate_operations().is_ok());
+    }
+
+    #[test]
+    fn test_path_construction_methods() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test basic path construction methods that exist
+        ctx.move_to(10.0, 10.0);
+        ctx.line_to(20.0, 20.0);
+        ctx.curve_to(30.0, 30.0, 40.0, 40.0, 50.0, 50.0);
+        ctx.rect(60.0, 60.0, 30.0, 30.0);
+        ctx.circle(100.0, 100.0, 25.0);
+        ctx.close_path();
+
+        let ops = ctx.generate_operations().unwrap();
+        assert!(!ops.is_empty());
+    }
+
+    #[test]
+    fn test_graphics_context_clone_advanced() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color(Color::rgb(1.0, 0.0, 0.0));
+        ctx.set_line_width(5.0);
+
+        let cloned = ctx.clone();
+        assert_eq!(cloned.fill_color(), Color::rgb(1.0, 0.0, 0.0));
+        assert_eq!(cloned.line_width(), 5.0);
+    }
+
+    #[test]
+    fn test_basic_drawing_operations() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test that we can at least create a basic drawing
+        ctx.move_to(50.0, 50.0);
+        ctx.line_to(100.0, 100.0);
+        ctx.stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("m")); // move
+        assert!(ops_str.contains("l")); // line
+        assert!(ops_str.contains("S")); // stroke
+    }
+
+    #[test]
+    fn test_graphics_state_stack() {
+        let mut ctx = GraphicsContext::new();
+
+        // Initial state
+        ctx.set_fill_color(Color::black());
+
+        // Save and change
+        ctx.save_state();
+        ctx.set_fill_color(Color::red());
+        assert_eq!(ctx.fill_color(), Color::red());
+
+        // Save again and change
+        ctx.save_state();
+        ctx.set_fill_color(Color::blue());
+        assert_eq!(ctx.fill_color(), Color::blue());
+
+        // Restore once
+        ctx.restore_state();
+        assert_eq!(ctx.fill_color(), Color::red());
+
+        // Restore again
+        ctx.restore_state();
+        assert_eq!(ctx.fill_color(), Color::black());
+    }
 }

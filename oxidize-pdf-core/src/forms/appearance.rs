@@ -1281,4 +1281,82 @@ mod tests {
             assert!(result.is_ok(), "Failed for style {:?}", style);
         }
     }
+
+    #[test]
+    fn test_appearance_state_pdf_names() {
+        assert_eq!(AppearanceState::Normal.pdf_name(), "N");
+        assert_eq!(AppearanceState::Rollover.pdf_name(), "R");
+        assert_eq!(AppearanceState::Down.pdf_name(), "D");
+    }
+
+    #[test]
+    fn test_appearance_stream_creation_advanced() {
+        let content = b"q 1 0 0 1 0 0 cm Q".to_vec();
+        let bbox = [0.0, 0.0, 100.0, 50.0];
+        let stream = AppearanceStream::new(content.clone(), bbox);
+
+        assert_eq!(stream.content, content);
+        assert_eq!(stream.bbox, bbox);
+        assert!(stream.resources.is_empty());
+    }
+
+    #[test]
+    fn test_appearance_stream_with_resources_advanced() {
+        let mut resources = Dictionary::new();
+        resources.set("Font", Object::Dictionary(Dictionary::new()));
+
+        let stream =
+            AppearanceStream::new(vec![], [0.0, 0.0, 10.0, 10.0]).with_resources(resources.clone());
+
+        assert_eq!(stream.resources, resources);
+    }
+
+    #[test]
+    fn test_appearance_dictionary_new() {
+        let dict = AppearanceDictionary::new();
+        assert!(dict.appearances.is_empty());
+        assert!(dict.down_appearances.is_empty());
+    }
+
+    #[test]
+    fn test_appearance_dictionary_set_get() {
+        let mut dict = AppearanceDictionary::new();
+        let stream = AppearanceStream::new(vec![1, 2, 3], [0.0, 0.0, 10.0, 10.0]);
+
+        dict.set_appearance(AppearanceState::Normal, stream.clone());
+        assert!(dict.get_appearance(AppearanceState::Normal).is_some());
+        assert!(dict.get_appearance(AppearanceState::Down).is_none());
+    }
+
+    #[test]
+    fn test_text_field_multiline() {
+        let mut generator = TextFieldAppearance::default();
+        generator.multiline = true;
+
+        let widget = Widget::new(Rectangle {
+            lower_left: Point { x: 0.0, y: 0.0 },
+            upper_right: Point { x: 200.0, y: 100.0 },
+        });
+
+        let text = "Line 1\nLine 2\nLine 3";
+        let result = generator.generate_appearance(&widget, Some(text), AppearanceState::Normal);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_appearance_with_custom_colors() {
+        let mut generator = TextFieldAppearance::default();
+        generator.text_color = Color::rgb(1.0, 0.0, 0.0); // Red text
+        generator.font_size = 14.0;
+        generator.justification = 1; // center
+
+        let widget = Widget::new(Rectangle {
+            lower_left: Point { x: 0.0, y: 0.0 },
+            upper_right: Point { x: 100.0, y: 30.0 },
+        });
+
+        let result =
+            generator.generate_appearance(&widget, Some("Colored"), AppearanceState::Normal);
+        assert!(result.is_ok());
+    }
 }

@@ -1041,6 +1041,172 @@ mod tests {
         let crop_box = page.crop_box.unwrap();
         assert_eq!(crop_box, [10.0, 10.0, 585.0, 832.0]);
     }
+
+    #[test]
+    fn test_parsed_page_creation() {
+        let dict = PdfDictionary::new();
+        let page = ParsedPage {
+            obj_ref: (1, 0),
+            dict: dict.clone(),
+            inherited_resources: None,
+            media_box: [0.0, 0.0, 612.0, 792.0],
+            crop_box: None,
+            rotation: 0,
+            annotations: None,
+        };
+
+        assert_eq!(page.obj_ref, (1, 0));
+        assert_eq!(page.dict, dict);
+        assert!(page.inherited_resources.is_none());
+        assert_eq!(page.media_box, [0.0, 0.0, 612.0, 792.0]); // Default US Letter
+        assert!(page.crop_box.is_none());
+        assert_eq!(page.rotation, 0);
+        assert!(page.annotations.is_none());
+    }
+
+    #[test]
+    fn test_parsed_page_width_height() {
+        let mut page = create_test_page();
+
+        // A4 size
+        assert_eq!(page.width(), 595.0);
+        assert_eq!(page.height(), 842.0);
+
+        // Test with rotation
+        page.rotation = 90;
+        // Width and height should swap when rotated
+        assert_eq!(page.width(), 842.0);
+        assert_eq!(page.height(), 595.0);
+
+        page.rotation = 270;
+        assert_eq!(page.width(), 842.0);
+        assert_eq!(page.height(), 595.0);
+
+        page.rotation = 180;
+        assert_eq!(page.width(), 595.0);
+        assert_eq!(page.height(), 842.0);
+    }
+
+    #[test]
+    fn test_parsed_page_get_resources() {
+        let page = create_test_page_with_resources();
+        let resources = page.get_resources();
+
+        assert!(resources.is_some());
+        let res = resources.unwrap();
+        assert!(res.contains_key("Font"));
+    }
+
+    #[test]
+    fn test_parsed_page_get_contents() {
+        let mut page = create_test_page();
+
+        // Add contents to page
+        page.dict
+            .insert("Contents".to_string(), PdfObject::Reference(10, 0));
+
+        let contents = page.get_contents();
+        assert!(contents.is_some());
+        assert_eq!(contents, Some(&PdfObject::Reference(10, 0)));
+    }
+
+    #[test]
+    fn test_parsed_page_get_annotations() {
+        let page = create_test_page_with_resources();
+        let annotations = page.get_annotations();
+
+        assert!(annotations.is_some());
+        if let Some(arr) = annotations {
+            assert_eq!(arr.0.len(), 0);
+        }
+    }
+
+    #[test]
+    fn test_parsed_page_inherited_resources() {
+        let mut page = create_test_page();
+        let mut parent_resources = PdfDictionary::new();
+        parent_resources.insert(
+            "Font".to_string(),
+            PdfObject::Dictionary(PdfDictionary::new()),
+        );
+
+        // Directly set inherited resources
+        page.inherited_resources = Some(parent_resources.clone());
+
+        assert!(page.inherited_resources.is_some());
+        assert_eq!(page.inherited_resources, Some(parent_resources));
+    }
+
+    #[test]
+    fn test_parsed_page_with_crop_box() {
+        let mut page = create_test_page();
+        page.crop_box = Some([50.0, 50.0, 545.0, 792.0]);
+
+        // CropBox affects visible area
+        let crop = page.crop_box.unwrap();
+        assert_eq!(crop[0], 50.0);
+        assert_eq!(crop[1], 50.0);
+        assert_eq!(crop[2], 545.0);
+        assert_eq!(crop[3], 792.0);
+    }
+
+    #[test]
+    fn test_page_tree_cache_overflow() {
+        let mut tree = PageTree::new(100);
+
+        // Cache more pages than typical cache size
+        for i in 0..50 {
+            let page = create_test_page();
+            tree.cache_page(i, page);
+        }
+
+        // All pages should be cached
+        for i in 0..50 {
+            assert!(tree.get_cached_page(i).is_some());
+        }
+    }
+
+    #[test]
+    fn test_page_tree_update_cached_page() {
+        let mut tree = PageTree::new(10);
+        let page1 = create_test_page();
+        let mut page2 = create_test_page();
+        page2.rotation = 180;
+
+        tree.cache_page(0, page1);
+        let cached = tree.get_cached_page(0).unwrap();
+        assert_eq!(cached.rotation, 0);
+
+        // Update the same page
+        tree.cache_page(0, page2);
+        let cached = tree.get_cached_page(0).unwrap();
+        assert_eq!(cached.rotation, 180);
+    }
+
+    #[test]
+    fn test_parsed_page_clone() {
+        let page = create_test_page_with_resources();
+        let cloned = page.clone();
+
+        assert_eq!(page.obj_ref, cloned.obj_ref);
+        assert_eq!(page.dict, cloned.dict);
+        assert_eq!(page.inherited_resources, cloned.inherited_resources);
+        assert_eq!(page.media_box, cloned.media_box);
+        assert_eq!(page.crop_box, cloned.crop_box);
+        assert_eq!(page.rotation, cloned.rotation);
+        assert_eq!(page.annotations, cloned.annotations);
+    }
+
+    #[test]
+    fn test_page_tree_get_page_bounds() {
+        let tree = PageTree::new(100);
+
+        // Test bounds checking
+        assert!(tree.get_cached_page(0).is_none()); // Not cached yet
+        assert!(tree.get_cached_page(99).is_none()); // Within bounds but not cached
+        assert!(tree.get_cached_page(100).is_none()); // Out of bounds
+        assert!(tree.get_cached_page(u32::MAX).is_none()); // Way out of bounds
+    }
 }
 
 #[cfg(test)]

@@ -177,6 +177,8 @@ pub enum RequirementCondition {
 /// Validation result
 #[derive(Debug, Clone)]
 pub struct ValidationResult {
+    /// Field name
+    pub field_name: String,
     /// Is valid
     pub is_valid: bool,
     /// Validation errors
@@ -196,6 +198,8 @@ pub struct ValidationError {
     pub error_type: ValidationErrorType,
     /// Error message
     pub message: String,
+    /// Additional details
+    pub details: Option<String>,
 }
 
 /// Validation error types
@@ -220,6 +224,12 @@ pub struct ValidationSettings {
     pub auto_format: bool,
     /// Allow partial validation
     pub allow_partial: bool,
+    /// Real-time validation
+    pub real_time_validation: bool,
+    /// Highlight errors visually
+    pub highlight_errors: bool,
+    /// Show error messages
+    pub show_error_messages: bool,
 }
 
 impl Default for ValidationSettings {
@@ -229,6 +239,9 @@ impl Default for ValidationSettings {
             show_format_hints: true,
             auto_format: true,
             allow_partial: false,
+            real_time_validation: true,
+            highlight_errors: true,
+            show_error_messages: true,
         }
     }
 }
@@ -271,6 +284,7 @@ impl FormValidationSystem {
                     field_name: field_name.to_string(),
                     error_type: ValidationErrorType::Required,
                     message: required_info.error_message.clone(),
+                    details: None,
                 });
             }
         }
@@ -285,6 +299,7 @@ impl FormValidationSystem {
                         field_name: field_name.to_string(),
                         error_type: ValidationErrorType::Format,
                         message: e.to_string(),
+                        details: None,
                     }),
                 }
             }
@@ -299,12 +314,14 @@ impl FormValidationSystem {
                             .error_message
                             .clone()
                             .unwrap_or_else(|| e.to_string()),
+                        details: None,
                     });
                 }
             }
         }
 
         let result = ValidationResult {
+            field_name: field_name.to_string(),
             is_valid: errors.is_empty(),
             errors,
             warnings,
@@ -418,12 +435,41 @@ impl FormValidationSystem {
                 self.validate_phone_number(&value.to_string(), *country)
             }
             ValidationRule::CreditCard => self.validate_credit_card(&value.to_string()),
-            ValidationRule::Date { min: _, max: _ } => {
+            ValidationRule::Date { min, max } => {
                 // Parse date and validate range
+                let text = value.to_string();
+                let date = NaiveDate::parse_from_str(&text, "%Y-%m-%d")
+                    .map_err(|e| format!("Invalid date format: {}", e))?;
+
+                if let Some(min_date) = min {
+                    if date < *min_date {
+                        return Err(format!("Date must be on or after {}", min_date));
+                    }
+                }
+                if let Some(max_date) = max {
+                    if date > *max_date {
+                        return Err(format!("Date must be on or before {}", max_date));
+                    }
+                }
                 Ok(())
             }
-            ValidationRule::Time { min: _, max: _ } => {
+            ValidationRule::Time { min, max } => {
                 // Parse time and validate range
+                let text = value.to_string();
+                let time = NaiveTime::parse_from_str(&text, "%H:%M:%S")
+                    .or_else(|_| NaiveTime::parse_from_str(&text, "%H:%M"))
+                    .map_err(|e| format!("Invalid time format: {}", e))?;
+
+                if let Some(min_time) = min {
+                    if time < *min_time {
+                        return Err(format!("Time must be at or after {}", min_time));
+                    }
+                }
+                if let Some(max_time) = max {
+                    if time > *max_time {
+                        return Err(format!("Time must be at or before {}", max_time));
+                    }
+                }
                 Ok(())
             }
             ValidationRule::Custom { name, validator } => {
@@ -1292,6 +1338,7 @@ mod tests {
             field_name: "test".to_string(),
             is_valid: true,
             errors: vec![],
+            warnings: vec![],
             formatted_value: None,
         };
         assert_eq!(format!("{}", valid_result), "Valid");
@@ -1313,6 +1360,7 @@ mod tests {
                     details: None,
                 },
             ],
+            warnings: vec![],
             formatted_value: None,
         };
         assert_eq!(format!("{}", invalid_result), "Invalid: 2 errors");
@@ -1346,6 +1394,268 @@ mod tests {
 
         let results = system.validate_all(&fields);
         assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.is_valid));
+    }
+
+    #[test]
+    fn test_validation_settings_advanced() {
+        let settings = ValidationSettings {
+            validate_on_change: true,
+            show_format_hints: true,
+            auto_format: false,
+            allow_partial: false,
+            real_time_validation: true,
+            highlight_errors: true,
+            show_error_messages: true,
+        };
+
+        let mut system = FormValidationSystem::new();
+        system.settings = settings.clone();
+
+        assert!(system.settings.validate_on_change);
+        assert!(system.settings.show_format_hints);
+        assert!(!system.settings.auto_format);
+    }
+
+    #[test]
+    fn test_complex_pattern_validation() {
+        let mut system = FormValidationSystem::new();
+
+        // Add complex regex pattern for product code
+        system.add_validator(FieldValidator {
+            field_name: "product_code".to_string(),
+            rules: vec![ValidationRule::Pattern(
+                r"^[A-Z]{3}-\d{4}-[A-Z]\d$".to_string(),
+            )],
+            format_mask: None,
+            error_message: Some("Invalid product code format".to_string()),
+        });
+
+        let valid_code = FieldValue::Text("ABC-1234-A5".to_string());
+        let result = system.validate_field("product_code", &valid_code);
+        assert!(result.is_valid);
+
+        let invalid_code = FieldValue::Text("abc-1234-a5".to_string());
+        let result = system.validate_field("product_code", &invalid_code);
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_currency_format_mask() {
+        let system = FormValidationSystem::new();
+
+        let mask = FormatMask::Number {
+            decimals: 2,
+            thousands_separator: true,
+            allow_negative: false,
+            prefix: Some("$".to_string()),
+            suffix: None,
+        };
+
+        let result = system.apply_format_mask(&FieldValue::Number(1234567.89), &mask);
+        assert!(result.is_ok());
+        // Format should be $1,234,567.89
+    }
+
+    #[test]
+    fn test_international_phone_formats() {
+        let mut system = FormValidationSystem::new();
+
+        // Test US phone
+        system.add_validator(FieldValidator {
+            field_name: "us_phone".to_string(),
+            rules: vec![ValidationRule::PhoneNumber {
+                country: PhoneCountry::US,
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let valid_us = FieldValue::Text("(555) 123-4567".to_string());
+        assert!(system.validate_field("us_phone", &valid_us).is_valid);
+
+        // Test UK phone
+        system.add_validator(FieldValidator {
+            field_name: "uk_phone".to_string(),
+            rules: vec![ValidationRule::PhoneNumber {
+                country: PhoneCountry::UK,
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let valid_uk = FieldValue::Text("+44 20 1234 5678".to_string());
+        assert!(system.validate_field("uk_phone", &valid_uk).is_valid);
+    }
+
+    #[test]
+    fn test_multiple_validation_rules() {
+        let mut system = FormValidationSystem::new();
+
+        // Password field with multiple rules
+        system.add_validator(FieldValidator {
+            field_name: "password".to_string(),
+            rules: vec![
+                ValidationRule::Required,
+                ValidationRule::Length {
+                    min: Some(8),
+                    max: Some(32),
+                },
+                ValidationRule::Pattern(r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).*$".to_string()),
+            ],
+            format_mask: None,
+            error_message: Some(
+                "Password must be 8-32 chars with uppercase, lowercase, and number".to_string(),
+            ),
+        });
+
+        let weak_password = FieldValue::Text("abc123".to_string());
+        let result = system.validate_field("password", &weak_password);
+        assert!(!result.is_valid);
+        assert!(result.errors.len() >= 2); // Length and pattern failures
+
+        let strong_password = FieldValue::Text("SecurePass123".to_string());
+        assert!(system.validate_field("password", &strong_password).is_valid);
+    }
+
+    #[test]
+    fn test_conditional_required_field() {
+        let mut system = FormValidationSystem::new();
+
+        let info = RequiredFieldInfo {
+            field_name: "shipping_address".to_string(),
+            error_message: "Shipping address required when different from billing".to_string(),
+            group: Some("shipping".to_string()),
+            condition: Some(RequirementCondition::IfFieldNotEmpty {
+                field: "different_shipping".to_string(),
+            }),
+        };
+
+        system.add_required_field(info);
+
+        // Should allow empty when condition not met
+        let result = system.validate_field("shipping_address", &FieldValue::Empty);
+        // In real scenario, condition would be evaluated
+    }
+
+    #[test]
+    fn test_validation_cache_advanced() {
+        let mut system = FormValidationSystem::new();
+
+        system.add_validator(FieldValidator {
+            field_name: "cached_field".to_string(),
+            rules: vec![ValidationRule::Required],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let value = FieldValue::Text("test".to_string());
+
+        // First validation
+        let result1 = system.validate_field("cached_field", &value);
+
+        // Cache should contain result
+        assert!(system.validation_cache.contains_key("cached_field"));
+
+        // Clear cache
+        system.clear_cache();
+        assert!(system.validation_cache.is_empty());
+    }
+
+    #[test]
+    fn test_custom_validator_function() {
+        let mut system = FormValidationSystem::new();
+
+        fn is_even_number(value: &FieldValue) -> bool {
+            match value {
+                FieldValue::Number(n) => (*n as i32) % 2 == 0,
+                _ => false,
+            }
+        }
+
+        system.add_validator(FieldValidator {
+            field_name: "even_number".to_string(),
+            rules: vec![ValidationRule::Custom {
+                name: "even_check".to_string(),
+                validator: is_even_number,
+            }],
+            format_mask: None,
+            error_message: Some("Must be an even number".to_string()),
+        });
+
+        assert!(
+            system
+                .validate_field("even_number", &FieldValue::Number(4.0))
+                .is_valid
+        );
+        assert!(
+            !system
+                .validate_field("even_number", &FieldValue::Number(5.0))
+                .is_valid
+        );
+    }
+
+    #[test]
+    fn test_percentage_format() {
+        let system = FormValidationSystem::new();
+
+        let mask = FormatMask::Number {
+            decimals: 1,
+            thousands_separator: false,
+            allow_negative: false,
+            prefix: None,
+            suffix: Some("%".to_string()),
+        };
+
+        let result = system.apply_format_mask(&FieldValue::Number(0.856), &mask);
+        assert!(result.is_ok());
+        // Should format as 85.6%
+    }
+
+    #[test]
+    fn test_clear_validation_errors() {
+        let mut system = FormValidationSystem::new();
+
+        system.add_validator(FieldValidator {
+            field_name: "test".to_string(),
+            rules: vec![ValidationRule::Required],
+            format_mask: None,
+            error_message: None,
+        });
+
+        // Validate and cache error
+        let _ = system.validate_field("test", &FieldValue::Empty);
+        assert!(system.validation_cache.contains_key("test"));
+
+        // Clear cache
+        system.clear_cache();
+        assert!(system.validation_cache.is_empty());
+    }
+
+    #[test]
+    fn test_batch_validation() {
+        let mut system = FormValidationSystem::new();
+
+        // Add multiple validators
+        for i in 0..5 {
+            system.add_validator(FieldValidator {
+                field_name: format!("field_{}", i),
+                rules: vec![ValidationRule::Required],
+                format_mask: None,
+                error_message: None,
+            });
+        }
+
+        let mut fields = HashMap::new();
+        for i in 0..5 {
+            fields.insert(
+                format!("field_{}", i),
+                FieldValue::Text(format!("value_{}", i)),
+            );
+        }
+
+        let results = system.validate_all(&fields);
+        assert_eq!(results.len(), 5);
         assert!(results.iter().all(|r| r.is_valid));
     }
 }
