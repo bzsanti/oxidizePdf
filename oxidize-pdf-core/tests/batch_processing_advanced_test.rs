@@ -5,7 +5,7 @@ use oxidize_pdf::batch::{
     batch_merge_pdfs, batch_process_files, batch_split_pdfs, BatchJob, BatchOptions,
     BatchProcessor, BatchProgress, BatchSummary, ProgressCallback, ProgressInfo,
 };
-use oxidize_pdf::graphics::Font;
+use oxidize_pdf::text::Font;
 use oxidize_pdf::writer::PdfWriter;
 use oxidize_pdf::{Document, Page};
 use std::fs;
@@ -444,13 +444,13 @@ fn test_batch_with_real_pdf_operations() {
         input: temp_dir.path().join("rotate_me.pdf"),
         output: temp_dir.path().join("rotated.pdf"),
         rotation: 90,
-        pages: vec![1, 2, 3],
+        pages: Some(vec![1, 2, 3]),
     });
 
     processor.add_job(BatchJob::Extract {
         input: temp_dir.path().join("extract_from.pdf"),
         output: temp_dir.path().join("extracted.pdf"),
-        pages: vec![1, 3, 5],
+        pages: Some(vec![1, 3, 5]),
     });
 
     processor.add_job(BatchJob::Compress {

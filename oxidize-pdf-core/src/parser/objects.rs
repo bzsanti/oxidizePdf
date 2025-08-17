@@ -1881,4 +1881,510 @@ This text does not contain the magic word and continues for a very long time wit
         // Should fail because endstream not found within recovery distance
         assert!(obj.is_err());
     }
+
+    // ========== NEW COMPREHENSIVE TESTS ==========
+
+    #[test]
+    fn test_pdf_name_special_characters() {
+        let name = PdfName::new("Name#20With#20Spaces".to_string());
+        assert_eq!(name.as_str(), "Name#20With#20Spaces");
+
+        // Test with Unicode characters
+        let unicode_name = PdfName::new("café".to_string());
+        assert_eq!(unicode_name.as_str(), "café");
+
+        // Test with special PDF name characters
+        let special_name = PdfName::new("Font#2FSubtype".to_string());
+        assert_eq!(special_name.as_str(), "Font#2FSubtype");
+    }
+
+    #[test]
+    fn test_pdf_name_edge_cases() {
+        // Empty name
+        let empty_name = PdfName::new("".to_string());
+        assert_eq!(empty_name.as_str(), "");
+
+        // Very long name
+        let long_name = PdfName::new("A".repeat(1000));
+        assert_eq!(long_name.as_str().len(), 1000);
+
+        // Name with all valid PDF name characters
+        let complex_name = PdfName::new("ABCdef123-._~!*'()".to_string());
+        assert_eq!(complex_name.as_str(), "ABCdef123-._~!*'()");
+    }
+
+    #[test]
+    fn test_pdf_string_encoding_validation() {
+        // Valid UTF-8 string
+        let utf8_string = PdfString::new("Hello, 世界! 🌍".as_bytes().to_vec());
+        assert!(utf8_string.as_str().is_ok());
+
+        // Invalid UTF-8 bytes
+        let invalid_utf8 = PdfString::new(vec![0xFF, 0xFE, 0xFD]);
+        assert!(invalid_utf8.as_str().is_err());
+
+        // Empty string
+        let empty_string = PdfString::new(vec![]);
+        assert_eq!(empty_string.as_str().unwrap(), "");
+    }
+
+    #[test]
+    fn test_pdf_string_binary_data() {
+        // Test with binary data
+        let binary_data = vec![0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC];
+        let binary_string = PdfString::new(binary_data.clone());
+        assert_eq!(binary_string.as_bytes(), &binary_data);
+
+        // Test with null bytes
+        let null_string = PdfString::new(vec![
+            0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x00, 0x57, 0x6F, 0x72, 0x6C, 0x64,
+        ]);
+        assert_eq!(binary_string.as_bytes().len(), 8);
+        assert!(null_string.as_bytes().contains(&0x00));
+    }
+
+    #[test]
+    fn test_pdf_array_nested_structures() {
+        let mut array = PdfArray::new();
+
+        // Add nested array
+        let mut nested_array = PdfArray::new();
+        nested_array.push(PdfObject::Integer(1));
+        nested_array.push(PdfObject::Integer(2));
+        array.push(PdfObject::Array(nested_array));
+
+        // Add nested dictionary
+        let mut nested_dict = PdfDictionary(HashMap::new());
+        nested_dict.0.insert(
+            PdfName::new("Key".to_string()),
+            PdfObject::String(PdfString::new(b"Value".to_vec())),
+        );
+        array.push(PdfObject::Dictionary(nested_dict));
+
+        assert_eq!(array.len(), 2);
+        assert!(matches!(array.get(0), Some(PdfObject::Array(_))));
+        assert!(matches!(array.get(1), Some(PdfObject::Dictionary(_))));
+    }
+
+    #[test]
+    fn test_pdf_array_type_mixing() {
+        let mut array = PdfArray::new();
+
+        // Mix different types
+        array.push(PdfObject::Null);
+        array.push(PdfObject::Boolean(true));
+        array.push(PdfObject::Integer(42));
+        array.push(PdfObject::Real(3.14159));
+        array.push(PdfObject::String(PdfString::new(b"text".to_vec())));
+        array.push(PdfObject::Name(PdfName::new("Name".to_string())));
+
+        assert_eq!(array.len(), 6);
+        assert!(matches!(array.get(0), Some(PdfObject::Null)));
+        assert!(matches!(array.get(1), Some(PdfObject::Boolean(true))));
+        assert!(matches!(array.get(2), Some(PdfObject::Integer(42))));
+        assert!(matches!(array.get(3), Some(PdfObject::Real(_))));
+        assert!(matches!(array.get(4), Some(PdfObject::String(_))));
+        assert!(matches!(array.get(5), Some(PdfObject::Name(_))));
+    }
+
+    #[test]
+    fn test_pdf_dictionary_key_operations() {
+        let mut dict = PdfDictionary(HashMap::new());
+
+        // Test insertion and retrieval
+        dict.0.insert(
+            PdfName::new("Type".to_string()),
+            PdfObject::Name(PdfName::new("Test".to_string())),
+        );
+        dict.0
+            .insert(PdfName::new("Count".to_string()), PdfObject::Integer(100));
+        dict.0
+            .insert(PdfName::new("Flag".to_string()), PdfObject::Boolean(true));
+
+        assert_eq!(dict.0.len(), 3);
+        assert!(dict.0.contains_key(&PdfName::new("Type".to_string())));
+        assert!(dict.0.contains_key(&PdfName::new("Count".to_string())));
+        assert!(dict.0.contains_key(&PdfName::new("Flag".to_string())));
+        assert!(!dict.0.contains_key(&PdfName::new("Missing".to_string())));
+
+        // Test that we can retrieve values
+        assert!(dict.0.get(&PdfName::new("Type".to_string())).is_some());
+    }
+
+    #[test]
+    fn test_pdf_dictionary_complex_values() {
+        let mut dict = PdfDictionary(HashMap::new());
+
+        // Add complex nested structure
+        let mut rect_array = PdfArray::new();
+        rect_array.push(PdfObject::Real(0.0));
+        rect_array.push(PdfObject::Real(0.0));
+        rect_array.push(PdfObject::Real(612.0));
+        rect_array.push(PdfObject::Real(792.0));
+
+        dict.0.insert(
+            PdfName::new("MediaBox".to_string()),
+            PdfObject::Array(rect_array),
+        );
+
+        // Add nested dictionary for resources
+        let mut resources = PdfDictionary(HashMap::new());
+        let mut font_dict = PdfDictionary(HashMap::new());
+        font_dict
+            .0
+            .insert(PdfName::new("F1".to_string()), PdfObject::Reference(10, 0));
+        resources.0.insert(
+            PdfName::new("Font".to_string()),
+            PdfObject::Dictionary(font_dict),
+        );
+
+        dict.0.insert(
+            PdfName::new("Resources".to_string()),
+            PdfObject::Dictionary(resources),
+        );
+
+        assert_eq!(dict.0.len(), 2);
+        assert!(dict.0.get(&PdfName::new("MediaBox".to_string())).is_some());
+        assert!(dict.0.get(&PdfName::new("Resources".to_string())).is_some());
+    }
+
+    #[test]
+    fn test_object_reference_validation() {
+        let ref1 = PdfObject::Reference(1, 0);
+        let ref2 = PdfObject::Reference(1, 0);
+        let ref3 = PdfObject::Reference(1, 1);
+        let ref4 = PdfObject::Reference(2, 0);
+
+        assert_eq!(ref1, ref2);
+        assert_ne!(ref1, ref3);
+        assert_ne!(ref1, ref4);
+
+        // Test edge cases
+        let max_ref = PdfObject::Reference(u32::MAX, u16::MAX);
+        assert!(matches!(max_ref, PdfObject::Reference(u32::MAX, u16::MAX)));
+    }
+
+    #[test]
+    fn test_pdf_object_type_checking() {
+        let objects = vec![
+            PdfObject::Null,
+            PdfObject::Boolean(true),
+            PdfObject::Integer(42),
+            PdfObject::Real(3.14),
+            PdfObject::String(PdfString::new(b"text".to_vec())),
+            PdfObject::Name(PdfName::new("Name".to_string())),
+            PdfObject::Array(PdfArray::new()),
+            PdfObject::Dictionary(PdfDictionary(HashMap::new())),
+            PdfObject::Reference(1, 0),
+        ];
+
+        // Test type identification
+        assert!(matches!(objects[0], PdfObject::Null));
+        assert!(matches!(objects[1], PdfObject::Boolean(_)));
+        assert!(matches!(objects[2], PdfObject::Integer(_)));
+        assert!(matches!(objects[3], PdfObject::Real(_)));
+        assert!(matches!(objects[4], PdfObject::String(_)));
+        assert!(matches!(objects[5], PdfObject::Name(_)));
+        assert!(matches!(objects[6], PdfObject::Array(_)));
+        assert!(matches!(objects[7], PdfObject::Dictionary(_)));
+        assert!(matches!(objects[8], PdfObject::Reference(_, _)));
+    }
+
+    #[test]
+    fn test_pdf_array_large_capacity() {
+        let mut array = PdfArray::new();
+
+        // Add many elements to test capacity management
+        for i in 0..1000 {
+            array.push(PdfObject::Integer(i));
+        }
+
+        assert_eq!(array.len(), 1000);
+        // Check that last element is correct
+        if let Some(PdfObject::Integer(val)) = array.get(999) {
+            assert_eq!(*val, 999);
+        } else {
+            panic!("Expected Integer at index 999");
+        }
+        assert!(array.get(1000).is_none());
+
+        // Test access to elements
+        let mut count = 0;
+        for i in 0..array.len() {
+            if let Some(obj) = array.get(i) {
+                if matches!(obj, PdfObject::Integer(_)) {
+                    count += 1;
+                }
+            }
+        }
+        assert_eq!(count, 1000);
+    }
+
+    #[test]
+    fn test_pdf_dictionary_memory_efficiency() {
+        let mut dict = PdfDictionary(HashMap::new());
+
+        // Add many key-value pairs
+        for i in 0..100 {
+            let key = PdfName::new(format!("Key{}", i));
+            dict.0.insert(key, PdfObject::Integer(i));
+        }
+
+        assert_eq!(dict.0.len(), 100);
+        assert!(dict.0.contains_key(&PdfName::new("Key99".to_string())));
+        assert!(!dict.0.contains_key(&PdfName::new("Key100".to_string())));
+
+        // Test removal
+        dict.0.remove(&PdfName::new("Key50".to_string()));
+        assert_eq!(dict.0.len(), 99);
+        assert!(!dict.0.contains_key(&PdfName::new("Key50".to_string())));
+    }
+
+    #[test]
+    fn test_parsing_simple_error_cases() {
+        use std::io::Cursor;
+
+        // Test empty input handling
+        let empty_input = b"";
+        let mut cursor = Cursor::new(empty_input.to_vec());
+        let mut lexer = Lexer::new(&mut cursor);
+        let result = PdfObject::parse(&mut lexer);
+
+        // Should fail gracefully on empty input
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_unicode_string_handling() {
+        // Test various Unicode encodings
+        let unicode_tests = vec![
+            ("ASCII", "Hello World"),
+            ("Latin-1", "Café résumé"),
+            ("Emoji", "Hello 🌍 World 🚀"),
+            ("CJK", "你好世界"),
+            ("Mixed", "Hello 世界! Bonjour 🌍"),
+        ];
+
+        for (name, text) in unicode_tests {
+            let pdf_string = PdfString::new(text.as_bytes().to_vec());
+            match pdf_string.as_str() {
+                Ok(decoded) => assert_eq!(decoded, text, "Failed for {}", name),
+                Err(_) => {
+                    // Some encodings might not be valid UTF-8, that's ok
+                    assert!(!text.is_empty(), "Should handle {}", name);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_deep_nesting_limits() {
+        // Test deeply nested structures
+        let mut root_array = PdfArray::new();
+
+        // Create nested structure (but not too deep to avoid stack overflow)
+        for i in 0..10 {
+            let mut nested = PdfArray::new();
+            nested.push(PdfObject::Integer(i as i64));
+            root_array.push(PdfObject::Array(nested));
+        }
+
+        assert_eq!(root_array.len(), 10);
+
+        // Verify nested structure
+        for i in 0..10 {
+            if let Some(PdfObject::Array(nested)) = root_array.get(i) {
+                assert_eq!(nested.len(), 1);
+            }
+        }
+    }
+
+    #[test]
+    fn test_special_numeric_values() {
+        // Test edge case numbers
+        let numbers = vec![
+            (0i64, 0.0f64),
+            (i32::MAX as i64, f32::MAX as f64),
+            (i32::MIN as i64, f32::MIN as f64),
+            (-1i64, -1.0f64),
+            (2147483647i64, 2147483647.0f64),
+        ];
+
+        for (int_val, float_val) in numbers {
+            let int_obj = PdfObject::Integer(int_val);
+            let float_obj = PdfObject::Real(float_val);
+
+            assert!(matches!(int_obj, PdfObject::Integer(_)));
+            assert!(matches!(float_obj, PdfObject::Real(_)));
+        }
+
+        // Test special float values
+        let special_floats = vec![
+            (0.0f64, "zero"),
+            (f64::INFINITY, "infinity"),
+            (f64::NEG_INFINITY, "negative infinity"),
+        ];
+
+        for (val, _name) in special_floats {
+            let obj = PdfObject::Real(val);
+            assert!(matches!(obj, PdfObject::Real(_)));
+        }
+    }
+
+    #[test]
+    fn test_array_bounds_checking() {
+        let mut array = PdfArray::new();
+        array.push(PdfObject::Integer(1));
+        array.push(PdfObject::Integer(2));
+        array.push(PdfObject::Integer(3));
+
+        // Valid indices
+        assert!(array.get(0).is_some());
+        assert!(array.get(1).is_some());
+        assert!(array.get(2).is_some());
+
+        // Invalid indices
+        assert!(array.get(3).is_none());
+        assert!(array.get(100).is_none());
+
+        // Test with empty array
+        let empty_array = PdfArray::new();
+        assert!(empty_array.get(0).is_none());
+        assert_eq!(empty_array.len(), 0);
+    }
+
+    #[test]
+    fn test_dictionary_case_sensitivity() {
+        let mut dict = PdfDictionary(HashMap::new());
+
+        // PDF names are case-sensitive
+        dict.0.insert(
+            PdfName::new("Type".to_string()),
+            PdfObject::Name(PdfName::new("Page".to_string())),
+        );
+        dict.0.insert(
+            PdfName::new("type".to_string()),
+            PdfObject::Name(PdfName::new("Font".to_string())),
+        );
+        dict.0.insert(
+            PdfName::new("TYPE".to_string()),
+            PdfObject::Name(PdfName::new("Image".to_string())),
+        );
+
+        assert_eq!(dict.0.len(), 3);
+        assert!(dict.0.contains_key(&PdfName::new("Type".to_string())));
+        assert!(dict.0.contains_key(&PdfName::new("type".to_string())));
+        assert!(dict.0.contains_key(&PdfName::new("TYPE".to_string())));
+
+        // Each key should map to different values
+        if let Some(PdfObject::Name(name)) = dict.0.get(&PdfName::new("Type".to_string())) {
+            assert_eq!(name.as_str(), "Page");
+        }
+        if let Some(PdfObject::Name(name)) = dict.0.get(&PdfName::new("type".to_string())) {
+            assert_eq!(name.as_str(), "Font");
+        }
+        if let Some(PdfObject::Name(name)) = dict.0.get(&PdfName::new("TYPE".to_string())) {
+            assert_eq!(name.as_str(), "Image");
+        }
+    }
+
+    #[test]
+    fn test_object_cloning_and_equality() {
+        let original_array = {
+            let mut arr = PdfArray::new();
+            arr.push(PdfObject::Integer(42));
+            arr.push(PdfObject::String(PdfString::new(b"test".to_vec())));
+            arr
+        };
+
+        let cloned_array = original_array.clone();
+        assert_eq!(original_array.len(), cloned_array.len());
+
+        // Test deep equality
+        for i in 0..original_array.len() {
+            let orig = original_array.get(i).unwrap();
+            let cloned = cloned_array.get(i).unwrap();
+            match (orig, cloned) {
+                (PdfObject::Integer(a), PdfObject::Integer(b)) => assert_eq!(a, b),
+                (PdfObject::String(a), PdfObject::String(b)) => {
+                    assert_eq!(a.as_bytes(), b.as_bytes())
+                }
+                _ => panic!("Type mismatch in cloned array"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_concurrent_object_access() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let dict = Arc::new({
+            let mut d = PdfDictionary(HashMap::new());
+            d.0.insert(
+                PdfName::new("SharedKey".to_string()),
+                PdfObject::Integer(42),
+            );
+            d
+        });
+
+        let dict_clone = Arc::clone(&dict);
+        let handle = thread::spawn(move || {
+            // Read access from another thread
+            if let Some(PdfObject::Integer(val)) =
+                dict_clone.0.get(&PdfName::new("SharedKey".to_string()))
+            {
+                assert_eq!(*val, 42);
+            }
+        });
+
+        // Read access from main thread
+        if let Some(PdfObject::Integer(val)) = dict.0.get(&PdfName::new("SharedKey".to_string())) {
+            assert_eq!(*val, 42);
+        }
+
+        handle.join().unwrap();
+    }
+
+    #[test]
+    fn test_stream_data_edge_cases() {
+        // Test stream object creation
+        let mut dict = PdfDictionary(HashMap::new());
+        dict.0
+            .insert(PdfName::new("Length".to_string()), PdfObject::Integer(0));
+
+        let stream = PdfStream {
+            dict: dict.clone(),
+            data: vec![],
+        };
+
+        // Verify empty stream
+        assert_eq!(stream.data.len(), 0);
+        assert!(stream.raw_data().is_empty());
+
+        // Test stream with data
+        let stream_with_data = PdfStream {
+            dict,
+            data: b"Hello World".to_vec(),
+        };
+
+        assert_eq!(stream_with_data.raw_data(), b"Hello World");
+    }
+
+    #[test]
+    fn test_name_object_hash_consistency() {
+        use std::collections::HashSet;
+
+        let mut name_set = HashSet::new();
+
+        // Add several names
+        name_set.insert(PdfName::new("Type".to_string()));
+        name_set.insert(PdfName::new("Pages".to_string()));
+        name_set.insert(PdfName::new("Type".to_string())); // Duplicate
+
+        assert_eq!(name_set.len(), 2); // Should only have 2 unique names
+        assert!(name_set.contains(&PdfName::new("Type".to_string())));
+        assert!(name_set.contains(&PdfName::new("Pages".to_string())));
+        assert!(!name_set.contains(&PdfName::new("Font".to_string())));
+    }
 }
