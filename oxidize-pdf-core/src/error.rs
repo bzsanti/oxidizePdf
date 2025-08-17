@@ -369,4 +369,129 @@ mod tests {
             panic!("IO error should be preserved as OxidizePdfError::Io");
         }
     }
+
+    #[test]
+    fn test_operation_cancelled_error() {
+        // Test the OperationCancelled variant (line 44-45)
+        let error = PdfError::OperationCancelled;
+        assert_eq!(error.to_string(), "Operation cancelled");
+
+        // Test in a Result context
+        let result: Result<()> = Err(PdfError::OperationCancelled);
+        assert!(result.is_err());
+        if let Err(PdfError::OperationCancelled) = result {
+            // Variant matched correctly
+        } else {
+            panic!("Expected OperationCancelled variant");
+        }
+    }
+
+    #[test]
+    fn test_encryption_error() {
+        // Test the EncryptionError variant (line 47-48)
+        let error = PdfError::EncryptionError("AES decryption failed".to_string());
+        assert_eq!(error.to_string(), "Encryption error: AES decryption failed");
+
+        // Test debug format
+        let debug_str = format!("{:?}", error);
+        assert!(debug_str.contains("EncryptionError"));
+        assert!(debug_str.contains("AES decryption failed"));
+    }
+
+    #[test]
+    fn test_permission_denied_error() {
+        // Test the PermissionDenied variant (line 50-51)
+        let error = PdfError::PermissionDenied("Cannot modify protected document".to_string());
+        assert_eq!(
+            error.to_string(),
+            "Permission denied: Cannot modify protected document"
+        );
+
+        // Test that it's different from InvalidOperation
+        let other_error = PdfError::InvalidOperation("Cannot modify".to_string());
+        assert_ne!(error.to_string(), other_error.to_string());
+    }
+
+    #[test]
+    fn test_invalid_operation_error() {
+        // Test the InvalidOperation variant (line 53-54)
+        let error =
+            PdfError::InvalidOperation("Cannot perform operation on encrypted PDF".to_string());
+        assert_eq!(
+            error.to_string(),
+            "Invalid operation: Cannot perform operation on encrypted PDF"
+        );
+
+        // Test in match expression
+        match error {
+            PdfError::InvalidOperation(msg) => {
+                assert!(msg.contains("encrypted"));
+            }
+            _ => panic!("Expected InvalidOperation variant"),
+        }
+    }
+
+    #[test]
+    fn test_duplicate_field_error() {
+        // Test the DuplicateField variant (line 56-57)
+        let field_name = "email_address";
+        let error = PdfError::DuplicateField(field_name.to_string());
+        assert_eq!(error.to_string(), "Duplicate field: email_address");
+
+        // Test that it handles empty field names
+        let empty_error = PdfError::DuplicateField(String::new());
+        assert_eq!(empty_error.to_string(), "Duplicate field: ");
+    }
+
+    #[test]
+    fn test_field_not_found_error() {
+        // Test the FieldNotFound variant (line 59-60)
+        let field_name = "signature_field";
+        let error = PdfError::FieldNotFound(field_name.to_string());
+        assert_eq!(error.to_string(), "Field not found: signature_field");
+
+        // Test with special characters
+        let special_field = "field[0].subfield";
+        let special_error = PdfError::FieldNotFound(special_field.to_string());
+        assert_eq!(
+            special_error.to_string(),
+            "Field not found: field[0].subfield"
+        );
+    }
+
+    #[test]
+    fn test_aes_error_conversion() {
+        // Test the From<AesError> conversion (line 66-70)
+        // We need to simulate an AesError
+        use crate::encryption::AesError;
+
+        let aes_error = AesError::InvalidKeyLength {
+            expected: 32,
+            actual: 16,
+        };
+        let pdf_error: PdfError = aes_error.into();
+
+        match pdf_error {
+            PdfError::EncryptionError(msg) => {
+                assert!(msg.contains("Invalid key length") || msg.contains("InvalidKeyLength"));
+            }
+            _ => panic!("Expected EncryptionError from AesError conversion"),
+        }
+    }
+
+    #[test]
+    fn test_parse_error_conversion() {
+        // Test the From<ParseError> conversion (line 72-76)
+        use crate::parser::ParseError;
+
+        let parse_error = ParseError::InvalidXRef;
+        let pdf_error: PdfError = parse_error.into();
+
+        match pdf_error {
+            PdfError::ParseError(msg) => {
+                assert!(msg.contains("XRef") || msg.contains("Invalid"));
+            }
+            _ => panic!("Expected ParseError from ParseError conversion"),
+        }
+    }
 }

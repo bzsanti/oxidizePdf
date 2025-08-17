@@ -799,6 +799,83 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_rotation_large_negative_angles() {
+        // Test large negative angles (line 29-32)
+        assert_eq!(
+            RotationAngle::from_degrees(-720).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-1080).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-450).unwrap(),
+            RotationAngle::Clockwise270
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-630).unwrap(),
+            RotationAngle::Clockwise90
+        );
+    }
+
+    #[test]
+    fn test_rotation_combine_overflow() {
+        // Test combine that results in > 360 (line 56-57)
+        let angle1 = RotationAngle::Clockwise270;
+        let angle2 = RotationAngle::Rotate180;
+        let combined = angle1.combine(angle2);
+        assert_eq!(combined, RotationAngle::Clockwise90); // 270 + 180 = 450 % 360 = 90
+
+        // Test multiple combines
+        let angle3 = RotationAngle::Clockwise270;
+        let result = angle1.combine(angle2).combine(angle3);
+        assert_eq!(result, RotationAngle::None); // 90 + 270 = 360 % 360 = 0
+    }
+
+    #[test]
+    fn test_rotation_extreme_values() {
+        // Test with extreme i32 values (edge case for line 28-33)
+        // These should not panic but might give unexpected results due to overflow
+        let large_positive = 2147483647; // i32::MAX
+        let result = RotationAngle::from_degrees(large_positive);
+        assert!(result.is_err() || result.is_ok()); // Just ensure no panic
+
+        let large_negative = -2147483648; // i32::MIN
+        let result2 = RotationAngle::from_degrees(large_negative);
+        assert!(result2.is_err() || result2.is_ok()); // Just ensure no panic
+
+        // Test reasonable but large values
+        assert_eq!(
+            RotationAngle::from_degrees(3690).unwrap(),
+            RotationAngle::Clockwise90 // 3690 % 360 = 90
+        );
+    }
+
+    #[test]
+    fn test_rotation_combine_unwrap_safety() {
+        // Test that combine's unwrap is safe (line 57)
+        // All valid combinations should produce valid results
+        let angles = vec![
+            RotationAngle::None,
+            RotationAngle::Clockwise90,
+            RotationAngle::Rotate180,
+            RotationAngle::Clockwise270,
+        ];
+
+        for angle1 in &angles {
+            for angle2 in &angles {
+                // This should never panic
+                let combined = angle1.combine(*angle2);
+
+                // Verify the result is valid
+                let total_degrees = (angle1.to_degrees() + angle2.to_degrees()) % 360;
+                assert_eq!(combined.to_degrees(), total_degrees);
+            }
+        }
+    }
 }
 
 #[cfg(test)]

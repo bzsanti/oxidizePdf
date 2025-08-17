@@ -56,6 +56,8 @@ pub struct GraphicsContext {
     clipping_region: ClippingRegion,
     // Font management
     font_manager: Option<Arc<FontManager>>,
+    // State stack for save/restore
+    state_stack: Vec<(Color, Color)>,
     current_font_name: Option<String>,
     current_font_size: f64,
     // Character tracking for font subsetting
@@ -93,6 +95,7 @@ impl GraphicsContext {
             clipping_region: ClippingRegion::new(),
             // Font defaults
             font_manager: None,
+            state_stack: Vec::new(),
             current_font_name: None,
             current_font_size: 12.0,
             used_characters: HashSet::new(),
@@ -251,12 +254,20 @@ impl GraphicsContext {
     pub fn save_state(&mut self) -> &mut Self {
         self.operations.push_str("q\n");
         self.save_clipping_state();
+        // Save color state
+        self.state_stack
+            .push((self.current_color, self.stroke_color));
         self
     }
 
     pub fn restore_state(&mut self) -> &mut Self {
         self.operations.push_str("Q\n");
         self.restore_clipping_state();
+        // Restore color state
+        if let Some((fill, stroke)) = self.state_stack.pop() {
+            self.current_color = fill;
+            self.stroke_color = stroke;
+        }
         self
     }
 
