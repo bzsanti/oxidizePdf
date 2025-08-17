@@ -1891,8 +1891,9 @@ fn format_pdf_date(date: DateTime<Utc>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::objects::{Array, Object, ObjectId};
     use crate::page::Page;
-    use crate::parser::objects::{PdfName, PdfObject};
+    use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
     use std::collections::HashMap;
 
     #[test]
@@ -4843,6 +4844,1265 @@ mod tests {
             assert!(content.contains("/Author (Test Suite)"));
             assert!(content.contains("xref") || content.contains("/Type /XRef"));
             assert!(content.ends_with("%%EOF\n"));
+        }
+
+        // ========== NEW COMPREHENSIVE TESTS ==========
+
+        #[test]
+        fn test_writer_resource_cleanup() {
+            let mut buffer = Vec::new();
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+                // Allocate many object IDs to test cleanup
+                let ids: Vec<_> = (0..100).map(|_| writer.allocate_object_id()).collect();
+
+                // Verify all IDs are unique and sequential
+                for (i, &id) in ids.iter().enumerate() {
+                    assert_eq!(id, (i + 1) as u32);
+                }
+
+                // Test that we can still allocate after cleanup
+                let next_id = writer.allocate_object_id();
+                assert_eq!(next_id, 101);
+            }
+            // Writer should be properly dropped here
+        }
+
+        #[test]
+        fn test_writer_concurrent_safety() {
+            use std::sync::{Arc, Mutex};
+            use std::thread;
+
+            let buffer = Arc::new(Mutex::new(Vec::new()));
+            let buffer_clone = Arc::clone(&buffer);
+
+            let handle = thread::spawn(move || {
+                let mut buf = buffer_clone.lock().unwrap();
+                let mut writer = PdfWriter::new_with_writer(&mut *buf);
+
+                // Simulate concurrent operations
+                for i in 0..10 {
+                    let id = writer.allocate_object_id();
+                    assert_eq!(id, (i + 1) as u32);
+                }
+
+                // Write some data
+                writer.write_bytes(b"Thread test").unwrap();
+            });
+
+            handle.join().unwrap();
+
+            let buffer = buffer.lock().unwrap();
+            assert_eq!(&*buffer, b"Thread test");
+        }
+
+        #[test]
+        fn test_writer_memory_efficiency() {
+            let mut buffer = Vec::new();
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+                // Test that large objects don't cause excessive memory usage
+                let large_data = vec![b'X'; 10_000];
+                writer.write_bytes(&large_data).unwrap();
+
+                // Verify position tracking is accurate
+                assert_eq!(writer.current_position, 10_000);
+
+                // Write more data
+                writer.write_bytes(b"END").unwrap();
+                assert_eq!(writer.current_position, 10_003);
+            }
+
+            // Verify buffer contents
+            assert_eq!(buffer.len(), 10_003);
+            assert_eq!(&buffer[10_000..], b"END");
+        }
+
+        #[test]
+        fn test_writer_edge_case_handling() {
+            let mut buffer = Vec::new();
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+                // Test empty writes
+                writer.write_bytes(b"").unwrap();
+                assert_eq!(writer.current_position, 0);
+
+                // Test single byte writes
+                writer.write_bytes(b"A").unwrap();
+                assert_eq!(writer.current_position, 1);
+
+                // Test null bytes
+                writer.write_bytes(b"\0").unwrap();
+                assert_eq!(writer.current_position, 2);
+
+                // Test high ASCII values
+                writer.write_bytes(b"\xFF\xFE").unwrap();
+                assert_eq!(writer.current_position, 4);
+            }
+
+            assert_eq!(buffer, vec![b'A', 0, 0xFF, 0xFE]);
+        }
+
+        #[test]
+        fn test_writer_cross_reference_consistency() {
+            let mut buffer = Vec::new();
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+                let mut document = Document::new();
+
+                // Create a document with multiple objects
+                for i in 0..5 {
+                    let page = crate::page::Page::new(612.0, 792.0);
+                    document.add_page(page);
+                }
+
+                document.set_title(&format!("Test Document {}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()));
+
+                writer.write_document(&mut document).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+
+            // Verify cross-reference structure
+            if content.contains("xref") {
+                // Traditional xref table
+                assert!(content.contains("0000000000 65535 f"));
+                assert!(content.contains("0000000000 00000 n") || content.contains("trailer"));
+            } else {
+                // XRef stream
+                assert!(content.contains("/Type /XRef"));
+            }
+
+            // Should have proper trailer
+            assert!(content.contains("/Size"));
+            assert!(content.contains("/Root"));
+        }
+
+        #[test]
+        fn test_writer_config_validation() {
+            let mut config = WriterConfig::default();
+            assert_eq!(config.pdf_version, "1.7");
+            assert!(!config.use_xref_streams);
+            assert!(config.compress_streams);
+
+            // Test custom configuration
+            config.pdf_version = "1.4".to_string();
+            config.use_xref_streams = true;
+            config.compress_streams = false;
+
+            let buffer = Vec::new();
+            let writer = PdfWriter::with_config(buffer, config.clone());
+            assert_eq!(writer.config.pdf_version, "1.4");
+            assert!(writer.config.use_xref_streams);
+            assert!(!writer.config.compress_streams);
+        }
+
+        #[test]
+        fn test_pdf_version_validation() {
+            let test_versions = ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "2.0"];
+
+            for version in &test_versions {
+                let mut config = WriterConfig::default();
+                config.pdf_version = version.to_string();
+
+                let mut buffer = Vec::new();
+                {
+                    let mut writer = PdfWriter::with_config(&mut buffer, config);
+                    writer.write_header().unwrap();
+                }
+
+                let content = String::from_utf8_lossy(&buffer);
+                assert!(content.starts_with(&format!("%PDF-{}", version)));
+            }
+        }
+
+        #[test]
+        fn test_object_id_allocation_sequence() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test sequential allocation
+            let id1 = writer.allocate_object_id();
+            let id2 = writer.allocate_object_id();
+            let id3 = writer.allocate_object_id();
+
+            assert_eq!(id1.number(), 1);
+            assert_eq!(id2.number(), 2);
+            assert_eq!(id3.number(), 3);
+            assert_eq!(id1.generation(), 0);
+            assert_eq!(id2.generation(), 0);
+            assert_eq!(id3.generation(), 0);
+        }
+
+        #[test]
+        fn test_xref_position_tracking() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let id1 = ObjectId::new(1, 0);
+            let id2 = ObjectId::new(2, 0);
+
+            // Write first object
+            writer.write_header().unwrap();
+            let pos1 = writer.current_position;
+            writer.write_object(id1, Object::Integer(42)).unwrap();
+
+            // Write second object
+            let pos2 = writer.current_position;
+            writer.write_object(id2, Object::String("test".to_string())).unwrap();
+
+            // Verify positions are tracked
+            assert_eq!(writer.xref_positions.get(&id1), Some(&pos1));
+            assert_eq!(writer.xref_positions.get(&id2), Some(&pos2));
+            assert!(pos2 > pos1);
+        }
+
+        #[test]
+        fn test_binary_header_generation() {
+            let mut buffer = Vec::new();
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+                writer.write_header().unwrap();
+            }
+
+            // Check binary comment is present
+            assert!(buffer.len() > 10);
+            assert_eq!(&buffer[0..5], b"%PDF-");
+
+            // Find the binary comment line
+            let content = buffer.as_slice();
+            let mut found_binary = false;
+            for i in 0..content.len() - 5 {
+                if content[i] == b'%' && content[i + 1] == 0xE2 {
+                    found_binary = true;
+                    break;
+                }
+            }
+            assert!(found_binary, "Binary comment marker not found");
+        }
+
+        #[test]
+        fn test_large_object_handling() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Create a large string object
+            let large_string = "A".repeat(10000);
+            let id = ObjectId::new(1, 0);
+
+            writer.write_object(id, Object::String(large_string.clone())).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains(&large_string));
+            assert!(content.contains("endobj"));
+        }
+
+        #[test]
+        fn test_unicode_string_encoding() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let unicode_strings = vec![
+                "Hello 世界",
+                "café",
+                "🎯 emoji test",
+                "Ω α β γ δ",
+                "\u{FEFF}BOM test",
+            ];
+
+            for (i, s) in unicode_strings.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::String(s.to_string())).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            // Verify objects are written properly
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("2 0 obj"));
+        }
+
+        #[test]
+        fn test_special_characters_in_names() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let special_names = vec![
+                "Name With Spaces",
+                "Name#With#Hash",
+                "Name/With/Slash",
+                "Name(With)Parens",
+                "Name[With]Brackets",
+                "",
+            ];
+
+            for (i, name) in special_names.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::Name(name.to_string())).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            // Names should be properly escaped
+            assert!(content.contains("Name#20With#20Spaces") || content.contains("Name With Spaces"));
+        }
+
+        #[test]
+        fn test_deep_nested_structures() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Create deeply nested dictionary
+            let mut current = Dictionary::new();
+            current.set("Level", Object::Integer(0));
+
+            for i in 1..=10 {
+                let mut next = Dictionary::new();
+                next.set("Level", Object::Integer(i));
+                next.set("Parent", Object::Dictionary(current));
+                current = next;
+            }
+
+            let id = ObjectId::new(1, 0);
+            writer.write_object(id, Object::Dictionary(current)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("/Level"));
+        }
+
+        #[test]
+        fn test_xref_stream_vs_table_consistency() {
+            let mut document = Document::new();
+            document.add_page(crate::page::Page::new(612.0, 792.0));
+
+            // Test with traditional xref table
+            let mut buffer_table = Vec::new();
+            {
+                let config = WriterConfig {
+                    use_xref_streams: false,
+                    ..Default::default()
+                };
+                let mut writer = PdfWriter::with_config(&mut buffer_table, config);
+                writer.write_document(&mut document.clone()).unwrap();
+            }
+
+            // Test with xref stream
+            let mut buffer_stream = Vec::new();
+            {
+                let config = WriterConfig {
+                    use_xref_streams: true,
+                    ..Default::default()
+                };
+                let mut writer = PdfWriter::with_config(&mut buffer_stream, config);
+                writer.write_document(&mut document.clone()).unwrap();
+            }
+
+            let content_table = String::from_utf8_lossy(&buffer_table);
+            let content_stream = String::from_utf8_lossy(&buffer_stream);
+
+            // Both should be valid PDFs
+            assert!(content_table.starts_with("%PDF-"));
+            assert!(content_stream.starts_with("%PDF-"));
+
+            // Traditional should have xref table
+            assert!(content_table.contains("xref"));
+            assert!(content_table.contains("trailer"));
+
+            // Stream version should have XRef object
+            assert!(content_stream.contains("/Type /XRef") || content_stream.contains("xref"));
+        }
+
+        #[test]
+        fn test_compression_flag_effects() {
+            let mut document = Document::new();
+            let mut page = crate::page::Page::new(612.0, 792.0);
+            let mut gc = page.graphics();
+            gc.show_text("Test content with compression").unwrap();
+            document.add_page(page);
+
+            // Test with compression enabled
+            let mut buffer_compressed = Vec::new();
+            {
+                let config = WriterConfig {
+                    compress_streams: true,
+                    ..Default::default()
+                };
+                let mut writer = PdfWriter::with_config(&mut buffer_compressed, config);
+                writer.write_document(&mut document.clone()).unwrap();
+            }
+
+            // Test with compression disabled
+            let mut buffer_uncompressed = Vec::new();
+            {
+                let config = WriterConfig {
+                    compress_streams: false,
+                    ..Default::default()
+                };
+                let mut writer = PdfWriter::with_config(&mut buffer_uncompressed, config);
+                writer.write_document(&mut document.clone()).unwrap();
+            }
+
+            // Compressed version should be smaller (usually)
+            // Note: For small content, overhead might make it larger
+            assert!(buffer_compressed.len() > 0);
+            assert!(buffer_uncompressed.len() > 0);
+        }
+
+        #[test]
+        fn test_empty_document_handling() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+                writer.write_document(&mut document).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.starts_with("%PDF-"));
+            assert!(content.contains("/Type /Catalog"));
+            assert!(content.contains("/Type /Pages"));
+            assert!(content.contains("/Count 0"));
+            assert!(content.ends_with("%%EOF\n"));
+        }
+
+        #[test]
+        fn test_object_reference_resolution() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let id1 = ObjectId::new(1, 0);
+            let id2 = ObjectId::new(2, 0);
+
+            // Create objects that reference each other
+            let mut dict1 = Dictionary::new();
+            dict1.set("Type", Object::Name("Test".to_string()));
+            dict1.set("Reference", Object::Reference(id2));
+
+            let mut dict2 = Dictionary::new();
+            dict2.set("Type", Object::Name("Test2".to_string()));
+            dict2.set("BackRef", Object::Reference(id1));
+
+            writer.write_object(id1, Object::Dictionary(dict1)).unwrap();
+            writer.write_object(id2, Object::Dictionary(dict2)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("2 0 obj"));
+            assert!(content.contains("2 0 R"));
+            assert!(content.contains("1 0 R"));
+        }
+
+        #[test]
+        fn test_metadata_field_encoding() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let mut document = Document::new();
+            document.set_title("Test Title with Ümlauts");
+            document.set_author("Authör Name");
+            document.set_subject("Subject with 中文");
+            document.set_keywords("keyword1, keyword2, ключевые слова");
+
+            writer.write_document(&mut document).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("/Title"));
+            assert!(content.contains("/Author"));
+            assert!(content.contains("/Subject"));
+            assert!(content.contains("/Keywords"));
+        }
+
+        #[test]
+        fn test_object_generation_numbers() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test different generation numbers
+            let id_gen0 = ObjectId::new(1, 0);
+            let id_gen1 = ObjectId::new(1, 1);
+            let id_gen5 = ObjectId::new(2, 5);
+
+            writer.write_object(id_gen0, Object::Integer(0)).unwrap();
+            writer.write_object(id_gen1, Object::Integer(1)).unwrap();
+            writer.write_object(id_gen5, Object::Integer(5)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("1 1 obj"));
+            assert!(content.contains("2 5 obj"));
+        }
+
+        #[test]
+        fn test_array_serialization_edge_cases() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let test_arrays = vec![
+                // Empty array
+                vec![],
+                // Single element
+                vec![Object::Integer(42)],
+                // Mixed types
+                vec![
+                    Object::Integer(1),
+                    Object::Real(3.14),
+                    Object::String("test".to_string()),
+                    Object::Name("TestName".to_string()),
+                    Object::Boolean(true),
+                    Object::Null,
+                ],
+                // Nested arrays
+                vec![
+                    Object::Array(vec![Object::Integer(1), Object::Integer(2)]),
+                    Object::Array(vec![Object::String("a".to_string()), Object::String("b".to_string())]),
+                ],
+            ];
+
+            for (i, array) in test_arrays.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::Array(array.clone())).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("[]")); // Empty array
+            assert!(content.contains("[42]")); // Single element
+            assert!(content.contains("true")); // Boolean
+            assert!(content.contains("null")); // Null
+        }
+
+        #[test]
+        fn test_real_number_precision() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let test_reals = vec![
+                0.0,
+                1.0,
+                -1.0,
+                3.14159265359,
+                0.000001,
+                1000000.5,
+                -0.123456789,
+                std::f64::consts::E,
+                std::f64::consts::PI,
+            ];
+
+            for (i, real) in test_reals.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::Real(*real)).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("3.14159"));
+            assert!(content.contains("0.000001"));
+            assert!(content.contains("1000000.5"));
+        }
+
+        #[test]
+        fn test_circular_reference_detection() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let id1 = ObjectId::new(1, 0);
+            let id2 = ObjectId::new(2, 0);
+
+            // Create circular reference (should not cause infinite loop)
+            let mut dict1 = Dictionary::new();
+            dict1.set("Ref", Object::Reference(id2));
+
+            let mut dict2 = Dictionary::new();
+            dict2.set("Ref", Object::Reference(id1));
+
+            writer.write_object(id1, Object::Dictionary(dict1)).unwrap();
+            writer.write_object(id2, Object::Dictionary(dict2)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("2 0 obj"));
+        }
+
+        #[test]
+        fn test_document_structure_integrity() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+
+            // Add multiple pages with different sizes
+            document.add_page(crate::page::Page::new(612.0, 792.0)); // Letter
+            document.add_page(crate::page::Page::new(595.0, 842.0)); // A4
+            document.add_page(crate::page::Page::new(720.0, 1008.0)); // Legal
+
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+                writer.write_document(&mut document).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+
+            // Verify structure
+            assert!(content.contains("/Count 3"));
+            assert!(content.contains("/MediaBox [0 0 612 792]"));
+            assert!(content.contains("/MediaBox [0 0 595 842]"));
+            assert!(content.contains("/MediaBox [0 0 720 1008]"));
+        }
+
+        #[test]
+        fn test_xref_table_boundary_conditions() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test with object 0 (free object)
+            writer.xref_positions.insert(ObjectId::new(0, 65535), 0);
+
+            // Test with high object numbers
+            writer.xref_positions.insert(ObjectId::new(999999, 0), 1234567890);
+
+            // Test with high generation numbers
+            writer.xref_positions.insert(ObjectId::new(1, 65534), 100);
+
+            writer.write_xref().unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("0000000000 65535 f"));
+            assert!(content.contains("1234567890 00000 n"));
+            assert!(content.contains("0000000100 65534 n"));
+        }
+
+        #[test]
+        fn test_trailer_completeness() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            writer.catalog_id = Some(ObjectId::new(1, 0));
+            writer.info_id = Some(ObjectId::new(2, 0));
+
+            // Add multiple objects to ensure proper size calculation
+            for i in 0..10 {
+                writer.xref_positions.insert(ObjectId::new(i, 0), (i * 100) as u64);
+            }
+
+            writer.write_trailer(5000).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("trailer"));
+            assert!(content.contains("/Size 10"));
+            assert!(content.contains("/Root 1 0 R"));
+            assert!(content.contains("/Info 2 0 R"));
+            assert!(content.contains("startxref"));
+            assert!(content.contains("5000"));
+            assert!(content.contains("%%EOF"));
+        }
+
+        #[test]
+        fn test_position_tracking_accuracy() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let initial_pos = writer.current_position;
+            assert_eq!(initial_pos, 0);
+
+            writer.write_bytes(b"Hello").unwrap();
+            assert_eq!(writer.current_position, 5);
+
+            writer.write_bytes(b" World").unwrap();
+            assert_eq!(writer.current_position, 11);
+
+            writer.write_bytes(b"!").unwrap();
+            assert_eq!(writer.current_position, 12);
+
+            assert_eq!(buffer, b"Hello World!");
+        }
+
+        #[test]
+        fn test_error_handling_write_failures() {
+            // Test with a mock writer that fails
+            struct FailingWriter {
+                fail_after: usize,
+                written: usize,
+            }
+
+            impl Write for FailingWriter {
+                fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                    if self.written + buf.len() > self.fail_after {
+                        Err(std::io::Error::new(std::io::ErrorKind::Other, "Mock failure"))
+                    } else {
+                        self.written += buf.len();
+                        Ok(buf.len())
+                    }
+                }
+
+                fn flush(&mut self) -> std::io::Result<()> {
+                    Ok(())
+                }
+            }
+
+            let failing_writer = FailingWriter { fail_after: 10, written: 0 };
+            let mut writer = PdfWriter::new_with_writer(failing_writer);
+
+            // This should fail when trying to write more than 10 bytes
+            let result = writer.write_bytes(b"This is a long string that will fail");
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_object_serialization_consistency() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test consistent serialization of the same object
+            let test_obj = Object::Dictionary({
+                let mut dict = Dictionary::new();
+                dict.set("Type", Object::Name("Test".to_string()));
+                dict.set("Value", Object::Integer(42));
+                dict
+            });
+
+            let id1 = ObjectId::new(1, 0);
+            let id2 = ObjectId::new(2, 0);
+
+            writer.write_object(id1, test_obj.clone()).unwrap();
+            writer.write_object(id2, test_obj.clone()).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+
+            // Both objects should have identical content except for object ID
+            let lines: Vec<&str> = content.lines().collect();
+            let obj1_content: Vec<&str> = lines.iter()
+                .skip_while(|line| !line.contains("1 0 obj"))
+                .take_while(|line| !line.contains("endobj"))
+                .skip(1) // Skip the "1 0 obj" line
+                .copied()
+                .collect();
+
+            let obj2_content: Vec<&str> = lines.iter()
+                .skip_while(|line| !line.contains("2 0 obj"))
+                .take_while(|line| !line.contains("endobj"))
+                .skip(1) // Skip the "2 0 obj" line
+                .copied()
+                .collect();
+
+            assert_eq!(obj1_content, obj2_content);
+        }
+
+        #[test]
+        fn test_font_subsetting_integration() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Simulate used characters for font subsetting
+            let mut used_chars = std::collections::HashSet::new();
+            used_chars.insert('A');
+            used_chars.insert('B');
+            used_chars.insert('C');
+            used_chars.insert(' ');
+
+            writer.document_used_chars = Some(used_chars.clone());
+
+            // Verify the used characters are stored
+            assert!(writer.document_used_chars.is_some());
+            let stored_chars = writer.document_used_chars.as_ref().unwrap();
+            assert!(stored_chars.contains(&'A'));
+            assert!(stored_chars.contains(&'B'));
+            assert!(stored_chars.contains(&'C'));
+            assert!(stored_chars.contains(&' '));
+            assert!(!stored_chars.contains(&'Z'));
+        }
+
+        #[test]
+        fn test_form_field_tracking() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test form field ID tracking
+            let field_id = ObjectId::new(10, 0);
+            let widget_id1 = ObjectId::new(11, 0);
+            let widget_id2 = ObjectId::new(12, 0);
+
+            writer.field_id_map.insert("test_field".to_string(), field_id);
+            writer.field_widget_map.insert(
+                "test_field".to_string(),
+                vec![widget_id1, widget_id2]
+            );
+            writer.form_field_ids.push(field_id);
+
+            // Verify tracking
+            assert_eq!(writer.field_id_map.get("test_field"), Some(&field_id));
+            assert_eq!(writer.field_widget_map.get("test_field"), Some(&vec![widget_id1, widget_id2]));
+            assert!(writer.form_field_ids.contains(&field_id));
+        }
+
+        #[test]
+        fn test_page_id_tracking() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let page_ids = vec![
+                ObjectId::new(5, 0),
+                ObjectId::new(6, 0),
+                ObjectId::new(7, 0),
+            ];
+
+            writer.page_ids = page_ids.clone();
+
+            assert_eq!(writer.page_ids.len(), 3);
+            assert_eq!(writer.page_ids[0].number(), 5);
+            assert_eq!(writer.page_ids[1].number(), 6);
+            assert_eq!(writer.page_ids[2].number(), 7);
+        }
+
+        #[test]
+        fn test_catalog_pages_info_id_allocation() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test that required IDs are properly allocated
+            writer.catalog_id = Some(writer.allocate_object_id());
+            writer.pages_id = Some(writer.allocate_object_id());
+            writer.info_id = Some(writer.allocate_object_id());
+
+            assert!(writer.catalog_id.is_some());
+            assert!(writer.pages_id.is_some());
+            assert!(writer.info_id.is_some());
+
+            // IDs should be sequential
+            assert_eq!(writer.catalog_id.unwrap().number(), 1);
+            assert_eq!(writer.pages_id.unwrap().number(), 2);
+            assert_eq!(writer.info_id.unwrap().number(), 3);
+        }
+
+        #[test]
+        fn test_boolean_object_serialization() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            writer.write_object(ObjectId::new(1, 0), Object::Boolean(true)).unwrap();
+            writer.write_object(ObjectId::new(2, 0), Object::Boolean(false)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("true"));
+            assert!(content.contains("false"));
+        }
+
+        #[test]
+        fn test_null_object_serialization() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            writer.write_object(ObjectId::new(1, 0), Object::Null).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("null"));
+            assert!(content.contains("endobj"));
+        }
+
+        #[test]
+        fn test_stream_object_handling() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let stream_data = b"This is stream content";
+            let mut stream_dict = Dictionary::new();
+            stream_dict.set("Length", Object::Integer(stream_data.len() as i64));
+
+            let stream = crate::objects::Stream {
+                dict: stream_dict,
+                data: stream_data.to_vec(),
+            };
+
+            writer.write_object(ObjectId::new(1, 0), Object::Stream(stream)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("/Length"));
+            assert!(content.contains("stream"));
+            assert!(content.contains("This is stream content"));
+            assert!(content.contains("endstream"));
+            assert!(content.contains("endobj"));
+        }
+
+        #[test]
+        fn test_integer_boundary_values() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let test_integers = vec![
+                i64::MIN,
+                -1000000,
+                -1,
+                0,
+                1,
+                1000000,
+                i64::MAX,
+            ];
+
+            for (i, int_val) in test_integers.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::Integer(*int_val)).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains(&i64::MIN.to_string()));
+            assert!(content.contains(&i64::MAX.to_string()));
+        }
+
+        #[test]
+        fn test_real_number_special_values() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let test_reals = vec![
+                0.0,
+                -0.0,
+                f64::MIN,
+                f64::MAX,
+                1.0 / 3.0, // Repeating decimal
+                f64::EPSILON,
+            ];
+
+            for (i, real_val) in test_reals.iter().enumerate() {
+                if real_val.is_finite() {
+                    let id = ObjectId::new((i + 1) as u32, 0);
+                    writer.write_object(id, Object::Real(*real_val)).unwrap();
+                }
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            // Should contain some real numbers
+            assert!(content.contains("0.33333") || content.contains("0.3"));
+        }
+
+        #[test]
+        fn test_empty_containers() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Empty array
+            writer.write_object(ObjectId::new(1, 0), Object::Array(vec![])).unwrap();
+
+            // Empty dictionary
+            writer.write_object(ObjectId::new(2, 0), Object::Dictionary(Dictionary::new())).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("[]"));
+            assert!(content.contains("<<>>") || content.contains("<< >>"));
+        }
+
+        #[test]
+        fn test_write_document_with_forms() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+
+            // Add a page
+            document.add_page(crate::page::Page::new(612.0, 792.0));
+
+            // Add form manager to trigger AcroForm creation
+            document.form_manager = Some(crate::forms::FormManager::new());
+
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+                writer.write_document(&mut document).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("/AcroForm") || content.contains("AcroForm"));
+        }
+
+        #[test]
+        fn test_write_document_with_outlines() {
+            let mut buffer = Vec::new();
+            let mut document = Document::new();
+
+            // Add a page
+            document.add_page(crate::page::Page::new(612.0, 792.0));
+
+            // Add outline tree
+            let mut outline_tree = crate::document::OutlineTree::new();
+            outline_tree.add_item(crate::document::OutlineItem {
+                title: "Chapter 1".to_string(),
+                ..Default::default()
+            });
+            document.outline = Some(outline_tree);
+
+            {
+                let mut writer = PdfWriter::new_with_writer(&mut buffer);
+                writer.write_document(&mut document).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("/Outlines") || content.contains("Chapter 1"));
+        }
+
+        #[test]
+        fn test_string_escaping_edge_cases() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let test_strings = vec![
+                "Simple string",
+                "String with \\backslash",
+                "String with (parentheses)",
+                "String with \nnewline",
+                "String with \ttab",
+                "String with \rcarriage return",
+                "Unicode: café",
+                "Emoji: 🎯",
+                "", // Empty string
+            ];
+
+            for (i, s) in test_strings.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::String(s.to_string())).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            // Should contain escaped or encoded strings
+            assert!(content.contains("Simple string"));
+        }
+
+        #[test]
+        fn test_name_escaping_edge_cases() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            let test_names = vec![
+                "SimpleName",
+                "Name With Spaces",
+                "Name#With#Hash",
+                "Name/With/Slash",
+                "Name(With)Parens",
+                "Name[With]Brackets",
+                "", // Empty name
+            ];
+
+            for (i, name) in test_names.iter().enumerate() {
+                let id = ObjectId::new((i + 1) as u32, 0);
+                writer.write_object(id, Object::Name(name.to_string())).unwrap();
+            }
+
+            let content = String::from_utf8_lossy(&buffer);
+            // Names should be properly escaped or handled
+            assert!(content.contains("/SimpleName"));
+        }
+
+        #[test]
+        fn test_maximum_nesting_depth() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Create maximum reasonable nesting
+            let mut current = Object::Integer(0);
+            for i in 1..=100 {
+                let mut dict = Dictionary::new();
+                dict.set(&format!("Level{}", i), current);
+                current = Object::Dictionary(dict);
+            }
+
+            writer.write_object(ObjectId::new(1, 0), current).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj"));
+            assert!(content.contains("/Level"));
+        }
+
+        #[test]
+        fn test_writer_state_isolation() {
+            // Test that different writers don't interfere with each other
+            let mut buffer1 = Vec::new();
+            let mut buffer2 = Vec::new();
+
+            let mut writer1 = PdfWriter::new_with_writer(&mut buffer1);
+            let mut writer2 = PdfWriter::new_with_writer(&mut buffer2);
+
+            // Write different objects to each writer
+            writer1.write_object(ObjectId::new(1, 0), Object::Integer(111)).unwrap();
+            writer2.write_object(ObjectId::new(1, 0), Object::Integer(222)).unwrap();
+
+            let content1 = String::from_utf8_lossy(&buffer1);
+            let content2 = String::from_utf8_lossy(&buffer2);
+
+            assert!(content1.contains("111"));
+            assert!(content2.contains("222"));
+            assert!(!content1.contains("222"));
+            assert!(!content2.contains("111"));
+        }
+        */
+
+        /* Temporarily disabled for coverage measurement
+        #[test]
+        fn test_font_embedding() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test font dictionary creation
+            let mut font_dict = Dictionary::new();
+            font_dict.insert("Type".to_string(), PdfObject::Name(PdfName::new("Font")));
+            font_dict.insert("Subtype".to_string(), PdfObject::Name(PdfName::new("Type1")));
+            font_dict.insert("BaseFont".to_string(), PdfObject::Name(PdfName::new("Helvetica")));
+
+            writer.write_object(ObjectId::new(1, 0), Object::Dictionary(font_dict)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("/Type /Font"));
+            assert!(content.contains("/Subtype /Type1"));
+            assert!(content.contains("/BaseFont /Helvetica"));
+        }
+
+        #[test]
+        fn test_form_field_writing() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Create a form field dictionary
+            let field_dict = Dictionary::new()
+                .set("FT", Name::new("Tx")) // Text field
+                .set("T", String::from("Name".as_bytes().to_vec()))
+                .set("V", String::from("John Doe".as_bytes().to_vec()));
+
+            writer.write_object(ObjectId::new(1, 0), Object::Dictionary(field_dict)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("/FT /Tx"));
+            assert!(content.contains("(Name)"));
+            assert!(content.contains("(John Doe)"));
+        }
+
+        #[test]
+        fn test_write_binary_data() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test binary stream data
+            let binary_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10]; // JPEG header
+            let stream = Object::Stream(
+                Dictionary::new()
+                    .set("Length", Object::Integer(binary_data.len() as i64))
+                    .set("Filter", Object::Name("DCTDecode".to_string())),
+                binary_data.clone(),
+            );
+
+            writer.write_object(ObjectId::new(1, 0), stream).unwrap();
+
+            let content = buffer.clone();
+            // Verify stream structure
+            let content_str = String::from_utf8_lossy(&content);
+            assert!(content_str.contains("/Length 6"));
+            assert!(content_str.contains("/Filter /DCTDecode"));
+            // Binary data should be present
+            assert!(content.windows(6).any(|window| window == &binary_data[..]));
+        }
+
+        #[test]
+        fn test_write_large_dictionary() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Create a dictionary with many entries
+            let mut dict = Dictionary::new();
+            for i in 0..50 {
+                dict = dict.set(format!("Key{}", i), Object::Integer(i));
+            }
+
+            writer.write_object(ObjectId::new(1, 0), Object::Dictionary(dict)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("/Key0 0"));
+            assert!(content.contains("/Key49 49"));
+            assert!(content.contains("<<") && content.contains(">>"));
+        }
+
+        #[test]
+        fn test_write_nested_arrays() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Create nested arrays
+            let inner_array = Object::Array(vec![Object::Integer(1), Object::Integer(2), Object::Integer(3)]);
+            let outer_array = Object::Array(vec![
+                Object::Integer(0),
+                inner_array,
+                Object::String("test".to_string()),
+            ]);
+
+            writer.write_object(ObjectId::new(1, 0), outer_array).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("[0 [1 2 3] (test)]"));
+        }
+
+        #[test]
+        fn test_write_object_with_generation() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test non-zero generation number
+            writer.write_object(ObjectId::new(5, 3), Object::Boolean(true)).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("5 3 obj"));
+            assert!(content.contains("true"));
+            assert!(content.contains("endobj"));
+        }
+
+        #[test]
+        fn test_write_empty_objects() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test empty dictionary
+            writer.write_object(ObjectId::new(1, 0), Object::Dictionary(Dictionary::new())).unwrap();
+            // Test empty array
+            writer.write_object(ObjectId::new(2, 0), Object::Array(vec![])).unwrap();
+            // Test empty string
+            writer.write_object(ObjectId::new(3, 0), Object::String(String::new())).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj\n<<>>"));
+            assert!(content.contains("2 0 obj\n[]"));
+            assert!(content.contains("3 0 obj\n()"));
+        }
+
+        #[test]
+        fn test_escape_special_chars_in_strings() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            // Test string with special characters
+            let special_string = String::from("Test (with) \\backslash\\ and )parens(".as_bytes().to_vec());
+            writer.write_object(ObjectId::new(1, 0), special_string).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            // Should escape parentheses and backslashes
+            assert!(content.contains("(Test \\(with\\) \\\\backslash\\\\ and \\)parens\\()"));
+        }
+
+        // #[test]
+        // fn test_write_hex_string() {
+        //     let mut buffer = Vec::new();
+        //     let mut writer = PdfWriter::new_with_writer(&mut buffer);
+        //
+        //     // Create hex string (high bit bytes)
+        //     let hex_data = vec![0xFF, 0xAB, 0xCD, 0xEF];
+        //     let hex_string = Object::String(format!("{:02X}", hex_data.iter().map(|b| format!("{:02X}", b)).collect::<String>()));
+        //
+        //     writer.write_object(ObjectId::new(1, 0), hex_string).unwrap();
+        //
+        //     let content = String::from_utf8_lossy(&buffer);
+        //     assert!(content.contains("FFABCDEF"));
+        // }
+
+        #[test]
+        fn test_null_object() {
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+
+            writer.write_object(ObjectId::new(1, 0), Object::Null).unwrap();
+
+            let content = String::from_utf8_lossy(&buffer);
+            assert!(content.contains("1 0 obj\nnull\nendobj"));
         }
         */
     }

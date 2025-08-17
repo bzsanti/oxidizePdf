@@ -346,7 +346,10 @@ mod tests {
     fn test_page_range_get_indices_empty_document() {
         let total = 0;
 
-        assert_eq!(PageRange::All.get_indices(total).unwrap(), vec![]);
+        assert_eq!(
+            PageRange::All.get_indices(total).unwrap(),
+            vec![] as Vec<usize>
+        );
         assert!(PageRange::Single(0).get_indices(total).is_err());
         assert!(PageRange::Range(0, 1).get_indices(total).is_err());
         assert!(PageRange::List(vec![0]).get_indices(total).is_err());

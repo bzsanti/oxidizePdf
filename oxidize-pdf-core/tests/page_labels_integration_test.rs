@@ -320,7 +320,7 @@ fn test_pdf_generation_with_labels() {
     for i in 0..5 {
         let mut page = Page::a4();
         page.text()
-            .set_font(oxidize_pdf::graphics::Font::Helvetica, 12.0)
+            .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
             .at(100.0, 700.0)
             .write(&format!("Physical Page {}", i + 1))
             .unwrap();
@@ -340,7 +340,7 @@ fn test_pdf_generation_with_labels() {
 
     // Write to buffer to ensure document is valid
     let mut buffer = Vec::new();
-    let mut writer = PdfWriter::new(&mut buffer);
+    let mut writer = PdfWriter::new_with_writer(&mut buffer);
     writer.write_document(&mut document).unwrap();
 
     // Verify PDF structure
