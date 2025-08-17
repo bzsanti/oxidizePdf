@@ -486,7 +486,7 @@ impl FormValidationSystem {
     fn validate_phone_number(&self, phone: &str, country: PhoneCountry) -> Result<(), String> {
         let pattern = match country {
             PhoneCountry::US => r"^\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}$",
-            PhoneCountry::UK => r"^\+?44\s?[0-9]{4}\s?[0-9]{6}$",
+            PhoneCountry::UK => r"^\+?44\s?\d{2}\s?\d{4}\s?\d{4}$",
             PhoneCountry::EU => r"^\+?[0-9]{2}\s?[0-9]{3}\s?[0-9]{3}\s?[0-9]{4}$",
             PhoneCountry::Japan => r"^0\d{1,4}-?\d{1,4}-?\d{4}$",
             PhoneCountry::Custom => r"^[0-9+\-\s\(\)]+$",
@@ -1489,6 +1489,375 @@ mod tests {
     }
 
     #[test]
+    fn test_phone_validation_all_countries() {
+        // Test phone validation for EU, Japan, and Custom formats
+        let mut system = FormValidationSystem::new();
+
+        // Test EU phone
+        system.add_validator(FieldValidator {
+            field_name: "eu_phone".to_string(),
+            rules: vec![ValidationRule::PhoneNumber {
+                country: PhoneCountry::EU,
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let valid_eu = FieldValue::Text("+33 123 456 7890".to_string());
+        assert!(system.validate_field("eu_phone", &valid_eu).is_valid);
+
+        let invalid_eu = FieldValue::Text("123-456".to_string());
+        assert!(!system.validate_field("eu_phone", &invalid_eu).is_valid);
+
+        // Test Japan phone
+        system.add_validator(FieldValidator {
+            field_name: "japan_phone".to_string(),
+            rules: vec![ValidationRule::PhoneNumber {
+                country: PhoneCountry::Japan,
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let valid_japan = FieldValue::Text("03-1234-5678".to_string());
+        assert!(system.validate_field("japan_phone", &valid_japan).is_valid);
+
+        let invalid_japan = FieldValue::Text("123".to_string());
+        assert!(
+            !system
+                .validate_field("japan_phone", &invalid_japan)
+                .is_valid
+        );
+
+        // Test Custom phone (accepts any phone-like format)
+        system.add_validator(FieldValidator {
+            field_name: "custom_phone".to_string(),
+            rules: vec![ValidationRule::PhoneNumber {
+                country: PhoneCountry::Custom,
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        let valid_custom = FieldValue::Text("+1-234-567-8900".to_string());
+        assert!(
+            system
+                .validate_field("custom_phone", &valid_custom)
+                .is_valid
+        );
+
+        let invalid_custom = FieldValue::Text("not a phone".to_string());
+        assert!(
+            !system
+                .validate_field("custom_phone", &invalid_custom)
+                .is_valid
+        );
+    }
+
+    #[test]
+    fn test_credit_card_validation_edge_cases() {
+        // Test credit card validation with invalid lengths and failing Luhn check
+        let mut system = FormValidationSystem::new();
+
+        system.add_validator(FieldValidator {
+            field_name: "cc".to_string(),
+            rules: vec![ValidationRule::CreditCard],
+            format_mask: None,
+            error_message: None,
+        });
+
+        // Test too short (< 13 digits)
+        let too_short = FieldValue::Text("123456789012".to_string());
+        let result = system.validate_field("cc", &too_short);
+        assert!(!result.is_valid);
+        assert!(result.errors[0].message.contains("length"));
+
+        // Test too long (> 19 digits)
+        let too_long = FieldValue::Text("12345678901234567890".to_string());
+        let result = system.validate_field("cc", &too_long);
+        assert!(!result.is_valid);
+        assert!(result.errors[0].message.contains("length"));
+
+        // Test invalid Luhn checksum (valid length but fails Luhn)
+        let invalid_luhn = FieldValue::Text("4111111111111112".to_string()); // Changed last digit
+        let result = system.validate_field("cc", &invalid_luhn);
+        assert!(!result.is_valid);
+        assert!(result.errors[0].message.contains("Invalid credit card"));
+
+        // Test valid credit card
+        let valid_cc = FieldValue::Text("4111111111111111".to_string()); // Valid test card
+        let result = system.validate_field("cc", &valid_cc);
+        assert!(result.is_valid);
+    }
+
+    #[test]
+    fn test_time_validation_with_range() {
+        // Test time validation with min/max constraints
+        let mut system = FormValidationSystem::new();
+
+        system.add_validator(FieldValidator {
+            field_name: "appointment".to_string(),
+            rules: vec![ValidationRule::Time {
+                min: Some(NaiveTime::from_hms_opt(9, 0, 0).unwrap()),
+                max: Some(NaiveTime::from_hms_opt(17, 0, 0).unwrap()),
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        // Valid time within range
+        let valid = FieldValue::Text("10:30:00".to_string());
+        assert!(system.validate_field("appointment", &valid).is_valid);
+
+        // Time too early
+        let too_early = FieldValue::Text("08:30:00".to_string());
+        let result = system.validate_field("appointment", &too_early);
+        assert!(!result.is_valid);
+        assert!(result.errors[0].message.contains("at or after"));
+
+        // Time too late
+        let too_late = FieldValue::Text("18:00:00".to_string());
+        let result = system.validate_field("appointment", &too_late);
+        assert!(!result.is_valid);
+        assert!(result.errors[0].message.contains("at or before"));
+
+        // Invalid time format
+        let invalid = FieldValue::Text("not a time".to_string());
+        let result = system.validate_field("appointment", &invalid);
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_custom_validator() {
+        // Test custom validation function
+        fn is_even(value: &FieldValue) -> bool {
+            if let FieldValue::Text(s) = value {
+                if let Ok(n) = s.parse::<i32>() {
+                    return n % 2 == 0;
+                }
+            }
+            false
+        }
+
+        let mut system = FormValidationSystem::new();
+
+        system.add_validator(FieldValidator {
+            field_name: "even_number".to_string(),
+            rules: vec![ValidationRule::Custom {
+                name: "even_check".to_string(),
+                validator: is_even,
+            }],
+            format_mask: None,
+            error_message: None,
+        });
+
+        // Valid even number
+        let valid = FieldValue::Text("42".to_string());
+        assert!(system.validate_field("even_number", &valid).is_valid);
+
+        // Invalid odd number
+        let invalid = FieldValue::Text("43".to_string());
+        let result = system.validate_field("even_number", &invalid);
+        assert!(!result.is_valid);
+        assert!(result.errors[0]
+            .message
+            .contains("Custom validation 'even_check' failed"));
+
+        // Invalid non-number
+        let non_number = FieldValue::Text("abc".to_string());
+        let result = system.validate_field("even_number", &non_number);
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_format_mask_number_with_all_options() {
+        // Test number formatting with all options
+        let system = FormValidationSystem::new();
+
+        let mask = FormatMask::Number {
+            decimals: 3,
+            thousands_separator: true,
+            allow_negative: true,
+            prefix: Some("€ ".to_string()),
+            suffix: Some(" EUR".to_string()),
+        };
+
+        // Test positive number
+        let value = FieldValue::Number(12345.6789);
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "€ 12,345.679 EUR");
+
+        // Test negative number
+        let value = FieldValue::Number(-9876.543);
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "€ -9,876.543 EUR");
+
+        // Test with allow_negative = false
+        let mask_no_neg = FormatMask::Number {
+            decimals: 2,
+            thousands_separator: false,
+            allow_negative: false,
+            prefix: None,
+            suffix: None,
+        };
+
+        let value = FieldValue::Number(-123.456);
+        let formatted = system.apply_format_mask(&value, &mask_no_neg);
+        assert!(formatted.is_err());
+        assert!(formatted
+            .unwrap_err()
+            .contains("Negative numbers not allowed"));
+    }
+
+    #[test]
+    fn test_ssn_and_zip_format_masks() {
+        // Test SSN and ZIP code format masks
+        let system = FormValidationSystem::new();
+
+        // Test SSN formatting
+        let ssn_mask = FormatMask::SSN;
+        let ssn_value = FieldValue::Text("123456789".to_string());
+        let formatted = system.apply_format_mask(&ssn_value, &ssn_mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "123-45-6789");
+
+        // Test invalid SSN
+        let invalid_ssn = FieldValue::Text("12345".to_string());
+        let formatted = system.apply_format_mask(&invalid_ssn, &ssn_mask);
+        assert!(formatted.is_err());
+        assert!(formatted.unwrap_err().contains("9 digits"));
+
+        // Test ZIP code (5 digits)
+        let zip5_mask = FormatMask::ZipCode { plus_four: false };
+        let zip5_value = FieldValue::Text("12345".to_string());
+        let formatted = system.apply_format_mask(&zip5_value, &zip5_mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "12345");
+
+        // Test invalid ZIP5
+        let invalid_zip5 = FieldValue::Text("1234".to_string());
+        let formatted = system.apply_format_mask(&invalid_zip5, &zip5_mask);
+        assert!(formatted.is_err());
+
+        // Test ZIP+4
+        let zip9_mask = FormatMask::ZipCode { plus_four: true };
+        let zip9_value = FieldValue::Text("123456789".to_string());
+        let formatted = system.apply_format_mask(&zip9_value, &zip9_mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "12345-6789");
+
+        // Test invalid ZIP+4
+        let invalid_zip9 = FieldValue::Text("12345".to_string());
+        let formatted = system.apply_format_mask(&invalid_zip9, &zip9_mask);
+        assert!(formatted.is_err());
+    }
+
+    #[test]
+    fn test_date_format_masks() {
+        // Test different date format masks
+        let system = FormValidationSystem::new();
+
+        let date = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
+        let value = FieldValue::Text(date.to_string());
+
+        // Test MDY format
+        let mask = FormatMask::Date {
+            format: DateFormat::MDY,
+        };
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "03/15/2024");
+
+        // Test DMY format
+        let mask = FormatMask::Date {
+            format: DateFormat::DMY,
+        };
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "15/03/2024");
+
+        // Test YMD format
+        let mask = FormatMask::Date {
+            format: DateFormat::YMD,
+        };
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "2024-03-15");
+
+        // Test DotDMY format
+        let mask = FormatMask::Date {
+            format: DateFormat::DotDMY,
+        };
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "15.03.2024");
+
+        // Test DashMDY format
+        let mask = FormatMask::Date {
+            format: DateFormat::DashMDY,
+        };
+        let formatted = system.apply_format_mask(&value, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "03-15-2024");
+    }
+
+    #[test]
+    fn test_time_format_masks() {
+        // Test different time format masks
+        let system = FormValidationSystem::new();
+
+        // Morning time
+        let time_am = NaiveTime::from_hms_opt(9, 30, 45).unwrap();
+        let value_am = FieldValue::Text(time_am.to_string());
+
+        // Afternoon time
+        let time_pm = NaiveTime::from_hms_opt(15, 45, 30).unwrap();
+        let value_pm = FieldValue::Text(time_pm.to_string());
+
+        // Test HM format
+        let mask = FormatMask::Time {
+            format: TimeFormat::HM,
+            use_24_hour: true,
+        };
+        let formatted = system.apply_format_mask(&value_am, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "09:30");
+
+        // Test HMS format
+        let mask = FormatMask::Time {
+            format: TimeFormat::HMS,
+            use_24_hour: true,
+        };
+        let formatted = system.apply_format_mask(&value_am, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "09:30:45");
+
+        // Test HMAM format
+        let mask = FormatMask::Time {
+            format: TimeFormat::HMAM,
+            use_24_hour: false,
+        };
+        let formatted = system.apply_format_mask(&value_am, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "09:30 AM");
+
+        let formatted = system.apply_format_mask(&value_pm, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "03:45 PM");
+
+        // Test HMSAM format
+        let mask = FormatMask::Time {
+            format: TimeFormat::HMSAM,
+            use_24_hour: false,
+        };
+        let formatted = system.apply_format_mask(&value_pm, &mask);
+        assert!(formatted.is_ok());
+        assert_eq!(formatted.unwrap(), "03:45:30 PM");
+    }
+
+    #[test]
     fn test_multiple_validation_rules() {
         let mut system = FormValidationSystem::new();
 
@@ -1501,7 +1870,7 @@ mod tests {
                     min: Some(8),
                     max: Some(32),
                 },
-                ValidationRule::Pattern(r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).*$".to_string()),
+                ValidationRule::Pattern(r".*[A-Z].*[a-z].*[0-9].*|.*[A-Z].*[0-9].*[a-z].*|.*[a-z].*[A-Z].*[0-9].*|.*[a-z].*[0-9].*[A-Z].*|.*[0-9].*[A-Z].*[a-z].*|.*[0-9].*[a-z].*[A-Z].*".to_string()),
             ],
             format_mask: None,
             error_message: Some(

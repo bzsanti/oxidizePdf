@@ -918,7 +918,7 @@ mod tests {
             obj_ref: (3, 0),
             dict,
             inherited_resources: None,
-            media_box: [0.0, 0.0, 612.0, 792.0],
+            media_box: [0.0, 0.0, 595.0, 842.0],
             crop_box: None,
             rotation: 0,
             annotations: None,
@@ -984,7 +984,7 @@ mod tests {
         assert!(cached.is_some());
         let cached_page = cached.unwrap();
         assert_eq!(cached_page.obj_ref, (3, 0));
-        assert_eq!(cached_page.media_box, [0.0, 0.0, 612.0, 792.0]);
+        assert_eq!(cached_page.media_box, [0.0, 0.0, 595.0, 842.0]);
     }
 
     #[test]
