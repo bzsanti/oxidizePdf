@@ -7,6 +7,7 @@ mod patterns;
 mod pdf_image;
 mod png_decoder;
 mod shadings;
+pub mod soft_mask;
 pub mod state;
 pub mod transparency;
 
@@ -24,9 +25,10 @@ pub use shadings::{
     AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
     ShadingManager, ShadingPattern, ShadingType,
 };
+pub use soft_mask::{SoftMask, SoftMaskState, SoftMaskType};
 pub use state::{
     BlendMode, ExtGState, ExtGStateFont, ExtGStateManager, Halftone, LineDashPattern,
-    RenderingIntent, SoftMask, TransferFunction,
+    RenderingIntent, TransferFunction,
 };
 pub use transparency::TransparencyGroup;
 use transparency::TransparencyGroupState;

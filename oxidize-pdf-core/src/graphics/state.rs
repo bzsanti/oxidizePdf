@@ -3,6 +3,7 @@
 //! This module provides comprehensive support for PDF Extended Graphics State (ExtGState)
 //! dictionary parameters as specified in ISO 32000-1:2008.
 
+use super::soft_mask::SoftMask;
 use crate::error::{PdfError, Result};
 use crate::graphics::{LineCap, LineJoin};
 use crate::text::Font;
@@ -510,15 +511,6 @@ pub struct HalftoneColorant {
     pub spot_function: SpotFunction,
 }
 
-/// Soft mask specification for transparency
-#[derive(Debug, Clone, PartialEq)]
-pub enum SoftMask {
-    /// No soft mask
-    None,
-    /// Custom soft mask (placeholder for advanced implementation)
-    Custom(String),
-}
-
 /// Extended Graphics State Dictionary according to ISO 32000-1 Section 8.4
 #[derive(Debug, Clone)]
 pub struct ExtGState {
@@ -766,12 +758,12 @@ impl ExtGState {
 
     /// Set soft mask with a named XObject
     pub fn set_soft_mask_name(&mut self, name: String) {
-        self.soft_mask = Some(SoftMask::Custom(name));
+        self.soft_mask = Some(SoftMask::luminosity(name));
     }
 
     /// Remove soft mask (set to None)
     pub fn set_soft_mask_none(&mut self) {
-        self.soft_mask = Some(SoftMask::None);
+        self.soft_mask = Some(SoftMask::none());
     }
 
     /// Set black point compensation (PDF 2.0)
@@ -922,17 +914,16 @@ impl ExtGState {
         }
 
         if let Some(ref mask) = self.soft_mask {
-            match mask {
-                SoftMask::None => {
-                    write!(&mut dict, " /SMask /None").map_err(|_| {
-                        PdfError::InvalidStructure("Failed to write soft mask".to_string())
-                    })?;
-                }
-                SoftMask::Custom(name) => {
-                    write!(&mut dict, " /SMask /{name}").map_err(|_| {
-                        PdfError::InvalidStructure("Failed to write soft mask".to_string())
-                    })?;
-                }
+            if mask.is_none() {
+                write!(&mut dict, " /SMask /None").map_err(|_| {
+                    PdfError::InvalidStructure("Failed to write soft mask".to_string())
+                })?;
+            } else {
+                // In a full implementation, this would write the soft mask dictionary
+                // For now, we write a reference
+                write!(&mut dict, " /SMask {}", mask.to_pdf_string()).map_err(|_| {
+                    PdfError::InvalidStructure("Failed to write soft mask".to_string())
+                })?;
             }
         }
 
