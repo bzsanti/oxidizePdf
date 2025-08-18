@@ -3,8 +3,9 @@
 [![Crates.io](https://img.shields.io/crates/v/oxidize-pdf.svg)](https://crates.io/crates/oxidize-pdf)
 [![Documentation](https://docs.rs/oxidize-pdf/badge.svg)](https://docs.rs/oxidize-pdf)
 [![Downloads](https://img.shields.io/crates/d/oxidize-pdf)](https://crates.io/crates/oxidize-pdf)
+[![Coverage](https://img.shields.io/badge/coverage-64.75%25-yellow)](docs/COVERAGE_METHODOLOGY.md)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Rust](https://img.shields.io/badge/rust-%3E%3D1.70-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
 A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready with **60% ISO 32000-1:2008 compliance** (measured by automated test suite). Generate PDFs 2x faster than PDFSharp, with memory safety guarantees and a 5.2MB binary size.

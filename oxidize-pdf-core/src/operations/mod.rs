@@ -341,7 +341,10 @@ mod tests {
         let total = 0;
 
         // All should return empty vector
-        assert_eq!(PageRange::All.get_indices(total).unwrap(), vec![]);
+        assert_eq!(
+            PageRange::All.get_indices(total).unwrap(),
+            Vec::<usize>::new()
+        );
 
         // Single should fail
         assert!(PageRange::Single(0).get_indices(total).is_err());
@@ -350,7 +353,10 @@ mod tests {
         assert!(PageRange::Range(0, 1).get_indices(total).is_err());
 
         // Empty list should work
-        assert_eq!(PageRange::List(vec![]).get_indices(total).unwrap(), vec![]);
+        assert_eq!(
+            PageRange::List(vec![]).get_indices(total).unwrap(),
+            Vec::<usize>::new()
+        );
     }
 
     #[test]

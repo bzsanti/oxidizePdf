@@ -295,7 +295,7 @@ fn extract_number(line: &str) -> Option<i32> {
 /// Parse hex string to bytes
 fn parse_hex(s: &str) -> Option<Vec<u8>> {
     let s = s.trim_start_matches('<').trim_end_matches('>');
-    if !s.len().is_multiple_of(2) {
+    if s.len() % 2 != 0 {
         return None;
     }
 
