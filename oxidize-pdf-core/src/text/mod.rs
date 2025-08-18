@@ -7,13 +7,11 @@ mod font;
 pub mod font_manager;
 pub mod fonts;
 mod header_footer;
-pub mod header_footer_advanced;
 mod layout;
 mod list;
 mod metrics;
 pub mod ocr;
 pub mod table;
-mod table_advanced;
 
 #[cfg(test)]
 mod cmap_tests;
@@ -38,11 +36,6 @@ pub use ocr::{
     OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
 };
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
-pub use table_advanced::{
-    AdvancedTable, AdvancedTableCell, AdvancedTableOptions, AlternatingRowColors, BorderLine,
-    BorderStyle, CellContent, CellPadding, ColumnDefinition, ColumnWidth, LineStyle, TableRow,
-    VerticalAlign,
-};
 
 use crate::error::Result;
 use std::fmt::Write;

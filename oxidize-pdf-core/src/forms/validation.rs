@@ -611,21 +611,37 @@ impl FormValidationSystem {
             return Err("Invalid date format".to_string());
         }
 
+        // Detect input format: YYYYMMDD (if first 4 digits > 1900) or MMDDYYYY
+        let is_yyyy_format = if digits.len() >= 4 {
+            digits[0..4].parse::<u32>().unwrap_or(0) > 1900
+        } else {
+            false
+        };
+
+        // Parse components based on detected format
+        let (year, month, day) = if is_yyyy_format {
+            // Input is YYYYMMDD (e.g., 20240315)
+            (&digits[0..4], &digits[4..6], &digits[6..8])
+        } else {
+            // Input is MMDDYYYY (e.g., 03152024)
+            (&digits[4..8], &digits[0..2], &digits[2..4])
+        };
+
         let formatted = match format {
             DateFormat::MDY => {
-                format!("{}/{}/{}", &digits[0..2], &digits[2..4], &digits[4..8])
+                format!("{}/{}/{}", month, day, year)
             }
             DateFormat::DMY => {
-                format!("{}/{}/{}", &digits[0..2], &digits[2..4], &digits[4..8])
+                format!("{}/{}/{}", day, month, year)
             }
             DateFormat::YMD => {
-                format!("{}-{}-{}", &digits[0..4], &digits[4..6], &digits[6..8])
+                format!("{}-{}-{}", year, month, day)
             }
             DateFormat::DotDMY => {
-                format!("{}.{}.{}", &digits[0..2], &digits[2..4], &digits[4..8])
+                format!("{}.{}.{}", day, month, year)
             }
             DateFormat::DashMDY => {
-                format!("{}-{}-{}", &digits[0..2], &digits[2..4], &digits[4..8])
+                format!("{}-{}-{}", month, day, year)
             }
         };
 
@@ -670,6 +686,19 @@ impl FormValidationSystem {
                     format!("{:02}:{:02} {}", h, minutes, am_pm)
                 }
             }
+            TimeFormat::HMAM => {
+                // Always includes AM/PM regardless of use_24_hour setting
+                let (h, am_pm) = if hours == 0 {
+                    (12, "AM")
+                } else if hours < 12 {
+                    (hours, "AM")
+                } else if hours == 12 {
+                    (12, "PM")
+                } else {
+                    (hours - 12, "PM")
+                };
+                format!("{:02}:{:02} {}", h, minutes, am_pm)
+            }
             TimeFormat::HMS | TimeFormat::HMSAM => {
                 if use_24_hour {
                     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
@@ -686,7 +715,6 @@ impl FormValidationSystem {
                     format!("{:02}:{:02}:{:02} {}", h, minutes, seconds, am_pm)
                 }
             }
-            _ => format!("{:02}:{:02}", hours, minutes),
         };
 
         Ok(formatted)

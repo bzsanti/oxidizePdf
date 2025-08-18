@@ -5,7 +5,6 @@
 //! (Revision 2, 3, 4, 5, and 6) and Public Key Security Handler.
 
 mod aes;
-mod aes_advanced;
 mod crypt_filters;
 mod embedded_files;
 mod encryption_dict;
@@ -17,7 +16,6 @@ mod rc4;
 mod standard_security;
 
 pub use aes::{generate_iv, Aes, AesError, AesKey, AesKeySize};
-pub use aes_advanced::{compute_owner_encryption_key, compute_perms_entry, AdvancedAesHandler};
 pub use crypt_filters::{AuthEvent, CryptFilterManager, FunctionalCryptFilter, SecurityHandler};
 pub use embedded_files::{EmbeddedFileEncryption, ExtendedEncryptionDict};
 pub use encryption_dict::{

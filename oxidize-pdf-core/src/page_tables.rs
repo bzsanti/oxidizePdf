@@ -5,24 +5,12 @@
 use crate::error::PdfError;
 use crate::graphics::Color;
 use crate::page::Page;
-use crate::text::{
-    AdvancedTable, AdvancedTableCell, AdvancedTableOptions, AlternatingRowColors, BorderStyle,
-    CellPadding, ColumnDefinition, ColumnWidth, Table, TableOptions,
-};
+use crate::text::{Font, HeaderStyle, Table, TableOptions};
 
 /// Extension trait for adding tables to pages
 pub trait PageTables {
     /// Add a simple table to the page
     fn add_simple_table(&mut self, table: &Table, x: f64, y: f64) -> Result<&mut Self, PdfError>;
-
-    /// Add an advanced table to the page
-    fn add_advanced_table(
-        &mut self,
-        table: &AdvancedTable,
-        x: f64,
-        y: f64,
-        available_width: f64,
-    ) -> Result<&mut Self, PdfError>;
 
     /// Create and add a quick table with equal columns
     fn add_quick_table(
@@ -49,16 +37,10 @@ pub trait PageTables {
 /// Predefined table styles
 #[derive(Debug, Clone)]
 pub struct TableStyle {
-    /// Border style
-    pub borders: BorderStyle,
-    /// Cell padding
-    pub padding: CellPadding,
     /// Header background color
     pub header_background: Option<Color>,
     /// Header text color
     pub header_text_color: Option<Color>,
-    /// Alternating row colors
-    pub alternating_rows: Option<AlternatingRowColors>,
     /// Default font size
     pub font_size: f64,
 }
@@ -67,11 +49,8 @@ impl TableStyle {
     /// Create a minimal table style (no borders)
     pub fn minimal() -> Self {
         Self {
-            borders: BorderStyle::none(),
-            padding: CellPadding::uniform(5.0),
             header_background: None,
             header_text_color: None,
-            alternating_rows: None,
             font_size: 10.0,
         }
     }
@@ -79,11 +58,8 @@ impl TableStyle {
     /// Create a simple table style with borders
     pub fn simple() -> Self {
         Self {
-            borders: BorderStyle::default(),
-            padding: CellPadding::uniform(5.0),
             header_background: None,
             header_text_color: None,
-            alternating_rows: None,
             font_size: 10.0,
         }
     }
@@ -91,15 +67,8 @@ impl TableStyle {
     /// Create a professional table style
     pub fn professional() -> Self {
         Self {
-            borders: BorderStyle::horizontal_only(1.0, Color::gray(0.7)),
-            padding: CellPadding::symmetric(8.0, 6.0),
             header_background: Some(Color::gray(0.1)),
             header_text_color: Some(Color::white()),
-            alternating_rows: Some(AlternatingRowColors {
-                even_color: Color::white(),
-                odd_color: Color::gray(0.95),
-                include_header: false,
-            }),
             font_size: 10.0,
         }
     }
@@ -107,15 +76,8 @@ impl TableStyle {
     /// Create a colorful table style
     pub fn colorful() -> Self {
         Self {
-            borders: BorderStyle::default(),
-            padding: CellPadding::uniform(6.0),
             header_background: Some(Color::rgb(0.2, 0.4, 0.8)),
             header_text_color: Some(Color::white()),
-            alternating_rows: Some(AlternatingRowColors {
-                even_color: Color::rgb(0.95, 0.95, 1.0),
-                odd_color: Color::white(),
-                include_header: false,
-            }),
             font_size: 10.0,
         }
     }
@@ -126,19 +88,6 @@ impl PageTables for Page {
         let mut table_clone = table.clone();
         table_clone.set_position(x, y);
         table_clone.render(self.graphics())?;
-        Ok(self)
-    }
-
-    fn add_advanced_table(
-        &mut self,
-        table: &AdvancedTable,
-        x: f64,
-        y: f64,
-        available_width: f64,
-    ) -> Result<&mut Self, PdfError> {
-        let mut table_clone = table.clone();
-        table_clone.set_position(x, y);
-        table_clone.render(self.graphics(), available_width)?;
         Ok(self)
     }
 
@@ -182,54 +131,39 @@ impl PageTables for Page {
             return Ok(self);
         }
 
-        // Create columns with equal width
-        let columns: Vec<ColumnDefinition> = (0..num_columns)
-            .map(|_| ColumnDefinition {
-                width: ColumnWidth::Fixed(width / num_columns as f64),
-                default_align: crate::text::TextAlign::Left,
-                min_width: None,
-                max_width: None,
+        // Create a simple table with the given style
+        let mut table = Table::with_equal_columns(num_columns, width);
+
+        // Create table options based on style
+        let header_style = if style.header_background.is_some() || style.header_text_color.is_some()
+        {
+            Some(HeaderStyle {
+                background_color: style.header_background.unwrap_or(Color::white()),
+                text_color: style.header_text_color.unwrap_or(Color::black()),
+                font: Font::Helvetica,
+                bold: true,
             })
-            .collect();
+        } else {
+            None
+        };
 
-        let mut table = AdvancedTable::new(columns);
-
-        // Apply style
-        let options = AdvancedTableOptions {
-            border_style: style.borders,
-            cell_padding: style.padding,
+        let options = TableOptions {
             font_size: style.font_size,
-            alternating_rows: style.alternating_rows,
+            header_style,
             ..Default::default()
         };
+
         table.set_options(options);
 
         // Add header row
-        let header_cells: Vec<AdvancedTableCell> = headers
-            .into_iter()
-            .map(|text| {
-                let mut cell =
-                    AdvancedTableCell::text(text).with_align(crate::text::TextAlign::Center);
-
-                if let Some(bg) = style.header_background {
-                    cell = cell.with_background(bg);
-                }
-                if let Some(color) = style.header_text_color {
-                    cell = cell.with_text_color(color);
-                }
-
-                cell
-            })
-            .collect();
-
-        table.add_header_row(header_cells)?;
+        table.add_row(headers)?;
 
         // Add data rows
         for row_data in data {
-            table.add_text_row(row_data)?;
+            table.add_row(row_data)?;
         }
 
-        self.add_advanced_table(&table, x, y, width)
+        self.add_simple_table(&table, x, y)
     }
 }
 
@@ -255,14 +189,13 @@ mod tests {
     #[test]
     fn test_table_styles() {
         let minimal = TableStyle::minimal();
-        assert!(minimal.borders.top.is_none());
+        assert_eq!(minimal.font_size, 10.0);
 
         let simple = TableStyle::simple();
-        assert!(simple.borders.top.is_some());
+        assert_eq!(simple.font_size, 10.0);
 
         let professional = TableStyle::professional();
         assert!(professional.header_background.is_some());
-        assert!(professional.alternating_rows.is_some());
 
         let colorful = TableStyle::colorful();
         assert!(colorful.header_background.is_some());
@@ -296,30 +229,6 @@ mod tests {
 
         let data: Vec<Vec<String>> = vec![];
         let result = page.add_quick_table(data, 50.0, 700.0, 400.0, None);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_advanced_table_integration() {
-        let mut page = Page::a4();
-
-        let columns = vec![
-            ColumnDefinition {
-                width: ColumnWidth::Fixed(100.0),
-                default_align: crate::text::TextAlign::Left,
-                min_width: None,
-                max_width: None,
-            },
-            ColumnDefinition {
-                width: ColumnWidth::Fixed(200.0),
-                default_align: crate::text::TextAlign::Right,
-                min_width: None,
-                max_width: None,
-            },
-        ];
-
-        let table = AdvancedTable::new(columns);
-        let result = page.add_advanced_table(&table, 50.0, 700.0, 300.0);
         assert!(result.is_ok());
     }
 }

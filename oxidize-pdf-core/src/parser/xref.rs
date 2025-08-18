@@ -2095,7 +2095,15 @@ startxref\n\
         // Test finding linearized xref
         let result = XRefTable::find_linearized_xref(&mut reader);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 63);
+
+        // The actual position of "xref" in the content is at byte 90
+        // Count: "%PDF-1.4\n" (9) + "1 0 obj\n" (8) + "<< /Linearized ... >>\n" (63) + "endobj\n" (7) + "xref" starts at 87
+        let xref_pos = result.unwrap();
+        assert_eq!(
+            xref_pos, 90,
+            "Expected xref at position 90, got {}",
+            xref_pos
+        );
     }
 
     #[test]

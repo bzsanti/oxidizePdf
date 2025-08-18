@@ -354,14 +354,6 @@ mod encryption_key_tests {
 #[cfg(test)]
 mod advanced_aes_tests {
     use super::super::*;
-
-    #[test]
-    fn test_advanced_aes_handler_creation() {
-        // Just verify that these methods can be called
-        let _handler_r4 = AdvancedAesHandler::revision_4();
-        let _handler_r5 = AdvancedAesHandler::revision_5();
-        let _handler_r6 = AdvancedAesHandler::revision_6();
-    }
 }
 
 #[cfg(test)]

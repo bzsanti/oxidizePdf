@@ -1471,7 +1471,9 @@ fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
             }
             let repeat_byte = data[i];
             let count = ((-length) as usize) + 1;
-            result.extend(std::iter::repeat_n(repeat_byte, count));
+            for _ in 0..count {
+                result.push(repeat_byte);
+            }
             i += 1;
         }
     }

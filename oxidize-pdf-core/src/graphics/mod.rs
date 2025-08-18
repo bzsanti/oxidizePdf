@@ -8,6 +8,7 @@ mod pdf_image;
 mod png_decoder;
 mod shadings;
 pub mod state;
+pub mod transparency;
 
 pub use clipping::{ClippingPath, ClippingRegion};
 pub use color::Color;
@@ -27,6 +28,8 @@ pub use state::{
     BlendMode, ExtGState, ExtGStateFont, ExtGStateManager, Halftone, LineDashPattern,
     RenderingIntent, SoftMask, TransferFunction,
 };
+pub use transparency::TransparencyGroup;
+use transparency::TransparencyGroupState;
 
 use crate::error::Result;
 use crate::text::{ColumnContent, ColumnLayout, Font, FontManager, ListElement, Table};
@@ -64,6 +67,8 @@ pub struct GraphicsContext {
     used_characters: HashSet<char>,
     // Glyph mapping for Unicode fonts (Unicode code point -> Glyph ID)
     glyph_mapping: Option<HashMap<u32, u16>>,
+    // Transparency group stack for nested groups
+    transparency_stack: Vec<TransparencyGroupState>,
 }
 
 impl Default for GraphicsContext {
@@ -100,6 +105,7 @@ impl GraphicsContext {
             current_font_size: 12.0,
             used_characters: HashSet::new(),
             glyph_mapping: None,
+            transparency_stack: Vec::new(),
         }
     }
 
@@ -269,6 +275,56 @@ impl GraphicsContext {
             self.stroke_color = stroke;
         }
         self
+    }
+
+    /// Begin a transparency group
+    /// ISO 32000-1:2008 Section 11.4
+    pub fn begin_transparency_group(&mut self, group: TransparencyGroup) -> &mut Self {
+        // Save current state
+        self.save_state();
+
+        // Mark beginning of transparency group with special comment
+        writeln!(&mut self.operations, "% Begin Transparency Group").unwrap();
+
+        // Apply group settings via ExtGState
+        let mut extgstate = ExtGState::new();
+        extgstate = extgstate.with_blend_mode(group.blend_mode.clone());
+        extgstate.alpha_fill = Some(group.opacity as f64);
+        extgstate.alpha_stroke = Some(group.opacity as f64);
+
+        // Apply the ExtGState
+        self.pending_extgstate = Some(extgstate);
+        let _ = self.apply_pending_extgstate();
+
+        // Create group state and push to stack
+        let mut group_state = TransparencyGroupState::new(group);
+        // Save current operations state
+        group_state.saved_state = self.operations.as_bytes().to_vec();
+        self.transparency_stack.push(group_state);
+
+        self
+    }
+
+    /// End a transparency group
+    pub fn end_transparency_group(&mut self) -> &mut Self {
+        if let Some(_group_state) = self.transparency_stack.pop() {
+            // Mark end of transparency group
+            writeln!(&mut self.operations, "% End Transparency Group").unwrap();
+
+            // Restore state
+            self.restore_state();
+        }
+        self
+    }
+
+    /// Check if we're currently inside a transparency group
+    pub fn in_transparency_group(&self) -> bool {
+        !self.transparency_stack.is_empty()
+    }
+
+    /// Get the current transparency group (if any)
+    pub fn current_transparency_group(&self) -> Option<&TransparencyGroup> {
+        self.transparency_stack.last().map(|state| &state.group)
     }
 
     pub fn translate(&mut self, tx: f64, ty: f64) -> &mut Self {
@@ -2046,6 +2102,57 @@ mod tests {
         let ops = ctx.generate_operations().unwrap();
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("2 J"));
+    }
+
+    #[test]
+    fn test_transparency_groups() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test basic transparency group
+        let group = TransparencyGroup::new()
+            .with_isolated(true)
+            .with_opacity(0.5);
+
+        ctx.begin_transparency_group(group);
+        assert!(ctx.in_transparency_group());
+
+        // Draw something in the group
+        ctx.rect(10.0, 10.0, 100.0, 100.0);
+        ctx.fill();
+
+        ctx.end_transparency_group();
+        assert!(!ctx.in_transparency_group());
+
+        // Check that operations contain transparency markers
+        let ops = ctx.operations();
+        assert!(ops.contains("% Begin Transparency Group"));
+        assert!(ops.contains("% End Transparency Group"));
+    }
+
+    #[test]
+    fn test_nested_transparency_groups() {
+        let mut ctx = GraphicsContext::new();
+
+        // First group
+        let group1 = TransparencyGroup::isolated().with_opacity(0.8);
+        ctx.begin_transparency_group(group1);
+        assert!(ctx.in_transparency_group());
+
+        // Nested group
+        let group2 = TransparencyGroup::knockout().with_blend_mode(BlendMode::Multiply);
+        ctx.begin_transparency_group(group2);
+
+        // Draw in nested group
+        ctx.circle(50.0, 50.0, 25.0);
+        ctx.fill();
+
+        // End nested group
+        ctx.end_transparency_group();
+        assert!(ctx.in_transparency_group()); // Still in first group
+
+        // End first group
+        ctx.end_transparency_group();
+        assert!(!ctx.in_transparency_group());
     }
 
     #[test]
