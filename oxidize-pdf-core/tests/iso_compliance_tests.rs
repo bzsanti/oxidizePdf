@@ -590,10 +590,10 @@ fn test_section_11_transparency() -> (usize, usize) {
         implemented += 1;
     }
     if test_feature("Soft masks", || {
-        use oxidize_pdf::graphics::state::{ExtGState, SoftMask};
+        use oxidize_pdf::graphics::{ExtGState, SoftMask};
         // Test that we can create soft masks (they exist)
         let mut state = ExtGState::new();
-        state.set_soft_mask(SoftMask::None);
+        state.set_soft_mask(SoftMask::none());
         state.set_soft_mask_name("SM1".to_string());
         true
     }) {
@@ -899,11 +899,11 @@ fn test_section_8_comprehensive() -> (usize, usize) {
 
     // 8.6 Color Spaces (12 types)
     total += 12;
-    implemented += 3; // DeviceGray, DeviceRGB, DeviceCMYK
+    implemented += 4; // DeviceGray, DeviceRGB, DeviceCMYK, ICCBased
 
     // 8.7 Patterns (2 types)
     total += 2;
-    implemented += 0;
+    implemented += 1; // Tiling patterns implemented
 
     // 8.8 Images (5 features)
     total += 5;
@@ -986,11 +986,11 @@ fn test_section_11_comprehensive() -> (usize, usize) {
 
     // 11.5 Transparency Groups
     total += 5;
-    implemented += 0;
+    implemented += 5; // TransparencyGroup fully implemented
 
     // 11.6 Soft Masks
     total += 4;
-    implemented += 0;
+    implemented += 4; // SoftMask fully implemented
 
     (total, implemented)
 }
