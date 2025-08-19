@@ -4,12 +4,17 @@
 //! opening URIs, or executing named actions.
 
 mod action;
+mod form_actions;
 mod goto_action;
 mod launch_action;
 mod named_action;
 mod uri_action;
 
 pub use action::{Action, ActionDictionary, ActionType};
+pub use form_actions::{
+    HideAction, ImportDataAction, JavaScriptAction, OCGStateChange, ResetFormAction,
+    SetOCGStateAction, SoundAction, SubmitFormAction, SubmitFormFlags,
+};
 pub use goto_action::{GoToAction, RemoteGoToAction};
 pub use launch_action::{LaunchAction, LaunchParameters};
 pub use named_action::{NamedAction, StandardNamedAction};

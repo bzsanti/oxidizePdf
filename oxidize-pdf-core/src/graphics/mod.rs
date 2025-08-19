@@ -1,26 +1,44 @@
+pub mod calibrated_color;
 pub mod clipping;
 mod color;
 mod color_profiles;
+pub mod devicen_color;
+pub mod form_xobject;
 mod indexed_color;
+pub mod lab_color;
 mod path;
 mod patterns;
 mod pdf_image;
 mod png_decoder;
+pub mod separation_color;
 mod shadings;
 pub mod soft_mask;
 pub mod state;
 pub mod transparency;
 
+pub use calibrated_color::{CalGrayColorSpace, CalRgbColorSpace, CalibratedColor};
 pub use clipping::{ClippingPath, ClippingRegion};
 pub use color::Color;
 pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
+pub use devicen_color::{
+    AlternateColorSpace as DeviceNAlternateColorSpace, ColorantDefinition, ColorantType,
+    DeviceNAttributes, DeviceNColorSpace, LinearTransform, SampledFunction, TintTransformFunction,
+};
+pub use form_xobject::{
+    FormTemplates, FormXObject, FormXObjectBuilder, FormXObjectManager,
+    TransparencyGroup as FormTransparencyGroup,
+};
 pub use indexed_color::{BaseColorSpace, ColorLookupTable, IndexedColorManager, IndexedColorSpace};
+pub use lab_color::{LabColor, LabColorSpace};
 pub use path::{LineCap, LineJoin, PathBuilder, PathCommand, WindingRule};
 pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
     TilingType,
 };
 pub use pdf_image::{ColorSpace, Image, ImageFormat, MaskType};
+pub use separation_color::{
+    AlternateColorSpace, SeparationColor, SeparationColorSpace, SpotColors, TintTransform,
+};
 pub use shadings::{
     AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
     ShadingManager, ShadingPattern, ShadingType,
@@ -185,6 +203,78 @@ impl GraphicsContext {
 
     pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
         self.current_color = color;
+        self
+    }
+
+    /// Set fill color using calibrated color space
+    pub fn set_fill_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
+        // Generate a unique color space name
+        let cs_name = match &color {
+            CalibratedColor::Gray(_, _) => "CalGray1",
+            CalibratedColor::Rgb(_, _) => "CalRGB1",
+        };
+
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/{} cs", cs_name).unwrap();
+
+        // Set color values
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "sc").unwrap();
+
+        self
+    }
+
+    /// Set stroke color using calibrated color space
+    pub fn set_stroke_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
+        // Generate a unique color space name
+        let cs_name = match &color {
+            CalibratedColor::Gray(_, _) => "CalGray1",
+            CalibratedColor::Rgb(_, _) => "CalRGB1",
+        };
+
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/{} CS", cs_name).unwrap();
+
+        // Set color values
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "SC").unwrap();
+
+        self
+    }
+
+    /// Set fill color using Lab color space
+    pub fn set_fill_color_lab(&mut self, color: LabColor) -> &mut Self {
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/Lab1 cs").unwrap();
+
+        // Set color values (normalized for PDF)
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "sc").unwrap();
+
+        self
+    }
+
+    /// Set stroke color using Lab color space
+    pub fn set_stroke_color_lab(&mut self, color: LabColor) -> &mut Self {
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/Lab1 CS").unwrap();
+
+        // Set color values (normalized for PDF)
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "SC").unwrap();
+
         self
     }
 
