@@ -281,6 +281,14 @@ impl Annotation {
         self
     }
 
+    /// Set field dictionary properties (for widget annotations)
+    pub fn set_field_dict(&mut self, field_dict: Dictionary) {
+        // Merge field dictionary into properties
+        for (key, value) in field_dict.iter() {
+            self.properties.set(key, value.clone());
+        }
+    }
+
     /// Convert to PDF dictionary
     pub fn to_dict(&self) -> Dictionary {
         let mut dict = Dictionary::new();

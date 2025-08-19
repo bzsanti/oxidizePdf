@@ -7,6 +7,8 @@ mod annotation;
 mod annotation_type;
 mod link;
 mod markup;
+mod polygon;
+mod popup;
 mod text;
 
 pub use annotation::{
@@ -19,4 +21,11 @@ pub use annotation_type::{
 };
 pub use link::{HighlightMode, LinkAction, LinkAnnotation, LinkDestination};
 pub use markup::{MarkupAnnotation, MarkupType, QuadPoints};
+pub use polygon::{
+    create_rectangle_polygon, create_regular_polygon, create_triangle, PolygonAnnotation,
+    PolylineAnnotation,
+};
+pub use popup::{
+    create_markup_popup, create_open_popup, create_text_popup, PopupAnnotation, PopupFlags,
+};
 pub use text::{Icon, TextAnnotation};
