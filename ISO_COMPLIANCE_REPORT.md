@@ -11,14 +11,14 @@ Features Implemented: 123
 
 | Section | Features | Implemented | Compliance |
 |---------|----------|-------------|------------|
-| Section 14: Document Interchange | 30 | 3 | 10.0% |
-| Section 9: Text | 32 | 18 | 56.2% |
 | Section 13: Multimedia | 20 | 0 | 0.0% |
-| Section 11: Transparency | 28 | 28 | 100.0% |
 | Section 10: Rendering | 15 | 0 | 0.0% |
-| Section 7: Document Structure | 43 | 14 | 32.6% |
-| Section 8: Graphics | 50 | 35 | 70.0% |
 | Section 12: Interactive | 68 | 25 | 36.8% |
+| Section 7: Document Structure | 43 | 14 | 32.6% |
+| Section 11: Transparency | 28 | 28 | 100.0% |
+| Section 9: Text | 32 | 18 | 56.2% |
+| Section 14: Document Interchange | 30 | 3 | 10.0% |
+| Section 8: Graphics | 50 | 35 | 70.0% |
 
 ## Key Achievements (v1.1.8)
 
