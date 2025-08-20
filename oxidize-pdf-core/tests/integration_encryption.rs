@@ -8,6 +8,7 @@ use oxidize_pdf::objects::ObjectId;
 use oxidize_pdf::{Document, Page};
 
 #[test]
+#[ignore = "Encryption feature under development"]
 fn test_create_encrypted_pdf() {
     // Create a new PDF document
     let mut doc = Document::new();

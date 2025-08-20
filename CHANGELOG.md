@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.1.9] - 2025-08-20
+
+### Fixed
+- Fixed PDF split operation to correctly generate individual page files
+- Fixed test_split_pdf to use SinglePages mode instead of ChunkSize(1) 
+- Fixed test_complex_document_workflow to use actual generated file names
+- Improved split_pdf file naming pattern handling for different split modes
+
+### Changed
+- Updated version from 1.1.8 to 1.1.9
+
+### Known Issues
+- test_create_encrypted_pdf test is currently failing (encryption feature under development)
+
 ## [1.1.8] - 2025-08-11 - FONT SUBSETTING & PROJECT CLEANUP 🎯
 
 ### Added

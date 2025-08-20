@@ -221,10 +221,10 @@ fn test_split_pdf() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     // Split into individual pages
     let options = SplitOptions {
-        mode: SplitMode::ChunkSize(1),
+        mode: SplitMode::SinglePages,
         output_pattern: temp_dir
             .path()
-            .join("page_%d.pdf")
+            .join("page_{}.pdf")
             .to_string_lossy()
             .to_string(),
         preserve_metadata: true,
@@ -427,18 +427,28 @@ fn test_complex_document_workflow() -> std::result::Result<(), Box<dyn std::erro
         mode: SplitMode::ChunkSize(3),
         output_pattern: temp_dir
             .path()
-            .join("chunk_%d.pdf")
+            .join("chunk_{}.pdf")
             .to_string_lossy()
             .to_string(),
         preserve_metadata: true,
         optimize: false,
     };
 
-    split_pdf(&original_path, split_options)?;
+    let split_files = split_pdf(&original_path, split_options)?;
 
     // Step 4: Merge some chunks
-    let chunk1 = temp_dir.path().join("chunk_1.pdf");
-    let chunk2 = temp_dir.path().join("chunk_2.pdf");
+    // Use the actual file names created
+    let chunk1 = if split_files.len() > 0 {
+        split_files[0].clone()
+    } else {
+        return Err("No files created from split".into());
+    };
+
+    let chunk2 = if split_files.len() > 1 {
+        split_files[1].clone()
+    } else {
+        return Err("Not enough files created from split".into());
+    };
 
     let merge_inputs = vec![MergeInput::new(chunk1), MergeInput::new(chunk2)];
 
