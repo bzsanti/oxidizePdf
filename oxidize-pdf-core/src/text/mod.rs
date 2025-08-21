@@ -4,14 +4,14 @@ mod extraction;
 mod extraction_cmap;
 mod flow;
 mod font;
+pub mod font_manager;
 pub mod fonts;
 mod header_footer;
 mod layout;
 mod list;
 mod metrics;
 pub mod ocr;
-mod table;
-mod table_advanced;
+pub mod table;
 
 #[cfg(test)]
 mod cmap_tests;
@@ -23,6 +23,7 @@ pub use encoding::TextEncoding;
 pub use extraction::{ExtractedText, ExtractionOptions, TextExtractor, TextFragment};
 pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
+pub use font_manager::{CustomFont, FontDescriptor, FontFlags, FontManager, FontMetrics, FontType};
 pub use header_footer::{HeaderFooter, HeaderFooterOptions, HeaderFooterPosition};
 pub use layout::{ColumnContent, ColumnLayout, ColumnOptions, TextFormat};
 pub use list::{
@@ -35,11 +36,6 @@ pub use ocr::{
     OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
 };
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
-pub use table_advanced::{
-    AdvancedTable, AdvancedTableCell, AdvancedTableOptions, AlternatingRowColors, BorderLine,
-    BorderStyle, CellContent, CellPadding, ColumnDefinition, ColumnWidth, LineStyle, TableRow,
-    VerticalAlign,
-};
 
 use crate::error::Result;
 use std::fmt::Write;
@@ -109,6 +105,7 @@ impl TextContext {
     }
 
     /// Get the current font
+    #[allow(dead_code)]
     pub(crate) fn current_font(&self) -> &Font {
         &self.current_font
     }

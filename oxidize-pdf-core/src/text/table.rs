@@ -4,7 +4,7 @@
 //! suitable for structured data presentation in PDF documents.
 
 use crate::error::PdfError;
-use crate::graphics::{Color, GraphicsContext};
+use crate::graphics::{Color, GraphicsContext, LineDashPattern};
 use crate::text::{measure_text, Font, TextAlign};
 
 /// Represents a simple table in a PDF document
@@ -39,6 +39,14 @@ pub struct TableOptions {
     pub text_color: Color,
     /// Header row styling
     pub header_style: Option<HeaderStyle>,
+    /// Grid layout options
+    pub grid_style: GridStyle,
+    /// Cell border style
+    pub cell_border_style: CellBorderStyle,
+    /// Alternating row colors
+    pub alternating_row_colors: Option<(Color, Color)>,
+    /// Table background color
+    pub background_color: Option<Color>,
 }
 
 /// Header row styling options
@@ -72,6 +80,48 @@ pub struct TableCell {
     align: TextAlign,
     /// Column span (default 1)
     colspan: usize,
+    /// Row span (default 1)
+    rowspan: usize,
+    /// Cell background color (overrides row color)
+    background_color: Option<Color>,
+    /// Cell border style (overrides table default)
+    border_style: Option<CellBorderStyle>,
+}
+
+/// Grid layout style for tables
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GridStyle {
+    /// No grid lines
+    None,
+    /// Only horizontal lines
+    Horizontal,
+    /// Only vertical lines
+    Vertical,
+    /// Full grid with all lines
+    Full,
+    /// Only outer borders
+    Outline,
+}
+
+/// Cell border style options
+#[derive(Debug, Clone)]
+pub struct CellBorderStyle {
+    /// Border width
+    pub width: f64,
+    /// Border color
+    pub color: Color,
+    /// Dash pattern (None for solid)
+    pub dash_pattern: Option<LineDashPattern>,
+}
+
+impl Default for CellBorderStyle {
+    fn default() -> Self {
+        Self {
+            width: 1.0,
+            color: Color::black(),
+            dash_pattern: None,
+        }
+    }
 }
 
 impl Default for TableOptions {
@@ -85,6 +135,10 @@ impl Default for TableOptions {
             font_size: 10.0,
             text_color: Color::black(),
             header_style: None,
+            grid_style: GridStyle::Full,
+            cell_border_style: CellBorderStyle::default(),
+            alternating_row_colors: None,
+            background_color: None,
         }
     }
 }
@@ -133,6 +187,9 @@ impl Table {
                 content,
                 align: TextAlign::Center,
                 colspan: 1,
+                rowspan: 1,
+                background_color: None,
+                border_style: None,
             })
             .collect();
 
@@ -167,6 +224,9 @@ impl Table {
                 content,
                 align,
                 colspan: 1,
+                rowspan: 1,
+                background_color: None,
+                border_style: None,
             })
             .collect();
 
@@ -224,8 +284,17 @@ impl Table {
         let (start_x, start_y) = self.position;
         let mut current_y = start_y;
 
+        // Draw table background if specified
+        if let Some(bg_color) = self.options.background_color {
+            graphics.save_state();
+            graphics.set_fill_color(bg_color);
+            graphics.rectangle(start_x, start_y, self.get_width(), self.get_height());
+            graphics.fill();
+            graphics.restore_state();
+        }
+
         // Draw each row
-        for row in self.rows.iter() {
+        for (row_index, row) in self.rows.iter().enumerate() {
             let row_height = self.calculate_row_height(row);
             let mut current_x = start_x;
 
@@ -244,8 +313,17 @@ impl Table {
                     }
                 }
 
-                // Draw cell background if header
-                if use_header_style {
+                // Draw cell background
+                // First priority: cell-specific background
+                if let Some(cell_bg) = cell.background_color {
+                    graphics.save_state();
+                    graphics.set_fill_color(cell_bg);
+                    graphics.rectangle(current_x, current_y, cell_width, row_height);
+                    graphics.fill();
+                    graphics.restore_state();
+                }
+                // Second priority: header style background
+                else if use_header_style {
                     if let Some(style) = header_style {
                         graphics.save_state();
                         graphics.set_fill_color(style.background_color);
@@ -254,14 +332,89 @@ impl Table {
                         graphics.restore_state();
                     }
                 }
+                // Third priority: alternating row colors
+                else if let Some((even_color, odd_color)) = self.options.alternating_row_colors {
+                    if !row.is_header {
+                        let color = if row_index % 2 == 0 {
+                            even_color
+                        } else {
+                            odd_color
+                        };
+                        graphics.save_state();
+                        graphics.set_fill_color(color);
+                        graphics.rectangle(current_x, current_y, cell_width, row_height);
+                        graphics.fill();
+                        graphics.restore_state();
+                    }
+                }
 
-                // Draw cell border
-                graphics.save_state();
-                graphics.set_stroke_color(self.options.border_color);
-                graphics.set_line_width(self.options.border_width);
-                graphics.rectangle(current_x, current_y, cell_width, row_height);
-                graphics.stroke();
-                graphics.restore_state();
+                // Draw cell border based on grid style
+                let should_draw_border = match self.options.grid_style {
+                    GridStyle::None => false,
+                    GridStyle::Full => true,
+                    GridStyle::Horizontal => {
+                        // Draw top and bottom borders only
+                        true
+                    }
+                    GridStyle::Vertical => {
+                        // Draw left and right borders only
+                        true
+                    }
+                    GridStyle::Outline => {
+                        // Only draw if it's an edge cell
+                        col_index == 0
+                            || col_index + cell.colspan >= self.column_widths.len()
+                            || row_index == 0
+                            || row_index == self.rows.len() - 1
+                    }
+                };
+
+                if should_draw_border {
+                    graphics.save_state();
+
+                    // Use cell-specific border style if available
+                    let border_style = cell
+                        .border_style
+                        .as_ref()
+                        .unwrap_or(&self.options.cell_border_style);
+
+                    graphics.set_stroke_color(border_style.color);
+                    graphics.set_line_width(border_style.width);
+
+                    // Apply dash pattern if specified
+                    if let Some(dash_pattern) = &border_style.dash_pattern {
+                        graphics.set_line_dash_pattern(dash_pattern.clone());
+                    }
+
+                    // Draw borders based on grid style
+                    match self.options.grid_style {
+                        GridStyle::Full | GridStyle::Outline => {
+                            graphics.rectangle(current_x, current_y, cell_width, row_height);
+                            graphics.stroke();
+                        }
+                        GridStyle::Horizontal => {
+                            // Top border
+                            graphics.move_to(current_x, current_y);
+                            graphics.line_to(current_x + cell_width, current_y);
+                            // Bottom border
+                            graphics.move_to(current_x, current_y + row_height);
+                            graphics.line_to(current_x + cell_width, current_y + row_height);
+                            graphics.stroke();
+                        }
+                        GridStyle::Vertical => {
+                            // Left border
+                            graphics.move_to(current_x, current_y);
+                            graphics.line_to(current_x, current_y + row_height);
+                            // Right border
+                            graphics.move_to(current_x + cell_width, current_y);
+                            graphics.line_to(current_x + cell_width, current_y + row_height);
+                            graphics.stroke();
+                        }
+                        GridStyle::None => {}
+                    }
+
+                    graphics.restore_state();
+                }
 
                 // Draw cell text
                 let text_x = current_x + self.options.cell_padding;
@@ -407,6 +560,9 @@ impl TableCell {
             content,
             align: TextAlign::Left,
             colspan: 1,
+            rowspan: 1,
+            background_color: None,
+            border_style: None,
         }
     }
 
@@ -416,6 +572,9 @@ impl TableCell {
             content,
             align,
             colspan: 1,
+            rowspan: 1,
+            background_color: None,
+            border_style: None,
         }
     }
 
@@ -425,7 +584,28 @@ impl TableCell {
             content,
             align: TextAlign::Left,
             colspan,
+            rowspan: 1,
+            background_color: None,
+            border_style: None,
         }
+    }
+
+    /// Set cell background color
+    pub fn set_background_color(&mut self, color: Color) -> &mut Self {
+        self.background_color = Some(color);
+        self
+    }
+
+    /// Set cell border style
+    pub fn set_border_style(&mut self, style: CellBorderStyle) -> &mut Self {
+        self.border_style = Some(style);
+        self
+    }
+
+    /// Set rowspan
+    pub fn set_rowspan(&mut self, rowspan: usize) -> &mut Self {
+        self.rowspan = rowspan;
+        self
     }
 
     /// Set cell alignment
@@ -529,6 +709,9 @@ mod tests {
         assert_eq!(options.border_color, Color::black());
         assert_eq!(options.cell_padding, 5.0);
         assert_eq!(options.font_size, 10.0);
+        assert_eq!(options.grid_style, GridStyle::Full);
+        assert!(options.alternating_row_colors.is_none());
+        assert!(options.background_color.is_none());
     }
 
     #[test]
@@ -600,5 +783,79 @@ mod tests {
         let row = TableRow::new(vec![TableCell::new("Test".to_string())]);
         let height = table.calculate_row_height(&row);
         assert_eq!(height, 30.0);
+    }
+
+    #[test]
+    fn test_grid_styles() {
+        let mut options = TableOptions::default();
+
+        options.grid_style = GridStyle::None;
+        assert_eq!(options.grid_style, GridStyle::None);
+
+        options.grid_style = GridStyle::Horizontal;
+        assert_eq!(options.grid_style, GridStyle::Horizontal);
+
+        options.grid_style = GridStyle::Vertical;
+        assert_eq!(options.grid_style, GridStyle::Vertical);
+
+        options.grid_style = GridStyle::Outline;
+        assert_eq!(options.grid_style, GridStyle::Outline);
+    }
+
+    #[test]
+    fn test_cell_border_style() {
+        let style = CellBorderStyle::default();
+        assert_eq!(style.width, 1.0);
+        assert_eq!(style.color, Color::black());
+        assert!(style.dash_pattern.is_none());
+
+        let custom_style = CellBorderStyle {
+            width: 2.0,
+            color: Color::rgb(1.0, 0.0, 0.0),
+            dash_pattern: Some(LineDashPattern::new(vec![5.0, 3.0], 0.0)),
+        };
+        assert_eq!(custom_style.width, 2.0);
+        assert!(custom_style.dash_pattern.is_some());
+    }
+
+    #[test]
+    fn test_table_with_alternating_colors() {
+        let mut table = Table::new(vec![100.0, 100.0]);
+        table.options.alternating_row_colors = Some((Color::gray(0.95), Color::gray(0.9)));
+
+        table
+            .add_row(vec!["Row 1".to_string(), "Data 1".to_string()])
+            .unwrap();
+        table
+            .add_row(vec!["Row 2".to_string(), "Data 2".to_string()])
+            .unwrap();
+
+        assert_eq!(table.rows.len(), 2);
+        assert!(table.options.alternating_row_colors.is_some());
+    }
+
+    #[test]
+    fn test_cell_with_background() {
+        let mut cell = TableCell::new("Test".to_string());
+        cell.set_background_color(Color::rgb(0.0, 1.0, 0.0));
+
+        assert!(cell.background_color.is_some());
+        assert_eq!(cell.background_color.unwrap(), Color::rgb(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn test_cell_with_custom_border() {
+        let mut cell = TableCell::new("Test".to_string());
+        let border_style = CellBorderStyle {
+            width: 2.0,
+            color: Color::rgb(0.0, 0.0, 1.0),
+            dash_pattern: None,
+        };
+        cell.set_border_style(border_style);
+
+        assert!(cell.border_style.is_some());
+        let style = cell.border_style.as_ref().unwrap();
+        assert_eq!(style.width, 2.0);
+        assert_eq!(style.color, Color::rgb(0.0, 0.0, 1.0));
     }
 }

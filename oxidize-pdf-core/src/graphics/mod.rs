@@ -1,31 +1,61 @@
+pub mod calibrated_color;
+pub mod clipping;
 mod color;
 mod color_profiles;
+pub mod devicen_color;
+pub mod form_xobject;
+mod indexed_color;
+pub mod lab_color;
 mod path;
 mod patterns;
 mod pdf_image;
+mod png_decoder;
+pub mod separation_color;
 mod shadings;
-mod state;
+pub mod soft_mask;
+pub mod state;
+pub mod transparency;
 
+pub use calibrated_color::{CalGrayColorSpace, CalRgbColorSpace, CalibratedColor};
+pub use clipping::{ClippingPath, ClippingRegion};
 pub use color::Color;
 pub use color_profiles::{IccColorSpace, IccProfile, IccProfileManager, StandardIccProfile};
-pub use path::{LineCap, LineJoin, PathBuilder};
+pub use devicen_color::{
+    AlternateColorSpace as DeviceNAlternateColorSpace, ColorantDefinition, ColorantType,
+    DeviceNAttributes, DeviceNColorSpace, LinearTransform, SampledFunction, TintTransformFunction,
+};
+pub use form_xobject::{
+    FormTemplates, FormXObject, FormXObjectBuilder, FormXObjectManager,
+    TransparencyGroup as FormTransparencyGroup,
+};
+pub use indexed_color::{BaseColorSpace, ColorLookupTable, IndexedColorManager, IndexedColorSpace};
+pub use lab_color::{LabColor, LabColorSpace};
+pub use path::{LineCap, LineJoin, PathBuilder, PathCommand, WindingRule};
 pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,
     TilingType,
 };
-pub use pdf_image::{ColorSpace as ImageColorSpace, Image, ImageFormat};
+pub use pdf_image::{ColorSpace, Image, ImageFormat, MaskType};
+pub use separation_color::{
+    AlternateColorSpace, SeparationColor, SeparationColorSpace, SpotColors, TintTransform,
+};
 pub use shadings::{
     AxialShading, ColorStop, FunctionBasedShading, Point, RadialShading, ShadingDefinition,
     ShadingManager, ShadingPattern, ShadingType,
 };
+pub use soft_mask::{SoftMask, SoftMaskState, SoftMaskType};
 pub use state::{
     BlendMode, ExtGState, ExtGStateFont, ExtGStateManager, Halftone, LineDashPattern,
-    RenderingIntent, SoftMask, TransferFunction,
+    RenderingIntent, TransferFunction,
 };
+pub use transparency::TransparencyGroup;
+use transparency::TransparencyGroupState;
 
 use crate::error::Result;
-use crate::text::{ColumnContent, ColumnLayout, Font, ListElement, Table};
+use crate::text::{ColumnContent, ColumnLayout, Font, FontManager, ListElement, Table};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct GraphicsContext {
@@ -45,6 +75,20 @@ pub struct GraphicsContext {
     current_rendering_intent: RenderingIntent,
     current_flatness: f64,
     current_smoothness: f64,
+    // Clipping support
+    clipping_region: ClippingRegion,
+    // Font management
+    font_manager: Option<Arc<FontManager>>,
+    // State stack for save/restore
+    state_stack: Vec<(Color, Color)>,
+    current_font_name: Option<String>,
+    current_font_size: f64,
+    // Character tracking for font subsetting
+    used_characters: HashSet<char>,
+    // Glyph mapping for Unicode fonts (Unicode code point -> Glyph ID)
+    glyph_mapping: Option<HashMap<u32, u16>>,
+    // Transparency group stack for nested groups
+    transparency_stack: Vec<TransparencyGroupState>,
 }
 
 impl Default for GraphicsContext {
@@ -72,6 +116,16 @@ impl GraphicsContext {
             current_rendering_intent: RenderingIntent::RelativeColorimetric,
             current_flatness: 1.0,
             current_smoothness: 0.0,
+            // Clipping defaults
+            clipping_region: ClippingRegion::new(),
+            // Font defaults
+            font_manager: None,
+            state_stack: Vec::new(),
+            current_font_name: None,
+            current_font_size: 12.0,
+            used_characters: HashSet::new(),
+            glyph_mapping: None,
+            transparency_stack: Vec::new(),
         }
     }
 
@@ -152,6 +206,78 @@ impl GraphicsContext {
         self
     }
 
+    /// Set fill color using calibrated color space
+    pub fn set_fill_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
+        // Generate a unique color space name
+        let cs_name = match &color {
+            CalibratedColor::Gray(_, _) => "CalGray1",
+            CalibratedColor::Rgb(_, _) => "CalRGB1",
+        };
+
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/{} cs", cs_name).unwrap();
+
+        // Set color values
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "sc").unwrap();
+
+        self
+    }
+
+    /// Set stroke color using calibrated color space
+    pub fn set_stroke_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
+        // Generate a unique color space name
+        let cs_name = match &color {
+            CalibratedColor::Gray(_, _) => "CalGray1",
+            CalibratedColor::Rgb(_, _) => "CalRGB1",
+        };
+
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/{} CS", cs_name).unwrap();
+
+        // Set color values
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "SC").unwrap();
+
+        self
+    }
+
+    /// Set fill color using Lab color space
+    pub fn set_fill_color_lab(&mut self, color: LabColor) -> &mut Self {
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/Lab1 cs").unwrap();
+
+        // Set color values (normalized for PDF)
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "sc").unwrap();
+
+        self
+    }
+
+    /// Set stroke color using Lab color space
+    pub fn set_stroke_color_lab(&mut self, color: LabColor) -> &mut Self {
+        // Set the color space (this would need to be registered in the PDF resources)
+        writeln!(&mut self.operations, "/Lab1 CS").unwrap();
+
+        // Set color values (normalized for PDF)
+        let values = color.values();
+        for value in &values {
+            write!(&mut self.operations, "{:.4} ", value).unwrap();
+        }
+        writeln!(&mut self.operations, "SC").unwrap();
+
+        self
+    }
+
     pub fn set_line_width(&mut self, width: f64) -> &mut Self {
         self.line_width = width;
         writeln!(&mut self.operations, "{width:.2} w").unwrap();
@@ -175,29 +301,122 @@ impl GraphicsContext {
         let opacity = opacity.clamp(0.0, 1.0);
         self.fill_opacity = opacity;
         self.stroke_opacity = opacity;
+
+        // Create pending ExtGState if opacity is not 1.0
+        if opacity < 1.0 {
+            let mut state = ExtGState::new();
+            state.alpha_fill = Some(opacity);
+            state.alpha_stroke = Some(opacity);
+            self.pending_extgstate = Some(state);
+        }
+
         self
     }
 
     /// Set the fill opacity (0.0 to 1.0)
     pub fn set_fill_opacity(&mut self, opacity: f64) -> &mut Self {
         self.fill_opacity = opacity.clamp(0.0, 1.0);
+
+        // Update or create pending ExtGState
+        if opacity < 1.0 {
+            if let Some(ref mut state) = self.pending_extgstate {
+                state.alpha_fill = Some(opacity);
+            } else {
+                let mut state = ExtGState::new();
+                state.alpha_fill = Some(opacity);
+                self.pending_extgstate = Some(state);
+            }
+        }
+
         self
     }
 
     /// Set the stroke opacity (0.0 to 1.0)
     pub fn set_stroke_opacity(&mut self, opacity: f64) -> &mut Self {
         self.stroke_opacity = opacity.clamp(0.0, 1.0);
+
+        // Update or create pending ExtGState
+        if opacity < 1.0 {
+            if let Some(ref mut state) = self.pending_extgstate {
+                state.alpha_stroke = Some(opacity);
+            } else {
+                let mut state = ExtGState::new();
+                state.alpha_stroke = Some(opacity);
+                self.pending_extgstate = Some(state);
+            }
+        }
+
         self
     }
 
     pub fn save_state(&mut self) -> &mut Self {
         self.operations.push_str("q\n");
+        self.save_clipping_state();
+        // Save color state
+        self.state_stack
+            .push((self.current_color, self.stroke_color));
         self
     }
 
     pub fn restore_state(&mut self) -> &mut Self {
         self.operations.push_str("Q\n");
+        self.restore_clipping_state();
+        // Restore color state
+        if let Some((fill, stroke)) = self.state_stack.pop() {
+            self.current_color = fill;
+            self.stroke_color = stroke;
+        }
         self
+    }
+
+    /// Begin a transparency group
+    /// ISO 32000-1:2008 Section 11.4
+    pub fn begin_transparency_group(&mut self, group: TransparencyGroup) -> &mut Self {
+        // Save current state
+        self.save_state();
+
+        // Mark beginning of transparency group with special comment
+        writeln!(&mut self.operations, "% Begin Transparency Group").unwrap();
+
+        // Apply group settings via ExtGState
+        let mut extgstate = ExtGState::new();
+        extgstate = extgstate.with_blend_mode(group.blend_mode.clone());
+        extgstate.alpha_fill = Some(group.opacity as f64);
+        extgstate.alpha_stroke = Some(group.opacity as f64);
+
+        // Apply the ExtGState
+        self.pending_extgstate = Some(extgstate);
+        let _ = self.apply_pending_extgstate();
+
+        // Create group state and push to stack
+        let mut group_state = TransparencyGroupState::new(group);
+        // Save current operations state
+        group_state.saved_state = self.operations.as_bytes().to_vec();
+        self.transparency_stack.push(group_state);
+
+        self
+    }
+
+    /// End a transparency group
+    pub fn end_transparency_group(&mut self) -> &mut Self {
+        if let Some(_group_state) = self.transparency_stack.pop() {
+            // Mark end of transparency group
+            writeln!(&mut self.operations, "% End Transparency Group").unwrap();
+
+            // Restore state
+            self.restore_state();
+        }
+        self
+    }
+
+    /// Check if we're currently inside a transparency group
+    pub fn in_transparency_group(&self) -> bool {
+        !self.transparency_stack.is_empty()
+    }
+
+    /// Get the current transparency group (if any)
+    pub fn current_transparency_group(&self) -> Option<&TransparencyGroup> {
+        self.transparency_stack.last().map(|state| &state.group)
     }
 
     pub fn translate(&mut self, tx: f64, ty: f64) -> &mut Self {
@@ -256,6 +475,63 @@ impl GraphicsContext {
 
         // Draw the image XObject
         writeln!(&mut self.operations, "/{image_name} Do").unwrap();
+
+        // Restore graphics state
+        self.restore_state();
+
+        self
+    }
+
+    /// Draw an image with transparency support (soft mask)
+    /// This method handles images with alpha channels or soft masks
+    pub fn draw_image_with_transparency(
+        &mut self,
+        image_name: &str,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        mask_name: Option<&str>,
+    ) -> &mut Self {
+        // Save graphics state
+        self.save_state();
+
+        // If we have a mask, we need to set up an ExtGState with SMask
+        if let Some(mask) = mask_name {
+            // Create an ExtGState for the soft mask
+            let mut extgstate = ExtGState::new();
+            extgstate.set_soft_mask_name(mask.to_string());
+
+            // Register and apply the ExtGState
+            let gs_name = self
+                .extgstate_manager
+                .add_state(extgstate)
+                .unwrap_or_else(|_| "GS1".to_string());
+            writeln!(&mut self.operations, "/{} gs", gs_name).unwrap();
+        }
+
+        // Set up transformation matrix for image placement
+        writeln!(
+            &mut self.operations,
+            "{width:.2} 0 0 {height:.2} {x:.2} {y:.2} cm"
+        )
+        .unwrap();
+
+        // Draw the image XObject
+        writeln!(&mut self.operations, "/{image_name} Do").unwrap();
+
+        // If we had a mask, reset the soft mask to None
+        if mask_name.is_some() {
+            // Create an ExtGState that removes the soft mask
+            let mut reset_extgstate = ExtGState::new();
+            reset_extgstate.set_soft_mask_none();
+
+            let gs_name = self
+                .extgstate_manager
+                .add_state(reset_extgstate)
+                .unwrap_or_else(|_| "GS2".to_string());
+            writeln!(&mut self.operations, "/{} gs", gs_name).unwrap();
+        }
 
         // Restore graphics state
         self.restore_state();
@@ -350,6 +626,11 @@ impl GraphicsContext {
         &self.operations
     }
 
+    /// Get the operations string (alias for testing)
+    pub fn get_operations(&self) -> &str {
+        &self.operations
+    }
+
     /// Clear all operations
     pub fn clear(&mut self) {
         self.operations.clear();
@@ -370,6 +651,19 @@ impl GraphicsContext {
     /// Set font and size
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
         writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size).unwrap();
+
+        // Track font name and size for Unicode detection and proper font handling
+        match &font {
+            Font::Custom(name) => {
+                self.current_font_name = Some(name.clone());
+                self.current_font_size = size;
+            }
+            _ => {
+                self.current_font_name = Some(font.pdf_name());
+                self.current_font_size = size;
+            }
+        }
+
         self
     }
 
@@ -615,6 +909,425 @@ impl GraphicsContext {
     pub fn clip_even_odd(&mut self) -> &mut Self {
         self.operations.push_str("W*\n");
         self
+    }
+
+    /// Create clipping path and stroke it
+    pub fn clip_stroke(&mut self) -> &mut Self {
+        self.apply_stroke_color();
+        self.operations.push_str("W S\n");
+        self
+    }
+
+    /// Set a custom clipping path
+    pub fn set_clipping_path(&mut self, path: ClippingPath) -> Result<&mut Self> {
+        let ops = path.to_pdf_operations()?;
+        self.operations.push_str(&ops);
+        self.clipping_region.set_clip(path);
+        Ok(self)
+    }
+
+    /// Clear the current clipping path
+    pub fn clear_clipping(&mut self) -> &mut Self {
+        self.clipping_region.clear_clip();
+        self
+    }
+
+    /// Save the current clipping state (called automatically by save_state)
+    fn save_clipping_state(&mut self) {
+        self.clipping_region.save();
+    }
+
+    /// Restore the previous clipping state (called automatically by restore_state)
+    fn restore_clipping_state(&mut self) {
+        self.clipping_region.restore();
+    }
+
+    /// Create a rectangular clipping region
+    pub fn clip_rect(&mut self, x: f64, y: f64, width: f64, height: f64) -> Result<&mut Self> {
+        let path = ClippingPath::rect(x, y, width, height);
+        self.set_clipping_path(path)
+    }
+
+    /// Create a circular clipping region
+    pub fn clip_circle(&mut self, cx: f64, cy: f64, radius: f64) -> Result<&mut Self> {
+        let path = ClippingPath::circle(cx, cy, radius);
+        self.set_clipping_path(path)
+    }
+
+    /// Create an elliptical clipping region
+    pub fn clip_ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64) -> Result<&mut Self> {
+        let path = ClippingPath::ellipse(cx, cy, rx, ry);
+        self.set_clipping_path(path)
+    }
+
+    /// Check if a clipping path is active
+    pub fn has_clipping(&self) -> bool {
+        self.clipping_region.has_clip()
+    }
+
+    /// Get the current clipping path
+    pub fn clipping_path(&self) -> Option<&ClippingPath> {
+        self.clipping_region.current()
+    }
+
+    /// Set the font manager for custom fonts
+    pub fn set_font_manager(&mut self, font_manager: Arc<FontManager>) -> &mut Self {
+        self.font_manager = Some(font_manager);
+        self
+    }
+
+    /// Set the current font to a custom font
+    pub fn set_custom_font(&mut self, font_name: &str, size: f64) -> &mut Self {
+        self.current_font_name = Some(font_name.to_string());
+        self.current_font_size = size;
+
+        // Try to get the glyph mapping from the font manager
+        if let Some(ref font_manager) = self.font_manager {
+            if let Some(mapping) = font_manager.get_font_glyph_mapping(font_name) {
+                self.glyph_mapping = Some(mapping);
+            }
+        }
+
+        self
+    }
+
+    /// Set the glyph mapping for Unicode fonts (Unicode -> GlyphID)
+    pub fn set_glyph_mapping(&mut self, mapping: HashMap<u32, u16>) -> &mut Self {
+        self.glyph_mapping = Some(mapping);
+        self
+    }
+
+    /// Draw text at the specified position with automatic encoding detection
+    pub fn draw_text(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Track used characters for font subsetting
+        self.used_characters.extend(text.chars());
+
+        // Check if we're using a custom font (which will be Type0/Unicode)
+        // Custom fonts are those that are not the standard PDF fonts (Helvetica, Times, etc.)
+        let using_custom_font = if let Some(ref font_name) = self.current_font_name {
+            // If font name doesn't start with standard PDF font names, it's custom
+            !matches!(
+                font_name.as_str(),
+                "Helvetica"
+                    | "Times"
+                    | "Courier"
+                    | "Symbol"
+                    | "ZapfDingbats"
+                    | "Helvetica-Bold"
+                    | "Helvetica-Oblique"
+                    | "Helvetica-BoldOblique"
+                    | "Times-Roman"
+                    | "Times-Bold"
+                    | "Times-Italic"
+                    | "Times-BoldItalic"
+                    | "Courier-Bold"
+                    | "Courier-Oblique"
+                    | "Courier-BoldOblique"
+            )
+        } else {
+            false
+        };
+
+        // Detect if text needs Unicode encoding
+        let needs_unicode = text.chars().any(|c| c as u32 > 255) || using_custom_font;
+
+        // Use appropriate encoding based on content and font type
+        if needs_unicode {
+            self.draw_with_unicode_encoding(text, x, y)
+        } else {
+            self.draw_with_simple_encoding(text, x, y)
+        }
+    }
+
+    /// Internal: Draw text with simple encoding (WinAnsiEncoding for standard fonts)
+    fn draw_with_simple_encoding(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Check if text contains characters outside Latin-1
+        let has_unicode = text.chars().any(|c| c as u32 > 255);
+
+        if has_unicode {
+            // Warning: Text contains Unicode characters but no Unicode font is set
+            eprintln!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
+        }
+
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Use parentheses encoding for Latin-1 text (standard PDF fonts use WinAnsiEncoding)
+        // This allows proper rendering of accented characters
+        self.operations.push('(');
+        for ch in text.chars() {
+            let code = ch as u32;
+            if code <= 127 {
+                // ASCII characters - handle special characters that need escaping
+                match ch {
+                    '(' => self.operations.push_str("\\("),
+                    ')' => self.operations.push_str("\\)"),
+                    '\\' => self.operations.push_str("\\\\"),
+                    '\n' => self.operations.push_str("\\n"),
+                    '\r' => self.operations.push_str("\\r"),
+                    '\t' => self.operations.push_str("\\t"),
+                    _ => self.operations.push(ch),
+                }
+            } else if code <= 255 {
+                // Latin-1 characters (128-255)
+                // For WinAnsiEncoding, we can use octal notation for high-bit characters
+                write!(&mut self.operations, "\\{:03o}", code).unwrap();
+            } else {
+                // Characters outside Latin-1 - replace with '?'
+                self.operations.push('?');
+            }
+        }
+        self.operations.push_str(") Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Internal: Draw text with Unicode encoding (Type0/CID)
+    fn draw_with_unicode_encoding(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font - ensure it's a Type0 font for Unicode
+        if let Some(font_name) = &self.current_font_name {
+            // The font should be converted to Type0 by FontManager if needed
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // IMPORTANT: For Type0 fonts with Identity-H encoding, we write CIDs (Character IDs),
+        // NOT GlyphIDs. The CIDToGIDMap in the font handles the CID -> GlyphID conversion.
+        // In our case, we use Unicode code points as CIDs.
+        self.operations.push('<');
+
+        for ch in text.chars() {
+            let code = ch as u32;
+
+            // For Type0 fonts with Identity-H encoding, write the Unicode code point as CID
+            // The CIDToGIDMap will handle the conversion to the actual glyph ID
+            if code <= 0xFFFF {
+                // Write the Unicode code point as a 2-byte hex value (CID)
+                write!(&mut self.operations, "{:04X}", code).unwrap();
+            } else {
+                // Characters outside BMP - use replacement character
+                // Most PDF viewers don't handle supplementary planes well
+                write!(&mut self.operations, "FFFD").unwrap(); // Unicode replacement character
+            }
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Legacy: Draw text with hex encoding (kept for compatibility)
+    #[deprecated(note = "Use draw_text() which automatically detects encoding")]
+    pub fn draw_text_hex(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            // Fallback to Helvetica if no font is set
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Encode text as hex string
+        // For TrueType fonts with Identity-H encoding, we need UTF-16BE
+        // But we'll use single-byte encoding for now to fix spacing
+        self.operations.push('<');
+        for ch in text.chars() {
+            if ch as u32 <= 255 {
+                // For characters in the Latin-1 range, use single byte
+                write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+            } else {
+                // For characters outside Latin-1, we need proper glyph mapping
+                // For now, use a placeholder
+                write!(&mut self.operations, "3F").unwrap(); // '?' character
+            }
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Legacy: Draw text with Type0 font encoding (kept for compatibility)
+    #[deprecated(note = "Use draw_text() which automatically detects encoding")]
+    pub fn draw_text_cid(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        use crate::fonts::needs_type0_font;
+
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Check if text needs Type0 encoding
+        if needs_type0_font(text) {
+            // Use 2-byte hex encoding for CIDs with identity mapping
+            self.operations.push('<');
+            for ch in text.chars() {
+                let code = ch as u32;
+
+                // Handle all Unicode characters
+                if code <= 0xFFFF {
+                    // Direct identity mapping for BMP characters
+                    write!(&mut self.operations, "{:04X}", code).unwrap();
+                } else if code <= 0x10FFFF {
+                    // For characters outside BMP - use surrogate pairs
+                    let code = code - 0x10000;
+                    let high = ((code >> 10) & 0x3FF) + 0xD800;
+                    let low = (code & 0x3FF) + 0xDC00;
+                    write!(&mut self.operations, "{:04X}{:04X}", high, low).unwrap();
+                } else {
+                    // Invalid Unicode - use replacement character
+                    write!(&mut self.operations, "FFFD").unwrap();
+                }
+            }
+            self.operations.push_str("> Tj\n");
+        } else {
+            // Use regular single-byte encoding for Latin-1
+            self.operations.push('<');
+            for ch in text.chars() {
+                if ch as u32 <= 255 {
+                    write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+                } else {
+                    write!(&mut self.operations, "3F").unwrap();
+                }
+            }
+            self.operations.push_str("> Tj\n");
+        }
+
+        // End text object
+        self.operations.push_str("ET\n");
+        Ok(self)
+    }
+
+    /// Legacy: Draw text with UTF-16BE encoding (kept for compatibility)
+    #[deprecated(note = "Use draw_text() which automatically detects encoding")]
+    pub fn draw_text_unicode(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
+        // Begin text object
+        self.operations.push_str("BT\n");
+
+        // Set font if available
+        if let Some(font_name) = &self.current_font_name {
+            writeln!(
+                &mut self.operations,
+                "/{} {} Tf",
+                font_name, self.current_font_size
+            )
+            .unwrap();
+        } else {
+            // Fallback to Helvetica if no font is set
+            writeln!(
+                &mut self.operations,
+                "/Helvetica {} Tf",
+                self.current_font_size
+            )
+            .unwrap();
+        }
+
+        // Set text position
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+
+        // Encode text as UTF-16BE hex string
+        self.operations.push('<');
+        let mut utf16_buffer = [0u16; 2];
+        for ch in text.chars() {
+            let encoded = ch.encode_utf16(&mut utf16_buffer);
+            for unit in encoded {
+                // Write UTF-16BE (big-endian)
+                write!(&mut self.operations, "{:04X}", unit).unwrap();
+            }
+        }
+        self.operations.push_str("> Tj\n");
+
+        // End text object
+        self.operations.push_str("ET\n");
+
+        Ok(self)
+    }
+
+    /// Get the characters used in this graphics context
+    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
+        if self.used_characters.is_empty() {
+            None
+        } else {
+            Some(self.used_characters.clone())
+        }
     }
 }
 
@@ -1232,5 +1945,500 @@ mod tests {
         // Check for both clipping operations
         assert!(ops.contains("W\n"));
         assert!(ops.contains("W*\n"));
+    }
+
+    // ============= Additional Critical Method Tests =============
+
+    #[test]
+    fn test_move_to_and_line_to() {
+        let mut ctx = GraphicsContext::new();
+        ctx.move_to(100.0, 200.0).line_to(300.0, 400.0).stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("100.00 200.00 m"));
+        assert!(ops_str.contains("300.00 400.00 l"));
+        assert!(ops_str.contains("S"));
+    }
+
+    #[test]
+    fn test_bezier_curve() {
+        let mut ctx = GraphicsContext::new();
+        ctx.move_to(0.0, 0.0)
+            .curve_to(10.0, 20.0, 30.0, 40.0, 50.0, 60.0)
+            .stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0.00 0.00 m"));
+        assert!(ops_str.contains("10.00 20.00 30.00 40.00 50.00 60.00 c"));
+        assert!(ops_str.contains("S"));
+    }
+
+    #[test]
+    fn test_circle_path() {
+        let mut ctx = GraphicsContext::new();
+        ctx.circle(100.0, 100.0, 50.0).fill();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        // Circle should use bezier curves (c operator)
+        assert!(ops_str.contains(" c"));
+        assert!(ops_str.contains("f"));
+    }
+
+    #[test]
+    fn test_path_closing() {
+        let mut ctx = GraphicsContext::new();
+        ctx.move_to(0.0, 0.0)
+            .line_to(100.0, 0.0)
+            .line_to(100.0, 100.0)
+            .close_path()
+            .stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("h")); // close path operator
+        assert!(ops_str.contains("S"));
+    }
+
+    #[test]
+    fn test_fill_and_stroke() {
+        let mut ctx = GraphicsContext::new();
+        ctx.rect(10.0, 10.0, 50.0, 50.0).fill_stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("10.00 10.00 50.00 50.00 re"));
+        assert!(ops_str.contains("B")); // fill and stroke operator
+    }
+
+    #[test]
+    fn test_color_settings() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color(Color::rgb(1.0, 0.0, 0.0))
+            .set_stroke_color(Color::rgb(0.0, 1.0, 0.0))
+            .rect(10.0, 10.0, 50.0, 50.0)
+            .fill_stroke(); // This will write the colors
+
+        assert_eq!(ctx.fill_color(), Color::rgb(1.0, 0.0, 0.0));
+        assert_eq!(ctx.stroke_color(), Color::rgb(0.0, 1.0, 0.0));
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1.000 0.000 0.000 rg")); // red fill
+        assert!(ops_str.contains("0.000 1.000 0.000 RG")); // green stroke
+    }
+
+    #[test]
+    fn test_line_styles() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_width(2.5)
+            .set_line_cap(LineCap::Round)
+            .set_line_join(LineJoin::Bevel);
+
+        assert_eq!(ctx.line_width(), 2.5);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("2.50 w")); // line width
+        assert!(ops_str.contains("1 J")); // round line cap
+        assert!(ops_str.contains("2 j")); // bevel line join
+    }
+
+    #[test]
+    fn test_opacity_settings() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_opacity(0.5);
+
+        assert_eq!(ctx.fill_opacity(), 0.5);
+        assert_eq!(ctx.stroke_opacity(), 0.5);
+        assert!(ctx.uses_transparency());
+
+        ctx.set_fill_opacity(0.7).set_stroke_opacity(0.3);
+
+        assert_eq!(ctx.fill_opacity(), 0.7);
+        assert_eq!(ctx.stroke_opacity(), 0.3);
+    }
+
+    #[test]
+    fn test_state_save_restore() {
+        let mut ctx = GraphicsContext::new();
+        ctx.save_state()
+            .set_fill_color(Color::rgb(1.0, 0.0, 0.0))
+            .restore_state();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("q")); // save state
+        assert!(ops_str.contains("Q")); // restore state
+    }
+
+    #[test]
+    fn test_transformations() {
+        let mut ctx = GraphicsContext::new();
+        ctx.translate(100.0, 200.0).scale(2.0, 3.0).rotate(45.0);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1 0 0 1 100.00 200.00 cm")); // translate
+        assert!(ops_str.contains("2.00 0 0 3.00 0 0 cm")); // scale
+        assert!(ops_str.contains("cm")); // rotate matrix
+    }
+
+    #[test]
+    fn test_custom_transform() {
+        let mut ctx = GraphicsContext::new();
+        ctx.transform(1.0, 0.5, 0.5, 1.0, 10.0, 20.0);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1.00 0.50 0.50 1.00 10.00 20.00 cm"));
+    }
+
+    #[test]
+    fn test_rectangle_path() {
+        let mut ctx = GraphicsContext::new();
+        ctx.rectangle(25.0, 25.0, 150.0, 100.0).stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("25.00 25.00 150.00 100.00 re"));
+        assert!(ops_str.contains("S"));
+    }
+
+    #[test]
+    fn test_empty_operations() {
+        let ctx = GraphicsContext::new();
+        let ops = ctx.generate_operations().unwrap();
+        assert!(ops.is_empty());
+    }
+
+    #[test]
+    fn test_complex_path_operations() {
+        let mut ctx = GraphicsContext::new();
+        ctx.move_to(50.0, 50.0)
+            .line_to(100.0, 50.0)
+            .curve_to(125.0, 50.0, 150.0, 75.0, 150.0, 100.0)
+            .line_to(150.0, 150.0)
+            .close_path()
+            .fill();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("50.00 50.00 m"));
+        assert!(ops_str.contains("100.00 50.00 l"));
+        assert!(ops_str.contains("125.00 50.00 150.00 75.00 150.00 100.00 c"));
+        assert!(ops_str.contains("150.00 150.00 l"));
+        assert!(ops_str.contains("h"));
+        assert!(ops_str.contains("f"));
+    }
+
+    #[test]
+    fn test_graphics_state_dict_generation() {
+        let mut ctx = GraphicsContext::new();
+
+        // Without transparency, should return None
+        assert!(ctx.generate_graphics_state_dict().is_none());
+
+        // With transparency, should generate dict
+        ctx.set_opacity(0.5);
+        let dict = ctx.generate_graphics_state_dict();
+        assert!(dict.is_some());
+        let dict_str = dict.unwrap();
+        assert!(dict_str.contains("/ca 0.5"));
+        assert!(dict_str.contains("/CA 0.5"));
+    }
+
+    #[test]
+    fn test_line_dash_pattern() {
+        let mut ctx = GraphicsContext::new();
+        let pattern = LineDashPattern {
+            array: vec![3.0, 2.0],
+            phase: 0.0,
+        };
+        ctx.set_line_dash_pattern(pattern);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("[3.00 2.00] 0.00 d"));
+    }
+
+    #[test]
+    fn test_miter_limit_setting() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_miter_limit(4.0);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("4.00 M"));
+    }
+
+    #[test]
+    fn test_line_cap_styles() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_line_cap(LineCap::Butt);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0 J"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_cap(LineCap::Round);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1 J"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_cap(LineCap::Square);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("2 J"));
+    }
+
+    #[test]
+    fn test_transparency_groups() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test basic transparency group
+        let group = TransparencyGroup::new()
+            .with_isolated(true)
+            .with_opacity(0.5);
+
+        ctx.begin_transparency_group(group);
+        assert!(ctx.in_transparency_group());
+
+        // Draw something in the group
+        ctx.rect(10.0, 10.0, 100.0, 100.0);
+        ctx.fill();
+
+        ctx.end_transparency_group();
+        assert!(!ctx.in_transparency_group());
+
+        // Check that operations contain transparency markers
+        let ops = ctx.operations();
+        assert!(ops.contains("% Begin Transparency Group"));
+        assert!(ops.contains("% End Transparency Group"));
+    }
+
+    #[test]
+    fn test_nested_transparency_groups() {
+        let mut ctx = GraphicsContext::new();
+
+        // First group
+        let group1 = TransparencyGroup::isolated().with_opacity(0.8);
+        ctx.begin_transparency_group(group1);
+        assert!(ctx.in_transparency_group());
+
+        // Nested group
+        let group2 = TransparencyGroup::knockout().with_blend_mode(BlendMode::Multiply);
+        ctx.begin_transparency_group(group2);
+
+        // Draw in nested group
+        ctx.circle(50.0, 50.0, 25.0);
+        ctx.fill();
+
+        // End nested group
+        ctx.end_transparency_group();
+        assert!(ctx.in_transparency_group()); // Still in first group
+
+        // End first group
+        ctx.end_transparency_group();
+        assert!(!ctx.in_transparency_group());
+    }
+
+    #[test]
+    fn test_line_join_styles() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_line_join(LineJoin::Miter);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0 j"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_join(LineJoin::Round);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1 j"));
+
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_join(LineJoin::Bevel);
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("2 j"));
+    }
+
+    #[test]
+    fn test_rendering_intent() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_rendering_intent(RenderingIntent::AbsoluteColorimetric);
+        assert_eq!(
+            ctx.rendering_intent(),
+            RenderingIntent::AbsoluteColorimetric
+        );
+
+        ctx.set_rendering_intent(RenderingIntent::Perceptual);
+        assert_eq!(ctx.rendering_intent(), RenderingIntent::Perceptual);
+
+        ctx.set_rendering_intent(RenderingIntent::Saturation);
+        assert_eq!(ctx.rendering_intent(), RenderingIntent::Saturation);
+    }
+
+    #[test]
+    fn test_flatness_tolerance() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_flatness(0.5);
+        assert_eq!(ctx.flatness(), 0.5);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("0.50 i"));
+    }
+
+    #[test]
+    fn test_smoothness_tolerance() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_smoothness(0.1);
+        assert_eq!(ctx.smoothness(), 0.1);
+    }
+
+    #[test]
+    fn test_bezier_curves() {
+        let mut ctx = GraphicsContext::new();
+
+        // Cubic Bezier
+        ctx.move_to(10.0, 10.0);
+        ctx.curve_to(20.0, 10.0, 30.0, 20.0, 30.0, 30.0);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("10.00 10.00 m"));
+        assert!(ops_str.contains("c")); // cubic curve
+    }
+
+    #[test]
+    fn test_clipping_path() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.rectangle(10.0, 10.0, 100.0, 100.0);
+        ctx.clip();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("W"));
+    }
+
+    #[test]
+    fn test_even_odd_clipping() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.rectangle(10.0, 10.0, 100.0, 100.0);
+        ctx.clip_even_odd();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("W*"));
+    }
+
+    #[test]
+    fn test_color_creation() {
+        // Test color creation methods
+        let gray = Color::gray(0.5);
+        assert_eq!(gray, Color::Gray(0.5));
+
+        let rgb = Color::rgb(0.2, 0.4, 0.6);
+        assert_eq!(rgb, Color::Rgb(0.2, 0.4, 0.6));
+
+        let cmyk = Color::cmyk(0.1, 0.2, 0.3, 0.4);
+        assert_eq!(cmyk, Color::Cmyk(0.1, 0.2, 0.3, 0.4));
+
+        // Test predefined colors
+        assert_eq!(Color::black(), Color::Gray(0.0));
+        assert_eq!(Color::white(), Color::Gray(1.0));
+        assert_eq!(Color::red(), Color::Rgb(1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn test_extended_graphics_state() {
+        let ctx = GraphicsContext::new();
+
+        // Test that we can create and use an extended graphics state
+        let extgstate = ExtGState::new();
+
+        // We should be able to create the state without errors
+        assert!(ctx.generate_operations().is_ok());
+    }
+
+    #[test]
+    fn test_path_construction_methods() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test basic path construction methods that exist
+        ctx.move_to(10.0, 10.0);
+        ctx.line_to(20.0, 20.0);
+        ctx.curve_to(30.0, 30.0, 40.0, 40.0, 50.0, 50.0);
+        ctx.rect(60.0, 60.0, 30.0, 30.0);
+        ctx.circle(100.0, 100.0, 25.0);
+        ctx.close_path();
+
+        let ops = ctx.generate_operations().unwrap();
+        assert!(!ops.is_empty());
+    }
+
+    #[test]
+    fn test_graphics_context_clone_advanced() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color(Color::rgb(1.0, 0.0, 0.0));
+        ctx.set_line_width(5.0);
+
+        let cloned = ctx.clone();
+        assert_eq!(cloned.fill_color(), Color::rgb(1.0, 0.0, 0.0));
+        assert_eq!(cloned.line_width(), 5.0);
+    }
+
+    #[test]
+    fn test_basic_drawing_operations() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test that we can at least create a basic drawing
+        ctx.move_to(50.0, 50.0);
+        ctx.line_to(100.0, 100.0);
+        ctx.stroke();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("m")); // move
+        assert!(ops_str.contains("l")); // line
+        assert!(ops_str.contains("S")); // stroke
+    }
+
+    #[test]
+    fn test_graphics_state_stack() {
+        let mut ctx = GraphicsContext::new();
+
+        // Initial state
+        ctx.set_fill_color(Color::black());
+
+        // Save and change
+        ctx.save_state();
+        ctx.set_fill_color(Color::red());
+        assert_eq!(ctx.fill_color(), Color::red());
+
+        // Save again and change
+        ctx.save_state();
+        ctx.set_fill_color(Color::blue());
+        assert_eq!(ctx.fill_color(), Color::blue());
+
+        // Restore once
+        ctx.restore_state();
+        assert_eq!(ctx.fill_color(), Color::red());
+
+        // Restore again
+        ctx.restore_state();
+        assert_eq!(ctx.fill_color(), Color::black());
     }
 }

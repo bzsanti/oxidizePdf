@@ -257,6 +257,120 @@ mod tests {
     }
 
     #[test]
+    fn test_page_range_empty_list() {
+        // Test parsing an empty list of pages
+        let result = PageRange::parse("");
+        assert!(result.is_err());
+
+        // Test list with only commas
+        let result2 = PageRange::parse(",,");
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_page_range_list_with_zero() {
+        // Test that 0 in a list causes error (line 148-151)
+        let result = PageRange::parse("1,0,3");
+        assert!(result.is_err());
+        if let Err(e) = result {
+            match e {
+                OperationError::InvalidPageRange(msg) => {
+                    assert!(msg.contains("Page numbers start at 1"));
+                }
+                _ => panic!("Expected InvalidPageRange error"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_page_range_with_extra_spaces() {
+        // Test parsing with extra spaces in list (line 143-144)
+        match PageRange::parse(" 1 , 3 , 5 ").unwrap() {
+            PageRange::List(pages) => {
+                assert_eq!(pages, vec![0, 2, 4]);
+            }
+            _ => panic!("Expected List"),
+        }
+
+        // Test range with spaces
+        match PageRange::parse(" 2 - 5 ").unwrap() {
+            PageRange::Range(start, end) => {
+                assert_eq!(start, 1);
+                assert_eq!(end, 4);
+            }
+            _ => panic!("Expected Range"),
+        }
+    }
+
+    #[test]
+    fn test_page_range_equal_start_end() {
+        // Test range where start == end (should work)
+        match PageRange::parse("5-5").unwrap() {
+            PageRange::Range(start, end) => {
+                assert_eq!(start, 4);
+                assert_eq!(end, 4);
+            }
+            _ => panic!("Expected Range"),
+        }
+
+        // Verify get_indices works correctly
+        let range = PageRange::Range(4, 4);
+        assert_eq!(range.get_indices(10).unwrap(), vec![4]);
+    }
+
+    #[test]
+    fn test_page_range_list_out_of_bounds() {
+        // Test List variant with out of bounds indices (line 186-190)
+        let pages = PageRange::List(vec![2, 5, 15]);
+        let result = pages.get_indices(10);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            match e {
+                OperationError::PageIndexOutOfBounds(idx, total) => {
+                    assert_eq!(idx, 15);
+                    assert_eq!(total, 10);
+                }
+                _ => panic!("Expected PageIndexOutOfBounds error"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_page_range_empty_document() {
+        // Test get_indices with 0 total pages
+        let total = 0;
+
+        // All should return empty vector
+        assert_eq!(
+            PageRange::All.get_indices(total).unwrap(),
+            Vec::<usize>::new()
+        );
+
+        // Single should fail
+        assert!(PageRange::Single(0).get_indices(total).is_err());
+
+        // Range should fail
+        assert!(PageRange::Range(0, 1).get_indices(total).is_err());
+
+        // Empty list should work
+        assert_eq!(
+            PageRange::List(vec![]).get_indices(total).unwrap(),
+            Vec::<usize>::new()
+        );
+    }
+
+    #[test]
+    fn test_page_range_additional_invalid_formats() {
+        // Test various invalid formats (line 160-162)
+        assert!(PageRange::parse("1-2-3").is_err()); // Multiple dashes
+        assert!(PageRange::parse("abc").is_err()); // Non-numeric
+        assert!(PageRange::parse("1.5").is_err()); // Decimal
+        assert!(PageRange::parse("-5").is_err()); // Negative without start
+        assert!(PageRange::parse("1-").is_err()); // Missing end
+        assert!(PageRange::parse("-").is_err()); // Only dash
+    }
+
+    #[test]
     fn test_module_exports() {
         // Verify that all operation types are exported correctly
         // This test just ensures the module structure is correct
@@ -296,6 +410,219 @@ mod tests {
         for error in errors {
             let message = error.to_string();
             assert!(!message.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_page_range_edge_cases() {
+        // Test whitespace handling
+        assert!(matches!(
+            PageRange::parse("  all  ").unwrap(),
+            PageRange::All
+        ));
+        assert!(matches!(
+            PageRange::parse(" 5 ").unwrap(),
+            PageRange::Single(4)
+        ));
+
+        // Test various list formats
+        match PageRange::parse(" 1 , 3 , 5 ").unwrap() {
+            PageRange::List(pages) => assert_eq!(pages, vec![0, 2, 4]),
+            _ => panic!("Expected List"),
+        }
+
+        // Test range with spaces
+        match PageRange::parse(" 2 - 5 ").unwrap() {
+            PageRange::Range(start, end) => {
+                assert_eq!(start, 1);
+                assert_eq!(end, 4);
+            }
+            _ => panic!("Expected Range"),
+        }
+    }
+
+    #[test]
+    fn test_page_range_invalid_formats() {
+        // Test various invalid formats
+        assert!(PageRange::parse("").is_err());
+        assert!(PageRange::parse("abc").is_err());
+        assert!(PageRange::parse("1-").is_err());
+        assert!(PageRange::parse("-5").is_err());
+        assert!(PageRange::parse("1-2-3").is_err());
+        assert!(PageRange::parse("1,0,3").is_err());
+        assert!(PageRange::parse("0-5").is_err());
+        assert!(PageRange::parse("5-0").is_err());
+        assert!(PageRange::parse("1,,3").is_err());
+        assert!(PageRange::parse("1.5").is_err());
+    }
+
+    #[test]
+    fn test_page_range_get_indices_empty_document() {
+        let total = 0;
+
+        assert_eq!(
+            PageRange::All.get_indices(total).unwrap(),
+            vec![] as Vec<usize>
+        );
+        assert!(PageRange::Single(0).get_indices(total).is_err());
+        assert!(PageRange::Range(0, 1).get_indices(total).is_err());
+        assert!(PageRange::List(vec![0]).get_indices(total).is_err());
+    }
+
+    #[test]
+    fn test_page_range_get_indices_single_page_document() {
+        let total = 1;
+
+        assert_eq!(PageRange::All.get_indices(total).unwrap(), vec![0]);
+        assert_eq!(PageRange::Single(0).get_indices(total).unwrap(), vec![0]);
+        assert!(PageRange::Single(1).get_indices(total).is_err());
+        assert_eq!(PageRange::Range(0, 0).get_indices(total).unwrap(), vec![0]);
+        assert!(PageRange::Range(0, 1).get_indices(total).is_err());
+    }
+
+    #[test]
+    fn test_page_range_list_duplicates() {
+        // Lists can have duplicates in our implementation
+        match PageRange::parse("1,1,2,2,3").unwrap() {
+            PageRange::List(pages) => {
+                assert_eq!(pages, vec![0, 0, 1, 1, 2]);
+            }
+            _ => panic!("Expected List"),
+        }
+    }
+
+    #[test]
+    fn test_page_range_list_unordered() {
+        // Lists don't need to be ordered
+        match PageRange::parse("5,2,8,1,3").unwrap() {
+            PageRange::List(pages) => {
+                assert_eq!(pages, vec![4, 1, 7, 0, 2]);
+            }
+            _ => panic!("Expected List"),
+        }
+    }
+
+    #[test]
+    fn test_operation_error_display() {
+        let error = OperationError::PageIndexOutOfBounds(10, 5);
+        assert_eq!(
+            error.to_string(),
+            "Page index 10 out of bounds (document has 5 pages)"
+        );
+
+        let error = OperationError::InvalidRotation(45);
+        assert_eq!(
+            error.to_string(),
+            "Invalid rotation angle: 45 (must be 0, 90, 180, or 270)"
+        );
+
+        let error = OperationError::NoPagesToProcess;
+        assert_eq!(error.to_string(), "No pages to process");
+    }
+
+    #[test]
+    fn test_page_range_large_document() {
+        let total = 1000;
+
+        // Test all pages
+        let indices = PageRange::All.get_indices(total).unwrap();
+        assert_eq!(indices.len(), 1000);
+        assert_eq!(indices[0], 0);
+        assert_eq!(indices[999], 999);
+
+        // Test large range
+        let indices = PageRange::Range(100, 200).get_indices(total).unwrap();
+        assert_eq!(indices.len(), 101);
+        assert_eq!(indices[0], 100);
+        assert_eq!(indices[100], 200);
+    }
+
+    #[test]
+    fn test_page_range_parse_case_insensitive() {
+        assert!(matches!(PageRange::parse("all").unwrap(), PageRange::All));
+        assert!(matches!(PageRange::parse("ALL").unwrap(), PageRange::All));
+        assert!(matches!(PageRange::parse("All").unwrap(), PageRange::All));
+        assert!(matches!(PageRange::parse("aLL").unwrap(), PageRange::All));
+    }
+
+    #[test]
+    fn test_operation_result_type() {
+        // Test that OperationResult works correctly
+        fn test_function() -> OperationResult<usize> {
+            Ok(42)
+        }
+
+        fn test_error_function() -> OperationResult<usize> {
+            Err(OperationError::NoPagesToProcess)
+        }
+
+        assert_eq!(test_function().unwrap(), 42);
+        assert!(test_error_function().is_err());
+    }
+
+    #[test]
+    fn test_page_range_boundary_values() {
+        // Test maximum safe values
+        let large_page = usize::MAX / 2;
+
+        match PageRange::parse(&large_page.to_string()).unwrap() {
+            PageRange::Single(idx) => assert_eq!(idx, large_page - 1),
+            _ => panic!("Expected Single"),
+        }
+
+        // Test with actual document
+        let indices = PageRange::Single(5).get_indices(10).unwrap();
+        assert_eq!(indices, vec![5]);
+
+        // Test range boundary
+        let indices = PageRange::Range(0, 9).get_indices(10).unwrap();
+        assert_eq!(indices.len(), 10);
+    }
+
+    #[test]
+    fn test_error_from_io() {
+        use std::io;
+
+        let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
+        let op_error: OperationError = io_error.into();
+
+        match op_error {
+            OperationError::Io(_) => {}
+            _ => panic!("Expected Io variant"),
+        }
+    }
+
+    #[test]
+    fn test_page_range_fmt_debug() {
+        // Test Debug implementation
+        let range = PageRange::All;
+        let debug_str = format!("{:?}", range);
+        assert!(debug_str.contains("All"));
+
+        let range = PageRange::Single(5);
+        let debug_str = format!("{:?}", range);
+        assert!(debug_str.contains("Single"));
+        assert!(debug_str.contains("5"));
+
+        let range = PageRange::Range(1, 10);
+        let debug_str = format!("{:?}", range);
+        assert!(debug_str.contains("Range"));
+
+        let range = PageRange::List(vec![1, 2, 3]);
+        let debug_str = format!("{:?}", range);
+        assert!(debug_str.contains("List"));
+    }
+
+    #[test]
+    fn test_page_range_clone() {
+        let original = PageRange::List(vec![1, 2, 3]);
+        let cloned = original.clone();
+
+        match (original, cloned) {
+            (PageRange::List(orig), PageRange::List(clone)) => {
+                assert_eq!(orig, clone);
+            }
+            _ => panic!("Clone failed"),
         }
     }
 }

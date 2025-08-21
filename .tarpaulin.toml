@@ -2,7 +2,7 @@
 # Tarpaulin configuration for oxidize-pdf
 
 # Basic settings
-timeout = "300"
+timeout = 300
 exclude-files = ["*/tests/*", "*/examples/*", "*/benches/*", "*/build.rs"]
 ignored = true
 avoid-cfg-tarpaulin = true

@@ -1216,4 +1216,57 @@ mod tests {
         assert_eq!(matrix, cloned);
         assert_ne!(matrix, PatternMatrix::identity());
     }
+
+    #[test]
+    fn test_pattern_type() {
+        assert_eq!(PatternType::Tiling as i32, 1);
+        assert_eq!(PatternType::Shading as i32, 2);
+    }
+
+    #[test]
+    fn test_tiling_type() {
+        assert_eq!(TilingType::ConstantSpacing as i32, 1);
+        assert_eq!(TilingType::NoDistortion as i32, 2);
+        assert_eq!(TilingType::ConstantSpacingFaster as i32, 3);
+    }
+
+    #[test]
+    fn test_paint_type() {
+        assert_eq!(PaintType::Colored as i32, 1);
+        assert_eq!(PaintType::Uncolored as i32, 2);
+    }
+
+    #[test]
+    fn test_pattern_manager() {
+        let mut manager = PatternManager::new();
+
+        let mut pattern = TilingPattern::new(
+            "P1".to_string(),
+            PaintType::Colored,
+            TilingType::ConstantSpacing,
+            [0.0, 0.0, 10.0, 10.0],
+            10.0,
+            10.0,
+        );
+        // Add some content to the pattern
+        pattern.content_stream = vec![b'q', b' ', b'Q']; // Minimal valid PDF content
+
+        let name = manager.add_pattern(pattern).unwrap();
+        assert_eq!(name, "P1");
+
+        // PatternManager stores patterns internally
+        // We can verify it was added by checking the pattern count increases
+        let mut pattern2 = TilingPattern::new(
+            "P2".to_string(),
+            PaintType::Uncolored,
+            TilingType::NoDistortion,
+            [0.0, 0.0, 20.0, 20.0],
+            20.0,
+            20.0,
+        );
+        pattern2.content_stream = vec![b'q', b' ', b'Q']; // Minimal valid PDF content
+
+        let name2 = manager.add_pattern(pattern2).unwrap();
+        assert_eq!(name2, "P2");
+    }
 }

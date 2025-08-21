@@ -158,4 +158,116 @@ impl XRefEntryType {
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::super::objects::{PdfDictionary, PdfName};
+    use super::*;
+    use flate2::write::ZlibEncoder;
+    use flate2::Compression;
+    use std::collections::HashMap;
+    use std::io::Write;
+
+    fn create_test_stream_data() -> Vec<u8> {
+        // Create test data with proper format:
+        // Object numbers and offsets: "1 0 2 2"
+        // Then the objects starting at offset 10 (after "1 0 2 2    ")
+        // Simple objects: "true false"
+        let data = b"1 0 2 2    true false";
+        data.to_vec()
+    }
+
+    fn create_compressed_stream_data() -> Vec<u8> {
+        let data = create_test_stream_data();
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&data).unwrap();
+        encoder.finish().unwrap()
+    }
+
+    #[test]
+    fn test_xref_entry_type_free() {
+        let entry = XRefEntryType::Free {
+            next_free_obj: 5,
+            generation: 65535,
+        };
+
+        let simple = entry.to_simple_entry();
+        assert_eq!(simple.offset, 0);
+        assert_eq!(simple.generation, 65535);
+        assert!(!simple.in_use);
+    }
+
+    #[test]
+    fn test_xref_entry_type_in_use() {
+        let entry = XRefEntryType::InUse {
+            offset: 1234,
+            generation: 0,
+        };
+
+        let simple = entry.to_simple_entry();
+        assert_eq!(simple.offset, 1234);
+        assert_eq!(simple.generation, 0);
+        assert!(simple.in_use);
+    }
+
+    #[test]
+    fn test_xref_entry_type_compressed() {
+        let entry = XRefEntryType::Compressed {
+            stream_obj_num: 10,
+            index_in_stream: 3,
+        };
+
+        let simple = entry.to_simple_entry();
+        assert_eq!(simple.offset, 0); // Compressed entries have offset 0
+        assert_eq!(simple.generation, 0);
+        assert!(simple.in_use);
+    }
+
+    // Note: These tests are simplified because creating valid object stream data
+    // that passes through the full parser is complex. The real testing happens
+    // in integration tests with actual PDF files.
+
+    #[test]
+    fn test_object_stream_parse_missing_n() {
+        // Test that missing N field causes error
+        let mut dict = PdfDictionary(HashMap::new());
+        dict.0.insert(
+            PdfName("Type".to_string()),
+            PdfObject::Name(PdfName("ObjStm".to_string())),
+        );
+        dict.0
+            .insert(PdfName("First".to_string()), PdfObject::Integer(10));
+
+        let stream = PdfStream { dict, data: vec![] };
+
+        let options = ParseOptions::default();
+        let result = ObjectStream::parse(stream, &options);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ParseError::MissingKey(key) => assert_eq!(key, "N"),
+            _ => panic!("Expected MissingKey error"),
+        }
+    }
+
+    #[test]
+    fn test_object_stream_parse_missing_first() {
+        // Test that missing First field causes error
+        let mut dict = PdfDictionary(HashMap::new());
+        dict.0.insert(
+            PdfName("Type".to_string()),
+            PdfObject::Name(PdfName("ObjStm".to_string())),
+        );
+        dict.0
+            .insert(PdfName("N".to_string()), PdfObject::Integer(2));
+
+        let stream = PdfStream { dict, data: vec![] };
+
+        let options = ParseOptions::default();
+        let result = ObjectStream::parse(stream, &options);
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ParseError::MissingKey(key) => assert_eq!(key, "First"),
+            _ => panic!("Expected MissingKey error"),
+        }
+    }
+}

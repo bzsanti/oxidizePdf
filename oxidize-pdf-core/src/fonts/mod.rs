@@ -3,19 +3,23 @@
 //! This module provides support for loading TrueType (TTF) and OpenType (OTF) fonts,
 //! embedding them in PDF documents, and using them for text rendering.
 
+pub mod cid_mapper;
 pub mod embedder;
 pub mod font_cache;
 pub mod font_descriptor;
 pub mod font_metrics;
 pub mod loader;
 pub mod ttf_parser;
+pub mod type0;
 
+pub use cid_mapper::{analyze_unicode_ranges, CidMapping, UnicodeRanges};
 pub use embedder::{EmbeddingOptions, FontEmbedder, FontEncoding};
 pub use font_cache::FontCache;
 pub use font_descriptor::{FontDescriptor, FontFlags};
 pub use font_metrics::{FontMetrics, TextMeasurement};
 pub use loader::{FontData, FontFormat, FontLoader};
 pub use ttf_parser::{GlyphMapping, TtfParser};
+pub use type0::{create_type0_from_font, needs_type0_font, Type0Font};
 
 use crate::Result;
 
@@ -37,6 +41,18 @@ pub struct Font {
 }
 
 impl Font {
+    /// Create a new font with default values
+    pub fn new(name: impl Into<String>) -> Self {
+        Font {
+            name: name.into(),
+            data: Vec::new(),
+            format: FontFormat::TrueType,
+            metrics: FontMetrics::default(),
+            descriptor: FontDescriptor::default(),
+            glyph_mapping: GlyphMapping::default(),
+        }
+    }
+
     /// Load a font from file path
     pub fn from_file(name: impl Into<String>, path: impl AsRef<std::path::Path>) -> Result<Self> {
         let data = std::fs::read(path)?;

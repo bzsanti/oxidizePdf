@@ -1,12 +1,19 @@
 # Build artifacts
 /target
+**/target/
 Cargo.lock
 
-# Test PDFs
-test-pdfs/
+# Test PDFs - ONLY in designated directories
 *.pdf
-test_*.pdf
+!oxidize-pdf-core/test-pdfs/*.pdf
+!test-pdfs/*.pdf
 !test-suite/fixtures/**/*.pdf
+!test-files/*.pdf
+
+# Temporary output directories (should not exist)
+output/
+**/output/
+test-output/
 
 # PDF samples for testing
 PDF_Samples/
@@ -38,6 +45,19 @@ test-suite/fixtures/valid/GOVPUB-CS1-301ae7b075ad3435b3a7dca00e78e8ff.pdf
 # Development and debug scripts
 debug_manual.pdf
 *.debug.pdf
+
+# Python scripts in root (should be in tools/)
+/*.py
+
+# Rust scripts in root (should be in dev-tools/)
+/*.rs
+
+# Test output files
+test_*.txt
+*_test.txt
+
+# Generated PDFs in wrong locations
+/oxidize-pdf-core/*.pdf
 
 # Coverage files
 *.profraw

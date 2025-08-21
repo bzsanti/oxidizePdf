@@ -144,4 +144,200 @@ mod tests {
         // Check font was added
         assert!(cache.has_font("ThreadFont"));
     }
+
+    #[test]
+    fn test_font_cache_default() {
+        let cache = FontCache::default();
+        assert!(cache.is_empty());
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn test_get_nonexistent_font() {
+        let cache = FontCache::new();
+        assert!(cache.get_font("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_replace_font() {
+        let cache = FontCache::new();
+
+        // Add original font
+        let font1 = create_test_font("Original");
+        cache.add_font("TestFont", font1).unwrap();
+
+        // Replace with new font
+        let mut font2 = create_test_font("Replacement");
+        font2.metrics.units_per_em = 2048; // Different value
+        cache.add_font("TestFont", font2).unwrap();
+
+        // Verify replacement
+        let retrieved = cache.get_font("TestFont").unwrap();
+        assert_eq!(retrieved.name, "Replacement");
+        assert_eq!(retrieved.metrics.units_per_em, 2048);
+        assert_eq!(cache.len(), 1); // Still only one font
+    }
+
+    #[test]
+    fn test_multiple_threads_reading() {
+        use std::thread;
+
+        let cache = FontCache::new();
+        let font = create_test_font("SharedFont");
+        cache.add_font("SharedFont", font).unwrap();
+
+        let mut handles = vec![];
+
+        // Spawn multiple reader threads
+        for i in 0..5 {
+            let cache_clone = cache.clone();
+            let handle = thread::spawn(move || {
+                for _ in 0..10 {
+                    let font = cache_clone.get_font("SharedFont");
+                    assert!(font.is_some());
+                    assert_eq!(font.unwrap().name, "SharedFont");
+                }
+                i
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all threads to complete
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    #[test]
+    fn test_multiple_threads_writing() {
+        use std::thread;
+
+        let cache = FontCache::new();
+        let mut handles = vec![];
+
+        // Spawn multiple writer threads
+        for i in 0..5 {
+            let cache_clone = cache.clone();
+            let handle = thread::spawn(move || {
+                let font_name = format!("Font{}", i);
+                let font = create_test_font(&font_name);
+                cache_clone.add_font(&font_name, font).unwrap();
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all threads to complete
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // Verify all fonts were added
+        assert_eq!(cache.len(), 5);
+        for i in 0..5 {
+            assert!(cache.has_font(&format!("Font{}", i)));
+        }
+    }
+
+    #[test]
+    fn test_font_names_empty_cache() {
+        let cache = FontCache::new();
+        assert_eq!(cache.font_names(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_font_names_ordering() {
+        let cache = FontCache::new();
+
+        // Add fonts in non-alphabetical order
+        cache.add_font("Zebra", create_test_font("Zebra")).unwrap();
+        cache.add_font("Alpha", create_test_font("Alpha")).unwrap();
+        cache
+            .add_font("Middle", create_test_font("Middle"))
+            .unwrap();
+
+        let mut names = cache.font_names();
+        names.sort(); // Sort for consistent testing
+        assert_eq!(names, vec!["Alpha", "Middle", "Zebra"]);
+    }
+
+    #[test]
+    fn test_clear_and_reuse() {
+        let cache = FontCache::new();
+
+        // Add fonts
+        cache.add_font("Font1", create_test_font("Font1")).unwrap();
+        cache.add_font("Font2", create_test_font("Font2")).unwrap();
+        assert_eq!(cache.len(), 2);
+
+        // Clear
+        cache.clear();
+        assert_eq!(cache.len(), 0);
+        assert!(cache.is_empty());
+
+        // Reuse cache
+        cache.add_font("Font3", create_test_font("Font3")).unwrap();
+        assert_eq!(cache.len(), 1);
+        assert!(cache.has_font("Font3"));
+        assert!(!cache.has_font("Font1"));
+    }
+
+    #[test]
+    fn test_arc_sharing() {
+        let cache = FontCache::new();
+        let font = create_test_font("SharedFont");
+        cache.add_font("SharedFont", font).unwrap();
+
+        // Get multiple Arc references
+        let arc1 = cache.get_font("SharedFont").unwrap();
+        let arc2 = cache.get_font("SharedFont").unwrap();
+
+        // Both should point to the same font
+        assert!(Arc::ptr_eq(&arc1, &arc2));
+    }
+
+    #[test]
+    fn test_cache_with_special_names() {
+        let cache = FontCache::new();
+
+        // Test with various special characters in names
+        let special_names = vec![
+            "Font-Name",
+            "Font.Name",
+            "Font Name",
+            "Font_Name",
+            "Font/Name",
+            "Font@Name",
+            "日本語",
+            "😀Font",
+        ];
+
+        for name in &special_names {
+            cache.add_font(*name, create_test_font(name)).unwrap();
+        }
+
+        assert_eq!(cache.len(), special_names.len());
+
+        for name in &special_names {
+            assert!(cache.has_font(name));
+            let font = cache.get_font(name).unwrap();
+            assert_eq!(font.name, *name);
+        }
+    }
+
+    #[test]
+    fn test_cache_memory_efficiency() {
+        let cache = FontCache::new();
+
+        // Add same font data with different names
+        for i in 0..100 {
+            let font = create_test_font("TestFont");
+            cache.add_font(format!("Font{}", i), font).unwrap();
+        }
+
+        assert_eq!(cache.len(), 100);
+
+        // Clear should free all references
+        cache.clear();
+        assert_eq!(cache.len(), 0);
+    }
 }

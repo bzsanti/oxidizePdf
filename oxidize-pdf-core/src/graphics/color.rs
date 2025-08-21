@@ -69,6 +69,33 @@ impl Color {
         Color::Rgb(1.0, 0.0, 1.0)
     }
 
+    /// Get red component (converts other color spaces to RGB approximation)
+    pub fn r(&self) -> f64 {
+        match self {
+            Color::Rgb(r, _, _) => *r,
+            Color::Gray(g) => *g,
+            Color::Cmyk(c, _, _, k) => (1.0 - c) * (1.0 - k),
+        }
+    }
+
+    /// Get green component (converts other color spaces to RGB approximation)
+    pub fn g(&self) -> f64 {
+        match self {
+            Color::Rgb(_, g, _) => *g,
+            Color::Gray(g) => *g,
+            Color::Cmyk(_, m, _, k) => (1.0 - m) * (1.0 - k),
+        }
+    }
+
+    /// Get blue component (converts other color spaces to RGB approximation)
+    pub fn b(&self) -> f64 {
+        match self {
+            Color::Rgb(_, _, b) => *b,
+            Color::Gray(g) => *g,
+            Color::Cmyk(_, _, y, k) => (1.0 - y) * (1.0 - k),
+        }
+    }
+
     /// Convert to PDF array representation
     pub fn to_pdf_array(&self) -> crate::objects::Object {
         use crate::objects::Object;

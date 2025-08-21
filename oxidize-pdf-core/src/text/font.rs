@@ -149,6 +149,24 @@ pub enum Font {
 }
 
 impl Font {
+    /// Get the metrics for this font if it's a standard font
+    pub fn get_metrics(&self) -> Option<&'static crate::text::fonts::StandardFontMetrics> {
+        crate::text::fonts::get_standard_font_metrics(self)
+    }
+
+    /// Get the width of a character in font units (1000 units = 1 em)
+    pub fn get_char_width(&self, ch: u8) -> Option<i32> {
+        self.get_metrics().map(|m| m.get_char_width(ch))
+    }
+
+    /// Get the width of a string in user space units at the given font size
+    pub fn get_string_width(&self, text: &str, font_size: f64) -> Option<f64> {
+        self.get_metrics().map(|m| {
+            let width_units = m.get_string_width(text);
+            m.to_user_space(width_units, font_size)
+        })
+    }
+
     /// Get the PDF name for this font
     pub fn pdf_name(&self) -> String {
         match self {

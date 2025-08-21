@@ -21,6 +21,12 @@ impl Point {
     }
 }
 
+impl From<(f64, f64)> for Point {
+    fn from((x, y): (f64, f64)) -> Self {
+        Self::new(x, y)
+    }
+}
+
 /// A rectangle defined by two points
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rectangle {

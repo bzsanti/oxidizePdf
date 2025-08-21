@@ -14,16 +14,43 @@ pub enum LineJoin {
     Bevel = 2,
 }
 
+/// Winding rule for determining path interior
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WindingRule {
+    /// Non-zero winding rule (default)
+    NonZero,
+    /// Even-odd winding rule
+    EvenOdd,
+}
+
 pub struct PathBuilder {
     commands: Vec<PathCommand>,
 }
 
+/// Path construction commands
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub(crate) enum PathCommand {
-    MoveTo(f64, f64),
-    LineTo(f64, f64),
-    CurveTo(f64, f64, f64, f64, f64, f64),
+pub enum PathCommand {
+    /// Move to position
+    MoveTo { x: f64, y: f64 },
+    /// Draw line to position
+    LineTo { x: f64, y: f64 },
+    /// Draw cubic Bézier curve
+    CurveTo {
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        x3: f64,
+        y3: f64,
+    },
+    /// Draw rectangle
+    Rectangle {
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    },
+    /// Close current path
     ClosePath,
 }
 
@@ -42,18 +69,34 @@ impl PathBuilder {
     }
 
     pub fn move_to(mut self, x: f64, y: f64) -> Self {
-        self.commands.push(PathCommand::MoveTo(x, y));
+        self.commands.push(PathCommand::MoveTo { x, y });
         self
     }
 
     pub fn line_to(mut self, x: f64, y: f64) -> Self {
-        self.commands.push(PathCommand::LineTo(x, y));
+        self.commands.push(PathCommand::LineTo { x, y });
         self
     }
 
     pub fn curve_to(mut self, x1: f64, y1: f64, x2: f64, y2: f64, x3: f64, y3: f64) -> Self {
-        self.commands
-            .push(PathCommand::CurveTo(x1, y1, x2, y2, x3, y3));
+        self.commands.push(PathCommand::CurveTo {
+            x1,
+            y1,
+            x2,
+            y2,
+            x3,
+            y3,
+        });
+        self
+    }
+
+    pub fn rectangle(mut self, x: f64, y: f64, width: f64, height: f64) -> Self {
+        self.commands.push(PathCommand::Rectangle {
+            x,
+            y,
+            width,
+            height,
+        });
         self
     }
 
@@ -88,14 +131,14 @@ mod tests {
     #[test]
     fn test_line_cap_debug() {
         let butt = LineCap::Butt;
-        let debug_str = format!("{butt:?}");
+        let debug_str = format!("{:?}", butt);
         assert_eq!(debug_str, "Butt");
 
         let round = LineCap::Round;
-        assert_eq!(format!("{round:?}"), "Round");
+        assert_eq!(format!("{:?}", round), "Round");
 
         let square = LineCap::Square;
-        assert_eq!(format!("{square:?}"), "Square");
+        assert_eq!(format!("{:?}", square), "Square");
     }
 
     #[test]
@@ -133,14 +176,14 @@ mod tests {
     #[test]
     fn test_line_join_debug() {
         let miter = LineJoin::Miter;
-        let debug_str = format!("{miter:?}");
+        let debug_str = format!("{:?}", miter);
         assert_eq!(debug_str, "Miter");
 
         let round = LineJoin::Round;
-        assert_eq!(format!("{round:?}"), "Round");
+        assert_eq!(format!("{:?}", round), "Round");
 
         let bevel = LineJoin::Bevel;
-        assert_eq!(format!("{bevel:?}"), "Bevel");
+        assert_eq!(format!("{:?}", bevel), "Bevel");
     }
 
     #[test]
@@ -182,7 +225,7 @@ mod tests {
 
         assert_eq!(commands.len(), 1);
         match &commands[0] {
-            PathCommand::MoveTo(x, y) => {
+            PathCommand::MoveTo { x, y } => {
                 assert_eq!(*x, 10.0);
                 assert_eq!(*y, 20.0);
             }
@@ -197,7 +240,7 @@ mod tests {
 
         assert_eq!(commands.len(), 1);
         match &commands[0] {
-            PathCommand::LineTo(x, y) => {
+            PathCommand::LineTo { x, y } => {
                 assert_eq!(*x, 30.0);
                 assert_eq!(*y, 40.0);
             }
@@ -212,7 +255,14 @@ mod tests {
 
         assert_eq!(commands.len(), 1);
         match &commands[0] {
-            PathCommand::CurveTo(x1, y1, x2, y2, x3, y3) => {
+            PathCommand::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x3,
+                y3,
+            } => {
                 assert_eq!(*x1, 10.0);
                 assert_eq!(*y1, 20.0);
                 assert_eq!(*x2, 30.0);
@@ -249,7 +299,7 @@ mod tests {
         assert_eq!(commands.len(), 5);
 
         match &commands[0] {
-            PathCommand::MoveTo(x, y) => {
+            PathCommand::MoveTo { x, y } => {
                 assert_eq!(*x, 0.0);
                 assert_eq!(*y, 0.0);
             }
@@ -257,7 +307,7 @@ mod tests {
         }
 
         match &commands[1] {
-            PathCommand::LineTo(x, y) => {
+            PathCommand::LineTo { x, y } => {
                 assert_eq!(*x, 100.0);
                 assert_eq!(*y, 0.0);
             }
@@ -281,7 +331,14 @@ mod tests {
         assert_eq!(commands.len(), 3);
 
         match &commands[1] {
-            PathCommand::CurveTo(x1, y1, x2, y2, x3, y3) => {
+            PathCommand::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x3,
+                y3,
+            } => {
                 assert_eq!(*x1, 50.0);
                 assert_eq!(*y1, 0.0);
                 assert_eq!(*x2, 100.0);
@@ -295,31 +352,38 @@ mod tests {
 
     #[test]
     fn test_path_command_debug() {
-        let move_cmd = PathCommand::MoveTo(10.0, 20.0);
-        let debug_str = format!("{move_cmd:?}");
+        let move_cmd = PathCommand::MoveTo { x: 10.0, y: 20.0 };
+        let debug_str = format!("{:?}", move_cmd);
         assert!(debug_str.contains("MoveTo"));
         assert!(debug_str.contains("10.0"));
         assert!(debug_str.contains("20.0"));
 
-        let line_cmd = PathCommand::LineTo(30.0, 40.0);
-        let line_debug = format!("{line_cmd:?}");
+        let line_cmd = PathCommand::LineTo { x: 30.0, y: 40.0 };
+        let line_debug = format!("{:?}", line_cmd);
         assert!(line_debug.contains("LineTo"));
 
-        let curve_cmd = PathCommand::CurveTo(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
-        let curve_debug = format!("{curve_cmd:?}");
+        let curve_cmd = PathCommand::CurveTo {
+            x1: 1.0,
+            y1: 2.0,
+            x2: 3.0,
+            y2: 4.0,
+            x3: 5.0,
+            y3: 6.0,
+        };
+        let curve_debug = format!("{:?}", curve_cmd);
         assert!(curve_debug.contains("CurveTo"));
 
         let close_cmd = PathCommand::ClosePath;
-        let close_debug = format!("{close_cmd:?}");
+        let close_debug = format!("{:?}", close_cmd);
         assert!(close_debug.contains("ClosePath"));
     }
 
     #[test]
     fn test_path_command_clone() {
-        let move_cmd = PathCommand::MoveTo(10.0, 20.0);
+        let move_cmd = PathCommand::MoveTo { x: 10.0, y: 20.0 };
         let move_clone = move_cmd.clone();
         match (move_cmd, move_clone) {
-            (PathCommand::MoveTo(x1, y1), PathCommand::MoveTo(x2, y2)) => {
+            (PathCommand::MoveTo { x: x1, y: y1 }, PathCommand::MoveTo { x: x2, y: y2 }) => {
                 assert_eq!(x1, x2);
                 assert_eq!(y1, y2);
             }
@@ -368,7 +432,7 @@ mod tests {
         assert_eq!(commands.len(), 3);
 
         match &commands[0] {
-            PathCommand::MoveTo(x, y) => {
+            PathCommand::MoveTo { x, y } => {
                 assert_eq!(*x, -10.0);
                 assert_eq!(*y, -20.0);
             }
@@ -388,7 +452,7 @@ mod tests {
 
         // All commands should have zero values
         match &commands[0] {
-            PathCommand::MoveTo(x, y) => {
+            PathCommand::MoveTo { x, y } => {
                 assert_eq!(*x, 0.0);
                 assert_eq!(*y, 0.0);
             }
@@ -405,7 +469,7 @@ mod tests {
 
         let commands = builder.build();
         match &commands[0] {
-            PathCommand::MoveTo(x, y) => {
+            PathCommand::MoveTo { x, y } => {
                 assert_eq!(*x, large_val);
                 assert_eq!(*y, large_val);
             }
