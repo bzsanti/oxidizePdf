@@ -343,7 +343,7 @@ mod tests {
         ];
 
         for error in errors {
-            let debug_str = format!("{:?}", error);
+            let debug_str = format!("{error:?}");
             assert!(!debug_str.is_empty());
 
             let cloned = error.clone();
@@ -381,7 +381,7 @@ mod tests {
             },
         };
 
-        let debug_str = format!("{:?}", result);
+        let debug_str = format!("{result:?}");
         assert!(debug_str.contains("ValidationResult"));
         assert!(debug_str.contains("false"));
         assert!(debug_str.contains("InvalidHeader"));
@@ -396,7 +396,7 @@ mod tests {
         assert_eq!(stats.streams_validated, 0);
         assert_eq!(stats.xrefs_validated, 0);
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("ValidationStats"));
     }
 
@@ -758,7 +758,7 @@ mod tests {
         ];
 
         for (error, expected_pattern) in errors {
-            let debug_str = format!("{:?}", error);
+            let debug_str = format!("{error:?}");
             assert!(debug_str.contains(expected_pattern));
         }
     }
@@ -834,7 +834,7 @@ mod tests {
         for error in refs {
             match error {
                 ValidationError::CircularReference(a, b) => {
-                    let debug = format!("{:?}", error);
+                    let debug = format!("{error:?}");
                     assert!(debug.contains(&a.to_string()));
                     assert!(debug.contains(&b.to_string()));
                 }
@@ -922,7 +922,7 @@ mod tests {
             stats: ValidationStats::default(),
         };
         for i in 0..50 {
-            many_warnings.warnings.push(format!("Warning {}", i));
+            many_warnings.warnings.push(format!("Warning {i}"));
         }
         assert_eq!(many_warnings.warnings.len(), 50);
     }
@@ -976,7 +976,7 @@ mod tests {
             ];
 
             for error in errors {
-                let debug = format!("{:?}", error);
+                let debug = format!("{error:?}");
                 assert!(!debug.is_empty());
             }
         }

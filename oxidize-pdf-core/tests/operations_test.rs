@@ -14,26 +14,26 @@ fn test_split_merge_rotate_workflow() {
     fs::create_dir_all(test_dir).ok();
 
     // Create a test PDF with 3 pages
-    let test_pdf = format!("{}/test_multi.pdf", test_dir);
+    let test_pdf = format!("{test_dir}/test_multi.pdf");
     create_test_pdf(&test_pdf, 3).unwrap();
 
     // Test 1: Split into individual pages
-    let split_pattern = format!("{}/split_page_{{}}.pdf", test_dir);
+    let split_pattern = format!("{test_dir}/split_page_{{}}.pdf");
     let split_files = split_into_pages(&test_pdf, &split_pattern).unwrap();
     assert_eq!(split_files.len(), 3);
 
     // Verify split files exist
     for file in &split_files {
-        assert!(file.exists(), "Split file {:?} should exist", file);
+        assert!(file.exists(), "Split file {file:?} should exist");
     }
 
     // Test 2: Merge the split files back
-    let merged_pdf = format!("{}/merged.pdf", test_dir);
+    let merged_pdf = format!("{test_dir}/merged.pdf");
     merge_pdf_files(&split_files, &merged_pdf).unwrap();
     assert!(Path::new(&merged_pdf).exists());
 
     // Test 3: Rotate all pages
-    let rotated_pdf = format!("{}/rotated.pdf", test_dir);
+    let rotated_pdf = format!("{test_dir}/rotated.pdf");
     rotate_all_pages(&merged_pdf, &rotated_pdf, RotationAngle::Clockwise90).unwrap();
     assert!(Path::new(&rotated_pdf).exists());
 
@@ -103,7 +103,7 @@ fn create_test_pdf(path: &str, page_count: usize) -> oxidize_pdf::Result<()> {
         page.text()
             .set_font(oxidize_pdf::text::Font::Helvetica, 24.0)
             .at(100.0, 700.0)
-            .write(&format!("Test Page {}", i))?;
+            .write(&format!("Test Page {i}"))?;
         doc.add_page(page);
     }
 

@@ -333,7 +333,7 @@ mod tests {
         let cloned = action_type.clone();
         assert_eq!(action_type, cloned);
 
-        let debug_str = format!("{:?}", action_type);
+        let debug_str = format!("{action_type:?}");
         assert!(debug_str.contains("GoTo"));
 
         // Test inequality
@@ -451,7 +451,7 @@ mod tests {
         let action = Action::uri("https://example.com");
         let cloned = action.clone();
 
-        let debug_str = format!("{:?}", action);
+        let debug_str = format!("{action:?}");
         assert!(debug_str.contains("URI"));
         assert!(debug_str.contains("https://example.com"));
 

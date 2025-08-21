@@ -33,7 +33,7 @@ fn test_memory_optimized_document_creation() -> Result<()> {
 
     for (config_name, _memory_options) in memory_configs {
         let mut doc = Document::new();
-        doc.set_title(&format!("Memory Test - {}", config_name));
+        doc.set_title(format!("Memory Test - {config_name}"));
 
         // Create substantial content to test memory usage
         for page_num in 1..=5 {
@@ -42,13 +42,10 @@ fn test_memory_optimized_document_creation() -> Result<()> {
             page.text()
                 .set_font(Font::Helvetica, 12.0)
                 .at(50.0, 750.0)
-                .write(&format!(
-                    "Memory config: {} - Page {}",
-                    config_name, page_num
-                ))?;
+                .write(&format!("Memory config: {config_name} - Page {page_num}"))?;
 
             // Add content that would benefit from memory optimization
-            let content = format!("Content for page {} with config {}", page_num, config_name);
+            let content = format!("Content for page {page_num} with config {config_name}");
             for line in 0..20 {
                 let y_pos = 700.0 - (line as f64 * 15.0);
                 page.text()
@@ -61,15 +58,12 @@ fn test_memory_optimized_document_creation() -> Result<()> {
         }
 
         // Test memory-aware saving
-        let file_path = temp_dir.path().join(format!("memory_{}.pdf", config_name));
+        let file_path = temp_dir.path().join(format!("memory_{config_name}.pdf"));
         doc.save(&file_path)?;
 
         assert!(file_path.exists());
         let file_size = fs::metadata(&file_path).unwrap().len();
-        println!(
-            "Generated PDF size for {}: {} bytes",
-            config_name, file_size
-        );
+        println!("Generated PDF size for {config_name}: {file_size} bytes");
         assert!(file_size > 2000); // Should be substantial (adjusted from 5000)
 
         // Test in-memory generation with memory awareness
@@ -128,13 +122,10 @@ fn test_optimized_reader_memory_workflows() -> Result<()> {
             // Test memory options integration
             assert!(memory_options.cache_size > 0);
 
-            println!("Successfully created optimized reader with config {}", i);
+            println!("Successfully created optimized reader with config {i}");
         } else {
             // If optimized reader creation fails, that's expected for incomplete implementation
-            println!(
-                "Optimized reader creation failed for config {} (expected)",
-                i
-            );
+            println!("Optimized reader creation failed for config {i} (expected)");
         }
     }
 
@@ -179,7 +170,7 @@ fn test_memory_manager_integration() -> Result<()> {
             assert!(manager.cache().is_none());
         }
 
-        println!("Memory manager test {} completed successfully", i);
+        println!("Memory manager test {i} completed successfully");
     }
 
     Ok(())
@@ -204,10 +195,7 @@ fn test_large_document_memory_efficiency() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .at(50.0, 750.0)
-            .write(&format!(
-                "Large Document - Page {}/{}",
-                page_num, page_count
-            ))?;
+            .write(&format!("Large Document - Page {page_num}/{page_count}"))?;
 
         // Add substantial content to each page
         for section in 0..5 {
@@ -274,10 +262,10 @@ fn test_large_document_memory_efficiency() -> Result<()> {
     assert!(memory_duration.as_secs() < 10);
 
     println!("Large document test completed:");
-    println!("  Pages: {}", page_count);
-    println!("  File size: {} bytes", file_size);
-    println!("  Save time: {:?}", save_duration);
-    println!("  Memory generation time: {:?}", memory_duration);
+    println!("  Pages: {page_count}");
+    println!("  File size: {file_size} bytes");
+    println!("  Save time: {save_duration:?}");
+    println!("  Memory generation time: {memory_duration:?}");
 
     Ok(())
 }
@@ -356,7 +344,7 @@ fn test_content_type_memory_optimization() -> Result<()> {
 
     for (content_type, content_fn) in content_types {
         let mut doc = Document::new();
-        doc.set_title(&format!("Memory Test - {}", content_type));
+        doc.set_title(format!("Memory Test - {content_type}"));
 
         // Test with memory optimization enabled
         doc.set_compress(true);
@@ -371,7 +359,7 @@ fn test_content_type_memory_optimization() -> Result<()> {
         // Test memory-efficient operations
         let file_path = temp_dir
             .path()
-            .join(format!("memory_content_{}.pdf", content_type));
+            .join(format!("memory_content_{content_type}.pdf"));
 
         let start_time = std::time::Instant::now();
         doc.save(&file_path)?;
@@ -384,9 +372,9 @@ fn test_content_type_memory_optimization() -> Result<()> {
         let memory_bytes = doc.to_bytes()?;
         assert!(!memory_bytes.is_empty());
 
-        println!("Content type '{}' test results:", content_type);
-        println!("  File size: {} bytes", file_size);
-        println!("  Save duration: {:?}", save_duration);
+        println!("Content type '{content_type}' test results:");
+        println!("  File size: {file_size} bytes");
+        println!("  Save duration: {save_duration:?}");
         println!("  Memory size: {} bytes", memory_bytes.len());
 
         // Verify reasonable performance
@@ -421,7 +409,7 @@ fn test_memory_statistics_tracking() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 750.0)
-            .write(&format!("Statistics tracking page {}", page_num))?;
+            .write(&format!("Statistics tracking page {page_num}"))?;
 
         // Simulate cache operations
         if page_num % 3 == 0 {
@@ -477,7 +465,7 @@ fn test_batch_processing_memory_efficiency() -> Result<()> {
 
     for batch_num in 1..=batch_size {
         let mut doc = Document::new();
-        doc.set_title(&format!("Batch Document {}", batch_num));
+        doc.set_title(format!("Batch Document {batch_num}"));
         doc.set_compress(true); // Enable compression for memory efficiency
 
         // Add content proportional to batch number
@@ -487,7 +475,7 @@ fn test_batch_processing_memory_efficiency() -> Result<()> {
             page.text()
                 .set_font(Font::Helvetica, 12.0)
                 .at(50.0, 750.0)
-                .write(&format!("Batch {} - Page {}", batch_num, page_num))?;
+                .write(&format!("Batch {batch_num} - Page {page_num}"))?;
 
             // Add scaling content
             for line in 0..(batch_num * 5) {
@@ -504,7 +492,7 @@ fn test_batch_processing_memory_efficiency() -> Result<()> {
         }
 
         // Save efficiently
-        let batch_path = temp_dir.path().join(format!("batch_{}.pdf", batch_num));
+        let batch_path = temp_dir.path().join(format!("batch_{batch_num}.pdf"));
         let start_time = std::time::Instant::now();
         doc.save(&batch_path)?;
         let save_duration = start_time.elapsed();

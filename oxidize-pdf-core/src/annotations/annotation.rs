@@ -576,10 +576,10 @@ mod tests {
     #[test]
     fn test_annotation_type_debug_clone_partial_eq() {
         let annotation_type = AnnotationType::Highlight;
-        let debug_str = format!("{:?}", annotation_type);
+        let debug_str = format!("{annotation_type:?}");
         assert!(debug_str.contains("Highlight"));
 
-        let cloned = annotation_type.clone();
+        let cloned = annotation_type;
         assert_eq!(annotation_type, cloned);
 
         assert_eq!(AnnotationType::Text, AnnotationType::Text);
@@ -683,10 +683,10 @@ mod tests {
             read_only: true,
             ..Default::default()
         };
-        let debug_str = format!("{:?}", flags);
+        let debug_str = format!("{flags:?}");
         assert!(debug_str.contains("AnnotationFlags"));
 
-        let cloned = flags.clone();
+        let cloned = flags;
         assert_eq!(flags.print, cloned.print);
         assert_eq!(flags.read_only, cloned.read_only);
         assert_eq!(flags.to_flags(), cloned.to_flags());
@@ -704,10 +704,10 @@ mod tests {
     #[test]
     fn test_border_style_debug_clone() {
         let style = BorderStyleType::Dashed;
-        let debug_str = format!("{:?}", style);
+        let debug_str = format!("{style:?}");
         assert!(debug_str.contains("Dashed"));
 
-        let cloned = style.clone();
+        let cloned = style;
         assert_eq!(style.pdf_name(), cloned.pdf_name());
     }
 
@@ -740,7 +740,7 @@ mod tests {
             dash_pattern: Some(vec![1.0, 2.0]),
         };
 
-        let debug_str = format!("{:?}", border);
+        let debug_str = format!("{border:?}");
         assert!(debug_str.contains("BorderStyle"));
         assert!(debug_str.contains("2.5"));
 
@@ -804,7 +804,7 @@ mod tests {
         let annotation =
             Annotation::new(AnnotationType::Stamp, rect).with_contents("Stamp annotation");
 
-        let debug_str = format!("{:?}", annotation);
+        let debug_str = format!("{annotation:?}");
         assert!(debug_str.contains("Annotation"));
         assert!(debug_str.contains("Stamp"));
 
@@ -1019,7 +1019,7 @@ mod tests {
     #[test]
     fn test_annotation_manager_debug_default() {
         let manager = AnnotationManager::new();
-        let debug_str = format!("{:?}", manager);
+        let debug_str = format!("{manager:?}");
         assert!(debug_str.contains("AnnotationManager"));
 
         let default_manager = AnnotationManager::default();
@@ -1463,7 +1463,7 @@ mod tests {
                 Point::new((i + 10) as f64, (i + 10) as f64),
             );
             let annotation = Annotation::new(AnnotationType::Text, rect)
-                .with_contents(format!("Annotation {}", i));
+                .with_contents(format!("Annotation {i}"));
             let annot_ref = manager.add_annotation(page_ref, annotation);
             refs.push(annot_ref);
         }

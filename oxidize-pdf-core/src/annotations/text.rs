@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_all_icon_types() {
-        let icons = vec![
+        let icons = [
             Icon::Comment,
             Icon::Key,
             Icon::Note,
@@ -200,7 +200,7 @@ mod tests {
             Icon::Insert,
         ];
 
-        let expected_names = vec![
+        let expected_names = [
             "Comment",
             "Key",
             "Note",
@@ -227,11 +227,11 @@ mod tests {
         let icon = Icon::Help;
 
         // Test Debug
-        let debug_str = format!("{:?}", icon);
+        let debug_str = format!("{icon:?}");
         assert_eq!(debug_str, "Help");
 
         // Test Clone
-        let cloned = icon.clone();
+        let cloned = icon;
         assert!(matches!(cloned, Icon::Help));
 
         // Test Copy
@@ -378,7 +378,7 @@ mod tests {
         let position = Point::new(300.0, 400.0);
         let text_annot = TextAnnotation::new(position).with_icon(Icon::NewParagraph);
 
-        let debug_str = format!("{:?}", text_annot);
+        let debug_str = format!("{text_annot:?}");
         assert!(debug_str.contains("TextAnnotation"));
         assert!(debug_str.contains("NewParagraph"));
     }

@@ -96,7 +96,7 @@ pub fn get_fixture_sample(size: usize) -> Vec<PathBuf> {
 pub fn log_fixture_status() {
     if fixtures_available() {
         let count = get_fixture_pdfs().len();
-        println!("📁 Found {} PDF fixtures for testing", count);
+        println!("📁 Found {count} PDF fixtures for testing");
     } else if env::var("CI").is_ok() {
         println!("🤖 Running in CI: Using synthetic PDFs only");
     } else if env::var("OXIDIZE_PDF_FIXTURES").unwrap_or_default() == "off" {
@@ -179,7 +179,7 @@ mod tests {
     fn test_fixture_detection() {
         // This test should always pass regardless of fixture availability
         let available = fixtures_available();
-        println!("Fixtures available: {}", available);
+        println!("Fixtures available: {available}");
 
         if available {
             let pdfs = get_fixture_pdfs();

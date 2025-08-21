@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_runtime_permissions_selective() {
-        let perms = Permissions::new().set_print(true).set_copy(true).clone();
+        let perms = *Permissions::new().set_print(true).set_copy(true);
         let runtime = RuntimePermissions::new(perms);
 
         assert!(runtime.on_print(None).is_ok());
@@ -408,7 +408,7 @@ mod tests {
 
     #[test]
     fn test_callbacks() {
-        let perms = Permissions::new().set_print(true).clone();
+        let perms = *Permissions::new().set_print(true);
         let mut runtime = RuntimePermissions::new(perms);
 
         let callback_called = Arc::new(Mutex::new(false));
@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_multiple_callbacks() {
-        let perms = Permissions::new().set_print(true).clone();
+        let perms = *Permissions::new().set_print(true);
         let mut runtime = RuntimePermissions::new(perms);
 
         let counter = Arc::new(Mutex::new(0));
@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_context_in_callback() {
-        let perms = Permissions::new().set_copy(true).clone();
+        let perms = *Permissions::new().set_copy(true);
         let mut runtime = RuntimePermissions::new(perms);
 
         let context_received = Arc::new(Mutex::new(String::new()));
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_event_logging() {
-        let perms = Permissions::new().set_print(true).clone();
+        let perms = *Permissions::new().set_print(true);
         let mut runtime = RuntimePermissions::new(perms);
         runtime.set_log_level(LogLevel::Debug);
 
@@ -513,7 +513,7 @@ mod tests {
 
     #[test]
     fn test_permissions_validator_trait() {
-        let perms = Permissions::new().set_accessibility(true).clone();
+        let perms = *Permissions::new().set_accessibility(true);
         let runtime = RuntimePermissions::new(perms);
 
         // Test trait methods

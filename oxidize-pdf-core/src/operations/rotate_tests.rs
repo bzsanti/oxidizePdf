@@ -143,8 +143,7 @@ mod tests {
         for angle in invalid_angles {
             assert!(
                 RotationAngle::from_degrees(angle).is_err(),
-                "Angle {} should be invalid",
-                angle
+                "Angle {angle} should be invalid"
             );
             assert!(
                 RotationAngle::from_degrees(-angle).is_err(),

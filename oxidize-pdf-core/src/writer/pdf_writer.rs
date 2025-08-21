@@ -3005,7 +3005,7 @@ mod tests {
                 .unwrap();
 
             let content = String::from_utf8_lossy(&buffer);
-            assert!(content.contains(&format!("({})", long_string)));
+            assert!(content.contains(&format!("({long_string})")));
         }
 
         // Test 13: Maximum object ID
@@ -3473,7 +3473,7 @@ mod tests {
                     page.text()
                         .set_font(Font::Helvetica, 10.0)
                         .at(50.0, 700.0 - (j as f64 * 30.0))
-                        .write(&format!("Line {line} on page {page}", line = j, page = i))
+                        .write(&format!("Line {j} on page {i}"))
                         .unwrap();
                 }
 
@@ -3761,23 +3761,19 @@ mod tests {
                         // Look for patterns like "1000 0 R" that shouldn't exist
                         assert!(
                             !content.contains("1000 0 R"),
-                            "Found invalid ObjectId reference 1000 0 R - max valid ID is {}",
-                            max_valid_id
+                            "Found invalid ObjectId reference 1000 0 R - max valid ID is {max_valid_id}"
                         );
                         assert!(
                             !content.contains("1001 0 R"),
-                            "Found invalid ObjectId reference 1001 0 R - max valid ID is {}",
-                            max_valid_id
+                            "Found invalid ObjectId reference 1001 0 R - max valid ID is {max_valid_id}"
                         );
                         assert!(
                             !content.contains("1002 0 R"),
-                            "Found invalid ObjectId reference 1002 0 R - max valid ID is {}",
-                            max_valid_id
+                            "Found invalid ObjectId reference 1002 0 R - max valid ID is {max_valid_id}"
                         );
                         assert!(
                             !content.contains("1003 0 R"),
-                            "Found invalid ObjectId reference 1003 0 R - max valid ID is {}",
-                            max_valid_id
+                            "Found invalid ObjectId reference 1003 0 R - max valid ID is {max_valid_id}"
                         );
 
                         // Verify all object references are within valid range
@@ -3789,16 +3785,14 @@ mod tests {
                                     if words[i + 1] == "0" && words[i + 2] == "R" {
                                         if let Ok(obj_id) = words[i].parse::<u32>() {
                                             assert!(obj_id <= max_valid_id,
-                                                   "Object reference {} 0 R exceeds xref table size (max: {})",
-                                                   obj_id, max_valid_id);
+                                                   "Object reference {obj_id} 0 R exceeds xref table size (max: {max_valid_id})");
                                         }
                                     }
                                 }
                             }
                         }
 
-                        println!("✅ PDF structure validation passed: all {} object references are valid (max ID: {})", 
-                                count, max_valid_id);
+                        println!("✅ PDF structure validation passed: all {count} object references are valid (max ID: {max_valid_id})");
                     }
                 }
             } else {
@@ -3848,7 +3842,7 @@ mod tests {
         #[test]
         fn test_writer_config_default() {
             let config = WriterConfig::default();
-            assert_eq!(config.use_xref_streams, false);
+            assert!(!config.use_xref_streams);
             assert_eq!(config.pdf_version, "1.7");
         }
 

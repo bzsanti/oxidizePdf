@@ -126,7 +126,7 @@ fn test_multi_font_document_workflow() -> Result<()> {
         page.text()
             .set_font(primary_font.clone(), 18.0)
             .at(50.0, 750.0)
-            .write(&format!("Font Combination: {}", combo_name))?;
+            .write(&format!("Font Combination: {combo_name}"))?;
 
         // Body text with secondary font
         page.text()
@@ -238,7 +238,7 @@ fn test_custom_font_embedding_workflow() -> Result<()> {
                 page.text()
                     .set_font(Font::HelveticaBold, 14.0)
                     .at(50.0, 750.0)
-                    .write(&format!("Embedding Scenario: {}", scenario_name))?;
+                    .write(&format!("Embedding Scenario: {scenario_name}"))?;
 
                 page.text()
                     .set_font(Font::Helvetica, 10.0)
@@ -260,7 +260,7 @@ fn test_custom_font_embedding_workflow() -> Result<()> {
                 page.text()
                     .set_font(Font::HelveticaBold, 14.0)
                     .at(50.0, 750.0)
-                    .write(&format!("Embedding Scenario: {} (Fallback)", scenario_name))?;
+                    .write(&format!("Embedding Scenario: {scenario_name} (Fallback)"))?;
 
                 page.text()
                     .set_font(Font::Helvetica, 10.0)
@@ -324,7 +324,7 @@ fn test_font_caching_workflow() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 16.0)
             .at(50.0, 750.0)
-            .write(&format!("Page {} - Font Caching Test", page_num))?;
+            .write(&format!("Page {page_num} - Font Caching Test"))?;
 
         // Use different cached fonts on each page
         let mut y_pos = 700.0;
@@ -332,7 +332,7 @@ fn test_font_caching_workflow() -> Result<()> {
             page.text()
                 .set_font(font.clone(), *size)
                 .at(50.0, y_pos)
-                .write(&format!("Cached font: {} at {} pt", cache_key, size))?;
+                .write(&format!("Cached font: {cache_key} at {size} pt"))?;
             y_pos -= 25.0;
         }
 
@@ -401,7 +401,7 @@ fn test_font_encoding_workflow() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 720.0)
-            .write(&format!("Encoding: {:?}", encoding))?;
+            .write(&format!("Encoding: {encoding:?}"))?;
 
         // Sample text with different fonts
         let fonts_to_test = vec![Font::Helvetica, Font::TimesRoman, Font::Courier];
@@ -412,7 +412,7 @@ fn test_font_encoding_workflow() -> Result<()> {
             page.text()
                 .set_font(font.clone(), 10.0)
                 .at(50.0, y_pos)
-                .write(&format!("{:?} with {:?}: {}", font, encoding, sample_text))?;
+                .write(&format!("{font:?} with {encoding:?}: {sample_text}"))?;
 
             y_pos -= 25.0;
         }
@@ -450,7 +450,7 @@ fn test_font_performance_workflow() -> Result<()> {
     let fonts_per_page = 5;
     let text_blocks_per_font = 10;
 
-    let test_fonts = vec![
+    let test_fonts = [
         Font::Helvetica,
         Font::HelveticaBold,
         Font::TimesRoman,
@@ -468,10 +468,7 @@ fn test_font_performance_workflow() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 18.0)
             .at(50.0, 750.0)
-            .write(&format!(
-                "Performance Test - Page {}/{}",
-                page_num, page_count
-            ))?;
+            .write(&format!("Performance Test - Page {page_num}/{page_count}"))?;
 
         let mut y_pos = 700.0;
 
@@ -485,7 +482,7 @@ fn test_font_performance_workflow() -> Result<()> {
             page.text()
                 .set_font(font.clone(), 14.0)
                 .at(50.0, y_pos)
-                .write(&format!("Font {:?} Section", font))?;
+                .write(&format!("Font {font:?} Section"))?;
             y_pos -= 20.0;
 
             // Multiple text blocks with same font
@@ -498,9 +495,8 @@ fn test_font_performance_workflow() -> Result<()> {
                     .set_font(font.clone(), 9.0)
                     .at(70.0, y_pos)
                     .write(&format!(
-                        "Block {} - Performance testing with font {:?} on page {}",
-                        block_num, font, page_num
-                    ))?;
+                    "Block {block_num} - Performance testing with font {font:?} on page {page_num}"
+                ))?;
                 y_pos -= 12.0;
             }
 
@@ -512,7 +508,7 @@ fn test_font_performance_workflow() -> Result<()> {
         // Progress check every 5 pages
         if page_num % 5 == 0 {
             let elapsed = start_time.elapsed();
-            println!("Generated {} pages in {:?}", page_num, elapsed);
+            println!("Generated {page_num} pages in {elapsed:?}");
         }
     }
 
@@ -528,10 +524,10 @@ fn test_font_performance_workflow() -> Result<()> {
     let file_size = fs::metadata(&file_path).unwrap().len();
 
     println!("Font Performance Test Results:");
-    println!("  Pages: {}", page_count);
-    println!("  File size: {} bytes", file_size);
-    println!("  Generation time: {:?}", generation_time);
-    println!("  Save time: {:?}", save_time);
+    println!("  Pages: {page_count}");
+    println!("  File size: {file_size} bytes");
+    println!("  Generation time: {generation_time:?}");
+    println!("  Save time: {save_time:?}");
     println!("  Total time: {:?}", generation_time + save_time);
 
     // Performance assertions
@@ -572,21 +568,20 @@ fn test_font_fallback_workflow() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 720.0)
-            .write(&format!("Requested: {}", requested_font))?;
+            .write(&format!("Requested: {requested_font}"))?;
 
         // Fallback font description
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 690.0)
-            .write(&format!("Fallback: {:?}", fallback_font))?;
+            .write(&format!("Fallback: {fallback_font:?}"))?;
 
         // Test text with fallback font
         page.text()
             .set_font(fallback_font.clone(), 14.0)
             .at(50.0, 650.0)
             .write(&format!(
-                "This text uses the fallback font: {:?}",
-                fallback_font
+                "This text uses the fallback font: {fallback_font:?}"
             ))?;
 
         // Additional sample text
@@ -634,7 +629,7 @@ fn test_font_fallback_workflow() -> Result<()> {
             .text()
             .set_font(font.clone(), 10.0)
             .at(50.0, y_pos)
-            .write(&format!("{:?}: {}", font, sample_text))?;
+            .write(&format!("{font:?}: {sample_text}"))?;
         y_pos -= 20.0;
     }
 
@@ -692,7 +687,7 @@ fn test_font_metrics_workflow() -> Result<()> {
         page.text()
             .set_font(Font::HelveticaBold, 12.0)
             .at(50.0, y_pos)
-            .write(&format!("{:?} at {} pt:", font, size))?;
+            .write(&format!("{font:?} at {size} pt:"))?;
         y_pos -= 15.0;
 
         // Sample text with the actual font
@@ -707,8 +702,7 @@ fn test_font_metrics_workflow() -> Result<()> {
             .set_font(Font::Helvetica, 9.0)
             .at(70.0, y_pos)
             .write(&format!(
-                "Font size: {:.1} pt, typical metrics for {:?}",
-                size, font
+                "Font size: {size:.1} pt, typical metrics for {font:?}"
             ))?;
         y_pos -= 12.0;
 
@@ -718,8 +712,7 @@ fn test_font_metrics_workflow() -> Result<()> {
             .set_font(Font::Helvetica, 9.0)
             .at(70.0, y_pos)
             .write(&format!(
-                "Estimated text width: {:.1} points",
-                estimated_width
+                "Estimated text width: {estimated_width:.1} points"
             ))?;
         y_pos -= 20.0;
     }

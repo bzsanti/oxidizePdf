@@ -279,7 +279,7 @@ mod font_metrics_tests {
     fn test_metrics_kerning_pairs() {
         // FontMetrics doesn't have kerning methods in public API
         // This test is a placeholder for future kerning support
-        let pairs = vec![
+        let pairs = [
             ('A', 'V', -80),
             ('A', 'W', -60),
             ('T', 'o', -40),
@@ -352,7 +352,7 @@ mod font_cache_tests {
         // Add fonts up to limit
         for i in 0..cache_limit {
             cache
-                .add_font(format!("Font{}", i), create_test_font("Helvetica"))
+                .add_font(format!("Font{i}"), create_test_font("Helvetica"))
                 .unwrap();
         }
 
@@ -387,7 +387,7 @@ mod font_cache_tests {
 
                 // Each thread performs mixed operations
                 for j in 0..50 {
-                    let font_name = format!("Thread{}Font{}", i, j);
+                    let font_name = format!("Thread{i}Font{j}");
 
                     // Write
                     cache_clone
@@ -412,7 +412,7 @@ mod font_cache_tests {
         }
 
         // Verify no data corruption
-        assert!(cache.font_names().len() > 0);
+        assert!(!cache.font_names().is_empty());
     }
 }
 

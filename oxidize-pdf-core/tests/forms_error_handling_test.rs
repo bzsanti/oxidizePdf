@@ -66,7 +66,7 @@ fn test_invalid_field_names() {
 
     for (i, name) in problematic_names.iter().enumerate() {
         let field = TextField::new(*name)
-            .with_value(format!("Test value {}", i))
+            .with_value(format!("Test value {i}"))
             .with_max_length(100);
 
         let widget = Widget::new(Rectangle::new(
@@ -88,7 +88,7 @@ fn test_invalid_field_names() {
                 assert!(form_manager.get_field(name).is_some());
             }
             Err(e) => {
-                println!("Field '{}' creation failed (may be expected): {}", name, e);
+                println!("Field '{name}' creation failed (may be expected): {e}");
                 // Some names might legitimately fail - that's ok as long as we don't panic
             }
         }
@@ -116,7 +116,7 @@ fn test_extreme_field_values() {
         "ñ".repeat(1_000)
     );
 
-    let extreme_cases = vec![
+    let extreme_cases = [
         ("empty", ""),
         ("single_char", "a"),
         ("very_long", very_long.as_str()),
@@ -126,7 +126,7 @@ fn test_extreme_field_values() {
     ];
 
     for (i, (case_name, value)) in extreme_cases.iter().enumerate() {
-        let field_name = format!("extreme_{}", case_name);
+        let field_name = format!("extreme_{case_name}");
 
         let field = TextField::new(&field_name)
             .with_value(*value)
@@ -157,16 +157,11 @@ fn test_extreme_field_values() {
                 // Should complete in reasonable time even with large values
                 assert!(
                     creation_time.as_secs() < 5,
-                    "Field creation took too long: {:?} for case '{}'",
-                    creation_time,
-                    case_name
+                    "Field creation took too long: {creation_time:?} for case '{case_name}'"
                 );
             }
             Err(e) => {
-                println!(
-                    "Extreme case '{}' failed (may be expected): {}",
-                    case_name, e
-                );
+                println!("Extreme case '{case_name}' failed (may be expected): {e}");
                 // Some extremely large values might legitimately fail
             }
         }
@@ -203,7 +198,7 @@ fn test_invalid_widget_rectangles() {
     ];
 
     for (i, rect) in invalid_rects.iter().enumerate() {
-        let field_name = format!("invalid_rect_{}", i);
+        let field_name = format!("invalid_rect_{i}");
         let field = TextField::new(&field_name).with_value("Test");
         let widget = Widget::new(*rect);
 
@@ -211,17 +206,14 @@ fn test_invalid_widget_rectangles() {
 
         match result {
             Ok(obj_ref) => {
-                println!("Invalid rect {} handled successfully: {:?}", i, rect);
+                println!("Invalid rect {i} handled successfully: {rect:?}");
                 assert_eq!(obj_ref.number(), (i + 1) as u32);
 
                 // Verify the field can be retrieved
                 assert!(form_manager.get_field(&field_name).is_some());
             }
             Err(e) => {
-                println!(
-                    "Invalid rect {} rejected (may be correct): {} - {:?}",
-                    i, e, rect
-                );
+                println!("Invalid rect {i} rejected (may be correct): {e} - {rect:?}");
                 // Some invalid rectangles should be rejected
             }
         }
@@ -244,7 +236,7 @@ fn test_invalid_choice_field_configurations() {
     ];
 
     for (i, (options, selection)) in invalid_radio_tests.iter().enumerate() {
-        let field_name = format!("invalid_radio_{}", i);
+        let field_name = format!("invalid_radio_{i}");
         let mut radio = RadioButton::new(&field_name);
 
         // Add options
@@ -280,7 +272,7 @@ fn test_invalid_choice_field_configurations() {
                 );
             }
             Err(e) => {
-                println!("Invalid radio {} rejected: {}", i, e);
+                println!("Invalid radio {i} rejected: {e}");
             }
         }
     }
@@ -301,7 +293,7 @@ fn test_invalid_choice_field_configurations() {
     ];
 
     for (i, (options, selections)) in invalid_list_tests.iter().enumerate() {
-        let field_name = format!("invalid_list_{}", i);
+        let field_name = format!("invalid_list_{i}");
         let mut listbox = ListBox::new(&field_name);
 
         for (value, label) in options {
@@ -327,7 +319,7 @@ fn test_invalid_choice_field_configurations() {
                 );
             }
             Err(e) => {
-                println!("Invalid listbox {} rejected: {}", i, e);
+                println!("Invalid listbox {i} rejected: {e}");
             }
         }
     }
@@ -346,9 +338,9 @@ fn test_memory_exhaustion_protection() {
         let start_time = std::time::Instant::now();
 
         for i in 0..field_count {
-            let field_name = format!("mem_field_{}", i);
+            let field_name = format!("mem_field_{i}");
             let field = TextField::new(&field_name)
-                .with_value(format!("Value {}", i))
+                .with_value(format!("Value {i}"))
                 .with_max_length(100);
 
             let widget = Widget::new(Rectangle::new(
@@ -369,13 +361,12 @@ fn test_memory_exhaustion_protection() {
         }
 
         let total_time = start_time.elapsed();
-        println!("Created {} fields in {:?}", field_count, total_time);
+        println!("Created {field_count} fields in {total_time:?}");
 
         // Should complete in reasonable time
         assert!(
             total_time.as_secs() < 60,
-            "Memory test took too long: {:?}",
-            total_time
+            "Memory test took too long: {total_time:?}"
         );
         assert_eq!(form_manager.field_count(), field_count);
 
@@ -384,7 +375,7 @@ fn test_memory_exhaustion_protection() {
 
     match many_fields_test() {
         Ok(_) => println!("Memory exhaustion test (many fields) passed"),
-        Err(e) => println!("Memory exhaustion test failed (may be expected): {}", e),
+        Err(e) => println!("Memory exhaustion test failed (may be expected): {e}"),
     }
 
     // Test 2: Fields with extremely large values
@@ -407,16 +398,15 @@ fn test_memory_exhaustion_protection() {
 
         match result {
             Ok(_) => {
-                println!("Large value field created in {:?}", creation_time);
+                println!("Large value field created in {creation_time:?}");
                 // Should complete quickly even with large values
                 assert!(
                     creation_time.as_secs() < 10,
-                    "Large value creation took too long: {:?}",
-                    creation_time
+                    "Large value creation took too long: {creation_time:?}"
                 );
             }
             Err(e) => {
-                println!("Large value field rejected (may be correct): {}", e);
+                println!("Large value field rejected (may be correct): {e}");
             }
         }
 
@@ -425,7 +415,7 @@ fn test_memory_exhaustion_protection() {
 
     match large_values_test() {
         Ok(_) => println!("Memory exhaustion test (large values) passed"),
-        Err(e) => println!("Memory exhaustion test failed: {}", e),
+        Err(e) => println!("Memory exhaustion test failed: {e}"),
     }
 }
 
@@ -510,16 +500,16 @@ fn test_invalid_appearance_configurations() {
         // Test widget annotation dictionary creation
         let result = std::panic::catch_unwind(|| {
             let dict = widget.to_annotation_dict();
-            println!("Invalid appearance {} handled, dict created", i);
+            println!("Invalid appearance {i} handled, dict created");
             dict
         });
 
         match result {
             Ok(_dict) => {
-                println!("Invalid appearance {} processed successfully", i);
+                println!("Invalid appearance {i} processed successfully");
             }
             Err(_) => {
-                println!("Invalid appearance {} caused panic (should be handled)", i);
+                println!("Invalid appearance {i} caused panic (should be handled)");
                 // This identifies cases where better error handling is needed
             }
         }
@@ -561,14 +551,11 @@ fn test_corrupted_form_data_handling() {
                 if let Some(val) = retrieved_value {
                     println!("Problematic value '{}' handled: length {}", key, val.len());
                 } else {
-                    println!("Problematic value '{}' resulted in None", key);
+                    println!("Problematic value '{key}' resulted in None");
                 }
             }
             Err(_) => {
-                println!(
-                    "Problematic value '{}' caused panic (needs better handling)",
-                    key
-                );
+                println!("Problematic value '{key}' caused panic (needs better handling)");
             }
         }
     }
@@ -578,8 +565,8 @@ fn test_corrupted_form_data_handling() {
         let mut large_form_data = FormData::new();
 
         for i in 0..100_000 {
-            let key = format!("key_{}", i);
-            let value = format!("value_{}", i);
+            let key = format!("key_{i}");
+            let value = format!("value_{i}");
             large_form_data.set_value(&key, &value);
         }
 
@@ -592,7 +579,7 @@ fn test_corrupted_form_data_handling() {
 
     match large_data_test {
         Ok(count) => {
-            println!("Large form data test passed: {} entries", count);
+            println!("Large form data test passed: {count} entries");
             assert_eq!(count, 100_000);
         }
         Err(_) => {
@@ -643,7 +630,7 @@ fn test_invalid_field_flags_combinations() {
     ];
 
     for (i, options) in problematic_options.iter().enumerate() {
-        let field_name = format!("problematic_flags_{}", i);
+        let field_name = format!("problematic_flags_{i}");
         let field = TextField::new(&field_name)
             .with_value("Test value")
             .with_max_length(100);
@@ -666,18 +653,18 @@ fn test_invalid_field_flags_combinations() {
 
                     // Check if problematic values were sanitized or preserved
                     if let Some(Object::Integer(flags)) = dict.get("Ff") {
-                        println!("  Flags value: {}", flags);
+                        println!("  Flags value: {flags}");
                     }
                     if let Some(Object::String(da)) = dict.get("DA") {
                         println!("  Appearance length: {}", da.len());
                     }
                     if let Some(Object::Integer(q)) = dict.get("Q") {
-                        println!("  Quadding value: {}", q);
+                        println!("  Quadding value: {q}");
                     }
                 }
             }
             Err(e) => {
-                println!("Problematic flags {} rejected: {}", i, e);
+                println!("Problematic flags {i} rejected: {e}");
                 // Some combinations should legitimately be rejected
             }
         }
@@ -704,10 +691,7 @@ fn test_acroform_corruption_handling() {
         if i % 10_000 == 0 && i > 0 {
             let elapsed = start_time.elapsed();
             if elapsed.as_secs() > 10 {
-                println!(
-                    "AcroForm stress test stopped at {} fields after {:?}",
-                    i, elapsed
-                );
+                println!("AcroForm stress test stopped at {i} fields after {elapsed:?}");
                 break;
             }
         }
@@ -716,10 +700,7 @@ fn test_acroform_corruption_handling() {
     let final_count = acro_form.fields.len();
     let creation_time = start_time.elapsed();
 
-    println!(
-        "AcroForm created with {} fields in {:?}",
-        final_count, creation_time
-    );
+    println!("AcroForm created with {final_count} fields in {creation_time:?}");
     assert!(
         creation_time.as_secs() < 15,
         "AcroForm creation took too long"
@@ -730,7 +711,7 @@ fn test_acroform_corruption_handling() {
     let dict = acro_form.to_dict();
     let dict_time = dict_start.elapsed();
 
-    println!("AcroForm dictionary created in {:?}", dict_time);
+    println!("AcroForm dictionary created in {dict_time:?}");
     assert!(dict_time.as_secs() < 5, "Dictionary creation took too long");
 
     // Verify dictionary structure
@@ -777,9 +758,9 @@ fn test_concurrent_form_operations() {
             let mut successes = 0;
 
             for i in 0..100 {
-                let field_name = format!("thread_{}_field_{}", thread_id, i);
+                let field_name = format!("thread_{thread_id}_field_{i}");
                 let field = TextField::new(&field_name)
-                    .with_value(format!("Thread {} Value {}", thread_id, i))
+                    .with_value(format!("Thread {thread_id} Value {i}"))
                     .with_max_length(100);
 
                 let widget = Widget::new(Rectangle::new(
@@ -809,10 +790,7 @@ fn test_concurrent_form_operations() {
     for handle in handles {
         match handle.join() {
             Ok((thread_id, successes, errors)) => {
-                println!(
-                    "Thread {} completed: {} successes, {} errors",
-                    thread_id, successes, errors
-                );
+                println!("Thread {thread_id} completed: {successes} successes, {errors} errors");
                 total_successes += successes;
                 total_errors += errors;
             }
@@ -824,14 +802,13 @@ fn test_concurrent_form_operations() {
     }
 
     println!(
-        "Concurrent test completed: {} total successes, {} total errors",
-        total_successes, total_errors
+        "Concurrent test completed: {total_successes} total successes, {total_errors} total errors"
     );
 
     // Verify final state
     let final_manager = form_manager.lock().unwrap();
     let final_count = final_manager.field_count();
-    println!("Final form manager has {} fields", final_count);
+    println!("Final form manager has {final_count} fields");
 
     // Should have some successful operations (exact count depends on race conditions)
     assert!(
@@ -857,9 +834,9 @@ fn test_resource_cleanup() {
 
         // Add some fields
         for i in 0..50 {
-            let field_name = format!("cleanup_test_{}_{}", iteration, i);
+            let field_name = format!("cleanup_test_{iteration}_{i}");
             let field = TextField::new(&field_name)
-                .with_value(format!("Iteration {} Field {}", iteration, i))
+                .with_value(format!("Iteration {iteration} Field {i}"))
                 .with_max_length(100);
 
             let widget = Widget::new(Rectangle::new(
@@ -880,17 +857,14 @@ fn test_resource_cleanup() {
     let final_memory_pressure = get_memory_pressure_indicator();
 
     println!(
-        "Memory pressure: initial = {}, final = {}",
-        initial_memory_pressure, final_memory_pressure
+        "Memory pressure: initial = {initial_memory_pressure}, final = {final_memory_pressure}"
     );
 
     // Memory usage shouldn't grow excessively
     // This is a heuristic test - exact memory usage is hard to measure
     assert!(
         final_memory_pressure < initial_memory_pressure + 1000,
-        "Memory usage grew too much: {} -> {}",
-        initial_memory_pressure,
-        final_memory_pressure
+        "Memory usage grew too much: {initial_memory_pressure} -> {final_memory_pressure}"
     );
 }
 
@@ -944,7 +918,7 @@ fn test_api_misuse_prevention() {
             // This might be acceptable behavior
         }
         Err(e) => {
-            println!("Duplicate field name rejected: {}", e);
+            println!("Duplicate field name rejected: {e}");
             // This is also acceptable behavior
         }
     }
@@ -961,7 +935,7 @@ fn test_api_misuse_prevention() {
     let initial_count = form_manager.field_count();
 
     for i in 0..10 {
-        let field_name = format!("ref_test_{}", i);
+        let field_name = format!("ref_test_{i}");
         let field = TextField::new(&field_name).with_value("Test");
         let widget = Widget::new(Rectangle::new(
             Point::new(50.0, 500.0 - i as f64 * 25.0),
@@ -988,7 +962,7 @@ fn test_api_misuse_prevention() {
 
     // Test 4: Large field counts
     let final_count = form_manager.field_count();
-    println!("Final field count: {}", final_count);
+    println!("Final field count: {final_count}");
     assert!(
         final_count >= initial_count,
         "Field count should only increase"
@@ -1033,19 +1007,16 @@ fn test_invalid_widget_operations() {
         let result = std::panic::catch_unwind(|| {
             let widget_with_appearance = widget.with_appearance(appearance.clone());
             let annotation_dict = widget_with_appearance.to_annotation_dict();
-            println!("Extreme appearance {} handled successfully", i);
+            println!("Extreme appearance {i} handled successfully");
             annotation_dict
         });
 
         match result {
             Ok(_) => {
-                println!("Extreme widget appearance {} processed successfully", i);
+                println!("Extreme widget appearance {i} processed successfully");
             }
             Err(_) => {
-                println!(
-                    "Extreme widget appearance {} caused panic (needs better handling)",
-                    i
-                );
+                println!("Extreme widget appearance {i} caused panic (needs better handling)");
             }
         }
     }
@@ -1079,10 +1050,7 @@ fn test_invalid_widget_operations() {
         if i % 100 == 0 && i > 0 {
             let elapsed = start_time.elapsed();
             if elapsed.as_secs() > 5 {
-                println!(
-                    "Widget addition stopped at {} widgets after {:?}",
-                    i, elapsed
-                );
+                println!("Widget addition stopped at {i} widgets after {elapsed:?}");
                 break;
             }
         }
@@ -1091,10 +1059,7 @@ fn test_invalid_widget_operations() {
     let final_widget_count = form_field.widgets.len();
     let total_time = start_time.elapsed();
 
-    println!(
-        "Added {} widgets to form field in {:?}",
-        final_widget_count, total_time
-    );
+    println!("Added {final_widget_count} widgets to form field in {total_time:?}");
     assert!(total_time.as_secs() < 10, "Widget addition took too long");
     assert!(final_widget_count > 0, "Should have added some widgets");
     assert!(
@@ -1120,7 +1085,7 @@ fn test_form_state_consistency() {
 
     for (i, name) in field_names.iter().enumerate() {
         let field = TextField::new(*name)
-            .with_value(format!("Value for {}", name))
+            .with_value(format!("Value for {name}"))
             .with_max_length(100);
 
         let widget = Widget::new(Rectangle::new(
@@ -1136,42 +1101,36 @@ fn test_form_state_consistency() {
         assert_eq!(
             form_manager.field_count(),
             expected_count,
-            "Field count inconsistent after adding field {}",
-            i
+            "Field count inconsistent after adding field {i}"
         );
 
         assert_eq!(
             form_manager.get_acro_form().fields.len(),
             expected_count,
-            "AcroForm field count inconsistent after adding field {}",
-            i
+            "AcroForm field count inconsistent after adding field {i}"
         );
 
         assert_eq!(
             form_manager.fields().len(),
             expected_count,
-            "Fields map size inconsistent after adding field {}",
-            i
+            "Fields map size inconsistent after adding field {i}"
         );
 
         assert!(
             form_manager.get_field(name).is_some(),
-            "Cannot retrieve field {} that was just added",
-            name
+            "Cannot retrieve field {name} that was just added"
         );
 
         assert_eq!(
             obj_ref.number(),
             (i + 1) as u32,
-            "Object reference number inconsistent for field {}",
-            i
+            "Object reference number inconsistent for field {i}"
         );
 
         assert_eq!(
             obj_ref.generation(),
             0,
-            "Object reference generation should be 0 for field {}",
-            i
+            "Object reference generation should be 0 for field {i}"
         );
     }
 
@@ -1184,8 +1143,7 @@ fn test_form_state_consistency() {
     for name in &field_names {
         assert!(
             form_manager.get_field(name).is_some(),
-            "Field '{}' should be retrievable",
-            name
+            "Field '{name}' should be retrievable"
         );
     }
 
@@ -1236,7 +1194,7 @@ fn test_field_value_edge_cases() {
     ];
 
     for (i, (case_name, value)) in edge_case_values.iter().enumerate() {
-        let field_name = format!("edge_case_{}", case_name);
+        let field_name = format!("edge_case_{case_name}");
 
         let field = TextField::new(&field_name)
             .with_value(*value)
@@ -1281,7 +1239,7 @@ fn test_field_value_edge_cases() {
                 }
             }
             Err(e) => {
-                println!("Edge case '{}' rejected: {}", case_name, e);
+                println!("Edge case '{case_name}' rejected: {e}");
                 // Some extreme cases might legitimately fail
             }
         }
@@ -1302,16 +1260,16 @@ fn test_performance_regression_detection() {
     ];
 
     for (test_name, field_count) in performance_tests {
-        println!("Running performance test: {}", test_name);
+        println!("Running performance test: {test_name}");
 
         let start_time = std::time::Instant::now();
         let mut form_manager = FormManager::new();
 
         // Create fields
         for i in 0..field_count {
-            let field_name = format!("perf_field_{}", i);
+            let field_name = format!("perf_field_{i}");
             let field = TextField::new(&field_name)
-                .with_value(format!("Performance test value {}", i))
+                .with_value(format!("Performance test value {i}"))
                 .with_max_length(200);
 
             let widget = Widget::new(Rectangle::new(
@@ -1335,7 +1293,7 @@ fn test_performance_regression_detection() {
         let mut retrieved_count = 0;
 
         for i in 0..field_count {
-            let field_name = format!("perf_field_{}", i);
+            let field_name = format!("perf_field_{i}");
             if form_manager.get_field(&field_name).is_some() {
                 retrieved_count += 1;
             }
@@ -1349,11 +1307,8 @@ fn test_performance_regression_detection() {
         let acro_dict = acro_form.to_dict();
         let acroform_time = acroform_start.elapsed();
 
-        println!("  {} fields created in {:?}", field_count, creation_time);
-        println!(
-            "  {} fields retrieved in {:?}",
-            retrieved_count, retrieval_time
-        );
+        println!("  {field_count} fields created in {creation_time:?}");
+        println!("  {retrieved_count} fields retrieved in {retrieval_time:?}");
         println!(
             "  AcroForm with {} refs generated in {:?}",
             acro_dict.get("Fields").map_or(0, |f| match f {
@@ -1369,9 +1324,7 @@ fn test_performance_regression_detection() {
 
         assert!(
             actual_time_per_field < max_creation_time_per_field,
-            "Creation time per field too slow: {:?} > {:?}",
-            actual_time_per_field,
-            max_creation_time_per_field
+            "Creation time per field too slow: {actual_time_per_field:?} > {max_creation_time_per_field:?}"
         );
 
         assert_eq!(
@@ -1381,14 +1334,12 @@ fn test_performance_regression_detection() {
 
         assert!(
             retrieval_time < std::time::Duration::from_millis(field_count as u64),
-            "Field retrieval too slow: {:?}",
-            retrieval_time
+            "Field retrieval too slow: {retrieval_time:?}"
         );
 
         assert!(
             acroform_time < std::time::Duration::from_secs(1),
-            "AcroForm generation too slow: {:?}",
-            acroform_time
+            "AcroForm generation too slow: {acroform_time:?}"
         );
     }
 
@@ -1435,7 +1386,7 @@ fn test_malformed_input_sanitization() {
 
     for (i, malformed_name) in malformed_names.iter().enumerate() {
         let field = TextField::new(*malformed_name)
-            .with_value(format!("Value for field {}", i))
+            .with_value(format!("Value for field {i}"))
             .with_max_length(100);
 
         let widget = Widget::new(Rectangle::new(
@@ -1475,7 +1426,7 @@ fn test_malformed_input_sanitization() {
                     let mut found_sanitized = false;
                     for candidate in &sanitized_candidates {
                         if form_manager.get_field(candidate).is_some() {
-                            println!("  Field found with sanitized name '{}'", candidate);
+                            println!("  Field found with sanitized name '{candidate}'");
                             found_sanitized = true;
                             break;
                         }
@@ -1487,7 +1438,7 @@ fn test_malformed_input_sanitization() {
                 }
             }
             Err(e) => {
-                println!("Malformed name '{}' rejected: {}", malformed_name, e);
+                println!("Malformed name '{malformed_name}' rejected: {e}");
                 // Some names might be legitimately rejected
             }
         }
@@ -1502,15 +1453,15 @@ fn test_error_propagation_and_handling() {
     // Test that errors are properly propagated and handled throughout the forms system
 
     // Test 1: Invalid max_length handling
-    let invalid_max_lengths = vec![-1, -100, -1000, i32::MIN];
+    let invalid_max_lengths = [-1, -100, -1000, i32::MIN];
 
     for (i, max_length) in invalid_max_lengths.iter().enumerate() {
-        let field_name = format!("invalid_max_length_{}", i);
+        let field_name = format!("invalid_max_length_{i}");
         let field = TextField::new(&field_name)
             .with_value("Test value")
             .with_max_length(*max_length);
 
-        println!("Testing invalid max_length: {}", max_length);
+        println!("Testing invalid max_length: {max_length}");
 
         let widget = Widget::new(Rectangle::new(
             Point::new(50.0, 600.0 - i as f64 * 30.0),
@@ -1522,16 +1473,10 @@ fn test_error_propagation_and_handling() {
 
         match result {
             Ok(_) => {
-                println!(
-                    "  Invalid max_length {} was accepted (may need validation)",
-                    max_length
-                );
+                println!("  Invalid max_length {max_length} was accepted (may need validation)");
             }
             Err(e) => {
-                println!(
-                    "  Invalid max_length {} properly rejected: {}",
-                    max_length, e
-                );
+                println!("  Invalid max_length {max_length} properly rejected: {e}");
             }
         }
     }
@@ -1554,7 +1499,7 @@ fn test_error_propagation_and_handling() {
             println!("ComboBox with empty options but set value was accepted");
         }
         Err(e) => {
-            println!("ComboBox with empty options properly rejected: {}", e);
+            println!("ComboBox with empty options properly rejected: {e}");
         }
     }
 
@@ -1570,7 +1515,7 @@ fn test_error_propagation_and_handling() {
             println!("RadioButton with no options but selection set was accepted");
         }
         Err(e) => {
-            println!("RadioButton with no options properly rejected: {}", e);
+            println!("RadioButton with no options properly rejected: {e}");
         }
     }
 
@@ -1598,10 +1543,7 @@ fn test_error_propagation_and_handling() {
             );
         }
         Err(e) => {
-            println!(
-                "RadioButton with widget/option count mismatch properly rejected: {}",
-                e
-            );
+            println!("RadioButton with widget/option count mismatch properly rejected: {e}");
         }
     }
 

@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn test_goto_action_debug() {
         let action = GoToAction::to_page_xyz(0, 100.0, 200.0, Some(1.5));
-        let _ = format!("{:?}", action);
+        let _ = format!("{action:?}");
     }
 
     #[test]
@@ -326,7 +326,7 @@ mod tests {
         assert_eq!(dict1.get("NewWindow"), dict2.get("NewWindow"));
 
         // Test debug formatting
-        let _ = format!("{:?}", action);
+        let _ = format!("{action:?}");
     }
 
     #[test]

@@ -17,7 +17,7 @@ mod tests {
         // Should handle up to the limit
         for i in 0..10 {
             let result = context.enter();
-            assert!(result.is_ok(), "Failed at depth {}", i);
+            assert!(result.is_ok(), "Failed at depth {i}");
         }
 
         // Should fail at limit+1
@@ -183,7 +183,7 @@ mod tests {
         // Create 50 levels of nesting
         for i in 0..50 {
             let mut dict = PdfDictionary::new();
-            dict.insert(format!("level_{}", i), nested_dict);
+            dict.insert(format!("level_{i}"), nested_dict);
             nested_dict = PdfObject::Dictionary(dict);
         }
 

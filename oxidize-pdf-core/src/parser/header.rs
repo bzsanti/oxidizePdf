@@ -301,7 +301,7 @@ mod tests {
     fn test_pdf_version_display() {
         let version = PdfVersion::new(1, 7);
         assert_eq!(version.to_string(), "1.7");
-        assert_eq!(format!("{}", version), "1.7");
+        assert_eq!(format!("{version}"), "1.7");
     }
 
     #[test]
@@ -484,7 +484,7 @@ mod tests {
         ];
 
         for (major, minor) in supported_versions {
-            let input = format!("%PDF-{}.{}\n", major, minor);
+            let input = format!("%PDF-{major}.{minor}\n");
             let header = PdfHeader::parse(Cursor::new(input.as_bytes())).unwrap();
 
             assert_eq!(header.version.major, major);
@@ -499,10 +499,7 @@ mod tests {
         let cloned_version = version.clone();
 
         assert_eq!(version, cloned_version);
-        assert_eq!(
-            format!("{:?}", version),
-            "PdfVersion { major: 1, minor: 4 }"
-        );
+        assert_eq!(format!("{version:?}"), "PdfVersion { major: 1, minor: 4 }");
 
         let header = PdfHeader {
             version: version.clone(),

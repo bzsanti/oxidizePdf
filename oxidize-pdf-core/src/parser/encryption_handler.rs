@@ -507,7 +507,7 @@ mod tests {
             dict.0.remove(&PdfName(skip_key.to_string()));
 
             let result = EncryptionHandler::parse_encryption_dict(&dict);
-            assert!(result.is_err(), "Should fail when {} is missing", skip_key);
+            assert!(result.is_err(), "Should fail when {skip_key} is missing");
         }
     }
 
@@ -764,11 +764,11 @@ mod tests {
             // All should fail with test data but not crash
             let result = handler.unlock_with_user_password(&password);
             assert!(result.is_ok());
-            assert_eq!(result.unwrap(), false);
+            assert!(!result.unwrap());
 
             let result = handler.unlock_with_owner_password(&password);
             assert!(result.is_ok());
-            assert_eq!(result.unwrap(), false);
+            assert!(!result.unwrap());
         }
     }
 

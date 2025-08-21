@@ -62,7 +62,7 @@ mod tests {
         page.text()
             .set_font(crate::text::Font::Helvetica, 24.0)
             .at(50.0, 700.0)
-            .write(&format!("{} - Page with Image", title))
+            .write(&format!("{title} - Page with Image"))
             .unwrap();
 
         // Note: In a real implementation, we would need to add the image to the page
@@ -355,7 +355,7 @@ mod tests {
         let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0x00, 0x00];
         let result = extractor.detect_image_format_from_data(&jpeg_data);
         if result.is_err() {
-            println!("JPEG detection failed: {:?}", result);
+            println!("JPEG detection failed: {result:?}");
         }
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ImageFormat::Jpeg);

@@ -650,11 +650,11 @@ mod tests {
         let mode = HighlightMode::Push;
 
         // Test Debug
-        let debug_str = format!("{:?}", mode);
+        let debug_str = format!("{mode:?}");
         assert!(debug_str.contains("Push"));
 
         // Test Clone
-        let cloned = mode.clone();
+        let cloned = mode;
         assert!(matches!(cloned, HighlightMode::Push));
 
         // Test Copy
@@ -671,7 +671,7 @@ mod tests {
             zoom: Some(1.5),
         };
 
-        let debug_str = format!("{:?}", dest);
+        let debug_str = format!("{dest:?}");
         assert!(debug_str.contains("XYZ"));
         assert!(debug_str.contains("100.0"));
 
@@ -692,7 +692,7 @@ mod tests {
             uri: "https://test.com".to_string(),
         };
 
-        let debug_str = format!("{:?}", action);
+        let debug_str = format!("{action:?}");
         assert!(debug_str.contains("URI"));
         assert!(debug_str.contains("https://test.com"));
 
@@ -708,7 +708,7 @@ mod tests {
         let link = LinkAnnotation::to_uri(rect, "https://example.com")
             .with_highlight_mode(HighlightMode::Outline);
 
-        let debug_str = format!("{:?}", link);
+        let debug_str = format!("{link:?}");
         assert!(debug_str.contains("LinkAnnotation"));
 
         let cloned = link.clone();

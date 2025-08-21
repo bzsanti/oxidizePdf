@@ -359,7 +359,7 @@ mod tests {
     #[test]
     fn test_recovery_options_debug() {
         let options = RecoveryOptions::default();
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("RecoveryOptions"));
         assert!(debug_str.contains("aggressive_recovery"));
         assert!(debug_str.contains("max_errors"));
@@ -408,7 +408,7 @@ mod tests {
             has_images: true,
         };
 
-        let debug_str = format!("{:?}", page);
+        let debug_str = format!("{page:?}");
         assert!(debug_str.contains("RecoveredPage"));
         assert!(debug_str.contains("page_number: 5"));
     }
@@ -464,7 +464,7 @@ mod tests {
             recovery_warnings: vec!["Test warning".to_string()],
         };
 
-        let debug_str = format!("{:?}", partial);
+        let debug_str = format!("{partial:?}");
         assert!(debug_str.contains("PartialRecovery"));
         assert!(debug_str.contains("total_objects: 50"));
         assert!(debug_str.contains("recovered_objects: 45"));

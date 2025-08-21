@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn test_text_align_debug() {
         let align = TextAlign::Center;
-        let debug_str = format!("{:?}", align);
+        let debug_str = format!("{align:?}");
         assert_eq!(debug_str, "Center");
     }
 
@@ -677,7 +677,7 @@ mod tests {
             context.write_wrapped("Test text").unwrap();
 
             let ops = context.operations();
-            assert!(ops.contains(&format!("/{} 14 Tf", font_name)));
+            assert!(ops.contains(&format!("/{font_name} 14 Tf")));
         }
     }
 
@@ -694,7 +694,7 @@ mod tests {
             context.write_wrapped("Test").unwrap();
 
             let ops = context.operations();
-            assert!(ops.contains(&format!("/Helvetica {} Tf", size)));
+            assert!(ops.contains(&format!("/Helvetica {size} Tf")));
         }
     }
 

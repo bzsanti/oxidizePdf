@@ -65,7 +65,7 @@ mod compression_tests {
                 assert_eq!(name, "FlateDecode");
             }
             _ => {
-                panic!("Filter should be a Name object, but was: {:?}", filter);
+                panic!("Filter should be a Name object, but was: {filter:?}");
             }
         }
 

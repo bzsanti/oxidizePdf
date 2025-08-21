@@ -445,10 +445,10 @@ fn test_field_types() {
 
     // Test debug and clone
     let field_type = FieldType::Text;
-    let cloned = field_type.clone();
+    let cloned = field_type;
     assert_eq!(field_type, cloned);
 
-    let debug_str = format!("{:?}", field_type);
+    let debug_str = format!("{field_type:?}");
     assert!(debug_str.contains("Text"));
 }
 
@@ -469,7 +469,7 @@ fn test_border_styles() {
 
     // Test debug, clone, copy
     let style = BorderStyle::Dashed;
-    let cloned = style.clone();
+    let cloned = style;
     let copied = style;
 
     assert_eq!(style.pdf_name(), cloned.pdf_name());
@@ -675,26 +675,26 @@ fn test_cloning() {
 #[test]
 fn test_debug_formatting() {
     let field = TextField::new("test").with_value("value");
-    let debug_str = format!("{:?}", field);
+    let debug_str = format!("{field:?}");
     assert!(debug_str.contains("TextField"));
     assert!(debug_str.contains("test"));
 
     let checkbox = CheckBox::new("check").checked();
-    let debug_str = format!("{:?}", checkbox);
+    let debug_str = format!("{checkbox:?}");
     assert!(debug_str.contains("CheckBox"));
     assert!(debug_str.contains("check"));
 
     let button = PushButton::new("button").with_caption("Click");
-    let debug_str = format!("{:?}", button);
+    let debug_str = format!("{button:?}");
     assert!(debug_str.contains("PushButton"));
     assert!(debug_str.contains("button"));
 
     let form_data = FormData::new();
-    let debug_str = format!("{:?}", form_data);
+    let debug_str = format!("{form_data:?}");
     assert!(debug_str.contains("FormData"));
 
     let acroform = AcroForm::new();
-    let debug_str = format!("{:?}", acroform);
+    let debug_str = format!("{acroform:?}");
     assert!(debug_str.contains("AcroForm"));
 }
 

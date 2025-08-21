@@ -778,7 +778,7 @@ mod tests {
                 LazyObject::Loading if i == 2 => {
                     // Success
                 }
-                _ => panic!("Unexpected variant at index {}", i),
+                _ => panic!("Unexpected variant at index {i}"),
             }
         }
     }

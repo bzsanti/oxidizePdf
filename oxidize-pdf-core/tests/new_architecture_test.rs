@@ -21,7 +21,7 @@ fn test_pdf_document_page_access() {
         page.text()
             .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
             .at(100.0, 700.0)
-            .write(&format!("Page {}", i))
+            .write(&format!("Page {i}"))
             .unwrap();
         doc.add_page(page);
     }
@@ -62,7 +62,7 @@ fn test_split_operation_with_new_architecture() {
         page.text()
             .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
             .at(100.0, 700.0)
-            .write(&format!("Split Page {}", i))
+            .write(&format!("Split Page {i}"))
             .unwrap();
         doc.add_page(page);
     }
@@ -87,7 +87,7 @@ fn test_split_operation_with_new_architecture() {
 
     // Verify each output file exists
     for (i, output_file) in output_files.iter().enumerate() {
-        assert!(output_file.exists(), "Output file {} should exist", i);
+        assert!(output_file.exists(), "Output file {i} should exist");
 
         // Open and verify it has one page
         let doc = PdfReader::open_document(output_file).unwrap();
@@ -103,10 +103,10 @@ fn test_merge_operation_with_new_architecture() {
 
     // Create 3 PDFs with 2 pages each
     for i in 0..3 {
-        let test_pdf = temp_dir.path().join(format!("merge_input_{}.pdf", i));
+        let test_pdf = temp_dir.path().join(format!("merge_input_{i}.pdf"));
 
         let mut doc = Document::new();
-        doc.set_title(format!("Merge Test {}", i));
+        doc.set_title(format!("Merge Test {i}"));
 
         for j in 1..=2 {
             let mut page = Page::new(612.0, 792.0);
@@ -150,7 +150,7 @@ fn test_rotate_operation_with_new_architecture() {
         page.text()
             .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
             .at(100.0, 700.0)
-            .write(&format!("Rotate Page {}", i))
+            .write(&format!("Rotate Page {i}"))
             .unwrap();
 
         // Add a rectangle to see rotation

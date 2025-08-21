@@ -534,7 +534,7 @@ startxref\n\
     fn test_object_size_estimation_string_types() {
         // Empty string
         let obj = PdfObject::String(PdfString::new(b"".to_vec()));
-        assert_eq!(estimate_object_size(&obj), 24 + 0);
+        assert_eq!(estimate_object_size(&obj), 24);
 
         // Short string
         let obj = PdfObject::String(PdfString::new(b"Hello".to_vec()));
@@ -550,14 +550,14 @@ startxref\n\
         assert_eq!(estimate_object_size(&obj), 24 + 4);
 
         let obj = PdfObject::Name(PdfName::new("".to_string()));
-        assert_eq!(estimate_object_size(&obj), 24 + 0);
+        assert_eq!(estimate_object_size(&obj), 24);
     }
 
     #[test]
     fn test_object_size_estimation_array() {
         // Empty array
         let obj = PdfObject::Array(PdfArray(vec![]));
-        assert_eq!(estimate_object_size(&obj), 24 + 0);
+        assert_eq!(estimate_object_size(&obj), 24);
 
         // Simple array
         let obj = PdfObject::Array(PdfArray(vec![
@@ -581,7 +581,7 @@ startxref\n\
     fn test_object_size_estimation_dictionary() {
         // Empty dictionary
         let obj = PdfObject::Dictionary(PdfDictionary::new());
-        assert_eq!(estimate_object_size(&obj), 24 + 0);
+        assert_eq!(estimate_object_size(&obj), 24);
 
         // Simple dictionary
         let mut dict = PdfDictionary::new();
@@ -686,8 +686,8 @@ startxref\n\
         }
 
         let reader = result.unwrap();
-        assert_eq!(reader.options().lenient_syntax, true);
-        assert_eq!(reader.options().collect_warnings, false);
+        assert!(reader.options().lenient_syntax);
+        assert!(!reader.options().collect_warnings);
     }
 
     #[test]
@@ -724,15 +724,13 @@ startxref\n\
             let memory_opts = MemoryOptions::default().with_cache_size(0);
             let cache_size = memory_opts.cache_size.max(1);
             assert_eq!(cache_size, 1);
-            return;
         }
     }
 
     #[test]
     fn test_estimate_object_size_edge_cases() {
         // Very large array
-        let large_array =
-            PdfObject::Array(PdfArray((0..1000).map(|i| PdfObject::Integer(i)).collect()));
+        let large_array = PdfObject::Array(PdfArray((0..1000).map(PdfObject::Integer).collect()));
         let size = estimate_object_size(&large_array);
         assert!(size > 16000); // Should be substantial
 
@@ -740,8 +738,8 @@ startxref\n\
         let mut large_dict = PdfDictionary::new();
         for i in 0..100 {
             large_dict.insert(
-                format!("Key{}", i),
-                PdfObject::String(PdfString::new(format!("Value{}", i).as_bytes().to_vec())),
+                format!("Key{i}"),
+                PdfObject::String(PdfString::new(format!("Value{i}").as_bytes().to_vec())),
             );
         }
         let obj = PdfObject::Dictionary(large_dict);
@@ -807,7 +805,7 @@ startxref\n\
         // Unicode string
         let unicode_text = "Hello 世界 🌍";
         let obj = PdfObject::String(PdfString::new(unicode_text.as_bytes().to_vec()));
-        let expected_size = 24 + unicode_text.as_bytes().len();
+        let expected_size = 24 + unicode_text.len();
         assert_eq!(estimate_object_size(&obj), expected_size);
     }
 

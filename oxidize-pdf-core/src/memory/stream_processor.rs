@@ -410,7 +410,7 @@ mod tests {
             skip_fonts: true,
         };
 
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("StreamingOptions"));
         assert!(debug_str.contains("512"));
         assert!(debug_str.contains("1024"));
@@ -448,7 +448,7 @@ mod tests {
         ];
 
         for event in events {
-            let debug_str = format!("{:?}", event);
+            let debug_str = format!("{event:?}");
             assert!(!debug_str.is_empty());
         }
     }
@@ -463,7 +463,7 @@ mod tests {
             operations: vec![ContentOperation::BeginText],
         };
 
-        let debug_str = format!("{:?}", page_data);
+        let debug_str = format!("{page_data:?}");
         assert!(debug_str.contains("PageData"));
         assert!(debug_str.contains("5"));
         assert!(debug_str.contains("612.0"));
@@ -481,11 +481,11 @@ mod tests {
         ];
 
         for resource_type in resource_types {
-            let debug_str = format!("{:?}", resource_type);
+            let debug_str = format!("{resource_type:?}");
             assert!(!debug_str.is_empty());
 
             let cloned = resource_type.clone();
-            let cloned_debug = format!("{:?}", cloned);
+            let cloned_debug = format!("{cloned:?}");
             assert_eq!(debug_str, cloned_debug);
         }
     }
@@ -494,7 +494,7 @@ mod tests {
     fn test_processing_action_debug_partial_eq() {
         let action = ProcessingAction::Continue;
 
-        let debug_str = format!("{:?}", action);
+        let debug_str = format!("{action:?}");
         assert!(debug_str.contains("Continue"));
 
         assert_eq!(ProcessingAction::Continue, ProcessingAction::Continue);
@@ -890,7 +890,7 @@ mod tests {
         let mut first_ops = Vec::new();
         processor
             .process_stream(cursor1, |op| {
-                first_ops.push(format!("{:?}", op));
+                first_ops.push(format!("{op:?}"));
                 Ok(ProcessingAction::Continue)
             })
             .unwrap();
@@ -902,7 +902,7 @@ mod tests {
         let mut second_ops = Vec::new();
         processor
             .process_stream(cursor2, |op| {
-                second_ops.push(format!("{:?}", op));
+                second_ops.push(format!("{op:?}"));
                 Ok(ProcessingAction::Continue)
             })
             .unwrap();

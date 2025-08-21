@@ -342,7 +342,7 @@ fn test_complete_embedding_workflow() -> Result<()> {
 
     // Read back and verify
     let file_data = fs::read(&output_path)?;
-    assert!(file_data.len() > 0);
+    assert!(!file_data.is_empty());
 
     Ok(())
 }

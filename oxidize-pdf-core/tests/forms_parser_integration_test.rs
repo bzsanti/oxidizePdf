@@ -521,7 +521,7 @@ fn test_parse_field_flags() {
         field_dict.set("Type", Object::Name("Annot".to_string()));
         field_dict.set("Subtype", Object::Name("Widget".to_string()));
         field_dict.set("FT", Object::Name("Tx".to_string()));
-        field_dict.set("T", Object::String(format!("flag_test_{}", i)));
+        field_dict.set("T", Object::String(format!("flag_test_{i}")));
         field_dict.set("Ff", Object::Integer(*flags_value));
 
         let form_field = FormField::new(field_dict);
@@ -534,26 +534,22 @@ fn test_parse_field_flags() {
 
             assert_eq!(
                 read_only, *expected_read_only,
-                "ReadOnly flag mismatch for flags {}: expected {}, got {}",
-                flags_value, expected_read_only, read_only
+                "ReadOnly flag mismatch for flags {flags_value}: expected {expected_read_only}, got {read_only}"
             );
 
             assert_eq!(
                 required, *expected_required,
-                "Required flag mismatch for flags {}: expected {}, got {}",
-                flags_value, expected_required, required
+                "Required flag mismatch for flags {flags_value}: expected {expected_required}, got {required}"
             );
 
             assert_eq!(
                 no_export, *expected_no_export,
-                "NoExport flag mismatch for flags {}: expected {}, got {}",
-                flags_value, expected_no_export, no_export
+                "NoExport flag mismatch for flags {flags_value}: expected {expected_no_export}, got {no_export}"
             );
         }
 
         println!(
-            "Field flags {} parsed correctly: ReadOnly={}, Required={}, NoExport={}",
-            flags_value, expected_read_only, expected_required, expected_no_export
+            "Field flags {flags_value} parsed correctly: ReadOnly={expected_read_only}, Required={expected_required}, NoExport={expected_no_export}"
         );
     }
 }
@@ -606,7 +602,7 @@ fn test_parse_malformed_form_dictionaries() {
         // Parser should handle malformed dictionaries gracefully
         let result = std::panic::catch_unwind(|| {
             let form_field = FormField::new(malformed_dict.clone());
-            println!("Malformed case {} handled gracefully", i);
+            println!("Malformed case {i} handled gracefully");
             form_field
         });
 
@@ -614,14 +610,11 @@ fn test_parse_malformed_form_dictionaries() {
             Ok(form_field) => {
                 // Field created successfully despite malformation
                 assert_eq!(form_field.widgets.len(), 0); // Should have no widgets due to malformation
-                println!("Malformed case {} created FormField with 0 widgets", i);
+                println!("Malformed case {i} created FormField with 0 widgets");
             }
             Err(_) => {
                 // Panic occurred - this indicates the parser needs better error handling
-                println!(
-                    "Malformed case {} caused panic - parser needs improvement",
-                    i
-                );
+                println!("Malformed case {i} caused panic - parser needs improvement");
             }
         }
     }
@@ -843,8 +836,8 @@ fn test_parse_large_form_collections() {
         field_dict.set("Type", Object::Name("Annot".to_string()));
         field_dict.set("Subtype", Object::Name("Widget".to_string()));
         field_dict.set("FT", Object::Name("Tx".to_string()));
-        field_dict.set("T", Object::String(format!("field_{}", i)));
-        field_dict.set("V", Object::String(format!("Value {}", i)));
+        field_dict.set("T", Object::String(format!("field_{i}")));
+        field_dict.set("V", Object::String(format!("Value {i}")));
         field_dict.set("MaxLen", Object::Integer(100));
         field_dict.set("Ff", Object::Integer(0));
 
@@ -868,9 +861,7 @@ fn test_parse_large_form_collections() {
     // Check parsing performance (should complete in reasonable time)
     assert!(
         parsing_time.as_secs() < 5,
-        "Parsing {} fields took too long: {:?}",
-        field_count,
-        parsing_time
+        "Parsing {field_count} fields took too long: {parsing_time:?}"
     );
 
     // Verify a few random fields
@@ -882,5 +873,5 @@ fn test_parse_large_form_collections() {
         assert_eq!(name, "field_999");
     }
 
-    println!("Parsed {} form fields in {:?}", field_count, parsing_time);
+    println!("Parsed {field_count} form fields in {parsing_time:?}");
 }

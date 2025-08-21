@@ -339,7 +339,7 @@ mod tests {
             is_valid: false,
         };
 
-        let debug_str = format!("{:?}", obj);
+        let debug_str = format!("{obj:?}");
         assert!(debug_str.contains("ScannedObject"));
         assert!(debug_str.contains("123"));
 
@@ -366,7 +366,7 @@ mod tests {
         ];
 
         for obj_type in types {
-            let debug_str = format!("{:?}", obj_type);
+            let debug_str = format!("{obj_type:?}");
             assert!(!debug_str.is_empty());
 
             let cloned = obj_type.clone();
@@ -410,7 +410,7 @@ mod tests {
             duration_ms: 250,
         };
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("ScanStats"));
 
         let cloned = stats.clone();
@@ -464,7 +464,7 @@ mod tests {
             stats: ScanStats::default(),
         };
 
-        let debug_str = format!("{:?}", result);
+        let debug_str = format!("{result:?}");
         assert!(debug_str.contains("ScanResult"));
     }
 
@@ -733,7 +733,7 @@ mod tests {
 
     #[test]
     fn test_scan_result_sorting() {
-        let mut objects = vec![
+        let mut objects = [
             ScannedObject {
                 id: 3,
                 generation: 0,

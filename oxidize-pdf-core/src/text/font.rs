@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn test_font_debug() {
         let font = Font::HelveticaBold;
-        let debug_str = format!("{:?}", font);
+        let debug_str = format!("{font:?}");
         assert_eq!(debug_str, "HelveticaBold");
     }
 
@@ -376,7 +376,7 @@ mod tests {
     #[test]
     fn test_font_family_debug() {
         let family = FontFamily::Times;
-        let debug_str = format!("{:?}", family);
+        let debug_str = format!("{family:?}");
         assert_eq!(debug_str, "Times");
     }
 
@@ -568,7 +568,7 @@ mod tests {
     fn test_font_with_encoding_debug() {
         let font_enc =
             FontWithEncoding::with_encoding(Font::Helvetica, FontEncoding::WinAnsiEncoding);
-        let debug_str = format!("{:?}", font_enc);
+        let debug_str = format!("{font_enc:?}");
         assert!(debug_str.contains("Helvetica"));
         assert!(debug_str.contains("WinAnsiEncoding"));
     }

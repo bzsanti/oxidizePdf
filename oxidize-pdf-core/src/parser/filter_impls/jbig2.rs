@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn test_jbig2_decode_params_debug() {
         let params = Jbig2DecodeParams::default();
-        let debug_str = format!("{:?}", params);
+        let debug_str = format!("{params:?}");
         assert!(debug_str.contains("Jbig2DecodeParams"));
     }
 
@@ -454,7 +454,7 @@ mod tests {
             data_length: 1024,
         };
 
-        let debug_str = format!("{:?}", segment);
+        let debug_str = format!("{segment:?}");
         assert!(debug_str.contains("Jbig2SegmentHeader"));
         assert!(debug_str.contains("segment_number: 42"));
     }
@@ -702,7 +702,7 @@ mod tests {
         let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
 
         // Test text region segment types (4, 6, 7)
-        for text_type in vec![4, 6, 7] {
+        for text_type in [4, 6, 7] {
             let mut data = vec![];
             data.extend_from_slice(&[
                 0x00, 0x00, 0x00, 0x01,      // Segment number
@@ -723,7 +723,7 @@ mod tests {
         let decoder = Jbig2Decoder::new(Jbig2DecodeParams::default());
 
         // Test halftone region segment types (36, 38, 39)
-        for halftone_type in vec![36, 38, 39] {
+        for halftone_type in [36, 38, 39] {
             let mut data = vec![];
             data.extend_from_slice(&[
                 0x00,
