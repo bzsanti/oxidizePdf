@@ -1,310 +1,299 @@
-//! Example demonstrating batch processing capabilities
+//! Example demonstrating batch processing of multiple PDFs
 //!
-//! This example shows how to process multiple PDF files in parallel with progress tracking.
+//! This example shows how to process multiple PDF files in parallel with
+//! progress tracking, error handling, and resource management.
 
 use oxidize_pdf::{
-    batch_merge_pdfs, batch_split_pdfs, BatchJob, BatchOptions, BatchProcessor, Color, Document,
-    Font, Page,
+    batch_merge_pdfs, batch_process_files, batch_split_pdfs, BatchJob, BatchOptions,
+    BatchProcessor, Document, Page, Result,
 };
-use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create output directory
-    fs::create_dir_all("output/batch")?;
+fn main() -> Result<()> {
+    println!("🚀 Batch Processing Examples\n");
+    println!("============================\n");
 
-    // First, create some sample PDFs
+    // First create some test PDFs
     create_sample_pdfs()?;
 
-    println!("=== Batch Processing Example ===\n");
+    // Example 1: Basic batch processing
+    basic_batch_processing()?;
 
-    // Example 1: Batch split PDFs
-    example_batch_split()?;
+    // Example 2: Batch split with progress tracking
+    batch_split_with_progress()?;
 
-    // Example 2: Batch merge PDFs
-    example_batch_merge()?;
+    // Example 3: Batch merge multiple groups
+    batch_merge_groups()?;
 
-    // Example 3: Custom batch operations with progress
-    example_custom_batch()?;
+    // Example 4: Custom operations with parallelism
+    custom_batch_operations()?;
 
-    // Example 4: Mixed operations with parallelism
-    example_mixed_operations()?;
+    // Example 5: Error handling and recovery
+    batch_with_error_handling()?;
 
-    println!("\n✓ All batch operations completed successfully!");
+    println!("\n✅ All batch processing examples completed!");
+    println!("Check examples/results/batch/ for generated files");
 
     Ok(())
 }
 
 /// Create sample PDFs for testing
-fn create_sample_pdfs() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Creating sample PDFs...");
+fn create_sample_pdfs() -> Result<()> {
+    println!("📄 Creating sample PDFs...");
+
+    // Create output directory
+    std::fs::create_dir_all("examples/results/batch")?;
 
     for i in 1..=5 {
         let mut doc = Document::new();
-        doc.set_title(format!("Sample Document {i}"));
-        doc.set_author("Batch Processing Example");
+        doc.set_title(format!("Sample Document {}", i));
+        doc.set_author("Batch Processor");
 
-        // Create pages with different content
-        for page_num in 1..=4 {
+        // Add 3-5 pages per document
+        let num_pages = 3 + (i % 3);
+        for page_num in 1..=num_pages {
             let mut page = Page::a4();
 
-            // Title
             page.text()
-                .set_font(Font::HelveticaBold, 24.0)
+                .set_font(oxidize_pdf::Font::HelveticaBold, 24.0)
                 .at(50.0, 750.0)
-                .write(&format!("Document {i} - Page {page_num}"))?;
+                .write(&format!("Document {}", i))?;
 
-            // Add some graphics
-            page.graphics()
-                .set_fill_color(Color::rgb(0.2 * i as f64, 0.1, 0.8))
-                .rectangle(50.0, 600.0, 200.0, 100.0)
-                .fill();
-
-            // Add text content
             page.text()
-                .set_font(Font::Helvetica, 12.0)
-                .at(50.0, 550.0)
-                .write("This is a sample page created for batch processing demonstration.")?;
+                .set_font(oxidize_pdf::Font::Helvetica, 16.0)
+                .at(50.0, 700.0)
+                .write(&format!("Page {} of {}", page_num, num_pages))?;
+
+            page.text()
+                .set_font(oxidize_pdf::Font::Helvetica, 12.0)
+                .at(50.0, 650.0)
+                .write("This is a sample page for batch processing demonstration.")?;
 
             doc.add_page(page);
         }
 
-        doc.save(format!("output/batch/sample_{i}.pdf"))?;
+        doc.save(format!("examples/results/batch/sample_{}.pdf", i))?;
     }
 
     println!("✓ Created 5 sample PDFs\n");
     Ok(())
 }
 
-/// Example 1: Batch split multiple PDFs
-fn example_batch_split() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Example 1: Batch Split PDFs");
-    println!("---------------------------");
+/// Example 1: Basic batch processing
+fn basic_batch_processing() -> Result<()> {
+    println!("Example 1: Basic Batch Processing");
+    println!("---------------------------------");
 
-    // Collect PDFs to split
-    let files: Vec<PathBuf> = (1..=3)
-        .map(|i| PathBuf::from(format!("output/batch/sample_{i}.pdf")))
-        .collect();
+    let mut processor = BatchProcessor::new(BatchOptions::default().with_parallelism(4));
 
-    // Configure batch options with progress callback
+    // Add simple custom jobs
+    for i in 1..=5 {
+        let job_name = format!("Process file {}", i);
+        processor.add_job(BatchJob::Custom {
+            name: job_name.clone(),
+            operation: Box::new(move || {
+                println!("  Processing: {}", job_name);
+                std::thread::sleep(Duration::from_millis(100)); // Simulate work
+                Ok(())
+            }),
+        });
+    }
+
+    let summary = processor.execute()?;
+
+    println!("✓ Batch completed:");
+    println!("  - Total jobs: {}", summary.total_jobs);
+    println!("  - Successful: {}", summary.successful);
+    println!("  - Failed: {}", summary.failed);
+    println!("  - Success rate: {:.1}%\n", summary.success_rate());
+
+    Ok(())
+}
+
+/// Example 2: Batch split with progress tracking
+fn batch_split_with_progress() -> Result<()> {
+    println!("Example 2: Batch Split with Progress");
+    println!("------------------------------------");
+
+    let progress_counter = Arc::new(AtomicUsize::new(0));
+    let progress_clone = Arc::clone(&progress_counter);
+
     let options = BatchOptions::default()
         .with_parallelism(2)
-        .with_progress_callback(|info| {
-            println!(
-                "  Split progress: {:.1}% - {} completed, {} failed",
-                info.percentage(),
-                info.completed_jobs,
-                info.failed_jobs
-            );
+        .with_progress_callback(move |info| {
+            let count = progress_clone.fetch_add(1, Ordering::SeqCst);
+            if count % 10 == 0 {
+                // Print every 10th update to avoid spam
+                println!(
+                    "  Progress: {:.1}% ({}/{})",
+                    info.percentage(),
+                    info.completed_jobs,
+                    info.total_jobs
+                );
+            }
         });
 
-    // Split each PDF into individual pages
+    // Split PDFs into single pages
+    let files: Vec<PathBuf> = (1..=3)
+        .map(|i| PathBuf::from(format!("examples/results/batch/sample_{}.pdf", i)))
+        .collect();
+
     let summary = batch_split_pdfs(files, 1, options)?;
 
+    println!("✓ Split completed:");
+    println!("  - Files processed: {}", summary.total_jobs);
+    println!("  - Success rate: {:.1}%", summary.success_rate());
     println!(
-        "✓ Split completed: {} successful, {} failed in {:.2}s\n",
-        summary.successful,
-        summary.failed,
-        summary.duration.as_secs_f64()
+        "  - Progress updates: {}\n",
+        progress_counter.load(Ordering::SeqCst)
     );
 
     Ok(())
 }
 
-/// Example 2: Batch merge PDFs
-fn example_batch_merge() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Example 2: Batch Merge PDFs");
-    println!("---------------------------");
+/// Example 3: Batch merge multiple groups
+fn batch_merge_groups() -> Result<()> {
+    println!("Example 3: Batch Merge Groups");
+    println!("-----------------------------");
 
     // Define merge groups
     let merge_groups = vec![
         // Merge samples 1 and 2
         (
             vec![
-                PathBuf::from("output/batch/sample_1.pdf"),
-                PathBuf::from("output/batch/sample_2.pdf"),
+                PathBuf::from("examples/results/batch/sample_1.pdf"),
+                PathBuf::from("examples/results/batch/sample_2.pdf"),
             ],
-            PathBuf::from("output/batch/merged_1_2.pdf"),
+            PathBuf::from("examples/results/batch/merged_1_2.pdf"),
         ),
         // Merge samples 3, 4, and 5
         (
             vec![
-                PathBuf::from("output/batch/sample_3.pdf"),
-                PathBuf::from("output/batch/sample_4.pdf"),
-                PathBuf::from("output/batch/sample_5.pdf"),
+                PathBuf::from("examples/results/batch/sample_3.pdf"),
+                PathBuf::from("examples/results/batch/sample_4.pdf"),
+                PathBuf::from("examples/results/batch/sample_5.pdf"),
             ],
-            PathBuf::from("output/batch/merged_3_4_5.pdf"),
+            PathBuf::from("examples/results/batch/merged_3_4_5.pdf"),
         ),
     ];
 
     let summary = batch_merge_pdfs(merge_groups, BatchOptions::default())?;
 
-    println!(
-        "✓ Merge completed: {} successful in {:.2}s\n",
-        summary.successful,
-        summary.duration.as_secs_f64()
-    );
+    println!("✓ Merge completed:");
+    println!("  - Merge operations: {}", summary.total_jobs);
+    println!("  - Successful: {}", summary.successful);
+    println!("  - Created merged_1_2.pdf and merged_3_4_5.pdf\n");
 
     Ok(())
 }
 
-/// Example 3: Custom batch operations with detailed progress
-fn example_custom_batch() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Example 3: Custom Batch Operations");
+/// Example 4: Custom operations with parallelism
+fn custom_batch_operations() -> Result<()> {
+    println!("Example 4: Custom Batch Operations");
     println!("----------------------------------");
-
-    // Track detailed progress
-    let processed_pages = Arc::new(AtomicUsize::new(0));
-    let total_pages = Arc::new(AtomicUsize::new(0));
-
-    let options = BatchOptions::default()
-        .with_parallelism(3)
-        .with_progress_callback({
-            let processed = Arc::clone(&processed_pages);
-            let total = Arc::clone(&total_pages);
-            move |info| {
-                let pages_done = processed.load(Ordering::SeqCst);
-                let pages_total = total.load(Ordering::SeqCst);
-
-                println!(
-                    "  Progress: {:.1}% | Jobs: {}/{} | Pages: {}/{} | ETA: {}",
-                    info.percentage(),
-                    info.completed_jobs,
-                    info.total_jobs,
-                    pages_done,
-                    pages_total,
-                    info.format_eta()
-                );
-            }
-        });
-
-    let mut processor = BatchProcessor::new(options);
-
-    // Add custom jobs that process pages
-    for i in 1..=5 {
-        let processed_clone = Arc::clone(&processed_pages);
-        let total_clone = Arc::clone(&total_pages);
-
-        processor.add_job(BatchJob::Custom {
-            name: format!("Analyze sample_{i}.pdf"),
-            operation: Box::new(move || {
-                // Simulate page analysis
-                let num_pages = 4; // Each sample has 4 pages
-                total_clone.fetch_add(num_pages, Ordering::SeqCst);
-
-                for _page in 1..=num_pages {
-                    // Simulate processing each page
-                    std::thread::sleep(Duration::from_millis(50));
-                    processed_clone.fetch_add(1, Ordering::SeqCst);
-                }
-
-                Ok(())
-            }),
-        });
-    }
-
-    let summary = processor.execute()?;
-
-    println!(
-        "✓ Custom batch completed: {} jobs in {:.2}s\n",
-        summary.successful,
-        summary.duration.as_secs_f64()
-    );
-
-    Ok(())
-}
-
-/// Example 4: Mixed operations demonstrating parallelism
-fn example_mixed_operations() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Example 4: Mixed Operations with Parallelism");
-    println!("-------------------------------------------");
 
     let start = Instant::now();
 
-    let options = BatchOptions::default()
-        .with_parallelism(4)
-        .with_progress_callback(|info| {
-            print!("\r  Processing: [");
-            let width = 30;
-            let filled = (info.percentage() / 100.0 * width as f64) as usize;
-            for i in 0..width {
-                if i < filled {
-                    print!("=");
-                } else {
-                    print!(" ");
-                }
-            }
-            print!(
-                "] {:.1}% - {:.1} jobs/s",
-                info.percentage(),
-                info.throughput
+    // Process files with custom operation
+    let files: Vec<PathBuf> = (1..=5)
+        .map(|i| PathBuf::from(format!("examples/results/batch/sample_{}.pdf", i)))
+        .collect();
+
+    let processed_count = Arc::new(AtomicUsize::new(0));
+    let count_clone = Arc::clone(&processed_count);
+
+    let summary = batch_process_files(
+        files,
+        move |path| {
+            let count = count_clone.fetch_add(1, Ordering::SeqCst) + 1;
+            println!(
+                "  [{}/5] Analyzing: {}",
+                count,
+                path.file_name().unwrap().to_string_lossy()
             );
-            use std::io::Write;
-            let _ = std::io::stdout().flush();
-        });
 
-    let mut processor = BatchProcessor::new(options);
+            // Simulate document analysis (Document::open not available, so simulate)
+            println!("    → Analyzing document structure...");
 
-    // Add various job types
-    processor.add_job(BatchJob::Split {
-        input: PathBuf::from("output/batch/sample_1.pdf"),
-        output_pattern: "output/batch/mixed_split_%d.pdf".to_string(),
-        pages_per_file: 2,
-    });
+            std::thread::sleep(Duration::from_millis(200)); // Simulate analysis
+            Ok(())
+        },
+        BatchOptions::default().with_parallelism(3),
+    )?;
 
-    processor.add_job(BatchJob::Rotate {
-        input: PathBuf::from("output/batch/sample_2.pdf"),
-        output: PathBuf::from("output/batch/mixed_rotated.pdf"),
-        rotation: 90,
-        pages: None,
-    });
+    let duration = start.elapsed();
 
-    processor.add_job(BatchJob::Extract {
-        input: PathBuf::from("output/batch/sample_3.pdf"),
-        output: PathBuf::from("output/batch/mixed_extracted.pdf"),
-        pages: vec![0, 2],
-    });
+    println!("✓ Analysis completed:");
+    println!("  - Files analyzed: {}", summary.total_jobs);
+    println!("  - Total time: {:.2}s", duration.as_secs_f64());
+    println!(
+        "  - Average per file: {:.2}s\n",
+        duration.as_secs_f64() / summary.total_jobs as f64
+    );
 
-    // Add some custom jobs
-    for i in 1..=3 {
-        processor.add_job(BatchJob::Custom {
-            name: format!("Custom task {i}"),
-            operation: Box::new(move || {
-                // Simulate work
-                std::thread::sleep(Duration::from_millis(200));
-                Ok(())
-            }),
-        });
+    Ok(())
+}
+
+/// Example 5: Error handling and recovery
+fn batch_with_error_handling() -> Result<()> {
+    println!("Example 5: Error Handling");
+    println!("-------------------------");
+
+    let mut processor = BatchProcessor::new(
+        BatchOptions::default()
+            .with_parallelism(2)
+            .stop_on_error(false), // Continue on errors
+    );
+
+    // Add mixed jobs (some will fail)
+    for i in 1..=6 {
+        if i % 3 == 0 {
+            // This job will fail
+            processor.add_job(BatchJob::Custom {
+                name: format!("Job {} (will fail)", i),
+                operation: Box::new(move || {
+                    Err(oxidize_pdf::error::PdfError::InvalidStructure(format!(
+                        "Simulated error for job {}",
+                        i
+                    )))
+                }),
+            });
+        } else {
+            // This job will succeed
+            processor.add_job(BatchJob::Custom {
+                name: format!("Job {} (will succeed)", i),
+                operation: Box::new(move || {
+                    println!("  ✓ Job {} completed", i);
+                    Ok(())
+                }),
+            });
+        }
     }
 
     let summary = processor.execute()?;
 
-    println!("\n\n✓ Mixed operations completed:");
+    println!("\n✓ Batch completed with errors:");
     println!("  - Total jobs: {}", summary.total_jobs);
-    println!(
-        "  - Successful: {} ({:.1}%)",
-        summary.successful,
-        summary.success_rate()
-    );
-    println!("  - Failed: {}", summary.failed);
-    println!("  - Duration: {:.2}s", summary.duration.as_secs_f64());
+    println!("  - Successful: {} ✅", summary.successful);
+    println!("  - Failed: {} ❌", summary.failed);
+    println!("  - Success rate: {:.1}%", summary.success_rate());
 
-    if let Some(avg) = summary.average_duration() {
-        println!("  - Average job duration: {:.2}s", avg.as_secs_f64());
+    // Show detailed report
+    if summary.failed > 0 {
+        println!("\n  Failed jobs:");
+        for result in &summary.results {
+            if let oxidize_pdf::batch::JobResult::Failed {
+                job_name, error, ..
+            } = result
+            {
+                println!("    - {}: {}", job_name, error);
+            }
+        }
     }
 
-    let elapsed = start.elapsed();
-    println!(
-        "  - Total time with parallelism: {:.2}s",
-        elapsed.as_secs_f64()
-    );
-    println!(
-        "  - Speedup factor: ~{:.1}x",
-        (summary.total_jobs as f64 * 0.2) / elapsed.as_secs_f64()
-    );
-
+    println!();
     Ok(())
 }

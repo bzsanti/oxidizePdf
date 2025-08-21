@@ -191,6 +191,7 @@ pub mod page_forms;
 pub mod page_labels;
 pub mod page_lists;
 pub mod page_tables;
+pub mod page_tree;
 pub mod parser;
 pub mod recovery;
 pub mod streaming;
@@ -205,30 +206,19 @@ pub mod semantic;
 pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
-pub use graphics::{Color, GraphicsContext, Image, ImageColorSpace, ImageFormat};
+pub use graphics::{Color, ColorSpace, GraphicsContext, Image, ImageFormat, MaskType};
 pub use page::{Margins, Page};
 pub use page_lists::{ListStyle, ListType, PageLists};
 pub use page_tables::{PageTables, TableStyle};
 pub use text::{
     measure_text,
     split_into_words,
-    AdvancedTable,
-    AdvancedTableCell,
-    AdvancedTableOptions,
-    AlternatingRowColors,
-    BorderLine,
-    BorderStyle as TableBorderStyle,
     BulletStyle,
-    CellContent,
-    CellPadding,
-    ColumnDefinition,
-    ColumnWidth,
     Font,
     FontFamily,
     FragmentType,
     HeaderStyle,
     ImagePreprocessing,
-    LineStyle,
     ListElement,
     ListOptions,
     MockOcrProvider,
@@ -246,12 +236,24 @@ pub use text::{
     Table,
     TableCell,
     TableOptions,
-    TableRow,
     TextAlign,
     TextContext,
     TextFlowContext,
     UnorderedList,
-    VerticalAlign,
+};
+
+// Re-export forms types
+pub use forms::{
+    calculations::FieldValue,
+    field_actions::{
+        ActionSettings, FieldAction, FieldActionSystem, FieldActions, FormatActionType,
+        SpecialFormatType, ValidateActionType,
+    },
+    validation::{
+        DateFormat, FieldValidator, FormValidationSystem, FormatMask, PhoneCountry,
+        RequiredFieldInfo, RequirementCondition, TimeFormat, ValidationRule, ValidationSettings,
+    },
+    BorderStyle, FieldType, TextField, Widget,
 };
 
 // Re-export font embedding types
@@ -259,6 +261,9 @@ pub use text::fonts::embedding::{
     EmbeddedFontData, EmbeddingOptions, EncodingDifference, FontDescriptor, FontEmbedder,
     FontEncoding, FontFlags, FontMetrics, FontType,
 };
+
+// Re-export font management types
+pub use text::font_manager::{CustomFont, FontManager};
 
 // Re-export parsing types
 pub use parser::{
@@ -573,7 +578,7 @@ mod tests {
     fn test_image_types() {
         // Test image-related types
         let _format = ImageFormat::Jpeg;
-        let _color_space = ImageColorSpace::DeviceRGB;
+        let _color_space = ColorSpace::DeviceRGB;
 
         // Test that image creation doesn't panic
         let image_data = vec![0u8; 100];

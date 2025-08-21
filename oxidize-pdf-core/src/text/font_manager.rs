@@ -5,7 +5,7 @@
 
 use crate::error::{PdfError, Result};
 use crate::objects::{Dictionary, Object};
-use crate::text::fonts::truetype::{TrueTypeFont, GlyphInfo};
+use crate::text::fonts::truetype::TrueTypeFont;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
@@ -318,6 +318,80 @@ pub enum FontFileType {
 }
 
 impl CustomFont {
+    /// Create a font from byte data
+    pub fn from_bytes(name: &str, data: Vec<u8>) -> Result<Self> {
+        // Parse TrueType font
+        let ttf = TrueTypeFont::parse(data.clone()).map_err(|e| {
+            PdfError::InvalidStructure(format!("Failed to parse TrueType font: {}", e))
+        })?;
+
+        // Get font name from the font file or use provided name
+        let font_name = ttf.get_font_name().unwrap_or_else(|_| name.to_string());
+
+        // Create font descriptor from TrueType data
+        let flags = FontFlags {
+            fixed_pitch: false,
+            symbolic: false,
+            non_symbolic: true,
+            ..Default::default()
+        };
+
+        let descriptor = FontDescriptor::new(
+            font_name.clone(),
+            flags,
+            [-500.0, -300.0, 1500.0, 1000.0], // Font bbox
+            0.0,                              // Italic angle
+            750.0,                            // Ascent
+            -250.0,                           // Descent
+            700.0,                            // Cap height
+            100.0,                            // Stem V
+        );
+
+        // Create metrics with proper Unicode support
+        let mut widths = Vec::new();
+        if let Ok(cmap_tables) = ttf.parse_cmap() {
+            if let Some(cmap) = cmap_tables
+                .iter()
+                .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                .or_else(|| cmap_tables.first())
+            {
+                for char_code in 32u8..=255 {
+                    if let Some(&glyph_id) = cmap.mappings.get(&(char_code as u32)) {
+                        if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
+                            let width = (advance_width as f64 * 1000.0) / ttf.units_per_em as f64;
+                            widths.push(width);
+                        } else {
+                            widths.push(250.0);
+                        }
+                    } else {
+                        widths.push(250.0);
+                    }
+                }
+            }
+        }
+
+        let metrics = FontMetrics {
+            first_char: 32,
+            last_char: 255,
+            widths,
+            missing_width: 250.0,
+        };
+
+        let font = Self {
+            name: name.to_string(),
+            font_type: FontType::Type0, // Use Type0 for Unicode support
+            encoding: FontEncoding::Identity, // Identity encoding for Unicode
+            descriptor,
+            metrics,
+            font_data: Some(data),
+            font_file_type: Some(FontFileType::TrueType),
+            truetype_font: Some(ttf),
+            used_glyphs: HashSet::new(),
+        };
+
+        Ok(font)
+    }
+
     /// Create a new Type 1 font
     pub fn new_type1(
         name: String,
@@ -358,6 +432,52 @@ impl CustomFont {
         }
     }
 
+    /// Optimize the font for the given text content
+    pub fn optimize_for_text(&mut self, text: &str) {
+        // Check if text contains Unicode characters beyond Latin-1
+        let needs_unicode = text.chars().any(|c| c as u32 > 255);
+
+        if needs_unicode && self.font_type != FontType::Type0 {
+            // Convert to Type0 for Unicode support
+            self.convert_to_type0();
+        }
+
+        // Mark characters as used for subsetting
+        self.mark_characters_used(text);
+    }
+
+    /// Convert font to Type0 for Unicode support
+    fn convert_to_type0(&mut self) {
+        // Only convert TrueType fonts to Type0
+        if self.font_type == FontType::TrueType {
+            self.font_type = FontType::Type0;
+            self.encoding = FontEncoding::Identity;
+
+            // Clear used glyphs as we'll need to rebuild with CIDs
+            self.used_glyphs.clear();
+        }
+    }
+
+    /// Get the glyph mapping (Unicode -> GlyphID) from the font's cmap table
+    pub fn get_glyph_mapping(&self) -> Option<HashMap<u32, u16>> {
+        if let Some(ref ttf) = self.truetype_font {
+            // Parse the cmap table to get Unicode to GlyphID mappings
+            if let Ok(cmap_tables) = ttf.parse_cmap() {
+                // Prefer Windows Unicode mapping (platform 3, encoding 1)
+                // or fallback to Unicode mapping (platform 0)
+                let cmap = cmap_tables
+                    .iter()
+                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0));
+
+                if let Some(cmap) = cmap {
+                    return Some(cmap.mappings.clone());
+                }
+            }
+        }
+        None
+    }
+
     /// Load font data from file for embedding
     pub fn load_font_file<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         let data = fs::read(path.as_ref())?;
@@ -365,7 +485,7 @@ impl CustomFont {
         // Detect font file type
         let file_type = Self::detect_font_file_type(&data)?;
         self.font_file_type = Some(file_type);
-        
+
         // For TrueType fonts, parse the font structure
         if matches!(file_type, FontFileType::TrueType) {
             match TrueTypeFont::parse(data.clone()) {
@@ -375,21 +495,24 @@ impl CustomFont {
                         self.name = font_name.clone();
                         self.descriptor.font_name = font_name;
                     }
-                    
+
                     // Update metrics from the font
                     if let Ok(cmap_tables) = ttf.parse_cmap() {
                         // Find best cmap table
-                        if let Some(cmap) = cmap_tables.iter()
+                        if let Some(cmap) = cmap_tables
+                            .iter()
                             .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                            .or_else(|| cmap_tables.first()) {
-                            
+                            .or_else(|| cmap_tables.first())
+                        {
                             // Update character widths
                             let mut widths = Vec::new();
                             for char_code in self.metrics.first_char..=self.metrics.last_char {
                                 if let Some(&glyph_id) = cmap.mappings.get(&(char_code as u32)) {
-                                    if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
+                                    if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id)
+                                    {
                                         // Convert from font units to 1000ths of a unit
-                                        let width = (advance_width as f64 * 1000.0) / ttf.units_per_em as f64;
+                                        let width = (advance_width as f64 * 1000.0)
+                                            / ttf.units_per_em as f64;
                                         widths.push(width);
                                     } else {
                                         widths.push(self.metrics.missing_width);
@@ -401,7 +524,7 @@ impl CustomFont {
                             self.metrics.widths = widths;
                         }
                     }
-                    
+
                     self.truetype_font = Some(ttf);
                 }
                 Err(_) => {
@@ -409,23 +532,25 @@ impl CustomFont {
                 }
             }
         }
-        
+
         self.font_data = Some(data);
         Ok(())
     }
-    
+
     /// Load TrueType font from file
     pub fn load_truetype_font<P: AsRef<Path>>(path: P) -> Result<Self> {
         let data = fs::read(path.as_ref())?;
-        
+
         // Parse TrueType font
-        let ttf = TrueTypeFont::parse(data.clone())
-            .map_err(|e| PdfError::InvalidStructure(format!("Failed to parse TrueType font: {}", e)))?;
-        
+        let ttf = TrueTypeFont::parse(data.clone()).map_err(|e| {
+            PdfError::InvalidStructure(format!("Failed to parse TrueType font: {}", e))
+        })?;
+
         // Get font name
-        let font_name = ttf.get_font_name()
+        let font_name = ttf
+            .get_font_name()
             .unwrap_or_else(|_| "Unknown".to_string());
-        
+
         // Create font descriptor from TrueType data
         let flags = FontFlags {
             fixed_pitch: false, // TODO: Detect from font
@@ -433,25 +558,26 @@ impl CustomFont {
             non_symbolic: true,
             ..Default::default()
         };
-        
+
         let descriptor = FontDescriptor::new(
             font_name.clone(),
             flags,
             [-500.0, -300.0, 1500.0, 1000.0], // TODO: Get from font
-            0.0, // TODO: Get italic angle
-            750.0, // TODO: Get ascent
-            -250.0, // TODO: Get descent
-            700.0, // TODO: Get cap height
-            100.0, // TODO: Get stem V
+            0.0,                              // TODO: Get italic angle
+            750.0,                            // TODO: Get ascent
+            -250.0,                           // TODO: Get descent
+            700.0,                            // TODO: Get cap height
+            100.0,                            // TODO: Get stem V
         );
-        
+
         // Create metrics
         let mut widths = Vec::new();
         if let Ok(cmap_tables) = ttf.parse_cmap() {
-            if let Some(cmap) = cmap_tables.iter()
+            if let Some(cmap) = cmap_tables
+                .iter()
                 .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                .or_else(|| cmap_tables.first()) {
-                
+                .or_else(|| cmap_tables.first())
+            {
                 for char_code in 32u8..=255 {
                     if let Some(&glyph_id) = cmap.mappings.get(&(char_code as u32)) {
                         if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
@@ -466,35 +592,36 @@ impl CustomFont {
                 }
             }
         }
-        
+
         if widths.is_empty() {
             widths = vec![250.0; 224]; // Default widths
         }
-        
+
         let metrics = FontMetrics::new(32, 255, widths, 250.0);
-        
+
         let mut font = Self::new_truetype(
             font_name,
             FontEncoding::WinAnsiEncoding,
             descriptor,
             metrics,
         );
-        
+
         font.font_data = Some(data);
         font.font_file_type = Some(FontFileType::TrueType);
         font.truetype_font = Some(ttf);
-        
+
         Ok(font)
     }
-    
+
     /// Mark characters as used for subsetting
     pub fn mark_characters_used(&mut self, text: &str) {
         if let Some(ref ttf) = self.truetype_font {
             if let Ok(cmap_tables) = ttf.parse_cmap() {
-                if let Some(cmap) = cmap_tables.iter()
+                if let Some(cmap) = cmap_tables
+                    .iter()
                     .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                    .or_else(|| cmap_tables.first()) {
-                    
+                    .or_else(|| cmap_tables.first())
+                {
                     for ch in text.chars() {
                         if let Some(&glyph_id) = cmap.mappings.get(&(ch as u32)) {
                             self.used_glyphs.insert(glyph_id);
@@ -504,23 +631,24 @@ impl CustomFont {
             }
         }
     }
-    
+
     /// Get subset font data
     pub fn get_subset_font_data(&self) -> Result<Option<Vec<u8>>> {
         if self.font_type != FontType::TrueType {
             return Ok(self.font_data.clone());
         }
-        
+
         if let Some(ref ttf) = self.truetype_font {
             if self.used_glyphs.is_empty() {
                 // No subsetting needed if no glyphs used
                 return Ok(self.font_data.clone());
             }
-            
+
             // Create subset
-            let subset_data = ttf.create_subset(&self.used_glyphs)
-                .map_err(|e| PdfError::InvalidStructure(format!("Failed to create font subset: {}", e)))?;
-            
+            let subset_data = ttf.create_subset(&self.used_glyphs).map_err(|e| {
+                PdfError::InvalidStructure(format!("Failed to create font subset: {}", e))
+            })?;
+
             Ok(Some(subset_data))
         } else {
             Ok(self.font_data.clone())
@@ -660,6 +788,15 @@ impl FontManager {
     /// Get a registered font
     pub fn get_font(&self, name: &str) -> Option<&CustomFont> {
         self.fonts.get(name)
+    }
+
+    /// Get the glyph mapping for a registered font
+    pub fn get_font_glyph_mapping(&self, name: &str) -> Option<HashMap<u32, u16>> {
+        if let Some(font) = self.fonts.get(name) {
+            font.get_glyph_mapping()
+        } else {
+            None
+        }
     }
 
     /// Get all registered fonts

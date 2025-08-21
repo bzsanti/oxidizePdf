@@ -114,4 +114,87 @@ mod tests {
         let invalid_data = vec![0xFF, 0xFF, 0xFF, 0xFF];
         assert!(FontLoader::load_from_bytes(invalid_data).is_err());
     }
+
+    #[test]
+    fn test_font_validation() {
+        // Valid TTF with minimal data
+        let mut ttf_data = vec![0x00, 0x01, 0x00, 0x00];
+        ttf_data.extend_from_slice(&[0x00; 20]); // Add padding
+        let font_data = FontLoader::load_from_bytes(ttf_data).unwrap();
+        assert!(FontLoader::validate(&font_data).is_ok());
+
+        // Invalid - too small
+        let small_font = FontData {
+            bytes: vec![0x00; 10],
+            format: FontFormat::TrueType,
+        };
+        assert!(FontLoader::validate(&small_font).is_err());
+    }
+
+    #[test]
+    fn test_ttf_true_tag_detection() {
+        // Test TTF with 'true' tag
+        let true_header = vec![0x74, 0x72, 0x75, 0x65, 0x00, 0x00, 0x00, 0x00];
+        let true_data = FontLoader::load_from_bytes(true_header).unwrap();
+        assert_eq!(true_data.format, FontFormat::TrueType);
+    }
+
+    #[test]
+    fn test_font_data_clone() {
+        let font_data = FontData {
+            bytes: vec![1, 2, 3, 4],
+            format: FontFormat::TrueType,
+        };
+
+        let cloned = font_data.clone();
+        assert_eq!(cloned.bytes, font_data.bytes);
+        assert_eq!(cloned.format, font_data.format);
+    }
+
+    #[test]
+    fn test_font_format_equality() {
+        assert_eq!(FontFormat::TrueType, FontFormat::TrueType);
+        assert_eq!(FontFormat::OpenType, FontFormat::OpenType);
+        assert_ne!(FontFormat::TrueType, FontFormat::OpenType);
+    }
+
+    #[test]
+    fn test_otf_validation() {
+        // Valid OTF with minimal data
+        let mut otf_data = vec![0x4F, 0x54, 0x54, 0x4F];
+        otf_data.extend_from_slice(&[0x00; 20]); // Add padding
+        let font_data = FontLoader::load_from_bytes(otf_data).unwrap();
+        assert!(FontLoader::validate(&font_data).is_ok());
+
+        // Invalid OTF - too small
+        let small_otf = FontData {
+            bytes: vec![0x4F, 0x54, 0x54, 0x4F],
+            format: FontFormat::OpenType,
+        };
+        assert!(FontLoader::validate(&small_otf).is_err());
+    }
+
+    #[test]
+    fn test_empty_font_data() {
+        let empty_data = vec![];
+        let result = FontLoader::load_from_bytes(empty_data);
+        assert!(result.is_err());
+        if let Err(PdfError::FontError(msg)) = result {
+            assert!(msg.contains("too small"));
+        }
+    }
+
+    #[test]
+    fn test_font_format_detect_edge_cases() {
+        // Test with exactly 4 bytes
+        let exact_ttf = vec![0x00, 0x01, 0x00, 0x00];
+        assert_eq!(
+            FontFormat::detect(&exact_ttf).unwrap(),
+            FontFormat::TrueType
+        );
+
+        // Test with 3 bytes (too small)
+        let too_small = vec![0x00, 0x01, 0x00];
+        assert!(FontFormat::detect(&too_small).is_err());
+    }
 }

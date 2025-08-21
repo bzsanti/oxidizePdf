@@ -527,4 +527,293 @@ mod tests {
             assert!(!message.is_empty());
         }
     }
+
+    // ============= ParseOptions Tests =============
+
+    #[test]
+    fn test_parse_options_default() {
+        let opts = ParseOptions::default();
+        assert!(opts.strict_mode); // default is true
+        assert!(!opts.recover_from_stream_errors); // default is false
+        assert!(!opts.ignore_corrupt_streams); // default is false
+        assert!(!opts.partial_content_allowed); // default is false
+        assert_eq!(opts.max_recovery_attempts, 3);
+        assert!(!opts.log_recovery_details);
+        assert!(!opts.lenient_streams);
+        assert_eq!(opts.max_recovery_bytes, 1000); // default is 1000
+        assert!(!opts.collect_warnings);
+        assert!(opts.lenient_encoding); // default is true
+        assert!(opts.preferred_encoding.is_none());
+        assert!(!opts.lenient_syntax);
+    }
+
+    #[test]
+    fn test_parse_options_strict() {
+        let opts = ParseOptions::strict();
+        assert!(opts.strict_mode);
+        assert!(!opts.recover_from_stream_errors);
+        assert!(!opts.ignore_corrupt_streams);
+        assert!(!opts.partial_content_allowed);
+        assert!(!opts.lenient_streams);
+        assert!(!opts.collect_warnings);
+        assert!(!opts.lenient_encoding);
+        assert!(!opts.lenient_syntax);
+    }
+
+    #[test]
+    fn test_parse_options_tolerant() {
+        let opts = ParseOptions::tolerant();
+        assert!(!opts.strict_mode);
+        assert!(opts.recover_from_stream_errors);
+        assert!(!opts.ignore_corrupt_streams);
+        assert!(opts.partial_content_allowed);
+        assert!(opts.lenient_streams);
+        assert!(opts.collect_warnings);
+        assert!(opts.lenient_encoding);
+        assert!(opts.lenient_syntax);
+    }
+
+    #[test]
+    fn test_parse_options_lenient() {
+        let opts = ParseOptions::lenient();
+        assert!(!opts.strict_mode);
+        assert!(opts.recover_from_stream_errors);
+        assert!(!opts.ignore_corrupt_streams); // lenient (tolerant) doesn't ignore
+        assert!(opts.partial_content_allowed);
+        assert!(opts.lenient_streams);
+        assert!(opts.collect_warnings);
+        assert!(opts.lenient_encoding);
+        assert!(opts.lenient_syntax);
+        assert_eq!(opts.max_recovery_attempts, 5);
+        assert_eq!(opts.max_recovery_bytes, 5000);
+    }
+
+    #[test]
+    fn test_parse_options_skip_errors() {
+        let opts = ParseOptions::skip_errors();
+        assert!(!opts.strict_mode);
+        assert!(opts.recover_from_stream_errors);
+        assert!(opts.ignore_corrupt_streams); // skip_errors does ignore
+        assert!(opts.partial_content_allowed);
+        assert!(opts.lenient_streams);
+        assert!(!opts.collect_warnings); // skip_errors doesn't collect warnings
+        assert!(opts.lenient_encoding);
+        assert!(opts.lenient_syntax);
+        assert_eq!(opts.max_recovery_attempts, 1);
+        assert_eq!(opts.max_recovery_bytes, 5000);
+    }
+
+    #[test]
+    fn test_parse_options_builder() {
+        let mut opts = ParseOptions::default();
+        opts.strict_mode = false;
+        opts.recover_from_stream_errors = true;
+        opts.max_recovery_attempts = 10;
+        opts.lenient_encoding = true;
+
+        assert!(!opts.strict_mode);
+        assert!(opts.recover_from_stream_errors);
+        assert_eq!(opts.max_recovery_attempts, 10);
+        assert!(opts.lenient_encoding);
+    }
+
+    #[test]
+    fn test_parse_error_variants() {
+        // Test all ParseError variants
+        let errors = vec![
+            ParseError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, "test")),
+            ParseError::InvalidHeader,
+            ParseError::UnsupportedVersion("3.0".to_string()),
+            ParseError::InvalidXRef,
+            ParseError::InvalidTrailer,
+            ParseError::InvalidReference(1, 0),
+            ParseError::MissingKey("Type".to_string()),
+            ParseError::CircularReference,
+            ParseError::EncryptionNotSupported,
+            ParseError::EmptyFile,
+            ParseError::StreamDecodeError("decode error".to_string()),
+            ParseError::StreamLengthMismatch {
+                declared: 100,
+                actual: 50,
+            },
+            ParseError::CharacterEncodingError {
+                position: 10,
+                message: "invalid UTF-8".to_string(),
+            },
+            ParseError::SyntaxError {
+                position: 100,
+                message: "unexpected token".to_string(),
+            },
+            ParseError::UnexpectedToken {
+                expected: "dict".to_string(),
+                found: "array".to_string(),
+            },
+        ];
+
+        for error in errors {
+            // Test Display implementation
+            let display = format!("{}", error);
+            assert!(!display.is_empty());
+
+            // Test conversion to OxidizePdfError
+            let _oxidize_err: OxidizePdfError = error.into();
+        }
+    }
+
+    #[test]
+    fn test_pdf_object_creation() {
+        // Test all PdfObject variants
+        let null = PdfObject::Null;
+        let boolean = PdfObject::Boolean(true);
+        let integer = PdfObject::Integer(42);
+        let _real = PdfObject::Real(3.14);
+        let _string = PdfObject::String(PdfString::new(b"test".to_vec()));
+        let _name = PdfObject::Name(PdfName::new("Test".to_string()));
+        let _array = PdfObject::Array(PdfArray::new());
+        let _dict = PdfObject::Dictionary(PdfDictionary::new());
+        // PdfStream doesn't have a public constructor, skip it for now
+        // let stream = PdfObject::Stream(...);
+        let _reference = PdfObject::Reference(1, 0);
+
+        // Test pattern matching
+        match null {
+            PdfObject::Null => assert!(true),
+            _ => panic!("Expected Null"),
+        }
+
+        match boolean {
+            PdfObject::Boolean(v) => assert!(v),
+            _ => panic!("Expected Boolean"),
+        }
+
+        match integer {
+            PdfObject::Integer(v) => assert_eq!(v, 42),
+            _ => panic!("Expected Integer"),
+        }
+    }
+
+    #[test]
+    fn test_pdf_dictionary_operations() {
+        let mut dict = PdfDictionary::new();
+
+        // Test insertion
+        dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName::new("Page".to_string())),
+        );
+        dict.insert("Count".to_string(), PdfObject::Integer(10));
+
+        // Test retrieval
+        assert!(dict.get("Type").is_some());
+        assert!(dict.get("Count").is_some());
+        assert!(dict.get("Missing").is_none());
+
+        // Test contains
+        assert!(dict.contains_key("Type"));
+        assert!(!dict.contains_key("Missing"));
+
+        // Test get_type
+        let type_name = dict.get_type();
+        assert_eq!(type_name, Some("Page"));
+    }
+
+    #[test]
+    fn test_pdf_array_operations() {
+        let mut array = PdfArray::new();
+
+        // Test push (direct access to inner Vec)
+        array.0.push(PdfObject::Integer(1));
+        array.0.push(PdfObject::Integer(2));
+        array.0.push(PdfObject::Integer(3));
+
+        // Test length
+        assert_eq!(array.len(), 3);
+
+        // Test is_empty
+        assert!(!array.is_empty());
+
+        // Test get
+        assert!(array.get(0).is_some());
+        assert!(array.get(10).is_none());
+
+        // Test iteration (direct access to inner Vec)
+        let mut sum = 0;
+        for obj in array.0.iter() {
+            if let PdfObject::Integer(v) = obj {
+                sum += v;
+            }
+        }
+        assert_eq!(sum, 6);
+    }
+
+    #[test]
+    fn test_pdf_name_operations() {
+        let name1 = PdfName::new("Type".to_string());
+        let name2 = PdfName::new("Type".to_string());
+        let name3 = PdfName::new("Subtype".to_string());
+
+        // Test equality
+        assert_eq!(name1, name2);
+        assert_ne!(name1, name3);
+
+        // Test inner field access (PdfName.0 is pub)
+        assert_eq!(name1.0, "Type");
+    }
+
+    #[test]
+    fn test_pdf_string_operations() {
+        // Test literal string
+        let literal = PdfString::new(b"Hello World".to_vec());
+        // PdfString has public inner field
+        assert_eq!(literal.0, b"Hello World");
+
+        // Test empty string
+        let empty = PdfString::new(Vec::new());
+        assert!(empty.0.is_empty());
+    }
+
+    // PdfStream tests removed - no public constructor
+
+    #[test]
+    fn test_parse_options_modifications() {
+        let mut opts = ParseOptions::default();
+
+        // Test field modifications
+        opts.strict_mode = false;
+        assert!(!opts.strict_mode);
+
+        opts.recover_from_stream_errors = true;
+        assert!(opts.recover_from_stream_errors);
+
+        opts.max_recovery_attempts = 20;
+        assert_eq!(opts.max_recovery_attempts, 20);
+
+        opts.lenient_streams = true;
+        assert!(opts.lenient_streams);
+
+        // Skip encoding type test - types not matching
+        // opts.preferred_encoding = Some(...);
+    }
+
+    // Content operation and encoding tests removed - types don't match actual implementation
+
+    #[test]
+    fn test_resource_types() {
+        // Test that we can create resource dictionaries
+        let mut resources = PdfDictionary::new();
+
+        // Add Font resources
+        let mut fonts = PdfDictionary::new();
+        fonts.insert("F1".to_string(), PdfObject::Reference(10, 0));
+        resources.insert("Font".to_string(), PdfObject::Dictionary(fonts));
+
+        // Add XObject resources
+        let mut xobjects = PdfDictionary::new();
+        xobjects.insert("Im1".to_string(), PdfObject::Reference(20, 0));
+        resources.insert("XObject".to_string(), PdfObject::Dictionary(xobjects));
+
+        // Verify resources structure
+        assert!(resources.contains_key("Font"));
+        assert!(resources.contains_key("XObject"));
+    }
 }

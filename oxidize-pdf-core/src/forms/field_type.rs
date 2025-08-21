@@ -152,6 +152,23 @@ pub struct ButtonField {
     pub pushbutton: bool,
 }
 
+impl ButtonField {
+    /// Check if this is a checkbox
+    pub fn is_checkbox(&self) -> bool {
+        !self.radio && !self.pushbutton
+    }
+
+    /// Check if this is a radio button
+    pub fn is_radio(&self) -> bool {
+        self.radio
+    }
+
+    /// Check if this is a push button
+    pub fn is_pushbutton(&self) -> bool {
+        self.pushbutton
+    }
+}
+
 /// Push button field
 #[derive(Debug, Clone)]
 pub struct PushButton {
@@ -416,6 +433,8 @@ pub struct ComboBox {
     pub options: Vec<(String, String)>,
     /// Current value
     pub value: Option<String>,
+    /// Selected index
+    pub selected: Option<usize>,
     /// Whether custom text entry is allowed
     pub editable: bool,
 }
@@ -427,6 +446,7 @@ impl ComboBox {
             name: name.into(),
             options: Vec::new(),
             value: None,
+            selected: None,
             editable: false,
         }
     }
@@ -450,6 +470,16 @@ impl ComboBox {
     /// Set value
     pub fn with_value(mut self, value: impl Into<String>) -> Self {
         self.value = Some(value.into());
+        self
+    }
+
+    /// Set selected option by index
+    pub fn with_selected(mut self, index: usize) -> Self {
+        self.selected = Some(index);
+        // Also set the value to match
+        if let Some((export, _)) = self.options.get(index) {
+            self.value = Some(export.clone());
+        }
         self
     }
 

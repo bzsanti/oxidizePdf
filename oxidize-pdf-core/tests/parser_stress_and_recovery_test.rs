@@ -18,9 +18,9 @@ fn test_massive_dictionary() {
 
     // Create dictionary with 10,000 entries
     for i in 0..10000 {
-        content.push_str(&format!("/Key{i} {i}"));
+        content.push_str(&format!("/Key{} {}", i, i));
         if i < 9999 {
-            content.push(' ');
+            content.push_str(" ");
         }
     }
     content.push_str(">>\nendobj\n");
@@ -37,14 +37,14 @@ fn test_massive_dictionary() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Parsed massive dictionary in {:?}", start.elapsed());
             }
-            Err(e) => println!("Dictionary parsing error: {e}"),
+            Err(e) => println!("Dictionary parsing error: {}", e),
         },
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -55,9 +55,9 @@ fn test_massive_array() {
 
     // Create array with 50,000 elements
     for i in 0..50000 {
-        content.push_str(&format!("{i}"));
+        content.push_str(&format!("{}", i));
         if i < 49999 {
-            content.push(' ');
+            content.push_str(" ");
         }
     }
     content.push_str("]\nendobj\n");
@@ -74,14 +74,14 @@ fn test_massive_array() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Parsed massive array in {:?}", start.elapsed());
             }
-            Err(e) => println!("Array parsing error: {e}"),
+            Err(e) => println!("Array parsing error: {}", e),
         },
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -104,9 +104,9 @@ fn test_pathological_xref() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(_) => println!("Parsed pathological xref in {:?}", start.elapsed()),
-        Err(e) => println!("Xref parsing error: {e}"),
+        Err(e) => println!("Xref parsing error: {}", e),
     }
 }
 
@@ -142,7 +142,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             // Should detect exponential expansion
             let start = Instant::now();
@@ -156,10 +156,10 @@ endobj
                         println!("Handled billion laughs pattern");
                     }
                 }
-                Err(e) => println!("Detected billion laughs: {e}"),
+                Err(e) => println!("Detected billion laughs: {}", e),
             }
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -187,12 +187,12 @@ stream
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled potential zip bomb"),
-            Err(e) => println!("Zip bomb protection: {e}"),
+            Err(e) => println!("Zip bomb protection: {}", e),
         },
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -225,7 +225,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             // Should be able to read good objects even if one is corrupted
             let mut successful_reads = 0;
@@ -238,10 +238,13 @@ endobj
                 }
             }
 
-            println!("Recovery test: {successful_reads} successful, {failed_reads} failed");
+            println!(
+                "Recovery test: {} successful, {} failed",
+                successful_reads, failed_reads
+            );
             assert!(successful_reads >= 3, "Should read at least 3 good objects");
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -283,16 +286,16 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             for i in 2..=3 {
                 match doc.get_object(i, 0) {
-                    Ok(_) => println!("Read content stream {i}"),
-                    Err(e) => println!("Content stream {i} error: {e}"),
+                    Ok(_) => println!("Read content stream {}", i),
+                    Err(e) => println!("Content stream {} error: {}", i, e),
                 }
             }
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -327,12 +330,12 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed Type3 font with invalid program"),
-            Err(e) => println!("Font parsing error: {e}"),
+            Err(e) => println!("Font parsing error: {}", e),
         },
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -371,16 +374,16 @@ endobj
     pdf.extend_from_slice(b"startxref\n400\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             // Should detect recursion when trying to render
             println!("Parser created with recursive forms");
             match doc.get_object(1, 0) {
                 Ok(_) => println!("Read recursive form XObject"),
-                Err(e) => println!("Recursion detected: {e}"),
+                Err(e) => println!("Recursion detected: {}", e),
             }
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -392,7 +395,7 @@ fn test_object_count_exhaustion() {
 
     // Create many small objects
     for i in 1..=10000 {
-        pdf.extend_from_slice(format!("{i} 0 obj\nnull\nendobj\n").as_bytes());
+        pdf.extend_from_slice(format!("{} 0 obj\nnull\nendobj\n", i).as_bytes());
     }
 
     // Create xref for all objects
@@ -408,9 +411,9 @@ fn test_object_count_exhaustion() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(_) => println!("Handled 10,000 objects in {:?}", start.elapsed()),
-        Err(e) => println!("Object count limit: {e}"),
+        Err(e) => println!("Object count limit: {}", e),
     }
 }
 
@@ -443,17 +446,17 @@ endobj
     pdf.extend_from_slice(b"startxref\n500\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             // Should parse but not execute JavaScript
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
-                    Ok(obj) => println!("Parsed annotation {i} with JavaScript: {obj:?}"),
-                    Err(e) => println!("Annotation {i} error: {e}"),
+                    Ok(obj) => println!("Parsed annotation {} with JavaScript: {:?}", i, obj),
+                    Err(e) => println!("Annotation {} error: {}", i, e),
                 }
             }
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -483,15 +486,15 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             // Should handle circular outline references
             match doc.get_object(1, 0) {
                 Ok(_) => println!("Parsed invalid outline hierarchy"),
-                Err(e) => println!("Outline error: {e}"),
+                Err(e) => println!("Outline error: {}", e),
             }
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -517,12 +520,12 @@ stream
     pdf.extend_from_slice(b"startxref\n1200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed corrupted image data"),
-            Err(e) => println!("Image data error: {e}"),
+            Err(e) => println!("Image data error: {}", e),
         },
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -556,19 +559,19 @@ fn test_parser_timeout() {
     let start = Instant::now();
     let timeout = Duration::from_secs(5);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => {
                 let elapsed = start.elapsed();
                 if elapsed > timeout {
-                    println!("Parser took too long: {elapsed:?}");
+                    println!("Parser took too long: {:?}", elapsed);
                 } else {
-                    println!("Parsed complex structure in {elapsed:?}");
+                    println!("Parsed complex structure in {:?}", elapsed);
                 }
             }
-            Err(e) => println!("Parsing error: {e}"),
+            Err(e) => println!("Parsing error: {}", e),
         },
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
@@ -614,7 +617,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n500\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => {
             // Should be able to work with valid parts despite some corruption
             let mut valid_count = 0;
@@ -627,10 +630,13 @@ endobj
                 }
             }
 
-            println!("Mixed content: {valid_count} valid, {invalid_count} invalid objects");
+            println!(
+                "Mixed content: {} valid, {} invalid objects",
+                valid_count, invalid_count
+            );
             assert!(valid_count >= 4, "Should parse most valid objects");
         }
-        Err(e) => println!("Parser error: {e}"),
+        Err(e) => println!("Parser error: {}", e),
     }
 }
 
