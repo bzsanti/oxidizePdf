@@ -111,8 +111,8 @@ fn test_annotations_document_integration() {
     let mut document = Document::new();
     document.set_title("Annotations Integration Test");
 
-    let mut page1 = Page::a4();
-    let mut page2 = Page::letter();
+    let page1 = Page::a4();
+    let page2 = Page::letter();
 
     let mut manager = AnnotationManager::new();
 

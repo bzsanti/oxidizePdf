@@ -4,7 +4,6 @@ use oxidize_pdf::graphics::{
     CalGrayColorSpace, CalRgbColorSpace, CalibratedColor, GraphicsContext,
 };
 use oxidize_pdf::objects::Object;
-use oxidize_pdf::Document;
 
 #[test]
 fn test_cal_gray_construction() {

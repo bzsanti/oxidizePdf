@@ -13,12 +13,12 @@
 //! - Field lookup and retrieval efficiency
 
 use oxidize_pdf::forms::{
-    AcroForm, CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormField, FormManager,
-    ListBox, PushButton, RadioButton, TextField, Widget, WidgetAppearance,
+    CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormManager, PushButton, RadioButton,
+    TextField, Widget, WidgetAppearance,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::graphics::Color;
-use oxidize_pdf::objects::{Dictionary, Object, ObjectReference};
+use oxidize_pdf::objects::Object;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;

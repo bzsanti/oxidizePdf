@@ -41,7 +41,7 @@ fn test_custom_font_loading_from_file() -> Result<()> {
 #[test]
 #[ignore] // Ignore for now as create_minimal_ttf_data is complex
 fn test_custom_font_loading_from_bytes() -> Result<()> {
-    let mut doc = Document::new();
+    let doc = Document::new();
 
     // Create dummy font data for testing
     // In real use, this would be actual TTF/OTF data
@@ -76,7 +76,7 @@ fn test_custom_font_with_text() -> Result<()> {
 
 #[test]
 fn test_multiple_custom_fonts() {
-    let mut doc = Document::new();
+    let doc = Document::new();
 
     // Test that document starts with no custom fonts
     assert_eq!(doc.custom_font_names().len(), 0);

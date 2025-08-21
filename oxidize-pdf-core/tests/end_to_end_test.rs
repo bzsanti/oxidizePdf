@@ -11,7 +11,6 @@ use oxidize_pdf::writer::PdfWriter;
 use oxidize_pdf::{Document, Page, Result};
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Cursor};
-use std::path::Path;
 use tempfile::TempDir;
 
 /// Helper to create a test PDF in memory
@@ -52,7 +51,7 @@ fn test_create_and_parse_simple_pdf() -> Result<()> {
     let pdf_bytes = create_test_pdf_bytes("Simple Test", 1)?;
 
     // Parse it back
-    let mut reader = BufReader::new(Cursor::new(&pdf_bytes));
+    let reader = BufReader::new(Cursor::new(&pdf_bytes));
     let mut parsed = PdfReader::new(reader)?;
 
     // Verify basic structure
@@ -194,8 +193,8 @@ fn test_pdf_metadata() -> Result<()> {
     writer.write_document(&mut document)?;
 
     // Parse and verify metadata
-    let mut reader = BufReader::new(Cursor::new(&buffer));
-    let mut parsed = PdfReader::new(reader)?;
+    let reader = BufReader::new(Cursor::new(&buffer));
+    let parsed = PdfReader::new(reader)?;
 
     // Metadata checking not available in current API
     // let info = parsed.get_info().expect("Should have info dictionary");
@@ -281,7 +280,7 @@ fn test_merge_pdfs() -> std::result::Result<(), Box<dyn std::error::Error>> {
     assert!(merged_content.starts_with(b"%PDF"));
 
     // Parse and check page count
-    let mut reader = BufReader::new(File::open(&output_path)?);
+    let reader = BufReader::new(File::open(&output_path)?);
     let mut parsed = PdfReader::new(reader)?;
     assert_eq!(parsed.page_count()?, 6); // 2 + 3 + 1 pages
 
@@ -367,19 +366,19 @@ fn test_pdf_compression() -> Result<()> {
 fn test_pdf_parse_error_handling() {
     // Test with invalid PDF
     let invalid_pdf = b"This is not a PDF file";
-    let mut reader = BufReader::new(Cursor::new(invalid_pdf));
+    let reader = BufReader::new(Cursor::new(invalid_pdf));
     let result = PdfReader::new(reader);
     assert!(result.is_err());
 
     // Test with truncated PDF
     let truncated_pdf = b"%PDF-1.4\n1 0 obj";
-    let mut reader = BufReader::new(Cursor::new(truncated_pdf));
+    let reader = BufReader::new(Cursor::new(truncated_pdf));
     let result = PdfReader::new(reader);
     assert!(result.is_err());
 
     // Test with empty input
     let empty = b"";
-    let mut reader = BufReader::new(Cursor::new(empty));
+    let reader = BufReader::new(Cursor::new(empty));
     let result = PdfReader::new(reader);
     assert!(result.is_err());
 }
@@ -457,7 +456,7 @@ fn test_complex_document_workflow() -> std::result::Result<(), Box<dyn std::erro
 
     // Step 5: Verify final result
     assert!(merged_path.exists());
-    let mut reader = BufReader::new(File::open(&merged_path)?);
+    let reader = BufReader::new(File::open(&merged_path)?);
     let mut parsed = PdfReader::new(reader)?;
 
     // Should have pages from first two chunks

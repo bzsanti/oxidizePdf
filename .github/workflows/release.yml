@@ -9,9 +9,49 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # First verify that all CI checks are passing
+  check-ci-status:
+    name: Verify CI Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Check CI status for this commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Checking CI status for commit: $COMMIT_SHA"
+          
+          # Get all check runs for this commit
+          gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs \
+            --jq '.check_runs[] | select(.name != "Verify CI Status") | {name: .name, status: .status, conclusion: .conclusion}' > check_results.json
+          
+          # Display results
+          echo "CI Check Results:"
+          cat check_results.json
+          
+          # Check if any required checks failed
+          FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure") | .name' | wc -l)
+          PENDING_CHECKS=$(cat check_results.json | jq -r 'select(.status == "in_progress" or .status == "queued") | .name' | wc -l)
+          
+          if [ "$FAILED_CHECKS" -gt 0 ]; then
+            echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
+            exit 1
+          fi
+          
+          if [ "$PENDING_CHECKS" -gt 0 ]; then
+            echo "⏳ Release blocked: $PENDING_CHECKS CI checks still pending"
+            exit 1
+          fi
+          
+          echo "✅ All CI checks passed. Release can proceed."
+
   release:
     name: Release
     runs-on: ubuntu-latest
+    needs: check-ci-status
     permissions:
       contents: write
       packages: write
@@ -169,31 +209,57 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
       # Create PR to merge to main branch after successful release
+      - name: Prepare merge to main
+        run: |
+          echo "Preparing merge to main branch..."
+          
+          # Check if main has different files that could conflict
+          git fetch origin main
+          
+          # Create a clean branch from current state
+          git checkout -b release-merge-v${{ steps.get_version.outputs.VERSION }}
+          
+          # Ensure we have all changes committed
+          git add -A
+          
+          # Only commit if there are changes
+          if ! git diff --cached --exit-code; then
+            git commit -m "chore: finalize release v${{ steps.get_version.outputs.VERSION }}" || echo "No changes to commit"
+          fi
+          
+          git push origin release-merge-v${{ steps.get_version.outputs.VERSION }}
+      
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: merge release v${{ steps.get_version.outputs.VERSION }} to main"
-          title: "🚀 Release v${{ steps.get_version.outputs.VERSION }}"
-          body: |
-            ## Automated Release Merge
-            
-            This PR merges the release changes from development to main after successful release of v${{ steps.get_version.outputs.VERSION }}.
-            
-            ### Release Details:
-            - 📦 Packages published to crates.io
-            - 🏷️ GitHub Release created
-            - ✅ All tests passed
-            
-            ### Next Steps:
-            1. Review the changes
-            2. Approve and merge this PR
-            3. The release cycle will be complete
-            
-            ---
-            *This is an automated PR created by the release workflow.*
-          branch: release-v${{ steps.get_version.outputs.VERSION }}
-          base: main
-          labels: |
-            release
-            automated
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head release-merge-v${{ steps.get_version.outputs.VERSION }} \
+            --title "🚀 Release v${{ steps.get_version.outputs.VERSION }} - Automated merge" \
+            --body "$(cat <<'EOF'
+          ## Automated Release Merge
+          
+          This PR merges the release changes after successful release of v${{ steps.get_version.outputs.VERSION }}.
+          
+          ### Release Details:
+          - ✅ CI checks passed before release
+          - 📦 Packages published to crates.io
+          - 🏷️ GitHub Release created
+          - ⚡ All tests passed
+          
+          ### What's included:
+          - Version bumps and changelog updates
+          - Code quality improvements (warning fixes)
+          - Documentation updates
+          
+          ### Next Steps:
+          1. Review the changes
+          2. Approve and merge this PR
+          3. The release cycle will be complete
+          
+          ---
+          *This is an automated PR created after successful release to crates.io*
+          EOF
+          )" \
+            --label release,automated

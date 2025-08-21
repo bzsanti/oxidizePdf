@@ -764,7 +764,7 @@ mod tests {
     #[test]
     fn test_page_tree_node_to_dict_page() {
         let tree = PageTree::new();
-        let mut page_node = PageNode {
+        let page_node = PageNode {
             contents: vec![Object::Integer(1)],
             attributes: InheritableAttributes {
                 media_box: Some(Rectangle::new(

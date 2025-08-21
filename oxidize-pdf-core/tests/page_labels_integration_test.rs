@@ -1,10 +1,9 @@
 //! Integration tests for page labels module
 //! Tests real-world page labeling scenarios
 
-use oxidize_pdf::page_labels::{PageLabel, PageLabelBuilder, PageLabelStyle, PageLabelTree};
+use oxidize_pdf::page_labels::{PageLabel, PageLabelBuilder, PageLabelTree};
 use oxidize_pdf::writer::PdfWriter;
 use oxidize_pdf::{Document, Page};
-use std::io::Cursor;
 
 #[test]
 fn test_book_with_front_matter() {

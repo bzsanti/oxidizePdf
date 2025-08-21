@@ -50,7 +50,7 @@
 //! ```
 
 #[cfg(test)]
-use super::objects::{PdfArray, PdfName, PdfString};
+use super::objects::{PdfArray, PdfName};
 use super::objects::{PdfDictionary, PdfObject};
 use super::page_tree::{PageTree, ParsedPage};
 use super::reader::PdfReader;

@@ -14,12 +14,10 @@
 //! - Cross-field dependencies and calculations
 
 use oxidize_pdf::forms::{
-    AcroForm, CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormField, FormManager,
-    ListBox, PushButton, RadioButton, TextField, Widget, WidgetAppearance,
+    ComboBox, FieldFlags, FieldOptions, FormField, FormManager, TextField, Widget,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
-use oxidize_pdf::graphics::Color;
-use oxidize_pdf::objects::{Dictionary, Object, ObjectReference};
+use oxidize_pdf::objects::{Dictionary, Object};
 
 /// Test 1: Basic field validation constraints
 #[test]

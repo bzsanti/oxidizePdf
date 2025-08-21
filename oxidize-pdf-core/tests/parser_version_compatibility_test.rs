@@ -7,8 +7,7 @@
 //! - Hybrid reference formats
 //! - Unicode and encoding edge cases
 
-use oxidize_pdf::parser::{PdfDocument, PdfObject, PdfReader};
-use oxidize_pdf::Document;
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use std::io::Cursor;
 
 /// Test 1: PDF versions from 1.0 to 2.0
@@ -543,7 +542,6 @@ endobj
 
 #[cfg(test)]
 mod version_tests {
-    use super::*;
 
     /// Meta-test to ensure version compatibility tests work
     #[test]

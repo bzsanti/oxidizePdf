@@ -7,8 +7,7 @@
 //! - Resource exhaustion protection
 //! - Malicious PDF patterns
 
-use oxidize_pdf::parser::{PdfDocument, PdfObject, PdfReader};
-use oxidize_pdf::Document;
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use std::io::Cursor;
 use std::time::{Duration, Instant};
 
@@ -39,7 +38,7 @@ fn test_massive_dictionary() {
 
     let start = Instant::now();
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => match doc.get_object(1, 0) {
+        Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Parsed massive dictionary in {:?}", start.elapsed());
             }
@@ -76,7 +75,7 @@ fn test_massive_array() {
 
     let start = Instant::now();
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => match doc.get_object(1, 0) {
+        Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Parsed massive array in {:?}", start.elapsed());
             }
@@ -144,7 +143,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             // Should detect exponential expansion
             let start = Instant::now();
             let timeout = Duration::from_secs(5);
@@ -189,7 +188,7 @@ stream
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => match doc.get_object(1, 0) {
+        Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled potential zip bomb"),
             Err(e) => println!("Zip bomb protection: {}", e),
         },
@@ -227,7 +226,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             // Should be able to read good objects even if one is corrupted
             let mut successful_reads = 0;
             let mut failed_reads = 0;
@@ -288,7 +287,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             for i in 2..=3 {
                 match doc.get_object(i, 0) {
                     Ok(_) => println!("Read content stream {}", i),
@@ -332,7 +331,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => match doc.get_object(1, 0) {
+        Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed Type3 font with invalid program"),
             Err(e) => println!("Font parsing error: {}", e),
         },
@@ -376,7 +375,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             // Should detect recursion when trying to render
             println!("Parser created with recursive forms");
             match doc.get_object(1, 0) {
@@ -448,7 +447,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             // Should parse but not execute JavaScript
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
@@ -488,7 +487,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             // Should handle circular outline references
             match doc.get_object(1, 0) {
                 Ok(_) => println!("Parsed invalid outline hierarchy"),
@@ -522,7 +521,7 @@ stream
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => match doc.get_object(1, 0) {
+        Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed corrupted image data"),
             Err(e) => println!("Image data error: {}", e),
         },
@@ -561,7 +560,7 @@ fn test_parser_timeout() {
     let timeout = Duration::from_secs(5);
 
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => match doc.get_object(1, 0) {
+        Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => {
                 let elapsed = start.elapsed();
                 if elapsed > timeout {
@@ -619,7 +618,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
-        Ok(mut doc) => {
+        Ok(doc) => {
             // Should be able to work with valid parts despite some corruption
             let mut valid_count = 0;
             let mut invalid_count = 0;
@@ -643,7 +642,6 @@ endobj
 
 #[cfg(test)]
 mod stress_tests {
-    use super::*;
 
     /// Meta-test for stress test coverage
     #[test]
