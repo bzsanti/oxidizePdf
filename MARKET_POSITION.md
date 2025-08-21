@@ -102,19 +102,19 @@ We are **NOT** trying to compete with iText or Aspose. We are the open-source ch
 - GitHub Stars: ~500
 - Weekly Downloads: ~1,000
 - Production Users: ~10 known
-- ISO Compliance: 60%
+- PDF Generation: Basic functionality
 
 ### Target (End 2025)
 - GitHub Stars: 2,000
 - Weekly Downloads: 5,000
 - Production Users: 50+
-- ISO Compliance: 65%
+- PDF Features: Enhanced functionality
 
 ### Target (End 2026)
 - GitHub Stars: 5,000
 - Weekly Downloads: 20,000
 - Production Users: 200+
-- ISO Compliance: 75%
+- PDF Features: Advanced functionality
 - .NET Package Downloads: 10,000/week
 
 ## 🎭 Competitive Positioning
@@ -150,10 +150,10 @@ We are **NOT** trying to compete with iText or Aspose. We are the open-source ch
 "oxidize-pdf is a modern PDF library in Rust - think PDFSharp but faster, safer, and truly cross-platform."
 
 ### 30 Seconds
-"oxidize-pdf generates PDFs with zero dependencies, guaranteed memory safety, and blazing performance. At 60% ISO compliance, we match PDFSharp's capabilities while being 2x faster and 3x smaller. Perfect for microservices, embedded systems, and high-performance applications."
+"oxidize-pdf generates PDFs with zero dependencies, guaranteed memory safety, and blazing performance. With basic PDF functionality, we provide core features while being 2x faster and 3x smaller. Perfect for microservices, embedded systems, and high-performance applications."
 
 ### 60 Seconds
-"oxidize-pdf is reshaping PDF generation with Rust's safety and performance. We've achieved 60% ISO compliance - on par with PDFSharp - but with zero dependencies, a 5MB binary, and 215 PDFs/second throughput. While others bundle Chrome or require runtime environments, we deliver a single binary that runs anywhere. We're not trying to be iText; we're building the modern open-source choice for developers who value simplicity, safety, and speed."
+"oxidize-pdf is reshaping PDF generation with Rust's safety and performance. We provide basic PDF generation with zero dependencies, a 5MB binary, and 215 PDFs/second throughput. While others bundle Chrome or require runtime environments, we deliver a single binary that runs anywhere. We're not trying to be iText; we're building the modern open-source choice for developers who value simplicity, safety, and speed."
 
 ## 🎖️ Proof Points
 
@@ -175,7 +175,7 @@ We are **NOT** trying to compete with iText or Aspose. We are the open-source ch
 ## 📢 Key Messages
 
 ### For Technical Decision Makers
-1. "Production-ready at 60% ISO compliance"
+1. "Production-ready for basic PDF generation"
 2. "Same features as PDFSharp, better performance"
 3. "Future-proof with Rust ecosystem"
 

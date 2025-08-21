@@ -25,7 +25,7 @@ lazy_static = { workspace = true }
 flate2 = { workspace = true, optional = true }
 
 # Serialization
-serde = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, optional = true }
 
 # Logging
@@ -47,6 +47,12 @@ num_cpus = "1.16"
 # Regular expressions for validation
 regex = "1.10"
 
+# TOML parsing for ISO compliance matrix
+toml = "0.8"
+
+# Temporary files for external validation
+tempfile = "3.8"
+
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -62,7 +68,6 @@ tesseract = { version = "0.15", optional = true }
 leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
-tempfile = "3.8"
 criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1.7"
 
@@ -89,6 +94,22 @@ path = "../examples/src/button_fields_demo.rs"
 [[example]]
 name = "calibrated_colors_demo"
 path = "../examples/src/calibrated_colors_demo.rs"
+
+[[example]]
+name = "generate_compliance_report"
+path = "../examples/src/generate_compliance_report.rs"
+
+[[example]]
+name = "parse_iso_spec"
+path = "../examples/src/parse_iso_spec.rs"
+
+[[example]]
+name = "expand_iso_matrix"
+path = "../examples/src/expand_iso_matrix.rs"
+
+[[example]]
+name = "compare_iso_matrices"
+path = "../examples/src/compare_iso_matrices.rs"
 
 # Temporarily disabled examples with compilation errors
 # [[example]]
@@ -126,4 +147,4 @@ ocr-full = ["ocr-tesseract"]
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
 
 # Semantic marking (Community level - basic tagging)
-semantic = ["dep:serde", "dep:serde_json"]
+semantic = ["dep:serde_json"]

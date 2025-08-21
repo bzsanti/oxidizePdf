@@ -58,6 +58,10 @@ pub struct Document {
     pub(crate) embedded_fonts: HashMap<String, ObjectId>,
     /// Characters used in the document (for font subsetting)
     pub(crate) used_characters: HashSet<char>,
+    /// Action to execute when the document is opened
+    pub(crate) open_action: Option<crate::actions::Action>,
+    /// Viewer preferences for controlling document display
+    pub(crate) viewer_preferences: Option<crate::viewer_preferences::ViewerPreferences>,
 }
 
 /// Metadata for a PDF document.
@@ -117,6 +121,8 @@ impl Document {
             custom_fonts: FontCache::new(),
             embedded_fonts: HashMap::new(),
             used_characters: HashSet::new(),
+            open_action: None,
+            viewer_preferences: None,
         }
     }
 
@@ -174,6 +180,29 @@ impl Document {
     /// Check if document is encrypted
     pub fn is_encrypted(&self) -> bool {
         self.encryption.is_some()
+    }
+
+    /// Set the action to execute when the document is opened
+    pub fn set_open_action(&mut self, action: crate::actions::Action) {
+        self.open_action = Some(action);
+    }
+
+    /// Get the document open action
+    pub fn open_action(&self) -> Option<&crate::actions::Action> {
+        self.open_action.as_ref()
+    }
+
+    /// Set viewer preferences for controlling document display
+    pub fn set_viewer_preferences(
+        &mut self,
+        preferences: crate::viewer_preferences::ViewerPreferences,
+    ) {
+        self.viewer_preferences = Some(preferences);
+    }
+
+    /// Get viewer preferences
+    pub fn viewer_preferences(&self) -> Option<&crate::viewer_preferences::ViewerPreferences> {
+        self.viewer_preferences.as_ref()
     }
 
     /// Set document outline (bookmarks)
