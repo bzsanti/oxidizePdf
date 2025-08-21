@@ -59,7 +59,7 @@ proptest! {
     #[test]
     fn test_object_id_display_parse_roundtrip(id in object_id_strategy()) {
         // Test that ObjectId can be displayed and the format is correct
-        let display = format!("{}", id);
+        let display = format!("{id}");
         let expected = format!("{} {} R", id.number(), id.generation());
         prop_assert_eq!(display, expected);
     }
@@ -95,9 +95,9 @@ proptest! {
         // Verify all components are clamped to [0.0, 1.0]
         match color {
             Color::Rgb(r_clamped, g_clamped, b_clamped) => {
-                prop_assert!(r_clamped >= 0.0 && r_clamped <= 1.0);
-                prop_assert!(g_clamped >= 0.0 && g_clamped <= 1.0);
-                prop_assert!(b_clamped >= 0.0 && b_clamped <= 1.0);
+                prop_assert!((0.0..=1.0).contains(&r_clamped));
+                prop_assert!((0.0..=1.0).contains(&g_clamped));
+                prop_assert!((0.0..=1.0).contains(&b_clamped));
 
                 // Verify clamping logic
                 prop_assert_eq!(r_clamped, r.clamp(0.0, 1.0));
@@ -114,7 +114,7 @@ proptest! {
 
         match color {
             Color::Gray(clamped) => {
-                prop_assert!(clamped >= 0.0 && clamped <= 1.0);
+                prop_assert!((0.0..=1.0).contains(&clamped));
                 prop_assert_eq!(clamped, value.clamp(0.0, 1.0));
             }
             _ => prop_assert!(false, "Expected Gray color"),
@@ -127,10 +127,10 @@ proptest! {
 
         match color {
             Color::Cmyk(c_clamped, m_clamped, y_clamped, k_clamped) => {
-                prop_assert!(c_clamped >= 0.0 && c_clamped <= 1.0);
-                prop_assert!(m_clamped >= 0.0 && m_clamped <= 1.0);
-                prop_assert!(y_clamped >= 0.0 && y_clamped <= 1.0);
-                prop_assert!(k_clamped >= 0.0 && k_clamped <= 1.0);
+                prop_assert!((0.0..=1.0).contains(&c_clamped));
+                prop_assert!((0.0..=1.0).contains(&m_clamped));
+                prop_assert!((0.0..=1.0).contains(&y_clamped));
+                prop_assert!((0.0..=1.0).contains(&k_clamped));
 
                 prop_assert_eq!(c_clamped, c.clamp(0.0, 1.0));
                 prop_assert_eq!(m_clamped, m.clamp(0.0, 1.0));
@@ -250,7 +250,7 @@ mod regression_tests {
     #[test]
     fn test_object_id_zero_generation() {
         let id = ObjectId::new(42, 0);
-        assert_eq!(format!("{}", id), "42 0 R");
+        assert_eq!(format!("{id}"), "42 0 R");
     }
 
     #[test]

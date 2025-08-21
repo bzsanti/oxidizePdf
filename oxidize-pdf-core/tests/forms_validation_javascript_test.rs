@@ -1161,7 +1161,7 @@ fn test_javascript_action_performance() {
     // Create many fields with JavaScript actions
     for i in 0..field_count {
         let mut field_dict = Dictionary::new();
-        field_dict.set("T", Object::String(format!("js_field_{}", i)));
+        field_dict.set("T", Object::String(format!("js_field_{i}")));
         field_dict.set("FT", Object::Name("Tx".to_string()));
 
         let mut aa_dict = Dictionary::new();
@@ -1170,7 +1170,7 @@ fn test_javascript_action_performance() {
         let validate_js = format!(
             r#"
             var value = event.value;
-            var fieldNumber = {};
+            var fieldNumber = {i};
             
             // Complex validation logic
             if (value != "") {{
@@ -1196,14 +1196,13 @@ fn test_javascript_action_performance() {
                 }}
                 
                 if (!isValid) {{
-                    app.alert("Field {}: " + errors.join(", "));
+                    app.alert("Field {i}: " + errors.join(", "));
                     event.rc = false;
                 }} else {{
                     event.rc = true;
                 }}
             }}
-        "#,
-            i, i
+        "#
         );
 
         aa_dict.set("V", Object::String(validate_js));
@@ -1221,9 +1220,7 @@ fn test_javascript_action_performance() {
     // Check processing performance
     assert!(
         processing_time.as_secs() < 2,
-        "Processing {} JavaScript actions took too long: {:?}",
-        field_count,
-        processing_time
+        "Processing {field_count} JavaScript actions took too long: {processing_time:?}"
     );
 
     // Verify a few random fields have their JavaScript preserved
@@ -1239,9 +1236,6 @@ fn test_javascript_action_performance() {
         }
     }
 
-    println!(
-        "Processed {} fields with JavaScript actions in {:?}",
-        field_count, processing_time
-    );
+    println!("Processed {field_count} fields with JavaScript actions in {processing_time:?}");
     println!("JavaScript action performance test completed");
 }

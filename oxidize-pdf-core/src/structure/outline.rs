@@ -391,7 +391,7 @@ mod tests {
             italic: true,
             bold: false,
         };
-        let debug_str = format!("{:?}", flags);
+        let debug_str = format!("{flags:?}");
         assert!(debug_str.contains("OutlineFlags"));
         assert!(debug_str.contains("italic: true"));
         assert!(debug_str.contains("bold: false"));
@@ -458,7 +458,7 @@ mod tests {
             .bold()
             .with_color(Color::rgb(1.0, 0.0, 0.0));
 
-        let debug_str = format!("{:?}", item);
+        let debug_str = format!("{item:?}");
         assert!(debug_str.contains("OutlineItem"));
         assert!(debug_str.contains("Test Item"));
 
@@ -663,7 +663,7 @@ mod tests {
         match dict.get("Dest") {
             Some(Object::Array(arr)) => {
                 // Should be the destination array
-                assert!(arr.len() > 0);
+                assert!(!arr.is_empty());
             }
             _ => panic!("Dest should be an array"),
         }
@@ -678,7 +678,7 @@ mod tests {
         match dict.get("C") {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 3);
-                assert_eq!(arr.get(0), Some(&Object::Real(1.0)));
+                assert_eq!(arr.first(), Some(&Object::Real(1.0)));
                 assert_eq!(arr.get(1), Some(&Object::Real(0.0)));
                 assert_eq!(arr.get(2), Some(&Object::Real(0.0)));
             }
@@ -696,7 +696,7 @@ mod tests {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 3);
                 // Gray color should be converted to RGB with equal components
-                assert_eq!(arr.get(0), Some(&Object::Real(0.5)));
+                assert_eq!(arr.first(), Some(&Object::Real(0.5)));
                 assert_eq!(arr.get(1), Some(&Object::Real(0.5)));
                 assert_eq!(arr.get(2), Some(&Object::Real(0.5)));
             }
@@ -714,7 +714,7 @@ mod tests {
             Some(Object::Array(arr)) => {
                 assert_eq!(arr.len(), 3);
                 // CMYK (0,1,1,0) should convert to RGB (1,0,0) - red
-                assert_eq!(arr.get(0), Some(&Object::Real(1.0)));
+                assert_eq!(arr.first(), Some(&Object::Real(1.0)));
                 assert_eq!(arr.get(1), Some(&Object::Real(0.0)));
                 assert_eq!(arr.get(2), Some(&Object::Real(0.0)));
             }

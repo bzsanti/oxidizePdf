@@ -36,7 +36,7 @@ fn test_complete_pdf_creation_workflow() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 16.0)
             .at(50.0, 750.0)
-            .write(&format!("Page {} - Integration Test", page_num))?;
+            .write(&format!("Page {page_num} - Integration Test"))?;
 
         page.text()
             .set_font(Font::Helvetica, 12.0)
@@ -159,7 +159,7 @@ fn test_custom_writer_config_workflow() -> Result<()> {
     ];
 
     for (i, config) in configs.into_iter().enumerate() {
-        let test_path = temp_dir.path().join(format!("config_test_{}.pdf", i));
+        let test_path = temp_dir.path().join(format!("config_test_{i}.pdf"));
 
         // Test saving with config
         doc.save_with_config(&test_path, config.clone())?;
@@ -199,11 +199,11 @@ fn test_multi_format_content_workflow() -> Result<()> {
 
     let mut y_pos = 750.0;
     for (font, size) in fonts {
-        let font_name = format!("{:?}", font);
+        let font_name = format!("{font:?}");
         page.text()
             .set_font(font, size)
             .at(50.0, y_pos)
-            .write(&format!("Text in {} at {} points", font_name, size))?;
+            .write(&format!("Text in {font_name} at {size} points"))?;
         y_pos -= 30.0;
     }
 
@@ -280,7 +280,7 @@ fn test_large_document_workflow() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .at(50.0, 750.0)
-            .write(&format!("Large Document - Page {}", page_num))?;
+            .write(&format!("Large Document - Page {page_num}"))?;
 
         // Add multiple text blocks
         for i in 0..10 {
@@ -358,7 +358,7 @@ fn test_compression_workflow() -> Result<()> {
     assert!(uncompressed_path.exists());
 
     // Verify compression setting is respected
-    assert!(doc.get_compress() == false); // Last setting
+    assert!(!doc.get_compress()); // Last setting
 
     // Both files should be substantial but compressed might be smaller
     assert!(compressed_size > 500);
@@ -480,8 +480,8 @@ fn test_concurrent_operations_workflow() -> Result<()> {
     // Create multiple documents
     for doc_num in 0..5 {
         let mut doc = Document::new();
-        doc.set_title(&format!("Concurrent Document {}", doc_num));
-        doc.set_author(&format!("Author {}", doc_num));
+        doc.set_title(format!("Concurrent Document {doc_num}"));
+        doc.set_author(format!("Author {doc_num}"));
 
         // Each document gets different content
         for page_num in 0..3 {
@@ -489,7 +489,7 @@ fn test_concurrent_operations_workflow() -> Result<()> {
             page.text()
                 .set_font(Font::Helvetica, 12.0)
                 .at(50.0, 750.0)
-                .write(&format!("Doc {} Page {}", doc_num, page_num))?;
+                .write(&format!("Doc {doc_num} Page {page_num}"))?;
 
             // Unique color per document
             let color = Color::rgb((doc_num as f64) / 5.0, 0.5, 1.0 - (doc_num as f64) / 5.0);
@@ -506,7 +506,7 @@ fn test_concurrent_operations_workflow() -> Result<()> {
 
     // Save all documents
     for (i, mut doc) in documents.into_iter().enumerate() {
-        let file_path = temp_dir.path().join(format!("concurrent_{}.pdf", i));
+        let file_path = temp_dir.path().join(format!("concurrent_{i}.pdf"));
         doc.save(&file_path)?;
 
         assert!(file_path.exists());

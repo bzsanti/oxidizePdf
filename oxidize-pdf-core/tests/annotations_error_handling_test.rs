@@ -155,7 +155,7 @@ fn test_quad_points_invalid_rectangles() {
     }
 
     // Test with extreme coordinate values in rectangles
-    let extreme_rects = vec![
+    let extreme_rects = [
         Rectangle::new(
             Point::new(f64::MAX, f64::MIN),
             Point::new(f64::INFINITY, f64::NEG_INFINITY),
@@ -170,8 +170,8 @@ fn test_quad_points_invalid_rectangles() {
         });
 
         match result_extreme {
-            Ok(_) => println!("QuadPoints handled extreme rectangle {} gracefully", i),
-            Err(_) => println!("QuadPoints panicked on extreme rectangle {}", i),
+            Ok(_) => println!("QuadPoints handled extreme rectangle {i} gracefully"),
+            Err(_) => println!("QuadPoints panicked on extreme rectangle {i}"),
         }
     }
 
@@ -362,7 +362,7 @@ fn test_annotation_memory_pressure() {
         let large_content = "Large content ".repeat(1000); // ~14KB per annotation
         let annotation = Annotation::new(AnnotationType::FreeText, rect)
             .with_contents(large_content)
-            .with_name(format!("large_annotation_{}", i));
+            .with_name(format!("large_annotation_{i}"));
 
         annotations.push(annotation);
     }
@@ -379,7 +379,7 @@ fn test_annotation_memory_pressure() {
         }
 
         if let Some(Object::String(name)) = dict.get("NM") {
-            assert_eq!(name, &format!("large_annotation_{}", i));
+            assert_eq!(name, &format!("large_annotation_{i}"));
         }
     }
 
@@ -506,7 +506,7 @@ fn test_concurrent_annotation_operations() {
                 );
 
                 let annotation = Annotation::new(AnnotationType::Text, rect)
-                    .with_contents(format!("Thread {} annotation {}", thread_id, i));
+                    .with_contents(format!("Thread {thread_id} annotation {i}"));
 
                 if let Ok(mut mgr) = manager_clone.lock() {
                     mgr.add_annotation(page_ref, annotation);

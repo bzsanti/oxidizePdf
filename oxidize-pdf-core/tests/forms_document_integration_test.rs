@@ -62,7 +62,7 @@ fn test_form_document_catalog_integration() {
         Ok(_) => {
             assert!(pdf_path.exists());
             let file_size = fs::metadata(&pdf_path).unwrap().len();
-            println!("PDF file created with {} bytes", file_size);
+            println!("PDF file created with {file_size} bytes");
 
             // NOTE: This test identifies a critical integration gap
             // The file is created but may not contain the forms data
@@ -75,7 +75,7 @@ fn test_form_document_catalog_integration() {
         }
         Err(e) => {
             // For now, we document what we expect vs what we get
-            println!("Form document save failed (expected for now): {}", e);
+            println!("Form document save failed (expected for now): {e}");
             // This test identifies the integration gap - forms may not be properly
             // integrated into document structure yet
         }
@@ -187,13 +187,10 @@ fn test_multiple_field_types_document_integration() {
             let file_size = fs::metadata(&pdf_path).unwrap().len();
             assert!(file_size > 500, "Complex form PDF should be substantial");
 
-            println!(
-                "Multi-field form document created successfully: {} bytes",
-                file_size
-            );
+            println!("Multi-field form document created successfully: {file_size} bytes");
         }
         Err(e) => {
-            println!("Multi-field form save failed (documenting gap): {}", e);
+            println!("Multi-field form save failed (documenting gap): {e}");
             // This identifies where form integration needs work
         }
     }
@@ -251,13 +248,13 @@ fn test_form_field_options_document_integration() {
                         // TODO: Verify form structure in parsed document
                     }
                     Err(e) => {
-                        println!("Form document parsing failed: {}", e);
+                        println!("Form document parsing failed: {e}");
                     }
                 }
             }
         }
         Err(e) => {
-            println!("Styled form save failed: {}", e);
+            println!("Styled form save failed: {e}");
         }
     }
 }
@@ -291,7 +288,7 @@ fn test_form_document_roundtrip() {
         match doc.save(&pdf_path) {
             Ok(_) => println!("Roundtrip form saved successfully"),
             Err(e) => {
-                println!("Save failed in roundtrip test: {}", e);
+                println!("Save failed in roundtrip test: {e}");
                 return; // Can't continue test without saved file
             }
         }
@@ -316,13 +313,13 @@ fn test_form_document_roundtrip() {
                         );
                     }
                     Err(e) => {
-                        println!("Roundtrip document parsing failed: {}", e);
+                        println!("Roundtrip document parsing failed: {e}");
                         panic!("Critical: Document with forms cannot be parsed back");
                     }
                 }
             }
             Err(e) => {
-                println!("Failed to read roundtrip file: {}", e);
+                println!("Failed to read roundtrip file: {e}");
             }
         }
     } else {
@@ -342,8 +339,8 @@ fn test_large_form_document_integration() {
     // Create 50 form fields to test scalability
     let fields_count = 50;
     for i in 0..fields_count {
-        let field_name = format!("field_{}", i);
-        let field_value = format!("value_{}", i);
+        let field_name = format!("field_{i}");
+        let field_value = format!("value_{i}");
 
         let field = TextField::new(field_name)
             .with_value(field_value)
@@ -373,20 +370,16 @@ fn test_large_form_document_integration() {
     match doc.save(&pdf_path) {
         Ok(_) => {
             let save_time = start_time.elapsed();
-            println!(
-                "Large form ({} fields) saved in {:?}",
-                fields_count, save_time
-            );
+            println!("Large form ({fields_count} fields) saved in {save_time:?}");
 
             // Verify reasonable performance (should complete in under 5 seconds)
             assert!(
                 save_time.as_secs() < 5,
-                "Large form save took too long: {:?}",
-                save_time
+                "Large form save took too long: {save_time:?}"
             );
 
             let file_size = fs::metadata(&pdf_path).unwrap().len();
-            println!("Large form file size: {} bytes", file_size);
+            println!("Large form file size: {file_size} bytes");
 
             // File should be substantial but not excessive
             assert!(
@@ -395,12 +388,11 @@ fn test_large_form_document_integration() {
             );
             assert!(
                 file_size < 1_000_000,
-                "Large form shouldn't be excessive: {} bytes",
-                file_size
+                "Large form shouldn't be excessive: {file_size} bytes"
             );
         }
         Err(e) => {
-            println!("Large form save failed: {}", e);
+            println!("Large form save failed: {e}");
         }
     }
 }
@@ -447,7 +439,7 @@ fn test_form_appearance_document_integration() {
             assert!(file_size > 500, "Appearance form should have content");
         }
         Err(e) => {
-            println!("Appearance form save failed: {}", e);
+            println!("Appearance form save failed: {e}");
         }
     }
 }
@@ -515,7 +507,7 @@ fn test_form_validation_document_integration() {
             println!("Validation form created successfully");
         }
         Err(e) => {
-            println!("Validation form save failed: {}", e);
+            println!("Validation form save failed: {e}");
         }
     }
 }
@@ -570,7 +562,7 @@ fn test_form_calculation_order_document() {
             println!("Calculation form created successfully");
         }
         Err(e) => {
-            println!("Calculation form save failed: {}", e);
+            println!("Calculation form save failed: {e}");
         }
     }
 }
@@ -613,7 +605,7 @@ fn test_form_javascript_document_integration() {
             // TODO: Add actual JavaScript action integration
         }
         Err(e) => {
-            println!("JavaScript form save failed: {}", e);
+            println!("JavaScript form save failed: {e}");
         }
     }
 }
@@ -689,7 +681,7 @@ fn test_multi_page_form_document() {
             assert!(file_size > 700, "Multi-page form should be substantial");
         }
         Err(e) => {
-            println!("Multi-page form save failed: {}", e);
+            println!("Multi-page form save failed: {e}");
         }
     }
 }
@@ -736,7 +728,7 @@ fn test_form_submission_document_integration() {
             // TODO: Add form data extraction verification
         }
         Err(e) => {
-            println!("Submission form save failed: {}", e);
+            println!("Submission form save failed: {e}");
         }
     }
 }
@@ -780,7 +772,7 @@ fn test_form_tab_order_document() {
             println!("Tab order form created successfully");
         }
         Err(e) => {
-            println!("Tab order form save failed: {}", e);
+            println!("Tab order form save failed: {e}");
         }
     }
 }
@@ -819,7 +811,7 @@ fn test_form_encrypted_document_integration() {
             // This test would verify forms work with encrypted PDFs
         }
         Err(e) => {
-            println!("Encrypted form save failed: {}", e);
+            println!("Encrypted form save failed: {e}");
         }
     }
 }
@@ -873,7 +865,7 @@ fn test_form_reset_document_integration() {
             // TODO: Add reset functionality testing
         }
         Err(e) => {
-            println!("Reset form save failed: {}", e);
+            println!("Reset form save failed: {e}");
         }
     }
 }
@@ -992,7 +984,7 @@ fn test_complex_form_layout_document() {
             assert!(file_size > 800, "Complex form should be substantial");
         }
         Err(e) => {
-            println!("Complex layout form save failed: {}", e);
+            println!("Complex layout form save failed: {e}");
         }
     }
 }
@@ -1029,7 +1021,7 @@ fn test_form_tooltips_document_integration() {
             // TODO: Add tooltip/help text implementation
         }
         Err(e) => {
-            println!("Tooltip form save failed: {}", e);
+            println!("Tooltip form save failed: {e}");
         }
     }
 }
@@ -1063,7 +1055,7 @@ fn test_form_data_extraction_integration() {
         match doc.save(&pdf_path) {
             Ok(_) => println!("Extraction test form saved"),
             Err(e) => {
-                println!("Save failed: {}", e);
+                println!("Save failed: {e}");
                 return;
             }
         }
@@ -1081,7 +1073,7 @@ fn test_form_data_extraction_integration() {
                     println!("Form data extraction needs implementation");
                 }
                 Err(e) => {
-                    println!("Failed to load form document for extraction: {}", e);
+                    println!("Failed to load form document for extraction: {e}");
                 }
             }
         }
@@ -1132,7 +1124,7 @@ fn test_form_different_page_sizes() {
             println!("Mixed page sizes form created successfully");
         }
         Err(e) => {
-            println!("Mixed page sizes form save failed: {}", e);
+            println!("Mixed page sizes form save failed: {e}");
         }
     }
 }
@@ -1149,9 +1141,9 @@ fn test_form_creation_performance() {
     // Create many fields rapidly
     let field_count = 100;
     for i in 0..field_count {
-        let field_name = format!("perf_field_{}", i);
+        let field_name = format!("perf_field_{i}");
         let field = TextField::new(field_name)
-            .with_value(format!("Value {}", i))
+            .with_value(format!("Value {i}"))
             .with_max_length(50);
 
         let y_pos = 750.0 - (i as f64 * 7.0);
@@ -1164,13 +1156,12 @@ fn test_form_creation_performance() {
     }
 
     let creation_time = start_time.elapsed();
-    println!("Created {} fields in {:?}", field_count, creation_time);
+    println!("Created {field_count} fields in {creation_time:?}");
 
     // Should be reasonably fast
     assert!(
         creation_time.as_millis() < 1000,
-        "Field creation too slow: {:?}",
-        creation_time
+        "Field creation too slow: {creation_time:?}"
     );
     assert_eq!(form_manager.field_count(), field_count);
 
@@ -1183,17 +1174,16 @@ fn test_form_creation_performance() {
     match doc.save(&pdf_path) {
         Ok(_) => {
             let save_time = save_start.elapsed();
-            println!("Saved performance form in {:?}", save_time);
+            println!("Saved performance form in {save_time:?}");
 
             // Document save should also be reasonable
             assert!(
                 save_time.as_secs() < 10,
-                "Save took too long: {:?}",
-                save_time
+                "Save took too long: {save_time:?}"
             );
         }
         Err(e) => {
-            println!("Performance form save failed: {}", e);
+            println!("Performance form save failed: {e}");
         }
     }
 }
@@ -1210,9 +1200,9 @@ fn test_form_memory_usage() {
         let mut form_manager = FormManager::new();
 
         for j in 0..initial_field_count {
-            let field_name = format!("mem_test_{}_{}", i, j);
+            let field_name = format!("mem_test_{i}_{j}");
             let field = TextField::new(field_name)
-                .with_value(format!("Memory test value {} {}", i, j))
+                .with_value(format!("Memory test value {i} {j}"))
                 .with_max_length(100);
 
             let widget = Widget::new(Rectangle::new(
@@ -1297,7 +1287,7 @@ fn test_document_catalog_acroform_integration() {
             // TODO: Add verification that AcroForm appears in document catalog
         }
         Err(e) => {
-            println!("Catalog integration save failed: {}", e);
+            println!("Catalog integration save failed: {e}");
         }
     }
 }
@@ -1352,7 +1342,7 @@ fn test_cross_browser_form_compatibility() {
             // TODO: Add tests with different PDF specification versions
         }
         Err(e) => {
-            println!("Compatibility form save failed: {}", e);
+            println!("Compatibility form save failed: {e}");
         }
     }
 }
@@ -1378,7 +1368,7 @@ fn test_international_form_support() {
     ];
 
     for (i, (lang, text)) in international_texts.iter().enumerate() {
-        let field_name = format!("international_{}", lang);
+        let field_name = format!("international_{lang}");
         let field = TextField::new(field_name)
             .with_value(*text)
             .with_max_length(100);
@@ -1411,7 +1401,7 @@ fn test_international_form_support() {
             );
         }
         Err(e) => {
-            println!("International form save failed: {}", e);
+            println!("International form save failed: {e}");
         }
     }
 }
@@ -1469,7 +1459,7 @@ fn test_form_accessibility_features() {
             // TODO: Add accessibility metadata and structure
         }
         Err(e) => {
-            println!("Accessibility form save failed: {}", e);
+            println!("Accessibility form save failed: {e}");
         }
     }
 }
@@ -1579,7 +1569,7 @@ fn test_comprehensive_form_validation() {
             println!("Edge case validation needs implementation");
         }
         Err(e) => {
-            println!("Validation test save failed: {}", e);
+            println!("Validation test save failed: {e}");
             // Some validation errors might prevent document creation
             // This is actually good - it means validation is working
         }

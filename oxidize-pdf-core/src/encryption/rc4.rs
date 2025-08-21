@@ -159,7 +159,7 @@ mod tests {
     #[test]
     fn test_rc4_key_debug() {
         let key = Rc4Key::new(vec![1, 2, 3, 4, 5]);
-        let debug_str = format!("{:?}", key);
+        let debug_str = format!("{key:?}");
         assert!(debug_str.contains("Rc4Key"));
     }
 

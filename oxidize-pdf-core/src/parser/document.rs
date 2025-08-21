@@ -1175,7 +1175,7 @@ mod tests {
         pdf.extend_from_slice(b"trailer\n");
         pdf.extend_from_slice(b"<< /Size 4 /Root 1 0 R >>\n");
         pdf.extend_from_slice(b"startxref\n");
-        pdf.extend_from_slice(format!("{}\n", xref_pos).as_bytes());
+        pdf.extend_from_slice(format!("{xref_pos}\n").as_bytes());
         pdf.extend_from_slice(b"%%EOF\n");
 
         pdf
@@ -1217,15 +1217,15 @@ mod tests {
         pdf.extend_from_slice(b"xref\n");
         pdf.extend_from_slice(b"0 4\n");
         pdf.extend_from_slice(b"0000000000 65535 f \n");
-        pdf.extend_from_slice(format!("{:010} 00000 n \n", obj1_pos).as_bytes());
-        pdf.extend_from_slice(format!("{:010} 00000 n \n", obj2_pos).as_bytes());
-        pdf.extend_from_slice(format!("{:010} 00000 n \n", obj3_pos).as_bytes());
+        pdf.extend_from_slice(format!("{obj1_pos:010} 00000 n \n").as_bytes());
+        pdf.extend_from_slice(format!("{obj2_pos:010} 00000 n \n").as_bytes());
+        pdf.extend_from_slice(format!("{obj3_pos:010} 00000 n \n").as_bytes());
 
         // Trailer
         pdf.extend_from_slice(b"trailer\n");
         pdf.extend_from_slice(b"<< /Size 4 /Root 1 0 R /Info 3 0 R >>\n");
         pdf.extend_from_slice(b"startxref\n");
-        pdf.extend_from_slice(format!("{}\n", xref_pos).as_bytes());
+        pdf.extend_from_slice(format!("{xref_pos}\n").as_bytes());
         pdf.extend_from_slice(b"%%EOF\n");
 
         pdf
@@ -1713,7 +1713,7 @@ mod tests {
                 let mut pdf_data = Vec::new();
 
                 // PDF header
-                pdf_data.extend_from_slice(format!("%PDF-{}\n", version).as_bytes());
+                pdf_data.extend_from_slice(format!("%PDF-{version}\n").as_bytes());
 
                 // Track positions for xref
                 let obj1_pos = pdf_data.len();
@@ -1732,14 +1732,14 @@ mod tests {
                 pdf_data.extend_from_slice(b"xref\n");
                 pdf_data.extend_from_slice(b"0 3\n");
                 pdf_data.extend_from_slice(b"0000000000 65535 f \n");
-                pdf_data.extend_from_slice(format!("{:010} 00000 n \n", obj1_pos).as_bytes());
-                pdf_data.extend_from_slice(format!("{:010} 00000 n \n", obj2_pos).as_bytes());
+                pdf_data.extend_from_slice(format!("{obj1_pos:010} 00000 n \n").as_bytes());
+                pdf_data.extend_from_slice(format!("{obj2_pos:010} 00000 n \n").as_bytes());
 
                 // Trailer
                 pdf_data.extend_from_slice(b"trailer\n");
                 pdf_data.extend_from_slice(b"<< /Size 3 /Root 1 0 R >>\n");
                 pdf_data.extend_from_slice(b"startxref\n");
-                pdf_data.extend_from_slice(format!("{}\n", xref_pos).as_bytes());
+                pdf_data.extend_from_slice(format!("{xref_pos}\n").as_bytes());
                 pdf_data.extend_from_slice(b"%%EOF\n");
 
                 let cursor = Cursor::new(pdf_data);

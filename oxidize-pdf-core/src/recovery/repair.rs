@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn test_repair_strategy_debug_clone() {
         let strategy = RepairStrategy::RebuildXRef;
-        let debug_str = format!("{:?}", strategy);
+        let debug_str = format!("{strategy:?}");
         assert!(debug_str.contains("RebuildXRef"));
 
         let cloned = strategy.clone();
@@ -781,7 +781,7 @@ mod tests {
 
         // Write 15 pages worth of content
         for i in 0..15 {
-            file.write_all(format!("BT (Page {}) Tj ET ", i).as_bytes())
+            file.write_all(format!("BT (Page {i}) Tj ET ").as_bytes())
                 .unwrap();
         }
 
@@ -906,7 +906,7 @@ mod tests {
 
         for strategy in strategies {
             let result = repair_document(&temp_path, strategy.clone(), &options);
-            assert!(result.is_ok(), "Strategy {:?} failed", strategy);
+            assert!(result.is_ok(), "Strategy {strategy:?} failed");
         }
 
         // Cleanup
@@ -921,7 +921,7 @@ mod tests {
             is_page: true,
         };
 
-        let debug_str = format!("{:?}", obj);
+        let debug_str = format!("{obj:?}");
         assert!(debug_str.contains("PdfObject"));
         assert!(debug_str.contains("42"));
         assert!(debug_str.contains("100"));
@@ -936,7 +936,7 @@ mod tests {
             content_type: FragmentType::Page,
         };
 
-        let debug_str = format!("{:?}", fragment);
+        let debug_str = format!("{fragment:?}");
         assert!(debug_str.contains("PdfFragment"));
         assert!(debug_str.contains("Page"));
     }
@@ -951,7 +951,7 @@ mod tests {
         ];
 
         for ftype in types {
-            let debug_str = format!("{:?}", ftype);
+            let debug_str = format!("{ftype:?}");
             assert!(!debug_str.is_empty());
         }
     }

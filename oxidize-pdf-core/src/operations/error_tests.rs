@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_debug_format() {
         let err = OperationError::NoPagesToProcess;
-        let debug_str = format!("{:?}", err);
+        let debug_str = format!("{err:?}");
         assert!(debug_str.contains("NoPagesToProcess"));
     }
 

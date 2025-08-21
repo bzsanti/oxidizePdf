@@ -108,7 +108,7 @@ impl CryptFilterManager {
     ) -> Result<Vec<u8>> {
         let filter_name = filter_name.unwrap_or(&self.default_string_filter);
         let filter = self.get_filter(filter_name).ok_or_else(|| {
-            PdfError::EncryptionError(format!("Crypt filter '{}' not found", filter_name))
+            PdfError::EncryptionError(format!("Crypt filter '{filter_name}' not found"))
         })?;
 
         match filter.method {
@@ -141,7 +141,7 @@ impl CryptFilterManager {
     ) -> Result<Vec<u8>> {
         let filter_name = filter_name.unwrap_or(&self.default_string_filter);
         let filter = self.get_filter(filter_name).ok_or_else(|| {
-            PdfError::EncryptionError(format!("Crypt filter '{}' not found", filter_name))
+            PdfError::EncryptionError(format!("Crypt filter '{filter_name}' not found"))
         })?;
 
         match filter.method {
@@ -175,7 +175,7 @@ impl CryptFilterManager {
         // Check if stream has a specific filter
         let filter_name = self.get_stream_filter_name(stream_dict);
         let filter = self.get_filter(&filter_name).ok_or_else(|| {
-            PdfError::EncryptionError(format!("Crypt filter '{}' not found", filter_name))
+            PdfError::EncryptionError(format!("Crypt filter '{filter_name}' not found"))
         })?;
 
         match filter.method {
@@ -209,7 +209,7 @@ impl CryptFilterManager {
         // Check if stream has a specific filter
         let filter_name = self.get_stream_filter_name(stream_dict);
         let filter = self.get_filter(&filter_name).ok_or_else(|| {
-            PdfError::EncryptionError(format!("Crypt filter '{}' not found", filter_name))
+            PdfError::EncryptionError(format!("Crypt filter '{filter_name}' not found"))
         })?;
 
         match filter.method {
@@ -435,8 +435,7 @@ impl SecurityHandler for StandardSecurityHandler {
                 self.encrypt_aes(data, key, obj_id)
             }
             _ => Err(PdfError::EncryptionError(format!(
-                "Unsupported AES key size: {} bits",
-                bits
+                "Unsupported AES key size: {bits} bits"
             ))),
         }
     }
@@ -454,8 +453,7 @@ impl SecurityHandler for StandardSecurityHandler {
                 self.decrypt_aes(data, key, obj_id)
             }
             _ => Err(PdfError::EncryptionError(format!(
-                "Unsupported AES key size: {} bits",
-                bits
+                "Unsupported AES key size: {bits} bits"
             ))),
         }
     }

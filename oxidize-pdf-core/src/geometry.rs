@@ -139,14 +139,14 @@ mod tests {
     fn test_point_copy_clone_debug() {
         let p1 = Point::new(5.0, 10.0);
         let p2 = p1; // Copy
-        let p3 = p1.clone(); // Clone
+        let p3 = p1; // Clone
 
         assert_eq!(p1, p2);
         assert_eq!(p1, p3);
         assert_eq!(p2, p3);
 
         // Test debug formatting
-        let debug_str = format!("{:?}", p1);
+        let debug_str = format!("{p1:?}");
         assert!(debug_str.contains("Point"));
         assert!(debug_str.contains("5.0"));
         assert!(debug_str.contains("10.0"));
@@ -230,7 +230,7 @@ mod tests {
     fn test_rectangle_copy_clone_debug_partial_eq() {
         let rect1 = Rectangle::new(Point::new(0.0, 0.0), Point::new(10.0, 20.0));
         let rect2 = rect1; // Copy
-        let rect3 = rect1.clone(); // Clone
+        let rect3 = rect1; // Clone
         let rect4 = Rectangle::new(Point::new(0.0, 0.0), Point::new(10.0, 21.0));
 
         assert_eq!(rect1, rect2);
@@ -238,7 +238,7 @@ mod tests {
         assert_ne!(rect1, rect4);
 
         // Test debug formatting
-        let debug_str = format!("{:?}", rect1);
+        let debug_str = format!("{rect1:?}");
         assert!(debug_str.contains("Rectangle"));
         assert!(debug_str.contains("lower_left"));
         assert!(debug_str.contains("upper_right"));

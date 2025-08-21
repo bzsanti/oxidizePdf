@@ -101,7 +101,7 @@ fn test_structure_preservation_roundtrip() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .at(50.0, 750.0)
-            .write(&format!("Original Page {}", i))?;
+            .write(&format!("Original Page {i}"))?;
         original_doc.add_page(page);
     }
 
@@ -127,7 +127,7 @@ fn test_structure_preservation_roundtrip() -> Result<()> {
             page.text()
                 .set_font(Font::Helvetica, 14.0)
                 .at(50.0, 750.0)
-                .write(&format!("Preserved Page {}", i))?;
+                .write(&format!("Preserved Page {i}"))?;
             preserved_doc.add_page(page);
         }
 
@@ -232,7 +232,7 @@ fn test_memory_efficient_roundtrip() -> Result<()> {
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 750.0)
-            .write(&format!("Memory Test Page {}", page_num))?;
+            .write(&format!("Memory Test Page {page_num}"))?;
 
         // Add repeated content that could stress memory
         for line in 0..20 {
@@ -279,7 +279,7 @@ fn test_config_propagation_roundtrip() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
 
     // Test different writer configurations
-    let configs = vec![
+    let configs = [
         WriterConfig {
             use_xref_streams: false,
             pdf_version: "1.4".to_string(),
@@ -295,17 +295,17 @@ fn test_config_propagation_roundtrip() -> Result<()> {
     for (i, config) in configs.iter().enumerate() {
         // Create document with specific config
         let mut doc = Document::new();
-        doc.set_title(&format!("Config Test {}", i));
+        doc.set_title(format!("Config Test {i}"));
 
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 700.0)
-            .write(&format!("Testing config {}", i))?;
+            .write(&format!("Testing config {i}"))?;
         doc.add_page(page);
 
         // Save with specific config
-        let config_path = temp_dir.path().join(format!("config_{}.pdf", i));
+        let config_path = temp_dir.path().join(format!("config_{i}.pdf"));
         doc.save_with_config(&config_path, config.clone())?;
 
         // Verify file was created
@@ -327,7 +327,7 @@ fn test_config_propagation_roundtrip() -> Result<()> {
         if let Ok(_reader) = PdfReader::open(&config_path) {
             // If parsing succeeds, create a new document
             let mut roundtrip_doc = Document::new();
-            roundtrip_doc.set_title(&format!("Roundtrip Config {}", i));
+            roundtrip_doc.set_title(format!("Roundtrip Config {i}"));
 
             let mut roundtrip_page = Page::a4();
             roundtrip_page
@@ -337,7 +337,7 @@ fn test_config_propagation_roundtrip() -> Result<()> {
                 .write("Roundtrip successful")?;
             roundtrip_doc.add_page(roundtrip_page);
 
-            let roundtrip_path = temp_dir.path().join(format!("roundtrip_{}.pdf", i));
+            let roundtrip_path = temp_dir.path().join(format!("roundtrip_{i}.pdf"));
             roundtrip_doc.save(&roundtrip_path)?;
             assert!(roundtrip_path.exists());
         }
@@ -368,7 +368,7 @@ fn test_incremental_modification_roundtrip() -> Result<()> {
     base_doc.save(&base_path)?;
 
     // Simulate incremental modifications
-    let modifications = vec![
+    let modifications = [
         ("Added page 2", "Modified Author 1"),
         ("Added page 3", "Modified Author 2"),
         ("Final version", "Final Author"),
@@ -399,7 +399,7 @@ fn test_incremental_modification_roundtrip() -> Result<()> {
             modified_doc.add_page(page);
         }
 
-        let modified_path = temp_dir.path().join(format!("modified_{}.pdf", i));
+        let modified_path = temp_dir.path().join(format!("modified_{i}.pdf"));
         modified_doc.save(&modified_path)?;
 
         // Verify incremental changes
@@ -476,19 +476,14 @@ fn test_edge_case_roundtrip() -> Result<()> {
 
         // Test that edge case can be saved
         let save_result = doc.save(&case_path);
-        assert!(
-            save_result.is_ok(),
-            "Failed to save edge case: {}",
-            case_name
-        );
+        assert!(save_result.is_ok(), "Failed to save edge case: {case_name}");
         assert!(case_path.exists());
 
         // Test that edge case can be generated in memory
         let bytes_result = doc.to_bytes();
         assert!(
             bytes_result.is_ok(),
-            "Failed to generate bytes for edge case: {}",
-            case_name
+            "Failed to generate bytes for edge case: {case_name}"
         );
         assert!(!bytes_result.unwrap().is_empty());
     }

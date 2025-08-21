@@ -382,7 +382,7 @@ fn test_array_debug() {
     array.push(Object::Integer(42));
     array.push(Object::Boolean(true));
 
-    let debug_str = format!("{:?}", array);
+    let debug_str = format!("{array:?}");
     assert!(
         debug_str.contains("Array"),
         "Debug output should contain Array"

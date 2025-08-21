@@ -754,13 +754,13 @@ mod tests {
     fn test_free_text_font_variations() {
         let rect = Rectangle::new(Point::new(50.0, 50.0), Point::new(350.0, 150.0));
 
-        let fonts_and_sizes = vec![
+        let fonts_and_sizes = [
             (Font::Helvetica, 12.0),
             (Font::TimesRoman, 10.0),
             (Font::Courier, 14.0),
         ];
 
-        let colors = vec![
+        let colors = [
             Color::Gray(0.0),
             Color::Rgb(1.0, 0.0, 0.0),
             Color::Cmyk(0.0, 1.0, 1.0, 0.0),
@@ -775,7 +775,7 @@ mod tests {
 
             if let Some(Object::String(da)) = dict.get("DA") {
                 assert!(da.contains(&font.pdf_name()));
-                assert!(da.contains(&format!("{} Tf", size)));
+                assert!(da.contains(&format!("{size} Tf")));
             } else {
                 panic!("DA field not found");
             }
@@ -809,7 +809,7 @@ mod tests {
 
     #[test]
     fn test_line_ending_styles_comprehensive() {
-        let styles = vec![
+        let styles = [
             LineEndingStyle::None,
             LineEndingStyle::Square,
             LineEndingStyle::Circle,
@@ -822,7 +822,7 @@ mod tests {
             LineEndingStyle::Slash,
         ];
 
-        let expected_names = vec![
+        let expected_names = [
             "None",
             "Square",
             "Circle",
@@ -1140,7 +1140,7 @@ mod tests {
             .with_font(Font::Helvetica, 14.0, Color::black())
             .with_justification(1);
 
-        let debug_str = format!("{:?}", free_text);
+        let debug_str = format!("{free_text:?}");
         assert!(debug_str.contains("FreeTextAnnotation"));
         assert!(debug_str.contains("Debug test"));
 
@@ -1154,7 +1154,7 @@ mod tests {
         let line = LineAnnotation::new(Point::new(0.0, 0.0), Point::new(100.0, 100.0))
             .with_endings(LineEndingStyle::Circle, LineEndingStyle::Square);
 
-        let debug_str = format!("{:?}", line);
+        let debug_str = format!("{line:?}");
         assert!(debug_str.contains("LineAnnotation"));
 
         let cloned = line.clone();
@@ -1169,7 +1169,7 @@ mod tests {
             intensity: 1.2,
         };
 
-        let debug_str = format!("{:?}", effect);
+        let debug_str = format!("{effect:?}");
         assert!(debug_str.contains("BorderEffect"));
         assert!(debug_str.contains("Cloudy"));
 
@@ -1182,7 +1182,7 @@ mod tests {
     fn test_stamp_name_debug_clone() {
         let stamp = StampName::TopSecret;
 
-        let debug_str = format!("{:?}", stamp);
+        let debug_str = format!("{stamp:?}");
         assert!(debug_str.contains("TopSecret"));
 
         let cloned = stamp.clone();
@@ -1233,10 +1233,10 @@ mod tests {
     fn test_line_ending_style_debug_clone_copy() {
         let style = LineEndingStyle::ClosedArrow;
 
-        let debug_str = format!("{:?}", style);
+        let debug_str = format!("{style:?}");
         assert!(debug_str.contains("ClosedArrow"));
 
-        let cloned = style.clone();
+        let cloned = style;
         assert!(matches!(cloned, LineEndingStyle::ClosedArrow));
 
         let copied: LineEndingStyle = style;
@@ -1247,10 +1247,10 @@ mod tests {
     fn test_border_effect_style_debug_clone_copy() {
         let style = BorderEffectStyle::Cloudy;
 
-        let debug_str = format!("{:?}", style);
+        let debug_str = format!("{style:?}");
         assert!(debug_str.contains("Cloudy"));
 
-        let cloned = style.clone();
+        let cloned = style;
         assert!(matches!(cloned, BorderEffectStyle::Cloudy));
 
         let copied: BorderEffectStyle = style;

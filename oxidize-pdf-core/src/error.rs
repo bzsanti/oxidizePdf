@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn test_pdf_error_debug() {
         let error = PdfError::InvalidReference("object 1 0".to_string());
-        let debug_str = format!("{:?}", error);
+        let debug_str = format!("{error:?}");
         assert!(debug_str.contains("InvalidReference"));
         assert!(debug_str.contains("object 1 0"));
     }
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn test_oxidize_pdf_error_debug() {
         let error = OxidizePdfError::InvalidStructure("malformed PDF".to_string());
-        let debug_str = format!("{:?}", error);
+        let debug_str = format!("{error:?}");
         assert!(debug_str.contains("InvalidStructure"));
         assert!(debug_str.contains("malformed PDF"));
     }

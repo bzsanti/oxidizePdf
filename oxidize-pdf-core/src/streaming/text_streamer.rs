@@ -289,7 +289,7 @@ mod tests {
         // Add chunks that exceed buffer size
         for i in 0..5 {
             streamer.buffer.push_back(TextChunk {
-                text: format!("Text{}", i),
+                text: format!("Text{i}"),
                 x: 0.0,
                 y: 0.0,
                 font_size: 12.0,
@@ -331,7 +331,7 @@ mod tests {
             font_name: Some("Arial".to_string()),
         };
 
-        let debug_str = format!("{:?}", chunk);
+        let debug_str = format!("{chunk:?}");
         assert!(debug_str.contains("TextChunk"));
         assert!(debug_str.contains("Test"));
 
@@ -362,7 +362,7 @@ mod tests {
     fn test_text_stream_options_debug_clone() {
         let options = TextStreamOptions::default();
 
-        let debug_str = format!("{:?}", options);
+        let debug_str = format!("{options:?}");
         assert!(debug_str.contains("TextStreamOptions"));
 
         let cloned = options.clone();
@@ -727,7 +727,7 @@ mod tests {
 
         assert!(!chunks.is_empty());
         // The text should contain the special characters (lossy conversion)
-        assert!(chunks[0].text.len() > 0);
+        assert!(!chunks[0].text.is_empty());
     }
 
     #[test]
@@ -737,7 +737,7 @@ mod tests {
         // Add chunks with same position
         for i in 0..3 {
             streamer.buffer.push_back(TextChunk {
-                text: format!("Text{}", i),
+                text: format!("Text{i}"),
                 x: 100.0,
                 y: 100.0,
                 font_size: 12.0,
@@ -871,10 +871,10 @@ mod tests {
     fn test_buffer_with_different_font_names() {
         let mut streamer = TextStreamer::new(TextStreamOptions::default());
 
-        let fonts = vec!["Arial", "Times", "Courier", "Helvetica"];
+        let fonts = ["Arial", "Times", "Courier", "Helvetica"];
         for (i, font) in fonts.iter().enumerate() {
             streamer.buffer.push_back(TextChunk {
-                text: format!("Font{}", i),
+                text: format!("Font{i}"),
                 x: 0.0,
                 y: 0.0,
                 font_size: 12.0,

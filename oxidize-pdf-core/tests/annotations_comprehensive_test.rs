@@ -70,11 +70,11 @@ fn test_annotation_manager_multiple_pages() {
 
             let annotation = match annot_num % 3 {
                 0 => TextAnnotation::new(Point::new(100.0, y_pos))
-                    .with_contents(format!("Note {} on page {}", annot_num, page_num))
+                    .with_contents(format!("Note {annot_num} on page {page_num}"))
                     .to_annotation(),
                 1 => LinkAnnotation::to_page(rect, ObjectReference::new(1, 0)).to_annotation(),
                 _ => MarkupAnnotation::underline(rect)
-                    .with_contents(format!("Underline {} on page {}", annot_num, page_num))
+                    .with_contents(format!("Underline {annot_num} on page {page_num}"))
                     .to_annotation(),
             };
 
@@ -901,7 +901,7 @@ fn test_concurrent_annotation_manager_operations() {
 
             for i in 0..10 {
                 let annotation = Annotation::new(AnnotationType::Text, rect)
-                    .with_contents(format!("Thread {} annotation {}", thread_id, i));
+                    .with_contents(format!("Thread {thread_id} annotation {i}"));
 
                 let mut manager = manager_clone.lock().unwrap();
                 manager.add_annotation(page_ref, annotation);

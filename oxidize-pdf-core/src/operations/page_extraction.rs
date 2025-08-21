@@ -782,7 +782,7 @@ mod tests {
         #[test]
         fn test_page_extraction_options_debug() {
             let options = PageExtractionOptions::default();
-            let debug_str = format!("{:?}", options);
+            let debug_str = format!("{options:?}");
             assert!(debug_str.contains("PageExtractionOptions"));
             assert!(debug_str.contains("preserve_metadata"));
             assert!(debug_str.contains("preserve_annotations"));

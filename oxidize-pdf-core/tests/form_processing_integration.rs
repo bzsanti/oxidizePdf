@@ -287,7 +287,7 @@ fn test_comprehensive_form_creation_workflow() -> Result<()> {
     // Verify file creation and content
     assert!(file_path.exists());
     let file_size = fs::metadata(&file_path).unwrap().len();
-    println!("Comprehensive form file size: {} bytes", file_size);
+    println!("Comprehensive form file size: {file_size} bytes");
     assert!(file_size > 1000); // Should be substantial with complex form
 
     Ok(())
@@ -578,7 +578,7 @@ fn test_advanced_form_field_styling_workflow() -> Result<()> {
     // Verify file creation
     assert!(file_path.exists());
     let file_size = fs::metadata(&file_path).unwrap().len();
-    println!("Styled form file size: {} bytes", file_size);
+    println!("Styled form file size: {file_size} bytes");
     assert!(file_size > 1000);
 
     Ok(())
@@ -897,7 +897,7 @@ fn test_form_dependencies_workflow() -> Result<()> {
     // Verify file creation
     assert!(file_path.exists());
     let file_size = fs::metadata(&file_path).unwrap().len();
-    println!("Dependencies form file size: {} bytes", file_size);
+    println!("Dependencies form file size: {file_size} bytes");
     assert!(file_size > 1000);
 
     Ok(())
@@ -937,8 +937,8 @@ fn test_form_performance_workflow() -> Result<()> {
         match i % 5 {
             0 => {
                 // Text field
-                let field = TextField::new(&format!("text_field_{}", i))
-                    .with_default_value(&format!("Text field {}", i));
+                let field = TextField::new(format!("text_field_{i}"))
+                    .with_default_value(format!("Text field {i}"));
                 let widget = Widget::new(Rectangle::new(
                     Point::new(50.0, y_position - 10.0),
                     Point::new(300.0, y_position + 5.0),
@@ -947,7 +947,7 @@ fn test_form_performance_workflow() -> Result<()> {
             }
             1 => {
                 // Checkbox
-                let checkbox = CheckBox::new(&format!("checkbox_{}", i));
+                let checkbox = CheckBox::new(format!("checkbox_{i}"));
                 let widget = Widget::new(Rectangle::new(
                     Point::new(50.0, y_position - 5.0),
                     Point::new(65.0, y_position + 10.0),
@@ -956,8 +956,8 @@ fn test_form_performance_workflow() -> Result<()> {
             }
             2 => {
                 // Push button
-                let button = PushButton::new(&format!("button_{}", i))
-                    .with_caption(&format!("Button {}", i));
+                let button =
+                    PushButton::new(format!("button_{i}")).with_caption(format!("Button {i}"));
                 let widget = Widget::new(Rectangle::new(
                     Point::new(50.0, y_position - 10.0),
                     Point::new(150.0, y_position + 5.0),
@@ -966,9 +966,9 @@ fn test_form_performance_workflow() -> Result<()> {
             }
             3 => {
                 // Combo box
-                let combo = ComboBox::new(&format!("combo_{}", i))
-                    .add_option("opt1", &format!("Option 1 for combo {}", i))
-                    .add_option("opt2", &format!("Option 2 for combo {}", i));
+                let combo = ComboBox::new(format!("combo_{i}"))
+                    .add_option("opt1", format!("Option 1 for combo {i}"))
+                    .add_option("opt2", format!("Option 2 for combo {i}"));
                 let widget = Widget::new(Rectangle::new(
                     Point::new(50.0, y_position - 10.0),
                     Point::new(200.0, y_position + 5.0),
@@ -977,9 +977,9 @@ fn test_form_performance_workflow() -> Result<()> {
             }
             4 => {
                 // List box
-                let listbox = ListBox::new(&format!("list_{}", i))
-                    .add_option("item1", &format!("Item 1 for list {}", i))
-                    .add_option("item2", &format!("Item 2 for list {}", i));
+                let listbox = ListBox::new(format!("list_{i}"))
+                    .add_option("item1", format!("Item 1 for list {i}"))
+                    .add_option("item2", format!("Item 2 for list {i}"));
                 let widget = Widget::new(Rectangle::new(
                     Point::new(50.0, y_position - 20.0),
                     Point::new(200.0, y_position + 10.0),
@@ -1008,11 +1008,11 @@ fn test_form_performance_workflow() -> Result<()> {
     // Set values for all fields
     for i in 0..50 {
         match i % 5 {
-            0 => perf_data.set_value(&format!("text_field_{}", i), &format!("Value {}", i)),
-            1 => perf_data.set_value(&format!("checkbox_{}", i), "true"),
-            2 => perf_data.set_value(&format!("button_{}", i), "clicked"),
-            3 => perf_data.set_value(&format!("combo_{}", i), "opt1"),
-            4 => perf_data.set_value(&format!("list_{}", i), "item1"),
+            0 => perf_data.set_value(format!("text_field_{i}"), format!("Value {i}")),
+            1 => perf_data.set_value(format!("checkbox_{i}"), "true"),
+            2 => perf_data.set_value(format!("button_{i}"), "clicked"),
+            3 => perf_data.set_value(format!("combo_{i}"), "opt1"),
+            4 => perf_data.set_value(format!("list_{i}"), "item1"),
             _ => unreachable!(),
         }
     }
@@ -1027,21 +1027,21 @@ fn test_form_performance_workflow() -> Result<()> {
 
     // Performance reporting
     println!("Form Performance Results:");
-    println!("  Field creation: {:?}", creation_time);
-    println!("  Data handling: {:?}", data_time);
-    println!("  Document save: {:?}", save_time);
+    println!("  Field creation: {creation_time:?}");
+    println!("  Data handling: {data_time:?}");
+    println!("  Document save: {save_time:?}");
 
     // Verify file creation
     assert!(file_path.exists());
     let file_size = fs::metadata(&file_path).unwrap().len();
-    println!("Performance form file size: {} bytes", file_size);
+    println!("Performance form file size: {file_size} bytes");
     assert!(file_size > 1500); // Should be substantial with 50 fields
 
     // Performance assertions
     assert!(creation_time.as_secs() < 1);
     assert!(save_time.as_secs() < 5);
 
-    println!("  File size: {} bytes", file_size);
+    println!("  File size: {file_size} bytes");
 
     Ok(())
 }
