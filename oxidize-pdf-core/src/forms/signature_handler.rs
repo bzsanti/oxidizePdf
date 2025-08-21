@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn test_validation() {
         let mut handler = SignatureHandler::new();
-        let mut field = SignatureField::new("sig1").required();
+        let field = SignatureField::new("sig1").required();
 
         handler.add_signature_field(field.clone()).unwrap();
 

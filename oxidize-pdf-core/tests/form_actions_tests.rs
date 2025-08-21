@@ -298,7 +298,7 @@ fn test_sound_action_volume_clamping() {
 
 #[test]
 fn test_submit_form_all_flags() {
-    let mut flags = SubmitFormFlags {
+    let flags = SubmitFormFlags {
         include: false,
         html: true,
         coordinates: true,

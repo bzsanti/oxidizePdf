@@ -17,7 +17,7 @@ use oxidize_pdf::forms::{
     TextField, Widget,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
-use oxidize_pdf::parser::{PdfDocument, PdfReader};
+use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::Page;
 use std::fs;
 use std::io::Cursor;
@@ -29,7 +29,7 @@ fn test_form_document_catalog_integration() {
     let mut doc = Document::new();
     doc.set_title("Form Integration Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create a simple text field
@@ -88,7 +88,7 @@ fn test_multiple_field_types_document_integration() {
     let mut doc = Document::new();
     doc.set_title("Multi-Field Form Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Text field
@@ -203,7 +203,7 @@ fn test_multiple_field_types_document_integration() {
 #[test]
 fn test_form_field_options_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create field with comprehensive options
@@ -273,7 +273,7 @@ fn test_form_document_roundtrip() {
         let mut doc = Document::new();
         doc.set_title("Roundtrip Test Form");
 
-        let mut page = Page::a4();
+        let page = Page::a4();
         let mut form_manager = FormManager::new();
 
         // Add a simple form field
@@ -336,7 +336,7 @@ fn test_large_form_document_integration() {
     let mut doc = Document::new();
     doc.set_title("Large Form Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create 50 form fields to test scalability
@@ -409,7 +409,7 @@ fn test_large_form_document_integration() {
 #[test]
 fn test_form_appearance_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create fields with different appearances
@@ -456,7 +456,7 @@ fn test_form_appearance_document_integration() {
 #[test]
 fn test_form_validation_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Required field
@@ -524,7 +524,7 @@ fn test_form_validation_document_integration() {
 #[test]
 fn test_form_calculation_order_document() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create fields that would have calculation dependencies
@@ -579,7 +579,7 @@ fn test_form_calculation_order_document() {
 #[test]
 fn test_form_javascript_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Button that would trigger JavaScript
@@ -627,7 +627,7 @@ fn test_multi_page_form_document() {
     let mut form_manager = FormManager::new();
 
     // Page 1 - Personal Information
-    let mut page1 = Page::a4();
+    let page1 = Page::a4();
 
     let name_field = TextField::new("full_name").with_max_length(100);
     let name_widget = Widget::new(Rectangle::new(
@@ -650,7 +650,7 @@ fn test_multi_page_form_document() {
     doc.add_page(page1);
 
     // Page 2 - Preferences
-    let mut page2 = Page::a4();
+    let page2 = Page::a4();
 
     let newsletter_check = CheckBox::new("newsletter").checked();
     let newsletter_widget = Widget::new(Rectangle::new(
@@ -698,7 +698,7 @@ fn test_multi_page_form_document() {
 #[test]
 fn test_form_submission_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create form with submission URL (conceptual)
@@ -745,7 +745,7 @@ fn test_form_submission_document_integration() {
 #[test]
 fn test_form_tab_order_document() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create fields in specific tab order
@@ -791,7 +791,7 @@ fn test_form_encrypted_document_integration() {
     let mut doc = Document::new();
     doc.set_title("Encrypted Form Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create a sensitive form field
@@ -828,7 +828,7 @@ fn test_form_encrypted_document_integration() {
 #[test]
 fn test_form_reset_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Form with default values
@@ -884,7 +884,7 @@ fn test_complex_form_layout_document() {
     let mut doc = Document::new();
     doc.set_title("Complex Layout Form");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Header section
@@ -1001,7 +1001,7 @@ fn test_complex_form_layout_document() {
 #[test]
 fn test_form_tooltips_document_integration() {
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Field with tooltip (conceptual - would need tooltip implementation)
@@ -1043,7 +1043,7 @@ fn test_form_data_extraction_integration() {
     // Create form with known data
     {
         let mut doc = Document::new();
-        let mut page = Page::a4();
+        let page = Page::a4();
         let mut form_manager = FormManager::new();
 
         let test_field = TextField::new("extraction_test")
@@ -1094,7 +1094,7 @@ fn test_form_different_page_sizes() {
     let mut doc = Document::new();
 
     // A4 page with form
-    let mut a4_page = Page::a4();
+    let a4_page = Page::a4();
     let mut form_manager = FormManager::new();
 
     let a4_field = TextField::new("a4_field").with_value("A4 Page Field");
@@ -1109,7 +1109,7 @@ fn test_form_different_page_sizes() {
     doc.add_page(a4_page);
 
     // Letter page with form
-    let mut letter_page = Page::letter();
+    let letter_page = Page::letter();
 
     let letter_field = TextField::new("letter_field").with_value("Letter Page Field");
     let letter_widget = Widget::new(Rectangle::new(
@@ -1143,7 +1143,7 @@ fn test_form_creation_performance() {
     let start_time = std::time::Instant::now();
 
     let mut doc = Document::new();
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create many fields rapidly
@@ -1247,7 +1247,7 @@ fn test_document_catalog_acroform_integration() {
     let mut doc = Document::new();
     doc.set_title("Catalog Integration Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Add a simple field
@@ -1308,7 +1308,7 @@ fn test_cross_browser_form_compatibility() {
     let mut doc = Document::new();
     doc.set_title("Cross-Browser Compatibility Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Create forms that should work across different PDF viewers
@@ -1363,7 +1363,7 @@ fn test_international_form_support() {
     let mut doc = Document::new();
     doc.set_title("International Form Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Test with various international characters
@@ -1422,7 +1422,7 @@ fn test_form_accessibility_features() {
     let mut doc = Document::new();
     doc.set_title("Accessibility Form Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Required field with clear labeling
@@ -1480,7 +1480,7 @@ fn test_comprehensive_form_validation() {
     let mut doc = Document::new();
     doc.set_title("Comprehensive Validation Test");
 
-    let mut page = Page::a4();
+    let page = Page::a4();
     let mut form_manager = FormManager::new();
 
     // Test various field validation scenarios

@@ -2364,7 +2364,7 @@ mod tests {
 
     #[test]
     fn test_extended_graphics_state() {
-        let mut ctx = GraphicsContext::new();
+        let ctx = GraphicsContext::new();
 
         // Test that we can create and use an extended graphics state
         let extgstate = ExtGState::new();

@@ -1,6 +1,5 @@
 //! Integration tests for PDF encryption functionality
 
-use oxidize_pdf::document::DocumentEncryption;
 use oxidize_pdf::encryption::{
     EncryptionDictionary, EncryptionKey, Permissions, StandardSecurityHandler,
 };

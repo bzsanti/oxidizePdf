@@ -4,7 +4,6 @@
 use oxidize_pdf::parser::objects::{
     PdfArray, PdfDictionary, PdfName, PdfObject, PdfStream, PdfString,
 };
-use std::collections::HashMap;
 
 #[test]
 fn test_object_creation_and_conversion() {

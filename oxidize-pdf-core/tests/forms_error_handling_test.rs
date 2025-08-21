@@ -13,8 +13,8 @@
 //! - API misuse prevention
 
 use oxidize_pdf::forms::{
-    AcroForm, CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormField, FormManager,
-    ListBox, PushButton, RadioButton, TextField, Widget, WidgetAppearance,
+    AcroForm, ComboBox, FieldFlags, FieldOptions, FormData, FormField, FormManager, ListBox,
+    RadioButton, TextField, Widget, WidgetAppearance,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::graphics::Color;

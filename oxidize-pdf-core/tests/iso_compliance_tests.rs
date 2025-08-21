@@ -242,7 +242,7 @@ fn test_section_8_graphics() -> (usize, usize) {
     // ICC Color Profiles - Basic support (1 test)
     total += 1;
     if test_feature("ICC Color Profiles básicos", || {
-        use oxidize_pdf::graphics::{IccProfile, IccProfileManager, StandardIccProfile};
+        use oxidize_pdf::graphics::{IccProfileManager, StandardIccProfile};
 
         // Test creating profiles
         let mut manager = IccProfileManager::new();
@@ -265,7 +265,7 @@ fn test_section_8_graphics() -> (usize, usize) {
     // Pattern Support (Tiling) (1 test)
     total += 1;
     if test_feature("Pattern Support (Tiling)", || {
-        use oxidize_pdf::graphics::{PaintType, PatternMatrix, TilingPattern, TilingType};
+        use oxidize_pdf::graphics::{PaintType, TilingPattern, TilingType};
 
         // Create a tiling pattern
         let mut pattern = TilingPattern::new(

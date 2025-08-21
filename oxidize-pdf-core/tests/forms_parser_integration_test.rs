@@ -13,16 +13,10 @@
 //! - Parser error handling for malformed form structures
 //! - Content stream processing for form fields
 
-use oxidize_pdf::forms::{
-    AcroForm, CheckBox, ComboBox, FieldFlags, FieldOptions, FormData, FormField, FormManager,
-    ListBox, PushButton, RadioButton, TextField, Widget, WidgetAppearance,
-};
+use oxidize_pdf::forms::{AcroForm, FormField, FormManager, TextField, Widget, WidgetAppearance};
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::graphics::Color;
 use oxidize_pdf::objects::{Dictionary, Object, ObjectReference};
-use oxidize_pdf::parser::{PdfDocument, PdfReader};
-use oxidize_pdf::{Document, Page};
-use std::io::Cursor;
 
 /// Test 1: Parse TextField from PDF dictionary
 #[test]

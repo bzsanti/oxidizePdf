@@ -2,7 +2,6 @@
 
 use oxidize_pdf::fonts::{Font, FontCache, FontDescriptor, FontFormat, FontLoader, FontMetrics};
 use oxidize_pdf::{Document, Page};
-use std::path::Path;
 
 #[test]
 fn test_font_loading_and_embedding() {

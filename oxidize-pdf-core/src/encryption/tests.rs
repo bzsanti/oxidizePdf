@@ -239,7 +239,7 @@ mod permissions_tests {
 #[cfg(test)]
 mod encryption_dict_tests {
     use super::super::*;
-    use crate::objects::{Dictionary, Object};
+    use crate::objects::Object;
 
     #[test]
     fn test_crypt_filter_method_pdf_name() {
@@ -352,9 +352,7 @@ mod encryption_key_tests {
 }
 
 #[cfg(test)]
-mod advanced_aes_tests {
-    use super::super::*;
-}
+mod advanced_aes_tests {}
 
 #[cfg(test)]
 mod standard_security_tests {

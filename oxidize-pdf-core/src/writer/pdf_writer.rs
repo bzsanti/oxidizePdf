@@ -1891,10 +1891,8 @@ fn format_pdf_date(date: DateTime<Utc>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::objects::{Array, Object, ObjectId};
+    use crate::objects::{Object, ObjectId};
     use crate::page::Page;
-    use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
-    use std::collections::HashMap;
 
     #[test]
     fn test_pdf_writer_new_with_writer() {
