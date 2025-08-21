@@ -87,7 +87,16 @@ character_encoding_analysis.json
 pdf_test_results.txt
 group*.txt
 
+# ISO Analysis - Keep only essential files
+ISO_COMPLIANCE_MATRIX_*.toml
+iso_extraction/
+*_compliance_*.md
+*_iso_*.md
+iso_*.json
+*.csv
+
 # Temporary test outputs
 test_output/
 test_subset/
 output.pdf
+test*_page_*.pdf

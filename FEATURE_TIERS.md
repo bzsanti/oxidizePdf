@@ -249,7 +249,7 @@ Clear delineation of features across our product tiers, with business justificat
 - Redaction
 
 ### 2027: Enterprise Features
-**Goal**: Complete ISO compliance (85-100%)
+**Goal**: Advanced PDF capabilities
 - Linearization
 - All annotation types
 - Multimedia support

@@ -191,12 +191,15 @@ pub mod page_forms;
 pub mod page_labels;
 pub mod page_lists;
 pub mod page_tables;
+pub mod page_transitions;
 pub mod page_tree;
 pub mod parser;
 pub mod recovery;
 pub mod streaming;
 pub mod structure;
 pub mod text;
+pub mod verification;
+pub mod viewer_preferences;
 pub mod writer;
 
 #[cfg(feature = "semantic")]
@@ -313,6 +316,22 @@ pub use actions::{
 
 // Re-export page label types
 pub use page_labels::{PageLabel, PageLabelBuilder, PageLabelRange, PageLabelStyle, PageLabelTree};
+
+// Re-export verification types
+pub use verification::comparators::{
+    compare_pdfs, ComparisonResult, DifferenceSeverity, PdfDifference,
+};
+pub use verification::compliance_report::{
+    format_report_markdown, generate_compliance_report, ComplianceReport,
+};
+pub use verification::iso_matrix::{load_default_matrix, load_matrix, ComplianceStats, IsoMatrix};
+pub use verification::validators::{
+    check_available_validators, validate_external, validate_with_qpdf,
+};
+pub use verification::{
+    extract_pdf_differences, pdfs_structurally_equivalent, verify_iso_requirement,
+    ExternalValidationResult, IsoRequirement, VerificationLevel, VerificationResult,
+};
 
 /// Current version of oxidize-pdf
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

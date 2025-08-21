@@ -9,6 +9,7 @@ pub mod font_cache;
 pub mod font_descriptor;
 pub mod font_metrics;
 pub mod loader;
+pub mod standard_14;
 pub mod ttf_parser;
 pub mod type0;
 
@@ -18,6 +19,7 @@ pub use font_cache::FontCache;
 pub use font_descriptor::{FontDescriptor, FontFlags};
 pub use font_metrics::{FontMetrics, TextMeasurement};
 pub use loader::{FontData, FontFormat, FontLoader};
+pub use standard_14::Standard14Font;
 pub use ttf_parser::{GlyphMapping, TtfParser};
 pub use type0::{create_type0_from_font, needs_type0_font, Type0Font};
 

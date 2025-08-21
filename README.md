@@ -8,7 +8,7 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready with **60% ISO 32000-1:2008 compliance** (measured by automated test suite). Generate PDFs 2x faster than PDFSharp, with memory safety guarantees and a 5.2MB binary size.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready for basic PDF functionality. Generate PDFs 2x faster than PDFSharp, with memory safety guarantees and a 5.2MB binary size.
 
 ## Features
 
@@ -41,7 +41,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🔧 **Lenient parsing** - Handles some malformed PDFs
 - 💾 **Memory optimization**: New `OptimizedPdfReader` with LRU cache
 
-**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library has achieved **60% ISO 32000-1:2008 compliance** (on par with PDFSharp). See [Known Limitations](#known-limitations) for a transparent assessment of current capabilities and planned features.
+**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library provides basic PDF functionality. See [Known Limitations](#known-limitations) for a transparent assessment of current capabilities and planned features.
 
 ## 🏆 Why oxidize-pdf?
 
@@ -395,7 +395,7 @@ For commercial use cases that require proprietary licensing, please contact us a
 
 ## Known Limitations
 
-oxidize-pdf currently has **~40% pragmatic ISO 32000-1:2008 compliance**. We prioritize transparency about what works and what doesn't. See [ISO_COMPLIANCE.md](ISO_COMPLIANCE.md) for detailed status.
+oxidize-pdf provides basic PDF functionality. We prioritize transparency about what works and what doesn't.
 
 ### Working Features
 - ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode, DCTDecode (JPEG)
