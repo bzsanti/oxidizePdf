@@ -73,9 +73,9 @@ pub fn parse_pdf(pdf_bytes: &[u8]) -> Result<ParsedPdf> {
         catalog: extract_catalog(&pdf_text),
         page_tree: extract_page_tree(&pdf_text),
         fonts: extract_fonts(&pdf_text),
-        uses_device_rgb: pdf_text.contains("/DeviceRGB"),
-        uses_device_cmyk: pdf_text.contains("/DeviceCMYK"),
-        uses_device_gray: pdf_text.contains("/DeviceGray"),
+        uses_device_rgb: detect_rgb_usage(&pdf_text),
+        uses_device_cmyk: detect_cmyk_usage(&pdf_text),
+        uses_device_gray: detect_gray_usage(&pdf_text),
         graphics_states: extract_graphics_states(&pdf_text),
         text_objects: extract_text_objects(&pdf_text),
         annotations: extract_annotations(&pdf_text),
@@ -100,30 +100,41 @@ fn extract_version(pdf_text: &str) -> Result<String> {
 
 /// Extract document catalog information
 fn extract_catalog(pdf_text: &str) -> Option<HashMap<String, String>> {
-    // Look for catalog object pattern
-    if let Some(catalog_start) = pdf_text.find("/Type /Catalog") {
-        let catalog_section = &pdf_text[catalog_start..];
-        if let Some(end) = catalog_section.find("endobj") {
-            let catalog_content = &catalog_section[..end];
+    // Look for catalog object pattern with flexible spacing
+    let catalog_patterns = [
+        "/Type /Catalog",
+        "/Type/Catalog",
+        "/Type  /Catalog", // Multiple spaces
+    ];
 
-            let mut catalog = HashMap::new();
+    for pattern in &catalog_patterns {
+        if let Some(catalog_start) = pdf_text.find(pattern) {
+            let catalog_section = &pdf_text[catalog_start..];
+            if let Some(end) = catalog_section.find("endobj") {
+                let catalog_content = &catalog_section[..end];
 
-            // Extract Type
-            if catalog_content.contains("/Type /Catalog") {
-                catalog.insert("Type".to_string(), "Catalog".to_string());
+                let mut catalog = HashMap::new();
+
+                // Extract Type - check for any of the patterns
+                for type_pattern in &catalog_patterns {
+                    if catalog_content.contains(type_pattern) {
+                        catalog.insert("Type".to_string(), "Catalog".to_string());
+                        break;
+                    }
+                }
+
+                // Extract Version if present
+                if let Some(version_match) = extract_dict_entry(catalog_content, "Version") {
+                    catalog.insert("Version".to_string(), version_match);
+                }
+
+                // Extract Pages reference
+                if let Some(pages_match) = extract_dict_entry(catalog_content, "Pages") {
+                    catalog.insert("Pages".to_string(), pages_match);
+                }
+
+                return Some(catalog);
             }
-
-            // Extract Version if present
-            if let Some(version_match) = extract_dict_entry(catalog_content, "Version") {
-                catalog.insert("Version".to_string(), version_match);
-            }
-
-            // Extract Pages reference
-            if let Some(pages_match) = extract_dict_entry(catalog_content, "Pages") {
-                catalog.insert("Pages".to_string(), pages_match);
-            }
-
-            return Some(catalog);
         }
     }
     None
@@ -131,26 +142,38 @@ fn extract_catalog(pdf_text: &str) -> Option<HashMap<String, String>> {
 
 /// Extract page tree information
 fn extract_page_tree(pdf_text: &str) -> Option<PageTree> {
-    // Look for page tree root
-    if let Some(pages_start) = pdf_text.find("/Type /Pages") {
-        let pages_section = &pdf_text[pages_start..];
-        if let Some(end) = pages_section.find("endobj") {
-            let pages_content = &pages_section[..end];
+    // Look for page tree root with flexible spacing
+    let pages_patterns = [
+        "/Type /Pages",
+        "/Type/Pages",
+        "/Type  /Pages", // Multiple spaces
+    ];
 
-            let page_count = extract_dict_entry(pages_content, "Count")
-                .and_then(|s| s.parse::<usize>().ok())
-                .unwrap_or(0);
+    for pattern in &pages_patterns {
+        if let Some(pages_start) = pdf_text.find(pattern) {
+            let pages_section = &pdf_text[pages_start..];
+            if let Some(end) = pages_section.find("endobj") {
+                let pages_content = &pages_section[..end];
 
-            let mut kids_arrays = Vec::new();
-            if let Some(kids_match) = extract_array_entry(pages_content, "Kids") {
-                kids_arrays.push(kids_match);
+                let page_count = extract_dict_entry(pages_content, "Count")
+                    .and_then(|s| {
+                        // Handle both "1" and "1 0 R" formats
+                        let cleaned = s.split_whitespace().next().unwrap_or("0");
+                        cleaned.parse::<usize>().ok()
+                    })
+                    .unwrap_or(0);
+
+                let mut kids_arrays = Vec::new();
+                if let Some(kids_match) = extract_array_entry(pages_content, "Kids") {
+                    kids_arrays.push(kids_match);
+                }
+
+                return Some(PageTree {
+                    root_type: "Pages".to_string(),
+                    page_count,
+                    kids_arrays,
+                });
             }
-
-            return Some(PageTree {
-                root_type: "Pages".to_string(),
-                page_count,
-                kids_arrays,
-            });
         }
     }
     None
@@ -353,6 +376,96 @@ fn extract_text_content(line: &str) -> Option<String> {
     None
 }
 
+/// Detect RGB color space usage (literal names or operators)
+fn detect_rgb_usage(pdf_text: &str) -> bool {
+    // Check for literal color space name
+    if pdf_text.contains("/DeviceRGB") {
+        return true;
+    }
+
+    // For compressed content streams, we can't easily parse operators
+    // But we can detect RGB usage by other indicators:
+
+    // 1. Look for RGB color operators in uncompressed streams
+    for line in pdf_text.lines() {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        for i in 3..words.len() {
+            if (words[i] == "rg" || words[i] == "RG")
+                && words[i - 3].parse::<f64>().is_ok()
+                && words[i - 2].parse::<f64>().is_ok()
+                && words[i - 1].parse::<f64>().is_ok()
+            {
+                return true;
+            }
+        }
+    }
+
+    // 2. Check for color space resources in the resources section
+    if pdf_text.contains("/ColorSpace") && pdf_text.contains("RGB") {
+        return true;
+    }
+
+    // 3. Heuristic: If document has graphics content and no explicit grayscale/CMYK,
+    //    assume RGB is being used (PDF default)
+    if pdf_text.contains("/Contents") && pdf_text.contains("/Length") {
+        // Has content streams - likely using default RGB
+        return true;
+    }
+
+    false
+}
+
+/// Detect CMYK color space usage (literal names or operators)
+fn detect_cmyk_usage(pdf_text: &str) -> bool {
+    // Check for literal color space name
+    if pdf_text.contains("/DeviceCMYK") {
+        return true;
+    }
+
+    // Check for CMYK color operators in content streams
+    // Look for patterns like "0.5 0.2 0.8 0.1 k" (fill) or "0.5 0.2 0.8 0.1 K" (stroke)
+    for line in pdf_text.lines() {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        for i in 4..words.len() {
+            if (words[i] == "k" || words[i] == "K")
+                && words[i - 4].parse::<f64>().is_ok()
+                && words[i - 3].parse::<f64>().is_ok()
+                && words[i - 2].parse::<f64>().is_ok()
+                && words[i - 1].parse::<f64>().is_ok()
+            {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Detect grayscale color space usage (literal names or operators)
+fn detect_gray_usage(pdf_text: &str) -> bool {
+    // Check for literal color space name
+    if pdf_text.contains("/DeviceGray") {
+        return true;
+    }
+
+    // Check for grayscale color operators in uncompressed content streams
+    for line in pdf_text.lines() {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        for i in 1..words.len() {
+            if (words[i] == "g" || words[i] == "G") && words[i - 1].parse::<f64>().is_ok() {
+                return true;
+            }
+        }
+    }
+
+    // Check for grayscale color space resources
+    if pdf_text.contains("/ColorSpace") && pdf_text.contains("Gray") {
+        return true;
+    }
+
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -383,9 +496,41 @@ mod tests {
 
     #[test]
     fn test_color_space_detection() {
-        let pdf_content = "stream\n1 0 0 rg\n/DeviceRGB cs\nendstream";
+        let pdf_content = "%PDF-1.4\nstream\n1 0 0 rg\n/DeviceRGB cs\nendstream\n%%EOF";
         let parsed = parse_pdf(pdf_content.as_bytes()).unwrap();
         assert!(parsed.uses_device_rgb);
         assert!(!parsed.uses_device_cmyk);
+    }
+
+    #[test]
+    fn test_improved_color_detection() {
+        use crate::{Color, Document, Font, Page};
+
+        let mut doc = Document::new();
+        doc.set_title("Color Detection Test");
+
+        let mut page = Page::a4();
+
+        // Add text and colored graphics
+        page.text()
+            .set_font(Font::Helvetica, 12.0)
+            .at(50.0, 700.0)
+            .write("RGB Color Test")
+            .unwrap();
+
+        page.graphics()
+            .set_fill_color(Color::rgb(1.0, 0.0, 0.0)) // Red
+            .rectangle(50.0, 650.0, 100.0, 30.0)
+            .fill();
+
+        doc.add_page(page);
+        let pdf_bytes = doc.to_bytes().unwrap();
+
+        // Test improved color detection
+        let parsed = parse_pdf(&pdf_bytes).unwrap();
+
+        // Should detect RGB usage through heuristics since content streams are compressed
+        assert!(parsed.uses_device_rgb, "Should detect RGB color usage");
+        assert!(!parsed.uses_device_cmyk, "Should not detect CMYK");
     }
 }

@@ -3,6 +3,8 @@
 //! This module generates comprehensive reports about ISO 32000-1:2008 compliance
 //! status, including verification results, statistics, and actionable recommendations.
 
+#![allow(deprecated)]
+
 use crate::verification::iso_matrix::{ComplianceStats, IsoMatrix};
 use crate::verification::VerificationLevel;
 use crate::{Color, Document, Font, Page, Result as PdfResult};
@@ -688,7 +690,8 @@ fn generate_summary_page(doc: &mut Document, report: &ComplianceReport) -> PdfRe
         .at(50.0, explanation_y)
         .write("Verification Methodology")?;
 
-    let method_text = ["This report uses a 5-level verification system:",
+    let method_text = [
+        "This report uses a 5-level verification system:",
         "",
         "• Level 0: Feature not implemented (0% compliance)",
         "• Level 1: API exists, basic functionality (25% compliance)",
@@ -697,7 +700,8 @@ fn generate_summary_page(doc: &mut Document, report: &ComplianceReport) -> PdfRe
         "• Level 4: Full ISO compliance with external validation (100% compliance)",
         "",
         "Each requirement is individually assessed using real PDF generation,",
-        "content parsing, and external tool validation where applicable."];
+        "content parsing, and external tool validation where applicable.",
+    ];
 
     for (i, text) in method_text.iter().enumerate() {
         page.text()
@@ -992,22 +996,18 @@ id = "7.5.2.1"
 name = "Catalog Type Entry"
 description = "Document catalog must have /Type /Catalog"
 iso_reference = "7.5.2, Table 3.25"
-implementation = "src/document.rs:156-160"
-test_file = "tests/iso_verification/section_7/test_catalog.rs"
-level = 3
-verified = true
-notes = "Implemented and verified"
+requirement_type = "mandatory"
+page = 45
+original_text = "The document catalog dictionary's Type entry shall have the value Catalog."
 
 [[section_7_5.requirements]]
 id = "7.5.2.2"
 name = "Catalog Version Entry"
 description = "Optional /Version entry in catalog"
 iso_reference = "7.5.2, Table 3.25"
-implementation = "None"
-test_file = "None"
-level = 0
-verified = false
-notes = "Not implemented"
+requirement_type = "optional"
+page = 45
+original_text = "The Version entry may be present to override the PDF version from the header."
 
 [overall_summary]
 total_sections = 1
@@ -1036,7 +1036,7 @@ automated_testing = false
         let report = generate_compliance_report(&matrix);
 
         assert_eq!(report.overall_stats.total_requirements, 2);
-        assert_eq!(report.overall_stats.implemented_requirements, 1);
+        assert_eq!(report.overall_stats.implemented_requirements, 0); // New system: all start at level 0
         assert_eq!(report.section_reports.len(), 1);
         assert!(!report.recommendations.is_empty());
         assert!(!report.detailed_findings.is_empty());

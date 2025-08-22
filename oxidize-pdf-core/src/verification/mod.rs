@@ -16,6 +16,9 @@ pub mod iso_matrix;
 pub mod parser;
 pub mod validators;
 
+#[cfg(test)]
+pub mod tests;
+
 use crate::error::Result;
 
 /// Verification levels for ISO compliance
@@ -283,7 +286,7 @@ fn verify_requirement_content(
 }
 
 #[cfg(test)]
-mod tests {
+mod unit_tests {
     use super::*;
 
     #[test]
