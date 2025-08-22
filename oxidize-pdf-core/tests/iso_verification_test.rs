@@ -263,11 +263,15 @@ fn test_verification_levels() -> PdfResult<()> {
     page.text()
         .set_font(Font::TimesRoman, 10.0)
         .at(100.0, 650.0)
-        .write("This PDF contains sufficient content to pass the GeneratesPdf verification level")?;
+        .write(
+            "This PDF contains sufficient content to pass the GeneratesPdf verification level",
+        )?;
     page.text()
         .set_font(Font::Courier, 8.0)
         .at(100.0, 600.0)
-        .write("Additional text to ensure the PDF file size exceeds the minimum threshold of 1000 bytes")?;
+        .write(
+        "Additional text to ensure the PDF file size exceeds the minimum threshold of 1000 bytes",
+    )?;
     doc.add_page(page);
     let pdf_bytes = doc.to_bytes()?;
 

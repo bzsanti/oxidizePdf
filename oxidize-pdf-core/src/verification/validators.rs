@@ -15,9 +15,7 @@ pub fn validate_external(pdf_bytes: &[u8]) -> Result<ExternalValidationResult> {
     // Create temporary file for validation
     let mut temp_file = NamedTempFile::new().map_err(PdfError::Io)?;
 
-    temp_file
-        .write_all(pdf_bytes)
-        .map_err(PdfError::Io)?;
+    temp_file.write_all(pdf_bytes).map_err(PdfError::Io)?;
 
     let temp_path = temp_file.path();
 
