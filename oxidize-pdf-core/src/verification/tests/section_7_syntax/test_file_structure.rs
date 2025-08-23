@@ -14,7 +14,7 @@ iso_test!(
     test_pdf_header_level_2,
     "7.1.1",
     VerificationLevel::GeneratesPdf,
-    "Test passed".to_string(),
+    "PDF header Level 2 verification",
     {
         let pdf_bytes = create_basic_test_pdf("Header Test", "Testing PDF header compliance")?;
 
@@ -27,7 +27,7 @@ iso_test!(
         let notes = if passed {
             format!("PDF header valid: {}", &pdf_string[..8])
         } else {
-            "Test failed - implementation error".to_string()
+            "PDF header missing or invalid format".to_string()
         };
 
         Ok((passed, level_achieved, notes))
@@ -68,7 +68,7 @@ iso_test!(
     test_pdf_eof_marker_level_2,
     "7.1.2",
     VerificationLevel::GeneratesPdf,
-    "Test passed".to_string(),
+    "PDF EOF marker Level 2 verification",
     {
         let pdf_bytes = create_basic_test_pdf("EOF Test", "Testing PDF end-of-file marker")?;
 
