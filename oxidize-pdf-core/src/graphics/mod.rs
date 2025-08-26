@@ -130,12 +130,14 @@ impl GraphicsContext {
     }
 
     pub fn move_to(&mut self, x: f64, y: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{x:.2} {y:.2} m").unwrap();
+        writeln!(&mut self.operations, "{x:.2} {y:.2} m")
+            .expect("Writing to string should never fail");
         self
     }
 
     pub fn line_to(&mut self, x: f64, y: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{x:.2} {y:.2} l").unwrap();
+        writeln!(&mut self.operations, "{x:.2} {y:.2} l")
+            .expect("Writing to string should never fail");
         self
     }
 
@@ -144,7 +146,7 @@ impl GraphicsContext {
             &mut self.operations,
             "{x1:.2} {y1:.2} {x2:.2} {y2:.2} {x3:.2} {y3:.2} c"
         )
-        .unwrap();
+        .expect("Writing to string should never fail");
         self
     }
 
@@ -153,7 +155,7 @@ impl GraphicsContext {
             &mut self.operations,
             "{x:.2} {y:.2} {width:.2} {height:.2} re"
         )
-        .unwrap();
+        .expect("Writing to string should never fail");
         self
     }
 
@@ -215,14 +217,16 @@ impl GraphicsContext {
         };
 
         // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/{} cs", cs_name).unwrap();
+        writeln!(&mut self.operations, "/{} cs", cs_name)
+            .expect("Writing to string should never fail");
 
         // Set color values
         let values = color.values();
         for value in &values {
-            write!(&mut self.operations, "{:.4} ", value).unwrap();
+            write!(&mut self.operations, "{:.4} ", value)
+                .expect("Writing to string should never fail");
         }
-        writeln!(&mut self.operations, "sc").unwrap();
+        writeln!(&mut self.operations, "sc").expect("Writing to string should never fail");
 
         self
     }
@@ -236,14 +240,16 @@ impl GraphicsContext {
         };
 
         // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/{} CS", cs_name).unwrap();
+        writeln!(&mut self.operations, "/{} CS", cs_name)
+            .expect("Writing to string should never fail");
 
         // Set color values
         let values = color.values();
         for value in &values {
-            write!(&mut self.operations, "{:.4} ", value).unwrap();
+            write!(&mut self.operations, "{:.4} ", value)
+                .expect("Writing to string should never fail");
         }
-        writeln!(&mut self.operations, "SC").unwrap();
+        writeln!(&mut self.operations, "SC").expect("Writing to string should never fail");
 
         self
     }
@@ -251,14 +257,15 @@ impl GraphicsContext {
     /// Set fill color using Lab color space
     pub fn set_fill_color_lab(&mut self, color: LabColor) -> &mut Self {
         // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/Lab1 cs").unwrap();
+        writeln!(&mut self.operations, "/Lab1 cs").expect("Writing to string should never fail");
 
         // Set color values (normalized for PDF)
         let values = color.values();
         for value in &values {
-            write!(&mut self.operations, "{:.4} ", value).unwrap();
+            write!(&mut self.operations, "{:.4} ", value)
+                .expect("Writing to string should never fail");
         }
-        writeln!(&mut self.operations, "sc").unwrap();
+        writeln!(&mut self.operations, "sc").expect("Writing to string should never fail");
 
         self
     }
@@ -266,33 +273,37 @@ impl GraphicsContext {
     /// Set stroke color using Lab color space
     pub fn set_stroke_color_lab(&mut self, color: LabColor) -> &mut Self {
         // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/Lab1 CS").unwrap();
+        writeln!(&mut self.operations, "/Lab1 CS").expect("Writing to string should never fail");
 
         // Set color values (normalized for PDF)
         let values = color.values();
         for value in &values {
-            write!(&mut self.operations, "{:.4} ", value).unwrap();
+            write!(&mut self.operations, "{:.4} ", value)
+                .expect("Writing to string should never fail");
         }
-        writeln!(&mut self.operations, "SC").unwrap();
+        writeln!(&mut self.operations, "SC").expect("Writing to string should never fail");
 
         self
     }
 
     pub fn set_line_width(&mut self, width: f64) -> &mut Self {
         self.line_width = width;
-        writeln!(&mut self.operations, "{width:.2} w").unwrap();
+        writeln!(&mut self.operations, "{width:.2} w")
+            .expect("Writing to string should never fail");
         self
     }
 
     pub fn set_line_cap(&mut self, cap: LineCap) -> &mut Self {
         self.current_line_cap = cap;
-        writeln!(&mut self.operations, "{} J", cap as u8).unwrap();
+        writeln!(&mut self.operations, "{} J", cap as u8)
+            .expect("Writing to string should never fail");
         self
     }
 
     pub fn set_line_join(&mut self, join: LineJoin) -> &mut Self {
         self.current_line_join = join;
-        writeln!(&mut self.operations, "{} j", join as u8).unwrap();
+        writeln!(&mut self.operations, "{} j", join as u8)
+            .expect("Writing to string should never fail");
         self
     }
 
@@ -376,7 +387,8 @@ impl GraphicsContext {
         self.save_state();
 
         // Mark beginning of transparency group with special comment
-        writeln!(&mut self.operations, "% Begin Transparency Group").unwrap();
+        writeln!(&mut self.operations, "% Begin Transparency Group")
+            .expect("Writing to string should never fail");
 
         // Apply group settings via ExtGState
         let mut extgstate = ExtGState::new();
@@ -401,7 +413,8 @@ impl GraphicsContext {
     pub fn end_transparency_group(&mut self) -> &mut Self {
         if let Some(_group_state) = self.transparency_stack.pop() {
             // Mark end of transparency group
-            writeln!(&mut self.operations, "% End Transparency Group").unwrap();
+            writeln!(&mut self.operations, "% End Transparency Group")
+                .expect("Writing to string should never fail");
 
             // Restore state
             self.restore_state();
@@ -420,12 +433,14 @@ impl GraphicsContext {
     }
 
     pub fn translate(&mut self, tx: f64, ty: f64) -> &mut Self {
-        writeln!(&mut self.operations, "1 0 0 1 {tx:.2} {ty:.2} cm").unwrap();
+        writeln!(&mut self.operations, "1 0 0 1 {tx:.2} {ty:.2} cm")
+            .expect("Writing to string should never fail");
         self
     }
 
     pub fn scale(&mut self, sx: f64, sy: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{sx:.2} 0 0 {sy:.2} 0 0 cm").unwrap();
+        writeln!(&mut self.operations, "{sx:.2} 0 0 {sy:.2} 0 0 cm")
+            .expect("Writing to string should never fail");
         self
     }
 
@@ -437,7 +452,7 @@ impl GraphicsContext {
             "{:.6} {:.6} {:.6} {:.6} 0 0 cm",
             cos, sin, -sin, cos
         )
-        .unwrap();
+        .expect("Writing to string should never fail");
         self
     }
 
@@ -446,7 +461,7 @@ impl GraphicsContext {
             &mut self.operations,
             "{a:.2} {b:.2} {c:.2} {d:.2} {e:.2} {f:.2} cm"
         )
-        .unwrap();
+        .expect("Writing to string should never fail");
         self
     }
 
@@ -471,10 +486,11 @@ impl GraphicsContext {
             &mut self.operations,
             "{width:.2} 0 0 {height:.2} {x:.2} {y:.2} cm"
         )
-        .unwrap();
+        .expect("Writing to string should never fail");
 
         // Draw the image XObject
-        writeln!(&mut self.operations, "/{image_name} Do").unwrap();
+        writeln!(&mut self.operations, "/{image_name} Do")
+            .expect("Writing to string should never fail");
 
         // Restore graphics state
         self.restore_state();
@@ -507,7 +523,8 @@ impl GraphicsContext {
                 .extgstate_manager
                 .add_state(extgstate)
                 .unwrap_or_else(|_| "GS1".to_string());
-            writeln!(&mut self.operations, "/{} gs", gs_name).unwrap();
+            writeln!(&mut self.operations, "/{} gs", gs_name)
+                .expect("Writing to string should never fail");
         }
 
         // Set up transformation matrix for image placement
@@ -515,10 +532,11 @@ impl GraphicsContext {
             &mut self.operations,
             "{width:.2} 0 0 {height:.2} {x:.2} {y:.2} cm"
         )
-        .unwrap();
+        .expect("Writing to string should never fail");
 
         // Draw the image XObject
-        writeln!(&mut self.operations, "/{image_name} Do").unwrap();
+        writeln!(&mut self.operations, "/{image_name} Do")
+            .expect("Writing to string should never fail");
 
         // If we had a mask, reset the soft mask to None
         if mask_name.is_some() {
@@ -530,7 +548,8 @@ impl GraphicsContext {
                 .extgstate_manager
                 .add_state(reset_extgstate)
                 .unwrap_or_else(|_| "GS2".to_string());
-            writeln!(&mut self.operations, "/{} gs", gs_name).unwrap();
+            writeln!(&mut self.operations, "/{} gs", gs_name)
+                .expect("Writing to string should never fail");
         }
 
         // Restore graphics state
@@ -542,13 +561,16 @@ impl GraphicsContext {
     fn apply_stroke_color(&mut self) {
         match self.stroke_color {
             Color::Rgb(r, g, b) => {
-                writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} RG").unwrap();
+                writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} RG")
+                    .expect("Writing to string should never fail");
             }
             Color::Gray(g) => {
-                writeln!(&mut self.operations, "{g:.3} G").unwrap();
+                writeln!(&mut self.operations, "{g:.3} G")
+                    .expect("Writing to string should never fail");
             }
             Color::Cmyk(c, m, y, k) => {
-                writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} K").unwrap();
+                writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} K")
+                    .expect("Writing to string should never fail");
             }
         }
     }
@@ -556,13 +578,16 @@ impl GraphicsContext {
     fn apply_fill_color(&mut self) {
         match self.current_color {
             Color::Rgb(r, g, b) => {
-                writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} rg").unwrap();
+                writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} rg")
+                    .expect("Writing to string should never fail");
             }
             Color::Gray(g) => {
-                writeln!(&mut self.operations, "{g:.3} g").unwrap();
+                writeln!(&mut self.operations, "{g:.3} g")
+                    .expect("Writing to string should never fail");
             }
             Color::Cmyk(c, m, y, k) => {
-                writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} k").unwrap();
+                writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} k")
+                    .expect("Writing to string should never fail");
             }
         }
     }
@@ -585,11 +610,13 @@ impl GraphicsContext {
         let mut dict = String::from("<< /Type /ExtGState");
 
         if self.fill_opacity < 1.0 {
-            write!(&mut dict, " /ca {:.3}", self.fill_opacity).unwrap();
+            write!(&mut dict, " /ca {:.3}", self.fill_opacity)
+                .expect("Writing to string should never fail");
         }
 
         if self.stroke_opacity < 1.0 {
-            write!(&mut dict, " /CA {:.3}", self.stroke_opacity).unwrap();
+            write!(&mut dict, " /CA {:.3}", self.stroke_opacity)
+                .expect("Writing to string should never fail");
         }
 
         dict.push_str(" >>");
@@ -650,7 +677,8 @@ impl GraphicsContext {
 
     /// Set font and size
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
-        writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size).unwrap();
+        writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size)
+            .expect("Writing to string should never fail");
 
         // Track font name and size for Unicode detection and proper font handling
         match &font {
@@ -669,7 +697,8 @@ impl GraphicsContext {
 
     /// Set text position
     pub fn set_text_position(&mut self, x: f64, y: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{x:.2} {y:.2} Td").unwrap();
+        writeln!(&mut self.operations, "{x:.2} {y:.2} Td")
+            .expect("Writing to string should never fail");
         self
     }
 
@@ -722,7 +751,8 @@ impl GraphicsContext {
     /// Set line dash pattern
     pub fn set_line_dash_pattern(&mut self, pattern: LineDashPattern) -> &mut Self {
         self.current_dash_pattern = Some(pattern.clone());
-        writeln!(&mut self.operations, "{} d", pattern.to_pdf_string()).unwrap();
+        writeln!(&mut self.operations, "{} d", pattern.to_pdf_string())
+            .expect("Writing to string should never fail");
         self
     }
 
@@ -736,28 +766,32 @@ impl GraphicsContext {
     /// Set miter limit
     pub fn set_miter_limit(&mut self, limit: f64) -> &mut Self {
         self.current_miter_limit = limit.max(1.0);
-        writeln!(&mut self.operations, "{:.2} M", self.current_miter_limit).unwrap();
+        writeln!(&mut self.operations, "{:.2} M", self.current_miter_limit)
+            .expect("Writing to string should never fail");
         self
     }
 
     /// Set rendering intent
     pub fn set_rendering_intent(&mut self, intent: RenderingIntent) -> &mut Self {
         self.current_rendering_intent = intent;
-        writeln!(&mut self.operations, "/{} ri", intent.pdf_name()).unwrap();
+        writeln!(&mut self.operations, "/{} ri", intent.pdf_name())
+            .expect("Writing to string should never fail");
         self
     }
 
     /// Set flatness tolerance
     pub fn set_flatness(&mut self, flatness: f64) -> &mut Self {
         self.current_flatness = flatness.clamp(0.0, 100.0);
-        writeln!(&mut self.operations, "{:.2} i", self.current_flatness).unwrap();
+        writeln!(&mut self.operations, "{:.2} i", self.current_flatness)
+            .expect("Writing to string should never fail");
         self
     }
 
     /// Apply an ExtGState dictionary immediately
     pub fn apply_extgstate(&mut self, state: ExtGState) -> Result<&mut Self> {
         let state_name = self.extgstate_manager.add_state(state)?;
-        writeln!(&mut self.operations, "/{state_name} gs").unwrap();
+        writeln!(&mut self.operations, "/{state_name} gs")
+            .expect("Writing to string should never fail");
         Ok(self)
     }
 
@@ -770,7 +804,8 @@ impl GraphicsContext {
     fn apply_pending_extgstate(&mut self) -> Result<()> {
         if let Some(state) = self.pending_extgstate.take() {
             let state_name = self.extgstate_manager.add_state(state)?;
-            writeln!(&mut self.operations, "/{state_name} gs").unwrap();
+            writeln!(&mut self.operations, "/{state_name} gs")
+                .expect("Writing to string should never fail");
         }
         Ok(())
     }
@@ -1059,18 +1094,19 @@ impl GraphicsContext {
                 "/{} {} Tf",
                 font_name, self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         } else {
             writeln!(
                 &mut self.operations,
                 "/Helvetica {} Tf",
                 self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         }
 
         // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
+            .expect("Writing to string should never fail");
 
         // Use parentheses encoding for Latin-1 text (standard PDF fonts use WinAnsiEncoding)
         // This allows proper rendering of accented characters
@@ -1091,7 +1127,8 @@ impl GraphicsContext {
             } else if code <= 255 {
                 // Latin-1 characters (128-255)
                 // For WinAnsiEncoding, we can use octal notation for high-bit characters
-                write!(&mut self.operations, "\\{:03o}", code).unwrap();
+                write!(&mut self.operations, "\\{:03o}", code)
+                    .expect("Writing to string should never fail");
             } else {
                 // Characters outside Latin-1 - replace with '?'
                 self.operations.push('?');
@@ -1118,18 +1155,19 @@ impl GraphicsContext {
                 "/{} {} Tf",
                 font_name, self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         } else {
             writeln!(
                 &mut self.operations,
                 "/Helvetica {} Tf",
                 self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         }
 
         // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
+            .expect("Writing to string should never fail");
 
         // IMPORTANT: For Type0 fonts with Identity-H encoding, we write CIDs (Character IDs),
         // NOT GlyphIDs. The CIDToGIDMap in the font handles the CID -> GlyphID conversion.
@@ -1143,11 +1181,13 @@ impl GraphicsContext {
             // The CIDToGIDMap will handle the conversion to the actual glyph ID
             if code <= 0xFFFF {
                 // Write the Unicode code point as a 2-byte hex value (CID)
-                write!(&mut self.operations, "{:04X}", code).unwrap();
+                write!(&mut self.operations, "{:04X}", code)
+                    .expect("Writing to string should never fail");
             } else {
                 // Characters outside BMP - use replacement character
                 // Most PDF viewers don't handle supplementary planes well
-                write!(&mut self.operations, "FFFD").unwrap(); // Unicode replacement character
+                write!(&mut self.operations, "FFFD").expect("Writing to string should never fail");
+                // Unicode replacement character
             }
         }
         self.operations.push_str("> Tj\n");
@@ -1171,7 +1211,7 @@ impl GraphicsContext {
                 "/{} {} Tf",
                 font_name, self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         } else {
             // Fallback to Helvetica if no font is set
             writeln!(
@@ -1179,11 +1219,12 @@ impl GraphicsContext {
                 "/Helvetica {} Tf",
                 self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         }
 
         // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
+            .expect("Writing to string should never fail");
 
         // Encode text as hex string
         // For TrueType fonts with Identity-H encoding, we need UTF-16BE
@@ -1192,11 +1233,13 @@ impl GraphicsContext {
         for ch in text.chars() {
             if ch as u32 <= 255 {
                 // For characters in the Latin-1 range, use single byte
-                write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+                write!(&mut self.operations, "{:02X}", ch as u8)
+                    .expect("Writing to string should never fail");
             } else {
                 // For characters outside Latin-1, we need proper glyph mapping
                 // For now, use a placeholder
-                write!(&mut self.operations, "3F").unwrap(); // '?' character
+                write!(&mut self.operations, "3F").expect("Writing to string should never fail");
+                // '?' character
             }
         }
         self.operations.push_str("> Tj\n");
@@ -1222,18 +1265,19 @@ impl GraphicsContext {
                 "/{} {} Tf",
                 font_name, self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         } else {
             writeln!(
                 &mut self.operations,
                 "/Helvetica {} Tf",
                 self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         }
 
         // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
+            .expect("Writing to string should never fail");
 
         // Check if text needs Type0 encoding
         if needs_type0_font(text) {
@@ -1245,16 +1289,19 @@ impl GraphicsContext {
                 // Handle all Unicode characters
                 if code <= 0xFFFF {
                     // Direct identity mapping for BMP characters
-                    write!(&mut self.operations, "{:04X}", code).unwrap();
+                    write!(&mut self.operations, "{:04X}", code)
+                        .expect("Writing to string should never fail");
                 } else if code <= 0x10FFFF {
                     // For characters outside BMP - use surrogate pairs
                     let code = code - 0x10000;
                     let high = ((code >> 10) & 0x3FF) + 0xD800;
                     let low = (code & 0x3FF) + 0xDC00;
-                    write!(&mut self.operations, "{:04X}{:04X}", high, low).unwrap();
+                    write!(&mut self.operations, "{:04X}{:04X}", high, low)
+                        .expect("Writing to string should never fail");
                 } else {
                     // Invalid Unicode - use replacement character
-                    write!(&mut self.operations, "FFFD").unwrap();
+                    write!(&mut self.operations, "FFFD")
+                        .expect("Writing to string should never fail");
                 }
             }
             self.operations.push_str("> Tj\n");
@@ -1263,9 +1310,11 @@ impl GraphicsContext {
             self.operations.push('<');
             for ch in text.chars() {
                 if ch as u32 <= 255 {
-                    write!(&mut self.operations, "{:02X}", ch as u8).unwrap();
+                    write!(&mut self.operations, "{:02X}", ch as u8)
+                        .expect("Writing to string should never fail");
                 } else {
-                    write!(&mut self.operations, "3F").unwrap();
+                    write!(&mut self.operations, "3F")
+                        .expect("Writing to string should never fail");
                 }
             }
             self.operations.push_str("> Tj\n");
@@ -1289,7 +1338,7 @@ impl GraphicsContext {
                 "/{} {} Tf",
                 font_name, self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         } else {
             // Fallback to Helvetica if no font is set
             writeln!(
@@ -1297,11 +1346,12 @@ impl GraphicsContext {
                 "/Helvetica {} Tf",
                 self.current_font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
         }
 
         // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y).unwrap();
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
+            .expect("Writing to string should never fail");
 
         // Encode text as UTF-16BE hex string
         self.operations.push('<');
@@ -1310,7 +1360,8 @@ impl GraphicsContext {
             let encoded = ch.encode_utf16(&mut utf16_buffer);
             for unit in encoded {
                 // Write UTF-16BE (big-endian)
-                write!(&mut self.operations, "{:04X}", unit).unwrap();
+                write!(&mut self.operations, "{:04X}", unit)
+                    .expect("Writing to string should never fail");
             }
         }
         self.operations.push_str("> Tj\n");
@@ -1608,8 +1659,8 @@ mod tests {
 
         let result = ctx.generate_operations();
         assert!(result.is_ok());
-        let bytes = result.unwrap();
-        let ops_string = String::from_utf8(bytes).unwrap();
+        let bytes = result.expect("Writing to string should never fail");
+        let ops_string = String::from_utf8(bytes).expect("Writing to string should never fail");
         assert!(ops_string.contains("0.00 0.00 10.00 10.00 re"));
     }
 
@@ -1742,7 +1793,9 @@ mod tests {
 
         // Fill opacity only
         ctx.set_fill_opacity(0.5);
-        let dict = ctx.generate_graphics_state_dict().unwrap();
+        let dict = ctx
+            .generate_graphics_state_dict()
+            .expect("Writing to string should never fail");
         assert!(dict.contains("/Type /ExtGState"));
         assert!(dict.contains("/ca 0.500"));
         assert!(!dict.contains("/CA"));
@@ -1750,14 +1803,18 @@ mod tests {
         // Stroke opacity only
         ctx.set_fill_opacity(1.0);
         ctx.set_stroke_opacity(0.75);
-        let dict = ctx.generate_graphics_state_dict().unwrap();
+        let dict = ctx
+            .generate_graphics_state_dict()
+            .expect("Writing to string should never fail");
         assert!(dict.contains("/Type /ExtGState"));
         assert!(dict.contains("/CA 0.750"));
         assert!(!dict.contains("/ca"));
 
         // Both opacities
         ctx.set_fill_opacity(0.25);
-        let dict = ctx.generate_graphics_state_dict().unwrap();
+        let dict = ctx
+            .generate_graphics_state_dict()
+            .expect("Writing to string should never fail");
         assert!(dict.contains("/Type /ExtGState"));
         assert!(dict.contains("/ca 0.250"));
         assert!(dict.contains("/CA 0.750"));
@@ -1811,22 +1868,26 @@ mod tests {
     #[test]
     fn test_show_text() {
         let mut ctx = GraphicsContext::new();
-        ctx.show_text("Hello World").unwrap();
+        ctx.show_text("Hello World")
+            .expect("Writing to string should never fail");
         assert!(ctx.operations().contains("(Hello World) Tj\n"));
     }
 
     #[test]
     fn test_show_text_with_escaping() {
         let mut ctx = GraphicsContext::new();
-        ctx.show_text("Test (parentheses)").unwrap();
+        ctx.show_text("Test (parentheses)")
+            .expect("Writing to string should never fail");
         assert!(ctx.operations().contains("(Test \\(parentheses\\)) Tj\n"));
 
         ctx.clear();
-        ctx.show_text("Back\\slash").unwrap();
+        ctx.show_text("Back\\slash")
+            .expect("Writing to string should never fail");
         assert!(ctx.operations().contains("(Back\\\\slash) Tj\n"));
 
         ctx.clear();
-        ctx.show_text("Line\nBreak").unwrap();
+        ctx.show_text("Line\nBreak")
+            .expect("Writing to string should never fail");
         assert!(ctx.operations().contains("(Line\\nBreak) Tj\n"));
     }
 
@@ -1954,7 +2015,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.move_to(100.0, 200.0).line_to(300.0, 400.0).stroke();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("100.00 200.00 m"));
         assert!(ops_str.contains("300.00 400.00 l"));
@@ -1968,7 +2031,9 @@ mod tests {
             .curve_to(10.0, 20.0, 30.0, 40.0, 50.0, 60.0)
             .stroke();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("0.00 0.00 m"));
         assert!(ops_str.contains("10.00 20.00 30.00 40.00 50.00 60.00 c"));
@@ -1980,7 +2045,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.circle(100.0, 100.0, 50.0).fill();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         // Circle should use bezier curves (c operator)
         assert!(ops_str.contains(" c"));
@@ -1996,7 +2063,9 @@ mod tests {
             .close_path()
             .stroke();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("h")); // close path operator
         assert!(ops_str.contains("S"));
@@ -2007,7 +2076,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.rect(10.0, 10.0, 50.0, 50.0).fill_stroke();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("10.00 10.00 50.00 50.00 re"));
         assert!(ops_str.contains("B")); // fill and stroke operator
@@ -2024,7 +2095,9 @@ mod tests {
         assert_eq!(ctx.fill_color(), Color::rgb(1.0, 0.0, 0.0));
         assert_eq!(ctx.stroke_color(), Color::rgb(0.0, 1.0, 0.0));
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1.000 0.000 0.000 rg")); // red fill
         assert!(ops_str.contains("0.000 1.000 0.000 RG")); // green stroke
@@ -2039,7 +2112,9 @@ mod tests {
 
         assert_eq!(ctx.line_width(), 2.5);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("2.50 w")); // line width
         assert!(ops_str.contains("1 J")); // round line cap
@@ -2068,7 +2143,9 @@ mod tests {
             .set_fill_color(Color::rgb(1.0, 0.0, 0.0))
             .restore_state();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("q")); // save state
         assert!(ops_str.contains("Q")); // restore state
@@ -2079,7 +2156,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.translate(100.0, 200.0).scale(2.0, 3.0).rotate(45.0);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1 0 0 1 100.00 200.00 cm")); // translate
         assert!(ops_str.contains("2.00 0 0 3.00 0 0 cm")); // scale
@@ -2091,7 +2170,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.transform(1.0, 0.5, 0.5, 1.0, 10.0, 20.0);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1.00 0.50 0.50 1.00 10.00 20.00 cm"));
     }
@@ -2101,7 +2182,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.rectangle(25.0, 25.0, 150.0, 100.0).stroke();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("25.00 25.00 150.00 100.00 re"));
         assert!(ops_str.contains("S"));
@@ -2110,7 +2193,9 @@ mod tests {
     #[test]
     fn test_empty_operations() {
         let ctx = GraphicsContext::new();
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         assert!(ops.is_empty());
     }
 
@@ -2124,7 +2209,9 @@ mod tests {
             .close_path()
             .fill();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("50.00 50.00 m"));
         assert!(ops_str.contains("100.00 50.00 l"));
@@ -2145,7 +2232,7 @@ mod tests {
         ctx.set_opacity(0.5);
         let dict = ctx.generate_graphics_state_dict();
         assert!(dict.is_some());
-        let dict_str = dict.unwrap();
+        let dict_str = dict.expect("Writing to string should never fail");
         assert!(dict_str.contains("/ca 0.5"));
         assert!(dict_str.contains("/CA 0.5"));
     }
@@ -2159,7 +2246,9 @@ mod tests {
         };
         ctx.set_line_dash_pattern(pattern);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("[3.00 2.00] 0.00 d"));
     }
@@ -2169,7 +2258,9 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.set_miter_limit(4.0);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("4.00 M"));
     }
@@ -2179,19 +2270,25 @@ mod tests {
         let mut ctx = GraphicsContext::new();
 
         ctx.set_line_cap(LineCap::Butt);
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("0 J"));
 
         let mut ctx = GraphicsContext::new();
         ctx.set_line_cap(LineCap::Round);
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1 J"));
 
         let mut ctx = GraphicsContext::new();
         ctx.set_line_cap(LineCap::Square);
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("2 J"));
     }
@@ -2252,19 +2349,25 @@ mod tests {
         let mut ctx = GraphicsContext::new();
 
         ctx.set_line_join(LineJoin::Miter);
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("0 j"));
 
         let mut ctx = GraphicsContext::new();
         ctx.set_line_join(LineJoin::Round);
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("1 j"));
 
         let mut ctx = GraphicsContext::new();
         ctx.set_line_join(LineJoin::Bevel);
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("2 j"));
     }
@@ -2293,7 +2396,9 @@ mod tests {
         ctx.set_flatness(0.5);
         assert_eq!(ctx.flatness(), 0.5);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("0.50 i"));
     }
@@ -2314,7 +2419,9 @@ mod tests {
         ctx.move_to(10.0, 10.0);
         ctx.curve_to(20.0, 10.0, 30.0, 20.0, 30.0, 30.0);
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("10.00 10.00 m"));
         assert!(ops_str.contains("c")); // cubic curve
@@ -2327,7 +2434,9 @@ mod tests {
         ctx.rectangle(10.0, 10.0, 100.0, 100.0);
         ctx.clip();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("W"));
     }
@@ -2339,7 +2448,9 @@ mod tests {
         ctx.rectangle(10.0, 10.0, 100.0, 100.0);
         ctx.clip_even_odd();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("W*"));
     }
@@ -2385,7 +2496,9 @@ mod tests {
         ctx.circle(100.0, 100.0, 25.0);
         ctx.close_path();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         assert!(!ops.is_empty());
     }
 
@@ -2409,7 +2522,9 @@ mod tests {
         ctx.line_to(100.0, 100.0);
         ctx.stroke();
 
-        let ops = ctx.generate_operations().unwrap();
+        let ops = ctx
+            .generate_operations()
+            .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
         assert!(ops_str.contains("m")); // move
         assert!(ops_str.contains("l")); // line

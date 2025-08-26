@@ -305,7 +305,9 @@ pub fn batch_split_pdfs<P: AsRef<Path>>(
             input: path.to_path_buf(),
             output_pattern: format!(
                 "{}_page_%d.pdf",
-                path.file_stem().unwrap().to_str().unwrap()
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or("output")
             ),
             pages_per_file,
         });

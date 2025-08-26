@@ -222,7 +222,11 @@ impl JavaScriptEngine {
                     num_str.push(ch);
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_ascii_digit() || next_ch == '.' {
-                            num_str.push(chars.next().unwrap());
+                            num_str.push(
+                                chars
+                                    .next()
+                                    .expect("Character should be available after peek"),
+                            );
                         } else {
                             break;
                         }
@@ -237,7 +241,11 @@ impl JavaScriptEngine {
                     ident.push(ch);
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_alphanumeric() || next_ch == '_' {
-                            ident.push(chars.next().unwrap());
+                            ident.push(
+                                chars
+                                    .next()
+                                    .expect("Character should be available after peek"),
+                            );
                         } else {
                             break;
                         }

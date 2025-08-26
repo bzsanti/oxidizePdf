@@ -27,27 +27,33 @@ pub fn validate_external(pdf_bytes: &[u8]) -> Result<ExternalValidationResult> {
     };
 
     // Validate with qpdf (most important)
-    match validate_with_qpdf(temp_path.to_str().unwrap()) {
-        Ok(passed) => result.qpdf_passed = Some(passed),
-        Err(e) => result.error_messages.push(format!("qpdf error: {}", e)),
-    }
-
-    // Validate with veraPDF if available
-    match validate_with_verapdf(temp_path.to_str().unwrap()) {
-        Ok(passed) => result.verapdf_passed = Some(passed),
-        Err(e) => result.error_messages.push(format!("veraPDF error: {}", e)),
-    }
-
-    // Adobe Preflight is typically not available in CI/dev environments
-    // but we'll try if it exists
-    match validate_with_adobe_preflight(temp_path.to_str().unwrap()) {
-        Ok(passed) => result.adobe_preflight_passed = Some(passed),
-        Err(_) => {
-            // Adobe Preflight not available - this is expected
-            result
-                .error_messages
-                .push("Adobe Preflight not available".to_string());
+    if let Some(path_str) = temp_path.to_str() {
+        match validate_with_qpdf(path_str) {
+            Ok(passed) => result.qpdf_passed = Some(passed),
+            Err(e) => result.error_messages.push(format!("qpdf error: {}", e)),
         }
+
+        // Validate with veraPDF if available
+        match validate_with_verapdf(path_str) {
+            Ok(passed) => result.verapdf_passed = Some(passed),
+            Err(e) => result.error_messages.push(format!("veraPDF error: {}", e)),
+        }
+
+        // Adobe Preflight is typically not available in CI/dev environments
+        // but we'll try if it exists
+        match validate_with_adobe_preflight(path_str) {
+            Ok(passed) => result.adobe_preflight_passed = Some(passed),
+            Err(_) => {
+                // Adobe Preflight not available - this is expected
+                result
+                    .error_messages
+                    .push("Adobe Preflight not available".to_string());
+            }
+        }
+    } else {
+        result
+            .error_messages
+            .push("Path contains invalid UTF-8 characters".to_string());
     }
 
     Ok(result)
@@ -253,7 +259,6 @@ use std::collections::HashMap;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     fn create_minimal_pdf() -> Vec<u8> {
         // Create a minimal valid PDF for testing

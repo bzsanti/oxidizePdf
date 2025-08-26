@@ -830,10 +830,13 @@ impl XRefTable {
             // Check if this is just a flag character (n or f)
             if gen_part == "n" || gen_part == "f" {
                 // This is just the flag, generation defaults to 0
-                (0, Some(gen_part.chars().next().unwrap()))
+                (0, gen_part.chars().next())
             } else if gen_part.ends_with('n') || gen_part.ends_with('f') {
                 // Flag is attached to generation (e.g., "0n", "1f")
-                let flag_char = gen_part.chars().last().unwrap();
+                let flag_char = gen_part
+                    .chars()
+                    .last()
+                    .expect("String should have at least one character after ends_with check");
                 let gen_str = &gen_part[..gen_part.len() - 1];
                 if gen_str.is_empty() {
                     // Just the flag, no generation number

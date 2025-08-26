@@ -205,7 +205,10 @@ impl WorkerPool {
         }
 
         // Collect results
-        let results = results_handle.join().unwrap();
+        let results = results_handle.join().unwrap_or_else(|_| {
+            eprintln!("Result collection thread panicked");
+            Vec::new()
+        });
         results.into_iter().flatten().collect()
     }
 
@@ -239,7 +242,13 @@ impl Worker {
         let thread = thread::spawn(move || {
             loop {
                 let message = {
-                    let receiver = receiver.lock().unwrap();
+                    let receiver = match receiver.lock() {
+                        Ok(r) => r,
+                        Err(_) => {
+                            eprintln!("Worker {} receiver lock poisoned", id);
+                            break;
+                        }
+                    };
                     receiver.recv()
                 };
 

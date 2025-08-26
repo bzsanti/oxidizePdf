@@ -104,7 +104,7 @@ impl ChoiceWidget {
         let mut stream = String::new();
 
         // Save graphics state
-        writeln!(&mut stream, "q").unwrap();
+        writeln!(&mut stream, "q").expect("Writing to string should never fail");
 
         // Draw background if specified
         if let Some(bg_color) = &self.background_color {
@@ -115,15 +115,15 @@ impl ChoiceWidget {
                 bg_color.g(),
                 bg_color.b()
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
             writeln!(
                 &mut stream,
                 "0 0 {} {} re",
                 self.rect.width(),
                 self.rect.height()
             )
-            .unwrap();
-            writeln!(&mut stream, "f").unwrap();
+            .expect("Writing to string should never fail");
+            writeln!(&mut stream, "f").expect("Writing to string should never fail");
         }
 
         // Draw border
@@ -134,37 +134,42 @@ impl ChoiceWidget {
             self.border_color.g(),
             self.border_color.b()
         )
-        .unwrap();
-        writeln!(&mut stream, "{} w", self.border_width).unwrap();
+        .expect("Writing to string should never fail");
+        writeln!(&mut stream, "{} w", self.border_width)
+            .expect("Writing to string should never fail");
         writeln!(
             &mut stream,
             "0 0 {} {} re",
             self.rect.width(),
             self.rect.height()
         )
-        .unwrap();
-        writeln!(&mut stream, "S").unwrap();
+        .expect("Writing to string should never fail");
+        writeln!(&mut stream, "S").expect("Writing to string should never fail");
 
         // Draw dropdown arrow on the right
         let arrow_x = self.rect.width() - 15.0;
         let arrow_y = self.rect.height() / 2.0;
-        writeln!(&mut stream, "{:.3} {:.3} {:.3} rg", 0.3, 0.3, 0.3).unwrap();
-        writeln!(&mut stream, "{} {} m", arrow_x, arrow_y + 3.0).unwrap();
-        writeln!(&mut stream, "{} {} l", arrow_x + 8.0, arrow_y + 3.0).unwrap();
-        writeln!(&mut stream, "{} {} l", arrow_x + 4.0, arrow_y - 3.0).unwrap();
-        writeln!(&mut stream, "f").unwrap();
+        writeln!(&mut stream, "{:.3} {:.3} {:.3} rg", 0.3, 0.3, 0.3)
+            .expect("Writing to string should never fail");
+        writeln!(&mut stream, "{} {} m", arrow_x, arrow_y + 3.0)
+            .expect("Writing to string should never fail");
+        writeln!(&mut stream, "{} {} l", arrow_x + 8.0, arrow_y + 3.0)
+            .expect("Writing to string should never fail");
+        writeln!(&mut stream, "{} {} l", arrow_x + 4.0, arrow_y - 3.0)
+            .expect("Writing to string should never fail");
+        writeln!(&mut stream, "f").expect("Writing to string should never fail");
 
         // Draw selected text if any
         if let Some(selected_idx) = combo.selected {
             if let Some((_, display_text)) = combo.options.get(selected_idx) {
-                writeln!(&mut stream, "BT").unwrap();
+                writeln!(&mut stream, "BT").expect("Writing to string should never fail");
                 writeln!(
                     &mut stream,
                     "/{} {} Tf",
                     self.font.pdf_name(),
                     self.font_size
                 )
-                .unwrap();
+                .expect("Writing to string should never fail");
                 writeln!(
                     &mut stream,
                     "{:.3} {:.3} {:.3} rg",
@@ -172,20 +177,21 @@ impl ChoiceWidget {
                     self.text_color.g(),
                     self.text_color.b()
                 )
-                .unwrap();
+                .expect("Writing to string should never fail");
                 writeln!(
                     &mut stream,
                     "2 {} Td",
                     (self.rect.height() - self.font_size) / 2.0
                 )
-                .unwrap();
-                writeln!(&mut stream, "({}) Tj", escape_pdf_string(display_text)).unwrap();
-                writeln!(&mut stream, "ET").unwrap();
+                .expect("Writing to string should never fail");
+                writeln!(&mut stream, "({}) Tj", escape_pdf_string(display_text))
+                    .expect("Writing to string should never fail");
+                writeln!(&mut stream, "ET").expect("Writing to string should never fail");
             }
         }
 
         // Restore graphics state
-        writeln!(&mut stream, "Q").unwrap();
+        writeln!(&mut stream, "Q").expect("Writing to string should never fail");
 
         stream
     }
@@ -195,7 +201,7 @@ impl ChoiceWidget {
         let mut stream = String::new();
 
         // Save graphics state
-        writeln!(&mut stream, "q").unwrap();
+        writeln!(&mut stream, "q").expect("Writing to string should never fail");
 
         // Draw background
         if let Some(bg_color) = &self.background_color {
@@ -206,15 +212,15 @@ impl ChoiceWidget {
                 bg_color.g(),
                 bg_color.b()
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
             writeln!(
                 &mut stream,
                 "0 0 {} {} re",
                 self.rect.width(),
                 self.rect.height()
             )
-            .unwrap();
-            writeln!(&mut stream, "f").unwrap();
+            .expect("Writing to string should never fail");
+            writeln!(&mut stream, "f").expect("Writing to string should never fail");
         }
 
         // Draw border
@@ -225,16 +231,17 @@ impl ChoiceWidget {
             self.border_color.g(),
             self.border_color.b()
         )
-        .unwrap();
-        writeln!(&mut stream, "{} w", self.border_width).unwrap();
+        .expect("Writing to string should never fail");
+        writeln!(&mut stream, "{} w", self.border_width)
+            .expect("Writing to string should never fail");
         writeln!(
             &mut stream,
             "0 0 {} {} re",
             self.rect.width(),
             self.rect.height()
         )
-        .unwrap();
-        writeln!(&mut stream, "S").unwrap();
+        .expect("Writing to string should never fail");
+        writeln!(&mut stream, "S").expect("Writing to string should never fail");
 
         // Calculate visible items
         let item_height = self.font_size + 4.0;
@@ -255,7 +262,7 @@ impl ChoiceWidget {
                         highlight.g(),
                         highlight.b()
                     )
-                    .unwrap();
+                    .expect("Writing to string should never fail");
                     writeln!(
                         &mut stream,
                         "0 {} {} {} re",
@@ -263,20 +270,20 @@ impl ChoiceWidget {
                         self.rect.width(),
                         item_height
                     )
-                    .unwrap();
-                    writeln!(&mut stream, "f").unwrap();
+                    .expect("Writing to string should never fail");
+                    writeln!(&mut stream, "f").expect("Writing to string should never fail");
                 }
             }
 
             // Draw text
-            writeln!(&mut stream, "BT").unwrap();
+            writeln!(&mut stream, "BT").expect("Writing to string should never fail");
             writeln!(
                 &mut stream,
                 "/{} {} Tf",
                 self.font.pdf_name(),
                 self.font_size
             )
-            .unwrap();
+            .expect("Writing to string should never fail");
             writeln!(
                 &mut stream,
                 "{:.3} {:.3} {:.3} rg",
@@ -284,21 +291,24 @@ impl ChoiceWidget {
                 self.text_color.g(),
                 self.text_color.b()
             )
-            .unwrap();
-            writeln!(&mut stream, "2 {} Td", y_pos + 2.0).unwrap();
-            writeln!(&mut stream, "({}) Tj", escape_pdf_string(display_text)).unwrap();
-            writeln!(&mut stream, "ET").unwrap();
+            .expect("Writing to string should never fail");
+            writeln!(&mut stream, "2 {} Td", y_pos + 2.0)
+                .expect("Writing to string should never fail");
+            writeln!(&mut stream, "({}) Tj", escape_pdf_string(display_text))
+                .expect("Writing to string should never fail");
+            writeln!(&mut stream, "ET").expect("Writing to string should never fail");
         }
 
         // Draw scrollbar if needed
         if listbox.options.len() > visible_items {
-            writeln!(&mut stream, "0.7 0.7 0.7 rg").unwrap();
+            writeln!(&mut stream, "0.7 0.7 0.7 rg").expect("Writing to string should never fail");
             let scrollbar_x = self.rect.width() - 10.0;
-            writeln!(&mut stream, "{} 0 8 {} re", scrollbar_x, self.rect.height()).unwrap();
-            writeln!(&mut stream, "f").unwrap();
+            writeln!(&mut stream, "{} 0 8 {} re", scrollbar_x, self.rect.height())
+                .expect("Writing to string should never fail");
+            writeln!(&mut stream, "f").expect("Writing to string should never fail");
 
             // Draw scroll thumb
-            writeln!(&mut stream, "0.4 0.4 0.4 rg").unwrap();
+            writeln!(&mut stream, "0.4 0.4 0.4 rg").expect("Writing to string should never fail");
             let thumb_height =
                 (visible_items as f64 / listbox.options.len() as f64) * self.rect.height();
             writeln!(
@@ -308,12 +318,12 @@ impl ChoiceWidget {
                 self.rect.height() - thumb_height,
                 thumb_height
             )
-            .unwrap();
-            writeln!(&mut stream, "f").unwrap();
+            .expect("Writing to string should never fail");
+            writeln!(&mut stream, "f").expect("Writing to string should never fail");
         }
 
         // Restore graphics state
-        writeln!(&mut stream, "Q").unwrap();
+        writeln!(&mut stream, "Q").expect("Writing to string should never fail");
 
         stream
     }

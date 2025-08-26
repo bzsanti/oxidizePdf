@@ -5,3 +5,4 @@
 
 pub mod test_fonts;
 pub mod test_text_operators;
+pub mod test_text_operators_advanced;

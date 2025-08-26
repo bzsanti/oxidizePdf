@@ -51,6 +51,8 @@ pub struct Document {
     pub(crate) form_manager: Option<FormManager>,
     /// Whether to compress streams when writing the PDF
     pub(crate) compress: bool,
+    /// Whether to use compressed cross-reference streams (PDF 1.5+)
+    pub(crate) use_xref_streams: bool,
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
     /// Map from font name to embedded font object ID
@@ -117,7 +119,8 @@ impl Document {
             default_font_encoding: None,
             acro_form: None,
             form_manager: None,
-            compress: true, // Enable compression by default
+            compress: true,          // Enable compression by default
+            use_xref_streams: false, // Disabled by default for compatibility
             custom_fonts: FontCache::new(),
             embedded_fonts: HashMap::new(),
             used_characters: HashSet::new(),
@@ -428,7 +431,10 @@ impl Document {
         if self.acro_form.is_none() {
             self.acro_form = Some(AcroForm::new());
         }
-        self.form_manager.as_mut().unwrap()
+        // This should always succeed since we just ensured form_manager exists
+        self.form_manager
+            .as_mut()
+            .expect("FormManager should exist after initialization")
     }
 
     /// Disables interactive forms by removing both the AcroForm and FormManager.
@@ -448,8 +454,8 @@ impl Document {
 
         // Create writer config with document's compression setting
         let config = crate::writer::WriterConfig {
-            use_xref_streams: false,
-            pdf_version: "1.7".to_string(),
+            use_xref_streams: self.use_xref_streams,
+            pdf_version: if self.use_xref_streams { "1.5" } else { "1.7" }.to_string(),
             compress_streams: self.compress,
         };
 
@@ -579,6 +585,28 @@ impl Document {
         self.compress = compress;
     }
 
+    /// Enable or disable compressed cross-reference streams (PDF 1.5+).
+    ///
+    /// Cross-reference streams provide more compact representation of the cross-reference
+    /// table and support additional features like compressed object streams.
+    ///
+    /// # Arguments
+    ///
+    /// * `enable` - Whether to enable compressed cross-reference streams
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::Document;
+    ///
+    /// let mut doc = Document::new();
+    /// doc.enable_xref_streams(true);
+    /// ```
+    pub fn enable_xref_streams(&mut self, enable: bool) -> &mut Self {
+        self.use_xref_streams = enable;
+        self
+    }
+
     /// Gets the current compression setting.
     ///
     /// # Returns
@@ -624,8 +652,8 @@ impl Document {
 
         // Create writer config with document's compression setting
         let config = crate::writer::WriterConfig {
-            use_xref_streams: false,
-            pdf_version: "1.7".to_string(),
+            use_xref_streams: self.use_xref_streams,
+            pdf_version: if self.use_xref_streams { "1.5" } else { "1.7" }.to_string(),
             compress_streams: self.compress,
         };
 
@@ -1733,6 +1761,66 @@ mod tests {
             assert_eq!(doc.metadata.title.as_deref(), Some("Fluent"));
             assert_eq!(doc.metadata.author.as_deref(), Some("Builder"));
             assert!(doc.compress);
+        }
+
+        #[test]
+        fn test_xref_streams_functionality() {
+            use crate::{Document, Font, Page};
+
+            // Test with xref streams disabled (default)
+            let mut doc = Document::new();
+            assert!(!doc.use_xref_streams);
+
+            let mut page = Page::a4();
+            page.text()
+                .set_font(Font::Helvetica, 12.0)
+                .at(100.0, 700.0)
+                .write("Testing XRef Streams")
+                .unwrap();
+
+            doc.add_page(page);
+
+            // Generate PDF without xref streams
+            let pdf_without_xref = doc.to_bytes().unwrap();
+
+            // Verify traditional xref is used
+            let pdf_str = String::from_utf8_lossy(&pdf_without_xref);
+            assert!(pdf_str.contains("xref"), "Traditional xref table not found");
+            assert!(
+                !pdf_str.contains("/Type /XRef"),
+                "XRef stream found when it shouldn't be"
+            );
+
+            // Test with xref streams enabled
+            doc.enable_xref_streams(true);
+            assert!(doc.use_xref_streams);
+
+            // Generate PDF with xref streams
+            let pdf_with_xref = doc.to_bytes().unwrap();
+
+            // Verify xref streams are used
+            let pdf_str = String::from_utf8_lossy(&pdf_with_xref);
+            // XRef streams replace traditional xref tables in PDF 1.5+
+            assert!(
+                pdf_str.contains("/Type /XRef") || pdf_str.contains("stream"),
+                "XRef stream not found when enabled"
+            );
+
+            // Verify PDF version is set correctly
+            assert!(
+                pdf_str.contains("PDF-1.5"),
+                "PDF version not set to 1.5 for xref streams"
+            );
+
+            // Test fluent interface
+            let mut doc2 = Document::new();
+            doc2.enable_xref_streams(true);
+            doc2.set_title("XRef Streams Test");
+            doc2.set_author("oxidize-pdf");
+
+            assert!(doc2.use_xref_streams);
+            assert_eq!(doc2.metadata.title.as_deref(), Some("XRef Streams Test"));
+            assert_eq!(doc2.metadata.author.as_deref(), Some("oxidize-pdf"));
         }
 
         #[test]

@@ -201,7 +201,9 @@ impl<'a> TtfParser<'a> {
         let flags = self.extract_font_flags()?;
 
         // Get bounding box from head table
-        let head_table = self.get_table("head").unwrap();
+        let head_table = self.get_table("head").ok_or_else(|| {
+            PdfError::InvalidFormat("Missing required 'head' table in TTF font".to_string())
+        })?;
         let x_min = i16::from_be_bytes([head_table[36], head_table[37]]);
         let y_min = i16::from_be_bytes([head_table[38], head_table[39]]);
         let x_max = i16::from_be_bytes([head_table[40], head_table[41]]);

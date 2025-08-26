@@ -8,22 +8,28 @@ use crate::parser::{ParseError, ParseResult};
 use std::collections::{HashMap, HashSet};
 
 /// TrueType table tags
-const HEAD_TABLE: &[u8] = b"head";
-const CMAP_TABLE: &[u8] = b"cmap";
-const GLYF_TABLE: &[u8] = b"glyf";
-const LOCA_TABLE: &[u8] = b"loca";
-const MAXP_TABLE: &[u8] = b"maxp";
-const HHEA_TABLE: &[u8] = b"hhea";
-const HMTX_TABLE: &[u8] = b"hmtx";
-const NAME_TABLE: &[u8] = b"name";
-const _POST_TABLE: &[u8] = b"post";
-const _FPGM_TABLE: &[u8] = b"fpgm";
+const HEAD_TABLE: [u8; 4] = *b"head";
+const CMAP_TABLE: [u8; 4] = *b"cmap";
+const GLYF_TABLE: [u8; 4] = *b"glyf";
+const LOCA_TABLE: [u8; 4] = *b"loca";
+const MAXP_TABLE: [u8; 4] = *b"maxp";
+const HHEA_TABLE: [u8; 4] = *b"hhea";
+const HMTX_TABLE: [u8; 4] = *b"hmtx";
+const NAME_TABLE: [u8; 4] = *b"name";
+const _POST_TABLE: [u8; 4] = *b"post";
+const _FPGM_TABLE: [u8; 4] = *b"fpgm";
 const _CVT_TABLE: &[u8] = b"cvt ";
 const _PREP_TABLE: &[u8] = b"prep";
 
 /// Required tables for TrueType embedding in PDF
 const REQUIRED_TABLES: &[&[u8]] = &[
-    HEAD_TABLE, CMAP_TABLE, GLYF_TABLE, LOCA_TABLE, MAXP_TABLE, HHEA_TABLE, HMTX_TABLE,
+    &HEAD_TABLE,
+    &CMAP_TABLE,
+    &GLYF_TABLE,
+    &LOCA_TABLE,
+    &MAXP_TABLE,
+    &HHEA_TABLE,
+    &HMTX_TABLE,
 ];
 
 /// TrueType font file parser and subsetter
@@ -168,7 +174,7 @@ impl TrueTypeFont {
         }
 
         // Parse head table
-        let head_key: [u8; 4] = HEAD_TABLE.try_into().unwrap();
+        let head_key: [u8; 4] = HEAD_TABLE;
         let head_table = &tables[&head_key];
         let head_offset = head_table.offset as usize;
 
@@ -183,7 +189,7 @@ impl TrueTypeFont {
         let loca_format = read_i16(&data, head_offset + 50)? as u16;
 
         // Parse maxp table for glyph count
-        let maxp_key: [u8; 4] = MAXP_TABLE.try_into().unwrap();
+        let maxp_key: [u8; 4] = MAXP_TABLE;
         let maxp_table = &tables[&maxp_key];
         let maxp_offset = maxp_table.offset as usize;
 
@@ -212,7 +218,7 @@ impl TrueTypeFont {
 
     /// Get font name from the name table
     pub fn get_font_name(&self) -> ParseResult<String> {
-        let name_key: [u8; 4] = NAME_TABLE.try_into().unwrap();
+        let name_key: [u8; 4] = NAME_TABLE;
         if let Some(name_table) = self.tables.get(&name_key) {
             let offset = name_table.offset as usize;
             if offset + 6 > self.data.len() {
@@ -270,7 +276,7 @@ impl TrueTypeFont {
 
     /// Get raw glyph data from the glyf table
     pub fn get_glyph_data(&self, glyph_id: u16) -> ParseResult<Vec<u8>> {
-        let glyf_key: [u8; 4] = GLYF_TABLE.try_into().unwrap();
+        let glyf_key: [u8; 4] = GLYF_TABLE;
         let glyf_table = self
             .tables
             .get(&glyf_key)
@@ -279,7 +285,7 @@ impl TrueTypeFont {
                 message: "Missing glyf table".to_string(),
             })?;
 
-        let loca_key: [u8; 4] = LOCA_TABLE.try_into().unwrap();
+        let loca_key: [u8; 4] = LOCA_TABLE;
         let loca_table = self
             .tables
             .get(&loca_key)
@@ -332,7 +338,7 @@ impl TrueTypeFont {
 
     /// Get all glyph offsets from loca table
     pub fn get_glyph_offsets(&self) -> ParseResult<Vec<u32>> {
-        let loca_key: [u8; 4] = LOCA_TABLE.try_into().unwrap();
+        let loca_key: [u8; 4] = LOCA_TABLE;
         let loca_table = self
             .tables
             .get(&loca_key)
@@ -369,7 +375,7 @@ impl TrueTypeFont {
         unicode_to_glyph: &HashMap<u32, u16>,
     ) -> ParseResult<HashMap<u32, u16>> {
         // Parse hmtx table to get glyph advance widths
-        let hmtx_key: [u8; 4] = HMTX_TABLE.try_into().unwrap();
+        let hmtx_key: [u8; 4] = HMTX_TABLE;
         let hmtx_table = self
             .tables
             .get(&hmtx_key)
@@ -379,7 +385,7 @@ impl TrueTypeFont {
             })?;
 
         // Get number of horizontal metrics from hhea table
-        let hhea_key: [u8; 4] = HHEA_TABLE.try_into().unwrap();
+        let hhea_key: [u8; 4] = HHEA_TABLE;
         let hhea_table = self
             .tables
             .get(&hhea_key)
@@ -445,7 +451,7 @@ impl TrueTypeFont {
 
     /// Parse the cmap table to get character to glyph mappings
     pub fn parse_cmap(&self) -> ParseResult<Vec<CmapSubtable>> {
-        let cmap_key: [u8; 4] = CMAP_TABLE.try_into().unwrap();
+        let cmap_key: [u8; 4] = CMAP_TABLE;
         let cmap_table = self
             .tables
             .get(&cmap_key)
@@ -494,8 +500,14 @@ impl TrueTypeFont {
         encoding_id: u16,
     ) -> ParseResult<CmapSubtable> {
         // The subtable offset from the directory is relative to the cmap table start
-        let cmap_key: [u8; 4] = CMAP_TABLE.try_into().unwrap();
-        let cmap_table = self.tables.get(&cmap_key).unwrap();
+        let cmap_key: [u8; 4] = CMAP_TABLE;
+        let cmap_table = self
+            .tables
+            .get(&cmap_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing cmap table".to_string(),
+            })?;
         let absolute_offset = cmap_table.offset as usize + subtable_offset;
 
         if absolute_offset + 6 > self.data.len() {
@@ -643,7 +655,7 @@ impl TrueTypeFont {
 
     /// Get glyph metrics from hmtx table
     pub fn get_glyph_metrics(&self, glyph_id: u16) -> ParseResult<(u16, i16)> {
-        let hhea_key: [u8; 4] = HHEA_TABLE.try_into().unwrap();
+        let hhea_key: [u8; 4] = HHEA_TABLE;
         let hhea_table = self
             .tables
             .get(&hhea_key)
@@ -652,7 +664,7 @@ impl TrueTypeFont {
                 message: "Missing hhea table".to_string(),
             })?;
 
-        let hmtx_key: [u8; 4] = HMTX_TABLE.try_into().unwrap();
+        let hmtx_key: [u8; 4] = HMTX_TABLE;
         let hmtx_table = self
             .tables
             .get(&hmtx_key)
@@ -841,7 +853,7 @@ impl TrueTypeFont {
 
     /// Subset the glyf and loca tables
     fn subset_glyf_table(&self, glyph_map: &HashMap<u16, u16>) -> ParseResult<(Vec<u8>, Vec<u8>)> {
-        let glyf_key: [u8; 4] = GLYF_TABLE.try_into().unwrap();
+        let glyf_key: [u8; 4] = GLYF_TABLE;
         let glyf_table = self
             .tables
             .get(&glyf_key)
@@ -850,7 +862,7 @@ impl TrueTypeFont {
                 message: "Missing glyf table".to_string(),
             })?;
 
-        let loca_key: [u8; 4] = LOCA_TABLE.try_into().unwrap();
+        let loca_key: [u8; 4] = LOCA_TABLE;
         let loca_table = self
             .tables
             .get(&loca_key)
@@ -1442,13 +1454,13 @@ mod tests {
     #[test]
     fn test_required_tables() {
         assert_eq!(REQUIRED_TABLES.len(), 7);
-        assert!(REQUIRED_TABLES.contains(&HEAD_TABLE));
-        assert!(REQUIRED_TABLES.contains(&CMAP_TABLE));
-        assert!(REQUIRED_TABLES.contains(&GLYF_TABLE));
-        assert!(REQUIRED_TABLES.contains(&LOCA_TABLE));
-        assert!(REQUIRED_TABLES.contains(&MAXP_TABLE));
-        assert!(REQUIRED_TABLES.contains(&HHEA_TABLE));
-        assert!(REQUIRED_TABLES.contains(&HMTX_TABLE));
+        assert!(REQUIRED_TABLES.contains(&HEAD_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&CMAP_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&GLYF_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&LOCA_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&MAXP_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&HHEA_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&HMTX_TABLE.as_slice()));
     }
 
     #[test]

@@ -37,23 +37,29 @@ def update_requirement_status(req_id, level, implementation="", test_file="", no
         print(f"ERROR: Nivel {level} inválido. Debe ser 0-4")
         return False
     
-    # Actualizar estado del requisito  
-    status_key = f'status.\\\\\\\\\\\\\\"{req_id}\\\\\\\\\\\\\\"'
-    
-    if status_key not in status_data:
+    # Actualizar estado del requisito - usar formato correcto sin escapes  
+    if 'status' not in status_data:
+        print("ERROR: Sección 'status' no encontrada en el archivo")
+        return False
+        
+    if req_id not in status_data['status']:
         print(f"ERROR: Requisito {req_id} no encontrado en el estado")
+        print(f"🔍 Buscando clave: {req_id}")
+        # Debug: mostrar primeras claves disponibles
+        available_keys = list(status_data['status'].keys())[:5]
+        print(f"🔍 Primeras claves de estado: {available_keys}")
         return False
     
-    status_data[status_key]['level'] = level
-    status_data[status_key]['verified'] = level >= 3
-    status_data[status_key]['last_checked'] = datetime.now().isoformat()
+    status_data['status'][req_id]['level'] = level
+    status_data['status'][req_id]['verified'] = level >= 3
+    status_data['status'][req_id]['last_checked'] = datetime.now().isoformat()
     
     if implementation:
-        status_data[status_key]['implementation'] = implementation
+        status_data['status'][req_id]['implementation'] = implementation
     if test_file:
-        status_data[status_key]['test_file'] = test_file
+        status_data['status'][req_id]['test_file'] = test_file
     if notes:
-        status_data[status_key]['notes'] = notes
+        status_data['status'][req_id]['notes'] = notes
     
     # Actualizar metadata
     status_data['metadata']['last_updated'] = datetime.now().isoformat()
@@ -80,9 +86,9 @@ def recalculate_statistics(status_data):
     total_level = 0
     total_requirements = 0
     
-    for key, req_status in status_data.items():
-        if key.startswith('status.'):
-            level = req_status['level']
+    if 'status' in status_data:
+        for req_id, req_status in status_data['status'].items():
+            level = req_status.get('level', 0)
             if 0 <= level <= 4:
                 level_counts[level] += 1
                 total_level += level
