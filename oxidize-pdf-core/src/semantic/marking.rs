@@ -97,7 +97,7 @@ pub fn uuid_simple() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or_else(|_| std::time::Duration::from_secs(0))
         .as_nanos();
     format!("{:x}", timestamp)
 }

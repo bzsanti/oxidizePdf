@@ -69,6 +69,26 @@ impl Color {
         Color::Rgb(1.0, 0.0, 1.0)
     }
 
+    /// Pure cyan color in CMYK space (100% cyan, 0% magenta, 0% yellow, 0% black)
+    pub fn cmyk_cyan() -> Self {
+        Color::Cmyk(1.0, 0.0, 0.0, 0.0)
+    }
+
+    /// Pure magenta color in CMYK space (0% cyan, 100% magenta, 0% yellow, 0% black)
+    pub fn cmyk_magenta() -> Self {
+        Color::Cmyk(0.0, 1.0, 0.0, 0.0)
+    }
+
+    /// Pure yellow color in CMYK space (0% cyan, 0% magenta, 100% yellow, 0% black)
+    pub fn cmyk_yellow() -> Self {
+        Color::Cmyk(0.0, 0.0, 1.0, 0.0)
+    }
+
+    /// Pure black color in CMYK space (0% cyan, 0% magenta, 0% yellow, 100% black)
+    pub fn cmyk_black() -> Self {
+        Color::Cmyk(0.0, 0.0, 0.0, 1.0)
+    }
+
     /// Get red component (converts other color spaces to RGB approximation)
     pub fn r(&self) -> f64 {
         match self {
@@ -94,6 +114,80 @@ impl Color {
             Color::Gray(g) => *g,
             Color::Cmyk(_, _, y, k) => (1.0 - y) * (1.0 - k),
         }
+    }
+
+    /// Get CMYK components (for CMYK colors, or conversion for others)
+    pub fn cmyk_components(&self) -> (f64, f64, f64, f64) {
+        match self {
+            Color::Cmyk(c, m, y, k) => (*c, *m, *y, *k),
+            Color::Rgb(r, g, b) => {
+                // Convert RGB to CMYK using standard formula
+                let k = 1.0 - r.max(*g).max(*b);
+                if k >= 1.0 {
+                    (0.0, 0.0, 0.0, 1.0)
+                } else {
+                    let c = (1.0 - r - k) / (1.0 - k);
+                    let m = (1.0 - g - k) / (1.0 - k);
+                    let y = (1.0 - b - k) / (1.0 - k);
+                    (c, m, y, k)
+                }
+            }
+            Color::Gray(g) => {
+                // Convert grayscale to CMYK (K channel only)
+                let k = 1.0 - g;
+                (0.0, 0.0, 0.0, k)
+            }
+        }
+    }
+
+    /// Convert to RGB color space
+    pub fn to_rgb(&self) -> Color {
+        match self {
+            Color::Rgb(_, _, _) => *self,
+            Color::Gray(g) => Color::Rgb(*g, *g, *g),
+            Color::Cmyk(c, m, y, k) => {
+                // Standard CMYK to RGB conversion
+                let r = (1.0 - c) * (1.0 - k);
+                let g = (1.0 - m) * (1.0 - k);
+                let b = (1.0 - y) * (1.0 - k);
+                Color::Rgb(r.clamp(0.0, 1.0), g.clamp(0.0, 1.0), b.clamp(0.0, 1.0))
+            }
+        }
+    }
+
+    /// Convert to CMYK color space
+    pub fn to_cmyk(&self) -> Color {
+        match self {
+            Color::Cmyk(_, _, _, _) => *self,
+            _ => {
+                let (c, m, y, k) = self.cmyk_components();
+                Color::Cmyk(c, m, y, k)
+            }
+        }
+    }
+
+    /// Get the color space name for PDF
+    pub fn color_space_name(&self) -> &'static str {
+        match self {
+            Color::Gray(_) => "DeviceGray",
+            Color::Rgb(_, _, _) => "DeviceRGB",
+            Color::Cmyk(_, _, _, _) => "DeviceCMYK",
+        }
+    }
+
+    /// Check if this color is in CMYK color space
+    pub fn is_cmyk(&self) -> bool {
+        matches!(self, Color::Cmyk(_, _, _, _))
+    }
+
+    /// Check if this color is in RGB color space
+    pub fn is_rgb(&self) -> bool {
+        matches!(self, Color::Rgb(_, _, _))
+    }
+
+    /// Check if this color is in grayscale color space
+    pub fn is_gray(&self) -> bool {
+        matches!(self, Color::Gray(_))
     }
 
     /// Convert to PDF array representation
@@ -328,5 +422,167 @@ mod tests {
         assert_eq!(rgb_count, 1);
         assert_eq!(gray_count, 1);
         assert_eq!(cmyk_count, 1);
+    }
+
+    #[test]
+    fn test_cmyk_pure_colors() {
+        // Test pure CMYK colors
+        assert_eq!(Color::cmyk_cyan(), Color::Cmyk(1.0, 0.0, 0.0, 0.0));
+        assert_eq!(Color::cmyk_magenta(), Color::Cmyk(0.0, 1.0, 0.0, 0.0));
+        assert_eq!(Color::cmyk_yellow(), Color::Cmyk(0.0, 0.0, 1.0, 0.0));
+        assert_eq!(Color::cmyk_black(), Color::Cmyk(0.0, 0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn test_cmyk_to_rgb_conversion() {
+        // Test CMYK to RGB conversion
+        let pure_cyan = Color::cmyk_cyan().to_rgb();
+        match pure_cyan {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 0.0);
+                assert_eq!(g, 1.0);
+                assert_eq!(b, 1.0);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+
+        let pure_magenta = Color::cmyk_magenta().to_rgb();
+        match pure_magenta {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 1.0);
+                assert_eq!(g, 0.0);
+                assert_eq!(b, 1.0);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+
+        let pure_yellow = Color::cmyk_yellow().to_rgb();
+        match pure_yellow {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 1.0);
+                assert_eq!(g, 1.0);
+                assert_eq!(b, 0.0);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+
+        let pure_black = Color::cmyk_black().to_rgb();
+        match pure_black {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 0.0);
+                assert_eq!(g, 0.0);
+                assert_eq!(b, 0.0);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_rgb_to_cmyk_conversion() {
+        // Test RGB to CMYK conversion
+        let red = Color::red().to_cmyk();
+        let (c, m, y, k) = red.cmyk_components();
+        assert_eq!(c, 0.0);
+        assert_eq!(m, 1.0);
+        assert_eq!(y, 1.0);
+        assert_eq!(k, 0.0);
+
+        let green = Color::green().to_cmyk();
+        let (c, m, y, k) = green.cmyk_components();
+        assert_eq!(c, 1.0);
+        assert_eq!(m, 0.0);
+        assert_eq!(y, 1.0);
+        assert_eq!(k, 0.0);
+
+        let blue = Color::blue().to_cmyk();
+        let (c, m, y, k) = blue.cmyk_components();
+        assert_eq!(c, 1.0);
+        assert_eq!(m, 1.0);
+        assert_eq!(y, 0.0);
+        assert_eq!(k, 0.0);
+
+        let black = Color::black().to_cmyk();
+        let (c, m, y, k) = black.cmyk_components();
+        assert_eq!(c, 0.0);
+        assert_eq!(m, 0.0);
+        assert_eq!(y, 0.0);
+        assert_eq!(k, 1.0);
+    }
+
+    #[test]
+    fn test_color_space_detection() {
+        assert!(Color::rgb(0.5, 0.5, 0.5).is_rgb());
+        assert!(!Color::rgb(0.5, 0.5, 0.5).is_cmyk());
+        assert!(!Color::rgb(0.5, 0.5, 0.5).is_gray());
+
+        assert!(Color::gray(0.5).is_gray());
+        assert!(!Color::gray(0.5).is_rgb());
+        assert!(!Color::gray(0.5).is_cmyk());
+
+        assert!(Color::cmyk(0.1, 0.2, 0.3, 0.4).is_cmyk());
+        assert!(!Color::cmyk(0.1, 0.2, 0.3, 0.4).is_rgb());
+        assert!(!Color::cmyk(0.1, 0.2, 0.3, 0.4).is_gray());
+    }
+
+    #[test]
+    fn test_color_space_names() {
+        assert_eq!(Color::rgb(0.5, 0.5, 0.5).color_space_name(), "DeviceRGB");
+        assert_eq!(Color::gray(0.5).color_space_name(), "DeviceGray");
+        assert_eq!(
+            Color::cmyk(0.1, 0.2, 0.3, 0.4).color_space_name(),
+            "DeviceCMYK"
+        );
+    }
+
+    #[test]
+    fn test_cmyk_components_extraction() {
+        let cmyk_color = Color::cmyk(0.1, 0.2, 0.3, 0.4);
+        let (c, m, y, k) = cmyk_color.cmyk_components();
+        assert_eq!(c, 0.1);
+        assert_eq!(m, 0.2);
+        assert_eq!(y, 0.3);
+        assert_eq!(k, 0.4);
+
+        // Test RGB to CMYK component conversion
+        let white = Color::white();
+        let (c, m, y, k) = white.cmyk_components();
+        assert_eq!(c, 0.0);
+        assert_eq!(m, 0.0);
+        assert_eq!(y, 0.0);
+        assert_eq!(k, 0.0);
+    }
+
+    #[test]
+    fn test_roundtrip_conversions() {
+        // Test that conversion cycles preserve color reasonably well
+        let original_rgb = Color::rgb(0.6, 0.3, 0.9);
+        let converted_cmyk = original_rgb.to_cmyk();
+        let back_to_rgb = converted_cmyk.to_rgb();
+
+        let orig_components = (original_rgb.r(), original_rgb.g(), original_rgb.b());
+        let final_components = (back_to_rgb.r(), back_to_rgb.g(), back_to_rgb.b());
+
+        // Allow small tolerance for floating point conversion errors
+        assert!((orig_components.0 - final_components.0).abs() < 0.001);
+        assert!((orig_components.1 - final_components.1).abs() < 0.001);
+        assert!((orig_components.2 - final_components.2).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_grayscale_to_cmyk_conversion() {
+        let gray = Color::gray(0.7);
+        let (c, m, y, k) = gray.cmyk_components();
+
+        assert_eq!(c, 0.0);
+        assert_eq!(m, 0.0);
+        assert_eq!(y, 0.0);
+        assert!((k - 0.3).abs() < 1e-10); // k = 1.0 - gray_value (with tolerance for floating point precision)
+
+        let gray_as_cmyk = gray.to_cmyk();
+        let cmyk_components = gray_as_cmyk.cmyk_components();
+        assert_eq!(cmyk_components.0, 0.0);
+        assert_eq!(cmyk_components.1, 0.0);
+        assert_eq!(cmyk_components.2, 0.0);
+        assert!((cmyk_components.3 - 0.3).abs() < 1e-10);
     }
 }

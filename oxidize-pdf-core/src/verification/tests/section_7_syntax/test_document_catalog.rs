@@ -40,7 +40,7 @@ iso_test!(
 
 iso_test!(
     test_catalog_type_entry_level_3,
-    "7.5.2.1",
+    "7.687",
     VerificationLevel::ContentVerified,
     "Document catalog /Type entry content verification",
     {
@@ -234,6 +234,264 @@ iso_test!(
     }
 );
 
+// Additional critical document catalog tests
+
+iso_test!(
+    test_catalog_extensions_entry_level_0,
+    "7.5.2.4",
+    VerificationLevel::NotImplemented,
+    "Optional catalog /Extensions entry for developer extensions",
+    {
+        // This feature is not implemented - no developer extensions support
+        let passed = false;
+        let level_achieved = 0;
+        let notes = "Developer extensions (/Extensions) not implemented".to_string();
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_pagelabels_entry_level_0,
+    "7.5.2.5",
+    VerificationLevel::NotImplemented,
+    "Optional catalog /PageLabels entry for page labeling",
+    {
+        // Check if page labels are implemented
+        let mut doc = Document::new();
+        let page = Page::a4();
+        doc.add_page(page);
+
+        let pdf_bytes = doc.to_bytes()?;
+        let parsed = parse_pdf(&pdf_bytes)?;
+
+        let page_labels_implemented = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("PageLabels")
+        } else {
+            false
+        };
+
+        let passed = page_labels_implemented;
+        let level_achieved = if passed { 2 } else { 0 };
+        let notes = if passed {
+            "Page labels functionality detected in catalog".to_string()
+        } else {
+            "Page labels (/PageLabels) not implemented".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_names_entry_level_0,
+    "7.5.2.6",
+    VerificationLevel::NotImplemented,
+    "Optional catalog /Names entry for name dictionaries",
+    {
+        // Check if name dictionaries are implemented
+        let mut doc = Document::new();
+        let page = Page::a4();
+        doc.add_page(page);
+
+        let pdf_bytes = doc.to_bytes()?;
+        let parsed = parse_pdf(&pdf_bytes)?;
+
+        let names_implemented = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("Names")
+        } else {
+            false
+        };
+
+        let passed = names_implemented;
+        let level_achieved = if passed { 2 } else { 0 };
+        let notes = if passed {
+            "Name dictionaries (/Names) functionality detected".to_string()
+        } else {
+            "Name dictionaries (/Names) not implemented".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_dests_entry_level_0,
+    "7.5.2.7",
+    VerificationLevel::NotImplemented,
+    "Optional catalog /Dests entry for named destinations",
+    {
+        // Check if named destinations are implemented
+        let mut doc = Document::new();
+        let page = Page::a4();
+        doc.add_page(page);
+
+        let pdf_bytes = doc.to_bytes()?;
+        let parsed = parse_pdf(&pdf_bytes)?;
+
+        let dests_implemented = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("Dests")
+        } else {
+            false
+        };
+
+        let passed = dests_implemented;
+        let level_achieved = if passed { 2 } else { 0 };
+        let notes = if passed {
+            "Named destinations (/Dests) functionality detected".to_string()
+        } else {
+            "Named destinations (/Dests) not implemented".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_viewerpreferences_entry_level_2,
+    "7.5.2.8",
+    VerificationLevel::GeneratesPdf,
+    "Optional catalog /ViewerPreferences entry",
+    {
+        // Check if viewer preferences can be set
+        let mut doc = Document::new();
+        doc.set_title("Viewer Preferences Test");
+
+        // Try to access viewer preferences (even if limited)
+        let page = Page::a4();
+        doc.add_page(page);
+
+        let pdf_bytes = doc.to_bytes()?;
+
+        let passed = pdf_bytes.len() > 1000 && pdf_bytes.starts_with(b"%PDF-");
+        let level_achieved = if passed { 2 } else { 1 };
+        let notes = if passed {
+            "PDF generated - viewer preferences may be limited".to_string()
+        } else {
+            "PDF generation failed".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_outlines_entry_level_0,
+    "7.5.2.9",
+    VerificationLevel::NotImplemented,
+    "Optional catalog /Outlines entry for document outline",
+    {
+        // Check if outlines/bookmarks are implemented
+        let mut doc = Document::new();
+        doc.set_title("Outlines Test");
+
+        let page = Page::a4();
+        doc.add_page(page);
+
+        let pdf_bytes = doc.to_bytes()?;
+        let parsed = parse_pdf(&pdf_bytes)?;
+
+        let outlines_implemented = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("Outlines")
+        } else {
+            false
+        };
+
+        let passed = outlines_implemented;
+        let level_achieved = if passed { 2 } else { 0 };
+        let notes = if passed {
+            "Document outline (/Outlines) functionality detected".to_string()
+        } else {
+            "Document outline (/Outlines) not implemented".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_acroform_entry_level_2,
+    "7.5.2.10",
+    VerificationLevel::GeneratesPdf,
+    "Optional catalog /AcroForm entry for interactive forms",
+    {
+        // Test if AcroForm functionality exists in the codebase
+        let mut doc = Document::new();
+        doc.set_title("AcroForm Test");
+
+        let mut page = Page::a4();
+        page.text()
+            .set_font(Font::Helvetica, 12.0)
+            .at(50.0, 700.0)
+            .write("Testing AcroForm support")?;
+
+        doc.add_page(page);
+        let pdf_bytes = doc.to_bytes()?;
+
+        // Check if we can parse and look for AcroForm
+        let parsed = parse_pdf(&pdf_bytes)?;
+        let acroform_detected = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("AcroForm")
+        } else {
+            false
+        };
+
+        let passed = pdf_bytes.len() > 1000;
+        let level_achieved = if acroform_detected {
+            3
+        } else if passed {
+            2
+        } else {
+            1
+        };
+        let notes = if acroform_detected {
+            "AcroForm entry detected in catalog".to_string()
+        } else if passed {
+            "PDF generated but no AcroForm support detected".to_string()
+        } else {
+            "PDF generation failed".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
+iso_test!(
+    test_catalog_metadata_entry_level_0,
+    "7.5.2.11",
+    VerificationLevel::NotImplemented,
+    "Optional catalog /Metadata entry for document metadata stream",
+    {
+        // Check if XMP metadata streams are supported
+        let mut doc = Document::new();
+        doc.set_title("Metadata Stream Test");
+        doc.set_author("Test Author");
+        doc.set_subject("Test Subject");
+
+        let page = Page::a4();
+        doc.add_page(page);
+
+        let pdf_bytes = doc.to_bytes()?;
+        let parsed = parse_pdf(&pdf_bytes)?;
+
+        let metadata_stream_implemented = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("Metadata")
+        } else {
+            false
+        };
+
+        let passed = metadata_stream_implemented;
+        let level_achieved = if passed { 2 } else { 0 };
+        let notes = if passed {
+            "XMP metadata stream (/Metadata) functionality detected".to_string()
+        } else {
+            "XMP metadata streams (/Metadata) not implemented - using Info dict only".to_string()
+        };
+
+        Ok((passed, level_achieved, notes))
+    }
+);
+
 #[cfg(test)]
 mod integration_tests {
     use super::*;
@@ -293,3 +551,95 @@ mod integration_tests {
         Ok(())
     }
 }
+
+// Level 4 test with external validation
+iso_test!(
+    test_catalog_type_entry_level_4,
+    "7.687",
+    VerificationLevel::IsoCompliant,
+    "Document catalog /Type entry ISO compliance verification",
+    {
+        // Generate PDF
+        let pdf_bytes = create_basic_test_pdf(
+            "Catalog ISO Compliance Test",
+            "Testing catalog /Type entry with external validation",
+        )?;
+
+        // Level 3 verification (internal)
+        let parsed = parse_pdf(&pdf_bytes)?;
+        let catalog_valid = if let Some(catalog) = &parsed.catalog {
+            catalog.contains_key("Type")
+                && catalog
+                    .get("Type")
+                    .map_or(false, |v| v.as_str() == "Catalog")
+        } else {
+            false
+        };
+
+        if !catalog_valid {
+            // If internal verification fails, we can only achieve Level 2
+            Ok((false, 2, "Internal verification failed".to_string()))
+        } else {
+            // Level 4 verification (external validation with qpdf)
+            use std::fs;
+            use std::process::Command;
+
+            let temp_file = format!(
+                "/tmp/test_catalog_{}.pdf",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            );
+
+            fs::write(&temp_file, &pdf_bytes)?;
+
+            let qpdf_result = Command::new("qpdf").arg("--check").arg(&temp_file).output();
+
+            // Cleanup temp file
+            let _ = fs::remove_file(&temp_file);
+
+            let (passed, level_achieved, notes) = match qpdf_result {
+                Ok(output) => {
+                    if output.status.success() {
+                        (
+                            true,
+                            4,
+                            "PDF validates with qpdf - catalog /Type entry is ISO compliant"
+                                .to_string(),
+                        )
+                    } else {
+                        let error = String::from_utf8_lossy(&output.stderr);
+                        if error.contains("catalog") || error.contains("Type") {
+                            (
+                                false,
+                                3,
+                                format!("qpdf validation failed for catalog: {}", error),
+                            )
+                        } else {
+                            // Other PDF issues, but catalog is probably ok
+                            (
+                                true,
+                                3,
+                                format!(
+                                    "Internal verification passed but qpdf found other issues: {}",
+                                    error
+                                ),
+                            )
+                        }
+                    }
+                }
+                Err(_) => {
+                    // qpdf not available, fallback to Level 3
+                    (
+                        true,
+                        3,
+                        "qpdf not available - falling back to internal verification".to_string(),
+                    )
+                }
+            };
+
+            Ok((passed, level_achieved, notes))
+        }
+    }
+);

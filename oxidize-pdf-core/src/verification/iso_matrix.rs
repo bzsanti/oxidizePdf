@@ -660,7 +660,7 @@ impl ComplianceStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+
     use tempfile::NamedTempFile;
 
     use std::io::Write;

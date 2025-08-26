@@ -3,7 +3,7 @@
 //! Tests invariants and properties of Document manipulation operations
 //! to ensure consistency and correctness across all inputs.
 
-use oxidize_pdf::operations::PageRotation;
+use oxidize_pdf::operations::RotationAngle;
 use oxidize_pdf::text::Font;
 use oxidize_pdf::{Document, Page, PageSize, Result};
 use proptest::prelude::*;
@@ -23,12 +23,12 @@ fn page_size_strategy() -> impl Strategy<Value = PageSize> {
 }
 
 // Strategy for generating valid page rotations
-fn rotation_strategy() -> impl Strategy<Value = PageRotation> {
+fn rotation_strategy() -> impl Strategy<Value = RotationAngle> {
     prop_oneof![
-        Just(PageRotation::None),
-        Just(PageRotation::Rotate90),
-        Just(PageRotation::Rotate180),
-        Just(PageRotation::Rotate270),
+        Just(RotationAngle::None),
+        Just(RotationAngle::Clockwise90),
+        Just(RotationAngle::Rotate180),
+        Just(RotationAngle::Clockwise270),
     ]
 }
 
@@ -87,10 +87,10 @@ proptest! {
 
         // Rotation should be one of the valid values
         match rotation {
-            PageRotation::None => prop_assert!(true),
-            PageRotation::Rotate90 => prop_assert!(true),
-            PageRotation::Rotate180 => prop_assert!(true),
-            PageRotation::Rotate270 => prop_assert!(true),
+            RotationAngle::None => prop_assert!(true),
+            RotationAngle::Rotate90 => prop_assert!(true),
+            RotationAngle::Rotate180 => prop_assert!(true),
+            RotationAngle::Rotate270 => prop_assert!(true),
         }
     }
 
@@ -185,7 +185,7 @@ proptest! {
 
             // Different rotation on some pages
             if i % 2 == 0 {
-                page.set_rotation(PageRotation::Rotate90);
+                page.set_rotation(RotationAngle::Rotate90);
             }
 
             doc.add_page(page);
@@ -292,10 +292,10 @@ mod regression_tests {
 
         // Add pages with all rotation values
         for rotation in &[
-            PageRotation::None,
-            PageRotation::Rotate90,
-            PageRotation::Rotate180,
-            PageRotation::Rotate270,
+            RotationAngle::None,
+            RotationAngle::Rotate90,
+            RotationAngle::Rotate180,
+            RotationAngle::Rotate270,
         ] {
             let mut page = Page::a4();
             page.set_rotation(*rotation);

@@ -70023,6 +70023,14 @@ original_text = "indication of which shared objects shall be referenced from any
 [overall_summary]
 total_sections = 8
 total_requirements = 7775
+total_implemented = 0
+average_level = 0.0
+real_compliance_percentage = 0.0
+level_0_count = 7775
+level_1_count = 0
+level_2_count = 0
+level_3_count = 0
+level_4_count = 0
 
 [validation_tools]
 external_validators = [ "qpdf", "verapdf", "pdftk",]

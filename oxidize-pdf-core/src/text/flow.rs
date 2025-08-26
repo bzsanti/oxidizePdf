@@ -125,10 +125,11 @@ impl TextFlowContext {
                 self.current_font.pdf_name(),
                 self.font_size
             )
-            .unwrap();
+            .expect("Writing to String should never fail");
 
             // Set text position
-            writeln!(&mut self.operations, "{:.2} {:.2} Td", x, self.cursor_y).unwrap();
+            writeln!(&mut self.operations, "{:.2} {:.2} Td", x, self.cursor_y)
+                .expect("Writing to String should never fail");
 
             // Handle justification
             if self.alignment == TextAlign::Justified && i < lines.len() - 1 && line.len() > 1 {
@@ -139,7 +140,8 @@ impl TextFlowContext {
                     let space_adjustment = extra_space / spaces_count as f64;
 
                     // Set word spacing
-                    writeln!(&mut self.operations, "{space_adjustment:.2} Tw").unwrap();
+                    writeln!(&mut self.operations, "{space_adjustment:.2} Tw")
+                        .expect("Writing to String should never fail");
                 }
             }
 

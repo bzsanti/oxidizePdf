@@ -459,8 +459,12 @@ impl CalculationEngine {
                     if stack.len() < 2 {
                         return Err(PdfError::InvalidStructure("Invalid expression".to_string()));
                     }
-                    let right = stack.pop().unwrap();
-                    let left = stack.pop().unwrap();
+                    let right = stack
+                        .pop()
+                        .expect("Stack should have at least 2 elements after length check");
+                    let left = stack
+                        .pop()
+                        .expect("Stack should have at least 2 elements after length check");
                     stack.push(op.apply(left, right));
                 }
                 _ => {}
@@ -488,7 +492,9 @@ impl CalculationEngine {
                 ExpressionToken::Operator(op) => {
                     while let Some(ExpressionToken::Operator(top_op)) = operators.last() {
                         if top_op.precedence() >= op.precedence() {
-                            output.push(operators.pop().unwrap());
+                            if let Some(operator) = operators.pop() {
+                                output.push(operator);
+                            }
                         } else {
                             break;
                         }
@@ -546,7 +552,8 @@ impl CalculationEngine {
                     .iter()
                     .filter_map(|f| self.field_values.get(f))
                     .map(|v| v.to_number())
-                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .filter(|n| !n.is_nan()) // Skip NaN values
+                    .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                     .unwrap_or(0.0);
                 Ok(FieldValue::Number(min))
             }
@@ -555,7 +562,8 @@ impl CalculationEngine {
                     .iter()
                     .filter_map(|f| self.field_values.get(f))
                     .map(|v| v.to_number())
-                    .max_by(|a, b| a.partial_cmp(b).unwrap())
+                    .filter(|n| !n.is_nan()) // Skip NaN values
+                    .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                     .unwrap_or(0.0);
                 Ok(FieldValue::Number(max))
             }
@@ -712,7 +720,11 @@ impl ArithmeticExpression {
                     num_str.push(ch);
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_ascii_digit() || next_ch == '.' {
-                            num_str.push(chars.next().unwrap());
+                            if let Some(consumed_ch) = chars.next() {
+                                num_str.push(consumed_ch);
+                            } else {
+                                break; // Iterator exhausted unexpectedly
+                            }
                         } else {
                             break;
                         }
@@ -727,7 +739,11 @@ impl ArithmeticExpression {
                     field_name.push(ch);
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_alphanumeric() || next_ch == '_' {
-                            field_name.push(chars.next().unwrap());
+                            if let Some(consumed_ch) = chars.next() {
+                                field_name.push(consumed_ch);
+                            } else {
+                                break; // Iterator exhausted unexpectedly
+                            }
                         } else {
                             break;
                         }

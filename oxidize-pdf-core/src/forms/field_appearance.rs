@@ -306,17 +306,18 @@ impl FieldAppearanceGenerator {
         let padding = 2.0;
         let text_y = height / 2.0 - self.font_size / 2.0;
 
-        if self.comb && self.max_length.is_some() {
-            // Comb field - evenly space characters
-            let max_len = self.max_length.unwrap();
-            let char_width = (width - 2.0 * padding) / max_len as f64;
+        if self.comb {
+            if let Some(max_len) = self.max_length {
+                // Comb field - evenly space characters
+                let char_width = (width - 2.0 * padding) / max_len as f64;
 
-            for (i, ch) in self.value.chars().take(max_len).enumerate() {
-                let x = padding + (i as f64 + 0.5) * char_width;
-                ops.push(format!("{} {} Td", x, text_y));
-                ops.push(format!("({}) Tj", escape_string(&ch.to_string())));
-                if i < self.value.len() - 1 {
-                    ops.push(format!("{} 0 Td", -x));
+                for (i, ch) in self.value.chars().take(max_len).enumerate() {
+                    let x = padding + (i as f64 + 0.5) * char_width;
+                    ops.push(format!("{} {} Td", x, text_y));
+                    ops.push(format!("({}) Tj", escape_string(&ch.to_string())));
+                    if i < self.value.len() - 1 {
+                        ops.push(format!("{} 0 Td", -x));
+                    }
                 }
             }
         } else if self.multiline {

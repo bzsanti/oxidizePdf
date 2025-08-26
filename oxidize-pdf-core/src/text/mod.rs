@@ -38,6 +38,7 @@ pub use ocr::{
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 
 use crate::error::Result;
+use crate::Color;
 use std::fmt::Write;
 
 /// Text rendering mode for PDF text operations
@@ -74,6 +75,9 @@ pub struct TextContext {
     leading: Option<f64>,
     text_rise: Option<f64>,
     rendering_mode: Option<TextRenderingMode>,
+    // Color parameters
+    fill_color: Option<Color>,
+    stroke_color: Option<Color>,
 }
 
 impl Default for TextContext {
@@ -95,6 +99,8 @@ impl TextContext {
             leading: None,
             text_rise: None,
             rendering_mode: None,
+            fill_color: None,
+            stroke_color: None,
         }
     }
 
@@ -127,7 +133,7 @@ impl TextContext {
             self.current_font.pdf_name(),
             self.font_size
         )
-        .unwrap();
+        .expect("Writing to String should never fail");
 
         // Apply text state parameters
         self.apply_text_state_parameters();
@@ -138,7 +144,7 @@ impl TextContext {
             "{:.2} {:.2} Td",
             self.text_matrix[4], self.text_matrix[5]
         )
-        .unwrap();
+        .expect("Writing to String should never fail");
 
         // Encode text using WinAnsiEncoding
         let encoding = TextEncoding::WinAnsiEncoding;
@@ -157,7 +163,8 @@ impl TextContext {
                 // For bytes in the printable ASCII range, write as is
                 0x20..=0x7E => self.operations.push(byte as char),
                 // For other bytes, write as octal escape sequences
-                _ => write!(&mut self.operations, "\\{byte:03o}").unwrap(),
+                _ => write!(&mut self.operations, "\\{byte:03o}")
+                    .expect("Writing to String should never fail"),
             }
         }
         self.operations.push_str(") Tj\n");
@@ -205,36 +212,90 @@ impl TextContext {
         self
     }
 
+    /// Set the text fill color
+    pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
+        self.fill_color = Some(color);
+        self
+    }
+
+    /// Set the text stroke color
+    pub fn set_stroke_color(&mut self, color: Color) -> &mut Self {
+        self.stroke_color = Some(color);
+        self
+    }
+
     /// Apply text state parameters to the operations string
     fn apply_text_state_parameters(&mut self) {
         // Character spacing (Tc)
         if let Some(spacing) = self.character_spacing {
-            writeln!(&mut self.operations, "{spacing:.2} Tc").unwrap();
+            writeln!(&mut self.operations, "{spacing:.2} Tc")
+                .expect("Writing to String should never fail");
         }
 
         // Word spacing (Tw)
         if let Some(spacing) = self.word_spacing {
-            writeln!(&mut self.operations, "{spacing:.2} Tw").unwrap();
+            writeln!(&mut self.operations, "{spacing:.2} Tw")
+                .expect("Writing to String should never fail");
         }
 
         // Horizontal scaling (Tz)
         if let Some(scale) = self.horizontal_scaling {
-            writeln!(&mut self.operations, "{:.2} Tz", scale * 100.0).unwrap();
+            writeln!(&mut self.operations, "{:.2} Tz", scale * 100.0)
+                .expect("Writing to String should never fail");
         }
 
         // Leading (TL)
         if let Some(leading) = self.leading {
-            writeln!(&mut self.operations, "{leading:.2} TL").unwrap();
+            writeln!(&mut self.operations, "{leading:.2} TL")
+                .expect("Writing to String should never fail");
         }
 
         // Text rise (Ts)
         if let Some(rise) = self.text_rise {
-            writeln!(&mut self.operations, "{rise:.2} Ts").unwrap();
+            writeln!(&mut self.operations, "{rise:.2} Ts")
+                .expect("Writing to String should never fail");
         }
 
         // Text rendering mode (Tr)
         if let Some(mode) = self.rendering_mode {
-            writeln!(&mut self.operations, "{} Tr", mode as u8).unwrap();
+            writeln!(&mut self.operations, "{} Tr", mode as u8)
+                .expect("Writing to String should never fail");
+        }
+
+        // Fill color
+        if let Some(color) = self.fill_color {
+            match color {
+                Color::Rgb(r, g, b) => {
+                    writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} rg")
+                        .expect("Writing to String should never fail");
+                }
+                Color::Gray(gray) => {
+                    writeln!(&mut self.operations, "{gray:.3} g")
+                        .expect("Writing to String should never fail");
+                }
+                Color::Cmyk(c, m, y, k) => {
+                    writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} k")
+                        .expect("Writing to String should never fail");
+                }
+            }
+        }
+
+        // Stroke color
+        if let Some(color) = self.stroke_color {
+            match color {
+                Color::Rgb(r, g, b) => {
+                    writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} RG")
+                        .expect("Writing to String should never fail");
+                }
+                Color::Gray(gray) => {
+                    writeln!(&mut self.operations, "{gray:.3} G")
+                        .expect("Writing to String should never fail");
+                }
+                Color::Cmyk(c, m, y, k) => {
+                    writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} K")
+                        .expect("Writing to String should never fail");
+                }
+            }
         }
     }
 
@@ -266,6 +327,8 @@ impl TextContext {
         self.leading = None;
         self.text_rise = None;
         self.rendering_mode = None;
+        self.fill_color = None;
+        self.stroke_color = None;
     }
 
     /// Get the raw operations string
@@ -605,6 +668,68 @@ mod tests {
         assert!(
             ops.contains("Tr"),
             "Text rendering mode operator (Tr) not found"
+        );
+    }
+
+    #[test]
+    fn test_text_color_operations() {
+        use crate::Color;
+
+        let mut context = TextContext::new();
+
+        // Test RGB fill color
+        context.set_fill_color(Color::rgb(1.0, 0.0, 0.0));
+        context.apply_text_state_parameters();
+
+        let ops = context.operations();
+        assert!(
+            ops.contains("1.000 0.000 0.000 rg"),
+            "RGB fill color operator (rg) not found in: {ops}"
+        );
+
+        // Clear and test RGB stroke color
+        context.clear();
+        context.set_stroke_color(Color::rgb(0.0, 1.0, 0.0));
+        context.apply_text_state_parameters();
+
+        let ops = context.operations();
+        assert!(
+            ops.contains("0.000 1.000 0.000 RG"),
+            "RGB stroke color operator (RG) not found in: {ops}"
+        );
+
+        // Clear and test grayscale fill color
+        context.clear();
+        context.set_fill_color(Color::gray(0.5));
+        context.apply_text_state_parameters();
+
+        let ops = context.operations();
+        assert!(
+            ops.contains("0.500 g"),
+            "Gray fill color operator (g) not found in: {ops}"
+        );
+
+        // Clear and test CMYK stroke color
+        context.clear();
+        context.set_stroke_color(Color::cmyk(0.2, 0.3, 0.4, 0.1));
+        context.apply_text_state_parameters();
+
+        let ops = context.operations();
+        assert!(
+            ops.contains("0.200 0.300 0.400 0.100 K"),
+            "CMYK stroke color operator (K) not found in: {ops}"
+        );
+
+        // Test both fill and stroke colors together
+        context.clear();
+        context.set_fill_color(Color::rgb(1.0, 0.0, 0.0));
+        context.set_stroke_color(Color::rgb(0.0, 0.0, 1.0));
+        context.apply_text_state_parameters();
+
+        let ops = context.operations();
+        assert!(
+            ops.contains("1.000 0.000 0.000 rg") && ops.contains("0.000 0.000 1.000 RG"),
+            "Both fill and stroke colors not found in: {ops}"
         );
     }
 }

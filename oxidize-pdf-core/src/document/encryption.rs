@@ -220,8 +220,8 @@ mod tests {
         );
 
         // Check handlers
-        let handler_40 = enc_40.handler();
-        let handler_128 = enc_128.handler();
+        let _handler_40 = enc_40.handler();
+        let _handler_128 = enc_128.handler();
 
         // Verify different encryption dictionary versions
         let dict_40 = enc_40.create_encryption_dict(None).unwrap();
@@ -323,9 +323,9 @@ mod tests {
         );
 
         // Create encryption dictionaries
-        let dict1 = enc1.create_encryption_dict(None).unwrap();
-        let dict2 = enc2.create_encryption_dict(None).unwrap();
-        let dict3 = enc3.create_encryption_dict(None).unwrap();
+        let _dict1 = enc1.create_encryption_dict(None).unwrap();
+        let _dict2 = enc2.create_encryption_dict(None).unwrap();
+        let _dict3 = enc3.create_encryption_dict(None).unwrap();
 
         // Permissions should be encoded differently
         // Note: p field contains encoded permissions as i32

@@ -413,10 +413,27 @@ impl PageTree {
             }
 
             let rect = [
-                array.0.first().unwrap().as_real().unwrap_or(0.0),
-                array.get(1).unwrap().as_real().unwrap_or(0.0),
-                array.get(2).unwrap().as_real().unwrap_or(0.0),
-                array.get(3).unwrap().as_real().unwrap_or(0.0),
+                array
+                    .0
+                    .first()
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
+                array
+                    .get(1)
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
+                array
+                    .get(2)
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
+                array
+                    .get(3)
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
             ];
 
             Ok(Some(rect))

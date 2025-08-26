@@ -241,10 +241,12 @@ impl ClippingPath {
         for cmd in &self.commands {
             match cmd {
                 PathCommand::MoveTo { x, y } => {
-                    writeln!(&mut ops, "{:.3} {:.3} m", x, y).unwrap();
+                    writeln!(&mut ops, "{:.3} {:.3} m", x, y)
+                        .expect("Writing to string should never fail");
                 }
                 PathCommand::LineTo { x, y } => {
-                    writeln!(&mut ops, "{:.3} {:.3} l", x, y).unwrap();
+                    writeln!(&mut ops, "{:.3} {:.3} l", x, y)
+                        .expect("Writing to string should never fail");
                 }
                 PathCommand::CurveTo {
                     x1,
@@ -259,7 +261,7 @@ impl ClippingPath {
                         "{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} c",
                         x1, y1, x2, y2, x3, y3
                     )
-                    .unwrap();
+                    .expect("Writing to string should never fail");
                 }
                 PathCommand::Rectangle {
                     x,
@@ -267,22 +269,27 @@ impl ClippingPath {
                     width,
                     height,
                 } => {
-                    writeln!(&mut ops, "{:.3} {:.3} {:.3} {:.3} re", x, y, width, height).unwrap();
+                    writeln!(&mut ops, "{:.3} {:.3} {:.3} {:.3} re", x, y, width, height)
+                        .expect("Writing to string should never fail");
                 }
                 PathCommand::ClosePath => {
-                    writeln!(&mut ops, "h").unwrap();
+                    writeln!(&mut ops, "h").expect("Writing to string should never fail");
                 }
             }
         }
 
         // Apply clipping based on winding rule
         match self.winding_rule {
-            WindingRule::NonZero => writeln!(&mut ops, "W").unwrap(),
-            WindingRule::EvenOdd => writeln!(&mut ops, "W*").unwrap(),
+            WindingRule::NonZero => {
+                writeln!(&mut ops, "W").expect("Writing to string should never fail")
+            }
+            WindingRule::EvenOdd => {
+                writeln!(&mut ops, "W*").expect("Writing to string should never fail")
+            }
         }
 
         // End path without filling or stroking
-        writeln!(&mut ops, "n").unwrap();
+        writeln!(&mut ops, "n").expect("Writing to string should never fail");
 
         Ok(ops)
     }
@@ -464,7 +471,9 @@ mod tests {
     #[test]
     fn test_pdf_operations_nonzero() {
         let path = ClippingPath::rect(0.0, 0.0, 100.0, 100.0);
-        let ops = path.to_pdf_operations().unwrap();
+        let ops = path
+            .to_pdf_operations()
+            .expect("Writing to string should never fail");
 
         assert!(ops.contains("0.000 0.000 100.000 100.000 re"));
         assert!(ops.contains("W")); // Non-zero winding
@@ -475,7 +484,9 @@ mod tests {
     fn test_pdf_operations_evenodd() {
         let path =
             ClippingPath::rect(0.0, 0.0, 100.0, 100.0).with_winding_rule(WindingRule::EvenOdd);
-        let ops = path.to_pdf_operations().unwrap();
+        let ops = path
+            .to_pdf_operations()
+            .expect("Writing to string should never fail");
 
         assert!(ops.contains("W*")); // Even-odd winding
     }
@@ -548,12 +559,16 @@ mod tests {
         let mut region = ClippingRegion::new();
 
         // No clip set
-        let ops = region.to_pdf_operations().unwrap();
+        let ops = region
+            .to_pdf_operations()
+            .expect("Writing to string should never fail");
         assert!(ops.is_none());
 
         // With clip set
         region.set_clip(ClippingPath::rect(0.0, 0.0, 100.0, 100.0));
-        let ops = region.to_pdf_operations().unwrap();
+        let ops = region
+            .to_pdf_operations()
+            .expect("Writing to string should never fail");
         assert!(ops.is_some());
         assert!(ops.unwrap().contains("re"));
     }
@@ -567,7 +582,9 @@ mod tests {
             .line_to(70.0, 50.0)
             .close_path();
 
-        let ops = path.to_pdf_operations().unwrap();
+        let ops = path
+            .to_pdf_operations()
+            .expect("Writing to string should never fail");
         assert!(ops.contains("10.000 10.000 m"));
         assert!(ops.contains("50.000 10.000 l"));
         assert!(ops.contains("c")); // Curve

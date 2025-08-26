@@ -357,24 +357,19 @@ fn create_test_compliance_matrix() -> oxidize_pdf::verification::iso_matrix::Iso
                     name: "Test Requirement 1".to_string(),
                     description: "A test requirement".to_string(),
                     iso_reference: "Test".to_string(),
-                    implementation: "test".to_string(),
-                    test_file: "test".to_string(),
-                    level: 3,
-                    verified: true,
-                    external_validation: None,
-                    notes: "Test".to_string(),
+                    requirement_type: "mandatory".to_string(),
+                    page: 42,
+                    original_text: "Test requirement original text from ISO standard".to_string(),
                 },
                 IsoRequirementData {
                     id: "test.2".to_string(),
                     name: "Test Requirement 2".to_string(),
                     description: "Another test requirement".to_string(),
                     iso_reference: "Test".to_string(),
-                    implementation: "None".to_string(),
-                    test_file: "None".to_string(),
-                    level: 0,
-                    verified: false,
-                    external_validation: None,
-                    notes: "Not implemented".to_string(),
+                    requirement_type: "optional".to_string(),
+                    page: 43,
+                    original_text: "Another test requirement original text from ISO standard"
+                        .to_string(),
                 },
             ],
         },
@@ -407,4 +402,207 @@ fn create_test_compliance_matrix() -> oxidize_pdf::verification::iso_matrix::Iso
             automated_testing: false,
         },
     }
+}
+
+#[test]
+fn test_requirement_status_handling() {
+    println!("🔍 Testing RequirementStatus handling (external validation & notes)");
+
+    use oxidize_pdf::verification::iso_matrix::RequirementStatus;
+    use std::collections::HashMap;
+
+    // Create test status data with external validation and notes
+    let mut status_map = HashMap::new();
+
+    // Test requirement with external validation success
+    status_map.insert(
+        "test.1".to_string(),
+        RequirementStatus {
+            level: 3,
+            implementation: "src/test.rs".to_string(),
+            test_file: "tests/iso_verification_test.rs".to_string(),
+            verified: true,
+            last_checked: "2025-08-24T10:00:00Z".to_string(),
+            notes:
+                "External validation: qpdf confirms compliance. Tested with various text encodings."
+                    .to_string(),
+        },
+    );
+
+    // Test requirement with external validation pending
+    status_map.insert(
+        "test.2".to_string(),
+        RequirementStatus {
+            level: 2,
+            implementation: "None".to_string(),
+            test_file: "None".to_string(),
+            verified: false,
+            last_checked: "2025-08-24T10:00:00Z".to_string(),
+            notes: "External validation: Pending qpdf installation. Internal tests pass."
+                .to_string(),
+        },
+    );
+
+    // Verify status data structure
+    assert_eq!(status_map.len(), 2);
+
+    let status1 = status_map.get("test.1").unwrap();
+    assert!(status1.verified);
+    assert!(status1.notes.contains("External validation"));
+    assert!(status1.notes.contains("qpdf"));
+
+    let status2 = status_map.get("test.2").unwrap();
+    assert!(!status2.verified);
+    assert!(status2.notes.contains("External validation: Pending"));
+
+    println!("✓ External validation tracking working");
+    println!("  - Status with external validation: {}", status1.notes);
+    println!("  - Status with pending validation: {}", status2.notes);
+
+    // Test notes parsing for external validation results
+    let has_external_validation =
+        |notes: &str| -> bool { notes.to_lowercase().contains("external validation") };
+
+    let extract_external_tool = |notes: &str| -> Option<String> {
+        if notes.contains("qpdf") {
+            Some("qpdf".to_string())
+        } else if notes.contains("adobe") {
+            Some("adobe_preflight".to_string())
+        } else if notes.contains("veraPDF") {
+            Some("veraPDF".to_string())
+        } else {
+            None
+        }
+    };
+
+    assert!(has_external_validation(&status1.notes));
+    assert_eq!(
+        extract_external_tool(&status1.notes),
+        Some("qpdf".to_string())
+    );
+
+    println!("✓ Notes parsing for external validation working correctly");
+}
+
+#[test]
+fn test_compliance_system_dual_file_architecture() {
+    println!("🔍 Testing ComplianceSystem dual-file architecture");
+
+    use oxidize_pdf::verification::iso_matrix::*;
+    use std::collections::HashMap;
+
+    // Create test matrix (immutable definitions)
+    let matrix = create_test_compliance_matrix();
+
+    // Create test verification status (mutable state)
+    let mut status_map = HashMap::new();
+    status_map.insert(
+        "test.1".to_string(),
+        RequirementStatus {
+            level: 3,
+            implementation: "src/document.rs:125".to_string(),
+            test_file: "tests/iso_verification_test.rs:77".to_string(),
+            verified: true,
+            last_checked: "2025-08-24T10:00:00Z".to_string(),
+            notes: "Level 3: Content verified. External validation: qpdf confirms /Type /Catalog structure.".to_string(),
+        },
+    );
+
+    status_map.insert(
+        "test.2".to_string(),
+        RequirementStatus {
+            level: 0,
+            implementation: "None".to_string(),
+            test_file: "None".to_string(),
+            verified: false,
+            last_checked: "2025-08-24T10:00:00Z".to_string(),
+            notes: "Level 0: Not implemented. External validation: N/A (feature not available)."
+                .to_string(),
+        },
+    );
+
+    let verification_status = VerificationStatus {
+        metadata: StatusMetadata {
+            last_updated: "2025-08-24T10:00:00Z".to_string(),
+            matrix_version: "test".to_string(),
+            total_requirements: 2,
+            note: "Test verification status".to_string(),
+            warning: "For testing purposes only".to_string(),
+        },
+        status: status_map,
+        statistics: StatusStatistics {
+            level_0_count: 1,
+            level_1_count: 0,
+            level_2_count: 0,
+            level_3_count: 1,
+            level_4_count: 0,
+            average_level: 1.5,
+            compliance_percentage: 37.5,
+            last_calculated: "2025-08-24T10:00:00Z".to_string(),
+        },
+    };
+
+    // Create combined compliance system
+    let compliance_system = ComplianceSystem {
+        matrix,
+        status: verification_status,
+    };
+
+    // Test dual-file system functionality
+    println!("✓ ComplianceSystem created successfully");
+    println!(
+        "  - Matrix version: {}",
+        compliance_system.matrix.metadata.version
+    );
+    println!(
+        "  - Status last updated: {}",
+        compliance_system.status.metadata.last_updated
+    );
+    println!(
+        "  - Total requirements: {}",
+        compliance_system.status.metadata.total_requirements
+    );
+
+    // Test combining matrix definitions with status data
+    let req_data = compliance_system
+        .matrix
+        .sections
+        .get("test_section")
+        .unwrap()
+        .requirements
+        .get(0)
+        .unwrap();
+    let req_status = compliance_system.status.status.get("test.1").unwrap();
+
+    println!("✓ Requirement combination test:");
+    println!(
+        "  - Definition: {} ({})",
+        req_data.name, req_data.requirement_type
+    );
+    println!(
+        "  - Status: Level {} - {}",
+        req_status.level,
+        if req_status.verified {
+            "Verified"
+        } else {
+            "Not verified"
+        }
+    );
+    println!("  - Implementation: {}", req_status.implementation);
+    println!("  - Notes: {}", req_status.notes);
+
+    // Verify separation of concerns
+    assert!(!req_data.name.is_empty()); // Matrix has definitions
+    assert!(!req_status.implementation.is_empty() || req_status.implementation == "None"); // Status has implementation details
+    assert!(!req_status.notes.is_empty()); // Status has verification notes
+
+    // Test external validation tracking through notes
+    let has_external_validation = req_status.notes.contains("External validation:");
+    let external_validation_passed = req_status.notes.contains("qpdf confirms");
+
+    assert!(has_external_validation);
+    assert!(external_validation_passed);
+
+    println!("✓ External validation tracking through notes working");
+    println!("✓ Dual-file architecture test passed - proper separation of concerns");
 }

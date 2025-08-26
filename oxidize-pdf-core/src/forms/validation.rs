@@ -414,8 +414,8 @@ impl FormValidationSystem {
             }
             ValidationRule::Email => {
                 let text = value.to_string();
-                let email_regex =
-                    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+                let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                    .expect("Email regex pattern should be valid");
                 if email_regex.is_match(&text) {
                     Ok(())
                 } else {
@@ -424,7 +424,8 @@ impl FormValidationSystem {
             }
             ValidationRule::Url => {
                 let text = value.to_string();
-                let url_regex = Regex::new(r"^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
+                let url_regex = Regex::new(r"^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+                    .expect("URL regex pattern should be valid");
                 if url_regex.is_match(&text) {
                     Ok(())
                 } else {
@@ -492,7 +493,7 @@ impl FormValidationSystem {
             PhoneCountry::Custom => r"^[0-9+\-\s\(\)]+$",
         };
 
-        let re = Regex::new(pattern).unwrap();
+        let re = Regex::new(pattern).map_err(|e| format!("Invalid phone regex pattern: {}", e))?;
         if re.is_match(phone) {
             Ok(())
         } else {
@@ -505,7 +506,7 @@ impl FormValidationSystem {
         let digits: Vec<u32> = card_number
             .chars()
             .filter(|c| c.is_ascii_digit())
-            .map(|c| c.to_digit(10).unwrap())
+            .filter_map(|c| c.to_digit(10))
             .collect();
 
         if digits.len() < 13 || digits.len() > 19 {
