@@ -4,7 +4,7 @@
 # ====================
 # Build & Dependencies
 # ====================
-target/           # 14GB of compiled artifacts
+target/           # Compiled artifacts (cleaned regularly)
 Cargo.lock       # Auto-generated, not needed for context
 .git/            # Git history and objects
 
@@ -38,10 +38,15 @@ tests/images/
 test-pdfs/
 
 # ====================
-# Documentation
+# Documentation (Large files)
 # ====================
-# Keep only essential docs in context
-docs/api/
+# Exclude large documentation already read
+API_DOCUMENTATION.md      # 450+ lines, comprehensive API guide
+PERFORMANCE.md           # 400+ lines, benchmarks and optimization
+MIGRATION.md            # 500+ lines, migration guide
+examples/doc/COMPREHENSIVE_EXAMPLES.md  # 800+ lines, production examples
+
+# Backup and temp files
 *.bak
 LICENSE*
 CHANGELOG*
@@ -59,6 +64,10 @@ CONTRIBUTORS
 *~
 .DS_Store
 Thumbs.db
+*.profraw
+*.profdata
+cobertura.xml
+tarpaulin-report.html
 
 # ====================
 # IDE & Editor Files
@@ -86,12 +95,13 @@ examples/results/
 oxidize-pdf-core/*.pdf
 
 # ====================
-# Scripts in Wrong Location
+# Scripts in Wrong Location  
 # ====================
 /*.py            # Python scripts should be in tools/
 /*.rs            # Rust scripts should be in dev-tools/
 test_*.txt       # Test output files
 *_test.txt
+test_output.log  # Test logs
 
 # ====================
 # Obsolete Documentation

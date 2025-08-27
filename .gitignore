@@ -5,7 +5,7 @@ Cargo.lock
 
 # Test PDFs - ONLY in designated directories
 *.pdf
-!oxidize-pdf-core/test-pdfs/*.pdf
+!examples/results/**/*.pdf
 !test-pdfs/*.pdf
 !test-suite/fixtures/**/*.pdf
 !test-files/*.pdf
@@ -64,6 +64,20 @@ test_*.txt
 *.profdata
 cobertura.xml
 tarpaulin-report.html
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*~
+*.swp
+*.swo
+
+# Test output logs
+test_output.log
+*_test.log
 
 # Keep GitHub workflows
 !.github/
