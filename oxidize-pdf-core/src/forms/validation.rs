@@ -375,18 +375,46 @@ impl FormValidationSystem {
                 }
             }
             ValidationRule::Range { min, max } => {
-                let num = value.to_number();
-                if let Some(min_val) = min {
-                    if num < *min_val {
-                        return Err(format!("Value must be at least {}", min_val));
+                // For range validation, only accept numeric values or valid text representations
+                match value {
+                    FieldValue::Number(num) => {
+                        if let Some(min_val) = min {
+                            if num < min_val {
+                                return Err(format!("Value must be at least {}", min_val));
+                            }
+                        }
+                        if let Some(max_val) = max {
+                            if num > max_val {
+                                return Err(format!("Value must be at most {}", max_val));
+                            }
+                        }
+                        Ok(())
+                    }
+                    FieldValue::Text(s) => {
+                        // Only accept text that can be parsed as a valid number
+                        match s.parse::<f64>() {
+                            Ok(num) => {
+                                if let Some(min_val) = min {
+                                    if num < *min_val {
+                                        return Err(format!("Value must be at least {}", min_val));
+                                    }
+                                }
+                                if let Some(max_val) = max {
+                                    if num > *max_val {
+                                        return Err(format!("Value must be at most {}", max_val));
+                                    }
+                                }
+                                Ok(())
+                            }
+                            Err(_) => {
+                                Err("Value must be a valid number for range validation".to_string())
+                            }
+                        }
+                    }
+                    FieldValue::Boolean(_) | FieldValue::Empty => {
+                        Err("Range validation requires numeric values".to_string())
                     }
                 }
-                if let Some(max_val) = max {
-                    if num > *max_val {
-                        return Err(format!("Value must be at most {}", max_val));
-                    }
-                }
-                Ok(())
             }
             ValidationRule::Length { min, max } => {
                 let text = value.to_string();
@@ -457,6 +485,34 @@ impl FormValidationSystem {
             ValidationRule::Time { min, max } => {
                 // Parse time and validate range
                 let text = value.to_string();
+
+                // Manual validation for invalid components before using chrono
+                if text.contains(':') {
+                    let parts: Vec<&str> = text.split(':').collect();
+                    if parts.len() >= 2 {
+                        // Validate hour (0-23)
+                        if let Ok(hour) = parts[0].parse::<u32>() {
+                            if hour > 23 {
+                                return Err("Invalid hour: must be 0-23".to_string());
+                            }
+                        }
+                        // Validate minute (0-59)
+                        if let Ok(minute) = parts[1].parse::<u32>() {
+                            if minute > 59 {
+                                return Err("Invalid minute: must be 0-59".to_string());
+                            }
+                        }
+                        // Validate second if present (0-59)
+                        if parts.len() >= 3 {
+                            if let Ok(second) = parts[2].parse::<u32>() {
+                                if second > 59 {
+                                    return Err("Invalid second: must be 0-59".to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+
                 let time = NaiveTime::parse_from_str(&text, "%H:%M:%S")
                     .or_else(|_| NaiveTime::parse_from_str(&text, "%H:%M"))
                     .map_err(|e| format!("Invalid time format: {}", e))?;
@@ -488,7 +544,7 @@ impl FormValidationSystem {
         let pattern = match country {
             PhoneCountry::US => r"^\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}$",
             PhoneCountry::UK => r"^\+?44\s?\d{2}\s?\d{4}\s?\d{4}$",
-            PhoneCountry::EU => r"^\+?[0-9]{2}\s?[0-9]{3}\s?[0-9]{3}\s?[0-9]{4}$",
+            PhoneCountry::EU => r"^\+?[0-9]{2,3}\s?[0-9]{2,4}\s?[0-9]{2,4}\s?[0-9]{2,4}$",
             PhoneCountry::Japan => r"^0\d{1,4}-?\d{1,4}-?\d{4}$",
             PhoneCountry::Custom => r"^[0-9+\-\s\(\)]+$",
         };
@@ -1932,7 +1988,7 @@ mod tests {
         system.add_required_field(info);
 
         // Should allow empty when condition not met
-        let result = system.validate_field("shipping_address", &FieldValue::Empty);
+        let _result = system.validate_field("shipping_address", &FieldValue::Empty);
         // In real scenario, condition would be evaluated
     }
 
@@ -1950,7 +2006,7 @@ mod tests {
         let value = FieldValue::Text("test".to_string());
 
         // First validation
-        let result1 = system.validate_field("cached_field", &value);
+        let _result1 = system.validate_field("cached_field", &value);
 
         // Cache should contain result
         assert!(system.validation_cache.contains_key("cached_field"));
@@ -2697,7 +2753,7 @@ mod tests {
             ("contact_email", ""),
             ("contact_address", ""),
         ] {
-            let result = system.validate_field(field_name, &FieldValue::Empty);
+            let _result = system.validate_field(field_name, &FieldValue::Empty);
             // Current implementation doesn't fully check group conditions
             // This test documents expected behavior
         }

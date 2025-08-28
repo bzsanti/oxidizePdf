@@ -58,8 +58,8 @@ impl ObjectStream {
 
         // Create a cursor for reading
         let mut cursor = Cursor::new(&data);
-        // TODO: Accept options parameter in parse() to pass here
-        let mut lexer = Lexer::new(&mut cursor);
+        // Pass options to lexer for more flexible parsing
+        let mut lexer = Lexer::new_with_options(&mut cursor, options.clone());
 
         // Read object number/offset pairs
         let mut offsets = Vec::new();
@@ -96,11 +96,10 @@ impl ObjectStream {
 
             // Seek to object start
             cursor.set_position(abs_offset as u64);
-            let mut obj_lexer = Lexer::new(&mut cursor);
+            let mut obj_lexer = Lexer::new_with_options(&mut cursor, options.clone());
 
-            // Parse the object
-            // TODO: Accept options parameter in parse() to pass here
-            let obj = PdfObject::parse(&mut obj_lexer)?;
+            // Parse the object with options for more flexible parsing
+            let obj = PdfObject::parse_with_options(&mut obj_lexer, options)?;
 
             // Store in cache
             self.objects.insert(*obj_num, obj);
@@ -166,6 +165,7 @@ mod tests {
     use std::collections::HashMap;
     use std::io::Write;
 
+    #[allow(dead_code)]
     fn create_test_stream_data() -> Vec<u8> {
         // Create test data with proper format:
         // Object numbers and offsets: "1 0 2 2"
@@ -175,6 +175,7 @@ mod tests {
         data.to_vec()
     }
 
+    #[allow(dead_code)]
     fn create_compressed_stream_data() -> Vec<u8> {
         let data = create_test_stream_data();
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());

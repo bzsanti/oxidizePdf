@@ -721,6 +721,66 @@ impl GraphicsContext {
         Ok(self)
     }
 
+    /// Set word spacing for text justification
+    pub fn set_word_spacing(&mut self, spacing: f64) -> &mut Self {
+        writeln!(&mut self.operations, "{spacing:.2} Tw")
+            .expect("Writing to string should never fail");
+        self
+    }
+
+    /// Set character spacing
+    pub fn set_character_spacing(&mut self, spacing: f64) -> &mut Self {
+        writeln!(&mut self.operations, "{spacing:.2} Tc")
+            .expect("Writing to string should never fail");
+        self
+    }
+
+    /// Show justified text with automatic word spacing calculation
+    pub fn show_justified_text(&mut self, text: &str, target_width: f64) -> Result<&mut Self> {
+        // Split text into words
+        let words: Vec<&str> = text.split_whitespace().collect();
+        if words.len() <= 1 {
+            // Can't justify single word or empty text
+            return self.show_text(text);
+        }
+
+        // Calculate natural width of text without extra spacing
+        let text_without_spaces = words.join("");
+        let natural_text_width = self.estimate_text_width_simple(&text_without_spaces);
+        let space_width = self.estimate_text_width_simple(" ");
+        let natural_width = natural_text_width + (space_width * (words.len() - 1) as f64);
+
+        // Calculate extra spacing needed per word gap
+        let extra_space_needed = target_width - natural_width;
+        let word_gaps = (words.len() - 1) as f64;
+
+        if word_gaps > 0.0 && extra_space_needed > 0.0 {
+            let extra_word_spacing = extra_space_needed / word_gaps;
+
+            // Set word spacing
+            self.set_word_spacing(extra_word_spacing);
+
+            // Show text (spaces will be expanded automatically)
+            self.show_text(text)?;
+
+            // Reset word spacing to default
+            self.set_word_spacing(0.0);
+        } else {
+            // Fallback to normal text display
+            self.show_text(text)?;
+        }
+
+        Ok(self)
+    }
+
+    /// Simple text width estimation (placeholder implementation)
+    fn estimate_text_width_simple(&self, text: &str) -> f64 {
+        // This is a simplified estimation. In a full implementation,
+        // you would use actual font metrics.
+        let font_size = self.current_font_size;
+        text.len() as f64 * font_size * 0.6 // Approximate width factor
+    }
+
     /// Render a table
     pub fn render_table(&mut self, table: &Table) -> Result<()> {
         table.render(self)
@@ -2407,7 +2467,7 @@ mod tests {
     fn test_smoothness_tolerance() {
         let mut ctx = GraphicsContext::new();
 
-        ctx.set_smoothness(0.1);
+        let _ = ctx.set_smoothness(0.1);
         assert_eq!(ctx.smoothness(), 0.1);
     }
 
@@ -2478,7 +2538,7 @@ mod tests {
         let ctx = GraphicsContext::new();
 
         // Test that we can create and use an extended graphics state
-        let extgstate = ExtGState::new();
+        let _extgstate = ExtGState::new();
 
         // We should be able to create the state without errors
         assert!(ctx.generate_operations().is_ok());
@@ -2555,5 +2615,73 @@ mod tests {
         // Restore again
         ctx.restore_state();
         assert_eq!(ctx.fill_color(), Color::black());
+    }
+
+    #[test]
+    fn test_word_spacing() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_word_spacing(2.5);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("2.50 Tw"));
+    }
+
+    #[test]
+    fn test_character_spacing() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_character_spacing(1.0);
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+        assert!(ops_str.contains("1.00 Tc"));
+    }
+
+    #[test]
+    fn test_justified_text() {
+        let mut ctx = GraphicsContext::new();
+        ctx.begin_text();
+        ctx.set_text_position(100.0, 200.0);
+        ctx.show_justified_text("Hello world from PDF", 200.0)
+            .unwrap();
+        ctx.end_text();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+
+        // Should contain text operations
+        assert!(ops_str.contains("BT")); // Begin text
+        assert!(ops_str.contains("ET")); // End text
+        assert!(ops_str.contains("100.00 200.00 Td")); // Text position
+        assert!(ops_str.contains("(Hello world from PDF) Tj")); // Show text
+
+        // Should contain word spacing operations
+        assert!(ops_str.contains("Tw")); // Word spacing
+    }
+
+    #[test]
+    fn test_justified_text_single_word() {
+        let mut ctx = GraphicsContext::new();
+        ctx.begin_text();
+        ctx.show_justified_text("Hello", 200.0).unwrap();
+        ctx.end_text();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+
+        // Single word should just use normal text display
+        assert!(ops_str.contains("(Hello) Tj"));
+        // Should not contain word spacing since there's only one word
+        assert_eq!(ops_str.matches("Tw").count(), 0);
+    }
+
+    #[test]
+    fn test_text_width_estimation() {
+        let ctx = GraphicsContext::new();
+        let width = ctx.estimate_text_width_simple("Hello");
+
+        // Should return reasonable estimation based on font size and character count
+        assert!(width > 0.0);
+        assert_eq!(width, 5.0 * 12.0 * 0.6); // 5 chars * 12pt font * 0.6 factor
     }
 }

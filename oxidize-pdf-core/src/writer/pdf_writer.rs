@@ -300,24 +300,6 @@ impl<W: Write> PdfWriter<W> {
 
         resources.set("Font", Object::Dictionary(font_dict));
 
-        // Add images as XObjects
-        if !page.images().is_empty() {
-            let mut xobject_dict = Dictionary::new();
-
-            for (name, image) in page.images() {
-                // Use sequential ObjectId allocation to avoid conflicts
-                let image_id = self.allocate_object_id();
-
-                // Write the image XObject
-                self.write_object(image_id, image.to_pdf_object())?;
-
-                // Add reference to XObject dictionary
-                xobject_dict.set(name, Object::Reference(image_id));
-            }
-
-            resources.set("XObject", Object::Dictionary(xobject_dict));
-        }
-
         // Add ExtGState resources for transparency
         if let Some(extgstate_states) = page.get_extgstate_resources() {
             let mut extgstate_dict = Dictionary::new();
@@ -1401,6 +1383,24 @@ impl<W: Write> PdfWriter<W> {
 
         resources.set("Font", Object::Dictionary(font_dict));
 
+        // Add images as XObjects
+        if !page.images().is_empty() {
+            let mut xobject_dict = Dictionary::new();
+
+            for (name, image) in page.images() {
+                // Use sequential ObjectId allocation to avoid conflicts
+                let image_id = self.allocate_object_id();
+
+                // Write the image XObject
+                self.write_object(image_id, image.to_pdf_object())?;
+
+                // Add reference to XObject dictionary
+                xobject_dict.set(name, Object::Reference(image_id));
+            }
+
+            resources.set("XObject", Object::Dictionary(xobject_dict));
+        }
+
         page_dict.set("Resources", Object::Dictionary(resources));
 
         // Handle form widget annotations
@@ -2281,7 +2281,6 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "draw_image not fully implemented in GraphicsContext"]
         fn test_writer_image_integration() {
             let temp_dir = TempDir::new().unwrap();
             let file_path = temp_dir.path().join("writer_image_integration.pdf");
@@ -2337,8 +2336,8 @@ mod tests {
             println!("PDF size: {} bytes", content.len());
             println!("Contains 'XObject': {}", content_str.contains("XObject"));
 
-            // TODO: Fix XObject writing
-            // assert!(content_str.contains("XObject"));
+            // Verify XObject is properly written
+            assert!(content_str.contains("XObject"));
             assert!(content_str.contains("test_image1"));
             assert!(content_str.contains("test_image2"));
             assert!(content_str.contains("/Type /XObject"));

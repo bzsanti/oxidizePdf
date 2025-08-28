@@ -433,21 +433,21 @@ mod tests {
         let mut page1 = Page::a4();
         page1.graphics().begin_text();
         page1.graphics().set_text_position(100.0, 700.0);
-        page1.graphics().show_text("Page 1");
+        let _ = page1.graphics().show_text("Page 1");
         page1.graphics().end_text();
         doc.add_page(page1);
 
         let mut page2 = Page::a4();
         page2.graphics().begin_text();
         page2.graphics().set_text_position(100.0, 700.0);
-        page2.graphics().show_text("Page 2");
+        let _ = page2.graphics().show_text("Page 2");
         page2.graphics().end_text();
         doc.add_page(page2);
 
         let mut page3 = Page::a4();
         page3.graphics().begin_text();
         page3.graphics().set_text_position(100.0, 700.0);
-        page3.graphics().show_text("Page 3");
+        let _ = page3.graphics().show_text("Page 3");
         page3.graphics().end_text();
         doc.add_page(page3);
 
@@ -481,7 +481,7 @@ mod tests {
             let mut page = Page::a4();
             page.graphics().begin_text();
             page.graphics().set_text_position(100.0, 700.0);
-            page.graphics().show_text(&format!("Page {}", i));
+            let _ = page.graphics().show_text(&format!("Page {}", i));
             page.graphics().end_text();
             doc.add_page(page);
         }
