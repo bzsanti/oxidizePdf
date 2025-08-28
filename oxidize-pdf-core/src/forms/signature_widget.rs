@@ -946,7 +946,7 @@ mod tests {
 
     #[test]
     fn test_multiple_ink_strokes() {
-        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 100.0));
+        let _rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 100.0));
         let strokes = vec![
             InkStroke {
                 points: vec![(10.0, 10.0), (20.0, 20.0)],

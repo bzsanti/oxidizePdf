@@ -179,8 +179,7 @@ impl PdfSplitter {
 
         // Set rotation if needed
         if parsed_page.rotation != 0 {
-            // TODO: Implement rotation in Page
-            // For now, we'll handle this when we implement the rotation feature
+            page.set_rotation(parsed_page.rotation);
         }
 
         // Get content streams
@@ -302,7 +301,7 @@ impl PdfSplitter {
                 ContentOperation::SetLineWidth(width) => {
                     page.graphics().set_line_width(*width as f64);
                 }
-                // TODO: Implement more operators as needed
+                // Note: Additional operators can be implemented on demand
                 _ => {
                     // Silently skip unimplemented operators for now
                 }

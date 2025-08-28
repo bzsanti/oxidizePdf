@@ -551,23 +551,39 @@ impl CustomFont {
             .get_font_name()
             .unwrap_or_else(|_| "Unknown".to_string());
 
-        // Create font descriptor from TrueType data
+        // Create font descriptor from TrueType data with real metrics
+        let fixed_pitch = ttf.is_fixed_pitch().unwrap_or(false);
         let flags = FontFlags {
-            fixed_pitch: false, // TODO: Detect from font
+            fixed_pitch,
             symbolic: false,
             non_symbolic: true,
             ..Default::default()
         };
 
+        let font_bbox = ttf
+            .get_font_bbox()
+            .unwrap_or([-500.0, -300.0, 1500.0, 1000.0]);
+        let font_bbox_f64 = [
+            font_bbox[0] as f64,
+            font_bbox[1] as f64,
+            font_bbox[2] as f64,
+            font_bbox[3] as f64,
+        ];
+        let italic_angle = ttf.get_italic_angle().unwrap_or(0.0) as f64;
+        let ascent = ttf.get_ascent().unwrap_or(750) as f64;
+        let descent = ttf.get_descent().unwrap_or(-250) as f64;
+        let cap_height = ttf.get_cap_height().unwrap_or(700.0) as f64;
+        let stem_width = ttf.get_stem_width().unwrap_or(100.0) as f64;
+
         let descriptor = FontDescriptor::new(
             font_name.clone(),
             flags,
-            [-500.0, -300.0, 1500.0, 1000.0], // TODO: Get from font
-            0.0,                              // TODO: Get italic angle
-            750.0,                            // TODO: Get ascent
-            -250.0,                           // TODO: Get descent
-            700.0,                            // TODO: Get cap height
-            100.0,                            // TODO: Get stem V
+            font_bbox_f64,
+            italic_angle,
+            ascent,
+            descent,
+            cap_height,
+            stem_width,
         );
 
         // Create metrics

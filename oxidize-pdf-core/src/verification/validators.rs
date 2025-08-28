@@ -308,7 +308,8 @@ startxref
         let available = check_available_validators();
         // Just test that the function runs without panicking
         // The actual validators may or may not be available in test environment
-        assert!(available.len() >= 0); // Always true, but ensures function runs
+        // Just ensure function runs without actual assertion on length
+        let _ = available.len();
     }
 
     #[test]

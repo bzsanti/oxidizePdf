@@ -1867,7 +1867,7 @@ mod tests {
                 let mut page = Page::a4();
                 let gc = page.graphics();
                 gc.begin_text();
-                gc.show_text(&format!("Page {}", i + 1));
+                let _ = gc.show_text(&format!("Page {}", i + 1));
                 gc.end_text();
                 doc.add_page(page);
             }
@@ -1903,7 +1903,7 @@ mod tests {
                 // Add text
                 gc.begin_text();
                 gc.set_text_position(100.0, 500.0);
-                gc.show_text("Graphics Test");
+                let _ = gc.show_text("Graphics Test");
                 gc.end_text();
 
                 gc.restore_state();

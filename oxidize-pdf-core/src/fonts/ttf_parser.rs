@@ -214,7 +214,7 @@ impl<'a> TtfParser<'a> {
             font_family: font_name,
             flags,
             font_bbox: [x_min as f32, y_min as f32, x_max as f32, y_max as f32],
-            italic_angle: 0.0, // TODO: Extract from post table
+            italic_angle: self.extract_italic_angle()?,
             ascent: metrics.ascent as f32,
             descent: metrics.descent as f32,
             cap_height: metrics.cap_height as f32,
@@ -233,8 +233,72 @@ impl<'a> TtfParser<'a> {
             return Err(PdfError::FontError("Invalid name table".into()));
         }
 
-        // For now, return a default name
-        // TODO: Properly parse name table
+        // Parse name table to extract font name (Name ID 6: PostScript name)
+        let name_data = name_table;
+
+        if name_data.len() < 6 {
+            return Ok("CustomFont".to_string());
+        }
+
+        // Read name table header
+        let num_records = u16::from_be_bytes([name_data[2], name_data[3]]);
+        let string_offset = u16::from_be_bytes([name_data[4], name_data[5]]) as usize;
+
+        if name_data.len() < 6 + (num_records as usize * 12) {
+            return Ok("CustomFont".to_string());
+        }
+
+        // Look for PostScript name (Name ID 6) or Font Family name (Name ID 1)
+        for i in 0..num_records {
+            let record_offset = 6 + (i as usize * 12);
+            if record_offset + 12 > name_data.len() {
+                break;
+            }
+
+            let platform_id =
+                u16::from_be_bytes([name_data[record_offset], name_data[record_offset + 1]]);
+            let name_id =
+                u16::from_be_bytes([name_data[record_offset + 6], name_data[record_offset + 7]]);
+            let length =
+                u16::from_be_bytes([name_data[record_offset + 8], name_data[record_offset + 9]])
+                    as usize;
+            let offset =
+                u16::from_be_bytes([name_data[record_offset + 10], name_data[record_offset + 11]])
+                    as usize;
+
+            // Look for PostScript name (ID 6) or Family name (ID 1) in platform ID 1 (Mac) or 3 (Microsoft)
+            if (name_id == 6 || name_id == 1) && (platform_id == 1 || platform_id == 3) {
+                let str_start = string_offset + offset;
+                let str_end = str_start + length;
+
+                if str_end <= name_data.len() {
+                    let name_bytes = &name_data[str_start..str_end];
+
+                    // Try to decode as UTF-8 or ASCII
+                    if platform_id == 1 {
+                        // Mac Roman encoding - simplified to ASCII
+                        let name = String::from_utf8_lossy(name_bytes).to_string();
+                        if !name.trim().is_empty() {
+                            return Ok(name.trim().to_string());
+                        }
+                    } else if platform_id == 3 {
+                        // Microsoft Unicode (UTF-16 BE)
+                        if name_bytes.len() % 2 == 0 {
+                            let utf16_chars: Vec<u16> = name_bytes
+                                .chunks_exact(2)
+                                .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+                                .collect();
+                            if let Ok(name) = String::from_utf16(&utf16_chars) {
+                                if !name.trim().is_empty() {
+                                    return Ok(name.trim().to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Ok("CustomFont".to_string())
     }
 
@@ -276,10 +340,14 @@ impl<'a> TtfParser<'a> {
             return Err(PdfError::FontError("Invalid cmap table".into()));
         }
 
-        // For now, create a basic ASCII mapping
-        // TODO: Properly parse cmap table
-        for ch in 0x20..=0x7E {
-            mapping.add_mapping(char::from(ch), ch as u16);
+        // Parse cmap table for character to glyph mapping
+        let cmap_data = cmap_table;
+
+        if self.parse_cmap_table(cmap_data, &mut mapping).is_err() {
+            // Fallback to basic ASCII mapping if cmap parsing fails
+            for ch in 0x20..=0x7E {
+                mapping.add_mapping(char::from(ch), ch as u16);
+            }
         }
 
         // Extract glyph widths from hmtx table
@@ -329,6 +397,188 @@ impl<'a> TtfParser<'a> {
         }
 
         Ok(())
+    }
+
+    /// Parse cmap table to extract character to glyph mappings
+    fn parse_cmap_table(&self, cmap_data: &[u8], mapping: &mut GlyphMapping) -> Result<()> {
+        if cmap_data.len() < 4 {
+            return Err(PdfError::FontError("Invalid cmap table header".into()));
+        }
+
+        let num_tables = u16::from_be_bytes([cmap_data[2], cmap_data[3]]) as usize;
+
+        if cmap_data.len() < 4 + num_tables * 8 {
+            return Err(PdfError::FontError("Incomplete cmap table".into()));
+        }
+
+        // Look for the best subtable (prefer Unicode platform)
+        let mut best_offset = None;
+        for i in 0..num_tables {
+            let record_offset = 4 + i * 8;
+            let platform_id =
+                u16::from_be_bytes([cmap_data[record_offset], cmap_data[record_offset + 1]]);
+            let encoding_id =
+                u16::from_be_bytes([cmap_data[record_offset + 2], cmap_data[record_offset + 3]]);
+            let subtable_offset = u32::from_be_bytes([
+                cmap_data[record_offset + 4],
+                cmap_data[record_offset + 5],
+                cmap_data[record_offset + 6],
+                cmap_data[record_offset + 7],
+            ]) as usize;
+
+            // Prefer Unicode BMP (platform 3, encoding 1/10) or Unicode platform (platform 0)
+            if (platform_id == 3 && (encoding_id == 1 || encoding_id == 10)) || platform_id == 0 {
+                best_offset = Some(subtable_offset);
+                break;
+            }
+            // Fallback to Mac Roman (platform 1, encoding 0)
+            else if platform_id == 1 && encoding_id == 0 && best_offset.is_none() {
+                best_offset = Some(subtable_offset);
+            }
+        }
+
+        if let Some(offset) = best_offset {
+            self.parse_cmap_subtable(cmap_data, offset, mapping)?;
+        }
+
+        Ok(())
+    }
+
+    /// Parse a specific cmap subtable
+    fn parse_cmap_subtable(
+        &self,
+        cmap_data: &[u8],
+        offset: usize,
+        mapping: &mut GlyphMapping,
+    ) -> Result<()> {
+        if offset + 6 > cmap_data.len() {
+            return Err(PdfError::FontError("Invalid cmap subtable offset".into()));
+        }
+
+        let format = u16::from_be_bytes([cmap_data[offset], cmap_data[offset + 1]]);
+
+        match format {
+            0 => self.parse_cmap_format_0(cmap_data, offset, mapping),
+            4 => self.parse_cmap_format_4(cmap_data, offset, mapping),
+            _ => {
+                // Unsupported format, create basic ASCII mapping
+                for ch in 0x20..=0x7E {
+                    mapping.add_mapping(char::from(ch), ch as u16);
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Parse cmap format 0 (simple byte mapping)
+    fn parse_cmap_format_0(
+        &self,
+        cmap_data: &[u8],
+        offset: usize,
+        mapping: &mut GlyphMapping,
+    ) -> Result<()> {
+        if offset + 262 > cmap_data.len() {
+            return Err(PdfError::FontError("Incomplete cmap format 0".into()));
+        }
+
+        // Format 0: simple byte encoding, 256 bytes
+        for i in 0..256 {
+            let glyph_id = cmap_data[offset + 6 + i] as u16;
+            if glyph_id != 0 {
+                mapping.add_mapping(char::from(i as u8), glyph_id);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parse cmap format 4 (segment mapping)
+    fn parse_cmap_format_4(
+        &self,
+        cmap_data: &[u8],
+        offset: usize,
+        mapping: &mut GlyphMapping,
+    ) -> Result<()> {
+        if offset + 14 > cmap_data.len() {
+            return Err(PdfError::FontError(
+                "Incomplete cmap format 4 header".into(),
+            ));
+        }
+
+        let seg_count_x2 = u16::from_be_bytes([cmap_data[offset + 6], cmap_data[offset + 7]]);
+        let seg_count = seg_count_x2 / 2;
+
+        let expected_length = 16 + seg_count as usize * 8;
+        if offset + expected_length > cmap_data.len() {
+            // Try to handle partial tables gracefully
+            for ch in 0x20..=0x7E {
+                mapping.add_mapping(char::from(ch), ch as u16);
+            }
+            return Ok(());
+        }
+
+        // Parse end codes
+        let end_codes_offset = offset + 14;
+        let start_codes_offset = end_codes_offset + seg_count as usize * 2 + 2; // +2 for reserved pad
+        let id_delta_offset = start_codes_offset + seg_count as usize * 2;
+        let _id_range_offset_offset = id_delta_offset + seg_count as usize * 2;
+
+        for i in 0..seg_count {
+            let i = i as usize;
+
+            if start_codes_offset + i * 2 + 1 >= cmap_data.len()
+                || end_codes_offset + i * 2 + 1 >= cmap_data.len()
+                || id_delta_offset + i * 2 + 1 >= cmap_data.len()
+            {
+                break;
+            }
+
+            let end_code = u16::from_be_bytes([
+                cmap_data[end_codes_offset + i * 2],
+                cmap_data[end_codes_offset + i * 2 + 1],
+            ]);
+            let start_code = u16::from_be_bytes([
+                cmap_data[start_codes_offset + i * 2],
+                cmap_data[start_codes_offset + i * 2 + 1],
+            ]);
+            let id_delta = i16::from_be_bytes([
+                cmap_data[id_delta_offset + i * 2],
+                cmap_data[id_delta_offset + i * 2 + 1],
+            ]);
+
+            // Simple mapping using id_delta (skip complex id_range_offset for now)
+            for code in start_code..=end_code {
+                if let Some(ch) = char::from_u32(code as u32) {
+                    let glyph_id = (code as i32 + id_delta as i32) as u16;
+                    if glyph_id != 0 {
+                        mapping.add_mapping(ch, glyph_id);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Extract italic angle from head table macStyle flags
+    fn extract_italic_angle(&self) -> Result<f32> {
+        let head_table = self
+            .get_table("head")
+            .ok_or_else(|| PdfError::FontError("Missing head table".to_string()))?;
+
+        if head_table.len() < 46 {
+            return Ok(0.0); // Default to non-italic if table is incomplete
+        }
+
+        // macStyle is at offset 44 from the start of head table
+        let mac_style = u16::from_be_bytes([head_table[44], head_table[45]]);
+
+        // Bit 1 indicates italic
+        if mac_style & 0x02 != 0 {
+            Ok(-12.0) // Common italic angle
+        } else {
+            Ok(0.0)
+        }
     }
 }
 

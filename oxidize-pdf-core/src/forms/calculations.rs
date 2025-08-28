@@ -1586,7 +1586,7 @@ mod tests {
             ],
         };
 
-        engine.add_calculation("result", Calculation::Arithmetic(expr));
+        let _ = engine.add_calculation("result", Calculation::Arithmetic(expr));
 
         // Should handle division by zero gracefully
         let result = engine.calculate_field("result");
@@ -1614,7 +1614,7 @@ mod tests {
         let mut engine = CalculationEngine::new();
 
         // Create circular reference: A depends on B, B depends on C, C depends on A
-        engine.add_calculation(
+        let _ = engine.add_calculation(
             "field_a",
             Calculation::Arithmetic(ArithmeticExpression {
                 tokens: vec![
@@ -1625,7 +1625,7 @@ mod tests {
             }),
         );
 
-        engine.add_calculation(
+        let _ = engine.add_calculation(
             "field_b",
             Calculation::Arithmetic(ArithmeticExpression {
                 tokens: vec![
@@ -1636,7 +1636,7 @@ mod tests {
             }),
         );
 
-        engine.add_calculation(
+        let _ = engine.add_calculation(
             "field_c",
             Calculation::Arithmetic(ArithmeticExpression {
                 tokens: vec![
@@ -1670,7 +1670,7 @@ mod tests {
             ],
         };
 
-        engine.add_calculation("result", Calculation::Arithmetic(expr));
+        let _ = engine.add_calculation("result", Calculation::Arithmetic(expr));
 
         // Should convert text to 0
         let _ = engine.calculate_field("result");
@@ -1693,7 +1693,7 @@ mod tests {
             ],
         };
 
-        engine.add_calculation("result", Calculation::Arithmetic(expr));
+        let _ = engine.add_calculation("result", Calculation::Arithmetic(expr));
 
         // Empty fields should be treated as 0
         let _ = engine.calculate_field("result");
@@ -1712,7 +1712,7 @@ mod tests {
         engine.set_field_value("val3", FieldValue::Number(25.0));
         engine.set_field_value("val4", FieldValue::Text("invalid".to_string()));
 
-        engine.add_calculation(
+        let _ = engine.add_calculation(
             "max_result",
             Calculation::Function(CalculationFunction::Max(vec![
                 "val1".to_string(),

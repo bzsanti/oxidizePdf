@@ -300,7 +300,7 @@ fn test_form_document_roundtrip() {
             Ok(pdf_data) => {
                 let cursor = Cursor::new(pdf_data);
                 match PdfReader::new(cursor) {
-                    Ok(pdf_doc) => {
+                    Ok(_pdf_doc) => {
                         println!("Roundtrip document loaded successfully");
 
                         // Try to verify basic document structure

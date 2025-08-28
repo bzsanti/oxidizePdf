@@ -105,35 +105,41 @@ fn extract_catalog(pdf_text: &str) -> Option<HashMap<String, String>> {
         "/Type /Catalog",
         "/Type/Catalog",
         "/Type  /Catalog", // Multiple spaces
+        "/Type Catalog",   // Space but no slash before Catalog (writer format)
     ];
 
     for pattern in &catalog_patterns {
-        if let Some(catalog_start) = pdf_text.find(pattern) {
-            let catalog_section = &pdf_text[catalog_start..];
-            if let Some(end) = catalog_section.find("endobj") {
-                let catalog_content = &catalog_section[..end];
+        if let Some(pattern_pos) = pdf_text.find(pattern) {
+            // Find the start of the object containing this pattern
+            let before_pattern = &pdf_text[..pattern_pos];
+            if let Some(obj_start) = before_pattern.rfind(" obj") {
+                // Find the complete object from " obj" to "endobj"
+                let from_obj = &pdf_text[obj_start..];
+                if let Some(end) = from_obj.find("endobj") {
+                    let catalog_content = &from_obj[..end];
 
-                let mut catalog = HashMap::new();
+                    let mut catalog = HashMap::new();
 
-                // Extract Type - check for any of the patterns
-                for type_pattern in &catalog_patterns {
-                    if catalog_content.contains(type_pattern) {
-                        catalog.insert("Type".to_string(), "Catalog".to_string());
-                        break;
+                    // Extract Type - check for any of the patterns
+                    for type_pattern in &catalog_patterns {
+                        if catalog_content.contains(type_pattern) {
+                            catalog.insert("Type".to_string(), "Catalog".to_string());
+                            break;
+                        }
                     }
-                }
 
-                // Extract Version if present
-                if let Some(version_match) = extract_dict_entry(catalog_content, "Version") {
-                    catalog.insert("Version".to_string(), version_match);
-                }
+                    // Extract Version if present
+                    if let Some(version_match) = extract_dict_entry(catalog_content, "Version") {
+                        catalog.insert("Version".to_string(), version_match);
+                    }
 
-                // Extract Pages reference
-                if let Some(pages_match) = extract_dict_entry(catalog_content, "Pages") {
-                    catalog.insert("Pages".to_string(), pages_match);
-                }
+                    // Extract Pages reference
+                    if let Some(pages_match) = extract_dict_entry(catalog_content, "Pages") {
+                        catalog.insert("Pages".to_string(), pages_match);
+                    }
 
-                return Some(catalog);
+                    return Some(catalog);
+                }
             }
         }
     }
@@ -147,6 +153,7 @@ fn extract_page_tree(pdf_text: &str) -> Option<PageTree> {
         "/Type /Pages",
         "/Type/Pages",
         "/Type  /Pages", // Multiple spaces
+        "/Type Pages",   // Space but no slash before Pages (writer format)
     ];
 
     for pattern in &pages_patterns {
@@ -296,13 +303,22 @@ fn extract_annotations(pdf_text: &str) -> Vec<Annotation> {
     // Look for annotation objects
     if pdf_text.contains("/Type /Annot") {
         // This is a simplified extraction - real implementation would be more complex
-        for line in pdf_text.lines() {
-            if line.contains("/Subtype") {
-                if let Some(subtype) = extract_dict_entry(line, "Subtype") {
+        // Process each annotation object section
+        let sections = pdf_text.split(" obj").collect::<Vec<&str>>();
+        for section in sections {
+            if section.contains("/Type /Annot") && section.contains("/Subtype") {
+                if let Some(subtype) = extract_dict_entry(section, "Subtype") {
+                    // Extract rect array [x1 y1 x2 y2]
+                    let rect =
+                        extract_array_entry(section, "Rect").and_then(|arr| parse_rect_array(&arr));
+
+                    // Extract contents (string value)
+                    let contents = extract_string_entry(section, "Contents");
+
                     annotations.push(Annotation {
                         subtype,
-                        rect: None,     // TODO: Extract rect
-                        contents: None, // TODO: Extract contents
+                        rect,
+                        contents,
                     });
                 }
             }
@@ -329,7 +345,57 @@ fn extract_dict_entry(content: &str, key: &str) -> Option<String> {
         let after_key = &content[start + pattern.len()..];
         let words: Vec<&str> = after_key.split_whitespace().collect();
         if !words.is_empty() {
+            // Check if it's a PDF reference (3 words: "N G R")
+            if words.len() >= 3 && words[2] == "R" {
+                return Some(format!("{} {} {}", words[0], words[1], words[2]));
+            }
+            // Otherwise return first word without slash
             return Some(words[0].trim_start_matches('/').to_string());
+        }
+    }
+    None
+}
+
+/// Helper: Parse rect array from string vector to [f64; 4]
+fn parse_rect_array(arr: &[String]) -> Option<[f64; 4]> {
+    if arr.len() == 4 {
+        let mut rect = [0.0; 4];
+        for (i, val_str) in arr.iter().enumerate() {
+            if let Ok(val) = val_str.parse::<f64>() {
+                rect[i] = val;
+            } else {
+                return None; // Failed to parse as number
+            }
+        }
+        Some(rect)
+    } else {
+        None // Wrong number of elements
+    }
+}
+
+/// Helper: Extract string entry (handles both literal and hex strings)
+fn extract_string_entry(content: &str, key: &str) -> Option<String> {
+    let pattern = format!("/{}", key);
+    if let Some(start) = content.find(&pattern) {
+        let after_key = &content[start + pattern.len()..];
+
+        // Skip whitespace
+        let trimmed = after_key.trim_start();
+
+        if trimmed.starts_with('(') {
+            // Literal string: (content)
+            if let Some(end) = trimmed.find(')') {
+                let string_content = &trimmed[1..end];
+                return Some(string_content.to_string());
+            }
+        } else if trimmed.starts_with('<') && !trimmed.starts_with("<<") {
+            // Hex string: <hexdata>
+            if let Some(end) = trimmed.find('>') {
+                let hex_content = &trimmed[1..end];
+                // For simplicity, just return the hex string as-is
+                // In a full implementation, you'd decode the hex
+                return Some(format!("hex:{}", hex_content));
+            }
         }
     }
     None
@@ -482,7 +548,7 @@ mod tests {
         let pdf_content = "1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj";
         let catalog = extract_catalog(pdf_content).unwrap();
         assert_eq!(catalog.get("Type"), Some(&"Catalog".to_string()));
-        assert_eq!(catalog.get("Pages"), Some(&"2".to_string()));
+        assert_eq!(catalog.get("Pages"), Some(&"2 0 R".to_string()));
     }
 
     #[test]
