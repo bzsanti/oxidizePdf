@@ -17,9 +17,9 @@ line = true
 branch = true
 
 # Package selection
-packages = ["oxidize-pdf", "oxidize-pdf-cli", "oxidize-pdf-api"]
+packages = ["oxidize-pdf-core", "oxidize-pdf-cli", "oxidize-pdf-api"]
 all-features = false
-features = ["compression", "ocr"]
+features = "compression ocr"
 
 [report]
 # Skip coverage for generated code
