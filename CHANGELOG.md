@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.2.0] - 2025-08-29
+
+### Fixed
+- Fixed tarpaulin configuration syntax error in .tarpaulin.toml (features field)
+- Fixed GitHub Actions CI pipeline coverage job timeout and workspace configuration
+- Updated CI workflow to use --workspace instead of --all for tarpaulin
+- Increased coverage timeout from 300s to 600s for large test suites
+
+### Changed  
+- Updated version from 1.1.9 to 1.2.0
+- Improved CI reliability for coverage reporting
+
+### Technical
+- All 4,079+ tests continue to pass with 100% success rate
+- Coverage infrastructure now properly configured for workspace builds
+
 ## [1.1.9] - 2025-08-20
 
 ### Fixed

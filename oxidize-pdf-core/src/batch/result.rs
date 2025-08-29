@@ -427,4 +427,257 @@ mod tests {
         assert!(!summary.cancelled);
         assert_eq!(summary.success_rate(), 100.0);
     }
+
+    #[test]
+    fn test_job_result_cancelled() {
+        let result = JobResult::Cancelled {
+            job_name: "Cancelled Job".to_string(),
+        };
+
+        assert!(!result.is_success());
+        assert!(!result.is_failed());
+        assert!(result.is_cancelled());
+        assert_eq!(result.job_name(), "Cancelled Job");
+        assert!(result.duration().is_none());
+        assert!(result.error().is_none());
+        assert!(result.output_files().is_none());
+
+        let display = result.to_string();
+        assert!(display.contains("⚠"));
+        assert!(display.contains("Cancelled Job"));
+        assert!(display.contains("cancelled"));
+    }
+
+    #[test]
+    fn test_job_result_display_failed() {
+        let failed = JobResult::Failed {
+            job_name: "Failed Merge".to_string(),
+            duration: Duration::from_millis(1500),
+            error: "File not found".to_string(),
+        };
+
+        let display = failed.to_string();
+        assert!(display.contains("✗"));
+        assert!(display.contains("Failed Merge"));
+        assert!(display.contains("1.50s"));
+        assert!(display.contains("File not found"));
+    }
+
+    #[test]
+    fn test_batch_result_all_successful() {
+        let all_success = BatchResult {
+            job_results: vec![
+                JobResult::Success {
+                    job_name: "Job 1".to_string(),
+                    duration: Duration::from_secs(1),
+                    output_files: vec![PathBuf::from("out1.pdf")],
+                },
+                JobResult::Success {
+                    job_name: "Job 2".to_string(),
+                    duration: Duration::from_secs(2),
+                    output_files: vec![PathBuf::from("out2.pdf")],
+                },
+            ],
+            total_duration: Duration::from_secs(3),
+            cancelled: false,
+        };
+
+        assert!(all_success.all_successful());
+        assert_eq!(all_success.success_count(), 2);
+        assert_eq!(all_success.failure_count(), 0);
+        assert_eq!(all_success.cancelled_count(), 0);
+        assert!(all_success.errors().is_empty());
+    }
+
+    #[test]
+    fn test_batch_result_mixed_results() {
+        let mixed = BatchResult {
+            job_results: vec![
+                JobResult::Success {
+                    job_name: "Success 1".to_string(),
+                    duration: Duration::from_secs(1),
+                    output_files: vec![PathBuf::from("success1.pdf")],
+                },
+                JobResult::Failed {
+                    job_name: "Failed 1".to_string(),
+                    duration: Duration::from_secs(2),
+                    error: "Permission denied".to_string(),
+                },
+                JobResult::Failed {
+                    job_name: "Failed 2".to_string(),
+                    duration: Duration::from_secs(1),
+                    error: "Invalid format".to_string(),
+                },
+                JobResult::Cancelled {
+                    job_name: "Cancelled 1".to_string(),
+                },
+            ],
+            total_duration: Duration::from_secs(5),
+            cancelled: true,
+        };
+
+        assert!(!mixed.all_successful());
+        assert_eq!(mixed.success_count(), 1);
+        assert_eq!(mixed.failure_count(), 2);
+        assert_eq!(mixed.cancelled_count(), 1);
+
+        let errors = mixed.errors();
+        assert_eq!(errors.len(), 2);
+        assert!(errors.iter().any(|(name, _)| *name == "Failed 1"));
+        assert!(errors.iter().any(|(name, _)| *name == "Failed 2"));
+    }
+
+    #[test]
+    fn test_batch_summary_zero_total_jobs() {
+        let summary = BatchSummary {
+            total_jobs: 0,
+            successful: 0,
+            failed: 0,
+            cancelled: false,
+            duration: Duration::from_secs(0),
+            results: vec![],
+        };
+
+        assert_eq!(summary.success_rate(), 100.0); // Empty batch is 100% successful
+        assert!(summary.average_duration().is_none());
+        assert!(summary.output_files().is_empty());
+    }
+
+    #[test]
+    fn test_batch_summary_average_duration_edge_cases() {
+        // Summary with no durations (cancelled jobs only)
+        let no_durations = BatchSummary {
+            total_jobs: 2,
+            successful: 0,
+            failed: 0,
+            cancelled: false,
+            duration: Duration::from_secs(5),
+            results: vec![
+                JobResult::Cancelled {
+                    job_name: "Cancelled 1".to_string(),
+                },
+                JobResult::Cancelled {
+                    job_name: "Cancelled 2".to_string(),
+                },
+            ],
+        };
+
+        assert!(no_durations.average_duration().is_none());
+
+        // Summary with mixed duration and non-duration results
+        let mixed_durations = BatchSummary {
+            total_jobs: 3,
+            successful: 2,
+            failed: 0,
+            cancelled: false,
+            duration: Duration::from_secs(10),
+            results: vec![
+                JobResult::Success {
+                    job_name: "Job 1".to_string(),
+                    duration: Duration::from_secs(2),
+                    output_files: vec![],
+                },
+                JobResult::Success {
+                    job_name: "Job 2".to_string(),
+                    duration: Duration::from_secs(4),
+                    output_files: vec![],
+                },
+                JobResult::Cancelled {
+                    job_name: "Job 3".to_string(),
+                },
+            ],
+        };
+
+        assert_eq!(
+            mixed_durations.average_duration(),
+            Some(Duration::from_secs(3))
+        );
+    }
+
+    #[test]
+    fn test_batch_summary_output_files_collection() {
+        let summary = BatchSummary {
+            total_jobs: 3,
+            successful: 2,
+            failed: 1,
+            cancelled: false,
+            duration: Duration::from_secs(10),
+            results: vec![
+                JobResult::Success {
+                    job_name: "Multi-output job".to_string(),
+                    duration: Duration::from_secs(3),
+                    output_files: vec![
+                        PathBuf::from("output1.pdf"),
+                        PathBuf::from("output2.pdf"),
+                        PathBuf::from("output3.pdf"),
+                    ],
+                },
+                JobResult::Success {
+                    job_name: "Single-output job".to_string(),
+                    duration: Duration::from_secs(2),
+                    output_files: vec![PathBuf::from("single.pdf")],
+                },
+                JobResult::Failed {
+                    job_name: "Failed job".to_string(),
+                    duration: Duration::from_secs(1),
+                    error: "Error".to_string(),
+                },
+            ],
+        };
+
+        let output_files = summary.output_files();
+        assert_eq!(output_files.len(), 4); // 3 + 1 from successful jobs
+        assert!(output_files.contains(&&PathBuf::from("output1.pdf")));
+        assert!(output_files.contains(&&PathBuf::from("single.pdf")));
+    }
+
+    #[test]
+    fn test_batch_summary_report_formatting() {
+        let summary = BatchSummary {
+            total_jobs: 1,
+            successful: 0,
+            failed: 1,
+            cancelled: false,
+            duration: Duration::from_millis(2500),
+            results: vec![JobResult::Failed {
+                job_name: "Test Job".to_string(),
+                duration: Duration::from_millis(2500),
+                error: "Critical failure".to_string(),
+            }],
+        };
+
+        let report = summary.format_report();
+
+        // Check all the expected sections are present
+        assert!(report.contains("Batch Processing Summary"));
+        assert!(report.contains("========================"));
+        assert!(report.contains("Total Jobs: 1"));
+        assert!(report.contains("Successful: 0 (0.0%)"));
+        assert!(report.contains("Failed: 1"));
+        assert!(report.contains("Duration: 2.50s"));
+        assert!(report.contains("Average Duration: 2.50s"));
+        assert!(report.contains("Failed Jobs:"));
+        assert!(report.contains("Test Job"));
+        assert!(report.contains("Critical failure"));
+
+        // Should not contain cancellation message since not cancelled
+        assert!(!report.contains("Batch was cancelled"));
+    }
+
+    #[test]
+    fn test_batch_summary_display_trait() {
+        let summary = BatchSummary {
+            total_jobs: 2,
+            successful: 2,
+            failed: 0,
+            cancelled: false,
+            duration: Duration::from_secs(5),
+            results: vec![],
+        };
+
+        let display_string = format!("{summary}");
+        let report_string = summary.format_report();
+
+        assert_eq!(display_string, report_string);
+    }
 }

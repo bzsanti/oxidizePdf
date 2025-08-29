@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_lab_to_xyz_conversion() {
         let cs = LabColorSpace::new();
-        let [x, y, z] = cs.lab_to_xyz(50.0, 0.0, 0.0);
+        let [_x, y, _z] = cs.lab_to_xyz(50.0, 0.0, 0.0);
 
         // Middle gray should have Y around 0.18
         assert!((y - 0.184).abs() < 0.01);

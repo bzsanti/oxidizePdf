@@ -58,6 +58,9 @@ pub enum PdfError {
 
     #[error("Field not found: {0}")]
     FieldNotFound(String),
+
+    #[error("External validation error: {0}")]
+    ExternalValidationError(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;

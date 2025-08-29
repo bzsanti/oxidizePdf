@@ -320,11 +320,12 @@ impl SignatureField {
                     y_pos -= self.appearance.font_size + 2.0;
                 }
 
-                if self.appearance.show_dn && signer.distinguished_name.is_some() {
-                    let dn = signer.distinguished_name.as_ref().unwrap();
-                    stream.extend(format!("{} {} Td\n", x_pos, y_pos).as_bytes());
-                    stream.extend(format!("(DN: {}) Tj\n", dn).as_bytes());
-                    y_pos -= self.appearance.font_size + 2.0;
+                if self.appearance.show_dn {
+                    if let Some(ref dn) = signer.distinguished_name {
+                        stream.extend(format!("{} {} Td\n", x_pos, y_pos).as_bytes());
+                        stream.extend(format!("(DN: {}) Tj\n", dn).as_bytes());
+                        y_pos -= self.appearance.font_size + 2.0;
+                    }
                 }
             }
 
@@ -345,29 +346,29 @@ impl SignatureField {
                 }
             }
 
-            if self.appearance.show_reason && self.reason.is_some() {
-                let label = if self.appearance.show_labels {
-                    "Reason: "
-                } else {
-                    ""
-                };
-                stream.extend(format!("{} {} Td\n", x_pos, y_pos).as_bytes());
-                stream.extend(
-                    format!("({}{}) Tj\n", label, self.reason.as_ref().unwrap()).as_bytes(),
-                );
-                y_pos -= self.appearance.font_size + 2.0;
+            if self.appearance.show_reason {
+                if let Some(ref reason) = self.reason {
+                    let label = if self.appearance.show_labels {
+                        "Reason: "
+                    } else {
+                        ""
+                    };
+                    stream.extend(format!("{} {} Td\n", x_pos, y_pos).as_bytes());
+                    stream.extend(format!("({}{}) Tj\n", label, reason).as_bytes());
+                    y_pos -= self.appearance.font_size + 2.0;
+                }
             }
 
-            if self.appearance.show_location && self.location.is_some() {
-                let label = if self.appearance.show_labels {
-                    "Location: "
-                } else {
-                    ""
-                };
-                stream.extend(format!("{} {} Td\n", x_pos, y_pos).as_bytes());
-                stream.extend(
-                    format!("({}{}) Tj\n", label, self.location.as_ref().unwrap()).as_bytes(),
-                );
+            if self.appearance.show_location {
+                if let Some(ref location) = self.location {
+                    let label = if self.appearance.show_labels {
+                        "Location: "
+                    } else {
+                        ""
+                    };
+                    stream.extend(format!("{} {} Td\n", x_pos, y_pos).as_bytes());
+                    stream.extend(format!("({}{}) Tj\n", label, location).as_bytes());
+                }
             }
         } else {
             // Unsigned appearance - show placeholder

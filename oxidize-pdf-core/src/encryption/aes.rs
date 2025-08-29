@@ -312,7 +312,7 @@ impl Aes {
             return Err(AesError::PaddingError("Empty data".to_string()));
         }
 
-        let padding_len = *data.last().unwrap() as usize;
+        let padding_len = *data.last().expect("Data should not be empty after check") as usize;
 
         if padding_len == 0 || padding_len > 16 {
             return Err(AesError::PaddingError(format!(

@@ -11,7 +11,6 @@ use oxidize_pdf::operations::{
 };
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::{Document, Page};
-use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("PDF Split Examples\n");
@@ -138,7 +137,7 @@ fn split_into_chunks() -> Result<(), Box<dyn std::error::Error>> {
     let output_files = split_pdf("examples/results/sample_10pages.pdf", options)?;
 
     println!("✓ Split into chunks of {} pages:", chunk_size);
-    for (i, file) in output_files.iter().enumerate() {
+    for (i, _file) in output_files.iter().enumerate() {
         let start_page = i * chunk_size + 1;
         let end_page = ((i + 1) * chunk_size).min(10);
         println!("  - Chunk {}: Pages {}-{}", i + 1, start_page, end_page);
@@ -164,7 +163,7 @@ fn custom_split_example() -> Result<(), Box<dyn std::error::Error>> {
     let document = PdfDocument::new(reader);
     let mut splitter = PdfSplitter::new(document, options);
 
-    let output_files = splitter.split()?;
+    let _output_files = splitter.split()?;
 
     println!("✓ Split at custom points:");
     println!("  - Part 1: Pages 1-2");

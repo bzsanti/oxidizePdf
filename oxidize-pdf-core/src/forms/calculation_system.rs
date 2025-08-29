@@ -385,7 +385,7 @@ impl FormCalculationSystem {
                     field: field_name.to_string(),
                     event_type: EventType::CalculationTriggered,
                     old_value: None,
-                    new_value: Some(self.engine.get_field_value(field_name).unwrap().clone()),
+                    new_value: self.engine.get_field_value(field_name).cloned(),
                 });
             }
         }

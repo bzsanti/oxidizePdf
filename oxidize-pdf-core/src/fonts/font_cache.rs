@@ -1,7 +1,7 @@
 //! Font caching for efficient font management
 
 use super::Font;
-use crate::Result;
+use crate::{PdfError, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -22,44 +22,57 @@ impl FontCache {
     /// Add a font to the cache
     pub fn add_font(&self, name: impl Into<String>, font: Font) -> Result<()> {
         let name = name.into();
-        let mut fonts = self.fonts.write().unwrap();
+        let mut fonts = self
+            .fonts
+            .write()
+            .map_err(|_| PdfError::InvalidOperation("Font cache lock is poisoned".to_string()))?;
         fonts.insert(name, Arc::new(font));
         Ok(())
     }
 
     /// Get a font from the cache
     pub fn get_font(&self, name: &str) -> Option<Arc<Font>> {
-        let fonts = self.fonts.read().unwrap();
+        let fonts = self.fonts.read().ok()?;
         fonts.get(name).cloned()
     }
 
     /// Check if a font exists in the cache
     pub fn has_font(&self, name: &str) -> bool {
-        let fonts = self.fonts.read().unwrap();
+        let Ok(fonts) = self.fonts.read() else {
+            return false;
+        };
         fonts.contains_key(name)
     }
 
     /// Get all font names in the cache
     pub fn font_names(&self) -> Vec<String> {
-        let fonts = self.fonts.read().unwrap();
+        let Ok(fonts) = self.fonts.read() else {
+            return Vec::new();
+        };
         fonts.keys().cloned().collect()
     }
 
     /// Clear the cache
     pub fn clear(&self) {
-        let mut fonts = self.fonts.write().unwrap();
-        fonts.clear();
+        if let Ok(mut fonts) = self.fonts.write() {
+            fonts.clear();
+        }
+        // Silently ignore if lock is poisoned
     }
 
     /// Get the number of cached fonts
     pub fn len(&self) -> usize {
-        let fonts = self.fonts.read().unwrap();
+        let Ok(fonts) = self.fonts.read() else {
+            return 0;
+        };
         fonts.len()
     }
 
     /// Check if the cache is empty
     pub fn is_empty(&self) -> bool {
-        let fonts = self.fonts.read().unwrap();
+        let Ok(fonts) = self.fonts.read() else {
+            return true;
+        };
         fonts.is_empty()
     }
 }
