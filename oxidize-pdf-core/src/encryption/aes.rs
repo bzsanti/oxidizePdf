@@ -486,13 +486,22 @@ impl Aes {
 /// Generate random IV for AES encryption
 pub fn generate_iv() -> Vec<u8> {
     // In production, use a cryptographically secure random number generator
-    // For now, use a simple approach
+    // For now, use a simple approach with multiple entropy sources
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::thread;
     use std::time::SystemTime;
 
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
     let mut hasher = DefaultHasher::new();
+
+    // Hash multiple entropy sources to ensure uniqueness
     SystemTime::now().hash(&mut hasher);
+    thread::current().id().hash(&mut hasher);
+    std::process::id().hash(&mut hasher);
+    COUNTER.fetch_add(1, Ordering::SeqCst).hash(&mut hasher);
 
     let seed = hasher.finish();
     let mut iv = Vec::new();
