@@ -95,7 +95,7 @@ jobs:
           
           # Check if any required checks failed (ignore Code Coverage)
           FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage") | .name' | wc -l)
-          PENDING_CHECKS=$(cat check_results.json | jq -r 'select(.status == "in_progress" or .status == "queued") | .name' | wc -l)
+          PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage") | .name' | wc -l)
           
           if [ "$FAILED_CHECKS" -gt 0 ]; then
             echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
