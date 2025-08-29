@@ -111,6 +111,14 @@ path = "../examples/src/expand_iso_matrix.rs"
 name = "compare_iso_matrices"
 path = "../examples/src/compare_iso_matrices.rs"
 
+[[example]]
+name = "advanced_tables_example"
+path = "../examples/advanced_tables_example.rs"
+
+[[example]]
+name = "charts_example"
+path = "../examples/charts_example.rs"
+
 # Temporarily disabled examples with compilation errors
 # [[example]]
 # name = "streaming_support"
