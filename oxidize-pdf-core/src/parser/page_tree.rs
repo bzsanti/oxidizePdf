@@ -297,10 +297,17 @@ impl PageTree {
                             if let Some(count_obj) = kid_dict.get("Count") {
                                 count_obj.as_integer().unwrap_or(0) as u32
                             } else {
-                                // Missing Count - need to traverse kids to count manually
-                                // For now, estimate based on context
-                                // TODO: Implement proper recursive counting
-                                1
+                                // Missing Count - use size of Kids array as approximation
+                                if let Some(nested_kids_obj) = kid_dict.get("Kids") {
+                                    if let Some(nested_kids_array) = nested_kids_obj.as_array() {
+                                        // Use array length as page count approximation
+                                        nested_kids_array.0.len() as u32
+                                    } else {
+                                        1 // Default if Kids is not an array
+                                    }
+                                } else {
+                                    1 // Default if no Kids array
+                                }
                             }
                         } else {
                             // This is a page
@@ -413,10 +420,27 @@ impl PageTree {
             }
 
             let rect = [
-                array.0.first().unwrap().as_real().unwrap_or(0.0),
-                array.get(1).unwrap().as_real().unwrap_or(0.0),
-                array.get(2).unwrap().as_real().unwrap_or(0.0),
-                array.get(3).unwrap().as_real().unwrap_or(0.0),
+                array
+                    .0
+                    .first()
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
+                array
+                    .get(1)
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
+                array
+                    .get(2)
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
+                array
+                    .get(3)
+                    .expect("Array should have 4 elements after validation")
+                    .as_real()
+                    .unwrap_or(0.0),
             ];
 
             Ok(Some(rect))

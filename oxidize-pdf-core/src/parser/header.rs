@@ -116,8 +116,8 @@ impl PdfHeader {
 
         // Extract the PDF header part
         let pdf_line = &line[pdf_start..];
-        if pdf_line.len() < 8 {
-            // Not enough characters for "%PDF-X.Y"
+        if pdf_line.len() < 7 {
+            // Not enough characters for "%PDF-XY" (minimum format)
             return Err(ParseError::InvalidHeader);
         }
 
@@ -532,7 +532,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix version parsing without dot
     fn test_header_version_without_dot() {
         let input = b"%PDF-14\n";
         let header = PdfHeader::parse(Cursor::new(input)).unwrap();

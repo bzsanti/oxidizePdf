@@ -8,22 +8,28 @@ use crate::parser::{ParseError, ParseResult};
 use std::collections::{HashMap, HashSet};
 
 /// TrueType table tags
-const HEAD_TABLE: &[u8] = b"head";
-const CMAP_TABLE: &[u8] = b"cmap";
-const GLYF_TABLE: &[u8] = b"glyf";
-const LOCA_TABLE: &[u8] = b"loca";
-const MAXP_TABLE: &[u8] = b"maxp";
-const HHEA_TABLE: &[u8] = b"hhea";
-const HMTX_TABLE: &[u8] = b"hmtx";
-const NAME_TABLE: &[u8] = b"name";
-const _POST_TABLE: &[u8] = b"post";
-const _FPGM_TABLE: &[u8] = b"fpgm";
+const HEAD_TABLE: [u8; 4] = *b"head";
+const CMAP_TABLE: [u8; 4] = *b"cmap";
+const GLYF_TABLE: [u8; 4] = *b"glyf";
+const LOCA_TABLE: [u8; 4] = *b"loca";
+const MAXP_TABLE: [u8; 4] = *b"maxp";
+const HHEA_TABLE: [u8; 4] = *b"hhea";
+const HMTX_TABLE: [u8; 4] = *b"hmtx";
+const NAME_TABLE: [u8; 4] = *b"name";
+const _POST_TABLE: [u8; 4] = *b"post";
+const _FPGM_TABLE: [u8; 4] = *b"fpgm";
 const _CVT_TABLE: &[u8] = b"cvt ";
 const _PREP_TABLE: &[u8] = b"prep";
 
 /// Required tables for TrueType embedding in PDF
 const REQUIRED_TABLES: &[&[u8]] = &[
-    HEAD_TABLE, CMAP_TABLE, GLYF_TABLE, LOCA_TABLE, MAXP_TABLE, HHEA_TABLE, HMTX_TABLE,
+    &HEAD_TABLE,
+    &CMAP_TABLE,
+    &GLYF_TABLE,
+    &LOCA_TABLE,
+    &MAXP_TABLE,
+    &HHEA_TABLE,
+    &HMTX_TABLE,
 ];
 
 /// TrueType font file parser and subsetter
@@ -168,7 +174,7 @@ impl TrueTypeFont {
         }
 
         // Parse head table
-        let head_key: [u8; 4] = HEAD_TABLE.try_into().unwrap();
+        let head_key: [u8; 4] = HEAD_TABLE;
         let head_table = &tables[&head_key];
         let head_offset = head_table.offset as usize;
 
@@ -183,7 +189,7 @@ impl TrueTypeFont {
         let loca_format = read_i16(&data, head_offset + 50)? as u16;
 
         // Parse maxp table for glyph count
-        let maxp_key: [u8; 4] = MAXP_TABLE.try_into().unwrap();
+        let maxp_key: [u8; 4] = MAXP_TABLE;
         let maxp_table = &tables[&maxp_key];
         let maxp_offset = maxp_table.offset as usize;
 
@@ -212,7 +218,7 @@ impl TrueTypeFont {
 
     /// Get font name from the name table
     pub fn get_font_name(&self) -> ParseResult<String> {
-        let name_key: [u8; 4] = NAME_TABLE.try_into().unwrap();
+        let name_key: [u8; 4] = NAME_TABLE;
         if let Some(name_table) = self.tables.get(&name_key) {
             let offset = name_table.offset as usize;
             if offset + 6 > self.data.len() {
@@ -270,7 +276,7 @@ impl TrueTypeFont {
 
     /// Get raw glyph data from the glyf table
     pub fn get_glyph_data(&self, glyph_id: u16) -> ParseResult<Vec<u8>> {
-        let glyf_key: [u8; 4] = GLYF_TABLE.try_into().unwrap();
+        let glyf_key: [u8; 4] = GLYF_TABLE;
         let glyf_table = self
             .tables
             .get(&glyf_key)
@@ -279,7 +285,7 @@ impl TrueTypeFont {
                 message: "Missing glyf table".to_string(),
             })?;
 
-        let loca_key: [u8; 4] = LOCA_TABLE.try_into().unwrap();
+        let loca_key: [u8; 4] = LOCA_TABLE;
         let loca_table = self
             .tables
             .get(&loca_key)
@@ -332,7 +338,7 @@ impl TrueTypeFont {
 
     /// Get all glyph offsets from loca table
     pub fn get_glyph_offsets(&self) -> ParseResult<Vec<u32>> {
-        let loca_key: [u8; 4] = LOCA_TABLE.try_into().unwrap();
+        let loca_key: [u8; 4] = LOCA_TABLE;
         let loca_table = self
             .tables
             .get(&loca_key)
@@ -369,7 +375,7 @@ impl TrueTypeFont {
         unicode_to_glyph: &HashMap<u32, u16>,
     ) -> ParseResult<HashMap<u32, u16>> {
         // Parse hmtx table to get glyph advance widths
-        let hmtx_key: [u8; 4] = HMTX_TABLE.try_into().unwrap();
+        let hmtx_key: [u8; 4] = HMTX_TABLE;
         let hmtx_table = self
             .tables
             .get(&hmtx_key)
@@ -379,7 +385,7 @@ impl TrueTypeFont {
             })?;
 
         // Get number of horizontal metrics from hhea table
-        let hhea_key: [u8; 4] = HHEA_TABLE.try_into().unwrap();
+        let hhea_key: [u8; 4] = HHEA_TABLE;
         let hhea_table = self
             .tables
             .get(&hhea_key)
@@ -445,7 +451,7 @@ impl TrueTypeFont {
 
     /// Parse the cmap table to get character to glyph mappings
     pub fn parse_cmap(&self) -> ParseResult<Vec<CmapSubtable>> {
-        let cmap_key: [u8; 4] = CMAP_TABLE.try_into().unwrap();
+        let cmap_key: [u8; 4] = CMAP_TABLE;
         let cmap_table = self
             .tables
             .get(&cmap_key)
@@ -494,8 +500,14 @@ impl TrueTypeFont {
         encoding_id: u16,
     ) -> ParseResult<CmapSubtable> {
         // The subtable offset from the directory is relative to the cmap table start
-        let cmap_key: [u8; 4] = CMAP_TABLE.try_into().unwrap();
-        let cmap_table = self.tables.get(&cmap_key).unwrap();
+        let cmap_key: [u8; 4] = CMAP_TABLE;
+        let cmap_table = self
+            .tables
+            .get(&cmap_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing cmap table".to_string(),
+            })?;
         let absolute_offset = cmap_table.offset as usize + subtable_offset;
 
         if absolute_offset + 6 > self.data.len() {
@@ -643,7 +655,7 @@ impl TrueTypeFont {
 
     /// Get glyph metrics from hmtx table
     pub fn get_glyph_metrics(&self, glyph_id: u16) -> ParseResult<(u16, i16)> {
-        let hhea_key: [u8; 4] = HHEA_TABLE.try_into().unwrap();
+        let hhea_key: [u8; 4] = HHEA_TABLE;
         let hhea_table = self
             .tables
             .get(&hhea_key)
@@ -652,7 +664,7 @@ impl TrueTypeFont {
                 message: "Missing hhea table".to_string(),
             })?;
 
-        let hmtx_key: [u8; 4] = HMTX_TABLE.try_into().unwrap();
+        let hmtx_key: [u8; 4] = HMTX_TABLE;
         let hmtx_table = self
             .tables
             .get(&hmtx_key)
@@ -705,6 +717,170 @@ impl TrueTypeFont {
             let lsb = read_i16(&self.data, lsb_offset)?;
             Ok((advance_width, lsb))
         }
+    }
+
+    /// Get font ascent from hhea table
+    pub fn get_ascent(&self) -> ParseResult<i16> {
+        let hhea_key: [u8; 4] = HHEA_TABLE;
+        let hhea_table = self
+            .tables
+            .get(&hhea_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing hhea table".to_string(),
+            })?;
+
+        let ascent_offset = hhea_table.offset as usize + 4; // Ascent is at offset 4
+        if ascent_offset + 2 > self.data.len() {
+            return Err(ParseError::SyntaxError {
+                position: ascent_offset,
+                message: "Incomplete hhea table - ascent".to_string(),
+            });
+        }
+        read_i16(&self.data, ascent_offset)
+    }
+
+    /// Get font descent from hhea table
+    pub fn get_descent(&self) -> ParseResult<i16> {
+        let hhea_key: [u8; 4] = HHEA_TABLE;
+        let hhea_table = self
+            .tables
+            .get(&hhea_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing hhea table".to_string(),
+            })?;
+
+        let descent_offset = hhea_table.offset as usize + 6; // Descent is at offset 6
+        if descent_offset + 2 > self.data.len() {
+            return Err(ParseError::SyntaxError {
+                position: descent_offset,
+                message: "Incomplete hhea table - descent".to_string(),
+            });
+        }
+        read_i16(&self.data, descent_offset)
+    }
+
+    /// Get font bounding box from head table
+    pub fn get_font_bbox(&self) -> ParseResult<[f32; 4]> {
+        let head_key: [u8; 4] = HEAD_TABLE;
+        let head_table = self
+            .tables
+            .get(&head_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing head table".to_string(),
+            })?;
+
+        let bbox_offset = head_table.offset as usize + 36; // FontBBox starts at offset 36
+        if bbox_offset + 8 > self.data.len() {
+            return Err(ParseError::SyntaxError {
+                position: bbox_offset,
+                message: "Incomplete head table - bbox".to_string(),
+            });
+        }
+
+        let xmin = read_i16(&self.data, bbox_offset)? as f32;
+        let ymin = read_i16(&self.data, bbox_offset + 2)? as f32;
+        let xmax = read_i16(&self.data, bbox_offset + 4)? as f32;
+        let ymax = read_i16(&self.data, bbox_offset + 6)? as f32;
+
+        Ok([xmin, ymin, xmax, ymax])
+    }
+
+    /// Get italic angle from head table (approximate - most TrueType fonts store this in post table)
+    pub fn get_italic_angle(&self) -> ParseResult<f32> {
+        let head_key: [u8; 4] = HEAD_TABLE;
+        let head_table = self
+            .tables
+            .get(&head_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing head table".to_string(),
+            })?;
+
+        // For TrueType fonts, italic angle is usually in post table, but we can approximate
+        // by checking the macStyle flags in the head table
+        let mac_style_offset = head_table.offset as usize + 44;
+        if mac_style_offset + 2 > self.data.len() {
+            return Err(ParseError::SyntaxError {
+                position: mac_style_offset,
+                message: "Incomplete head table - macStyle".to_string(),
+            });
+        }
+
+        let mac_style = read_u16(&self.data, mac_style_offset)?;
+        // Bit 1 indicates italic
+        if mac_style & 0x02 != 0 {
+            Ok(-12.0) // Common italic angle
+        } else {
+            Ok(0.0)
+        }
+    }
+
+    /// Detect if font is fixed-pitch by examining advance widths
+    pub fn is_fixed_pitch(&self) -> ParseResult<bool> {
+        let hhea_key: [u8; 4] = HHEA_TABLE;
+        let hhea_table = self
+            .tables
+            .get(&hhea_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing hhea table".to_string(),
+            })?;
+
+        let hmtx_key: [u8; 4] = HMTX_TABLE;
+        let hmtx_table = self
+            .tables
+            .get(&hmtx_key)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "Missing hmtx table".to_string(),
+            })?;
+
+        // Get number of horizontal metrics from hhea
+        let hhea_offset = hhea_table.offset as usize;
+        let num_hmetrics = read_u16(&self.data, hhea_offset + 34)?;
+
+        if num_hmetrics < 2 {
+            return Ok(false); // Need at least 2 glyphs to compare
+        }
+
+        // Check first few advance widths to see if they're the same
+        let hmtx_offset = hmtx_table.offset as usize;
+        let first_width = read_u16(&self.data, hmtx_offset)?;
+
+        // Check next 5 glyphs or until we run out
+        let check_count = std::cmp::min(5, num_hmetrics);
+        for i in 1..check_count {
+            let width_offset = hmtx_offset + (i as usize * 4);
+            if width_offset + 2 > self.data.len() {
+                break;
+            }
+            let width = read_u16(&self.data, width_offset)?;
+            if width != first_width {
+                return Ok(false); // Different widths = proportional font
+            }
+        }
+
+        Ok(true) // All sampled widths are the same
+    }
+
+    /// Get approximate cap height (simplified - usually requires OS/2 table)
+    pub fn get_cap_height(&self) -> ParseResult<f32> {
+        // Without OS/2 table, estimate as 70% of ascent
+        let ascent = self.get_ascent()? as f32;
+        Ok(ascent * 0.7)
+    }
+
+    /// Get approximate stem width (simplified estimation)
+    pub fn get_stem_width(&self) -> ParseResult<f32> {
+        // Estimate based on font bbox width
+        let bbox = self.get_font_bbox()?;
+        let bbox_width = bbox[2] - bbox[0]; // xmax - xmin
+
+        // Very rough estimation: stem width is about 10-15% of bbox width
+        Ok(bbox_width * 0.12)
     }
 
     /// Create a subset of the font containing only specified glyphs
@@ -841,7 +1017,7 @@ impl TrueTypeFont {
 
     /// Subset the glyf and loca tables
     fn subset_glyf_table(&self, glyph_map: &HashMap<u16, u16>) -> ParseResult<(Vec<u8>, Vec<u8>)> {
-        let glyf_key: [u8; 4] = GLYF_TABLE.try_into().unwrap();
+        let glyf_key: [u8; 4] = GLYF_TABLE;
         let glyf_table = self
             .tables
             .get(&glyf_key)
@@ -850,7 +1026,7 @@ impl TrueTypeFont {
                 message: "Missing glyf table".to_string(),
             })?;
 
-        let loca_key: [u8; 4] = LOCA_TABLE.try_into().unwrap();
+        let loca_key: [u8; 4] = LOCA_TABLE;
         let loca_table = self
             .tables
             .get(&loca_key)
@@ -1442,13 +1618,13 @@ mod tests {
     #[test]
     fn test_required_tables() {
         assert_eq!(REQUIRED_TABLES.len(), 7);
-        assert!(REQUIRED_TABLES.contains(&HEAD_TABLE));
-        assert!(REQUIRED_TABLES.contains(&CMAP_TABLE));
-        assert!(REQUIRED_TABLES.contains(&GLYF_TABLE));
-        assert!(REQUIRED_TABLES.contains(&LOCA_TABLE));
-        assert!(REQUIRED_TABLES.contains(&MAXP_TABLE));
-        assert!(REQUIRED_TABLES.contains(&HHEA_TABLE));
-        assert!(REQUIRED_TABLES.contains(&HMTX_TABLE));
+        assert!(REQUIRED_TABLES.contains(&HEAD_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&CMAP_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&GLYF_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&LOCA_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&MAXP_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&HHEA_TABLE.as_slice()));
+        assert!(REQUIRED_TABLES.contains(&HMTX_TABLE.as_slice()));
     }
 
     #[test]
@@ -1706,7 +1882,7 @@ mod tests {
     #[test]
     fn test_parse_table_entries_edge_cases() {
         // Test parsing table entries with various edge cases
-        let font = TrueTypeFont {
+        let _font = TrueTypeFont {
             data: vec![0; 1000],
             tables: HashMap::new(),
             num_glyphs: 10,

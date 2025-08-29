@@ -360,13 +360,13 @@ mod standard_security_tests {
 
     #[test]
     fn test_standard_security_handler_rc4_40bit() {
-        let handler = StandardSecurityHandler::rc4_40bit();
+        let _handler = StandardSecurityHandler::rc4_40bit();
         // Just verify it can be created without checking private fields
     }
 
     #[test]
     fn test_standard_security_handler_rc4_128bit() {
-        let handler = StandardSecurityHandler::rc4_128bit();
+        let _handler = StandardSecurityHandler::rc4_128bit();
         // Just verify it can be created without checking private fields
     }
 

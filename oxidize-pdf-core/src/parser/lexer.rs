@@ -417,7 +417,10 @@ impl<R: Read> Lexer<R> {
             // Convert hex to bytes
             let mut bytes = Vec::new();
             for chunk in hex_chars.as_bytes().chunks(2) {
-                let hex_str = std::str::from_utf8(chunk).unwrap();
+                let hex_str = std::str::from_utf8(chunk).map_err(|_| ParseError::SyntaxError {
+                    position: self.position,
+                    message: "Invalid UTF-8 in hex string".to_string(),
+                })?;
                 let byte =
                     u8::from_str_radix(hex_str, 16).map_err(|_| ParseError::SyntaxError {
                         position: self.position,

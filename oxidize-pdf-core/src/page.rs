@@ -67,6 +67,7 @@ pub struct Page {
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
     annotations: Vec<Annotation>,
+    rotation: i32, // Page rotation in degrees (0, 90, 180, 270)
 }
 
 impl Page {
@@ -85,6 +86,7 @@ impl Page {
             header: None,
             footer: None,
             annotations: Vec::new(),
+            rotation: 0, // Default to no rotation
         }
     }
 
@@ -151,6 +153,44 @@ impl Page {
         self.height
     }
 
+    /// Sets the page rotation in degrees.
+    /// Valid values are 0, 90, 180, and 270.
+    /// Other values will be normalized to the nearest valid rotation.
+    pub fn set_rotation(&mut self, rotation: i32) {
+        // Normalize rotation to valid values (0, 90, 180, 270)
+        let normalized = rotation.rem_euclid(360); // Ensure positive
+        self.rotation = match normalized {
+            0..=44 | 316..=360 => 0,
+            45..=134 => 90,
+            135..=224 => 180,
+            225..=315 => 270,
+            _ => 0, // Should not happen, but default to 0
+        };
+    }
+
+    /// Gets the current page rotation in degrees.
+    pub fn get_rotation(&self) -> i32 {
+        self.rotation
+    }
+
+    /// Gets the effective width considering rotation.
+    /// For 90° and 270° rotations, returns the height.
+    pub fn effective_width(&self) -> f64 {
+        match self.rotation {
+            90 | 270 => self.height,
+            _ => self.width,
+        }
+    }
+
+    /// Gets the effective height considering rotation.
+    /// For 90° and 270° rotations, returns the width.
+    pub fn effective_height(&self) -> f64 {
+        match self.rotation {
+            90 | 270 => self.width,
+            _ => self.height,
+        }
+    }
+
     pub fn text_flow(&self) -> TextFlowContext {
         TextFlowContext::new(self.width, self.height, self.margins.clone())
     }
@@ -167,14 +207,14 @@ impl Page {
     pub fn draw_image(
         &mut self,
         name: &str,
-        _x: f64,
-        _y: f64,
-        _width: f64,
-        _height: f64,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
     ) -> Result<()> {
         if self.images.contains_key(name) {
-            // TODO: Implement draw_image in GraphicsContext
-            // self.graphics_context.draw_image(name, x, y, width, height);
+            // Draw the image using the graphics context
+            self.graphics_context.draw_image(name, x, y, width, height);
             Ok(())
         } else {
             Err(crate::PdfError::InvalidReference(format!(
@@ -451,6 +491,11 @@ impl Page {
         ]);
         dict.set("MediaBox", Object::Array(media_box.into()));
 
+        // Add rotation if not zero
+        if self.rotation != 0 {
+            dict.set("Rotate", Object::Integer(self.rotation as i64));
+        }
+
         // Resources (empty for now, would include fonts, images, etc.)
         let resources = Dictionary::new();
         dict.set("Resources", Object::Dictionary(resources));
@@ -486,11 +531,8 @@ impl Page {
         // Add the current font from text context
         fonts.insert(self.text_context.current_font().clone());
 
-        // TODO: In a full implementation, we would:
-        // 1. Parse the content stream to find all Tf (set font) operations
-        // 2. Extract font names from those operations
-        // 3. Map them back to Font enum values
-        // For now, we'll just return the fonts we know are commonly used
+        // Note: Currently returns fonts from text context.
+        // Future enhancement: Parse content streams for complete font analysis
 
         // Add some commonly used fonts as a baseline
         fonts.insert(Font::Helvetica);
@@ -984,7 +1026,6 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "draw_image not fully implemented in GraphicsContext"]
         fn test_page_image_integration() {
             let temp_dir = TempDir::new().unwrap();
             let file_path = temp_dir.path().join("image_test.pdf");
@@ -1054,8 +1095,8 @@ mod tests {
                 println!("Found image-related content but no XObject dictionary");
             }
 
-            // TODO: Fix XObject writing in PdfWriter
-            // assert!(content_str.contains("XObject"));
+            // Verify XObject is properly written
+            assert!(content_str.contains("XObject"));
         }
 
         #[test]
@@ -1873,5 +1914,78 @@ mod unit_tests {
         assert_eq!(cloned.width(), page.width());
         assert_eq!(cloned.height(), page.height());
         assert_eq!(cloned.margins().left, page.margins().left);
+    }
+
+    #[test]
+    fn test_page_rotation() {
+        let mut page = Page::a4();
+
+        // Test default rotation
+        assert_eq!(page.get_rotation(), 0);
+
+        // Test setting valid rotations
+        page.set_rotation(90);
+        assert_eq!(page.get_rotation(), 90);
+
+        page.set_rotation(180);
+        assert_eq!(page.get_rotation(), 180);
+
+        page.set_rotation(270);
+        assert_eq!(page.get_rotation(), 270);
+
+        page.set_rotation(360);
+        assert_eq!(page.get_rotation(), 0);
+
+        // Test rotation normalization
+        page.set_rotation(45);
+        assert_eq!(page.get_rotation(), 90);
+
+        page.set_rotation(135);
+        assert_eq!(page.get_rotation(), 180);
+
+        page.set_rotation(-90);
+        assert_eq!(page.get_rotation(), 270);
+    }
+
+    #[test]
+    fn test_effective_dimensions() {
+        let mut page = Page::new(600.0, 800.0);
+
+        // No rotation - same dimensions
+        assert_eq!(page.effective_width(), 600.0);
+        assert_eq!(page.effective_height(), 800.0);
+
+        // 90 degree rotation - swapped dimensions
+        page.set_rotation(90);
+        assert_eq!(page.effective_width(), 800.0);
+        assert_eq!(page.effective_height(), 600.0);
+
+        // 180 degree rotation - same dimensions
+        page.set_rotation(180);
+        assert_eq!(page.effective_width(), 600.0);
+        assert_eq!(page.effective_height(), 800.0);
+
+        // 270 degree rotation - swapped dimensions
+        page.set_rotation(270);
+        assert_eq!(page.effective_width(), 800.0);
+        assert_eq!(page.effective_height(), 600.0);
+    }
+
+    #[test]
+    fn test_rotation_in_pdf_dict() {
+        let mut page = Page::a4();
+
+        // No rotation should not include Rotate field
+        let dict = page.to_dict();
+        assert!(dict.get("Rotate").is_none());
+
+        // With rotation should include Rotate field
+        page.set_rotation(90);
+        let dict = page.to_dict();
+        assert_eq!(dict.get("Rotate"), Some(&Object::Integer(90)));
+
+        page.set_rotation(270);
+        let dict = page.to_dict();
+        assert_eq!(dict.get("Rotate"), Some(&Object::Integer(270)));
     }
 }

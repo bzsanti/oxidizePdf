@@ -251,9 +251,9 @@ impl SignatureWidget {
         if signed {
             if show_name && signer_name.is_some() {
                 stream.extend(format!("{} {} Td\n", x_offset, y_offset).as_bytes());
-                stream.extend(
-                    format!("(Digitally signed by: {}) Tj\n", signer_name.unwrap()).as_bytes(),
-                );
+                if let Some(name) = signer_name {
+                    stream.extend(format!("(Digitally signed by: {}) Tj\n", name).as_bytes());
+                }
                 y_offset -= 12.0;
                 // Track y_offset for future use
                 let _ = y_offset;
@@ -261,7 +261,9 @@ impl SignatureWidget {
 
             if show_date && date.is_some() {
                 stream.extend(b"0 -12 Td\n");
-                stream.extend(format!("(Date: {}) Tj\n", date.unwrap()).as_bytes());
+                if let Some(d) = date {
+                    stream.extend(format!("(Date: {}) Tj\n", d).as_bytes());
+                }
                 y_offset -= 12.0;
                 // Track y_offset for future use
                 let _ = y_offset;
@@ -269,7 +271,9 @@ impl SignatureWidget {
 
             if show_reason && reason.is_some() {
                 stream.extend(b"0 -12 Td\n");
-                stream.extend(format!("(Reason: {}) Tj\n", reason.unwrap()).as_bytes());
+                if let Some(r) = reason {
+                    stream.extend(format!("(Reason: {}) Tj\n", r).as_bytes());
+                }
                 y_offset -= 12.0;
                 // Track y_offset for future use
                 let _ = y_offset;
@@ -277,7 +281,9 @@ impl SignatureWidget {
 
             if show_location && location.is_some() {
                 stream.extend(b"0 -12 Td\n");
-                stream.extend(format!("(Location: {}) Tj\n", location.unwrap()).as_bytes());
+                if let Some(l) = location {
+                    stream.extend(format!("(Location: {}) Tj\n", l).as_bytes());
+                }
             }
         } else {
             // Unsigned placeholder
@@ -940,7 +946,7 @@ mod tests {
 
     #[test]
     fn test_multiple_ink_strokes() {
-        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 100.0));
+        let _rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(200.0, 100.0));
         let strokes = vec![
             InkStroke {
                 points: vec![(10.0, 10.0), (20.0, 20.0)],

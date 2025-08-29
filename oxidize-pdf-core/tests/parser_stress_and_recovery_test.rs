@@ -39,7 +39,7 @@ fn test_massive_dictionary() {
     let start = Instant::now();
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
-            Ok(obj) => {
+            Ok(_obj) => {
                 println!("Parsed massive dictionary in {:?}", start.elapsed());
             }
             Err(e) => println!("Dictionary parsing error: {}", e),
@@ -76,7 +76,7 @@ fn test_massive_array() {
     let start = Instant::now();
     match PdfReader::new(cursor).and_then(|reader| Ok(PdfDocument::new(reader))) {
         Ok(doc) => match doc.get_object(1, 0) {
-            Ok(obj) => {
+            Ok(_obj) => {
                 println!("Parsed massive array in {:?}", start.elapsed());
             }
             Err(e) => println!("Array parsing error: {}", e),

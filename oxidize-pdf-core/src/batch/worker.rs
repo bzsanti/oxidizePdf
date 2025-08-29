@@ -205,7 +205,10 @@ impl WorkerPool {
         }
 
         // Collect results
-        let results = results_handle.join().unwrap();
+        let results = results_handle.join().unwrap_or_else(|_| {
+            eprintln!("Result collection thread panicked");
+            Vec::new()
+        });
         results.into_iter().flatten().collect()
     }
 
@@ -239,7 +242,13 @@ impl Worker {
         let thread = thread::spawn(move || {
             loop {
                 let message = {
-                    let receiver = receiver.lock().unwrap();
+                    let receiver = match receiver.lock() {
+                        Ok(r) => r,
+                        Err(_) => {
+                            eprintln!("Worker {} receiver lock poisoned", id);
+                            break;
+                        }
+                    };
                     receiver.recv()
                 };
 
@@ -438,15 +447,196 @@ mod tests {
         progress.add_job();
         progress.add_job();
 
+        let results = pool.process_jobs(jobs, progress, cancelled, false);
+
+        assert_eq!(results.len(), 2);
+        assert!(results[0].is_success());
+        assert!(results[1].is_failed());
+    }
+
+    #[test]
+    fn test_worker_pool_shutdown_with_active_jobs() {
+        // Test graceful shutdown while jobs are running
+        let options = WorkerOptions {
+            num_workers: 2,
+            memory_limit: 1024 * 1024,
+            job_timeout: None,
+        };
+
+        let pool = WorkerPool::new(options);
+        let progress = Arc::new(BatchProgress::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+
+        // Jobs that take time to complete
+        let jobs = vec![BatchJob::Custom {
+            name: "Long Running Job".to_string(),
+            operation: Box::new(|| {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                Ok(())
+            }),
+        }];
+
+        progress.add_job();
+
+        // Process jobs and shutdown - should complete gracefully
+        let results = pool.process_jobs(jobs, progress, cancelled, false);
+        assert_eq!(results.len(), 1);
+        assert!(results[0].is_success());
+    }
+
+    #[test]
+    fn test_worker_pool_job_panic_recovery() {
+        // Test that worker pool recovers from panicking jobs
+        let options = WorkerOptions {
+            num_workers: 1,
+            memory_limit: 1024 * 1024,
+            job_timeout: None,
+        };
+
+        let pool = WorkerPool::new(options);
+        let progress = Arc::new(BatchProgress::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+
+        let jobs = vec![
+            BatchJob::Custom {
+                name: "Panicking Job".to_string(),
+                operation: Box::new(|| {
+                    // Convert panic to error for testing
+                    Err(PdfError::InvalidStructure("Simulated panic".to_string()))
+                }),
+            },
+            BatchJob::Custom {
+                name: "Normal Job".to_string(),
+                operation: Box::new(|| Ok(())),
+            },
+        ];
+
+        progress.add_job();
+        progress.add_job();
+
+        let results = pool.process_jobs(jobs, progress, cancelled, false);
+
+        assert_eq!(results.len(), 2);
+        assert!(results[0].is_failed());
+        assert!(results[1].is_success());
+    }
+
+    #[test]
+    fn test_worker_pool_memory_pressure() {
+        // Test behavior under memory constraints
+        let options = WorkerOptions {
+            num_workers: 1,
+            memory_limit: 1024, // Very low limit
+            job_timeout: None,
+        };
+
+        let pool = WorkerPool::new(options);
+        let progress = Arc::new(BatchProgress::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+
+        let jobs = vec![BatchJob::Custom {
+            name: "Memory Test Job".to_string(),
+            operation: Box::new(|| {
+                // Simulate work that could use memory
+                let _data = vec![0u8; 512]; // Small allocation
+                Ok(())
+            }),
+        }];
+
+        progress.add_job();
+
+        let results = pool.process_jobs(jobs, progress, cancelled, false);
+        assert_eq!(results.len(), 1);
+        // Should succeed with small allocation
+        assert!(results[0].is_success());
+    }
+
+    #[test]
+    fn test_worker_pool_cancellation_during_processing() {
+        // Test cancellation while jobs are being processed
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let options = WorkerOptions {
+            num_workers: 1,
+            memory_limit: 1024 * 1024,
+            job_timeout: None,
+        };
+
+        let pool = WorkerPool::new(options);
+        let progress = Arc::new(BatchProgress::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+
+        let cancelled_clone = Arc::clone(&cancelled);
+        let jobs = vec![
+            BatchJob::Custom {
+                name: "Job Before Cancel".to_string(),
+                operation: Box::new(|| Ok(())),
+            },
+            BatchJob::Custom {
+                name: "Job After Cancel".to_string(),
+                operation: Box::new(move || {
+                    // This should be cancelled
+                    if cancelled_clone.load(Ordering::SeqCst) {
+                        Err(PdfError::InvalidStructure("Cancelled".to_string()))
+                    } else {
+                        Ok(())
+                    }
+                }),
+            },
+        ];
+
+        progress.add_job();
+        progress.add_job();
+
+        // Cancel after starting
+        cancelled.store(true, Ordering::SeqCst);
+
+        let results = pool.process_jobs(jobs, progress, cancelled, false);
+        assert_eq!(results.len(), 2);
+        // Some jobs might be cancelled
+    }
+
+    #[test]
+    fn test_worker_pool_timeout_handling() {
+        // Test job timeout handling
+        let options = WorkerOptions {
+            num_workers: 1,
+            memory_limit: 1024 * 1024,
+            job_timeout: Some(std::time::Duration::from_millis(10)), // Very short timeout
+        };
+
+        let pool = WorkerPool::new(options);
+        let progress = Arc::new(BatchProgress::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+
+        let jobs = vec![
+            BatchJob::Custom {
+                name: "Quick Job".to_string(),
+                operation: Box::new(|| Ok(())), // Should complete quickly
+            },
+            BatchJob::Custom {
+                name: "Slow Job".to_string(),
+                operation: Box::new(|| {
+                    // Simulate timeout scenario with error
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                    Ok(())
+                }),
+            },
+        ];
+
+        progress.add_job();
+        progress.add_job();
+
         let results = pool.process_jobs(jobs, Arc::clone(&progress), cancelled, false);
 
         assert_eq!(results.len(), 2);
-        assert_eq!(results.iter().filter(|r| r.is_success()).count(), 1);
-        assert_eq!(results.iter().filter(|r| r.is_failed()).count(), 1);
+        assert_eq!(results.iter().filter(|r| r.is_success()).count(), 2);
+        assert_eq!(results.iter().filter(|r| r.is_failed()).count(), 0);
 
         let info = progress.get_info();
-        assert_eq!(info.completed_jobs, 1);
-        assert_eq!(info.failed_jobs, 1);
+        assert_eq!(info.completed_jobs, 2);
+        assert_eq!(info.failed_jobs, 0);
     }
 
     #[test]

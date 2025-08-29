@@ -54,7 +54,7 @@ impl RotationAngle {
     /// Combine two rotations
     pub fn combine(self, other: RotationAngle) -> RotationAngle {
         let total = (self.to_degrees() + other.to_degrees()) % 360;
-        RotationAngle::from_degrees(total).unwrap()
+        RotationAngle::from_degrees(total).expect("Normalized angle should always be valid")
     }
 }
 

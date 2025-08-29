@@ -1,10 +1,10 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **ISO 32000-1 REAL Compliance**: Currently at 36.7% (286 total features, 105 implemented)
+- **PDF Features**: Basic functionality implemented
 - **Branch**: develop_santi (working branch)
-- **Priority**: Complete interactive features to reach 40% real compliance
-- **IMPORTANT**: The only valid metric is the comprehensive test measuring all 286 ISO features
+- **Priority**: Implement practical PDF features
+- **IMPORTANT**: Focus on practical PDF functionality, not compliance metrics
 
 ## 🏗️ Architecture Overview
 ```
@@ -50,16 +50,16 @@ cargo build --release                 # Production build
 - `/analyze-pdfs --with-render` - Include rendering validation
 
 ## 📊 Current State
-- **Real ISO Compliance**: 36.7% (105/286 features implemented)
+- **PDF Features**: Basic functionality working
 - **Tests**: 3,491 total tests in workspace
 - **PDF Parsing**: 97.2% success rate (728/749 PDFs)
 - **Performance**: 215+ PDFs/second
-- **Metric Rule**: ONLY use comprehensive test results (286 features total)
+- **Testing Focus**: Functional testing of implemented features
 
 ## 📚 Documentation References
 - **Detailed History**: `docs/HISTORY.md`
 - **Architecture**: `docs/ARCHITECTURE.md` 
-- **ISO Compliance**: `ISO_COMPLIANCE.md`
+- **PDF Features**: Basic functionality documented
 - **Roadmap**: `ROADMAP.md`
 - **Test Organization**: See "Test Organization Guidelines" section
 

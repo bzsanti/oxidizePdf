@@ -21,8 +21,16 @@ impl NameTreeNode {
         let limits = if names.is_empty() {
             None
         } else {
-            let min = names.keys().next().unwrap().clone();
-            let max = names.keys().last().unwrap().clone();
+            let min = names
+                .keys()
+                .next()
+                .expect("BTreeMap should have at least one key after is_empty check")
+                .clone();
+            let max = names
+                .keys()
+                .last()
+                .expect("BTreeMap should have at least one key after is_empty check")
+                .clone();
             Some((min, max))
         };
 
