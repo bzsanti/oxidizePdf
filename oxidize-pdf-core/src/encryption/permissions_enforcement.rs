@@ -143,12 +143,18 @@ impl RuntimePermissions {
 
     /// Get event log
     pub fn get_events(&self) -> Vec<PermissionEvent> {
-        self.event_log.lock().unwrap().clone()
+        self.event_log
+            .lock()
+            .map(|log| log.clone())
+            .unwrap_or_else(|_| Vec::new())
     }
 
     /// Clear event log
     pub fn clear_events(&self) {
-        self.event_log.lock().unwrap().clear();
+        if let Ok(mut log) = self.event_log.lock() {
+            log.clear();
+        }
+        // Silently ignore if lock is poisoned
     }
 
     /// Check if operation is allowed
@@ -190,7 +196,10 @@ impl RuntimePermissions {
         };
 
         if level >= self.log_level {
-            self.event_log.lock().unwrap().push(event);
+            if let Ok(mut log) = self.event_log.lock() {
+                log.push(event);
+            }
+            // Silently ignore if lock is poisoned
         }
     }
 

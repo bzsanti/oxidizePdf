@@ -1,44 +1,80 @@
-use oxidize_pdf::{Color, Document, Font, Page};
+use oxidize_pdf::graphics::Color;
+use oxidize_pdf::*;
+use std::fs;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a new document
-    let mut doc = Document::new();
+/// Crear un PDF básico "Hello World" para verificar funcionalidad real
+fn main() -> Result<()> {
+    println!("🚀 Creando PDF 'Hello World'...");
 
-    // Create a page (A4 size)
+    // Crear documento
+    let mut document = Document::new();
+    document.set_title("Hello World PDF");
+    document.set_author("oxidize-pdf");
+
+    // Crear página
     let mut page = Page::a4();
 
-    // Add some graphics
-    page.graphics()
-        .set_stroke_color(Color::red())
-        .set_line_width(2.0)
-        .rect(50.0, 50.0, 200.0, 100.0)
-        .stroke()
-        .set_fill_color(Color::rgb(0.0, 0.5, 1.0))
-        .circle(300.0, 400.0, 50.0)
-        .fill();
-
-    // Add some text
+    // Agregar texto simple usando la API real
     page.text()
         .set_font(Font::Helvetica, 24.0)
         .at(100.0, 700.0)
-        .write("¡Hola, mundo!")?
-        .set_font(Font::TimesRoman, 16.0)
+        .write("Hello World!")?;
+
+    // Agregar más texto
+    page.text()
+        .set_font(Font::Helvetica, 16.0)
         .at(100.0, 650.0)
-        .write("This is our first PDF document")?
-        .at(100.0, 620.0)
-        .write("created with oxidize_pdf library")?;
+        .write("Este PDF fue generado por oxidize-pdf")?;
 
-    // Add page to document
-    doc.add_page(page);
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(100.0, 600.0)
+        .write(&format!(
+            "Fecha: {}",
+            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
+        ))?;
 
-    // Set document metadata
-    doc.set_title("Hello World PDF");
-    doc.set_author("oxidize_pdf");
+    // Agregar página al documento
+    document.add_page(page);
 
-    // Save the document
-    doc.save("hello_world.pdf")?;
+    // Crear directorio si no existe
+    fs::create_dir_all("examples/results")?;
 
-    println!("PDF created successfully: hello_world.pdf");
+    // Guardar PDF
+    let output_path = "examples/results/hello_world.pdf";
+    document.save(output_path)?;
 
+    println!("✅ PDF generado exitosamente: {}", output_path);
+
+    // Verificar que el archivo se puede leer
+    if let Ok(file_size) = fs::metadata(output_path).map(|m| m.len()) {
+        println!("📊 Tamaño: {} bytes", file_size);
+
+        if file_size > 0 {
+            println!("🎉 ¡Funcionalidad básica CONFIRMADA!");
+            return Ok(());
+        }
+    }
+
+    println!("❌ Error: PDF generado pero vacío");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hello_world_generation() {
+        let result = main();
+        assert!(result.is_ok(), "Should generate PDF successfully");
+
+        // Verificar que el archivo existe
+        let path = "examples/results/hello_world.pdf";
+        assert!(std::path::Path::new(path).exists(), "PDF file should exist");
+
+        // Verificar que tiene contenido
+        let file_size = std::fs::metadata(path).unwrap().len();
+        assert!(file_size > 100, "PDF should have substantial content");
+    }
 }

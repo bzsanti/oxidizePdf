@@ -206,4 +206,120 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_launch_action_document() {
+        let action = LaunchAction::document("report.pdf");
+        assert_eq!(action.file, "report.pdf");
+        assert!(action.parameters.is_none());
+        assert!(action.new_window.is_none());
+    }
+
+    #[test]
+    fn test_launch_action_application() {
+        let action = LaunchAction::application("firefox");
+        assert_eq!(action.file, "firefox");
+        assert!(action.parameters.is_none());
+        assert!(action.new_window.is_none());
+    }
+
+    #[test]
+    fn test_launch_parameters_simple() {
+        let params = LaunchParameters::Simple("--help".to_string());
+        match params {
+            LaunchParameters::Simple(p) => assert_eq!(p, "--help"),
+            _ => panic!("Expected Simple parameters"),
+        }
+    }
+
+    #[test]
+    fn test_launch_parameters_windows() {
+        let win_params = WindowsLaunchParams::new("explorer.exe");
+        let params = LaunchParameters::Windows(win_params);
+        match params {
+            LaunchParameters::Windows(wp) => assert_eq!(wp.file_name, "explorer.exe"),
+            _ => panic!("Expected Windows parameters"),
+        }
+    }
+
+    #[test]
+    fn test_windows_params_minimal() {
+        let win_params = WindowsLaunchParams::new("calc.exe");
+        assert_eq!(win_params.file_name, "calc.exe");
+        assert!(win_params.default_directory.is_none());
+        assert!(win_params.operation.is_none());
+        assert!(win_params.parameters.is_none());
+    }
+
+    #[test]
+    fn test_windows_params_with_directory_only() {
+        let win_params = WindowsLaunchParams::new("app.exe").with_directory("C:\\Program Files");
+        assert_eq!(win_params.file_name, "app.exe");
+        assert_eq!(
+            win_params.default_directory,
+            Some("C:\\Program Files".to_string())
+        );
+        assert!(win_params.operation.is_none());
+        assert!(win_params.parameters.is_none());
+    }
+
+    #[test]
+    fn test_windows_params_with_operation_only() {
+        let win_params = WindowsLaunchParams::new("document.pdf").with_operation("print");
+        assert_eq!(win_params.file_name, "document.pdf");
+        assert!(win_params.default_directory.is_none());
+        assert_eq!(win_params.operation, Some("print".to_string()));
+        assert!(win_params.parameters.is_none());
+    }
+
+    #[test]
+    fn test_launch_action_without_new_window() {
+        let action = LaunchAction::new("app.exe");
+        let dict = action.to_dict();
+
+        // NewWindow should not be present when not set
+        assert!(dict.get("NewWindow").is_none());
+    }
+
+    #[test]
+    fn test_launch_action_with_false_new_window() {
+        let action = LaunchAction::new("app.exe").in_new_window(false);
+        let dict = action.to_dict();
+
+        assert_eq!(dict.get("NewWindow"), Some(&Object::Boolean(false)));
+    }
+
+    #[test]
+    fn test_launch_action_dict_type_fields() {
+        let action = LaunchAction::new("test.exe");
+        let dict = action.to_dict();
+
+        // Verify required Type and S fields
+        assert_eq!(dict.get("Type"), Some(&Object::Name("Action".to_string())));
+        assert_eq!(dict.get("S"), Some(&Object::Name("Launch".to_string())));
+    }
+
+    #[test]
+    fn test_windows_params_partial_dict() {
+        // Test Windows params with only some fields set
+        let win_params = WindowsLaunchParams::new("app.exe").with_parameters("/silent");
+
+        let action = LaunchAction::new("app.exe").with_windows_params(win_params);
+        let dict = action.to_dict();
+
+        if let Some(Object::Dictionary(win_dict)) = dict.get("Win") {
+            assert_eq!(
+                win_dict.get("F"),
+                Some(&Object::String("app.exe".to_string()))
+            );
+            assert!(win_dict.get("D").is_none()); // Directory not set
+            assert!(win_dict.get("O").is_none()); // Operation not set
+            assert_eq!(
+                win_dict.get("P"),
+                Some(&Object::String("/silent".to_string()))
+            );
+        } else {
+            panic!("Expected Win dictionary");
+        }
+    }
 }

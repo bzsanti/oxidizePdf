@@ -179,7 +179,7 @@ impl Aes {
             });
         }
 
-        if !data.len().is_multiple_of(16) {
+        if data.len() % 16 != 0 {
             return Err(AesError::DecryptionFailed(
                 "Data length must be multiple of 16 bytes".to_string(),
             ));
@@ -208,7 +208,7 @@ impl Aes {
 
     /// Encrypt data using AES-ECB mode (for Perms entry)
     pub fn encrypt_ecb(&self, data: &[u8]) -> Result<Vec<u8>, AesError> {
-        if !data.len().is_multiple_of(16) {
+        if data.len() % 16 != 0 {
             return Err(AesError::EncryptionFailed(
                 "Data length must be multiple of 16 bytes for ECB mode".to_string(),
             ));
@@ -312,7 +312,7 @@ impl Aes {
             return Err(AesError::PaddingError("Empty data".to_string()));
         }
 
-        let padding_len = *data.last().unwrap() as usize;
+        let padding_len = *data.last().expect("Data should not be empty after check") as usize;
 
         if padding_len == 0 || padding_len > 16 {
             return Err(AesError::PaddingError(format!(

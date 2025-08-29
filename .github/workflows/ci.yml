@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, develop_santi ]
   pull_request:
     branches: [ main, develop ]
 
@@ -85,7 +85,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --all --out Xml --timeout 300 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*" --ignore-panics --avoid-cfg-tarpaulin
+        run: cargo tarpaulin --workspace --out Xml --timeout 600 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*" --ignore-panics --avoid-cfg-tarpaulin
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

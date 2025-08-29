@@ -2,7 +2,7 @@
 # Tarpaulin configuration for oxidize-pdf
 
 # Basic settings
-timeout = "300"
+timeout = "300s"
 exclude-files = ["*/tests/*", "*/examples/*", "*/benches/*", "*/build.rs"]
 ignored = true
 avoid-cfg-tarpaulin = true
@@ -17,9 +17,9 @@ line = true
 branch = true
 
 # Package selection
-packages = ["oxidize-pdf", "oxidize-pdf-cli", "oxidize-pdf-api"]
+packages = ["oxidize-pdf-core", "oxidize-pdf-cli", "oxidize-pdf-api"]
 all-features = false
-features = ["compression", "ocr"]
+features = "compression ocr"
 
 [report]
 # Skip coverage for generated code

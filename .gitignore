@@ -1,12 +1,19 @@
 # Build artifacts
 /target
+**/target/
 Cargo.lock
 
-# Test PDFs
-test-pdfs/
+# Test PDFs - ONLY in designated directories
 *.pdf
-test_*.pdf
+!examples/results/**/*.pdf
+!test-pdfs/*.pdf
 !test-suite/fixtures/**/*.pdf
+!test-files/*.pdf
+
+# Temporary output directories (should not exist)
+output/
+**/output/
+test-output/
 
 # PDF samples for testing
 PDF_Samples/
@@ -39,11 +46,38 @@ test-suite/fixtures/valid/GOVPUB-CS1-301ae7b075ad3435b3a7dca00e78e8ff.pdf
 debug_manual.pdf
 *.debug.pdf
 
+# Python scripts in root (should be in tools/)
+/*.py
+
+# Rust scripts in root (should be in dev-tools/)
+/*.rs
+
+# Test output files
+test_*.txt
+*_test.txt
+
+# Generated PDFs in wrong locations
+/oxidize-pdf-core/*.pdf
+
 # Coverage files
 *.profraw
 *.profdata
 cobertura.xml
 tarpaulin-report.html
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*~
+*.swp
+*.swo
+
+# Test output logs
+test_output.log
+*_test.log
 
 # Keep GitHub workflows
 !.github/
@@ -67,7 +101,16 @@ character_encoding_analysis.json
 pdf_test_results.txt
 group*.txt
 
+# ISO Analysis - Keep only essential files
+ISO_COMPLIANCE_MATRIX_*.toml
+iso_extraction/
+*_compliance_*.md
+*_iso_*.md
+iso_*.json
+*.csv
+
 # Temporary test outputs
 test_output/
 test_subset/
 output.pdf
+test*_page_*.pdf

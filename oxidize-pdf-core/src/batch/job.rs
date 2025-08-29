@@ -323,4 +323,146 @@ mod tests {
         assert_eq!(job.input_files().len(), 0);
         assert!(job.output_file().is_none());
     }
+
+    #[test]
+    fn test_batch_job_extract_comprehensive() {
+        let job = BatchJob::Extract {
+            input: PathBuf::from("/path/to/document.pdf"),
+            output: PathBuf::from("/output/extracted.pdf"),
+            pages: vec![0, 2, 4, 6],
+        };
+
+        assert!(matches!(job.job_type(), JobType::Extract));
+        assert!(job.display_name().contains("Extract 4 pages"));
+        assert!(job.display_name().contains("document.pdf"));
+        assert_eq!(job.input_files().len(), 1);
+        assert_eq!(
+            job.output_file().unwrap(),
+            &PathBuf::from("/output/extracted.pdf")
+        );
+        assert_eq!(job.estimate_complexity(), 60); // 4 pages * 15
+    }
+
+    #[test]
+    fn test_batch_job_compress_comprehensive() {
+        let job = BatchJob::Compress {
+            input: PathBuf::from("large_file.pdf"),
+            output: PathBuf::from("compressed.pdf"),
+            quality: 85,
+        };
+
+        assert!(matches!(job.job_type(), JobType::Compress));
+        assert!(job.display_name().contains("Compress"));
+        assert!(job.display_name().contains("quality: 85"));
+        assert_eq!(job.input_files().len(), 1);
+        assert_eq!(job.output_file().unwrap(), &PathBuf::from("compressed.pdf"));
+        assert_eq!(job.estimate_complexity(), 50);
+    }
+
+    #[test]
+    fn test_job_status_equality_and_debug() {
+        assert_eq!(JobStatus::Pending, JobStatus::Pending);
+        assert_eq!(JobStatus::Running, JobStatus::Running);
+        assert_eq!(JobStatus::Completed, JobStatus::Completed);
+        assert_eq!(JobStatus::Cancelled, JobStatus::Cancelled);
+
+        let error1 = JobStatus::Failed("Error 1".to_string());
+        let error2 = JobStatus::Failed("Error 1".to_string());
+        let error3 = JobStatus::Failed("Error 2".to_string());
+
+        assert_eq!(error1, error2);
+        assert_ne!(error1, error3);
+
+        // Test Debug formatting
+        let debug_str = format!("{:?}", JobStatus::Failed("Test error".to_string()));
+        assert!(debug_str.contains("Failed"));
+        assert!(debug_str.contains("Test error"));
+    }
+
+    #[test]
+    fn test_batch_job_edge_cases() {
+        // Test with empty file names
+        let job_empty_name = BatchJob::Split {
+            input: PathBuf::from(""),
+            output_pattern: "output_%d.pdf".to_string(),
+            pages_per_file: 5,
+        };
+        assert!(!job_empty_name.display_name().is_empty());
+
+        // Test with zero pages per file
+        let job_zero_pages = BatchJob::Split {
+            input: PathBuf::from("test.pdf"),
+            output_pattern: "split_%d.pdf".to_string(),
+            pages_per_file: 0,
+        };
+        assert_eq!(job_zero_pages.estimate_complexity(), 0);
+
+        // Test merge with empty inputs
+        let job_empty_merge = BatchJob::Merge {
+            inputs: vec![],
+            output: PathBuf::from("merged.pdf"),
+        };
+        assert_eq!(job_empty_merge.input_files().len(), 0);
+        assert_eq!(job_empty_merge.estimate_complexity(), 0);
+
+        // Test extract with empty pages
+        let job_empty_extract = BatchJob::Extract {
+            input: PathBuf::from("test.pdf"),
+            output: PathBuf::from("extracted.pdf"),
+            pages: vec![],
+        };
+        assert_eq!(job_empty_extract.estimate_complexity(), 0);
+    }
+
+    #[test]
+    fn test_batch_job_rotation_edge_cases() {
+        // Test rotation with None pages (affects all pages)
+        let job_rotate_all = BatchJob::Rotate {
+            input: PathBuf::from("document.pdf"),
+            output: PathBuf::from("rotated_all.pdf"),
+            rotation: 180,
+            pages: None,
+        };
+        assert_eq!(job_rotate_all.estimate_complexity(), 100); // Default for all pages
+        assert!(job_rotate_all.display_name().contains("180°"));
+
+        // Test with negative rotation
+        let job_rotate_negative = BatchJob::Rotate {
+            input: PathBuf::from("document.pdf"),
+            output: PathBuf::from("rotated_neg.pdf"),
+            rotation: -90,
+            pages: Some(vec![1, 3, 5]),
+        };
+        assert!(job_rotate_negative.display_name().contains("-90°"));
+        assert_eq!(job_rotate_negative.estimate_complexity(), 15); // 3 pages * 5
+    }
+
+    #[test]
+    fn test_job_type_clone_and_debug() {
+        let job_type = JobType::Custom("Test Operation".to_string());
+        let cloned = job_type.clone();
+
+        match (job_type, cloned) {
+            (JobType::Custom(name1), JobType::Custom(name2)) => {
+                assert_eq!(name1, name2);
+                assert_eq!(name1, "Test Operation");
+            }
+            _ => panic!("Clone failed"),
+        }
+
+        // Test Debug formatting for all job types
+        let types = vec![
+            JobType::Split,
+            JobType::Merge,
+            JobType::Rotate,
+            JobType::Extract,
+            JobType::Compress,
+            JobType::Custom("Debug Test".to_string()),
+        ];
+
+        for job_type in types {
+            let debug_str = format!("{:?}", job_type);
+            assert!(!debug_str.is_empty());
+        }
+    }
 }

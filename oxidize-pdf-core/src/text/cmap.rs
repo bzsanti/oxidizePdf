@@ -256,7 +256,7 @@ impl CMap {
         match self.cmap_type {
             CMapType::ToUnicode => {
                 // Interpret as UTF-16BE
-                if mapped.len().is_multiple_of(2) {
+                if mapped.len() % 2 == 0 {
                     let utf16_values: Vec<u16> = mapped
                         .chunks(2)
                         .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
@@ -295,7 +295,7 @@ fn extract_number(line: &str) -> Option<i32> {
 /// Parse hex string to bytes
 fn parse_hex(s: &str) -> Option<Vec<u8>> {
     let s = s.trim_start_matches('<').trim_end_matches('>');
-    if !s.len().is_multiple_of(2) {
+    if s.len() % 2 != 0 {
         return None;
     }
 

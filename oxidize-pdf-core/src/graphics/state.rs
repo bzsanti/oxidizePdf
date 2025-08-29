@@ -3,6 +3,7 @@
 //! This module provides comprehensive support for PDF Extended Graphics State (ExtGState)
 //! dictionary parameters as specified in ISO 32000-1:2008.
 
+use super::soft_mask::SoftMask;
 use crate::error::{PdfError, Result};
 use crate::graphics::{LineCap, LineJoin};
 use crate::text::Font;
@@ -166,31 +167,348 @@ impl ExtGStateFont {
     }
 }
 
-/// Transfer function specification (simplified for basic implementation)
+/// Transfer function specification according to ISO 32000-1
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum TransferFunction {
-    /// Identity transfer function
+    /// Identity transfer function (no transformation)
     Identity,
-    /// Custom transfer function (placeholder for advanced implementation)
-    Custom(String),
+    /// Single transfer function for all components
+    Single(TransferFunctionData),
+    /// Separate transfer functions for each color component (C, M, Y, K or R, G, B)
+    Separate {
+        /// Function for first component (Cyan or Red)
+        c_or_r: TransferFunctionData,
+        /// Function for second component (Magenta or Green)
+        m_or_g: TransferFunctionData,
+        /// Function for third component (Yellow or Blue)
+        y_or_b: TransferFunctionData,
+        /// Function for fourth component (Black) - optional for RGB
+        k: Option<TransferFunctionData>,
+    },
 }
 
-/// Halftone specification (simplified for basic implementation)
+/// Data for a single transfer function
+#[derive(Debug, Clone, PartialEq)]
+pub struct TransferFunctionData {
+    /// Function type (0, 2, 3, or 4)
+    pub function_type: u32,
+    /// Domain of the function
+    pub domain: Vec<f64>,
+    /// Range of the function
+    pub range: Vec<f64>,
+    /// Function-specific parameters
+    pub params: TransferFunctionParams,
+}
+
+/// Parameters for different transfer function types
+#[derive(Debug, Clone, PartialEq)]
+pub enum TransferFunctionParams {
+    /// Type 0: Sampled function
+    Sampled {
+        /// Sample values
+        samples: Vec<f64>,
+        /// Number of samples in each dimension
+        size: Vec<u32>,
+        /// Bits per sample
+        bits_per_sample: u32,
+    },
+    /// Type 2: Exponential interpolation
+    Exponential {
+        /// C0 values
+        c0: Vec<f64>,
+        /// C1 values
+        c1: Vec<f64>,
+        /// Exponent
+        n: f64,
+    },
+    /// Type 3: Stitching function
+    Stitching {
+        /// Functions to stitch together
+        functions: Vec<TransferFunctionData>,
+        /// Bounds for stitching
+        bounds: Vec<f64>,
+        /// Encode values
+        encode: Vec<f64>,
+    },
+    /// Type 4: PostScript calculator function
+    PostScript {
+        /// PostScript code
+        code: String,
+    },
+}
+
+impl TransferFunction {
+    /// Create an identity transfer function
+    pub fn identity() -> Self {
+        TransferFunction::Identity
+    }
+
+    /// Create a gamma correction transfer function
+    pub fn gamma(gamma_value: f64) -> Self {
+        TransferFunction::Single(TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![0.0],
+                c1: vec![1.0],
+                n: gamma_value,
+            },
+        })
+    }
+
+    /// Create a linear transfer function with slope and intercept
+    pub fn linear(slope: f64, intercept: f64) -> Self {
+        TransferFunction::Single(TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![intercept],
+                c1: vec![slope + intercept],
+                n: 1.0,
+            },
+        })
+    }
+
+    /// Convert transfer function to PDF representation
+    pub fn to_pdf_string(&self) -> String {
+        match self {
+            TransferFunction::Identity => "/Identity".to_string(),
+            TransferFunction::Single(data) => data.to_pdf_string(),
+            TransferFunction::Separate {
+                c_or_r,
+                m_or_g,
+                y_or_b,
+                k,
+            } => {
+                let mut result = String::from("[");
+                result.push_str(&c_or_r.to_pdf_string());
+                result.push(' ');
+                result.push_str(&m_or_g.to_pdf_string());
+                result.push(' ');
+                result.push_str(&y_or_b.to_pdf_string());
+                if let Some(k_func) = k {
+                    result.push(' ');
+                    result.push_str(&k_func.to_pdf_string());
+                }
+                result.push(']');
+                result
+            }
+        }
+    }
+}
+
+impl TransferFunctionData {
+    /// Convert transfer function data to PDF representation
+    pub fn to_pdf_string(&self) -> String {
+        let mut dict = String::from("<<");
+
+        // Function type
+        dict.push_str(&format!(" /FunctionType {}", self.function_type));
+
+        // Domain
+        dict.push_str(" /Domain [");
+        for (i, val) in self.domain.iter().enumerate() {
+            if i > 0 {
+                dict.push(' ');
+            }
+            dict.push_str(&format!("{:.3}", val));
+        }
+        dict.push(']');
+
+        // Range
+        dict.push_str(" /Range [");
+        for (i, val) in self.range.iter().enumerate() {
+            if i > 0 {
+                dict.push(' ');
+            }
+            dict.push_str(&format!("{:.3}", val));
+        }
+        dict.push(']');
+
+        // Function-specific parameters
+        match &self.params {
+            TransferFunctionParams::Exponential { c0, c1, n } => {
+                // Type 2: Exponential interpolation function
+                dict.push_str(" /C0 [");
+                for (i, val) in c0.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str("] /C1 [");
+                for (i, val) in c1.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str(&format!("] /N {:.3}", n));
+            }
+            TransferFunctionParams::Sampled {
+                size,
+                bits_per_sample,
+                samples,
+                ..
+            } => {
+                // Type 0: Sampled function
+                dict.push_str(" /Size [");
+                for (i, val) in size.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{}", val));
+                }
+                dict.push_str(&format!("] /BitsPerSample {}", bits_per_sample));
+                // Samples would be encoded as a stream
+                dict.push_str(" /Length ");
+                dict.push_str(&format!("{}", samples.len()));
+            }
+            TransferFunctionParams::Stitching {
+                bounds,
+                encode,
+                functions,
+            } => {
+                // Type 3: Stitching function
+                dict.push_str(" /Bounds [");
+                for (i, val) in bounds.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str("] /Encode [");
+                for (i, val) in encode.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&format!("{:.3}", val));
+                }
+                dict.push_str("] /Functions [");
+                for (i, func) in functions.iter().enumerate() {
+                    if i > 0 {
+                        dict.push(' ');
+                    }
+                    dict.push_str(&func.to_pdf_string());
+                }
+                dict.push(']');
+            }
+            TransferFunctionParams::PostScript { code } => {
+                // Type 4: PostScript calculator function
+                dict.push_str(&format!(
+                    " /Length {} stream\n{}\nendstream",
+                    code.len(),
+                    code
+                ));
+            }
+        }
+
+        dict.push_str(" >>");
+        dict
+    }
+}
+
+/// Halftone specification according to ISO 32000-1
 #[derive(Debug, Clone, PartialEq)]
 pub enum Halftone {
     /// Default halftone
     Default,
-    /// Custom halftone (placeholder for advanced implementation)
+    /// Type 1: Simple halftone
+    Type1 {
+        /// Halftone frequency
+        frequency: f64,
+        /// Halftone angle in degrees
+        angle: f64,
+        /// Spot function name
+        spot_function: SpotFunction,
+    },
+    /// Type 5: Halftone with multiple colorants
+    Type5 {
+        /// Halftone for each colorant
+        colorants: HashMap<String, HalftoneColorant>,
+        /// Default halftone
+        default: Box<Halftone>,
+    },
+    /// Type 6: Threshold array
+    Type6 {
+        /// Width of threshold array
+        width: u32,
+        /// Height of threshold array
+        height: u32,
+        /// Threshold values
+        thresholds: Vec<u8>,
+    },
+    /// Type 10: Stochastic (FM) screening
+    Type10 {
+        /// Halftone frequency
+        frequency: f64,
+    },
+    /// Type 16: Multiple threshold arrays
+    Type16 {
+        /// Width of threshold arrays
+        width: u32,
+        /// Height of threshold arrays  
+        height: u32,
+        /// Multiple threshold arrays
+        thresholds: Vec<Vec<u8>>,
+    },
+}
+
+/// Spot function for halftone screening
+#[derive(Debug, Clone, PartialEq)]
+pub enum SpotFunction {
+    /// Simple dot
+    SimpleDot,
+    /// Inverted simple dot
+    InvertedSimpleDot,
+    /// Round dot
+    Round,
+    /// Inverted round dot
+    InvertedRound,
+    /// Ellipse
+    Ellipse,
+    /// Square
+    Square,
+    /// Cross
+    Cross,
+    /// Diamond
+    Diamond,
+    /// Line
+    Line,
+    /// Custom spot function
     Custom(String),
 }
 
-/// Soft mask specification for transparency
+impl SpotFunction {
+    /// Get the PDF name for this spot function
+    pub fn pdf_name(&self) -> String {
+        match self {
+            SpotFunction::SimpleDot => "SimpleDot".to_string(),
+            SpotFunction::InvertedSimpleDot => "InvertedSimpleDot".to_string(),
+            SpotFunction::Round => "Round".to_string(),
+            SpotFunction::InvertedRound => "InvertedRound".to_string(),
+            SpotFunction::Ellipse => "Ellipse".to_string(),
+            SpotFunction::Square => "Square".to_string(),
+            SpotFunction::Cross => "Cross".to_string(),
+            SpotFunction::Diamond => "Diamond".to_string(),
+            SpotFunction::Line => "Line".to_string(),
+            SpotFunction::Custom(name) => name.clone(),
+        }
+    }
+}
+
+/// Halftone specification for a single colorant
 #[derive(Debug, Clone, PartialEq)]
-pub enum SoftMask {
-    /// No soft mask
-    None,
-    /// Custom soft mask (placeholder for advanced implementation)
-    Custom(String),
+pub struct HalftoneColorant {
+    /// Halftone frequency
+    pub frequency: f64,
+    /// Halftone angle in degrees
+    pub angle: f64,
+    /// Spot function
+    pub spot_function: SpotFunction,
 }
 
 /// Extended Graphics State Dictionary according to ISO 32000-1 Section 8.4
@@ -433,9 +751,61 @@ impl ExtGState {
         self
     }
 
+    /// Set soft mask for transparency
+    pub fn set_soft_mask(&mut self, mask: SoftMask) {
+        self.soft_mask = Some(mask);
+    }
+
+    /// Set soft mask with a named XObject
+    pub fn set_soft_mask_name(&mut self, name: String) {
+        self.soft_mask = Some(SoftMask::luminosity(name));
+    }
+
+    /// Remove soft mask (set to None)
+    pub fn set_soft_mask_none(&mut self) {
+        self.soft_mask = Some(SoftMask::none());
+    }
+
     /// Set black point compensation (PDF 2.0)
     pub fn with_black_point_compensation(mut self, use_compensation: bool) -> Self {
         self.use_black_point_compensation = Some(use_compensation);
+        self
+    }
+
+    // Transfer function setters
+    /// Set transfer function for output device gamma correction
+    pub fn with_transfer_function(mut self, func: TransferFunction) -> Self {
+        self.transfer_function = Some(func);
+        self
+    }
+
+    /// Set gamma correction transfer function
+    pub fn with_gamma_correction(mut self, gamma: f64) -> Self {
+        self.transfer_function = Some(TransferFunction::gamma(gamma));
+        self
+    }
+
+    /// Set linear transfer function with slope and intercept
+    pub fn with_linear_transfer(mut self, slope: f64, intercept: f64) -> Self {
+        self.transfer_function = Some(TransferFunction::linear(slope, intercept));
+        self
+    }
+
+    /// Set alternative transfer function (TR2)
+    pub fn with_transfer_function_2(mut self, func: TransferFunction) -> Self {
+        self.transfer_function_2 = Some(func);
+        self
+    }
+
+    /// Set black generation function
+    pub fn with_black_generation(mut self, func: TransferFunction) -> Self {
+        self.black_generation = Some(func);
+        self
+    }
+
+    /// Set undercolor removal function
+    pub fn with_undercolor_removal(mut self, func: TransferFunction) -> Self {
+        self.undercolor_removal = Some(func);
         self
     }
 
@@ -543,6 +913,20 @@ impl ExtGState {
             })?;
         }
 
+        if let Some(ref mask) = self.soft_mask {
+            if mask.is_none() {
+                write!(&mut dict, " /SMask /None").map_err(|_| {
+                    PdfError::InvalidStructure("Failed to write soft mask".to_string())
+                })?;
+            } else {
+                // In a full implementation, this would write the soft mask dictionary
+                // For now, we write a reference
+                write!(&mut dict, " /SMask {}", mask.to_pdf_string()).map_err(|_| {
+                    PdfError::InvalidStructure("Failed to write soft mask".to_string())
+                })?;
+            }
+        }
+
         if let Some(alpha) = self.alpha_stroke {
             write!(&mut dict, " /CA {alpha:.3}").map_err(|_| {
                 PdfError::InvalidStructure("Failed to write stroke alpha".to_string())
@@ -564,6 +948,43 @@ impl ExtGState {
         if let Some(tk) = self.text_knockout {
             write!(&mut dict, " /TK {tk}").map_err(|_| {
                 PdfError::InvalidStructure("Failed to write text knockout".to_string())
+            })?;
+        }
+
+        // Transfer functions
+        if let Some(ref tf) = self.transfer_function {
+            write!(&mut dict, " /TR {}", tf.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write transfer function".to_string())
+            })?;
+        }
+
+        if let Some(ref tf) = self.transfer_function_2 {
+            write!(&mut dict, " /TR2 {}", tf.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write transfer function 2".to_string())
+            })?;
+        }
+
+        if let Some(ref bg) = self.black_generation {
+            write!(&mut dict, " /BG {}", bg.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write black generation".to_string())
+            })?;
+        }
+
+        if let Some(ref bg) = self.black_generation_2 {
+            write!(&mut dict, " /BG2 {}", bg.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write black generation 2".to_string())
+            })?;
+        }
+
+        if let Some(ref ucr) = self.undercolor_removal {
+            write!(&mut dict, " /UCR {}", ucr.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write undercolor removal".to_string())
+            })?;
+        }
+
+        if let Some(ref ucr) = self.undercolor_removal_2 {
+            write!(&mut dict, " /UCR2 {}", ucr.to_pdf_string()).map_err(|_| {
+                PdfError::InvalidStructure("Failed to write undercolor removal 2".to_string())
             })?;
         }
 
@@ -599,7 +1020,90 @@ impl ExtGState {
             && self.alpha_fill.is_none()
             && self.alpha_is_shape.is_none()
             && self.text_knockout.is_none()
+            && self.transfer_function.is_none()
+            && self.transfer_function_2.is_none()
+            && self.black_generation.is_none()
+            && self.black_generation_2.is_none()
+            && self.undercolor_removal.is_none()
+            && self.undercolor_removal_2.is_none()
             && self.use_black_point_compensation.is_none()
+    }
+
+    /// Convert to Dictionary object for PDF writer
+    pub fn to_dict(&self) -> crate::objects::Dictionary {
+        use crate::objects::{Dictionary, Object};
+
+        let mut dict = Dictionary::new();
+        dict.set("Type", Object::Name("ExtGState".to_string()));
+
+        // Line parameters
+        if let Some(width) = self.line_width {
+            dict.set("LW", Object::Real(width));
+        }
+
+        if let Some(cap) = self.line_cap {
+            dict.set("LC", Object::Integer(cap as i64));
+        }
+
+        if let Some(join) = self.line_join {
+            dict.set("LJ", Object::Integer(join as i64));
+        }
+
+        if let Some(limit) = self.miter_limit {
+            dict.set("ML", Object::Real(limit));
+        }
+
+        // Transparency parameters
+        if let Some(mode) = &self.blend_mode {
+            dict.set("BM", Object::Name(mode.pdf_name().to_string()));
+        }
+
+        if let Some(alpha) = self.alpha_stroke {
+            dict.set("CA", Object::Real(alpha));
+        }
+
+        if let Some(alpha) = self.alpha_fill {
+            dict.set("ca", Object::Real(alpha));
+        }
+
+        if let Some(ais) = self.alpha_is_shape {
+            dict.set("AIS", Object::Boolean(ais));
+        }
+
+        if let Some(tk) = self.text_knockout {
+            dict.set("TK", Object::Boolean(tk));
+        }
+
+        // Other parameters
+        if let Some(intent) = &self.rendering_intent {
+            dict.set("RI", Object::Name(intent.pdf_name().to_string()));
+        }
+
+        if let Some(op) = self.overprint_stroke {
+            dict.set("OP", Object::Boolean(op));
+        }
+
+        if let Some(op) = self.overprint_fill {
+            dict.set("op", Object::Boolean(op));
+        }
+
+        if let Some(mode) = self.overprint_mode {
+            dict.set("OPM", Object::Integer(mode as i64));
+        }
+
+        if let Some(flatness) = self.flatness {
+            dict.set("FL", Object::Real(flatness));
+        }
+
+        if let Some(smoothness) = self.smoothness {
+            dict.set("SM", Object::Real(smoothness));
+        }
+
+        if let Some(sa) = self.stroke_adjustment {
+            dict.set("SA", Object::Boolean(sa));
+        }
+
+        dict
     }
 }
 
@@ -997,5 +1501,93 @@ mod tests {
         assert!(dict.contains("/ca 0.600"));
         assert!(dict.contains("/AIS true"));
         assert!(dict.contains("/TK false"));
+    }
+
+    #[test]
+    fn test_transfer_function_identity() {
+        let tf = TransferFunction::identity();
+        assert_eq!(tf.to_pdf_string(), "/Identity");
+    }
+
+    #[test]
+    fn test_transfer_function_gamma() {
+        let tf = TransferFunction::gamma(2.2);
+        let pdf = tf.to_pdf_string();
+        assert!(pdf.contains("/FunctionType 2"));
+        assert!(pdf.contains("/N 2.200"));
+        assert!(pdf.contains("/Domain [0.000 1.000]"));
+        assert!(pdf.contains("/Range [0.000 1.000]"));
+        assert!(pdf.contains("/C0 [0.000]"));
+        assert!(pdf.contains("/C1 [1.000]"));
+    }
+
+    #[test]
+    fn test_transfer_function_linear() {
+        let tf = TransferFunction::linear(0.8, 0.1);
+        let pdf = tf.to_pdf_string();
+        assert!(pdf.contains("/FunctionType 2"));
+        assert!(pdf.contains("/N 1.000"));
+        assert!(pdf.contains("/C0 [0.100]")); // intercept
+        assert!(pdf.contains("/C1 [0.900]")); // slope + intercept
+    }
+
+    #[test]
+    fn test_extgstate_with_transfer_functions() {
+        let state = ExtGState::new()
+            .with_gamma_correction(1.8)
+            .with_transfer_function_2(TransferFunction::identity())
+            .with_black_generation(TransferFunction::linear(1.0, 0.0))
+            .with_undercolor_removal(TransferFunction::gamma(2.2));
+
+        assert!(!state.is_empty());
+
+        let dict = state.to_pdf_dictionary().unwrap();
+        assert!(dict.contains("/TR"));
+        assert!(dict.contains("/TR2 /Identity"));
+        assert!(dict.contains("/BG"));
+        assert!(dict.contains("/UCR"));
+        assert!(dict.contains("/N 1.800")); // gamma value for TR
+        assert!(dict.contains("/N 2.200")); // gamma value for UCR
+    }
+
+    #[test]
+    fn test_transfer_function_separate() {
+        let c_func = TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![0.0],
+                c1: vec![1.0],
+                n: 1.5,
+            },
+        };
+
+        let m_func = c_func.clone();
+        let y_func = c_func.clone();
+        let k_func = Some(TransferFunctionData {
+            function_type: 2,
+            domain: vec![0.0, 1.0],
+            range: vec![0.0, 1.0],
+            params: TransferFunctionParams::Exponential {
+                c0: vec![0.1],
+                c1: vec![0.9],
+                n: 2.0,
+            },
+        });
+
+        let tf = TransferFunction::Separate {
+            c_or_r: c_func,
+            m_or_g: m_func,
+            y_or_b: y_func,
+            k: k_func,
+        };
+
+        let pdf = tf.to_pdf_string();
+        assert!(pdf.starts_with('['));
+        assert!(pdf.ends_with(']'));
+        assert!(pdf.contains("/FunctionType 2"));
+        // Should have 4 functions for CMYK
+        assert_eq!(pdf.matches("/FunctionType 2").count(), 4);
     }
 }

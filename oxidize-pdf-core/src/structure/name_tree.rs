@@ -21,8 +21,16 @@ impl NameTreeNode {
         let limits = if names.is_empty() {
             None
         } else {
-            let min = names.keys().next().unwrap().clone();
-            let max = names.keys().last().unwrap().clone();
+            let min = names
+                .keys()
+                .next()
+                .expect("BTreeMap should have at least one key after is_empty check")
+                .clone();
+            let max = names
+                .keys()
+                .last()
+                .expect("BTreeMap should have at least one key after is_empty check")
+                .clone();
             Some((min, max))
         };
 
@@ -134,7 +142,7 @@ impl NameTree {
         if let Some(Object::Array(names_array)) = dict.get("Names") {
             let items: Vec<&Object> = names_array.iter().collect();
 
-            if !items.len().is_multiple_of(2) {
+            if items.len() % 2 != 0 {
                 return Err(PdfError::InvalidStructure(
                     "Names array must have even length".to_string(),
                 ));

@@ -144,7 +144,21 @@ impl ImageExtractor {
             }
         }
 
-        // TODO: Extract inline images from content stream if extract_inline is true
+        // Extract inline images from content stream if requested
+        if self.options.extract_inline {
+            if let Ok(parsed_page) = self.document.get_page(page_number as u32) {
+                if let Ok(content_streams) = self.document.get_page_content_streams(&parsed_page) {
+                    for stream_data in &content_streams {
+                        let inline_images = self.extract_inline_images_from_stream(
+                            stream_data,
+                            page_number,
+                            &mut image_index,
+                        )?;
+                        extracted.extend(inline_images);
+                    }
+                }
+            }
+        }
 
         Ok(extracted)
     }
@@ -329,6 +343,161 @@ impl ImageExtractor {
         // Default to PNG for FlateDecode if no other format detected
         // This is a fallback since FlateDecode is commonly used for PNG in PDFs
         Ok(ImageFormat::Png)
+    }
+
+    /// Extract inline images from a content stream
+    fn extract_inline_images_from_stream(
+        &mut self,
+        stream_data: &[u8],
+        page_number: usize,
+        image_index: &mut usize,
+    ) -> OperationResult<Vec<ExtractedImage>> {
+        let mut inline_images = Vec::new();
+
+        // Convert bytes to string for parsing
+        let stream_str = String::from_utf8_lossy(stream_data);
+
+        // Find inline image operators: BI (Begin Image), ID (Image Data), EI (End Image)
+        let mut pos = 0;
+        while let Some(bi_pos) = stream_str[pos..].find("BI") {
+            let absolute_bi_pos = pos + bi_pos;
+
+            // Find the ID operator after BI
+            if let Some(relative_id_pos) = stream_str[absolute_bi_pos..].find("ID") {
+                let absolute_id_pos = absolute_bi_pos + relative_id_pos;
+
+                // Find the EI operator after ID
+                if let Some(relative_ei_pos) = stream_str[absolute_id_pos..].find("EI") {
+                    let absolute_ei_pos = absolute_id_pos + relative_ei_pos;
+
+                    // Extract image dictionary (between BI and ID)
+                    let dict_section = &stream_str[absolute_bi_pos + 2..absolute_id_pos].trim();
+
+                    // Extract image data (between ID and EI)
+                    let data_start = absolute_id_pos + 2;
+                    let data_end = absolute_ei_pos;
+
+                    if data_start < data_end && data_end <= stream_data.len() {
+                        let image_data = &stream_data[data_start..data_end];
+
+                        // Parse basic image properties from dictionary
+                        let (width, height) = self.parse_inline_image_dict(dict_section);
+
+                        // Create extracted image
+                        if let Ok(extracted_image) = self.save_inline_image(
+                            image_data,
+                            page_number,
+                            *image_index,
+                            width,
+                            height,
+                        ) {
+                            inline_images.push(extracted_image);
+                            *image_index += 1;
+                        }
+                    }
+
+                    // Continue searching after this EI
+                    pos = absolute_ei_pos + 2;
+                } else {
+                    break; // No matching EI found
+                }
+            } else {
+                break; // No matching ID found
+            }
+        }
+
+        Ok(inline_images)
+    }
+
+    /// Parse inline image dictionary to extract width and height
+    fn parse_inline_image_dict(&self, dict_str: &str) -> (u32, u32) {
+        let mut width = 100; // Default width
+        let mut height = 100; // Default height
+
+        // Simple parsing - look for /W and /H parameters
+        for line in dict_str.lines() {
+            let line = line.trim();
+
+            // Parse width: /W 123 or /Width 123
+            if line.starts_with("/W ") || line.starts_with("/Width ") {
+                if let Some(value_str) = line.split_whitespace().nth(1) {
+                    if let Ok(w) = value_str.parse::<u32>() {
+                        width = w;
+                    }
+                }
+            }
+
+            // Parse height: /H 123 or /Height 123
+            if line.starts_with("/H ") || line.starts_with("/Height ") {
+                if let Some(value_str) = line.split_whitespace().nth(1) {
+                    if let Ok(h) = value_str.parse::<u32>() {
+                        height = h;
+                    }
+                }
+            }
+        }
+
+        (width, height)
+    }
+
+    /// Save an inline image to disk
+    fn save_inline_image(
+        &mut self,
+        data: &[u8],
+        page_number: usize,
+        image_index: usize,
+        width: u32,
+        height: u32,
+    ) -> OperationResult<ExtractedImage> {
+        // Generate unique key for deduplication
+        let image_key = format!("{:x}", md5::compute(data));
+
+        // Check if we've already extracted this image
+        if let Some(existing_path) = self.processed_images.get(&image_key) {
+            return Ok(ExtractedImage {
+                page_number,
+                image_index,
+                file_path: existing_path.clone(),
+                width,
+                height,
+                format: ImageFormat::Raw, // Inline images are often raw
+            });
+        }
+
+        // Determine format and extension
+        let format = self
+            .detect_image_format_from_data(data)
+            .unwrap_or(ImageFormat::Raw);
+        let extension = match format {
+            ImageFormat::Jpeg => "jpg",
+            ImageFormat::Png => "png",
+            ImageFormat::Tiff => "tif",
+            ImageFormat::Raw => "raw",
+        };
+
+        // Generate filename
+        let filename = format!(
+            "inline_page_{}_{:03}.{}",
+            page_number + 1,
+            image_index + 1,
+            extension
+        );
+        let file_path = self.options.output_dir.join(filename);
+
+        // Write image data to file
+        fs::write(&file_path, data)?;
+
+        // Cache the extracted image
+        self.processed_images.insert(image_key, file_path.clone());
+
+        Ok(ExtractedImage {
+            page_number,
+            image_index,
+            file_path,
+            width,
+            height,
+            format,
+        })
     }
 }
 

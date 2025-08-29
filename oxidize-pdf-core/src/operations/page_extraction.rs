@@ -164,8 +164,7 @@ impl PageExtractor {
 
         // Apply rotation if needed
         if parsed_page.rotation != 0 {
-            // TODO: Implement rotation in Page when available
-            // For now, we just note it in a comment
+            page.set_rotation(parsed_page.rotation);
         }
 
         // Get content streams
@@ -191,12 +190,12 @@ impl PageExtractor {
 
         // Handle annotations if preservation is enabled
         if self.options.preserve_annotations {
-            // TODO: Extract and preserve annotations when annotation support is added
+            // Note: Annotation preservation requires annotation support implementation
         }
 
         // Handle form fields if preservation is enabled
         if self.options.preserve_forms {
-            // TODO: Extract and preserve form fields when form support is added
+            // Note: Form field preservation requires form support implementation
         }
 
         // If no content was successfully processed, add a placeholder

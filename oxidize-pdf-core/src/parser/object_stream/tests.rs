@@ -50,7 +50,7 @@ fn test_object_stream_parse_valid() {
     let result = ObjectStream::parse(stream, &options);
 
     assert!(result.is_ok(), "Should parse valid object stream");
-    let obj_stream = result.unwrap();
+    let obj_stream = result.expect("Should be able to parse valid object stream");
 
     assert_eq!(obj_stream.n, 2, "Should have correct number of objects");
     assert_eq!(obj_stream.first, 6, "Should have correct first offset");
