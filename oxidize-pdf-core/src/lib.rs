@@ -173,8 +173,10 @@
 //! ```
 
 pub mod actions;
+pub mod advanced_tables;
 pub mod annotations;
 pub mod batch;
+pub mod charts;
 pub mod compression;
 pub mod document;
 pub mod encryption;
@@ -197,6 +199,7 @@ pub mod parser;
 pub mod recovery;
 pub mod streaming;
 pub mod structure;
+pub mod templates;
 pub mod text;
 pub mod verification;
 pub mod viewer_preferences;
@@ -316,6 +319,11 @@ pub use actions::{
 
 // Re-export page label types
 pub use page_labels::{PageLabel, PageLabelBuilder, PageLabelRange, PageLabelStyle, PageLabelTree};
+
+// Re-export template types
+pub use templates::{
+    Template, TemplateContext, TemplateError, TemplateRenderer, TemplateResult, TemplateValue,
+};
 
 // Re-export verification types
 pub use verification::comparators::{
