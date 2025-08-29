@@ -67,6 +67,7 @@ pub struct Page {
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
     annotations: Vec<Annotation>,
+    rotation: i32, // Page rotation in degrees (0, 90, 180, 270)
 }
 
 impl Page {
@@ -85,6 +86,7 @@ impl Page {
             header: None,
             footer: None,
             annotations: Vec::new(),
+            rotation: 0, // Default to no rotation
         }
     }
 
@@ -143,14 +145,50 @@ impl Page {
         )
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn width(&self) -> f64 {
+    pub fn width(&self) -> f64 {
         self.width
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn height(&self) -> f64 {
+    pub fn height(&self) -> f64 {
         self.height
+    }
+
+    /// Sets the page rotation in degrees.
+    /// Valid values are 0, 90, 180, and 270.
+    /// Other values will be normalized to the nearest valid rotation.
+    pub fn set_rotation(&mut self, rotation: i32) {
+        // Normalize rotation to valid values (0, 90, 180, 270)
+        let normalized = rotation.rem_euclid(360); // Ensure positive
+        self.rotation = match normalized {
+            0..=44 | 316..=360 => 0,
+            45..=134 => 90,
+            135..=224 => 180,
+            225..=315 => 270,
+            _ => 0, // Should not happen, but default to 0
+        };
+    }
+
+    /// Gets the current page rotation in degrees.
+    pub fn get_rotation(&self) -> i32 {
+        self.rotation
+    }
+
+    /// Gets the effective width considering rotation.
+    /// For 90° and 270° rotations, returns the height.
+    pub fn effective_width(&self) -> f64 {
+        match self.rotation {
+            90 | 270 => self.height,
+            _ => self.width,
+        }
+    }
+
+    /// Gets the effective height considering rotation.
+    /// For 90° and 270° rotations, returns the width.
+    pub fn effective_height(&self) -> f64 {
+        match self.rotation {
+            90 | 270 => self.width,
+            _ => self.height,
+        }
     }
 
     pub fn text_flow(&self) -> TextFlowContext {
@@ -175,6 +213,7 @@ impl Page {
         height: f64,
     ) -> Result<()> {
         if self.images.contains_key(name) {
+            // Draw the image using the graphics context
             self.graphics_context.draw_image(name, x, y, width, height);
             Ok(())
         } else {
@@ -184,6 +223,7 @@ impl Page {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn images(&self) -> &HashMap<String, Image> {
         &self.images
     }
@@ -232,6 +272,7 @@ impl Page {
     }
 
     /// Get ExtGState resources from the graphics context
+    #[allow(dead_code)]
     pub(crate) fn get_extgstate_resources(
         &self,
     ) -> Option<&std::collections::HashMap<String, crate::graphics::ExtGState>> {
@@ -342,8 +383,19 @@ impl Page {
         self.footer.as_ref()
     }
 
+    /// Sets the page content directly.
+    ///
+    /// This is used internally when processing headers and footers.
+    pub(crate) fn set_content(&mut self, content: Vec<u8>) {
+        self.content = content;
+    }
+
     #[allow(dead_code)]
     pub(crate) fn generate_content(&mut self) -> Result<Vec<u8>> {
+        // First, get operations from graphics context as bytes
+        let graphics_ops = self.graphics_context.operations().as_bytes();
+        self.content.extend_from_slice(graphics_ops);
+
         self.generate_content_with_page_info(None, None, None)
     }
 
@@ -439,6 +491,11 @@ impl Page {
         ]);
         dict.set("MediaBox", Object::Array(media_box.into()));
 
+        // Add rotation if not zero
+        if self.rotation != 0 {
+            dict.set("Rotate", Object::Integer(self.rotation as i64));
+        }
+
         // Resources (empty for now, would include fonts, images, etc.)
         let resources = Dictionary::new();
         dict.set("Resources", Object::Dictionary(resources));
@@ -457,22 +514,25 @@ impl Page {
         dict
     }
 
+    /// Gets all characters used in this page.
+    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
+        self.graphics_context.get_used_characters()
+    }
+
     /// Gets all fonts used in this page.
     ///
     /// This method scans the page content to identify which fonts are being used.
     /// For now, it returns a simple set based on the current text context font,
     /// but in a full implementation it would parse all text operations.
+    #[allow(dead_code)]
     pub(crate) fn get_used_fonts(&self) -> Vec<Font> {
         let mut fonts = HashSet::new();
 
         // Add the current font from text context
         fonts.insert(self.text_context.current_font().clone());
 
-        // TODO: In a full implementation, we would:
-        // 1. Parse the content stream to find all Tf (set font) operations
-        // 2. Extract font names from those operations
-        // 3. Map them back to Font enum values
-        // For now, we'll just return the fonts we know are commonly used
+        // Note: Currently returns fonts from text context.
+        // Future enhancement: Parse content streams for complete font analysis
 
         // Add some commonly used fonts as a baseline
         fonts.insert(Font::Helvetica);
@@ -1008,6 +1068,9 @@ mod tests {
                 .write("Image 2 (50x50)")
                 .unwrap();
 
+            // Verify images were added before moving page
+            assert_eq!(page.images().len(), 2, "Two images should be added to page");
+
             doc.add_page(page);
 
             // Write and verify
@@ -1021,6 +1084,18 @@ mod tests {
             // Verify XObject references in PDF
             let content = fs::read(&file_path).unwrap();
             let content_str = String::from_utf8_lossy(&content);
+
+            // Debug: print what we're looking for
+            println!("PDF size: {} bytes", content.len());
+            println!("Contains 'XObject': {}", content_str.contains("XObject"));
+            println!("Contains '/XObject': {}", content_str.contains("/XObject"));
+
+            // Check for image-related content
+            if content_str.contains("/Type /Image") || content_str.contains("DCTDecode") {
+                println!("Found image-related content but no XObject dictionary");
+            }
+
+            // Verify XObject is properly written
             assert!(content_str.contains("XObject"));
         }
 
@@ -1415,5 +1490,502 @@ mod tests {
             // Note: We can't check for specific text content as it may be compressed
             // The test validates that headers/footers with date placeholders don't cause errors
         }
+    }
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+    use crate::graphics::Color;
+    use crate::text::Font;
+
+    // ============= Constructor Tests =============
+
+    #[test]
+    fn test_new_page_dimensions() {
+        let page = Page::new(100.0, 200.0);
+        assert_eq!(page.width(), 100.0);
+        assert_eq!(page.height(), 200.0);
+    }
+
+    #[test]
+    fn test_a4_page_dimensions() {
+        let page = Page::a4();
+        assert_eq!(page.width(), 595.0);
+        assert_eq!(page.height(), 842.0);
+    }
+
+    #[test]
+    fn test_letter_page_dimensions() {
+        let page = Page::letter();
+        assert_eq!(page.width(), 612.0);
+        assert_eq!(page.height(), 792.0);
+    }
+
+    #[test]
+    fn test_legal_page_dimensions() {
+        let page = Page::legal();
+        assert_eq!(page.width(), 612.0);
+        assert_eq!(page.height(), 1008.0);
+    }
+
+    // ============= Margins Tests =============
+
+    #[test]
+    fn test_default_margins() {
+        let page = Page::a4();
+        let margins = page.margins();
+        assert_eq!(margins.left, 72.0);
+        assert_eq!(margins.right, 72.0);
+        assert_eq!(margins.top, 72.0);
+        assert_eq!(margins.bottom, 72.0);
+    }
+
+    #[test]
+    fn test_set_margins() {
+        let mut page = Page::a4();
+        page.set_margins(10.0, 20.0, 30.0, 40.0);
+
+        let margins = page.margins();
+        assert_eq!(margins.left, 10.0);
+        assert_eq!(margins.right, 20.0);
+        assert_eq!(margins.top, 30.0);
+        assert_eq!(margins.bottom, 40.0);
+    }
+
+    #[test]
+    fn test_content_width() {
+        let mut page = Page::new(600.0, 800.0);
+        page.set_margins(50.0, 50.0, 0.0, 0.0);
+        assert_eq!(page.content_width(), 500.0);
+    }
+
+    #[test]
+    fn test_content_height() {
+        let mut page = Page::new(600.0, 800.0);
+        page.set_margins(0.0, 0.0, 100.0, 100.0);
+        assert_eq!(page.content_height(), 600.0);
+    }
+
+    #[test]
+    fn test_content_area() {
+        let mut page = Page::new(600.0, 800.0);
+        page.set_margins(50.0, 60.0, 70.0, 80.0);
+
+        let (x, y, right, top) = page.content_area();
+        assert_eq!(x, 50.0); // left margin
+        assert_eq!(y, 80.0); // bottom margin
+        assert_eq!(right, 540.0); // page width (600) - right margin (60)
+        assert_eq!(top, 730.0); // page height (800) - top margin (70)
+    }
+
+    // ============= Graphics Context Tests =============
+
+    #[test]
+    fn test_graphics_context_access() {
+        let mut page = Page::a4();
+        let gc = page.graphics();
+
+        // Test that we can perform basic operations
+        gc.move_to(0.0, 0.0);
+        gc.line_to(100.0, 100.0);
+
+        // Operations should be recorded
+        let ops = gc.get_operations();
+        assert!(!ops.is_empty());
+    }
+
+    #[test]
+    fn test_graphics_operations_chain() {
+        let mut page = Page::a4();
+
+        page.graphics()
+            .set_fill_color(Color::red())
+            .rectangle(10.0, 10.0, 100.0, 50.0)
+            .fill();
+
+        let ops = page.graphics().get_operations();
+        assert!(ops.contains("re")); // rectangle operator
+        assert!(ops.contains("f")); // fill operator
+    }
+
+    // ============= Text Context Tests =============
+
+    #[test]
+    fn test_text_context_access() {
+        let mut page = Page::a4();
+        let tc = page.text();
+
+        tc.set_font(Font::Helvetica, 12.0);
+        tc.at(100.0, 100.0);
+
+        // Should be able to write text without error
+        let result = tc.write("Test text");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_text_flow_creation() {
+        let page = Page::a4();
+        let text_flow = page.text_flow();
+
+        // Test that text flow is created without panic
+        // TextFlowContext doesn't expose its internal state
+        // but we can verify it's created correctly
+        let _ = text_flow; // Just ensure it can be created
+    }
+
+    // ============= Image Tests =============
+
+    #[test]
+    fn test_add_image() {
+        let mut page = Page::a4();
+
+        // Create a minimal JPEG image
+        let image_data = vec![
+            0xFF, 0xD8, // SOI marker
+            0xFF, 0xC0, // SOF0 marker
+            0x00, 0x11, // Length
+            0x08, // Precision
+            0x00, 0x10, // Height
+            0x00, 0x10, // Width
+            0x03, // Components
+            0x01, 0x11, 0x00, // Component 1
+            0x02, 0x11, 0x00, // Component 2
+            0x03, 0x11, 0x00, // Component 3
+            0xFF, 0xD9, // EOI marker
+        ];
+
+        let image = Image::from_jpeg_data(image_data).unwrap();
+        page.add_image("test_image", image);
+
+        // Image should be stored
+        assert!(page.images.contains_key("test_image"));
+    }
+
+    #[test]
+    fn test_draw_image_simple() {
+        let mut page = Page::a4();
+
+        // Create and add image
+        let image_data = vec![
+            0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x10, 0x00, 0x10, 0x03, 0x01, 0x11,
+            0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00, 0xFF, 0xD9,
+        ];
+
+        let image = Image::from_jpeg_data(image_data).unwrap();
+        page.add_image("img1", image);
+
+        // Draw the image
+        let result = page.draw_image("img1", 100.0, 100.0, 200.0, 200.0);
+        assert!(result.is_ok());
+    }
+
+    // ============= Annotations Tests =============
+
+    #[test]
+    fn test_add_annotation() {
+        use crate::annotations::{Annotation, AnnotationType};
+        use crate::geometry::{Point, Rectangle};
+
+        let mut page = Page::a4();
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(200.0, 150.0));
+        let annotation = Annotation::new(AnnotationType::Text, rect);
+
+        page.add_annotation(annotation);
+        assert_eq!(page.annotations().len(), 1);
+    }
+
+    #[test]
+    fn test_annotations_mut() {
+        use crate::annotations::{Annotation, AnnotationType};
+        use crate::geometry::{Point, Rectangle};
+
+        let mut page = Page::a4();
+        let _rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(200.0, 150.0));
+
+        // Add multiple annotations
+        for i in 0..3 {
+            let annotation = Annotation::new(
+                AnnotationType::Text,
+                Rectangle::new(
+                    Point::new(100.0 + i as f64 * 10.0, 100.0),
+                    Point::new(200.0 + i as f64 * 10.0, 150.0),
+                ),
+            );
+            page.add_annotation(annotation);
+        }
+
+        // Modify annotations
+        let annotations = page.annotations_mut();
+        annotations.clear();
+        assert_eq!(page.annotations().len(), 0);
+    }
+
+    // ============= Form Widget Tests =============
+
+    #[test]
+    fn test_add_form_widget() {
+        use crate::forms::Widget;
+        use crate::geometry::{Point, Rectangle};
+
+        let mut page = Page::a4();
+        let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(200.0, 120.0));
+        let widget = Widget::new(rect);
+
+        let obj_ref = page.add_form_widget(widget);
+        assert_eq!(obj_ref.number(), 0);
+        assert_eq!(obj_ref.generation(), 0);
+
+        // Annotations should include the widget
+        assert_eq!(page.annotations().len(), 1);
+    }
+
+    // ============= Header/Footer Tests =============
+
+    #[test]
+    fn test_set_header() {
+        use crate::text::HeaderFooter;
+
+        let mut page = Page::a4();
+        let header = HeaderFooter::new_header("Test Header");
+
+        page.set_header(header.clone());
+        assert!(page.header().is_some());
+
+        if let Some(h) = page.header() {
+            assert_eq!(h.content(), "Test Header");
+        }
+    }
+
+    #[test]
+    fn test_set_footer() {
+        use crate::text::HeaderFooter;
+
+        let mut page = Page::a4();
+        let footer = HeaderFooter::new_footer("Page {{page}} of {{total}}");
+
+        page.set_footer(footer.clone());
+        assert!(page.footer().is_some());
+
+        if let Some(f) = page.footer() {
+            assert_eq!(f.content(), "Page {{page}} of {{total}}");
+        }
+    }
+
+    #[test]
+    fn test_header_footer_rendering() {
+        use crate::text::HeaderFooter;
+
+        let mut page = Page::a4();
+
+        // Set both header and footer
+        page.set_header(HeaderFooter::new_header("Header"));
+        page.set_footer(HeaderFooter::new_footer("Footer"));
+
+        // Generate content with header/footer
+        let result = page.generate_content_with_page_info(Some(1), Some(1), None);
+        assert!(result.is_ok());
+
+        let content = result.unwrap();
+        assert!(!content.is_empty());
+    }
+
+    // ============= Table Tests =============
+
+    #[test]
+    fn test_add_table() {
+        use crate::text::Table;
+
+        let mut page = Page::a4();
+        let mut table = Table::with_equal_columns(2, 200.0);
+
+        // Add some rows
+        table
+            .add_row(vec!["Cell 1".to_string(), "Cell 2".to_string()])
+            .unwrap();
+        table
+            .add_row(vec!["Cell 3".to_string(), "Cell 4".to_string()])
+            .unwrap();
+
+        let result = page.add_table(&table);
+        assert!(result.is_ok());
+    }
+
+    // ============= Content Generation Tests =============
+
+    #[test]
+    fn test_generate_operations_empty() {
+        let page = Page::a4();
+        // Page doesn't have generate_operations, use graphics_context
+        let ops = page.graphics_context.generate_operations();
+
+        // Even empty page should have valid PDF operations
+        assert!(ops.is_ok());
+    }
+
+    #[test]
+    fn test_generate_operations_with_graphics() {
+        let mut page = Page::a4();
+
+        page.graphics().rectangle(50.0, 50.0, 100.0, 100.0).fill();
+
+        // Page doesn't have generate_operations, use graphics_context
+        let ops = page.graphics_context.generate_operations();
+        assert!(ops.is_ok());
+
+        let content = ops.unwrap();
+        let content_str = String::from_utf8_lossy(&content);
+        assert!(content_str.contains("re")); // rectangle
+        assert!(content_str.contains("f")); // fill
+    }
+
+    #[test]
+    fn test_generate_operations_with_text() {
+        let mut page = Page::a4();
+
+        page.text()
+            .set_font(Font::Helvetica, 12.0)
+            .at(100.0, 700.0)
+            .write("Hello")
+            .unwrap();
+
+        // Text operations are in text_context, not graphics_context
+        let ops = page.text_context.generate_operations();
+        assert!(ops.is_ok());
+
+        let content = ops.unwrap();
+        let content_str = String::from_utf8_lossy(&content);
+        assert!(content_str.contains("BT")); // Begin text
+        assert!(content_str.contains("ET")); // End text
+    }
+
+    // ============= Edge Cases and Error Handling =============
+
+    #[test]
+    fn test_negative_margins() {
+        let mut page = Page::a4();
+        page.set_margins(-10.0, -20.0, -30.0, -40.0);
+
+        // Negative margins should still work (might be intentional)
+        let margins = page.margins();
+        assert_eq!(margins.left, -10.0);
+        assert_eq!(margins.right, -20.0);
+    }
+
+    #[test]
+    fn test_zero_dimensions() {
+        let page = Page::new(0.0, 0.0);
+        assert_eq!(page.width(), 0.0);
+        assert_eq!(page.height(), 0.0);
+
+        // Content area with default margins would be negative
+        let (_, _, width, height) = page.content_area();
+        assert!(width < 0.0);
+        assert!(height < 0.0);
+    }
+
+    #[test]
+    fn test_huge_dimensions() {
+        let page = Page::new(1_000_000.0, 1_000_000.0);
+        assert_eq!(page.width(), 1_000_000.0);
+        assert_eq!(page.height(), 1_000_000.0);
+    }
+
+    #[test]
+    fn test_draw_nonexistent_image() {
+        let mut page = Page::a4();
+
+        // Try to draw an image that wasn't added
+        let result = page.draw_image("nonexistent", 100.0, 100.0, 200.0, 200.0);
+
+        // Should fail gracefully
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_clone_page() {
+        let mut page = Page::a4();
+        page.set_margins(10.0, 20.0, 30.0, 40.0);
+
+        page.graphics().rectangle(50.0, 50.0, 100.0, 100.0).fill();
+
+        let cloned = page.clone();
+        assert_eq!(cloned.width(), page.width());
+        assert_eq!(cloned.height(), page.height());
+        assert_eq!(cloned.margins().left, page.margins().left);
+    }
+
+    #[test]
+    fn test_page_rotation() {
+        let mut page = Page::a4();
+
+        // Test default rotation
+        assert_eq!(page.get_rotation(), 0);
+
+        // Test setting valid rotations
+        page.set_rotation(90);
+        assert_eq!(page.get_rotation(), 90);
+
+        page.set_rotation(180);
+        assert_eq!(page.get_rotation(), 180);
+
+        page.set_rotation(270);
+        assert_eq!(page.get_rotation(), 270);
+
+        page.set_rotation(360);
+        assert_eq!(page.get_rotation(), 0);
+
+        // Test rotation normalization
+        page.set_rotation(45);
+        assert_eq!(page.get_rotation(), 90);
+
+        page.set_rotation(135);
+        assert_eq!(page.get_rotation(), 180);
+
+        page.set_rotation(-90);
+        assert_eq!(page.get_rotation(), 270);
+    }
+
+    #[test]
+    fn test_effective_dimensions() {
+        let mut page = Page::new(600.0, 800.0);
+
+        // No rotation - same dimensions
+        assert_eq!(page.effective_width(), 600.0);
+        assert_eq!(page.effective_height(), 800.0);
+
+        // 90 degree rotation - swapped dimensions
+        page.set_rotation(90);
+        assert_eq!(page.effective_width(), 800.0);
+        assert_eq!(page.effective_height(), 600.0);
+
+        // 180 degree rotation - same dimensions
+        page.set_rotation(180);
+        assert_eq!(page.effective_width(), 600.0);
+        assert_eq!(page.effective_height(), 800.0);
+
+        // 270 degree rotation - swapped dimensions
+        page.set_rotation(270);
+        assert_eq!(page.effective_width(), 800.0);
+        assert_eq!(page.effective_height(), 600.0);
+    }
+
+    #[test]
+    fn test_rotation_in_pdf_dict() {
+        let mut page = Page::a4();
+
+        // No rotation should not include Rotate field
+        let dict = page.to_dict();
+        assert!(dict.get("Rotate").is_none());
+
+        // With rotation should include Rotate field
+        page.set_rotation(90);
+        let dict = page.to_dict();
+        assert_eq!(dict.get("Rotate"), Some(&Object::Integer(90)));
+
+        page.set_rotation(270);
+        let dict = page.to_dict();
+        assert_eq!(dict.get("Rotate"), Some(&Object::Integer(270)));
     }
 }

@@ -499,6 +499,182 @@ impl HighlightAnnotation {
     }
 }
 
+/// Circle annotation
+#[derive(Debug, Clone)]
+pub struct CircleAnnotation {
+    /// Base annotation
+    pub annotation: Annotation,
+    /// Interior color (fill color)
+    pub interior_color: Option<Color>,
+    /// Border effect
+    pub border_effect: Option<BorderEffect>,
+}
+
+impl CircleAnnotation {
+    /// Create a new circle annotation
+    pub fn new(rect: Rectangle) -> Self {
+        let annotation = Annotation::new(crate::annotations::AnnotationType::Circle, rect);
+
+        Self {
+            annotation,
+            interior_color: None,
+            border_effect: None,
+        }
+    }
+
+    /// Set interior color
+    pub fn with_interior_color(mut self, color: Color) -> Self {
+        self.interior_color = Some(color);
+        self
+    }
+
+    /// Set cloudy border
+    pub fn with_cloudy_border(mut self, intensity: f64) -> Self {
+        self.border_effect = Some(BorderEffect {
+            style: BorderEffectStyle::Cloudy,
+            intensity: intensity.clamp(0.0, 2.0),
+        });
+        self
+    }
+
+    /// Convert to annotation
+    pub fn to_annotation(self) -> Annotation {
+        let mut annotation = self.annotation;
+
+        // Interior color
+        if let Some(color) = self.interior_color {
+            let ic = match color {
+                Color::Rgb(r, g, b) => vec![Object::Real(r), Object::Real(g), Object::Real(b)],
+                Color::Gray(g) => vec![Object::Real(g)],
+                Color::Cmyk(c, m, y, k) => vec![
+                    Object::Real(c),
+                    Object::Real(m),
+                    Object::Real(y),
+                    Object::Real(k),
+                ],
+            };
+            annotation.properties.set("IC", Object::Array(ic));
+        }
+
+        // Border effect
+        if let Some(effect) = self.border_effect {
+            let mut be_dict = crate::objects::Dictionary::new();
+            match effect.style {
+                BorderEffectStyle::Solid => be_dict.set("S", Object::Name("S".to_string())),
+                BorderEffectStyle::Cloudy => {
+                    be_dict.set("S", Object::Name("C".to_string()));
+                    be_dict.set("I", Object::Real(effect.intensity));
+                }
+            }
+            annotation.properties.set("BE", Object::Dictionary(be_dict));
+        }
+
+        annotation
+    }
+}
+
+/// File attachment annotation
+#[derive(Debug, Clone)]
+pub struct FileAttachmentAnnotation {
+    /// Base annotation
+    pub annotation: Annotation,
+    /// File name
+    pub file_name: String,
+    /// File data
+    pub file_data: Vec<u8>,
+    /// MIME type
+    pub mime_type: Option<String>,
+    /// Icon name
+    pub icon: FileAttachmentIcon,
+}
+
+/// File attachment icon types
+#[derive(Debug, Clone)]
+pub enum FileAttachmentIcon {
+    /// Graph icon
+    Graph,
+    /// Paperclip icon
+    Paperclip,
+    /// Push pin icon
+    PushPin,
+    /// Tag icon
+    Tag,
+}
+
+impl FileAttachmentIcon {
+    /// Get PDF name
+    pub fn pdf_name(&self) -> &'static str {
+        match self {
+            FileAttachmentIcon::Graph => "Graph",
+            FileAttachmentIcon::Paperclip => "Paperclip",
+            FileAttachmentIcon::PushPin => "PushPin",
+            FileAttachmentIcon::Tag => "Tag",
+        }
+    }
+}
+
+impl FileAttachmentAnnotation {
+    /// Create a new file attachment annotation
+    pub fn new(rect: Rectangle, file_name: String, file_data: Vec<u8>) -> Self {
+        let annotation = Annotation::new(crate::annotations::AnnotationType::FileAttachment, rect);
+
+        Self {
+            annotation,
+            file_name,
+            file_data,
+            mime_type: None,
+            icon: FileAttachmentIcon::Paperclip,
+        }
+    }
+
+    /// Set MIME type
+    pub fn with_mime_type(mut self, mime_type: String) -> Self {
+        self.mime_type = Some(mime_type);
+        self
+    }
+
+    /// Set icon
+    pub fn with_icon(mut self, icon: FileAttachmentIcon) -> Self {
+        self.icon = icon;
+        self
+    }
+
+    /// Convert to annotation
+    pub fn to_annotation(self) -> Annotation {
+        let mut annotation = self.annotation;
+
+        // Set icon name
+        annotation
+            .properties
+            .set("Name", Object::Name(self.icon.pdf_name().to_string()));
+
+        // Create file specification dictionary
+        let mut fs_dict = crate::objects::Dictionary::new();
+        fs_dict.set("Type", Object::Name("Filespec".to_string()));
+        fs_dict.set("F", Object::String(self.file_name.clone()));
+        fs_dict.set("UF", Object::String(self.file_name.clone()));
+
+        // Create embedded file stream
+        let mut ef_dict = crate::objects::Dictionary::new();
+        let mut stream_dict = crate::objects::Dictionary::new();
+        stream_dict.set("Type", Object::Name("EmbeddedFile".to_string()));
+        stream_dict.set("Length", Object::Integer(self.file_data.len() as i64));
+
+        if let Some(mime) = self.mime_type {
+            stream_dict.set("Subtype", Object::Name(mime));
+        }
+
+        // Note: In a real implementation, we'd create a proper stream object
+        // For now, we'll just reference it
+        ef_dict.set("F", Object::Dictionary(stream_dict));
+        fs_dict.set("EF", Object::Dictionary(ef_dict));
+
+        annotation.properties.set("FS", Object::Dictionary(fs_dict));
+
+        annotation
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -359,6 +359,252 @@ mod tests {
         assert!(!options.preserve_metadata);
         assert!(options.optimize);
     }
+
+    #[test]
+    fn test_validate_page_order_empty() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+
+        let temp_file = NamedTempFile::new().unwrap();
+        doc.save(temp_file.path()).unwrap();
+
+        // Create reorderer with empty page order
+        let pdf_doc = PdfReader::open_document(temp_file.path()).unwrap();
+        let options = ReorderOptions {
+            page_order: vec![],
+            preserve_metadata: true,
+            optimize: false,
+        };
+
+        let reorderer = PageReorderer::new(pdf_doc, options);
+        let result = reorderer.reorder();
+
+        assert!(result.is_err());
+        if let Err(OperationError::InvalidPageRange(msg)) = result {
+            assert!(msg.contains("empty"));
+        } else {
+            panic!("Expected InvalidPageRange error");
+        }
+    }
+
+    #[test]
+    fn test_validate_page_order_out_of_bounds() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF with 2 pages
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        doc.add_page(Page::letter());
+
+        let temp_file = NamedTempFile::new().unwrap();
+        doc.save(temp_file.path()).unwrap();
+
+        // Try to reorder with invalid index
+        let pdf_doc = PdfReader::open_document(temp_file.path()).unwrap();
+        let options = ReorderOptions {
+            page_order: vec![0, 5], // Index 5 is out of bounds
+            preserve_metadata: true,
+            optimize: false,
+        };
+
+        let reorderer = PageReorderer::new(pdf_doc, options);
+        let result = reorderer.reorder();
+
+        assert!(result.is_err());
+        if let Err(OperationError::InvalidPageRange(msg)) = result {
+            assert!(msg.contains("out of bounds"));
+        } else {
+            panic!("Expected InvalidPageRange error");
+        }
+    }
+
+    #[test]
+    fn test_reorder_pages_simple() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF with 3 pages
+        let mut doc = Document::new();
+        let mut page1 = Page::a4();
+        page1.graphics().begin_text();
+        page1.graphics().set_text_position(100.0, 700.0);
+        let _ = page1.graphics().show_text("Page 1");
+        page1.graphics().end_text();
+        doc.add_page(page1);
+
+        let mut page2 = Page::a4();
+        page2.graphics().begin_text();
+        page2.graphics().set_text_position(100.0, 700.0);
+        let _ = page2.graphics().show_text("Page 2");
+        page2.graphics().end_text();
+        doc.add_page(page2);
+
+        let mut page3 = Page::a4();
+        page3.graphics().begin_text();
+        page3.graphics().set_text_position(100.0, 700.0);
+        let _ = page3.graphics().show_text("Page 3");
+        page3.graphics().end_text();
+        doc.add_page(page3);
+
+        let temp_file = NamedTempFile::new().unwrap();
+        doc.save(temp_file.path()).unwrap();
+
+        // Reorder pages: [2, 0, 1]
+        let pdf_doc = PdfReader::open_document(temp_file.path()).unwrap();
+        let options = ReorderOptions {
+            page_order: vec![2, 0, 1],
+            preserve_metadata: true,
+            optimize: false,
+        };
+
+        let reorderer = PageReorderer::new(pdf_doc, options);
+        let result = reorderer.reorder();
+
+        assert!(result.is_ok());
+        let reordered_doc = result.unwrap();
+        assert_eq!(reordered_doc.page_count(), 3);
+    }
+
+    #[test]
+    fn test_reverse_pages() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF with 4 pages
+        let mut doc = Document::new();
+        for i in 1..=4 {
+            let mut page = Page::a4();
+            page.graphics().begin_text();
+            page.graphics().set_text_position(100.0, 700.0);
+            let _ = page.graphics().show_text(&format!("Page {}", i));
+            page.graphics().end_text();
+            doc.add_page(page);
+        }
+
+        let temp_input = NamedTempFile::new().unwrap();
+        doc.save(temp_input.path()).unwrap();
+
+        let temp_output = NamedTempFile::new().unwrap();
+
+        // Reverse the pages
+        let result = reverse_pdf_pages(temp_input.path(), temp_output.path());
+        assert!(result.is_ok());
+
+        // Verify the output file exists
+        assert!(temp_output.path().exists());
+    }
+
+    #[test]
+    fn test_swap_pages() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        doc.add_page(Page::letter());
+        doc.add_page(Page::legal());
+
+        let temp_input = NamedTempFile::new().unwrap();
+        doc.save(temp_input.path()).unwrap();
+
+        let temp_output = NamedTempFile::new().unwrap();
+
+        // Swap pages 0 and 2
+        let result = swap_pdf_pages(temp_input.path(), temp_output.path(), 0, 2);
+        assert!(result.is_ok());
+
+        // Test invalid swap (out of bounds)
+        let result = swap_pdf_pages(temp_input.path(), temp_output.path(), 0, 10);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_move_page() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF
+        let mut doc = Document::new();
+        for _ in 0..5 {
+            doc.add_page(Page::a4());
+        }
+
+        let temp_input = NamedTempFile::new().unwrap();
+        doc.save(temp_input.path()).unwrap();
+
+        let temp_output = NamedTempFile::new().unwrap();
+
+        // Move page from index 0 to index 3
+        let result = move_pdf_page(temp_input.path(), temp_output.path(), 0, 3);
+        assert!(result.is_ok());
+
+        // Test invalid move (out of bounds)
+        let result = move_pdf_page(temp_input.path(), temp_output.path(), 10, 2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_duplicate_pages_in_order() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF with 2 pages
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        doc.add_page(Page::letter());
+
+        let temp_file = NamedTempFile::new().unwrap();
+        doc.save(temp_file.path()).unwrap();
+
+        // Create order with duplicates [0, 1, 0, 1]
+        let pdf_doc = PdfReader::open_document(temp_file.path()).unwrap();
+        let options = ReorderOptions {
+            page_order: vec![0, 1, 0, 1],
+            preserve_metadata: true,
+            optimize: false,
+        };
+
+        let reorderer = PageReorderer::new(pdf_doc, options);
+        let result = reorderer.reorder();
+
+        assert!(result.is_ok());
+        let reordered_doc = result.unwrap();
+        assert_eq!(reordered_doc.page_count(), 4); // Should have 4 pages now
+    }
+
+    #[test]
+    fn test_single_page_reorder() {
+        use crate::{Document, Page};
+        use tempfile::NamedTempFile;
+
+        // Create a test PDF with 1 page
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+
+        let temp_file = NamedTempFile::new().unwrap();
+        doc.save(temp_file.path()).unwrap();
+
+        // Reorder single page
+        let pdf_doc = PdfReader::open_document(temp_file.path()).unwrap();
+        let options = ReorderOptions {
+            page_order: vec![0],
+            preserve_metadata: true,
+            optimize: false,
+        };
+
+        let reorderer = PageReorderer::new(pdf_doc, options);
+        let result = reorderer.reorder();
+
+        assert!(result.is_ok());
+        let reordered_doc = result.unwrap();
+        assert_eq!(reordered_doc.page_count(), 1);
+    }
 }
 
 #[cfg(test)]

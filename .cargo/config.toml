@@ -1,0 +1,19 @@
+[build]
+# Limit parallel jobs to reduce CPU usage
+jobs = 2
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "codegen-units=1"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "codegen-units=1"]
+
+[profile.dev]
+# Reduce optimization for faster compilation
+opt-level = 0
+debug = false
+
+[profile.test]
+# Reduce optimization for tests
+opt-level = 0
+debug = false

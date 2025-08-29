@@ -191,11 +191,15 @@ pub mod page_forms;
 pub mod page_labels;
 pub mod page_lists;
 pub mod page_tables;
+pub mod page_transitions;
+pub mod page_tree;
 pub mod parser;
 pub mod recovery;
 pub mod streaming;
 pub mod structure;
 pub mod text;
+pub mod verification;
+pub mod viewer_preferences;
 pub mod writer;
 
 #[cfg(feature = "semantic")]
@@ -205,30 +209,19 @@ pub mod semantic;
 pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
-pub use graphics::{Color, GraphicsContext, Image, ImageColorSpace, ImageFormat};
+pub use graphics::{Color, ColorSpace, GraphicsContext, Image, ImageFormat, MaskType};
 pub use page::{Margins, Page};
 pub use page_lists::{ListStyle, ListType, PageLists};
 pub use page_tables::{PageTables, TableStyle};
 pub use text::{
     measure_text,
     split_into_words,
-    AdvancedTable,
-    AdvancedTableCell,
-    AdvancedTableOptions,
-    AlternatingRowColors,
-    BorderLine,
-    BorderStyle as TableBorderStyle,
     BulletStyle,
-    CellContent,
-    CellPadding,
-    ColumnDefinition,
-    ColumnWidth,
     Font,
     FontFamily,
     FragmentType,
     HeaderStyle,
     ImagePreprocessing,
-    LineStyle,
     ListElement,
     ListOptions,
     MockOcrProvider,
@@ -246,12 +239,24 @@ pub use text::{
     Table,
     TableCell,
     TableOptions,
-    TableRow,
     TextAlign,
     TextContext,
     TextFlowContext,
     UnorderedList,
-    VerticalAlign,
+};
+
+// Re-export forms types
+pub use forms::{
+    calculations::FieldValue,
+    field_actions::{
+        ActionSettings, FieldAction, FieldActionSystem, FieldActions, FormatActionType,
+        SpecialFormatType, ValidateActionType,
+    },
+    validation::{
+        DateFormat, FieldValidator, FormValidationSystem, FormatMask, PhoneCountry,
+        RequiredFieldInfo, RequirementCondition, TimeFormat, ValidationRule, ValidationSettings,
+    },
+    BorderStyle, FieldType, TextField, Widget,
 };
 
 // Re-export font embedding types
@@ -259,6 +264,9 @@ pub use text::fonts::embedding::{
     EmbeddedFontData, EmbeddingOptions, EncodingDifference, FontDescriptor, FontEmbedder,
     FontEncoding, FontFlags, FontMetrics, FontType,
 };
+
+// Re-export font management types
+pub use text::font_manager::{CustomFont, FontManager};
 
 // Re-export parsing types
 pub use parser::{
@@ -308,6 +316,22 @@ pub use actions::{
 
 // Re-export page label types
 pub use page_labels::{PageLabel, PageLabelBuilder, PageLabelRange, PageLabelStyle, PageLabelTree};
+
+// Re-export verification types
+pub use verification::comparators::{
+    compare_pdfs, ComparisonResult, DifferenceSeverity, PdfDifference,
+};
+pub use verification::compliance_report::{
+    format_report_markdown, generate_compliance_report, ComplianceReport,
+};
+pub use verification::iso_matrix::{load_default_matrix, load_matrix, ComplianceStats, IsoMatrix};
+pub use verification::validators::{
+    check_available_validators, validate_external, validate_with_qpdf,
+};
+pub use verification::{
+    extract_pdf_differences, pdfs_structurally_equivalent, verify_iso_requirement,
+    ExternalValidationResult, IsoRequirement, VerificationLevel, VerificationResult,
+};
 
 /// Current version of oxidize-pdf
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -573,7 +597,7 @@ mod tests {
     fn test_image_types() {
         // Test image-related types
         let _format = ImageFormat::Jpeg;
-        let _color_space = ImageColorSpace::DeviceRGB;
+        let _color_space = ColorSpace::DeviceRGB;
 
         // Test that image creation doesn't panic
         let image_data = vec![0u8; 100];

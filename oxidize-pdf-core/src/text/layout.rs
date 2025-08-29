@@ -328,23 +328,31 @@ impl ColumnLayout {
         for line in lines {
             graphics.begin_text();
 
-            let text_x = match self.options.text_align {
-                TextAlign::Left => column_x,
+            match self.options.text_align {
+                TextAlign::Left => {
+                    graphics.set_text_position(column_x, current_y);
+                    graphics.show_text(line)?;
+                }
                 TextAlign::Center => {
                     let line_width = self.estimate_text_width(line);
                     let column_width = self.column_widths[0]; // Simplified for now
-                    column_x + (column_width - line_width) / 2.0
+                    let text_x = column_x + (column_width - line_width) / 2.0;
+                    graphics.set_text_position(text_x, current_y);
+                    graphics.show_text(line)?;
                 }
                 TextAlign::Right => {
                     let line_width = self.estimate_text_width(line);
                     let column_width = self.column_widths[0]; // Simplified for now
-                    column_x + column_width - line_width
+                    let text_x = column_x + column_width - line_width;
+                    graphics.set_text_position(text_x, current_y);
+                    graphics.show_text(line)?;
                 }
-                TextAlign::Justified => column_x, // TODO: Implement justification
+                TextAlign::Justified => {
+                    let column_width = self.column_widths[0]; // Simplified for now
+                    graphics.set_text_position(column_x, current_y);
+                    graphics.show_justified_text(line, column_width)?;
+                }
             };
-
-            graphics.set_text_position(text_x, current_y);
-            graphics.show_text(line)?;
             graphics.end_text();
 
             current_y -= line_height;

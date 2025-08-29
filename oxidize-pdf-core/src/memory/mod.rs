@@ -173,7 +173,10 @@ impl MemoryManager {
 
     /// Get memory statistics
     pub fn stats(&self) -> MemoryStats {
-        self.stats.read().unwrap().clone()
+        self.stats
+            .read()
+            .map(|stats| stats.clone())
+            .unwrap_or_else(|_| MemoryStats::default())
     }
 
     /// Record a memory allocation

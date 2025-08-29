@@ -2,6 +2,7 @@
 name = "oxidize-pdf"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -24,7 +25,7 @@ lazy_static = { workspace = true }
 flate2 = { workspace = true, optional = true }
 
 # Serialization
-serde = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, optional = true }
 
 # Logging
@@ -43,6 +44,15 @@ bitflags = "2.4"
 # Parallel processing
 num_cpus = "1.16"
 
+# Regular expressions for validation
+regex = "1.10"
+
+# TOML parsing for ISO compliance matrix
+toml = "0.8"
+
+# Temporary files for external validation
+tempfile = "3.8"
+
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -58,59 +68,48 @@ tesseract = { version = "0.15", optional = true }
 leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
-tempfile = "3.8"
 criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1.7"
 
 [[example]]
-name = "hello_world"
+name = "font_spacing_test"
+path = "../examples/src/font_spacing_test.rs"
 
 [[example]]
-name = "graphics_demo"
+name = "font_subsetting_test"
+path = "../examples/src/font_subsetting_test.rs"
 
 [[example]]
-name = "text_formatting"
+name = "field_actions"
+path = "../examples/src/field_actions.rs"
 
 [[example]]
-name = "text_wrapping"
+name = "form_validation"
+path = "../examples/src/form_validation.rs"
 
 [[example]]
-name = "simple_text_wrap"
+name = "button_fields_demo"
+path = "../examples/src/button_fields_demo.rs"
 
 [[example]]
-name = "extract_images"
+name = "calibrated_colors_demo"
+path = "../examples/src/calibrated_colors_demo.rs"
 
 [[example]]
-name = "create_pdf_with_images"
+name = "generate_compliance_report"
+path = "../examples/src/generate_compliance_report.rs"
 
 [[example]]
-name = "ai_ready_invoice"
-required-features = ["semantic"]
+name = "parse_iso_spec"
+path = "../examples/src/parse_iso_spec.rs"
 
 [[example]]
-name = "basic_tagging"
+name = "expand_iso_matrix"
+path = "../examples/src/expand_iso_matrix.rs"
 
 [[example]]
-name = "parse_pdf"
-
-[[example]]
-name = "jpeg_image"
-
-[[example]]
-name = "comprehensive_demo"
-
-[[example]]
-name = "parse_and_extract"
-
-[[example]]
-name = "tesseract_ocr_demo"
-required-features = ["ocr-tesseract"]
-
-[[example]]
-name = "memory_optimization"
-
-[[example]]
-name = "metadata"
+name = "compare_iso_matrices"
+path = "../examples/src/compare_iso_matrices.rs"
 
 # Temporarily disabled examples with compilation errors
 # [[example]]
@@ -148,4 +147,4 @@ ocr-full = ["ocr-tesseract"]
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
 
 # Semantic marking (Community level - basic tagging)
-semantic = ["dep:serde", "dep:serde_json"]
+semantic = ["dep:serde_json"]

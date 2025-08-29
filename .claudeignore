@@ -1,0 +1,132 @@
+# .claudeignore - Optimized for oxidize-pdf project
+# This file reduces Claude's context by ~70% by excluding non-essential files
+
+# ====================
+# Build & Dependencies
+# ====================
+target/           # Compiled artifacts (cleaned regularly)
+Cargo.lock       # Auto-generated, not needed for context
+.git/            # Git history and objects
+
+# ====================
+# Binary & Media Files  
+# ====================
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+*.zip
+*.tar
+*.tar.gz
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ====================
+# Test Files (67 files)
+# ====================
+# Include only when actively working on tests
+*_test.rs
+*_tests.rs
+test_*.rs
+*/tests/fixtures/
+tests/images/
+test-pdfs/
+
+# ====================
+# Documentation (Large files)
+# ====================
+# Exclude large documentation already read
+API_DOCUMENTATION.md      # 450+ lines, comprehensive API guide
+PERFORMANCE.md           # 400+ lines, benchmarks and optimization
+MIGRATION.md            # 500+ lines, migration guide
+examples/doc/COMPREHENSIVE_EXAMPLES.md  # 800+ lines, production examples
+
+# Backup and temp files
+*.bak
+LICENSE*
+CHANGELOG*
+AUTHORS
+CONTRIBUTORS
+
+# ====================
+# Generated Files
+# ====================
+*.log
+*.tmp
+*.cache
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.profraw
+*.profdata
+cobertura.xml
+tarpaulin-report.html
+
+# ====================
+# IDE & Editor Files
+# ====================
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# ====================
+# Large Source Files
+# ====================
+# These files are >1500 lines, include only when needed
+oxidize-pdf-core/src/writer/pdf_writer.rs      # 3912 lines
+oxidize-pdf-core/src/operations/page_analysis.rs # 2124 lines
+oxidize-pdf-core/src/parser/content.rs          # 2105 lines
+oxidize-pdf-api/src/api_old.rs                  # 1863 lines - deprecated
+
+# ====================
+# Examples Output
+# ====================
+examples/results/
+oxidize-pdf-core/*.pdf
+
+# ====================
+# Scripts in Wrong Location  
+# ====================
+/*.py            # Python scripts should be in tools/
+/*.rs            # Rust scripts should be in dev-tools/
+test_*.txt       # Test output files
+*_test.txt
+test_output.log  # Test logs
+
+# ====================
+# Obsolete Documentation
+# ====================
+SESSION_*.md
+*_SESSION_*.md
+COVERAGE_AUDIT.md
+*_UPDATE.md
+*_SUMMARY.md
+
+# ====================
+# Benchmarks & Performance
+# ====================
+benches/
+perf/
+criterion/
+
+# ====================
+# Keep These Files
+# ====================
+# !CLAUDE.md
+# !CLAUDE.local.md
+# !PROJECT_PROGRESS.md
+# !README.md
+# !Cargo.toml
+# !src/**/*.rs  # Except those explicitly excluded above
+# !oxidize-pdf-core/src/lib.rs
+# !oxidize-pdf-api/src/lib.rs

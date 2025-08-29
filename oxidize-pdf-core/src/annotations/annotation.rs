@@ -206,6 +206,8 @@ pub struct Annotation {
     pub rect: Rectangle,
     /// Optional content text
     pub contents: Option<String>,
+    /// Optional subject
+    pub subject: Option<String>,
     /// Optional annotation name
     pub name: Option<String>,
     /// Modification date
@@ -229,6 +231,7 @@ impl Annotation {
             annotation_type,
             rect,
             contents: None,
+            subject: None,
             name: None,
             modified: None,
             flags: AnnotationFlags {
@@ -245,6 +248,12 @@ impl Annotation {
     /// Set contents
     pub fn with_contents(mut self, contents: impl Into<String>) -> Self {
         self.contents = Some(contents.into());
+        self
+    }
+
+    /// Set subject
+    pub fn with_subject(mut self, subject: impl Into<String>) -> Self {
+        self.subject = Some(subject.into());
         self
     }
 
@@ -272,6 +281,14 @@ impl Annotation {
         self
     }
 
+    /// Set field dictionary properties (for widget annotations)
+    pub fn set_field_dict(&mut self, field_dict: Dictionary) {
+        // Merge field dictionary into properties
+        for (key, value) in field_dict.iter() {
+            self.properties.set(key, value.clone());
+        }
+    }
+
     /// Convert to PDF dictionary
     pub fn to_dict(&self) -> Dictionary {
         let mut dict = Dictionary::new();
@@ -295,6 +312,10 @@ impl Annotation {
         // Optional fields
         if let Some(ref contents) = self.contents {
             dict.set("Contents", Object::String(contents.clone()));
+        }
+
+        if let Some(ref subject) = self.subject {
+            dict.set("Subj", Object::String(subject.clone()));
         }
 
         if let Some(ref name) = self.name {

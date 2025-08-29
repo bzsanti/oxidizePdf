@@ -332,4 +332,221 @@ mod tests {
         assert_eq!(to_letters(26, false), "z");
         assert_eq!(to_letters(27, false), "aa");
     }
+
+    #[test]
+    fn test_page_label_style_to_pdf_name() {
+        assert_eq!(PageLabelStyle::DecimalArabic.to_pdf_name(), Some("D"));
+        assert_eq!(PageLabelStyle::UppercaseRoman.to_pdf_name(), Some("r"));
+        assert_eq!(PageLabelStyle::LowercaseRoman.to_pdf_name(), Some("R"));
+        assert_eq!(PageLabelStyle::UppercaseLetters.to_pdf_name(), Some("A"));
+        assert_eq!(PageLabelStyle::LowercaseLetters.to_pdf_name(), Some("a"));
+        assert_eq!(PageLabelStyle::None.to_pdf_name(), None);
+    }
+
+    #[test]
+    fn test_page_label_with_all_styles() {
+        // Test all constructor methods
+        let decimal = PageLabel::decimal();
+        assert_eq!(decimal.style, PageLabelStyle::DecimalArabic);
+
+        let roman_upper = PageLabel::roman_uppercase();
+        assert_eq!(roman_upper.style, PageLabelStyle::UppercaseRoman);
+
+        let roman_lower = PageLabel::roman_lowercase();
+        assert_eq!(roman_lower.style, PageLabelStyle::LowercaseRoman);
+
+        let letters_upper = PageLabel::letters_uppercase();
+        assert_eq!(letters_upper.style, PageLabelStyle::UppercaseLetters);
+
+        let letters_lower = PageLabel::letters_lowercase();
+        assert_eq!(letters_lower.style, PageLabelStyle::LowercaseLetters);
+
+        let prefix_only = PageLabel::prefix_only("Prefix");
+        assert_eq!(prefix_only.style, PageLabelStyle::None);
+        assert_eq!(prefix_only.prefix, Some("Prefix".to_string()));
+    }
+
+    #[test]
+    fn test_page_label_chaining() {
+        let label = PageLabel::decimal().with_prefix("Page ").starting_at(10);
+
+        assert_eq!(label.style, PageLabelStyle::DecimalArabic);
+        assert_eq!(label.prefix, Some("Page ".to_string()));
+        assert_eq!(label.start, 10);
+
+        // Test formatting with chained settings
+        assert_eq!(label.format_label(0), "Page 10");
+        assert_eq!(label.format_label(5), "Page 15");
+    }
+
+    #[test]
+    fn test_format_label_edge_cases() {
+        // Test with empty prefix
+        let label = PageLabel::decimal().with_prefix("");
+        assert_eq!(label.format_label(0), "1");
+
+        // Test with long prefix
+        let long_prefix = "This is a very long prefix that might appear in some documents: ";
+        let label = PageLabel::roman_uppercase().with_prefix(long_prefix);
+        assert_eq!(label.format_label(0), format!("{}I", long_prefix));
+
+        // Test with high starting number
+        let label = PageLabel::decimal().starting_at(9999);
+        assert_eq!(label.format_label(0), "9999");
+        assert_eq!(label.format_label(1), "10000");
+    }
+
+    #[test]
+    fn test_roman_edge_cases() {
+        // Test edge cases for roman numerals
+        assert_eq!(to_roman(49), "xlix");
+        assert_eq!(to_roman(99), "xcix");
+        assert_eq!(to_roman(499), "cdxcix");
+        assert_eq!(to_roman(999), "cmxcix");
+        assert_eq!(to_roman(1444), "mcdxliv");
+        assert_eq!(to_roman(1994), "mcmxciv");
+        assert_eq!(to_roman(2023), "mmxxiii");
+
+        // Test with style formatting
+        assert_eq!(PageLabelStyle::UppercaseRoman.format(49), "XLIX");
+        assert_eq!(PageLabelStyle::LowercaseRoman.format(49), "xlix");
+    }
+
+    #[test]
+    fn test_letter_edge_cases() {
+        // Test more letter conversion cases
+        assert_eq!(to_letters(78, true), "BZ"); // 26*2 + 26
+        assert_eq!(to_letters(104, true), "CZ"); // 26*3 + 26
+        assert_eq!(to_letters(701, true), "ZY"); // Last before ZZ
+        assert_eq!(to_letters(728, true), "AAZ"); // 26*26 + 26 + 26
+        assert_eq!(to_letters(1378, true), "AZZ"); // Complex case
+
+        // Lowercase versions
+        assert_eq!(to_letters(78, false), "bz");
+        assert_eq!(to_letters(104, false), "cz");
+        assert_eq!(to_letters(701, false), "zy");
+    }
+
+    #[test]
+    fn test_prefix_only_variations() {
+        // Test prefix-only labels with different content
+        let label1 = PageLabel::prefix_only("Cover");
+        assert_eq!(label1.format_label(0), "Cover");
+        assert_eq!(label1.format_label(100), "Cover"); // Should always be same
+
+        let label2 = PageLabel::prefix_only("Appendix A");
+        assert_eq!(label2.format_label(0), "Appendix A");
+
+        // Unicode prefix
+        let label3 = PageLabel::prefix_only("附录");
+        assert_eq!(label3.format_label(0), "附录");
+
+        // Special characters
+        let label4 = PageLabel::prefix_only("§1");
+        assert_eq!(label4.format_label(0), "§1");
+    }
+
+    #[test]
+    fn test_to_dict_comprehensive() {
+        // Test dictionary generation with all combinations
+        let label1 = PageLabel::new(PageLabelStyle::DecimalArabic);
+        let dict1 = label1.to_dict();
+        assert_eq!(dict1.get("Type"), Some(&Object::Name("D".to_string())));
+        assert!(dict1.get("P").is_none()); // No prefix
+        assert!(dict1.get("St").is_none()); // Default start (1)
+
+        let label2 = PageLabel::new(PageLabelStyle::UppercaseLetters)
+            .with_prefix("Section ")
+            .starting_at(10);
+        let dict2 = label2.to_dict();
+        assert_eq!(dict2.get("Type"), Some(&Object::Name("A".to_string())));
+        assert_eq!(
+            dict2.get("P"),
+            Some(&Object::String("Section ".to_string()))
+        );
+        assert_eq!(dict2.get("St"), Some(&Object::Integer(10)));
+
+        // Test prefix-only (no Type field)
+        let label3 = PageLabel::prefix_only("Index");
+        let dict3 = label3.to_dict();
+        assert!(dict3.get("Type").is_none());
+        assert_eq!(dict3.get("P"), Some(&Object::String("Index".to_string())));
+    }
+
+    #[test]
+    fn test_sequential_page_labels() {
+        // Simulate a document with different label ranges
+        let front_matter = PageLabel::roman_lowercase().with_prefix("");
+        let main_content = PageLabel::decimal().starting_at(1);
+        let appendix = PageLabel::letters_uppercase().with_prefix("Appendix ");
+
+        // Front matter pages (i, ii, iii, iv)
+        assert_eq!(front_matter.format_label(0), "i");
+        assert_eq!(front_matter.format_label(1), "ii");
+        assert_eq!(front_matter.format_label(2), "iii");
+        assert_eq!(front_matter.format_label(3), "iv");
+
+        // Main content (1, 2, 3...)
+        assert_eq!(main_content.format_label(0), "1");
+        assert_eq!(main_content.format_label(99), "100");
+
+        // Appendix (Appendix A, Appendix B...)
+        assert_eq!(appendix.format_label(0), "Appendix A");
+        assert_eq!(appendix.format_label(1), "Appendix B");
+        assert_eq!(appendix.format_label(25), "Appendix Z");
+    }
+
+    #[test]
+    fn test_large_number_formatting() {
+        // Test with very large numbers
+        let label = PageLabel::decimal().starting_at(999999);
+        assert_eq!(label.format_label(0), "999999");
+        assert_eq!(label.format_label(1), "1000000");
+
+        // Roman numerals with large numbers (typically capped at 3999)
+        assert_eq!(to_roman(4000), "mmmm"); // Graceful handling
+        assert_eq!(to_roman(5000), "mmmmm");
+
+        // Letters with large numbers
+        assert_eq!(to_letters(18278, true).len() > 0, true); // Should produce something
+    }
+
+    #[test]
+    fn test_special_prefix_combinations() {
+        // Test various prefix and style combinations
+        let combinations = vec![
+            (PageLabel::decimal().with_prefix("№"), 0, "№1"),
+            (
+                PageLabel::roman_uppercase().with_prefix("Chapter "),
+                0,
+                "Chapter I",
+            ),
+            (
+                PageLabel::letters_lowercase()
+                    .with_prefix("(")
+                    .with_prefix(")"),
+                0,
+                ")a",
+            ),
+            (
+                PageLabel::decimal().with_prefix("Page ").starting_at(100),
+                0,
+                "Page 100",
+            ),
+        ];
+
+        for (label, offset, expected) in combinations {
+            assert_eq!(label.format_label(offset), expected);
+        }
+    }
+
+    #[test]
+    fn test_clone_and_equality() {
+        let label1 = PageLabel::decimal().with_prefix("Page ");
+        let label2 = label1.clone();
+
+        assert_eq!(label1.style, label2.style);
+        assert_eq!(label1.prefix, label2.prefix);
+        assert_eq!(label1.start, label2.start);
+    }
 }

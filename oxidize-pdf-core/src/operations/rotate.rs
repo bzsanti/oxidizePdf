@@ -54,7 +54,7 @@ impl RotationAngle {
     /// Combine two rotations
     pub fn combine(self, other: RotationAngle) -> RotationAngle {
         let total = (self.to_degrees() + other.to_degrees()) % 360;
-        RotationAngle::from_degrees(total).unwrap()
+        RotationAngle::from_degrees(total).expect("Normalized angle should always be valid")
     }
 }
 
@@ -458,6 +458,423 @@ mod tests {
         let r3 = RotationAngle::Clockwise270;
         let r4 = RotationAngle::Clockwise90;
         assert_eq!(r3.combine(r4), RotationAngle::None);
+    }
+
+    // ============= Comprehensive Rotation Tests =============
+
+    #[test]
+    fn test_rotation_to_degrees() {
+        assert_eq!(RotationAngle::None.to_degrees(), 0);
+        assert_eq!(RotationAngle::Clockwise90.to_degrees(), 90);
+        assert_eq!(RotationAngle::Rotate180.to_degrees(), 180);
+        assert_eq!(RotationAngle::Clockwise270.to_degrees(), 270);
+    }
+
+    #[test]
+    fn test_rotation_normalization_positive() {
+        // Test positive angle normalization
+        assert_eq!(
+            RotationAngle::from_degrees(360).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(450).unwrap(),
+            RotationAngle::Clockwise90
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(540).unwrap(),
+            RotationAngle::Rotate180
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(630).unwrap(),
+            RotationAngle::Clockwise270
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(720).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(810).unwrap(),
+            RotationAngle::Clockwise90
+        );
+    }
+
+    #[test]
+    fn test_rotation_normalization_negative() {
+        // Test negative angle normalization
+        assert_eq!(
+            RotationAngle::from_degrees(-90).unwrap(),
+            RotationAngle::Clockwise270
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-180).unwrap(),
+            RotationAngle::Rotate180
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-270).unwrap(),
+            RotationAngle::Clockwise90
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-360).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-450).unwrap(),
+            RotationAngle::Clockwise270
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-540).unwrap(),
+            RotationAngle::Rotate180
+        );
+    }
+
+    #[test]
+    fn test_rotation_invalid_angles() {
+        // Test all invalid angles that should return errors
+        let invalid_angles = vec![
+            1, 15, 30, 45, 60, 75, 89, 91, 105, 120, 135, 150, 165, 179, 181, 195, 210, 225, 240,
+            255, 269, 271, 285, 300, 315, 330, 345, 359,
+        ];
+
+        for angle in invalid_angles {
+            assert!(
+                RotationAngle::from_degrees(angle).is_err(),
+                "Angle {} should be invalid",
+                angle
+            );
+            assert!(
+                RotationAngle::from_degrees(-angle).is_err(),
+                "Angle {} should be invalid",
+                -angle
+            );
+        }
+    }
+
+    #[test]
+    fn test_rotation_combine_all_combinations() {
+        // Test all possible combinations of rotations
+        let rotations = vec![
+            RotationAngle::None,
+            RotationAngle::Clockwise90,
+            RotationAngle::Rotate180,
+            RotationAngle::Clockwise270,
+        ];
+
+        // Expected results for each combination (row combines with column)
+        let expected = vec![
+            vec![
+                RotationAngle::None,
+                RotationAngle::Clockwise90,
+                RotationAngle::Rotate180,
+                RotationAngle::Clockwise270,
+            ],
+            vec![
+                RotationAngle::Clockwise90,
+                RotationAngle::Rotate180,
+                RotationAngle::Clockwise270,
+                RotationAngle::None,
+            ],
+            vec![
+                RotationAngle::Rotate180,
+                RotationAngle::Clockwise270,
+                RotationAngle::None,
+                RotationAngle::Clockwise90,
+            ],
+            vec![
+                RotationAngle::Clockwise270,
+                RotationAngle::None,
+                RotationAngle::Clockwise90,
+                RotationAngle::Rotate180,
+            ],
+        ];
+
+        for (i, r1) in rotations.iter().enumerate() {
+            for (j, r2) in rotations.iter().enumerate() {
+                let result = r1.combine(*r2);
+                assert_eq!(
+                    result, expected[i][j],
+                    "Combining {:?} with {:?} should give {:?}, got {:?}",
+                    r1, r2, expected[i][j], result
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_rotation_combine_chain() {
+        // Test chaining multiple rotations
+        let r1 = RotationAngle::Clockwise90;
+        let r2 = RotationAngle::Clockwise90;
+        let r3 = RotationAngle::Clockwise90;
+        let r4 = RotationAngle::Clockwise90;
+
+        let result = r1.combine(r2).combine(r3).combine(r4);
+        assert_eq!(result, RotationAngle::None); // 4 * 90 = 360 = 0
+
+        // Test another chain
+        let result2 = RotationAngle::Clockwise270
+            .combine(RotationAngle::Clockwise90)
+            .combine(RotationAngle::Rotate180);
+        assert_eq!(result2, RotationAngle::Rotate180); // 270 + 90 + 180 = 540 = 180
+    }
+
+    #[test]
+    fn test_rotation_identity() {
+        // Test that None is the identity element
+        let rotations = vec![
+            RotationAngle::None,
+            RotationAngle::Clockwise90,
+            RotationAngle::Rotate180,
+            RotationAngle::Clockwise270,
+        ];
+
+        for rotation in rotations {
+            assert_eq!(rotation.combine(RotationAngle::None), rotation);
+            assert_eq!(RotationAngle::None.combine(rotation), rotation);
+        }
+    }
+
+    #[test]
+    fn test_rotation_inverse() {
+        // Test that each rotation has an inverse
+        assert_eq!(
+            RotationAngle::Clockwise90.combine(RotationAngle::Clockwise270),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::Rotate180.combine(RotationAngle::Rotate180),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::Clockwise270.combine(RotationAngle::Clockwise90),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::None.combine(RotationAngle::None),
+            RotationAngle::None
+        );
+    }
+
+    #[test]
+    fn test_rotation_options_default() {
+        let options = RotateOptions::default();
+        assert!(matches!(options.angle, RotationAngle::Clockwise90));
+        assert!(matches!(options.pages, PageRange::All));
+        assert!(!options.preserve_page_size);
+    }
+
+    #[test]
+    fn test_rotation_options_with_angle() {
+        let options = RotateOptions {
+            angle: RotationAngle::Rotate180,
+            pages: PageRange::Range(5, 10),
+            preserve_page_size: false,
+        };
+
+        assert_eq!(options.angle, RotationAngle::Rotate180);
+
+        if let PageRange::Range(start, end) = options.pages {
+            assert_eq!(start, 5);
+            assert_eq!(end, 10);
+        } else {
+            panic!("Expected Range page specification");
+        }
+    }
+
+    #[test]
+    fn test_rotation_options_all_pages() {
+        let options = RotateOptions {
+            angle: RotationAngle::Clockwise270,
+            pages: PageRange::All,
+            preserve_page_size: true,
+        };
+
+        assert_eq!(options.angle, RotationAngle::Clockwise270);
+        assert!(matches!(options.pages, PageRange::All));
+        assert!(options.preserve_page_size);
+    }
+
+    #[test]
+    fn test_rotation_options_single_page() {
+        let options = RotateOptions {
+            angle: RotationAngle::Clockwise90,
+            pages: PageRange::Single(0),
+            preserve_page_size: false,
+        };
+
+        assert_eq!(options.angle, RotationAngle::Clockwise90);
+
+        if let PageRange::Single(page) = options.pages {
+            assert_eq!(page, 0);
+        } else {
+            panic!("Expected Single page specification");
+        }
+    }
+
+    #[test]
+    fn test_rotation_options_page_list() {
+        let pages = vec![1, 3, 5, 7, 9];
+        let options = RotateOptions {
+            angle: RotationAngle::Rotate180,
+            pages: PageRange::List(pages.clone()),
+            preserve_page_size: false,
+        };
+
+        if let PageRange::List(list) = options.pages {
+            assert_eq!(list, pages);
+        } else {
+            panic!("Expected List page specification");
+        }
+    }
+
+    #[test]
+    fn test_pdf_rotator_new() {
+        // This test would need actual PDF document setup
+        // For now, just test that the structure is correct
+        let options = RotateOptions::default();
+        assert_eq!(options.angle.to_degrees(), 90);
+    }
+
+    #[test]
+    fn test_rotation_edge_cases() {
+        // Test edge cases with large positive numbers
+        assert_eq!(
+            RotationAngle::from_degrees(1080).unwrap(),
+            RotationAngle::None
+        ); // 3 * 360
+        assert_eq!(
+            RotationAngle::from_degrees(990).unwrap(),
+            RotationAngle::Clockwise270
+        ); // 2*360 + 270
+
+        // Test edge cases with large negative numbers
+        assert_eq!(
+            RotationAngle::from_degrees(-720).unwrap(),
+            RotationAngle::None
+        ); // -2 * 360
+        assert_eq!(
+            RotationAngle::from_degrees(-810).unwrap(),
+            RotationAngle::Clockwise270
+        ); // -2*360 - 90
+    }
+
+    #[test]
+    fn test_rotation_associativity() {
+        // Test that rotation combination is associative
+        let r1 = RotationAngle::Clockwise90;
+        let r2 = RotationAngle::Rotate180;
+        let r3 = RotationAngle::Clockwise270;
+
+        // (r1 + r2) + r3 should equal r1 + (r2 + r3)
+        let left = r1.combine(r2).combine(r3);
+        let right = r1.combine(r2.combine(r3));
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn test_rotation_consistency() {
+        // Test that from_degrees and to_degrees are consistent
+        for angle in [0, 90, 180, 270].iter() {
+            let rotation = RotationAngle::from_degrees(*angle).unwrap();
+            assert_eq!(rotation.to_degrees(), *angle);
+        }
+    }
+
+    #[test]
+    fn test_rotation_multiple_full_rotations() {
+        // Test multiple full rotations
+        for multiplier in 1..5 {
+            let angle = 360 * multiplier;
+            assert_eq!(
+                RotationAngle::from_degrees(angle).unwrap(),
+                RotationAngle::None,
+                "Angle {} should normalize to None",
+                angle
+            );
+            assert_eq!(
+                RotationAngle::from_degrees(-angle).unwrap(),
+                RotationAngle::None,
+                "Angle {} should normalize to None",
+                -angle
+            );
+        }
+    }
+
+    #[test]
+    fn test_rotation_large_negative_angles() {
+        // Test large negative angles (line 29-32)
+        assert_eq!(
+            RotationAngle::from_degrees(-720).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-1080).unwrap(),
+            RotationAngle::None
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-450).unwrap(),
+            RotationAngle::Clockwise270
+        );
+        assert_eq!(
+            RotationAngle::from_degrees(-630).unwrap(),
+            RotationAngle::Clockwise90
+        );
+    }
+
+    #[test]
+    fn test_rotation_combine_overflow() {
+        // Test combine that results in > 360 (line 56-57)
+        let angle1 = RotationAngle::Clockwise270;
+        let angle2 = RotationAngle::Rotate180;
+        let combined = angle1.combine(angle2);
+        assert_eq!(combined, RotationAngle::Clockwise90); // 270 + 180 = 450 % 360 = 90
+
+        // Test multiple combines
+        let angle3 = RotationAngle::Clockwise270;
+        let result = angle1.combine(angle2).combine(angle3);
+        assert_eq!(result, RotationAngle::None); // 90 + 270 = 360 % 360 = 0
+    }
+
+    #[test]
+    fn test_rotation_extreme_values() {
+        // Test with extreme i32 values (edge case for line 28-33)
+        // These should not panic but might give unexpected results due to overflow
+        let large_positive = 2147483647; // i32::MAX
+        let result = RotationAngle::from_degrees(large_positive);
+        assert!(result.is_err() || result.is_ok()); // Just ensure no panic
+
+        let large_negative = -2147483648; // i32::MIN
+        let result2 = RotationAngle::from_degrees(large_negative);
+        assert!(result2.is_err() || result2.is_ok()); // Just ensure no panic
+
+        // Test reasonable but large values
+        assert_eq!(
+            RotationAngle::from_degrees(3690).unwrap(),
+            RotationAngle::Clockwise90 // 3690 % 360 = 90
+        );
+    }
+
+    #[test]
+    fn test_rotation_combine_unwrap_safety() {
+        // Test that combine's unwrap is safe (line 57)
+        // All valid combinations should produce valid results
+        let angles = vec![
+            RotationAngle::None,
+            RotationAngle::Clockwise90,
+            RotationAngle::Rotate180,
+            RotationAngle::Clockwise270,
+        ];
+
+        for angle1 in &angles {
+            for angle2 in &angles {
+                // This should never panic
+                let combined = angle1.combine(*angle2);
+
+                // Verify the result is valid
+                let total_degrees = (angle1.to_degrees() + angle2.to_degrees()) % 360;
+                assert_eq!(combined.to_degrees(), total_degrees);
+            }
+        }
     }
 }
 

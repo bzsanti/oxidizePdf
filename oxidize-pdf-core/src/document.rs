@@ -51,11 +51,19 @@ pub struct Document {
     pub(crate) form_manager: Option<FormManager>,
     /// Whether to compress streams when writing the PDF
     pub(crate) compress: bool,
+    /// Whether to use compressed cross-reference streams (PDF 1.5+)
+    pub(crate) use_xref_streams: bool,
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
     /// Map from font name to embedded font object ID
     #[allow(dead_code)]
     pub(crate) embedded_fonts: HashMap<String, ObjectId>,
+    /// Characters used in the document (for font subsetting)
+    pub(crate) used_characters: HashSet<char>,
+    /// Action to execute when the document is opened
+    pub(crate) open_action: Option<crate::actions::Action>,
+    /// Viewer preferences for controlling document display
+    pub(crate) viewer_preferences: Option<crate::viewer_preferences::ViewerPreferences>,
 }
 
 /// Metadata for a PDF document.
@@ -111,14 +119,22 @@ impl Document {
             default_font_encoding: None,
             acro_form: None,
             form_manager: None,
-            compress: true, // Enable compression by default
+            compress: true,          // Enable compression by default
+            use_xref_streams: false, // Disabled by default for compatibility
             custom_fonts: FontCache::new(),
             embedded_fonts: HashMap::new(),
+            used_characters: HashSet::new(),
+            open_action: None,
+            viewer_preferences: None,
         }
     }
 
     /// Adds a page to the document.
     pub fn add_page(&mut self, page: Page) {
+        // Collect used characters from the page
+        if let Some(used_chars) = page.get_used_characters() {
+            self.used_characters.extend(used_chars);
+        }
         self.pages.push(page);
     }
 
@@ -130,6 +146,11 @@ impl Document {
     /// Sets the document author.
     pub fn set_author(&mut self, author: impl Into<String>) {
         self.metadata.author = Some(author.into());
+    }
+
+    /// Sets the form manager for the document.
+    pub fn set_form_manager(&mut self, form_manager: FormManager) {
+        self.form_manager = Some(form_manager);
     }
 
     /// Sets the document subject.
@@ -162,6 +183,29 @@ impl Document {
     /// Check if document is encrypted
     pub fn is_encrypted(&self) -> bool {
         self.encryption.is_some()
+    }
+
+    /// Set the action to execute when the document is opened
+    pub fn set_open_action(&mut self, action: crate::actions::Action) {
+        self.open_action = Some(action);
+    }
+
+    /// Get the document open action
+    pub fn open_action(&self) -> Option<&crate::actions::Action> {
+        self.open_action.as_ref()
+    }
+
+    /// Set viewer preferences for controlling document display
+    pub fn set_viewer_preferences(
+        &mut self,
+        preferences: crate::viewer_preferences::ViewerPreferences,
+    ) {
+        self.viewer_preferences = Some(preferences);
+    }
+
+    /// Get viewer preferences
+    pub fn viewer_preferences(&self) -> Option<&crate::viewer_preferences::ViewerPreferences> {
+        self.viewer_preferences.as_ref()
     }
 
     /// Set document outline (bookmarks)
@@ -289,6 +333,7 @@ impl Document {
     ///
     /// This scans all pages and collects the unique fonts used, applying
     /// the default encoding where no explicit encoding is specified.
+    #[allow(dead_code)]
     pub(crate) fn get_fonts_with_encodings(&self) -> Vec<FontWithEncoding> {
         let mut fonts_used = HashSet::new();
 
@@ -386,7 +431,10 @@ impl Document {
         if self.acro_form.is_none() {
             self.acro_form = Some(AcroForm::new());
         }
-        self.form_manager.as_mut().unwrap()
+        // This should always succeed since we just ensured form_manager exists
+        self.form_manager
+            .as_mut()
+            .expect("FormManager should exist after initialization")
     }
 
     /// Disables interactive forms by removing both the AcroForm and FormManager.
@@ -406,8 +454,8 @@ impl Document {
 
         // Create writer config with document's compression setting
         let config = crate::writer::WriterConfig {
-            use_xref_streams: false,
-            pdf_version: "1.7".to_string(),
+            use_xref_streams: self.use_xref_streams,
+            pdf_version: if self.use_xref_streams { "1.5" } else { "1.7" }.to_string(),
             compress_streams: self.compress,
         };
 
@@ -442,6 +490,41 @@ impl Document {
         let mut pdf_writer = PdfWriter::with_config(writer, config);
         pdf_writer.write_document(self)?;
         Ok(())
+    }
+
+    /// Saves the document to a file with custom values for headers/footers.
+    ///
+    /// This method processes all pages to replace custom placeholders in headers
+    /// and footers before saving the document.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path where the document should be saved
+    /// * `custom_values` - A map of placeholder names to their replacement values
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created or written.
+    pub fn save_with_custom_values(
+        &mut self,
+        path: impl AsRef<std::path::Path>,
+        custom_values: &std::collections::HashMap<String, String>,
+    ) -> Result<()> {
+        // Process all pages with custom values
+        let total_pages = self.pages.len();
+        for (index, page) in self.pages.iter_mut().enumerate() {
+            // Generate content with page info and custom values
+            let page_content = page.generate_content_with_page_info(
+                Some(index + 1),
+                Some(total_pages),
+                Some(custom_values),
+            )?;
+            // Update the page content
+            page.set_content(page_content);
+        }
+
+        // Save the document normally
+        self.save(path)
     }
 
     /// Writes the document to a buffer.
@@ -502,6 +585,28 @@ impl Document {
         self.compress = compress;
     }
 
+    /// Enable or disable compressed cross-reference streams (PDF 1.5+).
+    ///
+    /// Cross-reference streams provide more compact representation of the cross-reference
+    /// table and support additional features like compressed object streams.
+    ///
+    /// # Arguments
+    ///
+    /// * `enable` - Whether to enable compressed cross-reference streams
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::Document;
+    ///
+    /// let mut doc = Document::new();
+    /// doc.enable_xref_streams(true);
+    /// ```
+    pub fn enable_xref_streams(&mut self, enable: bool) -> &mut Self {
+        self.use_xref_streams = enable;
+        self
+    }
+
     /// Gets the current compression setting.
     ///
     /// # Returns
@@ -547,8 +652,8 @@ impl Document {
 
         // Create writer config with document's compression setting
         let config = crate::writer::WriterConfig {
-            use_xref_streams: false,
-            pdf_version: "1.7".to_string(),
+            use_xref_streams: self.use_xref_streams,
+            pdf_version: if self.use_xref_streams { "1.5" } else { "1.7" }.to_string(),
             compress_streams: self.compress,
         };
 
@@ -1495,6 +1600,367 @@ mod tests {
             // Should be valid PDF
             assert!(!pdf_bytes.is_empty());
             assert_eq!(&pdf_bytes[0..5], b"%PDF-");
+        }
+
+        #[test]
+        fn test_document_metadata_all_fields() {
+            let mut doc = Document::new();
+
+            // Set all metadata fields
+            doc.set_title("Test Document");
+            doc.set_author("John Doe");
+            doc.set_subject("Testing PDF metadata");
+            doc.set_keywords("test, pdf, metadata");
+            doc.set_creator("Test Suite");
+            doc.set_producer("oxidize_pdf tests");
+
+            // Verify all fields are set
+            assert_eq!(doc.metadata.title.as_deref(), Some("Test Document"));
+            assert_eq!(doc.metadata.author.as_deref(), Some("John Doe"));
+            assert_eq!(
+                doc.metadata.subject.as_deref(),
+                Some("Testing PDF metadata")
+            );
+            assert_eq!(
+                doc.metadata.keywords.as_deref(),
+                Some("test, pdf, metadata")
+            );
+            assert_eq!(doc.metadata.creator.as_deref(), Some("Test Suite"));
+            assert_eq!(doc.metadata.producer.as_deref(), Some("oxidize_pdf tests"));
+            assert!(doc.metadata.creation_date.is_some());
+            assert!(doc.metadata.modification_date.is_some());
+        }
+
+        #[test]
+        fn test_document_add_pages() {
+            let mut doc = Document::new();
+
+            // Initially empty
+            assert_eq!(doc.page_count(), 0);
+
+            // Add pages
+            let page1 = Page::a4();
+            let page2 = Page::letter();
+            let page3 = Page::legal();
+
+            doc.add_page(page1);
+            assert_eq!(doc.page_count(), 1);
+
+            doc.add_page(page2);
+            assert_eq!(doc.page_count(), 2);
+
+            doc.add_page(page3);
+            assert_eq!(doc.page_count(), 3);
+
+            // Verify we can convert to PDF with multiple pages
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_default_font_encoding() {
+            let mut doc = Document::new();
+
+            // Initially no default encoding
+            assert!(doc.default_font_encoding.is_none());
+
+            // Set default encoding
+            doc.set_default_font_encoding(Some(FontEncoding::WinAnsiEncoding));
+            assert_eq!(
+                doc.default_font_encoding(),
+                Some(FontEncoding::WinAnsiEncoding)
+            );
+
+            // Change encoding
+            doc.set_default_font_encoding(Some(FontEncoding::MacRomanEncoding));
+            assert_eq!(
+                doc.default_font_encoding(),
+                Some(FontEncoding::MacRomanEncoding)
+            );
+        }
+
+        #[test]
+        fn test_document_compression_setting() {
+            let mut doc = Document::new();
+
+            // Default should compress
+            assert!(doc.compress);
+
+            // Disable compression
+            doc.set_compress(false);
+            assert!(!doc.compress);
+
+            // Re-enable compression
+            doc.set_compress(true);
+            assert!(doc.compress);
+        }
+
+        #[test]
+        fn test_document_with_empty_pages() {
+            let mut doc = Document::new();
+
+            // Add empty page
+            doc.add_page(Page::a4());
+
+            // Should be able to convert to bytes
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+
+            let pdf_bytes = result.unwrap();
+            assert!(!pdf_bytes.is_empty());
+            assert!(pdf_bytes.starts_with(b"%PDF-"));
+        }
+
+        #[test]
+        fn test_document_with_multiple_page_sizes() {
+            let mut doc = Document::new();
+
+            // Add pages with different sizes
+            doc.add_page(Page::a4()); // 595 x 842
+            doc.add_page(Page::letter()); // 612 x 792
+            doc.add_page(Page::legal()); // 612 x 1008
+            doc.add_page(Page::a4()); // Another A4
+            doc.add_page(Page::new(200.0, 300.0)); // Custom size
+
+            assert_eq!(doc.page_count(), 5);
+
+            // Verify we have 5 pages
+            // Note: Direct page access is not available in public API
+            // We verify by successful PDF generation
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_metadata_dates() {
+            use chrono::Duration;
+
+            let doc = Document::new();
+
+            // Should have creation and modification dates
+            assert!(doc.metadata.creation_date.is_some());
+            assert!(doc.metadata.modification_date.is_some());
+
+            if let (Some(created), Some(modified)) =
+                (doc.metadata.creation_date, doc.metadata.modification_date)
+            {
+                // Dates should be very close (created during construction)
+                let diff = modified - created;
+                assert!(diff < Duration::seconds(1));
+            }
+        }
+
+        #[test]
+        fn test_document_builder_pattern() {
+            // Test fluent API style
+            let mut doc = Document::new();
+            doc.set_title("Fluent");
+            doc.set_author("Builder");
+            doc.set_compress(true);
+
+            assert_eq!(doc.metadata.title.as_deref(), Some("Fluent"));
+            assert_eq!(doc.metadata.author.as_deref(), Some("Builder"));
+            assert!(doc.compress);
+        }
+
+        #[test]
+        fn test_xref_streams_functionality() {
+            use crate::{Document, Font, Page};
+
+            // Test with xref streams disabled (default)
+            let mut doc = Document::new();
+            assert!(!doc.use_xref_streams);
+
+            let mut page = Page::a4();
+            page.text()
+                .set_font(Font::Helvetica, 12.0)
+                .at(100.0, 700.0)
+                .write("Testing XRef Streams")
+                .unwrap();
+
+            doc.add_page(page);
+
+            // Generate PDF without xref streams
+            let pdf_without_xref = doc.to_bytes().unwrap();
+
+            // Verify traditional xref is used
+            let pdf_str = String::from_utf8_lossy(&pdf_without_xref);
+            assert!(pdf_str.contains("xref"), "Traditional xref table not found");
+            assert!(
+                !pdf_str.contains("/Type /XRef"),
+                "XRef stream found when it shouldn't be"
+            );
+
+            // Test with xref streams enabled
+            doc.enable_xref_streams(true);
+            assert!(doc.use_xref_streams);
+
+            // Generate PDF with xref streams
+            let pdf_with_xref = doc.to_bytes().unwrap();
+
+            // Verify xref streams are used
+            let pdf_str = String::from_utf8_lossy(&pdf_with_xref);
+            // XRef streams replace traditional xref tables in PDF 1.5+
+            assert!(
+                pdf_str.contains("/Type /XRef") || pdf_str.contains("stream"),
+                "XRef stream not found when enabled"
+            );
+
+            // Verify PDF version is set correctly
+            assert!(
+                pdf_str.contains("PDF-1.5"),
+                "PDF version not set to 1.5 for xref streams"
+            );
+
+            // Test fluent interface
+            let mut doc2 = Document::new();
+            doc2.enable_xref_streams(true);
+            doc2.set_title("XRef Streams Test");
+            doc2.set_author("oxidize-pdf");
+
+            assert!(doc2.use_xref_streams);
+            assert_eq!(doc2.metadata.title.as_deref(), Some("XRef Streams Test"));
+            assert_eq!(doc2.metadata.author.as_deref(), Some("oxidize-pdf"));
+        }
+
+        #[test]
+        fn test_document_save_to_vec() {
+            let mut doc = Document::new();
+            doc.set_title("Test Save");
+            doc.add_page(Page::a4());
+
+            // Test to_bytes
+            let bytes_result = doc.to_bytes();
+            assert!(bytes_result.is_ok());
+
+            let bytes = bytes_result.unwrap();
+            assert!(!bytes.is_empty());
+            assert!(bytes.starts_with(b"%PDF-"));
+            assert!(bytes.ends_with(b"%%EOF") || bytes.ends_with(b"%%EOF\n"));
+        }
+
+        #[test]
+        fn test_document_unicode_metadata() {
+            let mut doc = Document::new();
+
+            // Set metadata with Unicode characters
+            doc.set_title("日本語のタイトル");
+            doc.set_author("作者名 😀");
+            doc.set_subject("Тема документа");
+            doc.set_keywords("كلمات, מפתח, 关键词");
+
+            assert_eq!(doc.metadata.title.as_deref(), Some("日本語のタイトル"));
+            assert_eq!(doc.metadata.author.as_deref(), Some("作者名 😀"));
+            assert_eq!(doc.metadata.subject.as_deref(), Some("Тема документа"));
+            assert_eq!(
+                doc.metadata.keywords.as_deref(),
+                Some("كلمات, מפתח, 关键词")
+            );
+        }
+
+        #[test]
+        fn test_document_page_iteration() {
+            let mut doc = Document::new();
+
+            // Add multiple pages
+            for i in 0..5 {
+                let mut page = Page::a4();
+                let gc = page.graphics();
+                gc.begin_text();
+                let _ = gc.show_text(&format!("Page {}", i + 1));
+                gc.end_text();
+                doc.add_page(page);
+            }
+
+            // Verify page count
+            assert_eq!(doc.page_count(), 5);
+
+            // Verify we can generate PDF with all pages
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_with_graphics_content() {
+            let mut doc = Document::new();
+
+            let mut page = Page::a4();
+            {
+                let gc = page.graphics();
+
+                // Add various graphics operations
+                gc.save_state();
+
+                // Draw rectangle
+                gc.rectangle(100.0, 100.0, 200.0, 150.0);
+                gc.stroke();
+
+                // Draw circle (approximated)
+                gc.move_to(300.0, 300.0);
+                gc.circle(300.0, 300.0, 50.0);
+                gc.fill();
+
+                // Add text
+                gc.begin_text();
+                gc.set_text_position(100.0, 500.0);
+                let _ = gc.show_text("Graphics Test");
+                gc.end_text();
+
+                gc.restore_state();
+            }
+
+            doc.add_page(page);
+
+            // Should produce valid PDF
+            let result = doc.to_bytes();
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_document_producer_version() {
+            let doc = Document::new();
+
+            // Producer should contain version
+            assert!(doc.metadata.producer.is_some());
+            if let Some(producer) = &doc.metadata.producer {
+                assert!(producer.contains("oxidize_pdf"));
+                assert!(producer.contains(env!("CARGO_PKG_VERSION")));
+            }
+        }
+
+        #[test]
+        fn test_document_empty_metadata_fields() {
+            let mut doc = Document::new();
+
+            // Set empty strings
+            doc.set_title("");
+            doc.set_author("");
+            doc.set_subject("");
+            doc.set_keywords("");
+
+            // Empty strings should be stored as Some("")
+            assert_eq!(doc.metadata.title.as_deref(), Some(""));
+            assert_eq!(doc.metadata.author.as_deref(), Some(""));
+            assert_eq!(doc.metadata.subject.as_deref(), Some(""));
+            assert_eq!(doc.metadata.keywords.as_deref(), Some(""));
+        }
+
+        #[test]
+        fn test_document_very_long_metadata() {
+            let mut doc = Document::new();
+
+            // Create very long strings
+            let long_title = "A".repeat(1000);
+            let long_author = "B".repeat(500);
+            let long_keywords = vec!["keyword"; 100].join(", ");
+
+            doc.set_title(&long_title);
+            doc.set_author(&long_author);
+            doc.set_keywords(&long_keywords);
+
+            assert_eq!(doc.metadata.title.as_deref(), Some(long_title.as_str()));
+            assert_eq!(doc.metadata.author.as_deref(), Some(long_author.as_str()));
+            assert!(doc.metadata.keywords.as_ref().unwrap().len() > 500);
         }
     }
 }

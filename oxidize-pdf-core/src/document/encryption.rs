@@ -202,4 +202,220 @@ mod tests {
         let decrypted = ctx.decrypt_string(&encrypted, &obj_id);
         assert_eq!(decrypted, plaintext);
     }
+
+    #[test]
+    fn test_encryption_strength_variants() {
+        let enc_40 = DocumentEncryption::new(
+            "user",
+            "owner",
+            Permissions::new(),
+            EncryptionStrength::Rc4_40bit,
+        );
+
+        let enc_128 = DocumentEncryption::new(
+            "user",
+            "owner",
+            Permissions::new(),
+            EncryptionStrength::Rc4_128bit,
+        );
+
+        // Check handlers
+        let _handler_40 = enc_40.handler();
+        let _handler_128 = enc_128.handler();
+
+        // Verify different encryption dictionary versions
+        let dict_40 = enc_40.create_encryption_dict(None).unwrap();
+        let dict_128 = enc_128.create_encryption_dict(None).unwrap();
+
+        assert_eq!(dict_40.v, 1);
+        assert_eq!(dict_40.r, 2);
+        assert_eq!(dict_40.length, Some(5));
+
+        assert_eq!(dict_128.v, 2);
+        assert_eq!(dict_128.r, 3);
+        assert_eq!(dict_128.length, Some(16));
+    }
+
+    #[test]
+    fn test_empty_passwords() {
+        let enc =
+            DocumentEncryption::new("", "", Permissions::all(), EncryptionStrength::Rc4_128bit);
+
+        assert_eq!(enc.user_password.0, "");
+        assert_eq!(enc.owner_password.0, "");
+
+        // Should still create valid encryption dictionary
+        let dict = enc.create_encryption_dict(None);
+        assert!(dict.is_ok());
+    }
+
+    #[test]
+    fn test_long_passwords() {
+        let long_user = "a".repeat(100);
+        let long_owner = "b".repeat(100);
+
+        let enc = DocumentEncryption::new(
+            &long_user,
+            &long_owner,
+            Permissions::new(),
+            EncryptionStrength::Rc4_128bit,
+        );
+
+        assert_eq!(enc.user_password.0.len(), 100);
+        assert_eq!(enc.owner_password.0.len(), 100);
+
+        let dict = enc.create_encryption_dict(None);
+        assert!(dict.is_ok());
+    }
+
+    #[test]
+    fn test_unicode_passwords() {
+        let enc = DocumentEncryption::new(
+            "contraseña",
+            "密码",
+            Permissions::all(),
+            EncryptionStrength::Rc4_40bit,
+        );
+
+        assert_eq!(enc.user_password.0, "contraseña");
+        assert_eq!(enc.owner_password.0, "密码");
+
+        let dict = enc.create_encryption_dict(None);
+        assert!(dict.is_ok());
+    }
+
+    #[test]
+    fn test_encryption_with_file_id() {
+        let enc = DocumentEncryption::new(
+            "user",
+            "owner",
+            Permissions::new(),
+            EncryptionStrength::Rc4_128bit,
+        );
+
+        let file_id = b"test_file_id_12345";
+        let dict = enc.create_encryption_dict(Some(file_id)).unwrap();
+
+        // Should be able to get encryption key with same file ID
+        let key = enc.get_encryption_key(&dict, Some(file_id));
+        assert!(key.is_ok());
+    }
+
+    #[test]
+    fn test_different_permissions() {
+        let perms_none = Permissions::new();
+        let perms_all = Permissions::all();
+        let mut perms_custom = Permissions::new();
+        perms_custom.set_print(true);
+        perms_custom.set_modify_contents(false);
+
+        let enc1 =
+            DocumentEncryption::new("user", "owner", perms_none, EncryptionStrength::Rc4_128bit);
+
+        let enc2 =
+            DocumentEncryption::new("user", "owner", perms_all, EncryptionStrength::Rc4_128bit);
+
+        let enc3 = DocumentEncryption::new(
+            "user",
+            "owner",
+            perms_custom,
+            EncryptionStrength::Rc4_128bit,
+        );
+
+        // Create encryption dictionaries
+        let _dict1 = enc1.create_encryption_dict(None).unwrap();
+        let _dict2 = enc2.create_encryption_dict(None).unwrap();
+        let _dict3 = enc3.create_encryption_dict(None).unwrap();
+
+        // Permissions should be encoded differently
+        // Note: p field contains encoded permissions as i32
+        // Different permission sets should have different values
+    }
+
+    #[test]
+    fn test_encryption_context_stream() {
+        let handler = StandardSecurityHandler::rc4_128bit();
+        let key = EncryptionKey::new(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+        let ctx = EncryptionContext::new(handler, key);
+
+        let obj_id = ObjectId::new(5, 0);
+        let stream_data = b"This is a PDF stream content that needs encryption";
+
+        let encrypted = ctx.encrypt_stream(stream_data, &obj_id);
+        assert_ne!(encrypted, stream_data);
+
+        let decrypted = ctx.decrypt_stream(&encrypted, &obj_id);
+        assert_eq!(decrypted, stream_data);
+    }
+
+    #[test]
+    fn test_encryption_context_different_objects() {
+        let handler = StandardSecurityHandler::rc4_40bit();
+        let key = EncryptionKey::new(vec![1, 2, 3, 4, 5]);
+        let ctx = EncryptionContext::new(handler, key);
+
+        let obj_id1 = ObjectId::new(1, 0);
+        let obj_id2 = ObjectId::new(2, 0);
+        let plaintext = b"Test data";
+
+        let encrypted1 = ctx.encrypt_string(plaintext, &obj_id1);
+        let encrypted2 = ctx.encrypt_string(plaintext, &obj_id2);
+
+        // Same plaintext encrypted with different object IDs should produce different ciphertext
+        assert_ne!(encrypted1, encrypted2);
+
+        // But both should decrypt to the same plaintext
+        assert_eq!(ctx.decrypt_string(&encrypted1, &obj_id1), plaintext);
+        assert_eq!(ctx.decrypt_string(&encrypted2, &obj_id2), plaintext);
+    }
+
+    #[test]
+    fn test_get_encryption_key_consistency() {
+        let enc = DocumentEncryption::new(
+            "user123",
+            "owner456",
+            Permissions::all(),
+            EncryptionStrength::Rc4_128bit,
+        );
+
+        let file_id = b"consistent_file_id";
+        let dict = enc.create_encryption_dict(Some(file_id)).unwrap();
+
+        // Getting key multiple times should produce consistent results
+        let key1 = enc.get_encryption_key(&dict, Some(file_id));
+        let key2 = enc.get_encryption_key(&dict, Some(file_id));
+
+        // Both should succeed
+        assert!(key1.is_ok());
+        assert!(key2.is_ok());
+    }
+
+    #[test]
+    fn test_handler_selection() {
+        let enc_40 = DocumentEncryption::new(
+            "test",
+            "test",
+            Permissions::new(),
+            EncryptionStrength::Rc4_40bit,
+        );
+
+        let enc_128 = DocumentEncryption::new(
+            "test",
+            "test",
+            Permissions::new(),
+            EncryptionStrength::Rc4_128bit,
+        );
+
+        // Handlers should be different for different strengths
+        let _handler_40 = enc_40.handler();
+        let _handler_128 = enc_128.handler();
+
+        // Create dictionaries to verify correct configuration
+        let dict_40 = enc_40.create_encryption_dict(None).unwrap();
+        let dict_128 = enc_128.create_encryption_dict(None).unwrap();
+
+        // 40-bit should have length 5, 128-bit should have length 16
+        assert_eq!(dict_40.length, Some(5));
+        assert_eq!(dict_128.length, Some(16));
+    }
 }

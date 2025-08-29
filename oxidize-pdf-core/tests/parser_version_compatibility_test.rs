@@ -280,7 +280,7 @@ endobj
 
     let cursor = Cursor::new(pdf);
     match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
-        Ok(doc) => {
+        Ok(_doc) => {
             println!("Parser created with corrupted page tree");
             // Try to traverse the page tree
             // Try to access document properties
