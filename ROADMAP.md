@@ -38,6 +38,29 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 - **Enterprise Edition**: Advanced PDF capabilities (Target: Q4 2027+)
   - Linearization, all annotation types, full multimedia
 
+## 🎯 Funcionalidades Estratégicas Inmediatas
+
+### Prioridad 1: Reporting Avanzado (Q1 2026)
+- [ ] Dashboard framework con layout automático
+- [ ] KPI cards con visualizaciones embebidas
+- [ ] Tablas pivote con subtotales y agregaciones
+- [ ] Heatmaps y treemaps nativos
+- [ ] Data embedding para re-análisis
+
+### Prioridad 2: Rendimiento Extremo (Q1 2026)
+- [ ] Paralelización de generación de páginas
+- [ ] Streaming writer para PDFs grandes
+- [ ] Object pool para reutilización de recursos
+- [ ] Compresión adaptativa por contenido
+- [ ] Benchmarks: objetivo 1000+ páginas/segundo
+
+### Prioridad 3: OCR Avanzado (Q2 2026)
+- [ ] Activar integración Tesseract existente
+- [ ] API de OCR por regiones
+- [ ] Pipeline de corrección con diccionarios
+- [ ] Table extraction especializado
+- [ ] Confidence API para validación
+
 ### Path to 50% Real Compliance - Critical Milestones
 
 #### 🎯 Phase 1: Complete Interactive Features (36.7% → 42%) - 2-3 weeks
