@@ -374,9 +374,9 @@ fn test_incremental_modification_roundtrip() -> Result<()> {
         ("Final version", "Final Author"),
     ];
 
-    let mut current_path = base_path;
+    let mut _current_path = base_path;
 
-    for (i, (page_content, author)) in modifications.iter().enumerate() {
+    for (i, (_page_content, author)) in modifications.iter().enumerate() {
         // Create modified version
         let mut modified_doc = Document::new();
         modified_doc.set_title("Base Document"); // Keep same title
@@ -408,7 +408,7 @@ fn test_incremental_modification_roundtrip() -> Result<()> {
         let content_str = String::from_utf8_lossy(&content);
         assert!(content_str.contains(author));
 
-        current_path = modified_path;
+        _current_path = modified_path;
     }
 
     Ok(())

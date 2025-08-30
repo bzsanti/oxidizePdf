@@ -67,6 +67,7 @@ pub struct Page {
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
     annotations: Vec<Annotation>,
+    coordinate_system: crate::coordinate_system::CoordinateSystem,
     rotation: i32, // Page rotation in degrees (0, 90, 180, 270)
 }
 
@@ -86,6 +87,7 @@ impl Page {
             header: None,
             footer: None,
             annotations: Vec::new(),
+            coordinate_system: crate::coordinate_system::CoordinateSystem::PdfStandard,
             rotation: 0, // Default to no rotation
         }
     }
@@ -95,14 +97,29 @@ impl Page {
         Self::new(595.0, 842.0)
     }
 
+    /// Creates a new A4 landscape page (842 x 595 points).
+    pub fn a4_landscape() -> Self {
+        Self::new(842.0, 595.0)
+    }
+
     /// Creates a new US Letter page (612 x 792 points).
     pub fn letter() -> Self {
         Self::new(612.0, 792.0)
     }
 
+    /// Creates a new US Letter landscape page (792 x 612 points).
+    pub fn letter_landscape() -> Self {
+        Self::new(792.0, 612.0)
+    }
+
     /// Creates a new US Legal page (612 x 1008 points).
     pub fn legal() -> Self {
         Self::new(612.0, 1008.0)
+    }
+
+    /// Creates a new US Legal landscape page (1008 x 612 points).
+    pub fn legal_landscape() -> Self {
+        Self::new(1008.0, 612.0)
     }
 
     /// Returns a mutable reference to the graphics context for drawing shapes.
@@ -151,6 +168,20 @@ impl Page {
 
     pub fn height(&self) -> f64 {
         self.height
+    }
+
+    /// Get the current coordinate system for this page
+    pub fn coordinate_system(&self) -> crate::coordinate_system::CoordinateSystem {
+        self.coordinate_system
+    }
+
+    /// Set the coordinate system for this page
+    pub fn set_coordinate_system(
+        &mut self,
+        coordinate_system: crate::coordinate_system::CoordinateSystem,
+    ) -> &mut Self {
+        self.coordinate_system = coordinate_system;
+        self
     }
 
     /// Sets the page rotation in degrees.
@@ -1987,5 +2018,245 @@ mod unit_tests {
         page.set_rotation(270);
         let dict = page.to_dict();
         assert_eq!(dict.get("Rotate"), Some(&Object::Integer(270)));
+    }
+}
+
+/// Layout manager for intelligent positioning of elements on a page
+///
+/// This manager handles automatic positioning of tables, images, and other elements
+/// using different coordinate systems while preventing overlaps and managing page flow.
+#[derive(Debug)]
+pub struct LayoutManager {
+    /// Coordinate system being used
+    pub coordinate_system: crate::coordinate_system::CoordinateSystem,
+    /// Current Y position for next element
+    pub current_y: f64,
+    /// Page dimensions
+    pub page_width: f64,
+    pub page_height: f64,
+    /// Page margins
+    pub margins: Margins,
+    /// Spacing between elements
+    pub element_spacing: f64,
+}
+
+impl LayoutManager {
+    /// Create a new layout manager for the given page
+    pub fn new(page: &Page, coordinate_system: crate::coordinate_system::CoordinateSystem) -> Self {
+        let current_y = match coordinate_system {
+            crate::coordinate_system::CoordinateSystem::PdfStandard => {
+                // PDF coordinates: start from top (high Y value)
+                page.height() - page.margins().top
+            }
+            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
+                // Screen coordinates: start from top (low Y value)
+                page.margins().top
+            }
+            crate::coordinate_system::CoordinateSystem::Custom(_) => {
+                // For custom systems, start conservatively in the middle
+                page.height() / 2.0
+            }
+        };
+
+        Self {
+            coordinate_system,
+            current_y,
+            page_width: page.width(),
+            page_height: page.height(),
+            margins: page.margins().clone(),
+            element_spacing: 10.0,
+        }
+    }
+
+    /// Set custom spacing between elements
+    pub fn with_element_spacing(mut self, spacing: f64) -> Self {
+        self.element_spacing = spacing;
+        self
+    }
+
+    /// Check if an element of given height will fit on the current page
+    pub fn will_fit(&self, element_height: f64) -> bool {
+        let required_space = element_height + self.element_spacing;
+
+        match self.coordinate_system {
+            crate::coordinate_system::CoordinateSystem::PdfStandard => {
+                // In PDF coords, we subtract height and check against bottom margin
+                self.current_y - required_space >= self.margins.bottom
+            }
+            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
+                // In screen coords, we add height and check against page height
+                self.current_y + required_space <= self.page_height - self.margins.bottom
+            }
+            crate::coordinate_system::CoordinateSystem::Custom(_) => {
+                // Conservative check for custom coordinate systems
+                required_space <= (self.page_height - self.margins.top - self.margins.bottom) / 2.0
+            }
+        }
+    }
+
+    /// Get the current available space remaining on the page
+    pub fn remaining_space(&self) -> f64 {
+        match self.coordinate_system {
+            crate::coordinate_system::CoordinateSystem::PdfStandard => {
+                (self.current_y - self.margins.bottom).max(0.0)
+            }
+            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
+                (self.page_height - self.margins.bottom - self.current_y).max(0.0)
+            }
+            crate::coordinate_system::CoordinateSystem::Custom(_) => {
+                self.page_height / 2.0 // Conservative estimate
+            }
+        }
+    }
+
+    /// Reserve space for an element and return its Y position
+    ///
+    /// Returns `None` if the element doesn't fit on the current page.
+    /// If it fits, returns the Y coordinate where the element should be placed
+    /// and updates the internal current_y for the next element.
+    pub fn add_element(&mut self, element_height: f64) -> Option<f64> {
+        if !self.will_fit(element_height) {
+            return None;
+        }
+
+        let position_y = match self.coordinate_system {
+            crate::coordinate_system::CoordinateSystem::PdfStandard => {
+                // Position element at current_y (top of element)
+                // Then move current_y down by element height + spacing
+                let y_position = self.current_y - element_height;
+                self.current_y = y_position - self.element_spacing;
+                self.current_y + element_height // Return the bottom Y of the element area
+            }
+            crate::coordinate_system::CoordinateSystem::ScreenSpace => {
+                // Position element at current_y (top of element)
+                // Then move current_y down by element height + spacing
+                let y_position = self.current_y;
+                self.current_y += element_height + self.element_spacing;
+                y_position
+            }
+            crate::coordinate_system::CoordinateSystem::Custom(_) => {
+                // Simple implementation for custom coordinate systems
+                let y_position = self.current_y;
+                self.current_y -= element_height + self.element_spacing;
+                y_position
+            }
+        };
+
+        Some(position_y)
+    }
+
+    /// Reset the layout manager for a new page
+    pub fn new_page(&mut self) {
+        self.current_y = match self.coordinate_system {
+            crate::coordinate_system::CoordinateSystem::PdfStandard => {
+                self.page_height - self.margins.top
+            }
+            crate::coordinate_system::CoordinateSystem::ScreenSpace => self.margins.top,
+            crate::coordinate_system::CoordinateSystem::Custom(_) => self.page_height / 2.0,
+        };
+    }
+
+    /// Get the X position for centering an element of given width
+    pub fn center_x(&self, element_width: f64) -> f64 {
+        let available_width = self.page_width - self.margins.left - self.margins.right;
+        self.margins.left + (available_width - element_width) / 2.0
+    }
+
+    /// Get the left margin X position
+    pub fn left_x(&self) -> f64 {
+        self.margins.left
+    }
+
+    /// Get the right margin X position minus element width
+    pub fn right_x(&self, element_width: f64) -> f64 {
+        self.page_width - self.margins.right - element_width
+    }
+}
+
+#[cfg(test)]
+mod layout_manager_tests {
+    use super::*;
+    use crate::coordinate_system::CoordinateSystem;
+
+    #[test]
+    fn test_layout_manager_pdf_standard() {
+        let page = Page::a4(); // 595 x 842
+        let mut layout = LayoutManager::new(&page, CoordinateSystem::PdfStandard);
+
+        // Check initial position (should be near top in PDF coords)
+        // A4 height is 842, with default margin of 72, so current_y should be 842 - 72 = 770
+        assert!(layout.current_y > 750.0); // Near top of A4, adjusted for actual margins
+
+        // Add an element
+        let element_height = 100.0;
+        let position = layout.add_element(element_height);
+
+        assert!(position.is_some());
+        let y_pos = position.unwrap();
+        assert!(y_pos > 700.0); // Should be positioned high up
+
+        // Current Y should have moved down
+        assert!(layout.current_y < y_pos);
+    }
+
+    #[test]
+    fn test_layout_manager_screen_space() {
+        let page = Page::a4();
+        let mut layout = LayoutManager::new(&page, CoordinateSystem::ScreenSpace);
+
+        // Check initial position (should be near top in screen coords)
+        assert!(layout.current_y < 100.0); // Near top margin
+
+        // Add an element
+        let element_height = 100.0;
+        let position = layout.add_element(element_height);
+
+        assert!(position.is_some());
+        let y_pos = position.unwrap();
+        assert!(y_pos < 100.0); // Should be positioned near top
+
+        // Current Y should have moved down (increased)
+        assert!(layout.current_y > y_pos);
+    }
+
+    #[test]
+    fn test_layout_manager_overflow() {
+        let page = Page::a4();
+        let mut layout = LayoutManager::new(&page, CoordinateSystem::PdfStandard);
+
+        // Try to add an element that's too large
+        let huge_element = 900.0; // Larger than page height
+        let position = layout.add_element(huge_element);
+
+        assert!(position.is_none()); // Should not fit
+
+        // Fill the page with smaller elements
+        let mut count = 0;
+        while layout.add_element(50.0).is_some() {
+            count += 1;
+            if count > 100 {
+                break;
+            } // Safety valve
+        }
+
+        // Should have added multiple elements
+        assert!(count > 5);
+
+        // Next element should not fit
+        assert!(layout.add_element(50.0).is_none());
+    }
+
+    #[test]
+    fn test_layout_manager_centering() {
+        let page = Page::a4();
+        let layout = LayoutManager::new(&page, CoordinateSystem::PdfStandard);
+
+        let element_width = 200.0;
+        let center_x = layout.center_x(element_width);
+
+        // Should be centered considering margins
+        let expected_center = page.margins().left
+            + (page.width() - page.margins().left - page.margins().right - element_width) / 2.0;
+        assert_eq!(center_x, expected_center);
     }
 }

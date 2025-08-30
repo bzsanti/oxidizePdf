@@ -3,7 +3,7 @@
 //! This example shows how to use transparency for shapes, text, and images
 //! including fill opacity, stroke opacity, and blend modes.
 
-use oxidize_pdf::graphics::{BlendMode, Color, ExtGState};
+use oxidize_pdf::graphics::Color;
 use oxidize_pdf::{Document, Page, Result};
 
 fn main() -> Result<()> {

@@ -9,7 +9,7 @@ pub mod fonts;
 mod header_footer;
 mod layout;
 mod list;
-mod metrics;
+pub mod metrics;
 pub mod ocr;
 pub mod table;
 

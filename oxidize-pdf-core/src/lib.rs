@@ -178,6 +178,7 @@ pub mod annotations;
 pub mod batch;
 pub mod charts;
 pub mod compression;
+pub mod coordinate_system;
 pub mod document;
 pub mod encryption;
 pub mod error;
@@ -209,6 +210,7 @@ pub mod writer;
 pub mod semantic;
 
 // Re-export generation types
+pub use coordinate_system::{CoordinateSystem, RenderContext, TransformMatrix};
 pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};

@@ -218,7 +218,7 @@ proptest! {
 
     fn test_dash_pattern(
         pattern in prop::collection::vec(0.1..20.0f64, 1..6),
-        phase in 0.0..10.0f64
+        _phase in 0.0..10.0f64
     ) {
         let mut page = Page::a4();
         let graphics = page.graphics();

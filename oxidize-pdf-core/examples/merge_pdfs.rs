@@ -5,7 +5,6 @@
 
 use oxidize_pdf::operations::merge::{merge_pdfs, MergeOptions, MetadataMode, PdfMerger};
 use oxidize_pdf::{Document, Page};
-use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("PDF Merge Examples\n");

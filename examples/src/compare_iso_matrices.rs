@@ -18,9 +18,9 @@ use std::fs;
 struct MatrixComparison {
     existing_requirements: usize,
     comprehensive_requirements: usize,
-    matching_requirements: usize,
+    _matching_requirements: usize,
     new_requirements: Vec<String>,
-    missing_implementations: Vec<String>,
+    _missing_implementations: Vec<String>,
     priority_gaps: Vec<PriorityGap>,
     implementation_status: ImplementationStatus,
 }
@@ -216,9 +216,9 @@ fn compare_matrices(
     Ok(MatrixComparison {
         existing_requirements: existing_reqs.len(),
         comprehensive_requirements: comprehensive_reqs.len(),
-        matching_requirements: matching.len(),
+        _matching_requirements: matching.len(),
         new_requirements,
-        missing_implementations: Vec::new(), // TODO: Implement
+        _missing_implementations: Vec::new(), // TODO: Implement
         priority_gaps,
         implementation_status,
     })
@@ -278,9 +278,9 @@ fn create_baseline_comparison(
     Ok(MatrixComparison {
         existing_requirements: 0,
         comprehensive_requirements: comprehensive_reqs.len(),
-        matching_requirements: 0,
+        _matching_requirements: 0,
         new_requirements: comprehensive_reqs.keys().cloned().collect(),
-        missing_implementations: Vec::new(),
+        _missing_implementations: Vec::new(),
         priority_gaps,
         implementation_status,
     })

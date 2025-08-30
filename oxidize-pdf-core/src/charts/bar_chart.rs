@@ -5,18 +5,13 @@ use crate::graphics::Color;
 use crate::text::Font;
 
 /// Bar chart orientation
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum BarOrientation {
     /// Vertical bars (default)
+    #[default]
     Vertical,
     /// Horizontal bars
     Horizontal,
-}
-
-impl Default for BarOrientation {
-    fn default() -> Self {
-        BarOrientation::Vertical
-    }
 }
 
 /// Bar chart configuration

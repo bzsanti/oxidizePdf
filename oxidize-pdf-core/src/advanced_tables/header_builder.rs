@@ -258,14 +258,19 @@ impl HeaderBuilder {
                 }
 
                 // Check for overlapping cells
-                for col in cell.start_col..(cell.start_col + cell.colspan) {
-                    if column_coverage[col] {
+                for (col, coverage) in column_coverage
+                    .iter_mut()
+                    .enumerate()
+                    .skip(cell.start_col)
+                    .take(cell.colspan)
+                {
+                    if *coverage {
                         return Err(format!(
                             "Overlapping header cells at level {} column {}",
                             level_idx, col
                         ));
                     }
-                    column_coverage[col] = true;
+                    *coverage = true;
                 }
             }
         }

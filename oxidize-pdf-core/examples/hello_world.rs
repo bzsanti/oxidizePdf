@@ -1,4 +1,3 @@
-use oxidize_pdf::graphics::Color;
 use oxidize_pdf::*;
 use std::fs;
 
