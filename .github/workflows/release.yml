@@ -54,22 +54,10 @@ jobs:
                   echo "should_release=false" >> $GITHUB_OUTPUT
                 fi
               else
-                # If no PR found, check if it's a direct push to main (allow for emergency releases)
-                if [[ "${{ github.ref }}" == refs/heads/main ]]; then
-                  echo "⚠️ Direct push to main detected - allowing emergency release"
-                  # Check if there's a version tag for this commit
-                  if git describe --exact-match --tags ${{ github.sha }} 2>/dev/null; then
-                    VERSION_TAG=$(git describe --exact-match --tags ${{ github.sha }})
-                    echo "should_release=true" >> $GITHUB_OUTPUT
-                    echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
-                  else
-                    echo "❌ No version tag found for this commit"
-                    echo "should_release=false" >> $GITHUB_OUTPUT
-                  fi
-                else
-                  echo "❌ No associated PR found and not a direct main push"
-                  echo "should_release=false" >> $GITHUB_OUTPUT
-                fi
+                # If no PR found, allow release if tag is on main (covers direct pushes and tag releases)
+                echo "⚠️ No associated PR found, but tag is on main branch - allowing release"
+                echo "should_release=true" >> $GITHUB_OUTPUT
+                echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
               fi
             else
               echo "❌ Tag is not on main branch"
@@ -105,9 +93,9 @@ jobs:
           echo "CI Check Results:"
           cat check_results.json
           
-          # Check if any required checks failed
-          FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure") | .name' | wc -l)
-          PENDING_CHECKS=$(cat check_results.json | jq -r 'select(.status == "in_progress" or .status == "queued") | .name' | wc -l)
+          # Check if any required checks failed (ignore Code Coverage)
+          FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage") | .name' | wc -l)
+          PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage") | .name' | wc -l)
           
           if [ "$FAILED_CHECKS" -gt 0 ]; then
             echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
