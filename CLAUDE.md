@@ -6,6 +6,30 @@
 - **Priority**: Implement practical PDF features
 - **IMPORTANT**: Focus on practical PDF functionality, not compliance metrics
 
+## 🚀 Prioridades Inmediatas (Strategic Focus)
+Las tres funcionalidades clave para diferenciación competitiva:
+
+### 1. 📈 **Reporting Avanzado**
+- Dashboards dinámicos con múltiples visualizaciones
+- KPI cards y métricas clave
+- Tablas pivote con agregaciones
+- Gráficos avanzados (heatmaps, treemaps, scatter plots)
+- Exportación de datos estructurados embebidos
+
+### 2. ⚡ **Rendimiento Extremo**
+- Generación paralela de páginas
+- Streaming de escritura sin mantener todo en memoria
+- Optimización agresiva de recursos PDF
+- Compresión inteligente por tipo de contenido
+- Lazy loading mejorado para documentos grandes
+
+### 3. 🔍 **OCR Avanzado**
+- Integración completa con Tesseract
+- OCR selectivo por regiones
+- Post-procesamiento con corrección automática
+- Extracción especializada de tablas
+- Confidence scoring por palabra/región
+
 ## 🏗️ Architecture Overview
 ```
 oxidize-pdf/
