@@ -4,9 +4,11 @@ use super::bar_chart::{BarChart, BarOrientation};
 use super::chart_builder::Chart;
 use super::line_chart::LineChart;
 use super::pie_chart::PieChart;
+use crate::coordinate_system::CoordinateSystem;
 use crate::error::PdfError;
 use crate::graphics::Color;
 use crate::page::Page;
+use crate::text::metrics::measure_text;
 
 /// Renderer for various chart types
 pub struct ChartRenderer {
@@ -14,14 +16,26 @@ pub struct ChartRenderer {
     pub margin: f64,
     /// Default grid line opacity
     pub grid_opacity: f64,
+    /// Coordinate system to use for rendering
+    pub coordinate_system: CoordinateSystem,
 }
 
 impl ChartRenderer {
-    /// Create a new chart renderer
+    /// Create a new chart renderer with PDF standard coordinates (default)
     pub fn new() -> Self {
         Self {
             margin: 20.0,
             grid_opacity: 0.3,
+            coordinate_system: CoordinateSystem::PdfStandard,
+        }
+    }
+
+    /// Create a new chart renderer with specific coordinate system
+    pub fn with_coordinate_system(coordinate_system: CoordinateSystem) -> Self {
+        Self {
+            margin: 20.0,
+            grid_opacity: 0.3,
+            coordinate_system,
         }
     }
 
@@ -54,6 +68,149 @@ impl ChartRenderer {
                 // For other types, render as vertical bar for now
                 let bar_chart = self.convert_to_bar_chart(chart, BarOrientation::Vertical);
                 self.render_bar_chart(page, &bar_chart, x, y, width, height)
+            }
+        }
+    }
+
+    // Coordinate transformation methods
+
+    /// Transform Y coordinate based on the active coordinate system
+    #[allow(dead_code)]
+    fn transform_y(&self, y: f64, chart_height: f64, page_height: f64) -> f64 {
+        match self.coordinate_system {
+            CoordinateSystem::PdfStandard => y, // No transformation needed
+            CoordinateSystem::ScreenSpace => {
+                // Convert screen coordinates (origin top-left) to PDF coordinates (origin bottom-left)
+                page_height - y - chart_height
+            }
+            CoordinateSystem::Custom(matrix) => {
+                // Apply custom transformation matrix
+                let point = crate::geometry::Point::new(0.0, y);
+                matrix.transform_point(point).y
+            }
+        }
+    }
+
+    /// Transform bar coordinates for vertical bars based on coordinate system
+    fn transform_vertical_bar(
+        &self,
+        bar_x: f64,
+        bar_y: f64,
+        bar_height: f64,
+        _chart_area_height: f64,
+        _page_height: f64,
+    ) -> (f64, f64, f64) {
+        match self.coordinate_system {
+            CoordinateSystem::PdfStandard => {
+                // PDF coordinates: bars grow upward from base
+                (bar_x, bar_y, bar_height)
+            }
+            CoordinateSystem::ScreenSpace => {
+                // Screen coordinates: bars should be positioned correctly within chart area
+                // In screen coordinates, Y=0 is at the top, so we need to flip the bar position
+                // but keep bars growing upward visually (which is actually downward in screen space)
+                (bar_x, bar_y, bar_height)
+            }
+            CoordinateSystem::Custom(matrix) => {
+                // For custom matrices, apply basic transformation
+                let start_point = matrix.transform_point(crate::geometry::Point::new(bar_x, bar_y));
+                let end_point =
+                    matrix.transform_point(crate::geometry::Point::new(bar_x, bar_y + bar_height));
+                let transformed_height = (end_point.y - start_point.y).abs();
+                (start_point.x, start_point.y, transformed_height)
+            }
+        }
+    }
+
+    /// Transform bar coordinates for horizontal bars based on coordinate system  
+    fn transform_horizontal_bar(
+        &self,
+        bar_x: f64,
+        bar_y: f64,
+        bar_width: f64,
+        bar_height: f64,
+        chart_area: &ChartArea,
+    ) -> (f64, f64, f64, f64) {
+        match self.coordinate_system {
+            CoordinateSystem::PdfStandard => {
+                // PDF coordinates: no transformation needed
+                (bar_x, bar_y, bar_width, bar_height)
+            }
+            CoordinateSystem::ScreenSpace => {
+                // Screen coordinates: Y positions need to be flipped within chart area
+                let screen_bar_y =
+                    chart_area.y + chart_area.height - bar_y - bar_height + chart_area.y;
+                (bar_x, screen_bar_y, bar_width, bar_height)
+            }
+            CoordinateSystem::Custom(matrix) => {
+                // For custom matrices, apply transformation
+                let start_point = matrix.transform_point(crate::geometry::Point::new(bar_x, bar_y));
+                let end_point = matrix.transform_point(crate::geometry::Point::new(
+                    bar_x + bar_width,
+                    bar_y + bar_height,
+                ));
+                let transformed_width = (end_point.x - start_point.x).abs();
+                let transformed_height = (end_point.y - start_point.y).abs();
+                (
+                    start_point.x,
+                    start_point.y,
+                    transformed_width,
+                    transformed_height,
+                )
+            }
+        }
+    }
+
+    /// Transform line chart data points based on coordinate system
+    fn transform_line_points(
+        &self,
+        points: &[(f64, f64)],
+        chart_area: &ChartArea,
+    ) -> Vec<(f64, f64)> {
+        match self.coordinate_system {
+            CoordinateSystem::PdfStandard => {
+                // PDF coordinates: no transformation needed for data points
+                points.to_vec()
+            }
+            CoordinateSystem::ScreenSpace => {
+                // Screen coordinates: flip Y coordinates within chart area
+                points
+                    .iter()
+                    .map(|(x, y)| {
+                        let flipped_y = chart_area.y + chart_area.height - (y - chart_area.y);
+                        (*x, flipped_y)
+                    })
+                    .collect()
+            }
+            CoordinateSystem::Custom(matrix) => {
+                // Apply custom transformation
+                points
+                    .iter()
+                    .map(|(x, y)| {
+                        let transformed =
+                            matrix.transform_point(crate::geometry::Point::new(*x, *y));
+                        (transformed.x, transformed.y)
+                    })
+                    .collect()
+            }
+        }
+    }
+
+    /// Transform text position for labels based on coordinate system
+    fn transform_label_position(&self, x: f64, y: f64, chart_area: &ChartArea) -> (f64, f64) {
+        match self.coordinate_system {
+            CoordinateSystem::PdfStandard => {
+                // Labels go below the chart area (negative offset)
+                (x, y - 15.0)
+            }
+            CoordinateSystem::ScreenSpace => {
+                // Labels go below the chart area (positive offset in screen space)
+                (x, chart_area.y + chart_area.height + 15.0)
+            }
+            CoordinateSystem::Custom(matrix) => {
+                // Apply custom transformation
+                let point = matrix.transform_point(crate::geometry::Point::new(x, y));
+                (point.x, point.y)
             }
         }
     }
@@ -92,10 +249,18 @@ impl ChartRenderer {
 
         // Draw title
         if !chart.title.is_empty() {
+            let title_width = measure_text(
+                &chart.title,
+                chart.title_font.clone(),
+                chart.title_font_size,
+            );
             page.text()
                 .set_font(chart.title_font.clone(), chart.title_font_size)
                 .set_fill_color(Color::black())
-                .at(x + width / 2.0, y + height - title_height / 2.0)
+                .at(
+                    x + width / 2.0 - title_width / 2.0,
+                    y + height - title_height / 2.0,
+                )
                 .write(&chart.title)?;
         }
 
@@ -180,10 +345,15 @@ impl ChartRenderer {
 
         // Draw title if present
         if !chart.title.is_empty() {
+            let title_width = measure_text(
+                &chart.title,
+                chart.title_font.clone(),
+                chart.title_font_size,
+            );
             page.text()
                 .set_font(chart.title_font.clone(), chart.title_font_size)
                 .set_fill_color(Color::black())
-                .at(center_x, center_y + radius + 30.0)
+                .at(center_x - title_width / 2.0, center_y + radius + 30.0)
                 .write(&chart.title)?;
         }
 
@@ -237,40 +407,74 @@ impl ChartRenderer {
                 continue; // Need at least 2 points for a line
             }
 
-            // Convert data points to screen coordinates
-            let screen_points: Vec<(f64, f64)> = series
+            // Convert data points to chart coordinates
+            let chart_points: Vec<(f64, f64)> = series
                 .data
                 .iter()
                 .map(|(data_x, data_y)| {
-                    let screen_x =
+                    let chart_x =
                         chart_area.x + ((data_x - x_min) / (x_max - x_min)) * chart_area.width;
-                    let screen_y =
+                    let chart_y =
                         chart_area.y + ((data_y - y_min) / (y_max - y_min)) * chart_area.height;
-                    (screen_x, screen_y)
+                    (chart_x, chart_y)
                 })
                 .collect();
 
+            // Transform points based on coordinate system
+            let final_points = self.transform_line_points(&chart_points, &chart_area);
+
             // Draw area fill if enabled
-            if series.fill_area && screen_points.len() >= 2 {
-                self.draw_area_fill(page, &screen_points, &chart_area, series)?;
+            if series.fill_area && final_points.len() >= 2 {
+                self.draw_area_fill(page, &final_points, &chart_area, series)?;
             }
 
             // Draw the line
-            self.draw_line_series(page, &screen_points, series)?;
+            self.draw_line_series(page, &final_points, series)?;
 
             // Draw markers if enabled
             if series.show_markers {
-                self.draw_line_markers(page, &screen_points, series)?;
+                self.draw_line_markers(page, &final_points, series)?;
             }
         }
 
         // Draw title
         if !chart.title.is_empty() {
+            let title_width = measure_text(
+                &chart.title,
+                chart.title_font.clone(),
+                chart.title_font_size,
+            );
             page.text()
                 .set_font(chart.title_font.clone(), chart.title_font_size)
                 .set_fill_color(Color::black())
-                .at(x + width / 2.0, y + height - title_height / 2.0)
+                .at(
+                    x + width / 2.0 - title_width / 2.0,
+                    y + height - title_height / 2.0,
+                )
                 .write(&chart.title)?;
+        }
+
+        // Draw axis labels if present
+        if !chart.x_axis_label.is_empty() {
+            let x_label_width = measure_text(
+                &chart.x_axis_label,
+                chart.axis_font.clone(),
+                chart.axis_font_size,
+            );
+            page.text()
+                .set_font(chart.axis_font.clone(), chart.axis_font_size)
+                .set_fill_color(Color::black())
+                .at(x + width / 2.0 - x_label_width / 2.0, y - 20.0)
+                .write(&chart.x_axis_label)?;
+        }
+
+        if !chart.y_axis_label.is_empty() {
+            // Position Y axis label inside the chart area to ensure visibility
+            page.text()
+                .set_font(chart.axis_font.clone(), chart.axis_font_size)
+                .set_fill_color(Color::black())
+                .at(x + 10.0, y + height - 20.0)
+                .write(&chart.y_axis_label)?;
         }
 
         Ok(())
@@ -311,7 +515,16 @@ impl ChartRenderer {
         for (i, data) in chart.data.iter().enumerate() {
             let bar_height = (data.value / max_value) * area.height;
             let bar_x = area.x + i as f64 * (bar_width + spacing);
-            let bar_y = area.y;
+            let bar_y_original = area.y;
+
+            // Transform bar coordinates based on coordinate system
+            let (final_bar_x, final_bar_y, final_bar_height) = self.transform_vertical_bar(
+                bar_x,
+                bar_y_original,
+                bar_height,
+                area.height,
+                page.height(),
+            );
 
             let color = chart.color_for_index(i);
 
@@ -319,7 +532,7 @@ impl ChartRenderer {
             page.graphics()
                 .save_state()
                 .set_fill_color(color)
-                .rectangle(bar_x, bar_y, bar_width, bar_height)
+                .rectangle(final_bar_x, final_bar_y, bar_width, final_bar_height)
                 .fill()
                 .restore_state();
 
@@ -329,7 +542,7 @@ impl ChartRenderer {
                     .save_state()
                     .set_stroke_color(border_color)
                     .set_line_width(chart.bar_border_width)
-                    .rectangle(bar_x, bar_y, bar_width, bar_height)
+                    .rectangle(final_bar_x, final_bar_y, bar_width, final_bar_height)
                     .stroke()
                     .restore_state();
             }
@@ -337,18 +550,31 @@ impl ChartRenderer {
             // Draw value if enabled
             if chart.show_values {
                 let value_text = format!("{:.1}", data.value);
+                let value_y = match self.coordinate_system {
+                    CoordinateSystem::PdfStandard => final_bar_y + final_bar_height + 5.0,
+                    CoordinateSystem::ScreenSpace => final_bar_y - 5.0, // Above bars in screen space
+                    CoordinateSystem::Custom(_) => final_bar_y + final_bar_height + 5.0,
+                };
+
+                let value_width =
+                    measure_text(&value_text, chart.value_font.clone(), chart.value_font_size);
                 page.text()
                     .set_font(chart.value_font.clone(), chart.value_font_size)
                     .set_fill_color(Color::black())
-                    .at(bar_x + bar_width / 2.0, bar_y + bar_height + 5.0)
+                    .at(final_bar_x + bar_width / 2.0 - value_width / 2.0, value_y)
                     .write(&value_text)?;
             }
 
-            // Draw label
+            // Draw label using coordinate system transformation
+            let (label_x, label_y) =
+                self.transform_label_position(bar_x + bar_width / 2.0, bar_y_original, area);
+
+            let label_width =
+                measure_text(&data.label, chart.label_font.clone(), chart.label_font_size);
             page.text()
                 .set_font(chart.label_font.clone(), chart.label_font_size)
                 .set_fill_color(Color::black())
-                .at(bar_x + bar_width / 2.0, area.y - 15.0)
+                .at(label_x - label_width / 2.0, label_y)
                 .write(&data.label)?;
         }
 
@@ -372,8 +598,19 @@ impl ChartRenderer {
 
         for (i, data) in chart.data.iter().enumerate() {
             let bar_width = (data.value / max_value) * area.width;
-            let bar_x = area.x;
-            let bar_y = area.y + area.height - (i as f64 + 1.0) * bar_height + spacing / 2.0;
+            let bar_x_original = area.x;
+            let bar_y_original =
+                area.y + area.height - (i as f64 + 1.0) * bar_height + spacing / 2.0;
+
+            // Transform bar coordinates based on coordinate system
+            let (final_bar_x, final_bar_y, final_bar_width, final_bar_height) = self
+                .transform_horizontal_bar(
+                    bar_x_original,
+                    bar_y_original,
+                    bar_width,
+                    actual_bar_height,
+                    area,
+                );
 
             let color = chart.color_for_index(i);
 
@@ -381,31 +618,53 @@ impl ChartRenderer {
             page.graphics()
                 .save_state()
                 .set_fill_color(color)
-                .rectangle(bar_x, bar_y, bar_width, actual_bar_height)
+                .rectangle(final_bar_x, final_bar_y, final_bar_width, final_bar_height)
                 .fill()
                 .restore_state();
+
+            // Draw border if specified
+            if let Some(border_color) = chart.bar_border_color {
+                page.graphics()
+                    .save_state()
+                    .set_stroke_color(border_color)
+                    .set_line_width(chart.bar_border_width)
+                    .rectangle(final_bar_x, final_bar_y, final_bar_width, final_bar_height)
+                    .stroke()
+                    .restore_state();
+            }
 
             // Draw value if enabled
             if chart.show_values {
                 let value_text = format!("{:.1}", data.value);
+                let value_x = final_bar_x + final_bar_width + 5.0;
+                let value_y = final_bar_y + final_bar_height / 2.0;
+
+                // Note: For horizontal bars, values are positioned to the right of the bar
+                // No need to center horizontally as they are left-aligned from the edge
                 page.text()
                     .set_font(chart.value_font.clone(), chart.value_font_size)
                     .set_fill_color(Color::black())
-                    .at(bar_x + bar_width + 5.0, bar_y + actual_bar_height / 2.0)
+                    .at(value_x, value_y)
                     .write(&value_text)?;
             }
 
-            // Draw label
+            // Draw label - for horizontal bars, labels go to the left
+            let label_width =
+                measure_text(&data.label, chart.label_font.clone(), chart.label_font_size);
+            let label_x = final_bar_x - 10.0 - label_width; // Right-align to the left of the bar
+            let label_y = final_bar_y + final_bar_height / 2.0;
+
             page.text()
                 .set_font(chart.label_font.clone(), chart.label_font_size)
                 .set_fill_color(Color::black())
-                .at(bar_x - 10.0, bar_y + actual_bar_height / 2.0)
+                .at(label_x, label_y)
                 .write(&data.label)?;
         }
 
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_pie_segment(
         &self,
         page: &mut Page,
@@ -448,6 +707,7 @@ impl ChartRenderer {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_pie_segment_border(
         &self,
         page: &mut Page,
@@ -574,7 +834,7 @@ impl ChartRenderer {
             return Ok(());
         }
 
-        let fill_color = series.fill_color.unwrap_or_else(|| {
+        let fill_color = series.fill_color.unwrap_or({
             // PDF doesn't support alpha, use a lighter version of the line color
             series.color
         });

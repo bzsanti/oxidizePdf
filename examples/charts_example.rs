@@ -77,7 +77,8 @@ fn create_bar_charts(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .bar_border(Color::black(), 1.0)
         .build();
 
-    page.add_bar_chart(&vertical_chart, 50.0, 600.0, 500.0, 250.0)?;
+    // A4 height=842pt, place from Y=550 (top chart)
+    page.add_bar_chart(&vertical_chart, 50.0, 550.0, 500.0, 250.0)?;
 
     // Horizontal bar chart - Product Performance
     let horizontal_chart = BarChartBuilder::new()
@@ -95,6 +96,7 @@ fn create_bar_charts(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .grid_color(Color::rgb(0.95, 0.95, 0.95))
         .build();
 
+    // Bottom chart starts at Y=250 to avoid overlap
     page.add_bar_chart(&horizontal_chart, 50.0, 250.0, 500.0, 200.0)?;
 
     Ok(())
@@ -131,7 +133,8 @@ fn create_pie_charts(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .border(Color::white(), 2.0)
         .build();
 
-    page.add_pie_chart(&market_share, 100.0, 500.0, 150.0)?;
+    // Top pie chart at Y=600 with radius 150
+    page.add_pie_chart(&market_share, 100.0, 600.0, 150.0)?;
 
     // Budget Allocation Pie Chart
     let budget = PieChartBuilder::new()
@@ -149,7 +152,8 @@ fn create_pie_charts(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .legend_position(LegendPosition::Bottom)
         .build();
 
-    page.add_pie_chart(&budget, 100.0, 150.0, 150.0)?;
+    // Bottom pie chart at Y=350 with radius 150 (spacing: 250pt)
+    page.add_pie_chart(&budget, 100.0, 350.0, 150.0)?;
 
     Ok(())
 }
@@ -211,7 +215,8 @@ fn create_line_charts(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .title_font(Font::HelveticaBold, 16.0)
         .build();
 
-    page.add_line_chart(&revenue_chart, 50.0, 500.0, 500.0, 300.0)?;
+    // Top line chart at Y=550 with height 250
+    page.add_line_chart(&revenue_chart, 50.0, 550.0, 500.0, 250.0)?;
 
     // Performance Metrics Line Chart
     let performance_chart = LineChartBuilder::new()
@@ -238,7 +243,8 @@ fn create_line_charts(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .legend_position(LegendPosition::Right)
         .build();
 
-    page.add_line_chart(&performance_chart, 50.0, 150.0, 500.0, 250.0)?;
+    // Bottom line chart at Y=250 with height 200
+    page.add_line_chart(&performance_chart, 50.0, 250.0, 500.0, 200.0)?;
 
     Ok(())
 }
@@ -260,7 +266,8 @@ fn create_dashboard(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .colors(vec![Color::rgb(0.2, 0.6, 0.9)])
         .build();
 
-    page.add_bar_chart(&products_chart, 50.0, 550.0, 250.0, 150.0)?;
+    // Top row: Small bar chart left side
+    page.add_bar_chart(&products_chart, 50.0, 650.0, 250.0, 120.0)?;
 
     // Small pie chart - Regional Distribution
     let region_chart = PieChartBuilder::new()
@@ -269,7 +276,8 @@ fn create_dashboard(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .minimal_style()
         .build();
 
-    page.add_pie_chart(&region_chart, 320.0, 550.0, 115.0)?;
+    // Top row: Small pie chart right side
+    page.add_pie_chart(&region_chart, 350.0, 650.0, 100.0)?;
 
     // Line chart - Monthly Trend
     let trend_chart = LineChartBuilder::new()
@@ -283,7 +291,8 @@ fn create_dashboard(page: &mut Page) -> Result<(), Box<dyn Error>> {
         )
         .build();
 
-    page.add_line_chart(&trend_chart, 50.0, 350.0, 500.0, 150.0)?;
+    // Middle: Wide line chart
+    page.add_line_chart(&trend_chart, 50.0, 450.0, 500.0, 140.0)?;
 
     // Horizontal bars - Department Performance
     let dept_chart = BarChartBuilder::new()
@@ -304,7 +313,8 @@ fn create_dashboard(page: &mut Page) -> Result<(), Box<dyn Error>> {
         .show_values(true)
         .build();
 
-    page.add_bar_chart(&dept_chart, 50.0, 150.0, 500.0, 150.0)?;
+    // Bottom: Department bar chart
+    page.add_bar_chart(&dept_chart, 50.0, 250.0, 500.0, 140.0)?;
 
     // Add summary statistics
     page.text()

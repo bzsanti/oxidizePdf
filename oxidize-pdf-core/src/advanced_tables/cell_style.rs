@@ -4,11 +4,12 @@ use crate::graphics::Color;
 use crate::text::Font;
 
 /// Border styles for table cells
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum BorderStyle {
     /// No border
     None,
     /// Solid line border
+    #[default]
     Solid,
     /// Dashed line border
     Dashed,
@@ -18,16 +19,11 @@ pub enum BorderStyle {
     Double,
 }
 
-impl Default for BorderStyle {
-    fn default() -> Self {
-        BorderStyle::Solid
-    }
-}
-
 /// Cell alignment options
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum CellAlignment {
     /// Left-aligned content
+    #[default]
     Left,
     /// Center-aligned content
     Center,
@@ -35,12 +31,6 @@ pub enum CellAlignment {
     Right,
     /// Justified content (for multi-line text)
     Justify,
-}
-
-impl Default for CellAlignment {
-    fn default() -> Self {
-        CellAlignment::Left
-    }
 }
 
 /// Padding configuration for cells

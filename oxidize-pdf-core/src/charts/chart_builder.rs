@@ -4,11 +4,12 @@ use crate::graphics::Color;
 use crate::text::Font;
 
 /// Position of the chart legend
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum LegendPosition {
     /// No legend
     None,
     /// Legend on the right side
+    #[default]
     Right,
     /// Legend at the bottom
     Bottom,
@@ -16,12 +17,6 @@ pub enum LegendPosition {
     Top,
     /// Legend on the left side
     Left,
-}
-
-impl Default for LegendPosition {
-    fn default() -> Self {
-        LegendPosition::Right
-    }
 }
 
 /// Chart type enumeration

@@ -15,7 +15,7 @@
 //!
 //! # Example
 //! ```rust
-//! use oxidize_pdf::charts::{BarChart, ChartData};
+//! use oxidize_pdf::charts::{BarChartBuilder, ChartData};
 //! use oxidize_pdf::graphics::Color;
 //!
 //! let data = vec![
@@ -25,10 +25,10 @@
 //!     ChartData::new("Q4", 45.0),
 //! ];
 //!
-//! let chart = BarChart::new()
+//! let chart = BarChartBuilder::new()
 //!     .title("Quarterly Sales")
 //!     .data(data)
-//!     .colors(vec![Color::blue(), Color::green(), Color::orange(), Color::red()])
+//!     .colors(vec![Color::blue(), Color::green(), Color::yellow(), Color::red()])
 //!     .build();
 //! ```
 
@@ -98,7 +98,7 @@ impl ChartExt for Page {
         width: f64,
         height: f64,
     ) -> Result<(), PdfError> {
-        let renderer = ChartRenderer::new();
+        let renderer = ChartRenderer::with_coordinate_system(self.coordinate_system());
         renderer.render_chart(self, chart, x, y, width, height)
     }
 
@@ -110,7 +110,7 @@ impl ChartExt for Page {
         width: f64,
         height: f64,
     ) -> Result<(), PdfError> {
-        let renderer = ChartRenderer::new();
+        let renderer = ChartRenderer::with_coordinate_system(self.coordinate_system());
         renderer.render_bar_chart(self, chart, x, y, width, height)
     }
 
@@ -121,7 +121,7 @@ impl ChartExt for Page {
         y: f64,
         radius: f64,
     ) -> Result<(), PdfError> {
-        let renderer = ChartRenderer::new();
+        let renderer = ChartRenderer::with_coordinate_system(self.coordinate_system());
         renderer.render_pie_chart(self, chart, x, y, radius)
     }
 
@@ -133,7 +133,7 @@ impl ChartExt for Page {
         width: f64,
         height: f64,
     ) -> Result<(), PdfError> {
-        let renderer = ChartRenderer::new();
+        let renderer = ChartRenderer::with_coordinate_system(self.coordinate_system());
         renderer.render_line_chart(self, chart, x, y, width, height)
     }
 }

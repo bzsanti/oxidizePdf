@@ -41,11 +41,11 @@ fn test_custom_font_loading_from_file() -> Result<()> {
 #[test]
 #[ignore] // Ignore for now as create_minimal_ttf_data is complex
 fn test_custom_font_loading_from_bytes() -> Result<()> {
-    let doc = Document::new();
+    let _doc = Document::new();
 
     // Create dummy font data for testing
     // In real use, this would be actual TTF/OTF data
-    let font_data = vec![0u8; 1000]; // Dummy data
+    let _font_data = vec![0u8; 1000]; // Dummy data
 
     // This test would need a proper TTF font to work
     // doc.add_font_from_bytes("TestFont", font_data)?;

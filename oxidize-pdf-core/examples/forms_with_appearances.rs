@@ -5,8 +5,8 @@
 
 use oxidize_pdf::error::Result;
 use oxidize_pdf::forms::{
-    AppearanceGenerator, AppearanceState, CheckBox, CheckBoxAppearance, CheckStyle, FieldType,
-    FormManager, PushButton, PushButtonAppearance, RadioButton, RadioButtonAppearance, TextField,
+    AppearanceGenerator, AppearanceState, CheckBox, CheckBoxAppearance, CheckStyle, FormManager,
+    PushButton, PushButtonAppearance, RadioButton, RadioButtonAppearance, TextField,
     TextFieldAppearance, Widget, WidgetAppearance,
 };
 use oxidize_pdf::geometry::{Point, Rectangle};
@@ -183,7 +183,7 @@ fn create_radio_buttons(form_manager: &mut FormManager, page: &mut Page) -> Resu
             border_style: oxidize_pdf::forms::BorderStyle::Solid,
         };
 
-        let mut widget = Widget::new(rect).with_appearance(appearance);
+        let widget = Widget::new(rect).with_appearance(appearance);
 
         // Generate custom radio button appearance
         let radio_appearance = RadioButtonAppearance {
@@ -199,7 +199,7 @@ fn create_radio_buttons(form_manager: &mut FormManager, page: &mut Page) -> Resu
         let mut app_dict = oxidize_pdf::forms::AppearanceDictionary::new();
         app_dict.set_appearance(AppearanceState::Normal, unselected_stream);
         app_dict.set_down_appearance(value.to_string(), selected_stream);
-        widget = widget.with_appearance_streams(app_dict);
+        let _widget = widget.with_appearance_streams(app_dict);
 
         // Note: In a real implementation, we'd need to associate each widget
         // with the radio button group properly

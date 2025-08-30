@@ -75,7 +75,7 @@ fn test_pdf_with_compressed_streams() {
     for i in 0..10 {
         let y = 700.0 - (i as f64 * 20.0);
         gc.set_text_position(100.0, y);
-        gc.show_text(&format!("Line {}: This is a test of PDF compression", i));
+        let _ = gc.show_text(&format!("Line {}: This is a test of PDF compression", i));
     }
     gc.end_text();
     gc.restore_state();

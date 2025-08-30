@@ -233,7 +233,7 @@ fn encryption_strength_comparison() -> Result<(), Box<dyn std::error::Error>> {
         (EncryptionStrength::Rc4_128bit, "AES 256-bit", "maximum"),
     ];
 
-    for (strength, name, level) in strengths {
+    for (_strength, name, level) in strengths {
         println!("  {} - Security level: {}", name, level);
     }
 

@@ -116,8 +116,36 @@ name = "advanced_tables_example"
 path = "../examples/advanced_tables_example.rs"
 
 [[example]]
+name = "advanced_tables_landscape_example"
+path = "../examples/advanced_tables_landscape_example.rs"
+
+[[example]]
+name = "advanced_tables_adjusted_example"
+path = "../examples/advanced_tables_adjusted_example.rs"
+
+[[example]]
+name = "advanced_tables_truncated_example"
+path = "../examples/advanced_tables_truncated_example.rs"
+
+[[example]]
 name = "charts_example"
 path = "../examples/charts_example.rs"
+
+[[example]]
+name = "charts_coordinate_problem"
+path = "../examples/charts_coordinate_problem.rs"
+
+[[example]]
+name = "charts_fixed_example"
+path = "../examples/charts_fixed_example.rs"
+
+[[example]]
+name = "charts_text_alignment_test"
+path = "../examples/charts_text_alignment_test.rs"
+
+[[example]]
+name = "charts_comprehensive_test"
+path = "../examples/charts_comprehensive_test.rs"
 
 # Temporarily disabled examples with compilation errors
 # [[example]]

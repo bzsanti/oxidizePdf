@@ -151,26 +151,26 @@ fn add_summary_page(page: &mut Page) -> Result<()> {
     table.set_options(table_options);
 
     // Add header row
-    table.add_header_row(vec![
+    let _ = table.add_header_row(vec![
         "Metric".to_string(),
         "2023".to_string(),
         "2024".to_string(),
     ]);
 
     // Add data rows
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Revenue (M)".to_string(),
         "$125.5".to_string(),
         "$144.3".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Profit (M)".to_string(),
         "$22.1".to_string(),
         "$32.5".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Employees".to_string(),
         "1,250".to_string(),
         "1,580".to_string(),
@@ -206,7 +206,7 @@ fn add_financial_table(page: &mut Page) -> Result<()> {
     table.set_options(table_options);
 
     // Add header row
-    table.add_header_row(vec![
+    let _ = table.add_header_row(vec![
         "Quarter".to_string(),
         "Q1 2024".to_string(),
         "Q2 2024".to_string(),
@@ -215,7 +215,7 @@ fn add_financial_table(page: &mut Page) -> Result<()> {
     ]);
 
     // Add financial data
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Revenue".to_string(),
         "$32.1M".to_string(),
         "$34.5M".to_string(),
@@ -223,7 +223,7 @@ fn add_financial_table(page: &mut Page) -> Result<()> {
         "$40.5M".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Expenses".to_string(),
         "$24.8M".to_string(),
         "$26.1M".to_string(),
@@ -231,7 +231,7 @@ fn add_financial_table(page: &mut Page) -> Result<()> {
         "$29.2M".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Net Profit".to_string(),
         "$7.3M".to_string(),
         "$8.4M".to_string(),
@@ -239,7 +239,7 @@ fn add_financial_table(page: &mut Page) -> Result<()> {
         "$11.3M".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Margin %".to_string(),
         "22.7%".to_string(),
         "24.3%".to_string(),
@@ -247,7 +247,7 @@ fn add_financial_table(page: &mut Page) -> Result<()> {
         "27.9%".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Growth YoY".to_string(),
         "12%".to_string(),
         "14%".to_string(),
@@ -310,7 +310,7 @@ fn add_detailed_report(page: &mut Page) -> Result<()> {
 
     table.set_options(table_options);
 
-    table.add_header_row(vec![
+    let _ = table.add_header_row(vec![
         "Region".to_string(),
         "Revenue".to_string(),
         "Growth".to_string(),
@@ -318,7 +318,7 @@ fn add_detailed_report(page: &mut Page) -> Result<()> {
         "Forecast".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "North America".to_string(),
         "$65.2M".to_string(),
         "+14%".to_string(),
@@ -326,7 +326,7 @@ fn add_detailed_report(page: &mut Page) -> Result<()> {
         "$75.0M".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Europe".to_string(),
         "$42.1M".to_string(),
         "+18%".to_string(),
@@ -334,7 +334,7 @@ fn add_detailed_report(page: &mut Page) -> Result<()> {
         "$52.0M".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Asia Pacific".to_string(),
         "$28.5M".to_string(),
         "+25%".to_string(),
@@ -342,7 +342,7 @@ fn add_detailed_report(page: &mut Page) -> Result<()> {
         "$38.0M".to_string(),
     ]);
 
-    table.add_row(vec![
+    let _ = table.add_row(vec![
         "Latin America".to_string(),
         "$8.5M".to_string(),
         "+32%".to_string(),

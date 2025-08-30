@@ -1,10 +1,10 @@
-//! Example demonstrating advanced table features
+//! Example demonstrating adjusted table column widths for portrait orientation
 //!
-//! This example shows how to create professional-looking tables with:
-//! - Custom cell styles and borders
-//! - Multi-level headers with spanning
-//! - Zebra striping for alternating rows
-//! - Financial formatting and alignment
+//! This example shows the same tables as advanced_tables_example.rs but with
+//! column widths adjusted to fit properly within portrait margins:
+//! - A4 Portrait: 595 x 842 points (451 points usable width)
+//! - All tables adjusted to ~440 points total width
+//! - Demonstrates responsive table design for narrow layouts
 
 use oxidize_pdf::advanced_tables::{
     AdvancedTableBuilder, AdvancedTableExt, BorderStyle, CellAlignment, CellStyle, HeaderBuilder,
@@ -18,26 +18,26 @@ use oxidize_pdf::Document;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("Creating advanced tables example PDF...");
+    println!("Creating advanced tables with adjusted widths example PDF...");
 
     // Create a new document
     let mut doc = Document::new();
 
-    // Page 1: Financial Report Table
-    let mut page1 = Page::a4();
+    // Page 1: Financial Report Table (adjusted widths)
+    let mut page1 = Page::a4(); // Standard portrait orientation
     let mut layout_manager =
         LayoutManager::new(&page1, CoordinateSystem::PdfStandard).with_element_spacing(40.0);
     create_financial_table(&mut page1, &mut layout_manager)?;
     doc.add_page(page1);
 
-    // Page 2: Product Inventory Table
+    // Page 2: Product Inventory Table (adjusted widths)
     let mut page2 = Page::a4();
     let mut layout_manager =
         LayoutManager::new(&page2, CoordinateSystem::PdfStandard).with_element_spacing(40.0);
     create_inventory_table(&mut page2, &mut layout_manager)?;
     doc.add_page(page2);
 
-    // Page 3: Schedule/Timetable
+    // Page 3: Schedule/Timetable (adjusted widths)
     let mut page3 = Page::a4();
     let mut layout_manager =
         LayoutManager::new(&page3, CoordinateSystem::PdfStandard).with_element_spacing(40.0);
@@ -45,9 +45,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     doc.add_page(page3);
 
     // Save the document
-    let output_path = "examples/results/advanced_tables_example.pdf";
+    let output_path = "examples/results/advanced_tables_adjusted_example.pdf";
     doc.save(output_path)?;
     println!("PDF saved to: {}", output_path);
+    println!("Portrait dimensions: 595 x 842 points (451 points usable width)");
 
     Ok(())
 }
@@ -56,7 +57,7 @@ fn create_financial_table(
     page: &mut Page,
     layout_manager: &mut LayoutManager,
 ) -> Result<(), Box<dyn Error>> {
-    println!("Creating financial report table...");
+    println!("Creating financial report table with adjusted widths...");
 
     // Define cell styles
     let header_style = CellStyle::new()
@@ -81,16 +82,16 @@ fn create_financial_table(
         .padding(Padding::uniform(6.0))
         .border(BorderStyle::Double, 2.0, Color::black());
 
-    // Create the table
+    // Create the table - widths adjusted from 570 to 440 points
     let table = AdvancedTableBuilder::new()
-        .title("Quarterly Financial Report - Q3 2024")
+        .title("Quarterly Financial Report - Q3 2024 (Adjusted)")
         .columns(vec![
-            ("Department", 150.0),
-            ("Q1 Revenue", 100.0),
-            ("Q2 Revenue", 100.0),
-            ("Q3 Revenue", 100.0),
-            ("Total", 120.0),
-        ])
+            ("Department", 110.0), // Reduced from 150
+            ("Q1 Revenue", 85.0),  // Reduced from 100
+            ("Q2 Revenue", 85.0),  // Reduced from 100
+            ("Q3 Revenue", 85.0),  // Reduced from 100
+            ("Total", 75.0),       // Reduced from 120
+        ]) // Total: 440 points (fits in 451 available)
         .header_style(header_style)
         .data_style(data_style)
         .zebra_stripes(true, Color::rgb(0.98, 0.98, 0.98))
@@ -145,6 +146,8 @@ fn create_financial_table(
     let renderer = TableRenderer::new();
     let table_height = renderer.calculate_table_height(&table);
 
+    println!("Financial table width: {} points", table.calculate_width());
+
     // Position table using layout manager
     if let Some(y_position) = layout_manager.add_element(table_height) {
         let x_position = layout_manager.center_x(table.calculate_width());
@@ -160,9 +163,9 @@ fn create_inventory_table(
     page: &mut Page,
     layout_manager: &mut LayoutManager,
 ) -> Result<(), Box<dyn Error>> {
-    println!("Creating inventory table with merged headers...");
+    println!("Creating inventory table with adjusted widths...");
 
-    // Create a table with complex headers
+    // Create a table with complex headers and properly sized columns
     let header_builder = HeaderBuilder::new(7)
         .add_level(vec![
             ("Product Information", 3), // Spans 3 columns
@@ -180,7 +183,17 @@ fn create_inventory_table(
         ]);
 
     let table = AdvancedTableBuilder::new()
-        .title("Product Inventory Report")
+        .title("Product Inventory Report (Adjusted)")
+        // Columns adjusted to fit in 440 points total
+        .columns(vec![
+            ("SKU", 50.0),      // Product codes are short
+            ("Name", 90.0),     // Product names need more space
+            ("Category", 70.0), // Category names are medium
+            ("In Stock", 50.0), // Numbers are short
+            ("Reserved", 50.0), // Numbers are short
+            ("Cost", 65.0),     // Currency values need space
+            ("Retail", 65.0),   // Currency values need space
+        ]) // Total: 440 points (fits in 451 available)
         .complex_header(header_builder)
         .add_row(vec![
             "PRD-001",
@@ -233,6 +246,8 @@ fn create_inventory_table(
     let renderer = TableRenderer::new();
     let table_height = renderer.calculate_table_height(&table);
 
+    println!("Inventory table width: {} points", table.calculate_width());
+
     // Position table using layout manager
     if let Some(y_position) = layout_manager.add_element(table_height) {
         let x_position = layout_manager.center_x(table.calculate_width());
@@ -248,7 +263,7 @@ fn create_schedule_table(
     page: &mut Page,
     layout_manager: &mut LayoutManager,
 ) -> Result<(), Box<dyn Error>> {
-    println!("Creating schedule table...");
+    println!("Creating schedule table with adjusted widths...");
 
     // Create alternating styles for time slots
     let time_style = CellStyle::new()
@@ -270,13 +285,13 @@ fn create_schedule_table(
         .alignment(CellAlignment::Center);
 
     let table = AdvancedTableBuilder::new()
-        .title("Conference Schedule - Day 1")
+        .title("Conference Schedule - Day 1 (Adjusted)")
         .columns(vec![
-            ("Time", 80.0),
-            ("Track A", 160.0),
-            ("Track B", 160.0),
-            ("Track C", 160.0),
-        ])
+            ("Time", 60.0),     // Reduced from 80
+            ("Track A", 127.0), // Reduced from 160
+            ("Track B", 127.0), // Reduced from 160
+            ("Track C", 126.0), // Reduced from 160
+        ]) // Total: 440 points (fits in 451 available)
         .add_row_with_mixed_styles(vec![
             (time_style.clone(), "9:00 AM"),
             (event_style.clone(), "Keynote: Future of Technology"),
@@ -312,6 +327,8 @@ fn create_schedule_table(
     // Calculate table height for intelligent positioning
     let renderer = TableRenderer::new();
     let table_height = renderer.calculate_table_height(&table);
+
+    println!("Schedule table width: {} points", table.calculate_width());
 
     // Position table using layout manager
     if let Some(y_position) = layout_manager.add_element(table_height) {

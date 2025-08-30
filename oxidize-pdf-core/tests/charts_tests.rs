@@ -1,11 +1,10 @@
 //! Unit tests for charts functionality
 
 use oxidize_pdf::charts::{
-    BarChart, BarChartBuilder, BarOrientation, ChartBuilder, ChartData, ChartType, DataSeries,
-    LegendPosition, LineChart, LineChartBuilder, PieChart, PieChartBuilder, PieSegment,
+    BarChartBuilder, BarOrientation, ChartBuilder, ChartData, ChartType, DataSeries,
+    LegendPosition, LineChartBuilder, PieChartBuilder, PieSegment,
 };
 use oxidize_pdf::graphics::Color;
-use oxidize_pdf::text::Font;
 
 #[test]
 fn test_bar_chart_creation() {

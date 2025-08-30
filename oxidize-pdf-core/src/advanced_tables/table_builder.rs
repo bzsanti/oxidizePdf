@@ -107,7 +107,7 @@ pub struct RowData {
 impl RowData {
     /// Create a new row from string content
     pub fn from_strings(content: Vec<&str>) -> Self {
-        let cells = content.into_iter().map(|s| CellData::new(s)).collect();
+        let cells = content.into_iter().map(CellData::new).collect();
 
         Self {
             cells,
