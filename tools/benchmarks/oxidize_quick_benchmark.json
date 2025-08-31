@@ -1,0 +1,32 @@
+{
+  "timestamp": 1756673703.187093,
+  "summary": {
+    "tests_run": 2,
+    "avg_pages_per_second": 9.034584520270428,
+    "claimed_pages_per_second": 215
+  },
+  "detailed_results": [
+    {
+      "test_name": "font_spacing_test",
+      "avg_execution_time_ms": 111.38327916463216,
+      "min_execution_time_ms": 15.756845474243164,
+      "max_execution_time_ms": 300.6470203399658,
+      "avg_file_size_bytes": 1467.0,
+      "avg_file_size_kb": 1.4326171875,
+      "pages": 1,
+      "pages_per_second": 8.978008256714467,
+      "iterations": 3
+    },
+    {
+      "test_name": "charts_comprehensive_test",
+      "avg_execution_time_ms": 109.99695460001628,
+      "min_execution_time_ms": 17.878055572509766,
+      "max_execution_time_ms": 294.0497398376465,
+      "avg_file_size_bytes": 9682.0,
+      "avg_file_size_kb": 9.455078125,
+      "pages": 1,
+      "pages_per_second": 9.09116078382639,
+      "iterations": 3
+    }
+  ]
+}

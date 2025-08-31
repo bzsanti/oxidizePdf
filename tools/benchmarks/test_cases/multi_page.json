@@ -1,0 +1,42 @@
+{
+  "name": "multi_page", 
+  "description": "Multi-page PDF for testing scalability",
+  "page_template": {
+    "width": 595.0,
+    "height": 842.0,
+    "content": [
+      {
+        "type": "text",
+        "text": "Page {{page_number}} of {{total_pages}}",
+        "x": 50.0,
+        "y": 800.0,
+        "font": "Helvetica",
+        "font_size": 12.0
+      },
+      {
+        "type": "text",
+        "text": "This is page content for performance testing. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "x": 50.0,
+        "y": 750.0,
+        "font": "Helvetica", 
+        "font_size": 10.0,
+        "max_width": 500.0
+      },
+      {
+        "type": "rectangle",
+        "x": 50.0,
+        "y": 600.0,
+        "width": 500.0,
+        "height": 100.0,
+        "fill_color": "lightblue",
+        "stroke_color": "blue"
+      }
+    ]
+  },
+  "page_counts": [1, 10, 50, 100, 500],
+  "expected_metrics": {
+    "pages_per_second_min": 50,
+    "memory_growth_linear": true,
+    "file_size_per_page_kb": 2
+  }
+}
