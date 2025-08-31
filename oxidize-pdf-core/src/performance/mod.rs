@@ -28,7 +28,7 @@
 //!     .with_streaming_writer(true);
 //!
 //! let mut doc = HighPerformanceDocument::new(options);
-//! 
+//!
 //! // Add pages - these will be processed in parallel
 //! for i in 0..100 {
 //!     let page = create_page(i);
@@ -40,8 +40,7 @@
 //! ```
 
 use crate::error::Result;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 pub mod compression;
 pub mod memory_pool;
@@ -51,22 +50,12 @@ pub mod resource_pool;
 pub mod streaming_writer;
 
 // Re-export main types
-pub use compression::{
-    CompressionStrategy, ContentType, IntelligentCompressor, CompressionStats
-};
-pub use memory_pool::{MemoryPool, PooledBuffer, MemoryPoolStats};
-pub use metrics::{
-    PerformanceMetrics, PerformanceMonitor, Operation, OperationStats
-};
-pub use parallel_generation::{
-    ParallelPageGenerator, PageProcessor, ParallelGenerationOptions
-};
-pub use resource_pool::{
-    ResourcePool, ResourceKey, FontResource, ImageResource, PatternResource
-};
-pub use streaming_writer::{
-    StreamingPdfWriter, StreamingOptions, WriteStrategy, StreamingStats
-};
+pub use compression::{CompressionStats, CompressionStrategy, ContentType, IntelligentCompressor};
+pub use memory_pool::{MemoryPool, MemoryPoolStats, PooledBuffer};
+pub use metrics::{Operation, OperationStats, PerformanceMetrics, PerformanceMonitor};
+pub use parallel_generation::{PageProcessor, ParallelGenerationOptions, ParallelPageGenerator};
+pub use resource_pool::{FontResource, ImageResource, PatternResource, ResourceKey, ResourcePool};
+pub use streaming_writer::{StreamingOptions, StreamingPdfWriter, StreamingStats, WriteStrategy};
 
 /// High-performance PDF document optimized for speed and memory efficiency
 pub struct HighPerformanceDocument {
@@ -133,12 +122,12 @@ impl PerformanceOptions {
             parallel_generation: true,
             max_threads: num_cpus::get(),
             resource_deduplication: true,
-            streaming_writer: false, // Keep in memory for speed
+            streaming_writer: false,             // Keep in memory for speed
             stream_buffer_size: 4 * 1024 * 1024, // 4MB
-            intelligent_compression: false, // Skip compression for speed
+            intelligent_compression: false,      // Skip compression for speed
             memory_pooling: true,
             memory_pool_size: 64 * 1024 * 1024, // 64MB
-            collect_metrics: false, // Skip metrics for speed
+            collect_metrics: false,             // Skip metrics for speed
         }
     }
 
@@ -237,7 +226,7 @@ impl HighPerformanceDocument {
     /// Save document with performance optimizations
     pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<()> {
         let start = Instant::now();
-        
+
         if self.options.streaming_writer {
             self.save_streaming(path)?;
         } else {
@@ -245,9 +234,12 @@ impl HighPerformanceDocument {
         }
 
         let duration = start.elapsed();
-        println!("Performance: Saved {} pages in {:.2}ms", 
-                 self.pages.len(), duration.as_secs_f64() * 1000.0);
-        
+        println!(
+            "Performance: Saved {} pages in {:.2}ms",
+            self.pages.len(),
+            duration.as_secs_f64() * 1000.0
+        );
+
         Ok(())
     }
 
@@ -276,7 +268,7 @@ impl PerformanceStats {
     /// Calculate overall performance score (0-100)
     pub fn performance_score(&self) -> f64 {
         let mut score = 100.0;
-        
+
         // Penalize for low resource deduplication
         let dedup_ratio = self.resource_pool_stats.deduplication_ratio();
         if dedup_ratio < 0.3 {

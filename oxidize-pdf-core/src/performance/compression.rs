@@ -34,9 +34,9 @@
 //! // JPEG data is stored as-is to avoid double compression
 //! ```
 
+use crate::error::Result;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use crate::error::Result;
 
 /// Intelligent compressor that adapts to content type
 pub struct IntelligentCompressor {
@@ -92,9 +92,12 @@ impl ContentType {
         }
 
         // Analyze text patterns
-        let text_chars = data.iter().filter(|&&b| b.is_ascii_graphic() || b.is_ascii_whitespace()).count();
+        let text_chars = data
+            .iter()
+            .filter(|&&b| b.is_ascii_graphic() || b.is_ascii_whitespace())
+            .count();
         let text_ratio = text_chars as f32 / data.len() as f32;
-        
+
         if text_ratio > 0.8 {
             // High ASCII ratio suggests text
             if Self::has_pdf_operators(data) {
@@ -116,21 +119,25 @@ impl ContentType {
 
     fn has_pdf_operators(data: &[u8]) -> bool {
         let content = String::from_utf8_lossy(data);
-        content.contains(" Td") || content.contains(" Tj") || 
-        content.contains(" re") || content.contains(" l") ||
-        content.contains("BT") || content.contains("ET")
+        content.contains(" Td")
+            || content.contains(" Tj")
+            || content.contains(" re")
+            || content.contains(" l")
+            || content.contains("BT")
+            || content.contains("ET")
     }
 
     fn has_metadata_patterns(data: &[u8]) -> bool {
         let content = String::from_utf8_lossy(data);
-        content.contains("/Type") || content.contains("/Creator") || 
-        content.contains("/Producer") || content.contains("/Title")
+        content.contains("/Type")
+            || content.contains("/Creator")
+            || content.contains("/Producer")
+            || content.contains("/Title")
     }
 
     fn has_xref_patterns(data: &[u8]) -> bool {
         let content = String::from_utf8_lossy(data);
-        content.starts_with("xref") || content.contains(" 0 n") || 
-        content.contains(" f ")
+        content.starts_with("xref") || content.contains(" 0 n") || content.contains(" f ")
     }
 }
 
@@ -221,66 +228,90 @@ impl IntelligentCompressor {
     /// Create a new intelligent compressor with optimal strategies
     pub fn new() -> Self {
         let mut strategies = HashMap::new();
-        
+
         // Text content: high compression ratio
         strategies.insert(ContentType::Text, CompressionStrategy::max_compression());
-        
+
         // Vector graphics: balanced with pattern optimization
-        strategies.insert(ContentType::VectorGraphics, CompressionStrategy {
-            algorithm: CompressionAlgorithm::Flate,
-            level: 7,
-            window_size: Some(16384), // 16KB window for patterns
-            dictionary: None,
-            should_compress: true,
-        });
-        
+        strategies.insert(
+            ContentType::VectorGraphics,
+            CompressionStrategy {
+                algorithm: CompressionAlgorithm::Flate,
+                level: 7,
+                window_size: Some(16384), // 16KB window for patterns
+                dictionary: None,
+                should_compress: true,
+            },
+        );
+
         // JPEG images: no additional compression (already compressed)
-        strategies.insert(ContentType::ImageJpeg, CompressionStrategy::no_compression());
-        
+        strategies.insert(
+            ContentType::ImageJpeg,
+            CompressionStrategy::no_compression(),
+        );
+
         // PNG images: light compression (may already be compressed)
-        strategies.insert(ContentType::ImagePng, CompressionStrategy {
-            algorithm: CompressionAlgorithm::Flate,
-            level: 3,
-            window_size: Some(8192),
-            dictionary: None,
-            should_compress: true,
-        });
-        
+        strategies.insert(
+            ContentType::ImagePng,
+            CompressionStrategy {
+                algorithm: CompressionAlgorithm::Flate,
+                level: 3,
+                window_size: Some(8192),
+                dictionary: None,
+                should_compress: true,
+            },
+        );
+
         // Uncompressed images: maximum compression
-        strategies.insert(ContentType::ImageUncompressed, CompressionStrategy::max_compression());
-        
+        strategies.insert(
+            ContentType::ImageUncompressed,
+            CompressionStrategy::max_compression(),
+        );
+
         // Font data: moderate compression (preserve structure)
-        strategies.insert(ContentType::FontData, CompressionStrategy {
-            algorithm: CompressionAlgorithm::Flate,
-            level: 5,
-            window_size: Some(4096),
-            dictionary: None,
-            should_compress: true,
-        });
-        
+        strategies.insert(
+            ContentType::FontData,
+            CompressionStrategy {
+                algorithm: CompressionAlgorithm::Flate,
+                level: 5,
+                window_size: Some(4096),
+                dictionary: None,
+                should_compress: true,
+            },
+        );
+
         // Metadata: lightweight compression
-        strategies.insert(ContentType::Metadata, CompressionStrategy {
-            algorithm: CompressionAlgorithm::Flate,
-            level: 4,
-            window_size: Some(2048),
-            dictionary: None,
-            should_compress: true,
-        });
-        
+        strategies.insert(
+            ContentType::Metadata,
+            CompressionStrategy {
+                algorithm: CompressionAlgorithm::Flate,
+                level: 4,
+                window_size: Some(2048),
+                dictionary: None,
+                should_compress: true,
+            },
+        );
+
         // Content streams: balanced compression
         strategies.insert(ContentType::ContentStream, CompressionStrategy::default());
-        
+
         // Cross-reference data: optimized for structure
-        strategies.insert(ContentType::CrossReference, CompressionStrategy {
-            algorithm: CompressionAlgorithm::Flate,
-            level: 8,
-            window_size: Some(1024),
-            dictionary: None,
-            should_compress: true,
-        });
-        
+        strategies.insert(
+            ContentType::CrossReference,
+            CompressionStrategy {
+                algorithm: CompressionAlgorithm::Flate,
+                level: 8,
+                window_size: Some(1024),
+                dictionary: None,
+                should_compress: true,
+            },
+        );
+
         // Unknown content: conservative approach
-        strategies.insert(ContentType::Unknown, CompressionStrategy::fast_compression());
+        strategies.insert(
+            ContentType::Unknown,
+            CompressionStrategy::fast_compression(),
+        );
 
         Self {
             strategies,
@@ -292,9 +323,11 @@ impl IntelligentCompressor {
     pub fn compress(&mut self, data: Vec<u8>, content_type: ContentType) -> Result<CompressedData> {
         let start = Instant::now();
         let original_size = data.len();
-        
+
         let default_strategy = CompressionStrategy::default();
-        let strategy = self.strategies.get(&content_type)
+        let strategy = self
+            .strategies
+            .get(&content_type)
             .unwrap_or(&default_strategy);
 
         let result = if strategy.should_compress && original_size > 100 {
@@ -316,8 +349,12 @@ impl IntelligentCompressor {
         self.stats.total_original_size += original_size;
         self.stats.total_compressed_size += result.compressed_size;
         self.stats.total_compression_time += start.elapsed();
-        
-        let type_stats = self.stats.by_content_type.entry(content_type).or_insert_with(ContentTypeStats::default);
+
+        let type_stats = self
+            .stats
+            .by_content_type
+            .entry(content_type)
+            .or_insert_with(ContentTypeStats::default);
         type_stats.operations += 1;
         type_stats.original_size += original_size;
         type_stats.compressed_size += result.compressed_size;
@@ -327,10 +364,14 @@ impl IntelligentCompressor {
     }
 
     /// Compress with a specific strategy
-    fn compress_with_strategy(&self, data: &[u8], strategy: &CompressionStrategy) -> Result<CompressedData> {
+    fn compress_with_strategy(
+        &self,
+        data: &[u8],
+        strategy: &CompressionStrategy,
+    ) -> Result<CompressedData> {
         let start = Instant::now();
         let original_size = data.len();
-        
+
         let compressed = match strategy.algorithm {
             CompressionAlgorithm::None => data.to_vec(),
             CompressionAlgorithm::Flate => self.compress_flate(data, strategy.level)?,
@@ -350,13 +391,13 @@ impl IntelligentCompressor {
 
     /// Flate compression implementation
     fn compress_flate(&self, data: &[u8], level: u32) -> Result<Vec<u8>> {
-        use flate2::{Compression, write::ZlibEncoder};
+        use flate2::{write::ZlibEncoder, Compression};
         use std::io::Write;
 
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::new(level));
         encoder.write_all(data)?;
         let compressed = encoder.finish()?;
-        
+
         Ok(compressed)
     }
 
@@ -364,16 +405,16 @@ impl IntelligentCompressor {
     fn compress_run_length(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut compressed = Vec::new();
         let mut i = 0;
-        
+
         while i < data.len() {
             let current = data[i];
             let mut count = 1;
-            
+
             // Count consecutive identical bytes
             while i + count < data.len() && data[i + count] == current && count < 255 {
                 count += 1;
             }
-            
+
             if count >= 3 {
                 // Use RLE encoding for runs of 3 or more
                 compressed.push(count as u8);
@@ -384,10 +425,10 @@ impl IntelligentCompressor {
                     compressed.push(current);
                 }
             }
-            
+
             i += count;
         }
-        
+
         Ok(compressed)
     }
 
@@ -395,21 +436,21 @@ impl IntelligentCompressor {
     fn compress_lzw(&self, data: &[u8]) -> Result<Vec<u8>> {
         // This is a simplified LZW implementation
         // In a full implementation, you'd use a proper LZW algorithm
-        
+
         let mut dictionary: HashMap<Vec<u8>, u16> = HashMap::new();
         let mut result = Vec::new();
         let mut dict_size = 256u16;
-        
+
         // Initialize dictionary with single bytes
         for i in 0..256 {
             dictionary.insert(vec![i as u8], i as u16);
         }
-        
+
         let mut current = Vec::new();
         for &byte in data {
             let mut next = current.clone();
             next.push(byte);
-            
+
             if dictionary.contains_key(&next) {
                 current = next;
             } else {
@@ -418,17 +459,17 @@ impl IntelligentCompressor {
                     result.push((code >> 8) as u8);
                     result.push(code as u8);
                 }
-                
+
                 // Add new sequence to dictionary
                 if dict_size < u16::MAX {
                     dictionary.insert(next, dict_size);
                     dict_size += 1;
                 }
-                
+
                 current = vec![byte];
             }
         }
-        
+
         // Output final sequence
         if !current.is_empty() {
             if let Some(&code) = dictionary.get(&current) {
@@ -436,26 +477,31 @@ impl IntelligentCompressor {
                 result.push(code as u8);
             }
         }
-        
+
         Ok(result)
     }
 
     /// Dictionary-based compression
-    fn compress_with_dictionary(&self, data: &[u8], strategy: &CompressionStrategy) -> Result<Vec<u8>> {
+    fn compress_with_dictionary(
+        &self,
+        data: &[u8],
+        strategy: &CompressionStrategy,
+    ) -> Result<Vec<u8>> {
         if let Some(ref dictionary) = strategy.dictionary {
             // Simple dictionary replacement
             let mut result = data.to_vec();
-            
+
             // Find common patterns in dictionary and replace them
             for (i, dict_entry) in dictionary.chunks(16).enumerate() {
                 if dict_entry.len() >= 4 {
                     let pattern = &dict_entry[0..dict_entry.len().min(8)];
                     let replacement = vec![(i % 256) as u8]; // Simple replacement
-                    
+
                     // Replace all occurrences (simplified)
                     if pattern.len() > replacement.len() {
                         // This is a very simplified replacement - real implementation would be more sophisticated
-                        result = result.chunks(pattern.len())
+                        result = result
+                            .chunks(pattern.len())
                             .flat_map(|chunk| {
                                 if chunk == pattern {
                                     replacement.clone()
@@ -467,7 +513,7 @@ impl IntelligentCompressor {
                     }
                 }
             }
-            
+
             Ok(result)
         } else {
             // Fall back to flate compression
@@ -496,38 +542,40 @@ impl IntelligentCompressor {
         let mut decoder = ZlibDecoder::new(data);
         let mut decompressed = Vec::new();
         decoder.read_to_end(&mut decompressed)?;
-        
+
         Ok(decompressed)
     }
 
     fn decompress_run_length(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut decompressed = Vec::new();
         let mut i = 0;
-        
+
         while i + 1 < data.len() {
             let count = data[i];
             let value = data[i + 1];
-            
+
             for _ in 0..count {
                 decompressed.push(value);
             }
-            
+
             i += 2;
         }
-        
+
         // Handle any remaining single bytes
         while i < data.len() {
             decompressed.push(data[i]);
             i += 1;
         }
-        
+
         Ok(decompressed)
     }
 
     fn decompress_lzw(&self, _data: &[u8]) -> Result<Vec<u8>> {
         // Simplified LZW decompression would go here
         // For now, return the data as-is (this is not correct but prevents errors)
-        Err(crate::error::PdfError::Internal("LZW decompression not fully implemented".to_string()))
+        Err(crate::error::PdfError::Internal(
+            "LZW decompression not fully implemented".to_string(),
+        ))
     }
 
     /// Get compression statistics
@@ -541,13 +589,17 @@ impl IntelligentCompressor {
     }
 
     /// Test compression effectiveness for a content type
-    pub fn test_compression(&mut self, data: &[u8], content_type: ContentType) -> CompressionTestResult {
+    pub fn test_compression(
+        &mut self,
+        data: &[u8],
+        content_type: ContentType,
+    ) -> CompressionTestResult {
         let original_size = data.len();
-        
+
         let start = Instant::now();
         let result = self.compress(data.to_vec(), content_type);
         let test_time = start.elapsed();
-        
+
         match result {
             Ok(compressed) => CompressionTestResult {
                 original_size,
@@ -649,7 +701,9 @@ impl CompressionStats {
         self.by_content_type
             .iter()
             .min_by(|(_, a), (_, b)| {
-                a.compression_ratio().partial_cmp(&b.compression_ratio()).unwrap_or(std::cmp::Ordering::Equal)
+                a.compression_ratio()
+                    .partial_cmp(&b.compression_ratio())
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|(&content_type, stats)| (content_type, stats.compression_ratio()))
     }
@@ -657,7 +711,8 @@ impl CompressionStats {
     /// Get human-readable summary
     pub fn summary(&self) -> String {
         let space_saved_mb = self.total_space_saved() as f64 / (1024.0 * 1024.0);
-        let best_type = self.best_compression_type()
+        let best_type = self
+            .best_compression_type()
             .map(|(t, r)| format!("{:?} ({:.1}%)", t, (1.0 - r) * 100.0))
             .unwrap_or_else(|| "None".to_string());
 
@@ -756,7 +811,7 @@ mod tests {
     #[test]
     fn test_intelligent_compressor_creation() {
         let compressor = IntelligentCompressor::new();
-        
+
         // Should have strategies for all content types
         assert!(compressor.strategies.contains_key(&ContentType::Text));
         assert!(compressor.strategies.contains_key(&ContentType::ImageJpeg));
@@ -767,10 +822,10 @@ mod tests {
     fn test_compression_basic() {
         let mut compressor = IntelligentCompressor::new();
         let text_data = b"Hello, World! This is some test text data.".to_vec();
-        
+
         let result = compressor.compress(text_data.clone(), ContentType::Text);
         assert!(result.is_ok());
-        
+
         let compressed = result.unwrap();
         assert_eq!(compressed.original_size, text_data.len());
         // Compression should reduce size for text
@@ -781,10 +836,10 @@ mod tests {
     fn test_jpeg_no_compression() {
         let mut compressor = IntelligentCompressor::new();
         let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]; // Mock JPEG
-        
+
         let result = compressor.compress(jpeg_data.clone(), ContentType::ImageJpeg);
         assert!(result.is_ok());
-        
+
         let compressed = result.unwrap();
         // JPEG should not be compressed further
         assert_eq!(compressed.algorithm, CompressionAlgorithm::None);
@@ -795,10 +850,10 @@ mod tests {
     fn test_run_length_compression() {
         let compressor = IntelligentCompressor::new();
         let data = vec![1, 1, 1, 1, 2, 3, 3, 3]; // Some repeated data
-        
+
         let result = compressor.compress_run_length(&data);
         assert!(result.is_ok());
-        
+
         let compressed = result.unwrap();
         // Should be compressed due to repeated sequences
         assert!(compressed.len() <= data.len());
@@ -807,13 +862,13 @@ mod tests {
     #[test]
     fn test_compression_stats() {
         let mut compressor = IntelligentCompressor::new();
-        
+
         let text1 = b"First text document".to_vec();
         let text2 = b"Second text document".to_vec();
-        
+
         let _ = compressor.compress(text1, ContentType::Text);
         let _ = compressor.compress(text2, ContentType::Text);
-        
+
         let stats = compressor.stats();
         assert_eq!(stats.total_operations, 2);
         assert!(stats.total_original_size > 0);
@@ -829,7 +884,7 @@ mod tests {
             compressed_size: 5,
             compression_time: Duration::from_millis(10),
         };
-        
+
         assert_eq!(compressed.compression_ratio(), 0.5);
         assert_eq!(compressed.space_saved(), 5);
         assert!(compressed.throughput_mbps() > 0.0);
@@ -839,10 +894,12 @@ mod tests {
     fn test_decompression_basic() {
         let mut compressor = IntelligentCompressor::new();
         let original_data = b"Test data for compression and decompression".to_vec();
-        
-        let compressed = compressor.compress(original_data.clone(), ContentType::Text).unwrap();
+
+        let compressed = compressor
+            .compress(original_data.clone(), ContentType::Text)
+            .unwrap();
         let decompressed = compressor.decompress(&compressed).unwrap();
-        
+
         assert_eq!(decompressed, original_data);
     }
 
@@ -850,9 +907,9 @@ mod tests {
     fn test_compression_test_result() {
         let mut compressor = IntelligentCompressor::new();
         let test_data = b"Test data for compression testing".as_slice();
-        
+
         let result = compressor.test_compression(test_data, ContentType::Text);
-        
+
         assert!(result.success);
         assert_eq!(result.original_size, test_data.len());
         assert!(result.compression_ratio <= 1.0);
@@ -862,14 +919,14 @@ mod tests {
     #[test]
     fn test_statistics_summary() {
         let mut compressor = IntelligentCompressor::new();
-        
+
         // Compress some data to generate stats
         let _ = compressor.compress(b"Hello World".to_vec(), ContentType::Text);
         let _ = compressor.compress(vec![0xFF, 0xD8, 0xFF, 0xE0], ContentType::ImageJpeg);
-        
+
         let stats = compressor.stats();
         let summary = stats.summary();
-        
+
         assert!(summary.contains("Total Operations: 2"));
         assert!(summary.contains("Content Types Processed:"));
     }
@@ -880,7 +937,7 @@ mod tests {
         stats.operations = 5;
         stats.original_size = 1000;
         stats.compressed_size = 600;
-        
+
         assert_eq!(stats.compression_ratio(), 0.6);
     }
 }

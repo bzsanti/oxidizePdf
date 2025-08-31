@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Added
+- Added comprehensive OPTIMIZATION_GUIDE.md with performance improvement strategies
+- Added consolidated benchmark scripts: benchmark_parser.py and benchmark_writer.py
+- Added honest performance documentation with real measured metrics
+
+### Changed
+- Consolidated 7 redundant benchmark scripts into 2 focused tools
+- Updated performance claims with realistic measurements (Parser: 42.6 PDFs/sec, Writer: ~12K pages/sec)  
+- Cleaned up tools/benchmarks directory structure
+
+### Fixed
+- Fixed unused import warnings in performance module
+- Fixed import warning in performance_benchmark_1000 example
+
+### Removed
+- Removed redundant benchmark scripts and obsolete JSON result files
+- Removed unnecessary Cargo workspace files from benchmarks directory
+
 ## [1.2.0] - 2025-08-29
 
 ### Fixed

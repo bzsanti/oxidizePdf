@@ -176,8 +176,6 @@ pub mod actions;
 pub mod advanced_tables;
 pub mod annotations;
 
-#[cfg(feature = "performance")]
-pub mod performance;
 pub mod batch;
 pub mod charts;
 pub mod compression;
@@ -200,6 +198,8 @@ pub mod page_tables;
 pub mod page_transitions;
 pub mod page_tree;
 pub mod parser;
+#[cfg(feature = "performance")]
+pub mod performance;
 pub mod recovery;
 pub mod streaming;
 pub mod structure;
