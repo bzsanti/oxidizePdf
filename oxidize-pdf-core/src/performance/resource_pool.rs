@@ -22,12 +22,12 @@
 //! assert_eq!(font_key, same_key);
 //! ```
 
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
-use std::sync::{Arc, RwLock};
 use crate::error::Result;
 use crate::graphics::Color;
 use crate::text::Font;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, RwLock};
 
 /// Unique identifier for a resource in the pool
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -91,7 +91,7 @@ impl FontResource {
     fn calculate_hash(&self) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
-        
+
         // Hash the identifying characteristics
         self.font.hash(&mut hasher);
         self.size.to_bits().hash(&mut hasher);
@@ -99,14 +99,14 @@ impl FontResource {
         self.color.g().to_bits().hash(&mut hasher);
         self.color.b().to_bits().hash(&mut hasher);
         self.encoding.hash(&mut hasher);
-        
+
         // Hash embedded data if present
         if let Some(data) = &self.embedded_data {
             data.len().hash(&mut hasher);
             // Hash first and last 64 bytes for performance
             if data.len() > 128 {
                 data[..64].hash(&mut hasher);
-                data[data.len()-64..].hash(&mut hasher);
+                data[data.len() - 64..].hash(&mut hasher);
             } else {
                 data.as_slice().hash(&mut hasher);
             }
@@ -177,17 +177,17 @@ impl ImageResource {
     fn calculate_hash(&self) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
-        
+
         self.width.hash(&mut hasher);
         self.height.hash(&mut hasher);
         self.format.hash(&mut hasher);
         self.color_space.hash(&mut hasher);
-        
+
         // Hash image data efficiently
         if self.data.len() > 1024 {
             // Hash first 512 bytes, last 512 bytes, and length
             self.data[..512].hash(&mut hasher);
-            self.data[self.data.len()-512..].hash(&mut hasher);
+            self.data[self.data.len() - 512..].hash(&mut hasher);
             self.data.len().hash(&mut hasher);
         } else {
             self.data.as_slice().hash(&mut hasher);
@@ -237,19 +237,19 @@ impl PatternResource {
     fn calculate_hash(&self) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
-        
+
         self.pattern_type.hash(&mut hasher);
-        
+
         for color in &self.colors {
             color.r().to_bits().hash(&mut hasher);
             color.g().to_bits().hash(&mut hasher);
             color.b().to_bits().hash(&mut hasher);
         }
-        
+
         for coord in &self.coordinates {
             coord.to_bits().hash(&mut hasher);
         }
-        
+
         for val in &self.matrix {
             val.to_bits().hash(&mut hasher);
         }
@@ -389,13 +389,12 @@ impl ResourcePool {
         let images = self.images.read().unwrap();
         let patterns = self.patterns.read().unwrap();
 
-        let font_memory: usize = fonts.values()
+        let font_memory: usize = fonts
+            .values()
             .map(|f| f.embedded_data.as_ref().map_or(1024, |d| d.len()))
             .sum();
 
-        let image_memory: usize = images.values()
-            .map(|i| i.data.len())
-            .sum();
+        let image_memory: usize = images.values().map(|i| i.data.len()).sum();
 
         let pattern_memory: usize = patterns.len() * 512; // Estimated
 
@@ -415,15 +414,15 @@ pub struct ResourcePoolStats {
     pub total_requests: u64,
     pub total_unique_resources: u64,
     pub total_duplicates_avoided: u64,
-    
+
     pub total_font_requests: u64,
     pub unique_fonts: u64,
     pub font_duplicates_avoided: u64,
-    
+
     pub total_image_requests: u64,
     pub unique_images: u64,
     pub image_duplicates_avoided: u64,
-    
+
     pub total_pattern_requests: u64,
     pub unique_patterns: u64,
     pub pattern_duplicates_avoided: u64,
@@ -463,11 +462,19 @@ impl ResourcePoolStats {
              - Images: {} requests, {} unique, {:.1}% deduplicated\n\
              - Patterns: {} requests, {} unique, {:.1}% deduplicated\n\
              - Overall Deduplication: {:.1}%",
-            self.total_requests, self.total_unique_resources, self.total_duplicates_avoided,
-            self.total_font_requests, self.unique_fonts, self.font_deduplication_ratio() * 100.0,
-            self.total_image_requests, self.unique_images, self.image_deduplication_ratio() * 100.0,
-            self.total_pattern_requests, self.unique_patterns, 
-            self.pattern_duplicates_avoided as f64 / self.total_pattern_requests.max(1) as f64 * 100.0,
+            self.total_requests,
+            self.total_unique_resources,
+            self.total_duplicates_avoided,
+            self.total_font_requests,
+            self.unique_fonts,
+            self.font_deduplication_ratio() * 100.0,
+            self.total_image_requests,
+            self.unique_images,
+            self.image_deduplication_ratio() * 100.0,
+            self.total_pattern_requests,
+            self.unique_patterns,
+            self.pattern_duplicates_avoided as f64 / self.total_pattern_requests.max(1) as f64
+                * 100.0,
             self.deduplication_ratio() * 100.0
         )
     }
@@ -488,7 +495,7 @@ mod tests {
     #[test]
     fn test_font_resource_deduplication() {
         let pool = ResourcePool::new();
-        
+
         let font1 = FontResource::new(Font::Helvetica, 12.0);
         let font2 = FontResource::new(Font::Helvetica, 12.0); // Same font
         let font3 = FontResource::new(Font::Helvetica, 14.0); // Different size
@@ -511,7 +518,7 @@ mod tests {
     #[test]
     fn test_image_resource_deduplication() {
         let pool = ResourcePool::new();
-        
+
         let data = vec![1, 2, 3, 4];
         let image1 = ImageResource::new(data.clone(), 100, 100, ImageFormat::Jpeg);
         let image2 = ImageResource::new(data.clone(), 100, 100, ImageFormat::Jpeg);
@@ -533,7 +540,7 @@ mod tests {
     #[test]
     fn test_pattern_resource_deduplication() {
         let pool = ResourcePool::new();
-        
+
         let colors = vec![Color::red(), Color::blue()];
         let pattern1 = PatternResource::linear_gradient((0.0, 0.0), (100.0, 0.0), colors.clone());
         let pattern2 = PatternResource::linear_gradient((0.0, 0.0), (100.0, 0.0), colors.clone());
@@ -555,10 +562,10 @@ mod tests {
     #[test]
     fn test_resource_retrieval() {
         let pool = ResourcePool::new();
-        
+
         let font = FontResource::new(Font::Helvetica, 12.0);
         let key = pool.add_font_resource(font).unwrap();
-        
+
         let retrieved = pool.get_font(&key);
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().font, Font::Helvetica);
@@ -568,7 +575,7 @@ mod tests {
     #[test]
     fn test_deduplication_ratio() {
         let pool = ResourcePool::new();
-        
+
         // Add same font 5 times
         let font = FontResource::new(Font::Helvetica, 12.0);
         for _ in 0..5 {
@@ -585,7 +592,7 @@ mod tests {
     #[test]
     fn test_memory_usage_estimation() {
         let pool = ResourcePool::new();
-        
+
         let data = vec![0u8; 1024]; // 1KB image
         let image = ImageResource::new(data, 100, 100, ImageFormat::Png);
         pool.add_image_resource(image).unwrap();
@@ -597,12 +604,12 @@ mod tests {
     #[test]
     fn test_pool_clear() {
         let pool = ResourcePool::new();
-        
+
         let font = FontResource::new(Font::Helvetica, 12.0);
         pool.add_font_resource(font).unwrap();
 
         assert_eq!(pool.stats().unique_fonts, 1);
-        
+
         pool.clear();
         assert_eq!(pool.stats().unique_fonts, 0);
     }

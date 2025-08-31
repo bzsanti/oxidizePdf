@@ -26,10 +26,10 @@
 //! let buffer2 = pool.get_buffer(2048)?; // Gets recycled memory
 //! ```
 
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
-use std::ops::{Deref, DerefMut};
 use crate::error::Result;
+use std::collections::VecDeque;
+use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, Mutex};
 
 /// A memory pool that manages reusable buffers of different sizes
 pub struct MemoryPool {
@@ -41,20 +41,20 @@ pub struct MemoryPool {
 
 /// Internal storage for different-sized buffer pools
 struct SizedPools {
-    small_buffers: VecDeque<Vec<u8>>,     // < 4KB
-    medium_buffers: VecDeque<Vec<u8>>,    // 4KB - 64KB  
-    large_buffers: VecDeque<Vec<u8>>,     // 64KB - 1MB
-    huge_buffers: VecDeque<Vec<u8>>,      // > 1MB
+    small_buffers: VecDeque<Vec<u8>>,  // < 4KB
+    medium_buffers: VecDeque<Vec<u8>>, // 4KB - 64KB
+    large_buffers: VecDeque<Vec<u8>>,  // 64KB - 1MB
+    huge_buffers: VecDeque<Vec<u8>>,   // > 1MB
     current_size: usize,
 }
 
 /// Buffer size categories for optimal pooling
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum BufferSize {
-    Small,   // < 4KB
-    Medium,  // 4KB - 64KB
-    Large,   // 64KB - 1MB
-    Huge,    // > 1MB
+    Small,  // < 4KB
+    Medium, // 4KB - 64KB
+    Large,  // 64KB - 1MB
+    Huge,   // > 1MB
 }
 
 impl BufferSize {
@@ -69,19 +69,19 @@ impl BufferSize {
 
     fn pool_capacity(&self) -> usize {
         match self {
-            BufferSize::Small => 32,   // Keep more small buffers
-            BufferSize::Medium => 16,  // Moderate medium buffers
-            BufferSize::Large => 8,    // Fewer large buffers
-            BufferSize::Huge => 2,     // Very few huge buffers
+            BufferSize::Small => 32,  // Keep more small buffers
+            BufferSize::Medium => 16, // Moderate medium buffers
+            BufferSize::Large => 8,   // Fewer large buffers
+            BufferSize::Huge => 2,    // Very few huge buffers
         }
     }
 
     fn typical_size(&self) -> usize {
         match self {
-            BufferSize::Small => 1024,     // 1KB
-            BufferSize::Medium => 8192,    // 8KB
-            BufferSize::Large => 131072,   // 128KB
-            BufferSize::Huge => 1048576,   // 1MB
+            BufferSize::Small => 1024,   // 1KB
+            BufferSize::Medium => 8192,  // 8KB
+            BufferSize::Large => 131072, // 128KB
+            BufferSize::Huge => 1048576, // 1MB
         }
     }
 }
@@ -131,10 +131,10 @@ impl MemoryPool {
         }
 
         let size_category = BufferSize::from_size(min_size);
-        
+
         let buffer = {
             let mut pools = self.pools.lock().unwrap();
-            
+
             let pool = match size_category {
                 BufferSize::Small => &mut pools.small_buffers,
                 BufferSize::Medium => &mut pools.medium_buffers,
@@ -145,14 +145,14 @@ impl MemoryPool {
             // Try to find a suitable buffer in the pool
             if let Some(mut buffer) = pool.pop_front() {
                 stats.pool_hits += 1;
-                
+
                 // Resize if needed
                 if buffer.capacity() < min_size {
                     buffer.reserve(min_size - buffer.capacity());
                 }
                 buffer.clear();
                 buffer.resize(min_size, 0);
-                
+
                 Some(buffer)
             } else {
                 stats.pool_misses += 1;
@@ -184,7 +184,7 @@ impl MemoryPool {
         }
 
         let mut pools = self.pools.lock().unwrap();
-        
+
         // Preallocate small buffers (most common)
         for _ in 0..16 {
             let buffer = vec![0; BufferSize::Small.typical_size()];
@@ -204,9 +204,9 @@ impl MemoryPool {
         }
 
         // Update current size estimate
-        pools.current_size = 16 * BufferSize::Small.typical_size() +
-                            8 * BufferSize::Medium.typical_size() +
-                            4 * BufferSize::Large.typical_size();
+        pools.current_size = 16 * BufferSize::Small.typical_size()
+            + 8 * BufferSize::Medium.typical_size()
+            + 4 * BufferSize::Large.typical_size();
 
         Ok(())
     }
@@ -256,7 +256,7 @@ impl MemoryPool {
         // Check if we have room in this pool and total memory limit
         let capacity = size_category.pool_capacity();
         let buffer_size = buffer.capacity();
-        
+
         if pool.len() < capacity {
             if pools.current_size + buffer_size <= self.max_total_size {
                 buffer.clear(); // Clear contents but keep capacity
@@ -333,13 +333,17 @@ impl Deref for PooledBuffer {
     type Target = Vec<u8>;
 
     fn deref(&self) -> &Self::Target {
-        self.buffer.as_ref().expect("Buffer should always be present")
+        self.buffer
+            .as_ref()
+            .expect("Buffer should always be present")
     }
 }
 
 impl DerefMut for PooledBuffer {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.buffer.as_mut().expect("Buffer should always be present")
+        self.buffer
+            .as_mut()
+            .expect("Buffer should always be present")
     }
 }
 
@@ -400,9 +404,9 @@ impl MemoryPoolStats {
         if self.total_requests == 0 {
             return 1.0;
         }
-        
-        let efficiency = (self.pool_hits as f64 + self.returns_to_pool as f64) / 
-                        (self.total_requests as f64 + self.returns_to_pool as f64);
+
+        let efficiency = (self.pool_hits as f64 + self.returns_to_pool as f64)
+            / (self.total_requests as f64 + self.returns_to_pool as f64);
         efficiency.min(1.0)
     }
 
@@ -420,8 +424,10 @@ impl MemoryPoolStats {
              - Hit Rate: {:.1}%\n\
              - Efficiency: {:.1}%",
             self.total_requests,
-            self.pool_hits, self.hit_rate() * 100.0,
-            self.pool_misses, (self.pool_misses as f64 / self.total_requests.max(1) as f64) * 100.0,
+            self.pool_hits,
+            self.hit_rate() * 100.0,
+            self.pool_misses,
+            (self.pool_misses as f64 / self.total_requests.max(1) as f64) * 100.0,
             self.new_allocations,
             self.direct_allocations,
             self.returns_to_pool,
@@ -453,7 +459,7 @@ mod tests {
     fn test_buffer_allocation() {
         let pool = MemoryPool::new(1024 * 1024);
         let buffer = pool.get_buffer(1024).unwrap();
-        
+
         assert_eq!(buffer.len(), 1024);
         assert!(buffer.capacity() >= 1024);
         assert!(buffer.is_pooled());
@@ -463,7 +469,7 @@ mod tests {
     fn test_direct_buffer_allocation() {
         let pool = MemoryPool::disabled();
         let buffer = pool.get_buffer(1024).unwrap();
-        
+
         assert_eq!(buffer.len(), 1024);
         assert!(!buffer.is_pooled());
     }
@@ -471,18 +477,18 @@ mod tests {
     #[test]
     fn test_buffer_reuse() {
         let pool = MemoryPool::new(1024 * 1024);
-        
+
         // Allocate and drop a buffer
         {
             let _buffer = pool.get_buffer(1024).unwrap();
         }
-        
+
         let stats1 = pool.stats();
         assert_eq!(stats1.total_requests, 1);
-        
+
         // Allocate another buffer of same size - should reuse
         let _buffer2 = pool.get_buffer(1024).unwrap();
-        
+
         let stats2 = pool.stats();
         assert_eq!(stats2.total_requests, 2);
         assert!(stats2.pool_hits > 0 || stats2.pool_misses > 0);
@@ -500,9 +506,9 @@ mod tests {
     fn test_preallocate() {
         let pool = MemoryPool::new(10 * 1024 * 1024);
         pool.preallocate().unwrap();
-        
+
         assert!(pool.memory_usage() > 0);
-        
+
         // First request should be a hit
         let _buffer = pool.get_buffer(1024).unwrap();
         let stats = pool.stats();
@@ -513,7 +519,7 @@ mod tests {
     fn test_buffer_resize() {
         let pool = MemoryPool::new(1024 * 1024);
         let mut buffer = pool.get_buffer(100).unwrap();
-        
+
         // Resize buffer
         buffer.resize(200, 42);
         assert_eq!(buffer.len(), 200);
@@ -525,7 +531,7 @@ mod tests {
         let mut stats = MemoryPoolStats::default();
         stats.total_requests = 10;
         stats.pool_hits = 7;
-        
+
         assert_eq!(stats.hit_rate(), 0.7);
     }
 
@@ -535,7 +541,7 @@ mod tests {
         stats.total_requests = 10;
         stats.pool_hits = 6;
         stats.returns_to_pool = 8;
-        
+
         let efficiency = stats.efficiency();
         assert!(efficiency > 0.0 && efficiency <= 1.0);
     }
@@ -544,9 +550,9 @@ mod tests {
     fn test_pool_clear() {
         let pool = MemoryPool::new(1024 * 1024);
         pool.preallocate().unwrap();
-        
+
         assert!(pool.memory_usage() > 0);
-        
+
         pool.clear();
         assert_eq!(pool.memory_usage(), 0);
     }
@@ -555,10 +561,10 @@ mod tests {
     fn test_buffer_deref() {
         let pool = MemoryPool::new(1024 * 1024);
         let mut buffer = pool.get_buffer(10).unwrap();
-        
+
         // Test deref
         assert_eq!(buffer.len(), 10);
-        
+
         // Test deref_mut
         buffer[0] = 42;
         assert_eq!(buffer[0], 42);

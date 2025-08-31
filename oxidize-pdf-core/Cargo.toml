@@ -149,6 +149,14 @@ path = "../examples/charts_text_alignment_test.rs"
 name = "charts_comprehensive_test"
 path = "../examples/charts_comprehensive_test.rs"
 
+[[example]]
+name = "performance_benchmark_1000"
+path = "../examples/src/performance_benchmark_1000.rs"
+
+[[example]]
+name = "simple_document_benchmark"
+path = "../examples/src/simple_document_benchmark.rs"
+
 # Temporarily disabled examples with compilation errors
 # [[example]]
 # name = "streaming_support"

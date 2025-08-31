@@ -35,11 +35,11 @@
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-use std::sync::{Arc, RwLock, Mutex};
-use std::time::{Duration, Instant};
-use std::collections::HashMap;
 use crate::error::Result;
-use crate::performance::{ResourcePool, MemoryPool, PerformancePage};
+use crate::performance::{MemoryPool, PerformancePage, ResourcePool};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
 /// Configuration for parallel page generation
 #[derive(Debug, Clone)]
@@ -79,7 +79,7 @@ impl ParallelGenerationOptions {
             chunk_size: 2, // Smaller chunks for better load balancing
             load_balancing: true,
             max_memory_per_thread: 128 * 1024 * 1024, // More memory per thread
-            progress_reporting: false, // Skip reporting for speed
+            progress_reporting: false,                // Skip reporting for speed
             thread_pool_config: ThreadPoolConfig::max_performance(),
         }
     }
@@ -91,7 +91,7 @@ impl ParallelGenerationOptions {
             chunk_size: 8, // Larger chunks to reduce overhead
             load_balancing: false,
             max_memory_per_thread: 16 * 1024 * 1024, // Less memory per thread
-            progress_reporting: true, // Monitor memory usage
+            progress_reporting: true,                // Monitor memory usage
             thread_pool_config: ThreadPoolConfig::memory_efficient(),
         }
     }
@@ -185,7 +185,7 @@ impl ParallelPageGenerator {
 
         #[cfg(feature = "rayon")]
         let thread_pool = Self::create_thread_pool(&options)?;
-        
+
         #[cfg(not(feature = "rayon"))]
         let thread_pool = None;
 
@@ -200,16 +200,23 @@ impl ParallelPageGenerator {
 
     /// Create a thread pool with custom configuration
     #[cfg(feature = "rayon")]
-    fn create_thread_pool(options: &ParallelGenerationOptions) -> Result<Option<rayon::ThreadPool>> {
+    fn create_thread_pool(
+        options: &ParallelGenerationOptions,
+    ) -> Result<Option<rayon::ThreadPool>> {
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(options.max_threads)
             .stack_size(options.thread_pool_config.stack_size)
             .thread_name(|index| {
-                format!("{}-{}", options.thread_pool_config.thread_name_prefix, index)
+                format!(
+                    "{}-{}",
+                    options.thread_pool_config.thread_name_prefix, index
+                )
             })
             .build()
-            .map_err(|e| crate::error::PdfError::Internal(format!("Failed to create thread pool: {}", e)))?;
-        
+            .map_err(|e| {
+                crate::error::PdfError::Internal(format!("Failed to create thread pool: {}", e))
+            })?;
+
         Ok(Some(pool))
     }
 
@@ -217,17 +224,15 @@ impl ParallelPageGenerator {
     #[cfg(feature = "rayon")]
     pub fn process_pages_parallel(&self, pages: Vec<PageSpec>) -> Result<Vec<ProcessedPage>> {
         let start_time = Instant::now();
-        
+
         if let Some(ref pool) = self.thread_pool {
-            let result = pool.install(|| {
-                self.process_pages_internal(pages)
-            });
-            
+            let result = pool.install(|| self.process_pages_internal(pages));
+
             // Update statistics
             let mut stats = self.stats.lock().unwrap();
             stats.total_processing_time = start_time.elapsed();
             stats.parallel_executions += 1;
-            
+
             result
         } else {
             // Fallback to sequential processing
@@ -248,14 +253,19 @@ impl ParallelPageGenerator {
         let chunk_size = self.options.chunk_size;
         let resource_pool = Arc::clone(&self.resource_pool);
         let stats = Arc::clone(&self.stats);
-        
+
         let results: Result<Vec<Vec<ProcessedPage>>> = pages
             .chunks(chunk_size)
             .enumerate()
             .collect::<Vec<_>>()
             .par_iter()
             .map(|(chunk_idx, chunk)| {
-                self.process_chunk(*chunk_idx, chunk, Arc::clone(&resource_pool), Arc::clone(&stats))
+                self.process_chunk(
+                    *chunk_idx,
+                    chunk,
+                    Arc::clone(&resource_pool),
+                    Arc::clone(&stats),
+                )
             })
             .collect();
 
@@ -265,7 +275,7 @@ impl ParallelPageGenerator {
         // Update final statistics
         let mut stats_guard = self.stats.lock().unwrap();
         stats_guard.total_pages_processed = final_results.len();
-        
+
         Ok(final_results)
     }
 
@@ -279,68 +289,66 @@ impl ParallelPageGenerator {
     ) -> Result<Vec<ProcessedPage>> {
         let start = Instant::now();
         let thread_id = self.get_current_thread_id();
-        
+
         // Create per-thread memory pool
         let memory_pool = MemoryPool::new(self.options.max_memory_per_thread);
-        
+
         let mut processed = Vec::with_capacity(chunk.len());
-        
+
         for (page_idx, spec) in chunk.iter().enumerate() {
             let page_start = Instant::now();
-            
+
             // Create page processor with shared resources
-            let processor = PageProcessor::new(
-                Arc::clone(&resource_pool),
-                &memory_pool,
-                thread_id,
-            );
-            
+            let processor = PageProcessor::new(Arc::clone(&resource_pool), &memory_pool, thread_id);
+
             // Process the page
             let processed_page = processor.process_page(spec)?;
             processed.push(processed_page);
-            
+
             // Update per-page statistics
             if self.options.progress_reporting {
                 let mut stats_guard = stats.lock().unwrap();
                 stats_guard.pages_completed += 1;
                 stats_guard.total_page_time += page_start.elapsed();
                 let current_count = stats_guard.thread_usage.get(&thread_id).unwrap_or(&0);
-                stats_guard.thread_usage.insert(thread_id, current_count + 1);
+                stats_guard
+                    .thread_usage
+                    .insert(thread_id, current_count + 1);
             }
         }
-        
+
         // Update chunk statistics
         let mut stats_guard = stats.lock().unwrap();
         stats_guard.chunks_processed += 1;
         stats_guard.total_chunk_time += start.elapsed();
         stats_guard.chunk_sizes.push(chunk.len());
-        
+
         Ok(processed)
     }
 
     /// Sequential fallback processing
     fn process_pages_sequential(&self, pages: Vec<PageSpec>) -> Result<Vec<ProcessedPage>> {
         let start_time = Instant::now();
-        
+
         let memory_pool = MemoryPool::new(self.options.max_memory_per_thread);
         let processor = PageProcessor::new(
             Arc::clone(&self.resource_pool),
             &memory_pool,
             0, // Single thread ID
         );
-        
+
         let mut results = Vec::with_capacity(pages.len());
         for spec in pages {
             let processed = processor.process_page(&spec)?;
             results.push(processed);
         }
-        
+
         // Update statistics
         let mut stats = self.stats.lock().unwrap();
         stats.total_processing_time = start_time.elapsed();
         stats.total_pages_processed = results.len();
         stats.sequential_executions += 1;
-        
+
         Ok(results)
     }
 
@@ -382,11 +390,11 @@ impl ParallelPageGenerator {
     pub fn optimal_chunk_size(&self, total_pages: usize) -> usize {
         let threads = self.options.max_threads;
         let base_chunk_size = (total_pages / threads).max(1);
-        
+
         // Adjust based on memory constraints
         let memory_per_page = 1024 * 1024; // Estimate 1MB per page
         let max_chunk_by_memory = self.options.max_memory_per_thread / memory_per_page;
-        
+
         base_chunk_size.min(max_chunk_by_memory).max(1)
     }
 }
@@ -399,7 +407,11 @@ pub struct PageProcessor {
 }
 
 impl PageProcessor {
-    pub fn new(resource_pool: Arc<ResourcePool>, memory_pool: &MemoryPool, thread_id: usize) -> Self {
+    pub fn new(
+        resource_pool: Arc<ResourcePool>,
+        memory_pool: &MemoryPool,
+        thread_id: usize,
+    ) -> Self {
         Self {
             resource_pool,
             memory_pool: MemoryPool::new(memory_pool.memory_usage()), // Clone memory pool settings
@@ -410,13 +422,13 @@ impl PageProcessor {
     /// Process a single page specification
     pub fn process_page(&self, spec: &PageSpec) -> Result<ProcessedPage> {
         let start = Instant::now();
-        
+
         // Simulate page processing - in real implementation this would:
         // 1. Render page content
         // 2. Deduplicate resources using resource pool
         // 3. Compress content streams
         // 4. Build page object structure
-        
+
         let performance_page = PerformancePage {
             index: spec.index,
             width: spec.width,
@@ -424,9 +436,9 @@ impl PageProcessor {
             content_refs: spec.resource_keys.clone(),
             estimated_size: self.estimate_page_size(spec),
         };
-        
+
         let processing_time = start.elapsed();
-        
+
         Ok(ProcessedPage {
             page: performance_page,
             processing_time,
@@ -440,7 +452,7 @@ impl PageProcessor {
         let base_size = 2048; // Base page object overhead
         let content_size = spec.content_length;
         let resource_overhead = spec.resource_keys.len() * 512;
-        
+
         base_size + content_size + resource_overhead
     }
 }
@@ -547,11 +559,11 @@ impl ParallelStats {
 
         let max_usage = *values.iter().max().unwrap() as f64;
         let min_usage = *values.iter().min().unwrap() as f64;
-        
+
         if max_usage == 0.0 {
             return 1.0;
         }
-        
+
         min_usage / max_usage
     }
 
@@ -624,13 +636,11 @@ mod tests {
 
     #[test]
     fn test_page_spec_complexity_clamping() {
-        let spec = PageSpec::new(0, 595.0, 842.0)
-            .with_complexity(1.5); // Should be clamped to 1.0
+        let spec = PageSpec::new(0, 595.0, 842.0).with_complexity(1.5); // Should be clamped to 1.0
 
         assert_eq!(spec.complexity_score, 1.0);
 
-        let spec2 = PageSpec::new(0, 595.0, 842.0)
-            .with_complexity(-0.5); // Should be clamped to 0.0
+        let spec2 = PageSpec::new(0, 595.0, 842.0).with_complexity(-0.5); // Should be clamped to 0.0
 
         assert_eq!(spec2.complexity_score, 0.0);
     }

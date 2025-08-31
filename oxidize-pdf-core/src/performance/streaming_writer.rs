@@ -37,10 +37,10 @@
 //! ```
 
 use crate::error::Result;
-use std::fs::File;
-use std::io::{BufWriter, Write, Seek, SeekFrom};
-use std::path::Path;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufWriter, Seek, SeekFrom, Write};
+use std::path::Path;
 use std::time::Instant;
 
 /// Configuration for streaming PDF writer
@@ -65,10 +65,10 @@ pub struct StreamingOptions {
 impl Default for StreamingOptions {
     fn default() -> Self {
         Self {
-            buffer_size: 256 * 1024,      // 256KB buffer
+            buffer_size: 256 * 1024, // 256KB buffer
             compression: true,
             auto_flush: true,
-            compression_level: 6,          // Balanced compression
+            compression_level: 6, // Balanced compression
             xref_streaming: true,
             progress_callbacks: false,
             write_strategy: WriteStrategy::Buffered,
@@ -80,10 +80,10 @@ impl StreamingOptions {
     /// Create options optimized for minimal memory usage
     pub fn minimal_memory() -> Self {
         Self {
-            buffer_size: 8 * 1024,        // 8KB buffer
+            buffer_size: 8 * 1024, // 8KB buffer
             compression: true,
             auto_flush: true,
-            compression_level: 9,          // Maximum compression
+            compression_level: 9, // Maximum compression
             xref_streaming: true,
             progress_callbacks: false,
             write_strategy: WriteStrategy::Direct,
@@ -94,10 +94,10 @@ impl StreamingOptions {
     pub fn max_speed() -> Self {
         Self {
             buffer_size: 2 * 1024 * 1024, // 2MB buffer
-            compression: false,            // Skip compression for speed
-            auto_flush: false,             // Manual flush for control
+            compression: false,           // Skip compression for speed
+            auto_flush: false,            // Manual flush for control
             compression_level: 1,
-            xref_streaming: false,         // Build xref in memory
+            xref_streaming: false, // Build xref in memory
             progress_callbacks: false,
             write_strategy: WriteStrategy::Buffered,
         }
@@ -173,7 +173,7 @@ impl StreamingPdfWriter {
 
         // Write PDF header
         instance.write_header()?;
-        
+
         Ok(instance)
     }
 
@@ -190,12 +190,16 @@ impl StreamingPdfWriter {
 
         // Write page object
         let page_obj_id = self.start_object()?;
-        
+
         writeln!(self.writer, "<<")?;
         writeln!(self.writer, "  /Type /Page")?;
         writeln!(self.writer, "  /Parent 2 0 R")?;
-        writeln!(self.writer, "  /MediaBox [0 0 {} {}]", page_content.width, page_content.height)?;
-        
+        writeln!(
+            self.writer,
+            "  /MediaBox [0 0 {} {}]",
+            page_content.width, page_content.height
+        )?;
+
         if !page_content.content_streams.is_empty() {
             writeln!(self.writer, "  /Contents [")?;
             for (i, stream) in page_content.content_streams.iter().enumerate() {
@@ -208,10 +212,10 @@ impl StreamingPdfWriter {
             }
             writeln!(self.writer, "  ]")?;
         }
-        
+
         if !page_content.resources.fonts.is_empty() || !page_content.resources.images.is_empty() {
             writeln!(self.writer, "  /Resources <<")?;
-            
+
             if !page_content.resources.fonts.is_empty() {
                 writeln!(self.writer, "    /Font <<")?;
                 for (name, font_id) in &page_content.resources.fonts {
@@ -219,7 +223,7 @@ impl StreamingPdfWriter {
                 }
                 writeln!(self.writer, "    >>")?;
             }
-            
+
             if !page_content.resources.images.is_empty() {
                 writeln!(self.writer, "    /XObject <<")?;
                 for (name, image_id) in &page_content.resources.images {
@@ -227,10 +231,10 @@ impl StreamingPdfWriter {
                 }
                 writeln!(self.writer, "    >>")?;
             }
-            
+
             writeln!(self.writer, "  >>")?;
         }
-        
+
         writeln!(self.writer, ">>")?;
         self.end_object()?;
 
@@ -249,7 +253,7 @@ impl StreamingPdfWriter {
     /// Write a content stream with optional compression
     fn write_content_stream(&mut self, content: &ContentStream) -> Result<u32> {
         let obj_id = self.start_object()?;
-        
+
         let data = if self.options.compression {
             self.compress_data(&content.data)?
         } else {
@@ -258,18 +262,18 @@ impl StreamingPdfWriter {
 
         writeln!(self.writer, "<<")?;
         writeln!(self.writer, "  /Length {}", data.len())?;
-        
+
         if self.options.compression {
             writeln!(self.writer, "  /Filter /FlateDecode")?;
         }
-        
+
         writeln!(self.writer, ">>")?;
         writeln!(self.writer, "stream")?;
         self.writer.write_all(&data)?;
         writeln!(self.writer, "\nendstream")?;
-        
+
         self.end_object()?;
-        
+
         Ok(obj_id)
     }
 
@@ -277,13 +281,13 @@ impl StreamingPdfWriter {
     fn start_object(&mut self) -> Result<u32> {
         let obj_id = self.current_object_id;
         self.current_object_id += 1;
-        
+
         // Record position for xref table
         self.object_positions.insert(obj_id, self.current_position);
-        
+
         writeln!(self.writer, "{} 0 obj", obj_id)?;
         self.stats.objects_written += 1;
-        
+
         Ok(obj_id)
     }
 
@@ -303,14 +307,15 @@ impl StreamingPdfWriter {
 
     /// Compress data using flate compression
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>> {
-        use flate2::Compression;
         use flate2::write::ZlibEncoder;
+        use flate2::Compression;
         use std::io::Write;
 
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::new(self.options.compression_level));
+        let mut encoder =
+            ZlibEncoder::new(Vec::new(), Compression::new(self.options.compression_level));
         encoder.write_all(data)?;
         let compressed = encoder.finish()?;
-        
+
         Ok(compressed)
     }
 
@@ -322,14 +327,14 @@ impl StreamingPdfWriter {
     /// Manually flush the writer
     pub fn flush(&mut self) -> Result<()> {
         let start = Instant::now();
-        
+
         self.writer.flush()?;
         self.current_position = self.writer.seek(SeekFrom::Current(0))?;
         self.buffer_used = 0;
-        
+
         self.stats.flushes += 1;
         self.stats.total_flush_time += start.elapsed();
-        
+
         Ok(())
     }
 
@@ -346,12 +351,12 @@ impl StreamingPdfWriter {
         writeln!(self.writer, "  /Type /Pages")?;
         writeln!(self.writer, "  /Count {}", self.pages_written)?;
         writeln!(self.writer, "  /Kids [")?;
-        
+
         // This is simplified - would need to track actual page object IDs
         for i in 0..self.pages_written {
             writeln!(self.writer, "    {} 0 R", 3 + i * 2)?; // Rough estimate
         }
-        
+
         writeln!(self.writer, "  ]")?;
         writeln!(self.writer, ">>")?;
         self.end_object()?;
@@ -369,7 +374,7 @@ impl StreamingPdfWriter {
         writeln!(self.writer, "xref")?;
         writeln!(self.writer, "0 {}", self.current_object_id)?;
         writeln!(self.writer, "0000000000 65535 f ")?;
-        
+
         for obj_id in 1..self.current_object_id {
             if let Some(position) = self.object_positions.get(&obj_id) {
                 writeln!(self.writer, "{:010} 00000 n ", position)?;
@@ -406,9 +411,10 @@ impl StreamingPdfWriter {
 
     /// Estimate total memory usage
     pub fn memory_usage(&self) -> usize {
-        self.options.buffer_size + 
-        self.object_positions.len() * (std::mem::size_of::<u32>() + std::mem::size_of::<u64>()) +
-        std::mem::size_of::<StreamingStats>()
+        self.options.buffer_size
+            + self.object_positions.len()
+                * (std::mem::size_of::<u32>() + std::mem::size_of::<u64>())
+            + std::mem::size_of::<StreamingStats>()
     }
 }
 
@@ -552,10 +558,10 @@ mod tests {
     fn test_streaming_writer_creation() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.pdf");
-        
+
         let options = StreamingOptions::default();
         let writer = StreamingPdfWriter::create(&file_path, options);
-        
+
         assert!(writer.is_ok());
         assert!(file_path.exists());
     }
@@ -578,9 +584,7 @@ mod tests {
         let content = StreamingPageContent {
             width: 595.0,
             height: 842.0,
-            content_streams: vec![
-                ContentStream::from_text("Hello", 100.0, 200.0, "F1", 12.0)
-            ],
+            content_streams: vec![ContentStream::from_text("Hello", 100.0, 200.0, "F1", 12.0)],
             resources,
         };
 
@@ -604,15 +608,15 @@ mod tests {
     fn test_buffer_usage_calculation() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.pdf");
-        
+
         let options = StreamingOptions::default().with_buffer_size(1000);
         let writer = StreamingPdfWriter::create(&file_path, options).unwrap();
-        
+
         // Initially should be low usage
         assert!(writer.buffer_usage_percent() < 10.0);
     }
 
-    #[test] 
+    #[test]
     fn test_write_strategy_enum() {
         assert_eq!(WriteStrategy::Buffered, WriteStrategy::Buffered);
         assert_ne!(WriteStrategy::Buffered, WriteStrategy::Direct);
