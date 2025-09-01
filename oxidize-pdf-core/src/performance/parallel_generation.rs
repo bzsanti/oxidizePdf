@@ -38,7 +38,7 @@ use rayon::prelude::*;
 use crate::error::Result;
 use crate::performance::{MemoryPool, PerformancePage, ResourcePool};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// Configuration for parallel page generation
@@ -187,7 +187,7 @@ impl ParallelPageGenerator {
         let thread_pool = Self::create_thread_pool(&options)?;
 
         #[cfg(not(feature = "rayon"))]
-        let thread_pool = None;
+        let thread_pool: Option<rayon::ThreadPool> = None;
 
         Ok(Self {
             options,

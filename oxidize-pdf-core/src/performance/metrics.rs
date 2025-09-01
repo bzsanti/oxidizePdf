@@ -47,7 +47,7 @@ pub struct PerformanceMonitor {
 }
 
 /// Types of operations that can be monitored
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Operation {
     /// PDF document parsing
     PdfParsing,

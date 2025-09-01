@@ -67,7 +67,7 @@ pub struct HighPerformanceDocument {
 }
 
 /// Performance-optimized page representation
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PerformancePage {
     pub index: u32,
     pub width: f64,
@@ -219,7 +219,7 @@ impl HighPerformanceDocument {
             resource_pool_stats: self.resource_pool.stats(),
             memory_pool_stats: self.memory_pool.stats(),
             compression_stats: CompressionStats::default(),
-            operation_stats: self.metrics.get_stats(),
+            operation_stats: Vec::new(), // TODO: Extract operation stats from metrics
         }
     }
 

@@ -53,6 +53,7 @@ toml = "0.8"
 
 # Temporary files for external validation
 tempfile = "3.8"
+rusty-tesseract = { version = "1.1.10", optional = true }
 
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
@@ -65,8 +66,9 @@ winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
 image = { version = "0.25.6", default-features = false, features = ["png", "jpeg"], optional = true }
 
 # OCR dependencies (optional)
-tesseract = { version = "0.15", optional = true }
-leptonica-plumbing = { version = "1.0", optional = true }
+rusty-tesseract = { version = "1.1.10", optional = true }
+# tesseract = { version = "0.15.2", optional = true, features = ["tesseract_5_2"] }
+# leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -172,6 +174,26 @@ path = "../examples/src/simple_document_benchmark.rs"
 
 # Temporarily disabled test file with compilation errors
 
+[[example]]
+name = "medium_complexity_benchmark"
+path = "../examples/src/medium_complexity_benchmark.rs"
+
+[[example]]
+name = "high_complexity_benchmark"
+path = "../examples/src/high_complexity_benchmark.rs"
+
+[[example]]
+name = "extreme_complexity_benchmark"
+path = "../examples/src/extreme_complexity_benchmark.rs"
+
+[[example]]
+name = "tesseract_debug"
+path = "../examples/src/tesseract_debug.rs"
+
+[[example]]
+name = "ocr_basic_demo"
+path = "../examples/src/ocr_basic_demo.rs"
+
 [[bench]]
 name = "ocr_benchmarks"
 harness = false
@@ -190,8 +212,11 @@ compression = ["dep:flate2"]
 external-images = ["dep:image"]
 
 # OCR features
-ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]
+ocr-tesseract = ["dep:rusty-tesseract"]
 ocr-full = ["ocr-tesseract"]
+
+# Performance features
+performance = ["dep:rayon", "compression"]
 
 # Test features
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
@@ -199,6 +224,5 @@ real-pdf-tests = []  # Enable tests with real PDF files from fixtures
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]
 
-# Performance features
-performance = ["dep:rayon", "compression"]
+# Parallel processing features
 rayon = ["dep:rayon"]
