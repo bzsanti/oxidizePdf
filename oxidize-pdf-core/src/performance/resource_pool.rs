@@ -128,7 +128,7 @@ pub struct ImageResource {
     pub dpi: Option<(u32, u32)>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum ImageFormat {
     Jpeg,
     Png,
@@ -206,7 +206,7 @@ pub struct PatternResource {
     pub matrix: [f64; 6],
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum PatternType {
     LinearGradient,
     RadialGradient,

@@ -78,9 +78,9 @@ impl ContentType {
 
         // Check magic bytes for images
         match &data[0..4] {
-            [0xFF, 0xD8, 0xFF, _] => ContentType::ImageJpeg,
-            [0x89, 0x50, 0x4E, 0x47] => ContentType::ImagePng,
-            [0x42, 0x4D, _, _] => ContentType::ImageUncompressed, // BMP
+            [0xFF, 0xD8, 0xFF, _] => return ContentType::ImageJpeg,
+            [0x89, 0x50, 0x4E, 0x47] => return ContentType::ImagePng,
+            [0x42, 0x4D, _, _] => return ContentType::ImageUncompressed, // BMP
             _ => {}
         }
 
@@ -573,7 +573,7 @@ impl IntelligentCompressor {
     fn decompress_lzw(&self, _data: &[u8]) -> Result<Vec<u8>> {
         // Simplified LZW decompression would go here
         // For now, return the data as-is (this is not correct but prevents errors)
-        Err(crate::error::PdfError::Internal(
+        Err(crate::error::PdfError::CompressionError(
             "LZW decompression not fully implemented".to_string(),
         ))
     }

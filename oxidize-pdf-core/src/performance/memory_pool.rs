@@ -246,6 +246,11 @@ impl MemoryPool {
         let mut pools = self.pools.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
 
+        // Extract values before borrowing mutably
+        let capacity = size_category.pool_capacity();
+        let buffer_size = buffer.capacity();
+        let current_size = pools.current_size;
+
         let pool = match size_category {
             BufferSize::Small => &mut pools.small_buffers,
             BufferSize::Medium => &mut pools.medium_buffers,
@@ -253,12 +258,8 @@ impl MemoryPool {
             BufferSize::Huge => &mut pools.huge_buffers,
         };
 
-        // Check if we have room in this pool and total memory limit
-        let capacity = size_category.pool_capacity();
-        let buffer_size = buffer.capacity();
-
         if pool.len() < capacity {
-            if pools.current_size + buffer_size <= self.max_total_size {
+            if current_size + buffer_size <= self.max_total_size {
                 buffer.clear(); // Clear contents but keep capacity
                 pools.current_size += buffer_size;
                 pool.push_back(buffer);

@@ -37,6 +37,9 @@ pub use ocr::{
 };
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 
+#[cfg(feature = "ocr-tesseract")]
+pub use tesseract_provider::{RustyTesseractConfig, RustyTesseractProvider};
+
 use crate::error::Result;
 use crate::Color;
 use std::fmt::Write;
