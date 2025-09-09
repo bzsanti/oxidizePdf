@@ -188,6 +188,7 @@ impl OcrProvider for RustyTesseractProvider {
                 height: 0.0,
                 font_size: 12.0,
                 confidence: confidence as f64,
+                word_confidences: None,
                 fragment_type: FragmentType::Word,
             }]
         };
@@ -199,6 +200,7 @@ impl OcrProvider for RustyTesseractProvider {
             processing_time_ms: processing_time.as_millis() as u64,
             engine_name: "rusty-tesseract".to_string(),
             language: self.config.language.clone(),
+            processed_region: None,
             image_dimensions: (0, 0), // We could extract actual dimensions if needed
         })
     }

@@ -925,6 +925,7 @@ fn simulate_page_ocr_processing<P: OcrProvider>(
         preprocessing: crate::text::ocr::ImagePreprocessing::default(),
         engine_options: std::collections::HashMap::new(),
         timeout_seconds: 30,
+        regions: None,
     };
 
     // Process the mock image data

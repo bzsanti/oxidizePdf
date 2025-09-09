@@ -599,6 +599,7 @@ impl TesseractOcrProvider {
                 processing_time_ms: processing_time.as_millis() as u64,
                 engine_name: "Tesseract".to_string(),
                 language: lang,
+                processed_region: None,
                 image_dimensions: (0, 0), // Note: Image dimensions not currently extracted
             })
         })

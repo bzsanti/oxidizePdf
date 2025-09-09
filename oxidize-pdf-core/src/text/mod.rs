@@ -32,8 +32,10 @@ pub use list::{
 };
 pub use metrics::{measure_char, measure_text, split_into_words};
 pub use ocr::{
-    FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError, OcrOptions,
-    OcrProcessingResult, OcrProvider, OcrResult, OcrTextFragment,
+    CharacterConfidence, CorrectionCandidate, CorrectionReason, CorrectionSuggestion,
+    CorrectionType, FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError,
+    OcrOptions, OcrPostProcessor, OcrProcessingResult, OcrProvider, OcrRegion, OcrResult,
+    OcrTextFragment, WordConfidence,
 };
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 

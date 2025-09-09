@@ -15,6 +15,12 @@ pub struct EntityMap {
     pub schemas: Vec<String>,
 }
 
+impl Default for EntityMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EntityMap {
     pub fn new() -> Self {
         Self {
@@ -26,18 +32,19 @@ impl EntityMap {
 
     /// Add an entity to the map
     pub fn add_entity(&mut self, entity: Entity) {
-        self.pages
-            .entry(entity.page)
-            .or_insert_with(Vec::new)
-            .push(entity);
+        self.pages.entry(entity.page).or_default().push(entity);
     }
 
-    /// Export to JSON string
+    /// Export to JSON string (requires serde_json feature)
+    #[cfg(feature = "semantic")]
+    #[allow(unexpected_cfgs)]
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }
 
-    /// Export to JSON with custom options
+    /// Export to JSON with custom options (requires serde_json feature)
+    #[cfg(feature = "semantic")]
+    #[allow(unexpected_cfgs)]
     pub fn to_json_compact(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }

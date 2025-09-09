@@ -1,0 +1,82 @@
+[package]
+name = "oxidize-pdf-pro"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "Commercial"
+repository = "https://github.com/bzsanti/oxidizePdf"
+documentation = "https://docs.oxidizepdf.dev/pro"
+homepage = "https://oxidizepdf.dev/pro"
+description = "Professional and Enterprise features for oxidize-pdf with AI-Ready capabilities"
+keywords = ["pdf", "ai", "machine-learning", "semantic", "enterprise"]
+categories = ["graphics", "text-processing", "parsing", "web-programming"]
+readme = "README.md"
+
+[dependencies]
+# Core PDF library
+oxidize-pdf = { path = "../oxidize-pdf-core" }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Serialization for metadata
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+# Date/time for licensing and metadata
+chrono = { workspace = true, features = ["serde"] }
+
+# Logging
+tracing = { workspace = true }
+
+# HTTP client for license validation (optional)
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+# XMP metadata toolkit (optional, for advanced XMP features)
+# xmp-toolkit = { version = "1.0", optional = true }
+
+# Base64 for license keys
+base64 = { workspace = true }
+
+# UUID for entity IDs
+uuid = { workspace = true }
+
+# XML processing for XMP
+quick-xml = { workspace = true }
+
+# Regular expressions for pattern extraction
+regex = { workspace = true }
+
+[features]
+default = ["xmp", "extraction", "templates"]
+
+# Core Pro features
+xmp = []                    # XMP metadata embedding
+extraction = []             # Entity extraction API
+templates = []              # Pre-built templates (Invoice, Contract, etc.)
+license-validation = ["reqwest"]  # Online license validation
+
+# Optional advanced features
+# xmp-toolkit = ["dep:xmp-toolkit"]  # Advanced XMP processing
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
+
+[[example]]
+name = "xmp_embedding"
+path = "examples/xmp_embedding.rs"
+
+[[example]]
+name = "semantic_extractor"
+path = "examples/semantic_extractor.rs"
+
+[[example]]
+name = "pro_invoice_template"
+path = "examples/pro_invoice_template.rs"
+
+[[example]]
+name = "basic_pro_features"
+path = "examples/basic_pro_features.rs"

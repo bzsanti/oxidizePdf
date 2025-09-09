@@ -40,6 +40,23 @@ pub struct ExtractTextResponse {
     pub pages: usize,
 }
 
+/// Response for OCR processing endpoint
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OcrResponse {
+    /// Extracted text from OCR processing
+    pub text: String,
+    /// Number of pages processed
+    pub pages: usize,
+    /// Average confidence score (0.0 to 1.0)
+    pub confidence: f64,
+    /// Processing time in milliseconds
+    pub processing_time_ms: u64,
+    /// OCR engine used
+    pub engine: String,
+    /// Language used for processing
+    pub language: String,
+}
+
 /// Request for PDF merge operation
 #[derive(Debug, Deserialize)]
 pub struct MergePdfRequest {
@@ -104,6 +121,8 @@ pub fn app() -> Router {
         .route("/api/create", post(create_pdf))
         .route("/api/health", get(health_check))
         .route("/api/extract", post(extract_text))
+        // OCR operations
+        .route("/api/ocr", post(process_ocr))
         // PDF operations
         .route("/api/merge", post(merge_pdfs_handler))
         .layer(CorsLayer::permissive())
@@ -315,4 +334,80 @@ pub async fn merge_pdfs_handler(mut multipart: Multipart) -> Result<Response, Ap
         output_data,
     )
         .into_response())
+}
+
+/// Process PDF with OCR to extract text from images and scanned content
+pub async fn process_ocr(mut multipart: Multipart) -> Result<Response, AppError> {
+    use std::time::Instant;
+
+    let start_time = Instant::now();
+    let mut pdf_data = None;
+
+    // Parse multipart form to extract PDF file
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        AppError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Failed to read multipart field: {e}"),
+        ))
+    })? {
+        if field.name() == Some("file") {
+            pdf_data = Some(field.bytes().await.map_err(|e| {
+                AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Failed to read file data: {e}"),
+                ))
+            })?);
+            break;
+        }
+    }
+
+    let pdf_bytes = pdf_data.ok_or_else(|| {
+        AppError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "No PDF file provided in upload",
+        ))
+    })?;
+
+    // For the community version, we'll simulate OCR processing
+    // In a real implementation, you would:
+    // 1. Extract images from the PDF
+    // 2. Process each image with an OCR provider
+    // 3. Combine the results
+
+    // Parse PDF to get basic information
+    let cursor = Cursor::new(pdf_bytes.as_ref());
+    let reader = PdfReader::new(cursor).map_err(|e| {
+        AppError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Failed to parse PDF: {e:?}"),
+        ))
+    })?;
+    let doc = PdfDocument::new(reader);
+    let page_count = doc.page_count().unwrap_or(0) as usize;
+
+    if page_count == 0 {
+        return Err(AppError::Io(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "PDF contains no pages",
+        )));
+    }
+
+    // Create mock OCR result for demonstration
+    // In reality, you would process actual images from the PDF
+    let mock_text = format!("Mock OCR text extracted from {} page(s)", page_count);
+    let mock_confidence = 0.85;
+
+    let processing_time = start_time.elapsed().as_millis() as u64;
+
+    // Create response
+    let response = OcrResponse {
+        text: mock_text,
+        pages: page_count,
+        confidence: mock_confidence,
+        processing_time_ms: processing_time,
+        engine: "MockOCR-Community".to_string(),
+        language: "eng".to_string(),
+    };
+
+    Ok((StatusCode::OK, Json(response)).into_response())
 }

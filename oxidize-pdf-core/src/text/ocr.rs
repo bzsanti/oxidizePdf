@@ -119,6 +119,62 @@ pub enum OcrError {
     Configuration(String),
 }
 
+/// A rectangular region for selective OCR processing
+#[derive(Debug, Clone, PartialEq)]
+pub struct OcrRegion {
+    /// X coordinate of the top-left corner (pixels)
+    pub x: u32,
+
+    /// Y coordinate of the top-left corner (pixels)  
+    pub y: u32,
+
+    /// Width of the region (pixels)
+    pub width: u32,
+
+    /// Height of the region (pixels)
+    pub height: u32,
+
+    /// Optional label for this region (e.g., "header", "table", "paragraph")
+    pub label: Option<String>,
+}
+
+impl OcrRegion {
+    /// Create a new OCR region
+    pub fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+            label: None,
+        }
+    }
+
+    /// Create a new OCR region with a label
+    pub fn with_label(x: u32, y: u32, width: u32, height: u32, label: impl Into<String>) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+            label: Some(label.into()),
+        }
+    }
+
+    /// Check if this region contains a point
+    pub fn contains_point(&self, x: u32, y: u32) -> bool {
+        x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
+    }
+
+    /// Check if this region overlaps with another region
+    pub fn overlaps_with(&self, other: &OcrRegion) -> bool {
+        !(self.x + self.width <= other.x
+            || other.x + other.width <= self.x
+            || self.y + self.height <= other.y
+            || other.y + other.height <= self.y)
+    }
+}
+
 /// OCR processing options and configuration
 #[derive(Debug, Clone)]
 pub struct OcrOptions {
@@ -139,6 +195,9 @@ pub struct OcrOptions {
 
     /// Timeout for OCR operations (in seconds)
     pub timeout_seconds: u32,
+
+    /// Specific regions to process (None = process entire image)
+    pub regions: Option<Vec<OcrRegion>>,
 }
 
 impl Default for OcrOptions {
@@ -150,6 +209,7 @@ impl Default for OcrOptions {
             preprocessing: ImagePreprocessing::default(),
             engine_options: std::collections::HashMap::new(),
             timeout_seconds: 30,
+            regions: None,
         }
     }
 }
@@ -185,6 +245,382 @@ impl Default for ImagePreprocessing {
     }
 }
 
+/// Word-level confidence information for detailed OCR analysis
+#[derive(Debug, Clone)]
+pub struct WordConfidence {
+    /// The word text
+    pub word: String,
+
+    /// Confidence score for this specific word (0.0 to 1.0)
+    pub confidence: f64,
+
+    /// X position of the word within the fragment (relative to fragment start)
+    pub x_offset: f64,
+
+    /// Width of the word in points
+    pub width: f64,
+
+    /// Optional character-level confidences (for ultimate granularity)
+    pub character_confidences: Option<Vec<CharacterConfidence>>,
+}
+
+impl WordConfidence {
+    /// Create a new word confidence
+    pub fn new(word: String, confidence: f64, x_offset: f64, width: f64) -> Self {
+        Self {
+            word,
+            confidence,
+            x_offset,
+            width,
+            character_confidences: None,
+        }
+    }
+
+    /// Create a word confidence with character-level details
+    pub fn with_characters(
+        word: String,
+        confidence: f64,
+        x_offset: f64,
+        width: f64,
+        character_confidences: Vec<CharacterConfidence>,
+    ) -> Self {
+        Self {
+            word,
+            confidence,
+            x_offset,
+            width,
+            character_confidences: Some(character_confidences),
+        }
+    }
+
+    /// Get the average character confidence if available
+    pub fn average_character_confidence(&self) -> Option<f64> {
+        self.character_confidences.as_ref().map(|chars| {
+            let sum: f64 = chars.iter().map(|c| c.confidence).sum();
+            sum / chars.len() as f64
+        })
+    }
+
+    /// Check if this word has low confidence (below threshold)
+    pub fn is_low_confidence(&self, threshold: f64) -> bool {
+        self.confidence < threshold
+    }
+}
+
+/// Character-level confidence information for ultimate OCR granularity
+#[derive(Debug, Clone)]
+pub struct CharacterConfidence {
+    /// The character
+    pub character: char,
+
+    /// Confidence score for this character (0.0 to 1.0)  
+    pub confidence: f64,
+
+    /// X position relative to word start
+    pub x_offset: f64,
+
+    /// Character width in points
+    pub width: f64,
+}
+
+impl CharacterConfidence {
+    /// Create a new character confidence
+    pub fn new(character: char, confidence: f64, x_offset: f64, width: f64) -> Self {
+        Self {
+            character,
+            confidence,
+            x_offset,
+            width,
+        }
+    }
+}
+
+/// Candidate for OCR post-processing correction
+#[derive(Debug, Clone)]
+pub struct CorrectionCandidate {
+    /// The original word with low confidence or errors
+    pub word: String,
+
+    /// Original confidence score
+    pub confidence: f64,
+
+    /// Position within the text fragment
+    pub position_in_fragment: usize,
+
+    /// Suggested corrections ranked by likelihood
+    pub suggested_corrections: Vec<CorrectionSuggestion>,
+
+    /// Reason why this word needs correction
+    pub correction_reason: CorrectionReason,
+}
+
+/// A suggested correction for an OCR error
+#[derive(Debug, Clone)]
+pub struct CorrectionSuggestion {
+    /// The corrected word
+    pub corrected_word: String,
+
+    /// Confidence in this correction (0.0 to 1.0)
+    pub correction_confidence: f64,
+
+    /// Type of correction applied
+    pub correction_type: CorrectionType,
+
+    /// Explanation of why this correction was suggested
+    pub explanation: Option<String>,
+}
+
+/// Reasons why a word might need correction
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CorrectionReason {
+    /// Word has low OCR confidence
+    LowConfidence,
+
+    /// Word contains common OCR confusion patterns
+    ConfusionPattern,
+
+    /// Word not found in dictionary
+    NotInDictionary,
+
+    /// Word doesn't fit context
+    ContextualError,
+
+    /// Word has suspicious character combinations
+    SuspiciousPattern,
+}
+
+/// Types of corrections that can be applied
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CorrectionType {
+    /// Character substitution (e.g., "0" -> "O")
+    CharacterSubstitution,
+
+    /// Dictionary lookup and replacement
+    DictionaryCorrection,
+
+    /// Contextual correction based on surrounding words
+    ContextualCorrection,
+
+    /// Pattern-based correction (e.g., "rn" -> "m")
+    PatternCorrection,
+
+    /// Manual review suggested
+    ManualReview,
+}
+
+/// OCR post-processor for automatic text correction
+#[derive(Debug, Clone)]
+pub struct OcrPostProcessor {
+    /// Common OCR character confusions
+    pub character_corrections: std::collections::HashMap<char, Vec<char>>,
+
+    /// Dictionary of valid words (optional)
+    pub dictionary: Option<std::collections::HashSet<String>>,
+
+    /// Common pattern corrections
+    pub pattern_corrections: std::collections::HashMap<String, String>,
+
+    /// Confidence threshold for correction
+    pub correction_threshold: f64,
+
+    /// Maximum edit distance for corrections
+    pub max_edit_distance: usize,
+}
+
+impl OcrPostProcessor {
+    /// Create a new post-processor with common OCR corrections
+    pub fn new() -> Self {
+        let mut character_corrections = std::collections::HashMap::new();
+
+        // Common OCR character confusions
+        character_corrections.insert('0', vec!['O', 'o', 'Q']);
+        character_corrections.insert('O', vec!['0', 'Q', 'o']);
+        character_corrections.insert('1', vec!['l', 'I', '|']);
+        character_corrections.insert('l', vec!['1', 'I', '|']);
+        character_corrections.insert('I', vec!['1', 'l', '|']);
+        character_corrections.insert('S', vec!['5', '$']);
+        character_corrections.insert('5', vec!['S', '$']);
+        character_corrections.insert('2', vec!['Z', 'z']);
+        character_corrections.insert('Z', vec!['2', 'z']);
+
+        let mut pattern_corrections = std::collections::HashMap::new();
+        pattern_corrections.insert("rn".to_string(), "m".to_string());
+        pattern_corrections.insert("cl".to_string(), "d".to_string());
+        pattern_corrections.insert("fi".to_string(), "fi".to_string()); // ligature
+        pattern_corrections.insert("fl".to_string(), "fl".to_string()); // ligature
+
+        Self {
+            character_corrections,
+            dictionary: None,
+            pattern_corrections,
+            correction_threshold: 0.7,
+            max_edit_distance: 2,
+        }
+    }
+
+    /// Add a dictionary for word validation
+    pub fn with_dictionary(mut self, dictionary: std::collections::HashSet<String>) -> Self {
+        self.dictionary = Some(dictionary);
+        self
+    }
+
+    /// Process a fragment and suggest corrections
+    pub fn process_fragment(&self, fragment: &OcrTextFragment) -> Vec<CorrectionCandidate> {
+        let mut candidates = fragment.get_correction_candidates(self.correction_threshold);
+
+        // Enhance candidates with suggestions
+        for candidate in &mut candidates {
+            candidate.suggested_corrections = self.generate_suggestions(&candidate.word);
+        }
+
+        candidates
+    }
+
+    /// Generate correction suggestions for a word
+    pub fn generate_suggestions(&self, word: &str) -> Vec<CorrectionSuggestion> {
+        let mut suggestions = Vec::new();
+
+        // Character substitution corrections
+        suggestions.extend(self.character_substitution_corrections(word));
+
+        // Pattern-based corrections
+        suggestions.extend(self.pattern_corrections(word));
+
+        // Dictionary corrections (if available)
+        if let Some(dict) = &self.dictionary {
+            suggestions.extend(self.dictionary_corrections(word, dict));
+        }
+
+        // Sort by confidence and limit results
+        suggestions.sort_by(|a, b| {
+            b.correction_confidence
+                .partial_cmp(&a.correction_confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        suggestions.truncate(5); // Limit to top 5 suggestions
+
+        suggestions
+    }
+
+    /// Generate character substitution corrections
+    fn character_substitution_corrections(&self, word: &str) -> Vec<CorrectionSuggestion> {
+        let mut suggestions = Vec::new();
+        let chars: Vec<char> = word.chars().collect();
+
+        for (i, &ch) in chars.iter().enumerate() {
+            if let Some(alternatives) = self.character_corrections.get(&ch) {
+                for &alt_ch in alternatives {
+                    let mut corrected_chars = chars.clone();
+                    corrected_chars[i] = alt_ch;
+                    let corrected_word: String = corrected_chars.into_iter().collect();
+
+                    suggestions.push(CorrectionSuggestion {
+                        corrected_word,
+                        correction_confidence: 0.8,
+                        correction_type: CorrectionType::CharacterSubstitution,
+                        explanation: Some(format!("'{}' -> '{}' substitution", ch, alt_ch)),
+                    });
+                }
+            }
+        }
+
+        suggestions
+    }
+
+    /// Generate pattern-based corrections
+    fn pattern_corrections(&self, word: &str) -> Vec<CorrectionSuggestion> {
+        let mut suggestions = Vec::new();
+
+        for (pattern, replacement) in &self.pattern_corrections {
+            if word.contains(pattern) {
+                let corrected_word = word.replace(pattern, replacement);
+                suggestions.push(CorrectionSuggestion {
+                    corrected_word,
+                    correction_confidence: 0.85,
+                    correction_type: CorrectionType::PatternCorrection,
+                    explanation: Some(format!(
+                        "Pattern '{}' -> '{}' correction",
+                        pattern, replacement
+                    )),
+                });
+            }
+        }
+
+        suggestions
+    }
+
+    /// Generate dictionary-based corrections
+    fn dictionary_corrections(
+        &self,
+        word: &str,
+        dictionary: &std::collections::HashSet<String>,
+    ) -> Vec<CorrectionSuggestion> {
+        let mut suggestions = Vec::new();
+
+        // Check if word is already valid
+        if dictionary.contains(word) {
+            return suggestions;
+        }
+
+        // Find similar words using simple edit distance
+        for dict_word in dictionary {
+            if self.edit_distance(word, dict_word) <= self.max_edit_distance {
+                let confidence = 1.0
+                    - (self.edit_distance(word, dict_word) as f64
+                        / word.len().max(dict_word.len()) as f64);
+                suggestions.push(CorrectionSuggestion {
+                    corrected_word: dict_word.clone(),
+                    correction_confidence: confidence * 0.9, // Slightly lower than pattern corrections
+                    correction_type: CorrectionType::DictionaryCorrection,
+                    explanation: Some(format!(
+                        "Dictionary match with edit distance {}",
+                        self.edit_distance(word, dict_word)
+                    )),
+                });
+            }
+        }
+
+        suggestions
+    }
+
+    /// Calculate simple edit distance (Levenshtein distance)
+    fn edit_distance(&self, s1: &str, s2: &str) -> usize {
+        let len1 = s1.len();
+        let len2 = s2.len();
+
+        let mut dp = vec![vec![0; len2 + 1]; len1 + 1];
+
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..=len1 {
+            dp[i][0] = i;
+        }
+        for j in 0..=len2 {
+            dp[0][j] = j;
+        }
+
+        let s1_chars: Vec<char> = s1.chars().collect();
+        let s2_chars: Vec<char> = s2.chars().collect();
+
+        for i in 1..=len1 {
+            for j in 1..=len2 {
+                if s1_chars[i - 1] == s2_chars[j - 1] {
+                    dp[i][j] = dp[i - 1][j - 1];
+                } else {
+                    dp[i][j] = 1 + dp[i - 1][j].min(dp[i][j - 1]).min(dp[i - 1][j - 1]);
+                }
+            }
+        }
+
+        dp[len1][len2]
+    }
+}
+
+impl Default for OcrPostProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Text fragment extracted by OCR with position and confidence information
 #[derive(Debug, Clone)]
 pub struct OcrTextFragment {
@@ -206,11 +642,171 @@ pub struct OcrTextFragment {
     /// Confidence score for this fragment (0.0 to 1.0)
     pub confidence: f64,
 
+    /// Word-level confidence scores (optional, for advanced OCR engines)
+    pub word_confidences: Option<Vec<WordConfidence>>,
+
     /// Font size estimation (points)
     pub font_size: f64,
 
     /// Whether this fragment is part of a word or line
     pub fragment_type: FragmentType,
+}
+
+impl OcrTextFragment {
+    /// Create a new OCR text fragment
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        text: String,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        confidence: f64,
+        font_size: f64,
+        fragment_type: FragmentType,
+    ) -> Self {
+        Self {
+            text,
+            x,
+            y,
+            width,
+            height,
+            confidence,
+            word_confidences: None,
+            font_size,
+            fragment_type,
+        }
+    }
+
+    /// Create a fragment with word-level confidence scores
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_word_confidences(
+        text: String,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        confidence: f64,
+        font_size: f64,
+        fragment_type: FragmentType,
+        word_confidences: Vec<WordConfidence>,
+    ) -> Self {
+        Self {
+            text,
+            x,
+            y,
+            width,
+            height,
+            confidence,
+            word_confidences: Some(word_confidences),
+            font_size,
+            fragment_type,
+        }
+    }
+
+    /// Get words with confidence below the threshold
+    pub fn get_low_confidence_words(&self, threshold: f64) -> Vec<&WordConfidence> {
+        self.word_confidences
+            .as_ref()
+            .map(|words| words.iter().filter(|w| w.confidence < threshold).collect())
+            .unwrap_or_default()
+    }
+
+    /// Get the average word confidence if available
+    pub fn average_word_confidence(&self) -> Option<f64> {
+        self.word_confidences.as_ref().map(|words| {
+            if words.is_empty() {
+                return 0.0;
+            }
+            let sum: f64 = words.iter().map(|w| w.confidence).sum();
+            sum / words.len() as f64
+        })
+    }
+
+    /// Get words sorted by confidence (lowest first)
+    pub fn words_by_confidence(&self) -> Vec<&WordConfidence> {
+        self.word_confidences
+            .as_ref()
+            .map(|words| {
+                let mut sorted_words: Vec<_> = words.iter().collect();
+                sorted_words.sort_by(|a, b| {
+                    a.confidence
+                        .partial_cmp(&b.confidence)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+                sorted_words
+            })
+            .unwrap_or_default()
+    }
+
+    /// Check if this fragment has any low-confidence words
+    pub fn has_low_confidence_words(&self, threshold: f64) -> bool {
+        self.word_confidences
+            .as_ref()
+            .map(|words| words.iter().any(|w| w.confidence < threshold))
+            .unwrap_or(false)
+    }
+
+    /// Get words that are candidates for correction (low confidence + patterns)
+    pub fn get_correction_candidates(&self, threshold: f64) -> Vec<CorrectionCandidate> {
+        self.word_confidences
+            .as_ref()
+            .map(|words| {
+                words
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, w)| w.confidence < threshold)
+                    .map(|(index, word)| CorrectionCandidate {
+                        word: word.word.clone(),
+                        confidence: word.confidence,
+                        position_in_fragment: index,
+                        suggested_corrections: vec![], // Will be filled by post-processor
+                        correction_reason: CorrectionReason::LowConfidence,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Generate a confidence report for this fragment
+    pub fn confidence_report(&self) -> String {
+        let mut report = format!(
+            "Fragment confidence: {:.1}% - \"{}\"\n",
+            self.confidence * 100.0,
+            self.text.trim()
+        );
+
+        if let Some(words) = &self.word_confidences {
+            report.push_str(&format!(
+                "  Word-level breakdown ({} words):\n",
+                words.len()
+            ));
+            for (i, word) in words.iter().enumerate() {
+                report.push_str(&format!(
+                    "    {}: \"{}\" - {:.1}%\n",
+                    i + 1,
+                    word.word,
+                    word.confidence * 100.0
+                ));
+
+                if let Some(chars) = &word.character_confidences {
+                    report.push_str("      Characters: ");
+                    for ch in chars {
+                        report.push_str(&format!(
+                            "'{}'({:.0}%) ",
+                            ch.character,
+                            ch.confidence * 100.0
+                        ));
+                    }
+                    report.push('\n');
+                }
+            }
+        } else {
+            report.push_str("  (No word-level data available)\n");
+        }
+
+        report
+    }
 }
 
 /// Type of text fragment
@@ -247,11 +843,60 @@ pub struct OcrProcessingResult {
     /// Language detected/used
     pub language: String,
 
+    /// Region that was processed (None if entire image was processed)
+    pub processed_region: Option<OcrRegion>,
+
     /// Image dimensions that were processed
     pub image_dimensions: (u32, u32),
 }
 
 impl OcrProcessingResult {
+    /// Create a new OCR processing result
+    pub fn new(
+        text: String,
+        confidence: f64,
+        fragments: Vec<OcrTextFragment>,
+        processing_time_ms: u64,
+        engine_name: String,
+        language: String,
+        image_dimensions: (u32, u32),
+    ) -> Self {
+        Self {
+            text,
+            confidence,
+            fragments,
+            processing_time_ms,
+            engine_name,
+            language,
+            processed_region: None,
+            image_dimensions,
+        }
+    }
+
+    /// Create a new OCR processing result for a specific region
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_region(
+        text: String,
+        confidence: f64,
+        fragments: Vec<OcrTextFragment>,
+        processing_time_ms: u64,
+        engine_name: String,
+        language: String,
+        image_dimensions: (u32, u32),
+        region: OcrRegion,
+    ) -> Self {
+        Self {
+            text,
+            confidence,
+            fragments,
+            processing_time_ms,
+            engine_name,
+            language,
+            processed_region: Some(region),
+            image_dimensions,
+        }
+    }
+
     /// Filter fragments by minimum confidence
     pub fn filter_by_confidence(&self, min_confidence: f64) -> Vec<&OcrTextFragment> {
         self.fragments
@@ -377,6 +1022,7 @@ impl fmt::Display for OcrEngine {
 ///         #     engine_name: "MyOCR".to_string(),
 ///         #     language: "en".to_string(),
 ///         #     image_dimensions: (800, 600),
+///         #     processed_region: None,
 ///         # })
 ///     }
 ///
@@ -448,6 +1094,52 @@ pub trait OcrProvider: Send + Sync {
         options: &OcrOptions,
     ) -> OcrResult<OcrProcessingResult> {
         self.process_image(page_data, options)
+    }
+
+    /// Process multiple images with region information
+    ///
+    /// This method allows for selective OCR processing where each image corresponds
+    /// to a specific region. This is useful for:
+    /// - Processing pre-cropped regions of a document  
+    /// - Batch processing of multiple regions with different OCR settings
+    /// - Optimizing performance by avoiding full-image processing
+    ///
+    /// # Arguments
+    ///
+    /// * `image_region_pairs` - Vector of (image_data, region) pairs
+    /// * `options` - OCR processing options (applies to all regions)
+    ///
+    /// # Returns
+    ///
+    /// A vector of `OcrProcessingResult`, one for each processed region.
+    /// The order matches the input pairs vector.
+    ///
+    /// # Default Implementation
+    ///
+    /// The default implementation processes each image separately and sets
+    /// the region information in the result.
+    fn process_image_regions(
+        &self,
+        image_region_pairs: &[(&[u8], &OcrRegion)],
+        options: &OcrOptions,
+    ) -> OcrResult<Vec<OcrProcessingResult>> {
+        let mut results = Vec::with_capacity(image_region_pairs.len());
+
+        for (image_data, region) in image_region_pairs {
+            let mut result = self.process_image(image_data, options)?;
+
+            // Adjust fragment coordinates to match original image coordinates
+            // (assuming the input image_data is already cropped to the region)
+            for fragment in &mut result.fragments {
+                fragment.x += region.x as f64;
+                fragment.y += region.y as f64;
+            }
+
+            result.processed_region = Some((*region).clone());
+            results.push(result);
+        }
+
+        Ok(results)
     }
 
     /// Get the list of supported image formats
@@ -617,6 +1309,7 @@ impl OcrProvider for MockOcrProvider {
                 width: 200.0,
                 height: 20.0,
                 confidence: self.confidence,
+                word_confidences: None,
                 font_size: 12.0,
                 fragment_type: FragmentType::Line,
             },
@@ -627,6 +1320,7 @@ impl OcrProvider for MockOcrProvider {
                 width: 150.0,
                 height: 20.0,
                 confidence: self.confidence * 0.9,
+                word_confidences: None,
                 font_size: 12.0,
                 fragment_type: FragmentType::Line,
             },
@@ -639,6 +1333,7 @@ impl OcrProvider for MockOcrProvider {
             processing_time_ms: self.processing_delay_ms,
             engine_name: "Mock OCR".to_string(),
             language: options.language.clone(),
+            processed_region: None,
             image_dimensions: (800, 600), // Mock dimensions
         })
     }
@@ -794,6 +1489,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -804,6 +1500,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 0.5,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -811,6 +1508,7 @@ mod tests {
             processing_time_ms: 100,
             engine_name: "Test".to_string(),
             language: "en".to_string(),
+            processed_region: None,
             image_dimensions: (800, 600),
         };
 
@@ -832,6 +1530,7 @@ mod tests {
                     width: 80.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -842,6 +1541,7 @@ mod tests {
                     width: 80.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -849,6 +1549,7 @@ mod tests {
             processing_time_ms: 100,
             engine_name: "Test".to_string(),
             language: "en".to_string(),
+            processed_region: None,
             image_dimensions: (800, 600),
         };
 
@@ -870,6 +1571,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -880,6 +1582,7 @@ mod tests {
                     width: 200.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Line,
                 },
@@ -887,6 +1590,7 @@ mod tests {
             processing_time_ms: 100,
             engine_name: "Test".to_string(),
             language: "en".to_string(),
+            processed_region: None,
             image_dimensions: (800, 600),
         };
 
@@ -912,6 +1616,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 0.8,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -922,6 +1627,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 0.6,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -929,6 +1635,7 @@ mod tests {
             processing_time_ms: 100,
             engine_name: "Test".to_string(),
             language: "en".to_string(),
+            processed_region: None,
             image_dimensions: (800, 600),
         };
 
@@ -945,6 +1652,7 @@ mod tests {
             processing_time_ms: 100,
             engine_name: "Test".to_string(),
             language: "en".to_string(),
+            processed_region: None,
             image_dimensions: (800, 600),
         };
 
@@ -1083,6 +1791,7 @@ mod tests {
                 },
                 engine_options: HashMap::new(),
                 timeout_seconds: 60,
+                regions: None,
             };
 
             options
@@ -1183,6 +1892,7 @@ mod tests {
                 width: 150.0,
                 height: 25.0,
                 confidence: 0.92,
+                word_confidences: None,
                 font_size: 14.0,
                 fragment_type: FragmentType::Line,
             };
@@ -1206,6 +1916,7 @@ mod tests {
                 width: 40.0,
                 height: 15.0,
                 confidence: 0.88,
+                word_confidences: None,
                 font_size: 11.0,
                 fragment_type: FragmentType::Word,
             };
@@ -1234,6 +1945,7 @@ mod tests {
                 width: 50.0,
                 height: 20.0,
                 confidence: 0.9,
+                word_confidences: None,
                 font_size: 12.0,
                 fragment_type: FragmentType::Word,
             };
@@ -1257,6 +1969,7 @@ mod tests {
                     width: 20.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Character,
                 },
@@ -1267,6 +1980,7 @@ mod tests {
                     width: 20.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Character,
                 },
@@ -1277,6 +1991,7 @@ mod tests {
                     width: 20.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Character,
                 },
@@ -1287,6 +2002,7 @@ mod tests {
                     width: 20.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Character,
                 },
@@ -1299,6 +2015,7 @@ mod tests {
                 processing_time_ms: 50,
                 engine_name: "Test".to_string(),
                 language: "en".to_string(),
+                processed_region: None,
                 image_dimensions: (200, 200),
             };
 
@@ -1325,6 +2042,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 1.0,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -1335,6 +2053,7 @@ mod tests {
                     width: 50.0,
                     height: 20.0,
                     confidence: 0.0,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -1345,6 +2064,7 @@ mod tests {
                     width: 30.0,
                     height: 20.0,
                     confidence: 0.5,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -1357,6 +2077,7 @@ mod tests {
                 processing_time_ms: 50,
                 engine_name: "Test".to_string(),
                 language: "en".to_string(),
+                processed_region: None,
                 image_dimensions: (200, 200),
             };
 
@@ -1377,6 +2098,7 @@ mod tests {
                     width: 10.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Character,
                 },
@@ -1387,6 +2109,7 @@ mod tests {
                     width: 40.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -1397,6 +2120,7 @@ mod tests {
                     width: 100.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Line,
                 },
@@ -1407,6 +2131,7 @@ mod tests {
                     width: 200.0,
                     height: 100.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Paragraph,
                 },
@@ -1419,6 +2144,7 @@ mod tests {
                 processing_time_ms: 50,
                 engine_name: "Test".to_string(),
                 language: "en".to_string(),
+                processed_region: None,
                 image_dimensions: (300, 300),
             };
 
@@ -1440,6 +2166,7 @@ mod tests {
                     width: 45.0,
                     height: 18.0,
                     confidence: 0.5 + (i as f64 % 50.0) / 100.0,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: if i % 4 == 0 {
                         FragmentType::Line
@@ -1456,6 +2183,7 @@ mod tests {
                 processing_time_ms: 500,
                 engine_name: "Test".to_string(),
                 language: "en".to_string(),
+                processed_region: None,
                 image_dimensions: (500, 2000),
             };
 
@@ -1482,6 +2210,7 @@ mod tests {
                 processing_time_ms: 10,
                 engine_name: "Test".to_string(),
                 language: "en".to_string(),
+                processed_region: None,
                 image_dimensions: (0, 0),
             };
 
@@ -1730,6 +2459,7 @@ mod tests {
                     map
                 },
                 timeout_seconds: 120,
+                regions: None,
             };
 
             // Verify all fields
@@ -1755,6 +2485,7 @@ mod tests {
                     width: 50.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -1765,6 +2496,7 @@ mod tests {
                     width: 60.0,
                     height: 20.0,
                     confidence: 0.9,
+                    word_confidences: None,
                     font_size: 12.0,
                     fragment_type: FragmentType::Word,
                 },
@@ -1825,6 +2557,7 @@ mod tests {
                         width: 100.0,
                         height: 20.0,
                         confidence: 0.9,
+                        word_confidences: None,
                         font_size: 12.0,
                         fragment_type: FragmentType::Word,
                     },
@@ -1835,6 +2568,7 @@ mod tests {
                         width: 100.0,
                         height: 20.0,
                         confidence: 0.8,
+                        word_confidences: None,
                         font_size: 12.0,
                         fragment_type: FragmentType::Word,
                     },
@@ -1842,6 +2576,7 @@ mod tests {
                 processing_time_ms: 100,
                 engine_name: "Test".to_string(),
                 language: "en".to_string(),
+                processed_region: None,
                 image_dimensions: (200, 100),
             });
 

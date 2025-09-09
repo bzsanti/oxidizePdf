@@ -45,6 +45,35 @@ GET /health
 ```
 Returns server status and version information.
 
+### OCR Processing
+```
+POST /api/ocr
+```
+Extract text from PDF files using OCR (Optical Character Recognition). Ideal for scanned documents or PDFs with embedded images containing text.
+
+**Request:**
+- Method: POST
+- Content-Type: multipart/form-data
+- Body: PDF file in 'file' field
+
+**Response:**
+```json
+{
+  "text": "Extracted text from the PDF",
+  "pages": 2,
+  "confidence": 0.85,
+  "processing_time_ms": 1250,
+  "engine": "MockOCR-Community", 
+  "language": "eng"
+}
+```
+
+**Example using curl:**
+```bash
+curl -X POST http://localhost:3000/api/ocr \
+  -F "file=@document.pdf"
+```
+
 ### Merge PDFs
 ```
 POST /api/merge

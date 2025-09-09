@@ -209,7 +209,6 @@ pub mod verification;
 pub mod viewer_preferences;
 pub mod writer;
 
-#[cfg(feature = "semantic")]
 pub mod semantic;
 
 // Re-export generation types
