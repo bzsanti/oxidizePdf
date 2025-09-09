@@ -63,7 +63,7 @@ libc = "0.2"
 winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
 
 # Image processing dependencies (optional)
-image = { version = "0.25.6", default-features = false, features = ["png", "jpeg"], optional = true }
+image = { workspace = true, optional = true }
 
 # OCR dependencies (optional)
 rusty-tesseract = { version = "1.1.10", optional = true }
@@ -191,6 +191,18 @@ name = "tesseract_debug"
 path = "../examples/src/tesseract_debug.rs"
 
 [[example]]
+name = "ocr_selective_regions"
+path = "../examples/src/ocr_selective_regions.rs"
+
+[[example]]
+name = "ocr_confidence_scoring"
+path = "../examples/src/ocr_confidence_scoring.rs"
+
+[[example]]
+name = "ocr_post_processing"
+path = "../examples/src/ocr_post_processing.rs"
+
+[[example]]
 name = "ocr_basic_demo"
 path = "../examples/src/ocr_basic_demo.rs"
 
@@ -212,7 +224,7 @@ compression = ["dep:flate2"]
 external-images = ["dep:image"]
 
 # OCR features
-ocr-tesseract = ["dep:rusty-tesseract"]
+ocr-tesseract = ["dep:rusty-tesseract", "external-images"]
 ocr-full = ["ocr-tesseract"]
 
 # Performance features

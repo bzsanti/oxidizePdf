@@ -13,7 +13,7 @@ readme = "README.md"
 
 [dependencies]
 # Core functionality
-oxidize-pdf = { version = "1.1.7", path = "../oxidize-pdf-core" }
+oxidize-pdf = { version = "1.2.0", path = "../oxidize-pdf-core" }
 
 # Web framework
 axum = { workspace = true, features = ["multipart"] }
@@ -52,3 +52,4 @@ tempfile = { workspace = true }
 pretty_assertions = { workspace = true }
 http-body-util = "0.1"
 hyper = "1.0"
+bytes = "1.5"

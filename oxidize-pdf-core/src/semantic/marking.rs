@@ -72,21 +72,25 @@ impl<'a> SemanticMarker<'a> {
     }
 
     /// Mark a region as a specific entity type
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn mark(&mut self, entity_type: EntityType, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         EntityBuilder::new(self.page, entity_type, bounds)
     }
 
     /// Mark text region
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn mark_text(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         self.mark(EntityType::Text, bounds)
     }
 
     /// Mark image region
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn mark_image(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         self.mark(EntityType::Image, bounds)
     }
 
     /// Mark table region
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn mark_table(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder {
         self.mark(EntityType::Table, bounds)
     }

@@ -3,6 +3,7 @@ members = [
     "oxidize-pdf-core",
     "oxidize-pdf-cli",
     "oxidize-pdf-api",
+    "oxidize-pdf-pro",
 ]
 resolver = "2"
 
@@ -11,7 +12,7 @@ version = "1.2.0"
 edition = "2021"
 rust-version = "1.77"  # MSRV - Required by thiserror 2.0
 authors = ["Santiago Fernández Muñoz"]
-license = "GPL-3.0"
+license = "MIT"
 repository = "https://github.com/bzsanti/oxidizePdf"
 homepage = "https://oxidizepdf.dev"
 documentation = "https://docs.oxidizepdf.dev"
@@ -62,6 +63,12 @@ insta = "1.38"
 rand = "0.8"
 hex = "0.4"
 regex = "1.11"
+
+# Pro dependencies
+base64 = "0.21"
+uuid = { version = "1.0", features = ["v4"] }
+quick-xml = { version = "0.31", features = ["serialize"] }
+reqwest = { version = "0.11", features = ["json"] }
 
 [profile.release]
 lto = true

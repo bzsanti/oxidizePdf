@@ -11,6 +11,7 @@ pub use api::{
     health_check,
     // PDF Operations
     merge_pdfs_handler,
+    process_ocr,
     AppError,
     CreatePdfRequest,
     ErrorResponse,
@@ -18,6 +19,7 @@ pub use api::{
     // Request/Response Types
     MergePdfRequest,
     MergePdfResponse,
+    OcrResponse,
 };
 
 #[cfg(test)]

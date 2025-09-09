@@ -3,10 +3,90 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Bounding box for entity regions
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BoundingBox {
+    /// X coordinate (left edge)
+    pub x: f32,
+    /// Y coordinate (bottom edge in PDF coordinates)
+    pub y: f32,
+    /// Width of the region
+    pub width: f32,
+    /// Height of the region  
+    pub height: f32,
+    /// Page number (1-indexed)
+    pub page: u32,
+}
+
+impl BoundingBox {
+    /// Create a new bounding box
+    pub fn new(x: f32, y: f32, width: f32, height: f32, page: u32) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+            page,
+        }
+    }
+
+    /// Get the right edge coordinate
+    pub fn right(&self) -> f32 {
+        self.x + self.width
+    }
+
+    /// Get the top edge coordinate (in PDF coordinates)
+    pub fn top(&self) -> f32 {
+        self.y + self.height
+    }
+
+    /// Check if this bounding box intersects with another
+    pub fn intersects(&self, other: &BoundingBox) -> bool {
+        self.page == other.page
+            && self.x < other.right()
+            && self.right() > other.x
+            && self.y < other.top()
+            && self.top() > other.y
+    }
+
+    /// Get the area of this bounding box
+    pub fn area(&self) -> f32 {
+        self.width * self.height
+    }
+}
+
+/// Relationship between entities
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntityRelation {
+    /// ID of the target entity
+    pub target_id: String,
+    /// Type of relationship
+    pub relation_type: RelationType,
+}
+
+/// Types of relationships between entities
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RelationType {
+    /// This entity contains the target entity
+    Contains,
+    /// This entity is part of the target entity
+    IsPartOf,
+    /// This entity references the target entity
+    References,
+    /// This entity follows the target entity (sequential)
+    Follows,
+    /// This entity precedes the target entity
+    Precedes,
+    /// Custom relationship type
+    Custom(String),
+}
+
 /// Standard entity types available in all editions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EntityType {
+    // Document Structure
     /// Generic text region
     Text,
     /// Image or graphic
@@ -25,10 +105,70 @@ pub enum EntityType {
     Header,
     /// Footer region
     Footer,
+
+    // Financial Documents
+    /// Invoice document
+    Invoice,
+    /// Invoice number/identifier
+    InvoiceNumber,
+    /// Customer name or organization
+    CustomerName,
+    /// Line item in an invoice
+    LineItem,
+    /// Total amount
+    TotalAmount,
+    /// Tax amount
+    TaxAmount,
+    /// Due date
+    DueDate,
+    /// Payment amount
+    PaymentAmount,
+
+    // Identity & Contact
+    /// Person name
+    PersonName,
+    /// Organization/Company name
+    OrganizationName,
+    /// Address (street, city, etc.)
+    Address,
+    /// Phone number
+    PhoneNumber,
+    /// Email address
+    Email,
+    /// Website URL
+    Website,
+
+    // Legal Documents
+    /// Contract document
+    Contract,
+    /// Contract party
+    ContractParty,
+    /// Contract term or clause
+    ContractTerm,
+    /// Effective date
+    EffectiveDate,
+    /// Contract value/amount
+    ContractValue,
+    /// Signature region
+    Signature,
+
+    // Dates and Numbers
+    /// Generic date
+    Date,
+    /// Amount or monetary value
+    Amount,
+    /// Quantity or count
+    Quantity,
+    /// Percentage value
+    Percentage,
+
+    // Custom entity type for extensibility (will be serialized as the inner string)
+    #[serde(untagged)]
+    Custom(String),
 }
 
 /// Metadata associated with an entity
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EntityMetadata {
     /// Key-value pairs of metadata
     pub properties: HashMap<String, String>,
@@ -36,6 +176,75 @@ pub struct EntityMetadata {
     pub confidence: Option<f32>,
     /// Schema URL if applicable
     pub schema: Option<String>,
+}
+
+/// Enhanced semantic entity with relationships
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SemanticEntity {
+    /// Unique identifier for this entity
+    pub id: String,
+    /// Type of entity
+    #[serde(rename = "type")]
+    pub entity_type: EntityType,
+    /// Geometric bounds of the entity
+    pub bounds: BoundingBox,
+    /// Text content of the entity (if applicable)
+    pub content: String,
+    /// Associated metadata
+    pub metadata: EntityMetadata,
+    /// Relationships to other entities
+    pub relationships: Vec<EntityRelation>,
+}
+
+impl SemanticEntity {
+    /// Create a new semantic entity
+    pub fn new(id: String, entity_type: EntityType, bounds: BoundingBox) -> Self {
+        Self {
+            id,
+            entity_type,
+            bounds,
+            content: String::new(),
+            metadata: EntityMetadata::new(),
+            relationships: Vec::new(),
+        }
+    }
+
+    /// Set the content text for this entity
+    pub fn with_content(mut self, content: impl Into<String>) -> Self {
+        self.content = content.into();
+        self
+    }
+
+    /// Add metadata to this entity
+    pub fn with_metadata(mut self, metadata: EntityMetadata) -> Self {
+        self.metadata = metadata;
+        self
+    }
+
+    /// Add a relationship to another entity
+    pub fn with_relationship(
+        mut self,
+        target_id: impl Into<String>,
+        relation_type: RelationType,
+    ) -> Self {
+        self.relationships.push(EntityRelation {
+            target_id: target_id.into(),
+            relation_type,
+        });
+        self
+    }
+
+    /// Add multiple relationships
+    pub fn with_relationships(mut self, relationships: Vec<EntityRelation>) -> Self {
+        self.relationships.extend(relationships);
+        self
+    }
+}
+
+impl Default for EntityMetadata {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EntityMetadata {
@@ -63,7 +272,7 @@ impl EntityMetadata {
     }
 }
 
-/// A marked entity in the PDF
+/// A marked entity in the PDF (backward compatibility)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
     /// Unique identifier for this entity
@@ -112,6 +321,10 @@ mod tests {
             EntityType::PageNumber,
             EntityType::Header,
             EntityType::Footer,
+            EntityType::Invoice,
+            EntityType::InvoiceNumber,
+            EntityType::CustomerName,
+            EntityType::Custom("TestType".to_string()),
         ];
 
         for entity_type in types {
@@ -125,6 +338,10 @@ mod tests {
                 EntityType::PageNumber => assert_eq!(entity_type, EntityType::PageNumber),
                 EntityType::Header => assert_eq!(entity_type, EntityType::Header),
                 EntityType::Footer => assert_eq!(entity_type, EntityType::Footer),
+                EntityType::Invoice => assert_eq!(entity_type, EntityType::Invoice),
+                EntityType::InvoiceNumber => assert_eq!(entity_type, EntityType::InvoiceNumber),
+                EntityType::CustomerName => assert_eq!(entity_type, EntityType::CustomerName),
+                EntityType::Custom(ref s) => assert_eq!(s, "TestType"),
             }
         }
     }
@@ -356,5 +573,71 @@ mod tests {
         // Test normal value
         let metadata3 = EntityMetadata::new().with_confidence(0.5);
         assert_eq!(metadata3.confidence, Some(0.5));
+    }
+
+    #[test]
+    fn test_financial_entity_types() {
+        let invoice = Entity::new(
+            "invoice_001".to_string(),
+            EntityType::Invoice,
+            (0.0, 0.0, 500.0, 600.0),
+            0,
+        );
+
+        let invoice_number = Entity::new(
+            "inv_num_001".to_string(),
+            EntityType::InvoiceNumber,
+            (100.0, 700.0, 150.0, 20.0),
+            0,
+        );
+
+        assert_eq!(invoice.entity_type, EntityType::Invoice);
+        assert_eq!(invoice_number.entity_type, EntityType::InvoiceNumber);
+    }
+
+    #[test]
+    fn test_custom_entity_type() {
+        let custom_entity = Entity::new(
+            "custom_001".to_string(),
+            EntityType::Custom("PurchaseOrder".to_string()),
+            (0.0, 0.0, 400.0, 500.0),
+            0,
+        );
+
+        assert_eq!(
+            custom_entity.entity_type,
+            EntityType::Custom("PurchaseOrder".to_string())
+        );
+
+        // Test serialization of custom type
+        let json = serde_json::to_string(&custom_entity.entity_type).unwrap();
+        assert!(json.contains("PurchaseOrder"));
+    }
+
+    #[test]
+    fn test_invoice_entity_with_metadata() {
+        let mut invoice = Entity::new(
+            "invoice_123".to_string(),
+            EntityType::Invoice,
+            (50.0, 50.0, 450.0, 700.0),
+            0,
+        );
+
+        invoice.metadata = EntityMetadata::new()
+            .with_property("invoice_number", "INV-2024-001")
+            .with_property("total_amount", "1234.56")
+            .with_property("currency", "USD")
+            .with_confidence(0.98)
+            .with_schema("https://schema.org/Invoice");
+
+        assert_eq!(
+            invoice.metadata.properties.get("invoice_number"),
+            Some(&"INV-2024-001".to_string())
+        );
+        assert_eq!(
+            invoice.metadata.properties.get("total_amount"),
+            Some(&"1234.56".to_string())
+        );
+        assert_eq!(invoice.metadata.confidence, Some(0.98));
     }
 }
