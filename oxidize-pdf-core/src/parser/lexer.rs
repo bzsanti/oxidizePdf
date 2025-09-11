@@ -989,7 +989,9 @@ impl<R: Read> Lexer<R> {
         // Control characters and Latin-1 supplement range that often indicate encoding issues
         (0x80..=0x9F).contains(&ch) ||
         ch == 0x07 || // Bell character
-        (ch <= 0x1F && ch != 0x09 && ch != 0x0A && ch != 0x0D) // Control chars except tab, LF, CR
+        (ch <= 0x1F && ch != 0x09 && ch != 0x0A && ch != 0x0D) || // Control chars except tab, LF, CR
+        // In lenient mode, also handle extended Latin-1 characters that may appear in corrupted streams
+        (self.options.lenient_syntax && ch >= 0xA0 && ch <= 0xFF) // Extended Latin-1 range
     }
 
     /// Handle problematic encoding characters in the main token stream

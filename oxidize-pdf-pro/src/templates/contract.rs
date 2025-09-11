@@ -1,5 +1,5 @@
 use super::ProTemplate;
-use crate::error::{ProError, Result};
+use crate::error::Result;
 use crate::license::FeatureGate;
 use oxidize_pdf::Document;
 

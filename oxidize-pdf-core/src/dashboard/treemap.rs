@@ -3,13 +3,13 @@
 //! This module implements tree maps for hierarchical data visualization,
 //! showing nested rectangles proportional to data values.
 
+use super::{
+    component::ComponentConfig, ComponentPosition, ComponentSpan, DashboardComponent,
+    DashboardTheme,
+};
 use crate::error::PdfError;
 use crate::graphics::Color;
 use crate::page::Page;
-use super::{
-    ComponentPosition, ComponentSpan, DashboardComponent, DashboardTheme,
-    component::ComponentConfig,
-};
 
 /// TreeMap visualization component
 #[derive(Debug, Clone)]
@@ -34,27 +34,42 @@ impl TreeMap {
 }
 
 impl DashboardComponent for TreeMap {
-    fn render(&self, page: &mut Page, position: ComponentPosition, theme: &DashboardTheme) -> Result<(), PdfError> {
+    fn render(
+        &self,
+        page: &mut Page,
+        position: ComponentPosition,
+        theme: &DashboardTheme,
+    ) -> Result<(), PdfError> {
         // Implementation placeholder
         let _title = self.options.title.as_deref().unwrap_or("TreeMap");
-        
+
         // Placeholder: page.add_text replaced
-        
+
         // Draw placeholder
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
         // Placeholder: page.rectangle replaced
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
-        
+
         Ok(())
     }
-    
-    fn get_span(&self) -> ComponentSpan { self.config.span }
-    fn set_span(&mut self, span: ComponentSpan) { self.config.span = span; }
-    fn preferred_height(&self, _available_width: f64) -> f64 { 250.0 }
-    fn component_type(&self) -> &'static str { "TreeMap" }
-    fn complexity_score(&self) -> u8 { 70 }
+
+    fn get_span(&self) -> ComponentSpan {
+        self.config.span
+    }
+    fn set_span(&mut self, span: ComponentSpan) {
+        self.config.span = span;
+    }
+    fn preferred_height(&self, _available_width: f64) -> f64 {
+        250.0
+    }
+    fn component_type(&self) -> &'static str {
+        "TreeMap"
+    }
+    fn complexity_score(&self) -> u8 {
+        70
+    }
 }
 
 /// TreeMap node data
@@ -88,7 +103,9 @@ impl Default for TreeMapOptions {
 pub struct TreeMapBuilder;
 
 impl TreeMapBuilder {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
     pub fn build(self) -> TreeMap {
         TreeMap::new(vec![])
     }

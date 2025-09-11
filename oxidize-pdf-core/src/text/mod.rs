@@ -73,6 +73,8 @@ pub struct TextContext {
     current_font: Font,
     font_size: f64,
     text_matrix: [f64; 6],
+    // Pending position for next write operation
+    pending_position: Option<(f64, f64)>,
     // Text state parameters
     character_spacing: Option<f64>,
     word_spacing: Option<f64>,
@@ -98,6 +100,7 @@ impl TextContext {
             current_font: Font::Helvetica,
             font_size: 12.0,
             text_matrix: [1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            pending_position: None,
             character_spacing: None,
             word_spacing: None,
             horizontal_scaling: None,
@@ -122,8 +125,8 @@ impl TextContext {
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
-        self.text_matrix[4] = x;
-        self.text_matrix[5] = y;
+        // Store position for next write() operation instead of setting text_matrix immediately
+        self.pending_position = Some((x, y));
         self
     }
 
@@ -143,13 +146,17 @@ impl TextContext {
         // Apply text state parameters
         self.apply_text_state_parameters();
 
-        // Set text position
-        writeln!(
-            &mut self.operations,
-            "{:.2} {:.2} Td",
-            self.text_matrix[4], self.text_matrix[5]
-        )
-        .expect("Writing to String should never fail");
+        // Set text position using pending_position if available, otherwise use text_matrix
+        let (x, y) = if let Some((px, py)) = self.pending_position.take() {
+            // Use and consume the pending position
+            (px, py)
+        } else {
+            // Fallback to text_matrix values
+            (self.text_matrix[4], self.text_matrix[5])
+        };
+
+        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
+            .expect("Writing to String should never fail");
 
         // Encode text using WinAnsiEncoding
         let encoding = TextEncoding::WinAnsiEncoding;

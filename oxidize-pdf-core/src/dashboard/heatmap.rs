@@ -3,13 +3,13 @@
 //! This module implements heat maps for dashboard visualizations, displaying
 //! data intensity through color gradients in a matrix format.
 
+use super::{
+    component::ComponentConfig, ComponentPosition, ComponentSpan, DashboardComponent,
+    DashboardTheme,
+};
 use crate::error::PdfError;
 use crate::graphics::Color;
 use crate::page::Page;
-use super::{
-    ComponentPosition, ComponentSpan, DashboardComponent, DashboardTheme,
-    component::ComponentConfig,
-};
 
 /// HeatMap visualization component
 #[derive(Debug, Clone)]
@@ -34,13 +34,13 @@ impl HeatMap {
             color_scale: ColorScale::default(),
         }
     }
-    
+
     /// Set heat map options
     pub fn with_options(mut self, options: HeatMapOptions) -> Self {
         self.options = options;
         self
     }
-    
+
     /// Set color scale
     pub fn with_color_scale(mut self, color_scale: ColorScale) -> Self {
         self.color_scale = color_scale;
@@ -49,28 +49,43 @@ impl HeatMap {
 }
 
 impl DashboardComponent for HeatMap {
-    fn render(&self, page: &mut Page, position: ComponentPosition, theme: &DashboardTheme) -> Result<(), PdfError> {
+    fn render(
+        &self,
+        page: &mut Page,
+        position: ComponentPosition,
+        theme: &DashboardTheme,
+    ) -> Result<(), PdfError> {
         // Implementation placeholder - full implementation would require complex matrix rendering
         let title = self.options.title.as_deref().unwrap_or("HeatMap");
-        
+
         // Render title
         // Placeholder: page.add_text replaced
-        
+
         // Draw placeholder rectangle
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
-        
+
         Ok(())
     }
-    
-    fn get_span(&self) -> ComponentSpan { self.config.span }
-    fn set_span(&mut self, span: ComponentSpan) { self.config.span = span; }
-    fn preferred_height(&self, _available_width: f64) -> f64 { 300.0 }
-    fn component_type(&self) -> &'static str { "HeatMap" }
-    fn complexity_score(&self) -> u8 { 75 }
+
+    fn get_span(&self) -> ComponentSpan {
+        self.config.span
+    }
+    fn set_span(&mut self, span: ComponentSpan) {
+        self.config.span = span;
+    }
+    fn preferred_height(&self, _available_width: f64) -> f64 {
+        300.0
+    }
+    fn component_type(&self) -> &'static str {
+        "HeatMap"
+    }
+    fn complexity_score(&self) -> u8 {
+        75
+    }
 }
 
 /// HeatMap data structure
@@ -126,7 +141,9 @@ impl Default for ColorScale {
 pub struct HeatMapBuilder;
 
 impl HeatMapBuilder {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
     pub fn build(self) -> HeatMap {
         HeatMap::new(HeatMapData {
             values: vec![],

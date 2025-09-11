@@ -342,6 +342,33 @@ mod tests {
                 EntityType::InvoiceNumber => assert_eq!(entity_type, EntityType::InvoiceNumber),
                 EntityType::CustomerName => assert_eq!(entity_type, EntityType::CustomerName),
                 EntityType::Custom(ref s) => assert_eq!(s, "TestType"),
+                _ => {
+                    // Handle all other EntityType variants that exist
+                    assert!(matches!(
+                        entity_type,
+                        EntityType::LineItem
+                            | EntityType::TotalAmount
+                            | EntityType::TaxAmount
+                            | EntityType::DueDate
+                            | EntityType::PaymentAmount
+                            | EntityType::PersonName
+                            | EntityType::OrganizationName
+                            | EntityType::Address
+                            | EntityType::PhoneNumber
+                            | EntityType::Email
+                            | EntityType::Website
+                            | EntityType::Contract
+                            | EntityType::ContractParty
+                            | EntityType::ContractTerm
+                            | EntityType::EffectiveDate
+                            | EntityType::ContractValue
+                            | EntityType::Signature
+                            | EntityType::Date
+                            | EntityType::Amount
+                            | EntityType::Quantity
+                            | EntityType::Percentage
+                    ));
+                }
             }
         }
     }

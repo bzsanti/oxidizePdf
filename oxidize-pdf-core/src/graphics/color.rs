@@ -17,6 +17,20 @@ impl Color {
         Color::Rgb(r.clamp(0.0, 1.0), g.clamp(0.0, 1.0), b.clamp(0.0, 1.0))
     }
 
+    /// Create a color from a hex string like "#RRGGBB"
+    pub fn hex(hex_str: &str) -> Self {
+        let hex = hex_str.trim_start_matches('#');
+        if hex.len() != 6 {
+            return Color::black(); // Default fallback
+        }
+
+        let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0) as f64 / 255.0;
+        let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0) as f64 / 255.0;
+        let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0) as f64 / 255.0;
+
+        Color::rgb(r, g, b)
+    }
+
     /// Creates a grayscale color with value clamped to 0.0-1.0.
     pub fn gray(value: f64) -> Self {
         Color::Gray(value.clamp(0.0, 1.0))

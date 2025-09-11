@@ -3,13 +3,13 @@
 //! This module implements pivot tables for data aggregation and analysis,
 //! with support for grouping, aggregation functions, and formatting.
 
-use std::collections::HashMap;
+use super::{
+    component::ComponentConfig, ComponentPosition, ComponentSpan, DashboardComponent,
+    DashboardTheme,
+};
 use crate::error::PdfError;
 use crate::page::Page;
-use super::{
-    ComponentPosition, ComponentSpan, DashboardComponent, DashboardTheme,
-    component::ComponentConfig,
-};
+use std::collections::HashMap;
 
 /// PivotTable component for data aggregation
 #[derive(Debug, Clone)]
@@ -34,14 +34,14 @@ impl PivotTable {
             computed_data: None,
         }
     }
-    
+
     /// Set pivot configuration
     pub fn with_config(mut self, config: PivotConfig) -> Self {
         self.pivot_config = config;
         self.computed_data = None; // Reset computed data
         self
     }
-    
+
     /// Add aggregation
     pub fn aggregate_by(mut self, functions: &[&str]) -> Self {
         for func_str in functions {
@@ -54,7 +54,7 @@ impl PivotTable {
         self.computed_data = None; // Reset computed data
         self
     }
-    
+
     /// Compute pivot data if not already computed
     fn ensure_computed(&mut self) -> Result<(), PdfError> {
         if self.computed_data.is_none() {
@@ -62,7 +62,7 @@ impl PivotTable {
         }
         Ok(())
     }
-    
+
     /// Compute pivot table data
     fn compute_pivot_data(&self) -> Result<ComputedPivotData, PdfError> {
         // Implementation placeholder - real implementation would be complex
@@ -79,49 +79,65 @@ impl PivotTable {
 }
 
 impl DashboardComponent for PivotTable {
-    fn render(&self, page: &mut Page, position: ComponentPosition, theme: &DashboardTheme) -> Result<(), PdfError> {
+    fn render(
+        &self,
+        page: &mut Page,
+        position: ComponentPosition,
+        theme: &DashboardTheme,
+    ) -> Result<(), PdfError> {
         let mut table = self.clone();
         table.ensure_computed()?;
-        
+
         let computed = table.computed_data.as_ref().unwrap();
-        
+
         // Render title if present
         if let Some(ref _title) = table.pivot_config.title {
             // Placeholder: page.add_text replaced
         }
-        
+
         // Simple table rendering (placeholder)
         let mut current_y = position.y + position.height - 40.0;
         let row_height = 20.0;
-        
+
         // Render headers
         for (i, _header) in computed.headers.iter().enumerate() {
             let _x = position.x + i as f64 * (position.width / computed.headers.len() as f64);
             // Placeholder: page.add_text replaced
         }
-        
+
         current_y -= row_height;
-        
+
         // Render data rows
         for (row_idx, row) in computed.rows.iter().enumerate() {
             let is_totals = computed.totals_row.map_or(false, |tr| tr == row_idx);
-            
+
             for (col_idx, _cell) in row.iter().enumerate() {
-                let _x = position.x + col_idx as f64 * (position.width / computed.headers.len() as f64);
+                let _x =
+                    position.x + col_idx as f64 * (position.width / computed.headers.len() as f64);
                 let _is_totals = is_totals; // Suppress warning
-                // Placeholder: page.add_text replaced
+                                            // Placeholder: page.add_text replaced
             }
             current_y -= row_height;
         }
-        
+
         Ok(())
     }
-    
-    fn get_span(&self) -> ComponentSpan { self.config.span }
-    fn set_span(&mut self, span: ComponentSpan) { self.config.span = span; }
-    fn preferred_height(&self, _available_width: f64) -> f64 { 200.0 }
-    fn component_type(&self) -> &'static str { "PivotTable" }
-    fn complexity_score(&self) -> u8 { 85 }
+
+    fn get_span(&self) -> ComponentSpan {
+        self.config.span
+    }
+    fn set_span(&mut self, span: ComponentSpan) {
+        self.config.span = span;
+    }
+    fn preferred_height(&self, _available_width: f64) -> f64 {
+        200.0
+    }
+    fn component_type(&self) -> &'static str {
+        "PivotTable"
+    }
+    fn complexity_score(&self) -> u8 {
+        85
+    }
 }
 
 /// Pivot table configuration
@@ -131,7 +147,7 @@ pub struct PivotConfig {
     pub title: Option<String>,
     /// Columns to group by (rows)
     pub row_groups: Vec<String>,
-    /// Columns to group by (columns) 
+    /// Columns to group by (columns)
     pub column_groups: Vec<String>,
     /// Aggregation functions to apply
     pub aggregations: Vec<AggregateFunction>,
@@ -180,7 +196,7 @@ pub enum AggregateFunction {
 
 impl std::str::FromStr for AggregateFunction {
     type Err = PdfError;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "count" => Ok(AggregateFunction::Count),
@@ -188,7 +204,10 @@ impl std::str::FromStr for AggregateFunction {
             "avg" | "average" => Ok(AggregateFunction::Average),
             "min" => Ok(AggregateFunction::Min),
             "max" => Ok(AggregateFunction::Max),
-            _ => Err(PdfError::InvalidOperation(format!("Unknown aggregate function: {}", s))),
+            _ => Err(PdfError::InvalidOperation(format!(
+                "Unknown aggregate function: {}",
+                s
+            ))),
         }
     }
 }
@@ -197,7 +216,9 @@ impl std::str::FromStr for AggregateFunction {
 pub struct PivotTableBuilder;
 
 impl PivotTableBuilder {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
     pub fn build(self) -> PivotTable {
         PivotTable::new(vec![])
     }

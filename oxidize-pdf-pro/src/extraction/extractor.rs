@@ -1,7 +1,4 @@
-use super::{
-    ExtractedEntity, ExtractionConfig, ExtractionMetadata, ExtractionMethod, ExtractionResult,
-    ProcessingStats,
-};
+use super::{ExtractedEntity, ExtractionConfig, ExtractionMethod, ExtractionResult};
 use crate::error::{ProError, Result};
 use crate::license::FeatureGate;
 use oxidize_pdf::{
@@ -20,6 +17,7 @@ pub struct SemanticExtractor {
 
 struct PatternExtractor {
     patterns: Vec<regex::Regex>,
+    #[allow(dead_code)]
     entity_type: EntityType,
     confidence_base: f32,
 }
@@ -239,7 +237,7 @@ impl SemanticExtractor {
         }
 
         let mut entities = Vec::new();
-        let mut entity_counter = 0;
+        let _entity_counter = 0;
 
         // Analyze document structure for tables, headers, etc.
         for page_num in 0..document.page_count() {
@@ -462,7 +460,7 @@ mod tests {
 
     #[test]
     fn test_pattern_extraction() {
-        let mut extractor = SemanticExtractor::new();
+        let extractor = SemanticExtractor::new();
         let text = "Invoice #12345 for John Doe. Total: $1,250.50";
 
         let entities = extractor.extract_with_patterns(text).unwrap();

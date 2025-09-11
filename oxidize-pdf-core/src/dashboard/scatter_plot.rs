@@ -3,13 +3,13 @@
 //! This module implements scatter plots for showing correlations and distributions
 //! in two-dimensional data.
 
+use super::{
+    component::ComponentConfig, ComponentPosition, ComponentSpan, DashboardComponent,
+    DashboardTheme,
+};
 use crate::error::PdfError;
 use crate::graphics::Color;
 use crate::page::Page;
-use super::{
-    ComponentPosition, ComponentSpan, DashboardComponent, DashboardTheme,
-    component::ComponentConfig,
-};
 
 /// ScatterPlot visualization component
 #[derive(Debug, Clone)]
@@ -34,27 +34,42 @@ impl ScatterPlot {
 }
 
 impl DashboardComponent for ScatterPlot {
-    fn render(&self, page: &mut Page, position: ComponentPosition, theme: &DashboardTheme) -> Result<(), PdfError> {
+    fn render(
+        &self,
+        page: &mut Page,
+        position: ComponentPosition,
+        theme: &DashboardTheme,
+    ) -> Result<(), PdfError> {
         // Implementation placeholder
         let _title = self.options.title.as_deref().unwrap_or("Scatter Plot");
-        
+
         // Placeholder: page.add_text replaced
-        
+
         // Draw placeholder
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
         // Placeholder: page.rectangle replaced
         // Placeholder: page graphics operation
         // Placeholder: page graphics operation
-        
+
         Ok(())
     }
-    
-    fn get_span(&self) -> ComponentSpan { self.config.span }
-    fn set_span(&mut self, span: ComponentSpan) { self.config.span = span; }
-    fn preferred_height(&self, _available_width: f64) -> f64 { 300.0 }
-    fn component_type(&self) -> &'static str { "ScatterPlot" }
-    fn complexity_score(&self) -> u8 { 60 }
+
+    fn get_span(&self) -> ComponentSpan {
+        self.config.span
+    }
+    fn set_span(&mut self, span: ComponentSpan) {
+        self.config.span = span;
+    }
+    fn preferred_height(&self, _available_width: f64) -> f64 {
+        300.0
+    }
+    fn component_type(&self) -> &'static str {
+        "ScatterPlot"
+    }
+    fn complexity_score(&self) -> u8 {
+        60
+    }
 }
 
 /// Scatter plot data point
@@ -91,7 +106,9 @@ impl Default for ScatterPlotOptions {
 pub struct ScatterPlotBuilder;
 
 impl ScatterPlotBuilder {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
     pub fn build(self) -> ScatterPlot {
         ScatterPlot::new(vec![])
     }

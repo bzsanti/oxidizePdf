@@ -147,11 +147,11 @@ impl OcrProvider for RustyTesseractProvider {
     ) -> OcrResult<OcrProcessingResult> {
         let start_time = Instant::now();
 
-        // Create rusty-tesseract image from raw bytes
-        // First, we need to decode the image bytes into a DynamicImage
+        // Create rusty-tesseract image from DynamicImage
+        // First decode the image bytes to DynamicImage using rusty_tesseract's image crate
         use std::io::Cursor;
         let cursor = Cursor::new(image_data);
-        let dynamic_image = image::io::Reader::new(cursor)
+        let dynamic_image = rusty_tesseract::image::io::Reader::new(cursor)
             .with_guessed_format()
             .map_err(|e| {
                 OcrError::ProcessingFailed(format!("Failed to guess image format: {}", e))

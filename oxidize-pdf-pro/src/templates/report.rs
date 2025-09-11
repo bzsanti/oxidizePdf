@@ -1,5 +1,5 @@
 use super::ProTemplate;
-use crate::error::{ProError, Result};
+use crate::error::Result;
 use crate::license::FeatureGate;
 use oxidize_pdf::Document;
 
@@ -10,7 +10,9 @@ pub struct ProReportTemplate {
 
 #[derive(Debug, Clone)]
 struct ReportSection {
+    #[allow(dead_code)]
     title: String,
+    #[allow(dead_code)]
     content: String,
 }
 

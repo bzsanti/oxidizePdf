@@ -1,4 +1,4 @@
-use crate::error::{ProError, Result};
+use crate::error::Result;
 use crate::license::FeatureGate;
 use oxidize_pdf::Document;
 
@@ -16,6 +16,7 @@ pub trait ProTemplate {
 }
 
 pub struct TemplateBuilder {
+    #[allow(dead_code)]
     template_type: TemplateType,
     data: serde_json::Value,
 }

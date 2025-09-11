@@ -157,28 +157,34 @@ impl Dashboard {
         // Set up page layout
         let page_bounds = page.content_area();
         let content_area = self.layout.calculate_content_area(page_bounds);
-        
+
         // Render header (title, subtitle)
         self.render_header(page, content_area)?;
-        
+
         // Calculate component positions using grid system
-        let component_positions = self.layout.calculate_positions(&self.components, content_area)?;
-        
+        let component_positions = self
+            .layout
+            .calculate_positions(&self.components, content_area)?;
+
         // Render each component
         for (component, position) in self.components.iter().zip(component_positions.iter()) {
             component.render(page, *position, &self.theme)?;
         }
-        
+
         // Render footer (metadata, page numbers)
         self.render_footer(page, content_area)?;
-        
+
         Ok(())
     }
-    
+
     /// Render dashboard header with title and subtitle
-    fn render_header(&self, page: &mut Page, content_area: (f64, f64, f64, f64)) -> Result<(), PdfError> {
+    fn render_header(
+        &self,
+        page: &mut Page,
+        content_area: (f64, f64, f64, f64),
+    ) -> Result<(), PdfError> {
         let (x, y, _width, height) = content_area;
-        
+
         // Render title with proper text rendering
         let title_y = y + height - 30.0;
         page.text()
@@ -186,7 +192,7 @@ impl Dashboard {
             .set_fill_color(self.theme.colors.text_primary)
             .at(x + 20.0, title_y)
             .write(&self.title)?;
-        
+
         // Render subtitle if present
         if let Some(subtitle) = &self.subtitle {
             let subtitle_y = title_y - 25.0;
@@ -196,24 +202,30 @@ impl Dashboard {
                 .at(x + 20.0, subtitle_y)
                 .write(subtitle)?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Render dashboard footer with metadata
-    fn render_footer(&self, page: &mut Page, content_area: (f64, f64, f64, f64)) -> Result<(), PdfError> {
+    fn render_footer(
+        &self,
+        page: &mut Page,
+        content_area: (f64, f64, f64, f64),
+    ) -> Result<(), PdfError> {
         let (x, y, width, _height) = content_area;
         let footer_y = y + 15.0; // Bottom margin
-        
+
         // Left side: creation date
-        let date_text = format!("Generated: {}", 
-            self.metadata.created_at.format("%Y-%m-%d %H:%M UTC"));
+        let date_text = format!(
+            "Generated: {}",
+            self.metadata.created_at.format("%Y-%m-%d %H:%M UTC")
+        );
         page.text()
             .set_font(Font::Helvetica, self.theme.typography.caption_size)
             .set_fill_color(self.theme.colors.text_muted)
             .at(x + 20.0, footer_y)
             .write(&date_text)?;
-        
+
         // Right side: data sources
         if !self.metadata.data_sources.is_empty() {
             let sources_text = format!("Data: {}", self.metadata.data_sources.join(", "));
@@ -223,10 +235,10 @@ impl Dashboard {
                 .at(x + width - 150.0, footer_y) // Right aligned
                 .write(&sources_text)?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Get dashboard statistics for debugging/monitoring
     pub fn get_stats(&self) -> DashboardStats {
         DashboardStats {
@@ -236,29 +248,35 @@ impl Dashboard {
             complexity_score: self.calculate_complexity_score(),
         }
     }
-    
+
     /// Estimate rendering time in milliseconds
     fn estimate_render_time(&self) -> u32 {
         // Base render time + component complexity
-        50 + self.components.iter()
+        50 + self
+            .components
+            .iter()
             .map(|c| c.estimated_render_time_ms())
             .sum::<u32>()
     }
-    
+
     /// Estimate memory usage in MB
     fn estimate_memory_usage(&self) -> f64 {
         // Base dashboard overhead + component memory
-        0.5 + self.components.iter()
+        0.5 + self
+            .components
+            .iter()
             .map(|c| c.estimated_memory_mb())
             .sum::<f64>()
     }
-    
+
     /// Calculate complexity score (0-100)
     fn calculate_complexity_score(&self) -> u8 {
-        let component_complexity: u32 = self.components.iter()
+        let component_complexity: u32 = self
+            .components
+            .iter()
             .map(|c| c.complexity_score() as u32)
             .sum();
-            
+
         // Normalize to 0-100 scale
         ((component_complexity / self.components.len().max(1) as u32).min(100)) as u8
     }
@@ -281,7 +299,7 @@ pub struct DashboardStats {
 mod tests {
     use super::*;
     use crate::{Document, Page};
-    
+
     #[test]
     fn test_dashboard_creation() {
         let dashboard = DashboardBuilder::new()
@@ -289,33 +307,33 @@ mod tests {
             .subtitle("Unit Test")
             .build()
             .unwrap();
-            
+
         assert_eq!(dashboard.title, "Test Dashboard");
         assert_eq!(dashboard.subtitle, Some("Unit Test".to_string()));
     }
-    
+
     #[test]
     fn test_dashboard_stats() {
         let dashboard = DashboardBuilder::new()
             .title("Performance Test")
             .build()
             .unwrap();
-            
+
         let stats = dashboard.get_stats();
         assert!(stats.estimated_render_time_ms > 0);
         assert!(stats.memory_usage_mb > 0.0);
     }
-    
+
     #[test]
     fn test_dashboard_render() {
         let dashboard = DashboardBuilder::new()
             .title("Render Test")
             .build()
             .unwrap();
-            
+
         let mut document = Document::new();
         let mut page = Page::new(595.0, 842.0); // A4 size
-        
+
         // Should not panic
         let result = dashboard.render_to_page(&mut page);
         document.add_page(page);

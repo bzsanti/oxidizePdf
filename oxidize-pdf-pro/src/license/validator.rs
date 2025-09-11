@@ -1,7 +1,6 @@
-use super::{LicenseType, ProLicense, UsageLimits};
-use crate::error::{ProError, Result};
-use chrono::{DateTime, Utc};
-use std::collections::HashMap;
+use super::{LicenseType, ProLicense};
+use crate::error::Result;
+use chrono::Utc;
 
 pub struct LicenseValidator {
     strict_validation: bool,
