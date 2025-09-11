@@ -39,7 +39,7 @@ impl DashboardTheme {
             backgrounds: ThemeBackgrounds::default(),
         }
     }
-    
+
     /// Corporate theme - professional, blue-based palette
     pub fn corporate() -> Self {
         let colors = ThemeColors {
@@ -60,7 +60,7 @@ impl DashboardTheme {
             text_muted: Color::hex("#adb5bd"),
             border: Color::hex("#dee2e6"),
         };
-        
+
         let typography = Typography {
             title_font: "Helvetica-Bold".to_string(),
             title_size: 24.0,
@@ -76,7 +76,7 @@ impl DashboardTheme {
             caption_color: colors.text_secondary,
             line_height: 1.4,
         };
-        
+
         Self {
             colors,
             typography,
@@ -85,7 +85,7 @@ impl DashboardTheme {
             backgrounds: ThemeBackgrounds::corporate(),
         }
     }
-    
+
     /// Minimal theme - clean, grayscale palette
     pub fn minimal() -> Self {
         let colors = ThemeColors {
@@ -106,9 +106,9 @@ impl DashboardTheme {
             text_muted: Color::hex("#bdbdbd"),
             border: Color::hex("#e0e0e0"),
         };
-        
+
         let typography = Typography::minimal();
-        
+
         Self {
             colors,
             typography,
@@ -117,7 +117,7 @@ impl DashboardTheme {
             backgrounds: ThemeBackgrounds::minimal(),
         }
     }
-    
+
     /// Dark theme - dark background with light text
     pub fn dark() -> Self {
         let colors = ThemeColors {
@@ -138,9 +138,9 @@ impl DashboardTheme {
             text_muted: Color::hex("#666666"),
             border: Color::hex("#333333"),
         };
-        
+
         let typography = Typography::dark();
-        
+
         Self {
             colors,
             typography,
@@ -149,7 +149,7 @@ impl DashboardTheme {
             backgrounds: ThemeBackgrounds::dark(),
         }
     }
-    
+
     /// Colorful theme - vibrant, multi-color palette
     pub fn colorful() -> Self {
         let colors = ThemeColors {
@@ -170,9 +170,9 @@ impl DashboardTheme {
             text_muted: Color::hex("#bdbdbd"),
             border: Color::hex("#e1bee7"),
         };
-        
+
         let typography = Typography::colorful();
-        
+
         Self {
             colors,
             typography,
@@ -181,7 +181,7 @@ impl DashboardTheme {
             backgrounds: ThemeBackgrounds::colorful(),
         }
     }
-    
+
     /// Set custom color palette
     pub fn set_color_palette(&mut self, colors: Vec<Color>) {
         if !colors.is_empty() {
@@ -194,12 +194,12 @@ impl DashboardTheme {
             }
         }
     }
-    
+
     /// Set typography configuration
     pub fn set_typography(&mut self, typography: Typography) {
         self.typography = typography;
     }
-    
+
     /// Get title text style
     pub fn title_style(&self) -> TextStyle {
         TextStyle {
@@ -210,7 +210,7 @@ impl DashboardTheme {
             alignment: TextAlignment::Center,
         }
     }
-    
+
     /// Get subtitle text style
     pub fn subtitle_style(&self) -> TextStyle {
         TextStyle {
@@ -221,7 +221,7 @@ impl DashboardTheme {
             alignment: TextAlignment::Center,
         }
     }
-    
+
     /// Get footer text style
     pub fn footer_style(&self) -> TextStyle {
         TextStyle {
@@ -232,12 +232,12 @@ impl DashboardTheme {
             alignment: TextAlignment::Left,
         }
     }
-    
+
     /// Get title height in points
     pub fn title_height(&self) -> f64 {
         self.typography.title_size * self.typography.line_height
     }
-    
+
     /// Get footer height in points
     pub fn footer_height(&self) -> f64 {
         self.typography.caption_size * self.typography.line_height
@@ -337,7 +337,7 @@ impl Typography {
             line_height: 1.4,
         }
     }
-    
+
     /// Minimal typography setup
     pub fn minimal() -> Self {
         Self {
@@ -356,7 +356,7 @@ impl Typography {
             line_height: 1.5,
         }
     }
-    
+
     /// Dark theme typography
     pub fn dark() -> Self {
         Self {
@@ -375,7 +375,7 @@ impl Typography {
             line_height: 1.4,
         }
     }
-    
+
     /// Colorful theme typography
     pub fn colorful() -> Self {
         Self {
@@ -450,7 +450,7 @@ impl ThemeSpacing {
             xl: 32.0,
         }
     }
-    
+
     pub fn minimal() -> Self {
         Self {
             xs: 2.0,
@@ -460,7 +460,7 @@ impl ThemeSpacing {
             xl: 28.0,
         }
     }
-    
+
     pub fn colorful() -> Self {
         Self {
             xs: 6.0,
@@ -500,7 +500,7 @@ impl ThemeBorders {
             radius: 4.0,
         }
     }
-    
+
     pub fn minimal() -> Self {
         Self {
             thin: 0.25,
@@ -509,7 +509,7 @@ impl ThemeBorders {
             radius: 2.0,
         }
     }
-    
+
     pub fn dark() -> Self {
         Self {
             thin: 0.5,
@@ -518,7 +518,7 @@ impl ThemeBorders {
             radius: 6.0,
         }
     }
-    
+
     pub fn colorful() -> Self {
         Self {
             thin: 1.0,
@@ -557,7 +557,7 @@ impl ThemeBackgrounds {
             hover: Color::hex("#f5f5f5"),
         }
     }
-    
+
     pub fn minimal() -> Self {
         Self {
             primary: Color::white(),
@@ -566,7 +566,7 @@ impl ThemeBackgrounds {
             hover: Color::hex("#f0f0f0"),
         }
     }
-    
+
     pub fn dark() -> Self {
         Self {
             primary: Color::hex("#121212"),
@@ -575,7 +575,7 @@ impl ThemeBackgrounds {
             hover: Color::hex("#3d3d3d"),
         }
     }
-    
+
     pub fn colorful() -> Self {
         Self {
             primary: Color::hex("#fafafa"),
@@ -595,37 +595,37 @@ impl Default for ThemeBackgrounds {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_theme_creation() {
         let theme = DashboardTheme::corporate();
         assert_eq!(theme.typography.title_size, 24.0);
         assert_eq!(theme.colors.primary, Color::hex("#1f4788"));
     }
-    
+
     #[test]
     fn test_theme_variants() {
         let corporate = DashboardTheme::corporate();
         let minimal = DashboardTheme::minimal();
         let dark = DashboardTheme::dark();
         let colorful = DashboardTheme::colorful();
-        
+
         // Themes should have different color schemes
         assert_ne!(corporate.colors.primary, minimal.colors.primary);
         assert_ne!(minimal.colors.background, dark.colors.background);
         assert_ne!(dark.colors.accent, colorful.colors.accent);
     }
-    
+
     #[test]
     fn test_typography_variants() {
         let professional = Typography::professional();
         let minimal = Typography::minimal();
-        
+
         assert_eq!(professional.title_font, "Helvetica-Bold");
         assert_eq!(minimal.title_font, "Helvetica-Light");
         assert_ne!(professional.title_size, minimal.title_size);
     }
-    
+
     #[test]
     fn test_theme_spacing() {
         let spacing = ThemeSpacing::corporate();
@@ -635,12 +635,12 @@ mod tests {
         assert_eq!(spacing.lg, 24.0);
         assert_eq!(spacing.xl, 32.0);
     }
-    
+
     #[test]
     fn test_text_style_creation() {
         let theme = DashboardTheme::default();
         let title_style = theme.title_style();
-        
+
         assert_eq!(title_style.alignment, TextAlignment::Center);
         assert_eq!(title_style.weight, FontWeight::Bold);
     }

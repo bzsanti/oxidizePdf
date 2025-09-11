@@ -52,8 +52,6 @@
 //! This crate requires a valid commercial license for production use.
 //! See [`license`] module for license validation.
 
-use std::error::Error;
-
 // Re-export core types for convenience
 pub use oxidize_pdf::{
     graphics::Color,

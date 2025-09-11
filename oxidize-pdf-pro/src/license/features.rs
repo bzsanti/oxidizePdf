@@ -1,5 +1,5 @@
 use super::{check_feature_access, record_usage, UsageType};
-use crate::error::{ProError, Result};
+use crate::error::Result;
 
 pub struct FeatureGate;
 
@@ -123,7 +123,6 @@ macro_rules! with_feature {
 /// ```
 ///
 /// This would be implemented as a procedural macro in a separate crate.
-
 /// Helper trait for feature-gated operations
 pub trait FeatureGated {
     /// Check if the required features are available for this operation
@@ -144,7 +143,7 @@ pub trait FeatureGated {
 }
 
 /// Standard feature gates as constants for consistency
-pub mod features {
+pub mod feature_constants {
     pub const XMP_EMBEDDING: &str = "xmp";
     pub const ENTITY_EXTRACTION: &str = "extraction";
     pub const PRO_TEMPLATES: &str = "templates";
@@ -158,7 +157,7 @@ pub mod features {
 
 /// License tier information
 pub mod tiers {
-    use super::features::*;
+    use super::feature_constants::*;
 
     pub fn community_features() -> Vec<&'static str> {
         vec![] // Community edition has no Pro features
@@ -195,7 +194,7 @@ pub mod tiers {
 /// Feature compatibility matrix
 pub mod compatibility {
     use super::super::LicenseType;
-    use super::features::*;
+    use super::feature_constants::*;
 
     pub fn is_feature_available(license_type: &LicenseType, feature: &str) -> bool {
         match license_type {
@@ -244,37 +243,38 @@ pub mod compatibility {
 #[cfg(test)]
 mod tests {
     use super::compatibility::*;
-    use super::*;
+    use super::feature_constants;
+    use crate::license::LicenseType;
 
     #[test]
     fn test_feature_availability() {
         assert!(is_feature_available(
             &LicenseType::Enterprise,
-            features::XMP_EMBEDDING
+            feature_constants::XMP_EMBEDDING
         ));
         assert!(is_feature_available(
             &LicenseType::Professional,
-            features::XMP_EMBEDDING
+            feature_constants::XMP_EMBEDDING
         ));
         assert!(!is_feature_available(
             &LicenseType::Trial,
-            features::ENTERPRISE_SUPPORT
+            feature_constants::ENTERPRISE_SUPPORT
         ));
         assert!(is_feature_available(
             &LicenseType::Development,
-            features::ENTERPRISE_SUPPORT
+            feature_constants::ENTERPRISE_SUPPORT
         ));
     }
 
     #[test]
     fn test_license_recommendations() {
-        let basic_features = vec![features::XMP_EMBEDDING];
+        let basic_features = vec![feature_constants::XMP_EMBEDDING];
         assert_eq!(
             recommend_license_tier(&basic_features),
             LicenseType::Professional
         );
 
-        let enterprise_features = vec![features::MULTI_TENANT];
+        let enterprise_features = vec![feature_constants::MULTI_TENANT];
         assert_eq!(
             recommend_license_tier(&enterprise_features),
             LicenseType::Enterprise

@@ -61,7 +61,7 @@ impl TrainingDataset {
     }
 
     pub fn export_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(self).map_err(|e| ProError::Serialization(e))
+        serde_json::to_string_pretty(self).map_err(ProError::Serialization)
     }
 
     pub fn export_csv(&self) -> Result<String> {

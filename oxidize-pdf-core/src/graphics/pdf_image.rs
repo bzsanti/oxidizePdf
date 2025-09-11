@@ -68,7 +68,11 @@ impl Image {
     pub fn from_jpeg_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         #[cfg(feature = "external-images")]
         {
-            Self::from_external_jpeg_file(path)
+            // Fallback to reading file directly without external image processing
+            let mut file = File::open(path)?;
+            let mut data = Vec::new();
+            file.read_to_end(&mut data)?;
+            Self::from_jpeg_data(data)
         }
         #[cfg(not(feature = "external-images"))]
         {
@@ -100,7 +104,11 @@ impl Image {
     pub fn from_png_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         #[cfg(feature = "external-images")]
         {
-            Self::from_external_png_file(path)
+            // Fallback to reading file directly without external image processing
+            let mut file = File::open(path)?;
+            let mut data = Vec::new();
+            file.read_to_end(&mut data)?;
+            Self::from_png_data(data)
         }
         #[cfg(not(feature = "external-images"))]
         {
@@ -287,66 +295,26 @@ impl Image {
         })
     }
 
-    /// Load and decode external PNG file using the `image` crate (requires external-images feature)
+    /// Load raw image data from file (simple implementation without external image crate)
     #[cfg(feature = "external-images")]
-    pub fn from_external_png_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let img = image::ImageReader::open(path)?
-            .decode()
-            .map_err(|e| PdfError::InvalidImage(format!("Failed to decode PNG: {}", e)))?;
-
-        Self::from_dynamic_image(img)
-    }
-
-    /// Load and decode external JPEG file using the `image` crate (requires external-images feature)
-    #[cfg(feature = "external-images")]
-    pub fn from_external_jpeg_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let img = image::ImageReader::open(path)?
-            .decode()
-            .map_err(|e| PdfError::InvalidImage(format!("Failed to decode JPEG: {}", e)))?;
-
-        Self::from_dynamic_image(img)
-    }
-
-    /// Convert from `image` crate's DynamicImage to our Image struct
-    #[cfg(feature = "external-images")]
-    fn from_dynamic_image(img: image::DynamicImage) -> Result<Self> {
-        use image::DynamicImage;
-
-        let (width, height) = (img.width(), img.height());
-
-        let (rgb_data, color_space) = match img {
-            DynamicImage::ImageLuma8(gray_img) => (gray_img.into_raw(), ColorSpace::DeviceGray),
-            DynamicImage::ImageLumaA8(gray_alpha_img) => {
-                // Convert gray+alpha to RGB (discard alpha for now)
-                let rgb_data: Vec<u8> = gray_alpha_img
-                    .pixels()
-                    .flat_map(|p| [p[0], p[0], p[0]]) // Gray to RGB
-                    .collect();
-                (rgb_data, ColorSpace::DeviceRGB)
-            }
-            DynamicImage::ImageRgb8(rgb_img) => (rgb_img.into_raw(), ColorSpace::DeviceRGB),
-            DynamicImage::ImageRgba8(rgba_img) => {
-                // Convert RGBA to RGB (discard alpha for now)
-                let rgb_data: Vec<u8> = rgba_img
-                    .pixels()
-                    .flat_map(|p| [p[0], p[1], p[2]]) // Drop alpha channel
-                    .collect();
-                (rgb_data, ColorSpace::DeviceRGB)
-            }
-            _ => {
-                // Convert other formats to RGB8
-                let rgb_img = img.to_rgb8();
-                (rgb_img.into_raw(), ColorSpace::DeviceRGB)
-            }
-        };
+    pub fn from_file_raw<P: AsRef<Path>>(
+        path: P,
+        width: u32,
+        height: u32,
+        format: ImageFormat,
+    ) -> Result<Self> {
+        let data = std::fs::read(path)
+            .map_err(|e| PdfError::InvalidImage(format!("Failed to read image file: {}", e)))?;
 
         Ok(Image {
-            data: rgb_data,
-            format: ImageFormat::Raw,
+            data,
+            format,
             width,
             height,
-            color_space,
+            color_space: ColorSpace::DeviceRGB,
             bits_per_component: 8,
+            alpha_data: None,
+            soft_mask: None,
         })
     }
 

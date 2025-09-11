@@ -24,7 +24,7 @@ pub struct ProLicense {
     pub metadata: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LicenseType {
     Professional,
     Enterprise,
@@ -61,6 +61,7 @@ pub struct UsageStats {
 #[derive(Debug, Clone)]
 struct LicenseState {
     current_license: Option<ProLicense>,
+    #[allow(dead_code)]
     validation_cache: HashMap<String, (DateTime<Utc>, bool)>,
     usage_stats: UsageStats,
     last_validation: Option<DateTime<Utc>>,
@@ -327,7 +328,8 @@ async fn validate_online_license(license_key: &str) -> Result<ProLicense> {
 }
 
 #[cfg(not(feature = "license-validation"))]
-fn validate_online_license(license_key: &str) -> Result<ProLicense> {
+#[allow(dead_code)]
+fn validate_online_license(_license_key: &str) -> Result<ProLicense> {
     Err(ProError::LicenseValidation(
         "Online validation not enabled".to_string(),
     ))
@@ -336,7 +338,8 @@ fn validate_online_license(license_key: &str) -> Result<ProLicense> {
 fn decode_license_token(token: &str) -> Result<ProLicense> {
     // Simple base64 decoding for demo purposes
     // In production, this would be a proper JWT validation
-    let decoded = base64::decode(token)?;
+    use base64::prelude::*;
+    let decoded = BASE64_STANDARD.decode(token)?;
     let json_str = String::from_utf8(decoded)
         .map_err(|_| ProError::LicenseValidation("Invalid token encoding".to_string()))?;
 

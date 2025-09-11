@@ -1,13 +1,8 @@
 use crate::error::{ProError, Result};
 use crate::license::FeatureGate;
-use crate::xmp::XmpMetadata;
-use oxidize_pdf::{
-    semantic::{BoundingBox, EntityType, SemanticEntity},
-    Document,
-};
+use oxidize_pdf::semantic::{BoundingBox, EntityType, SemanticEntity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
 
 pub mod analysis;
 pub mod extractor;
@@ -99,6 +94,12 @@ impl Default for ExtractionConfig {
     }
 }
 
+impl Default for ExtractionResult {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ExtractionResult {
     pub fn new() -> Self {
         Self {
@@ -187,7 +188,7 @@ impl ExtractionResult {
     }
 
     pub fn export_to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(self).map_err(|e| ProError::Serialization(e))
+        serde_json::to_string_pretty(self).map_err(ProError::Serialization)
     }
 
     pub fn export_to_csv(&self) -> Result<String> {

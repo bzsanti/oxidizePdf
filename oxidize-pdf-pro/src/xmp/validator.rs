@@ -1,5 +1,5 @@
 use super::{SchemaOrgEntity, XmpMetadata};
-use crate::error::{ProError, Result};
+use crate::error::Result;
 use std::collections::{HashMap, HashSet};
 
 pub struct MetadataValidator {
@@ -348,7 +348,7 @@ impl MetadataValidator {
         let mut seen_ids = HashMap::new();
 
         for entity in &metadata.schema_org_entities {
-            if let Some(existing_entity) = seen_ids.insert(&entity.id, entity) {
+            if let Some(_existing_entity) = seen_ids.insert(&entity.id, entity) {
                 issues.push(ValidationIssue {
                     severity: IssueSeverity::Error,
                     entity_id: Some(entity.id.clone()),
@@ -408,7 +408,7 @@ impl MetadataValidator {
             match entity.schema_type.as_str() {
                 "MonetaryAmount" => {
                     if let Some(content) = &entity.content {
-                        let has_currency_symbols = content.chars().any(|c| "$€£¥".contains(c));
+                        let _has_currency_symbols = content.chars().any(|c| "$€£¥".contains(c));
                         let has_digits = content.chars().any(|c| c.is_ascii_digit());
 
                         if !has_digits {

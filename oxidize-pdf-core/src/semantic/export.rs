@@ -36,14 +36,14 @@ impl EntityMap {
     }
 
     /// Export to JSON string (requires serde_json feature)
-    #[cfg(feature = "semantic")]
+    #[cfg(any(feature = "semantic", test))]
     #[allow(unexpected_cfgs)]
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }
 
     /// Export to JSON with custom options (requires serde_json feature)
-    #[cfg(feature = "semantic")]
+    #[cfg(any(feature = "semantic", test))]
     #[allow(unexpected_cfgs)]
     pub fn to_json_compact(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)

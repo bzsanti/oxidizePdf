@@ -1,5 +1,5 @@
 use super::ProTemplate;
-use crate::error::{ProError, Result};
+use crate::error::Result;
 use crate::license::FeatureGate;
 use oxidize_pdf::Document;
 
@@ -12,7 +12,9 @@ pub struct ProInvoiceTemplate {
 
 #[derive(Debug, Clone)]
 struct LineItem {
+    #[allow(dead_code)]
     description: String,
+    #[allow(dead_code)]
     amount: f64,
 }
 

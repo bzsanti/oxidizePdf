@@ -1,5 +1,4 @@
-use super::{ExtractedEntity, ExtractionResult};
-use oxidize_pdf::semantic::EntityType;
+use super::ExtractionResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

@@ -1,7 +1,8 @@
 use oxidize_pdf::Document;
+use oxidize_pdf::PdfError;
 use oxidize_pdf_pro::prelude::*;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), PdfError> {
     println!("XMP Embedding Example");
 
     // Initialize Pro features

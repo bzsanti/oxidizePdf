@@ -1,7 +1,6 @@
 use super::{SchemaOrgEntity, XmpMetadata};
 use crate::error::{ProError, Result};
 use oxidize_pdf::Document;
-use std::io::{Read, Seek, Write};
 
 pub struct XmpEmbedder {
     include_schema_org: bool,
@@ -48,7 +47,7 @@ impl XmpEmbedder {
         let xmp_xml = metadata.to_xmp_xml()?;
 
         // Create XMP metadata stream
-        let metadata_obj_id = document
+        let _metadata_obj_id = document
             .add_xmp_metadata(&xmp_xml)
             .map_err(|e| ProError::XmpEmbedding(format!("Failed to add XMP metadata: {}", e)))?;
 

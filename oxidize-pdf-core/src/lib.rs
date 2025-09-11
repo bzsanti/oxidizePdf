@@ -211,6 +211,9 @@ pub mod writer;
 
 pub mod semantic;
 
+// Dashboard and reporting modules
+pub mod dashboard;
+
 // Re-export generation types
 pub use coordinate_system::{CoordinateSystem, RenderContext, TransformMatrix};
 pub use document::{Document, DocumentMetadata};
@@ -284,6 +287,12 @@ pub use parser::{
 
 // Re-export operations
 pub use operations::{merge_pdfs, rotate_pdf_pages, split_pdf};
+
+// Re-export dashboard types
+pub use dashboard::{
+    Dashboard, DashboardBuilder, DashboardComponent, DashboardConfig, DashboardLayout,
+    DashboardTheme, HeatMap, KpiCard, PivotTable, ScatterPlot, TreeMap, Typography,
+};
 
 // Re-export memory optimization types
 pub use memory::{LazyDocument, MemoryOptions, StreamProcessor, StreamingOptions};

@@ -46,6 +46,12 @@ pub struct EntityRelationship {
     pub confidence: Option<f32>,
 }
 
+impl Default for XmpMetadata {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl XmpMetadata {
     pub fn new() -> Self {
         let now = Utc::now();
