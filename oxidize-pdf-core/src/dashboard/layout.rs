@@ -41,7 +41,7 @@ impl DashboardLayout {
 
         // Calculate basic content area
         let mut content_x = page_x + margin_left;
-        let mut content_y = page_y + margin_top;
+        let content_y = page_y + margin_top;
         let mut content_width = page_width - margin_left - margin_right;
         let content_height = page_height
             - margin_top
@@ -453,7 +453,7 @@ pub struct LayoutStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dashboard::{ComponentSpan, KpiCard};
+    use crate::dashboard::ComponentSpan;
 
     #[test]
     fn test_grid_system() {

@@ -164,7 +164,7 @@ impl ComponentSpan {
     /// Create a new component span
     pub fn new(columns: u8) -> Self {
         Self {
-            columns: columns.min(12).max(1),
+            columns: columns.clamp(1, 12),
             rows: None,
         }
     }
@@ -172,7 +172,7 @@ impl ComponentSpan {
     /// Create a span with both column and row specification
     pub fn with_rows(columns: u8, rows: u8) -> Self {
         Self {
-            columns: columns.min(12).max(1),
+            columns: columns.clamp(1, 12),
             rows: Some(rows.max(1)),
         }
     }

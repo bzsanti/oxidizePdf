@@ -1,4 +1,10 @@
 //! # Dashboard Framework for Professional PDF Reports
+#![allow(
+    dead_code,
+    unused_variables,
+    clippy::new_without_default,
+    clippy::derivable_impls
+)] // Placeholder implementations
 //!
 //! This module provides a comprehensive dashboard system for creating professional
 //! data visualization reports in PDF format. The framework includes:
