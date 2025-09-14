@@ -81,9 +81,9 @@ impl PivotTable {
 impl DashboardComponent for PivotTable {
     fn render(
         &self,
-        page: &mut Page,
+        _page: &mut Page,
         position: ComponentPosition,
-        theme: &DashboardTheme,
+        _theme: &DashboardTheme,
     ) -> Result<(), PdfError> {
         let mut table = self.clone();
         table.ensure_computed()?;
@@ -109,7 +109,7 @@ impl DashboardComponent for PivotTable {
 
         // Render data rows
         for (row_idx, row) in computed.rows.iter().enumerate() {
-            let is_totals = computed.totals_row.map_or(false, |tr| tr == row_idx);
+            let is_totals = computed.totals_row == Some(row_idx);
 
             for (col_idx, _cell) in row.iter().enumerate() {
                 let _x =

@@ -51,12 +51,12 @@ impl HeatMap {
 impl DashboardComponent for HeatMap {
     fn render(
         &self,
-        page: &mut Page,
-        position: ComponentPosition,
-        theme: &DashboardTheme,
+        _page: &mut Page,
+        _position: ComponentPosition,
+        _theme: &DashboardTheme,
     ) -> Result<(), PdfError> {
         // Implementation placeholder - full implementation would require complex matrix rendering
-        let title = self.options.title.as_deref().unwrap_or("HeatMap");
+        let _title = self.options.title.as_deref().unwrap_or("HeatMap");
 
         // Render title
         // Placeholder: page.add_text replaced

@@ -234,7 +234,7 @@ impl DashboardComponent for KpiCard {
         self.config.span = span;
     }
 
-    fn preferred_height(&self, available_width: f64) -> f64 {
+    fn preferred_height(&self, _available_width: f64) -> f64 {
         // Base height for KPI cards
         let mut height = 120.0;
 
@@ -431,10 +431,10 @@ impl KpiCard {
     /// Render the icon
     fn render_icon(
         &self,
-        page: &mut Page,
-        area: ComponentPosition,
-        icon: &str,
-        colors: &KpiColorTheme,
+        _page: &mut Page,
+        _area: ComponentPosition,
+        _icon: &str,
+        _colors: &KpiColorTheme,
     ) -> Result<(), PdfError> {
         // For now, render icon as text (could be enhanced to support actual icons)
         // Placeholder: page.add_text replaced

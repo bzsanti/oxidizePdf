@@ -209,22 +209,53 @@ impl ImageExtractor {
             }
         }
 
+        // Get color space information
+        let color_space = stream.dict.0.get(&PdfName("ColorSpace".to_string()));
+        let bits_per_component = match stream.dict.0.get(&PdfName("BitsPerComponent".to_string())) {
+            Some(PdfObject::Integer(bits)) => *bits as u8,
+            _ => 8, // Default to 8 bits per component
+        };
+
         // Get the decoded image data
         let parse_options = self.document.options();
-        let data = stream.decode(&parse_options).map_err(|e| {
+        let mut data = stream.decode(&parse_options).map_err(|e| {
             OperationError::ParseError(format!("Failed to decode image stream: {e}"))
         })?;
 
-        // Determine format from filter
+        // Determine format from filter and process data accordingly
         let format = match stream.dict.0.get(&PdfName("Filter".to_string())) {
             Some(PdfObject::Name(filter)) => match filter.0.as_str() {
-                "DCTDecode" => ImageFormat::Jpeg,
-                "FlateDecode" => {
-                    // FlateDecode can be used for PNG or other formats
-                    // Try to detect from the actual data
-                    self.detect_image_format_from_data(&data)?
+                "DCTDecode" => {
+                    // JPEG data is already in correct format
+                    ImageFormat::Jpeg
                 }
-                "LZWDecode" => ImageFormat::Tiff, // Common for TIFF
+                "FlateDecode" => {
+                    // FlateDecode contains raw pixel data - need to convert to image format
+                    data = self.convert_raw_image_data_to_png(
+                        &data,
+                        width,
+                        height,
+                        color_space,
+                        bits_per_component,
+                    )?;
+                    ImageFormat::Png
+                }
+                "CCITTFaxDecode" => {
+                    // CCITT data for scanned documents - convert to PNG
+                    data = self.convert_ccitt_to_png(&data, width, height)?;
+                    ImageFormat::Png
+                }
+                "LZWDecode" => {
+                    // LZW compressed raw data - convert to PNG
+                    data = self.convert_raw_image_data_to_png(
+                        &data,
+                        width,
+                        height,
+                        color_space,
+                        bits_per_component,
+                    )?;
+                    ImageFormat::Png
+                }
                 _ => {
                     eprintln!("Unsupported image filter: {}", filter.0);
                     return Ok(None);
@@ -236,10 +267,29 @@ impl ImageExtractor {
                     match filter.0.as_str() {
                         "DCTDecode" => ImageFormat::Jpeg,
                         "FlateDecode" => {
-                            // Try to detect from the actual data
-                            self.detect_image_format_from_data(&data)?
+                            data = self.convert_raw_image_data_to_png(
+                                &data,
+                                width,
+                                height,
+                                color_space,
+                                bits_per_component,
+                            )?;
+                            ImageFormat::Png
                         }
-                        "LZWDecode" => ImageFormat::Tiff,
+                        "CCITTFaxDecode" => {
+                            data = self.convert_ccitt_to_png(&data, width, height)?;
+                            ImageFormat::Png
+                        }
+                        "LZWDecode" => {
+                            data = self.convert_raw_image_data_to_png(
+                                &data,
+                                width,
+                                height,
+                                color_space,
+                                bits_per_component,
+                            )?;
+                            ImageFormat::Png
+                        }
                         _ => {
                             eprintln!("Unsupported image filter: {}", filter.0);
                             return Ok(None);
@@ -250,8 +300,15 @@ impl ImageExtractor {
                 }
             }
             _ => {
-                eprintln!("No filter found for image");
-                return Ok(None);
+                // No filter - raw image data
+                data = self.convert_raw_image_data_to_png(
+                    &data,
+                    width,
+                    height,
+                    color_space,
+                    bits_per_component,
+                )?;
+                ImageFormat::Png
             }
         };
 
@@ -498,6 +555,218 @@ impl ImageExtractor {
             height,
             format,
         })
+    }
+
+    /// Convert raw image data to PNG format
+    fn convert_raw_image_data_to_png(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        color_space: Option<&PdfObject>,
+        bits_per_component: u8,
+    ) -> OperationResult<Vec<u8>> {
+        // Determine color components and channels
+        let (components, _channels) = match color_space {
+            Some(PdfObject::Name(cs)) => match cs.0.as_str() {
+                "DeviceGray" => (1, 1),
+                "DeviceRGB" => (3, 3),
+                "DeviceCMYK" => (4, 4),
+                _ => (3, 3), // Default to RGB
+            },
+            Some(PdfObject::Array(cs_array)) if !cs_array.0.is_empty() => {
+                if let Some(PdfObject::Name(cs_name)) = cs_array.0.first() {
+                    match cs_name.0.as_str() {
+                        "ICCBased" | "CalRGB" => (3, 3),
+                        "CalGray" => (1, 1),
+                        _ => (3, 3),
+                    }
+                } else {
+                    (3, 3)
+                }
+            }
+            _ => (3, 3), // Default to RGB
+        };
+
+        // Calculate expected data size
+        let bytes_per_sample = if bits_per_component <= 8 { 1 } else { 2 };
+        let expected_size = (width * height * components as u32 * bytes_per_sample as u32) as usize;
+
+        // Validate data size
+        if data.len() < expected_size {
+            return Err(OperationError::ParseError(format!(
+                "Image data too small: expected {}, got {}",
+                expected_size,
+                data.len()
+            )));
+        }
+
+        // Convert to PNG format using simple PNG encoding
+        self.create_png_from_raw_data(data, width, height, components, bits_per_component)
+    }
+
+    /// Create PNG from raw pixel data
+    fn create_png_from_raw_data(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        components: u8,
+        bits_per_component: u8,
+    ) -> OperationResult<Vec<u8>> {
+        // Simple PNG creation - create a basic PNG structure
+        let mut png_data = Vec::new();
+
+        // PNG signature
+        png_data.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+        // IHDR chunk
+        let mut ihdr = Vec::new();
+        ihdr.extend_from_slice(&width.to_be_bytes());
+        ihdr.extend_from_slice(&height.to_be_bytes());
+        ihdr.push(bits_per_component);
+
+        // Color type: 0 = grayscale, 2 = RGB, 6 = RGBA
+        let color_type = match components {
+            1 => 0, // Grayscale
+            3 => 2, // RGB
+            4 => 6, // RGBA
+            _ => 2, // Default to RGB
+        };
+        ihdr.push(color_type);
+        ihdr.push(0); // Compression method
+        ihdr.push(0); // Filter method
+        ihdr.push(0); // Interlace method
+
+        self.write_png_chunk(&mut png_data, b"IHDR", &ihdr);
+
+        // IDAT chunk - compress the image data
+        let compressed_data = self.compress_image_data(data, width, height, components)?;
+        self.write_png_chunk(&mut png_data, b"IDAT", &compressed_data);
+
+        // IEND chunk
+        self.write_png_chunk(&mut png_data, b"IEND", &[]);
+
+        Ok(png_data)
+    }
+
+    /// Write a PNG chunk with proper CRC
+    fn write_png_chunk(&self, output: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+        // Length (4 bytes, big endian)
+        output.extend_from_slice(&(data.len() as u32).to_be_bytes());
+
+        // Chunk type (4 bytes)
+        output.extend_from_slice(chunk_type);
+
+        // Data
+        output.extend_from_slice(data);
+
+        // CRC (4 bytes, big endian)
+        let crc = self.calculate_crc32(chunk_type, data);
+        output.extend_from_slice(&crc.to_be_bytes());
+    }
+
+    /// Simple CRC32 calculation for PNG
+    fn calculate_crc32(&self, chunk_type: &[u8; 4], data: &[u8]) -> u32 {
+        // Simple CRC32 - in a real implementation we'd use a proper CRC library
+        let mut crc: u32 = 0xFFFFFFFF;
+
+        // Process chunk type
+        for &byte in chunk_type {
+            crc ^= byte as u32;
+            for _ in 0..8 {
+                if crc & 1 != 0 {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+
+        // Process data
+        for &byte in data {
+            crc ^= byte as u32;
+            for _ in 0..8 {
+                if crc & 1 != 0 {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+
+        crc ^ 0xFFFFFFFF
+    }
+
+    /// Compress image data for PNG IDAT chunk
+    fn compress_image_data(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        components: u8,
+    ) -> OperationResult<Vec<u8>> {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+
+        // PNG requires scanline filtering - add filter byte (0 = None) to each row
+        let bytes_per_pixel = components as usize;
+        let bytes_per_row = width as usize * bytes_per_pixel;
+
+        for row in 0..height {
+            // Filter byte (0 = no filter)
+            encoder.write_all(&[0])?;
+
+            // Row data
+            let start = row as usize * bytes_per_row;
+            let end = start + bytes_per_row;
+            if end <= data.len() {
+                encoder.write_all(&data[start..end])?;
+            }
+        }
+
+        encoder
+            .finish()
+            .map_err(|e| OperationError::ParseError(format!("Failed to compress PNG data: {e}")))
+    }
+
+    /// Convert CCITT Fax decoded data to PNG (for scanned documents)
+    fn convert_ccitt_to_png(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> OperationResult<Vec<u8>> {
+        // CCITT is typically 1-bit monochrome
+        // Convert 1-bit to 8-bit grayscale
+        let mut rgb_data = Vec::new();
+
+        let bits_per_row = width as usize;
+        let bytes_per_row = bits_per_row.div_ceil(8); // Round up to nearest byte
+
+        for row in 0..height {
+            let row_start = row as usize * bytes_per_row;
+
+            for col in 0..width {
+                let byte_idx = row_start + (col as usize / 8);
+                let bit_idx = 7 - (col as usize % 8);
+
+                if byte_idx < data.len() {
+                    let bit = (data[byte_idx] >> bit_idx) & 1;
+                    // CCITT: 0 = black, 1 = white
+                    let gray_value = if bit == 0 { 0 } else { 255 };
+                    rgb_data.push(gray_value);
+                } else {
+                    rgb_data.push(255); // White for missing data
+                }
+            }
+        }
+
+        // Create PNG from grayscale data
+        self.create_png_from_raw_data(&rgb_data, width, height, 1, 8)
     }
 }
 

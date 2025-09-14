@@ -36,9 +36,9 @@ impl ScatterPlot {
 impl DashboardComponent for ScatterPlot {
     fn render(
         &self,
-        page: &mut Page,
-        position: ComponentPosition,
-        theme: &DashboardTheme,
+        _page: &mut Page,
+        _position: ComponentPosition,
+        _theme: &DashboardTheme,
     ) -> Result<(), PdfError> {
         // Implementation placeholder
         let _title = self.options.title.as_deref().unwrap_or("Scatter Plot");
