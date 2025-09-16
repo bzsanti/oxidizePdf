@@ -98,6 +98,7 @@ mod tests {
             extract_inline: false,
             min_size: Some(50),
             create_dir: false,
+            preprocessing: ImagePreprocessingOptions::default(),
         };
 
         assert_eq!(options.output_dir, temp_dir.path());
