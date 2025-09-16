@@ -12,6 +12,7 @@ mod list;
 pub mod metrics;
 pub mod ocr;
 pub mod table;
+pub mod validation;
 
 #[cfg(test)]
 mod cmap_tests;
@@ -38,6 +39,7 @@ pub use ocr::{
     OcrTextFragment, WordConfidence,
 };
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
+pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 
 #[cfg(feature = "ocr-tesseract")]
 pub use tesseract_provider::{RustyTesseractConfig, RustyTesseractProvider};

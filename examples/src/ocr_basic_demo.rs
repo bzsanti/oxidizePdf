@@ -120,6 +120,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                             .collect::<String>()
                                                             .replace('\n', " ");
                                                         println!("      Sample: \"{}\"", sample);
+
+                                                        // Search for target date
+                                                        if ocr_result
+                                                            .text
+                                                            .contains("30 September 2016")
+                                                        {
+                                                            println!("      🎉 FOUND TARGET: '30 September 2016' in OCR text!");
+                                                            any_success = true;
+                                                        } else {
+                                                            println!("      🔍 Target '30 September 2016' not found in OCR text");
+                                                        }
+
                                                         any_success = true;
                                                     }
                                                 }
@@ -151,6 +163,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                             "      Native text: \"{}\"",
                                                             sample
                                                         );
+
+                                                        // Search for target date in native text
+                                                        if text_result
+                                                            .text
+                                                            .contains("30 September 2016")
+                                                        {
+                                                            println!("      🎉 FOUND TARGET: '30 September 2016' in native text!");
+                                                        } else {
+                                                            println!("      🔍 Target '30 September 2016' not found in native text");
+                                                        }
+
                                                         any_success = true;
                                                     }
                                                 }

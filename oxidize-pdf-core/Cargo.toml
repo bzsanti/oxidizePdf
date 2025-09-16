@@ -38,6 +38,9 @@ sha2 = "0.10"
 # Unicode processing
 unicode-normalization = "0.1"
 
+# Text processing and validation
+regex = "1.10"
+
 # Flags
 bitflags = "2.4"
 
@@ -45,8 +48,7 @@ bitflags = "2.4"
 num_cpus = "1.16"
 rayon = { version = "1.8", optional = true }
 
-# Regular expressions for validation
-regex = "1.10"
+# (regex dependency moved to text processing section above)
 
 # TOML parsing for ISO compliance matrix
 toml = "0.8"
@@ -54,6 +56,7 @@ toml = "0.8"
 # Temporary files for external validation
 tempfile = "3.8"
 rusty-tesseract = { version = "1.1.10", optional = true }
+image = { workspace = true, features = ["png", "jpeg"], optional = true }
 
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
@@ -160,6 +163,26 @@ path = "../examples/src/performance_benchmark_1000.rs"
 name = "simple_document_benchmark"
 path = "../examples/src/simple_document_benchmark.rs"
 
+[[example]]
+name = "test_image_extraction_rotation"
+path = "../examples/src/test_image_extraction_rotation.rs"
+
+[[example]]
+name = "test_enhanced_image_extraction"
+path = "../examples/src/test_enhanced_image_extraction.rs"
+
+[[example]]
+name = "test_row_alignment_fix"
+path = "../examples/src/test_row_alignment_fix.rs"
+
+[[example]]
+name = "analyze_fis2_structure"
+path = "../examples/src/analyze_fis2_structure.rs"
+
+[[example]]
+name = "test_transformation_single_page"
+path = "../examples/src/test_transformation_single_page.rs"
+
 # Temporarily disabled examples with compilation errors
 # [[example]]
 # name = "streaming_support"
@@ -206,6 +229,10 @@ path = "../examples/src/ocr_post_processing.rs"
 [[example]]
 name = "ocr_basic_demo"
 path = "../examples/src/ocr_basic_demo.rs"
+
+[[example]]
+name = "ocr_simple_test"
+path = "../examples/src/ocr_simple_test.rs"
 
 [[bench]]
 name = "ocr_benchmarks"

@@ -59,12 +59,19 @@ pub struct RustyTesseractConfig {
 #[cfg(feature = "ocr-tesseract")]
 impl Default for RustyTesseractConfig {
     fn default() -> Self {
+        let mut config_vars = HashMap::new();
+
+        // Optimize for scanned documents
+        config_vars.insert("tessedit_char_whitelist".to_string(),
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?:;()[]{}\"'-+=%&#@*/\\| \t\n".to_string());
+        config_vars.insert("preserve_interword_spaces".to_string(), "1".to_string());
+
         Self {
             language: "eng".to_string(),
-            psm: Some(6), // Uniform block of text
-            oem: Some(3), // Default OCR Engine Mode
-            dpi: Some(300),
-            config_variables: HashMap::new(),
+            psm: Some(3), // Fully automatic page segmentation, but no OSD (best for scanned documents)
+            oem: Some(3), // Default, based on what is available
+            dpi: Some(300), // High DPI for better accuracy
+            config_variables: config_vars,
         }
     }
 }
@@ -87,6 +94,30 @@ impl RustyTesseractProvider {
         Ok(Self { config })
     }
 
+    /// Create a new Tesseract OCR provider optimized for legal documents and contracts
+    pub fn for_contracts() -> OcrResult<Self> {
+        let mut config_vars = HashMap::new();
+
+        // Optimize specifically for legal/contract documents
+        config_vars.insert("preserve_interword_spaces".to_string(), "1".to_string());
+        config_vars.insert("tessedit_create_hocr".to_string(), "0".to_string());
+        config_vars.insert("tessedit_create_tsv".to_string(), "0".to_string());
+        config_vars.insert("load_system_dawg".to_string(), "1".to_string()); // Use system dictionary
+        config_vars.insert("load_freq_dawg".to_string(), "1".to_string()); // Use frequency data
+        config_vars.insert("textord_debug_tabfind".to_string(), "0".to_string());
+        config_vars.insert("textord_use_cjk_fp_model".to_string(), "0".to_string());
+
+        let config = RustyTesseractConfig {
+            language: "eng".to_string(),
+            psm: Some(1), // Automatic page segmentation with OSD (best for full page documents)
+            oem: Some(1), // Neural nets LSTM engine only
+            dpi: Some(300),
+            config_variables: config_vars,
+        };
+
+        Ok(Self { config })
+    }
+
     /// Test if Tesseract is available and working
     pub fn test_availability() -> OcrResult<bool> {
         // Try to create a simple test args to verify Tesseract is installed
@@ -100,6 +131,11 @@ impl RustyTesseractProvider {
 
         // Just return true if we can create args - actual testing would need a real image
         Ok(true)
+    }
+
+    /// Get the current configuration
+    pub fn config(&self) -> &RustyTesseractConfig {
+        &self.config
     }
 
     /// Convert OcrOptions to rusty-tesseract Args
@@ -277,7 +313,7 @@ mod tests {
     fn test_config_default() {
         let config = RustyTesseractConfig::default();
         assert_eq!(config.language, "eng");
-        assert_eq!(config.psm, Some(6));
+        assert_eq!(config.psm, Some(3)); // Fully automatic page segmentation for scanned documents
         assert_eq!(config.oem, Some(3));
         assert_eq!(config.dpi, Some(300));
     }

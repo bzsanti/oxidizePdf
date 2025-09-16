@@ -198,6 +198,9 @@ pub struct OcrOptions {
 
     /// Specific regions to process (None = process entire image)
     pub regions: Option<Vec<OcrRegion>>,
+
+    /// Whether to save extracted images for debug purposes
+    pub debug_output: bool,
 }
 
 impl Default for OcrOptions {
@@ -210,6 +213,7 @@ impl Default for OcrOptions {
             engine_options: std::collections::HashMap::new(),
             timeout_seconds: 30,
             regions: None,
+            debug_output: false,
         }
     }
 }
@@ -1792,6 +1796,7 @@ mod tests {
                 engine_options: HashMap::new(),
                 timeout_seconds: 60,
                 regions: None,
+                debug_output: false,
             };
 
             options
@@ -2460,6 +2465,7 @@ mod tests {
                 },
                 timeout_seconds: 120,
                 regions: None,
+                debug_output: false,
             };
 
             // Verify all fields
