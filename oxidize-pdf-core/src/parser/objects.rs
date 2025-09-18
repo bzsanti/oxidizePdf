@@ -587,27 +587,81 @@ impl PdfObject {
         // Read the actual stream data
         let mut stream_data = if length == usize::MAX {
             // Missing length - search for endstream marker
+            // Check if this is a DCTDecode (JPEG) stream first
+            let is_dct_decode = dict
+                .0
+                .get(&PdfName("Filter".to_string()))
+                .map(|filter| match filter {
+                    PdfObject::Name(name) => name.0 == "DCTDecode",
+                    PdfObject::Array(arr) => arr
+                        .0
+                        .iter()
+                        .any(|f| matches!(f, PdfObject::Name(name) if name.0 == "DCTDecode")),
+                    _ => false,
+                })
+                .unwrap_or(false);
+
             let mut data = Vec::new();
             let max_search = 65536; // Search up to 64KB
             let mut found_endstream = false;
 
-            for _ in 0..max_search {
+            for i in 0..max_search {
                 match lexer.peek_byte() {
                     Ok(b) => {
                         // Check if we might be at "endstream"
                         if b == b'e' {
-                            let pos = lexer.position();
-                            // Try to read "endstream"
-                            if let Ok(Token::EndStream) = lexer.peek_token() {
-                                found_endstream = true;
-                                break;
+                            // Use a temporary buffer to avoid seek issues that cause byte duplication
+                            let mut temp_buffer = vec![b'e'];
+                            let expected = b"ndstream";
+                            let mut is_endstream = true;
+
+                            // Consume the 'e' first
+                            let _ = lexer.read_byte();
+
+                            // Read the next 8 bytes and check if they match "ndstream"
+                            for &expected_byte in expected.iter() {
+                                match lexer.read_byte() {
+                                    Ok(byte) => {
+                                        temp_buffer.push(byte);
+                                        if byte != expected_byte {
+                                            is_endstream = false;
+                                            break;
+                                        }
+                                    }
+                                    Err(_) => {
+                                        is_endstream = false;
+                                        break;
+                                    }
+                                }
                             }
-                            // Not endstream, continue
-                            lexer.seek(pos as u64)?;
+
+                            if is_endstream && temp_buffer.len() == 9 {
+                                // We found "endstream"!
+                                found_endstream = true;
+                                if is_dct_decode {
+                                    eprintln!("🔍 [PARSER] Found 'endstream' after reading {} bytes for DCTDecode", data.len());
+                                }
+                                break;
+                            } else {
+                                // Not "endstream", add all the bytes we read to the data
+                                // This avoids the seek() operation that was causing byte duplication
+                                data.extend(temp_buffer);
+                                continue;
+                            }
+                        } else {
+                            // Add byte to data
+                            data.push(lexer.read_byte()?);
                         }
-                        data.push(lexer.read_byte()?);
+
+                        // Log progress for debugging (can be removed in production)
+                        if is_dct_decode && i % 10000 == 0 && i > 0 {
+                            // Uncomment for debugging: eprintln!("DCTDecode reading progress: {} bytes", data.len());
+                        }
                     }
-                    Err(_) => break,
+                    Err(_) => {
+                        // End of stream reached
+                        break;
+                    }
                 }
             }
 
@@ -616,6 +670,17 @@ impl PdfObject {
                     position: lexer.position(),
                     message: "Could not find endstream marker".to_string(),
                 });
+            }
+
+            if is_dct_decode {
+                // TODO: CRITICAL - JPEG extraction still produces corrupt images
+                // Current issue: "17 extraneous bytes before marker 0xc4"
+                // This fix resolves stream length issues but JPEG structure remains corrupted
+                // See: docs/JPEG_EXTRACTION_STATUS.md for current status
+                eprintln!(
+                    "DCTDecode stream: read {} bytes (full stream based on endstream marker)",
+                    data.len()
+                );
             }
 
             data
@@ -637,20 +702,31 @@ impl PdfObject {
             }
             Ok(other_token) => {
                 if options.lenient_streams {
-                    // Try to find endstream within max_recovery_bytes
-                    eprintln!("Warning: Stream length mismatch. Expected 'endstream' after {length} bytes, got {other_token:?}");
+                    // Check if this is a DCTDecode (JPEG) stream - don't extend these
+                    let is_dct_decode = dict
+                        .0
+                        .get(&PdfName("Filter".to_string()))
+                        .map(|filter| match filter {
+                            PdfObject::Name(name) => name.0 == "DCTDecode",
+                            PdfObject::Array(arr) => arr.0.iter().any(
+                                |f| matches!(f, PdfObject::Name(name) if name.0 == "DCTDecode"),
+                            ),
+                            _ => false,
+                        })
+                        .unwrap_or(false);
 
-                    if let Some(additional_bytes) =
-                        lexer.find_keyword_ahead("endstream", options.max_recovery_bytes)?
-                    {
-                        // Read the additional bytes
-                        let extra_data = lexer.read_bytes(additional_bytes)?;
-                        stream_data.extend_from_slice(&extra_data);
+                    if is_dct_decode {
+                        // For DCTDecode (JPEG) streams, don't extend beyond the specified length
+                        // JPEGs are sensitive to extra data and the length should be accurate
+                        eprintln!("Warning: DCTDecode stream length mismatch at {length} bytes, but not extending JPEG data");
 
-                        let actual_length = stream_data.len();
-                        eprintln!(
-                            "Stream length corrected: declared={length}, actual={actual_length}"
-                        );
+                        // Skip ahead to find endstream without modifying the data
+                        if let Some(additional_bytes) =
+                            lexer.find_keyword_ahead("endstream", options.max_recovery_bytes)?
+                        {
+                            // Skip the additional bytes without adding to stream_data
+                            let _ = lexer.read_bytes(additional_bytes)?;
+                        }
 
                         // Skip whitespace and consume endstream
                         lexer.skip_whitespace()?;
@@ -658,14 +734,36 @@ impl PdfObject {
 
                         Ok(stream_data)
                     } else {
-                        // Couldn't find endstream within recovery distance
-                        Err(ParseError::SyntaxError {
-                            position: lexer.position(),
-                            message: format!(
-                                "Could not find 'endstream' within {} bytes",
-                                options.max_recovery_bytes
-                            ),
-                        })
+                        // Try to find endstream within max_recovery_bytes for non-JPEG streams
+                        eprintln!("Warning: Stream length mismatch. Expected 'endstream' after {length} bytes, got {other_token:?}");
+
+                        if let Some(additional_bytes) =
+                            lexer.find_keyword_ahead("endstream", options.max_recovery_bytes)?
+                        {
+                            // Read the additional bytes
+                            let extra_data = lexer.read_bytes(additional_bytes)?;
+                            stream_data.extend_from_slice(&extra_data);
+
+                            let actual_length = stream_data.len();
+                            eprintln!(
+                                "Stream length corrected: declared={length}, actual={actual_length}"
+                            );
+
+                            // Skip whitespace and consume endstream
+                            lexer.skip_whitespace()?;
+                            lexer.expect_keyword("endstream")?;
+
+                            Ok(stream_data)
+                        } else {
+                            // Couldn't find endstream within recovery distance
+                            Err(ParseError::SyntaxError {
+                                position: lexer.position(),
+                                message: format!(
+                                    "Could not find 'endstream' within {} bytes",
+                                    options.max_recovery_bytes
+                                ),
+                            })
+                        }
                     }
                 } else {
                     // Strict mode - return error
