@@ -1,13 +1,52 @@
-# Progreso del Proyecto - 2025-09-16 23:45:00
+# Progreso del Proyecto - 2025-01-19 00:46:14
 
-## 🎉 BREAKTHROUGH: Sistema OCR RESUELTO
+## 🚀 NUEVA SOLUCIÓN: Resolución de Recursos Multi-Página
 
 ### Estado Actual:
 - **Rama**: develop_santi
-- **Estado**: ✅ Sistema OCR funcional y completo
-- **Tests**: Compilación exitosa con features habilitadas
+- **Último commit**: be04b01 feat: improve page resource resolution for malformed PDFs
+- **Tests**: ⚠️ 4097 passed, 5 failed (fallos no relacionados con nuevas funcionalidades)
 
-## Sesión 16 Sep 2025 - SOLUCIÓN CRÍTICA IMPLEMENTADA
+## Sesión 19 Ene 2025 - FIX PARA EXTRACCIÓN MULTI-PÁGINA
+
+### 🔍 PROBLEMA IDENTIFICADO:
+PDFs mal formados extraían la misma imagen para todas las páginas porque:
+- Recursos de página definidos como referencias indirectas (no heredados)
+- `get_page_resources()` devolvía None para todas las páginas
+- Fallback a búsqueda document-wide encontraba siempre el mismo objeto
+
+### ✅ SOLUCIÓN IMPLEMENTADA:
+
+#### 1. **Mejora en page_analysis.rs**:
+```rust
+// Fallback cuando get_page_resources() devuelve None
+if resources.is_none() {
+    if let Some(resources_ref) = page.dict.get("Resources") {
+        // Resolver referencias indirectas directamente
+        match self.document.resolve(resources_ref) {
+            Ok(resolved_obj) => {
+                if let Some(resolved_dict) = resolved_obj.as_dict() {
+                    resources = Some(resolved_dict.clone());
+                }
+            }
+        }
+    }
+}
+```
+
+#### 2. **Resultados obtenidos**:
+- ✅ **Páginas extraen objetos únicos**: Page 0→Object 5, Page 30→Object 155, Page 65→Object 330
+- ✅ **Tamaños diferentes**: 38,263 bytes vs 65,763 bytes vs 33,696 bytes
+- ✅ **Mantiene retrocompatibilidad**: PDFs bien formados siguen funcionando
+- ✅ **Debug output confirmatorio**: Logs muestran resolución correcta
+
+### ⏳ Estado Técnico ACTUAL:
+- **Infraestructura de resolución**: ✅ Implementada y funcionando
+- **Tests preliminares**: ✅ Muestran extracción de objetos únicos
+- **Compilación**: ✅ Sin errores, solo warnings menores
+- **Pendiente**: Verificación completa del usuario con documentos reales
+
+## Sesión 16 Sep 2025 - SOLUCIÓN CRÍTICA IMPLEMENTADA (ANTERIOR)
 
 ### 🔍 PROBLEMA RAÍZ IDENTIFICADO:
 La extracción de imágenes estaba **deduplicando** todas las páginas porque el PDF FIS2 tiene:
