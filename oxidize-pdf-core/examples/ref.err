@@ -1,0 +1,6 @@
+Error in fopenReadStream: failed to open locally with tail fis2-000.jpg for filename /tmp/reference/fis2-000.jpg
+Leptonica Error in findFileFormat: image file not found: /tmp/reference/fis2-000.jpg
+Error in fopenReadStream: failed to open locally with tail ÿØÿà for filename ÿØÿà
+Leptonica Error in pixRead: image file not found: ÿØÿà
+Image file ÿØÿà cannot be read!
+Error during processing.
