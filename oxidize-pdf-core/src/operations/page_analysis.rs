@@ -695,7 +695,7 @@ impl PageContentAnalyzer {
     ///
     /// This method extracts the primary image from a scanned page and converts
     /// it to a format suitable for OCR processing (PNG or JPEG).
-    fn extract_page_image_data(&self, page_number: usize) -> OperationResult<Vec<u8>> {
+    pub fn extract_page_image_data(&self, page_number: usize) -> OperationResult<Vec<u8>> {
         println!(
             "🔍 [DEBUG] extract_page_image_data called for page {}",
             page_number
@@ -914,12 +914,192 @@ impl PageContentAnalyzer {
         xobject_name: &str,
         page: &crate::parser::page_tree::ParsedPage,
     ) -> OperationResult<Vec<u8>> {
-        // Get page-specific resources
+        // Get page-specific resources - with fallback for malformed PDFs
         let resources = self
             .document
             .get_page_resources(page)
             .map_err(|e| OperationError::ParseError(e.to_string()))?;
 
+        // Try standard method first
+        if let Some(resources) = resources {
+            if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
+                .0
+                .get(&crate::parser::objects::PdfName("XObject".to_string()))
+            {
+                if let Some(xobject_ref) = xobjects
+                    .0
+                    .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
+                {
+                    if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) =
+                        xobject_ref
+                    {
+                        if let Ok(crate::parser::objects::PdfObject::Stream(stream)) =
+                            self.document.get_object(*obj_num, *gen_num)
+                        {
+                            if let Some(crate::parser::objects::PdfObject::Name(subtype)) = stream
+                                .dict
+                                .0
+                                .get(&crate::parser::objects::PdfName("Subtype".to_string()))
+                            {
+                                if subtype.0 == "Image" {
+                                    let width = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Width".to_string()))
+                                        .and_then(|w| {
+                                            if let crate::parser::objects::PdfObject::Integer(w) = w
+                                            {
+                                                Some(*w)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+                                    let height = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Height".to_string()))
+                                        .and_then(|h| {
+                                            if let crate::parser::objects::PdfObject::Integer(h) = h
+                                            {
+                                                Some(*h)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+                                    println!(
+                                        "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
+                                        xobject_name, obj_num, width, height
+                                    );
+                                    return self.extract_image_stream_for_ocr(&stream);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback for malformed PDFs: try direct resolution
+        if let Some(crate::parser::objects::PdfObject::Reference(res_obj, res_gen)) = page
+            .dict
+            .0
+            .get(&crate::parser::objects::PdfName("Resources".to_string()))
+        {
+            match self.document.get_object(*res_obj, *res_gen) {
+                Ok(crate::parser::objects::PdfObject::Dictionary(resolved_dict)) => {
+                    println!(
+                        "🔍 [DEBUG] Page-specific fallback: resolved Resources {} {} R",
+                        res_obj, res_gen
+                    );
+                    if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) =
+                        resolved_dict
+                            .0
+                            .get(&crate::parser::objects::PdfName("XObject".to_string()))
+                    {
+                        println!("🔍 [DEBUG] Page-specific fallback found XObject dictionary with {} entries", xobjects.0.len());
+                        for (name, obj) in &xobjects.0 {
+                            println!(
+                                "🔍 [DEBUG] Page-specific fallback XObject: {} -> {:?}",
+                                name.0, obj
+                            );
+                        }
+                        if let Some(xobject_ref) = xobjects
+                            .0
+                            .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
+                        {
+                            if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) =
+                                xobject_ref
+                            {
+                                println!("🔍 [DEBUG] Page-specific fallback: trying to get object {} {} R", obj_num, gen_num);
+                                match self.document.get_object(*obj_num, *gen_num) {
+                                    Ok(crate::parser::objects::PdfObject::Stream(stream)) => {
+                                        println!(
+                                            "🔍 [DEBUG] Page-specific fallback: got stream object"
+                                        );
+                                        match stream.dict.0.get(&crate::parser::objects::PdfName(
+                                            "Subtype".to_string(),
+                                        )) {
+                                            Some(crate::parser::objects::PdfObject::Name(
+                                                subtype,
+                                            )) => {
+                                                println!("🔍 [DEBUG] Page-specific fallback: stream subtype = {}", subtype.0);
+                                                if subtype.0 == "Image" {
+                                                    let width = stream
+                                                        .dict
+                                                        .0
+                                                        .get(&crate::parser::objects::PdfName("Width".to_string()))
+                                                        .and_then(|w| {
+                                                            if let crate::parser::objects::PdfObject::Integer(w) = w
+                                                            {
+                                                                Some(*w)
+                                                            } else {
+                                                                None
+                                                            }
+                                                        })
+                                                        .unwrap_or(0);
+                                                    let height = stream
+                                                        .dict
+                                                        .0
+                                                        .get(&crate::parser::objects::PdfName("Height".to_string()))
+                                                        .and_then(|h| {
+                                                            if let crate::parser::objects::PdfObject::Integer(h) = h
+                                                            {
+                                                                Some(*h)
+                                                            } else {
+                                                                None
+                                                            }
+                                                        })
+                                                        .unwrap_or(0);
+                                                    println!(
+                                                        "🔍 [DEBUG] Page-specific fallback XObject {} -> Object {} ({}x{})",
+                                                        xobject_name, obj_num, width, height
+                                                    );
+                                                    return self
+                                                        .extract_image_stream_for_ocr(&stream);
+                                                } else {
+                                                    println!("🔍 [DEBUG] Page-specific fallback: stream is not an image (subtype: {})", subtype.0);
+                                                }
+                                            }
+                                            None => {
+                                                println!("🔍 [DEBUG] Page-specific fallback: stream has no Subtype");
+                                            }
+                                            _ => {
+                                                println!("🔍 [DEBUG] Page-specific fallback: stream Subtype is not a name");
+                                            }
+                                        }
+                                    }
+                                    Ok(obj) => {
+                                        println!("🔍 [DEBUG] Page-specific fallback: object {} {} R is not a stream, got: {:?}", obj_num, gen_num, std::any::type_name_of_val(&obj));
+                                    }
+                                    Err(e) => {
+                                        println!("🔍 [DEBUG] Page-specific fallback: failed to get object {} {} R: {}", obj_num, gen_num, e);
+                                    }
+                                }
+                            } else {
+                                println!("🔍 [DEBUG] Page-specific fallback: XObject reference is not a Reference");
+                            }
+                        } else {
+                            println!("🔍 [DEBUG] Page-specific fallback: XObject '{}' not found in resolved resources", xobject_name);
+                        }
+                    } else {
+                        println!("🔍 [DEBUG] Page-specific fallback: no XObject dictionary in resolved resources");
+                    }
+                }
+                Ok(_) => {
+                    println!("🔍 [DEBUG] Page-specific fallback: Resources reference resolved to non-dictionary");
+                }
+                Err(e) => {
+                    println!(
+                        "🔍 [DEBUG] Page-specific fallback: failed to resolve Resources: {}",
+                        e
+                    );
+                }
+            }
+        }
+
+        // If we reach here, we couldn't find the XObject
         if let Some(resources) = resources {
             if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
                 .0

@@ -659,9 +659,22 @@ impl<R: Read> Lexer<R> {
     }
 
     pub fn read_bytes(&mut self, n: usize) -> ParseResult<Vec<u8>> {
-        let mut bytes = vec![0u8; n];
-        self.reader.read_exact(&mut bytes)?;
-        self.position += n;
+        let mut bytes = Vec::with_capacity(n);
+
+        // First consume any peeked byte to avoid duplication
+        if self.peek_buffer.is_some() && n > 0 {
+            bytes.push(self.consume_char()?.unwrap());
+        }
+
+        // Read remaining bytes directly
+        let remaining = n - bytes.len();
+        if remaining > 0 {
+            let mut rest = vec![0u8; remaining];
+            self.reader.read_exact(&mut rest)?;
+            self.position += remaining;
+            bytes.extend_from_slice(&rest);
+        }
+
         Ok(bytes)
     }
 

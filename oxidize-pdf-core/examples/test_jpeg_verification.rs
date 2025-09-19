@@ -1,8 +1,8 @@
 //! Verificación de extracción JPEG con el PDF FIS2
 
-use oxidize_pdf::parser::{PdfDocument, PdfReader, ParseOptions};
-use oxidize_pdf::operations::page_analysis::{PageContentAnalyzer, AnalysisOptions};
-use oxidize_pdf::text::{RustyTesseractProvider, OcrOptions, OcrProvider};
+use oxidize_pdf::operations::page_analysis::{AnalysisOptions, PageContentAnalyzer};
+use oxidize_pdf::parser::{ParseOptions, PdfDocument, PdfReader};
+use oxidize_pdf::text::{OcrOptions, OcrProvider, RustyTesseractProvider};
 use std::fs::File;
 use std::time::Instant;
 
@@ -64,11 +64,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 Ok(ocr_result) => {
                                     if !ocr_result.text.trim().is_empty() {
                                         println!("\n🎉 ¡ÉXITO! OCR funcionó correctamente");
-                                        println!("   📝 Caracteres extraídos: {}", ocr_result.text.len());
-                                        println!("   📈 Confianza: {:.1}%", ocr_result.confidence * 100.0);
+                                        println!(
+                                            "   📝 Caracteres extraídos: {}",
+                                            ocr_result.text.len()
+                                        );
+                                        println!(
+                                            "   📈 Confianza: {:.1}%",
+                                            ocr_result.confidence * 100.0
+                                        );
 
                                         // Mostrar preview del texto
-                                        let preview = ocr_result.text
+                                        let preview = ocr_result
+                                            .text
                                             .chars()
                                             .take(200)
                                             .collect::<String>()
@@ -123,9 +130,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Ok(data) = std::fs::read(&path) {
                                 if data.len() >= 4 {
                                     let has_soi = data[0] == 0xFF && data[1] == 0xD8;
-                                    let has_eoi = data[data.len()-2] == 0xFF && data[data.len()-1] == 0xD9;
-                                    println!("      SOI marker (FFD8): {}", if has_soi { "✅" } else { "❌" });
-                                    println!("      EOI marker (FFD9): {}", if has_eoi { "✅" } else { "❌" });
+                                    let has_eoi = data[data.len() - 2] == 0xFF
+                                        && data[data.len() - 1] == 0xD9;
+                                    println!(
+                                        "      SOI marker (FFD8): {}",
+                                        if has_soi { "✅" } else { "❌" }
+                                    );
+                                    println!(
+                                        "      EOI marker (FFD9): {}",
+                                        if has_eoi { "✅" } else { "❌" }
+                                    );
                                 }
                             }
                         }

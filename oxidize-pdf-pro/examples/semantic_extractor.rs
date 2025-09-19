@@ -1,7 +1,9 @@
 use oxidize_pdf::Document;
+use oxidize_pdf_pro::license::FeatureGate;
 use oxidize_pdf_pro::prelude::*;
+use oxidize_pdf_pro::{initialize, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     println!("Semantic Extraction Example");
 
     // Initialize Pro features
