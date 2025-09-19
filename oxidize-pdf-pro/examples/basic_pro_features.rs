@@ -2,9 +2,12 @@ use oxidize_pdf::{
     semantic::{BoundingBox, EntityType},
     Document,
 };
+use oxidize_pdf_pro::license::FeatureGate;
 use oxidize_pdf_pro::prelude::*;
+use oxidize_pdf_pro::templates::ProTemplate;
+use oxidize_pdf_pro::{initialize, license_info, Result};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     println!("oxidize-pdf-pro Basic Features Demo");
 
     // Initialize Pro features with development license
@@ -54,12 +57,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     doc.relate_entities(
         &invoice_id,
         &customer_id,
-        oxidize_pdf::semantic::RelationType::BillsTo,
+        oxidize_pdf::semantic::RelationType::PartOf, // TODO: implement BillsTo relation
     );
     doc.relate_entities(
         &invoice_id,
         &total_id,
-        oxidize_pdf::semantic::RelationType::HasAmount,
+        oxidize_pdf::semantic::RelationType::Contains, // TODO: implement HasAmount relation
     );
 
     println!(

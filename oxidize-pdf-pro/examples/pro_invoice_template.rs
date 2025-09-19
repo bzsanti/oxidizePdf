@@ -1,7 +1,9 @@
-use oxidize_pdf::Document;
+use oxidize_pdf_pro::license::FeatureGate;
 use oxidize_pdf_pro::prelude::*;
+use oxidize_pdf_pro::templates::ProTemplate;
+use oxidize_pdf_pro::initialize;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     println!("Pro Invoice Template Example");
 
     // Initialize Pro features
@@ -27,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .invoice_number("INV-2024-001")
                 .add_line_item("Professional Services", 2500.00)
                 .add_line_item("Consulting Hours", 1200.00)
-                .with_tax_rate(0.10)
+                // .with_tax_rate(0.10) // TODO: implement tax rate feature
                 .with_schema_org_markup();
 
             match invoice.build() {
@@ -61,10 +63,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(_) => {
             let contract = ProContractTemplate::new()
                 .title("Service Agreement")
-                .party("BelowZero Corp", "Client")
-                .party("ACME Corporation", "Provider")
-                .term("Service delivery within 30 days")
-                .term("Payment due within 15 days of completion")
+                .add_party("BelowZero Corp")
+                .add_party("ACME Corporation")
+                // .term("Service delivery within 30 days") // TODO: implement term method
+                // .term("Payment due within 15 days of completion")
                 .with_legal_formatting();
 
             match contract.build() {

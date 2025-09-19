@@ -926,6 +926,7 @@ impl PageContentAnalyzer {
                 .0
                 .get(&crate::parser::objects::PdfName("XObject".to_string()))
             {
+                #[allow(clippy::collapsible_match)]
                 if let Some(xobject_ref) = xobjects
                     .0
                     .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
@@ -1106,6 +1107,7 @@ impl PageContentAnalyzer {
                 .get(&crate::parser::objects::PdfName("XObject".to_string()))
             {
                 // Look for the specific XObject name in this page's resources
+                #[allow(clippy::collapsible_match)]
                 if let Some(xobject_ref) = xobjects
                     .0
                     .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
@@ -1532,6 +1534,7 @@ impl PageContentAnalyzer {
 
     /// Return raw JPEG data from DCTDecode stream without modification
     /// DCTDecode streams in PDFs are valid JPEG data - pass through unchanged
+    #[allow(dead_code)]
     fn clean_jpeg_data(&self, raw_data: &[u8]) -> Vec<u8> {
         println!(
             "🔍 [DEBUG] Using raw DCTDecode stream as-is: {} bytes",
@@ -1544,6 +1547,7 @@ impl PageContentAnalyzer {
     }
 
     #[cfg(feature = "external-images")]
+    #[allow(dead_code)]
     fn fix_image_rotation_for_ocr(
         &self,
         image_data: &[u8],
@@ -1567,6 +1571,7 @@ impl PageContentAnalyzer {
     }
 
     #[cfg(not(feature = "external-images"))]
+    #[allow(dead_code)]
     fn fix_image_rotation_for_ocr(
         &self,
         image_data: &[u8],
@@ -1579,6 +1584,7 @@ impl PageContentAnalyzer {
         Ok(image_data.to_vec())
     }
 
+    #[allow(dead_code)]
     fn detect_rotation_needed(
         &self,
         pdf_width: u32,
@@ -1620,6 +1626,7 @@ impl PageContentAnalyzer {
         0
     }
 
+    #[allow(dead_code)]
     fn rotate_image_externally(&self, image_data: &[u8], rotation: u8) -> OperationResult<Vec<u8>> {
         use std::fs;
         use std::process::Command;
@@ -1744,6 +1751,7 @@ impl PageContentAnalyzer {
 
     /// Clean corrupted JPEG data using sips (macOS system tool)
     /// This fixes JPEGs extracted from PDFs that have structural issues
+    #[allow(dead_code)]
     fn clean_corrupted_jpeg(
         &self,
         corrupted_jpeg_data: &[u8],
@@ -1769,7 +1777,7 @@ impl PageContentAnalyzer {
 
         // Use sips to recompress and clean the JPEG
         let output = Command::new("sips")
-            .args(&[
+            .args([
                 "-s",
                 "format",
                 "jpeg",
