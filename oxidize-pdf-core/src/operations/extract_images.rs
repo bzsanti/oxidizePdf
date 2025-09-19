@@ -48,10 +48,10 @@ impl TransformMatrix {
         self.b.abs() < 0.001 && self.c.abs() < 0.001 && self.a.abs() > 0.001 && self.d.abs() > 0.001
     }
 
-    /// Check if this is the specific FIS2 matrix that needs rotation
+    /// Check if this is a matrix that needs rotation for proper OCR
     #[allow(dead_code)]
     fn is_fis2_like_matrix(&self) -> bool {
-        // FIS2 uses 841.68 x 595.08 which are A4 dimensions (landscape fitting in portrait)
+        // Some PDFs use 841.68 x 595.08 which are A4 dimensions (landscape fitting in portrait)
         // This indicates the image is landscape but being fit into portrait page
         (self.a - 841.68).abs() < 1.0
             && (self.d - 595.08).abs() < 1.0
@@ -328,7 +328,9 @@ impl ImageExtractor {
         let format = match stream.dict.0.get(&PdfName("Filter".to_string())) {
             Some(PdfObject::Name(filter)) => match filter.0.as_str() {
                 "DCTDecode" => {
-                    // JPEG data is already in correct format
+                    // JPEG data is already in correct format - use raw stream data
+                    // DCTDecode streams contain complete JPEG data, don't decode
+                    data = stream.data.clone();
                     ImageFormat::Jpeg
                 }
                 "FlateDecode" => {
@@ -367,7 +369,11 @@ impl ImageExtractor {
                 // Handle filter arrays - use the first filter
                 if let Some(PdfObject::Name(filter)) = filters.0.first() {
                     match filter.0.as_str() {
-                        "DCTDecode" => ImageFormat::Jpeg,
+                        "DCTDecode" => {
+                            // JPEG data is already in correct format - use raw stream data
+                            data = stream.data.clone();
+                            ImageFormat::Jpeg
+                        }
                         "FlateDecode" => {
                             data = self.convert_raw_image_data_to_png(
                                 &data,
@@ -643,7 +649,7 @@ impl ImageExtractor {
 
         // This is a brute force approach - scan through objects looking for image streams
         // In a real implementation, we would have better object mapping, but for now
-        // this should work for the FIS2 case
+        // this should work for common landscape-in-portrait cases
 
         // Try some common object numbers that might contain images
         // We'll scan a range and look for stream objects that look like images
@@ -841,7 +847,7 @@ impl ImageExtractor {
         } else if matrix.b < 0.0 && matrix.c > 0.0 {
             Ok(img.rotate270()) // 90 degrees counter-clockwise (270 clockwise)
         } else {
-            // Default to 90-degree rotation for our FIS2 case
+            // Default to 90-degree rotation for landscape-in-portrait cases
             Ok(img.rotate90())
         }
     }

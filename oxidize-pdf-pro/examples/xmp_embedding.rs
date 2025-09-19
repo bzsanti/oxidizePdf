@@ -1,8 +1,9 @@
 use oxidize_pdf::Document;
-use oxidize_pdf::PdfError;
+use oxidize_pdf_pro::license::FeatureGate;
 use oxidize_pdf_pro::prelude::*;
+use oxidize_pdf_pro::{initialize, Result};
 
-fn main() -> Result<(), PdfError> {
+fn main() -> Result<()> {
     println!("XMP Embedding Example");
 
     // Initialize Pro features

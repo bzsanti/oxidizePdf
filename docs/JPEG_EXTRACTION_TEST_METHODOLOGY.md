@@ -16,13 +16,13 @@
 mkdir -p /tmp/reference
 
 # Extraer imagen con pdfimages (herramienta estándar)
-pdfimages -j -f 1 -l 1 "/Users/santifdezmunoz/Downloads/ocr/FIS2 160930 O&M Agreement ESS.pdf" /tmp/reference/fis2
+pdfimages -j -f 1 -l 1 "tests/fixtures/malformed_with_indirect_refs.pdf" /tmp/reference/sample
 ```
-**Output esperado**: `/tmp/reference/fis2-000.jpg` (imagen de referencia correcta)
+**Output esperado**: `/tmp/reference/sample-000.jpg` (imagen de referencia correcta)
 
 ### **FASE 2: Extracción con oxidize-pdf** ✅
 ```bash
-# Ejecutar nuestro extractor con FIS2 PDF
+# Ejecutar nuestro extractor con PDF de prueba
 cd /Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf
 cargo run --features ocr-tesseract --example test_jpeg_verification
 ```
@@ -159,7 +159,7 @@ echo "=================================================="
 # FASE 1
 echo "FASE 1: Extrayendo imagen de referencia..."
 mkdir -p /tmp/reference
-pdfimages -j -f 1 -l 1 "/Users/santifdezmunoz/Downloads/ocr/FIS2 160930 O&M Agreement ESS.pdf" /tmp/reference/fis2
+pdfimages -j -f 1 -l 1 "tests/fixtures/malformed_with_indirect_refs.pdf" /tmp/reference/sample
 
 # FASE 2
 echo "FASE 2: Extrayendo con oxidize-pdf..."

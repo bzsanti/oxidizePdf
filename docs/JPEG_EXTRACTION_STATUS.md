@@ -134,7 +134,7 @@ $ cmp -l referencia.jpg oxidize.jpg | head -3
 
 - **Metodología completa**: `docs/JPEG_EXTRACTION_TEST_METHODOLOGY.md`
 - **Test de verificación**: `cargo run --example test_jpeg_verification`
-- **PDF de prueba**: `FIS2 160930 O&M Agreement ESS.pdf`
+- **PDF de prueba**: `tests/fixtures/malformed_with_indirect_refs.pdf`
 - **Código modificado**: `src/parser/objects.rs:611-649`
 
 ---

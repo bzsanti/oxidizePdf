@@ -558,18 +558,20 @@ impl PdfObject {
                 }
             }
             PdfObject::Reference(obj_num, gen_num) => {
-                // Stream length is an indirect reference - we'll need to resolve it
-                // For now, we'll use a fallback approach: search for endstream marker
-                // This maintains compatibility while we implement proper reference resolution
+                // Stream length is an indirect reference - we need to search for endstream
+                // without a fixed limit since we don't know the actual size
                 if options.lenient_streams {
                     if options.collect_warnings {
-                        eprintln!("Warning: Stream length is an indirect reference ({obj_num} {gen_num} R). Using endstream detection fallback.");
+                        eprintln!("Warning: Stream length is an indirect reference ({obj_num} {gen_num} R). Using unlimited endstream search.");
                     }
-                    usize::MAX // This will trigger the endstream search below
+                    // Use a special marker to indicate we need unlimited search
+                    usize::MAX - 1 // MAX-1 means "indirect reference, search unlimited"
                 } else {
                     return Err(ParseError::SyntaxError {
                         position: lexer.position(),
-                        message: format!("Stream length reference ({obj_num} {gen_num} R) requires lenient mode or reference resolution"),
+                        message: format!(
+                            "Stream length reference ({obj_num} {gen_num} R) requires lenient mode"
+                        ),
                     });
                 }
             }
@@ -585,8 +587,9 @@ impl PdfObject {
         lexer.read_newline()?;
 
         // Read the actual stream data
-        let mut stream_data = if length == usize::MAX {
-            // Missing length - search for endstream marker
+        let mut stream_data = if length == usize::MAX || length == usize::MAX - 1 {
+            // Missing length or indirect reference - search for endstream marker
+            let is_indirect_ref = length == usize::MAX - 1;
             // Check if this is a DCTDecode (JPEG) stream first
             let is_dct_decode = dict
                 .0
@@ -602,8 +605,18 @@ impl PdfObject {
                 .unwrap_or(false);
 
             let mut data = Vec::new();
-            let max_search = 65536; // Search up to 64KB
+            // For indirect references, search without limit (up to reasonable max)
+            // For missing length, use 64KB limit
+            let max_search = if is_indirect_ref {
+                10 * 1024 * 1024 // 10MB max for indirect references
+            } else {
+                65536 // 64KB for missing length
+            };
             let mut found_endstream = false;
+
+            if is_indirect_ref && options.collect_warnings {
+                eprintln!("Searching for endstream without fixed limit (up to {}MB) for indirect reference", max_search / 1024 / 1024);
+            }
 
             for i in 0..max_search {
                 match lexer.peek_byte() {
@@ -737,8 +750,15 @@ impl PdfObject {
                         // Try to find endstream within max_recovery_bytes for non-JPEG streams
                         eprintln!("Warning: Stream length mismatch. Expected 'endstream' after {length} bytes, got {other_token:?}");
 
+                        // For indirect references (length == usize::MAX - 1), search with larger limit
+                        let search_limit = if length == usize::MAX - 1 {
+                            10 * 1024 * 1024 // 10MB for indirect references
+                        } else {
+                            options.max_recovery_bytes
+                        };
+
                         if let Some(additional_bytes) =
-                            lexer.find_keyword_ahead("endstream", options.max_recovery_bytes)?
+                            lexer.find_keyword_ahead("endstream", search_limit)?
                         {
                             // Read the additional bytes
                             let extra_data = lexer.read_bytes(additional_bytes)?;
@@ -760,7 +780,7 @@ impl PdfObject {
                                 position: lexer.position(),
                                 message: format!(
                                     "Could not find 'endstream' within {} bytes",
-                                    options.max_recovery_bytes
+                                    search_limit
                                 ),
                             })
                         }
@@ -780,8 +800,15 @@ impl PdfObject {
                         "Warning: Stream length mismatch. Could not peek next token after {length} bytes"
                     );
 
+                    // For indirect references (length == usize::MAX - 1), search with larger limit
+                    let search_limit = if length == usize::MAX - 1 {
+                        10 * 1024 * 1024 // 10MB for indirect references
+                    } else {
+                        options.max_recovery_bytes
+                    };
+
                     if let Some(additional_bytes) =
-                        lexer.find_keyword_ahead("endstream", options.max_recovery_bytes)?
+                        lexer.find_keyword_ahead("endstream", search_limit)?
                     {
                         // Read the additional bytes
                         let extra_data = lexer.read_bytes(additional_bytes)?;
@@ -803,7 +830,7 @@ impl PdfObject {
                             position: lexer.position(),
                             message: format!(
                                 "Could not find 'endstream' within {} bytes",
-                                options.max_recovery_bytes
+                                search_limit
                             ),
                         })
                     }
