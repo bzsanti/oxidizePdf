@@ -8,10 +8,11 @@
 
 use oxidize_pdf::advanced_tables::{
     AdvancedTableBuilder, AdvancedTableExt, BorderStyle, CellAlignment, CellStyle, HeaderBuilder,
-    Padding,
+    Padding, TableRenderer,
 };
+use oxidize_pdf::coordinate_system::CoordinateSystem;
 use oxidize_pdf::graphics::Color;
-use oxidize_pdf::page::Page;
+use oxidize_pdf::page::{LayoutManager, Page};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::Document;
 use std::error::Error;
@@ -21,18 +22,27 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Create a new document
     let mut doc = Document::new();
-    let mut page = Page::a4();
 
-    // Example 1: Financial Report Table
-    create_financial_table(&mut page)?;
+    // Page 1: Financial Report Table
+    let mut page1 = Page::a4();
+    let mut layout_manager =
+        LayoutManager::new(&page1, CoordinateSystem::PdfStandard).with_element_spacing(40.0);
+    create_financial_table(&mut page1, &mut layout_manager)?;
+    doc.add_page(page1);
 
-    // Example 2: Product Inventory Table
-    create_inventory_table(&mut page)?;
+    // Page 2: Product Inventory Table
+    let mut page2 = Page::a4();
+    let mut layout_manager =
+        LayoutManager::new(&page2, CoordinateSystem::PdfStandard).with_element_spacing(40.0);
+    create_inventory_table(&mut page2, &mut layout_manager)?;
+    doc.add_page(page2);
 
-    // Example 3: Schedule/Timetable
-    create_schedule_table(&mut page)?;
-
-    doc.add_page(page);
+    // Page 3: Schedule/Timetable
+    let mut page3 = Page::a4();
+    let mut layout_manager =
+        LayoutManager::new(&page3, CoordinateSystem::PdfStandard).with_element_spacing(40.0);
+    create_schedule_table(&mut page3, &mut layout_manager)?;
+    doc.add_page(page3);
 
     // Save the document
     let output_path = "examples/results/advanced_tables_example.pdf";
@@ -42,7 +52,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn create_financial_table(page: &mut Page) -> Result<(), Box<dyn Error>> {
+fn create_financial_table(
+    page: &mut Page,
+    layout_manager: &mut LayoutManager,
+) -> Result<(), Box<dyn Error>> {
     println!("Creating financial report table...");
 
     // Define cell styles
@@ -126,16 +139,27 @@ fn create_financial_table(page: &mut Page) -> Result<(), Box<dyn Error>> {
             ],
             total_style,
         )
-        .position(50.0, 700.0)
         .build()?;
 
-    // Render the table
-    page.add_advanced_table(&table, 50.0, 700.0)?;
+    // Calculate table height for intelligent positioning
+    let renderer = TableRenderer::new();
+    let table_height = renderer.calculate_table_height(&table);
+
+    // Position table using layout manager
+    if let Some(y_position) = layout_manager.add_element(table_height) {
+        let x_position = layout_manager.center_x(table.calculate_width());
+        page.add_advanced_table(&table, x_position, y_position)?;
+    } else {
+        return Err("Table does not fit on page".into());
+    }
 
     Ok(())
 }
 
-fn create_inventory_table(page: &mut Page) -> Result<(), Box<dyn Error>> {
+fn create_inventory_table(
+    page: &mut Page,
+    layout_manager: &mut LayoutManager,
+) -> Result<(), Box<dyn Error>> {
     println!("Creating inventory table with merged headers...");
 
     // Create a table with complex headers
@@ -203,15 +227,27 @@ fn create_inventory_table(page: &mut Page) -> Result<(), Box<dyn Error>> {
             "$45",
             "$129",
         ])
-        .position(50.0, 450.0)
         .build()?;
 
-    page.add_advanced_table(&table, 50.0, 450.0)?;
+    // Calculate table height for intelligent positioning
+    let renderer = TableRenderer::new();
+    let table_height = renderer.calculate_table_height(&table);
+
+    // Position table using layout manager
+    if let Some(y_position) = layout_manager.add_element(table_height) {
+        let x_position = layout_manager.center_x(table.calculate_width());
+        page.add_advanced_table(&table, x_position, y_position)?;
+    } else {
+        return Err("Table does not fit on page".into());
+    }
 
     Ok(())
 }
 
-fn create_schedule_table(page: &mut Page) -> Result<(), Box<dyn Error>> {
+fn create_schedule_table(
+    page: &mut Page,
+    layout_manager: &mut LayoutManager,
+) -> Result<(), Box<dyn Error>> {
     println!("Creating schedule table...");
 
     // Create alternating styles for time slots
@@ -271,10 +307,19 @@ fn create_schedule_table(page: &mut Page) -> Result<(), Box<dyn Error>> {
             (event_style.clone(), "Case Study: Scaling"),
             (event_style.clone(), "Hands-on: Kubernetes"),
         ])
-        .position(50.0, 200.0)
         .build()?;
 
-    page.add_advanced_table(&table, 50.0, 200.0)?;
+    // Calculate table height for intelligent positioning
+    let renderer = TableRenderer::new();
+    let table_height = renderer.calculate_table_height(&table);
+
+    // Position table using layout manager
+    if let Some(y_position) = layout_manager.add_element(table_height) {
+        let x_position = layout_manager.center_x(table.calculate_width());
+        page.add_advanced_table(&table, x_position, y_position)?;
+    } else {
+        return Err("Table does not fit on page".into());
+    }
 
     Ok(())
 }

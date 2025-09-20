@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.2.1] - 2025-09-20
+
+### Fixed
+- Fixed critical bug with indirect reference resolution for stream Length in malformed PDFs
+- Fixed JPEG image extraction from multiple pages - each page now extracts its unique image instead of duplicating the cover page
+- Fixed OCR functionality that was failing due to incorrect image extraction
+- Fixed compilation warning in oxidize-pdf-pro xmp_embedding example
+
+### Added
+- Added support for unlimited endstream search when Length is an indirect reference (up to 10MB)
+- Added comprehensive OCR test with real Tesseract integration
+- Added multi-page image extraction verification test
+- Added improved error handling for corrupted PDF streams
+
+### Changed
+- Updated CONTRIBUTING.md to correctly reflect MIT License instead of GPL v3
+- Improved debug logging for PDF stream parsing and image extraction
+- Enhanced compatibility with malformed PDFs containing corrupted streams
+
+### Technical
+- Stream parsing now handles indirect references dynamically instead of using fixed byte limits
+- OCR now successfully extracts different text from each page with 95% confidence
+- Pages in malformed PDFs now extract correct unique images instead of duplicating the cover page
+- All workspace tests continue to pass with improved PDF compatibility
+
 ## [1.2.0] - 2025-08-29
 
 ### Fixed

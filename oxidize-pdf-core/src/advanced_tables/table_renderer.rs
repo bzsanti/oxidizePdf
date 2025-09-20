@@ -6,7 +6,7 @@ use super::table_builder::{AdvancedTable, CellData, RowData};
 use crate::error::PdfError;
 use crate::graphics::Color;
 use crate::page::Page;
-use crate::text::Font;
+use crate::text::{measure_text, Font};
 
 /// Renderer for advanced tables
 pub struct TableRenderer {
@@ -28,6 +28,47 @@ impl TableRenderer {
         }
     }
 
+    /// Calculate the total height needed to render a table
+    ///
+    /// This is essential for intelligent positioning and layout management.
+    /// Returns the height in points from bottom to top of the rendered table.
+    pub fn calculate_table_height(&self, table: &AdvancedTable) -> f64 {
+        let mut total_height = 0.0;
+
+        // Calculate header height
+        if let Some(header) = &table.header {
+            // For complex headers, calculate based on levels and row spans
+            total_height += header.calculate_height();
+        } else if !table.columns.is_empty() {
+            // Simple header from column definitions
+            total_height += self.default_header_height;
+        }
+
+        // Calculate rows height
+        for row in &table.rows {
+            let row_height = row.min_height.unwrap_or(self.default_row_height);
+
+            // Account for row spans if needed
+            let max_rowspan = row.cells.iter().map(|cell| cell.rowspan).max().unwrap_or(1);
+
+            if max_rowspan > 1 {
+                // For multi-row spanning cells, the height is distributed
+                // This is a simplified calculation - full implementation would
+                // need to track overlapping spans
+                total_height += row_height * max_rowspan as f64;
+            } else {
+                total_height += row_height;
+            }
+        }
+
+        // Add small buffer for table borders
+        if table.table_border {
+            total_height += 2.0; // Top and bottom borders
+        }
+
+        total_height
+    }
+
     /// Render a table to a PDF page
     pub fn render_table(
         &self,
@@ -37,9 +78,7 @@ impl TableRenderer {
         y: f64,
     ) -> Result<f64, PdfError> {
         // Validate table structure
-        table
-            .validate()
-            .map_err(|e| PdfError::InvalidOperation(e))?;
+        table.validate().map_err(PdfError::InvalidOperation)?;
 
         let mut current_y = y;
 
@@ -74,7 +113,7 @@ impl TableRenderer {
         let mut current_y = start_y;
         let column_positions = self.calculate_column_positions(table, x);
 
-        for (_level_idx, level) in header.levels.iter().enumerate() {
+        for level in header.levels.iter() {
             let row_height = self.default_header_height;
 
             for cell in level {
@@ -169,6 +208,7 @@ impl TableRenderer {
     }
 
     /// Render an individual cell
+    #[allow(clippy::too_many_arguments)]
     fn render_cell(
         &self,
         page: &mut Page,
@@ -289,7 +329,70 @@ impl TableRenderer {
         // For now, all borders will be solid
     }
 
+    /// Truncate text to fit within a specified width, adding ellipsis if needed
+    fn truncate_text_to_width(
+        &self,
+        text: &str,
+        max_width: f64,
+        font: &Font,
+        font_size: f64,
+    ) -> String {
+        // If text already fits, return as-is
+        let full_width = measure_text(text, font.clone(), font_size);
+        if full_width <= max_width {
+            return text.to_string();
+        }
+
+        // If even ellipsis doesn't fit, return empty string
+        let ellipsis = "...";
+        let ellipsis_width = measure_text(ellipsis, font.clone(), font_size);
+        if ellipsis_width > max_width {
+            return String::new();
+        }
+
+        // If exactly ellipsis width, return ellipsis
+        if ellipsis_width == max_width {
+            return ellipsis.to_string();
+        }
+
+        // Binary search to find the maximum text that fits with ellipsis
+        let available_width = max_width - ellipsis_width;
+        let chars: Vec<char> = text.chars().collect();
+
+        let mut left = 0;
+        let mut right = chars.len();
+        let mut best_length = 0;
+
+        while left <= right {
+            let mid = (left + right) / 2;
+            if mid == 0 {
+                break;
+            }
+
+            let substring: String = chars[..mid].iter().collect();
+            let substring_width = measure_text(&substring, font.clone(), font_size);
+
+            if substring_width <= available_width {
+                best_length = mid;
+                left = mid + 1;
+            } else {
+                if mid == 0 {
+                    break;
+                }
+                right = mid - 1;
+            }
+        }
+
+        if best_length == 0 {
+            ellipsis.to_string()
+        } else {
+            let truncated: String = chars[..best_length].iter().collect();
+            format!("{}{}", truncated, ellipsis)
+        }
+    }
+
     /// Render text within a cell
+    #[allow(clippy::too_many_arguments)]
     fn render_cell_text(
         &self,
         page: &mut Page,
@@ -302,26 +405,44 @@ impl TableRenderer {
     ) -> Result<(), PdfError> {
         let font = style.font.clone().unwrap_or(Font::Helvetica);
         let font_size = style.font_size.unwrap_or(12.0);
-        let text_color = style.text_color.clone().unwrap_or(Color::black());
+        let text_color = style.text_color.unwrap_or(Color::black());
+
+        // Calculate available width for text (considering padding)
+        let available_width = width - style.padding.left - style.padding.right;
+
+        // Truncate text if it doesn't fit within the cell
+        let display_text = if available_width > 0.0 {
+            self.truncate_text_to_width(content, available_width, &font, font_size)
+        } else {
+            String::new()
+        };
 
         // Calculate text position based on alignment and padding
         let text_x = match style.alignment {
             CellAlignment::Left => x + style.padding.left,
-            CellAlignment::Center => x + width / 2.0,
-            CellAlignment::Right => x + width - style.padding.right,
+            CellAlignment::Center => {
+                // For center alignment, we need to calculate based on actual text width
+                let text_width = measure_text(&display_text, font.clone(), font_size);
+                x + style.padding.left + (available_width - text_width) / 2.0
+            }
+            CellAlignment::Right => {
+                let text_width = measure_text(&display_text, font.clone(), font_size);
+                x + width - style.padding.right - text_width
+            }
             CellAlignment::Justify => x + style.padding.left,
         };
 
         let text_y = y + height / 2.0; // Vertically center for now
 
-        let text_obj = page
-            .text()
-            .set_font(font, font_size)
-            .set_fill_color(text_color);
+        // Only render text if we have something to display
+        if !display_text.is_empty() {
+            let text_obj = page
+                .text()
+                .set_font(font, font_size)
+                .set_fill_color(text_color);
 
-        // Simplified text rendering - position and write
-        // TODO: Implement proper alignment when TextContext supports it
-        text_obj.at(text_x, text_y).write(content)?;
+            text_obj.at(text_x, text_y).write(&display_text)?;
+        }
 
         Ok(())
     }
@@ -400,5 +521,138 @@ impl TableRenderer {
 impl Default for TableRenderer {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::text::Font;
+
+    #[test]
+    fn test_truncate_text_to_width_no_truncation_needed() {
+        let renderer = TableRenderer::new();
+        let text = "Short";
+        let max_width = 100.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let result = renderer.truncate_text_to_width(text, max_width, &font, font_size);
+        assert_eq!(result, "Short");
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_with_truncation() {
+        let renderer = TableRenderer::new();
+        let text = "This is a very long text that should be truncated";
+        let max_width = 50.0; // Very narrow width
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let result = renderer.truncate_text_to_width(text, max_width, &font, font_size);
+        assert!(result.ends_with("..."));
+        assert!(result.len() < text.len());
+
+        // Verify the truncated text fits within the width
+        let truncated_width = measure_text(&result, font, font_size);
+        assert!(truncated_width <= max_width);
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_empty_when_too_narrow() {
+        let renderer = TableRenderer::new();
+        let text = "Any text";
+        let max_width = 5.0; // Too narrow even for ellipsis
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let result = renderer.truncate_text_to_width(text, max_width, &font, font_size);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_exactly_ellipsis_width() {
+        let renderer = TableRenderer::new();
+        let text = "Some text";
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        // Calculate width that exactly fits ellipsis
+        let ellipsis_width = measure_text("...", font.clone(), font_size);
+
+        let result = renderer.truncate_text_to_width(text, ellipsis_width, &font, font_size);
+        assert_eq!(result, "...");
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_single_character() {
+        let renderer = TableRenderer::new();
+        let text = "A";
+        let max_width = 50.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let result = renderer.truncate_text_to_width(text, max_width, &font, font_size);
+        assert_eq!(result, "A");
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_different_fonts() {
+        let renderer = TableRenderer::new();
+        let text = "This text will be truncated";
+        let max_width = 60.0;
+        let font_size = 12.0;
+
+        // Test with different fonts
+        let helvetica_result =
+            renderer.truncate_text_to_width(text, max_width, &Font::Helvetica, font_size);
+        let courier_result =
+            renderer.truncate_text_to_width(text, max_width, &Font::Courier, font_size);
+        let times_result =
+            renderer.truncate_text_to_width(text, max_width, &Font::TimesRoman, font_size);
+
+        // All should be truncated and fit within width
+        for result in [&helvetica_result, &courier_result, &times_result] {
+            assert!(result.ends_with("..."));
+            assert!(result.len() < text.len());
+        }
+
+        // Courier (monospace) might have different truncation point
+        // All results should be valid and within width limits
+        assert!(!helvetica_result.is_empty());
+        assert!(!courier_result.is_empty());
+        assert!(!times_result.is_empty());
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_empty_input() {
+        let renderer = TableRenderer::new();
+        let text = "";
+        let max_width = 100.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let result = renderer.truncate_text_to_width(text, max_width, &font, font_size);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_truncate_text_to_width_unicode_characters() {
+        let renderer = TableRenderer::new();
+        let text = "Héllö Wørld with ümlauts and émojis 🚀🎉";
+        let max_width = 80.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let result = renderer.truncate_text_to_width(text, max_width, &font, font_size);
+
+        // Should handle unicode properly
+        if result != text {
+            assert!(result.ends_with("..."));
+        }
+
+        // Verify width constraint
+        let result_width = measure_text(&result, font, font_size);
+        assert!(result_width <= max_width);
     }
 }

@@ -314,7 +314,7 @@ fn test_cross_annotation_relationships() {
     let page_ref = ObjectReference::new(1, 0);
 
     // Create parent text annotation
-    let parent_rect = Rectangle::new(Point::new(100.0, 500.0), Point::new(120.0, 520.0));
+    let _parent_rect = Rectangle::new(Point::new(100.0, 500.0), Point::new(120.0, 520.0));
     let parent_text = TextAnnotation::new(Point::new(100.0, 500.0))
         .with_contents("Parent annotation")
         .to_annotation();
@@ -331,7 +331,7 @@ fn test_cross_annotation_relationships() {
         .properties
         .set("Open", Object::Boolean(true));
 
-    let popup_ref = manager.add_annotation(page_ref, popup_annotation);
+    let _popup_ref = manager.add_annotation(page_ref, popup_annotation);
 
     // Create ink annotation with response to parent
     let ink_rect = Rectangle::new(Point::new(200.0, 450.0), Point::new(400.0, 550.0));
@@ -345,7 +345,7 @@ fn test_cross_annotation_relationships() {
         .properties
         .set("RT", Object::Name("R".to_string())); // Reply Type
 
-    let ink_ref = manager.add_annotation(page_ref, ink_annotation);
+    let _ink_ref = manager.add_annotation(page_ref, ink_annotation);
 
     // Create linking chain: Link -> FreeText -> Square
     let link_rect = Rectangle::new(Point::new(50.0, 300.0), Point::new(200.0, 320.0));
@@ -380,7 +380,7 @@ fn test_cross_annotation_relationships() {
         .properties
         .set("GroupWith", Object::Reference(freetext_ref));
 
-    let square_ref = manager.add_annotation(page_ref, square_annotation);
+    let _square_ref = manager.add_annotation(page_ref, square_annotation);
 
     // Verify all annotations are created
     if let Some(page_annotations) = manager.get_page_annotations(&page_ref) {

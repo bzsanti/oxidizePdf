@@ -38,20 +38,25 @@ sha2 = "0.10"
 # Unicode processing
 unicode-normalization = "0.1"
 
+# Text processing and validation
+regex = "1.10"
+
 # Flags
 bitflags = "2.4"
 
 # Parallel processing
 num_cpus = "1.16"
+rayon = { version = "1.8", optional = true }
 
-# Regular expressions for validation
-regex = "1.10"
+# (regex dependency moved to text processing section above)
 
 # TOML parsing for ISO compliance matrix
 toml = "0.8"
 
 # Temporary files for external validation
 tempfile = "3.8"
+rusty-tesseract = { version = "1.1.10", optional = true }
+image = { workspace = true, features = ["png", "jpeg"], optional = true }
 
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
@@ -61,15 +66,18 @@ libc = "0.2"
 winapi = { version = "0.3", features = ["memoryapi", "handleapi", "winnt"] }
 
 # Image processing dependencies (optional)
-image = { version = "0.25.6", default-features = false, features = ["png", "jpeg"], optional = true }
+image = { workspace = true, optional = true }
 
 # OCR dependencies (optional)
-tesseract = { version = "0.15", optional = true }
-leptonica-plumbing = { version = "1.0", optional = true }
+rusty-tesseract = { version = "1.1.10", optional = true }
+# tesseract = { version = "0.15.2", optional = true, features = ["tesseract_5_2"] }
+# leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1.7"
+tempfile = "3.8"
+serde_json = { workspace = true }
 
 [[example]]
 name = "font_spacing_test"
@@ -86,6 +94,10 @@ path = "../examples/src/field_actions.rs"
 [[example]]
 name = "form_validation"
 path = "../examples/src/form_validation.rs"
+
+[[example]]
+name = "generate_jpeg_test_fixture"
+path = "../examples/src/generate_jpeg_test_fixture.rs"
 
 [[example]]
 name = "button_fields_demo"
@@ -116,8 +128,48 @@ name = "advanced_tables_example"
 path = "../examples/advanced_tables_example.rs"
 
 [[example]]
+name = "advanced_tables_landscape_example"
+path = "../examples/advanced_tables_landscape_example.rs"
+
+[[example]]
+name = "advanced_tables_adjusted_example"
+path = "../examples/advanced_tables_adjusted_example.rs"
+
+[[example]]
+name = "advanced_tables_truncated_example"
+path = "../examples/advanced_tables_truncated_example.rs"
+
+[[example]]
 name = "charts_example"
 path = "../examples/charts_example.rs"
+
+[[example]]
+name = "charts_coordinate_problem"
+path = "../examples/charts_coordinate_problem.rs"
+
+[[example]]
+name = "charts_fixed_example"
+path = "../examples/charts_fixed_example.rs"
+
+[[example]]
+name = "charts_text_alignment_test"
+path = "../examples/charts_text_alignment_test.rs"
+
+[[example]]
+name = "charts_comprehensive_test"
+path = "../examples/charts_comprehensive_test.rs"
+
+[[example]]
+name = "performance_benchmark_1000"
+path = "../examples/src/performance_benchmark_1000.rs"
+
+[[example]]
+name = "simple_document_benchmark"
+path = "../examples/src/simple_document_benchmark.rs"
+
+[[example]]
+name = "test_row_alignment_fix"
+path = "../examples/src/test_row_alignment_fix.rs"
 
 # Temporarily disabled examples with compilation errors
 # [[example]]
@@ -134,8 +186,34 @@ path = "../examples/charts_example.rs"
 
 # Temporarily disabled test file with compilation errors
 
+[[example]]
+name = "medium_complexity_benchmark"
+path = "../examples/src/medium_complexity_benchmark.rs"
+
+[[example]]
+name = "high_complexity_benchmark"
+path = "../examples/src/high_complexity_benchmark.rs"
+
+[[example]]
+name = "extreme_complexity_benchmark"
+path = "../examples/src/extreme_complexity_benchmark.rs"
+
+[[example]]
+name = "tesseract_debug"
+path = "../examples/src/tesseract_debug.rs"
+
+
+[[example]]
+name = "test_ocr_with_tesseract"
+path = "../examples/src/test_ocr_with_tesseract.rs"
+required-features = ["ocr-tesseract"]
+
 [[bench]]
 name = "ocr_benchmarks"
+harness = false
+
+[[bench]]
+name = "performance_benchmarks"
 harness = false
 
 [features]
@@ -148,11 +226,17 @@ compression = ["dep:flate2"]
 external-images = ["dep:image"]
 
 # OCR features
-ocr-tesseract = ["dep:tesseract", "dep:leptonica-plumbing"]
+ocr-tesseract = ["dep:rusty-tesseract", "external-images"]
 ocr-full = ["ocr-tesseract"]
+
+# Performance features
+performance = ["dep:rayon", "compression"]
 
 # Test features
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
 
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]
+
+# Parallel processing features
+rayon = ["dep:rayon"]

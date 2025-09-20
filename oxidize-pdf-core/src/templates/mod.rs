@@ -10,13 +10,16 @@
 //! use oxidize_pdf::templates::{Template, TemplateContext};
 //! use oxidize_pdf::{Document, Page, Font};
 //!
-//! let mut context = TemplateContext::new();
-//! context.set("name", "John Doe");
-//! context.set("date", "2024-01-15");
-//! context.set("total", "$1,234.56");
+//! fn example() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut context = TemplateContext::new();
+//!     context.set("name", "John Doe");
+//!     context.set("date", "2024-01-15");
+//!     context.set("total", "$1,234.56");
 //!
-//! let template_text = "Invoice for {{name}} - Date: {{date}} - Total: {{total}}";
-//! let rendered = Template::render(template_text, &context)?;
+//!     let template_text = "Invoice for {{name}} - Date: {{date}} - Total: {{total}}";
+//!     let rendered = Template::render(template_text, &context)?;
+//!     Ok(())
+//! }
 //! ```
 
 mod context;

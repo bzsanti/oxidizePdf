@@ -412,10 +412,11 @@ fn test_concurrent_form_operations() {
 
     println!("Concurrent operations completed in {total_time:?}");
     println!(
-        "Success rate: {:.1}% ({}/{})",
+        "Success rate: {:.1}% ({}/{}) - Failures: {}",
         success_rate * 100.0,
         total_successes,
-        expected_operations
+        expected_operations,
+        total_failures
     );
 
     // Should have high success rate

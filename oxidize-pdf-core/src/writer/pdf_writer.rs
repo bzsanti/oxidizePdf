@@ -1354,7 +1354,10 @@ impl<W: Write> PdfWriter<W> {
         // Add font resources
         let mut font_dict = Dictionary::new();
 
-        // Add standard PDF fonts (Type1) with WinAnsiEncoding for Latin-1 support
+        // Add ALL standard PDF fonts (Type1) with WinAnsiEncoding
+        // This fixes the text rendering issue in dashboards where HelveticaBold was missing
+
+        // Helvetica family
         let mut helvetica_dict = Dictionary::new();
         helvetica_dict.set("Type", Object::Name("Font".to_string()));
         helvetica_dict.set("Subtype", Object::Name("Type1".to_string()));
@@ -1362,6 +1365,37 @@ impl<W: Write> PdfWriter<W> {
         helvetica_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
         font_dict.set("Helvetica", Object::Dictionary(helvetica_dict));
 
+        let mut helvetica_bold_dict = Dictionary::new();
+        helvetica_bold_dict.set("Type", Object::Name("Font".to_string()));
+        helvetica_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
+        helvetica_bold_dict.set("BaseFont", Object::Name("Helvetica-Bold".to_string()));
+        helvetica_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set("Helvetica-Bold", Object::Dictionary(helvetica_bold_dict));
+
+        let mut helvetica_oblique_dict = Dictionary::new();
+        helvetica_oblique_dict.set("Type", Object::Name("Font".to_string()));
+        helvetica_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
+        helvetica_oblique_dict.set("BaseFont", Object::Name("Helvetica-Oblique".to_string()));
+        helvetica_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set(
+            "Helvetica-Oblique",
+            Object::Dictionary(helvetica_oblique_dict),
+        );
+
+        let mut helvetica_bold_oblique_dict = Dictionary::new();
+        helvetica_bold_oblique_dict.set("Type", Object::Name("Font".to_string()));
+        helvetica_bold_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
+        helvetica_bold_oblique_dict.set(
+            "BaseFont",
+            Object::Name("Helvetica-BoldOblique".to_string()),
+        );
+        helvetica_bold_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set(
+            "Helvetica-BoldOblique",
+            Object::Dictionary(helvetica_bold_oblique_dict),
+        );
+
+        // Times family
         let mut times_dict = Dictionary::new();
         times_dict.set("Type", Object::Name("Font".to_string()));
         times_dict.set("Subtype", Object::Name("Type1".to_string()));
@@ -1369,12 +1403,61 @@ impl<W: Write> PdfWriter<W> {
         times_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
         font_dict.set("Times-Roman", Object::Dictionary(times_dict));
 
+        let mut times_bold_dict = Dictionary::new();
+        times_bold_dict.set("Type", Object::Name("Font".to_string()));
+        times_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
+        times_bold_dict.set("BaseFont", Object::Name("Times-Bold".to_string()));
+        times_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set("Times-Bold", Object::Dictionary(times_bold_dict));
+
+        let mut times_italic_dict = Dictionary::new();
+        times_italic_dict.set("Type", Object::Name("Font".to_string()));
+        times_italic_dict.set("Subtype", Object::Name("Type1".to_string()));
+        times_italic_dict.set("BaseFont", Object::Name("Times-Italic".to_string()));
+        times_italic_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set("Times-Italic", Object::Dictionary(times_italic_dict));
+
+        let mut times_bold_italic_dict = Dictionary::new();
+        times_bold_italic_dict.set("Type", Object::Name("Font".to_string()));
+        times_bold_italic_dict.set("Subtype", Object::Name("Type1".to_string()));
+        times_bold_italic_dict.set("BaseFont", Object::Name("Times-BoldItalic".to_string()));
+        times_bold_italic_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set(
+            "Times-BoldItalic",
+            Object::Dictionary(times_bold_italic_dict),
+        );
+
+        // Courier family
         let mut courier_dict = Dictionary::new();
         courier_dict.set("Type", Object::Name("Font".to_string()));
         courier_dict.set("Subtype", Object::Name("Type1".to_string()));
         courier_dict.set("BaseFont", Object::Name("Courier".to_string()));
         courier_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
         font_dict.set("Courier", Object::Dictionary(courier_dict));
+
+        let mut courier_bold_dict = Dictionary::new();
+        courier_bold_dict.set("Type", Object::Name("Font".to_string()));
+        courier_bold_dict.set("Subtype", Object::Name("Type1".to_string()));
+        courier_bold_dict.set("BaseFont", Object::Name("Courier-Bold".to_string()));
+        courier_bold_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set("Courier-Bold", Object::Dictionary(courier_bold_dict));
+
+        let mut courier_oblique_dict = Dictionary::new();
+        courier_oblique_dict.set("Type", Object::Name("Font".to_string()));
+        courier_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
+        courier_oblique_dict.set("BaseFont", Object::Name("Courier-Oblique".to_string()));
+        courier_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set("Courier-Oblique", Object::Dictionary(courier_oblique_dict));
+
+        let mut courier_bold_oblique_dict = Dictionary::new();
+        courier_bold_oblique_dict.set("Type", Object::Name("Font".to_string()));
+        courier_bold_oblique_dict.set("Subtype", Object::Name("Type1".to_string()));
+        courier_bold_oblique_dict.set("BaseFont", Object::Name("Courier-BoldOblique".to_string()));
+        courier_bold_oblique_dict.set("Encoding", Object::Name("WinAnsiEncoding".to_string()));
+        font_dict.set(
+            "Courier-BoldOblique",
+            Object::Dictionary(courier_bold_oblique_dict),
+        );
 
         // Add custom fonts (Type0 fonts for Unicode support)
         for (font_name, font_id) in font_refs {

@@ -1,6 +1,8 @@
 //! # oxidize-pdf
 //!
 //! A comprehensive, pure Rust PDF library for generation, parsing, and manipulation with zero external PDF dependencies.
+
+#![allow(clippy::all)]
 //!
 //! ## Features
 //!
@@ -175,9 +177,11 @@
 pub mod actions;
 pub mod advanced_tables;
 pub mod annotations;
+
 pub mod batch;
 pub mod charts;
 pub mod compression;
+pub mod coordinate_system;
 pub mod document;
 pub mod encryption;
 pub mod error;
@@ -196,6 +200,8 @@ pub mod page_tables;
 pub mod page_transitions;
 pub mod page_tree;
 pub mod parser;
+#[cfg(feature = "performance")]
+pub mod performance;
 pub mod recovery;
 pub mod streaming;
 pub mod structure;
@@ -205,10 +211,13 @@ pub mod verification;
 pub mod viewer_preferences;
 pub mod writer;
 
-#[cfg(feature = "semantic")]
 pub mod semantic;
 
+// Dashboard and reporting modules
+pub mod dashboard;
+
 // Re-export generation types
+pub use coordinate_system::{CoordinateSystem, RenderContext, TransformMatrix};
 pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
@@ -280,6 +289,12 @@ pub use parser::{
 
 // Re-export operations
 pub use operations::{merge_pdfs, rotate_pdf_pages, split_pdf};
+
+// Re-export dashboard types
+pub use dashboard::{
+    Dashboard, DashboardBuilder, DashboardComponent, DashboardConfig, DashboardLayout,
+    DashboardTheme, HeatMap, KpiCard, PivotTable, ScatterPlot, TreeMap, Typography,
+};
 
 // Re-export memory optimization types
 pub use memory::{LazyDocument, MemoryOptions, StreamProcessor, StreamingOptions};

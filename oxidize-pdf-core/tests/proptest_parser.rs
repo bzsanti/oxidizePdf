@@ -8,6 +8,7 @@ use proptest::prelude::*;
 use std::io::Cursor;
 
 // Strategy for generating valid PDF-like strings
+#[allow(dead_code)]
 fn pdf_string_strategy() -> impl Strategy<Value = String> {
     prop_oneof![
         // Simple ASCII strings
@@ -22,11 +23,13 @@ fn pdf_string_strategy() -> impl Strategy<Value = String> {
 }
 
 // Strategy for generating PDF names
+#[allow(dead_code)]
 fn pdf_name_strategy() -> impl Strategy<Value = String> {
     "[a-zA-Z][a-zA-Z0-9._-]{0,50}".prop_map(|s| format!("/{s}"))
 }
 
 // Strategy for generating simple PDF documents
+#[allow(dead_code)]
 fn simple_pdf_strategy() -> impl Strategy<Value = Vec<u8>> {
     (
         any::<u32>().prop_map(|n| n % 100 + 1), // num objects

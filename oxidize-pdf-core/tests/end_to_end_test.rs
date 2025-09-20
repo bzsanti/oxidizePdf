@@ -194,7 +194,7 @@ fn test_pdf_metadata() -> Result<()> {
 
     // Parse and verify metadata
     let reader = BufReader::new(Cursor::new(&buffer));
-    let parsed = PdfReader::new(reader)?;
+    let _parsed = PdfReader::new(reader)?;
 
     // Metadata checking not available in current API
     // let info = parsed.get_info().expect("Should have info dictionary");

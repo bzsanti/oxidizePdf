@@ -276,6 +276,7 @@ mod tests {
             width: 150.0,
             height: 20.0,
             confidence: 0.95,
+            word_confidences: None,
             font_size: 12.0,
             fragment_type: FragmentType::Word,
         };

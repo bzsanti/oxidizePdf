@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/oxidize-pdf/badge.svg)](https://docs.rs/oxidize-pdf)
 [![Downloads](https://img.shields.io/crates/d/oxidize-pdf)](https://crates.io/crates/oxidize-pdf)
 [![Coverage](https://img.shields.io/badge/coverage-64.75%25-yellow)](docs/COVERAGE_METHODOLOGY.md)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
@@ -381,17 +381,9 @@ cargo run --example tesseract_ocr_demo --features ocr-tesseract
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
 
-### Commercial Licensing
-
-For commercial use cases that require proprietary licensing, please contact us about our PRO and Enterprise editions which offer:
-
-- Commercial-friendly licensing
-- Advanced OCR features (cloud providers, batch processing)
-- PDF forms and digital signatures
-- Priority support and SLAs
-- Custom feature development
+The MIT license allows you to use oxidize-pdf in commercial projects without restrictions.
 
 ## Known Limitations
 

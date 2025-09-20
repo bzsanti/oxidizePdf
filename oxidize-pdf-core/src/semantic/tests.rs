@@ -436,7 +436,7 @@ mod export_tests {
         for (i, entity_type) in types.iter().enumerate() {
             let entity = Entity::new(
                 format!("entity-{}", i),
-                *entity_type,
+                entity_type.clone(),
                 (0.0, 0.0, 100.0, 50.0),
                 0,
             );
@@ -671,6 +671,7 @@ mod marking_tests {
                 EntityType::PageNumber => assert!(true),
                 EntityType::Header => assert!(true),
                 EntityType::Footer => assert!(true),
+                _ => assert!(true), // Handle all other EntityType variants
             }
         }
     }
@@ -922,7 +923,12 @@ mod marking_tests {
         ];
 
         for (entity_type, bounds) in test_cases {
-            let entity = Entity::new(format!("mark-{:?}", entity_type), entity_type, bounds, 0);
+            let entity = Entity::new(
+                format!("mark-{:?}", entity_type),
+                entity_type.clone(),
+                bounds,
+                0,
+            );
             assert_eq!(entity.entity_type, entity_type);
             assert_eq!(entity.bounds, bounds);
         }
