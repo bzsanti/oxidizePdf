@@ -8,6 +8,7 @@ use oxidize_pdf::Page;
 use proptest::prelude::*;
 
 // Strategy for finite floating point values suitable for graphics
+#[allow(dead_code)]
 fn graphics_coord() -> impl Strategy<Value = f64> {
     prop_oneof![
         -1000.0..1000.0f64,
@@ -20,6 +21,7 @@ fn graphics_coord() -> impl Strategy<Value = f64> {
 }
 
 // Strategy for color values (0.0 to 1.0)
+#[allow(dead_code)]
 fn color_component() -> impl Strategy<Value = f64> {
     0.0..=1.0f64
 }
@@ -243,6 +245,7 @@ proptest! {
 mod regression_tests {
     use super::*;
 
+    #[allow(dead_code)]
     fn test_zero_radius_circle() {
         let mut page = Page::a4();
         let graphics = page.graphics();
@@ -254,6 +257,7 @@ mod regression_tests {
         // Should not panic
     }
 
+    #[allow(dead_code)]
     fn test_zero_dimension_rectangle() {
         let mut page = Page::a4();
         let graphics = page.graphics();
@@ -271,6 +275,7 @@ mod regression_tests {
         graphics.stroke();
     }
 
+    #[allow(dead_code)]
     fn test_singular_transform() {
         let mut page = Page::a4();
         let graphics = page.graphics();
@@ -283,6 +288,7 @@ mod regression_tests {
         graphics.stroke();
     }
 
+    #[allow(dead_code)]
     fn test_very_long_path() {
         let mut page = Page::a4();
         let graphics = page.graphics();
@@ -297,6 +303,7 @@ mod regression_tests {
         graphics.stroke();
     }
 
+    #[allow(dead_code)]
     fn test_nested_save_restore_states() {
         let mut page = Page::a4();
         let graphics = page.graphics();

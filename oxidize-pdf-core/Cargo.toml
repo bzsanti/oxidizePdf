@@ -96,6 +96,10 @@ name = "form_validation"
 path = "../examples/src/form_validation.rs"
 
 [[example]]
+name = "generate_jpeg_test_fixture"
+path = "../examples/src/generate_jpeg_test_fixture.rs"
+
+[[example]]
 name = "button_fields_demo"
 path = "../examples/src/button_fields_demo.rs"
 

@@ -7,6 +7,7 @@ use oxidize_pdf::{Point, Rectangle};
 use proptest::prelude::*;
 
 // Strategy for generating finite f64 values
+#[allow(dead_code)]
 fn finite_f64() -> impl Strategy<Value = f64> {
     prop_oneof![
         -1e10..1e10f64,
@@ -154,12 +155,14 @@ proptest! {
 mod regression_tests {
     use super::*;
 
+    #[allow(dead_code)]
     fn test_point_with_negative_zero() {
         let p1 = Point::new(0.0, 0.0);
         let p2 = Point::new(-0.0, -0.0);
         assert_eq!(p1, p2);
     }
 
+    #[allow(dead_code)]
     fn test_rectangle_zero_area() {
         // Line rectangles (zero width or height)
         let horizontal_line = Rectangle::from_position_and_size(0.0, 0.0, 100.0, 0.0);
@@ -177,6 +180,7 @@ mod regression_tests {
         assert_eq!(point_rect.width() * point_rect.height(), 0.0);
     }
 
+    #[allow(dead_code)]
     fn test_rectangle_large_coordinates() {
         let large_rect = Rectangle::new(Point::new(-1e9, -1e9), Point::new(1e9, 1e9));
         assert_eq!(large_rect.width(), 2e9);
