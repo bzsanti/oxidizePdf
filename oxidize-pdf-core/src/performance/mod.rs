@@ -62,6 +62,7 @@ pub struct HighPerformanceDocument {
     options: PerformanceOptions,
     resource_pool: ResourcePool,
     memory_pool: MemoryPool,
+    #[allow(dead_code)]
     metrics: PerformanceMonitor,
     pages: Vec<PerformancePage>,
 }

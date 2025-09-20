@@ -36,6 +36,7 @@ pub struct MemoryPool {
     pools: Arc<Mutex<SizedPools>>,
     stats: Arc<Mutex<MemoryPoolStats>>,
     enabled: bool,
+    #[allow(dead_code)]
     max_total_size: usize,
 }
 
@@ -238,6 +239,7 @@ impl MemoryPool {
     }
 
     /// Internal method to return a buffer to the appropriate pool
+    #[allow(dead_code)]
     fn return_buffer(&self, mut buffer: Vec<u8>, size_category: BufferSize) {
         if !self.enabled {
             return; // Just drop the buffer

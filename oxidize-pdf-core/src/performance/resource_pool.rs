@@ -41,6 +41,7 @@ enum ResourceType {
     Font,
     Image,
     Pattern,
+    #[allow(dead_code)]
     ColorSpace,
 }
 
