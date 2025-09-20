@@ -2,7 +2,7 @@
 //!
 //! A comprehensive, pure Rust PDF library for generation, parsing, and manipulation with zero external PDF dependencies.
 
-#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::all)]
 //!
 //! ## Features
 //!
