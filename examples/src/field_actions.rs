@@ -10,16 +10,12 @@
 use oxidize_pdf::forms::{
     calculations::FieldValue,
     field_actions::{
-        ActionSettings, FieldAction, FieldActionSystem, FieldActions, FormatActionType,
-        SpecialFormatType, ValidateActionType,
+        FieldAction, FieldActionSystem, FieldActions, FormatActionType, SpecialFormatType,
+        ValidateActionType,
     },
-    BorderStyle, FieldType, TextField, Widget,
 };
-use oxidize_pdf::geometry::Rectangle;
-use oxidize_pdf::graphics::Color;
 use oxidize_pdf::text::Font;
 use oxidize_pdf::{Document, Page, PdfError};
-use std::collections::HashMap;
 
 fn main() -> Result<(), PdfError> {
     println!("✅ Creating PDF with field action examples...");

@@ -4,6 +4,7 @@ use crate::forms::{AcroForm, FormManager};
 use crate::objects::{Object, ObjectId};
 use crate::page::Page;
 use crate::page_labels::PageLabelTree;
+use crate::semantic::{BoundingBox, EntityType, RelationType, SemanticEntity};
 use crate::structure::{NamedDestinations, OutlineTree, PageTree};
 use crate::text::{FontEncoding, FontWithEncoding};
 use crate::writer::PdfWriter;
@@ -64,6 +65,8 @@ pub struct Document {
     pub(crate) open_action: Option<crate::actions::Action>,
     /// Viewer preferences for controlling document display
     pub(crate) viewer_preferences: Option<crate::viewer_preferences::ViewerPreferences>,
+    /// Semantic entities marked in the document for AI processing
+    pub(crate) semantic_entities: Vec<SemanticEntity>,
 }
 
 /// Metadata for a PDF document.
@@ -126,6 +129,7 @@ impl Document {
             used_characters: HashSet::new(),
             open_action: None,
             viewer_preferences: None,
+            semantic_entities: Vec::new(),
         }
     }
 
@@ -716,6 +720,202 @@ impl Document {
         writer.write_document(self)?;
 
         Ok(buffer)
+    }
+
+    // ==================== Semantic Entity Methods ====================
+
+    /// Mark a region of the PDF with semantic meaning for AI processing.
+    ///
+    /// This creates an AI-Ready PDF that contains machine-readable metadata
+    /// alongside the visual content, enabling automated document processing.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, semantic::{EntityType, BoundingBox}};
+    ///
+    /// let mut doc = Document::new();
+    ///
+    /// // Mark an invoice number region
+    /// let entity_id = doc.mark_entity(
+    ///     "invoice_001".to_string(),
+    ///     EntityType::InvoiceNumber,
+    ///     BoundingBox::new(100.0, 700.0, 150.0, 20.0, 1)
+    /// );
+    ///
+    /// // Add content and metadata
+    /// doc.set_entity_content(&entity_id, "INV-2024-001");
+    /// doc.add_entity_metadata(&entity_id, "confidence", "0.98");
+    /// ```
+    pub fn mark_entity(
+        &mut self,
+        id: impl Into<String>,
+        entity_type: EntityType,
+        bounds: BoundingBox,
+    ) -> String {
+        let entity_id = id.into();
+        let entity = SemanticEntity::new(entity_id.clone(), entity_type, bounds);
+        self.semantic_entities.push(entity);
+        entity_id
+    }
+
+    /// Set the content text for an entity
+    pub fn set_entity_content(&mut self, entity_id: &str, content: impl Into<String>) -> bool {
+        if let Some(entity) = self
+            .semantic_entities
+            .iter_mut()
+            .find(|e| e.id == entity_id)
+        {
+            entity.content = content.into();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Add metadata to an entity
+    pub fn add_entity_metadata(
+        &mut self,
+        entity_id: &str,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> bool {
+        if let Some(entity) = self
+            .semantic_entities
+            .iter_mut()
+            .find(|e| e.id == entity_id)
+        {
+            entity.metadata.properties.insert(key.into(), value.into());
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Set confidence score for an entity
+    pub fn set_entity_confidence(&mut self, entity_id: &str, confidence: f32) -> bool {
+        if let Some(entity) = self
+            .semantic_entities
+            .iter_mut()
+            .find(|e| e.id == entity_id)
+        {
+            entity.metadata.confidence = Some(confidence.clamp(0.0, 1.0));
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Add a relationship between two entities
+    pub fn relate_entities(
+        &mut self,
+        from_id: &str,
+        to_id: &str,
+        relation_type: RelationType,
+    ) -> bool {
+        // First check if target entity exists
+        let target_exists = self.semantic_entities.iter().any(|e| e.id == to_id);
+        if !target_exists {
+            return false;
+        }
+
+        // Then add the relationship
+        if let Some(entity) = self.semantic_entities.iter_mut().find(|e| e.id == from_id) {
+            entity.relationships.push(crate::semantic::EntityRelation {
+                target_id: to_id.to_string(),
+                relation_type,
+            });
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get all semantic entities in the document
+    pub fn get_semantic_entities(&self) -> &[SemanticEntity] {
+        &self.semantic_entities
+    }
+
+    /// Get entities by type
+    pub fn get_entities_by_type(&self, entity_type: EntityType) -> Vec<&SemanticEntity> {
+        self.semantic_entities
+            .iter()
+            .filter(|e| e.entity_type == entity_type)
+            .collect()
+    }
+
+    /// Export semantic entities as JSON
+    #[cfg(feature = "semantic")]
+    pub fn export_semantic_entities_json(&self) -> Result<String> {
+        serde_json::to_string_pretty(&self.semantic_entities)
+            .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+    }
+
+    /// Find an entity by ID
+    pub fn find_entity(&self, entity_id: &str) -> Option<&SemanticEntity> {
+        self.semantic_entities.iter().find(|e| e.id == entity_id)
+    }
+
+    /// Remove an entity by ID
+    pub fn remove_entity(&mut self, entity_id: &str) -> bool {
+        if let Some(pos) = self
+            .semantic_entities
+            .iter()
+            .position(|e| e.id == entity_id)
+        {
+            self.semantic_entities.remove(pos);
+            // Also remove any relationships pointing to this entity
+            for entity in &mut self.semantic_entities {
+                entity.relationships.retain(|r| r.target_id != entity_id);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get the count of semantic entities
+    pub fn semantic_entity_count(&self) -> usize {
+        self.semantic_entities.len()
+    }
+
+    /// Add XMP metadata stream to the document (Pro feature placeholder)
+    pub fn add_xmp_metadata(&mut self, _xmp_data: &str) -> Result<ObjectId> {
+        // This is a placeholder implementation for the Pro version
+        // In the community edition, this just returns a dummy ObjectId
+        tracing::info!("XMP metadata embedding requested but not available in community edition");
+        Ok(ObjectId::new(9999, 0)) // Dummy object ID
+    }
+
+    /// Get XMP metadata from the document (Pro feature placeholder)  
+    pub fn get_xmp_metadata(&self) -> Result<Option<String>> {
+        // This is a placeholder implementation for the Pro version
+        // In the community edition, this always returns None
+        tracing::info!("XMP metadata extraction requested but not available in community edition");
+        Ok(None)
+    }
+
+    /// Extract text content from all pages (placeholder implementation)
+    pub fn extract_text(&self) -> Result<String> {
+        // Placeholder implementation - in a real PDF reader this would
+        // parse content streams and extract text operators
+        let mut text = String::new();
+        for (i, _page) in self.pages.iter().enumerate() {
+            text.push_str(&format!("Text from page {} (placeholder)\n", i + 1));
+        }
+        Ok(text)
+    }
+
+    /// Extract text content from a specific page (placeholder implementation)
+    pub fn extract_page_text(&self, page_index: usize) -> Result<String> {
+        if page_index < self.pages.len() {
+            Ok(format!("Text from page {} (placeholder)", page_index + 1))
+        } else {
+            Err(crate::error::PdfError::InvalidReference(format!(
+                "Page index {} out of bounds",
+                page_index
+            )))
+        }
     }
 }
 

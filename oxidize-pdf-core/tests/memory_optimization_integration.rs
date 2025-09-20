@@ -350,7 +350,7 @@ fn test_content_type_memory_optimization() -> Result<()> {
         doc.set_compress(true);
 
         // Create pages with specific content type
-        for page_num in 1..=5 {
+        for _page_num in 1..=5 {
             let mut page = Page::a4();
             content_fn(&mut page)?;
             doc.add_page(page);

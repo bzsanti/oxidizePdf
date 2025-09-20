@@ -693,26 +693,90 @@ impl PageContentAnalyzer {
 
     /// Extract image data from a page for OCR processing
     ///
-    /// This method extracts the primary image from a scanned page.
-    /// For scanned pages, this typically returns the main page image.
-    fn extract_page_image_data(&self, page_number: usize) -> OperationResult<Vec<u8>> {
+    /// This method extracts the primary image from a scanned page and converts
+    /// it to a format suitable for OCR processing (PNG or JPEG).
+    pub fn extract_page_image_data(&self, page_number: usize) -> OperationResult<Vec<u8>> {
+        println!(
+            "🔍 [DEBUG] extract_page_image_data called for page {}",
+            page_number
+        );
+
         let page = self
             .document
             .get_page(page_number as u32)
             .map_err(|e| OperationError::ParseError(e.to_string()))?;
 
-        // Get page resources to find the main image
+        // Method 1: Check page resources for XObjects
+        println!("🔍 [DEBUG] Trying Method 1: Check page resources for XObjects");
         let resources = self
             .document
             .get_page_resources(&page)
             .map_err(|e| OperationError::ParseError(e.to_string()))?;
 
-        if let Some(resources) = resources {
+        // Try to get resources from standard method first
+        let mut resolved_resources_dict: Option<crate::parser::objects::PdfDictionary> = None;
+
+        if let Some(_resources) = &resources {
+            // Standard case - resources found normally
+            println!(
+                "🔍 [DEBUG] Page {} has resources via standard method",
+                page_number
+            );
+        } else {
+            // If resources is None, try to resolve directly from page dictionary
+            println!(
+                "🔍 [DEBUG] Page {} resources None, trying direct resolution",
+                page_number
+            );
+            if let Some(resources_ref) = page.dict.get("Resources") {
+                println!(
+                    "🔍 [DEBUG] Page {} has Resources entry, resolving reference",
+                    page_number
+                );
+                match self.document.resolve(resources_ref) {
+                    Ok(resolved_obj) => {
+                        if let Some(resolved_dict) = resolved_obj.as_dict() {
+                            println!("🔍 [DEBUG] Page {} resolved Resources to dictionary with {} entries",
+                                   page_number, resolved_dict.0.len());
+                            resolved_resources_dict = Some(resolved_dict.clone());
+                        } else {
+                            println!(
+                                "🔍 [DEBUG] Page {} Resources resolved but not a dictionary",
+                                page_number
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        println!(
+                            "🔍 [DEBUG] Page {} failed to resolve Resources: {}",
+                            page_number, e
+                        );
+                    }
+                }
+            } else {
+                println!(
+                    "🔍 [DEBUG] Page {} has no Resources entry in dict",
+                    page_number
+                );
+            }
+        }
+
+        // Check for XObjects in either standard resources or resolved resources
+        let active_resources = resources.or(resolved_resources_dict.as_ref());
+
+        if let Some(resources) = &active_resources {
+            println!("🔍 [DEBUG] Page {} has resources", page_number);
             if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
                 .0
                 .get(&crate::parser::objects::PdfName("XObject".to_string()))
             {
-                for obj_ref in xobjects.0.values() {
+                println!(
+                    "🔍 [DEBUG] Page {} has XObject dictionary with {} entries",
+                    page_number,
+                    xobjects.0.len()
+                );
+                // Process each XObject to find images
+                for (xobject_name, obj_ref) in xobjects.0.iter() {
                     if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) = obj_ref
                     {
                         if let Ok(crate::parser::objects::PdfObject::Stream(stream)) =
@@ -725,17 +789,191 @@ impl PageContentAnalyzer {
                                 .get(&crate::parser::objects::PdfName("Subtype".to_string()))
                             {
                                 if subtype.0 == "Image" {
-                                    // Get the raw image data
-                                    let parse_options = self.document.options();
-                                    let image_data =
-                                        stream.decode(&parse_options).map_err(|e| {
-                                            OperationError::ParseError(format!(
-                                                "Failed to decode image: {e}"
-                                            ))
-                                        })?;
+                                    let width = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Width".to_string()))
+                                        .and_then(|w| {
+                                            if let crate::parser::objects::PdfObject::Integer(w) = w
+                                            {
+                                                Some(*w)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
 
-                                    // Return the first (and typically only) image for scanned pages
+                                    let height = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Height".to_string()))
+                                        .and_then(|h| {
+                                            if let crate::parser::objects::PdfObject::Integer(h) = h
+                                            {
+                                                Some(*h)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+
+                                    println!(
+                                        "🔍 [DEBUG] Page {} Method1 XObject {} -> Object {} ({}x{})",
+                                        page_number, xobject_name.0, obj_num, width, height
+                                    );
+                                    // Extract and convert image for OCR
+                                    return self.extract_image_stream_for_ocr(&stream);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                println!("🔍 [DEBUG] Page {} has no XObject dictionary", page_number);
+            }
+        } else {
+            println!("🔍 [DEBUG] Page {} has no resources", page_number);
+        }
+
+        // Method 2: Find XObject referenced by this specific page's content stream
+        println!("🔍 [DEBUG] Trying Method 2: Parse content streams for Do operators");
+        if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
+            println!(
+                "🔍 [DEBUG] Page {} has {} content streams",
+                page_number,
+                content_streams.len()
+            );
+            for (i, content_stream) in content_streams.iter().enumerate() {
+                let content_str = String::from_utf8_lossy(content_stream);
+                println!(
+                    "🔍 [DEBUG] Content stream {} has {} bytes",
+                    i,
+                    content_stream.len()
+                );
+
+                // Look for Do operators and extract the XObject name
+                // Pattern: "/ImageName Do" where ImageName is the XObject key
+                for line in content_str.lines() {
+                    if line.trim().ends_with(" Do") {
+                        // Extract XObject name from "/Name Do"
+                        let parts: Vec<&str> = line.split_whitespace().collect();
+                        if parts.len() >= 2 && parts[parts.len() - 1] == "Do" {
+                            let xobject_name = parts[parts.len() - 2];
+                            println!(
+                                "🔍 [DEBUG] Found Do operator with XObject: {}",
+                                xobject_name
+                            );
+                            if let Some(name) = xobject_name.strip_prefix('/') {
+                                // Remove leading '/'
+                                println!("🔍 [DEBUG] Looking for XObject: {}", name);
+
+                                // Try to find this specific XObject using page resources first
+                                if let Ok(image_data) =
+                                    self.find_specific_xobject_image_from_page(name, &page)
+                                {
                                     return Ok(image_data);
+                                } else {
+                                    println!("🔍 [DEBUG] Page-specific XObject lookup failed for: {}, trying document-wide search", name);
+                                    // Fallback to document-wide search for malformed PDFs
+                                    if let Ok(image_data) = self.find_specific_xobject_image(name) {
+                                        return Ok(image_data);
+                                    } else {
+                                        println!("🔍 [DEBUG] Document-wide XObject lookup also failed for: {}", name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: Look for inline images: BI ... ID ... EI
+                if content_str.contains("BI") && content_str.contains("EI") {
+                    // For now, inline image extraction would require more complex implementation
+                    // Most scanned PDFs use XObjects which we handle above
+                }
+            }
+        }
+
+        // Method 3: Last resort - scan document for any large images
+        println!("🔍 [DEBUG] Trying Method 3: Fallback scan for large images");
+        match self.find_image_xobjects_in_document() {
+            Ok(image_data) if !image_data.is_empty() => {
+                return Ok(image_data);
+            }
+            _ => {}
+        }
+
+        Err(OperationError::ParseError(
+            "No image data found on scanned page (checked XObjects and inline images)".to_string(),
+        ))
+    }
+
+    /// Find a specific XObject image by name using page-specific resources
+    fn find_specific_xobject_image_from_page(
+        &self,
+        xobject_name: &str,
+        page: &crate::parser::page_tree::ParsedPage,
+    ) -> OperationResult<Vec<u8>> {
+        // Get page-specific resources - with fallback for malformed PDFs
+        let resources = self
+            .document
+            .get_page_resources(page)
+            .map_err(|e| OperationError::ParseError(e.to_string()))?;
+
+        // Try standard method first
+        if let Some(resources) = resources {
+            if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
+                .0
+                .get(&crate::parser::objects::PdfName("XObject".to_string()))
+            {
+                #[allow(clippy::collapsible_match)]
+                if let Some(xobject_ref) = xobjects
+                    .0
+                    .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
+                {
+                    if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) =
+                        xobject_ref
+                    {
+                        if let Ok(crate::parser::objects::PdfObject::Stream(stream)) =
+                            self.document.get_object(*obj_num, *gen_num)
+                        {
+                            if let Some(crate::parser::objects::PdfObject::Name(subtype)) = stream
+                                .dict
+                                .0
+                                .get(&crate::parser::objects::PdfName("Subtype".to_string()))
+                            {
+                                if subtype.0 == "Image" {
+                                    let width = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Width".to_string()))
+                                        .and_then(|w| {
+                                            if let crate::parser::objects::PdfObject::Integer(w) = w
+                                            {
+                                                Some(*w)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+                                    let height = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Height".to_string()))
+                                        .and_then(|h| {
+                                            if let crate::parser::objects::PdfObject::Integer(h) = h
+                                            {
+                                                Some(*h)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+                                    println!(
+                                        "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
+                                        xobject_name, obj_num, width, height
+                                    );
+                                    return self.extract_image_stream_for_ocr(&stream);
                                 }
                             }
                         }
@@ -744,10 +982,852 @@ impl PageContentAnalyzer {
             }
         }
 
+        // Fallback for malformed PDFs: try direct resolution
+        if let Some(crate::parser::objects::PdfObject::Reference(res_obj, res_gen)) = page
+            .dict
+            .0
+            .get(&crate::parser::objects::PdfName("Resources".to_string()))
+        {
+            match self.document.get_object(*res_obj, *res_gen) {
+                Ok(crate::parser::objects::PdfObject::Dictionary(resolved_dict)) => {
+                    println!(
+                        "🔍 [DEBUG] Page-specific fallback: resolved Resources {} {} R",
+                        res_obj, res_gen
+                    );
+                    if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) =
+                        resolved_dict
+                            .0
+                            .get(&crate::parser::objects::PdfName("XObject".to_string()))
+                    {
+                        println!("🔍 [DEBUG] Page-specific fallback found XObject dictionary with {} entries", xobjects.0.len());
+                        for (name, obj) in &xobjects.0 {
+                            println!(
+                                "🔍 [DEBUG] Page-specific fallback XObject: {} -> {:?}",
+                                name.0, obj
+                            );
+                        }
+                        if let Some(xobject_ref) = xobjects
+                            .0
+                            .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
+                        {
+                            if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) =
+                                xobject_ref
+                            {
+                                println!("🔍 [DEBUG] Page-specific fallback: trying to get object {} {} R", obj_num, gen_num);
+                                match self.document.get_object(*obj_num, *gen_num) {
+                                    Ok(crate::parser::objects::PdfObject::Stream(stream)) => {
+                                        println!(
+                                            "🔍 [DEBUG] Page-specific fallback: got stream object"
+                                        );
+                                        match stream.dict.0.get(&crate::parser::objects::PdfName(
+                                            "Subtype".to_string(),
+                                        )) {
+                                            Some(crate::parser::objects::PdfObject::Name(
+                                                subtype,
+                                            )) => {
+                                                println!("🔍 [DEBUG] Page-specific fallback: stream subtype = {}", subtype.0);
+                                                if subtype.0 == "Image" {
+                                                    let width = stream
+                                                        .dict
+                                                        .0
+                                                        .get(&crate::parser::objects::PdfName("Width".to_string()))
+                                                        .and_then(|w| {
+                                                            if let crate::parser::objects::PdfObject::Integer(w) = w
+                                                            {
+                                                                Some(*w)
+                                                            } else {
+                                                                None
+                                                            }
+                                                        })
+                                                        .unwrap_or(0);
+                                                    let height = stream
+                                                        .dict
+                                                        .0
+                                                        .get(&crate::parser::objects::PdfName("Height".to_string()))
+                                                        .and_then(|h| {
+                                                            if let crate::parser::objects::PdfObject::Integer(h) = h
+                                                            {
+                                                                Some(*h)
+                                                            } else {
+                                                                None
+                                                            }
+                                                        })
+                                                        .unwrap_or(0);
+                                                    println!(
+                                                        "🔍 [DEBUG] Page-specific fallback XObject {} -> Object {} ({}x{})",
+                                                        xobject_name, obj_num, width, height
+                                                    );
+                                                    return self
+                                                        .extract_image_stream_for_ocr(&stream);
+                                                } else {
+                                                    println!("🔍 [DEBUG] Page-specific fallback: stream is not an image (subtype: {})", subtype.0);
+                                                }
+                                            }
+                                            None => {
+                                                println!("🔍 [DEBUG] Page-specific fallback: stream has no Subtype");
+                                            }
+                                            _ => {
+                                                println!("🔍 [DEBUG] Page-specific fallback: stream Subtype is not a name");
+                                            }
+                                        }
+                                    }
+                                    Ok(obj) => {
+                                        println!("🔍 [DEBUG] Page-specific fallback: object {} {} R is not a stream, got: {:?}", obj_num, gen_num, std::any::type_name_of_val(&obj));
+                                    }
+                                    Err(e) => {
+                                        println!("🔍 [DEBUG] Page-specific fallback: failed to get object {} {} R: {}", obj_num, gen_num, e);
+                                    }
+                                }
+                            } else {
+                                println!("🔍 [DEBUG] Page-specific fallback: XObject reference is not a Reference");
+                            }
+                        } else {
+                            println!("🔍 [DEBUG] Page-specific fallback: XObject '{}' not found in resolved resources", xobject_name);
+                        }
+                    } else {
+                        println!("🔍 [DEBUG] Page-specific fallback: no XObject dictionary in resolved resources");
+                    }
+                }
+                Ok(_) => {
+                    println!("🔍 [DEBUG] Page-specific fallback: Resources reference resolved to non-dictionary");
+                }
+                Err(e) => {
+                    println!(
+                        "🔍 [DEBUG] Page-specific fallback: failed to resolve Resources: {}",
+                        e
+                    );
+                }
+            }
+        }
+
+        // If we reach here, we couldn't find the XObject
+        if let Some(resources) = resources {
+            if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
+                .0
+                .get(&crate::parser::objects::PdfName("XObject".to_string()))
+            {
+                // Look for the specific XObject name in this page's resources
+                #[allow(clippy::collapsible_match)]
+                if let Some(xobject_ref) = xobjects
+                    .0
+                    .get(&crate::parser::objects::PdfName(xobject_name.to_string()))
+                {
+                    if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) =
+                        xobject_ref
+                    {
+                        if let Ok(crate::parser::objects::PdfObject::Stream(stream)) =
+                            self.document.get_object(*obj_num, *gen_num)
+                        {
+                            // Verify it's an image XObject
+                            if let Some(crate::parser::objects::PdfObject::Name(subtype)) = stream
+                                .dict
+                                .0
+                                .get(&crate::parser::objects::PdfName("Subtype".to_string()))
+                            {
+                                if subtype.0 == "Image" {
+                                    let width = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Width".to_string()))
+                                        .and_then(|w| {
+                                            if let crate::parser::objects::PdfObject::Integer(w) = w
+                                            {
+                                                Some(*w)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+
+                                    let height = stream
+                                        .dict
+                                        .0
+                                        .get(&crate::parser::objects::PdfName("Height".to_string()))
+                                        .and_then(|h| {
+                                            if let crate::parser::objects::PdfObject::Integer(h) = h
+                                            {
+                                                Some(*h)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(0);
+
+                                    println!(
+                                        "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
+                                        xobject_name, obj_num, width, height
+                                    );
+                                    return self.extract_image_stream_for_ocr(&stream);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(OperationError::ParseError(format!(
+            "No page-specific XObject found for name: {}",
+            xobject_name
+        )))
+    }
+
+    /// Find a specific XObject image by name in the document (fallback method)
+    fn find_specific_xobject_image(&self, xobject_name: &str) -> OperationResult<Vec<u8>> {
+        // Search through document objects for one with this specific name reference
+        // This is more targeted than scanning all objects
+
+        for obj_num in 1..=1000 {
+            // Reasonable range for most PDFs
+            if let Ok(crate::parser::objects::PdfObject::Stream(stream)) =
+                self.document.get_object(obj_num, 0)
+            {
+                // Check if it's an image stream
+                if let Some(crate::parser::objects::PdfObject::Name(subtype)) = stream
+                    .dict
+                    .0
+                    .get(&crate::parser::objects::PdfName("Subtype".to_string()))
+                {
+                    if subtype.0 == "Image" {
+                        // For now, we'll return the first large image we find
+                        // TODO: Implement proper name-based lookup when we have access to the XRef table
+                        let width = stream
+                            .dict
+                            .0
+                            .get(&crate::parser::objects::PdfName("Width".to_string()))
+                            .and_then(|w| {
+                                if let crate::parser::objects::PdfObject::Integer(w) = w {
+                                    Some(*w)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(0);
+                        let height = stream
+                            .dict
+                            .0
+                            .get(&crate::parser::objects::PdfName("Height".to_string()))
+                            .and_then(|h| {
+                                if let crate::parser::objects::PdfObject::Integer(h) = h {
+                                    Some(*h)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(0);
+
+                        // If it's a reasonably large image, likely a scanned page
+                        if width > 100 && height > 100 {
+                            println!(
+                                "🔍 [DEBUG] Using XObject {} -> Object {} ({}x{})",
+                                xobject_name, obj_num, width, height
+                            );
+                            return self.extract_image_stream_for_ocr(&stream);
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(OperationError::ParseError(format!(
+            "No image XObject found for name: {}",
+            xobject_name
+        )))
+    }
+
+    /// Scan the document for any image XObjects (fallback method)
+    fn find_image_xobjects_in_document(&self) -> OperationResult<Vec<u8>> {
+        // Scan through document objects looking for image streams
+        // This handles malformed PDFs where images aren't properly referenced in page resources
+        for obj_num in 1..=1000 {
+            // Reasonable range for most PDFs
+            if let Ok(crate::parser::objects::PdfObject::Stream(stream)) =
+                self.document.get_object(obj_num, 0)
+            {
+                // Check if it's an image stream
+                if let Some(crate::parser::objects::PdfObject::Name(subtype)) = stream
+                    .dict
+                    .0
+                    .get(&crate::parser::objects::PdfName("Subtype".to_string()))
+                {
+                    if subtype.0 == "Image" {
+                        // Get image dimensions to check if it's page-sized
+                        let width = stream
+                            .dict
+                            .0
+                            .get(&crate::parser::objects::PdfName("Width".to_string()))
+                            .and_then(|w| {
+                                if let crate::parser::objects::PdfObject::Integer(w) = w {
+                                    Some(*w)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(0);
+                        let height = stream
+                            .dict
+                            .0
+                            .get(&crate::parser::objects::PdfName("Height".to_string()))
+                            .and_then(|h| {
+                                if let crate::parser::objects::PdfObject::Integer(h) = h {
+                                    Some(*h)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(0);
+
+                        // If it's a reasonably large image, likely a scanned page
+                        if width > 100 && height > 100 {
+                            return self.extract_image_stream_for_ocr(&stream);
+                        }
+                    }
+                }
+            }
+        }
+
         Err(OperationError::ParseError(
-            "No image data found on scanned page".to_string(),
+            "No suitable image objects found in document".to_string(),
         ))
     }
+
+    /// Extract and convert image stream data for OCR processing
+    fn extract_image_stream_for_ocr(
+        &self,
+        stream: &crate::parser::objects::PdfStream,
+    ) -> OperationResult<Vec<u8>> {
+        println!(
+            "🔍 [DEBUG] extract_image_stream_for_ocr called with stream size: {}",
+            stream.data.len()
+        );
+
+        // Get image properties
+        let width = match stream
+            .dict
+            .0
+            .get(&crate::parser::objects::PdfName("Width".to_string()))
+        {
+            Some(crate::parser::objects::PdfObject::Integer(w)) => *w as u32,
+            _ => {
+                return Err(OperationError::ParseError(
+                    "Missing image width".to_string(),
+                ))
+            }
+        };
+
+        let height = match stream
+            .dict
+            .0
+            .get(&crate::parser::objects::PdfName("Height".to_string()))
+        {
+            Some(crate::parser::objects::PdfObject::Integer(h)) => *h as u32,
+            _ => {
+                return Err(OperationError::ParseError(
+                    "Missing image height".to_string(),
+                ))
+            }
+        };
+
+        // Get color space and bits per component
+        let color_space = stream
+            .dict
+            .0
+            .get(&crate::parser::objects::PdfName("ColorSpace".to_string()));
+        let bits_per_component = match stream.dict.0.get(&crate::parser::objects::PdfName(
+            "BitsPerComponent".to_string(),
+        )) {
+            Some(crate::parser::objects::PdfObject::Integer(bits)) => *bits as u8,
+            _ => 8,
+        };
+
+        // Debug: show image properties
+        let filter = stream
+            .dict
+            .0
+            .get(&crate::parser::objects::PdfName("Filter".to_string()));
+        println!(
+            "🔍 [DEBUG] Image properties: {}x{}, {} bits, filter: {:?}",
+            width,
+            height,
+            bits_per_component,
+            filter
+                .as_ref()
+                .map(|f| match f {
+                    crate::parser::objects::PdfObject::Name(n) => n.0.as_str(),
+                    _ => "Array/Other",
+                })
+                .unwrap_or("None")
+        );
+
+        // Get image data based on filter type
+        let data = match filter {
+            Some(crate::parser::objects::PdfObject::Name(filter_name)) => match filter_name
+                .0
+                .as_str()
+            {
+                "DCTDecode" => {
+                    // JPEG data - use the raw stream data directly without decoding
+                    // DCTDecode streams contain complete JPEG data including headers
+                    let jpeg_data = &stream.data;
+
+                    println!(
+                        "🔍 [DEBUG] Processing DCTDecode stream: {} bytes",
+                        jpeg_data.len()
+                    );
+
+                    // Validate JPEG structure
+                    if jpeg_data.len() < 4 {
+                        return Err(OperationError::ParseError(
+                            "DCTDecode stream too short to be valid JPEG".to_string(),
+                        ));
+                    }
+
+                    // Check for JPEG SOI marker (Start Of Image: 0xFFD8)
+                    if jpeg_data[0] != 0xFF || jpeg_data[1] != 0xD8 {
+                        return Err(OperationError::ParseError(format!(
+                            "Invalid JPEG stream: missing SOI marker. Found: {:02X}{:02X}, expected FFD8",
+                            jpeg_data[0], jpeg_data[1]
+                        )));
+                    }
+
+                    println!("✅ [DEBUG] JPEG SOI marker found");
+
+                    // Use the stream data as-is - DCTDecode streams are already complete JPEG files
+                    let final_jpeg_data = jpeg_data.to_vec();
+
+                    println!(
+                        "🔍 [DEBUG] Final JPEG size: {} bytes",
+                        final_jpeg_data.len()
+                    );
+
+                    // Save for debugging
+                    let debug_path = format!(
+                        "oxidize-pdf-core/examples/results/extracted_{}x{}.jpg",
+                        width, height
+                    );
+                    let _ = std::fs::create_dir_all("oxidize-pdf-core/examples/results");
+                    let _ = std::fs::write(&debug_path, &final_jpeg_data);
+                    println!("🔍 [DEBUG] Saved extracted JPEG to: {}", debug_path);
+
+                    final_jpeg_data
+                }
+                filter_name => {
+                    // For other filters, we need to decode the stream first
+                    println!("🔍 [DEBUG] Decoding stream with filter: {}", filter_name);
+                    let parse_options = self.document.options();
+                    let decoded_data = stream.decode(&parse_options).map_err(|e| {
+                        OperationError::ParseError(format!("Failed to decode image stream: {e}"))
+                    })?;
+
+                    println!(
+                        "🔍 [DEBUG] Decoded stream data: {} bytes",
+                        decoded_data.len()
+                    );
+
+                    match filter_name {
+                        "FlateDecode" => {
+                            // Convert raw pixel data to PNG
+                            self.convert_raw_to_png_for_ocr(
+                                &decoded_data,
+                                width,
+                                height,
+                                color_space,
+                                bits_per_component,
+                            )?
+                        }
+                        "CCITTFaxDecode" => {
+                            // Convert CCITT fax to PNG
+                            self.convert_ccitt_to_png_for_ocr(&decoded_data, width, height)?
+                        }
+                        "LZWDecode" => {
+                            // Convert LZW decoded data to PNG
+                            self.convert_raw_to_png_for_ocr(
+                                &decoded_data,
+                                width,
+                                height,
+                                color_space,
+                                bits_per_component,
+                            )?
+                        }
+                        _ => {
+                            return Err(OperationError::ParseError(format!(
+                                "Unsupported image filter: {}",
+                                filter_name
+                            )))
+                        }
+                    }
+                }
+            },
+            Some(crate::parser::objects::PdfObject::Array(filters)) => {
+                // Handle filter arrays - use the first filter
+                if let Some(crate::parser::objects::PdfObject::Name(filter)) = filters.0.first() {
+                    match filter.0.as_str() {
+                        "DCTDecode" => {
+                            println!("🔍 [DEBUG] Array filter: Using raw JPEG stream data");
+                            stream.data.clone()
+                        }
+                        filter_name => {
+                            // Decode other filter types
+                            println!(
+                                "🔍 [DEBUG] Array filter: Decoding stream with filter: {}",
+                                filter_name
+                            );
+                            let parse_options = self.document.options();
+                            let decoded_data = stream.decode(&parse_options).map_err(|e| {
+                                OperationError::ParseError(format!(
+                                    "Failed to decode image stream: {e}"
+                                ))
+                            })?;
+
+                            match filter_name {
+                                "FlateDecode" => self.convert_raw_to_png_for_ocr(
+                                    &decoded_data,
+                                    width,
+                                    height,
+                                    color_space,
+                                    bits_per_component,
+                                )?,
+                                "CCITTFaxDecode" => {
+                                    self.convert_ccitt_to_png_for_ocr(&decoded_data, width, height)?
+                                }
+                                "LZWDecode" => self.convert_raw_to_png_for_ocr(
+                                    &decoded_data,
+                                    width,
+                                    height,
+                                    color_space,
+                                    bits_per_component,
+                                )?,
+                                _ => {
+                                    return Err(OperationError::ParseError(format!(
+                                        "Unsupported image filter in array: {}",
+                                        filter_name
+                                    )))
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    return Err(OperationError::ParseError("Empty filter array".to_string()));
+                }
+            }
+            _ => {
+                // No filter - raw image data, convert to PNG
+                println!("🔍 [DEBUG] No filter: Converting raw image data to PNG");
+                let parse_options = self.document.options();
+                let decoded_data = stream.decode(&parse_options).map_err(|e| {
+                    OperationError::ParseError(format!("Failed to decode raw image stream: {e}"))
+                })?;
+
+                self.convert_raw_to_png_for_ocr(
+                    &decoded_data,
+                    width,
+                    height,
+                    color_space,
+                    bits_per_component,
+                )?
+            }
+        };
+
+        println!("🔍 [DEBUG] Final image data for OCR: {} bytes", data.len());
+        Ok(data)
+    }
+
+    /// Return raw JPEG data from DCTDecode stream without modification
+    /// DCTDecode streams in PDFs are valid JPEG data - pass through unchanged
+    #[allow(dead_code)]
+    fn clean_jpeg_data(&self, raw_data: &[u8]) -> Vec<u8> {
+        println!(
+            "🔍 [DEBUG] Using raw DCTDecode stream as-is: {} bytes",
+            raw_data.len()
+        );
+
+        // DCTDecode streams from PDF are already valid JPEG
+        // Don't try to "clean" or modify them - just pass through
+        raw_data.to_vec()
+    }
+
+    #[cfg(feature = "external-images")]
+    #[allow(dead_code)]
+    fn fix_image_rotation_for_ocr(
+        &self,
+        image_data: &[u8],
+        pdf_width: u32,
+        pdf_height: u32,
+    ) -> OperationResult<Vec<u8>> {
+        println!("🔍 [DEBUG] Image rotation correction with external-images feature");
+
+        // For now, apply a simple heuristic rotation fix for the known case
+        // Based on your image showing 90 degree clockwise rotation
+        let rotation_needed = self.detect_rotation_needed(pdf_width, pdf_height, 0, 0);
+
+        if rotation_needed > 0 {
+            // Use external command to rotate the image for now
+            // This is a temporary solution until we fix the image crate import
+            self.rotate_image_externally(image_data, rotation_needed)
+        } else {
+            println!("🔍 [DEBUG] No rotation correction needed based on dimensions");
+            Ok(image_data.to_vec())
+        }
+    }
+
+    #[cfg(not(feature = "external-images"))]
+    #[allow(dead_code)]
+    fn fix_image_rotation_for_ocr(
+        &self,
+        image_data: &[u8],
+        _pdf_width: u32,
+        _pdf_height: u32,
+    ) -> OperationResult<Vec<u8>> {
+        println!(
+            "🔍 [DEBUG] Image rotation correction disabled (external-images feature not enabled)"
+        );
+        Ok(image_data.to_vec())
+    }
+
+    #[allow(dead_code)]
+    fn detect_rotation_needed(
+        &self,
+        pdf_width: u32,
+        pdf_height: u32,
+        img_width: u32,
+        img_height: u32,
+    ) -> u8 {
+        // For the specific case we're dealing with, apply a simple heuristic
+        // Based on the debug output, we know the PDF is portrait (1169x1653 in metadata)
+        // but the extracted image appears landscape-oriented when viewed
+
+        // If we don't have actual image dimensions, use PDF dimensions as heuristic
+        let (actual_img_width, actual_img_height) = if img_width == 0 || img_height == 0 {
+            (pdf_width, pdf_height)
+        } else {
+            (img_width, img_height)
+        };
+
+        println!(
+            "🔍 [DEBUG] Rotation analysis - PDF: {}x{}, Image: {}x{}",
+            pdf_width, pdf_height, actual_img_width, actual_img_height
+        );
+
+        // Check if this is the typical portrait PDF with likely rotated content
+        if pdf_height > pdf_width {
+            // PDF is portrait - this is typical for scanned documents
+            // Based on your image example which was rotated 90° clockwise, apply counter-rotation
+            println!("🔍 [DEBUG] Portrait PDF detected - applying 270° rotation to correct typical scan rotation");
+            return 3; // 270° = 90° counter-clockwise
+        }
+
+        // For landscape PDFs or when dimensions are swapped
+        if pdf_width == actual_img_height && pdf_height == actual_img_width {
+            println!("🔍 [DEBUG] Dimensions swapped - applying 90° rotation");
+            return 1; // 90° clockwise
+        }
+
+        println!("🔍 [DEBUG] No rotation correction needed");
+        0
+    }
+
+    #[allow(dead_code)]
+    fn rotate_image_externally(&self, image_data: &[u8], rotation: u8) -> OperationResult<Vec<u8>> {
+        use std::fs;
+        use std::process::Command;
+
+        // Create temporary input file
+        let input_path = format!("examples/results/temp_input_{}.jpg", std::process::id());
+        let output_path = format!("examples/results/temp_output_{}.jpg", std::process::id());
+
+        // Save input image
+        if let Err(e) = fs::write(&input_path, image_data) {
+            println!("🔍 [DEBUG] Failed to write temp input file: {}", e);
+            return Ok(image_data.to_vec());
+        }
+
+        // Determine rotation angle
+        let angle = match rotation {
+            1 => "90",  // 90° clockwise
+            2 => "180", // 180°
+            3 => "270", // 270° clockwise (90° counter-clockwise)
+            _ => {
+                let _ = fs::remove_file(&input_path);
+                return Ok(image_data.to_vec());
+            }
+        };
+
+        println!(
+            "🔍 [DEBUG] Attempting to rotate image {} degrees using external tool",
+            angle
+        );
+
+        // Try sips first (available on macOS)
+        let sips_result = Command::new("sips")
+            .arg(&input_path)
+            .arg("-r")
+            .arg(angle)
+            .arg("--out")
+            .arg(&output_path)
+            .output();
+
+        let rotated_data = match sips_result {
+            Ok(sips_output) if sips_output.status.success() => match fs::read(&output_path) {
+                Ok(data) => {
+                    println!("🔍 [DEBUG] Successfully rotated image using sips");
+                    data
+                }
+                Err(e) => {
+                    println!("🔍 [DEBUG] Failed to read sips-rotated image: {}", e);
+                    image_data.to_vec()
+                }
+            },
+            Ok(sips_output) => {
+                println!(
+                    "🔍 [DEBUG] sips failed: {}",
+                    String::from_utf8_lossy(&sips_output.stderr)
+                );
+
+                // Fallback: try ImageMagick convert command
+                let result = Command::new("convert")
+                    .arg(&input_path)
+                    .arg("-rotate")
+                    .arg(angle)
+                    .arg(&output_path)
+                    .output();
+
+                match result {
+                    Ok(output) if output.status.success() => match fs::read(&output_path) {
+                        Ok(data) => {
+                            println!("🔍 [DEBUG] Successfully rotated image using ImageMagick");
+                            data
+                        }
+                        Err(e) => {
+                            println!("🔍 [DEBUG] Failed to read rotated image: {}", e);
+                            image_data.to_vec()
+                        }
+                    },
+                    _ => {
+                        println!(
+                            "🔍 [DEBUG] Both sips and ImageMagick failed, using original image"
+                        );
+                        image_data.to_vec()
+                    }
+                }
+            }
+            Err(e) => {
+                println!("🔍 [DEBUG] sips not available: {}", e);
+                println!("🔍 [DEBUG] Trying ImageMagick as fallback...");
+
+                let result = Command::new("convert")
+                    .arg(&input_path)
+                    .arg("-rotate")
+                    .arg(angle)
+                    .arg(&output_path)
+                    .output();
+
+                match result {
+                    Ok(output) if output.status.success() => match fs::read(&output_path) {
+                        Ok(data) => {
+                            println!("🔍 [DEBUG] Successfully rotated image using ImageMagick");
+                            data
+                        }
+                        Err(e) => {
+                            println!("🔍 [DEBUG] Failed to read rotated image: {}", e);
+                            image_data.to_vec()
+                        }
+                    },
+                    _ => {
+                        println!(
+                            "🔍 [DEBUG] No external rotation tools available, using original image"
+                        );
+                        image_data.to_vec()
+                    }
+                }
+            }
+        };
+
+        // Cleanup temporary files
+        let _ = fs::remove_file(&input_path);
+        let _ = fs::remove_file(&output_path);
+
+        Ok(rotated_data)
+    }
+
+    /// Clean corrupted JPEG data using sips (macOS system tool)
+    /// This fixes JPEGs extracted from PDFs that have structural issues
+    #[allow(dead_code)]
+    fn clean_corrupted_jpeg(
+        &self,
+        corrupted_jpeg_data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> OperationResult<Vec<u8>> {
+        use std::fs;
+        use std::process::Command;
+
+        println!("🔧 [DEBUG] Cleaning corrupted JPEG using sips");
+
+        // Generate temp file paths
+        let temp_id = std::process::id();
+        let input_path = format!("/tmp/ocr_corrupted_{}_{}.jpg", temp_id, width);
+        let output_path = format!("/tmp/ocr_clean_{}_{}.jpg", temp_id, width);
+
+        // Write corrupted JPEG to temp file
+        fs::write(&input_path, corrupted_jpeg_data).map_err(|e| {
+            OperationError::ProcessingError(format!("Failed to write temp JPEG: {e}"))
+        })?;
+
+        println!("🔧 [DEBUG] Saved corrupted JPEG to: {}", input_path);
+
+        // Use sips to recompress and clean the JPEG
+        let output = Command::new("sips")
+            .args([
+                "-s",
+                "format",
+                "jpeg",
+                "-s",
+                "formatOptions",
+                "100", // Maximum quality
+                &input_path,
+                "--out",
+                &output_path,
+            ])
+            .output()
+            .map_err(|e| OperationError::ProcessingError(format!("Failed to run sips: {e}")))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            println!("❌ [DEBUG] sips failed: {}", stderr);
+
+            // Cleanup temp files
+            let _ = fs::remove_file(&input_path);
+            let _ = fs::remove_file(&output_path);
+
+            // Fall back to original data if sips fails
+            println!("🔧 [DEBUG] Falling back to original JPEG data");
+            return Ok(corrupted_jpeg_data.to_vec());
+        }
+
+        // Read the cleaned JPEG
+        let cleaned_data = fs::read(&output_path).map_err(|e| {
+            OperationError::ProcessingError(format!("Failed to read cleaned JPEG: {e}"))
+        })?;
+
+        println!(
+            "🔧 [DEBUG] Successfully cleaned JPEG: {} -> {} bytes",
+            corrupted_jpeg_data.len(),
+            cleaned_data.len()
+        );
+
+        // Save the cleaned JPEG for debugging
+        let debug_clean_path = format!("fis2_cleaned_{}x{}.jpg", width, height);
+        let _ = fs::write(&debug_clean_path, &cleaned_data);
+        println!("🔧 [DEBUG] Saved cleaned JPEG to: {}", debug_clean_path);
+
+        // Cleanup temp files
+        let _ = fs::remove_file(&input_path);
+        let _ = fs::remove_file(&output_path);
+
+        Ok(cleaned_data)
+    }
+
+    // Removed problematic convert_jpeg_to_png_for_ocr function
 
     /// Calculate the total area of a page in points
     fn calculate_page_area(&self, page: &crate::parser::ParsedPage) -> OperationResult<f64> {
@@ -792,13 +1872,14 @@ impl PageContentAnalyzer {
 
     /// Analyze image content on a page
     fn analyze_image_content(&self, page_number: usize) -> OperationResult<ImageAnalysisResult> {
-        // For now, we'll use a simplified approach that estimates image coverage
-        // based on the presence of XObject references in the page resources
+        // Enhanced approach: check XObjects AND page content streams for images
 
         let page = self
             .document
             .get_page(page_number as u32)
             .map_err(|e| OperationError::ParseError(e.to_string()))?;
+
+        // Page analysis in progress
 
         // Get page resources to check for XObject references
         let resources = self
@@ -809,7 +1890,8 @@ impl PageContentAnalyzer {
         let mut total_area = 0.0;
         let mut image_count = 0;
 
-        if let Some(resources) = resources {
+        // Method 1: Check XObjects in resources
+        if let Some(resources) = &resources {
             if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
                 .0
                 .get(&crate::parser::objects::PdfName("XObject".to_string()))
@@ -864,6 +1946,33 @@ impl PageContentAnalyzer {
             }
         }
 
+        // Method 2: Check for inline images and Do operators in content stream
+        if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
+            for content_stream in content_streams.iter() {
+                let content_str = String::from_utf8_lossy(content_stream);
+
+                // Look for inline image operators: BI ... ID ... EI
+                let bi_count = content_str.matches("BI").count();
+                let ei_count = content_str.matches("EI").count();
+
+                if bi_count > 0 && ei_count > 0 {
+                    image_count += bi_count.min(ei_count);
+                    // For scanned pages, inline images often cover the entire page
+                    let page_area = page.width() * page.height();
+                    total_area += page_area * (bi_count.min(ei_count) as f64);
+                }
+
+                // Look for Do operators (invoke XObject) - fallback for scanned PDFs
+                let do_count = content_str.matches(" Do").count();
+                if do_count > 0 && image_count == 0 {
+                    // Assume Do operators reference large images covering the page
+                    image_count += do_count;
+                    let page_area = page.width() * page.height();
+                    total_area += page_area * (do_count as f64);
+                }
+            }
+        }
+
         Ok(ImageAnalysisResult {
             total_area,
             image_count,
@@ -891,6 +2000,199 @@ impl PageContentAnalyzer {
         } else {
             PageType::Mixed
         }
+    }
+
+    /// Convert raw image data to PNG format for OCR processing
+    fn convert_raw_to_png_for_ocr(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        color_space: Option<&crate::parser::objects::PdfObject>,
+        bits_per_component: u8,
+    ) -> OperationResult<Vec<u8>> {
+        // Imports removed - not used in current implementation
+
+        // Determine color components
+        let components = match color_space {
+            Some(crate::parser::objects::PdfObject::Name(cs)) => match cs.0.as_str() {
+                "DeviceGray" => 1,
+                "DeviceRGB" => 3,
+                "DeviceCMYK" => 4,
+                _ => 3, // Default to RGB
+            },
+            _ => 3, // Default to RGB
+        };
+
+        // Simple PNG creation
+        let mut png_data = Vec::new();
+
+        // PNG signature
+        png_data.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+        // IHDR chunk
+        let mut ihdr = Vec::new();
+        ihdr.extend_from_slice(&width.to_be_bytes());
+        ihdr.extend_from_slice(&height.to_be_bytes());
+        ihdr.push(bits_per_component);
+
+        // Color type
+        let color_type = match components {
+            1 => 0, // Grayscale
+            3 => 2, // RGB
+            4 => 6, // RGBA (treat CMYK as RGBA for now)
+            _ => 2, // Default to RGB
+        };
+        ihdr.push(color_type);
+        ihdr.push(0); // Compression method
+        ihdr.push(0); // Filter method
+        ihdr.push(0); // Interlace method
+
+        self.write_png_chunk(&mut png_data, b"IHDR", &ihdr);
+
+        // IDAT chunk - compress the image data
+        let compressed_data = self.compress_png_data(data, width, height, components)?;
+        self.write_png_chunk(&mut png_data, b"IDAT", &compressed_data);
+
+        // IEND chunk
+        self.write_png_chunk(&mut png_data, b"IEND", &[]);
+
+        Ok(png_data)
+    }
+
+    /// Convert CCITT Fax decoded data to PNG for OCR processing
+    fn convert_ccitt_to_png_for_ocr(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> OperationResult<Vec<u8>> {
+        // CCITT is typically 1-bit monochrome - convert to grayscale
+        let mut grayscale_data = Vec::new();
+
+        let bits_per_row = width as usize;
+        let bytes_per_row = bits_per_row.div_ceil(8);
+
+        for row in 0..height {
+            let row_start = row as usize * bytes_per_row;
+
+            for col in 0..width {
+                let byte_idx = row_start + (col as usize / 8);
+                let bit_idx = 7 - (col as usize % 8);
+
+                if byte_idx < data.len() {
+                    let bit = (data[byte_idx] >> bit_idx) & 1;
+                    // CCITT: 0 = black, 1 = white
+                    let gray_value = if bit == 0 { 0 } else { 255 };
+                    grayscale_data.push(gray_value);
+                } else {
+                    grayscale_data.push(255); // White for missing data
+                }
+            }
+        }
+
+        // Convert to PNG
+        self.convert_raw_to_png_for_ocr(
+            &grayscale_data,
+            width,
+            height,
+            Some(&crate::parser::objects::PdfObject::Name(
+                crate::parser::objects::PdfName("DeviceGray".to_string()),
+            )),
+            8,
+        )
+    }
+
+    /// Write a PNG chunk with proper CRC
+    fn write_png_chunk(&self, output: &mut Vec<u8>, chunk_type: &[u8; 4], data: &[u8]) {
+        // Length (4 bytes, big endian)
+        output.extend_from_slice(&(data.len() as u32).to_be_bytes());
+
+        // Chunk type (4 bytes)
+        output.extend_from_slice(chunk_type);
+
+        // Data
+        output.extend_from_slice(data);
+
+        // CRC (4 bytes, big endian)
+        let crc = self.calculate_png_crc32(chunk_type, data);
+        output.extend_from_slice(&crc.to_be_bytes());
+    }
+
+    /// Calculate CRC32 for PNG chunks
+    fn calculate_png_crc32(&self, chunk_type: &[u8; 4], data: &[u8]) -> u32 {
+        let mut crc: u32 = 0xFFFFFFFF;
+
+        // Process chunk type
+        for &byte in chunk_type {
+            crc ^= byte as u32;
+            for _ in 0..8 {
+                if crc & 1 != 0 {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+
+        // Process data
+        for &byte in data {
+            crc ^= byte as u32;
+            for _ in 0..8 {
+                if crc & 1 != 0 {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                } else {
+                    crc >>= 1;
+                }
+            }
+        }
+
+        crc ^ 0xFFFFFFFF
+    }
+
+    /// Compress image data for PNG IDAT chunk
+    fn compress_png_data(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        components: u8,
+    ) -> OperationResult<Vec<u8>> {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+
+        // PNG requires scanline filtering - add filter byte (0 = None) to each row
+        let bytes_per_pixel = components as usize;
+        let bytes_per_row = width as usize * bytes_per_pixel;
+
+        for row in 0..height {
+            // Filter byte (0 = no filter)
+            encoder.write_all(&[0])?;
+
+            // Row data
+            let start = row as usize * bytes_per_row;
+            let end = start + bytes_per_row;
+            if end <= data.len() {
+                encoder.write_all(&data[start..end])?;
+            } else {
+                // Pad with zeros if data is insufficient
+                let available = data.len().saturating_sub(start);
+                if available > 0 {
+                    encoder.write_all(&data[start..start + available])?;
+                }
+                let padding = bytes_per_row.saturating_sub(available);
+                for _ in 0..padding {
+                    encoder.write_all(&[0])?;
+                }
+            }
+        }
+
+        encoder
+            .finish()
+            .map_err(|e| OperationError::ParseError(format!("Failed to compress PNG data: {e}")))
     }
 }
 
@@ -925,6 +2227,8 @@ fn simulate_page_ocr_processing<P: OcrProvider>(
         preprocessing: crate::text::ocr::ImagePreprocessing::default(),
         engine_options: std::collections::HashMap::new(),
         timeout_seconds: 30,
+        regions: None,
+        debug_output: false,
     };
 
     // Process the mock image data

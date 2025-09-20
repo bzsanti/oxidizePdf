@@ -210,7 +210,7 @@ fn test_button_appearance_radio() {
     };
 
     let checked = generator.generate_checked().unwrap();
-    let unchecked = generator.generate_unchecked().unwrap();
+    let _unchecked = generator.generate_unchecked().unwrap();
 
     // Both should have proper bounding box
     if let Some(Object::Array(bbox)) = checked.dictionary().get("BBox") {

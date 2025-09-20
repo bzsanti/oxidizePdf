@@ -659,9 +659,22 @@ impl<R: Read> Lexer<R> {
     }
 
     pub fn read_bytes(&mut self, n: usize) -> ParseResult<Vec<u8>> {
-        let mut bytes = vec![0u8; n];
-        self.reader.read_exact(&mut bytes)?;
-        self.position += n;
+        let mut bytes = Vec::with_capacity(n);
+
+        // First consume any peeked byte to avoid duplication
+        if self.peek_buffer.is_some() && n > 0 {
+            bytes.push(self.consume_char()?.unwrap());
+        }
+
+        // Read remaining bytes directly
+        let remaining = n - bytes.len();
+        if remaining > 0 {
+            let mut rest = vec![0u8; remaining];
+            self.reader.read_exact(&mut rest)?;
+            self.position += remaining;
+            bytes.extend_from_slice(&rest);
+        }
+
         Ok(bytes)
     }
 
@@ -989,7 +1002,9 @@ impl<R: Read> Lexer<R> {
         // Control characters and Latin-1 supplement range that often indicate encoding issues
         (0x80..=0x9F).contains(&ch) ||
         ch == 0x07 || // Bell character
-        (ch <= 0x1F && ch != 0x09 && ch != 0x0A && ch != 0x0D) // Control chars except tab, LF, CR
+        (ch <= 0x1F && ch != 0x09 && ch != 0x0A && ch != 0x0D) || // Control chars except tab, LF, CR
+        // In lenient mode, also handle extended Latin-1 characters that may appear in corrupted streams
+        (self.options.lenient_syntax && ch >= 0xA0) // Extended Latin-1 range (u8 max is 0xFF)
     }
 
     /// Handle problematic encoding characters in the main token stream

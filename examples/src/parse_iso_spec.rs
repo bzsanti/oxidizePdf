@@ -176,7 +176,7 @@ fn parse_iso_structure(
     let mut conditional_count = 0;
 
     // Define patterns to identify sections and requirements
-    let section_pattern = Regex::new(r"(?m)^(\d+(?:\.\d+)*)\s+(.+?)(?:\s+\.\.\.|$)")?;
+    let _section_pattern = Regex::new(r"(?m)^(\d+(?:\.\d+)*)\s+(.+?)(?:\s+\.\.\.|$)")?;
     let requirement_patterns = vec![
         Regex::new(r"(?i)\b(shall|must|required)\b")?, // Mandatory
         Regex::new(r"(?i)\b(should|recommended)\b")?,  // Optional
@@ -280,7 +280,7 @@ fn extract_section_requirements(
 
     // Extract table definitions and dictionary specifications
     let table_pattern = Regex::new(r"(?i)table\s+(\d+\.\d+)[^\n]*([^}]+)")?;
-    let dict_pattern = Regex::new(r"(?i)dictionary\s+entries|required entries|optional entries")?;
+    let _dict_pattern = Regex::new(r"(?i)dictionary\s+entries|required entries|optional entries")?;
 
     // Extract requirements based on keywords
     let lines: Vec<&str> = section_text.lines().collect();

@@ -145,14 +145,50 @@ pub(crate) fn apply_filter(data: &[u8], filter: Filter) -> ParseResult<Vec<u8>> 
     }
 }
 
-/// Decode FlateDecode (zlib/deflate) compressed data
+/// Decode FlateDecode (zlib/deflate) compressed data with fallback strategies
 #[cfg(feature = "compression")]
 fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
+    // Strategy 1: Standard zlib decoder
+    if let Ok(result) = try_standard_zlib_decode(data) {
+        return Ok(result);
+    }
+
+    // Strategy 2: Raw deflate decoder (without zlib wrapper)
+    if let Ok(result) = try_raw_deflate_decode(data) {
+        return Ok(result);
+    }
+
+    // Strategy 3: Try skipping potential header corruption
+    if data.len() > 10 {
+        for skip_bytes in 1..=5 {
+            if let Ok(result) = try_standard_zlib_decode(&data[skip_bytes..]) {
+                return Ok(result);
+            }
+            if let Ok(result) = try_raw_deflate_decode(&data[skip_bytes..]) {
+                return Ok(result);
+            }
+        }
+    }
+
+    Err(ParseError::StreamDecodeError(
+        "All FlateDecode strategies failed".to_string(),
+    ))
+}
+
+#[cfg(feature = "compression")]
+fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut decoder = ZlibDecoder::new(data);
     let mut result = Vec::new();
-    decoder
-        .read_to_end(&mut result)
-        .map_err(|e| ParseError::StreamDecodeError(format!("Flate decode error: {e}")))?;
+    decoder.read_to_end(&mut result)?;
+    Ok(result)
+}
+
+#[cfg(feature = "compression")]
+fn try_raw_deflate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+    use flate2::read::DeflateDecoder;
+    let mut decoder = DeflateDecoder::new(data);
+    let mut result = Vec::new();
+    decoder.read_to_end(&mut result)?;
     Ok(result)
 }
 

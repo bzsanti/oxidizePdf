@@ -38,6 +38,36 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 - **Enterprise Edition**: Advanced PDF capabilities (Target: Q4 2027+)
   - Linearization, all annotation types, full multimedia
 
+## 🎯 Funcionalidades Estratégicas Inmediatas
+
+### Prioridad 1: AI-Ready PDFs (Q1 2025) 🆕
+- [ ] Sistema de marcado semántico de entidades en regiones PDF
+- [ ] Embedding de metadata estructurada (JSON-LD + Schema.org)
+- [ ] API de extracción de entidades para pipelines ML/AI
+- [ ] Export de training data para modelos de machine learning
+- [ ] Casos de uso: facturas, contratos, reportes automáticos
+
+### Prioridad 2: Reporting Avanzado (Q2 2025)
+- [ ] Dashboard framework con layout automático
+- [ ] KPI cards con visualizaciones embebidas
+- [ ] Tablas pivote con subtotales y agregaciones
+- [ ] Heatmaps y treemaps nativos
+- [ ] Data embedding para re-análisis
+
+### Prioridad 3: Rendimiento Extremo (Q2 2025)
+- [ ] Paralelización de generación de páginas
+- [ ] Streaming writer para PDFs grandes
+- [ ] Object pool para reutilización de recursos
+- [ ] Compresión adaptativa por contenido
+- [ ] Benchmarks: objetivo 1000+ páginas/segundo
+
+### Prioridad 4: OCR Avanzado (Q3 2025)
+- [ ] Activar integración Tesseract existente
+- [ ] API de OCR por regiones
+- [ ] Pipeline de corrección con diccionarios
+- [ ] Table extraction especializado
+- [ ] Confidence API para validación
+
 ### Path to 50% Real Compliance - Critical Milestones
 
 #### 🎯 Phase 1: Complete Interactive Features (36.7% → 42%) - 2-3 weeks
@@ -64,7 +94,7 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 
 ### Compliance Distribution
 
-### 🌍 Community Edition (Open Source - GPL v3)
+### 🌍 Community Edition (Open Source - MIT License)
 
 The Community Edition will provide essential PDF processing capabilities suitable for most individual and small-scale use cases. Target: 60% of ISO 32000-1:2008 specification by Q4 2026.
 
@@ -139,7 +169,7 @@ The Community Edition will provide essential PDF processing capabilities suitabl
 
 The PRO Edition extends Community features with advanced capabilities for professional and business use.
 
-#### AI-Ready Features (Q1 2026) 🆕
+#### AI-Ready Features (Q1 2025) 🆕 [MOVED TO PRIORITY 1]
 - [ ] **AI-Optimized PDFs** - Semantic marking for entity extraction
 - [ ] **Entity Recognition** - Mark regions as invoices, persons, dates, etc.
 - [ ] **Metadata Embedding** - Structured data within PDF regions

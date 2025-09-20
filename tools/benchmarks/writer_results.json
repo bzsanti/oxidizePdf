@@ -1,0 +1,109 @@
+{
+  "timestamp": 1756718746.672122,
+  "benchmarks": {
+    "simple": {
+      "description": "Documento simple (2 l\u00edneas de texto por p\u00e1gina)",
+      "results": [
+        {
+          "page_count": 100,
+          "avg_pages_per_sec": 4160.277405891375,
+          "avg_generation_ms": 0.0,
+          "avg_write_ms": 4.666666666666667,
+          "write_percentage": 100.0,
+          "iterations": [
+            {
+              "wall_time_ms": 350.2733440000001,
+              "wall_pages_per_sec": 285.4913218860296,
+              "internal_pages_per_sec": 19204.64,
+              "generation_ms": 0,
+              "write_ms": 4,
+              "total_internal_ms": 5
+            },
+            {
+              "wall_time_ms": 16.158085000000042,
+              "wall_pages_per_sec": 6188.852206186545,
+              "internal_pages_per_sec": 15676.36,
+              "generation_ms": 0,
+              "write_ms": 5,
+              "total_internal_ms": 6
+            },
+            {
+              "wall_time_ms": 16.648662000000147,
+              "wall_pages_per_sec": 6006.48868960155,
+              "internal_pages_per_sec": 17842.95,
+              "generation_ms": 0,
+              "write_ms": 5,
+              "total_internal_ms": 5
+            }
+          ]
+        },
+        {
+          "page_count": 500,
+          "avg_pages_per_sec": 14273.233541101572,
+          "avg_generation_ms": 2.0,
+          "avg_write_ms": 21.666666666666668,
+          "write_percentage": 91.54929577464789,
+          "iterations": [
+            {
+              "wall_time_ms": 37.70697700000003,
+              "wall_pages_per_sec": 13260.145463265315,
+              "internal_pages_per_sec": 19175.64,
+              "generation_ms": 2,
+              "write_ms": 23,
+              "total_internal_ms": 26
+            },
+            {
+              "wall_time_ms": 32.936344999999974,
+              "wall_pages_per_sec": 15180.797990791034,
+              "internal_pages_per_sec": 21933.6,
+              "generation_ms": 2,
+              "write_ms": 20,
+              "total_internal_ms": 22
+            },
+            {
+              "wall_time_ms": 34.77351999999989,
+              "wall_pages_per_sec": 14378.757169248369,
+              "internal_pages_per_sec": 20162.75,
+              "generation_ms": 2,
+              "write_ms": 22,
+              "total_internal_ms": 24
+            }
+          ]
+        },
+        {
+          "page_count": 1000,
+          "avg_pages_per_sec": 12933.123201497787,
+          "avg_generation_ms": 4.666666666666667,
+          "avg_write_ms": 40.333333333333336,
+          "write_percentage": 89.62962962962963,
+          "iterations": [
+            {
+              "wall_time_ms": 55.07634400000016,
+              "wall_pages_per_sec": 18156.615479052078,
+              "internal_pages_per_sec": 22227.15,
+              "generation_ms": 5,
+              "write_ms": 39,
+              "total_internal_ms": 44
+            },
+            {
+              "wall_time_ms": 58.71983100000011,
+              "wall_pages_per_sec": 17030.021765559886,
+              "internal_pages_per_sec": 20864.87,
+              "generation_ms": 4,
+              "write_ms": 42,
+              "total_internal_ms": 47
+            },
+            {
+              "wall_time_ms": 276.7988050000001,
+              "wall_pages_per_sec": 3612.7323598813937,
+              "internal_pages_per_sec": 21890.15,
+              "generation_ms": 5,
+              "write_ms": 40,
+              "total_internal_ms": 45
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

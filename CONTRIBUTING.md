@@ -414,7 +414,7 @@ oxidizePdf/
 
 ## License
 
-By contributing to oxidizePdf, you agree that your contributions will be licensed under the same license as the project (GPL v3 for Community Edition).
+By contributing to oxidizePdf, you agree that your contributions will be licensed under the same license as the project (MIT License).
 
 ## Recognition
 

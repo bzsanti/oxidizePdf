@@ -113,6 +113,38 @@ COVERAGE_AUDIT.md
 *_SUMMARY.md
 
 # ====================
+# OCR Examples (54+ files)
+# ====================
+# Exclude all OCR test files to reduce context by ~40%
+examples/src/test_ocr*.rs
+examples/src/ocr*.rs
+examples/src/test_enhanced*.rs
+examples/src/*ocr*.rs
+examples/src/*contract*.rs
+examples/src/*madridejos*.rs
+examples/src/*fis2*.rs
+examples/src/*om*.rs
+examples/src/test_real*.rs
+examples/src/extract_om*.rs
+examples/src/analyze_*.rs
+
+# ====================
+# Additional Binary Files
+# ====================
+*.dat
+*.raw
+*.bin
+
+# ====================
+# Generated Debug Files
+# ====================
+debug_*.jpg
+corrected_*.png
+enhanced_*.jpg
+transformed_*.jpg
+alignment_*.png
+
+# ====================
 # Benchmarks & Performance
 # ====================
 benches/

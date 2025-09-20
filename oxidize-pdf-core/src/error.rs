@@ -61,6 +61,12 @@ pub enum PdfError {
 
     #[error("External validation error: {0}")]
     ExternalValidationError(String),
+
+    #[error("Internal error: {0}")]
+    Internal(String),
+
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;

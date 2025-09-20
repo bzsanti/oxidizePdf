@@ -46,7 +46,7 @@ fn test_basic_field_validation_constraints() {
         Point::new(300.0, 620.0),
     ));
 
-    let field_ref = form_manager
+    let _field_ref = form_manager
         .add_text_field(required_field, widget, Some(required_options))
         .unwrap();
 
