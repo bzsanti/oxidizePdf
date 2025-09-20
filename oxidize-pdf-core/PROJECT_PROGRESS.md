@@ -1,74 +1,37 @@
-# Progreso del Proyecto - 2025-01-10 15:06:00
+# Progreso del Proyecto - 2025-09-21 01:42:11
 
 ## Estado Actual
-- **Rama**: develop_santi
-- **Funcionalidad trabajada**: Dashboard KPI Cards - Renderizado de texto
-- **Status**: ❌ PARCIALMENTE RESUELTO - Problema persiste
+- Rama: main
+- Último commit: 6be630a Release v1.2.1 - CI improvements and stability fixes (#49)
+- Tests: ⏱️ En ejecución (timeout a los 2min, compilación completa)
 
-## Problema Principal
-**Dashboard KPI Cards no muestran texto** - Solo se ven fondos grises y sparklines, falta el contenido de texto.
+## Archivos Modificados Recientes
 
-## Progreso de la Sesión
 
-### ✅ Problemas Identificados y Resueltos
-1. **Fragmentación de texto por ancho insuficiente**
-   - **Causa**: KPIs con span=3 recibían solo 106.75px (insuficiente)
-   - **Solución**: Modificar `add_kpi_row()` para máximo 2 KPIs por fila (span=6 = 225.5px)
-   - **Cambios**: `src/dashboard/builder.rs` - método `add_kpi_row()`
+## Logros de Esta Sesión
+- ✅ Revisión y resolución completa de CI pipeline
+- ✅ Arreglo de todas las fallas de compilación con Rust beta
+- ✅ Corrección de tests de extracción JPEG
+- ✅ Actualización de métodos deprecados ISO verification
+- ✅ Creación exitosa de PR #48 (merged)
+- ✅ Sincronización de branches develop y main
+- ✅ Creación exitosa de PR #49 (merged)
+- ✅ Creación y push del tag v1.2.1
+- ✅ Activación del pipeline de release automático
 
-2. **Span por defecto incorrecto**
-   - **Causa**: KPI cards defaulteaban a span=3 (quarter width)
-   - **Solución**: Cambiar default span de 3 a 12 (full width) 
-   - **Cambios**: `src/dashboard/kpi_card.rs` - línea config inicial
+## Release v1.2.1 Completado
+- Estado: ✅ Release tag creado y pipeline iniciado
+- GitHub Actions: https://github.com/bzsanti/oxidizePdf/actions/runs/17886200390
+- Incluye: Mejoras CI, correcciones AES en macOS, compatibilidad Rust beta
 
-### ❌ Problema Pendiente
-**Texto sigue invisible** a pesar de:
-- ✅ Métodos render_title() y render_value() se ejecutan correctamente
-- ✅ Coordenadas calculadas son apropiadas (Y=639, Y=611, etc.)  
-- ✅ Colores del theme son correctos (text_primary=#212529, text_secondary=#6c757d)
-- ✅ TextContext genera operaciones PDF correctamente
-- ✅ Font Helvetica disponible y usado
+## Próximos Pasos Post-Release
+- Continuar desarrollo según roadmap
+- Abordar issues #46 (CJK font support) y #47 (corrupted PDF handling)
+- Desarrollar funcionalidades avanzadas de dashboard y OCR
+- Revisar feedback de la comunidad post-release
 
-### 🔍 Investigación Realizada
-- **Debug logging**: Confirmado que render methods se llaman
-- **Position analysis**: Coordenadas en rangos válidos para PDF
-- **Color testing**: Probado con colores forzados (negro/rojo)
-- **TextContext verification**: Operaciones se escriben al PDF stream
+## Estado de Testing
+- Workspace tests: ⏱️ Compilación exitosa, tests en progreso
+- CI Pipeline: ✅ Todas las plataformas y versiones Rust pasando
+- Release Pipeline: ✅ Activo y funcionando
 
-## Tests Status
-- **Total**: 4099 tests
-- **Pasados**: 4094 ✅  
-- **Fallados**: 5 ❌ (relacionados con cambios implementados)
-- **Tests fallidos**:
-  - `dashboard::kpi_card::tests::test_kpi_card_creation` - Expected span 3, got 12
-  - `dashboard::layout::tests::test_dashboard_layout_content_area` - Margin mismatch
-  - `text::tests::*` - TextContext positioning tests
-
-## Archivos Modificados
-- `src/dashboard/kpi_card.rs` - Default span + debug (cleaned)
-- `src/dashboard/builder.rs` - Smart KPI row splitting  
-- `examples/debug_*.rs` - Debug utilities (no-commit)
-
-## Próximos Pasos (Mañana)
-1. **Investigar por qué texto sigue invisible**:
-   - Verificar orden de renderizado (graphics vs text z-order)
-   - Revisar PDF output directo con herramientas
-   - Posible problema en TextContext.write() implementation
-   
-2. **Corregir tests fallidos**:
-   - Actualizar assertions en tests para span=12
-   - Corregir margin expectations en layout tests
-   - Revisar TextContext positioning logic
-
-3. **Validación visual**:
-   - Abrir PDFs generados en viewer externo
-   - Confirmar si texto está presente pero invisible vs ausente
-
-## Notas Técnicas
-- Dashboard layout funciona correctamente (2 filas × 2 KPIs)
-- Sparklines y backgrounds se renderizan bien
-- El problema es específico al texto rendering dentro de KPI cards
-- TextContext opera correctamente en otros contextos
-
-## Recomendación
-El problema es sutil - los métodos text rendering se ejecutan pero el resultado no es visible. Sugiere issue en la implementación de TextContext.write() o en el orden de operaciones PDF.
