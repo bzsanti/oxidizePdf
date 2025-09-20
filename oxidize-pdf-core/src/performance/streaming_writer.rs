@@ -189,7 +189,7 @@ impl StreamingPdfWriter {
         let start = Instant::now();
 
         // Write page object
-        let page_obj_id = self.start_object()?;
+        let _page_obj_id = self.start_object()?;
 
         writeln!(self.writer, "<<")?;
         writeln!(self.writer, "  /Type /Page")?;
@@ -526,7 +526,6 @@ impl StreamingStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use tempfile::tempdir;
 
     #[test]

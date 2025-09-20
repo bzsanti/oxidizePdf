@@ -207,8 +207,9 @@ impl PerformanceMonitor {
             let memory_end = self.estimate_memory_usage();
             let memory_used = memory_end.saturating_sub(active_op.memory_start);
 
+            let operation = active_op.operation.clone();
             let completed_op = CompletedOperation {
-                operation: active_op.operation,
+                operation: operation.clone(),
                 duration,
                 thread_id: active_op.thread_id,
                 memory_used,
@@ -224,8 +225,8 @@ impl PerformanceMonitor {
             // Update operation statistics
             let mut stats = self.operation_stats.write().unwrap();
             let op_stats = stats
-                .entry(active_op.operation)
-                .or_insert_with(|| OperationStats::new(active_op.operation));
+                .entry(operation.clone())
+                .or_insert_with(|| OperationStats::new(operation));
             op_stats.add_measurement(duration, memory_used);
 
             duration
@@ -578,7 +579,7 @@ impl PerformanceMetrics {
         self.operation_stats
             .iter()
             .max_by_key(|(_, stats)| stats.average_duration())
-            .map(|(&op, stats)| (op, stats.average_duration()))
+            .map(|(op, stats)| (op.clone(), stats.average_duration()))
     }
 
     /// Get the most memory-intensive operation type
@@ -586,7 +587,7 @@ impl PerformanceMetrics {
         self.operation_stats
             .iter()
             .max_by_key(|(_, stats)| stats.average_memory())
-            .map(|(&op, stats)| (op, stats.average_memory()))
+            .map(|(op, stats)| (op.clone(), stats.average_memory()))
     }
 
     /// Get the most frequent operation type
@@ -594,7 +595,7 @@ impl PerformanceMetrics {
         self.operation_stats
             .iter()
             .max_by_key(|(_, stats)| stats.count)
-            .map(|(&op, stats)| (op, stats.count))
+            .map(|(op, stats)| (op.clone(), stats.count))
     }
 
     /// Get human-readable summary

@@ -251,26 +251,71 @@ impl MemoryPool {
         let buffer_size = buffer.capacity();
         let current_size = pools.current_size;
 
-        let pool = match size_category {
-            BufferSize::Small => &mut pools.small_buffers,
-            BufferSize::Medium => &mut pools.medium_buffers,
-            BufferSize::Large => &mut pools.large_buffers,
-            BufferSize::Huge => &mut pools.huge_buffers,
-        };
-
-        if pool.len() < capacity {
-            if current_size + buffer_size <= self.max_total_size {
-                buffer.clear(); // Clear contents but keep capacity
-                pools.current_size += buffer_size;
-                pool.push_back(buffer);
-                stats.returns_to_pool += 1;
-            } else {
-                stats.pool_evictions += 1;
-                // Drop the buffer (implicit)
+        match size_category {
+            BufferSize::Small => {
+                if pools.small_buffers.len() < capacity {
+                    if current_size + buffer_size <= self.max_total_size {
+                        buffer.clear(); // Clear contents but keep capacity
+                        pools.current_size += buffer_size;
+                        pools.small_buffers.push_back(buffer);
+                        stats.returns_to_pool += 1;
+                    } else {
+                        stats.pool_evictions += 1;
+                        // Drop the buffer (implicit)
+                    }
+                } else {
+                    stats.pool_evictions += 1;
+                    // Drop the buffer (implicit)
+                }
             }
-        } else {
-            stats.pool_evictions += 1;
-            // Drop the buffer (implicit)
+            BufferSize::Medium => {
+                if pools.medium_buffers.len() < capacity {
+                    if current_size + buffer_size <= self.max_total_size {
+                        buffer.clear(); // Clear contents but keep capacity
+                        pools.current_size += buffer_size;
+                        pools.medium_buffers.push_back(buffer);
+                        stats.returns_to_pool += 1;
+                    } else {
+                        stats.pool_evictions += 1;
+                        // Drop the buffer (implicit)
+                    }
+                } else {
+                    stats.pool_evictions += 1;
+                    // Drop the buffer (implicit)
+                }
+            }
+            BufferSize::Large => {
+                if pools.large_buffers.len() < capacity {
+                    if current_size + buffer_size <= self.max_total_size {
+                        buffer.clear(); // Clear contents but keep capacity
+                        pools.current_size += buffer_size;
+                        pools.large_buffers.push_back(buffer);
+                        stats.returns_to_pool += 1;
+                    } else {
+                        stats.pool_evictions += 1;
+                        // Drop the buffer (implicit)
+                    }
+                } else {
+                    stats.pool_evictions += 1;
+                    // Drop the buffer (implicit)
+                }
+            }
+            BufferSize::Huge => {
+                if pools.huge_buffers.len() < capacity {
+                    if current_size + buffer_size <= self.max_total_size {
+                        buffer.clear(); // Clear contents but keep capacity
+                        pools.current_size += buffer_size;
+                        pools.huge_buffers.push_back(buffer);
+                        stats.returns_to_pool += 1;
+                    } else {
+                        stats.pool_evictions += 1;
+                        // Drop the buffer (implicit)
+                    }
+                } else {
+                    stats.pool_evictions += 1;
+                    // Drop the buffer (implicit)
+                }
+            }
         }
     }
 }
@@ -357,8 +402,7 @@ impl Drop for PooledBuffer {
             self.size_category,
         ) {
             // Return to pool in a separate thread context to avoid deadlocks
-            let pool_ref = pool;
-            if let Ok(mut pools) = pool_ref.try_lock() {
+            if let Ok(mut pools) = pool.try_lock() {
                 let pool_queue = match size_category {
                     BufferSize::Small => &mut pools.small_buffers,
                     BufferSize::Medium => &mut pools.medium_buffers,

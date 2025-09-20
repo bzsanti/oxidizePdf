@@ -568,8 +568,9 @@ mod tests {
 
         let retrieved = pool.get_font(&key);
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().font, Font::Helvetica);
-        assert_eq!(retrieved.unwrap().size, 12.0);
+        let retrieved_font = retrieved.unwrap();
+        assert_eq!(retrieved_font.font, Font::Helvetica);
+        assert_eq!(retrieved_font.size, 12.0);
     }
 
     #[test]
