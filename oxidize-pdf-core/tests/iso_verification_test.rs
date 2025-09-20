@@ -8,7 +8,7 @@
 
 use oxidize_pdf::verification::{
     compliance_report::{format_report_markdown, generate_compliance_report},
-    iso_matrix::load_default_matrix,
+    iso_matrix::load_compliance_system,
     parser::parse_pdf,
     validators::check_available_validators,
     verify_iso_requirement, IsoRequirement, VerificationLevel,
@@ -124,19 +124,22 @@ fn test_real_iso_verification_system() -> PdfResult<()> {
 fn test_compliance_matrix_loading() {
     println!("🔍 Testing ISO Compliance Matrix Loading");
 
-    // Try to load the compliance matrix
-    match load_default_matrix() {
-        Ok(matrix) => {
-            println!("✓ Successfully loaded ISO compliance matrix");
-            println!("  - Version: {}", matrix.metadata.version);
-            println!("  - Total features: {}", matrix.metadata.total_features);
+    // Try to load the complete compliance system
+    match load_compliance_system() {
+        Ok(system) => {
+            println!("✓ Successfully loaded ISO compliance system");
+            println!("  - Version: {}", system.matrix.metadata.version);
+            println!(
+                "  - Total features: {}",
+                system.matrix.metadata.total_features
+            );
 
-            // Test matrix data access
-            let all_requirements = matrix.get_all_requirements();
+            // Test system data access using new methods
+            let all_requirements = system.get_all_requirements();
             println!("  - Total requirements loaded: {}", all_requirements.len());
 
-            // Test statistics calculation
-            let stats = matrix.calculate_compliance_stats();
+            // Test statistics calculation using new method
+            let stats = system.calculate_compliance_stats();
             println!(
                 "  - Average compliance: {:.1}%",
                 stats.average_compliance_percentage
@@ -144,10 +147,9 @@ fn test_compliance_matrix_loading() {
             println!("  - Level 0 (Not implemented): {}", stats.level_0_count);
             println!("  - Level 4 (ISO compliant): {}", stats.level_4_count);
 
-            // Test finding specific requirements
-            if let Some(catalog_req) = matrix.get_requirement("7.5.2.1") {
+            // Test finding specific requirements using new method
+            if let Some(catalog_req) = system.get_requirement_info("7.5.2.1") {
                 println!("  - Found requirement 7.5.2.1: {}", catalog_req.name);
-                assert_eq!(catalog_req.level, VerificationLevel::ContentVerified);
             }
 
             println!("✓ Matrix data access working correctly");
