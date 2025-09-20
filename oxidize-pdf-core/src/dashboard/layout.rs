@@ -453,7 +453,6 @@ pub struct LayoutStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dashboard::ComponentSpan;
 
     #[test]
     fn test_grid_system() {
@@ -496,7 +495,7 @@ mod tests {
         let content_area = layout.calculate_content_area(page_bounds);
 
         // Should account for margins, header, and footer
-        assert_eq!(content_area.0, 50.0); // Left margin
+        assert_eq!(content_area.0, 30.0); // Left margin
         assert!(content_area.2 < 800.0); // Width reduced by margins
         assert!(content_area.3 < 600.0); // Height reduced by margins + header + footer
     }

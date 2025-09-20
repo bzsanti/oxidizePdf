@@ -208,7 +208,7 @@ mod tests {
     fn test_popup_creation() {
         let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(300.0, 200.0));
 
-        let popup = PopupAnnotation::new(rect.clone());
+        let popup = PopupAnnotation::new(rect);
         assert_eq!(popup.rect, rect);
         assert!(!popup.open);
         assert!(popup.parent.is_none());
@@ -219,7 +219,7 @@ mod tests {
         let parent_ref = ObjectId::new(10, 0);
         let rect = Rectangle::new(Point::new(200.0, 200.0), Point::new(400.0, 300.0));
 
-        let popup = PopupAnnotation::new(rect).with_parent(parent_ref.clone());
+        let popup = PopupAnnotation::new(rect).with_parent(parent_ref);
 
         assert_eq!(popup.parent, Some(parent_ref));
     }
@@ -336,8 +336,8 @@ mod tests {
         let parent = ObjectId::new(42, 1);
         let rect = Rectangle::new(Point::new(200.0, 300.0), Point::new(400.0, 450.0));
 
-        let popup = PopupAnnotation::new(rect.clone())
-            .with_parent(parent.clone())
+        let popup = PopupAnnotation::new(rect)
+            .with_parent(parent)
             .with_contents("Complex popup with all features")
             .with_open(true)
             .with_color(Some(Color::rgb(0.8, 0.9, 1.0)))

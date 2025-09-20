@@ -202,6 +202,7 @@ path = "../examples/src/tesseract_debug.rs"
 [[example]]
 name = "test_ocr_with_tesseract"
 path = "../examples/src/test_ocr_with_tesseract.rs"
+required-features = ["ocr-tesseract"]
 
 [[bench]]
 name = "ocr_benchmarks"
