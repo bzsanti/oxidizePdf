@@ -3,7 +3,6 @@ members = [
     "oxidize-pdf-core",
     "oxidize-pdf-cli",
     "oxidize-pdf-api",
-    "oxidize-pdf-pro",
 ]
 resolver = "2"
 

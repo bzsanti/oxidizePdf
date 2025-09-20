@@ -127,7 +127,9 @@ impl TextContext {
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
-        // Store position for next write() operation instead of setting text_matrix immediately
+        // Update text_matrix immediately and store for write() operation
+        self.text_matrix[4] = x;
+        self.text_matrix[5] = y;
         self.pending_position = Some((x, y));
         self
     }

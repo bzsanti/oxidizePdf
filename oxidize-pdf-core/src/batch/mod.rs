@@ -477,9 +477,11 @@ mod tests {
 
     #[test]
     fn test_batch_processor_stop_on_error() {
-        let mut options = BatchOptions::default();
-        options.stop_on_error = true;
-        options.parallelism = 1; // Sequential to ensure order
+        let options = BatchOptions {
+            stop_on_error: true,
+            parallelism: 1,
+            ..Default::default()
+        };
 
         let mut processor = BatchProcessor::new(options);
 
@@ -492,8 +494,7 @@ mod tests {
         processor.add_job(BatchJob::Custom {
             name: "job2".to_string(),
             operation: Box::new(|| {
-                Err(crate::error::PdfError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                Err(crate::error::PdfError::Io(std::io::Error::other(
                     "Test error",
                 )))
             }),
@@ -513,8 +514,10 @@ mod tests {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
 
-        let mut options = BatchOptions::default();
-        options.parallelism = 4;
+        let options = BatchOptions {
+            parallelism: 4,
+            ..Default::default()
+        };
 
         let mut processor = BatchProcessor::new(options);
         let concurrent_count = Arc::new(AtomicUsize::new(0));
@@ -560,9 +563,11 @@ mod tests {
 
     #[test]
     fn test_batch_processor_timeout() {
-        let mut options = BatchOptions::default();
-        options.job_timeout = Some(Duration::from_millis(50));
-        options.parallelism = 1;
+        let options = BatchOptions {
+            job_timeout: Some(Duration::from_millis(50)),
+            parallelism: 1,
+            ..Default::default()
+        };
 
         let mut processor = BatchProcessor::new(options);
 
@@ -582,8 +587,10 @@ mod tests {
 
     #[test]
     fn test_batch_processor_memory_limit() {
-        let mut options = BatchOptions::default();
-        options.memory_limit_per_worker = 1024 * 1024; // 1MB
+        let options = BatchOptions {
+            memory_limit_per_worker: 1024 * 1024, // 1MB
+            ..Default::default()
+        };
 
         let processor = BatchProcessor::new(options);
 
@@ -598,10 +605,12 @@ mod tests {
         let progress_updates = Arc::new(Mutex::new(Vec::new()));
         let progress_clone = progress_updates.clone();
 
-        let mut options = BatchOptions::default();
-        options.progress_callback = Some(Arc::new(move |info: &ProgressInfo| {
-            progress_clone.lock().unwrap().push(info.percentage());
-        }));
+        let options = BatchOptions {
+            progress_callback: Some(Arc::new(move |info: &ProgressInfo| {
+                progress_clone.lock().unwrap().push(info.percentage());
+            })),
+            ..Default::default()
+        };
 
         let mut processor = BatchProcessor::new(options);
 

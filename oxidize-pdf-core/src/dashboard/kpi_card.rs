@@ -826,7 +826,7 @@ mod tests {
         let card = KpiCard::new("Revenue", "$1.2M");
         assert_eq!(card.title, "Revenue");
         assert_eq!(card.value, "$1.2M");
-        assert_eq!(card.get_span().columns, 3); // Quarter width by default
+        assert_eq!(card.get_span().columns, 12); // Full width by default
     }
 
     #[test]
