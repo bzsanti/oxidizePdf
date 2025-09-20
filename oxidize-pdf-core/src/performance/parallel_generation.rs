@@ -203,15 +203,11 @@ impl ParallelPageGenerator {
     fn create_thread_pool(
         options: &ParallelGenerationOptions,
     ) -> Result<Option<rayon::ThreadPool>> {
+        let thread_name_prefix = options.thread_pool_config.thread_name_prefix.clone();
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(options.max_threads)
             .stack_size(options.thread_pool_config.stack_size)
-            .thread_name(|index| {
-                format!(
-                    "{}-{}",
-                    options.thread_pool_config.thread_name_prefix, index
-                )
-            })
+            .thread_name(move |index| format!("{}-{}", thread_name_prefix, index))
             .build()
             .map_err(|e| {
                 crate::error::PdfError::Internal(format!("Failed to create thread pool: {}", e))
@@ -282,7 +278,7 @@ impl ParallelPageGenerator {
     /// Process a chunk of pages
     fn process_chunk(
         &self,
-        chunk_idx: usize,
+        _chunk_idx: usize,
         chunk: &[PageSpec],
         resource_pool: Arc<ResourcePool>,
         stats: Arc<Mutex<ParallelStats>>,
@@ -295,7 +291,7 @@ impl ParallelPageGenerator {
 
         let mut processed = Vec::with_capacity(chunk.len());
 
-        for (page_idx, spec) in chunk.iter().enumerate() {
+        for (_page_idx, spec) in chunk.iter().enumerate() {
             let page_start = Instant::now();
 
             // Create page processor with shared resources
@@ -310,7 +306,7 @@ impl ParallelPageGenerator {
                 let mut stats_guard = stats.lock().unwrap();
                 stats_guard.pages_completed += 1;
                 stats_guard.total_page_time += page_start.elapsed();
-                let current_count = stats_guard.thread_usage.get(&thread_id).unwrap_or(&0);
+                let current_count = *stats_guard.thread_usage.get(&thread_id).unwrap_or(&0);
                 stats_guard
                     .thread_usage
                     .insert(thread_id, current_count + 1);

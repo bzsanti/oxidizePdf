@@ -766,9 +766,10 @@ impl ImageExtractor {
     }
 
     /// Apply transformation matrix to an extracted image
+    #[allow(unused_mut)]
     fn apply_transformation_to_image(
         &self,
-        extracted_image: ExtractedImage,
+        mut extracted_image: ExtractedImage,
         matrix: &TransformMatrix,
     ) -> OperationResult<ExtractedImage> {
         eprintln!("DEBUG: Applying transformation to image: {:?}", matrix);
@@ -833,6 +834,7 @@ impl ImageExtractor {
 
     /// Apply rotation transformation
     #[cfg(feature = "external-images")]
+    #[allow(dead_code)]
     fn apply_rotation_transformation(
         &self,
         img: DynamicImage,
@@ -854,6 +856,7 @@ impl ImageExtractor {
 
     /// Apply scaling transformation
     #[cfg(feature = "external-images")]
+    #[allow(dead_code)]
     fn apply_scale_transformation(
         &self,
         img: DynamicImage,
