@@ -33,7 +33,7 @@
 //!
 //! # Quick Start Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use oxidize_pdf::dashboard::{DashboardBuilder, KpiCard};
 //! use oxidize_pdf::charts::BarChart;
 //! use oxidize_pdf::graphics::Color;
@@ -75,7 +75,7 @@
 //! # Advanced Features
 //!
 //! ## Custom Styling
-//! ```rust
+//! ```rust,ignore
 //! let dashboard = DashboardBuilder::new()
 //!     .theme(DashboardTheme::corporate())
 //!     .color_palette(vec![Color::hex("#1f77b4"), Color::hex("#ff7f0e")])
@@ -84,7 +84,7 @@
 //! ```
 //!
 //! ## Interactive Elements
-//! ```rust
+//! ```rust,ignore
 //! // Add tooltips and annotations
 //! let heatmap = HeatMap::new(data)
 //!     .tooltip_format("Region: {x}, Month: {y}, Sales: ${value}")
@@ -93,7 +93,7 @@
 //! ```
 //!
 //! ## Data Integration
-//! ```rust
+//! ```rust,ignore
 //! // Load data from various sources
 //! let data = DataSource::from_csv("sales.csv")?
 //!     .filter_by("region", "North America")

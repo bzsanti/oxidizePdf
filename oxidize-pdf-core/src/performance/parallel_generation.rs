@@ -397,6 +397,7 @@ impl ParallelPageGenerator {
 
 /// Page processor that handles individual page processing
 pub struct PageProcessor {
+    #[allow(dead_code)]
     resource_pool: Arc<ResourcePool>,
     memory_pool: MemoryPool,
     thread_id: usize,
