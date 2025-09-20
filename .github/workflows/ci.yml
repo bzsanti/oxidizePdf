@@ -68,7 +68,7 @@ jobs:
         run: cargo test --lib --verbose
 
       - name: Run tests (all others)
-        if: !(matrix.os == 'macos-latest' && matrix.rust == 'beta')
+        if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
         run: cargo test --all --verbose
 
       - name: Build documentation
