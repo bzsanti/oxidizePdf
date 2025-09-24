@@ -124,6 +124,18 @@ name = "compare_iso_matrices"
 path = "../examples/src/compare_iso_matrices.rs"
 
 [[example]]
+name = "test_corrupt_pdf_issue47"
+path = "../examples/src/test_corrupt_pdf_issue47.rs"
+
+[[example]]
+name = "test_cjk_fonts_issue46"
+path = "../examples/src/test_cjk_fonts_issue46.rs"
+
+[[example]]
+name = "demo_issues_fixed"
+path = "../examples/src/demo_issues_fixed.rs"
+
+[[example]]
 name = "advanced_tables_example"
 path = "../examples/advanced_tables_example.rs"
 
@@ -207,6 +219,10 @@ path = "../examples/src/tesseract_debug.rs"
 name = "test_ocr_with_tesseract"
 path = "../examples/src/test_ocr_with_tesseract.rs"
 required-features = ["ocr-tesseract"]
+
+[[example]]
+name = "test_extract_text_issue47"
+path = "../examples/src/test_extract_text_issue47.rs"
 
 [[bench]]
 name = "ocr_benchmarks"
