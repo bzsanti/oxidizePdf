@@ -207,6 +207,14 @@ path = "../examples/src/diagnose_xref_confusion.rs"
 name = "debug_predictor_structure"
 path = "../examples/src/debug_predictor_structure.rs"
 
+[[example]]
+name = "extract_page_14"
+path = "../examples/src/extract_page_14.rs"
+
+[[example]]
+name = "extract_multiple_pages"
+path = "../examples/src/extract_multiple_pages.rs"
+
 # Temporarily disabled examples with compilation errors
 # [[example]]
 # name = "streaming_support"
@@ -249,8 +257,28 @@ name = "test_extract_text_issue47"
 path = "../examples/src/test_extract_text_issue47.rs"
 
 [[example]]
+name = "test_parent_resources"
+path = "../examples/src/test_parent_resources.rs"
+
+[[example]]
 name = "test_issue47_verification"
 path = "../examples/src/test_issue47_verification.rs"
+
+[[example]]
+name = "debug_font_encoding"
+path = "../examples/src/debug_font_encoding.rs"
+
+[[example]]
+name = "test_random_fixtures"
+path = "../examples/src/test_random_fixtures.rs"
+
+[[example]]
+name = "test_random_fixtures_simple"
+path = "../examples/src/test_random_fixtures_simple.rs"
+
+[[example]]
+name = "test_text_extraction_demo"
+path = "../examples/src/test_text_extraction_demo.rs"
 
 [[bench]]
 name = "ocr_benchmarks"

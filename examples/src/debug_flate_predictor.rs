@@ -1,6 +1,6 @@
+use flate2::read::ZlibDecoder;
 use std::fs;
 use std::io::Read;
-use flate2::read::ZlibDecoder;
 
 fn main() {
     // Lee el PDF problemático
@@ -10,13 +10,19 @@ fn main() {
     // Buscar el XRef stream en offset 0x44acc (281,292)
     let xref_offset = 0x44acc;
     if pdf_data.len() <= xref_offset {
-        println!("ERROR: PDF demasiado pequeño para contener XRef en offset {}", xref_offset);
+        println!(
+            "ERROR: PDF demasiado pequeño para contener XRef en offset {}",
+            xref_offset
+        );
         return;
     }
 
     // Leer desde el offset hasta encontrar el stream
     let xref_data = &pdf_data[xref_offset..];
-    println!("Buscando XRef stream en offset 0x{:x} ({})", xref_offset, xref_offset);
+    println!(
+        "Buscando XRef stream en offset 0x{:x} ({})",
+        xref_offset, xref_offset
+    );
 
     // Mostrar contexto del objeto
     let context = &xref_data[..std::cmp::min(200, xref_data.len())];
@@ -35,24 +41,39 @@ fn main() {
 
     // Buscar el inicio del stream después de la línea "stream"
     if let Some(stream_start) = find_stream_start(xref_data) {
-        println!("\n✅ Encontrado inicio de stream en offset relativo: {}", stream_start);
+        println!(
+            "\n✅ Encontrado inicio de stream en offset relativo: {}",
+            stream_start
+        );
 
         // Buscar el final del stream
         if let Some(stream_end) = find_stream_end(&xref_data[stream_start..]) {
-            println!("✅ Encontrado final de stream en offset relativo: {}", stream_start + stream_end);
+            println!(
+                "✅ Encontrado final de stream en offset relativo: {}",
+                stream_start + stream_end
+            );
 
             let stream_data = &xref_data[stream_start..stream_start + stream_end];
             println!("Tamaño del stream comprimido: {} bytes", stream_data.len());
 
             // Mostrar los primeros bytes del stream
-            println!("Primeros 20 bytes del stream: {:02x?}", &stream_data[..std::cmp::min(20, stream_data.len())]);
+            println!(
+                "Primeros 20 bytes del stream: {:02x?}",
+                &stream_data[..std::cmp::min(20, stream_data.len())]
+            );
 
             // Intentar decodificar con zlib estándar
             println!("\n--- Intentando decodificación zlib estándar ---");
             match try_standard_zlib_decode(stream_data) {
                 Ok(decoded) => {
-                    println!("✅ Zlib estándar EXITOSO! Tamaño decodificado: {} bytes", decoded.len());
-                    println!("Primeros 50 bytes decodificados: {:02x?}", &decoded[..std::cmp::min(50, decoded.len())]);
+                    println!(
+                        "✅ Zlib estándar EXITOSO! Tamaño decodificado: {} bytes",
+                        decoded.len()
+                    );
+                    println!(
+                        "Primeros 50 bytes decodificados: {:02x?}",
+                        &decoded[..std::cmp::min(50, decoded.len())]
+                    );
 
                     // Analizar si tiene formato de XRef stream esperado
                     analyze_xref_stream(&decoded);
@@ -64,12 +85,17 @@ fn main() {
             println!("\n--- Intentando decodificación raw deflate ---");
             match try_raw_deflate_decode(stream_data) {
                 Ok(decoded) => {
-                    println!("✅ Raw deflate EXITOSO! Tamaño decodificado: {} bytes", decoded.len());
-                    println!("Primeros 50 bytes decodificados: {:02x?}", &decoded[..std::cmp::min(50, decoded.len())]);
+                    println!(
+                        "✅ Raw deflate EXITOSO! Tamaño decodificado: {} bytes",
+                        decoded.len()
+                    );
+                    println!(
+                        "Primeros 50 bytes decodificados: {:02x?}",
+                        &decoded[..std::cmp::min(50, decoded.len())]
+                    );
                 }
                 Err(e) => println!("❌ Raw deflate falló: {}", e),
             }
-
         } else {
             println!("❌ ERROR: No se encontró el final del stream (endstream)");
         }
@@ -138,7 +164,11 @@ fn analyze_xref_stream(data: &[u8]) -> () {
     // Intentar detectar el patrón del predictor analizando posibles tamaños de fila
     for row_size in [5, 6, 7, 8, 9, 10, 11, 12, 15, 20] {
         if data.len() % row_size == 0 {
-            println!("\n🔍 Probando tamaño de fila: {} (total {} filas)", row_size, data.len() / row_size);
+            println!(
+                "\n🔍 Probando tamaño de fila: {} (total {} filas)",
+                row_size,
+                data.len() / row_size
+            );
 
             let mut predictor_counts = std::collections::HashMap::new();
             let num_rows = std::cmp::min(data.len() / row_size, 20); // Solo analizar las primeras 20 filas
@@ -151,12 +181,13 @@ fn analyze_xref_stream(data: &[u8]) -> () {
             println!("  Bytes predictores encontrados: {:?}", predictor_counts);
 
             // PNG predictors válidos son 0, 1, 2, 3, 4
-            let valid_predictors: Vec<_> = predictor_counts.keys()
-                .filter(|&&b| b <= 4)
-                .collect();
+            let valid_predictors: Vec<_> = predictor_counts.keys().filter(|&&b| b <= 4).collect();
 
             if !valid_predictors.is_empty() {
-                println!("  ✅ Contiene predictores PNG válidos (0-4): {:?}", valid_predictors);
+                println!(
+                    "  ✅ Contiene predictores PNG válidos (0-4): {:?}",
+                    valid_predictors
+                );
             }
         }
     }

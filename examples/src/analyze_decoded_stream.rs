@@ -1,6 +1,6 @@
+use flate2::read::ZlibDecoder;
 use std::fs;
 use std::io::Read;
-use flate2::read::ZlibDecoder;
 
 fn main() {
     // Lee el PDF problemático
@@ -42,7 +42,10 @@ fn main() {
 
 fn analyze_binary_data(data: &[u8]) {
     println!("Primeros 100 bytes como hex:");
-    for (i, chunk) in data[..std::cmp::min(100, data.len())].chunks(16).enumerate() {
+    for (i, chunk) in data[..std::cmp::min(100, data.len())]
+        .chunks(16)
+        .enumerate()
+    {
         print!("{:04x}: ", i * 16);
         for &byte in chunk {
             print!("{:02x} ", byte);

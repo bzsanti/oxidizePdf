@@ -46,9 +46,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                     Err(e) => {
                         if e.to_string().contains("Page not found in tree") {
-                            println!("❌ Page {} - Still has 'Page not found in tree' error", page_idx + 1);
+                            println!(
+                                "❌ Page {} - Still has 'Page not found in tree' error",
+                                page_idx + 1
+                            );
                         } else {
-                            println!("✅ Page {} - Structure accessible (parsing error: {})", page_idx + 1, e);
+                            println!(
+                                "✅ Page {} - Structure accessible (parsing error: {})",
+                                page_idx + 1,
+                                e
+                            );
                             accessible_pages += 1;
                         }
                     }
@@ -64,10 +71,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("   ✓ PDF opens without crashing");
                 println!("   ✓ Correct page count (44) detected");
                 println!("   ✓ Pages are accessible in the tree (no 'Page not found' error)");
-                println!("   ✓ {} out of 5 test pages are accessible", accessible_pages);
+                println!(
+                    "   ✓ {} out of 5 test pages are accessible",
+                    accessible_pages
+                );
                 println!("\n🏆 ISSUE #47 HAS BEEN RESOLVED!");
                 println!("   The 'Page not found in tree' error has been eliminated.");
-                println!("   Any remaining errors are content parsing issues, not structural problems.");
+                println!(
+                    "   Any remaining errors are content parsing issues, not structural problems."
+                );
             } else {
                 println!("❌ FAILED: Still cannot access pages in the tree");
             }

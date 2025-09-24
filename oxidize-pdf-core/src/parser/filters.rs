@@ -1076,7 +1076,11 @@ pub(crate) fn apply_filter_with_params(
             // Some PDFs have streams that are already post-processed with predictor
             // and should not be decompressed with zlib
             if let Some(decode_params) = params {
-                if decode_params.get("Predictor").and_then(|p| p.as_integer()).is_some() {
+                if decode_params
+                    .get("Predictor")
+                    .and_then(|p| p.as_integer())
+                    .is_some()
+                {
                     // First try standard zlib decode
                     match try_standard_zlib_decode(data) {
                         Ok(decoded) => decoded,

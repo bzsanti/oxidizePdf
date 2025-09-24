@@ -1,6 +1,6 @@
+use flate2::read::ZlibDecoder;
 use std::fs;
 use std::io::Read;
-use flate2::read::ZlibDecoder;
 
 fn main() {
     let pdf_path = "test-pdfs/Cold_Email_Hacks.pdf";
@@ -15,7 +15,10 @@ fn analyze_xref_stream(pdf_data: &[u8], offset: usize, name: &str) {
     println!("\n=== {} (offset {}) ===", name, offset);
 
     if pdf_data.len() <= offset {
-        println!("ERROR: PDF demasiado pequeño para contener XRef en offset {}", offset);
+        println!(
+            "ERROR: PDF demasiado pequeño para contener XRef en offset {}",
+            offset
+        );
         return;
     }
 
@@ -44,7 +47,10 @@ fn analyze_xref_stream(pdf_data: &[u8], offset: usize, name: &str) {
         if let Some(stream_end) = find_stream_end(&xref_data[stream_start..]) {
             let stream_data = &xref_data[stream_start..stream_start + stream_end];
             println!("\n📊 Stream comprimido: {} bytes", stream_data.len());
-            println!("Primeros 20 bytes: {:02x?}", &stream_data[..std::cmp::min(20, stream_data.len())]);
+            println!(
+                "Primeros 20 bytes: {:02x?}",
+                &stream_data[..std::cmp::min(20, stream_data.len())]
+            );
 
             // Intentar decodificar
             println!("\n🔧 Intentando decodificar...");
@@ -130,7 +136,10 @@ fn analyze_xref_content(data: &[u8]) -> () {
     // Formato típico: [tipo 1 byte][campo1 3 bytes][campo2 1 byte] = 5 bytes por entrada
     if data.len() % 5 == 0 {
         let entries = data.len() / 5;
-        println!("✅ Posible estructura XRef: {} entradas de 5 bytes cada una", entries);
+        println!(
+            "✅ Posible estructura XRef: {} entradas de 5 bytes cada una",
+            entries
+        );
 
         // Mostrar algunas entradas
         for i in 0..std::cmp::min(entries, 10) {
@@ -139,7 +148,10 @@ fn analyze_xref_content(data: &[u8]) -> () {
             let campo1 = u32::from_be_bytes([0, entry[1], entry[2], entry[3]]);
             let campo2 = entry[4];
 
-            println!("  Entrada {}: tipo={}, campo1={}, campo2={}", i, tipo, campo1, campo2);
+            println!(
+                "  Entrada {}: tipo={}, campo1={}, campo2={}",
+                i, tipo, campo1, campo2
+            );
         }
     } else {
         println!("❌ No tiene estructura XRef estándar de 5 bytes por entrada");
@@ -155,7 +167,11 @@ fn simulate_predictor_12(data: &[u8]) {
 
     if data.len() % row_size != 0 {
         println!("❌ Los datos NO son compatibles con Predictor 12");
-        println!("   Tamaño: {} bytes, esperado múltiplo de {} (columnas + 1)", data.len(), row_size);
+        println!(
+            "   Tamaño: {} bytes, esperado múltiplo de {} (columnas + 1)",
+            data.len(),
+            row_size
+        );
         println!("   Resto: {} bytes", data.len() % row_size);
         return;
     }
@@ -174,12 +190,13 @@ fn simulate_predictor_12(data: &[u8]) {
     println!("   Bytes predictores encontrados: {:?}", predictor_counts);
 
     // PNG predictors válidos son 0-4
-    let valid_predictors: Vec<_> = predictor_counts.keys()
-        .filter(|&&b| b <= 4)
-        .collect();
+    let valid_predictors: Vec<_> = predictor_counts.keys().filter(|&&b| b <= 4).collect();
 
     if !valid_predictors.is_empty() {
-        println!("✅ Contiene predictores PNG válidos: {:?}", valid_predictors);
+        println!(
+            "✅ Contiene predictores PNG válidos: {:?}",
+            valid_predictors
+        );
     } else {
         println!("❌ NO contiene predictores PNG válidos (0-4)");
     }

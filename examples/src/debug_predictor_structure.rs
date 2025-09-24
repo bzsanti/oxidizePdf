@@ -31,7 +31,10 @@ fn main() {
             let test_row_size = test_columns + 1;
             if data_size % test_row_size == 0 {
                 let num_rows = data_size / test_row_size;
-                println!("  ✅ Compatible con {} columnas: {} filas de {} bytes", test_columns, num_rows, test_row_size);
+                println!(
+                    "  ✅ Compatible con {} columnas: {} filas de {} bytes",
+                    test_columns, num_rows, test_row_size
+                );
             }
         }
 
@@ -39,12 +42,18 @@ fn main() {
         for test_columns in [5, 10, 20, 25, 40, 50] {
             if data_size % test_columns == 0 {
                 let num_rows = data_size / test_columns;
-                println!("  ✅ Compatible SIN predictor: {} columnas, {} filas", test_columns, num_rows);
+                println!(
+                    "  ✅ Compatible SIN predictor: {} columnas, {} filas",
+                    test_columns, num_rows
+                );
             }
         }
     } else {
         let num_rows = data_size / expected_row_size;
-        println!("✅ Los datos SON compatibles: {} filas de {} bytes", num_rows, expected_row_size);
+        println!(
+            "✅ Los datos SON compatibles: {} filas de {} bytes",
+            num_rows, expected_row_size
+        );
     }
 
     println!();
@@ -61,7 +70,10 @@ fn main() {
     println!("🔍 ¿Son datos de XRef válidos?");
     if data_size % 5 == 0 {
         let num_entries = data_size / 5;
-        println!("✅ Compatible con estructura XRef: {} entradas de 5 bytes", num_entries);
+        println!(
+            "✅ Compatible con estructura XRef: {} entradas de 5 bytes",
+            num_entries
+        );
         println!("   Esto sugiere que son datos XRef sin predictor");
     }
 

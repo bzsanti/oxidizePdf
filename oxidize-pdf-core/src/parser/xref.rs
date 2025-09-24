@@ -313,6 +313,10 @@ impl XRefTable {
                                 stream_object_number,
                                 index_within_stream,
                             } => {
+                                eprintln!(
+                                    "DEBUG: Adding compressed object {} -> stream {} index {}",
+                                    obj_num, stream_object_number, index_within_stream
+                                );
                                 // Create extended entry for compressed object
                                 let ext_entry = XRefEntryExt {
                                     basic: XRefEntry {

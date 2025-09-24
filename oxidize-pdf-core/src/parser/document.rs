@@ -963,7 +963,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// # }
     /// ```
     pub fn extract_text(&self) -> ParseResult<Vec<crate::text::ExtractedText>> {
-        let extractor = crate::text::TextExtractor::new();
+        let mut extractor = crate::text::TextExtractor::new();
         extractor.extract_from_document(self)
     }
 
@@ -999,7 +999,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         &self,
         page_index: u32,
     ) -> ParseResult<crate::text::ExtractedText> {
-        let extractor = crate::text::TextExtractor::new();
+        let mut extractor = crate::text::TextExtractor::new();
         extractor.extract_from_page(self, page_index)
     }
 
@@ -1047,7 +1047,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         &self,
         options: crate::text::ExtractionOptions,
     ) -> ParseResult<Vec<crate::text::ExtractedText>> {
-        let extractor = crate::text::TextExtractor::with_options(options);
+        let mut extractor = crate::text::TextExtractor::with_options(options);
         extractor.extract_from_document(self)
     }
 

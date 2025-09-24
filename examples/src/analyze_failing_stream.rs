@@ -1,8 +1,9 @@
 fn main() {
     // Los datos del stream que está fallando según el debug log
     let failing_stream_data = [
-        0x01, 0x00, 0x00, 0x0f, 0x00, 0x01, 0x00, 0x00, 0xd8, 0x00, 0x01, 0x00, 0x03, 0x34, 0x00, 0x01,
-        0x00, 0x03, 0x78, 0x00,
+        0x01, 0x00, 0x00, 0x0f, 0x00, 0x01, 0x00, 0x00, 0xd8, 0x00, 0x01, 0x00, 0x03, 0x34, 0x00,
+        0x01, 0x00, 0x03, 0x78,
+        0x00,
         // Resto de datos omitidos por simplicidad, pero el patrón es claro
     ];
 
@@ -14,7 +15,10 @@ fn main() {
     let entry_size = 5;
     if 200 % entry_size == 0 {
         let num_entries = 200 / entry_size;
-        println!("✅ Compatible con estructura XRef: {} entradas de {} bytes", num_entries, entry_size);
+        println!(
+            "✅ Compatible con estructura XRef: {} entradas de {} bytes",
+            num_entries, entry_size
+        );
 
         // Analizar las primeras entradas
         for i in 0..std::cmp::min(4, num_entries) {
@@ -25,7 +29,10 @@ fn main() {
                 let campo1 = u32::from_be_bytes([0, entry[1], entry[2], entry[3]]);
                 let campo2 = entry[4];
 
-                println!("  Entrada {}: tipo={}, offset={}, generation={}", i, tipo, campo1, campo2);
+                println!(
+                    "  Entrada {}: tipo={}, offset={}, generation={}",
+                    i, tipo, campo1, campo2
+                );
             }
         }
     }
@@ -34,10 +41,14 @@ fn main() {
     println!("1. ❌ oxidize-pdf intenta aplicar zlib decode a estos 200 bytes");
     println!("2. ❌ Pero estos 200 bytes NO están comprimidos con zlib");
     println!("3. ✅ Son datos XRef ya decodificados y post-procesados con Predictor 12");
-    println!("4. 🔧 El problema está en el orden de aplicación: predictor ANTES de zlib, no después");
+    println!(
+        "4. 🔧 El problema está en el orden de aplicación: predictor ANTES de zlib, no después"
+    );
 
     println!("\n💡 SOLUCIÓN:");
-    println!("oxidize-pdf debe primero aplicar el predictor PNG para reconstruir los datos comprimidos,");
+    println!(
+        "oxidize-pdf debe primero aplicar el predictor PNG para reconstruir los datos comprimidos,"
+    );
     println!("y LUEGO aplicar zlib decode, no al revés.");
 
     // Simular la aplicación correcta del predictor
@@ -52,7 +63,10 @@ fn main() {
     let row_size = columns + predictor_size; // 6 bytes por fila
 
     if 200 % row_size != 0 {
-        println!("❌ Los 200 bytes no son compatibles con filas de {} bytes", row_size);
+        println!(
+            "❌ Los 200 bytes no son compatibles con filas de {} bytes",
+            row_size
+        );
         return;
     }
 

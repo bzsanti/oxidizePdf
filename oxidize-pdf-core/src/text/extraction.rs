@@ -5,7 +5,11 @@
 
 use crate::parser::content::{ContentOperation, ContentParser, TextElement};
 use crate::parser::document::PdfDocument;
+use crate::parser::objects::PdfObject;
+use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
+use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
+use std::collections::HashMap;
 use std::io::{Read, Seek};
 
 /// Text extraction options
@@ -112,9 +116,11 @@ impl Default for TextState {
     }
 }
 
-/// Text extractor for PDF pages
+/// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
+    /// Font cache for the current extraction
+    font_cache: HashMap<String, FontInfo>,
 }
 
 impl TextExtractor {
@@ -122,17 +128,21 @@ impl TextExtractor {
     pub fn new() -> Self {
         Self {
             options: ExtractionOptions::default(),
+            font_cache: HashMap::new(),
         }
     }
 
     /// Create a text extractor with custom options
     pub fn with_options(options: ExtractionOptions) -> Self {
-        Self { options }
+        Self {
+            options,
+            font_cache: HashMap::new(),
+        }
     }
 
     /// Extract text from a PDF document
     pub fn extract_from_document<R: Read + Seek>(
-        &self,
+        &mut self,
         document: &PdfDocument<R>,
     ) -> ParseResult<Vec<ExtractedText>> {
         let page_count = document.page_count()?;
@@ -148,12 +158,15 @@ impl TextExtractor {
 
     /// Extract text from a specific page
     pub fn extract_from_page<R: Read + Seek>(
-        &self,
+        &mut self,
         document: &PdfDocument<R>,
         page_index: u32,
     ) -> ParseResult<ExtractedText> {
         // Get the page
         let page = document.get_page(page_index)?;
+
+        // Extract font resources first
+        self.extract_font_resources(&page, document)?;
 
         // Get content streams
         let streams = page.content_streams_with_document(document)?;
@@ -468,11 +481,75 @@ impl TextExtractor {
         result
     }
 
-    /// Decode text using the current font encoding
+    /// Extract font resources from page
+    fn extract_font_resources<R: Read + Seek>(
+        &mut self,
+        page: &ParsedPage,
+        document: &PdfDocument<R>,
+    ) -> ParseResult<()> {
+        // Clear previous font cache
+        self.font_cache.clear();
+
+        // Get page resources
+        if let Some(resources) = page.get_resources() {
+            if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
+                // Extract each font
+                for (font_name, font_obj) in font_dict.0.iter() {
+                    if let Some(font_ref) = font_obj.as_reference() {
+                        if let Ok(PdfObject::Dictionary(font_dict)) =
+                            document.get_object(font_ref.0, font_ref.1)
+                        {
+                            // Create a CMap extractor to use its font extraction logic
+                            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+
+                            if let Ok(font_info) =
+                                cmap_extractor.extract_font_info(&font_dict, document)
+                            {
+                                self.font_cache.insert(font_name.0.clone(), font_info);
+                                tracing::debug!(
+                                    "Cached font: {} -> {:?}",
+                                    font_name.0,
+                                    self.font_cache.get(&font_name.0)
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Decode text using the current font encoding and ToUnicode mapping
     fn decode_text(&self, text: &[u8], state: &TextState) -> ParseResult<String> {
         use crate::text::encoding::TextEncoding;
 
-        // Try to determine encoding from font name
+        // First, try to use cached font information with ToUnicode CMap
+        if let Some(ref font_name) = state.font_name {
+            if let Some(font_info) = self.font_cache.get(font_name) {
+                // Create a temporary CMapTextExtractor to use its decoding logic
+                let cmap_extractor: CMapTextExtractor<std::fs::File> = CMapTextExtractor::new();
+
+                // Try CMap-based decoding first
+                if let Ok(decoded) = cmap_extractor.decode_text_with_font(text, font_info) {
+                    tracing::debug!(
+                        "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
+                        font_name,
+                        text,
+                        decoded
+                    );
+                    return Ok(decoded);
+                }
+
+                tracing::debug!(
+                    "CMap decoding failed for font {}, falling back to encoding",
+                    font_name
+                );
+            }
+        }
+
+        // Fall back to encoding-based decoding
         let encoding = if let Some(ref font_name) = state.font_name {
             match font_name.to_lowercase().as_str() {
                 name if name.contains("macroman") => TextEncoding::MacRomanEncoding,
@@ -495,7 +572,13 @@ impl TextExtractor {
             TextEncoding::WinAnsiEncoding // Default for most PDFs
         };
 
-        Ok(encoding.decode(text))
+        let fallback_result = encoding.decode(text);
+        tracing::debug!(
+            "Fallback encoding decoding: {:?} -> \"{}\"",
+            text,
+            fallback_result
+        );
+        Ok(fallback_result)
     }
 }
 

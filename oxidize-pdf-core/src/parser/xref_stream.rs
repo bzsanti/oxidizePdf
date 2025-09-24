@@ -140,7 +140,7 @@ impl XRefStream {
                     } else {
                         apply_filter(&stream_data, filter)?
                     }
-                },
+                }
                 PdfObject::Array(filters) => {
                     let mut data = stream_data;
                     for filter in filters.0.iter() {

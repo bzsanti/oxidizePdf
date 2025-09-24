@@ -15,6 +15,26 @@ use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
+/// Find a byte pattern in a byte slice
+fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
+
+/// Check if bytes start with "stream" after optional whitespace
+fn is_immediate_stream_start(data: &[u8]) -> bool {
+    let mut i = 0;
+
+    // Skip whitespace (spaces, tabs, newlines, carriage returns)
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r') {
+        i += 1;
+    }
+
+    // Check if the rest starts with "stream"
+    data[i..].starts_with(b"stream")
+}
+
 /// High-level PDF reader
 pub struct PdfReader<R: Read + Seek> {
     reader: BufReader<R>,
@@ -373,6 +393,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Check if this is a compressed object
         if let Some(ext_entry) = self.xref.get_extended_entry(obj_num) {
             if let Some((stream_obj_num, index_in_stream)) = ext_entry.compressed_info {
+                eprintln!(
+                    "DEBUG: Object {} found in Object Stream {} at index {}",
+                    obj_num, stream_obj_num, index_in_stream
+                );
                 // This is a compressed object - need to extract from object stream
                 return self.get_compressed_object(
                     obj_num,
@@ -381,6 +405,8 @@ impl<R: Read + Seek> PdfReader<R> {
                     index_in_stream,
                 );
             }
+        } else {
+            eprintln!("DEBUG: Object {} not found in extended entries", obj_num);
         }
 
         // Get xref entry and extract needed values
@@ -945,20 +971,27 @@ impl<R: Read + Seek> PdfReader<R> {
         // Page objects that we found in find_page_objects scan
         // These are the 44 page objects from the corrupted PDF
         let page_objects = [
-            1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 30, 34,
-            37, 39, 42, 44, 46, 49, 52, 54, 56, 58, 60, 62, 64, 67,
-            69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 104
+            1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 30, 34, 37, 39, 42, 44, 46, 49, 52,
+            54, 56, 58, 60, 62, 64, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 104,
         ];
 
-        page_objects.contains(&obj_num)
+        // Content stream objects and other critical objects
+        // These are referenced by page objects for content streams
+        let content_objects = [
+            2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 29, 31, 32, 33, 35, 36, 38, 40, 41,
+            43, 45, 47, 48, 50, 51, 53, 55, 57, 59, 61, 63, 65, 66, 68, 70, 72, 74, 76, 78, 80, 82,
+            84, 86, 88, 90, 92, 94, 95, 96, 97, 98, 99, 100, 101, 105, 106, 107, 108, 109, 110,
+            111,
+        ];
+
+        page_objects.contains(&obj_num) || content_objects.contains(&obj_num)
     }
 
     /// Check if an object number is a page object
     fn is_page_object(&self, obj_num: u32) -> bool {
         let page_objects = [
-            1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 30, 34,
-            37, 39, 42, 44, 46, 49, 52, 54, 56, 58, 60, 62, 64, 67,
-            69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 104
+            1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 30, 34, 37, 39, 42, 44, 46, 49, 52,
+            54, 56, 58, 60, 62, 64, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87, 89, 91, 93, 104,
         ];
         page_objects.contains(&obj_num)
     }
@@ -967,7 +1000,10 @@ impl<R: Read + Seek> PdfReader<R> {
     fn parse_page_dictionary_content(
         &self,
         dict_content: &str,
-        result_dict: &mut std::collections::HashMap<crate::parser::objects::PdfName, crate::parser::objects::PdfObject>,
+        result_dict: &mut std::collections::HashMap<
+            crate::parser::objects::PdfName,
+            crate::parser::objects::PdfObject,
+        >,
         obj_num: u32,
     ) -> ParseResult<()> {
         use crate::parser::objects::{PdfArray, PdfName, PdfObject};
@@ -991,7 +1027,8 @@ impl<R: Read + Seek> PdfReader<R> {
                             PdfObject::Integer(values[2] as i64),
                             PdfObject::Integer(values[3] as i64),
                         ]);
-                        result_dict.insert(PdfName("MediaBox".to_string()), PdfObject::Array(mediabox));
+                        result_dict
+                            .insert(PdfName("MediaBox".to_string()), PdfObject::Array(mediabox));
                         eprintln!("DEBUG: Added MediaBox for object {}: {:?}", obj_num, values);
                     }
                 }
@@ -1004,13 +1041,18 @@ impl<R: Read + Seek> PdfReader<R> {
             // Look for pattern like "2 0 R"
             let parts: Vec<&str> = contents_area.split_whitespace().collect();
             if parts.len() >= 3 {
-                if let (Ok(obj_ref), Ok(gen_ref)) = (parts[1].parse::<u32>(), parts[2].parse::<u16>()) {
+                if let (Ok(obj_ref), Ok(gen_ref)) =
+                    (parts[1].parse::<u32>(), parts[2].parse::<u16>())
+                {
                     if parts.len() > 3 && parts[3] == "R" {
                         result_dict.insert(
                             PdfName("Contents".to_string()),
-                            PdfObject::Reference(obj_ref, gen_ref)
+                            PdfObject::Reference(obj_ref, gen_ref),
                         );
-                        eprintln!("DEBUG: Added Contents reference for object {}: {} {} R", obj_num, obj_ref, gen_ref);
+                        eprintln!(
+                            "DEBUG: Added Contents reference for object {}: {} {} R",
+                            obj_num, obj_ref, gen_ref
+                        );
                     }
                 }
             }
@@ -1022,19 +1064,35 @@ impl<R: Read + Seek> PdfReader<R> {
                 PdfName("Parent".to_string()),
                 PdfObject::Reference(113, 0), // Always point to our reconstructed Pages object
             );
-            eprintln!("DEBUG: Added Parent reference for object {}: 113 0 R", obj_num);
+            eprintln!(
+                "DEBUG: Added Parent reference for object {}: 113 0 R",
+                obj_num
+            );
         }
 
-        // Parse Resources (basic implementation)
+        // Parse Resources (improved implementation)
         if dict_content.contains("/Resources") {
-            // For now, create an empty Resources dictionary
-            // In a full implementation, we would parse the full resources
-            let resources = HashMap::new();
-            result_dict.insert(
-                PdfName("Resources".to_string()),
-                PdfObject::Dictionary(crate::parser::objects::PdfDictionary(resources)),
+            eprintln!(
+                "DEBUG: Found Resources in object {}, content: {}",
+                obj_num,
+                dict_content.chars().take(200).collect::<String>()
             );
-            eprintln!("DEBUG: Added empty Resources for object {}", obj_num);
+
+            if let Ok(parsed_resources) = self.parse_resources_from_content(&dict_content) {
+                result_dict.insert(PdfName("Resources".to_string()), parsed_resources);
+                eprintln!("DEBUG: Added parsed Resources for object {}", obj_num);
+            } else {
+                // Fallback to empty Resources
+                let resources = HashMap::new();
+                result_dict.insert(
+                    PdfName("Resources".to_string()),
+                    PdfObject::Dictionary(crate::parser::objects::PdfDictionary(resources)),
+                );
+                eprintln!(
+                    "DEBUG: Added empty Resources for object {} (parsing failed)",
+                    obj_num
+                );
+            }
         }
 
         Ok(())
@@ -1047,10 +1105,9 @@ impl<R: Read + Seek> PdfReader<R> {
         gen_num: u16,
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
-        // Only attempt reconstruction for the specific corrupted PDF's problematic objects
-        match self.extract_object_manually(obj_num) {
-            Ok(dict) => {
-                let obj = PdfObject::Dictionary(dict);
+        // Try to extract the object manually (can be dictionary or stream)
+        match self.extract_object_or_stream_manually(obj_num) {
+            Ok(obj) => {
                 self.object_cache.insert((obj_num, gen_num), obj);
 
                 // Also add to XRef table so the object can be found later
@@ -1103,12 +1160,34 @@ impl<R: Read + Seek> PdfReader<R> {
         if let Some(start) = content.find(&pattern) {
             let search_area = &content[start..];
             if let Some(dict_start) = search_area.find("<<") {
-                if let Some(dict_end) = search_area.find(">>") {
+                // Handle nested dictionaries properly
+                let mut bracket_count = 1;
+                let mut pos = dict_start + 2;
+                let bytes = search_area.as_bytes();
+                let mut dict_end = None;
+
+                while pos < bytes.len() - 1 && bracket_count > 0 {
+                    if bytes[pos] == b'<' && bytes[pos + 1] == b'<' {
+                        bracket_count += 1;
+                        pos += 2;
+                    } else if bytes[pos] == b'>' && bytes[pos + 1] == b'>' {
+                        bracket_count -= 1;
+                        if bracket_count == 0 {
+                            dict_end = Some(pos);
+                            break;
+                        }
+                        pos += 2;
+                    } else {
+                        pos += 1;
+                    }
+                }
+
+                if let Some(dict_end) = dict_end {
                     let dict_content = &search_area[dict_start + 2..dict_end];
                     eprintln!(
                         "DEBUG: Found object {} dictionary content: '{}'",
                         obj_num,
-                        dict_content.trim()
+                        dict_content.chars().take(500).collect::<String>()
                     );
 
                     // Manually parse the object content based on object number
@@ -1163,16 +1242,28 @@ impl<R: Read + Seek> PdfReader<R> {
                         let page_refs = match self.find_page_objects() {
                             Ok(refs) => refs,
                             Err(e) => {
-                                eprintln!("DEBUG: Failed to find page objects: {:?}, using empty array", e);
+                                eprintln!(
+                                    "DEBUG: Failed to find page objects: {:?}, using empty array",
+                                    e
+                                );
                                 vec![]
                             }
                         };
 
-                        eprintln!("DEBUG: Found {} page objects for 113 Kids array: {:?}", page_refs.len(), page_refs);
+                        eprintln!(
+                            "DEBUG: Found {} page objects for 113 Kids array: {:?}",
+                            page_refs.len(),
+                            page_refs
+                        );
 
                         // Set count based on actual found pages
-                        let page_count = if page_refs.is_empty() { 44 } else { page_refs.len() as i64 };
-                        result_dict.insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
+                        let page_count = if page_refs.is_empty() {
+                            44
+                        } else {
+                            page_refs.len() as i64
+                        };
+                        result_dict
+                            .insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
 
                         // Create Kids array with real page object references
                         let kids_array: Vec<PdfObject> = page_refs
@@ -1197,16 +1288,28 @@ impl<R: Read + Seek> PdfReader<R> {
                         let page_refs = match self.find_page_objects() {
                             Ok(refs) => refs,
                             Err(e) => {
-                                eprintln!("DEBUG: Failed to find page objects: {:?}, using empty array", e);
+                                eprintln!(
+                                    "DEBUG: Failed to find page objects: {:?}, using empty array",
+                                    e
+                                );
                                 vec![]
                             }
                         };
 
-                        eprintln!("DEBUG: Found {} page objects for Kids array: {:?}", page_refs.len(), page_refs);
+                        eprintln!(
+                            "DEBUG: Found {} page objects for Kids array: {:?}",
+                            page_refs.len(),
+                            page_refs
+                        );
 
                         // Set count based on actual found pages
-                        let page_count = if page_refs.is_empty() { 44 } else { page_refs.len() as i64 };
-                        result_dict.insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
+                        let page_count = if page_refs.is_empty() {
+                            44
+                        } else {
+                            page_refs.len() as i64
+                        };
+                        result_dict
+                            .insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
 
                         // Create Kids array with real page object references
                         let kids_array: Vec<PdfObject> = page_refs
@@ -1219,7 +1322,10 @@ impl<R: Read + Seek> PdfReader<R> {
                             PdfObject::Array(PdfArray(kids_array)),
                         );
 
-                        eprintln!("DEBUG: Object 114 created as Pages node with {} Kids", page_count);
+                        eprintln!(
+                            "DEBUG: Object 114 created as Pages node with {} Kids",
+                            page_count
+                        );
                     } else if self.is_page_object(obj_num) {
                         // This is a page object - parse the page dictionary
                         eprintln!("DEBUG: Manually reconstructing Page object {}", obj_num);
@@ -1230,7 +1336,11 @@ impl<R: Read + Seek> PdfReader<R> {
                         );
 
                         // Parse standard page entries from the found dictionary content
-                        self.parse_page_dictionary_content(&dict_content, &mut result_dict, obj_num)?;
+                        self.parse_page_dictionary_content(
+                            &dict_content,
+                            &mut result_dict,
+                            obj_num,
+                        )?;
                     }
 
                     // Restore original position
@@ -1262,15 +1372,26 @@ impl<R: Read + Seek> PdfReader<R> {
             let page_refs = match self.find_page_objects() {
                 Ok(refs) => refs,
                 Err(e) => {
-                    eprintln!("DEBUG: Failed to find page objects: {:?}, using empty array", e);
+                    eprintln!(
+                        "DEBUG: Failed to find page objects: {:?}, using empty array",
+                        e
+                    );
                     vec![]
                 }
             };
 
-            eprintln!("DEBUG: Found {} page objects for fallback 113 Kids array: {:?}", page_refs.len(), page_refs);
+            eprintln!(
+                "DEBUG: Found {} page objects for fallback 113 Kids array: {:?}",
+                page_refs.len(),
+                page_refs
+            );
 
             // Set count based on actual found pages
-            let page_count = if page_refs.is_empty() { 44 } else { page_refs.len() as i64 };
+            let page_count = if page_refs.is_empty() {
+                44
+            } else {
+                page_refs.len() as i64
+            };
             result_dict.insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
 
             // Create Kids array with real page object references
@@ -1302,15 +1423,26 @@ impl<R: Read + Seek> PdfReader<R> {
             let page_refs = match self.find_page_objects() {
                 Ok(refs) => refs,
                 Err(e) => {
-                    eprintln!("DEBUG: Failed to find page objects: {:?}, using empty array", e);
+                    eprintln!(
+                        "DEBUG: Failed to find page objects: {:?}, using empty array",
+                        e
+                    );
                     vec![]
                 }
             };
 
-            eprintln!("DEBUG: Found {} page objects for fallback Kids array: {:?}", page_refs.len(), page_refs);
+            eprintln!(
+                "DEBUG: Found {} page objects for fallback Kids array: {:?}",
+                page_refs.len(),
+                page_refs
+            );
 
             // Set count based on actual found pages
-            let page_count = if page_refs.is_empty() { 44 } else { page_refs.len() as i64 };
+            let page_count = if page_refs.is_empty() {
+                44
+            } else {
+                page_refs.len() as i64
+            };
             result_dict.insert(PdfName("Count".to_string()), PdfObject::Integer(page_count));
 
             // Create Kids array with real page object references
@@ -1335,6 +1467,267 @@ impl<R: Read + Seek> PdfReader<R> {
         Err(ParseError::SyntaxError {
             position: 0,
             message: "Could not find catalog dictionary in manual extraction".to_string(),
+        })
+    }
+
+    /// Extract object manually, detecting whether it's a dictionary or stream
+    fn extract_object_or_stream_manually(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
+        use crate::parser::objects::PdfObject;
+
+        // Save current position
+        let original_pos = self.reader.stream_position().unwrap_or(0);
+
+        // Find object content manually
+        if self.reader.seek(SeekFrom::Start(0)).is_err() {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Failed to seek to beginning for manual extraction".to_string(),
+            });
+        }
+
+        // Read the entire file
+        let mut buffer = Vec::new();
+        if self.reader.read_to_end(&mut buffer).is_err() {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Failed to read file for manual extraction".to_string(),
+            });
+        }
+
+        // For stream objects, we need to work with raw bytes to avoid corruption
+        let pattern = format!("{} 0 obj", obj_num).into_bytes();
+
+        if let Some(obj_start) = find_bytes(&buffer, &pattern) {
+            let start = obj_start + pattern.len();
+            let search_area = &buffer[start..];
+
+            if let Some(dict_start) = find_bytes(search_area, b"<<") {
+                if let Some(dict_end) = find_bytes(&search_area[dict_start..], b">>") {
+                    let dict_start_abs = dict_start + 2;
+                    let dict_end_abs = dict_start + dict_end;
+                    let dict_content_bytes = &search_area[dict_start_abs..dict_end_abs];
+                    let dict_content = String::from_utf8_lossy(dict_content_bytes);
+
+                    eprintln!(
+                        "DEBUG: Found object {} dictionary content: '{}'",
+                        obj_num,
+                        dict_content.trim()
+                    );
+
+                    // Check if this is followed by stream data - be specific about positioning
+                    let after_dict = &search_area[dict_end_abs + 2..];
+                    if is_immediate_stream_start(after_dict) {
+                        // This is a stream object
+                        return self.reconstruct_stream_object_bytes(
+                            obj_num,
+                            &dict_content,
+                            after_dict,
+                        );
+                    } else {
+                        // This is a dictionary object - fall back to existing logic
+                        return self
+                            .extract_object_manually(obj_num)
+                            .map(|dict| PdfObject::Dictionary(dict));
+                    }
+                }
+            }
+        }
+
+        // Restore original position
+        self.reader.seek(SeekFrom::Start(original_pos)).ok();
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!("Could not manually extract object {}", obj_num),
+        })
+    }
+
+    /// Reconstruct a stream object from bytes to avoid corruption
+    fn reconstruct_stream_object_bytes(
+        &mut self,
+        obj_num: u32,
+        dict_content: &str,
+        after_dict: &[u8],
+    ) -> ParseResult<PdfObject> {
+        use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
+        use std::collections::HashMap;
+
+        // Parse dictionary content
+        let mut dict = HashMap::new();
+
+        // Simple parsing for /Filter and /Length
+        if dict_content.contains("/Filter /FlateDecode") {
+            dict.insert(
+                PdfName("Filter".to_string()),
+                PdfObject::Name(PdfName("FlateDecode".to_string())),
+            );
+        }
+
+        if let Some(length_start) = dict_content.find("/Length ") {
+            let length_part = &dict_content[length_start + 8..];
+            if let Some(space_pos) = length_part.find(' ') {
+                let length_str = &length_part[..space_pos];
+                if let Ok(length) = length_str.parse::<i64>() {
+                    dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
+                }
+            } else {
+                // Length might be at the end
+                if let Ok(length) = length_part.trim().parse::<i64>() {
+                    dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
+                }
+            }
+        }
+
+        // Find stream data
+        if let Some(stream_start) = find_bytes(after_dict, b"stream") {
+            let stream_start_pos = stream_start + 6; // "stream".len()
+            let stream_data_start = if after_dict.get(stream_start_pos) == Some(&b'\n') {
+                stream_start_pos + 1
+            } else if after_dict.get(stream_start_pos) == Some(&b'\r') {
+                if after_dict.get(stream_start_pos + 1) == Some(&b'\n') {
+                    stream_start_pos + 2
+                } else {
+                    stream_start_pos + 1
+                }
+            } else {
+                stream_start_pos
+            };
+
+            if let Some(endstream_pos) = find_bytes(after_dict, b"endstream") {
+                let mut stream_data = &after_dict[stream_data_start..endstream_pos];
+
+                // Respect the Length field if present
+                if let Some(PdfObject::Integer(length)) = dict.get(&PdfName("Length".to_string())) {
+                    let expected_length = *length as usize;
+                    if stream_data.len() > expected_length {
+                        stream_data = &stream_data[..expected_length];
+                        eprintln!(
+                            "DEBUG: Trimmed stream data from {} to {} bytes based on Length field",
+                            after_dict[stream_data_start..endstream_pos].len(),
+                            expected_length
+                        );
+                    }
+                }
+
+                eprintln!(
+                    "DEBUG: Reconstructed stream object {} with {} bytes of stream data",
+                    obj_num,
+                    stream_data.len()
+                );
+
+                let stream = PdfStream {
+                    dict: PdfDictionary(dict),
+                    data: stream_data.to_vec(),
+                };
+
+                return Ok(PdfObject::Stream(stream));
+            }
+        }
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!("Could not reconstruct stream for object {}", obj_num),
+        })
+    }
+
+    /// Parse Resources from PDF content string
+    fn parse_resources_from_content(&self, dict_content: &str) -> ParseResult<PdfObject> {
+        use crate::parser::objects::{PdfDictionary, PdfName, PdfObject};
+        use std::collections::HashMap;
+
+        // Find the Resources section
+        if let Some(resources_start) = dict_content.find("/Resources") {
+            // Find the opening bracket
+            if let Some(bracket_start) = dict_content[resources_start..].find("<<") {
+                let abs_bracket_start = resources_start + bracket_start + 2;
+
+                // Find matching closing bracket - simple nesting counter
+                let mut bracket_count = 1;
+                let mut end_pos = abs_bracket_start;
+                let chars: Vec<char> = dict_content.chars().collect();
+
+                while end_pos < chars.len() && bracket_count > 0 {
+                    if end_pos + 1 < chars.len() {
+                        if chars[end_pos] == '<' && chars[end_pos + 1] == '<' {
+                            bracket_count += 1;
+                            end_pos += 2;
+                            continue;
+                        } else if chars[end_pos] == '>' && chars[end_pos + 1] == '>' {
+                            bracket_count -= 1;
+                            end_pos += 2;
+                            continue;
+                        }
+                    }
+                    end_pos += 1;
+                }
+
+                if bracket_count == 0 {
+                    let resources_content = &dict_content[abs_bracket_start..end_pos - 2];
+                    eprintln!("DEBUG: Parsing Resources content: {}", resources_content);
+
+                    // Parse basic Resources structure
+                    let mut resources_dict = HashMap::new();
+
+                    // Look for Font dictionary
+                    if let Some(font_start) = resources_content.find("/Font") {
+                        if let Some(font_bracket) = resources_content[font_start..].find("<<") {
+                            let abs_font_start = font_start + font_bracket + 2;
+
+                            // Simple font parsing - look for font references
+                            let mut font_dict = HashMap::new();
+
+                            // Look for font entries like /F1 123 0 R
+                            let font_section = &resources_content[abs_font_start..];
+                            let mut pos = 0;
+                            while let Some(f_pos) = font_section[pos..].find("/F") {
+                                let abs_f_pos = pos + f_pos;
+                                if let Some(space_pos) = font_section[abs_f_pos..].find(" ") {
+                                    let font_name = &font_section[abs_f_pos..abs_f_pos + space_pos];
+
+                                    // Look for object reference after the font name
+                                    let after_name = &font_section[abs_f_pos + space_pos..];
+                                    if let Some(r_pos) = after_name.find(" R") {
+                                        let ref_part = after_name[..r_pos].trim();
+                                        if let Some(parts) = ref_part
+                                            .split_whitespace()
+                                            .collect::<Vec<&str>>()
+                                            .get(0..2)
+                                        {
+                                            if let (Ok(obj_num), Ok(gen_num)) =
+                                                (parts[0].parse::<u32>(), parts[1].parse::<u16>())
+                                            {
+                                                font_dict.insert(
+                                                    PdfName(font_name[1..].to_string()), // Remove leading /
+                                                    PdfObject::Reference(obj_num, gen_num),
+                                                );
+                                                eprintln!(
+                                                    "DEBUG: Found font {} -> {} {} R",
+                                                    font_name, obj_num, gen_num
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                                pos = abs_f_pos + 1;
+                            }
+
+                            if !font_dict.is_empty() {
+                                resources_dict.insert(
+                                    PdfName("Font".to_string()),
+                                    PdfObject::Dictionary(PdfDictionary(font_dict)),
+                                );
+                            }
+                        }
+                    }
+
+                    return Ok(PdfObject::Dictionary(PdfDictionary(resources_dict)));
+                }
+            }
+        }
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: "Could not parse Resources".to_string(),
         })
     }
 
@@ -1577,13 +1970,17 @@ impl<R: Read + Seek> PdfReader<R> {
                         for j in 1..=10 {
                             if i + j < lines.len() {
                                 let future_line = lines[i + j];
-                                if future_line.contains("/Type /Page") && !future_line.contains("/Type /Pages") {
+                                if future_line.contains("/Type /Page")
+                                    && !future_line.contains("/Type /Pages")
+                                {
                                     eprintln!("DEBUG: Found Page object at object {}", obj_num);
                                     page_objects.push((obj_num, 0));
                                     break;
                                 }
                                 // Stop looking if we hit next object or endobj
-                                if future_line.trim().ends_with(" 0 obj") || future_line.trim() == "endobj" {
+                                if future_line.trim().ends_with(" 0 obj")
+                                    || future_line.trim() == "endobj"
+                                {
                                     break;
                                 }
                             }
@@ -1596,7 +1993,11 @@ impl<R: Read + Seek> PdfReader<R> {
         page_objects.sort();
         page_objects.dedup();
 
-        eprintln!("DEBUG: Found {} Page objects: {:?}", page_objects.len(), page_objects);
+        eprintln!(
+            "DEBUG: Found {} Page objects: {:?}",
+            page_objects.len(),
+            page_objects
+        );
         Ok(page_objects)
     }
 

@@ -38,33 +38,40 @@ fn analyze_xref_position(pdf_data: &[u8], offset: usize, name: &str) {
             let has_predictor = dict_str.contains("/Predictor");
             let has_columns = dict_str.contains("/Columns");
 
-            println!("   Filter: {} | FlateDecode: {} | Predictor: {} | Columns: {}",
-                     has_filter, has_flate, has_predictor, has_columns);
+            println!(
+                "   Filter: {} | FlateDecode: {} | Predictor: {} | Columns: {}",
+                has_filter, has_flate, has_predictor, has_columns
+            );
 
             // Extraer longitud del stream si está disponible
             if let Some(length_start) = dict_str.find("/Length") {
                 let after_length = &dict_str[length_start + "/Length".len()..];
-                if let Some(number_match) = after_length.chars()
+                if let Some(number_match) = after_length
+                    .chars()
                     .skip_while(|c| !c.is_ascii_digit())
                     .take_while(|c| c.is_ascii_digit())
                     .collect::<String>()
                     .parse::<usize>()
-                    .ok() {
-                        println!("   Stream Length: {} bytes", number_match);
+                    .ok()
+                {
+                    println!("   Stream Length: {} bytes", number_match);
 
-                        // Encontrar el stream real
-                        if let Some(stream_start) = find_stream_start(context) {
-                            if stream_start + number_match <= context.len() {
-                                let stream_data = &context[stream_start..stream_start + number_match];
-                                println!("   Stream encontrado: {} bytes", stream_data.len());
-                                println!("   Primeros 20 bytes: {:02x?}", &stream_data[..std::cmp::min(20, stream_data.len())]);
-                            } else {
-                                println!("   ❌ Stream truncado en el contexto");
-                            }
+                    // Encontrar el stream real
+                    if let Some(stream_start) = find_stream_start(context) {
+                        if stream_start + number_match <= context.len() {
+                            let stream_data = &context[stream_start..stream_start + number_match];
+                            println!("   Stream encontrado: {} bytes", stream_data.len());
+                            println!(
+                                "   Primeros 20 bytes: {:02x?}",
+                                &stream_data[..std::cmp::min(20, stream_data.len())]
+                            );
                         } else {
-                            println!("   ❌ No se encontró 'stream'");
+                            println!("   ❌ Stream truncado en el contexto");
                         }
+                    } else {
+                        println!("   ❌ No se encontró 'stream'");
                     }
+                }
             }
         }
     }
@@ -80,7 +87,10 @@ fn analyze_problematic_object(pdf_data: &[u8]) {
     // Los 200 bytes que fallan empiezan con: [01, 00, 00, 0f, 00, 01, 00, 00, d8, 00...]
     let target_pattern = [0x01, 0x00, 0x00, 0x0f, 0x00, 0x01, 0x00, 0x00, 0xd8, 0x00];
 
-    println!("🔍 Buscando patrón de 200 bytes problemático: {:02x?}", &target_pattern);
+    println!(
+        "🔍 Buscando patrón de 200 bytes problemático: {:02x?}",
+        &target_pattern
+    );
 
     for (i, window) in pdf_data.windows(target_pattern.len()).enumerate() {
         if window == target_pattern {
