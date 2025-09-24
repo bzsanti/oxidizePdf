@@ -440,6 +440,12 @@ impl<'a> ContentTokenizer<'a> {
             // Names
             b'/' => self.read_name(),
 
+            // Skip semicolons (corrupted content recovery)
+            b';' => {
+                self.position += 1;
+                self.next_token() // Recursively get next valid token
+            }
+
             // Operators or other tokens
             _ => self.read_operator(),
         }
@@ -703,7 +709,7 @@ impl<'a> ContentTokenizer<'a> {
             let ch = self.input[self.position];
             match ch {
                 b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'(' | b')' | b'<' | b'>' | b'['
-                | b']' | b'{' | b'}' | b'/' | b'%' => break,
+                | b']' | b'{' | b'}' | b'/' | b'%' | b';' => break,
                 _ => self.position += 1,
             }
         }

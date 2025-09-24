@@ -167,7 +167,14 @@ impl TextExtractor {
 
         // Process each content stream
         for stream_data in streams {
-            let operations = ContentParser::parse_content(&stream_data)?;
+            let operations = match ContentParser::parse_content(&stream_data) {
+                Ok(ops) => ops,
+                Err(e) => {
+                    // Log the error but continue processing other streams
+                    eprintln!("Warning: Failed to parse content stream, skipping: {}", e);
+                    continue;
+                }
+            };
 
             for op in operations {
                 match op {

@@ -1065,13 +1065,34 @@ mod tests {
 }
 
 /// Apply a single filter to data with parameters (enhanced version)
-fn apply_filter_with_params(
+pub(crate) fn apply_filter_with_params(
     data: &[u8],
     filter: Filter,
     params: Option<&PdfDictionary>,
 ) -> ParseResult<Vec<u8>> {
     let result = match filter {
-        Filter::FlateDecode => decode_flate(data)?,
+        Filter::FlateDecode => {
+            // Special handling for FlateDecode with Predictor
+            // Some PDFs have streams that are already post-processed with predictor
+            // and should not be decompressed with zlib
+            if let Some(decode_params) = params {
+                if decode_params.get("Predictor").and_then(|p| p.as_integer()).is_some() {
+                    // First try standard zlib decode
+                    match try_standard_zlib_decode(data) {
+                        Ok(decoded) => decoded,
+                        Err(_) => {
+                            // If zlib decode fails, assume data is already decoded
+                            // This handles predictor-only streams or incorrect DecodeParms
+                            data.to_vec()
+                        }
+                    }
+                } else {
+                    decode_flate(data)?
+                }
+            } else {
+                decode_flate(data)?
+            }
+        }
         Filter::ASCIIHexDecode => decode_ascii_hex(data)?,
         Filter::ASCII85Decode => decode_ascii85(data)?,
         Filter::LZWDecode => decode_lzw(data, params)?,
@@ -1091,7 +1112,14 @@ fn apply_filter_with_params(
     if let Some(params_dict) = params {
         if let Some(predictor_obj) = params_dict.get("Predictor") {
             if let Some(predictor) = predictor_obj.as_integer() {
-                return apply_predictor(&result, predictor as u32, params_dict);
+                match apply_predictor(&result, predictor as u32, params_dict) {
+                    Ok(predictor_result) => return Ok(predictor_result),
+                    Err(_) => {
+                        // If predictor fails, use raw data
+                        // This handles cases where DecodeParms are incorrect or data doesn't use predictor
+                        return Ok(result);
+                    }
+                }
             }
         }
     }

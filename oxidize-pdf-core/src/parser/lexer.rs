@@ -147,6 +147,11 @@ impl<R: Read> Lexer<R> {
                 Ok(Token::Name("R".to_string()))
             }
             _ if ch.is_ascii_alphabetic() => self.read_keyword(),
+            b';' => {
+                // Skip semicolons (corrupted PDF recovery)
+                self.consume_char()?;
+                self.next_token() // Recursively get next valid token
+            }
             _ => {
                 // Check if this is a problematic encoding character
                 if self.is_problematic_encoding_char(ch) {
