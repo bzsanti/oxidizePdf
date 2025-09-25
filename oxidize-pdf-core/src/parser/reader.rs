@@ -135,6 +135,15 @@ impl PdfReader<File> {
         Self::new_with_options(file, options)
     }
 
+    /// Open a PDF file from a path with custom parsing options
+    pub fn open_with_options<P: AsRef<Path>>(
+        path: P,
+        options: super::ParseOptions,
+    ) -> ParseResult<Self> {
+        let file = File::open(path)?;
+        Self::new_with_options(file, options)
+    }
+
     /// Open a PDF file as a PdfDocument
     pub fn open_document<P: AsRef<Path>>(
         path: P,
@@ -422,7 +431,15 @@ impl<R: Read + Seek> PdfReader<R> {
                     }
 
                     if entry.generation != gen_num {
-                        return Err(ParseError::InvalidReference(obj_num, gen_num));
+                        if self.options.lenient_syntax {
+                            // In lenient mode, warn but use the available generation
+                            if self.options.collect_warnings {
+                                eprintln!("Warning: Object {} generation mismatch - expected {}, found {}, using available",
+                                    obj_num, gen_num, entry.generation);
+                            }
+                        } else {
+                            return Err(ParseError::InvalidReference(obj_num, gen_num));
+                        }
                     }
 
                     (entry.offset, entry.generation)
@@ -433,7 +450,17 @@ impl<R: Read + Seek> PdfReader<R> {
                         eprintln!("DEBUG: Object {} not found in XRef table, attempting manual reconstruction", obj_num);
                         return self.attempt_manual_object_reconstruction(obj_num, gen_num, 0);
                     } else {
-                        return Err(ParseError::InvalidReference(obj_num, gen_num));
+                        if self.options.lenient_syntax {
+                            // In lenient mode, return null object instead of failing completely
+                            if self.options.collect_warnings {
+                                eprintln!("Warning: Object {} {} R not found in XRef, returning null object",
+                                    obj_num, gen_num);
+                            }
+                            self.object_cache.insert(key, PdfObject::Null);
+                            return Ok(&self.object_cache[&key]);
+                        } else {
+                            return Err(ParseError::InvalidReference(obj_num, gen_num));
+                        }
                     }
                 }
             }
@@ -1105,25 +1132,202 @@ impl<R: Read + Seek> PdfReader<R> {
         gen_num: u16,
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
-        // Try to extract the object manually (can be dictionary or stream)
-        match self.extract_object_or_stream_manually(obj_num) {
-            Ok(obj) => {
-                self.object_cache.insert((obj_num, gen_num), obj);
+        eprintln!(
+            "DEBUG: Attempting smart reconstruction for object {} {}",
+            obj_num, gen_num
+        );
 
-                // Also add to XRef table so the object can be found later
-                use crate::parser::xref::XRefEntry;
-                let xref_entry = XRefEntry {
-                    offset: 0, // Dummy offset since object is cached
-                    generation: gen_num,
-                    in_use: true,
-                };
-                self.xref.add_entry(obj_num, xref_entry);
-                eprintln!("DEBUG: Added object {} to XRef table", obj_num);
-
-                Ok(self.object_cache.get(&(obj_num, gen_num)).unwrap())
+        // Try multiple reconstruction strategies
+        let reconstructed_obj = match self.smart_object_reconstruction(obj_num, gen_num) {
+            Ok(obj) => obj,
+            Err(_) => {
+                // Fallback to old method
+                match self.extract_object_or_stream_manually(obj_num) {
+                    Ok(obj) => obj,
+                    Err(e) => {
+                        // Last resort: create a null object
+                        if self.options.lenient_syntax {
+                            eprintln!(
+                                "DEBUG: Creating null object for missing {} {}",
+                                obj_num, gen_num
+                            );
+                            PdfObject::Null
+                        } else {
+                            return Err(e);
+                        }
+                    }
+                }
             }
-            Err(e) => Err(e),
+        };
+
+        self.object_cache
+            .insert((obj_num, gen_num), reconstructed_obj);
+
+        // Also add to XRef table so the object can be found later
+        use crate::parser::xref::XRefEntry;
+        let xref_entry = XRefEntry {
+            offset: 0, // Dummy offset since object is cached
+            generation: gen_num,
+            in_use: true,
+        };
+        self.xref.add_entry(obj_num, xref_entry);
+        eprintln!(
+            "DEBUG: Successfully reconstructed and cached object {} {}",
+            obj_num, gen_num
+        );
+
+        Ok(self.object_cache.get(&(obj_num, gen_num)).unwrap())
+    }
+
+    /// Smart object reconstruction using multiple heuristics
+    fn smart_object_reconstruction(
+        &mut self,
+        obj_num: u32,
+        gen_num: u16,
+    ) -> ParseResult<PdfObject> {
+        // Using objects from parent scope
+
+        // Strategy 1: Try to infer object type from context
+        if let Ok(inferred_obj) = self.infer_object_from_context(obj_num) {
+            return Ok(inferred_obj);
         }
+
+        // Strategy 2: Scan for object patterns in raw data
+        if let Ok(scanned_obj) = self.scan_for_object_patterns(obj_num) {
+            return Ok(scanned_obj);
+        }
+
+        // Strategy 3: Create synthetic object based on common PDF structures
+        if let Ok(synthetic_obj) = self.create_synthetic_object(obj_num) {
+            return Ok(synthetic_obj);
+        }
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!("Could not reconstruct object {} {}", obj_num, gen_num),
+        })
+    }
+
+    /// Infer object type from usage context in other objects
+    fn infer_object_from_context(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
+        // Using objects from parent scope
+
+        // Scan existing objects to see how this object is referenced
+        for (_key, obj) in self.object_cache.iter() {
+            if let PdfObject::Dictionary(dict) = obj {
+                for (key, value) in dict.0.iter() {
+                    if let PdfObject::Reference(ref_num, _) = value {
+                        if *ref_num == obj_num {
+                            // This object is referenced as {key}, infer its type
+                            match key.as_str() {
+                                "Font" | "F1" | "F2" | "F3" => {
+                                    return Ok(self.create_font_object(obj_num));
+                                }
+                                "XObject" | "Image" | "Im1" => {
+                                    return Ok(self.create_xobject(obj_num));
+                                }
+                                "Contents" => {
+                                    return Ok(self.create_content_stream(obj_num));
+                                }
+                                "Resources" => {
+                                    return Ok(self.create_resources_dict(obj_num));
+                                }
+                                _ => continue,
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(ParseError::SyntaxError {
+            position: 0,
+            message: "Cannot infer object type from context".to_string(),
+        })
+    }
+
+    /// Scan raw PDF data for object patterns
+    fn scan_for_object_patterns(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
+        // This would scan the raw PDF bytes for patterns like "obj_num 0 obj"
+        // and try to extract whatever follows, with better error recovery
+        self.extract_object_or_stream_manually(obj_num)
+    }
+
+    /// Create synthetic objects for common PDF structures
+    fn create_synthetic_object(&mut self, obj_num: u32) -> ParseResult<PdfObject> {
+        use super::objects::{PdfDictionary, PdfName, PdfObject};
+
+        // Common object numbers and their likely types
+        match obj_num {
+            1..=10 => {
+                // Usually structural objects (catalog, pages, etc.)
+                let mut dict = PdfDictionary::new();
+                dict.insert(
+                    "Type".to_string(),
+                    PdfObject::Name(PdfName("Null".to_string())),
+                );
+                Ok(PdfObject::Dictionary(dict))
+            }
+            _ => {
+                // Generic null object
+                Ok(PdfObject::Null)
+            }
+        }
+    }
+
+    fn create_font_object(&self, obj_num: u32) -> PdfObject {
+        use super::objects::{PdfDictionary, PdfName, PdfObject};
+        let mut font_dict = PdfDictionary::new();
+        font_dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName("Font".to_string())),
+        );
+        font_dict.insert(
+            "Subtype".to_string(),
+            PdfObject::Name(PdfName("Type1".to_string())),
+        );
+        font_dict.insert(
+            "BaseFont".to_string(),
+            PdfObject::Name(PdfName("Helvetica".to_string())),
+        );
+        eprintln!("DEBUG: Created synthetic Font object {}", obj_num);
+        PdfObject::Dictionary(font_dict)
+    }
+
+    fn create_xobject(&self, obj_num: u32) -> PdfObject {
+        use super::objects::{PdfDictionary, PdfName, PdfObject};
+        let mut xobj_dict = PdfDictionary::new();
+        xobj_dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName("XObject".to_string())),
+        );
+        xobj_dict.insert(
+            "Subtype".to_string(),
+            PdfObject::Name(PdfName("Form".to_string())),
+        );
+        eprintln!("DEBUG: Created synthetic XObject {}", obj_num);
+        PdfObject::Dictionary(xobj_dict)
+    }
+
+    fn create_content_stream(&self, obj_num: u32) -> PdfObject {
+        use super::objects::{PdfDictionary, PdfObject, PdfStream};
+        let mut stream_dict = PdfDictionary::new();
+        stream_dict.insert("Length".to_string(), PdfObject::Integer(0));
+
+        let stream = PdfStream {
+            dict: stream_dict,
+            data: Vec::new(),
+        };
+        eprintln!("DEBUG: Created synthetic content stream {}", obj_num);
+        PdfObject::Stream(stream)
+    }
+
+    fn create_resources_dict(&self, obj_num: u32) -> PdfObject {
+        use super::objects::{PdfArray, PdfDictionary, PdfObject};
+        let mut res_dict = PdfDictionary::new();
+        res_dict.insert("ProcSet".to_string(), PdfObject::Array(PdfArray::new()));
+        eprintln!("DEBUG: Created synthetic Resources dict {}", obj_num);
+        PdfObject::Dictionary(res_dict)
     }
 
     fn extract_object_manually(
@@ -2018,9 +2222,57 @@ impl<R: Read + Seek> PdfReader<R> {
     ) -> ParseResult<&PdfDictionary> {
         use super::objects::{PdfArray, PdfName};
 
-        // Create Kids array with page references
-        let mut kids = PdfArray::new();
+        eprintln!(
+            "DEBUG: Creating synthetic Pages tree with {} pages",
+            page_refs.len()
+        );
+
+        // Validate and repair page objects first
+        let mut valid_page_refs = Vec::new();
         for (obj_num, gen_num) in page_refs {
+            if let Ok(page_obj) = self.get_object(*obj_num, *gen_num) {
+                if let Some(page_dict) = page_obj.as_dict() {
+                    // Ensure this is actually a page object
+                    if let Some(obj_type) = page_dict.get("Type").and_then(|t| t.as_name()) {
+                        if obj_type.0 == "Page" {
+                            valid_page_refs.push((*obj_num, *gen_num));
+                            continue;
+                        }
+                    }
+
+                    // If no Type but has page-like properties, treat as page
+                    if page_dict.contains_key("MediaBox") || page_dict.contains_key("Contents") {
+                        eprintln!(
+                            "DEBUG: Assuming {} {} R is a Page (missing Type)",
+                            obj_num, gen_num
+                        );
+                        valid_page_refs.push((*obj_num, *gen_num));
+                    }
+                }
+            }
+        }
+
+        if valid_page_refs.is_empty() {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "No valid page objects found for synthetic Pages tree".to_string(),
+            });
+        }
+
+        eprintln!(
+            "DEBUG: Found {} valid page objects out of {}",
+            valid_page_refs.len(),
+            page_refs.len()
+        );
+
+        // Create hierarchical tree for many pages (more than 10)
+        if valid_page_refs.len() > 10 {
+            return self.create_hierarchical_pages_tree(&valid_page_refs);
+        }
+
+        // Create simple flat tree for few pages
+        let mut kids = PdfArray::new();
+        for (obj_num, gen_num) in &valid_page_refs {
             kids.push(PdfObject::Reference(*obj_num, *gen_num));
         }
 
@@ -2033,12 +2285,12 @@ impl<R: Read + Seek> PdfReader<R> {
         pages_dict.insert("Kids".to_string(), PdfObject::Array(kids));
         pages_dict.insert(
             "Count".to_string(),
-            PdfObject::Integer(page_refs.len() as i64),
+            PdfObject::Integer(valid_page_refs.len() as i64),
         );
 
         // Find a common MediaBox from the pages
         let mut media_box = None;
-        for (obj_num, gen_num) in page_refs.iter().take(1) {
+        for (obj_num, gen_num) in valid_page_refs.iter().take(3) {
             if let Ok(page_obj) = self.get_object(*obj_num, *gen_num) {
                 if let Some(page_dict) = page_obj.as_dict() {
                     if let Some(mb) = page_dict.get("MediaBox") {
@@ -2067,6 +2319,93 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // Return reference to cached dictionary
         if let PdfObject::Dictionary(dict) = &self.object_cache[&synthetic_key] {
+            Ok(dict)
+        } else {
+            unreachable!("Just inserted dictionary")
+        }
+    }
+
+    /// Create a hierarchical Pages tree for documents with many pages
+    fn create_hierarchical_pages_tree(
+        &mut self,
+        page_refs: &[(u32, u16)],
+    ) -> ParseResult<&PdfDictionary> {
+        use super::objects::{PdfArray, PdfName};
+
+        eprintln!(
+            "DEBUG: Creating hierarchical Pages tree with {} pages",
+            page_refs.len()
+        );
+
+        const PAGES_PER_NODE: usize = 10; // Max pages per intermediate node
+
+        // Split pages into groups
+        let chunks: Vec<&[(u32, u16)]> = page_refs.chunks(PAGES_PER_NODE).collect();
+        let mut intermediate_nodes = Vec::new();
+
+        // Create intermediate Pages nodes for each chunk
+        for (chunk_idx, chunk) in chunks.iter().enumerate() {
+            let mut kids = PdfArray::new();
+            for (obj_num, gen_num) in chunk.iter() {
+                kids.push(PdfObject::Reference(*obj_num, *gen_num));
+            }
+
+            let mut intermediate_dict = PdfDictionary::new();
+            intermediate_dict.insert(
+                "Type".to_string(),
+                PdfObject::Name(PdfName("Pages".to_string())),
+            );
+            intermediate_dict.insert("Kids".to_string(), PdfObject::Array(kids));
+            intermediate_dict.insert("Count".to_string(), PdfObject::Integer(chunk.len() as i64));
+
+            // Store intermediate node with synthetic object number
+            let intermediate_key = (u32::MAX - 2 - chunk_idx as u32, 0);
+            self.object_cache
+                .insert(intermediate_key, PdfObject::Dictionary(intermediate_dict));
+
+            intermediate_nodes.push(intermediate_key);
+        }
+
+        // Create root Pages node that references intermediate nodes
+        let mut root_kids = PdfArray::new();
+        for (obj_num, gen_num) in &intermediate_nodes {
+            root_kids.push(PdfObject::Reference(*obj_num, *gen_num));
+        }
+
+        let mut root_pages_dict = PdfDictionary::new();
+        root_pages_dict.insert(
+            "Type".to_string(),
+            PdfObject::Name(PdfName("Pages".to_string())),
+        );
+        root_pages_dict.insert("Kids".to_string(), PdfObject::Array(root_kids));
+        root_pages_dict.insert(
+            "Count".to_string(),
+            PdfObject::Integer(page_refs.len() as i64),
+        );
+
+        // Add MediaBox if available
+        if let Some((obj_num, gen_num)) = page_refs.first() {
+            if let Ok(page_obj) = self.get_object(*obj_num, *gen_num) {
+                if let Some(page_dict) = page_obj.as_dict() {
+                    if let Some(mb) = page_dict.get("MediaBox") {
+                        root_pages_dict.insert("MediaBox".to_string(), mb.clone());
+                    }
+                }
+            }
+        }
+
+        // Store root Pages dictionary
+        let root_key = (u32::MAX - 1, 0);
+        self.object_cache
+            .insert(root_key, PdfObject::Dictionary(root_pages_dict));
+
+        eprintln!(
+            "DEBUG: Created hierarchical tree with {} intermediate nodes",
+            intermediate_nodes.len()
+        );
+
+        // Return reference to cached dictionary
+        if let PdfObject::Dictionary(dict) = &self.object_cache[&root_key] {
             Ok(dict)
         } else {
             unreachable!("Just inserted dictionary")

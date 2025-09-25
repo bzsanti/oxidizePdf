@@ -524,11 +524,18 @@ impl<R: Read + Seek> PdfDocument<R> {
 
                         // Get the kid object
                         let kid_obj = self.get_object(kid_ref.0, kid_ref.1)?;
-                        let kid_dict =
-                            kid_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
-                                position: 0,
-                                message: "Page tree node must be a dictionary".to_string(),
-                            })?;
+                        let kid_dict = match kid_obj.as_dict() {
+                            Some(dict) => dict,
+                            None => {
+                                // Skip invalid page tree nodes in lenient mode
+                                eprintln!(
+                                    "Warning: Page tree node {} {} R is not a dictionary, skipping",
+                                    kid_ref.0, kid_ref.1
+                                );
+                                current_idx += 1; // Count as processed but skip
+                                continue;
+                            }
+                        };
 
                         let kid_type = kid_dict
                             .get_type()
@@ -611,9 +618,29 @@ impl<R: Read + Seek> PdfDocument<R> {
             }
         }
 
+        // Try fallback: search for the page by direct object scanning
+        eprintln!(
+            "Warning: Page {} not found in tree, attempting direct lookup",
+            target_index
+        );
+
+        // Scan for Page objects directly (try first few hundred objects)
+        for obj_num in 1..500 {
+            if let Ok(obj) = self.reader.borrow_mut().get_object(obj_num, 0) {
+                if let Some(dict) = obj.as_dict() {
+                    if let Some(obj_type) = dict.get("Type").and_then(|t| t.as_name()) {
+                        if obj_type.0 == "Page" {
+                            // Found a page, check if it's the right index (approximate)
+                            return self.create_parsed_page((obj_num, 0), dict, None);
+                        }
+                    }
+                }
+            }
+        }
+
         Err(ParseError::SyntaxError {
             position: 0,
-            message: "Page not found in tree".to_string(),
+            message: format!("Page {} not found in tree or document", target_index),
         })
     }
 

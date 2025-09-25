@@ -41,6 +41,9 @@ unicode-normalization = "0.1"
 # Text processing and validation
 regex = "1.10"
 
+# Random number generation (for examples)
+rand = { version = "0.8", optional = true }
+
 # Flags
 bitflags = "2.4"
 
@@ -279,6 +282,19 @@ path = "../examples/src/test_random_fixtures_simple.rs"
 [[example]]
 name = "test_text_extraction_demo"
 path = "../examples/src/test_text_extraction_demo.rs"
+
+[[example]]
+name = "test_random_fixtures_extraction"
+path = "../examples/src/test_random_fixtures_extraction.rs"
+
+[[example]]
+name = "test_all_fixtures_extraction"
+path = "../examples/src/test_all_fixtures_extraction.rs"
+
+[[example]]
+name = "test_error_fixes"
+path = "../examples/src/test_error_fixes.rs"
+required-features = ["rand"]
 
 [[bench]]
 name = "ocr_benchmarks"

@@ -156,6 +156,16 @@ impl<R: Read> Lexer<R> {
                 // Check if this is a problematic encoding character
                 if self.is_problematic_encoding_char(ch) {
                     self.handle_encoding_char_in_token_stream(ch)
+                } else if self.options.lenient_syntax {
+                    // In lenient mode, skip unexpected characters with a warning
+                    if self.options.collect_warnings {
+                        eprintln!(
+                            "Warning: Skipping unexpected character '{}' at position {}",
+                            ch as char, self.position
+                        );
+                    }
+                    self.consume_char()?;
+                    self.next_token() // Continue with next token
                 } else {
                     Err(ParseError::SyntaxError {
                         position: self.position,
@@ -891,16 +901,35 @@ impl<R: Read> Lexer<R> {
                     self.warnings.push(ParseWarning::InvalidEncoding {
                         position: self.position,
                         recovered_text: if result.text.len() > 50 {
-                            // Safe character boundary truncation
+                            // Ultra-safe character boundary truncation
                             let truncate_at = result
                                 .text
                                 .char_indices()
                                 .map(|(i, _)| i)
                                 .nth(47)
-                                .unwrap_or(result.text.len().min(47));
+                                .unwrap_or_else(|| {
+                                    // Fallback: find last valid boundary within first 47 bytes
+                                    let limit = result.text.len().min(47);
+                                    let mut pos = limit;
+                                    while pos > 0 && !result.text.is_char_boundary(pos) {
+                                        pos -= 1;
+                                    }
+                                    pos
+                                });
+
+                            // Double-check the boundary before slicing
+                            let safe_text = if truncate_at <= result.text.len()
+                                && result.text.is_char_boundary(truncate_at)
+                            {
+                                result.text[..truncate_at].to_string()
+                            } else {
+                                // Emergency fallback: use chars().take() for absolute safety
+                                result.text.chars().take(47).collect::<String>()
+                            };
+
                             format!(
                                 "{}... (truncated, {} chars total)",
-                                &result.text[..truncate_at],
+                                safe_text,
                                 result.text.chars().count()
                             )
                         } else {
