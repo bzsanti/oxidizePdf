@@ -39,14 +39,21 @@ SESSION_*.md
 
 # Private directories - CRITICAL SECURITY
 .private/
-oxidizePdf-private*/
-
-# Private contract files - NEVER commit
 *_private.*
 *_PRIVATE_*
 *.private.*
+oxidizePdf-private*/
+
+# Extracted images from private contracts - NEVER COMMIT
 *extracted_page*.jpg
 *extracted_page*.png
+examples/results/*.jpg
+
+# Strategic and business information - NEVER COMMIT
+PRODUCT_STRATEGY.md
+BUSINESS_PLAN.md
+PRICING_STRATEGY.md
+REVENUE_*.md
 
 # External test suites
 test-suite/external-suites/
