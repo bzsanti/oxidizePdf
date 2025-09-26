@@ -4,22 +4,23 @@ use oxidize_pdf::operations::{
     merge_pdf_files, rotate_all_pages, split_into_pages, PageRange, RotationAngle,
 };
 use oxidize_pdf::{Document, Page};
-use std::fs;
 use std::path::Path;
+use tempfile::TempDir;
 
 #[test]
 fn test_split_merge_rotate_workflow() {
-    // Create test directory
-    let test_dir = "test_output";
-    fs::create_dir_all(test_dir).ok();
+    // Create temporary directory
+    let temp_dir = TempDir::new().unwrap();
+    let test_dir = temp_dir.path();
 
     // Create a test PDF with 3 pages
-    let test_pdf = format!("{test_dir}/test_multi.pdf");
+    let test_pdf = test_dir.join("test_multi.pdf");
     create_test_pdf(&test_pdf, 3).unwrap();
 
     // Test 1: Split into individual pages
-    let split_pattern = format!("{test_dir}/split_page_{{}}.pdf");
-    let split_files = split_into_pages(&test_pdf, &split_pattern).unwrap();
+    let split_pattern = test_dir.join("split_page_{}.pdf");
+    let split_pattern_str = split_pattern.to_string_lossy();
+    let split_files = split_into_pages(&test_pdf, &split_pattern_str).unwrap();
     assert_eq!(split_files.len(), 3);
 
     // Verify split files exist
@@ -28,17 +29,16 @@ fn test_split_merge_rotate_workflow() {
     }
 
     // Test 2: Merge the split files back
-    let merged_pdf = format!("{test_dir}/merged.pdf");
+    let merged_pdf = test_dir.join("merged.pdf");
     merge_pdf_files(&split_files, &merged_pdf).unwrap();
-    assert!(Path::new(&merged_pdf).exists());
+    assert!(merged_pdf.exists());
 
     // Test 3: Rotate all pages
-    let rotated_pdf = format!("{test_dir}/rotated.pdf");
+    let rotated_pdf = test_dir.join("rotated.pdf");
     rotate_all_pages(&merged_pdf, &rotated_pdf, RotationAngle::Clockwise90).unwrap();
-    assert!(Path::new(&rotated_pdf).exists());
+    assert!(rotated_pdf.exists());
 
-    // Clean up
-    fs::remove_dir_all(test_dir).ok();
+    // Cleanup is automatic with TempDir
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn test_rotation_angles() {
 }
 
 // Helper function to create a test PDF with multiple pages
-fn create_test_pdf(path: &str, page_count: usize) -> oxidize_pdf::Result<()> {
+fn create_test_pdf<P: AsRef<Path>>(path: P, page_count: usize) -> oxidize_pdf::Result<()> {
     let mut doc = Document::new();
 
     for i in 1..=page_count {
@@ -107,6 +107,6 @@ fn create_test_pdf(path: &str, page_count: usize) -> oxidize_pdf::Result<()> {
         doc.add_page(page);
     }
 
-    doc.save(path)?;
+    doc.save(path.as_ref())?;
     Ok(())
 }
