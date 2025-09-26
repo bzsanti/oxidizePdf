@@ -6,7 +6,7 @@
 //! Cross-reference streams are an alternative to traditional xref tables,
 //! providing more compact representation and supporting compressed object streams.
 
-use crate::parser::filters::{apply_filter, Filter};
+use crate::parser::filters::{apply_filter, apply_filter_with_params, Filter};
 use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject};
 use crate::parser::ParseOptions;
 use crate::parser::{ParseError, ParseResult};
@@ -122,12 +122,25 @@ impl XRefStream {
         let decoded_data = if let Some(filter_obj) = stream_dict.get("Filter") {
             // Apply filters
             match filter_obj {
-                PdfObject::Name(filter_name) => apply_filter(
-                    &stream_data,
-                    Filter::from_name(filter_name.as_str()).ok_or_else(|| {
+                PdfObject::Name(filter_name) => {
+                    // Use apply_filter_with_params to handle DecodeParms (like Predictor)
+                    let filter = Filter::from_name(filter_name.as_str()).ok_or_else(|| {
                         ParseError::StreamDecodeError(format!("Unknown filter: {filter_name:?}"))
-                    })?,
-                )?,
+                    })?;
+
+                    // Get DecodeParms if available
+                    let decode_params = stream_dict.get("DecodeParms");
+
+                    if let Some(params_obj) = decode_params {
+                        if let Some(params_dict) = params_obj.as_dict() {
+                            apply_filter_with_params(&stream_data, filter, Some(params_dict))?
+                        } else {
+                            apply_filter(&stream_data, filter)?
+                        }
+                    } else {
+                        apply_filter(&stream_data, filter)?
+                    }
+                }
                 PdfObject::Array(filters) => {
                     let mut data = stream_data;
                     for filter in filters.0.iter() {

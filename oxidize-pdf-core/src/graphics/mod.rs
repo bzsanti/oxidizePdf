@@ -856,6 +856,7 @@ impl GraphicsContext {
     }
 
     /// Store an ExtGState to be applied before the next drawing operation
+    #[allow(dead_code)]
     fn set_pending_extgstate(&mut self, state: ExtGState) {
         self.pending_extgstate = Some(state);
     }
@@ -888,22 +889,19 @@ impl GraphicsContext {
     /// Set alpha for both stroke and fill operations
     pub fn set_alpha(&mut self, alpha: f64) -> Result<&mut Self> {
         let state = ExtGState::new().with_alpha(alpha);
-        self.set_pending_extgstate(state);
-        Ok(self)
+        self.apply_extgstate(state)
     }
 
     /// Set alpha for stroke operations only
     pub fn set_alpha_stroke(&mut self, alpha: f64) -> Result<&mut Self> {
         let state = ExtGState::new().with_alpha_stroke(alpha);
-        self.set_pending_extgstate(state);
-        Ok(self)
+        self.apply_extgstate(state)
     }
 
     /// Set alpha for fill operations only
     pub fn set_alpha_fill(&mut self, alpha: f64) -> Result<&mut Self> {
         let state = ExtGState::new().with_alpha_fill(alpha);
-        self.set_pending_extgstate(state);
-        Ok(self)
+        self.apply_extgstate(state)
     }
 
     /// Set overprint for stroke operations
@@ -2683,5 +2681,59 @@ mod tests {
         // Should return reasonable estimation based on font size and character count
         assert!(width > 0.0);
         assert_eq!(width, 5.0 * 12.0 * 0.6); // 5 chars * 12pt font * 0.6 factor
+    }
+
+    #[test]
+    fn test_set_alpha_methods() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test that set_alpha methods don't panic and return correctly
+        assert!(ctx.set_alpha(0.5).is_ok());
+        assert!(ctx.set_alpha_fill(0.3).is_ok());
+        assert!(ctx.set_alpha_stroke(0.7).is_ok());
+
+        // Test edge cases - should handle clamping in ExtGState
+        assert!(ctx.set_alpha(1.5).is_ok()); // Should not panic
+        assert!(ctx.set_alpha(-0.2).is_ok()); // Should not panic
+        assert!(ctx.set_alpha_fill(2.0).is_ok()); // Should not panic
+        assert!(ctx.set_alpha_stroke(-1.0).is_ok()); // Should not panic
+
+        // Test that methods return self for chaining
+        let result = ctx
+            .set_alpha(0.5)
+            .and_then(|c| c.set_alpha_fill(0.3))
+            .and_then(|c| c.set_alpha_stroke(0.7));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_alpha_methods_generate_extgstate() {
+        let mut ctx = GraphicsContext::new();
+
+        // Set some transparency
+        ctx.set_alpha(0.5).unwrap();
+
+        // Draw something to trigger ExtGState generation
+        ctx.rect(10.0, 10.0, 50.0, 50.0).fill();
+
+        let ops = ctx.generate_operations().unwrap();
+        let ops_str = String::from_utf8_lossy(&ops);
+
+        // Should contain ExtGState reference
+        assert!(ops_str.contains("/GS")); // ExtGState name
+        assert!(ops_str.contains(" gs\n")); // ExtGState operator
+
+        // Test separate alpha settings
+        ctx.clear();
+        ctx.set_alpha_fill(0.3).unwrap();
+        ctx.set_alpha_stroke(0.8).unwrap();
+        ctx.rect(20.0, 20.0, 60.0, 60.0).fill_stroke();
+
+        let ops2 = ctx.generate_operations().unwrap();
+        let ops_str2 = String::from_utf8_lossy(&ops2);
+
+        // Should contain multiple ExtGState references
+        assert!(ops_str2.contains("/GS")); // ExtGState names
+        assert!(ops_str2.contains(" gs\n")); // ExtGState operators
     }
 }

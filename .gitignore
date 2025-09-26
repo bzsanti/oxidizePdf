@@ -10,6 +10,12 @@ Cargo.lock
 !test-suite/fixtures/**/*.pdf
 !test-files/*.pdf
 
+# Examples results - ignore sensitive files
+examples/results/*.jpg
+examples/results/*.png
+examples/results/*extracted*
+examples/results/*private*
+
 # Temporary output directories (should not exist)
 output/
 **/output/
@@ -31,8 +37,23 @@ SESSION_*.md
 **/PROJECT_PROGRESS.md
 !PROJECT_PROGRESS.md
 
-# Private directories
+# Private directories - CRITICAL SECURITY
+.private/
+*_private.*
+*_PRIVATE_*
+*.private.*
 oxidizePdf-private*/
+
+# Extracted images from private contracts - NEVER COMMIT
+*extracted_page*.jpg
+*extracted_page*.png
+examples/results/*.jpg
+
+# Strategic and business information - NEVER COMMIT
+PRODUCT_STRATEGY.md
+BUSINESS_PLAN.md
+PRICING_STRATEGY.md
+REVENUE_*.md
 
 # External test suites
 test-suite/external-suites/

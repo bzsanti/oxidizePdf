@@ -41,6 +41,9 @@ unicode-normalization = "0.1"
 # Text processing and validation
 regex = "1.10"
 
+# Random number generation (for examples)
+rand = { version = "0.8", optional = true }
+
 # Flags
 bitflags = "2.4"
 
@@ -124,6 +127,18 @@ name = "compare_iso_matrices"
 path = "../examples/src/compare_iso_matrices.rs"
 
 [[example]]
+name = "test_corrupt_pdf_issue47"
+path = "../examples/src/test_corrupt_pdf_issue47.rs"
+
+[[example]]
+name = "test_cjk_fonts_issue46"
+path = "../examples/src/test_cjk_fonts_issue46.rs"
+
+[[example]]
+name = "demo_issues_fixed"
+path = "../examples/src/demo_issues_fixed.rs"
+
+[[example]]
 name = "advanced_tables_example"
 path = "../examples/advanced_tables_example.rs"
 
@@ -171,6 +186,38 @@ path = "../examples/src/simple_document_benchmark.rs"
 name = "test_row_alignment_fix"
 path = "../examples/src/test_row_alignment_fix.rs"
 
+[[example]]
+name = "debug_flate_predictor"
+path = "../examples/src/debug_flate_predictor.rs"
+
+[[example]]
+name = "analyze_decoded_stream"
+path = "../examples/src/analyze_decoded_stream.rs"
+
+[[example]]
+name = "debug_xref_streams"
+path = "../examples/src/debug_xref_streams.rs"
+
+[[example]]
+name = "analyze_failing_stream"
+path = "../examples/src/analyze_failing_stream.rs"
+
+[[example]]
+name = "diagnose_xref_confusion"
+path = "../examples/src/diagnose_xref_confusion.rs"
+
+[[example]]
+name = "debug_predictor_structure"
+path = "../examples/src/debug_predictor_structure.rs"
+
+[[example]]
+name = "extract_page_14"
+path = "../examples/src/extract_page_14.rs"
+
+[[example]]
+name = "extract_multiple_pages"
+path = "../examples/src/extract_multiple_pages.rs"
+
 # Temporarily disabled examples with compilation errors
 # [[example]]
 # name = "streaming_support"
@@ -207,6 +254,55 @@ path = "../examples/src/tesseract_debug.rs"
 name = "test_ocr_with_tesseract"
 path = "../examples/src/test_ocr_with_tesseract.rs"
 required-features = ["ocr-tesseract"]
+
+[[example]]
+name = "test_extract_text_issue47"
+path = "../examples/src/test_extract_text_issue47.rs"
+
+[[example]]
+name = "test_parent_resources"
+path = "../examples/src/test_parent_resources.rs"
+
+[[example]]
+name = "test_issue47_verification"
+path = "../examples/src/test_issue47_verification.rs"
+
+[[example]]
+name = "debug_font_encoding"
+path = "../examples/src/debug_font_encoding.rs"
+
+[[example]]
+name = "test_random_fixtures"
+path = "../examples/src/test_random_fixtures.rs"
+
+[[example]]
+name = "test_random_fixtures_simple"
+path = "../examples/src/test_random_fixtures_simple.rs"
+
+[[example]]
+name = "test_text_extraction_demo"
+path = "../examples/src/test_text_extraction_demo.rs"
+
+[[example]]
+name = "test_random_fixtures_extraction"
+path = "../examples/src/test_random_fixtures_extraction.rs"
+
+[[example]]
+name = "test_all_fixtures_extraction"
+path = "../examples/src/test_all_fixtures_extraction.rs"
+
+[[example]]
+name = "test_error_fixes"
+path = "../examples/src/test_error_fixes.rs"
+required-features = ["rand"]
+
+[[example]]
+name = "transparency"
+path = "../examples/src/transparency.rs"
+
+[[example]]
+name = "debug_transparency"
+path = "../examples/src/debug_transparency.rs"
 
 [[bench]]
 name = "ocr_benchmarks"
