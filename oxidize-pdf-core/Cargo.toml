@@ -296,6 +296,14 @@ name = "test_error_fixes"
 path = "../examples/src/test_error_fixes.rs"
 required-features = ["rand"]
 
+[[example]]
+name = "transparency"
+path = "../examples/src/transparency.rs"
+
+[[example]]
+name = "debug_transparency"
+path = "../examples/src/debug_transparency.rs"
+
 [[bench]]
 name = "ocr_benchmarks"
 harness = false

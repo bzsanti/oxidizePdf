@@ -304,7 +304,7 @@ impl Page {
 
     /// Get ExtGState resources from the graphics context
     #[allow(dead_code)]
-    pub(crate) fn get_extgstate_resources(
+    pub fn get_extgstate_resources(
         &self,
     ) -> Option<&std::collections::HashMap<String, crate::graphics::ExtGState>> {
         if self.graphics_context.has_extgstates() {

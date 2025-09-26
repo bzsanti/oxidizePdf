@@ -90,7 +90,7 @@ impl<W: Write> PdfWriter<W> {
         let font_refs = self.write_fonts(document)?;
 
         // Write pages (they contain widget annotations and font references)
-        self.write_pages_with_fonts(document, &font_refs)?;
+        self.write_pages(document, &font_refs)?;
 
         // Write form fields (must be after pages so we can track widgets)
         self.write_form_fields(document)?;
@@ -166,179 +166,6 @@ impl<W: Write> PdfWriter<W> {
         }
 
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
-        Ok(())
-    }
-
-    #[allow(dead_code)]
-    fn write_pages(&mut self, document: &Document) -> Result<()> {
-        let pages_id = self.pages_id.expect("pages_id must be set");
-        let mut pages_dict = Dictionary::new();
-        pages_dict.set("Type", Object::Name("Pages".to_string()));
-        pages_dict.set("Count", Object::Integer(document.pages.len() as i64));
-
-        let mut kids = Vec::new();
-
-        // Allocate page object IDs sequentially
-        let mut page_ids = Vec::new();
-        let mut content_ids = Vec::new();
-        for _ in 0..document.pages.len() {
-            page_ids.push(self.allocate_object_id());
-            content_ids.push(self.allocate_object_id());
-        }
-
-        for page_id in &page_ids {
-            kids.push(Object::Reference(*page_id));
-        }
-
-        pages_dict.set("Kids", Object::Array(kids));
-
-        self.write_object(pages_id, Object::Dictionary(pages_dict))?;
-
-        // Store page IDs for form field references
-        self.page_ids = page_ids.clone();
-
-        // Write individual pages (but skip form widget annotations for now)
-        for (i, page) in document.pages.iter().enumerate() {
-            let page_id = page_ids[i];
-            let content_id = content_ids[i];
-
-            self.write_page(page_id, pages_id, content_id, page, document)?;
-            self.write_page_content(content_id, page)?;
-        }
-
-        Ok(())
-    }
-
-    #[allow(dead_code)]
-    fn write_page(
-        &mut self,
-        page_id: ObjectId,
-        parent_id: ObjectId,
-        content_id: ObjectId,
-        page: &crate::page::Page,
-        document: &Document,
-    ) -> Result<()> {
-        // Start with the page's dictionary which includes annotations
-        let mut page_dict = page.to_dict();
-
-        // Override/ensure essential fields
-        page_dict.set("Type", Object::Name("Page".to_string()));
-        page_dict.set("Parent", Object::Reference(parent_id));
-        page_dict.set("Contents", Object::Reference(content_id));
-
-        // Process all annotations, including form widgets
-        let mut annot_refs = Vec::new();
-        for annotation in page.annotations() {
-            let mut annot_dict = annotation.to_dict();
-
-            // Check if this is a Widget annotation
-            let is_widget = if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
-                subtype == "Widget"
-            } else {
-                false
-            };
-
-            if is_widget {
-                // For widgets, we need to merge with form field data
-                // Add the page reference
-                annot_dict.set("P", Object::Reference(page_id));
-
-                // For now, if this is a widget without field data, add minimal field info
-                if annot_dict.get("FT").is_none() {
-                    // This is a widget that needs form field data
-                    // We'll handle this properly when we integrate with FormManager
-                    // For now, skip it as it won't work without field data
-                    continue;
-                }
-            }
-
-            // Write the annotation
-            let annot_id = self.allocate_object_id();
-            self.write_object(annot_id, Object::Dictionary(annot_dict))?;
-            annot_refs.push(Object::Reference(annot_id));
-
-            // If this is a form field widget, remember it for AcroForm
-            if is_widget {
-                self.form_field_ids.push(annot_id);
-            }
-        }
-
-        // NOTE: Form fields are now handled as annotations directly,
-        // so we don't need to add them separately here
-
-        // Add Annots array if we have any annotations (form fields or others)
-        if !annot_refs.is_empty() {
-            page_dict.set("Annots", Object::Array(annot_refs));
-        }
-
-        // Create resources dictionary with fonts from document
-        let mut resources = Dictionary::new();
-        let mut font_dict = Dictionary::new();
-
-        // Get fonts with encodings from the document
-        let fonts_with_encodings = document.get_fonts_with_encodings();
-
-        for font_with_encoding in fonts_with_encodings {
-            let mut font_entry = Dictionary::new();
-            font_entry.set("Type", Object::Name("Font".to_string()));
-            font_entry.set("Subtype", Object::Name("Type1".to_string()));
-            font_entry.set(
-                "BaseFont",
-                Object::Name(font_with_encoding.font.pdf_name().to_string()),
-            );
-
-            // Add encoding if specified
-            if let Some(encoding) = font_with_encoding.encoding {
-                font_entry.set("Encoding", Object::Name(encoding.pdf_name().to_string()));
-            }
-
-            font_dict.set(
-                font_with_encoding.font.pdf_name(),
-                Object::Dictionary(font_entry),
-            );
-        }
-
-        resources.set("Font", Object::Dictionary(font_dict));
-
-        // Add ExtGState resources for transparency
-        if let Some(extgstate_states) = page.get_extgstate_resources() {
-            let mut extgstate_dict = Dictionary::new();
-            for (name, state) in extgstate_states {
-                let mut state_dict = Dictionary::new();
-                state_dict.set("Type", Object::Name("ExtGState".to_string()));
-
-                // Add transparency parameters
-                if let Some(alpha_stroke) = state.alpha_stroke {
-                    state_dict.set("CA", Object::Real(alpha_stroke));
-                }
-                if let Some(alpha_fill) = state.alpha_fill {
-                    state_dict.set("ca", Object::Real(alpha_fill));
-                }
-
-                // Add other parameters as needed
-                if let Some(line_width) = state.line_width {
-                    state_dict.set("LW", Object::Real(line_width));
-                }
-                if let Some(line_cap) = state.line_cap {
-                    state_dict.set("LC", Object::Integer(line_cap as i64));
-                }
-                if let Some(line_join) = state.line_join {
-                    state_dict.set("LJ", Object::Integer(line_join as i64));
-                }
-                if let Some(blend_mode) = &state.blend_mode {
-                    state_dict.set("BM", Object::Name(blend_mode.pdf_name().to_string()));
-                }
-
-                extgstate_dict.set(name, Object::Dictionary(state_dict));
-            }
-            if !extgstate_dict.is_empty() {
-                resources.set("ExtGState", Object::Dictionary(extgstate_dict));
-            }
-        }
-
-        page_dict.set("Resources", Object::Dictionary(resources));
-
-        self.write_object(page_id, Object::Dictionary(page_dict))?;
         Ok(())
     }
 
@@ -1285,7 +1112,7 @@ impl<W: Write> PdfWriter<W> {
         Ok(font_id)
     }
 
-    fn write_pages_with_fonts(
+    fn write_pages(
         &mut self,
         document: &Document,
         font_refs: &HashMap<String, ObjectId>,
@@ -1326,6 +1153,16 @@ impl<W: Write> PdfWriter<W> {
         }
 
         Ok(())
+    }
+
+    /// Compatibility alias for `write_pages` to maintain backwards compatibility
+    #[allow(dead_code)]
+    fn write_pages_with_fonts(
+        &mut self,
+        document: &Document,
+        font_refs: &HashMap<String, ObjectId>,
+    ) -> Result<()> {
+        self.write_pages(document, font_refs)
     }
 
     fn write_page_with_fonts(
@@ -1482,6 +1319,53 @@ impl<W: Write> PdfWriter<W> {
             }
 
             resources.set("XObject", Object::Dictionary(xobject_dict));
+        }
+
+        // Add ExtGState resources for transparency
+        if let Some(extgstate_states) = page.get_extgstate_resources() {
+            let mut extgstate_dict = Dictionary::new();
+            for (name, state) in extgstate_states {
+                let mut state_dict = Dictionary::new();
+                state_dict.set("Type", Object::Name("ExtGState".to_string()));
+
+                // Add transparency parameters
+                if let Some(alpha_stroke) = state.alpha_stroke {
+                    state_dict.set("CA", Object::Real(alpha_stroke));
+                }
+                if let Some(alpha_fill) = state.alpha_fill {
+                    state_dict.set("ca", Object::Real(alpha_fill));
+                }
+
+                // Add other parameters as needed
+                if let Some(line_width) = state.line_width {
+                    state_dict.set("LW", Object::Real(line_width));
+                }
+                if let Some(line_cap) = state.line_cap {
+                    state_dict.set("LC", Object::Integer(line_cap as i64));
+                }
+                if let Some(line_join) = state.line_join {
+                    state_dict.set("LJ", Object::Integer(line_join as i64));
+                }
+                if let Some(dash_pattern) = &state.dash_pattern {
+                    let dash_objects: Vec<Object> = dash_pattern
+                        .array
+                        .iter()
+                        .map(|&d| Object::Real(d))
+                        .collect();
+                    state_dict.set(
+                        "D",
+                        Object::Array(vec![
+                            Object::Array(dash_objects),
+                            Object::Real(dash_pattern.phase),
+                        ]),
+                    );
+                }
+
+                extgstate_dict.set(name, Object::Dictionary(state_dict));
+            }
+            if !extgstate_dict.is_empty() {
+                resources.set("ExtGState", Object::Dictionary(extgstate_dict));
+            }
         }
 
         page_dict.set("Resources", Object::Dictionary(resources));
