@@ -3,6 +3,7 @@ mod dashboard_tests {
     use oxidize_pdf::dashboard::{DashboardBuilder, DashboardComponent, KpiCard, TrendDirection};
     use oxidize_pdf::{Document, Page};
     use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_dashboard_renders_to_pdf() {
@@ -32,15 +33,15 @@ mod dashboard_tests {
 
         document.add_page(page);
 
-        // Save to file
-        let output_path = "examples/results/test_dashboard.pdf";
-        std::fs::create_dir_all("examples/results").unwrap();
+        // Save to temporary file
+        let temp_dir = TempDir::new().unwrap();
+        let output_path = temp_dir.path().join("test_dashboard.pdf");
         document
-            .save(output_path)
+            .save(&output_path)
             .expect("Should save PDF successfully");
 
         // Verify file was created and has reasonable size
-        let metadata = fs::metadata(output_path).expect("PDF file should exist");
+        let metadata = fs::metadata(&output_path).expect("PDF file should exist");
 
         assert!(
             metadata.len() > 1000,
@@ -105,8 +106,11 @@ mod dashboard_tests {
             .expect("Should render varied data dashboard");
 
         document.add_page(page);
+
+        let temp_dir = TempDir::new().unwrap();
+        let output_path = temp_dir.path().join("varied_data_test.pdf");
         document
-            .save("examples/results/varied_data_test.pdf")
+            .save(&output_path)
             .expect("Should save varied data PDF");
     }
 
@@ -129,8 +133,11 @@ mod dashboard_tests {
             .expect("Should render empty dashboard");
 
         document.add_page(page);
+
+        let temp_dir = TempDir::new().unwrap();
+        let output_path = temp_dir.path().join("empty_dashboard_test.pdf");
         document
-            .save("examples/results/empty_dashboard_test.pdf")
+            .save(&output_path)
             .expect("Should save empty dashboard PDF");
     }
 
@@ -182,8 +189,11 @@ mod dashboard_tests {
             .expect("Should render large dashboard");
 
         document.add_page(page);
+
+        let temp_dir = TempDir::new().unwrap();
+        let output_path = temp_dir.path().join("large_dashboard_test.pdf");
         document
-            .save("examples/results/large_dashboard_test.pdf")
+            .save(&output_path)
             .expect("Should save large dashboard PDF");
     }
 }
