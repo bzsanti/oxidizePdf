@@ -34,7 +34,7 @@ fn test_extract_text_from_generated_pdf() {
     // Open and extract text
     let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
 
-    let extractor = TextExtractor::new();
+    let mut extractor = TextExtractor::new();
     let extracted = extractor.extract_from_page(&pdf_doc, 0).unwrap();
 
     // Verify extracted text contains what we wrote
@@ -76,7 +76,7 @@ fn test_extract_with_layout_preservation() {
         ..Default::default()
     };
 
-    let extractor = TextExtractor::with_options(options);
+    let mut extractor = TextExtractor::with_options(options);
     let extracted = extractor.extract_from_page(&pdf_doc, 0).unwrap();
 
     // Should have fragments with position info
@@ -112,7 +112,7 @@ fn test_extract_multiple_pages() {
     let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
 
     // Extract all pages
-    let extractor = TextExtractor::new();
+    let mut extractor = TextExtractor::new();
     let all_pages = extractor.extract_from_document(&pdf_doc).unwrap();
 
     // Should have 3 pages
@@ -138,7 +138,7 @@ fn test_extract_empty_page() {
     let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
 
     // Extract from empty page
-    let extractor = TextExtractor::new();
+    let mut extractor = TextExtractor::new();
     let extracted = extractor.extract_from_page(&pdf_doc, 0).unwrap();
 
     // Should be empty
@@ -195,7 +195,7 @@ startxref
     let document = PdfReader::open_document(&pdf_path).unwrap();
 
     // Extract text
-    let extractor = TextExtractor::new();
+    let mut extractor = TextExtractor::new();
     let extracted_text = extractor.extract_from_document(&document).unwrap();
 
     // Verify extraction
@@ -259,7 +259,7 @@ startxref
         preserve_layout: true,
         ..Default::default()
     };
-    let extractor = TextExtractor::with_options(options);
+    let mut extractor = TextExtractor::with_options(options);
     let extracted_text = extractor.extract_from_document(&document).unwrap();
 
     // Verify extraction

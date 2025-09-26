@@ -248,11 +248,34 @@ impl XRefTable {
                 {
                     eprintln!("Parsing XRef stream");
 
+                    // Try to decode the stream, with fallback for corrupted streams
+                    let decoded_data = match stream.decode(options) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            eprintln!(
+                                "XRef stream decode failed: {e:?}, attempting raw data fallback"
+                            );
+
+                            // If decode fails, try using raw stream data
+                            // This helps with corrupted Flate streams
+                            if !stream.data.is_empty() {
+                                eprintln!(
+                                    "Using raw stream data ({} bytes) as fallback",
+                                    stream.data.len()
+                                );
+                                stream.data.clone()
+                            } else {
+                                eprintln!("No raw stream data available, triggering recovery mode");
+                                return Err(e);
+                            }
+                        }
+                    };
+
                     // Use the new xref_stream module
                     let xref_stream_parser = xref_stream::XRefStream::parse(
                         &mut *reader,
                         stream.dict.clone(),
-                        stream.decode(options)?,
+                        decoded_data,
                         options,
                     )?;
 
@@ -290,6 +313,10 @@ impl XRefTable {
                                 stream_object_number,
                                 index_within_stream,
                             } => {
+                                eprintln!(
+                                    "DEBUG: Adding compressed object {} -> stream {} index {}",
+                                    obj_num, stream_object_number, index_within_stream
+                                );
                                 // Create extended entry for compressed object
                                 let ext_entry = XRefEntryExt {
                                     basic: XRefEntry {
@@ -572,6 +599,11 @@ impl XRefTable {
         reader: &mut BufReader<R>,
         _options: &super::ParseOptions,
     ) -> ParseResult<Self> {
+        // Create lenient options for recovery mode
+        let mut recovery_options = _options.clone();
+        recovery_options.lenient_syntax = true;
+        recovery_options.collect_warnings = true;
+        recovery_options.recover_from_stream_errors = true;
         let mut table = Self::new();
 
         // Read entire file into memory for scanning
@@ -580,6 +612,13 @@ impl XRefTable {
         let content = String::from_utf8_lossy(&buffer);
 
         eprintln!("XRef recovery: scanning {} bytes for objects", buffer.len());
+
+        // Try to extract Root from XRef stream first (more reliable than searching)
+        let mut xref_root_candidate = None;
+        if let Some(root_match) = extract_root_from_xref_stream(&content) {
+            xref_root_candidate = Some(root_match);
+            eprintln!("XRef recovery: Found Root {} in XRef stream", root_match);
+        }
 
         let mut objects_found = 0;
         let mut object_streams = Vec::new();
@@ -678,25 +717,51 @@ impl XRefTable {
             super::objects::PdfObject::Integer(table.len() as i64),
         );
 
-        // Try to find Root (Catalog) object by looking for common object numbers
-        // This is a heuristic - most PDFs have the catalog at object 1, 2, or 3
-        for obj_num in [1, 2, 3, 4, 5] {
-            if table.entries.contains_key(&obj_num) {
-                // Assume this might be the catalog
-                trailer.insert(
-                    "Root".to_string(),
-                    super::objects::PdfObject::Reference(obj_num, 0),
+        // Try to find Root (Catalog) object
+        let mut catalog_candidate = None;
+
+        // First, try using Root from XRef stream (most reliable)
+        if let Some(xref_root) = xref_root_candidate {
+            if table.entries.contains_key(&xref_root) {
+                catalog_candidate = Some(xref_root);
+                eprintln!("Using Root {} from XRef stream as catalog", xref_root);
+            } else {
+                eprintln!(
+                    "Warning: XRef Root {} not found in object table, searching manually",
+                    xref_root
                 );
-                break;
             }
         }
 
-        // If no Root found, use object 1 as a last resort
-        if !trailer.contains_key("Root") && !table.entries.is_empty() {
-            let first_obj = *table.entries.keys().min().unwrap_or(&1);
+        // If XRef Root not found or not in table, search manually
+        if catalog_candidate.is_none() {
+            catalog_candidate = find_catalog_by_content(&table, &buffer, &content);
+        }
+
+        // Fallback to common object numbers if catalog not found by content
+        if catalog_candidate.is_none() {
+            for obj_num in [1, 2, 3, 4, 5] {
+                if table.entries.contains_key(&obj_num) {
+                    catalog_candidate = Some(obj_num);
+                    eprintln!("Using fallback catalog candidate: object {}", obj_num);
+                    break;
+                }
+            }
+        }
+
+        // If still no Root found, use the first object as a last resort
+        if catalog_candidate.is_none() && !table.entries.is_empty() {
+            catalog_candidate = Some(*table.entries.keys().min().unwrap_or(&1));
+            eprintln!(
+                "Using last resort catalog candidate: object {}",
+                catalog_candidate.unwrap()
+            );
+        }
+
+        if let Some(root_obj) = catalog_candidate {
             trailer.insert(
                 "Root".to_string(),
-                super::objects::PdfObject::Reference(first_obj, 0),
+                super::objects::PdfObject::Reference(root_obj, 0),
             );
         }
 
@@ -893,6 +958,11 @@ impl XRefTable {
     /// Get an xref entry by object number
     pub fn get_entry(&self, obj_num: u32) -> Option<&XRefEntry> {
         self.entries.get(&obj_num)
+    }
+
+    /// Get a mutable xref entry by object number
+    pub fn get_entry_mut(&mut self, obj_num: u32) -> Option<&mut XRefEntry> {
+        self.entries.get_mut(&obj_num)
     }
 
     /// Get the trailer dictionary
@@ -2268,4 +2338,83 @@ startxref\n\
         // Should handle incomplete subsection
         assert!(result.is_err() || result.is_ok());
     }
+}
+
+/// Extract Root reference from XRef stream content
+fn extract_root_from_xref_stream(content: &str) -> Option<u32> {
+    // Look for pattern "/Root <number> 0 R" in XRef stream objects
+    // This is more reliable than searching for catalog objects
+
+    // Find all XRef stream objects (containing "/Type /XRef")
+    let lines: Vec<&str> = content.lines().collect();
+    let mut in_xref_obj = false;
+
+    for (i, line) in lines.iter().enumerate() {
+        // Check if we're starting an XRef object
+        if line.contains(" obj")
+            && lines
+                .get(i + 1)
+                .map_or(false, |next| next.contains("/Type /XRef"))
+        {
+            in_xref_obj = true;
+            continue;
+        }
+
+        // Check if we're in an XRef object and look for /Root
+        if in_xref_obj {
+            if line.contains("endobj") {
+                in_xref_obj = false;
+                continue;
+            }
+
+            // Look for /Root pattern: "/Root 102 0 R"
+            if let Some(root_pos) = line.find("/Root ") {
+                let after_root = &line[root_pos + 6..]; // Skip "/Root "
+
+                // Extract the number before " 0 R"
+                if let Some(space_pos) = after_root.find(' ') {
+                    let number_part = &after_root[..space_pos];
+                    if let Ok(root_obj) = number_part.parse::<u32>() {
+                        eprintln!("Extracted Root {} from XRef stream", root_obj);
+                        return Some(root_obj);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Find catalog by searching content and validating structure
+fn find_catalog_by_content(table: &XRefTable, buffer: &[u8], content: &str) -> Option<u32> {
+    for (obj_num, entry) in &table.entries {
+        if entry.in_use {
+            let offset = entry.offset as usize;
+            if offset < buffer.len() {
+                // Look for the complete object structure: "obj_num 0 obj ... /Type /Catalog ... endobj"
+                if let Some(obj_start) = content[offset..].find(&format!("{} 0 obj", obj_num)) {
+                    let absolute_start = offset + obj_start;
+
+                    // Find the end of this object
+                    if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                        let absolute_end = absolute_start + endobj_pos;
+                        let obj_content = &content[absolute_start..absolute_end];
+
+                        // Validate that this object contains "/Type /Catalog" within its boundaries
+                        if obj_content.contains("/Type /Catalog") {
+                            eprintln!(
+                                "Found catalog candidate at object {} (validated structure)",
+                                obj_num
+                            );
+                            return Some(*obj_num);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    eprintln!("No valid catalog found by content search");
+    None
 }

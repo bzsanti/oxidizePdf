@@ -625,7 +625,7 @@ fn main() -> Result<()> {
                 ..Default::default()
             };
 
-            let extractor = TextExtractor::with_options(options);
+            let mut extractor = TextExtractor::with_options(options);
 
             // Extract text from specific page or all pages
             let extracted_text = if let Some(page_num) = page {
