@@ -228,22 +228,39 @@ jobs:
           echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
           echo "api_version=$API_VERSION" >> $GITHUB_OUTPUT
           
-          # Check if versions exist on crates.io
-          if cargo search oxidize-pdf --limit 1 | grep -q "oxidize-pdf.*\"$CORE_VERSION\""; then
+          # Check if versions exist on crates.io using API (more reliable than cargo search)
+          echo "Checking if versions exist on crates.io..."
+          echo "Core version to check: $CORE_VERSION"
+          echo "CLI version to check: $CLI_VERSION"
+          echo "API version to check: $API_VERSION"
+
+          # Check core package
+          CORE_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf" | jq -r '.crate.max_version')
+          if [ "$CORE_PUBLISHED" = "$CORE_VERSION" ]; then
+            echo "✅ oxidize-pdf v$CORE_VERSION already published"
             echo "core_needs_publish=false" >> $GITHUB_OUTPUT
           else
+            echo "🚀 oxidize-pdf v$CORE_VERSION needs publishing (current: $CORE_PUBLISHED)"
             echo "core_needs_publish=true" >> $GITHUB_OUTPUT
           fi
-          
-          if cargo search oxidize-pdf-cli --limit 1 | grep -q "oxidize-pdf-cli.*\"$CLI_VERSION\""; then
+
+          # Check CLI package
+          CLI_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf-cli" | jq -r '.crate.max_version')
+          if [ "$CLI_PUBLISHED" = "$CLI_VERSION" ]; then
+            echo "✅ oxidize-pdf-cli v$CLI_VERSION already published"
             echo "cli_needs_publish=false" >> $GITHUB_OUTPUT
           else
+            echo "🚀 oxidize-pdf-cli v$CLI_VERSION needs publishing (current: $CLI_PUBLISHED)"
             echo "cli_needs_publish=true" >> $GITHUB_OUTPUT
           fi
-          
-          if cargo search oxidize-pdf-api --limit 1 | grep -q "oxidize-pdf-api.*\"$API_VERSION\""; then
+
+          # Check API package
+          API_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf-api" | jq -r '.crate.max_version')
+          if [ "$API_PUBLISHED" = "$API_VERSION" ]; then
+            echo "✅ oxidize-pdf-api v$API_VERSION already published"
             echo "api_needs_publish=false" >> $GITHUB_OUTPUT
           else
+            echo "🚀 oxidize-pdf-api v$API_VERSION needs publishing (current: $API_PUBLISHED)"
             echo "api_needs_publish=true" >> $GITHUB_OUTPUT
           fi
 
