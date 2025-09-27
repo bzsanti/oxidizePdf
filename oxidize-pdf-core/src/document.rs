@@ -391,6 +391,10 @@ impl Document {
     pub fn add_font_from_bytes(&mut self, name: impl Into<String>, data: Vec<u8>) -> Result<()> {
         let name = name.into();
         let font = CustomFont::from_bytes(&name, data)?;
+
+        // TODO: Implement automatic font metrics registration
+        // This needs to be properly integrated with the font metrics system
+
         self.custom_fonts.add_font(name, font)?;
         Ok(())
     }

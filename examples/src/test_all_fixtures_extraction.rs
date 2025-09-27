@@ -409,9 +409,9 @@ fn process_single_pdf(pdf_path: &Path, options: &ExtractionOptions, _rng: &mut (
 struct TextValidation {
     is_real_text: bool,
     readability_score: f64,
-    has_words: bool,
-    has_sentences: bool,
-    excessive_spaces: bool,
+    _has_words: bool,
+    _has_sentences: bool,
+    _excessive_spaces: bool,
 }
 
 fn validate_text_quality(text: &str) -> TextValidation {
@@ -422,9 +422,9 @@ fn validate_text_quality(text: &str) -> TextValidation {
         return TextValidation {
             is_real_text: false,
             readability_score: 0.0,
-            has_words: false,
-            has_sentences: false,
-            excessive_spaces: false,
+            _has_words: false,
+            _has_sentences: false,
+            _excessive_spaces: false,
         };
     }
 
@@ -463,9 +463,9 @@ fn validate_text_quality(text: &str) -> TextValidation {
     TextValidation {
         is_real_text,
         readability_score,
-        has_words,
-        has_sentences,
-        excessive_spaces,
+        _has_words: has_words,
+        _has_sentences: has_sentences,
+        _excessive_spaces: excessive_spaces,
     }
 }
 

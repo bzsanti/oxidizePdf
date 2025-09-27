@@ -8,6 +8,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.2.3] - 2025-09-27
+
+### Added
+- **CJK Font Support** - Complete support for Chinese, Japanese, and Korean fonts (Issue #46)
+  - CFF/OpenType font detection and handling
+  - UTF-16BE encoding for Unicode text rendering
+  - ToUnicode CMap generation with CJK character ranges
+  - Type0 font embedding with proper CIDFontType0 for CFF fonts
+  - Comprehensive test suite with 9 integration tests
+
+### Fixed
+- **Transparency functionality** - Fixed ExtGState timing and processing (Issue #51)
+- **FlateDecode with Predictor 12** - Improved PDF parsing compatibility (Issue #47)
+- **Text encoding** - Fixed mojibake in CJK text rendering with proper font selection
+- **Release workflow** - Improved version detection in CI/CD pipeline
+- **Compiler warnings** - Resolved all warnings in examples and core library
+
+### Security
+- Enhanced .gitignore rules to prevent private file leaks
+- Added protection against compiled binaries and extracted images
+- Removed sensitive business strategy documents from repository
+
+### Technical
+- Added 219 lines of comprehensive CJK font integration tests
+- Improved error recovery mechanisms for malformed PDFs
+- Enhanced CI compatibility with temporary directory usage
+- Updated font manager with CFF font type support
+
+## [1.2.2] - 2025-09-27
+
+### Fixed
+- Enhanced PDF parsing and security fixes
+- Resolved CI failures and Rust beta compatibility issues
+
 ## [1.2.1] - 2025-09-20
 
 ### Fixed

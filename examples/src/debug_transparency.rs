@@ -11,7 +11,7 @@ fn main() -> Result<()> {
 
     // Simple test - one rectangle with transparency
     {
-        let mut graphics = page.graphics();
+        let graphics = page.graphics();
 
         println!("Before set_alpha");
         graphics.set_alpha(0.5)?;

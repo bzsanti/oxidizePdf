@@ -131,8 +131,12 @@ name = "test_corrupt_pdf_issue47"
 path = "../examples/src/test_corrupt_pdf_issue47.rs"
 
 [[example]]
-name = "test_cjk_fonts_issue46"
-path = "../examples/src/test_cjk_fonts_issue46.rs"
+name = "test_cjk_fonts"
+path = "../examples/src/test_cjk_fonts.rs"
+
+[[example]]
+name = "test_cjk_comprehensive"
+path = "../examples/src/test_cjk_comprehensive.rs"
 
 [[example]]
 name = "demo_issues_fixed"

@@ -485,7 +485,18 @@ impl<W: Write> PdfWriter<W> {
 
         if !font_data_to_embed.is_empty() {
             let mut font_file_dict = Dictionary::new();
-            font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+            // Add appropriate properties based on font format
+            match font.format {
+                crate::fonts::FontFormat::OpenType => {
+                    // CFF/OpenType fonts use FontFile3 with OpenType subtype
+                    font_file_dict.set("Subtype", Object::Name("OpenType".to_string()));
+                    font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+                }
+                crate::fonts::FontFormat::TrueType => {
+                    // TrueType fonts use FontFile2 with Length1
+                    font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+                }
+            }
             let font_stream_obj = Object::Stream(font_file_dict, font_data_to_embed);
             self.write_object(font_file_id, font_stream_obj)?;
         } else {
@@ -517,13 +528,23 @@ impl<W: Write> PdfWriter<W> {
         descriptor.set("Descent", Object::Real(font.descriptor.descent as f64));
         descriptor.set("CapHeight", Object::Real(font.descriptor.cap_height as f64));
         descriptor.set("StemV", Object::Real(font.descriptor.stem_v as f64));
-        descriptor.set("FontFile2", Object::Reference(font_file_id));
+        // Use appropriate FontFile type based on font format
+        let font_file_key = match font.format {
+            crate::fonts::FontFormat::OpenType => "FontFile3", // CFF/OpenType fonts
+            crate::fonts::FontFormat::TrueType => "FontFile2", // TrueType fonts
+        };
+        descriptor.set(font_file_key, Object::Reference(font_file_id));
         self.write_object(descriptor_id, Object::Dictionary(descriptor))?;
 
         // Write CIDFont (descendant font)
         let mut cid_font = Dictionary::new();
         cid_font.set("Type", Object::Name("Font".to_string()));
-        cid_font.set("Subtype", Object::Name("CIDFontType2".to_string()));
+        // Use appropriate CIDFont subtype based on font format
+        let cid_font_subtype = match font.format {
+            crate::fonts::FontFormat::OpenType => "CIDFontType0", // CFF/OpenType fonts
+            crate::fonts::FontFormat::TrueType => "CIDFontType2", // TrueType fonts
+        };
+        cid_font.set("Subtype", Object::Name(cid_font_subtype.to_string()));
         cid_font.set("BaseFont", Object::Name(font_name.to_string()));
 
         // CIDSystemInfo
@@ -952,6 +973,27 @@ impl<W: Write> PdfWriter<W> {
 
             // Latin Extended-A (0x0100-0x017F)
             for i in 0x0100..=0x017F {
+                mappings.push((i, i));
+            }
+
+            // CJK Unicode ranges - CRITICAL for CJK font support
+            // Hiragana (Japanese)
+            for i in 0x3040..=0x309F {
+                mappings.push((i, i));
+            }
+
+            // Katakana (Japanese)
+            for i in 0x30A0..=0x30FF {
+                mappings.push((i, i));
+            }
+
+            // CJK Unified Ideographs (Chinese, Japanese, Korean)
+            for i in 0x4E00..=0x9FFF {
+                mappings.push((i, i));
+            }
+
+            // Hangul Syllables (Korean)
+            for i in 0xAC00..=0xD7AF {
                 mappings.push((i, i));
             }
 

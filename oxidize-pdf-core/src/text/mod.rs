@@ -162,28 +162,51 @@ impl TextContext {
         writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
             .expect("Writing to String should never fail");
 
-        // Encode text using WinAnsiEncoding
-        let encoding = TextEncoding::WinAnsiEncoding;
-        let encoded_bytes = encoding.encode(text);
+        // Choose encoding based on font type
+        match &self.current_font {
+            Font::Custom(_) => {
+                // For custom fonts (CJK), use UTF-16BE encoding with hex strings
+                let utf16_units: Vec<u16> = text.encode_utf16().collect();
+                let mut utf16be_bytes = Vec::new();
 
-        // Show text as a literal string
-        self.operations.push('(');
-        for &byte in &encoded_bytes {
-            match byte {
-                b'(' => self.operations.push_str("\\("),
-                b')' => self.operations.push_str("\\)"),
-                b'\\' => self.operations.push_str("\\\\"),
-                b'\n' => self.operations.push_str("\\n"),
-                b'\r' => self.operations.push_str("\\r"),
-                b'\t' => self.operations.push_str("\\t"),
-                // For bytes in the printable ASCII range, write as is
-                0x20..=0x7E => self.operations.push(byte as char),
-                // For other bytes, write as octal escape sequences
-                _ => write!(&mut self.operations, "\\{byte:03o}")
-                    .expect("Writing to String should never fail"),
+                for unit in utf16_units {
+                    utf16be_bytes.push((unit >> 8) as u8); // High byte
+                    utf16be_bytes.push((unit & 0xFF) as u8); // Low byte
+                }
+
+                // Write as hex string for Type0 fonts
+                self.operations.push('<');
+                for &byte in &utf16be_bytes {
+                    write!(&mut self.operations, "{:02X}", byte)
+                        .expect("Writing to String should never fail");
+                }
+                self.operations.push_str("> Tj\n");
+            }
+            _ => {
+                // For standard fonts, use WinAnsiEncoding with literal strings
+                let encoding = TextEncoding::WinAnsiEncoding;
+                let encoded_bytes = encoding.encode(text);
+
+                // Show text as a literal string
+                self.operations.push('(');
+                for &byte in &encoded_bytes {
+                    match byte {
+                        b'(' => self.operations.push_str("\\("),
+                        b')' => self.operations.push_str("\\)"),
+                        b'\\' => self.operations.push_str("\\\\"),
+                        b'\n' => self.operations.push_str("\\n"),
+                        b'\r' => self.operations.push_str("\\r"),
+                        b'\t' => self.operations.push_str("\\t"),
+                        // For bytes in the printable ASCII range, write as is
+                        0x20..=0x7E => self.operations.push(byte as char),
+                        // For other bytes, write as octal escape sequences
+                        _ => write!(&mut self.operations, "\\{byte:03o}")
+                            .expect("Writing to String should never fail"),
+                    }
+                }
+                self.operations.push_str(") Tj\n");
             }
         }
-        self.operations.push_str(") Tj\n");
 
         // End text object
         self.operations.push_str("ET\n");
