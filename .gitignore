@@ -74,6 +74,10 @@ test-suite/fixtures/valid/GOVPUB-CS1-301ae7b075ad3435b3a7dca00e78e8ff.pdf
 # Development and debug scripts
 debug_manual.pdf
 *.debug.pdf
+debug*.rs
+*_stream.jpg
+raw_*.jpg
+decoded_*.jpg
 
 # Python scripts in root (should be in tools/)
 /*.py

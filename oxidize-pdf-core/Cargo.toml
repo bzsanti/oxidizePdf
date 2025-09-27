@@ -316,10 +316,7 @@ path = "../examples/src/convert_pdf_ocr.rs"
 name = "test_ocr_simple"
 path = "../examples/src/test_ocr_simple.rs"
 
-[[example]]
-name = "test_confidential_ocr"
-path = "../examples/src/test_confidential_ocr.rs"
-required-features = ["ocr-tesseract"]
+# Removed test_confidential_ocr example - file deleted for cleanup
 
 [[bench]]
 name = "ocr_benchmarks"

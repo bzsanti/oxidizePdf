@@ -89,10 +89,14 @@ oxidize-pdf-core/src/parser/content.rs          # 2105 lines
 oxidize-pdf-api/src/api_old.rs                  # 1863 lines - deprecated
 
 # ====================
-# Examples Output
+# Examples Output & Generated PDFs
 # ====================
 examples/results/
 oxidize-pdf-core/*.pdf
+# Security: Exclude any confidential OCR outputs
+examples/results/*FIS*
+examples/results/*MADRID*
+examples/results/*confidential*
 
 # ====================
 # Scripts in Wrong Location  
@@ -113,13 +117,11 @@ COVERAGE_AUDIT.md
 *_SUMMARY.md
 
 # ====================
-# OCR Examples (54+ files)
+# OCR Examples (4 files found)
 # ====================
-# Exclude all OCR test files to reduce context by ~40%
+# Exclude OCR test files but keep main convert_pdf_ocr.rs
 examples/src/test_ocr*.rs
-examples/src/ocr*.rs
 examples/src/test_enhanced*.rs
-examples/src/*ocr*.rs
 examples/src/*contract*.rs
 examples/src/*madridejos*.rs
 examples/src/*fis2*.rs
@@ -127,6 +129,7 @@ examples/src/*om*.rs
 examples/src/test_real*.rs
 examples/src/extract_om*.rs
 examples/src/analyze_*.rs
+# Keep: examples/src/convert_pdf_ocr.rs (main CLI tool)
 
 # ====================
 # Additional Binary Files

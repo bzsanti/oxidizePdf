@@ -165,8 +165,8 @@ mod tesseract_tests {
 
         // Test contracts with expected target text
         let test_contracts = vec![
-            ("confidential_document_1.pdf", "2016"),
-            ("confidential_document_2.pdf", "2013"),
+            ("confidential_document_1.pdf", "year1"),
+            ("confidential_document_2.pdf", "year2"),
         ];
 
         let ocr_provider = match RustyTesseractProvider::for_contracts() {
