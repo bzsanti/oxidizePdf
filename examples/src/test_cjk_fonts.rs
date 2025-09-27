@@ -3,7 +3,7 @@ use std::error::Error;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("🧪 Testing Issue #46 - Custom CJK Font Support");
+    println!("🧪 Testing Custom CJK Font Support");
 
     let font_path = "test-pdfs/SourceHanSansSC-Regular.otf";
 
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                             // Save the PDF
                             doc.add_page(page);
-                            let output_path = "examples/results/test_cjk_fonts_issue46.pdf";
+                            let output_path = "examples/results/test_cjk_fonts.pdf";
                             match doc.save(output_path) {
                                 Ok(_) => println!("✅ PDF saved to: {}", output_path),
                                 Err(e) => println!("❌ Failed to save PDF: {}", e),

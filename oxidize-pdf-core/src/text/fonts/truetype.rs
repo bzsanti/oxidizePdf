@@ -16,17 +16,28 @@ const MAXP_TABLE: [u8; 4] = *b"maxp";
 const HHEA_TABLE: [u8; 4] = *b"hhea";
 const HMTX_TABLE: [u8; 4] = *b"hmtx";
 const NAME_TABLE: [u8; 4] = *b"name";
+const CFF_TABLE: [u8; 4] = *b"CFF ";
 const _POST_TABLE: [u8; 4] = *b"post";
 const _FPGM_TABLE: [u8; 4] = *b"fpgm";
 const _CVT_TABLE: &[u8] = b"cvt ";
 const _PREP_TABLE: &[u8] = b"prep";
 
-/// Required tables for TrueType embedding in PDF
-const REQUIRED_TABLES: &[&[u8]] = &[
+/// Required tables for TrueType fonts (.ttf)
+const TRUETYPE_REQUIRED_TABLES: &[&[u8]] = &[
     &HEAD_TABLE,
     &CMAP_TABLE,
     &GLYF_TABLE,
     &LOCA_TABLE,
+    &MAXP_TABLE,
+    &HHEA_TABLE,
+    &HMTX_TABLE,
+];
+
+/// Required tables for CFF/OpenType fonts (.otf)
+const CFF_REQUIRED_TABLES: &[&[u8]] = &[
+    &HEAD_TABLE,
+    &CMAP_TABLE,
+    &CFF_TABLE,
     &MAXP_TABLE,
     &HHEA_TABLE,
     &HMTX_TABLE,
@@ -45,6 +56,8 @@ pub struct TrueTypeFont {
     pub units_per_em: u16,
     /// Format of 'loca' table (0 = short, 1 = long)
     pub loca_format: u16,
+    /// Whether this is a CFF/OpenType font (true) or TrueType font (false)
+    pub is_cff: bool,
 }
 
 /// Table directory entry
@@ -159,14 +172,24 @@ impl TrueTypeFont {
             offset += 16;
         }
 
-        // Validate required tables
-        for &required in REQUIRED_TABLES {
+        // Detect font type: CFF (OpenType) or TrueType
+        let is_cff = tables.contains_key(&CFF_TABLE);
+
+        // Validate required tables based on font type
+        let required_tables = if is_cff {
+            CFF_REQUIRED_TABLES
+        } else {
+            TRUETYPE_REQUIRED_TABLES
+        };
+
+        for &required in required_tables {
             let tag = [required[0], required[1], required[2], required[3]];
             if !tables.contains_key(&tag) {
                 return Err(ParseError::SyntaxError {
                     position: 0,
                     message: format!(
-                        "Missing required table: {}",
+                        "Missing required table for {} font: {}",
+                        if is_cff { "CFF/OpenType" } else { "TrueType" },
                         std::str::from_utf8(required).unwrap_or("???")
                     ),
                 });
@@ -208,12 +231,23 @@ impl TrueTypeFont {
             num_glyphs,
             units_per_em,
             loca_format,
+            is_cff,
         })
     }
 
     /// Parse a TrueType/OpenType font from data (alias for parse)
     pub fn from_data(data: &[u8]) -> ParseResult<Self> {
         Self::parse(data.to_vec())
+    }
+
+    /// Check if this is a CFF/OpenType font
+    pub fn is_cff_font(&self) -> bool {
+        self.is_cff
+    }
+
+    /// Check if this is a TrueType font (not CFF)
+    pub fn is_truetype_font(&self) -> bool {
+        !self.is_cff
     }
 
     /// Get font name from the name table
@@ -274,8 +308,15 @@ impl TrueTypeFont {
         Ok("Unknown".to_string())
     }
 
-    /// Get raw glyph data from the glyf table
+    /// Get raw glyph data from the glyf table (only for TrueType fonts)
     pub fn get_glyph_data(&self, glyph_id: u16) -> ParseResult<Vec<u8>> {
+        if self.is_cff {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Glyph data extraction not supported for CFF/OpenType fonts".to_string(),
+            });
+        }
+
         let glyf_key: [u8; 4] = GLYF_TABLE;
         let glyf_table = self
             .tables
@@ -885,6 +926,11 @@ impl TrueTypeFont {
 
     /// Create a subset of the font containing only specified glyphs
     pub fn create_subset(&self, glyph_indices: &HashSet<u16>) -> ParseResult<Vec<u8>> {
+        // For CFF fonts, return the full font (subsetting CFF is complex)
+        if self.is_cff {
+            return Ok(self.data.clone());
+        }
+
         // Always include glyph 0 (missing glyph)
         let mut subset_glyphs = glyph_indices.clone();
         subset_glyphs.insert(0);
@@ -1617,14 +1663,24 @@ mod tests {
 
     #[test]
     fn test_required_tables() {
-        assert_eq!(REQUIRED_TABLES.len(), 7);
-        assert!(REQUIRED_TABLES.contains(&HEAD_TABLE.as_slice()));
-        assert!(REQUIRED_TABLES.contains(&CMAP_TABLE.as_slice()));
-        assert!(REQUIRED_TABLES.contains(&GLYF_TABLE.as_slice()));
-        assert!(REQUIRED_TABLES.contains(&LOCA_TABLE.as_slice()));
-        assert!(REQUIRED_TABLES.contains(&MAXP_TABLE.as_slice()));
-        assert!(REQUIRED_TABLES.contains(&HHEA_TABLE.as_slice()));
-        assert!(REQUIRED_TABLES.contains(&HMTX_TABLE.as_slice()));
+        // Test TrueType required tables
+        assert_eq!(TRUETYPE_REQUIRED_TABLES.len(), 7);
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&HEAD_TABLE.as_slice()));
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&CMAP_TABLE.as_slice()));
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&GLYF_TABLE.as_slice()));
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&LOCA_TABLE.as_slice()));
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&MAXP_TABLE.as_slice()));
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&HHEA_TABLE.as_slice()));
+        assert!(TRUETYPE_REQUIRED_TABLES.contains(&HMTX_TABLE.as_slice()));
+
+        // Test CFF required tables
+        assert_eq!(CFF_REQUIRED_TABLES.len(), 6);
+        assert!(CFF_REQUIRED_TABLES.contains(&HEAD_TABLE.as_slice()));
+        assert!(CFF_REQUIRED_TABLES.contains(&CMAP_TABLE.as_slice()));
+        assert!(CFF_REQUIRED_TABLES.contains(&CFF_TABLE.as_slice()));
+        assert!(CFF_REQUIRED_TABLES.contains(&MAXP_TABLE.as_slice()));
+        assert!(CFF_REQUIRED_TABLES.contains(&HHEA_TABLE.as_slice()));
+        assert!(CFF_REQUIRED_TABLES.contains(&HMTX_TABLE.as_slice()));
     }
 
     #[test]
@@ -1662,6 +1718,7 @@ mod tests {
             num_glyphs: 0,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         let result = font.get_table(b"test");
@@ -1687,6 +1744,7 @@ mod tests {
             num_glyphs: 0,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         let result = font.get_table(b"head");
@@ -1702,6 +1760,7 @@ mod tests {
             num_glyphs: 0,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         // Test that font has empty tables
@@ -1716,6 +1775,7 @@ mod tests {
             num_glyphs: 0,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         // Test that font has correct initial values
@@ -1738,6 +1798,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 0, // Short format
+            is_cff: false,
         };
 
         // Test data length and format
@@ -1763,6 +1824,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 1, // Long format
+            is_cff: false,
         };
 
         // Test data length and format
@@ -1793,6 +1855,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         // get_glyph_data method doesn't exist or is private
@@ -1809,6 +1872,7 @@ mod tests {
             num_glyphs: 0,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         let result = font.create_subset(&HashSet::new());
@@ -1823,6 +1887,7 @@ mod tests {
             num_glyphs: 100,
             units_per_em: 2048,
             loca_format: 1,
+            is_cff: false,
         };
 
         assert_eq!(font.num_glyphs, 100);
@@ -1839,6 +1904,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         let glyphs = HashSet::from([0, 1, 2]);
@@ -1858,6 +1924,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         // Add some basic tables
@@ -1888,6 +1955,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         // Test with empty table
@@ -1921,6 +1989,7 @@ mod tests {
             num_glyphs: 5,
             units_per_em: 1000,
             loca_format: 0,
+            is_cff: false,
         };
 
         // Test accessing glyph within bounds
@@ -1941,6 +2010,7 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 0, // Short format
+            is_cff: false,
         };
 
         assert_eq!(font_short.loca_format, 0);
@@ -1951,8 +2021,102 @@ mod tests {
             num_glyphs: 10,
             units_per_em: 1000,
             loca_format: 1, // Long format
+            is_cff: false,
         };
 
         assert_eq!(font_long.loca_format, 1);
+    }
+
+    #[test]
+    fn test_cff_font_detection() {
+        // Test CFF font creation with is_cff = true
+        let font_cff = TrueTypeFont {
+            data: vec![0x4F, 0x54, 0x54, 0x4F], // OTTO magic
+            tables: HashMap::new(),
+            num_glyphs: 100,
+            units_per_em: 1000,
+            loca_format: 0,
+            is_cff: true, // CFF font
+        };
+
+        assert!(font_cff.is_cff, "CFF font should have is_cff = true");
+        assert!(font_cff.is_cff_font(), "is_cff_font() should return true");
+
+        // Test TrueType font with is_cff = false
+        let font_ttf = TrueTypeFont {
+            data: vec![0x00, 0x01, 0x00, 0x00], // TTF magic
+            tables: HashMap::new(),
+            num_glyphs: 100,
+            units_per_em: 1000,
+            loca_format: 0,
+            is_cff: false, // TrueType font
+        };
+
+        assert!(!font_ttf.is_cff, "TrueType font should have is_cff = false");
+        assert!(!font_ttf.is_cff_font(), "is_cff_font() should return false");
+    }
+
+    #[test]
+    fn test_cff_table_detection() {
+        // Test that CFF table is detected in table list
+        let mut tables = HashMap::new();
+        tables.insert(*b"CFF ", (100, 200)); // CFF table present
+        tables.insert(*b"head", (300, 54));
+        tables.insert(*b"cmap", (400, 100));
+
+        let has_cff = tables.contains_key(&CFF_TABLE);
+        assert!(has_cff, "Should detect CFF table in font");
+
+        // Test without CFF table
+        let mut tables_no_cff = HashMap::new();
+        tables_no_cff.insert(*b"glyf", (100, 200));
+        tables_no_cff.insert(*b"head", (300, 54));
+        tables_no_cff.insert(*b"cmap", (400, 100));
+
+        let has_cff_2 = tables_no_cff.contains_key(&CFF_TABLE);
+        assert!(!has_cff_2, "Should not detect CFF table when absent");
+    }
+
+    #[test]
+    fn test_required_tables_for_cff() {
+        // CFF fonts should not require glyf and loca tables
+        let cff_tables = vec![
+            &HEAD_TABLE,
+            &CMAP_TABLE,
+            &CFF_TABLE,
+            &MAXP_TABLE,
+            &HHEA_TABLE,
+            &HMTX_TABLE,
+        ];
+
+        // Verify CFF fonts don't need glyf/loca
+        assert!(
+            !cff_tables.contains(&&GLYF_TABLE),
+            "CFF fonts should not require glyf table"
+        );
+        assert!(
+            !cff_tables.contains(&&LOCA_TABLE),
+            "CFF fonts should not require loca table"
+        );
+
+        // TrueType fonts should require glyf and loca
+        let ttf_tables = vec![
+            &HEAD_TABLE,
+            &CMAP_TABLE,
+            &GLYF_TABLE,
+            &LOCA_TABLE,
+            &MAXP_TABLE,
+            &HHEA_TABLE,
+            &HMTX_TABLE,
+        ];
+
+        assert!(
+            ttf_tables.contains(&&GLYF_TABLE),
+            "TrueType fonts should require glyf table"
+        );
+        assert!(
+            ttf_tables.contains(&&LOCA_TABLE),
+            "TrueType fonts should require loca table"
+        );
     }
 }

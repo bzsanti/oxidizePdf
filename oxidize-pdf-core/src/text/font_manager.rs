@@ -17,6 +17,8 @@ pub enum FontType {
     Type1,
     /// TrueType font
     TrueType,
+    /// CFF/OpenType font
+    CFF,
     /// Type 3 font (user-defined)
     Type3,
     /// Type 0 font (composite)
@@ -347,34 +349,54 @@ impl CustomFont {
             100.0,                            // Stem V
         );
 
-        // Create metrics with proper Unicode support
-        let mut widths = Vec::new();
+        // Create metrics with proper Unicode support (including CJK)
+        let mut char_widths = std::collections::HashMap::new();
         if let Ok(cmap_tables) = ttf.parse_cmap() {
             if let Some(cmap) = cmap_tables
                 .iter()
-                .find(|t| t.platform_id == 3 && t.encoding_id == 1)
+                .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode BMP
+                .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0)) // Unicode
                 .or_else(|| cmap_tables.first())
             {
-                for char_code in 32u8..=255 {
-                    if let Some(&glyph_id) = cmap.mappings.get(&(char_code as u32)) {
-                        if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
-                            let width = (advance_width as f64 * 1000.0) / ttf.units_per_em as f64;
-                            widths.push(width);
-                        } else {
-                            widths.push(250.0);
+                // Get widths for common Unicode ranges including CJK
+                let ranges = [
+                    (0x0020, 0x007F), // Basic Latin
+                    (0x00A0, 0x00FF), // Latin-1 Supplement
+                    (0x3000, 0x303F), // CJK Symbols and Punctuation
+                    (0x3040, 0x309F), // Hiragana
+                    (0x30A0, 0x30FF), // Katakana
+                    (0x4E00, 0x9FFF), // CJK Unified Ideographs (Common)
+                ];
+
+                for (start, end) in ranges {
+                    for char_code in start..=end {
+                        if let Some(&glyph_id) = cmap.mappings.get(&char_code) {
+                            if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
+                                let width =
+                                    (advance_width as f64 * 1000.0) / ttf.units_per_em as f64;
+                                if let Some(ch) = char::from_u32(char_code) {
+                                    char_widths.insert(ch, width);
+                                }
+                            }
                         }
-                    } else {
-                        widths.push(250.0);
                     }
                 }
             }
+        }
+
+        // For legacy compatibility, create a simple width array for ASCII range
+        let mut widths = Vec::new();
+        for char_code in 32u8..=255 {
+            let ch = char::from(char_code);
+            let width = char_widths.get(&ch).copied().unwrap_or(500.0); // Default width for CJK
+            widths.push(width);
         }
 
         let metrics = FontMetrics {
             first_char: 32,
             last_char: 255,
             widths,
-            missing_width: 250.0,
+            missing_width: 500.0, // Larger default for CJK characters
         };
 
         let font = Self {
@@ -432,13 +454,33 @@ impl CustomFont {
         }
     }
 
+    /// Create a new CFF/OpenType font
+    pub fn new_cff(
+        name: String,
+        encoding: FontEncoding,
+        descriptor: FontDescriptor,
+        metrics: FontMetrics,
+    ) -> Self {
+        Self {
+            name,
+            font_type: FontType::CFF,
+            encoding,
+            descriptor,
+            metrics,
+            font_data: None,
+            font_file_type: None,
+            truetype_font: None,
+            used_glyphs: HashSet::new(),
+        }
+    }
+
     /// Optimize the font for the given text content
     pub fn optimize_for_text(&mut self, text: &str) {
         // Check if text contains Unicode characters beyond Latin-1
         let needs_unicode = text.chars().any(|c| c as u32 > 255);
 
-        if needs_unicode && self.font_type != FontType::Type0 {
-            // Convert to Type0 for Unicode support
+        if needs_unicode && self.font_type != FontType::Type0 && self.font_type != FontType::CFF {
+            // Convert to Type0 for Unicode support (CFF fonts already support Unicode)
             self.convert_to_type0();
         }
 
@@ -448,7 +490,7 @@ impl CustomFont {
 
     /// Convert font to Type0 for Unicode support
     fn convert_to_type0(&mut self) {
-        // Only convert TrueType fonts to Type0
+        // Convert TrueType fonts to Type0, CFF fonts already use Type0 semantics
         if self.font_type == FontType::TrueType {
             self.font_type = FontType::Type0;
             self.encoding = FontEncoding::Identity;
@@ -615,15 +657,25 @@ impl CustomFont {
 
         let metrics = FontMetrics::new(32, 255, widths, 250.0);
 
-        let mut font = Self::new_truetype(
-            font_name,
-            FontEncoding::WinAnsiEncoding,
-            descriptor,
-            metrics,
-        );
+        // Check if font is CFF/OpenType
+        let mut font = if ttf.is_cff {
+            // CFF fonts use Identity encoding and Type0 for Unicode support
+            let mut font = Self::new_cff(font_name, FontEncoding::Identity, descriptor, metrics);
+            font.font_file_type = Some(FontFileType::OpenTypeCFF);
+            font
+        } else {
+            // Standard TrueType font
+            let mut font = Self::new_truetype(
+                font_name,
+                FontEncoding::WinAnsiEncoding,
+                descriptor,
+                metrics,
+            );
+            font.font_file_type = Some(FontFileType::TrueType);
+            font
+        };
 
         font.font_data = Some(data);
-        font.font_file_type = Some(FontFileType::TrueType);
         font.truetype_font = Some(ttf);
 
         Ok(font)
@@ -709,6 +761,7 @@ impl CustomFont {
                 match self.font_type {
                     FontType::Type1 => "Type1",
                     FontType::TrueType => "TrueType",
+                    FontType::CFF => "Type0", // CFF fonts use Type0 for Unicode support
                     FontType::Type3 => "Type3",
                     FontType::Type0 => "Type0",
                 }

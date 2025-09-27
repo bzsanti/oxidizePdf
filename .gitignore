@@ -3,6 +3,14 @@
 **/target/
 Cargo.lock
 
+# Compiled binaries and executables - NEVER COMMIT
+debug_*
+test_*
+/debug_cjk
+*.exe
+/oxidize-pdf
+/oxidizepdf
+
 # Test PDFs - ONLY in designated directories
 *.pdf
 !examples/results/**/*.pdf
