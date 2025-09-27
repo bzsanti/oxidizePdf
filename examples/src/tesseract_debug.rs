@@ -5,7 +5,7 @@ fn main() {
     println!("Testing rusty-tesseract dependency...");
 
     // Try to use rusty-tesseract
-    use rusty_tesseract::{Args, Image};
+    use rusty_tesseract::Args;
 
     println!("Creating test args...");
     let args = Args::default();

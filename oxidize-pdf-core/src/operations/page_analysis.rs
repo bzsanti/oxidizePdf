@@ -1400,14 +1400,7 @@ impl PageContentAnalyzer {
                         final_jpeg_data.len()
                     );
 
-                    // Save for debugging
-                    let debug_path = format!(
-                        "oxidize-pdf-core/examples/results/extracted_{}x{}.jpg",
-                        width, height
-                    );
-                    let _ = std::fs::create_dir_all("oxidize-pdf-core/examples/results");
-                    let _ = std::fs::write(&debug_path, &final_jpeg_data);
-                    println!("🔍 [DEBUG] Saved extracted JPEG to: {}", debug_path);
+                    // SECURITY: Never save extracted images to disk for confidential documents
 
                     final_jpeg_data
                 }
@@ -1756,7 +1749,7 @@ impl PageContentAnalyzer {
         &self,
         corrupted_jpeg_data: &[u8],
         width: u32,
-        height: u32,
+        _height: u32,
     ) -> OperationResult<Vec<u8>> {
         use std::fs;
         use std::process::Command;
@@ -1815,10 +1808,7 @@ impl PageContentAnalyzer {
             cleaned_data.len()
         );
 
-        // Save the cleaned JPEG for debugging
-        let debug_clean_path = format!("fis2_cleaned_{}x{}.jpg", width, height);
-        let _ = fs::write(&debug_clean_path, &cleaned_data);
-        println!("🔧 [DEBUG] Saved cleaned JPEG to: {}", debug_clean_path);
+        // SECURITY: Never save cleaned JPEG files for confidential documents
 
         // Cleanup temp files
         let _ = fs::remove_file(&input_path);

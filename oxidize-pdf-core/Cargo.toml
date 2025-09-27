@@ -308,6 +308,19 @@ path = "../examples/src/transparency.rs"
 name = "debug_transparency"
 path = "../examples/src/debug_transparency.rs"
 
+[[example]]
+name = "convert_pdf_ocr"
+path = "../examples/src/convert_pdf_ocr.rs"
+
+[[example]]
+name = "test_ocr_simple"
+path = "../examples/src/test_ocr_simple.rs"
+
+[[example]]
+name = "test_confidential_ocr"
+path = "../examples/src/test_confidential_ocr.rs"
+required-features = ["ocr-tesseract"]
+
 [[bench]]
 name = "ocr_benchmarks"
 harness = false
@@ -317,7 +330,7 @@ name = "performance_benchmarks"
 harness = false
 
 [features]
-default = ["compression"]
+default = ["compression", "ocr-tesseract"]
 
 # Basic features
 compression = ["dep:flate2"]
