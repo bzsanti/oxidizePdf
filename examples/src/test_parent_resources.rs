@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let document = PdfDocument::new(reader);
 
     // Get page 14 (index 13)
-    let page = document.get_page(13)?;
+    let _page = document.get_page(13)?;
     println!("📄 Página 14 cargada correctamente");
 
     // Try to get the page tree root (113) first
