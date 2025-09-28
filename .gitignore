@@ -6,6 +6,7 @@ Cargo.lock
 # Compiled binaries and executables - NEVER COMMIT
 debug_*
 test_*
+!examples/src/test_*.rs
 /debug_cjk
 *.exe
 /oxidize-pdf
