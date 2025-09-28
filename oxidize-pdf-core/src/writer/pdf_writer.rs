@@ -543,10 +543,6 @@ impl<W: Write> PdfWriter<W> {
         // Use appropriate CIDFont subtype based on font format
         let cid_font_subtype =
             if CjkFontType::should_use_cidfonttype2_for_preview_compatibility(font_name) {
-                println!(
-                    "Using CIDFontType2 for CJK font {} (Preview.app compatibility)",
-                    font_name
-                );
                 "CIDFontType2" // Force CIDFontType2 for CJK fonts to fix Preview.app rendering
             } else {
                 match font.format {
@@ -561,13 +557,8 @@ impl<W: Write> PdfWriter<W> {
         let mut cid_system_info = Dictionary::new();
         let (registry, ordering, supplement) =
             if let Some(cjk_type) = CjkFontType::detect_from_name(font_name) {
-                println!(
-                    "Detected CJK font type {:?} for font: {}",
-                    cjk_type, font_name
-                );
                 cjk_type.cid_system_info()
             } else {
-                println!("Using generic Identity mapping for font: {}", font_name);
                 ("Adobe", "Identity", 0)
             };
 
@@ -899,39 +890,6 @@ impl<W: Write> PdfWriter<W> {
                 {
                     sample_mappings.push((unicode, glyph_id));
                 }
-            }
-        }
-
-        // Debug output
-        let optimization_ratio = if !used_chars.is_empty() {
-            let full_size = (0xFFFF + 1) * 2;
-            let optimized_size = map.len();
-            format!(
-                " (optimized from {} KB to {} KB, {:.1}% reduction)",
-                full_size / 1024,
-                optimized_size / 1024,
-                (1.0 - optimized_size as f32 / full_size as f32) * 100.0
-            )
-        } else {
-            String::new()
-        };
-
-        println!(
-            "Generated CIDToGIDMap: {} bytes for max CID {:#06X}{}",
-            map.len(),
-            max_unicode,
-            optimization_ratio
-        );
-
-        // Show mappings for test characters
-        let test_chars = "Hello áéíóú";
-        println!("Sample mappings:");
-        for ch in test_chars.chars() {
-            let unicode = ch as u32;
-            if let Some(&glyph_id) = cmap_mappings.get(&unicode) {
-                println!("  '{}' (U+{:04X}) → GlyphID {}", ch, unicode, glyph_id);
-            } else {
-                println!("  '{}' (U+{:04X}) → NOT FOUND", ch, unicode);
             }
         }
 

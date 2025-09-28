@@ -152,13 +152,8 @@ impl<'a> FontEmbedder<'a> {
         let font_name = self.font.postscript_name();
         let (registry, ordering, supplement) =
             if let Some(cjk_type) = CjkFontType::detect_from_name(font_name) {
-                println!(
-                    "Detected CJK font type {:?} for font: {}",
-                    cjk_type, font_name
-                );
                 cjk_type.cid_system_info()
             } else {
-                println!("Using generic Identity mapping for font: {}", font_name);
                 ("Adobe", "Identity", 0)
             };
 

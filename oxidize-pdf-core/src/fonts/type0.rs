@@ -37,17 +37,8 @@ impl Type0Font {
         // Detect CJK font type and set appropriate CIDSystemInfo
         let (registry, ordering, supplement) =
             if let Some(cjk_type) = CjkFontType::detect_from_name(base_font.postscript_name()) {
-                println!(
-                    "Detected CJK font type {:?} for font: {}",
-                    cjk_type,
-                    base_font.postscript_name()
-                );
                 cjk_type.cid_system_info()
             } else {
-                println!(
-                    "Using generic Identity mapping for font: {}",
-                    base_font.postscript_name()
-                );
                 ("Adobe", "Identity", 0)
             };
 
