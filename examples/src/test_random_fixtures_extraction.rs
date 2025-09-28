@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Randomly select 10 PDFs
     #[cfg(feature = "rand")]
     {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         pdf_files.shuffle(&mut rng);
     }
     let selected_pdfs = pdf_files.into_iter().take(10).collect::<Vec<_>>();
@@ -83,11 +83,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     // So we can select from page 2 to page_count-1 (inclusive)
                                     let min_page = 2;
                                     let max_page = page_count - 1;
-                                    let mut rng = rand::thread_rng();
+                                    let mut rng = rand::rng();
                                     rng.gen_range(min_page..=max_page)
                                 } else {
                                     // Any page from 1 to page_count
-                                    let mut rng = rand::thread_rng();
+                                    let mut rng = rand::rng();
                                     rng.gen_range(1..=page_count)
                                 }
                             }

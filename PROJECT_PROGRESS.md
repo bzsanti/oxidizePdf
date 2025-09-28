@@ -1,52 +1,44 @@
-# Progreso del Proyecto - 2025-09-28 17:35:00
+# Progreso del Proyecto - 2025-09-28 22:30:16
 
-## 🚀 ESTADO ACTUAL: REBASE v1.2.4 - PREVIEW.APP CJK FIX
+## Estado Actual
+- Rama: main
+- Último commit: c2032f7 Merge pull request #59 from bzsanti/develop
+- Tests: ✅ Pasando (4117 tests ejecutados exitosamente)
 
-### Estado Actual:
-- **Rama**: develop_santi (rebase en progreso - conflicto 4/7)
-- **Operación**: Resolviendo conflictos de rebase con develop
-- **PR**: #58 (develop_santi → develop) con fix crítico Preview.app
-- **Tests**: ✅ 4117 tests passing
+## Archivos Modificados en Esta Sesión
+- /Cargo.toml: Actualizado rand de 0.8 a 0.9
+- /oxidize-pdf-core/Cargo.toml: Actualizado rand (0.8 → 0.9) y toml (0.8 → 0.9)
+- /examples/src/test_all_fixtures_extraction.rs: Migrado de rand::thread_rng() a rand::rng()
+- /examples/src/test_random_fixtures_extraction.rs: Migrado de rand::thread_rng() a rand::rng()
 
-## 🎯 FUNCIONALIDAD v1.2.4: PREVIEW.APP COMPATIBILITY FIX
+## Logros de Esta Sesión
+✅ **Release v1.2.4 Completado**
+- Fix para compatibilidad de fuentes CJK con macOS Preview.app
+- Workaround para bug de Preview.app con CIDFontType0
+- Soporte universal Adobe-Identity-0 para scripts CJK
 
-### ✅ Cambios Implementados
-- **CJK Font Detection**: Nuevo enum CjkFontType con detección automática
-- **Preview.app Workaround**: Force CIDFontType2 para fuentes CJK
-- **Universal Mapping**: Adobe-Identity-0 para compatibilidad multi-script
-- **Debug Cleanup**: Eliminados println! de producción
-- **Test Files**: test_ocr_simple.rs añadido correctamente
+✅ **Issues de GitHub Actualizados**
+- Issue #46: Actualizado con información de v1.2.4
+- Issue #57: Explicación técnica completa del problema y solución
 
-### 🔧 Archivos Técnicos Modificados
-1. **text/fonts/embedding.rs**: CjkFontType enum y detección
-2. **fonts/type0.rs**: CIDSystemInfo dinámico basado en tipo
-3. **writer/pdf_writer.rs**: Force CIDFontType2 workaround
-4. **fonts/embedder.rs**: CID system info mejorado
-5. **.gitignore**: Excepción para examples/src/test_*.rs
+✅ **Dependencias Actualizadas (lib.rs)**
+- rand 0.8 → 0.9.2: Mejor compatibilidad Rust 2024
+- toml 0.8 → 0.9.7: Mejoras significativas de rendimiento
 
-### 📊 Problema Original Resuelto
-- **Causa raíz**: Preview.app bug con CIDFontType0 en fuentes OpenType CFF
-- **Síntoma**: Caracteres "??????" en lugar de texto CJK
-- **Solución**: Force CIDFontType2 + Adobe-Identity-0 mapping
-- **Resultado**: ✅ Compatible con Preview, Foxit, navegadores
+✅ **Tests y Calidad**
+- 4117 tests pasando exitosamente
+- cargo clippy sin warnings
+- cargo fmt verificado
+- Funcionalidad TOML y rand verificada
 
-## 📦 HISTORIAL DE RELEASES
+## Próximos Pasos
+- Monitorear adopción de v1.2.4 por usuarios
+- Revisar feedback en issues #46 y #57
+- Considerar mejoras adicionales en soporte CJK
+- Evaluar otras actualizaciones de dependencias
 
-### v1.2.3 - CJK Font Support (Completada ✅)
-- Type0 font embedding con CIDFontType0
-- UTF-16BE encoding para texto CJK
-- ToUnicode CMap con rangos completos
-- Tag v1.2.3 creado y publicado
+## Notas Técnicas
+- Pipeline de release automático funcionando correctamente
+- Fix específico para macOS Preview.app documentado
+- Migración de API rand completada sin breaking changes
 
-### v1.2.4 - Preview.app Fix (En Progreso 🔄)
-- Workaround específico para Preview.app
-- Detección automática de fuentes CJK
-- Mapeo universal para multi-script
-- Cleanup de código de debug
-
-## Próximos Pasos Inmediatos
-1. 🔄 Resolver conflictos restantes del rebase (4/7)
-2. ⏳ Completar rebase develop_santi sobre develop
-3. ⏳ Force push develop_santi
-4. ⏳ Mergear PR #58 a develop
-5. ⏳ Tag v1.2.4

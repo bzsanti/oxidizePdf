@@ -59,7 +59,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 insta = "1.38"
 
 # Utilities
-rand = "0.8"
+rand = "0.9"
 hex = "0.4"
 regex = "1.11"
 

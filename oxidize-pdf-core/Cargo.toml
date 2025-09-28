@@ -42,7 +42,7 @@ unicode-normalization = "0.1"
 regex = "1.10"
 
 # Random number generation (for examples)
-rand = { version = "0.8", optional = true }
+rand = { version = "0.9", optional = true }
 
 # Flags
 bitflags = "2.4"
@@ -54,7 +54,7 @@ rayon = { version = "1.8", optional = true }
 # (regex dependency moved to text processing section above)
 
 # TOML parsing for ISO compliance matrix
-toml = "0.8"
+toml = "0.9"
 
 # Temporary files for external validation
 tempfile = "3.8"

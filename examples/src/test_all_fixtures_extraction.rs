@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let overall_start = Instant::now();
 
     #[cfg(feature = "rand")]
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     #[cfg(not(feature = "rand"))]
     let mut rng = ();
 
