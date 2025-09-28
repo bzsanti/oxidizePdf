@@ -2,6 +2,7 @@
 
 use super::Font;
 use crate::objects::{Dictionary, Object, ObjectId};
+use crate::text::fonts::embedding::CjkFontType;
 use crate::Result;
 
 /// Font embedding options
@@ -130,14 +131,40 @@ impl<'a> FontEmbedder<'a> {
         let mut dict = Dictionary::new();
 
         dict.set("Type", Object::Name("Font".into()));
-        dict.set("Subtype", Object::Name("CIDFontType2".into()));
-        dict.set("BaseFont", Object::Name(self.font.postscript_name().into()));
 
-        // CIDSystemInfo
+        let font_name = self.font.postscript_name();
+        let cid_font_subtype =
+            if CjkFontType::should_use_cidfonttype2_for_preview_compatibility(font_name) {
+                println!(
+                    "Using CIDFontType2 for CJK font {} (Preview.app compatibility)",
+                    font_name
+                );
+                "CIDFontType2" // Force CIDFontType2 for CJK fonts to fix Preview.app rendering
+            } else {
+                "CIDFontType2" // Default for this embedder
+            };
+
+        dict.set("Subtype", Object::Name(cid_font_subtype.into()));
+        dict.set("BaseFont", Object::Name(font_name.into()));
+
+        // CIDSystemInfo - Use appropriate values for CJK fonts
         let mut cid_system_info = Dictionary::new();
-        cid_system_info.set("Registry", Object::String("Adobe".into()));
-        cid_system_info.set("Ordering", Object::String("Identity".into()));
-        cid_system_info.set("Supplement", Object::Integer(0));
+        let font_name = self.font.postscript_name();
+        let (registry, ordering, supplement) =
+            if let Some(cjk_type) = CjkFontType::detect_from_name(font_name) {
+                println!(
+                    "Detected CJK font type {:?} for font: {}",
+                    cjk_type, font_name
+                );
+                cjk_type.cid_system_info()
+            } else {
+                println!("Using generic Identity mapping for font: {}", font_name);
+                ("Adobe", "Identity", 0)
+            };
+
+        cid_system_info.set("Registry", Object::String(registry.into()));
+        cid_system_info.set("Ordering", Object::String(ordering.into()));
+        cid_system_info.set("Supplement", Object::Integer(supplement as i64));
         dict.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
 
         dict.set("FontDescriptor", Object::Reference(descriptor_id));

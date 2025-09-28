@@ -7,6 +7,7 @@
 use crate::fonts::Font;
 use crate::objects::{Dictionary, Object, ObjectId};
 use crate::text::cmap::ToUnicodeCMapBuilder;
+use crate::text::fonts::embedding::CjkFontType;
 use std::collections::{HashMap, HashSet};
 
 /// Type0 font for Unicode support
@@ -33,14 +34,31 @@ pub struct Type0Font {
 impl Type0Font {
     /// Create a new Type0 font from a base font
     pub fn new(base_font: Font) -> Self {
+        // Detect CJK font type and set appropriate CIDSystemInfo
+        let (registry, ordering, supplement) =
+            if let Some(cjk_type) = CjkFontType::detect_from_name(base_font.postscript_name()) {
+                println!(
+                    "Detected CJK font type {:?} for font: {}",
+                    cjk_type,
+                    base_font.postscript_name()
+                );
+                cjk_type.cid_system_info()
+            } else {
+                println!(
+                    "Using generic Identity mapping for font: {}",
+                    base_font.postscript_name()
+                );
+                ("Adobe", "Identity", 0)
+            };
+
         let mut font = Self {
             base_font,
             cid_to_unicode: HashMap::new(),
             unicode_to_cid: HashMap::new(),
             used_cids: HashSet::new(),
-            registry: "Adobe".to_string(),
-            ordering: "Identity".to_string(),
-            supplement: 0,
+            registry: registry.to_string(),
+            ordering: ordering.to_string(),
+            supplement,
             to_unicode_cmap: None,
         };
 

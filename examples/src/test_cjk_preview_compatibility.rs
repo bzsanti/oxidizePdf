@@ -59,37 +59,37 @@ fn main() -> Result<(), Box<dyn Error>> {
         .text()
         .set_font(Font::Helvetica, 12.0)
         .at(50.0, 705.0)
-        .write("then the system fonts are working properly:")?;
+        .write("then the embedded SourceHanSC font is working properly:")?;
 
     // Add instructions for the user
     page2
         .text()
         .set_font(Font::Helvetica, 10.0)
         .at(50.0, 680.0)
-        .write("Note: Preview.app should now use Noto Sans CJK SC for the Chinese text")?;
+        .write("Note: Both pages use the embedded SourceHanSC (Chinese) font")?;
 
     page2
         .text()
         .set_font(Font::Helvetica, 10.0)
         .at(50.0, 665.0)
-        .write("If characters appear as boxes [], you may need to restart Preview")?;
+        .write("All Chinese text should display correctly in Preview.app")?;
 
-    // Test with basic characters that should work with system fallback
+    // Test with basic characters using the embedded CJK font
     page2
         .text()
-        .set_font(Font::Helvetica, 14.0)
+        .set_font(Font::Custom("SourceHanSC".to_string()), 14.0)
         .at(50.0, 630.0)
         .write("你好，世界！")?;
 
     page2
         .text()
-        .set_font(Font::Helvetica, 12.0)
+        .set_font(Font::Custom("SourceHanSC".to_string()), 12.0)
         .at(50.0, 605.0)
         .write("Japanese: こんにちは世界")?;
 
     page2
         .text()
-        .set_font(Font::Helvetica, 12.0)
+        .set_font(Font::Custom("SourceHanSC".to_string()), 12.0)
         .at(50.0, 585.0)
         .write("Korean: 안녕하세요 세계")?;
 

@@ -1,6 +1,7 @@
 use crate::document::Document;
 use crate::error::Result;
 use crate::objects::{Dictionary, Object, ObjectId};
+use crate::text::fonts::embedding::CjkFontType;
 use crate::writer::XRefStreamWriter;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -540,18 +541,39 @@ impl<W: Write> PdfWriter<W> {
         let mut cid_font = Dictionary::new();
         cid_font.set("Type", Object::Name("Font".to_string()));
         // Use appropriate CIDFont subtype based on font format
-        let cid_font_subtype = match font.format {
-            crate::fonts::FontFormat::OpenType => "CIDFontType0", // CFF/OpenType fonts
-            crate::fonts::FontFormat::TrueType => "CIDFontType2", // TrueType fonts
-        };
+        let cid_font_subtype =
+            if CjkFontType::should_use_cidfonttype2_for_preview_compatibility(font_name) {
+                println!(
+                    "Using CIDFontType2 for CJK font {} (Preview.app compatibility)",
+                    font_name
+                );
+                "CIDFontType2" // Force CIDFontType2 for CJK fonts to fix Preview.app rendering
+            } else {
+                match font.format {
+                    crate::fonts::FontFormat::OpenType => "CIDFontType0", // CFF/OpenType fonts
+                    crate::fonts::FontFormat::TrueType => "CIDFontType2", // TrueType fonts
+                }
+            };
         cid_font.set("Subtype", Object::Name(cid_font_subtype.to_string()));
         cid_font.set("BaseFont", Object::Name(font_name.to_string()));
 
-        // CIDSystemInfo
+        // CIDSystemInfo - Use appropriate values for CJK fonts
         let mut cid_system_info = Dictionary::new();
-        cid_system_info.set("Registry", Object::String("Adobe".to_string()));
-        cid_system_info.set("Ordering", Object::String("Identity".to_string()));
-        cid_system_info.set("Supplement", Object::Integer(0));
+        let (registry, ordering, supplement) =
+            if let Some(cjk_type) = CjkFontType::detect_from_name(font_name) {
+                println!(
+                    "Detected CJK font type {:?} for font: {}",
+                    cjk_type, font_name
+                );
+                cjk_type.cid_system_info()
+            } else {
+                println!("Using generic Identity mapping for font: {}", font_name);
+                ("Adobe", "Identity", 0)
+            };
+
+        cid_system_info.set("Registry", Object::String(registry.to_string()));
+        cid_system_info.set("Ordering", Object::String(ordering.to_string()));
+        cid_system_info.set("Supplement", Object::Integer(supplement as i64));
         cid_font.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
 
         cid_font.set("FontDescriptor", Object::Reference(descriptor_id));

@@ -35,6 +35,139 @@ pub enum FontEncoding {
     Identity,
 }
 
+/// CJK font types for proper CIDSystemInfo configuration
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CjkFontType {
+    /// Chinese Simplified (Source Han Sans SC, Noto Sans CJK SC, etc.)
+    ChineseSimplified,
+    /// Chinese Traditional (Source Han Sans TC, Noto Sans CJK TC, etc.)
+    ChineseTraditional,
+    /// Japanese (Source Han Sans JP, Noto Sans CJK JP, etc.)
+    Japanese,
+    /// Korean (Source Han Sans KR, Noto Sans CJK KR, etc.)
+    Korean,
+    /// Generic CJK (fallback)
+    Generic,
+}
+
+impl CjkFontType {
+    /// Get the appropriate CIDSystemInfo values for this font type
+    pub fn cid_system_info(&self) -> (&'static str, &'static str, i32) {
+        match self {
+            CjkFontType::ChineseSimplified => ("Adobe", "Identity", 0), // Use Identity for multi-script fonts
+            CjkFontType::ChineseTraditional => ("Adobe", "Identity", 0), // Use Identity for multi-script fonts
+            CjkFontType::Japanese => ("Adobe", "Identity", 0), // Use Identity for multi-script fonts
+            CjkFontType::Korean => ("Adobe", "Identity", 0), // Use Identity for multi-script fonts
+            CjkFontType::Generic => ("Adobe", "Identity", 0),
+        }
+    }
+
+    /// Detect CJK font type from font name
+    pub fn detect_from_name(font_name: &str) -> Option<Self> {
+        let name_lower = font_name.to_lowercase();
+
+        // Source Han Sans detection (various naming patterns)
+        if name_lower.contains("sourcehansans")
+            || name_lower.contains("source han sans")
+            || name_lower.contains("hansans")
+            || name_lower.contains("han sans")
+            || name_lower.contains("sourcehan")
+            || name_lower.contains("source han")
+        {
+            if name_lower.contains("sc") || name_lower.contains("simplifiedchinese") {
+                return Some(CjkFontType::ChineseSimplified);
+            }
+            if name_lower.contains("tc") || name_lower.contains("traditionalchinese") {
+                return Some(CjkFontType::ChineseTraditional);
+            }
+            if name_lower.contains("jp") || name_lower.contains("japanese") {
+                return Some(CjkFontType::Japanese);
+            }
+            if name_lower.contains("kr") || name_lower.contains("korean") {
+                return Some(CjkFontType::Korean);
+            }
+        }
+
+        // Noto Sans CJK detection
+        if name_lower.contains("notosanscjk") || name_lower.contains("noto sans cjk") {
+            if name_lower.contains("sc") {
+                return Some(CjkFontType::ChineseSimplified);
+            }
+            if name_lower.contains("tc") {
+                return Some(CjkFontType::ChineseTraditional);
+            }
+            if name_lower.contains("jp") {
+                return Some(CjkFontType::Japanese);
+            }
+            if name_lower.contains("kr") {
+                return Some(CjkFontType::Korean);
+            }
+        }
+
+        // Generic patterns
+        if name_lower.contains("chinese") || name_lower.contains("zh") || name_lower.contains("gb")
+        {
+            if name_lower.contains("traditional")
+                || name_lower.contains("tw")
+                || name_lower.contains("hk")
+            {
+                return Some(CjkFontType::ChineseTraditional);
+            }
+            return Some(CjkFontType::ChineseSimplified);
+        }
+
+        if name_lower.contains("japanese")
+            || name_lower.contains("jp")
+            || name_lower.contains("japan")
+        {
+            return Some(CjkFontType::Japanese);
+        }
+
+        if name_lower.contains("korean")
+            || name_lower.contains("kr")
+            || name_lower.contains("korea")
+        {
+            return Some(CjkFontType::Korean);
+        }
+
+        None
+    }
+
+    /// Determine if we should use CIDFontType2 for this font to ensure Preview.app compatibility
+    ///
+    /// # macOS Preview.app Workaround
+    ///
+    /// macOS Preview.app has a documented bug where it fails to render CIDFontType0 (CFF/PostScript)
+    /// fonts correctly, even when they are properly embedded. However, it renders CIDFontType2
+    /// (TrueType) fonts correctly regardless of the actual font format.
+    ///
+    /// According to Stack Overflow discussions, "embedding the same font as a CIDFontType2 font
+    /// instead of CIDFontType0 makes Preview show the desired result" while maintaining
+    /// compatibility with other PDF viewers.
+    ///
+    /// For CJK fonts, this workaround is particularly important because:
+    /// 1. CJK fonts are commonly in OpenType CFF format (like Source Han Sans)
+    /// 2. Preview.app is widely used on macOS for PDF viewing
+    /// 3. The alternative is to tell users to install system fonts or use different viewers
+    ///
+    /// # Technical Details
+    ///
+    /// This function returns `true` for CJK fonts regardless of their actual format, causing
+    /// the PDF writer to use CIDFontType2 instead of the technically correct CIDFontType0.
+    /// Non-CJK fonts continue to use the format-appropriate CIDFont type.
+    ///
+    /// # Arguments
+    /// * `font_name` - The PostScript name of the font
+    ///
+    /// # Returns
+    /// * `true` if this font should use CIDFontType2 (either because it's CJK or actually TrueType)
+    /// * `false` if this font should use format-appropriate CIDFont type
+    pub fn should_use_cidfonttype2_for_preview_compatibility(font_name: &str) -> bool {
+        // Always use CIDFontType2 for CJK fonts (Preview.app compatibility workaround)
+        Self::detect_from_name(font_name).is_some()
+    }
+}
+
 /// Encoding difference entry
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodingDifference {

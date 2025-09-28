@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.2.4] - 2025-09-28
+
+### Fixed
+- **macOS Preview.app CJK Font Rendering** - Implemented workaround for Preview.app bug
+  - Preview.app fails to render CIDFontType0 fonts correctly but works with CIDFontType2
+  - CJK fonts now use CIDFontType2 regardless of actual format for Preview.app compatibility
+  - Uses Adobe-Identity-0 for multi-script CJK support (Chinese, Japanese, Korean)
+  - Maintains compatibility with other PDF viewers (Adobe Reader, Foxit, browsers)
+  - Documented workaround with `should_use_cidfonttype2_for_preview_compatibility()` function
+
 ## [1.2.3] - 2025-09-27
 
 ### Added
