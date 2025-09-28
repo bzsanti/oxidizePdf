@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let font_data = std::fs::read(font_path)?;
     println!("   Font size: {} bytes", font_data.len());
 
-    doc.add_font_from_bytes("SourceHanSans", font_data)?;
+    doc.add_font_from_bytes("SourceHanSC", font_data)?;
     println!("✅ Font successfully added to document");
 
     let mut page = Page::a4();
@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     .write(sample_text)?;
             } else {
                 // Use CJK font for CJK text
-                text.set_font(Font::Custom("SourceHanSans".to_string()), 12.0)
+                text.set_font(Font::Custom("SourceHanSC".to_string()), 12.0)
                     .at(200.0, y_pos)
                     .write(sample_text)?;
             }
