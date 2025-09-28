@@ -139,6 +139,10 @@ name = "test_cjk_comprehensive"
 path = "../examples/src/test_cjk_comprehensive.rs"
 
 [[example]]
+name = "test_cjk_preview_compatibility"
+path = "../examples/src/test_cjk_preview_compatibility.rs"
+
+[[example]]
 name = "demo_issues_fixed"
 path = "../examples/src/demo_issues_fixed.rs"
 
