@@ -119,7 +119,7 @@ pub use layout::{DashboardLayout, GridPosition, LayoutManager};
 pub use pivot_table::{AggregateFunction, PivotConfig, PivotTable, PivotTableBuilder};
 pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPlotOptions, ScatterPoint};
 pub use theme::{DashboardTheme, Typography};
-pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode};
+pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode, TreeMapOptions};
 
 use crate::error::PdfError;
 use crate::page::Page;

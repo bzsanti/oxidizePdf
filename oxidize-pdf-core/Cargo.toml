@@ -340,6 +340,10 @@ path = "../examples/src/pivot_table_simple_test.rs"
 name = "scatter_plot_simple_test"
 path = "../examples/src/scatter_plot_simple_test.rs"
 
+[[example]]
+name = "treemap_simple_test"
+path = "../examples/src/treemap_simple_test.rs"
+
 # Removed test_confidential_ocr example - file deleted for cleanup
 
 [[bench]]
