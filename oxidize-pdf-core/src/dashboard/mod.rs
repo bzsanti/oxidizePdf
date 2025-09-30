@@ -117,7 +117,7 @@ pub use heatmap::{ColorScale, HeatMap, HeatMapBuilder, HeatMapData, HeatMapOptio
 pub use kpi_card::{KpiCard, KpiCardBuilder, TrendDirection};
 pub use layout::{DashboardLayout, GridPosition, LayoutManager};
 pub use pivot_table::{AggregateFunction, PivotConfig, PivotTable, PivotTableBuilder};
-pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPoint};
+pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPlotOptions, ScatterPoint};
 pub use theme::{DashboardTheme, Typography};
 pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode};
 
