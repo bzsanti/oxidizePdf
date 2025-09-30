@@ -320,6 +320,10 @@ path = "../examples/src/convert_pdf_ocr.rs"
 name = "test_ocr_simple"
 path = "../examples/src/test_ocr_simple.rs"
 
+[[example]]
+name = "extract_images_demo"
+path = "../examples/src/extract_images_demo.rs"
+
 # Removed test_confidential_ocr example - file deleted for cleanup
 
 [[bench]]
