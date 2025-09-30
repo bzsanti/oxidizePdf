@@ -58,13 +58,13 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 - **Measurement**: Against complete ISO specification (286 features)
 - **Strong Areas**: Transparency (100%), Graphics (58%), Text (56%)
 - **Weak Areas**: Interactive (19%), Rendering (0%), Multimedia (0%)
-- **Critical Gap**: PNG transparency (7 tests failing) - ⚠️ URGENT fix needed
+- **Recent Win**: PNG transparency ✅ COMPLETED (v1.2.5)
 - **Note**: Focus on practical PDF functionality, not compliance claims
 
 ### Target ISO 32000 Compliance Goals (Realistic)
 - **Community Edition**: Complete essential PDF functionality (Target: Q1 2026)
-  - Current: Basic PDF generation with gaps
-  - Next: PNG transparency, complete navigation APIs, enhanced error recovery
+  - Current: Basic PDF generation + PNG transparency ✅
+  - Next: Complete navigation APIs, enhanced error recovery, image extraction
 - **PRO Edition**: Professional PDF features (Target: Q2 2027)
   - PDF/A, PDF/UA, JavaScript, advanced signatures, OCR
 - **Enterprise Edition**: Advanced PDF capabilities (Target: Q4 2027+)
@@ -145,11 +145,11 @@ The Community Edition will provide essential PDF processing capabilities suitabl
 
 #### Phase 3: Extended Features (Q3 2025)
 - [x] **Text Extraction** - Extract plain text from PDFs ✅
-- 🚧 **Image Embedding & Extraction** - ⚠️ CRITICAL: PNG transparency support incomplete (7 tests failing)
+- 🚧 **Image Embedding & Extraction**
   - [x] Basic PNG embedding ✅
-  - [ ] PNG with alpha channel transparency - **URGENT: Required for print products**
+  - [x] PNG with alpha channel transparency ✅ **COMPLETED v1.2.5** - SMask support implemented
   - [x] JPEG embedding ✅
-  - [ ] Image extraction API
+  - [ ] Image extraction API - Next priority
 - [x] **Basic Metadata** - Read and write PDF metadata ✅
 - [x] **Basic Transparency** - Set opacity for colors and graphics (CA/ca parameters) ✅
 - [x] **CLI Tool** - Full-featured command-line interface ✅

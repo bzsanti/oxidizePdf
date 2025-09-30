@@ -211,7 +211,7 @@ impl Default for OcrOptions {
             preserve_layout: true,
             preprocessing: ImagePreprocessing::default(),
             engine_options: std::collections::HashMap::new(),
-            timeout_seconds: 30,
+            timeout_seconds: 60, // Aumentado para documentos complejos
             regions: None,
             debug_output: false,
         }
