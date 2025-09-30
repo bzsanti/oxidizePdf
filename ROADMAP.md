@@ -22,19 +22,51 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 
 ## 📊 Product Tiers & ISO 32000 Compliance
 
-### Current Status (August 2025) - Reality Check
-- **Real Implementation**: Basic PDF functionality 
+### Product Tier Strategy
+
+**Philosophy:** Essential features = Community (Open Source), Advanced/Specialized = PRO/Enterprise
+
+#### 🌍 **Community Edition (Open Source - MIT License)**
+**What belongs here:** ESSENTIAL features that any modern PDF library must have
+- ✅ Complete image support (PNG with transparency, JPEG, basic formats)
+- ✅ Text extraction and basic manipulation
+- ✅ Document structure reading (outlines, TOC, named destinations, annotations)
+- ✅ Basic error recovery and fault tolerance
+- ✅ PDF parsing and writing
+- ✅ Basic debugging and validation tools
+- **Rationale:** If you don't have these, you're not a complete PDF library
+
+#### 💼 **PRO Edition (Commercial License)**
+**What belongs here:** ADVANCED/SPECIALIZED features that add professional value
+- 🎯 PDF/A, PDF/UA compliance validation
+- 🎯 Advanced digital signatures with PKI
+- 🎯 OCR integration for scanned documents
+- 🎯 Format conversions (PDF → Word/Excel, HTML → PDF)
+- 🎯 Advanced watermarking with batch processing
+- 🎯 Professional debugging with compliance reports and fix suggestions
+- **Rationale:** Specialized tools for professional workflows and business requirements
+
+#### 🏢 **Enterprise Edition**
+**What belongs here:** ENTERPRISE-SCALE features
+- 🎯 Linearization for web optimization
+- 🎯 Full multimedia support
+- 🎯 Advanced performance optimization
+- 🎯 Multi-threading and distributed processing
+
+### Current Status (September 2025) - Reality Check
+- **Real Implementation**: Basic PDF functionality
 - **Measurement**: Against complete ISO specification (286 features)
 - **Strong Areas**: Transparency (100%), Graphics (58%), Text (56%)
 - **Weak Areas**: Interactive (19%), Rendering (0%), Multimedia (0%)
+- **Critical Gap**: PNG transparency (7 tests failing) - ⚠️ URGENT fix needed
 - **Note**: Focus on practical PDF functionality, not compliance claims
 
 ### Target ISO 32000 Compliance Goals (Realistic)
-- **Community Edition**: Enhanced PDF functionality (Target: Q1 2026)
-  - Current: Basic PDF generation
-  - Next: Complete interactive features, basic rendering
+- **Community Edition**: Complete essential PDF functionality (Target: Q1 2026)
+  - Current: Basic PDF generation with gaps
+  - Next: PNG transparency, complete navigation APIs, enhanced error recovery
 - **PRO Edition**: Professional PDF features (Target: Q2 2027)
-  - PDF/A, PDF/UA, JavaScript, advanced signatures
+  - PDF/A, PDF/UA, JavaScript, advanced signatures, OCR
 - **Enterprise Edition**: Advanced PDF capabilities (Target: Q4 2027+)
   - Linearization, all annotation types, full multimedia
 
@@ -113,7 +145,11 @@ The Community Edition will provide essential PDF processing capabilities suitabl
 
 #### Phase 3: Extended Features (Q3 2025)
 - [x] **Text Extraction** - Extract plain text from PDFs ✅
-- 🚧 **Image Extraction** - Extract embedded images (PNG support incomplete - 7 tests failing)
+- 🚧 **Image Embedding & Extraction** - ⚠️ CRITICAL: PNG transparency support incomplete (7 tests failing)
+  - [x] Basic PNG embedding ✅
+  - [ ] PNG with alpha channel transparency - **URGENT: Required for print products**
+  - [x] JPEG embedding ✅
+  - [ ] Image extraction API
 - [x] **Basic Metadata** - Read and write PDF metadata ✅
 - [x] **Basic Transparency** - Set opacity for colors and graphics (CA/ca parameters) ✅
 - [x] **CLI Tool** - Full-featured command-line interface ✅
@@ -124,6 +160,15 @@ The Community Edition will provide essential PDF processing capabilities suitabl
 - [x] **Streaming Support** - Process PDFs without full load ✅
 - [x] **Batch Processing** - Process multiple files ✅
 - [x] **Error Recovery** - Handle corrupted PDFs gracefully ✅
+  - [x] Hybrid-reference PDF support (XRef streams + direct objects) ✅ v1.2.5
+  - [x] XRef chain following with circular reference detection ✅ v1.2.5
+  - [x] Object scanning fallback for missing XRef entries ✅ v1.2.5
+  - [ ] Enhanced type inference for malformed objects (ongoing)
+- [ ] **PDF Debugging & Validation** - Error reporting and analysis tools
+  - [ ] Structured error reporting with context
+  - [ ] Warning collection during parsing
+  - [ ] Basic validation report (missing objects, corrupted streams)
+  - [ ] Object tree inspection API
 
 #### Phase 5: Critical Missing Features (Q1 2026) ✅ COMPLETED
 - [x] **Font Embedding** - TrueType/OpenType font embedding (ISO §9.6.3) ✅ COMPLETED v1.1.6
@@ -151,6 +196,11 @@ The Community Edition will provide essential PDF processing capabilities suitabl
 - [ ] **Simple Templates** - Variable substitution
 - [x] **Basic Forms** - Simple AcroForm fields (ISO §12.7) ✅
 - [x] **Basic Annotations** - Text, highlight annotations (ISO §12.5) ✅
+- [ ] **Document Navigation** - Outlines, bookmarks, and links inspection
+  - [ ] Outline/TOC reading API (bookmarks hierarchy)
+  - [ ] Named Destinations inspection
+  - [ ] Link/GoTo annotation extraction from pages
+  - [ ] Annotation traversal and filtering API
 
 #### Phase 7: PDFSharp Feature Parity (Q4 2025 - Q1 2026) 🎯 **65% Compliance Target**
 - [ ] **Digital Signatures Basic** - Visual representation and structure (no crypto)
@@ -187,6 +237,11 @@ The PRO Edition extends Community features with advanced capabilities for profes
 - [ ] **Form Handling** - Fill, extract, and flatten PDF forms (§12.7 complete)
 - [ ] **OCR Integration** - Extract text from scanned PDFs
 - [ ] **Redaction** - Secure content removal with no recovery
+- [ ] **Advanced PDF Debugging** - Professional validation and analysis
+  - [ ] PDF/A compliance validator with detailed reports
+  - [ ] Fix suggestions for common PDF errors
+  - [ ] Interactive object tree visualization
+  - [ ] Performance profiling for large PDFs
 
 #### ISO 32000 Advanced Compliance (Q3 2026)
 - [ ] **CID Fonts** - CID-keyed fonts, CJK support (§9.7)
