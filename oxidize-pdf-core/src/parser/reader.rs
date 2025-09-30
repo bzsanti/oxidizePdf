@@ -1706,16 +1706,37 @@ impl<R: Read + Seek> PdfReader<R> {
             let search_area = &buffer[start..];
 
             if let Some(dict_start) = find_bytes(search_area, b"<<") {
-                if let Some(dict_end) = find_bytes(&search_area[dict_start..], b">>") {
+                // Handle nested dictionaries properly by counting brackets
+                let mut bracket_count = 1;
+                let mut pos = dict_start + 2;
+                let mut dict_end = None;
+
+                while pos < search_area.len() - 1 && bracket_count > 0 {
+                    if search_area[pos] == b'<' && search_area[pos + 1] == b'<' {
+                        bracket_count += 1;
+                        pos += 2;
+                    } else if search_area[pos] == b'>' && search_area[pos + 1] == b'>' {
+                        bracket_count -= 1;
+                        if bracket_count == 0 {
+                            dict_end = Some(pos);
+                            break;
+                        }
+                        pos += 2;
+                    } else {
+                        pos += 1;
+                    }
+                }
+
+                if let Some(dict_end_pos) = dict_end {
                     let dict_start_abs = dict_start + 2;
-                    let dict_end_abs = dict_start + dict_end;
+                    let dict_end_abs = dict_end_pos;
                     let dict_content_bytes = &search_area[dict_start_abs..dict_end_abs];
                     let dict_content = String::from_utf8_lossy(dict_content_bytes);
 
                     eprintln!(
                         "DEBUG: Found object {} dictionary content: '{}'",
                         obj_num,
-                        dict_content.trim()
+                        dict_content.chars().take(200).collect::<String>()
                     );
 
                     // Check if this is followed by stream data - be specific about positioning

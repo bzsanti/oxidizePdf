@@ -115,14 +115,30 @@ impl XRefTable {
         while let Some(offset) = current_offset {
             // Prevent infinite loops
             if visited_offsets.contains(&offset) {
-                eprintln!("Circular reference in XRef chain at offset {offset}");
+                eprintln!(
+                    "Circular reference in XRef chain at offset {} (already visited)",
+                    offset
+                );
+                eprintln!("DEBUG: Visited offsets so far: {:?}", visited_offsets);
                 break;
             }
             visited_offsets.insert(offset);
 
+            eprintln!(
+                "DEBUG: Parsing XRef at offset {}, visited count: {}",
+                offset,
+                visited_offsets.len()
+            );
+
             // Parse the xref table at this offset
             reader.seek(SeekFrom::Start(offset))?;
             let table = Self::parse_primary_with_options(reader, options)?;
+
+            eprintln!(
+                "DEBUG: Parsed XRef table with {} entries, {} extended entries",
+                table.entries.len(),
+                table.extended_entries.len()
+            );
 
             // Get the previous offset from trailer
             let prev_offset = table
@@ -132,7 +148,16 @@ impl XRefTable {
                 .and_then(|obj| obj.as_integer())
                 .map(|i| i as u64);
 
+            if let Some(prev) = prev_offset {
+                eprintln!("DEBUG: Found /Prev pointer to offset {}", prev);
+            } else {
+                eprintln!("DEBUG: No /Prev in trailer, end of chain");
+            }
+
             // Merge entries (newer entries override older ones)
+            let regular_count = table.entries.len();
+            let extended_count = table.extended_entries.len();
+
             for (obj_num, entry) in table.entries {
                 merged_table.entries.entry(obj_num).or_insert(entry);
             }
@@ -143,6 +168,11 @@ impl XRefTable {
                     .or_insert(ext_entry);
             }
 
+            eprintln!(
+                "DEBUG: Merged {} regular + {} extended entries from this XRef",
+                regular_count, extended_count
+            );
+
             // Use the most recent trailer
             if merged_table.trailer.is_none() {
                 merged_table.trailer = table.trailer;
@@ -150,6 +180,32 @@ impl XRefTable {
             }
 
             current_offset = prev_offset;
+        }
+
+        eprintln!(
+            "DEBUG: XRef chain parsing complete. Total entries: {}, extended: {}",
+            merged_table.entries.len(),
+            merged_table.extended_entries.len()
+        );
+
+        // Check if we have a hybrid-reference file (XRef stream with missing objects)
+        // This happens when the PDF has direct objects (1-N) that aren't listed in XRef streams
+        // Typical for Skia/PDF and other optimized generators
+        if options.lenient_syntax || options.collect_warnings {
+            // Scan for objects that exist in the PDF but aren't in the XRef
+            // This is necessary for hybrid files where XRef stream only lists some objects
+            eprintln!("DEBUG: Scanning PDF for objects not in XRef (hybrid file support)");
+            reader.seek(SeekFrom::Start(0))?;
+
+            if let Err(e) = Self::scan_and_fill_missing_objects(reader, &mut merged_table) {
+                eprintln!("DEBUG: Object scanning failed (non-fatal): {:?}", e);
+            } else {
+                eprintln!(
+                    "DEBUG: After scanning - Total entries: {}, extended: {}",
+                    merged_table.entries.len(),
+                    merged_table.extended_entries.len()
+                );
+            }
         }
 
         Ok(merged_table)
@@ -586,6 +642,71 @@ impl XRefTable {
         }
 
         Err(ParseError::InvalidXRef)
+    }
+
+    /// Scan PDF for objects not present in XRef and add them (for hybrid files)
+    fn scan_and_fill_missing_objects<R: Read + Seek>(
+        reader: &mut BufReader<R>,
+        table: &mut Self,
+    ) -> ParseResult<()> {
+        // Read entire file into memory for scanning
+        let mut buffer = Vec::new();
+        reader.read_to_end(&mut buffer)?;
+
+        let mut objects_added = 0;
+
+        // Scan for object headers using byte patterns (not String to preserve offsets)
+        let mut pos = 0;
+        while pos < buffer.len() {
+            // Find "obj" pattern in bytes
+            if let Some(obj_pos) = buffer[pos..].windows(3).position(|w| w == b"obj") {
+                let abs_pos = pos + obj_pos;
+                if abs_pos < 4 {
+                    pos += obj_pos + 3;
+                    continue;
+                }
+
+                // Look backwards for newline to find line start
+                let line_start = buffer[..abs_pos]
+                    .iter()
+                    .rposition(|&b| b == b'\n' || b == b'\r')
+                    .map(|p| p + 1)
+                    .unwrap_or(0);
+
+                // Extract the line containing "N G obj"
+                let line_bytes = &buffer[line_start..abs_pos + 3];
+                let line = String::from_utf8_lossy(line_bytes);
+
+                if let Some((obj_num, gen_num)) = Self::parse_obj_header(line.trim()) {
+                    // Only add if not already present
+                    if !table.entries.contains_key(&obj_num)
+                        && !table.extended_entries.contains_key(&obj_num)
+                    {
+                        // Offset is the BYTE position of line start (not char position)
+                        table.add_entry(
+                            obj_num,
+                            XRefEntry {
+                                offset: line_start as u64,
+                                generation: gen_num,
+                                in_use: true,
+                            },
+                        );
+                        objects_added += 1;
+                    }
+                }
+
+                pos = abs_pos + 3;
+            } else {
+                break;
+            }
+        }
+
+        eprintln!(
+            "DEBUG: scan_and_fill_missing_objects added {} objects",
+            objects_added
+        );
+
+        Ok(())
     }
 
     /// Parse XRef table using recovery mode (scan for objects)
