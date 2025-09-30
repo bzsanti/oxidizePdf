@@ -332,6 +332,10 @@ path = "../examples/src/dashboard_sales_report.rs"
 name = "heatmap_simple_test"
 path = "../examples/src/heatmap_simple_test.rs"
 
+[[example]]
+name = "pivot_table_simple_test"
+path = "../examples/src/pivot_table_simple_test.rs"
+
 # Removed test_confidential_ocr example - file deleted for cleanup
 
 [[bench]]

@@ -116,7 +116,7 @@ pub use component::{ComponentPosition, ComponentSpan, DashboardComponent};
 pub use heatmap::{ColorScale, HeatMap, HeatMapBuilder, HeatMapData, HeatMapOptions};
 pub use kpi_card::{KpiCard, KpiCardBuilder, TrendDirection};
 pub use layout::{DashboardLayout, GridPosition, LayoutManager};
-pub use pivot_table::{AggregateFunction, PivotTable, PivotTableBuilder};
+pub use pivot_table::{AggregateFunction, PivotConfig, PivotTable, PivotTableBuilder};
 pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPoint};
 pub use theme::{DashboardTheme, Typography};
 pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode};
