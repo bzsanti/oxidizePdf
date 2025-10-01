@@ -329,6 +329,10 @@ name = "dashboard_sales_report"
 path = "../examples/src/dashboard_sales_report.rs"
 
 [[example]]
+name = "dashboard_templates_demo"
+path = "../examples/src/dashboard_templates_demo.rs"
+
+[[example]]
 name = "heatmap_simple_test"
 path = "../examples/src/heatmap_simple_test.rs"
 

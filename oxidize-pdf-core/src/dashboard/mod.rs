@@ -109,6 +109,7 @@ pub mod kpi_card;
 pub mod layout;
 pub mod pivot_table;
 pub mod scatter_plot;
+pub mod templates;
 pub mod theme;
 pub mod treemap;
 
@@ -120,6 +121,10 @@ pub use kpi_card::{KpiCard, KpiCardBuilder, TrendDirection};
 pub use layout::{DashboardLayout, GridPosition, LayoutManager};
 pub use pivot_table::{AggregateFunction, PivotConfig, PivotTable, PivotTableBuilder};
 pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPlotOptions, ScatterPoint};
+pub use templates::{
+    AnalyticsDashboardTemplate, ChartData, FinancialReportTemplate, KpiData, PieSegmentData,
+    SalesDashboardTemplate, SeriesData, TemplateData,
+};
 pub use theme::{DashboardTheme, Typography};
 pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode, TreeMapOptions};
 
