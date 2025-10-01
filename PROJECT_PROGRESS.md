@@ -95,8 +95,9 @@
 ### Reporting Avanzado - Items Restantes
 1. ⏳ **Chart Integration**: Conectar componentes avanzados con gráficos básicos
 2. ⏳ **Data Aggregation DSL**: API simplificada para agregaciones comunes
-3. ⏳ **Export Formats**: Exportación de datos embebidos JSON/CSV
-4. ⏳ **Templates**: Templates de dashboards pre-construidos
+3. ⏳ **Templates**: Templates de dashboards pre-construidos
+
+**Nota:** _Export Formats (JSON/CSV embedding) movido a PRO Edition - funcionalidad empresarial para auditoría y compliance._
 
 ### Rendimiento Extremo - No Iniciado
 1. ⏳ Generación paralela de páginas

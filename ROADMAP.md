@@ -84,7 +84,6 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 - [ ] KPI cards con visualizaciones embebidas
 - [ ] Tablas pivote con subtotales y agregaciones
 - [ ] Heatmaps y treemaps nativos
-- [ ] Data embedding para re-análisis
 
 ### Prioridad 3: Rendimiento Extremo (Q2 2025)
 - [ ] Paralelización de generación de páginas
