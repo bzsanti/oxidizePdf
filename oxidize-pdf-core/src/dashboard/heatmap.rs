@@ -50,14 +50,18 @@ impl HeatMap {
     /// Get min/max values from the data
     fn get_value_range(&self) -> (f64, f64) {
         let min_val = self.color_scale.min_value.unwrap_or_else(|| {
-            self.data.values.iter()
+            self.data
+                .values
+                .iter()
                 .flat_map(|row| row.iter())
                 .copied()
                 .fold(f64::INFINITY, f64::min)
         });
 
         let max_val = self.color_scale.max_value.unwrap_or_else(|| {
-            self.data.values.iter()
+            self.data
+                .values
+                .iter()
                 .flat_map(|row| row.iter())
                 .copied()
                 .fold(f64::NEG_INFINITY, f64::max)
@@ -112,11 +116,7 @@ impl HeatMap {
             }
         };
 
-        Color::rgb(
-            r1 + (r2 - r1) * t,
-            g1 + (g2 - g1) * t,
-            b1 + (b2 - b1) * t,
-        )
+        Color::rgb(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
     }
 
     /// Check if a color is dark (for text contrast)
@@ -217,7 +217,11 @@ impl DashboardComponent for HeatMap {
 
         // Calculate cell dimensions
         let rows = self.data.values.len();
-        let cols = if rows > 0 { self.data.values[0].len() } else { 0 };
+        let cols = if rows > 0 {
+            self.data.values[0].len()
+        } else {
+            0
+        };
 
         if rows == 0 || cols == 0 {
             return Ok(());
@@ -245,7 +249,7 @@ impl DashboardComponent for HeatMap {
                         x + self.options.cell_padding,
                         y + self.options.cell_padding,
                         cell_width - 2.0 * self.options.cell_padding,
-                        cell_height - 2.0 * self.options.cell_padding
+                        cell_height - 2.0 * self.options.cell_padding,
                     )
                     .fill();
 
@@ -257,7 +261,7 @@ impl DashboardComponent for HeatMap {
                         x + self.options.cell_padding,
                         y + self.options.cell_padding,
                         cell_width - 2.0 * self.options.cell_padding,
-                        cell_height - 2.0 * self.options.cell_padding
+                        cell_height - 2.0 * self.options.cell_padding,
                     )
                     .stroke();
 
@@ -302,7 +306,17 @@ impl DashboardComponent for HeatMap {
 
         // Render legend
         if self.options.show_legend {
-            self.render_legend(page, position, chart_x + chart_width + 10.0, chart_y + title_height, legend_width - 20.0, chart_height, min_val, max_val, theme)?;
+            self.render_legend(
+                page,
+                position,
+                chart_x + chart_width + 10.0,
+                chart_y + title_height,
+                legend_width - 20.0,
+                chart_height,
+                min_val,
+                max_val,
+                theme,
+            )?;
         }
 
         Ok(())

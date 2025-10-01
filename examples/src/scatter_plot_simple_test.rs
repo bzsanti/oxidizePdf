@@ -4,8 +4,8 @@
 
 use oxidize_pdf::{
     dashboard::{
-        DashboardComponent, ComponentPosition, DashboardTheme,
-        ScatterPlot, ScatterPoint, ScatterPlotOptions
+        ComponentPosition, DashboardComponent, DashboardTheme, ScatterPlot, ScatterPlotOptions,
+        ScatterPoint,
     },
     graphics::Color,
     Document, Page, Result,

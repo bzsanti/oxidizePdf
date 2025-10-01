@@ -94,7 +94,11 @@ impl DashboardComponent for PivotTable {
             return Ok(());
         }
 
-        let title_height = if table.pivot_config.title.is_some() { 30.0 } else { 0.0 };
+        let title_height = if table.pivot_config.title.is_some() {
+            30.0
+        } else {
+            0.0
+        };
         let row_height = 22.0;
         let header_height = 25.0;
         let padding = 5.0;
@@ -117,14 +121,24 @@ impl DashboardComponent for PivotTable {
         // Render header row with background
         page.graphics()
             .set_fill_color(crate::graphics::Color::gray(0.9))
-            .rect(position.x, current_y - header_height, position.width, header_height)
+            .rect(
+                position.x,
+                current_y - header_height,
+                position.width,
+                header_height,
+            )
             .fill();
 
         // Render header border
         page.graphics()
             .set_stroke_color(crate::graphics::Color::gray(0.6))
             .set_line_width(1.0)
-            .rect(position.x, current_y - header_height, position.width, header_height)
+            .rect(
+                position.x,
+                current_y - header_height,
+                position.width,
+                header_height,
+            )
             .stroke();
 
         // Render header text
@@ -159,7 +173,12 @@ impl DashboardComponent for PivotTable {
             if !is_totals && row_idx % 2 == 1 {
                 page.graphics()
                     .set_fill_color(crate::graphics::Color::gray(0.97))
-                    .rect(position.x, current_y - row_height, position.width, row_height)
+                    .rect(
+                        position.x,
+                        current_y - row_height,
+                        position.width,
+                        row_height,
+                    )
                     .fill();
             }
 
@@ -167,7 +186,12 @@ impl DashboardComponent for PivotTable {
             if is_totals {
                 page.graphics()
                     .set_fill_color(crate::graphics::Color::gray(0.85))
-                    .rect(position.x, current_y - row_height, position.width, row_height)
+                    .rect(
+                        position.x,
+                        current_y - row_height,
+                        position.width,
+                        row_height,
+                    )
                     .fill();
             }
 
@@ -229,7 +253,10 @@ impl DashboardComponent for PivotTable {
         page.graphics()
             .set_stroke_color(crate::graphics::Color::gray(0.6))
             .set_line_width(1.0)
-            .move_to(position.x + position.width, position.y + position.height - title_height)
+            .move_to(
+                position.x + position.width,
+                position.y + position.height - title_height,
+            )
             .line_to(position.x + position.width, current_y)
             .stroke();
 

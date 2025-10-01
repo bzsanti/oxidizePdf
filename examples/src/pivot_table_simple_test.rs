@@ -3,7 +3,7 @@
 //! Tests the PivotTable component in isolation
 
 use oxidize_pdf::{
-    dashboard::{PivotTable, PivotConfig, DashboardComponent, ComponentPosition, DashboardTheme},
+    dashboard::{ComponentPosition, DashboardComponent, DashboardTheme, PivotConfig, PivotTable},
     Document, Page, Result,
 };
 use std::collections::HashMap;
@@ -65,7 +65,12 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn create_record(category: &str, region: &str, quarter: &str, amount: &str) -> HashMap<String, String> {
+fn create_record(
+    category: &str,
+    region: &str,
+    quarter: &str,
+    amount: &str,
+) -> HashMap<String, String> {
     let mut record = HashMap::new();
     record.insert("Category".to_string(), category.to_string());
     record.insert("Region".to_string(), region.to_string());

@@ -122,7 +122,14 @@ impl DashboardComponent for TreeMap {
 
         // Calculate layout
         let mut rects = Vec::new();
-        self.layout_nodes(&self.data, plot_x, plot_y, plot_width, plot_height, &mut rects);
+        self.layout_nodes(
+            &self.data,
+            plot_x,
+            plot_y,
+            plot_width,
+            plot_height,
+            &mut rects,
+        );
 
         // Default colors if not specified
         let default_colors = vec![
@@ -140,7 +147,9 @@ impl DashboardComponent for TreeMap {
 
         // Render rectangles
         for (idx, (node, x, y, w, h)) in rects.iter().enumerate() {
-            let color = node.color.unwrap_or(default_colors[idx % default_colors.len()]);
+            let color = node
+                .color
+                .unwrap_or(default_colors[idx % default_colors.len()]);
 
             // Draw rectangle
             page.graphics()

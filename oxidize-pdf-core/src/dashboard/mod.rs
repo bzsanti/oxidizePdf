@@ -103,6 +103,7 @@
 
 pub mod builder;
 pub mod component;
+pub mod data_aggregation;
 pub mod heatmap;
 pub mod kpi_card;
 pub mod layout;
@@ -113,6 +114,7 @@ pub mod treemap;
 
 pub use builder::{DashboardBuilder, DashboardConfig};
 pub use component::{ComponentPosition, ComponentSpan, DashboardComponent};
+pub use data_aggregation::{AggregateFunc, DataAggregator, GroupedData};
 pub use heatmap::{ColorScale, HeatMap, HeatMapBuilder, HeatMapData, HeatMapOptions};
 pub use kpi_card::{KpiCard, KpiCardBuilder, TrendDirection};
 pub use layout::{DashboardLayout, GridPosition, LayoutManager};

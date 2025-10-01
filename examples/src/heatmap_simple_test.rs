@@ -3,7 +3,7 @@
 //! Tests the HeatMap component in isolation
 
 use oxidize_pdf::{
-    dashboard::{HeatMap, HeatMapData, ColorScale},
+    dashboard::{ColorScale, HeatMap, HeatMapData},
     graphics::Color,
     Document, Page, Result,
 };
@@ -18,7 +18,11 @@ fn main() -> Result<()> {
             vec![78.0, 95.0, 88.0],
             vec![91.0, 82.0, 97.0],
         ],
-        row_labels: vec!["North America".to_string(), "Europe".to_string(), "Asia".to_string()],
+        row_labels: vec![
+            "North America".to_string(),
+            "Europe".to_string(),
+            "Asia".to_string(),
+        ],
         column_labels: vec!["Q2".to_string(), "Q3".to_string(), "Q4".to_string()],
     };
 
@@ -43,7 +47,7 @@ fn main() -> Result<()> {
     let mut page = Page::a4();
 
     // Manually render the heatmap at a specific position
-    use oxidize_pdf::dashboard::{DashboardComponent, ComponentPosition, DashboardTheme};
+    use oxidize_pdf::dashboard::{ComponentPosition, DashboardComponent, DashboardTheme};
 
     let position = ComponentPosition {
         x: 50.0,

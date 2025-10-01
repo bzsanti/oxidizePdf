@@ -4,8 +4,7 @@
 
 use oxidize_pdf::{
     dashboard::{
-        DashboardComponent, ComponentPosition, DashboardTheme,
-        TreeMap, TreeMapNode, TreeMapOptions
+        ComponentPosition, DashboardComponent, DashboardTheme, TreeMap, TreeMapNode, TreeMapOptions,
     },
     Document, Page, Result,
 };

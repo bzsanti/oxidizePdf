@@ -344,6 +344,14 @@ path = "../examples/src/scatter_plot_simple_test.rs"
 name = "treemap_simple_test"
 path = "../examples/src/treemap_simple_test.rs"
 
+[[example]]
+name = "charts_dashboard_integration_test"
+path = "../examples/src/charts_dashboard_integration_test.rs"
+
+[[example]]
+name = "line_chart_dashboard_test"
+path = "../examples/src/line_chart_dashboard_test.rs"
+
 # Removed test_confidential_ocr example - file deleted for cleanup
 
 [[bench]]

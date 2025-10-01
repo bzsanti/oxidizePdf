@@ -35,12 +35,14 @@
 mod bar_chart;
 mod chart_builder;
 mod chart_renderer;
+mod dashboard_integration;
 mod line_chart;
 mod pie_chart;
 
 pub use bar_chart::{BarChart, BarChartBuilder, BarOrientation};
 pub use chart_builder::{Chart, ChartBuilder, ChartData, ChartType, LegendPosition};
 pub use chart_renderer::ChartRenderer;
+pub use dashboard_integration::{DashboardBarChart, DashboardLineChart, DashboardPieChart};
 pub use line_chart::{DataSeries, LineChart, LineChartBuilder};
 pub use pie_chart::{PieChart, PieChartBuilder, PieSegment};
 
