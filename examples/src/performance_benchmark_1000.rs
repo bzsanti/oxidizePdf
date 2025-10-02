@@ -15,6 +15,9 @@ fn main() -> Result<()> {
     let mut doc = Document::new();
     doc.set_title("Performance Benchmark");
 
+    // Separate page creation from adding to document
+    let page_creation_start = Instant::now();
+    let mut pages = Vec::with_capacity(page_count);
     for i in 0..page_count {
         let mut page = Page::a4();
 
@@ -29,8 +32,15 @@ fn main() -> Result<()> {
             .at(50.0, 700.0)
             .write("Lorem ipsum dolor sit amet, consectetur adipiscing elit.")?;
 
+        pages.push(page);
+    }
+    let page_creation_time = page_creation_start.elapsed();
+
+    let add_pages_start = Instant::now();
+    for page in pages {
         doc.add_page(page);
     }
+    let add_pages_time = add_pages_start.elapsed();
 
     let generation_time = start_time.elapsed();
 
@@ -43,6 +53,8 @@ fn main() -> Result<()> {
 
     // Output simple para parsing
     println!("PAGES={}", page_count);
+    println!("PAGE_CREATION_MS={}", page_creation_time.as_millis());
+    println!("ADD_PAGES_MS={}", add_pages_time.as_millis());
     println!("GENERATION_MS={}", generation_time.as_millis());
     println!("WRITE_MS={}", write_time.as_millis());
     println!("TOTAL_MS={}", total_time.as_millis());

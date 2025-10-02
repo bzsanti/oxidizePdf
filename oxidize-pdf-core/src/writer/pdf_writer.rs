@@ -1486,6 +1486,7 @@ impl<W: Write> PdfWriter<W> {
     fn write_object(&mut self, id: ObjectId, object: Object) -> Result<()> {
         self.xref_positions.insert(id, self.current_position);
 
+        // Pre-format header to count exact bytes once
         let header = format!("{} {} obj\n", id.number(), id.generation());
         self.write_bytes(header.as_bytes())?;
 
