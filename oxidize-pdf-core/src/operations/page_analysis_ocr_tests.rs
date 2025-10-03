@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(options.language, "en");
         assert_eq!(options.min_confidence, 0.6);
         assert!(options.preserve_layout);
-        assert_eq!(options.timeout_seconds, 30);
+        assert_eq!(options.timeout_seconds, 60); // Updated to match actual default
     }
 
     #[test]

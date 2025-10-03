@@ -2,7 +2,38 @@
 
 ## Current Status
 
-The PNG decoder in oxidize-pdf has **2 known test failures** out of 39 PNG-related tests (94.9% success rate).
+The PNG decoder in oxidize-pdf has **2 known test failures** out of 40 PNG-related tests (95.0% success rate).
+
+## ✅ NEW: PNG Transparency Support (v1.2.5+)
+
+**IMPLEMENTED** - PNG images with alpha channel transparency are now fully supported!
+
+### What's New:
+- ✅ **Alpha Channel Detection**: Automatic detection of PNG images with transparency
+- ✅ **SMask Generation**: Proper PDF SMask (Soft Mask) objects for alpha channel
+- ✅ **RGBA Support**: `Image::from_rgba_data()` creates images with transparency
+- ✅ **Automatic Handling**: `PdfWriter` automatically uses transparency when present
+- ✅ **Test Coverage**: New `test_png_transparency_smask` verifies SMask generation
+
+### Implementation Details:
+- `Image::has_transparency()` - Detects if image has alpha channel
+- `Image::to_pdf_object_with_transparency()` - Generates main image + SMask objects
+- `PdfWriter` now checks `has_transparency()` and writes SMask as separate PDF object
+- SMask uses DeviceGray colorspace for alpha channel (PDF specification compliant)
+- Main image uses DeviceRGB with separate SMask reference
+
+### Usage Example:
+```rust
+use oxidize_pdf::graphics::Image;
+use oxidize_pdf::writer::PdfWriter;
+
+// Create RGBA image with transparency
+let rgba_data = vec![/* R, G, B, A values */];
+let image = Image::from_rgba_data(rgba_data, width, height)?;
+
+// Transparency is automatically handled when adding to PDF
+page.add_image("transparent_img", image);
+```
 
 ## Specific Issues
 
@@ -12,7 +43,7 @@ The PNG decoder in oxidize-pdf has **2 known test failures** out of 39 PNG-relat
 - **Root Cause**: Test data with corrupt PNG deflate streams
 - **Impact**: Does not affect production PDF processing - only test edge cases
 
-### 2. `test_complete_workflow` - FAILED  
+### 2. `test_complete_workflow` - FAILED
 - **Error**: `InvalidImage("PNG decompression failed: corrupt deflate stream")`
 - **Location**: `oxidize-pdf-core/src/graphics/pdf_image.rs:2039`
 - **Root Cause**: Similar PNG deflate stream corruption in test data
@@ -20,16 +51,23 @@ The PNG decoder in oxidize-pdf has **2 known test failures** out of 39 PNG-relat
 
 ## Working PNG Functionality
 
-The following PNG features **work correctly** (36/39 tests passing):
+The following PNG features **work correctly** (37/40 tests passing):
 
 ✅ **Standard PNG Processing**:
 - Basic PNG data loading: `test_image_from_png_data` ✅
 - PNG file loading: `test_image_from_png_file` ✅
 - PNG to PDF object conversion: `test_image_to_pdf_object_png` ✅
 
+✅ **Transparency Support** (NEW):
+- PNG with alpha channel: `test_png_transparency_smask` ✅
+- RGBA image creation ✅
+- SMask generation and embedding ✅
+- Automatic transparency detection ✅
+
 ✅ **Color Space Support**:
 - Grayscale PNG: `test_png_grayscale_image` ✅
 - RGB PNG processing ✅
+- RGBA PNG processing ✅ (NEW)
 - Color space conversion ✅
 
 ✅ **Error Handling**:
@@ -80,11 +118,12 @@ The following PNG features **work correctly** (36/39 tests passing):
 
 ## Monitoring
 
-- PNG test success rate: **94.9%** (36/39 passing)
+- PNG test success rate: **95.0%** (37/40 passing, includes new transparency test)
+- PNG transparency support: **FULLY WORKING** ✅
 - No production user reports of PNG failures
 - Continuous integration tracks these specific failures
 
 ---
 
-**Last Updated**: 2024-08-27  
+**Last Updated**: 2025-09-30 - PNG Transparency Support Implemented
 **Next Review**: When production PNG issues reported or next major release

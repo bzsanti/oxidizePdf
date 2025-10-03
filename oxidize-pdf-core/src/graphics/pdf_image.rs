@@ -365,6 +365,10 @@ impl Image {
 
     /// Convert to PDF XObject with SMask for transparency
     pub fn to_pdf_object_with_transparency(&self) -> (Object, Option<Object>) {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write as IoWrite;
+
         let mut main_dict = Dictionary::new();
 
         // Required entries for image XObject
@@ -387,19 +391,29 @@ impl Image {
             Object::Integer(self.bits_per_component as i64),
         );
 
-        // Filter based on image format
-        match self.format {
+        // Prepare main image data (compress if needed)
+        let main_data = match self.format {
             ImageFormat::Jpeg => {
                 main_dict.set("Filter", Object::Name("DCTDecode".to_string()));
+                self.data.clone()
             }
             ImageFormat::Png | ImageFormat::Raw => {
-                // Use FlateDecode for PNG decoded data and raw data
+                // Compress raw RGB data with FlateDecode
                 main_dict.set("Filter", Object::Name("FlateDecode".to_string()));
+                let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                encoder.write_all(&self.data).unwrap();
+                encoder.finish().unwrap()
             }
             ImageFormat::Tiff => {
                 main_dict.set("Filter", Object::Name("FlateDecode".to_string()));
+                let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                encoder.write_all(&self.data).unwrap();
+                encoder.finish().unwrap()
             }
-        }
+        };
+
+        // Set Length for main image stream
+        main_dict.set("Length", Object::Integer(main_data.len() as i64));
 
         // Create soft mask if present
         let smask_obj = if let Some(mask) = &self.soft_mask {
@@ -412,7 +426,15 @@ impl Image {
             mask_dict.set("BitsPerComponent", Object::Integer(8));
             mask_dict.set("Filter", Object::Name("FlateDecode".to_string()));
 
-            Some(Object::Stream(mask_dict, mask.data.clone()))
+            // Compress alpha channel data
+            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(&mask.data).unwrap();
+            let compressed_mask_data = encoder.finish().unwrap();
+
+            // Set Length for SMask stream
+            mask_dict.set("Length", Object::Integer(compressed_mask_data.len() as i64));
+
+            Some(Object::Stream(mask_dict, compressed_mask_data))
         } else {
             None
         };
@@ -420,7 +442,7 @@ impl Image {
         // Note: The SMask reference would need to be set by the caller
         // as it requires object references which we don't have here
 
-        (Object::Stream(main_dict, self.data.clone()), smask_obj)
+        (Object::Stream(main_dict, main_data), smask_obj)
     }
 
     /// Check if this image has transparency

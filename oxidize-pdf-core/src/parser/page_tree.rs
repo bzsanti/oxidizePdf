@@ -191,15 +191,30 @@ impl PageTree {
             })
             .or_else(|| {
                 // If Type is missing and we have lenient parsing, try to infer
-                if reader.options().lenient_syntax {
+                let lenient_syntax = reader.options().lenient_syntax;
+                let collect_warnings = reader.options().collect_warnings;
+
+                if lenient_syntax || collect_warnings {
                     // If it has Kids, it's likely a Pages node
                     if node.contains_key("Kids") {
+                        if collect_warnings {
+                            eprintln!(
+                                "Warning: Inferred Type=Pages for object {} {} R (missing Type field, has Kids)",
+                                node_ref.0, node_ref.1
+                            );
+                        }
                         Some("Pages")
                     }
                     // If it has Contents or MediaBox but no Kids, it's likely a Page
                     else if node.contains_key("Contents")
                         || (node.contains_key("MediaBox") && !node.contains_key("Kids"))
                     {
+                        if collect_warnings {
+                            eprintln!(
+                                "Warning: Inferred Type=Page for object {} {} R (missing Type field, has Contents/MediaBox)",
+                                node_ref.0, node_ref.1
+                            );
+                        }
                         Some("Page")
                     } else {
                         None
@@ -269,6 +284,10 @@ impl PageTree {
 
                     // Get the kid object info first
                     let (_kid_type, count, is_target) = {
+                        // Cache parse options to avoid borrow checker issues
+                        let lenient_syntax = reader.options().lenient_syntax;
+                        let collect_warnings = reader.options().collect_warnings;
+
                         let kid_obj = reader.get_object(kid_ref.0, kid_ref.1)?;
                         let kid_dict =
                             kid_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
@@ -286,6 +305,37 @@ impl PageTree {
                                     || kid_dict.contains_key("MediaBox")
                                 {
                                     Some("Page")
+                                } else {
+                                    None
+                                }
+                            })
+                            .or_else(|| {
+                                // Additional inference for reconstructed/corrupted objects
+                                if lenient_syntax || collect_warnings {
+                                    // If it has Kids, it's likely a Pages node
+                                    if kid_dict.contains_key("Kids") {
+                                        if collect_warnings {
+                                            eprintln!(
+                                                "Warning: Inferred Type=Pages for object {} 0 R (missing Type field, has Kids)",
+                                                kid_ref.0
+                                            );
+                                        }
+                                        Some("Pages")
+                                    }
+                                    // If it has Contents or MediaBox but no Kids, it's likely a Page
+                                    else if kid_dict.contains_key("Contents")
+                                        || (kid_dict.contains_key("MediaBox") && !kid_dict.contains_key("Kids"))
+                                    {
+                                        if collect_warnings {
+                                            eprintln!(
+                                                "Warning: Inferred Type=Page for object {} 0 R (missing Type field, has Contents/MediaBox)",
+                                                kid_ref.0
+                                            );
+                                        }
+                                        Some("Page")
+                                    } else {
+                                        None
+                                    }
                                 } else {
                                     None
                                 }

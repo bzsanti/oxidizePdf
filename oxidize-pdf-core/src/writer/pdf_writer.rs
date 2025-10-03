@@ -1333,8 +1333,28 @@ impl<W: Write> PdfWriter<W> {
                 // Use sequential ObjectId allocation to avoid conflicts
                 let image_id = self.allocate_object_id();
 
-                // Write the image XObject
-                self.write_object(image_id, image.to_pdf_object())?;
+                // Check if image has transparency (alpha channel)
+                if image.has_transparency() {
+                    // Handle transparent images with SMask
+                    let (mut main_obj, smask_obj) = image.to_pdf_object_with_transparency();
+
+                    // If we have a soft mask, write it as a separate object and reference it
+                    if let Some(smask_stream) = smask_obj {
+                        let smask_id = self.allocate_object_id();
+                        self.write_object(smask_id, smask_stream)?;
+
+                        // Add SMask reference to the main image dictionary
+                        if let Object::Stream(ref mut dict, _) = main_obj {
+                            dict.set("SMask", Object::Reference(smask_id));
+                        }
+                    }
+
+                    // Write the main image XObject (now with SMask reference if applicable)
+                    self.write_object(image_id, main_obj)?;
+                } else {
+                    // Write the image XObject without transparency
+                    self.write_object(image_id, image.to_pdf_object())?;
+                }
 
                 // Add reference to XObject dictionary
                 xobject_dict.set(name, Object::Reference(image_id));
@@ -1466,6 +1486,7 @@ impl<W: Write> PdfWriter<W> {
     fn write_object(&mut self, id: ObjectId, object: Object) -> Result<()> {
         self.xref_positions.insert(id, self.current_position);
 
+        // Pre-format header to count exact bytes once
         let header = format!("{} {} obj\n", id.number(), id.generation());
         self.write_bytes(header.as_bytes())?;
 
@@ -6085,5 +6106,84 @@ mod tests {
             assert!(content.contains("1 0 obj\nnull\nendobj"));
         }
         */
+
+        #[test]
+        fn test_png_transparency_smask() {
+            // Test that PNG images with alpha channel generate proper SMask in PDF
+            use crate::graphics::Image;
+            use std::fs;
+            use std::path::Path;
+
+            // Create a larger RGBA image with gradient transparency for visual verification
+            let width = 200;
+            let height = 100;
+            let mut rgba_data = Vec::with_capacity((width * height * 4) as usize);
+
+            for _y in 0..height {
+                for x in 0..width {
+                    rgba_data.push(255); // R - red
+                    rgba_data.push(0); // G
+                    rgba_data.push(0); // B
+                                       // Alpha gradient from opaque (255) at left to transparent (0) at right
+                    let alpha = 255 - ((x * 255) / width) as u8;
+                    rgba_data.push(alpha); // A
+                }
+            }
+
+            // Create image from RGBA data
+            let image = Image::from_rgba_data(rgba_data, width, height).unwrap();
+
+            // Verify image has transparency
+            assert!(image.has_transparency(), "Image should have transparency");
+            assert!(image.soft_mask().is_some(), "Image should have soft mask");
+
+            // Create a PDF with this image
+            let mut document = crate::document::Document::new();
+            document.set_title("PNG Transparency Test");
+            let mut page = Page::a4();
+            page.add_image("transparent_img", image);
+            document.add_page(page);
+
+            // Write PDF to buffer for verification
+            let mut buffer = Vec::new();
+            let mut writer = PdfWriter::new_with_writer(&mut buffer);
+            writer.write_document(&mut document).unwrap();
+
+            // Verify PDF content
+            let content = String::from_utf8_lossy(&buffer);
+
+            // Should contain SMask reference for transparency
+            assert!(
+                content.contains("/SMask"),
+                "PDF should contain /SMask entry for transparency"
+            );
+
+            // Should have an image XObject
+            assert!(content.contains("/XObject"), "PDF should contain /XObject");
+            assert!(
+                content.contains("/Image"),
+                "PDF should contain /Image subtype"
+            );
+
+            // Should have DeviceGray colorspace for the mask
+            assert!(
+                content.contains("/DeviceGray"),
+                "PDF should contain /DeviceGray for mask"
+            );
+
+            // Should have DeviceRGB for main image
+            assert!(
+                content.contains("/DeviceRGB"),
+                "PDF should contain /DeviceRGB for main image"
+            );
+
+            // Also save to disk for manual visual inspection
+            let output_path = Path::new("examples/results/test_png_transparency_smask.pdf");
+            if let Some(parent) = output_path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::write(output_path, &buffer);
+            // Note: We don't fail the test if file write fails (e.g., in CI without examples dir)
+        }
     }
 }

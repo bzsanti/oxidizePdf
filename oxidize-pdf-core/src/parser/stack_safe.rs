@@ -11,7 +11,7 @@ use std::collections::HashSet;
 pub const MAX_RECURSION_DEPTH: usize = 1000;
 
 /// Timeout for long-running parsing operations (in seconds)
-pub const PARSING_TIMEOUT_SECS: u64 = 30;
+pub const PARSING_TIMEOUT_SECS: u64 = 120; // Aumentado para documentos complejos
 
 /// Stack-safe parsing context
 #[derive(Debug)]

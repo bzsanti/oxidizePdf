@@ -469,7 +469,9 @@ impl Document {
 
         use std::io::BufWriter;
         let file = std::fs::File::create(path)?;
-        let writer = BufWriter::new(file);
+        // Use 512KB buffer for better I/O performance (vs default 8KB)
+        // Reduces syscalls by ~98% for typical PDFs
+        let writer = BufWriter::with_capacity(512 * 1024, file);
         let mut pdf_writer = PdfWriter::with_config(writer, config);
 
         pdf_writer.write_document(self)?;
@@ -494,7 +496,8 @@ impl Document {
         // Use the config as provided (don't override compress_streams)
 
         let file = std::fs::File::create(path)?;
-        let writer = BufWriter::new(file);
+        // Use 512KB buffer for better I/O performance (vs default 8KB)
+        let writer = BufWriter::with_capacity(512 * 1024, file);
         let mut pdf_writer = PdfWriter::with_config(writer, config);
         pdf_writer.write_document(self)?;
         Ok(())

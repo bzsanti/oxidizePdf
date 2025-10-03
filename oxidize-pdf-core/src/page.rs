@@ -423,10 +423,7 @@ impl Page {
 
     #[allow(dead_code)]
     pub(crate) fn generate_content(&mut self) -> Result<Vec<u8>> {
-        // First, get operations from graphics context as bytes
-        let graphics_ops = self.graphics_context.operations().as_bytes();
-        self.content.extend_from_slice(graphics_ops);
-
+        // Generate content with no page info (used for simple pages without headers/footers)
         self.generate_content_with_page_info(None, None, None)
     }
 

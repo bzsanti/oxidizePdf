@@ -222,7 +222,7 @@ mod tests {
         assert_eq!(context.max_depth, 1000);
         assert!(context.active_stack.is_empty());
         assert!(context.completed_refs.is_empty());
-        assert_eq!(context.timeout, Duration::from_secs(30));
+        assert_eq!(context.timeout, Duration::from_secs(120)); // Updated to match PARSING_TIMEOUT_SECS
     }
 
     #[test]
