@@ -1,11 +1,11 @@
-# Progreso del Proyecto - 2025-10-02
+# Progreso del Proyecto - 2025-10-03
 
-## Sesión Actual: Rendimiento Extremo
+## Sesión Actual: Rendimiento Extremo - Fase 2
 
 ### Estado Actual
 - Rama: develop_santi
-- Último commit: 98a241c feat: Implement dashboard templates system
-- Tests: ✅ Todos pasando
+- Último commit: a37d85c perf: Optimize I/O buffer size for +10-13% throughput improvement
+- Tests: ✅ Compilación exitosa
 
 ### ✅ Baseline Performance Metrics Established
 
@@ -85,6 +85,49 @@ let writer = BufWriter::with_capacity(512 * 1024, file);  // 512KB
 3. Object batching - complejidad vs beneficio marginal
 
 **Conclusión:** Buffer optimization es la optimización de mayor impacto con menor complejidad. Rendimiento Extremo iniciado con éxito.
+
+### 📊 Análisis de Margen de Mejora Adicional
+
+**Investigación realizada:** Intentamos optimizaciones adicionales (eliminar clones, itoa/ryu, pre-allocation) pero todas añadieron overhead en lugar de mejorar.
+
+**Breakdown de tiempo (5000 páginas, 285ms total):**
+```
+PAGE_CREATION:  22ms (7.7%)  ← Casi óptimo, difícil mejorar
+ADD_PAGES:      12ms (4.2%)  ← Casi óptimo, difícil mejorar
+WRITE:         250ms (87.7%) ← AQUÍ está el margen
+```
+
+**Dentro de WRITE (250ms):**
+- Complejidad objetos: 50-70ms (diccionarios, arrays, streams)
+- Estructuras PDF: 60-80ms (xref, catalog, fonts)
+- Serialización: 90-120ms (format!, to_string) ← **Optimizable**
+
+**Margen realista disponible:**
+
+| Escenario | Esfuerzo | Mejora Adicional | Tiempo Final |
+|-----------|----------|------------------|--------------|
+| **Actual (v1.2.5)** | - | +10% | 285ms |
+| Fácil | Bajo | +5-10% | 245-260ms |
+| Moderado | Medio | +15-25% | 205-235ms |
+| Agresivo | Alto | +30-50% | 145-200ms |
+
+**Técnicas identificadas:**
+- **Fácil**: String pooling, reuse buffers (ROI: bueno)
+- **Moderado**: Pre-compute xref, batch writing (ROI: medio)
+- **Agresivo**: Streaming writer, parallel serialization (ROI: cuestionable)
+
+### 🎯 Decisión: Release v1.2.5
+
+**Mejora conseguida:** +10% (285ms vs 318ms baseline)
+- **Esfuerzo:** 2 líneas de código
+- **ROI:** Excelente
+- **Mantenibilidad:** Sin impacto
+
+**Próximos pasos de optimización:** DIFERIDOS
+- Tenemos mucho trabajo en features (Reporting, OCR, etc)
+- El +10% es un resultado honesto y sólido
+- Optimizaciones adicionales requieren esfuerzo desproporcionado para el beneficio
+- Retomar cuando haya justificación de negocio clara
 
 ---
 
