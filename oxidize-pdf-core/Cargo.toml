@@ -320,6 +320,42 @@ path = "../examples/src/convert_pdf_ocr.rs"
 name = "test_ocr_simple"
 path = "../examples/src/test_ocr_simple.rs"
 
+[[example]]
+name = "extract_images_demo"
+path = "../examples/src/extract_images_demo.rs"
+
+[[example]]
+name = "dashboard_sales_report"
+path = "../examples/src/dashboard_sales_report.rs"
+
+[[example]]
+name = "dashboard_templates_demo"
+path = "../examples/src/dashboard_templates_demo.rs"
+
+[[example]]
+name = "heatmap_simple_test"
+path = "../examples/src/heatmap_simple_test.rs"
+
+[[example]]
+name = "pivot_table_simple_test"
+path = "../examples/src/pivot_table_simple_test.rs"
+
+[[example]]
+name = "scatter_plot_simple_test"
+path = "../examples/src/scatter_plot_simple_test.rs"
+
+[[example]]
+name = "treemap_simple_test"
+path = "../examples/src/treemap_simple_test.rs"
+
+[[example]]
+name = "charts_dashboard_integration_test"
+path = "../examples/src/charts_dashboard_integration_test.rs"
+
+[[example]]
+name = "line_chart_dashboard_test"
+path = "../examples/src/line_chart_dashboard_test.rs"
+
 # Removed test_confidential_ocr example - file deleted for cleanup
 
 [[bench]]

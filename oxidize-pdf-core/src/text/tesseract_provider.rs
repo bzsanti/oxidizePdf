@@ -118,6 +118,36 @@ impl RustyTesseractProvider {
         Ok(Self { config })
     }
 
+    /// Create a new Tesseract OCR provider optimized for large documents with potential rotation issues
+    pub fn for_large_documents() -> OcrResult<Self> {
+        let mut config_vars = HashMap::new();
+
+        // Optimize for speed and rotation handling
+        config_vars.insert("preserve_interword_spaces".to_string(), "1".to_string());
+        config_vars.insert("tessedit_create_hocr".to_string(), "0".to_string());
+        config_vars.insert("tessedit_create_tsv".to_string(), "0".to_string());
+        config_vars.insert("load_system_dawg".to_string(), "1".to_string());
+        config_vars.insert("load_freq_dawg".to_string(), "1".to_string());
+
+        // Speed optimizations - disable learning and complex features
+        config_vars.insert("classify_enable_learning".to_string(), "0".to_string());
+        config_vars.insert("tessedit_do_invert".to_string(), "0".to_string());
+
+        // Better handling of rotated documents
+        config_vars.insert("textord_debug_tabfind".to_string(), "0".to_string());
+        config_vars.insert("textord_use_cjk_fp_model".to_string(), "0".to_string());
+
+        let config = RustyTesseractConfig {
+            language: "eng".to_string(),
+            psm: Some(1),   // Automatic page segmentation with OSD (handles rotation)
+            oem: Some(1),   // Neural nets LSTM engine only (faster than legacy)
+            dpi: Some(150), // Reduced DPI for speed
+            config_variables: config_vars,
+        };
+
+        Ok(Self { config })
+    }
+
     /// Test if Tesseract is available and working
     pub fn test_availability() -> OcrResult<bool> {
         // Try to create a simple test args to verify Tesseract is installed

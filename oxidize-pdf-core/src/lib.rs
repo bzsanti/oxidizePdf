@@ -288,7 +288,10 @@ pub use parser::{
 };
 
 // Re-export operations
-pub use operations::{merge_pdfs, rotate_pdf_pages, split_pdf};
+pub use operations::{
+    extract_images_from_pages, extract_images_from_pdf, merge_pdfs, rotate_pdf_pages, split_pdf,
+    ExtractImagesOptions, ExtractedImage, ImageExtractor,
+};
 
 // Re-export dashboard types
 pub use dashboard::{

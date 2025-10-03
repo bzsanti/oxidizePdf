@@ -489,9 +489,9 @@ impl KpiCard {
         let trend_text = format!(
             "{}{:.1}%",
             match trend.direction {
-                TrendDirection::Up => "↑",
-                TrendDirection::Down => "↓",
-                TrendDirection::Flat => "→",
+                TrendDirection::Up => "+",
+                TrendDirection::Down => "-",
+                TrendDirection::Flat => "",
             },
             trend.change.abs()
         );

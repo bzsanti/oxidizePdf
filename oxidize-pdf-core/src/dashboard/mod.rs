@@ -103,23 +103,30 @@
 
 pub mod builder;
 pub mod component;
+pub mod data_aggregation;
 pub mod heatmap;
 pub mod kpi_card;
 pub mod layout;
 pub mod pivot_table;
 pub mod scatter_plot;
+pub mod templates;
 pub mod theme;
 pub mod treemap;
 
 pub use builder::{DashboardBuilder, DashboardConfig};
 pub use component::{ComponentPosition, ComponentSpan, DashboardComponent};
-pub use heatmap::{HeatMap, HeatMapBuilder, HeatMapData};
+pub use data_aggregation::{AggregateFunc, DataAggregator, GroupedData};
+pub use heatmap::{ColorScale, HeatMap, HeatMapBuilder, HeatMapData, HeatMapOptions};
 pub use kpi_card::{KpiCard, KpiCardBuilder, TrendDirection};
 pub use layout::{DashboardLayout, GridPosition, LayoutManager};
-pub use pivot_table::{AggregateFunction, PivotTable, PivotTableBuilder};
-pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPoint};
+pub use pivot_table::{AggregateFunction, PivotConfig, PivotTable, PivotTableBuilder};
+pub use scatter_plot::{ScatterPlot, ScatterPlotBuilder, ScatterPlotOptions, ScatterPoint};
+pub use templates::{
+    AnalyticsDashboardTemplate, ChartData, FinancialReportTemplate, KpiData, PieSegmentData,
+    SalesDashboardTemplate, SeriesData, TemplateData,
+};
 pub use theme::{DashboardTheme, Typography};
-pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode};
+pub use treemap::{TreeMap, TreeMapBuilder, TreeMapNode, TreeMapOptions};
 
 use crate::error::PdfError;
 use crate::page::Page;
