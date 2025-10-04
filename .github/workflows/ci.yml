@@ -77,10 +77,9 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -91,7 +90,20 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage
-        run: cargo tarpaulin --workspace --out Xml --timeout 600 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*" --ignore-panics --avoid-cfg-tarpaulin
+        run: |
+          cargo tarpaulin \
+            --workspace \
+            --out Xml \
+            --timeout 1200 \
+            --release \
+            --exclude-files "*/tests/*" \
+            --exclude-files "*/examples/*" \
+            --exclude-files "*/benches/*" \
+            --run-types Lib \
+            --skip-clean \
+            --ignore-panics \
+            --avoid-cfg-tarpaulin
+        timeout-minutes: 30
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
