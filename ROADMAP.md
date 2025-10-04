@@ -26,7 +26,7 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 
 **Philosophy:** Essential features = Community (Open Source), Advanced/Specialized = PRO/Enterprise
 
-#### 🌍 **Community Edition (Open Source - MIT License)**
+#### 🌍 **Community Edition (Open Source - AGPL-3.0 License)**
 **What belongs here:** ESSENTIAL features that any modern PDF library must have
 - ✅ Complete image support (PNG with transparency, JPEG, basic formats)
 - ✅ Text extraction and basic manipulation
@@ -170,7 +170,7 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 
 ### Compliance Distribution
 
-### 🌍 Community Edition (Open Source - MIT License)
+### 🌍 Community Edition (Open Source - AGPL-3.0 License)
 
 The Community Edition will provide essential PDF processing capabilities suitable for most individual and small-scale use cases. Target: 60% of ISO 32000-1:2008 specification by Q4 2026.
 
@@ -446,7 +446,7 @@ oxidize-pdf-core/
 
 ```
 Public Repository:
-├── oxidizePdf/              # Community Edition (GPL v3)
+├── oxidizePdf/              # Community Edition (AGPL-3.0)
 │   ├── oxidize-pdf-core/    # Native PDF engine
 │   ├── oxidize-pdf-cli/     # CLI tool
 │   └── oxidize-pdf-api/     # Basic REST API

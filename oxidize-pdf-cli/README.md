@@ -117,7 +117,9 @@ oxidize-pdf-cli can be configured using environment variables:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
+
+For commercial licensing options that avoid AGPL-3.0 obligations, contact [bzsanti@outlook.com](mailto:bzsanti@outlook.com).
 
 ## Contributing
 
