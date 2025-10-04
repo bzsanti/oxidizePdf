@@ -1644,8 +1644,8 @@ mod tests {
         }
 
         #[test]
-        #[ignore = "Palette PNG not yet fully supported - see PNG_DECODER_ISSUES.md"]
-        fn test_png_palette_image() {
+        fn test_png_palette_image_incomplete() {
+            // Test that incomplete palette PNG (missing IDAT) is properly rejected
             let png_data = vec![
                 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
                 0x00, 0x00, 0x00, 0x0D, // IHDR chunk length (13)
@@ -1660,18 +1660,9 @@ mod tests {
                 0x5C, 0x72, 0x6E, 0x38, // CRC
             ];
 
-            let image = Image::from_png_data(png_data).unwrap();
-            let pdf_obj = image.to_pdf_object();
-
-            if let Object::Stream(dict, _) = pdf_obj {
-                // Palette images are treated as RGB in PDF
-                assert_eq!(
-                    dict.get("ColorSpace").unwrap(),
-                    &Object::Name("DeviceRGB".to_string())
-                );
-            } else {
-                panic!("Expected Stream object");
-            }
+            // Should fail because PNG is missing IDAT chunks
+            let result = Image::from_png_data(png_data);
+            assert!(result.is_err(), "Incomplete PNG should return error");
         }
 
         #[test]
