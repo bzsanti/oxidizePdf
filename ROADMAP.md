@@ -92,7 +92,52 @@ oxidizePdf aims to be a **100% native Rust PDF library** with zero external PDF 
 - [ ] Compresión adaptativa por contenido
 - [ ] Benchmarks: objetivo 1000+ páginas/segundo
 
-### Prioridad 4: OCR Avanzado (Q3 2025)
+### Prioridad 4: PDF Resilience & Recovery (Q1-Q2 2025) 🆕
+**Goal**: 99.0-99.3% recovery rate for corrupted PDFs (Community Edition)
+
+#### Layer 1: Resilient Parser (Week 1-2)
+- [ ] Circuit breakers for infinite loops
+- [ ] Max object depth protection (50 levels)
+- [ ] Operation timeouts (per-operation, not global)
+- [ ] Auto-detect and fix encoding (UTF-8/ANSI)
+- [ ] Normalize line endings (CRLF/LF)
+- [ ] Tolerate minor syntax errors
+- [ ] Memory bomb protection
+
+#### Layer 2: Auto-Repair Basic (Week 3-4)
+- [ ] **RebuildXRef** - Scan and rebuild cross-reference table
+- [ ] **FixStructure** - Repair missing header/EOF markers
+- [ ] **IncompleteDownload** - Handle truncated files intelligently
+- [ ] **TextEditorDamage** - Fix encoding/line ending corruption
+- [ ] **MinimalRepair** - Quick fixes for common issues
+- [ ] Auto-detection of corruption type
+- [ ] Strategy selection heuristics
+
+#### Layer 3: Partial Parsing (Week 5-6)
+- [ ] `PartialPdfDocument` API
+- [ ] Parse best-effort (continue on errors)
+- [ ] Page-by-page tolerance
+- [ ] Skip corrupted sections gracefully
+- [ ] Extract valid pages only
+- [ ] Metadata recovery (when possible)
+
+#### Logging (Community - Basic)
+- [ ] Console output summary
+- [ ] Recovery status reporting
+- [ ] Page recovery count
+- [ ] Strategy used display
+- [ ] Warning count (no details)
+
+#### Testing & Validation
+- [ ] 50+ real-world corrupted PDF test cases
+- [ ] Benchmark recovery success rate
+- [ ] Performance tests (recovery time)
+- [ ] Edge case coverage
+- [ ] Documentation and examples
+
+**See**: `docs/PDF_RECOVERY_STRATEGY.md` for detailed spec
+
+### Prioridad 5: OCR Avanzado (Q3 2025)
 - [ ] Activar integración Tesseract existente
 - [ ] API de OCR por regiones
 - [ ] Pipeline de corrección con diccionarios
