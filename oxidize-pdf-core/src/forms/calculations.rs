@@ -135,7 +135,7 @@ impl Operator {
                 if right != 0.0 {
                     left / right
                 } else {
-                    0.0 // Avoid division by zero
+                    f64::INFINITY // Division by zero returns infinity
                 }
             }
             Operator::Modulo => {
@@ -1079,8 +1079,8 @@ mod tests {
             .unwrap();
 
         let result = engine.get_field_value("result").unwrap();
-        // Division by zero returns 0.0 in this implementation
-        assert_eq!(result.to_number(), 0.0);
+        // Division by zero returns infinity
+        assert!(result.to_number().is_infinite());
     }
 
     #[test]
@@ -1569,7 +1569,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Temporarily ignored - division by zero handling needs review
     fn test_division_by_zero() {
         // Test division by zero handling
         let mut engine = CalculationEngine::new();
