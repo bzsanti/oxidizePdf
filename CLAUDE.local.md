@@ -39,3 +39,4 @@ Check: https://lib.rs/~bzsanti/dash.xml
 - Read specific line ranges
 - Keep this file under 50 lines
 - Reference docs/ instead of copying
+- los analisis estrategicos siempre son confidenciales y se tienen que almacenar en el directorio .private
