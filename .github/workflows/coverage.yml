@@ -52,9 +52,14 @@ jobs:
             --out Xml \
             --timeout 1200 \
             --release \
-            --exclude-files "*/tests/*" \
-            --exclude-files "*/examples/*" \
-            --exclude-files "*/benches/*" \
+            --exclude-files "**/tests/**" \
+            --exclude-files "**/examples/**" \
+            --exclude-files "**/benches/**" \
+            --exclude-files "tests/**" \
+            --exclude-files "examples/**" \
+            --exclude-files "benches/**" \
+            --exclude-files "tools/**" \
+            --exclude-files "dev-tools/**" \
             --run-types Lib \
             --skip-clean \
             --ignore-panics \
