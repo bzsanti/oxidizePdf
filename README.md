@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/oxidize-pdf/badge.svg)](https://docs.rs/oxidize-pdf)
 [![Downloads](https://img.shields.io/crates/d/oxidize-pdf)](https://crates.io/crates/oxidize-pdf)
 [![codecov](https://codecov.io/gh/bzsanti/oxidizePdf/branch/main/graph/badge.svg)](https://codecov.io/gh/bzsanti/oxidizePdf)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
@@ -381,9 +381,25 @@ cargo run --example tesseract_ocr_demo --features ocr-tesseract
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
 
-The MIT license allows you to use oxidize-pdf in commercial projects without restrictions.
+### Why AGPL-3.0?
+
+AGPL-3.0 ensures that oxidize-pdf remains free and open source while protecting against proprietary use in SaaS without contribution back to the community. This license:
+- ✅ Allows free use, modification, and distribution
+- ✅ Requires sharing modifications if you provide the software as a service
+- ✅ Ensures improvements benefit the entire community
+- ✅ Supports sustainable open source development
+
+### Commercial Licensing
+
+For commercial use cases that require proprietary licensing or want to avoid AGPL-3.0 obligations, we offer commercial licenses with:
+- Commercial-friendly terms (no AGPL obligations)
+- Advanced features (cloud OCR, batch processing, digital signatures)
+- Priority support and SLAs
+- Custom feature development
+
+**Contact**: [bzsanti@outlook.com](mailto:bzsanti@outlook.com) for commercial licensing inquiries.
 
 ## Known Limitations
 
@@ -478,23 +494,27 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## Roadmap
 
-### Community Edition (Open Source)
-- [ ] Basic transparency/opacity support (Q3 2025)
-- [ ] PNG image support
-- [ ] XRef stream support (PDF 1.5+)
-- [ ] TrueType/OpenType font embedding
-- [ ] Improved text extraction with CMap/ToUnicode
+oxidize-pdf is under active development. Our focus areas include:
 
-### PRO/Enterprise Features
-- [ ] Advanced transparency (blend modes, groups)
-- [ ] Cloud OCR providers (Azure, AWS, Google Cloud)
-- [ ] OCR batch processing and parallel execution
-- [ ] PDF forms and annotations
-- [ ] Digital signatures
-- [ ] PDF/A compliance
-- [ ] Encryption support
+### Current Focus
+- **Parsing & Compatibility**: Improving support for diverse PDF structures
+- **Core Operations**: Enhancing split, merge, and manipulation capabilities
+- **Performance**: Optimizing memory usage and processing speed
+- **Stability**: Addressing edge cases and error handling
 
-See our [detailed roadmap](ROADMAP.md) for more information.
+### Upcoming Areas
+- **Extended Format Support**: Additional image formats and encodings
+- **Advanced Text Processing**: Improved text extraction and layout analysis
+- **Enterprise Features**: Features designed for production use at scale
+- **Developer Experience**: Better APIs, documentation, and tooling
+
+### Long-term Vision
+- Comprehensive PDF standard compliance for common use cases
+- Production-ready reliability and performance
+- Rich ecosystem of tools and integrations
+- Sustainable open source development model
+
+We prioritize features based on community feedback and real-world usage. Have a specific need? [Open an issue](https://github.com/bzsanti/oxidizePdf/issues) to discuss!
 
 ## Support
 
