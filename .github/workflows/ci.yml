@@ -73,28 +73,3 @@ jobs:
 
       - name: Build documentation
         run: cargo doc --all --no-deps
-
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Tesseract OCR
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev
-
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin
-
-      - name: Generate coverage
-        run: cargo tarpaulin --workspace --out Xml --timeout 600 --exclude-files "*/tests/*" --exclude-files "*/examples/*" --exclude-files "*/benches/*" --ignore-panics --avoid-cfg-tarpaulin
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false

@@ -246,6 +246,44 @@ WRITE:         250ms (87.7%) ← AQUÍ está el margen
 - Renderizado inteligente de labels (solo en rectángulos > 40x20)
 - **Commit**: `e66b942`
 
+---
+
+## Sesión Finalizada: 2025-10-03
+
+### Estado Final
+- **Rama**: main
+- **Versión**: 1.2.5
+- **Último commit**: 68e4a62 - chore: Bump version to 1.2.5
+
+### 🎯 Objetivos Completados
+1. ✅ Optimización de rendimiento implementada (+10-13% throughput)
+2. ✅ Buffer I/O optimizado (8KB → 512KB)
+3. ✅ Análisis de margen de mejora documentado
+4. ✅ Versión 1.2.5 preparada para release
+
+### 📦 Release v1.2.5 - Estado
+- ✅ Código mergeado a main
+- ✅ Tag v1.2.5 creado y pusheado
+- ⏳ GitHub Actions release workflow - esperando CI checks
+
+### Performance Final
+- **Throughput**: 17,000 páginas/segundo (+8% vs baseline)
+- **Mejora**: +10-13% en documentos grandes
+- **Syscalls**: Reducidos de ~188 a ~3
+
+### Próximos Pasos
+1. **Inmediato**: Esperar a que CI complete para que release workflow proceda
+2. **Post-release**: Verificar publicación en crates.io
+3. **Futuro**: Considerar optimizaciones adicionales cuando haya justificación de negocio
+
+### Lecciones Aprendidas
+- Optimizaciones simples (buffer size) pueden dar mejoras significativas
+- No todas las optimizaciones "obvias" funcionan (itoa/ryu añadieron overhead)
+- Importante medir antes de optimizar
+- ROI debe considerarse: 2 líneas de código = +10% es excelente
+
+---
+
 ## Detalles Técnicos de Implementación
 
 ### Manejo de Colores
@@ -321,40 +359,3 @@ WRITE:         250ms (87.7%) ← AQUÍ está el margen
 ---
 
 *Este documento se actualiza automáticamente en sesiones futuras.*
-
----
-
-## Sesión Finalizada: 2025-10-03
-
-### Estado Final
-- **Rama**: main
-- **Versión**: 1.2.5
-- **Último commit**: 68e4a62 - chore: Bump version to 1.2.5
-
-### 🎯 Objetivos Completados
-1. ✅ Optimización de rendimiento implementada (+10-13% throughput)
-2. ✅ Buffer I/O optimizado (8KB → 512KB)
-3. ✅ Análisis de margen de mejora documentado
-4. ✅ Versión 1.2.5 preparada para release
-
-### 📦 Release v1.2.5 - Estado
-- ✅ Código mergeado a main
-- ✅ Tag v1.2.5 creado y pusheado
-- ⏳ GitHub Actions release workflow - esperando CI checks
-
-### Performance Final
-- **Throughput**: 17,000 páginas/segundo (+8% vs baseline)
-- **Mejora**: +10-13% en documentos grandes
-- **Syscalls**: Reducidos de ~188 a ~3
-
-### Próximos Pasos
-1. **Inmediato**: Esperar a que CI complete para que release workflow proceda
-2. **Post-release**: Verificar publicación en crates.io
-3. **Futuro**: Considerar optimizaciones adicionales cuando haya justificación de negocio
-
-### Lecciones Aprendidas
-- Optimizaciones simples (buffer size) pueden dar mejoras significativas
-- No todas las optimizaciones "obvias" funcionan (itoa/ryu añadieron overhead)
-- Importante medir antes de optimizar
-- ROI debe considerarse: 2 líneas de código = +10% es excelente
-
