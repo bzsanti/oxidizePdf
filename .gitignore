@@ -36,6 +36,7 @@ PDF_Samples/
 # Claude AI files
 .claude/
 CLAUDE.md
+CLAUDE.local.md
 
 # Internal project documentation
 IMPLEMENTATION_*.md

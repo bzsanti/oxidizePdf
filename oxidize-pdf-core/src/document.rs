@@ -93,13 +93,27 @@ pub struct DocumentMetadata {
 impl Default for DocumentMetadata {
     fn default() -> Self {
         let now = Utc::now();
+
+        // Determine edition string based on features
+        let edition = if cfg!(feature = "pro") {
+            "PRO Edition"
+        } else if cfg!(feature = "enterprise") {
+            "Enterprise Edition"
+        } else {
+            "Community Edition"
+        };
+
         Self {
             title: None,
             author: None,
             subject: None,
             keywords: None,
             creator: Some("oxidize_pdf".to_string()),
-            producer: Some(format!("oxidize_pdf v{}", env!("CARGO_PKG_VERSION"))),
+            producer: Some(format!(
+                "oxidize_pdf v{} ({})",
+                env!("CARGO_PKG_VERSION"),
+                edition
+            )),
             creation_date: Some(now),
             modification_date: Some(now),
         }
@@ -855,6 +869,71 @@ impl Document {
     #[cfg(feature = "semantic")]
     pub fn export_semantic_entities_json(&self) -> Result<String> {
         serde_json::to_string_pretty(&self.semantic_entities)
+            .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+    }
+
+    /// Export semantic entities as JSON-LD with Schema.org context
+    ///
+    /// This creates a machine-readable export compatible with Schema.org vocabularies,
+    /// making the PDF data accessible to AI/ML processing pipelines.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::{Document, semantic::{EntityType, BoundingBox}};
+    ///
+    /// let mut doc = Document::new();
+    ///
+    /// // Mark an invoice
+    /// let inv_id = doc.mark_entity(
+    ///     "invoice_1".to_string(),
+    ///     EntityType::Invoice,
+    ///     BoundingBox::new(50.0, 50.0, 500.0, 700.0, 1)
+    /// );
+    /// doc.set_entity_content(&inv_id, "Invoice #INV-001");
+    /// doc.add_entity_metadata(&inv_id, "totalPrice", "1234.56");
+    ///
+    /// // Export as JSON-LD
+    /// let json_ld = doc.export_semantic_entities_json_ld().unwrap();
+    /// println!("{}", json_ld);
+    /// ```
+    #[cfg(feature = "semantic")]
+    pub fn export_semantic_entities_json_ld(&self) -> Result<String> {
+        use crate::semantic::{Entity, EntityMap};
+
+        let mut entity_map = EntityMap::new();
+
+        // Convert SemanticEntity to Entity (backward compatibility)
+        for sem_entity in &self.semantic_entities {
+            let entity = Entity {
+                id: sem_entity.id.clone(),
+                entity_type: sem_entity.entity_type.clone(),
+                bounds: (
+                    sem_entity.bounds.x as f64,
+                    sem_entity.bounds.y as f64,
+                    sem_entity.bounds.width as f64,
+                    sem_entity.bounds.height as f64,
+                ),
+                page: (sem_entity.bounds.page - 1) as usize, // Convert 1-indexed to 0-indexed
+                metadata: sem_entity.metadata.clone(),
+            };
+            entity_map.add_entity(entity);
+        }
+
+        // Add document metadata
+        if let Some(title) = &self.metadata.title {
+            entity_map
+                .document_metadata
+                .insert("name".to_string(), title.clone());
+        }
+        if let Some(author) = &self.metadata.author {
+            entity_map
+                .document_metadata
+                .insert("author".to_string(), author.clone());
+        }
+
+        entity_map
+            .to_json_ld()
             .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
     }
 

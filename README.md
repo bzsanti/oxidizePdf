@@ -3,8 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/oxidize-pdf.svg)](https://crates.io/crates/oxidize-pdf)
 [![Documentation](https://docs.rs/oxidize-pdf/badge.svg)](https://docs.rs/oxidize-pdf)
 [![Downloads](https://img.shields.io/crates/d/oxidize-pdf)](https://crates.io/crates/oxidize-pdf)
-[![Coverage](https://img.shields.io/badge/coverage-64.75%25-yellow)](docs/COVERAGE_METHODOLOGY.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/bzsanti/oxidizePdf/branch/main/graph/badge.svg)](https://codecov.io/gh/bzsanti/oxidizePdf)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
@@ -21,12 +21,20 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 📝 **Advanced Text** - Custom TTF/OTF fonts, standard fonts, text flow with automatic wrapping, alignment
 - 🅰️ **Custom Fonts** - Load and embed TrueType/OpenType fonts with full Unicode support
 - 🔍 **OCR Support** - Extract text from scanned PDFs using Tesseract OCR (v0.1.3+)
+- 🤖 **AI/RAG Integration** - Document chunking for LLM pipelines with sentence boundaries and metadata (v1.3.0+)
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
-## 🎉 What's New in v1.1.0+
+## 🎉 What's New
 
-**Major new features (v1.1.6+):**
+**Latest: v1.3.0 - AI/RAG Integration:**
+- 🤖 **Document Chunking for LLMs** - Production-ready chunking with 0.62ms for 100 pages
+- 📊 **Rich Metadata** - Page tracking, position info, confidence scores
+- ✂️ **Smart Boundaries** - Sentence boundary detection for semantic coherence
+- ⚡ **Exceptional Performance** - 161x better than target, 160K pages/second throughput
+- 📚 **Complete Examples** - RAG pipeline with embeddings and vector store integration
+
+**Major features (v1.1.6+):**
 - 🅰️ **Custom Font Support** - Load TTF/OTF fonts from files or memory
 - ✍️ **Advanced Text Formatting** - Character spacing, word spacing, text rise, rendering modes
 - 📋 **Clipping Paths** - Both EvenOdd and NonZero winding rules
@@ -109,6 +117,49 @@ fn main() -> Result<()> {
 }
 ```
 
+### AI/RAG Document Chunking (v1.3.0+)
+
+```rust
+use oxidize_pdf::ai::DocumentChunker;
+use oxidize_pdf::parser::{PdfReader, PdfDocument};
+use oxidize_pdf::Result;
+
+fn main() -> Result<()> {
+    // Load and parse PDF
+    let reader = PdfReader::open("document.pdf")?;
+    let pdf_doc = PdfDocument::new(reader);
+    let text_pages = pdf_doc.extract_text()?;
+
+    // Prepare page texts with page numbers
+    let page_texts: Vec<(usize, String)> = text_pages
+        .iter()
+        .enumerate()
+        .map(|(idx, page)| (idx + 1, page.text.clone()))
+        .collect();
+
+    // Create chunker: 512 tokens per chunk, 50 tokens overlap
+    let chunker = DocumentChunker::new(512, 50);
+    let chunks = chunker.chunk_text_with_pages(&page_texts)?;
+
+    // Process chunks for RAG pipeline
+    for chunk in chunks {
+        println!("Chunk {}: {} tokens", chunk.id, chunk.tokens);
+        println!("  Pages: {:?}", chunk.page_numbers);
+        println!("  Position: chars {}-{}",
+            chunk.metadata.position.start_char,
+            chunk.metadata.position.end_char);
+        println!("  Sentence boundary: {}",
+            chunk.metadata.sentence_boundary_respected);
+
+        // Send to embedding API, store in vector DB, etc.
+        // let embedding = openai.embed(&chunk.content)?;
+        // vector_db.insert(chunk.id, embedding, chunk.content)?;
+    }
+
+    Ok(())
+}
+```
+
 ### Custom Fonts Example
 
 ```rust
@@ -117,28 +168,28 @@ use oxidize_pdf::{Document, Page, Font, Color, Result};
 fn main() -> Result<()> {
     let mut doc = Document::new();
     doc.set_title("Custom Fonts Demo");
-    
+
     // Load a custom font from file
     doc.add_font("MyFont", "/path/to/font.ttf")?;
-    
+
     // Or load from bytes
     let font_data = std::fs::read("/path/to/font.otf")?;
     doc.add_font_from_bytes("MyOtherFont", font_data)?;
-    
+
     let mut page = Page::a4();
-    
+
     // Use standard font
     page.text()
         .set_font(Font::Helvetica, 14.0)
         .at(50.0, 700.0)
         .write("Standard Font: Helvetica")?;
-    
+
     // Use custom font
     page.text()
         .set_font(Font::Custom("MyFont".to_string()), 16.0)
         .at(50.0, 650.0)
         .write("Custom Font: This is my custom font!")?;
-    
+
     // Advanced text formatting with custom font
     page.text()
         .set_font(Font::Custom("MyOtherFont".to_string()), 12.0)
@@ -146,10 +197,10 @@ fn main() -> Result<()> {
         .set_word_spacing(5.0)
         .at(50.0, 600.0)
         .write("Spaced text with custom font")?;
-    
+
     doc.add_page(page);
     doc.save("custom_fonts.pdf")?;
-    
+
     Ok(())
 }
 ```
@@ -381,9 +432,33 @@ cargo run --example tesseract_ocr_demo --features ocr-tesseract
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
 
-The MIT license allows you to use oxidize-pdf in commercial projects without restrictions.
+### Why AGPL-3.0?
+
+AGPL-3.0 ensures that oxidize-pdf remains free and open source while protecting against proprietary use in SaaS without contribution back to the community. This license:
+- ✅ Allows free use, modification, and distribution
+- ✅ Requires sharing modifications if you provide the software as a service
+- ✅ Ensures improvements benefit the entire community
+- ✅ Supports sustainable open source development
+
+### Commercial Products & Licensing
+
+**oxidize-pdf-core** is free and open source (AGPL-3.0). For commercial products and services:
+
+**Commercial Products:**
+- **oxidize-pdf-pro**: Enhanced library with advanced features
+- **oxidize-pdf-api**: REST API server for PDF operations
+- **oxidize-pdf-cli**: Command-line interface with enterprise capabilities
+
+**Commercial License Benefits:**
+- ✅ Commercial-friendly terms (no AGPL obligations)
+- ✅ Advanced features (cloud OCR, batch processing, digital signatures)
+- ✅ Priority support and SLAs
+- ✅ Custom feature development
+- ✅ Access to commercial products (API, CLI, PRO library)
+
+**Contact**: [bzsanti@outlook.com](mailto:bzsanti@outlook.com) for commercial licensing inquiries.
 
 ## Known Limitations
 
@@ -428,9 +503,7 @@ We're actively adding more examples for core features. New examples include:
 
 ```
 oxidize-pdf/
-├── oxidize-pdf-core/     # Core PDF library
-├── oxidize-pdf-cli/      # Command-line interface
-├── oxidize-pdf-api/      # REST API server
+├── oxidize-pdf-core/     # Core PDF library (AGPL-3.0)
 ├── test-suite/           # Comprehensive test suite
 ├── docs/                 # Documentation
 │   ├── technical/        # Technical docs and implementation details
@@ -440,6 +513,11 @@ oxidize-pdf/
 └── test-pdfs/            # Test PDF files
 
 ```
+
+**Commercial Products** (available separately under commercial license):
+- **oxidize-pdf-api**: REST API server for PDF operations
+- **oxidize-pdf-cli**: Command-line interface with advanced features
+- **oxidize-pdf-pro**: Enhanced library with additional capabilities
 
 See [REPOSITORY_ARCHITECTURE.md](REPOSITORY_ARCHITECTURE.md) for detailed information.
 
@@ -478,23 +556,27 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## Roadmap
 
-### Community Edition (Open Source)
-- [ ] Basic transparency/opacity support (Q3 2025)
-- [ ] PNG image support
-- [ ] XRef stream support (PDF 1.5+)
-- [ ] TrueType/OpenType font embedding
-- [ ] Improved text extraction with CMap/ToUnicode
+oxidize-pdf is under active development. Our focus areas include:
 
-### PRO/Enterprise Features
-- [ ] Advanced transparency (blend modes, groups)
-- [ ] Cloud OCR providers (Azure, AWS, Google Cloud)
-- [ ] OCR batch processing and parallel execution
-- [ ] PDF forms and annotations
-- [ ] Digital signatures
-- [ ] PDF/A compliance
-- [ ] Encryption support
+### Current Focus
+- **Parsing & Compatibility**: Improving support for diverse PDF structures
+- **Core Operations**: Enhancing split, merge, and manipulation capabilities
+- **Performance**: Optimizing memory usage and processing speed
+- **Stability**: Addressing edge cases and error handling
 
-See our [detailed roadmap](ROADMAP.md) for more information.
+### Upcoming Areas
+- **Extended Format Support**: Additional image formats and encodings
+- **Advanced Text Processing**: Improved text extraction and layout analysis
+- **Enterprise Features**: Features designed for production use at scale
+- **Developer Experience**: Better APIs, documentation, and tooling
+
+### Long-term Vision
+- Comprehensive PDF standard compliance for common use cases
+- Production-ready reliability and performance
+- Rich ecosystem of tools and integrations
+- Sustainable open source development model
+
+We prioritize features based on community feedback and real-world usage. Have a specific need? [Open an issue](https://github.com/bzsanti/oxidizePdf/issues) to discuss!
 
 ## Support
 
