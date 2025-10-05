@@ -366,6 +366,10 @@ harness = false
 name = "performance_benchmarks"
 harness = false
 
+[[bench]]
+name = "ai_chunking"
+harness = false
+
 [features]
 default = ["compression", "ocr-tesseract"]
 
@@ -390,3 +394,31 @@ semantic = ["dep:serde_json"]
 
 # Parallel processing features
 rayon = ["dep:rayon"]
+
+# Edition features (for licensing and fingerprinting)
+pro = []  # Commercial PRO edition
+enterprise = []  # Commercial Enterprise edition
+
+[[example]]
+name = "ai_ready_invoice"
+path = "../examples/src/ai_ready_invoice.rs"
+
+[[example]]
+name = "ai_ready_contract"
+path = "../examples/src/ai_ready_contract.rs"
+
+[[example]]
+name = "ai_ready_resume"
+path = "../examples/src/ai_ready_resume.rs"
+
+[[example]]
+name = "basic_chunking"
+path = "../examples/ai_pipelines/basic_chunking.rs"
+
+[[example]]
+name = "rag_pipeline"
+path = "../examples/ai_pipelines/rag_pipeline.rs"
+
+[[example]]
+name = "validate_real_pdfs"
+path = "../examples/validation/validate_real_pdfs.rs"

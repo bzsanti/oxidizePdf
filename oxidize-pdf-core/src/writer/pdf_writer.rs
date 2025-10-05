@@ -396,6 +396,19 @@ impl<W: Write> PdfWriter<W> {
             info_dict.set("ModDate", Object::String(date_string));
         }
 
+        // Add PDF signature (anti-spoofing and licensing)
+        // This is written AFTER user-configurable metadata so it cannot be overridden
+        let edition = if cfg!(feature = "pro") {
+            super::Edition::Pro
+        } else if cfg!(feature = "enterprise") {
+            super::Edition::Enterprise
+        } else {
+            super::Edition::Community
+        };
+
+        let signature = super::PdfSignature::new(document, edition);
+        signature.write_to_info_dict(&mut info_dict);
+
         self.write_object(info_id, Object::Dictionary(info_dict))?;
         Ok(())
     }

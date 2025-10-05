@@ -176,6 +176,7 @@
 
 pub mod actions;
 pub mod advanced_tables;
+pub mod ai;
 pub mod annotations;
 
 pub mod batch;
@@ -341,6 +342,12 @@ pub use page_labels::{PageLabel, PageLabelBuilder, PageLabelRange, PageLabelStyl
 // Re-export template types
 pub use templates::{
     Template, TemplateContext, TemplateError, TemplateRenderer, TemplateResult, TemplateValue,
+};
+
+// Re-export semantic types for AI-Ready PDFs
+pub use semantic::{
+    BoundingBox, Entity, EntityMap, EntityMetadata, EntityRelation, EntityType, ExportFormat,
+    RelationType, SemanticEntity, SemanticMarking,
 };
 
 // Re-export verification types

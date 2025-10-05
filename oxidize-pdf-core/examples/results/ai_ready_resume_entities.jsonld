@@ -1,0 +1,130 @@
+{
+  "@context": "https://schema.org",
+  "@type": "DigitalDocument",
+  "additionalType": "AI-Ready PDF",
+  "author": "oxidize-pdf",
+  "hasPart": [
+    {
+      "@id": "candidate_name",
+      "@type": "Person",
+      "confidence": 1.0,
+      "firstName": "John",
+      "lastName": "Smith",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,750,200,25"
+        }
+      }
+    },
+    {
+      "@id": "email",
+      "@type": "email",
+      "confidence": 1.0,
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,705,180,12"
+        }
+      },
+      "value": "john.smith@email.com"
+    },
+    {
+      "@id": "phone",
+      "@type": "telephone",
+      "confidence": 0.9800000190734863,
+      "formatted": "(555) 123-4567",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "250,705,130,12"
+        }
+      },
+      "value": "+15551234567"
+    },
+    {
+      "@id": "github",
+      "@type": "url",
+      "confidence": 0.949999988079071,
+      "pageStart": 1,
+      "platform": "GitHub",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,690,180,12"
+        }
+      },
+      "url": "https://github.com/johnsmith"
+    },
+    {
+      "@id": "location",
+      "@type": "PostalAddress",
+      "city": "San Francisco",
+      "confidence": 0.949999988079071,
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "250,690,150,12"
+        }
+      },
+      "state": "CA"
+    },
+    {
+      "@id": "job1_org",
+      "@type": "Organization",
+      "confidence": 0.9800000190734863,
+      "location": "San Francisco, CA",
+      "name": "TechCorp Inc.",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,534,200,12"
+        }
+      }
+    },
+    {
+      "@id": "job2_org",
+      "@type": "Organization",
+      "confidence": 0.9800000190734863,
+      "location": "Palo Alto, CA",
+      "name": "StartupXYZ",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,448,180,12"
+        }
+      }
+    },
+    {
+      "@id": "education_org",
+      "@type": "Organization",
+      "confidence": 0.9900000095367432,
+      "degree": "Bachelor of Science",
+      "graduationYear": "2018",
+      "institutionType": "University",
+      "major": "Computer Science",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,344,220,12"
+        }
+      }
+    }
+  ],
+  "name": "Software Engineer Resume - John Smith"
+}

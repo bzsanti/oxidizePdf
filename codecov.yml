@@ -5,12 +5,18 @@ coverage:
   # Ignore test-related code from coverage calculations
   ignore:
     - "test-suite/**"        # Test suite framework and utilities
-    - "**/tests/**"          # Test directories
+    - "**/tests/**"          # Test directories (crate-level)
+    - "tests/**"             # Test directories (workspace root)
     - "**/benches/**"        # Benchmark code
+    - "benches/**"           # Benchmark code (workspace root)
     - "**/examples/**"       # Example code
+    - "examples/**"          # Example code (workspace root)
     - "**/*_test.rs"         # Test files
+    - "**/*_tests.rs"        # Test files (plural)
     - "**/bin/**"            # Binary targets
     - "fuzz/**"              # Fuzzing targets
+    - "tools/**"             # Development tools
+    - "dev-tools/**"         # Development tools
     
   # Coverage status checks
   status:

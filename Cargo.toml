@@ -1,8 +1,6 @@
 [workspace]
 members = [
     "oxidize-pdf-core",
-    "oxidize-pdf-cli",
-    "oxidize-pdf-api",
 ]
 resolver = "2"
 
@@ -11,7 +9,7 @@ version = "1.2.5"
 edition = "2021"
 rust-version = "1.77"  # MSRV - Required by thiserror 2.0
 authors = ["Santiago Fernández Muñoz"]
-license = "MIT"
+license = "AGPL-3.0"
 repository = "https://github.com/bzsanti/oxidizePdf"
 homepage = "https://oxidizepdf.dev"
 documentation = "https://docs.oxidizepdf.dev"

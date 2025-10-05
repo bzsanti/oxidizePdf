@@ -1,0 +1,166 @@
+{
+  "@context": "https://schema.org",
+  "@type": "DigitalDocument",
+  "additionalType": "AI-Ready PDF",
+  "author": "oxidize-pdf",
+  "hasPart": [
+    {
+      "@id": "invoice_main",
+      "@type": "Invoice",
+      "confidence": 1.0,
+      "currency": "USD",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,50,495,750"
+        }
+      },
+      "status": "unpaid"
+    },
+    {
+      "@id": "invoice_number",
+      "@type": "identifier",
+      "confidence": 1.0,
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,720,200,15"
+        }
+      },
+      "value": "INV-2024-001"
+    },
+    {
+      "@id": "invoice_date",
+      "@type": "Date",
+      "confidence": 1.0,
+      "format": "ISO8601",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,700,150,15"
+        }
+      },
+      "value": "2024-10-05"
+    },
+    {
+      "@id": "due_date",
+      "@type": "paymentDueDate",
+      "confidence": 1.0,
+      "daysFromNow": "30",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,680,150,15"
+        }
+      },
+      "value": "2024-11-05"
+    },
+    {
+      "@id": "customer",
+      "@type": "customer",
+      "confidence": 0.9900000095367432,
+      "name": "Acme Corporation",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,620,200,15"
+        }
+      },
+      "type": "Organization"
+    },
+    {
+      "@id": "customer_address",
+      "@type": "PostalAddress",
+      "city": "New York",
+      "confidence": 0.9800000190734863,
+      "pageStart": 1,
+      "postalCode": "10001",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,590,200,30"
+        }
+      },
+      "state": "NY",
+      "street": "123 Business St"
+    },
+    {
+      "@id": "line_item_1",
+      "@type": "LineItem",
+      "amount": "6000.00",
+      "confidence": 0.949999988079071,
+      "description": "Professional Services - Web Development",
+      "pageStart": 1,
+      "quantity": "40",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,495,495,15"
+        }
+      },
+      "unitPrice": "150.00"
+    },
+    {
+      "@id": "line_item_2",
+      "@type": "LineItem",
+      "amount": "299.00",
+      "confidence": 0.949999988079071,
+      "description": "Cloud Hosting - Monthly",
+      "pageStart": 1,
+      "quantity": "1",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,470,495,15"
+        }
+      },
+      "unitPrice": "299.00"
+    },
+    {
+      "@id": "tax_amount",
+      "@type": "taxAmount",
+      "confidence": 1.0,
+      "pageStart": 1,
+      "rate": "8.5",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "400,375,150,15"
+        }
+      },
+      "type": "percentage",
+      "value": "535.42"
+    },
+    {
+      "@id": "total_amount",
+      "@type": "totalPrice",
+      "confidence": 1.0,
+      "currency": "USD",
+      "formatted": "$6,834.42",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "400,330,150,18"
+        }
+      },
+      "value": "6834.42"
+    }
+  ],
+  "name": "AI-Ready Invoice Example"
+}

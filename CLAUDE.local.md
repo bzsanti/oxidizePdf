@@ -39,3 +39,10 @@ Check: https://lib.rs/~bzsanti/dash.xml
 - Read specific line ranges
 - Keep this file under 50 lines
 - Reference docs/ instead of copying
+- los analisis estrategicos siempre son confidenciales y se tienen que almacenar en el directorio .private
+- Cuando trabajes en oxidize-pdf:
+1. SIEMPRE lee .private/roadmap_detailed_executable.md PRIMERO
+2. NO implementes nada que no esté en ese roadmap
+3. Si una feature parece necesaria pero no está:
+   - Pregunta al humano
+   - No la implementes sin confirmación
