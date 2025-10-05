@@ -418,3 +418,7 @@ path = "../examples/ai_pipelines/basic_chunking.rs"
 [[example]]
 name = "rag_pipeline"
 path = "../examples/ai_pipelines/rag_pipeline.rs"
+
+[[example]]
+name = "validate_real_pdfs"
+path = "../examples/validation/validate_real_pdfs.rs"
