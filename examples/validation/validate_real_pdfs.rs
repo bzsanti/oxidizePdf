@@ -25,7 +25,10 @@ fn main() -> Result<()> {
     // Test PDFs to validate
     let test_pdfs = vec![
         ("Cold Email Hacks", "test-pdfs/Cold_Email_Hacks.pdf"),
-        ("Unicode Professional", "test-pdfs/unicode_professional_demo.pdf"),
+        (
+            "Unicode Professional",
+            "test-pdfs/unicode_professional_demo.pdf",
+        ),
         ("Unicode Showcase", "test-pdfs/unicode_showcase.pdf"),
     ];
 
@@ -63,7 +66,11 @@ fn main() -> Result<()> {
     println!("📊 VALIDATION SUMMARY");
     println!("{}", "=".repeat(80));
     println!("Total PDFs tested: {}", total_tests);
-    println!("Passed: {} ({}%)", passed_tests, (passed_tests * 100) / total_tests.max(1));
+    println!(
+        "Passed: {} ({}%)",
+        passed_tests,
+        (passed_tests * 100) / total_tests.max(1)
+    );
     println!("Failed: {}", total_tests - passed_tests);
 
     if !failed_tests.is_empty() {
@@ -119,9 +126,22 @@ impl ValidationReport {
         println!("     Chunks created: {}", self.chunk_count);
         println!("     Chunked text: {} chars", self.total_chunk_chars);
         println!("     Text loss: {:.2}%", self.text_loss_pct);
-        println!("     Sentence boundaries respected: {:.1}%", self.sentence_boundary_pct);
-        println!("     Page tracking: {}", if self.page_tracking_accurate { "✅" } else { "❌" });
-        println!("     Metadata complete: {}", if self.metadata_complete { "✅" } else { "❌" });
+        println!(
+            "     Sentence boundaries respected: {:.1}%",
+            self.sentence_boundary_pct
+        );
+        println!(
+            "     Page tracking: {}",
+            if self.page_tracking_accurate {
+                "✅"
+            } else {
+                "❌"
+            }
+        );
+        println!(
+            "     Metadata complete: {}",
+            if self.metadata_complete { "✅" } else { "❌" }
+        );
 
         if !self.failures.is_empty() {
             println!("\n  ⚠️  Issues:");
@@ -135,7 +155,10 @@ impl ValidationReport {
 /// Check if text contains substantial sentence punctuation
 fn has_sentence_punctuation(page_texts: &[(usize, String)]) -> bool {
     let full_text: String = page_texts.iter().map(|(_, t)| t.as_str()).collect();
-    let punct_count = full_text.chars().filter(|c| matches!(c, '.' | '!' | '?')).count();
+    let punct_count = full_text
+        .chars()
+        .filter(|c| matches!(c, '.' | '!' | '?'))
+        .count();
     let word_count = full_text.split_whitespace().count();
 
     // If >10% of words end with punctuation, consider it has sentences
@@ -151,7 +174,10 @@ fn validate_pdf(path: &str) -> Result<ValidationReport> {
     let page_count = text_pages.len();
     let total_text_chars: usize = text_pages.iter().map(|p| p.text.len()).sum();
 
-    println!("  📖 Loaded: {} pages, {} chars", page_count, total_text_chars);
+    println!(
+        "  📖 Loaded: {} pages, {} chars",
+        page_count, total_text_chars
+    );
 
     // 2. Prepare for chunking
     let page_texts: Vec<(usize, String)> = text_pages
@@ -169,13 +195,18 @@ fn validate_pdf(path: &str) -> Result<ValidationReport> {
     // 4. Validate text completeness (no loss)
     // Note: We can't simply sum chunk lengths because of overlap.
     // Instead, reconstruct full text from chunks removing overlap.
-    let reconstructed_text: String = page_texts.iter().map(|(_, text)| text.as_str()).collect::<Vec<_>>().join("\n\n");
+    let reconstructed_text: String = page_texts
+        .iter()
+        .map(|(_, text)| text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n\n");
     let reconstructed_chars = reconstructed_text.len();
 
     // For text loss, we compare original vs reconstructed (not chunks)
     // Chunks will have MORE text due to overlap, which is expected
     let text_loss_pct = if total_text_chars > 0 {
-        ((total_text_chars as f32 - reconstructed_chars as f32).abs() / total_text_chars as f32) * 100.0
+        ((total_text_chars as f32 - reconstructed_chars as f32).abs() / total_text_chars as f32)
+            * 100.0
     } else {
         0.0
     };
@@ -223,7 +254,10 @@ fn validate_pdf(path: &str) -> Result<ValidationReport> {
     let mut failures = Vec::new();
 
     if text_loss_pct > 5.0 {
-        failures.push(format!("Text loss too high: {:.2}% (target: <5%)", text_loss_pct));
+        failures.push(format!(
+            "Text loss too high: {:.2}% (target: <5%)",
+            text_loss_pct
+        ));
     }
 
     // Only flag if document clearly has sentences but we're not respecting them
@@ -257,7 +291,9 @@ fn validate_pdf(path: &str) -> Result<ValidationReport> {
         let next_first_page = chunks[i + 1].metadata.position.first_page;
 
         // Check for major page jumps (backwards or >10 pages forward)
-        if next_first_page < current_last_page.saturating_sub(1) || next_first_page > current_last_page + 10 {
+        if next_first_page < current_last_page.saturating_sub(1)
+            || next_first_page > current_last_page + 10
+        {
             non_sequential_count += 1;
         }
     }
