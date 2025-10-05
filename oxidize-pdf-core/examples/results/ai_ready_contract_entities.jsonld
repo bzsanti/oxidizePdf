@@ -1,0 +1,185 @@
+{
+  "@context": "https://schema.org",
+  "@type": "DigitalDocument",
+  "additionalType": "AI-Ready PDF",
+  "author": "oxidize-pdf",
+  "hasPart": [
+    {
+      "@id": "contract_main",
+      "@type": "DigitalDocument",
+      "confidence": 1.0,
+      "contractType": "Services Agreement",
+      "jurisdiction": "California, USA",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,50,495,750"
+        }
+      }
+    },
+    {
+      "@id": "effective_date",
+      "@type": "datePublished",
+      "confidence": 1.0,
+      "format": "ISO8601",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "160,710,150,15"
+        }
+      },
+      "value": "2024-10-05"
+    },
+    {
+      "@id": "provider",
+      "@type": "Party",
+      "confidence": 0.9900000095367432,
+      "legalName": "TechCorp Solutions, Inc.",
+      "pageStart": 1,
+      "partyType": "Provider",
+      "role": "Service Provider",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "70,637,200,15"
+        }
+      }
+    },
+    {
+      "@id": "provider_address",
+      "@type": "PostalAddress",
+      "city": "San Francisco",
+      "confidence": 0.9800000190734863,
+      "pageStart": 1,
+      "postalCode": "94105",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "70,622,300,12"
+        }
+      },
+      "state": "CA",
+      "street": "123 Innovation Drive"
+    },
+    {
+      "@id": "client",
+      "@type": "Party",
+      "confidence": 0.9900000095367432,
+      "legalName": "Global Industries LLC",
+      "pageStart": 1,
+      "partyType": "Client",
+      "role": "Client",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "70,579,200,15"
+        }
+      }
+    },
+    {
+      "@id": "client_address",
+      "@type": "PostalAddress",
+      "city": "New York",
+      "confidence": 0.9800000190734863,
+      "pageStart": 1,
+      "postalCode": "10001",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "70,564,280,12"
+        }
+      },
+      "state": "NY",
+      "street": "456 Business Plaza"
+    },
+    {
+      "@id": "clause_scope",
+      "@type": "OfferCatalog",
+      "category": "Services",
+      "clauseNumber": "1",
+      "clauseType": "Scope of Work",
+      "confidence": 0.949999988079071,
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,442,495,57"
+        }
+      }
+    },
+    {
+      "@id": "contract_value",
+      "@type": "price",
+      "confidence": 1.0,
+      "currency": "USD",
+      "installmentCount": "3",
+      "pageStart": 1,
+      "paymentStructure": "installments",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,373,495,60"
+        }
+      },
+      "totalAmount": "150000"
+    },
+    {
+      "@id": "clause_term",
+      "@type": "OfferCatalog",
+      "category": "Duration",
+      "clauseNumber": "3",
+      "clauseType": "Term and Termination",
+      "confidence": 0.949999988079071,
+      "duration": "12 months",
+      "pageStart": 1,
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,317,495,50"
+        }
+      }
+    },
+    {
+      "@id": "provider_signature",
+      "@type": "signatureValue",
+      "confidence": 0.8999999761581421,
+      "pageStart": 1,
+      "signatoryParty": "provider",
+      "signatureType": "written",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,242,200,30"
+        }
+      }
+    },
+    {
+      "@id": "client_signature",
+      "@type": "signatureValue",
+      "confidence": 0.8999999761581421,
+      "pageStart": 1,
+      "signatoryParty": "client",
+      "signatureType": "written",
+      "spatialCoverage": {
+        "@type": "Place",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "box": "50,197,200,30"
+        }
+      }
+    }
+  ],
+  "name": "Software Development Services Agreement"
+}

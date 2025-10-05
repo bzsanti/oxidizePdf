@@ -343,6 +343,12 @@ pub use templates::{
     Template, TemplateContext, TemplateError, TemplateRenderer, TemplateResult, TemplateValue,
 };
 
+// Re-export semantic types for AI-Ready PDFs
+pub use semantic::{
+    BoundingBox, Entity, EntityMap, EntityMetadata, EntityRelation, EntityType, ExportFormat,
+    RelationType, SemanticEntity, SemanticMarking,
+};
+
 // Re-export verification types
 pub use verification::comparators::{
     compare_pdfs, ComparisonResult, DifferenceSeverity, PdfDifference,

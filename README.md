@@ -391,13 +391,21 @@ AGPL-3.0 ensures that oxidize-pdf remains free and open source while protecting 
 - ✅ Ensures improvements benefit the entire community
 - ✅ Supports sustainable open source development
 
-### Commercial Licensing
+### Commercial Products & Licensing
 
-For commercial use cases that require proprietary licensing or want to avoid AGPL-3.0 obligations, we offer commercial licenses with:
-- Commercial-friendly terms (no AGPL obligations)
-- Advanced features (cloud OCR, batch processing, digital signatures)
-- Priority support and SLAs
-- Custom feature development
+**oxidize-pdf-core** is free and open source (AGPL-3.0). For commercial products and services:
+
+**Commercial Products:**
+- **oxidize-pdf-pro**: Enhanced library with advanced features
+- **oxidize-pdf-api**: REST API server for PDF operations
+- **oxidize-pdf-cli**: Command-line interface with enterprise capabilities
+
+**Commercial License Benefits:**
+- ✅ Commercial-friendly terms (no AGPL obligations)
+- ✅ Advanced features (cloud OCR, batch processing, digital signatures)
+- ✅ Priority support and SLAs
+- ✅ Custom feature development
+- ✅ Access to commercial products (API, CLI, PRO library)
 
 **Contact**: [bzsanti@outlook.com](mailto:bzsanti@outlook.com) for commercial licensing inquiries.
 
@@ -444,9 +452,7 @@ We're actively adding more examples for core features. New examples include:
 
 ```
 oxidize-pdf/
-├── oxidize-pdf-core/     # Core PDF library
-├── oxidize-pdf-cli/      # Command-line interface
-├── oxidize-pdf-api/      # REST API server
+├── oxidize-pdf-core/     # Core PDF library (AGPL-3.0)
 ├── test-suite/           # Comprehensive test suite
 ├── docs/                 # Documentation
 │   ├── technical/        # Technical docs and implementation details
@@ -456,6 +462,11 @@ oxidize-pdf/
 └── test-pdfs/            # Test PDF files
 
 ```
+
+**Commercial Products** (available separately under commercial license):
+- **oxidize-pdf-api**: REST API server for PDF operations
+- **oxidize-pdf-cli**: Command-line interface with advanced features
+- **oxidize-pdf-pro**: Enhanced library with additional capabilities
 
 See [REPOSITORY_ARCHITECTURE.md](REPOSITORY_ARCHITECTURE.md) for detailed information.
 

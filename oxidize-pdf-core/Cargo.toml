@@ -390,3 +390,19 @@ semantic = ["dep:serde_json"]
 
 # Parallel processing features
 rayon = ["dep:rayon"]
+
+# Edition features (for licensing and fingerprinting)
+pro = []  # Commercial PRO edition
+enterprise = []  # Commercial Enterprise edition
+
+[[example]]
+name = "ai_ready_invoice"
+path = "../examples/src/ai_ready_invoice.rs"
+
+[[example]]
+name = "ai_ready_contract"
+path = "../examples/src/ai_ready_contract.rs"
+
+[[example]]
+name = "ai_ready_resume"
+path = "../examples/src/ai_ready_resume.rs"
