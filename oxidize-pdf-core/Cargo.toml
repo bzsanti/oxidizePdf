@@ -366,6 +366,10 @@ harness = false
 name = "performance_benchmarks"
 harness = false
 
+[[bench]]
+name = "ai_chunking"
+harness = false
+
 [features]
 default = ["compression", "ocr-tesseract"]
 
@@ -406,3 +410,11 @@ path = "../examples/src/ai_ready_contract.rs"
 [[example]]
 name = "ai_ready_resume"
 path = "../examples/src/ai_ready_resume.rs"
+
+[[example]]
+name = "basic_chunking"
+path = "../examples/ai_pipelines/basic_chunking.rs"
+
+[[example]]
+name = "rag_pipeline"
+path = "../examples/ai_pipelines/rag_pipeline.rs"

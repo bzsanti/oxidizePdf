@@ -176,6 +176,7 @@
 
 pub mod actions;
 pub mod advanced_tables;
+pub mod ai;
 pub mod annotations;
 
 pub mod batch;
