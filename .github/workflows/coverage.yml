@@ -48,7 +48,7 @@ jobs:
       - name: Generate coverage
         run: |
           cargo tarpaulin \
-            --workspace \
+            -p oxidize-pdf \
             --out Xml \
             --timeout 1200 \
             --release \
