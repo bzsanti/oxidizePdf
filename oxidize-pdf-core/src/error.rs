@@ -67,6 +67,9 @@ pub enum PdfError {
 
     #[error("Serialization error: {0}")]
     SerializationError(String),
+
+    #[error("Object stream error: {0}")]
+    ObjectStreamError(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;
