@@ -1,7 +1,7 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-01-19 - Fixed critical JPEG extraction bug (issue #67)
+- **Last Session**: 2025-10-06 - Fixed critical JPEG extraction bug (issue #67)
 - **Branch**: develop_santi (working branch)
 - **Version**: v1.3.0 released, working on v1.3.1
 - **Priority**: Bug fixes and feature documentation
@@ -9,14 +9,14 @@
 
 ## ✅ Funcionalidades Completadas
 
-### 🐛 **Bug Fixes Críticos** (Sesión 2025-01-19)
+### 🐛 **Bug Fixes Críticos** (Sesión 2025-10-06)
 - ✅ **JPEG Extraction Fix (Issue #67)**: Eliminación de bytes extra antes del SOI marker
   - Función `extract_clean_jpeg()` en `dct.rs`
   - 6 tests unitarios + verificación con PDF real
   - Tesseract OCR funcional
   - Commit: 644b820
 
-### 📚 **Documentación de Features** (Sesión 2025-01-19)
+### 📚 **Documentación de Features** (Sesión 2025-10-06)
 - ✅ **Corruption Recovery**: Ejemplo `recovery_corrupted_pdf.rs`
 - ✅ **PNG Transparency**: Ejemplo `png_transparency_watermark.rs`
 - ✅ **CJK Support**: Ejemplo `cjk_text_extraction.rs`
