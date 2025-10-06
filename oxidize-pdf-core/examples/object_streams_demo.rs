@@ -39,7 +39,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         page.text()
             .set_font(Font::Helvetica, 10.0)
             .at(100.0, 680.0 - (i as f64 * 20.0))
-            .write(&format!("Line {}: Object streams compress multiple objects together", i + 1))?;
+            .write(&format!(
+                "Line {}: Object streams compress multiple objects together",
+                i + 1
+            ))?;
     }
 
     doc.add_page(page);
@@ -57,7 +60,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut writer = PdfWriter::with_config(BufWriter::new(file), traditional_config);
     writer.write_document(&mut doc)?;
     let traditional_size = fs::metadata(&traditional_path)?.len();
-    println!("   ✓ Written: {} ({} bytes)", traditional_path, traditional_size);
+    println!(
+        "   ✓ Written: {} ({} bytes)",
+        traditional_path, traditional_size
+    );
 
     // Write WITH object streams (modern)
     println!("\n2. Writing PDF WITH object streams (modern PDF 1.5+)...");
@@ -88,7 +94,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dict.set("Data", Object::String(format!("Sample data {}", i)));
 
         // Serialize dictionary to bytes (simplified)
-        let dict_bytes = format!("<< /Type /Example /Index {} /Data (Sample data {}) >>", i, i).into_bytes();
+        let dict_bytes = format!(
+            "<< /Type /Example /Index {} /Data (Sample data {}) >>",
+            i, i
+        )
+        .into_bytes();
         obj_stream_writer.add_object(ObjectId::new(i as u32, 0), dict_bytes)?;
     }
 
@@ -147,10 +157,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n5. Object Stream Details:");
     for (idx, stream) in streams.iter().enumerate() {
-        println!("   Stream {}: {} objects (ID: {})",
-                 idx + 1,
-                 stream.objects.len(),
-                 stream.stream_id);
+        println!(
+            "   Stream {}: {} objects (ID: {})",
+            idx + 1,
+            stream.objects.len(),
+            stream.stream_id
+        );
 
         // Show dictionary
         let dict = stream.generate_dictionary(&[]);

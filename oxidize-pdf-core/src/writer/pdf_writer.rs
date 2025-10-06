@@ -13,6 +13,8 @@ use std::path::Path;
 pub struct WriterConfig {
     /// Use XRef streams instead of traditional XRef tables (PDF 1.5+)
     pub use_xref_streams: bool,
+    /// Use Object Streams for compressing multiple objects together (PDF 1.5+)
+    pub use_object_streams: bool,
     /// PDF version to write (default: 1.7)
     pub pdf_version: String,
     /// Enable compression for streams (default: true)
@@ -23,7 +25,30 @@ impl Default for WriterConfig {
     fn default() -> Self {
         Self {
             use_xref_streams: false,
+            use_object_streams: false,
             pdf_version: "1.7".to_string(),
+            compress_streams: true,
+        }
+    }
+}
+
+impl WriterConfig {
+    /// Create a modern PDF 1.5+ configuration with all compression features enabled
+    pub fn modern() -> Self {
+        Self {
+            use_xref_streams: true,
+            use_object_streams: true,
+            pdf_version: "1.5".to_string(),
+            compress_streams: true,
+        }
+    }
+
+    /// Create a legacy PDF 1.4 configuration without modern compression
+    pub fn legacy() -> Self {
+        Self {
+            use_xref_streams: false,
+            use_object_streams: false,
+            pdf_version: "1.4".to_string(),
             compress_streams: true,
         }
     }

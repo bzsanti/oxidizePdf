@@ -105,17 +105,14 @@ impl ObjectStream {
         uncompressed.extend_from_slice(&object_section);
 
         // Compress with zlib
-        let mut encoder = ZlibEncoder::new(
-            Vec::new(),
-            Compression::new(compression_level.min(9)),
-        );
-        encoder.write_all(&uncompressed).map_err(|e| {
-            PdfError::ObjectStreamError(format!("Compression failed: {}", e))
-        })?;
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::new(compression_level.min(9)));
+        encoder
+            .write_all(&uncompressed)
+            .map_err(|e| PdfError::ObjectStreamError(format!("Compression failed: {}", e)))?;
 
-        encoder.finish().map_err(|e| {
-            PdfError::ObjectStreamError(format!("Compression finish failed: {}", e))
-        })
+        encoder
+            .finish()
+            .map_err(|e| PdfError::ObjectStreamError(format!("Compression finish failed: {}", e)))
     }
 
     /// Generate the stream dictionary for this object stream
@@ -218,11 +215,7 @@ impl ObjectStreamWriter {
 
     /// Get compression statistics
     pub fn get_stats(&self) -> ObjectStreamStats {
-        let total_objects: usize = self
-            .completed_streams
-            .iter()
-            .map(|s| s.objects.len())
-            .sum();
+        let total_objects: usize = self.completed_streams.iter().map(|s| s.objects.len()).sum();
 
         let current_objects = self
             .current_stream
@@ -284,7 +277,9 @@ mod tests {
     fn test_can_compress() {
         assert!(ObjectStreamWriter::can_compress(&Object::Integer(42)));
         assert!(ObjectStreamWriter::can_compress(&Object::Boolean(true)));
-        assert!(ObjectStreamWriter::can_compress(&Object::Name("Test".to_string())));
+        assert!(ObjectStreamWriter::can_compress(&Object::Name(
+            "Test".to_string()
+        )));
 
         let dict = Dictionary::new();
         assert!(ObjectStreamWriter::can_compress(&Object::Dictionary(dict)));
@@ -319,8 +314,12 @@ mod tests {
 
         let mut writer = ObjectStreamWriter::new(config);
 
-        writer.add_object(ObjectId::new(1, 0), b"data1".to_vec()).unwrap();
-        writer.add_object(ObjectId::new(2, 0), b"data2".to_vec()).unwrap();
+        writer
+            .add_object(ObjectId::new(1, 0), b"data1".to_vec())
+            .unwrap();
+        writer
+            .add_object(ObjectId::new(2, 0), b"data2".to_vec())
+            .unwrap();
 
         let stats = writer.get_stats();
         assert_eq!(stats.total_objects, 2);
@@ -338,7 +337,9 @@ mod tests {
 
         // Add 5 objects (should create 3 streams: 2+2+1)
         for i in 1..=5 {
-            writer.add_object(ObjectId::new(i, 0), format!("data{}", i).into_bytes()).unwrap();
+            writer
+                .add_object(ObjectId::new(i, 0), format!("data{}", i).into_bytes())
+                .unwrap();
         }
 
         let streams = writer.finalize().unwrap();
