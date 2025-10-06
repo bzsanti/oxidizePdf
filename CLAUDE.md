@@ -1,12 +1,26 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **PDF Features**: Basic functionality implemented
+- **Last Session**: 2025-01-19 - Fixed critical JPEG extraction bug (issue #67)
 - **Branch**: develop_santi (working branch)
-- **Priority**: Implement practical PDF features
+- **Version**: v1.3.0 released, working on v1.3.1
+- **Priority**: Bug fixes and feature documentation
 - **IMPORTANT**: Focus on practical PDF functionality, not compliance metrics
 
 ## ✅ Funcionalidades Completadas
+
+### 🐛 **Bug Fixes Críticos** (Sesión 2025-01-19)
+- ✅ **JPEG Extraction Fix (Issue #67)**: Eliminación de bytes extra antes del SOI marker
+  - Función `extract_clean_jpeg()` en `dct.rs`
+  - 6 tests unitarios + verificación con PDF real
+  - Tesseract OCR funcional
+  - Commit: 644b820
+
+### 📚 **Documentación de Features** (Sesión 2025-01-19)
+- ✅ **Corruption Recovery**: Ejemplo `recovery_corrupted_pdf.rs`
+- ✅ **PNG Transparency**: Ejemplo `png_transparency_watermark.rs`
+- ✅ **CJK Support**: Ejemplo `cjk_text_extraction.rs`
+- ✅ README actualizado con features documentadas
 
 ### 📈 **Reporting Avanzado** (COMPLETADO)
 - ✅ Dashboards dinámicos con múltiples visualizaciones
@@ -77,11 +91,12 @@ cargo build --release                 # Production build
 - `/analyze-pdfs --with-render` - Include rendering validation
 
 ## 📊 Current State
-- **PDF Features**: Basic functionality working
-- **Tests**: 3,491 total tests in workspace
+- **PDF Features**: Core features implemented and documented
+- **Tests**: 4,163 total tests in workspace (all passing)
 - **PDF Parsing**: 98.8% success rate (750/759 PDFs) - 42.6 PDFs/second
 - **Performance**: ~12,000 pages/second for simple content (realistic measurement)
 - **Testing Focus**: Functional testing with honest benchmarks
+- **Last Build**: ✅ All tests passing, clippy clean, formatted
 
 ## 📚 Documentation References
 - **Detailed History**: `docs/HISTORY.md`
@@ -94,6 +109,11 @@ cargo build --release                 # Production build
 - PNG compression tests (7 failures) - non-critical
 - Encrypted PDFs not supported (19 cases)
 - Some circular references in complex PDFs
+
+## 📝 Open GitHub Issues (3)
+- **#57** - CJK Font Support Test Failed (pendiente feedback usuario)
+- **#54** - ISO 32000-1:2008 Compliance Tracking (enhancement)
+- **#46** - Source Han Sans font support (pendiente feedback usuario)
 
 ## 🔧 Test Organization (STRICT)
 **MANDATORY RULES:**
