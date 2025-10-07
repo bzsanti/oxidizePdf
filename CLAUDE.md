@@ -1,13 +1,41 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-06 - Fixed critical JPEG extraction bug (issue #67)
+- **Last Session**: 2025-10-07 - Feature 2.2.1 Object Streams COMPLETE
 - **Branch**: develop_santi (working branch)
-- **Version**: v1.3.0 released, working on v1.3.1
-- **Priority**: Bug fixes and feature documentation
-- **IMPORTANT**: Focus on practical PDF functionality, not compliance metrics
+- **Version**: v1.3.0 released, working on v1.4.0 (Sprint 2.2)
+- **Priority**: **ISO Core Fundamentals (Sprint 2.2)** - ✅ Object Streams | XRef Streams | LZWDecode
+- **Progress**: Feature 2.2.1 Object Streams integrated and tested
+- **Target**: 35-40% → 60-65% ISO compliance (on track)
 
 ## ✅ Funcionalidades Completadas
+
+### 🗜️ **Feature 2.2.1: Object Streams** (Sesión 2025-10-07) ⭐ NEW
+- ✅ **Object Stream Writer Integration**: Compresión automática de objetos PDF
+  - Integrado en `PdfWriter::write_document()` oxidize-pdf-core/src/writer/pdf_writer.rs:136
+  - Buffering de objetos comprimibles durante escritura
+  - Generación automática de object streams antes de xref
+  - XRef stream con entradas Type 2 para objetos comprimidos
+- ✅ **Configuración**:
+  - `WriterConfig::modern()` habilita object streams + xref streams
+  - `WriterConfig::legacy()` para PDF 1.4 sin compresión moderna
+  - Config granular con `use_object_streams` flag
+- ✅ **Compresión Inteligente**:
+  - Detecta automáticamente objetos comprimibles vs streams
+  - 100 objetos por stream (configurable)
+  - Zlib compression level 6
+- ✅ **Testing**:
+  - 16 tests unitarios (parser + writer)
+  - 4,170 tests totales pasando
+  - Demo: `modern_pdf_compression.rs` con 3.9% reducción
+- ✅ **Resultados Medidos**:
+  - Legacy PDF 1.4: 9447 bytes (baseline)
+  - Modern PDF 1.5: 9076 bytes (-3.9% reduction)
+  - 13 → 7 objetos directos (6 objetos comprimidos)
+- ✅ **ISO Compliance**:
+  - ISO 32000-1 Section 7.5.7 implementado
+  - PDF 1.5+ required
+  - Compatible con Adobe Acrobat
 
 ### 🐛 **Bug Fixes Críticos** (Sesión 2025-10-06)
 - ✅ **JPEG Extraction Fix (Issue #67)**: Eliminación de bytes extra antes del SOI marker
@@ -21,6 +49,20 @@
 - ✅ **PNG Transparency**: Ejemplo `png_transparency_watermark.rs`
 - ✅ **CJK Support**: Ejemplo `cjk_text_extraction.rs`
 - ✅ README actualizado con features documentadas
+
+### 📊 **Gap Analysis & Roadmap** (Sesión 2025-10-06 - Tarde)
+- ✅ **Gap Analysis vs lopdf**: Documento completo en `.private/GAP_ANALYSIS_LOPDF.md`
+- ✅ **Gaps Críticos Identificados** (P0):
+  - Object Streams (11-61% file size reduction)
+  - Cross-Reference Streams (PDF 1.5+ compliance)
+  - LZWDecode (legacy PDF compatibility)
+- ✅ **Ventajas Confirmadas**:
+  - Encryption: COMPLETO (RC4, AES-128/256, Public Key)
+  - CJK, Transparency, Annotations, Forms: Superiores a lopdf
+- ✅ **Roadmap Actualizado**:
+  - ROADMAP_MASTER.md con Sprint 2.2 ISO Core Fundamentals
+  - Sprint 2.2 detallado: 3 features P0/P1 en 3 semanas
+  - Sprint 2.3 planeado: Tagged PDF + Incremental Updates
 
 ### 📈 **Reporting Avanzado** (COMPLETADO)
 - ✅ Dashboards dinámicos con múltiples visualizaciones
@@ -111,9 +153,18 @@ cargo build --release                 # Production build
 - Some circular references in complex PDFs
 
 ## 📝 Open GitHub Issues (3)
-- **#57** - CJK Font Support Test Failed (pendiente feedback usuario)
+- **#57** - CJK Font Support Test Failed (pendiente feedback usuario - 7 días)
 - **#54** - ISO 32000-1:2008 Compliance Tracking (enhancement)
-- **#46** - Source Han Sans font support (pendiente feedback usuario)
+  - Gap analysis completado 2025-10-06
+  - Sprint 2.2 planeado para cerrar P0/P1 gaps
+- **#46** - Source Han Sans font support (pendiente feedback usuario - 7 días)
+
+## 🎯 Próximas Prioridades (Sprint 2.2)
+1. **Feature 2.2.1**: Object Streams (3 días) - File size parity con lopdf
+2. **Feature 2.2.2**: Cross-Reference Streams (3 días) - PDF 1.5+ compliance
+3. **Feature 2.2.3**: LZWDecode (2 días) - Legacy PDF compatibility
+
+**Objetivo**: 35-40% → 60-65% ISO compliance en 3 semanas
 
 ## 🔧 Test Organization (STRICT)
 **MANDATORY RULES:**

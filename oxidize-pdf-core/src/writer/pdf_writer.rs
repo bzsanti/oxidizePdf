@@ -2,7 +2,7 @@ use crate::document::Document;
 use crate::error::Result;
 use crate::objects::{Dictionary, Object, ObjectId};
 use crate::text::fonts::embedding::CjkFontType;
-use crate::writer::XRefStreamWriter;
+use crate::writer::{ObjectStreamConfig, ObjectStreamWriter, XRefStreamWriter};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
@@ -74,6 +74,9 @@ pub struct PdfWriter<W: Write> {
     config: WriterConfig,
     // Characters used in document (for font subsetting)
     document_used_chars: Option<std::collections::HashSet<char>>,
+    // Object stream buffering (when use_object_streams is enabled)
+    buffered_objects: HashMap<ObjectId, Vec<u8>>,
+    compressed_object_map: HashMap<ObjectId, (ObjectId, u32)>, // obj_id -> (stream_id, index)
 }
 
 impl<W: Write> PdfWriter<W> {
@@ -96,6 +99,8 @@ impl<W: Write> PdfWriter<W> {
             page_ids: Vec::new(),
             config,
             document_used_chars: None,
+            buffered_objects: HashMap::new(),
+            compressed_object_map: HashMap::new(),
         }
     }
 
@@ -126,6 +131,11 @@ impl<W: Write> PdfWriter<W> {
 
         // Write document info
         self.write_info(document)?;
+
+        // Flush buffered objects as object streams (if enabled)
+        if self.config.use_object_streams {
+            self.flush_object_streams()?;
+        }
 
         // Write xref table or stream
         let xref_position = self.current_position;
@@ -1510,6 +1520,8 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             page_ids: Vec::new(),
             config: WriterConfig::default(),
             document_used_chars: None,
+            buffered_objects: HashMap::new(),
+            compressed_object_map: HashMap::new(),
         })
     }
 }
@@ -1522,6 +1534,17 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_object(&mut self, id: ObjectId, object: Object) -> Result<()> {
+        use crate::writer::ObjectStreamWriter;
+
+        // If object streams enabled and object is compressible, buffer it
+        if self.config.use_object_streams && ObjectStreamWriter::can_compress(&object) {
+            let mut buffer = Vec::new();
+            self.write_object_value_to_buffer(&object, &mut buffer)?;
+            self.buffered_objects.insert(id, buffer);
+            return Ok(());
+        }
+
+        // Otherwise write immediately (streams, encryption dicts, etc.)
         self.xref_positions.insert(id, self.current_position);
 
         // Pre-format header to count exact bytes once
@@ -1585,6 +1608,119 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(ref_str.as_bytes())?;
             }
         }
+        Ok(())
+    }
+
+    /// Write object value to a buffer (for object streams)
+    fn write_object_value_to_buffer(&self, object: &Object, buffer: &mut Vec<u8>) -> Result<()> {
+        match object {
+            Object::Null => buffer.extend_from_slice(b"null"),
+            Object::Boolean(b) => buffer.extend_from_slice(if *b { b"true" } else { b"false" }),
+            Object::Integer(i) => buffer.extend_from_slice(i.to_string().as_bytes()),
+            Object::Real(f) => buffer.extend_from_slice(
+                format!("{f:.6}")
+                    .trim_end_matches('0')
+                    .trim_end_matches('.')
+                    .as_bytes(),
+            ),
+            Object::String(s) => {
+                buffer.push(b'(');
+                buffer.extend_from_slice(s.as_bytes());
+                buffer.push(b')');
+            }
+            Object::Name(n) => {
+                buffer.push(b'/');
+                buffer.extend_from_slice(n.as_bytes());
+            }
+            Object::Array(arr) => {
+                buffer.push(b'[');
+                for (i, obj) in arr.iter().enumerate() {
+                    if i > 0 {
+                        buffer.push(b' ');
+                    }
+                    self.write_object_value_to_buffer(obj, buffer)?;
+                }
+                buffer.push(b']');
+            }
+            Object::Dictionary(dict) => {
+                buffer.extend_from_slice(b"<<");
+                for (key, value) in dict.entries() {
+                    buffer.extend_from_slice(b"\n/");
+                    buffer.extend_from_slice(key.as_bytes());
+                    buffer.push(b' ');
+                    self.write_object_value_to_buffer(value, buffer)?;
+                }
+                buffer.extend_from_slice(b"\n>>");
+            }
+            Object::Stream(_, _) => {
+                // Streams should never be compressed in object streams
+                return Err(crate::error::PdfError::ObjectStreamError(
+                    "Cannot compress stream objects in object streams".to_string(),
+                ));
+            }
+            Object::Reference(id) => {
+                let ref_str = format!("{} {} R", id.number(), id.generation());
+                buffer.extend_from_slice(ref_str.as_bytes());
+            }
+        }
+        Ok(())
+    }
+
+    /// Flush buffered objects as compressed object streams
+    fn flush_object_streams(&mut self) -> Result<()> {
+        if self.buffered_objects.is_empty() {
+            return Ok(());
+        }
+
+        // Create object stream writer
+        let config = ObjectStreamConfig {
+            max_objects_per_stream: 100,
+            compression_level: 6,
+            enabled: true,
+        };
+        let mut os_writer = ObjectStreamWriter::new(config);
+
+        // Sort buffered objects by ID for deterministic output
+        let mut buffered: Vec<_> = self.buffered_objects.iter().collect();
+        buffered.sort_by_key(|(id, _)| id.number());
+
+        // Add all buffered objects to the stream writer
+        for (id, data) in buffered {
+            os_writer.add_object(*id, data.clone())?;
+        }
+
+        // Finalize and get completed streams
+        let streams = os_writer.finalize()?;
+
+        // Write each object stream to the PDF
+        for mut stream in streams {
+            let stream_id = stream.stream_id;
+
+            // Generate compressed stream data
+            let compressed_data = stream.generate_stream_data(6)?;
+
+            // Generate stream dictionary
+            let dict = stream.generate_dictionary(&compressed_data);
+
+            // Track compressed object mapping for xref
+            for (index, (obj_id, _)) in stream.objects.iter().enumerate() {
+                self.compressed_object_map
+                    .insert(*obj_id, (stream_id, index as u32));
+            }
+
+            // Write the object stream itself
+            self.xref_positions.insert(stream_id, self.current_position);
+
+            let header = format!("{} {} obj\n", stream_id.number(), stream_id.generation());
+            self.write_bytes(header.as_bytes())?;
+
+            self.write_object_value(&Object::Dictionary(dict))?;
+
+            self.write_bytes(b"\nstream\n")?;
+            self.write_bytes(&compressed_data)?;
+            self.write_bytes(b"\nendstream\nendobj\n")?;
+        }
+
         Ok(())
     }
 
@@ -1658,17 +1794,23 @@ impl<W: Write> PdfWriter<W> {
             .unwrap_or(0)
             .max(xref_stream_id.number());
 
-        // Add entries for all objects
+        // Add entries for all objects (including compressed objects)
         for obj_num in 1..=max_obj_num {
+            let obj_id = ObjectId::new(obj_num, 0);
+
             if obj_num == xref_stream_id.number() {
                 // The xref stream entry will be added with the correct position
                 xref_writer.add_in_use_entry(xref_position, 0);
+            } else if let Some((stream_id, index)) = self.compressed_object_map.get(&obj_id) {
+                // Type 2: Object is compressed in an object stream
+                xref_writer.add_compressed_entry(stream_id.number(), *index);
             } else if let Some((id, position)) =
                 entries.iter().find(|(id, _)| id.number() == obj_num)
             {
+                // Type 1: Regular in-use entry
                 xref_writer.add_in_use_entry(*position, id.generation());
             } else {
-                // Free entry for gap
+                // Type 0: Free entry for gap
                 xref_writer.add_free_entry(0, 0);
             }
         }
@@ -3859,6 +4001,7 @@ mod tests {
             // Create writer with XRef stream configuration
             let config = WriterConfig {
                 use_xref_streams: true,
+                use_object_streams: false,
                 pdf_version: "1.5".to_string(),
                 compress_streams: true,
             };
@@ -3904,6 +4047,7 @@ mod tests {
             // Test with custom version
             let config = WriterConfig {
                 use_xref_streams: false,
+                use_object_streams: false,
                 pdf_version: "1.4".to_string(),
                 compress_streams: true,
             };
@@ -3933,6 +4077,7 @@ mod tests {
 
             let config = WriterConfig {
                 use_xref_streams: true,
+                use_object_streams: false,
                 pdf_version: "1.5".to_string(),
                 compress_streams: true,
             };
@@ -4305,6 +4450,7 @@ mod tests {
                 let mut buffer = Vec::new();
                 let config = WriterConfig {
                     use_xref_streams: true,
+                use_object_streams: false,
                     pdf_version: "1.5".to_string(),
                     compress_streams: true,
                 };
@@ -4420,6 +4566,7 @@ mod tests {
         fn test_writer_config_custom() {
             let config = WriterConfig {
                 use_xref_streams: true,
+                use_object_streams: false,
                 pdf_version: "2.0".to_string(),
                 compress_streams: false,
             };
@@ -4443,6 +4590,7 @@ mod tests {
         fn test_pdf_writer_with_config() {
             let config = WriterConfig {
                 use_xref_streams: true,
+                use_object_streams: false,
                 pdf_version: "1.5".to_string(),
                 compress_streams: false,
             };

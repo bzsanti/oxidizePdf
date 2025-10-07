@@ -722,6 +722,7 @@ impl Document {
     ///
     /// let config = WriterConfig {
     ///     use_xref_streams: true,
+    ///     use_object_streams: false,
     ///     pdf_version: "1.5".to_string(),
     ///     compress_streams: true,
     /// };
@@ -1796,6 +1797,7 @@ mod tests {
 
             let config = crate::writer::WriterConfig {
                 use_xref_streams: true,
+                use_object_streams: false,
                 pdf_version: "1.5".to_string(),
                 compress_streams: true,
             };
@@ -1878,6 +1880,7 @@ mod tests {
             // Create config with compression true (should be overridden)
             let config = crate::writer::WriterConfig {
                 use_xref_streams: false,
+                use_object_streams: false,
                 pdf_version: "1.7".to_string(),
                 compress_streams: true,
             };

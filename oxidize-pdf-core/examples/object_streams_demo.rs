@@ -52,6 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let traditional_path = format!("{}/traditional.pdf", output_dir);
     let traditional_config = WriterConfig {
         use_xref_streams: false,
+        use_object_streams: false,
         pdf_version: "1.4".to_string(),
         compress_streams: true,
     };
@@ -70,6 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let modern_path = format!("{}/with_object_streams.pdf", output_dir);
     let modern_config = WriterConfig {
         use_xref_streams: false, // We'll add xref streams in Feature 2.2.2
+        use_object_streams: false,
         pdf_version: "1.5".to_string(),
         compress_streams: true,
     };

@@ -40,36 +40,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut doc2 = create_test_document()?;
     let xref_only_size = write_pdf(&mut doc2, &xref_only_path, xref_only_config)?;
     let xref_reduction = calculate_reduction(legacy_size, xref_only_size);
-    println!("   File size: {} bytes ({:.1}% reduction)\n", xref_only_size, xref_reduction);
+    println!(
+        "   File size: {} bytes ({:.1}% reduction)\n",
+        xref_only_size, xref_reduction
+    );
 
     // Test 3: PDF 1.5 Modern (XRef + Object Streams)
-    println!("3. PDF 1.5 Modern (XRef + Object Streams) - NOT YET INTEGRATED");
+    println!("3. PDF 1.5 Modern (XRef + Object Streams) - FULLY INTEGRATED ✓");
     let modern_path = format!("{}/modern_1.5.pdf", output_dir);
     let modern_config = WriterConfig::modern();
     let mut doc3 = create_test_document()?;
     let modern_size = write_pdf(&mut doc3, &modern_path, modern_config)?;
     let modern_reduction = calculate_reduction(legacy_size, modern_size);
-    println!("   File size: {} bytes ({:.1}% reduction)", modern_size, modern_reduction);
-    println!("   Note: Object stream integration pending\n");
+    println!(
+        "   File size: {} bytes ({:.1}% reduction)",
+        modern_size, modern_reduction
+    );
+    println!("   Note: Object streams automatically compress non-stream objects\n");
 
     // Summary
     println!("{}", "=".repeat(60));
     println!("SUMMARY");
     println!("{}", "=".repeat(60));
-    println!("Legacy PDF 1.4:           {:>10} bytes (baseline)", legacy_size);
-    println!("XRef Streams only:        {:>10} bytes (-{:.1}%)", xref_only_size, xref_reduction);
-    println!("Modern (full):            {:>10} bytes (-{:.1}%)", modern_size, modern_reduction);
+    println!(
+        "Legacy PDF 1.4:           {:>10} bytes (baseline)",
+        legacy_size
+    );
+    println!(
+        "XRef Streams only:        {:>10} bytes (-{:.1}%)",
+        xref_only_size, xref_reduction
+    );
+    println!(
+        "Modern (full):            {:>10} bytes (-{:.1}%) ✓",
+        modern_size, modern_reduction
+    );
     println!();
-    println!("Expected with Object Streams: {:>10} bytes (-11% to -61%)",
-             ((legacy_size as f64) * 0.50) as u64);
+    println!("Object Stream Compression:");
+    println!("  - Non-stream objects automatically compressed");
+    println!("  - XRef stream includes Type 2 entries for compressed objects");
+    println!("  - Configurable via WriterConfig::modern()");
     println!();
     println!("Output files:");
     println!("  {}/", output_dir);
     println!();
-    println!("Next Steps:");
-    println!("  - Integrate ObjectStreamWriter with PdfWriter.write_document()");
-    println!("  - Automatic object stream generation for compressible objects");
-    println!("  - Update XRef stream to include Type 2 entries for compressed objects");
+    println!("Note: Actual reduction depends on document structure.");
+    println!("      PDFs with many content streams will see lower reduction.");
 
     Ok(())
 }
@@ -85,7 +100,10 @@ fn create_test_document() -> Result<Document, Box<dyn std::error::Error>> {
         page.text()
             .set_font(Font::Helvetica, 16.0)
             .at(50.0, 800.0)
-            .write(&format!("Page {} - Modern PDF Compression Test", page_num + 1))?;
+            .write(&format!(
+                "Page {} - Modern PDF Compression Test",
+                page_num + 1
+            ))?;
 
         // Subtitle
         page.text()
