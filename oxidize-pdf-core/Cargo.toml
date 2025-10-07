@@ -183,6 +183,11 @@ name = "charts_comprehensive_test"
 path = "../examples/charts_comprehensive_test.rs"
 
 [[example]]
+name = "realistic_document_benchmark"
+path = "../examples/src/realistic_document_benchmark.rs"
+
+# Legacy trivial benchmark (deprecated - use realistic_document_benchmark)
+[[example]]
 name = "performance_benchmark_1000"
 path = "../examples/src/performance_benchmark_1000.rs"
 
