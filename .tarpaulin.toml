@@ -17,7 +17,7 @@ line = true
 branch = true
 
 # Package selection
-packages = ["oxidize-pdf", "oxidize-pdf-cli", "oxidize-pdf-api"]
+packages = ["oxidize-pdf-core"]
 all-features = false
 
 [report]
