@@ -1,0 +1,22 @@
+[package]
+name = "lopdf-comparison"
+version = "0.1.0"
+edition = "2021"
+
+# Exclude from parent workspace
+[workspace]
+
+[dependencies]
+# oxidize-pdf from parent workspace
+oxidize-pdf = { path = "../../oxidize-pdf-core" }
+
+# lopdf for comparison
+lopdf = "0.37"
+
+# Utilities
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[[bin]]
+name = "lopdf_realistic"
+path = "src/lopdf_realistic.rs"

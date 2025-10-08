@@ -1,0 +1,15 @@
+# Build artifacts
+/target/
+Cargo.lock
+
+# Benchmark results
+/results/*.pdf
+/results/*.json
+/results/BENCHMARK_REPORT.md
+
+# Test PDFs (user-provided)
+/test_pdfs/
+
+# Runtime data
+*.profraw
+perf.data

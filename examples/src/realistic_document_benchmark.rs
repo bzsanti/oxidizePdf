@@ -79,6 +79,7 @@ fn generate_paragraph(page_num: usize, para_idx: usize) -> String {
 }
 
 /// Generate procedural PNG image data (simple pattern)
+#[allow(dead_code)]
 fn generate_png_image(page_num: usize, width: u32, height: u32) -> Vec<u8> {
     // PNG signature
     let mut data = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
@@ -121,6 +122,7 @@ fn generate_png_image(page_num: usize, width: u32, height: u32) -> Vec<u8> {
 }
 
 /// Generate procedural JPEG image data (simple pattern)
+#[allow(dead_code)]
 fn generate_jpeg_image(page_num: usize, quality_level: u8) -> Vec<u8> {
     // JPEG SOI marker
     let mut data = vec![0xFF, 0xD8];
@@ -226,9 +228,9 @@ fn main() -> Result<()> {
         // === HEADER WITH LOGO (procedural image every 10 pages) ===
         if page_num % 10 == 0 {
             // Simulated logo with unique pattern
-            let logo_data = generate_png_image(page_num, 80, 30);
-            // Note: Image embedding would require image module
-            // For now, simulate with colored rectangle
+            let _logo_data = generate_png_image(page_num, 80, 30); // Reserved for future logo embedding
+                                                                   // Note: Image embedding would require image module
+                                                                   // For now, simulate with colored rectangle
             page.graphics()
                 .set_fill_color(Color::rgb(
                     0.2 + ((page_num as f64 * 0.01) % 0.3),
@@ -500,7 +502,7 @@ fn main() -> Result<()> {
                     .write(&format!("{}", value))?;
             }
 
-            y_pos -= chart_height + 15.0;
+            let _spacing = chart_height + 15.0; // Spacing for potential future elements
         }
 
         // === FOOTER ===
