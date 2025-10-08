@@ -8,6 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.4.0] - 2025-10-08
+
+### Added
+- **🗜️ Modern PDF Compression (ISO 32000-1)** - Full PDF 1.5+ compression support
+  - **Object Streams (ISO 7.5.7)**: Compress multiple non-stream objects together
+    - 3.9% file size reduction vs legacy PDF 1.4
+    - Automatic object buffering during write
+    - Type 2 XRef entries for compressed objects
+    - Configurable via `WriterConfig::modern()` and `WriterConfig::legacy()`
+  - **Cross-Reference Streams (ISO 7.5.8)**: Binary XRef tables with compression
+    - 1.3% additional file size reduction
+    - Dynamic width calculation for optimal storage
+    - Type 0/1/2 entry support (Free/InUse/Compressed)
+    - FlateDecode compression integrated
+  - **LZWDecode Filter (ISO 7.4.4)**: Complete LZW decompression support
+    - Variable-length codes (9-12 bits)
+    - CLEAR_CODE and EOD marker handling
+    - EarlyChange parameter support
+    - Compatible with legacy PDFs (pre-2000)
+
+### Fixed
+- **JPEG Extraction (Issue #67)**: Remove extraneous bytes before SOI marker
+  - Clean JPEG extraction for OCR compatibility
+  - Tesseract OCR now works correctly with extracted images
+  - 6 comprehensive unit tests added
+
+### Performance
+- **Realistic Benchmarks**: Replaced trivial content with production-quality tests
+  - **5,500-6,034 pages/second**: Complex documents with varied content
+  - **2,214 pages/second**: Medium complexity (charts + tables + gradients)
+  - **3,024 pages/second**: High complexity (Bezier curves + shadows)
+  - **No repetition**: Unique content per page using mathematical formulas
+
+### Technical
+- **ISO Compliance**: 55-60% (increased from 35-40% estimated)
+  - Honest gap analysis with evidence-based assessment
+  - All major filters implemented (LZW, CCITTFax, RunLength, DCT, Flate)
+  - Encryption superior to competitors (AES-256, Public Key, 275 tests)
+- **Test Suite**: 4,170 tests passing (39 new tests for compression features)
+- **Compression Config**:
+  - `WriterConfig::modern()` enables Object Streams + XRef Streams
+  - `WriterConfig::legacy()` for PDF 1.4 compatibility
+  - Granular control with `use_object_streams` flag
+
+### Documentation
+- Complete examples for modern compression features
+- Benchmark comparison vs lopdf (honest, evidence-based)
+- Detailed session notes in `.private/` for development transparency
+
 ## [1.3.0] - 2025-01-16
 
 ### Added

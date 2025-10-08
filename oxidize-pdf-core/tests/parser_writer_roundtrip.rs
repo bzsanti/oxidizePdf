@@ -282,11 +282,13 @@ fn test_config_propagation_roundtrip() -> Result<()> {
     let configs = [
         WriterConfig {
             use_xref_streams: false,
+            use_object_streams: false,
             pdf_version: "1.4".to_string(),
             compress_streams: false,
         },
         WriterConfig {
             use_xref_streams: true,
+            use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
         },
