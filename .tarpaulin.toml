@@ -17,7 +17,7 @@ line = true
 branch = true
 
 # Package selection
-packages = ["oxidize-pdf-core"]
+packages = ["oxidize-pdf"]
 all-features = false
 
 [report]
