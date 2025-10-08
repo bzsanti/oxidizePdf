@@ -171,11 +171,6 @@ jobs:
             oxidize-pdf = "${{ steps.get_version.outputs.VERSION }}"
             ```
 
-            Or install the CLI:
-            ```bash
-            cargo install oxidize-pdf-cli
-            ```
-
       # Detect which packages changed
       - name: Detect changed packages
         id: changes
@@ -230,7 +225,7 @@ jobs:
       # Publish to crates.io (only if version doesn't exist and package changed)
       - name: Publish oxidize-pdf to crates.io
         if: steps.changes.outputs.core_changed == 'true' && steps.version_check.outputs.core_needs_publish == 'true'
-        run: cargo publish -p oxidize-pdf
+        run: cargo publish -p oxidize-pdf-core
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
