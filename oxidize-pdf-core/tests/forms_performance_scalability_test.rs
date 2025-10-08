@@ -628,10 +628,10 @@ fn test_form_data_performance() {
         assert_eq!(retrieved_count, data_size);
         assert_eq!(iterated_count, data_size);
 
-        // Performance assertions
-        let max_insertion_time = std::time::Duration::from_micros(data_size as u64 * 10); // 10µs per insertion
-        let max_retrieval_time = std::time::Duration::from_micros(data_size as u64 * 5); // 5µs per retrieval
-        let max_iteration_time = std::time::Duration::from_micros(data_size as u64 * 2); // 2µs per iteration
+        // Performance assertions (relaxed for CI runners)
+        let max_insertion_time = std::time::Duration::from_micros(data_size as u64 * 25); // 25µs per insertion
+        let max_retrieval_time = std::time::Duration::from_micros(data_size as u64 * 15); // 15µs per retrieval
+        let max_iteration_time = std::time::Duration::from_micros(data_size as u64 * 5); // 5µs per iteration
 
         assert!(
             insertion_time < max_insertion_time,

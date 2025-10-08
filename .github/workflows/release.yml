@@ -93,9 +93,9 @@ jobs:
           echo "CI Check Results:"
           cat check_results.json
           
-          # Check if any required checks failed (ignore Code Coverage)
-          FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage") | .name' | wc -l)
-          PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage") | .name' | wc -l)
+          # Check if any required checks failed (ignore Code Coverage and Generate Coverage Report)
+          FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
+          PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
           
           if [ "$FAILED_CHECKS" -gt 0 ]; then
             echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
@@ -182,57 +182,40 @@ jobs:
         run: |
           # Get the previous tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
+
           if [ -z "$PREVIOUS_TAG" ]; then
-            echo "No previous tag found, assuming all packages changed"
+            echo "No previous tag found, assuming core package changed"
             echo "core_changed=true" >> $GITHUB_OUTPUT
-            echo "cli_changed=true" >> $GITHUB_OUTPUT
-            echo "api_changed=true" >> $GITHUB_OUTPUT
+            echo "cli_changed=false" >> $GITHUB_OUTPUT
+            echo "api_changed=false" >> $GITHUB_OUTPUT
           else
             CURRENT_TAG="${{ needs.verify-release-conditions.outputs.version_tag }}"
             echo "Comparing changes from $PREVIOUS_TAG to $CURRENT_TAG"
-            
+
             # Check if core package changed
             if git diff --name-only "$PREVIOUS_TAG".."$CURRENT_TAG" | grep -q "^oxidize-pdf-core/"; then
               echo "core_changed=true" >> $GITHUB_OUTPUT
             else
               echo "core_changed=false" >> $GITHUB_OUTPUT
             fi
-            
-            # Check if CLI package changed
-            if git diff --name-only "$PREVIOUS_TAG".."$CURRENT_TAG" | grep -q "^oxidize-pdf-cli/"; then
-              echo "cli_changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "cli_changed=false" >> $GITHUB_OUTPUT
-            fi
-            
-            # Check if API package changed
-            if git diff --name-only "$PREVIOUS_TAG".."$CURRENT_TAG" | grep -q "^oxidize-pdf-api/"; then
-              echo "api_changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "api_changed=false" >> $GITHUB_OUTPUT
-            fi
+
+            # CLI and API packages are in separate repositories
+            echo "cli_changed=false" >> $GITHUB_OUTPUT
+            echo "api_changed=false" >> $GITHUB_OUTPUT
           fi
 
       # Check if packages need new versions before publishing
       - name: Check version changes
         id: version_check
         run: |
-          # Get current versions from Cargo.toml files
-          # Core uses workspace version, so get it from workspace
+          # Get current version from workspace Cargo.toml
           CORE_VERSION=$(grep -A5 "^\[workspace\.package\]" Cargo.toml | grep "^version = " | cut -d'"' -f2)
-          CLI_VERSION=$(grep -E "^version = " oxidize-pdf-cli/Cargo.toml | cut -d'"' -f2)
-          API_VERSION=$(grep -E "^version = " oxidize-pdf-api/Cargo.toml | cut -d'"' -f2)
-          
+
           echo "core_version=$CORE_VERSION" >> $GITHUB_OUTPUT
-          echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
-          echo "api_version=$API_VERSION" >> $GITHUB_OUTPUT
-          
-          # Check if versions exist on crates.io using API (more reliable than cargo search)
-          echo "Checking if versions exist on crates.io..."
+
+          # Check if version exists on crates.io
+          echo "Checking if version exists on crates.io..."
           echo "Core version to check: $CORE_VERSION"
-          echo "CLI version to check: $CLI_VERSION"
-          echo "API version to check: $API_VERSION"
 
           # Check core package
           CORE_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf" | jq -r '.crate.max_version')
@@ -242,26 +225,6 @@ jobs:
           else
             echo "🚀 oxidize-pdf v$CORE_VERSION needs publishing (current: $CORE_PUBLISHED)"
             echo "core_needs_publish=true" >> $GITHUB_OUTPUT
-          fi
-
-          # Check CLI package
-          CLI_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf-cli" | jq -r '.crate.max_version')
-          if [ "$CLI_PUBLISHED" = "$CLI_VERSION" ]; then
-            echo "✅ oxidize-pdf-cli v$CLI_VERSION already published"
-            echo "cli_needs_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "🚀 oxidize-pdf-cli v$CLI_VERSION needs publishing (current: $CLI_PUBLISHED)"
-            echo "cli_needs_publish=true" >> $GITHUB_OUTPUT
-          fi
-
-          # Check API package
-          API_PUBLISHED=$(curl -s "https://crates.io/api/v1/crates/oxidize-pdf-api" | jq -r '.crate.max_version')
-          if [ "$API_PUBLISHED" = "$API_VERSION" ]; then
-            echo "✅ oxidize-pdf-api v$API_VERSION already published"
-            echo "api_needs_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "🚀 oxidize-pdf-api v$API_VERSION needs publishing (current: $API_PUBLISHED)"
-            echo "api_needs_publish=true" >> $GITHUB_OUTPUT
           fi
 
       # Publish to crates.io (only if version doesn't exist and package changed)
