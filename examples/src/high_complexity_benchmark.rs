@@ -138,35 +138,77 @@ fn main() -> Result<()> {
 
         y_pos -= 40.0;
 
-        // === TECHNICAL DIAGRAM ===
+        // === ENHANCED TECHNICAL DIAGRAM (varies per page) ===
         if page_num % 3 == 0 {
+            let diagram_type = (page_num / 3) % 3;
+            let diagram_title = match diagram_type {
+                0 => "System Architecture - Network Topology",
+                1 => "Data Flow Pipeline - Processing Stages",
+                _ => "Microservices Communication Graph",
+            };
+
             page.text()
                 .set_font(Font::HelveticaBold, 12.0)
                 .at(50.0, y_pos)
-                .write("System Architecture Diagram")?;
+                .write(&format!("{} (Page {})", diagram_title, page_num + 1))?;
 
             y_pos -= 30.0;
 
-            // Draw a complex technical diagram
+            // Diagram background with grid
+            page.graphics()
+                .set_fill_color(Color::rgb(0.95, 0.96, 0.98))
+                .rectangle(50.0, y_pos - 110.0, 495.0, 105.0)
+                .fill();
+
+            // Grid pattern
+            for gx in 0..10 {
+                let x = 50.0 + (gx as f64 * 49.5);
+                page.graphics()
+                    .set_stroke_color(Color::rgb(0.88, 0.89, 0.92))
+                    .set_line_width(0.3)
+                    .move_to(x, y_pos - 110.0)
+                    .line_to(x, y_pos - 5.0)
+                    .stroke();
+            }
+
             let diagram_start_x = 70.0;
             let diagram_start_y = y_pos;
 
-            // Main system box (unique per page)
-            let core_name = match page_num % 6 {
-                0 => "Core Module",
+            // Main system box (unique per page with shadow effect)
+            let core_name = match page_num % 9 {
+                0 => "Core Engine",
                 1 => "API Gateway",
-                2 => "Data Engine",
+                2 => "Data Processor",
                 3 => "Auth Service",
-                4 => "Cache Layer",
-                _ => "Load Balancer",
+                4 => "Cache Manager",
+                5 => "Load Balancer",
+                6 => "Message Broker",
+                7 => "Event Stream",
+                _ => "Service Mesh",
             };
 
+            // Shadow
             page.graphics()
-                .set_fill_color(Color::rgb(0.85, 0.9, 1.0))
-                .set_stroke_color(Color::rgb(0.2, 0.3, 0.7))
-                .set_line_width(2.0)
-                .rectangle(diagram_start_x, diagram_start_y - 60.0, 120.0, 50.0)
+                .set_fill_color(Color::rgb(0.7, 0.7, 0.75))
+                .rectangle(diagram_start_x + 3.0, diagram_start_y - 63.0, 120.0, 50.0)
                 .fill();
+
+            // Main box with gradient
+            for layer in 0..5 {
+                let layer_h = 10.0;
+                let layer_y = diagram_start_y - 60.0 + (layer as f64 * layer_h);
+                let alpha = 0.85 + (layer as f64 * 0.03);
+                page.graphics()
+                    .set_fill_color(Color::rgb(0.85 * alpha, 0.9 * alpha, 1.0 * alpha))
+                    .rectangle(diagram_start_x, layer_y, 120.0, layer_h)
+                    .fill();
+            }
+
+            page.graphics()
+                .set_stroke_color(Color::rgb(0.2, 0.3, 0.7))
+                .set_line_width(2.5)
+                .rectangle(diagram_start_x, diagram_start_y - 60.0, 120.0, 50.0)
+                .stroke();
 
             page.text()
                 .set_font(Font::HelveticaBold, 10.0)
@@ -174,57 +216,123 @@ fn main() -> Result<()> {
                 .at(diagram_start_x + 10.0, diagram_start_y - 35.0)
                 .write(core_name)?;
 
-            // Connected components (unique per page)
+            // Status indicator
+            let status_color = match (page_num * 7) % 3 {
+                0 => Color::rgb(0.2, 0.8, 0.2), // Green
+                1 => Color::rgb(1.0, 0.8, 0.0), // Yellow
+                _ => Color::rgb(0.9, 0.3, 0.3), // Red
+            };
+            page.graphics()
+                .set_fill_color(status_color)
+                .circle(diagram_start_x + 110.0, diagram_start_y - 15.0, 4.0)
+                .fill();
+
+            // Connected components (unique layout per page)
             let component_names = [
-                "Database", "Cache", "Queue", "Logger", "Monitor", "Metrics", "Backup", "Security",
+                "PostgreSQL",
+                "Redis",
+                "RabbitMQ",
+                "ElasticSearch",
+                "Prometheus",
+                "Grafana",
+                "Vault",
+                "Consul",
+                "Kafka",
+                "Cassandra",
+                "MongoDB",
+                "Neo4j",
             ];
 
-            for i in 0..4 {
-                let comp_x = diagram_start_x + 200.0 + (i as f64 * 80.0);
-                let comp_y = diagram_start_y - 30.0 + ((i % 2) as f64 * -40.0);
-                let comp_idx = (page_num * 2 + i) % component_names.len();
+            let num_components = 5 + (page_num % 3);
+            for i in 0..num_components {
+                let angle = (i as f64 / num_components as f64) * std::f64::consts::PI * 1.5 - 0.5;
+                let radius = 180.0 + ((page_num * (i + 1)) % 30) as f64;
+                let comp_x = diagram_start_x + 60.0 + angle.cos() * radius;
+                let comp_y = diagram_start_y - 35.0 - angle.sin() * (radius * 0.4);
+                let comp_idx = (page_num * 3 + i * 5) % component_names.len();
+
+                // Component shadow
+                page.graphics()
+                    .set_fill_color(Color::rgb(0.75, 0.75, 0.78))
+                    .rectangle(comp_x + 2.0, comp_y - 27.0, 70.0, 30.0)
+                    .fill();
 
                 // Component box with varying colors
-                let color_shift = (page_num as f64 * 0.1 + i as f64 * 0.05) % 0.3;
+                let color_shift = (page_num as f64 * 0.07 + i as f64 * 0.13) % 0.4;
                 page.graphics()
-                    .set_fill_color(Color::rgb(1.0, 0.9 - color_shift, 0.85 - color_shift))
-                    .set_stroke_color(Color::rgb(0.8, 0.5, 0.2))
-                    .set_line_width(1.5)
+                    .set_fill_color(Color::rgb(
+                        1.0 - color_shift * 0.3,
+                        0.92 - color_shift * 0.2,
+                        0.85 - color_shift * 0.15,
+                    ))
                     .rectangle(comp_x, comp_y - 25.0, 70.0, 30.0)
                     .fill();
 
+                page.graphics()
+                    .set_stroke_color(Color::rgb(0.8, 0.5, 0.2))
+                    .set_line_width(1.5)
+                    .rectangle(comp_x, comp_y - 25.0, 70.0, 30.0)
+                    .stroke();
+
                 page.text()
-                    .set_font(Font::Helvetica, 8.0)
+                    .set_font(Font::HelveticaBold, 7.0)
                     .set_fill_color(Color::rgb(0.3, 0.2, 0.1))
                     .at(comp_x + 5.0, comp_y - 12.0)
                     .write(component_names[comp_idx])?;
 
-                // Connection arrows
-                page.graphics()
-                    .set_stroke_color(Color::rgb(0.4, 0.4, 0.4))
-                    .set_line_width(1.0)
-                    .move_to(diagram_start_x + 120.0, diagram_start_y - 35.0)
-                    .line_to(comp_x, comp_y - 10.0)
-                    .stroke();
+                // Connection line with curve
+                let mid_x = (diagram_start_x + 120.0 + comp_x) / 2.0;
+                let mid_y = (diagram_start_y - 35.0 + comp_y - 10.0) / 2.0
+                    + ((page_num * i) % 20) as f64
+                    - 10.0;
+
+                // Bezier-like curve using multiple line segments
+                let segments = 8;
+                for s in 0..segments {
+                    let t = s as f64 / segments as f64;
+                    let t_next = (s + 1) as f64 / segments as f64;
+
+                    let x1 = (1.0 - t).powi(2) * (diagram_start_x + 120.0)
+                        + 2.0 * (1.0 - t) * t * mid_x
+                        + t.powi(2) * comp_x;
+                    let y1 = (1.0 - t).powi(2) * (diagram_start_y - 35.0)
+                        + 2.0 * (1.0 - t) * t * mid_y
+                        + t.powi(2) * (comp_y - 10.0);
+
+                    let x2 = (1.0 - t_next).powi(2) * (diagram_start_x + 120.0)
+                        + 2.0 * (1.0 - t_next) * t_next * mid_x
+                        + t_next.powi(2) * comp_x;
+                    let y2 = (1.0 - t_next).powi(2) * (diagram_start_y - 35.0)
+                        + 2.0 * (1.0 - t_next) * t_next * mid_y
+                        + t_next.powi(2) * (comp_y - 10.0);
+
+                    page.graphics()
+                        .set_stroke_color(Color::rgb(0.45, 0.45, 0.55))
+                        .set_line_width(1.2)
+                        .move_to(x1, y1)
+                        .line_to(x2, y2)
+                        .stroke();
+                }
 
                 // Arrow head
                 page.graphics()
-                    .set_fill_color(Color::rgb(0.4, 0.4, 0.4))
+                    .set_fill_color(Color::rgb(0.4, 0.4, 0.5))
                     .move_to(comp_x - 5.0, comp_y - 10.0)
                     .line_to(comp_x - 10.0, comp_y - 7.0)
                     .line_to(comp_x - 10.0, comp_y - 13.0)
                     .close_path()
                     .fill();
+
+                // Data rate label (unique per page)
+                let rate = 100 + (page_num * (i + 1) * 17) % 900;
+                page.text()
+                    .set_font(Font::Helvetica, 6.0)
+                    .set_fill_color(Color::rgb(0.5, 0.5, 0.6))
+                    .at(mid_x - 15.0, mid_y - 3.0)
+                    .write(&format!("{}req/s", rate))?;
             }
 
-            // Data flow indicators
-            page.text()
-                .set_font(Font::HelveticaOblique, 8.0)
-                .set_fill_color(Color::rgb(0.6, 0.3, 0.1))
-                .at(diagram_start_x + 140.0, diagram_start_y - 20.0)
-                .write("HTTP/REST")?;
-
-            y_pos -= 100.0;
+            y_pos -= 115.0;
         }
 
         // === CODE BLOCK WITH SYNTAX HIGHLIGHTING (unique per page) ===

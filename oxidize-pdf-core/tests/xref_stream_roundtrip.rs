@@ -27,6 +27,7 @@ fn test_xref_stream_roundtrip() -> Result<()> {
     {
         let config = WriterConfig {
             use_xref_streams: true,
+            use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
         };
@@ -97,6 +98,7 @@ fn test_xref_stream_with_compressed_objects() -> Result<()> {
     {
         let config = WriterConfig {
             use_xref_streams: true,
+            use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
         };

@@ -55,12 +55,64 @@ pub enum JpegColorSpace {
 /// validate it and extract metadata. The JPEG data is typically stored
 /// as-is in the PDF and decoded by the viewer.
 pub fn decode_dct(data: &[u8]) -> ParseResult<Vec<u8>> {
+    // Clean JPEG data by extracting from SOI to EOI markers
+    let clean_data = extract_clean_jpeg(data)?;
+
     // Validate JPEG structure
-    validate_jpeg(data)?;
+    validate_jpeg(&clean_data)?;
 
     // For PDF, we return the JPEG data as-is
     // The PDF reader will handle the actual JPEG decoding
-    Ok(data.to_vec())
+    Ok(clean_data)
+}
+
+/// Extract clean JPEG data from SOI (0xFFD8) to EOI (0xFFD9) markers
+///
+/// PDF streams may contain extra bytes before or after the actual JPEG data.
+/// This function finds the JPEG boundaries and extracts only the valid JPEG.
+pub fn extract_clean_jpeg(data: &[u8]) -> ParseResult<Vec<u8>> {
+    const SOI: [u8; 2] = [0xFF, 0xD8];
+    const EOI: [u8; 2] = [0xFF, 0xD9];
+
+    // Find SOI marker (Start Of Image)
+    let soi_pos = data
+        .windows(2)
+        .position(|window| window == SOI)
+        .ok_or_else(|| {
+            ParseError::StreamDecodeError(
+                "JPEG SOI marker (0xFFD8) not found in stream data".to_string(),
+            )
+        })?;
+
+    // Find EOI marker (End Of Image) - search from SOI position
+    let eoi_pos = data[soi_pos..]
+        .windows(2)
+        .position(|window| window == EOI)
+        .ok_or_else(|| {
+            ParseError::StreamDecodeError(
+                "JPEG EOI marker (0xFFD9) not found in stream data".to_string(),
+            )
+        })?;
+
+    // Calculate absolute position of EOI
+    let eoi_abs_pos = soi_pos + eoi_pos + 2; // +2 to include the EOI marker itself
+
+    // Extract clean JPEG data
+    if soi_pos > 0 {
+        eprintln!(
+            "⚠️  [DCTDecode] Found {} extraneous bytes before JPEG SOI marker, removing them",
+            soi_pos
+        );
+    }
+
+    if eoi_abs_pos < data.len() {
+        eprintln!(
+            "⚠️  [DCTDecode] Found {} extraneous bytes after JPEG EOI marker, removing them",
+            data.len() - eoi_abs_pos
+        );
+    }
+
+    Ok(data[soi_pos..eoi_abs_pos].to_vec())
 }
 
 /// Parse JPEG header information
@@ -450,6 +502,88 @@ mod tests {
         assert_eq!(cloned.components, info.components);
         assert_eq!(cloned.bits_per_component, info.bits_per_component);
         assert_eq!(cloned.color_space, info.color_space);
+    }
+
+    // Tests for extract_clean_jpeg function
+
+    #[test]
+    fn test_extract_clean_jpeg_with_extra_bytes_before() {
+        // Simulate 17 bytes before SOI (like in issue #67)
+        let mut data = vec![0x00; 17]; // 17 garbage bytes
+        data.extend_from_slice(&[0xFF, 0xD8]); // SOI
+        data.extend_from_slice(&[0xFF, 0xD9]); // EOI
+
+        let result = extract_clean_jpeg(&data);
+        assert!(result.is_ok());
+        let clean = result.unwrap();
+        assert_eq!(clean.len(), 4); // Only SOI + EOI
+        assert_eq!(clean, vec![0xFF, 0xD8, 0xFF, 0xD9]);
+    }
+
+    #[test]
+    fn test_extract_clean_jpeg_with_extra_bytes_after() {
+        let mut data = vec![0xFF, 0xD8]; // SOI
+        data.extend_from_slice(&[0xFF, 0xD9]); // EOI
+        data.extend_from_slice(&[0x00; 10]); // 10 garbage bytes after
+
+        let result = extract_clean_jpeg(&data);
+        assert!(result.is_ok());
+        let clean = result.unwrap();
+        assert_eq!(clean.len(), 4);
+        assert_eq!(clean, vec![0xFF, 0xD8, 0xFF, 0xD9]);
+    }
+
+    #[test]
+    fn test_extract_clean_jpeg_with_extra_bytes_both() {
+        let mut data = vec![0xAA, 0xBB, 0xCC]; // 3 bytes before
+        data.extend_from_slice(&[0xFF, 0xD8]); // SOI
+        data.push(0x42); // Some JPEG data
+        data.extend_from_slice(&[0xFF, 0xD9]); // EOI
+        data.extend_from_slice(&[0xDD, 0xEE]); // 2 bytes after
+
+        let result = extract_clean_jpeg(&data);
+        assert!(result.is_ok());
+        let clean = result.unwrap();
+        assert_eq!(clean.len(), 5);
+        assert_eq!(clean, vec![0xFF, 0xD8, 0x42, 0xFF, 0xD9]);
+    }
+
+    #[test]
+    fn test_extract_clean_jpeg_already_clean() {
+        let data = vec![0xFF, 0xD8, 0xFF, 0xD9];
+        let result = extract_clean_jpeg(&data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), data);
+    }
+
+    #[test]
+    fn test_extract_clean_jpeg_missing_soi() {
+        let data = vec![0x00, 0x00, 0xFF, 0xD9]; // No SOI
+        let result = extract_clean_jpeg(&data);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("SOI"));
+    }
+
+    #[test]
+    fn test_extract_clean_jpeg_missing_eoi() {
+        let data = vec![0xFF, 0xD8, 0x42, 0x43]; // SOI but no EOI
+        let result = extract_clean_jpeg(&data);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("EOI"));
+    }
+
+    #[test]
+    fn test_decode_dct_with_dirty_data() {
+        // Test that decode_dct properly cleans data via extract_clean_jpeg
+        let mut data = vec![0x00; 5]; // 5 garbage bytes
+        data.extend_from_slice(&[0xFF, 0xD8]); // SOI
+        data.extend_from_slice(&[0xFF, 0xD9]); // EOI
+        data.extend_from_slice(&[0x00; 3]); // 3 garbage bytes after
+
+        let result = decode_dct(&data);
+        assert!(result.is_ok());
+        let clean = result.unwrap();
+        assert_eq!(clean, vec![0xFF, 0xD8, 0xFF, 0xD9]);
     }
 
     #[test]

@@ -217,56 +217,132 @@ fn main() -> Result<()> {
             y_pos -= 15.0;
         }
 
-        // === CHART EVERY 4 PAGES (with unique data) ===
-        if (page_num + 1) % 4 == 0 {
+        // === ENHANCED CHART EVERY 3 PAGES (with unique data and mini sparklines) ===
+        if (page_num + 1) % 3 == 0 {
             y_pos -= 20.0;
+
+            let chart_type = (page_num / 3) % 3;
+            let chart_title = match chart_type {
+                0 => "Regional Performance Comparison",
+                1 => "Product Sales Distribution",
+                _ => "Quarterly Growth Trends",
+            };
 
             page.text()
                 .set_font(Font::HelveticaBold, 12.0)
                 .set_fill_color(Color::rgb(0.1, 0.1, 0.1))
                 .at(50.0, y_pos)
-                .write(&format!("Q{} Regional Performance", (page_num / 4) + 1))?;
+                .write(&format!("{} - Page {}", chart_title, page_num + 1))?;
 
             y_pos -= 30.0;
 
+            // Chart background
+            page.graphics()
+                .set_fill_color(Color::rgb(0.97, 0.97, 0.98))
+                .rectangle(50.0, y_pos - 100.0, 495.0, 95.0)
+                .fill();
+
+            // Chart grid lines
+            for i in 0..5 {
+                let grid_y = y_pos - (i as f64 * 20.0);
+                page.graphics()
+                    .set_stroke_color(Color::rgb(0.85, 0.85, 0.85))
+                    .set_line_width(0.5)
+                    .move_to(70.0, grid_y)
+                    .line_to(530.0, grid_y)
+                    .stroke();
+            }
+
             // Chart with unique data per page
             let chart_width = 400.0;
-            let _chart_height = 80.0;
-            let bar_width = chart_width / 5.0; // Use first 5 regions
+            let chart_height = 80.0;
+            let num_bars = 6;
+            let bar_width = chart_width / num_bars as f64;
 
-            for i in 0..5 {
+            for i in 0..num_bars {
                 // Generate unique bar heights based on page
-                let base_performance = 30.0 + (page_num as f64 * 5.0);
+                let base_performance = 25.0 + (page_num as f64 * 3.0);
                 let bar_height =
-                    base_performance + (i as f64 * 8.0) + ((page_num * (i + 1)) as f64 % 25.0);
-                let x = 50.0 + (i as f64 * bar_width);
+                    base_performance + (i as f64 * 7.0) + ((page_num * (i + 1) * 17) as f64 % 30.0);
+                let x = 70.0 + (i as f64 * bar_width);
 
-                // Bar with different colors per page
-                let color_shift = (page_num as f64 * 0.1) % 1.0;
+                // Gradient effect with multiple rectangles
+                for j in 0..5 {
+                    let segment_height = bar_height / 5.0;
+                    let segment_y = y_pos - bar_height + (j as f64 * segment_height);
+                    let alpha = 0.4 + ((5 - j) as f64 * 0.12);
+
+                    let color_shift = (page_num as f64 * 0.07 + i as f64 * 0.11) % 1.0;
+                    page.graphics()
+                        .set_fill_color(Color::rgb(
+                            (0.2 + color_shift * 0.3) * alpha,
+                            (0.5 + color_shift * 0.2) * alpha,
+                            (0.9 - color_shift * 0.3) * alpha,
+                        ))
+                        .rectangle(x + 10.0, segment_y, bar_width - 25.0, segment_height)
+                        .fill();
+                }
+
+                // Bar border
                 page.graphics()
-                    .set_fill_color(Color::rgb(
-                        0.2 + color_shift * 0.3,
-                        0.4 + color_shift * 0.2,
-                        0.8 - color_shift * 0.3,
-                    ))
-                    .rectangle(x + 10.0, y_pos - bar_height, bar_width - 20.0, bar_height)
-                    .fill();
+                    .set_stroke_color(Color::rgb(0.3, 0.3, 0.5))
+                    .set_line_width(1.0)
+                    .rectangle(x + 10.0, y_pos - bar_height, bar_width - 25.0, bar_height)
+                    .stroke();
 
                 // Bar value (unique per page)
-                let value = (bar_height * 2.1 + page_num as f64 * 50.0) as u32;
+                let value = (bar_height * 2.5 + page_num as f64 * 75.0 + i as f64 * 120.0) as u32;
                 page.text()
-                    .set_font(Font::Helvetica, 8.0)
-                    .set_fill_color(Color::rgb(0.1, 0.1, 0.1))
-                    .at(x + bar_width / 2.0 - 15.0, y_pos - bar_height - 12.0)
-                    .write(&format!("{}K", value))?;
+                    .set_font(Font::HelveticaBold, 8.0)
+                    .set_fill_color(Color::rgb(0.1, 0.1, 0.3))
+                    .at(x + bar_width / 2.0 - 12.0, y_pos - bar_height - 12.0)
+                    .write(&format!("${}", value))?;
 
-                // Region label
+                // Mini sparkline trend below bar (unique per page)
+                let sparkline_y = y_pos + 5.0;
+                let sparkline_width = bar_width - 30.0;
+                let num_points = 6;
+                let mut last_x = x + 12.0;
+                let mut last_y =
+                    sparkline_y - ((page_num * (i + 1) * 7) % 15) as f64 - ((i * 2) as f64);
+
+                for p in 1..num_points {
+                    let px = x + 12.0 + (p as f64 * (sparkline_width / num_points as f64));
+                    let trend_val = ((page_num * (p + 1) * (i + 1) * 13) % 15) as f64;
+                    let py = sparkline_y - trend_val - ((i * 2) as f64);
+
+                    page.graphics()
+                        .set_stroke_color(Color::rgb(0.4, 0.6, 0.8))
+                        .set_line_width(1.5)
+                        .move_to(last_x, last_y)
+                        .line_to(px, py)
+                        .stroke();
+
+                    last_x = px;
+                    last_y = py;
+                }
+
+                // Label
+                let label_text = match chart_type {
+                    0 => {
+                        let region_idx = (page_num * 3 + i) % regions.len();
+                        regions[region_idx]
+                    }
+                    1 => {
+                        let product_idx = (page_num * 5 + i) % products.len();
+                        products[product_idx]
+                    }
+                    _ => &format!("Q{}", i + 1),
+                };
+
                 page.text()
-                    .set_font(Font::Helvetica, 8.0)
-                    .set_fill_color(Color::rgb(0.1, 0.1, 0.1))
-                    .at(x + 5.0, y_pos + 10.0)
-                    .write(regions[i])?;
+                    .set_font(Font::Helvetica, 7.0)
+                    .set_fill_color(Color::rgb(0.2, 0.2, 0.2))
+                    .at(x + 5.0, y_pos + 20.0)
+                    .write(label_text)?;
             }
+
+            y_pos -= chart_height + 35.0;
         }
 
         // === FOOTER (with unique identifiers) ===
