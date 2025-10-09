@@ -2258,3 +2258,6 @@ fn format_pdf_date(date: DateTime<Utc>) -> String {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod rigorous_tests;
