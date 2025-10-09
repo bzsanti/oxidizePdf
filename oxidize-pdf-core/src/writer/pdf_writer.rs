@@ -201,6 +201,41 @@ impl<W: Write> PdfWriter<W> {
             }
         }
 
+        // Add StructTreeRoot if present (Tagged PDF - ISO 32000-1 §14.8)
+        if let Some(struct_tree) = &document.struct_tree {
+            if !struct_tree.is_empty() {
+                let struct_tree_root_id = self.write_struct_tree(struct_tree)?;
+                catalog.set("StructTreeRoot", Object::Reference(struct_tree_root_id));
+                // Mark as Tagged PDF
+                catalog.set("MarkInfo", {
+                    let mut mark_info = Dictionary::new();
+                    mark_info.set("Marked", Object::Boolean(true));
+                    Object::Dictionary(mark_info)
+                });
+            }
+        }
+
+        // Add XMP Metadata stream (ISO 32000-1 §14.3.2)
+        // Generate XMP from document metadata and embed as stream
+        let xmp_metadata = document.create_xmp_metadata();
+        let xmp_packet = xmp_metadata.to_xmp_packet();
+        let metadata_id = self.allocate_object_id();
+
+        // Create metadata stream dictionary
+        let mut metadata_dict = Dictionary::new();
+        metadata_dict.set("Type", Object::Name("Metadata".to_string()));
+        metadata_dict.set("Subtype", Object::Name("XML".to_string()));
+        metadata_dict.set("Length", Object::Integer(xmp_packet.len() as i64));
+
+        // Write XMP metadata stream
+        self.write_object(
+            metadata_id,
+            Object::Stream(metadata_dict, xmp_packet.into_bytes()),
+        )?;
+
+        // Reference it in catalog
+        catalog.set("Metadata", Object::Reference(metadata_id));
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
         Ok(())
     }
@@ -374,6 +409,149 @@ impl<W: Write> PdfWriter<W> {
         self.write_object(item_id, Object::Dictionary(item_dict))?;
 
         Ok(written_ids)
+    }
+
+    /// Writes the structure tree for Tagged PDF (ISO 32000-1 §14.8)
+    fn write_struct_tree(
+        &mut self,
+        struct_tree: &crate::structure::StructTree,
+    ) -> Result<ObjectId> {
+        // Allocate IDs for StructTreeRoot and all elements
+        let struct_tree_root_id = self.allocate_object_id();
+        let mut element_ids = Vec::new();
+        for _ in 0..struct_tree.len() {
+            element_ids.push(self.allocate_object_id());
+        }
+
+        // Build parent map: element_index -> parent_id
+        let mut parent_map: std::collections::HashMap<usize, ObjectId> =
+            std::collections::HashMap::new();
+
+        // Root element's parent is StructTreeRoot
+        if let Some(root_index) = struct_tree.root_index() {
+            parent_map.insert(root_index, struct_tree_root_id);
+
+            // Recursively map all children to their parents
+            fn map_children_parents(
+                tree: &crate::structure::StructTree,
+                parent_index: usize,
+                parent_id: ObjectId,
+                element_ids: &[ObjectId],
+                parent_map: &mut std::collections::HashMap<usize, ObjectId>,
+            ) {
+                if let Some(parent_elem) = tree.get(parent_index) {
+                    for &child_index in &parent_elem.children {
+                        parent_map.insert(child_index, parent_id);
+                        map_children_parents(
+                            tree,
+                            child_index,
+                            element_ids[child_index],
+                            element_ids,
+                            parent_map,
+                        );
+                    }
+                }
+            }
+
+            map_children_parents(
+                struct_tree,
+                root_index,
+                element_ids[root_index],
+                &element_ids,
+                &mut parent_map,
+            );
+        }
+
+        // Write all structure elements with parent references
+        for (index, element) in struct_tree.iter().enumerate() {
+            let element_id = element_ids[index];
+            let mut element_dict = Dictionary::new();
+
+            element_dict.set("Type", Object::Name("StructElem".to_string()));
+            element_dict.set("S", Object::Name(element.structure_type.as_pdf_name()));
+
+            // Parent reference (ISO 32000-1 §14.7.2 - required)
+            if let Some(&parent_id) = parent_map.get(&index) {
+                element_dict.set("P", Object::Reference(parent_id));
+            }
+
+            // Element ID (optional)
+            if let Some(ref id) = element.id {
+                element_dict.set("ID", Object::String(id.clone()));
+            }
+
+            // Attributes
+            if let Some(ref lang) = element.attributes.lang {
+                element_dict.set("Lang", Object::String(lang.clone()));
+            }
+            if let Some(ref alt) = element.attributes.alt {
+                element_dict.set("Alt", Object::String(alt.clone()));
+            }
+            if let Some(ref actual_text) = element.attributes.actual_text {
+                element_dict.set("ActualText", Object::String(actual_text.clone()));
+            }
+            if let Some(ref title) = element.attributes.title {
+                element_dict.set("T", Object::String(title.clone()));
+            }
+            if let Some(bbox) = element.attributes.bbox {
+                element_dict.set(
+                    "BBox",
+                    Object::Array(vec![
+                        Object::Real(bbox[0]),
+                        Object::Real(bbox[1]),
+                        Object::Real(bbox[2]),
+                        Object::Real(bbox[3]),
+                    ]),
+                );
+            }
+
+            // Kids (children elements + marked content references)
+            let mut kids = Vec::new();
+
+            // Add child element references
+            for &child_index in &element.children {
+                kids.push(Object::Reference(element_ids[child_index]));
+            }
+
+            // Add marked content references (MCIDs)
+            for mcid_ref in &element.mcids {
+                let mut mcr = Dictionary::new();
+                mcr.set("Type", Object::Name("MCR".to_string()));
+                mcr.set("Pg", Object::Integer(mcid_ref.page_index as i64));
+                mcr.set("MCID", Object::Integer(mcid_ref.mcid as i64));
+                kids.push(Object::Dictionary(mcr));
+            }
+
+            if !kids.is_empty() {
+                element_dict.set("K", Object::Array(kids));
+            }
+
+            self.write_object(element_id, Object::Dictionary(element_dict))?;
+        }
+
+        // Create StructTreeRoot dictionary
+        let mut struct_tree_root = Dictionary::new();
+        struct_tree_root.set("Type", Object::Name("StructTreeRoot".to_string()));
+
+        // Add root element(s) as K entry
+        if let Some(root_index) = struct_tree.root_index() {
+            struct_tree_root.set("K", Object::Reference(element_ids[root_index]));
+        }
+
+        // Add RoleMap if not empty
+        if !struct_tree.role_map.mappings().is_empty() {
+            let mut role_map = Dictionary::new();
+            for (custom_type, standard_type) in struct_tree.role_map.mappings() {
+                role_map.set(
+                    custom_type.as_str(),
+                    Object::Name(standard_type.as_pdf_name().to_string()),
+                );
+            }
+            struct_tree_root.set("RoleMap", Object::Dictionary(role_map));
+        }
+
+        self.write_object(struct_tree_root_id, Object::Dictionary(struct_tree_root))?;
+        Ok(struct_tree_root_id)
     }
 
     fn write_form_fields(&mut self, document: &mut Document) -> Result<()> {

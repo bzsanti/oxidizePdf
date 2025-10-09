@@ -276,7 +276,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "PNG decoder needs fixes - valid test data prepared"]
     fn test_png_image_creation() {
         // Valid 1x1 red PNG (70 bytes) - generated from real PNG
         let png_data = vec![

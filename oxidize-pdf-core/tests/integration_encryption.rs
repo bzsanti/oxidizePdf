@@ -6,31 +6,9 @@ use oxidize_pdf::encryption::{
 use oxidize_pdf::objects::ObjectId;
 use oxidize_pdf::{Document, Page};
 
-#[test]
-#[ignore = "Encryption feature under development"]
-fn test_create_encrypted_pdf() {
-    // Create a new PDF document
-    let mut doc = Document::new();
-
-    // Add a page with some content
-    let mut page = Page::new(595.0, 842.0);
-    page.text()
-        .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
-        .at(100.0, 700.0)
-        .write("This is encrypted content")
-        .ok();
-    doc.add_page(page);
-
-    // Set up encryption using DocumentEncryption
-    doc.encrypt_with_passwords("userpass", "ownerpass");
-
-    // Save to bytes
-    let pdf_bytes = doc.to_bytes().unwrap();
-
-    // Verify the PDF contains encryption markers
-    let pdf_str = String::from_utf8_lossy(&pdf_bytes);
-    assert!(pdf_str.contains("/Encrypt"));
-}
+// NOTE: Full document encryption via Document::encrypt_with_passwords() is not yet
+// fully integrated with the writer. The encryption primitives (handlers, keys, dictionaries)
+// are implemented and tested below. Document-level encryption will be completed in a future release.
 
 #[test]
 fn test_encrypt_decrypt_stream() {

@@ -2736,4 +2736,578 @@ mod tests {
         assert!(ops_str2.contains("/GS")); // ExtGState names
         assert!(ops_str2.contains(" gs\n")); // ExtGState operators
     }
+
+    #[test]
+    fn test_add_command() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test normal command
+        ctx.add_command("1 0 0 1 100 200 cm");
+        let ops = ctx.operations();
+        assert!(ops.contains("1 0 0 1 100 200 cm\n"));
+
+        // Test that newline is always added
+        ctx.clear();
+        ctx.add_command("q");
+        assert_eq!(ctx.operations(), "q\n");
+
+        // Test empty string
+        ctx.clear();
+        ctx.add_command("");
+        assert_eq!(ctx.operations(), "\n");
+
+        // Test command with existing newline
+        ctx.clear();
+        ctx.add_command("Q\n");
+        assert_eq!(ctx.operations(), "Q\n\n"); // Double newline
+
+        // Test multiple commands
+        ctx.clear();
+        ctx.add_command("q");
+        ctx.add_command("1 0 0 1 50 50 cm");
+        ctx.add_command("Q");
+        assert_eq!(ctx.operations(), "q\n1 0 0 1 50 50 cm\nQ\n");
+    }
+
+    #[test]
+    fn test_get_operations() {
+        let mut ctx = GraphicsContext::new();
+        ctx.rect(10.0, 10.0, 50.0, 50.0);
+        let ops1 = ctx.operations();
+        let ops2 = ctx.get_operations();
+        assert_eq!(ops1, ops2);
+    }
+
+    #[test]
+    fn test_set_line_solid() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_dash_pattern(LineDashPattern::new(vec![5.0, 3.0], 0.0));
+        ctx.set_line_solid();
+        let ops = ctx.operations();
+        assert!(ops.contains("[] 0 d\n"));
+    }
+
+    #[test]
+    fn test_set_custom_font() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_custom_font("CustomFont", 14.0);
+        assert_eq!(ctx.current_font_name, Some("CustomFont".to_string()));
+        assert_eq!(ctx.current_font_size, 14.0);
+    }
+
+    #[test]
+    fn test_set_glyph_mapping() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test initial state
+        assert!(ctx.glyph_mapping.is_none());
+
+        // Test normal mapping
+        let mut mapping = HashMap::new();
+        mapping.insert(65u32, 1u16); // 'A' -> glyph 1
+        mapping.insert(66u32, 2u16); // 'B' -> glyph 2
+        ctx.set_glyph_mapping(mapping.clone());
+        assert!(ctx.glyph_mapping.is_some());
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().len(), 2);
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().get(&65), Some(&1));
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().get(&66), Some(&2));
+
+        // Test empty mapping
+        ctx.set_glyph_mapping(HashMap::new());
+        assert!(ctx.glyph_mapping.is_some());
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().len(), 0);
+
+        // Test overwrite existing mapping
+        let mut new_mapping = HashMap::new();
+        new_mapping.insert(67u32, 3u16); // 'C' -> glyph 3
+        ctx.set_glyph_mapping(new_mapping);
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().len(), 1);
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().get(&67), Some(&3));
+        assert_eq!(ctx.glyph_mapping.as_ref().unwrap().get(&65), None); // Old mapping gone
+    }
+
+    #[test]
+    fn test_draw_text_basic() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+
+        let result = ctx.draw_text("Hello", 100.0, 200.0);
+        assert!(result.is_ok());
+
+        let ops = ctx.operations();
+        // Verify text block
+        assert!(ops.contains("BT\n"));
+        assert!(ops.contains("ET\n"));
+
+        // Verify font is set
+        assert!(ops.contains("/Helvetica"));
+        assert!(ops.contains("12"));
+        assert!(ops.contains("Tf\n"));
+
+        // Verify positioning
+        assert!(ops.contains("100"));
+        assert!(ops.contains("200"));
+        assert!(ops.contains("Td\n"));
+
+        // Verify text content
+        assert!(ops.contains("(Hello)") || ops.contains("<48656c6c6f>")); // Text or hex
+    }
+
+    #[test]
+    fn test_draw_text_with_special_characters() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+
+        // Test with parentheses (must be escaped in PDF)
+        let result = ctx.draw_text("Test (with) parens", 50.0, 100.0);
+        assert!(result.is_ok());
+
+        let ops = ctx.operations();
+        // Should escape parentheses
+        assert!(ops.contains("\\(") || ops.contains("\\)") || ops.contains("<"));
+        // Either escaped or hex
+    }
+
+    #[test]
+    fn test_draw_text_unicode_detection() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+
+        // ASCII text should use simple encoding
+        ctx.draw_text("ASCII", 0.0, 0.0).unwrap();
+        let ops_ascii = ctx.operations();
+
+        ctx.clear();
+
+        // Unicode text should trigger different encoding
+        ctx.set_font(Font::Helvetica, 12.0);
+        ctx.draw_text("中文", 0.0, 0.0).unwrap();
+        let ops_unicode = ctx.operations();
+
+        // Unicode should produce hex encoding
+        assert!(ops_unicode.contains("<") && ops_unicode.contains(">"));
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_draw_text_hex_encoding() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+        let result = ctx.draw_text_hex("Test", 50.0, 100.0);
+        assert!(result.is_ok());
+        let ops = ctx.operations();
+        assert!(ops.contains("<"));
+        assert!(ops.contains(">"));
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_draw_text_cid() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_custom_font("CustomCIDFont", 12.0);
+        let result = ctx.draw_text_cid("Test", 50.0, 100.0);
+        assert!(result.is_ok());
+        let ops = ctx.operations();
+        assert!(ops.contains("BT\n"));
+        assert!(ops.contains("ET\n"));
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_draw_text_unicode() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_custom_font("UnicodeFont", 12.0);
+        let result = ctx.draw_text_unicode("Test \u{4E2D}\u{6587}", 50.0, 100.0);
+        assert!(result.is_ok());
+        let ops = ctx.operations();
+        assert!(ops.contains("BT\n"));
+        assert!(ops.contains("ET\n"));
+    }
+
+    #[test]
+    fn test_begin_end_transparency_group() {
+        let mut ctx = GraphicsContext::new();
+
+        // Initial state - no transparency group
+        assert!(!ctx.in_transparency_group());
+        assert!(ctx.current_transparency_group().is_none());
+
+        // Begin transparency group
+        let group = TransparencyGroup::new();
+        ctx.begin_transparency_group(group.clone());
+        assert!(ctx.in_transparency_group());
+        assert!(ctx.current_transparency_group().is_some());
+
+        // Verify operations contain transparency marker
+        let ops = ctx.operations();
+        assert!(ops.contains("% Begin Transparency Group"));
+
+        // End transparency group
+        ctx.end_transparency_group();
+        assert!(!ctx.in_transparency_group());
+        assert!(ctx.current_transparency_group().is_none());
+
+        // Verify end marker
+        let ops_after = ctx.operations();
+        assert!(ops_after.contains("% End Transparency Group"));
+    }
+
+    #[test]
+    fn test_transparency_group_nesting() {
+        let mut ctx = GraphicsContext::new();
+
+        // Nest 3 levels
+        let group1 = TransparencyGroup::new();
+        let group2 = TransparencyGroup::new();
+        let group3 = TransparencyGroup::new();
+
+        ctx.begin_transparency_group(group1);
+        assert_eq!(ctx.transparency_stack.len(), 1);
+
+        ctx.begin_transparency_group(group2);
+        assert_eq!(ctx.transparency_stack.len(), 2);
+
+        ctx.begin_transparency_group(group3);
+        assert_eq!(ctx.transparency_stack.len(), 3);
+
+        // End all
+        ctx.end_transparency_group();
+        assert_eq!(ctx.transparency_stack.len(), 2);
+
+        ctx.end_transparency_group();
+        assert_eq!(ctx.transparency_stack.len(), 1);
+
+        ctx.end_transparency_group();
+        assert_eq!(ctx.transparency_stack.len(), 0);
+        assert!(!ctx.in_transparency_group());
+    }
+
+    #[test]
+    fn test_transparency_group_without_begin() {
+        let mut ctx = GraphicsContext::new();
+
+        // Try to end without begin - should not panic, just be no-op
+        assert!(!ctx.in_transparency_group());
+        ctx.end_transparency_group();
+        assert!(!ctx.in_transparency_group());
+    }
+
+    #[test]
+    fn test_extgstate_manager_access() {
+        let ctx = GraphicsContext::new();
+        let manager = ctx.extgstate_manager();
+        assert_eq!(manager.count(), 0);
+    }
+
+    #[test]
+    fn test_extgstate_manager_mut_access() {
+        let mut ctx = GraphicsContext::new();
+        let manager = ctx.extgstate_manager_mut();
+        assert_eq!(manager.count(), 0);
+    }
+
+    #[test]
+    fn test_has_extgstates() {
+        let mut ctx = GraphicsContext::new();
+
+        // Initially no extgstates
+        assert!(!ctx.has_extgstates());
+        assert_eq!(ctx.extgstate_manager().count(), 0);
+
+        // Adding transparency creates extgstate
+        ctx.set_alpha(0.5).unwrap();
+        ctx.rect(10.0, 10.0, 50.0, 50.0).fill();
+        let result = ctx.generate_operations().unwrap();
+
+        assert!(ctx.has_extgstates());
+        assert!(ctx.extgstate_manager().count() > 0);
+
+        // Verify extgstate is in PDF output
+        let output = String::from_utf8_lossy(&result);
+        assert!(output.contains("/GS")); // ExtGState reference
+        assert!(output.contains(" gs\n")); // ExtGState operator
+    }
+
+    #[test]
+    fn test_generate_extgstate_resources() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_alpha(0.5).unwrap();
+        ctx.rect(10.0, 10.0, 50.0, 50.0).fill();
+        ctx.generate_operations().unwrap();
+
+        let resources = ctx.generate_extgstate_resources();
+        assert!(resources.is_ok());
+    }
+
+    #[test]
+    fn test_apply_extgstate() {
+        let mut ctx = GraphicsContext::new();
+
+        // Create ExtGState with specific values
+        let mut state = ExtGState::new();
+        state.alpha_fill = Some(0.5);
+        state.alpha_stroke = Some(0.8);
+        state.blend_mode = Some(BlendMode::Multiply);
+
+        let result = ctx.apply_extgstate(state);
+        assert!(result.is_ok());
+
+        // Verify ExtGState was registered
+        assert!(ctx.has_extgstates());
+        assert_eq!(ctx.extgstate_manager().count(), 1);
+
+        // Apply different ExtGState
+        let mut state2 = ExtGState::new();
+        state2.alpha_fill = Some(0.3);
+        ctx.apply_extgstate(state2).unwrap();
+
+        // Should have 2 different extgstates
+        assert_eq!(ctx.extgstate_manager().count(), 2);
+    }
+
+    #[test]
+    fn test_with_extgstate() {
+        let mut ctx = GraphicsContext::new();
+        let result = ctx.with_extgstate(|mut state| {
+            state.alpha_fill = Some(0.5);
+            state.alpha_stroke = Some(0.8);
+            state
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_set_blend_mode() {
+        let mut ctx = GraphicsContext::new();
+
+        // Test different blend modes
+        let result = ctx.set_blend_mode(BlendMode::Multiply);
+        assert!(result.is_ok());
+        assert!(ctx.has_extgstates());
+
+        // Test that different blend modes create different extgstates
+        ctx.clear();
+        ctx.set_blend_mode(BlendMode::Screen).unwrap();
+        ctx.rect(0.0, 0.0, 10.0, 10.0).fill();
+        let ops = ctx.generate_operations().unwrap();
+        let output = String::from_utf8_lossy(&ops);
+
+        // Should contain extgstate reference
+        assert!(output.contains("/GS"));
+        assert!(output.contains(" gs\n"));
+    }
+
+    #[test]
+    fn test_render_table() {
+        let mut ctx = GraphicsContext::new();
+        let table = Table::with_equal_columns(2, 200.0);
+        let result = ctx.render_table(&table);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_render_list() {
+        let mut ctx = GraphicsContext::new();
+        use crate::text::{OrderedList, OrderedListStyle};
+        let ordered = OrderedList::new(OrderedListStyle::Decimal);
+        let list = ListElement::Ordered(ordered);
+        let result = ctx.render_list(&list);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_render_column_layout() {
+        let mut ctx = GraphicsContext::new();
+        use crate::text::ColumnContent;
+        let layout = ColumnLayout::new(2, 100.0, 200.0);
+        let content = ColumnContent::new("Test content");
+        let result = ctx.render_column_layout(&layout, &content, 50.0, 50.0, 400.0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_clip_ellipse() {
+        let mut ctx = GraphicsContext::new();
+
+        // No clipping initially
+        assert!(!ctx.has_clipping());
+        assert!(ctx.clipping_path().is_none());
+
+        // Apply ellipse clipping
+        let result = ctx.clip_ellipse(100.0, 100.0, 50.0, 30.0);
+        assert!(result.is_ok());
+        assert!(ctx.has_clipping());
+        assert!(ctx.clipping_path().is_some());
+
+        // Verify clipping operations in PDF
+        let ops = ctx.operations();
+        assert!(ops.contains("W\n") || ops.contains("W*\n")); // Clipping operator
+
+        // Clear clipping
+        ctx.clear_clipping();
+        assert!(!ctx.has_clipping());
+    }
+
+    #[test]
+    fn test_clipping_path_access() {
+        let mut ctx = GraphicsContext::new();
+
+        // No clipping initially
+        assert!(ctx.clipping_path().is_none());
+
+        // Apply rect clipping
+        ctx.clip_rect(10.0, 10.0, 50.0, 50.0).unwrap();
+        assert!(ctx.clipping_path().is_some());
+
+        // Apply different clipping - should replace
+        ctx.clip_circle(100.0, 100.0, 25.0).unwrap();
+        assert!(ctx.clipping_path().is_some());
+
+        // Save/restore should preserve clipping
+        ctx.save_state();
+        ctx.clear_clipping();
+        assert!(!ctx.has_clipping());
+
+        ctx.restore_state();
+        // After restore, clipping should be back
+        assert!(ctx.has_clipping());
+    }
+
+    // ====== QUALITY TESTS: EDGE CASES ======
+
+    #[test]
+    fn test_edge_case_move_to_negative() {
+        let mut ctx = GraphicsContext::new();
+        ctx.move_to(-100.5, -200.25);
+        assert!(ctx.operations().contains("-100.50 -200.25 m\n"));
+    }
+
+    #[test]
+    fn test_edge_case_opacity_out_of_range() {
+        let mut ctx = GraphicsContext::new();
+
+        // Above 1.0 - should clamp
+        let _ = ctx.set_opacity(2.5);
+        assert_eq!(ctx.fill_opacity(), 1.0);
+
+        // Below 0.0 - should clamp
+        let _ = ctx.set_opacity(-0.5);
+        assert_eq!(ctx.fill_opacity(), 0.0);
+    }
+
+    #[test]
+    fn test_edge_case_line_width_extremes() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_line_width(0.0);
+        assert_eq!(ctx.line_width(), 0.0);
+
+        ctx.set_line_width(10000.0);
+        assert_eq!(ctx.line_width(), 10000.0);
+    }
+
+    // ====== QUALITY TESTS: FEATURE INTERACTIONS ======
+
+    #[test]
+    fn test_interaction_transparency_plus_clipping() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.set_alpha(0.5).unwrap();
+        ctx.clip_rect(10.0, 10.0, 100.0, 100.0).unwrap();
+        ctx.rect(20.0, 20.0, 80.0, 80.0).fill();
+
+        let ops = ctx.generate_operations().unwrap();
+        let output = String::from_utf8_lossy(&ops);
+
+        // Both features should be in PDF
+        assert!(output.contains("W\n") || output.contains("W*\n"));
+        assert!(output.contains("/GS"));
+    }
+
+    #[test]
+    fn test_interaction_extgstate_plus_text() {
+        let mut ctx = GraphicsContext::new();
+
+        let mut state = ExtGState::new();
+        state.alpha_fill = Some(0.7);
+        ctx.apply_extgstate(state).unwrap();
+
+        ctx.set_font(Font::Helvetica, 14.0);
+        ctx.draw_text("Test", 100.0, 200.0).unwrap();
+
+        let ops = ctx.generate_operations().unwrap();
+        let output = String::from_utf8_lossy(&ops);
+
+        assert!(output.contains("/GS"));
+        assert!(output.contains("BT\n"));
+    }
+
+    #[test]
+    fn test_interaction_chained_transformations() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.translate(50.0, 100.0);
+        ctx.rotate(45.0);
+        ctx.scale(2.0, 2.0);
+
+        let ops = ctx.operations();
+        assert_eq!(ops.matches("cm\n").count(), 3);
+    }
+
+    // ====== QUALITY TESTS: END-TO-END ======
+
+    #[test]
+    fn test_e2e_complete_page_with_header() {
+        use crate::{Document, Page};
+
+        let mut doc = Document::new();
+        let mut page = Page::a4();
+        let ctx = page.graphics();
+
+        // Header
+        ctx.save_state();
+        let _ = ctx.set_fill_opacity(0.3);
+        ctx.set_fill_color(Color::rgb(200.0, 200.0, 255.0));
+        ctx.rect(0.0, 750.0, 595.0, 42.0).fill();
+        ctx.restore_state();
+
+        // Content
+        ctx.save_state();
+        ctx.clip_rect(50.0, 50.0, 495.0, 692.0).unwrap();
+        ctx.rect(60.0, 60.0, 100.0, 100.0).fill();
+        ctx.restore_state();
+
+        let ops = ctx.generate_operations().unwrap();
+        let output = String::from_utf8_lossy(&ops);
+
+        assert!(output.contains("q\n"));
+        assert!(output.contains("Q\n"));
+        assert!(output.contains("f\n"));
+
+        doc.add_page(page);
+        assert!(doc.to_bytes().unwrap().len() > 0);
+    }
+
+    #[test]
+    fn test_e2e_watermark_workflow() {
+        let mut ctx = GraphicsContext::new();
+
+        ctx.save_state();
+        let _ = ctx.set_fill_opacity(0.2);
+        ctx.translate(300.0, 400.0);
+        ctx.rotate(45.0);
+        ctx.set_font(Font::HelveticaBold, 72.0);
+        ctx.draw_text("DRAFT", 0.0, 0.0).unwrap();
+        ctx.restore_state();
+
+        let ops = ctx.generate_operations().unwrap();
+        let output = String::from_utf8_lossy(&ops);
+
+        // Verify watermark structure
+        assert!(output.contains("q\n")); // save state
+        assert!(output.contains("Q\n")); // restore state
+        assert!(output.contains("cm\n")); // transformations
+        assert!(output.contains("BT\n")); // text begin
+        assert!(output.contains("ET\n")); // text end
+    }
 }

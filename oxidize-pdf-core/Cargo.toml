@@ -41,6 +41,9 @@ unicode-normalization = "0.1"
 # Text processing and validation
 regex = "1.10"
 
+# XML parsing for XMP metadata
+quick-xml = { workspace = true }
+
 # Random number generation (for examples)
 rand = { version = "0.9", optional = true }
 
@@ -423,3 +426,7 @@ path = "../examples/ai_pipelines/rag_pipeline.rs"
 [[example]]
 name = "validate_real_pdfs"
 path = "../examples/validation/validate_real_pdfs.rs"
+
+[[example]]
+name = "xmp_metadata_demo"
+path = "../examples/src/xmp_metadata_demo.rs"
