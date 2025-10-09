@@ -1360,3 +1360,6 @@ mod tests;
 
 #[cfg(test)]
 mod postprocessor_tests;
+
+#[cfg(test)]
+mod rigorous_tests;
