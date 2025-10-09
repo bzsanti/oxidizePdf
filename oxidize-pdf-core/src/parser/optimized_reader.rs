@@ -58,6 +58,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
     pub fn clear_cache(&mut self) {
         self.object_cache.clear();
         self.object_stream_cache.clear();
+        self.memory_stats.cached_objects = 0;
     }
 }
 
@@ -460,6 +461,12 @@ mod tests {
     use std::io::Cursor;
 
     fn create_minimal_pdf() -> Vec<u8> {
+        // Offsets calculated from actual file:
+        // Header: 0-9
+        // Object 1: 9-58   (offset: 0000000009)
+        // Object 2: 58-115 (offset: 0000000058)
+        // Object 3: 115-186 (offset: 0000000115)
+        // XRef table: 186 (startxref: 186)
         b"%PDF-1.4\n\
 1 0 obj\n\
 << /Type /Catalog /Pages 2 0 R >>\n\
@@ -475,12 +482,12 @@ xref\n\
 0000000000 65535 f \n\
 0000000009 00000 n \n\
 0000000058 00000 n \n\
-0000000117 00000 n \n\
+0000000115 00000 n \n\
 trailer\n\
 << /Size 4 /Root 1 0 R >>\n\
 startxref\n\
-193\n\
-%%EOF"
+186\n\
+%%EOF\n"
             .to_vec()
     }
 
@@ -868,53 +875,50 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
-                // Initial state: 0 hits, 0 misses
-                assert_eq!(
-                    reader.memory_stats().cache_hits,
-                    0,
-                    "Cache hits must start at 0"
-                );
-                assert_eq!(
-                    reader.memory_stats().cache_misses,
-                    0,
-                    "Cache misses must start at 0"
-                );
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                // First access: should be cache miss
-                let _ = reader.get_object(1, 0);
-                assert_eq!(
-                    reader.memory_stats().cache_misses,
-                    1,
-                    "First access must be cache miss"
-                );
-                assert_eq!(
-                    reader.memory_stats().cache_hits,
-                    0,
-                    "No cache hits yet"
-                );
+            // Initial state: 0 hits, 0 misses
+            assert_eq!(
+                reader.memory_stats().cache_hits,
+                0,
+                "Cache hits must start at 0"
+            );
+            assert_eq!(
+                reader.memory_stats().cache_misses,
+                0,
+                "Cache misses must start at 0"
+            );
 
-                // Second access: should be cache hit
-                let _ = reader.get_object(1, 0);
-                assert_eq!(
-                    reader.memory_stats().cache_hits,
-                    1,
-                    "Second access must be cache hit"
-                );
-                assert_eq!(
-                    reader.memory_stats().cache_misses,
-                    1,
-                    "Cache misses unchanged"
-                );
+            // First access: should be cache miss
+            let _ = reader.get_object(1, 0);
+            assert_eq!(
+                reader.memory_stats().cache_misses,
+                1,
+                "First access must be cache miss"
+            );
+            assert_eq!(reader.memory_stats().cache_hits, 0, "No cache hits yet");
 
-                // Third access: another cache hit
-                let _ = reader.get_object(1, 0);
-                assert_eq!(
-                    reader.memory_stats().cache_hits,
-                    2,
-                    "Third access must increment cache hits"
-                );
-            }
+            // Second access: should be cache hit
+            let _ = reader.get_object(1, 0);
+            assert_eq!(
+                reader.memory_stats().cache_hits,
+                1,
+                "Second access must be cache hit"
+            );
+            assert_eq!(
+                reader.memory_stats().cache_misses,
+                1,
+                "Cache misses unchanged"
+            );
+
+            // Third access: another cache hit
+            let _ = reader.get_object(1, 0);
+            assert_eq!(
+                reader.memory_stats().cache_hits,
+                2,
+                "Third access must increment cache hits"
+            );
         }
 
         #[test]
@@ -926,33 +930,33 @@ startxref\n\
             let memory_options = MemoryOptions::default().with_cache_size(2);
             let parse_options = ParseOptions::default();
 
-            if let Ok(mut reader) =
+            let mut reader =
                 OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options)
-            {
-                // Load object 1 (cache size: 1)
-                let _ = reader.get_object(1, 0);
-                assert_eq!(
-                    reader.memory_stats().cached_objects,
-                    1,
-                    "Cache should have 1 object"
-                );
+                    .expect("Minimal PDF must parse successfully");
 
-                // Load object 2 (cache size: 2)
-                let _ = reader.get_object(2, 0);
-                assert_eq!(
-                    reader.memory_stats().cached_objects,
-                    2,
-                    "Cache should have 2 objects"
-                );
+            // Load object 1 (cache size: 1)
+            let _ = reader.get_object(1, 0);
+            assert_eq!(
+                reader.memory_stats().cached_objects,
+                1,
+                "Cache should have 1 object"
+            );
 
-                // Load object 3 (cache size: still 2, evicts LRU)
-                let _ = reader.get_object(3, 0);
-                assert_eq!(
-                    reader.memory_stats().cached_objects,
-                    2,
-                    "Cache must not exceed capacity of 2"
-                );
-            }
+            // Load object 2 (cache size: 2)
+            let _ = reader.get_object(2, 0);
+            assert_eq!(
+                reader.memory_stats().cached_objects,
+                2,
+                "Cache should have 2 objects"
+            );
+
+            // Load object 3 (cache size: still 2, evicts LRU)
+            let _ = reader.get_object(3, 0);
+            assert_eq!(
+                reader.memory_stats().cached_objects,
+                2,
+                "Cache must not exceed capacity of 2"
+            );
         }
 
         #[test]
@@ -960,33 +964,34 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
-                // Load some objects
-                let _ = reader.get_object(1, 0);
-                let _ = reader.get_object(1, 0); // cache hit
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                // Verify stats before clear
-                assert!(reader.memory_stats().cache_hits > 0);
-                assert!(reader.memory_stats().cached_objects > 0);
+            // Load some objects
+            let _ = reader.get_object(1, 0);
+            let _ = reader.get_object(1, 0); // cache hit
 
-                // Clear cache
-                reader.clear_cache();
+            // Verify stats before clear
+            assert!(reader.memory_stats().cache_hits > 0);
+            assert!(reader.memory_stats().cached_objects > 0);
 
-                // Cached objects should be 0 after clear
-                assert_eq!(
-                    reader.memory_stats().cached_objects,
-                    0,
-                    "Cache should be empty after clear"
-                );
+            // Clear cache
+            reader.clear_cache();
 
-                // Stats for hits/misses remain (cumulative)
-                // But next access will be miss
-                let _ = reader.get_object(1, 0);
-                assert!(
-                    reader.memory_stats().cache_misses >= 2,
-                    "Access after clear must be cache miss"
-                );
-            }
+            // Cached objects should be 0 after clear
+            assert_eq!(
+                reader.memory_stats().cached_objects,
+                0,
+                "Cache should be empty after clear"
+            );
+
+            // Stats for hits/misses remain (cumulative)
+            // But next access will be miss
+            let _ = reader.get_object(1, 0);
+            assert!(
+                reader.memory_stats().cache_misses >= 2,
+                "Access after clear must be cache miss"
+            );
         }
 
         #[test]
@@ -1022,13 +1027,14 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(reader) = OptimizedPdfReader::new(cursor) {
-                let version = reader.version();
+            let reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                // Minimal PDF is version 1.4
-                assert_eq!(version.major, 1, "PDF major version must be 1");
-                assert_eq!(version.minor, 4, "PDF minor version must be 4");
-            }
+            let version = reader.version();
+
+            // Minimal PDF is version 1.4
+            assert_eq!(version.major, 1, "PDF major version must be 1");
+            assert_eq!(version.minor, 4, "PDF minor version must be 4");
         }
 
         #[test]
@@ -1043,20 +1049,20 @@ startxref\n\
             };
             let memory_options = MemoryOptions::default().with_cache_size(100);
 
-            if let Ok(reader) =
+            let reader =
                 OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options)
-            {
-                let opts = reader.options();
+                    .expect("Minimal PDF must parse successfully");
 
-                assert_eq!(
-                    opts.lenient_syntax, true,
-                    "Options must match provided values"
-                );
-                assert_eq!(
-                    opts.collect_warnings, false,
-                    "Options must match provided values"
-                );
-            }
+            let opts = reader.options();
+
+            assert_eq!(
+                opts.lenient_syntax, true,
+                "Options must match provided values"
+            );
+            assert_eq!(
+                opts.collect_warnings, false,
+                "Options must match provided values"
+            );
         }
 
         #[test]
@@ -1064,26 +1070,27 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
-                // Catalog should be accessible
-                let catalog_result = reader.catalog();
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                if catalog_result.is_ok() {
-                    let catalog = catalog_result.unwrap();
+            // Catalog should be accessible
+            let catalog_result = reader.catalog();
 
-                    // Catalog must be a dictionary with Type = Catalog
-                    assert_eq!(
-                        catalog.get("Type"),
-                        Some(&PdfObject::Name(PdfName("Catalog".to_string()))),
-                        "Catalog must have /Type /Catalog"
-                    );
-                } else {
-                    // If catalog fails, should be specific error
-                    assert!(matches!(
-                        catalog_result.unwrap_err(),
-                        ParseError::MissingKey(_) | ParseError::SyntaxError { .. }
-                    ));
-                }
+            if catalog_result.is_ok() {
+                let catalog = catalog_result.unwrap();
+
+                // Catalog must be a dictionary with Type = Catalog
+                assert_eq!(
+                    catalog.get("Type"),
+                    Some(&PdfObject::Name(PdfName("Catalog".to_string()))),
+                    "Catalog must have /Type /Catalog"
+                );
+            } else {
+                // If catalog fails, should be specific error
+                assert!(matches!(
+                    catalog_result.unwrap_err(),
+                    ParseError::MissingKey(_) | ParseError::SyntaxError { .. }
+                ));
             }
         }
 
@@ -1092,17 +1099,18 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
-                let info_result = reader.info();
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                if info_result.is_ok() {
-                    let info = info_result.unwrap();
-                    // Minimal PDF has no Info dictionary in trailer
-                    assert!(
-                        info.is_none(),
-                        "Info should be None when not present in trailer"
-                    );
-                }
+            let info_result = reader.info();
+
+            if info_result.is_ok() {
+                let info = info_result.unwrap();
+                // Minimal PDF has no Info dictionary in trailer
+                assert!(
+                    info.is_none(),
+                    "Info should be None when not present in trailer"
+                );
             }
         }
 
@@ -1111,17 +1119,18 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
-                // Object 1 0 exists, but try accessing with wrong generation
-                let result = reader.get_object(1, 5); // Wrong generation number
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                // Should either return error or Null for free object
-                if result.is_err() {
-                    assert!(matches!(
-                        result.unwrap_err(),
-                        ParseError::InvalidReference(_, _)
-                    ));
-                }
+            // Object 1 0 exists, but try accessing with wrong generation
+            let result = reader.get_object(1, 5); // Wrong generation number
+
+            // Should either return error or Null for free object
+            if result.is_err() {
+                assert!(matches!(
+                    result.unwrap_err(),
+                    ParseError::InvalidReference(_, _)
+                ));
             }
         }
 
@@ -1130,19 +1139,20 @@ startxref\n\
             let data = create_minimal_pdf();
             let cursor = Cursor::new(data);
 
-            if let Ok(mut reader) = OptimizedPdfReader::new(cursor) {
-                // Try accessing object that doesn't exist
-                let result = reader.get_object(9999, 0);
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse successfully");
 
-                assert!(
-                    result.is_err(),
-                    "Accessing nonexistent object must return error"
-                );
-                assert!(matches!(
-                    result.unwrap_err(),
-                    ParseError::InvalidReference(_, _)
-                ));
-            }
+            // Try accessing object that doesn't exist
+            let result = reader.get_object(9999, 0);
+
+            assert!(
+                result.is_err(),
+                "Accessing nonexistent object must return error"
+            );
+            assert!(matches!(
+                result.unwrap_err(),
+                ParseError::InvalidReference(_, _)
+            ));
         }
 
         #[test]
@@ -1154,17 +1164,17 @@ startxref\n\
             let memory_options = MemoryOptions::default().with_cache_size(0);
             let parse_options = ParseOptions::default();
 
-            if let Ok(mut reader) =
+            let mut reader =
                 OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options)
-            {
-                // Should be able to cache at least 1 object
-                let _ = reader.get_object(1, 0);
-                assert_eq!(
-                    reader.memory_stats().cached_objects,
-                    1,
-                    "Must cache at least 1 object even with cache_size=0"
-                );
-            }
+                    .expect("Minimal PDF must parse successfully");
+
+            // Should be able to cache at least 1 object
+            let _ = reader.get_object(1, 0);
+            assert_eq!(
+                reader.memory_stats().cached_objects,
+                1,
+                "Must cache at least 1 object even with cache_size=0"
+            );
         }
 
         #[test]
@@ -1253,34 +1263,34 @@ startxref\n\
             let cursor1 = Cursor::new(data.clone());
             let cursor2 = Cursor::new(data);
 
-            if let (Ok(mut reader1), Ok(mut reader2)) = (
-                OptimizedPdfReader::new(cursor1),
-                OptimizedPdfReader::new(cursor2),
-            ) {
-                // Load object in reader1
-                let _ = reader1.get_object(1, 0);
-                assert_eq!(reader1.memory_stats().cached_objects, 1);
+            let mut reader1 =
+                OptimizedPdfReader::new(cursor1).expect("Minimal PDF must parse successfully");
+            let mut reader2 =
+                OptimizedPdfReader::new(cursor2).expect("Minimal PDF must parse successfully");
 
-                // reader2 should have independent cache (empty)
-                assert_eq!(
-                    reader2.memory_stats().cached_objects,
-                    0,
-                    "Readers must have independent caches"
-                );
+            // Load object in reader1
+            let _ = reader1.get_object(1, 0);
+            assert_eq!(reader1.memory_stats().cached_objects, 1);
 
-                // Load in reader2
-                let _ = reader2.get_object(1, 0);
-                assert_eq!(
-                    reader2.memory_stats().cached_objects,
-                    1,
-                    "reader2 cache should now have 1 object"
-                );
-                assert_eq!(
-                    reader1.memory_stats().cached_objects,
-                    1,
-                    "reader1 cache unchanged"
-                );
-            }
+            // reader2 should have independent cache (empty)
+            assert_eq!(
+                reader2.memory_stats().cached_objects,
+                0,
+                "Readers must have independent caches"
+            );
+
+            // Load in reader2
+            let _ = reader2.get_object(1, 0);
+            assert_eq!(
+                reader2.memory_stats().cached_objects,
+                1,
+                "reader2 cache should now have 1 object"
+            );
+            assert_eq!(
+                reader1.memory_stats().cached_objects,
+                1,
+                "reader1 cache unchanged"
+            );
         }
 
         #[test]
@@ -1291,15 +1301,15 @@ startxref\n\
             let parse_options = ParseOptions::strict();
             let memory_options = MemoryOptions::default();
 
-            if let Ok(reader) =
+            let reader =
                 OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options)
-            {
-                let opts = reader.options();
-                assert_eq!(
-                    opts.strict_mode, true,
-                    "Strict options must have strict_mode=true"
-                );
-            }
+                    .expect("Minimal PDF must parse successfully");
+
+            let opts = reader.options();
+            assert_eq!(
+                opts.strict_mode, true,
+                "Strict options must have strict_mode=true"
+            );
         }
 
         #[test]
@@ -1310,15 +1320,15 @@ startxref\n\
             let parse_options = ParseOptions::lenient();
             let memory_options = MemoryOptions::default();
 
-            if let Ok(reader) =
+            let reader =
                 OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options)
-            {
-                let opts = reader.options();
-                assert_eq!(
-                    opts.strict_mode, false,
-                    "Lenient options must have strict_mode=false"
-                );
-            }
+                    .expect("Minimal PDF must parse successfully");
+
+            let opts = reader.options();
+            assert_eq!(
+                opts.strict_mode, false,
+                "Lenient options must have strict_mode=false"
+            );
         }
     }
 }
