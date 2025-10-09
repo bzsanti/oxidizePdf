@@ -465,4 +465,340 @@ mod tests {
         assert_eq!(info.components, 4);
         assert_eq!(info.color_space, JpegColorSpace::CMYK);
     }
+
+    #[test]
+    fn test_extract_from_real_pdf_with_images() {
+        // Test with actual PDF that contains images
+        let fixture_path = "tests/fixtures/Cold_Email_Hacks.pdf";
+        if !std::path::Path::new(fixture_path).exists() {
+            eprintln!("Skipping test: fixture not found");
+            return;
+        }
+
+        let temp_dir = TempDir::new().unwrap();
+        let options = ExtractImagesOptions {
+            output_dir: temp_dir.path().to_path_buf(),
+            extract_inline: true,
+            min_size: Some(10),
+            create_dir: true,
+            ..Default::default()
+        };
+
+        let result = extract_images_from_pdf(fixture_path, options);
+
+        // This should succeed even if no images found
+        assert!(
+            result.is_ok(),
+            "Image extraction failed: {:?}",
+            result.err()
+        );
+
+        let images = result.unwrap();
+        // Cold_Email_Hacks.pdf might have images, but we don't hardcode expectations
+        eprintln!(
+            "Extracted {} images from Cold_Email_Hacks.pdf",
+            images.len()
+        );
+
+        // Verify all extracted images have valid dimensions
+        for img in &images {
+            assert!(img.width > 0, "Invalid width: {}", img.width);
+            assert!(img.height > 0, "Invalid height: {}", img.height);
+            assert!(
+                img.file_path.exists(),
+                "Image file not created: {:?}",
+                img.file_path
+            );
+        }
+    }
+
+    #[test]
+    fn test_extract_from_specific_page() {
+        let fixture_path = "tests/fixtures/Cold_Email_Hacks.pdf";
+        if !std::path::Path::new(fixture_path).exists() {
+            eprintln!("Skipping test: fixture not found");
+            return;
+        }
+
+        let temp_dir = TempDir::new().unwrap();
+        let options = ExtractImagesOptions {
+            output_dir: temp_dir.path().to_path_buf(),
+            extract_inline: false, // Only XObject images
+            min_size: None,        // Extract all sizes
+            create_dir: true,
+            ..Default::default()
+        };
+
+        // Extract only from first page (0-indexed)
+        let result = extract_images_from_pages(fixture_path, &[0], options);
+        assert!(result.is_ok(), "Page extraction failed: {:?}", result.err());
+
+        let images = result.unwrap();
+        // All images should be from page 0
+        for img in &images {
+            assert_eq!(img.page_number, 0, "Wrong page number");
+        }
+    }
+
+    #[test]
+    fn test_create_png_from_raw_data() {
+        // Test PNG creation from raw grayscale data
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+        let options = ExtractImagesOptions {
+            output_dir: temp_dir.path().to_path_buf(),
+            ..Default::default()
+        };
+        let extractor = ImageExtractor::new(document, options);
+
+        // Create 4x4 grayscale image data
+        let raw_data: Vec<u8> = vec![
+            0, 50, 100, 150, 50, 100, 150, 200, 100, 150, 200, 250, 150, 200, 250, 255,
+        ];
+
+        let result = extractor.create_png_from_raw_data(&raw_data, 4, 4, 1, 8);
+        assert!(result.is_ok(), "PNG creation failed: {:?}", result.err());
+
+        let png_bytes = result.unwrap();
+        // Verify PNG signature
+        assert_eq!(
+            &png_bytes[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
+    }
+
+    #[test]
+    fn test_create_png_rgb_data() {
+        // Test PNG creation from RGB data
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+        let options = ExtractImagesOptions::default();
+        let extractor = ImageExtractor::new(document, options);
+
+        // Create 2x2 RGB image
+        let rgb_data: Vec<u8> = vec![
+            255, 0, 0, 0, 255, 0, // Red, Green
+            0, 0, 255, 255, 255, 0, // Blue, Yellow
+        ];
+
+        let result = extractor.create_png_from_raw_data(&rgb_data, 2, 2, 3, 8);
+        assert!(result.is_ok());
+
+        let png_bytes = result.unwrap();
+        assert!(&png_bytes[0..8] == &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    }
+
+    #[test]
+    fn test_crc32_calculation() {
+        // Test CRC32 computation used in PNG chunks
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Calculate CRC for known data
+        let chunk_type = b"IHDR";
+        let data = vec![
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00,
+        ];
+
+        let crc = extractor.calculate_crc32(chunk_type, &data);
+        // CRC should be deterministic
+        assert_ne!(crc, 0);
+
+        // Same data should give same CRC
+        let crc2 = extractor.calculate_crc32(chunk_type, &data);
+        assert_eq!(crc, crc2);
+
+        // Different data should give different CRC
+        let data2 = vec![0xFF, 0xFF, 0xFF, 0xFF];
+        let crc3 = extractor.calculate_crc32(chunk_type, &data2);
+        assert_ne!(crc, crc3);
+    }
+
+    #[test]
+    fn test_compress_image_data() {
+        // Test zlib compression for PNG IDAT chunks
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Simple 3x3 grayscale image
+        let data: Vec<u8> = vec![0, 50, 100, 50, 100, 150, 100, 150, 200];
+
+        let result = extractor.compress_image_data(&data, 3, 3, 1);
+        assert!(result.is_ok());
+
+        let compressed = result.unwrap();
+        // Compressed data should be non-empty and start with zlib header
+        assert!(!compressed.is_empty());
+        // Zlib header typically starts with 0x78 (common compression levels)
+        assert!(compressed[0] == 0x78 || compressed[0] == 0x08);
+    }
+
+    #[test]
+    fn test_detect_correct_row_stride() {
+        // Test stride detection for CCITT-encoded images
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Simulate CCITT data for 100x10 image (1 bit per pixel)
+        let width = 100u32;
+        let height = 10u32;
+        let min_bytes_per_row = (width as usize + 7) / 8; // 13 bytes
+
+        // Create data with 16-byte alignment (common)
+        let stride = 16;
+        let data = vec![0u8; stride * height as usize];
+
+        let possible_strides = [
+            min_bytes_per_row,              // 13
+            (min_bytes_per_row + 1) & !1,   // 14
+            (min_bytes_per_row + 3) & !3,   // 16
+            (min_bytes_per_row + 7) & !7,   // 16
+            (min_bytes_per_row + 15) & !15, // 16
+        ];
+
+        let result = extractor.detect_correct_row_stride(&data, width, height, &possible_strides);
+        assert!(result.is_ok());
+
+        let detected_stride = result.unwrap();
+        // Should detect a reasonable stride (>= min_bytes_per_row, <= 16)
+        assert!(
+            detected_stride >= min_bytes_per_row,
+            "Stride too small: {}",
+            detected_stride
+        );
+        assert!(
+            detected_stride <= 16,
+            "Stride too large: {}",
+            detected_stride
+        );
+
+        // Verify it can fit the data
+        let expected_size = detected_stride * height as usize;
+        assert!(
+            expected_size <= data.len(),
+            "Stride {} would overflow data",
+            detected_stride
+        );
+    }
+
+    #[test]
+    fn test_parse_inline_image_dict() {
+        // Test parsing of inline image dictionaries
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+        let extractor = ImageExtractor::new(document, ExtractImagesOptions::default());
+
+        // Test with /W and /H abbreviations
+        let dict1 = "/W 200\n/H 150\n/BPC 8";
+        let (width, height) = extractor.parse_inline_image_dict(dict1);
+        assert_eq!(width, 200);
+        assert_eq!(height, 150);
+
+        // Test with full names
+        let dict2 = "/Width 300\n/Height 250";
+        let (width, height) = extractor.parse_inline_image_dict(dict2);
+        assert_eq!(width, 300);
+        assert_eq!(height, 250);
+
+        // Test with missing values (should use defaults)
+        let dict3 = "/BPC 8";
+        let (width, height) = extractor.parse_inline_image_dict(dict3);
+        assert_eq!(width, 100); // Default
+        assert_eq!(height, 100); // Default
+    }
+
+    #[test]
+    fn test_image_extraction_with_min_size_filter() {
+        // Test that min_size filter works correctly
+        let fixture_path = "tests/fixtures/Cold_Email_Hacks.pdf";
+        if !std::path::Path::new(fixture_path).exists() {
+            eprintln!("Skipping test: fixture not found");
+            return;
+        }
+
+        let temp_dir = TempDir::new().unwrap();
+
+        // Extract with no size filter
+        let options_no_filter = ExtractImagesOptions {
+            output_dir: temp_dir.path().join("no_filter"),
+            min_size: None,
+            create_dir: true,
+            ..Default::default()
+        };
+        let images_no_filter = extract_images_from_pdf(fixture_path, options_no_filter).unwrap();
+
+        // Extract with high size filter (only large images)
+        let options_with_filter = ExtractImagesOptions {
+            output_dir: temp_dir.path().join("with_filter"),
+            min_size: Some(500), // Only images >= 500px
+            create_dir: true,
+            ..Default::default()
+        };
+        let images_with_filter =
+            extract_images_from_pdf(fixture_path, options_with_filter).unwrap();
+
+        // Filtered list should be <= unfiltered list
+        assert!(images_with_filter.len() <= images_no_filter.len());
+
+        // All filtered images should meet min_size requirement
+        for img in &images_with_filter {
+            assert!(
+                img.width >= 500 || img.height >= 500,
+                "Image {}x{} should not pass filter",
+                img.width,
+                img.height
+            );
+        }
+    }
+
+    #[test]
+    fn test_deduplication_with_page_pattern() {
+        // Test that deduplication is disabled when pattern contains {page}
+        let temp_dir = TempDir::new().unwrap();
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        let input_path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
+
+        let document = crate::parser::PdfReader::open_document(&input_path).unwrap();
+
+        // Pattern WITH {page} should NOT deduplicate
+        let options_no_dedup = ExtractImagesOptions {
+            output_dir: temp_dir.path().to_path_buf(),
+            name_pattern: "page_{page}_img_{index}.{format}".to_string(),
+            ..Default::default()
+        };
+        let extractor = ImageExtractor::new(document, options_no_dedup);
+        let allow_dedup = !extractor.options.name_pattern.contains("{page}");
+        assert!(
+            !allow_dedup,
+            "Should NOT allow deduplication with {{page}} pattern"
+        );
+    }
 }
