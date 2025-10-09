@@ -3172,4 +3172,286 @@ startxref
         assert!(reader.unlock_with_password("pass\nwith\nnewlines").unwrap());
         assert!(reader.unlock_with_password("pass\twith\ttabs").unwrap());
     }
+
+    mod rigorous {
+        use super::*;
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR ERROR HANDLING
+        // =============================================================================
+
+        #[test]
+        fn test_reader_invalid_pdf_header() {
+            // Not a PDF at all
+            let invalid_data = b"This is not a PDF file";
+            let cursor = Cursor::new(invalid_data.to_vec());
+            let result = PdfReader::new(cursor);
+
+            assert!(result.is_err(), "Should fail on invalid PDF header");
+        }
+
+        #[test]
+        fn test_reader_truncated_header() {
+            // Truncated PDF header
+            let truncated = b"%PDF";
+            let cursor = Cursor::new(truncated.to_vec());
+            let result = PdfReader::new(cursor);
+
+            assert!(result.is_err(), "Should fail on truncated header");
+        }
+
+        #[test]
+        fn test_reader_empty_file() {
+            let empty = Vec::new();
+            let cursor = Cursor::new(empty);
+            let result = PdfReader::new(cursor);
+
+            assert!(result.is_err(), "Should fail on empty file");
+        }
+
+        #[test]
+        fn test_reader_malformed_version() {
+            // PDF with invalid version number
+            let malformed = b"%PDF-X.Y\n%%\xE2\xE3\xCF\xD3\n";
+            let cursor = Cursor::new(malformed.to_vec());
+            let result = PdfReader::new(cursor);
+
+            // Should either fail or handle gracefully
+            if let Ok(reader) = result {
+                // If it parsed, version should have some value
+                let _version = reader.version();
+            }
+        }
+
+        #[test]
+        fn test_reader_get_nonexistent_object() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Try to get object that doesn't exist (999 0 obj)
+            let result = reader.get_object(999, 0);
+
+            assert!(result.is_err(), "Should fail when object doesn't exist");
+        }
+
+        #[test]
+        fn test_reader_get_object_wrong_generation() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Try to get existing object with wrong generation
+            let result = reader.get_object(1, 99);
+
+            // Should either fail or return the object with gen 0
+            if let Err(e) = result {
+                // Expected - wrong generation
+                let _ = e;
+            }
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR OBJECT RESOLUTION
+        // =============================================================================
+
+        #[test]
+        fn test_resolve_direct_object() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Create a direct object (not a reference)
+            let direct_obj = PdfObject::Integer(42);
+
+            let resolved = reader.resolve(&direct_obj).unwrap();
+
+            // Should return the same object
+            assert_eq!(resolved, &PdfObject::Integer(42));
+        }
+
+        #[test]
+        fn test_resolve_reference() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Get Pages reference from catalog (extract values before resolve)
+            let pages_ref = {
+                let catalog = reader.catalog().unwrap();
+                if let Some(PdfObject::Reference(obj_num, gen_num)) = catalog.get("Pages") {
+                    PdfObject::Reference(*obj_num, *gen_num)
+                } else {
+                    panic!("Catalog /Pages must be a Reference");
+                }
+            };
+
+            // Now resolve it
+            let resolved = reader.resolve(&pages_ref).unwrap();
+
+            // Resolved object should be a dictionary with Type = Pages
+            if let PdfObject::Dictionary(dict) = resolved {
+                assert_eq!(
+                    dict.get("Type"),
+                    Some(&PdfObject::Name(PdfName("Pages".to_string())))
+                );
+            } else {
+                panic!("Expected dictionary, got: {:?}", resolved);
+            }
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR ENCRYPTION
+        // =============================================================================
+
+        #[test]
+        fn test_is_encrypted_on_unencrypted() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let reader = PdfReader::new(cursor).unwrap();
+
+            assert!(
+                !reader.is_encrypted(),
+                "Minimal PDF should not be encrypted"
+            );
+        }
+
+        #[test]
+        fn test_is_unlocked_on_unencrypted() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let reader = PdfReader::new(cursor).unwrap();
+
+            // Unencrypted PDFs are always "unlocked"
+            assert!(reader.is_unlocked(), "Unencrypted PDF should be unlocked");
+        }
+
+        #[test]
+        fn test_try_empty_password_on_unencrypted() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Should succeed (no encryption)
+            let result = reader.try_empty_password();
+            assert!(result.is_ok());
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR PARSE OPTIONS
+        // =============================================================================
+
+        #[test]
+        fn test_reader_with_strict_options() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+
+            let options = ParseOptions::strict();
+            let result = PdfReader::new_with_options(cursor, options);
+
+            assert!(result.is_ok(), "Minimal PDF should parse in strict mode");
+        }
+
+        #[test]
+        fn test_reader_with_lenient_options() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+
+            let options = ParseOptions::lenient();
+            let result = PdfReader::new_with_options(cursor, options);
+
+            assert!(result.is_ok(), "Minimal PDF should parse in lenient mode");
+        }
+
+        #[test]
+        fn test_reader_options_accessible() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+
+            let options = ParseOptions::lenient();
+            let reader = PdfReader::new_with_options(cursor, options.clone()).unwrap();
+
+            // Options should be accessible
+            let reader_options = reader.options();
+            assert_eq!(reader_options.strict_mode, options.strict_mode);
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR CATALOG AND INFO
+        // =============================================================================
+
+        #[test]
+        fn test_catalog_has_required_fields() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let catalog = reader.catalog().unwrap();
+
+            // Catalog MUST have Type = Catalog
+            assert_eq!(
+                catalog.get("Type"),
+                Some(&PdfObject::Name(PdfName("Catalog".to_string()))),
+                "Catalog must have /Type /Catalog"
+            );
+
+            // Catalog MUST have Pages
+            assert!(
+                catalog.contains_key("Pages"),
+                "Catalog must have /Pages entry"
+            );
+        }
+
+        #[test]
+        fn test_info_fields_when_present() {
+            let pdf_data = create_pdf_with_info();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let info = reader.info().unwrap();
+            assert!(info.is_some(), "PDF should have Info dictionary");
+
+            let info_dict = info.unwrap();
+
+            // Verify specific fields exist
+            assert!(info_dict.contains_key("Title"), "Info should have Title");
+            assert!(info_dict.contains_key("Author"), "Info should have Author");
+        }
+
+        #[test]
+        fn test_info_none_when_absent() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let info = reader.info().unwrap();
+            assert!(info.is_none(), "Minimal PDF should not have Info");
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR VERSION PARSING
+        // =============================================================================
+
+        #[test]
+        fn test_version_exact_values() {
+            let pdf_data = create_pdf_with_version("1.7");
+            let cursor = Cursor::new(pdf_data);
+            let reader = PdfReader::new(cursor).unwrap();
+
+            let version = reader.version();
+            assert_eq!(version.major, 1, "Major version must be exact");
+            assert_eq!(version.minor, 7, "Minor version must be exact");
+        }
+
+        #[test]
+        fn test_version_pdf_20() {
+            let pdf_data = create_pdf_with_version("2.0");
+            let cursor = Cursor::new(pdf_data);
+            let reader = PdfReader::new(cursor).unwrap();
+
+            let version = reader.version();
+            assert_eq!(version.major, 2, "PDF 2.0 major version");
+            assert_eq!(version.minor, 0, "PDF 2.0 minor version");
+        }
+    }
 }

@@ -19,9 +19,18 @@ fn test_writer_config_modern_values() {
     let config = WriterConfig::modern();
 
     // Verify all modern features are enabled
-    assert!(config.use_xref_streams, "Modern config must use XRef streams");
-    assert!(config.use_object_streams, "Modern config must use object streams");
-    assert!(config.compress_streams, "Modern config must compress streams");
+    assert!(
+        config.use_xref_streams,
+        "Modern config must use XRef streams"
+    );
+    assert!(
+        config.use_object_streams,
+        "Modern config must use object streams"
+    );
+    assert!(
+        config.compress_streams,
+        "Modern config must compress streams"
+    );
     assert_eq!(config.pdf_version, "1.5", "Modern config must be PDF 1.5+");
 }
 
@@ -30,9 +39,18 @@ fn test_writer_config_legacy_values() {
     let config = WriterConfig::legacy();
 
     // Verify legacy features
-    assert!(!config.use_xref_streams, "Legacy config must NOT use XRef streams");
-    assert!(!config.use_object_streams, "Legacy config must NOT use object streams");
-    assert!(config.compress_streams, "Legacy config should still compress streams");
+    assert!(
+        !config.use_xref_streams,
+        "Legacy config must NOT use XRef streams"
+    );
+    assert!(
+        !config.use_object_streams,
+        "Legacy config must NOT use object streams"
+    );
+    assert!(
+        config.compress_streams,
+        "Legacy config should still compress streams"
+    );
     assert_eq!(config.pdf_version, "1.4", "Legacy config must be PDF 1.4");
 }
 
@@ -42,10 +60,22 @@ fn test_writer_config_default_values() {
 
     // Default config should have specific values (not necessarily legacy)
     // Verify actual default behavior
-    assert_eq!(default_config.pdf_version, "1.7", "Default should be PDF 1.7");
-    assert!(!default_config.use_xref_streams, "Default should not use XRef streams");
-    assert!(!default_config.use_object_streams, "Default should not use object streams");
-    assert!(default_config.compress_streams, "Default should compress streams");
+    assert_eq!(
+        default_config.pdf_version, "1.7",
+        "Default should be PDF 1.7"
+    );
+    assert!(
+        !default_config.use_xref_streams,
+        "Default should not use XRef streams"
+    );
+    assert!(
+        !default_config.use_object_streams,
+        "Default should not use object streams"
+    );
+    assert!(
+        default_config.compress_streams,
+        "Default should compress streams"
+    );
 }
 
 #[test]
@@ -106,7 +136,11 @@ fn test_allocate_object_id_no_gaps() {
 
     // Verify no gaps in sequence
     for (i, id) in ids.iter().enumerate() {
-        assert_eq!(id.number(), (i + 1) as u32, "Object ID sequence must have no gaps");
+        assert_eq!(
+            id.number(),
+            (i + 1) as u32,
+            "Object ID sequence must have no gaps"
+        );
     }
 }
 
@@ -124,9 +158,11 @@ fn test_write_header_pdf_version() {
     let header = String::from_utf8_lossy(&buffer);
 
     // MUST start with exact PDF version
-    assert!(header.starts_with("%PDF-1.7\n"),
-            "PDF must start with '%PDF-1.7\\n', got: {:?}",
-            &header[..20]);
+    assert!(
+        header.starts_with("%PDF-1.7\n"),
+        "PDF must start with '%PDF-1.7\\n', got: {:?}",
+        &header[..20]
+    );
 }
 
 #[test]
@@ -153,8 +189,11 @@ fn test_write_header_length() {
     writer.write_header().unwrap();
 
     // Header must be exactly 15 bytes
-    assert_eq!(buffer.len(), 15,
-               "PDF header must be exactly 15 bytes (9 for version + 6 for binary comment)");
+    assert_eq!(
+        buffer.len(),
+        15,
+        "PDF header must be exactly 15 bytes (9 for version + 6 for binary comment)"
+    );
 }
 
 // =============================================================================
@@ -177,8 +216,10 @@ fn test_xref_format_in_document() {
     assert!(content.contains("xref"), "Must contain 'xref' keyword");
 
     // Free object 0 entry must exist
-    assert!(content.contains("0000000000 65535 f"),
-            "Must contain free object entry '0000000000 65535 f'");
+    assert!(
+        content.contains("0000000000 65535 f"),
+        "Must contain free object entry '0000000000 65535 f'"
+    );
 }
 
 #[test]
@@ -198,9 +239,11 @@ fn test_xref_positions_format() {
     // Count how many valid xref entries exist
     let xref_entries = content.matches(" 00000 n").count();
 
-    assert!(xref_entries >= 3,
-            "Document must have at least 3 xref entries (Catalog, Pages, Info), got: {}",
-            xref_entries);
+    assert!(
+        xref_entries >= 3,
+        "Document must have at least 3 xref entries (Catalog, Pages, Info), got: {}",
+        xref_entries
+    );
 }
 
 // =============================================================================
@@ -220,16 +263,25 @@ fn test_trailer_structure_in_document() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Must contain trailer keyword
-    assert!(content.contains("trailer"), "Must contain 'trailer' keyword");
+    assert!(
+        content.contains("trailer"),
+        "Must contain 'trailer' keyword"
+    );
 
     // Must contain Size
     assert!(content.contains("/Size"), "Trailer must contain /Size");
 
     // Must contain Root reference
-    assert!(content.contains("/Root"), "Trailer must contain /Root reference");
+    assert!(
+        content.contains("/Root"),
+        "Trailer must contain /Root reference"
+    );
 
     // Must contain Info reference
-    assert!(content.contains("/Info"), "Trailer must contain /Info reference");
+    assert!(
+        content.contains("/Info"),
+        "Trailer must contain /Info reference"
+    );
 }
 
 #[test]
@@ -249,8 +301,10 @@ fn test_trailer_references_valid_objects() {
     // Extract Root reference
     if let Some(root_start) = content.find("/Root") {
         let root_section = &content[root_start..root_start + 20];
-        assert!(root_section.contains("0 R"),
-                "Root reference must have format 'N 0 R'");
+        assert!(
+            root_section.contains("0 R"),
+            "Root reference must have format 'N 0 R'"
+        );
     } else {
         panic!("Trailer must contain /Root");
     }
@@ -273,8 +327,10 @@ fn test_document_ends_with_eof() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Document must end with EOF
-    assert!(content.ends_with("%%EOF\n"),
-            "Document must end with '%%EOF\\n'");
+    assert!(
+        content.ends_with("%%EOF\n"),
+        "Document must end with '%%EOF\\n'"
+    );
 }
 
 #[test]
@@ -293,8 +349,11 @@ fn test_eof_marker_format() {
     let end = &content[content.len().saturating_sub(10)..];
 
     // Must contain exactly "%%EOF\n" at the end
-    assert!(end.contains("%%EOF\n"),
-            "Document must end with exactly '%%EOF\\n', got: {:?}", end);
+    assert!(
+        end.contains("%%EOF\n"),
+        "Document must end with exactly '%%EOF\\n', got: {:?}",
+        end
+    );
 }
 
 // =============================================================================
@@ -314,7 +373,10 @@ fn test_empty_document_structure() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Must have all required PDF elements
-    assert!(content.starts_with("%PDF-1.7\n"), "Must start with PDF header");
+    assert!(
+        content.starts_with("%PDF-1.7\n"),
+        "Must start with PDF header"
+    );
     assert!(content.contains("/Type /Catalog"), "Must contain Catalog");
     assert!(content.contains("/Type /Pages"), "Must contain Pages");
     assert!(content.contains("trailer"), "Must contain trailer");
@@ -334,8 +396,10 @@ fn test_empty_document_page_count() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Empty document must have /Count 0
-    assert!(content.contains("/Count 0"),
-            "Empty document must have '/Count 0' in Pages object");
+    assert!(
+        content.contains("/Count 0"),
+        "Empty document must have '/Count 0' in Pages object"
+    );
 }
 
 // =============================================================================
@@ -356,8 +420,10 @@ fn test_document_single_page() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Must have Count 1
-    assert!(content.contains("/Count 1"),
-            "Document with 1 page must have '/Count 1'");
+    assert!(
+        content.contains("/Count 1"),
+        "Document with 1 page must have '/Count 1'"
+    );
 
     // Must have MediaBox for A4
     assert!(content.contains("/MediaBox"), "Must contain /MediaBox");
@@ -380,8 +446,10 @@ fn test_document_multiple_pages() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Must have Count 3
-    assert!(content.contains("/Count 3"),
-            "Document with 3 pages must have '/Count 3'");
+    assert!(
+        content.contains("/Count 3"),
+        "Document with 3 pages must have '/Count 3'"
+    );
 }
 
 // =============================================================================
@@ -402,8 +470,10 @@ fn test_document_with_title() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Must contain Title in Info dictionary
-    assert!(content.contains("/Title (Test Document Title)"),
-            "Info dictionary must contain /Title");
+    assert!(
+        content.contains("/Title (Test Document Title)"),
+        "Info dictionary must contain /Title"
+    );
 }
 
 #[test]
@@ -420,8 +490,10 @@ fn test_document_with_author() {
     let content = String::from_utf8_lossy(&buffer);
 
     // Must contain Author in Info dictionary
-    assert!(content.contains("/Author (Test Author)"),
-            "Info dictionary must contain /Author");
+    assert!(
+        content.contains("/Author (Test Author)"),
+        "Info dictionary must contain /Author"
+    );
 }
 
 #[test]
