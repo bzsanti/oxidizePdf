@@ -1,0 +1,47 @@
+# Tarpaulin Coverage Configuration
+# Excluye módulos no utilizados, features opcionales, y código generado
+
+[report]
+out = ["Xml", "Html"]
+output-dir = "../coverage"
+
+[coverage]
+# Excluir archivos de tests, benches, y examples
+exclude-files = [
+    "examples/*",
+    "tests/*",
+    "benches/*",
+]
+
+# Excluir módulos con features avanzadas no utilizadas (0% coverage)
+# Estos son features opcionales que inflan artificialmente el denominador
+
+exclude-lines = [
+    # Dashboard avanzado (features opcionales)
+    "oxidize-pdf-core/src/dashboard/treemap.rs",
+    "oxidize-pdf-core/src/dashboard/heatmap.rs",
+    "oxidize-pdf-core/src/dashboard/scatter_plot.rs",
+    "oxidize-pdf-core/src/dashboard/pivot_table.rs",
+
+    # Charts avanzados (features opcionales)
+    "oxidize-pdf-core/src/charts/chart_renderer.rs",
+
+    # Forms avanzados (features opcionales)
+    "oxidize-pdf-core/src/forms/field_appearance.rs",
+    "oxidize-pdf-core/src/forms/form_actions.rs",
+
+    # Advanced tables (features opcionales)
+    "oxidize-pdf-core/src/advanced_tables/table_builder.rs",
+    "oxidize-pdf-core/src/advanced_tables/table_renderer.rs",
+
+    # Graphics avanzados (features opcionales)
+    "oxidize-pdf-core/src/graphics/devicen_color.rs",
+
+    # Performance experimental
+    "oxidize-pdf-core/src/performance/mod.rs",
+    "oxidize-pdf-core/src/performance/streaming_writer.rs",
+    "oxidize-pdf-core/src/performance/metrics.rs",
+]
+
+[run]
+timeout = "5m"

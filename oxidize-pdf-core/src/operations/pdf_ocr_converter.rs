@@ -411,6 +411,7 @@ mod tests {
     }
 
     impl MockOcrProvider {
+        #[allow(dead_code)]
         fn new(confidence: f64, text: String) -> Self {
             Self { confidence, text }
         }

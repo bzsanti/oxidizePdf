@@ -342,6 +342,14 @@ impl TextContext {
         Ok(self.operations.as_bytes().to_vec())
     }
 
+    /// Appends a raw PDF operation to the text context
+    ///
+    /// This is used internally for marked content operators (BDC/EMC) and other
+    /// low-level PDF operations that need to be interleaved with text operations.
+    pub(crate) fn append_raw_operation(&mut self, operation: &str) {
+        self.operations.push_str(operation);
+    }
+
     /// Get the current font size
     pub fn font_size(&self) -> f64 {
         self.font_size

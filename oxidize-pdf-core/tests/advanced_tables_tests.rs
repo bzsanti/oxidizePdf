@@ -189,22 +189,22 @@ fn test_table_with_title_only() {
 }
 
 #[test]
-fn test_table_render_header() {
+fn test_table_show_header() {
     let table = AdvancedTableBuilder::new()
         .title("Title Only")
         .columns(vec![("Column", 100.0)])
-        .render_header(true)
+        .show_header(true)
         .build()
         .unwrap();
 
-    assert_eq!(table.hide_header, false);
+    assert_eq!(table.show_header, true);
 
     let table = AdvancedTableBuilder::new()
         .title("Title Only")
         .columns(vec![("Column", 100.0)])
-        .render_header(false)
+        .show_header(false)
         .build()
         .unwrap();
 
-    assert_eq!(table.hide_header, true);
+    assert_eq!(table.show_header, false);
 }

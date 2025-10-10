@@ -191,6 +191,7 @@ pub mod forms;
 pub mod geometry;
 pub mod graphics;
 pub mod memory;
+pub mod metadata;
 pub mod objects;
 pub mod operations;
 pub mod page;
