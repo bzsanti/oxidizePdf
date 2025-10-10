@@ -36,7 +36,7 @@ impl TableRenderer {
         let mut total_height = 0.0;
 
         // Calculate header height
-        if table.hide_header == false {
+        if table.show_header {
             if let Some(header) = &table.header {
                 // For complex headers, calculate based on levels and row spans
                 total_height += header.calculate_height();
@@ -85,7 +85,7 @@ impl TableRenderer {
         let mut current_y = y;
 
         // Render header if present
-        if table.hide_header == false {
+        if table.show_header {
             if let Some(header) = &table.header {
                 current_y = self.render_header(page, table, header, x, current_y)?;
             } else if !table.columns.is_empty() {
