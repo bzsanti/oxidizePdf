@@ -3453,5 +3453,280 @@ startxref
             assert_eq!(version.major, 2, "PDF 2.0 major version");
             assert_eq!(version.minor, 0, "PDF 2.0 minor version");
         }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR PAGES AND PAGE_COUNT
+        // =============================================================================
+
+        #[test]
+        fn test_pages_returns_pages_dict() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let pages_dict = reader
+                .pages()
+                .expect("pages() must return Pages dictionary");
+
+            assert_eq!(
+                pages_dict.get("Type"),
+                Some(&PdfObject::Name(PdfName("Pages".to_string()))),
+                "Pages dict must have /Type /Pages"
+            );
+        }
+
+        #[test]
+        fn test_page_count_minimal_pdf() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let count = reader.page_count().expect("page_count() must succeed");
+            assert_eq!(count, 0, "Minimal PDF has 0 pages");
+        }
+
+        #[test]
+        fn test_page_count_with_info_pdf() {
+            let pdf_data = create_pdf_with_info();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let count = reader.page_count().expect("page_count() must succeed");
+            assert_eq!(count, 0, "create_pdf_with_info() has Count 0 in Pages dict");
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR METADATA
+        // =============================================================================
+
+        #[test]
+        fn test_metadata_minimal_pdf() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let meta = reader.metadata().expect("metadata() must succeed");
+
+            // Minimal PDF has no metadata fields
+            assert!(meta.title.is_none(), "Minimal PDF has no title");
+            assert!(meta.author.is_none(), "Minimal PDF has no author");
+        }
+
+        #[test]
+        fn test_metadata_with_info() {
+            let pdf_data = create_pdf_with_info();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let meta = reader.metadata().expect("metadata() must succeed");
+
+            assert!(meta.title.is_some(), "PDF with Info has title");
+            assert_eq!(meta.title.unwrap(), "Test PDF", "Title must match");
+            assert!(meta.author.is_some(), "PDF with Info has author");
+            assert_eq!(meta.author.unwrap(), "Test Author", "Author must match");
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR RESOLVE_STREAM_LENGTH
+        // =============================================================================
+
+        #[test]
+        fn test_resolve_stream_length_direct_integer() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Pass a direct integer (Length value)
+            let length_obj = PdfObject::Integer(100);
+
+            let length = reader
+                .resolve_stream_length(&length_obj)
+                .expect("resolve_stream_length must succeed");
+            assert_eq!(length, Some(100), "Direct integer must be resolved");
+        }
+
+        #[test]
+        fn test_resolve_stream_length_negative_integer() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Negative length is invalid
+            let length_obj = PdfObject::Integer(-10);
+
+            let length = reader
+                .resolve_stream_length(&length_obj)
+                .expect("resolve_stream_length must succeed");
+            assert_eq!(length, None, "Negative integer returns None");
+        }
+
+        #[test]
+        fn test_resolve_stream_length_non_integer() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Pass a non-integer object
+            let name_obj = PdfObject::Name(PdfName("Test".to_string()));
+
+            let length = reader
+                .resolve_stream_length(&name_obj)
+                .expect("resolve_stream_length must succeed");
+            assert_eq!(length, None, "Non-integer object returns None");
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR GET_ALL_PAGES
+        // =============================================================================
+
+        #[test]
+        fn test_get_all_pages_empty_pdf() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let pages = reader
+                .get_all_pages()
+                .expect("get_all_pages() must succeed");
+            assert_eq!(pages.len(), 0, "Minimal PDF has 0 pages");
+        }
+
+        #[test]
+        fn test_get_all_pages_with_info() {
+            let pdf_data = create_pdf_with_info();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let pages = reader
+                .get_all_pages()
+                .expect("get_all_pages() must succeed");
+            assert_eq!(
+                pages.len(),
+                0,
+                "create_pdf_with_info() has 0 pages (Count 0)"
+            );
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR INTO_DOCUMENT
+        // =============================================================================
+
+        #[test]
+        fn test_into_document_consumes_reader() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let reader = PdfReader::new(cursor).unwrap();
+
+            let document = reader.into_document();
+
+            // Verify document has valid version
+            let version = document.version().expect("Document must have version");
+            assert!(
+                version.starts_with("1."),
+                "Document must have PDF 1.x version, got: {}",
+                version
+            );
+
+            // Verify document can access page count
+            let page_count = document
+                .page_count()
+                .expect("Document must allow page_count()");
+            assert_eq!(
+                page_count, 0,
+                "Minimal PDF has 0 pages (Count 0 in test helper)"
+            );
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR PARSE_CONTEXT
+        // =============================================================================
+
+        #[test]
+        fn test_clear_parse_context() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            // Clear parse context (should not panic)
+            reader.clear_parse_context();
+
+            // Verify reader still works after clearing
+            let version = reader.version();
+            assert_eq!(version.major, 1, "Reader must still work after clear");
+        }
+
+        #[test]
+        fn test_parse_context_mut_accessible() {
+            let pdf_data = create_minimal_pdf();
+            let cursor = Cursor::new(pdf_data);
+            let mut reader = PdfReader::new(cursor).unwrap();
+
+            let context = reader.parse_context_mut();
+
+            // Verify context has expected structure
+            let initial_depth = context.depth;
+            assert_eq!(initial_depth, 0, "Parse context must start with depth 0");
+
+            // Verify max_depth is set to reasonable value
+            assert!(
+                context.max_depth > 0,
+                "Parse context must have positive max_depth"
+            );
+        }
+
+        // =============================================================================
+        // RIGOROUS TESTS FOR UTILITY FUNCTIONS
+        // =============================================================================
+
+        #[test]
+        fn test_find_bytes_basic() {
+            let haystack = b"Hello World";
+            let needle = b"World";
+            let pos = find_bytes(haystack, needle);
+            assert_eq!(pos, Some(6), "Must find 'World' at position 6");
+        }
+
+        #[test]
+        fn test_find_bytes_not_found() {
+            let haystack = b"Hello World";
+            let needle = b"Rust";
+            let pos = find_bytes(haystack, needle);
+            assert_eq!(pos, None, "Must return None when not found");
+        }
+
+        #[test]
+        fn test_find_bytes_at_start() {
+            let haystack = b"Hello World";
+            let needle = b"Hello";
+            let pos = find_bytes(haystack, needle);
+            assert_eq!(pos, Some(0), "Must find at position 0");
+        }
+
+        #[test]
+        fn test_is_immediate_stream_start_with_stream() {
+            let data = b"stream\ndata";
+            assert!(
+                is_immediate_stream_start(data),
+                "Must detect 'stream' at start"
+            );
+        }
+
+        #[test]
+        fn test_is_immediate_stream_start_with_whitespace() {
+            let data = b"  \n\tstream\ndata";
+            assert!(
+                is_immediate_stream_start(data),
+                "Must detect 'stream' after whitespace"
+            );
+        }
+
+        #[test]
+        fn test_is_immediate_stream_start_no_stream() {
+            let data = b"endobj";
+            assert!(
+                !is_immediate_stream_start(data),
+                "Must return false when 'stream' absent"
+            );
+        }
     }
 }

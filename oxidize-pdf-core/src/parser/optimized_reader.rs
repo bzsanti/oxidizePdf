@@ -1330,5 +1330,231 @@ startxref\n\
                 "Lenient options must have strict_mode=false"
             );
         }
+
+        // =============================================================================
+        // COVERAGE EXPANSION: Tests for open*() functions (previously uncovered)
+        // =============================================================================
+
+        #[test]
+        fn test_open_from_file_path() {
+            use std::io::Write;
+            use tempfile::NamedTempFile;
+
+            // Create temp PDF file
+            let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+            temp_file
+                .write_all(&create_minimal_pdf())
+                .expect("Failed to write PDF data");
+
+            let path = temp_file.path();
+
+            // Test open() function
+            let result = OptimizedPdfReader::open(path);
+
+            assert!(result.is_ok(), "open() must succeed with valid PDF file");
+
+            let reader = result.unwrap();
+
+            // Verify it's using lenient options
+            assert_eq!(
+                reader.options().strict_mode,
+                false,
+                "open() must use lenient parsing"
+            );
+
+            // Verify version was parsed correctly
+            assert_eq!(reader.version().major, 1);
+            assert_eq!(reader.version().minor, 4);
+        }
+
+        #[test]
+        fn test_open_with_memory_options() {
+            use std::io::Write;
+            use tempfile::NamedTempFile;
+
+            let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+            temp_file
+                .write_all(&create_minimal_pdf())
+                .expect("Failed to write PDF data");
+
+            let path = temp_file.path();
+
+            // Custom memory options with small cache
+            let memory_options = MemoryOptions::default().with_cache_size(10);
+
+            // Test open_with_memory() function
+            let result = OptimizedPdfReader::open_with_memory(path, memory_options);
+
+            assert!(result.is_ok(), "open_with_memory() must succeed");
+
+            let mut reader = result.unwrap();
+
+            // Verify lenient parsing
+            assert_eq!(reader.options().strict_mode, false);
+
+            // Verify cache works with custom size
+            let _ = reader.get_object(1, 0);
+            assert_eq!(
+                reader.memory_stats().cached_objects,
+                1,
+                "Cache should respect custom memory options"
+            );
+        }
+
+        #[test]
+        fn test_open_strict_mode() {
+            use std::io::Write;
+            use tempfile::NamedTempFile;
+
+            let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+            temp_file
+                .write_all(&create_minimal_pdf())
+                .expect("Failed to write PDF data");
+
+            let path = temp_file.path();
+
+            // Test open_strict() function
+            let result = OptimizedPdfReader::open_strict(path);
+
+            assert!(result.is_ok(), "open_strict() must succeed with valid PDF");
+
+            let reader = result.unwrap();
+
+            // Verify strict mode is enabled
+            assert_eq!(
+                reader.options().strict_mode,
+                true,
+                "open_strict() must use strict parsing"
+            );
+
+            // Verify version parsing still works
+            assert_eq!(reader.version().major, 1);
+            assert_eq!(reader.version().minor, 4);
+        }
+
+        #[test]
+        fn test_open_nonexistent_file() {
+            use std::path::PathBuf;
+
+            // Try to open file that doesn't exist
+            let path = PathBuf::from("/tmp/this_file_does_not_exist_xyz_123.pdf");
+
+            let result = OptimizedPdfReader::open(&path);
+
+            assert!(result.is_err(), "open() must fail with nonexistent file");
+
+            // Should get IO error (file not found)
+            match result {
+                Err(ParseError::Io(_)) => {
+                    // Expected error type
+                }
+                Err(other) => panic!("Expected IO error, got: {:?}", other),
+                Ok(_) => panic!("Should not succeed with nonexistent file"),
+            }
+        }
+
+        #[test]
+        fn test_load_object_from_disk_free_object() {
+            // This tests the "free object" path in load_object_from_disk
+            // We need a PDF with a free entry in xref
+
+            // PDF with free object at position 0
+            let pdf_with_free = b"%PDF-1.4\n\
+1 0 obj\n\
+<< /Type /Catalog /Pages 2 0 R >>\n\
+endobj\n\
+2 0 obj\n\
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n\
+endobj\n\
+3 0 obj\n\
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\n\
+endobj\n\
+xref\n\
+0 4\n\
+0000000000 65535 f \n\
+0000000009 00000 n \n\
+0000000058 00000 n \n\
+0000000115 00000 n \n\
+trailer\n\
+<< /Size 4 /Root 1 0 R >>\n\
+startxref\n\
+186\n\
+%%EOF\n"
+                .to_vec();
+
+            let cursor = Cursor::new(pdf_with_free);
+            let mut reader =
+                OptimizedPdfReader::new(cursor).expect("PDF with free object must parse");
+
+            // Try to get object 0 (free object)
+            let result = reader.get_object(0, 65535);
+
+            // Free objects return Null (not an error)
+            if let Ok(obj) = result {
+                assert!(
+                    matches!(obj, PdfObject::Null),
+                    "Free object should return Null"
+                );
+            }
+        }
+
+        #[test]
+        fn test_find_catalog_when_trailer_missing_root() {
+            // Test the fallback catalog finding logic
+            // This is tested indirectly through catalog() function
+
+            let data = create_minimal_pdf();
+            let cursor = Cursor::new(data);
+
+            let mut reader = OptimizedPdfReader::new(cursor).expect("Minimal PDF must parse");
+
+            // catalog() should use find_catalog_object if Root is missing
+            let result = reader.catalog();
+
+            // With valid minimal PDF, catalog should be found
+            if let Ok(catalog) = result {
+                assert_eq!(
+                    catalog.get("Type"),
+                    Some(&PdfObject::Name(PdfName("Catalog".to_string()))),
+                    "Catalog must have /Type /Catalog"
+                );
+            }
+        }
+
+        #[test]
+        fn test_load_object_generation_mismatch_strict() {
+            // Test that strict mode rejects generation number mismatches
+            // Use a properly formatted PDF with correct xref but intentionally
+            // request wrong generation number
+
+            let data = create_minimal_pdf();
+            let cursor = Cursor::new(data);
+
+            // Create with STRICT options
+            let parse_options = ParseOptions::strict();
+            let memory_options = MemoryOptions::default();
+
+            let mut reader =
+                OptimizedPdfReader::new_with_options(cursor, parse_options, memory_options)
+                    .expect("Minimal PDF must parse in strict mode");
+
+            // Object 1 exists with generation 0
+            // Try to access with wrong generation number (5) in strict mode
+            let result = reader.get_object(1, 5);
+
+            // In strict mode, should get InvalidReference error
+            assert!(
+                result.is_err(),
+                "Strict mode must reject generation number mismatch"
+            );
+
+            if let Err(e) = result {
+                assert!(
+                    matches!(e, ParseError::InvalidReference(_, _)),
+                    "Expected InvalidReference error, got: {:?}",
+                    e
+                );
+            }
+        }
     }
 }

@@ -127,4 +127,134 @@ mod tests {
         let invalid_data = vec![0xFF, 0xFF, 0xFF, 0xFF];
         assert!(FontFormat::detect(&invalid_data).is_err());
     }
+
+    // =============================================================================
+    // RIGOROUS TESTS FOR Font STRUCT
+    // =============================================================================
+
+    #[test]
+    fn test_font_new() {
+        let font = Font::new("TestFont");
+
+        assert_eq!(font.name, "TestFont");
+        assert!(font.data.is_empty(), "Data should be empty for new font");
+        assert!(
+            matches!(font.format, FontFormat::TrueType),
+            "Default format should be TrueType"
+        );
+    }
+
+    #[test]
+    fn test_font_new_with_string() {
+        let font = Font::new("Arial".to_string());
+
+        assert_eq!(font.name, "Arial");
+        assert!(font.data.is_empty());
+    }
+
+    #[test]
+    fn test_font_postscript_name() {
+        let mut font = Font::new("TestFont");
+        font.descriptor.font_name = "Helvetica-Bold".to_string();
+
+        assert_eq!(font.postscript_name(), "Helvetica-Bold");
+    }
+
+    #[test]
+    fn test_font_has_glyph_with_empty_mapping() {
+        let font = Font::new("TestFont");
+
+        // Default glyph_mapping has no glyphs
+        assert!(!font.has_glyph('A'), "Empty mapping should not have glyph");
+        assert!(!font.has_glyph('€'), "Empty mapping should not have glyph");
+    }
+
+    #[test]
+    fn test_font_measure_text_with_defaults() {
+        let font = Font::new("TestFont");
+
+        // With default metrics and empty glyph mapping
+        let measurement = font.measure_text("Hello", 12.0);
+
+        // Empty glyph mapping means chars have no width (600 units default)
+        // "Hello" = 5 chars * 600 units * 12.0 / 1000 = 36.0
+        assert_eq!(
+            measurement.width, 36.0,
+            "5 chars with default 600 units at 12pt should be 36.0"
+        );
+    }
+
+    #[test]
+    fn test_font_line_height_with_defaults() {
+        let font = Font::new("TestFont");
+
+        let line_height = font.line_height(12.0);
+
+        // Default metrics: (ascent + |descent| + line_gap) * font_size / units_per_em
+        // (750 + 250 + 200) * 12.0 / 1000 = 14.4
+        assert_eq!(
+            line_height, 14.4,
+            "Default metrics should produce 14.4 line height at 12pt"
+        );
+    }
+
+    #[test]
+    fn test_font_from_file_nonexistent() {
+        let result = Font::from_file("TestFont", "/nonexistent/path/font.ttf");
+
+        assert!(
+            result.is_err(),
+            "Loading nonexistent file should return error"
+        );
+    }
+
+    #[test]
+    fn test_font_from_bytes_invalid_format() {
+        // Invalid font data (not TTF or OTF)
+        let invalid_data = vec![0xFF, 0xFE, 0xFD, 0xFC, 0x00, 0x01, 0x02, 0x03];
+
+        let result = Font::from_bytes("InvalidFont", invalid_data);
+
+        assert!(
+            result.is_err(),
+            "Invalid font data should return error from FontFormat::detect"
+        );
+    }
+
+    #[test]
+    fn test_font_from_bytes_too_small() {
+        // Data too small to be valid font
+        let tiny_data = vec![0x00, 0x01];
+
+        let result = Font::from_bytes("TinyFont", tiny_data);
+
+        assert!(
+            result.is_err(),
+            "Too small data should return error during detection"
+        );
+    }
+
+    #[test]
+    fn test_font_name_conversion() {
+        // Test that name accepts both &str and String
+        let font1 = Font::new("StrName");
+        let font2 = Font::new("StringName".to_string());
+
+        assert_eq!(font1.name, "StrName");
+        assert_eq!(font2.name, "StringName");
+    }
+
+    #[test]
+    fn test_font_fields_are_accessible() {
+        let mut font = Font::new("TestFont");
+
+        // Verify all fields are accessible and mutable
+        font.name = "ModifiedName".to_string();
+        font.data = vec![1, 2, 3, 4];
+        font.format = FontFormat::OpenType;
+
+        assert_eq!(font.name, "ModifiedName");
+        assert_eq!(font.data, vec![1, 2, 3, 4]);
+        assert!(matches!(font.format, FontFormat::OpenType));
+    }
 }
