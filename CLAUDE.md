@@ -1,16 +1,17 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session: 2025-10-10 - PR Reviews & CI Fixes
+- **Last Session**: 2025-10-11 - Release v1.5.0 & Community PRs
 - **Branch**: develop_santi (working branch)
-- **Version**: v1.3.0 released, planning v1.4.0
+- **Version**: **v1.5.0 released** 🚀
 - **Recent Work**:
-  - ✅ **coordinate_system.rs: 100% coverage** (+36 tests, +63% mejora) ⭐
-  - ✅ Test Coverage Strategy: "Wins E Impacto" documentada
-  - ✅ Coverage: 55.13% → 55.64% (+0.51%, +85 tests)
-  - ✅ Lecciones aprendidas actualizadas en CLAUDE.md
-- **Key Achievement**: Primera sesión con 100% cobertura (lógica pura + tests rigurosos)
-- **Next**: graphics/color.rs (82% → 100%, conversiones RGB↔CMYK)
+  - ✅ **Community PRs merged** (basheuft): text padding, header visibility, min_height rows
+  - ✅ **API refactor**: hide_header → show_header (eliminates double negation)
+  - ✅ **Coordinate system support**: Padding respects PdfStandard vs ScreenSpace
+  - ✅ **GitFlow completado**: develop_santi → develop → main → v1.5.0 tag
+  - ✅ **Tests**: 4,463 passing (100% success rate)
+- **Key Achievement**: Colaboración open source exitosa + release process automatizado
+- **Next**: Optimizar workflow de release (eliminar trigger innecesario en push a main)
 
 ## ✅ Funcionalidades Completadas
 
