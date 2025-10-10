@@ -153,6 +153,8 @@ pub struct AdvancedTable {
     pub rows: Vec<RowData>,
     /// Header configuration
     pub header: Option<HeaderBuilder>,
+    /// Whether to render the header or not
+    pub hide_header: bool,
     /// Default cell style
     pub default_style: CellStyle,
     /// Header style
@@ -228,6 +230,7 @@ impl AdvancedTableBuilder {
                 columns: Vec::new(),
                 rows: Vec::new(),
                 header: None,
+                hide_header: false,
                 default_style: CellStyle::data(),
                 header_style: CellStyle::header(),
                 zebra_striping: None,
@@ -314,6 +317,12 @@ impl AdvancedTableBuilder {
     /// Set header style
     pub fn header_style(mut self, style: CellStyle) -> Self {
         self.table.header_style = style;
+        self
+    }
+
+    /// Set hide_header
+    pub fn render_header(mut self, render: bool) -> Self {
+        self.table.hide_header = !render;
         self
     }
 
