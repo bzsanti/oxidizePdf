@@ -1,7 +1,7 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-10 - Test Coverage Improvement (Sesión 6)
+- **Last Session: 2025-10-10 - PR Reviews & CI Fixes
 - **Branch**: develop_santi (working branch)
 - **Version**: v1.3.0 released, planning v1.4.0
 - **Recent Work**:
