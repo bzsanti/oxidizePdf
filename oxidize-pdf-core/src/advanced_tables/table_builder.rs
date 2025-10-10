@@ -279,7 +279,9 @@ impl AdvancedTableBuilder {
     }
 
     pub fn add_row_with_min_height(mut self, content: Vec<&str>, min_height: f64) -> Self {
-        self.table.rows.push(RowData::from_strings(content).min_height(min_height));
+        self.table
+            .rows
+            .push(RowData::from_strings(content).min_height(min_height));
         self
     }
 
