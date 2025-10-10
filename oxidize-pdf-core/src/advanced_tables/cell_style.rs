@@ -1,5 +1,6 @@
 //! Cell styling system for advanced tables
 
+use crate::CoordinateSystem;
 use crate::graphics::Color;
 use crate::text::Font;
 
@@ -95,6 +96,30 @@ impl Padding {
     /// Get total vertical padding (top + bottom)
     pub fn vertical_total(&self) -> f64 {
         self.top + self.bottom
+    }
+
+    pub fn pad_vertically(&self, coordinate_system: &CoordinateSystem, y: f64) -> f64 {
+        let mut padded = y;
+        match coordinate_system {
+            CoordinateSystem::PdfStandard | CoordinateSystem::Custom(_) => {
+                padded -= self.top;
+                padded += self.bottom;
+            }
+            CoordinateSystem::ScreenSpace => {
+                padded += self.top;
+                padded -= self.bottom;
+            }
+        }
+
+        padded
+    }
+
+    pub fn pad_horizontally(&self, x: f64) -> f64 {
+        let mut padded = x;
+        padded -= self.right;
+        padded += self.left;
+
+        padded
     }
 }
 
@@ -378,5 +403,33 @@ impl CellStyle {
 impl Default for CellStyle {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pad_vertically() {
+        let cs = CoordinateSystem::PdfStandard;
+        let padding = Padding::new(6.0, 0.0, 2.0, 2.0);
+
+        assert_eq!(padding.pad_vertically(&cs, 100.0), 96.0);
+        assert_eq!(padding.pad_vertically(&cs, 50.0), 46.0);
+
+        let cs = CoordinateSystem::ScreenSpace;
+        let padding = Padding::new(6.0, 0.0, 2.0, 2.0);
+
+        assert_eq!(padding.pad_vertically(&cs, 100.0), 104.0);
+        assert_eq!(padding.pad_vertically(&cs, 50.0), 54.0);
+    }
+
+    #[test]
+    fn test_pad_horizontally() {
+        let padding = Padding::new(6.0, 12.0, 2.0, 2.0);
+
+        assert_eq!(padding.pad_horizontally(100.0), 90.0);
+        assert_eq!(padding.pad_horizontally(50.0), 40.0);
     }
 }
