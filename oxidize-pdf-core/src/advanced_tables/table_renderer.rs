@@ -36,12 +36,14 @@ impl TableRenderer {
         let mut total_height = 0.0;
 
         // Calculate header height
-        if let Some(header) = &table.header {
-            // For complex headers, calculate based on levels and row spans
-            total_height += header.calculate_height();
-        } else if !table.columns.is_empty() {
-            // Simple header from column definitions
-            total_height += self.default_header_height;
+        if table.hide_header == false {
+            if let Some(header) = &table.header {
+                // For complex headers, calculate based on levels and row spans
+                total_height += header.calculate_height();
+            } else if !table.columns.is_empty() {
+                // Simple header from column definitions
+                total_height += self.default_header_height;
+            }
         }
 
         // Calculate rows height
@@ -83,11 +85,13 @@ impl TableRenderer {
         let mut current_y = y;
 
         // Render header if present
-        if let Some(header) = &table.header {
-            current_y = self.render_header(page, table, header, x, current_y)?;
-        } else if !table.columns.is_empty() {
-            // Render simple header from column definitions
-            current_y = self.render_simple_header(page, table, x, current_y)?;
+        if table.hide_header == false {
+            if let Some(header) = &table.header {
+                current_y = self.render_header(page, table, header, x, current_y)?;
+            } else if !table.columns.is_empty() {
+                // Render simple header from column definitions
+                current_y = self.render_simple_header(page, table, x, current_y)?;
+            }
         }
 
         // Render table rows

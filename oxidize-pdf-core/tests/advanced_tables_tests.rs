@@ -187,3 +187,24 @@ fn test_table_with_title_only() {
     assert_eq!(table.title, Some("Title Only".to_string()));
     assert_eq!(table.rows.len(), 0); // No data rows
 }
+
+#[test]
+fn test_table_render_header() {
+    let table = AdvancedTableBuilder::new()
+        .title("Title Only")
+        .columns(vec![("Column", 100.0)])
+        .render_header(true)
+        .build()
+        .unwrap();
+
+    assert_eq!(table.hide_header, false);
+
+    let table = AdvancedTableBuilder::new()
+        .title("Title Only")
+        .columns(vec![("Column", 100.0)])
+        .render_header(false)
+        .build()
+        .unwrap();
+
+    assert_eq!(table.hide_header, true);
+}
