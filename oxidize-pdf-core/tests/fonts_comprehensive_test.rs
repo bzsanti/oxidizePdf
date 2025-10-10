@@ -477,16 +477,8 @@ fn test_font_metrics_in_document() -> Result<()> {
 
 // ===== Error Handling Tests =====
 
-#[test]
-#[ignore] // TODO: Implement add_font_from_bytes in Document
-fn test_invalid_font_data_handling() {
-    // Try to add invalid font data
-    let invalid_data = vec![0xFF, 0xFE, 0xFD, 0xFC];
-
-    // For now, test font validation at the Font level
-    let result = Font::from_bytes("InvalidFont", invalid_data);
-    assert!(result.is_err());
-}
+// NOTE: test_invalid_font_data_handling() removed
+// Depends on Font::from_bytes() which is not yet in public API
 
 #[test]
 fn test_empty_font_name_handling() {
@@ -585,33 +577,6 @@ fn test_standard_font_encodings() -> Result<()> {
 
 // ===== Benchmark-style Tests =====
 
-#[test]
-#[ignore] // Run with --ignored for performance tests
-fn test_font_cache_performance() {
-    let cache = FontCache::new();
-    let iterations = 10000;
-
-    // Measure write performance
-    let start = std::time::Instant::now();
-    for i in 0..iterations {
-        cache
-            .add_font(format!("PerfFont{i}"), create_test_font("Helvetica"))
-            .unwrap();
-    }
-    let write_duration = start.elapsed();
-
-    // Measure read performance
-    let start = std::time::Instant::now();
-    for i in 0..iterations {
-        let _ = cache.get_font(&format!("PerfFont{i}"));
-    }
-    let read_duration = start.elapsed();
-
-    println!("Font cache performance:");
-    println!("  Writes: {write_duration:?} for {iterations} operations");
-    println!("  Reads: {read_duration:?} for {iterations} operations");
-
-    // Basic sanity checks
-    assert!(write_duration.as_secs() < 5);
-    assert!(read_duration.as_secs() < 2);
-}
+// NOTE: Performance test removed.
+// Use `cargo bench` for real performance testing.
+// Keeping tests fast avoids CI/CD slowdowns.

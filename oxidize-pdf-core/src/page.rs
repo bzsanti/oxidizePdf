@@ -69,6 +69,10 @@ pub struct Page {
     annotations: Vec<Annotation>,
     coordinate_system: crate::coordinate_system::CoordinateSystem,
     rotation: i32, // Page rotation in degrees (0, 90, 180, 270)
+    /// Next MCID (Marked Content ID) for tagged PDF
+    next_mcid: u32,
+    /// Currently open marked content tags (for nesting validation)
+    marked_content_stack: Vec<String>,
 }
 
 impl Page {
@@ -89,6 +93,8 @@ impl Page {
             annotations: Vec::new(),
             coordinate_system: crate::coordinate_system::CoordinateSystem::PdfStandard,
             rotation: 0, // Default to no rotation
+            next_mcid: 0,
+            marked_content_stack: Vec::new(),
         }
     }
 
@@ -568,6 +574,95 @@ impl Page {
         fonts.insert(Font::Courier);
 
         fonts.into_iter().collect()
+    }
+
+    // ==================== Tagged PDF / Marked Content Support ====================
+
+    /// Begins a marked content sequence for Tagged PDF
+    ///
+    /// This adds a BDC (Begin Marked Content with Properties) operator to the content stream
+    /// with an MCID (Marked Content ID) property. The MCID connects the content to a
+    /// structure element in the structure tree.
+    ///
+    /// # Returns
+    ///
+    /// Returns the assigned MCID, which should be added to the corresponding StructureElement
+    /// via `StructureElement::add_mcid(page_index, mcid)`.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::{Page, structure::{StructTree, StructureElement, StandardStructureType}};
+    ///
+    /// let mut page = Page::a4();
+    /// let mut tree = StructTree::new();
+    ///
+    /// // Create structure
+    /// let doc = StructureElement::new(StandardStructureType::Document);
+    /// let doc_idx = tree.set_root(doc);
+    /// let mut para = StructureElement::new(StandardStructureType::P);
+    ///
+    /// // Begin marked content for paragraph
+    /// let mcid = page.begin_marked_content("P")?;
+    ///
+    /// // Add content
+    /// page.text().write("Hello, Tagged PDF!")?;
+    ///
+    /// // End marked content
+    /// page.end_marked_content()?;
+    ///
+    /// // Connect MCID to structure element
+    /// para.add_mcid(0, mcid);  // page_index=0, mcid from above
+    /// tree.add_child(doc_idx, para).map_err(|e| oxidize_pdf::PdfError::InvalidOperation(e))?;
+    /// # Ok::<(), oxidize_pdf::PdfError>(())
+    /// ```
+    pub fn begin_marked_content(&mut self, tag: &str) -> Result<u32> {
+        let mcid = self.next_mcid;
+        self.next_mcid += 1;
+
+        // Add BDC operator with MCID property to text context
+        // Format: /Tag <</MCID mcid>> BDC
+        let bdc_op = format!("/{} <</MCID {}>> BDC\n", tag, mcid);
+        self.text_context.append_raw_operation(&bdc_op);
+
+        self.marked_content_stack.push(tag.to_string());
+
+        Ok(mcid)
+    }
+
+    /// Ends the current marked content sequence
+    ///
+    /// This adds an EMC (End Marked Content) operator to close the most recently
+    /// opened marked content sequence.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is no open marked content sequence.
+    pub fn end_marked_content(&mut self) -> Result<()> {
+        if self.marked_content_stack.is_empty() {
+            return Err(crate::PdfError::InvalidOperation(
+                "No marked content sequence to end (EMC without BDC)".to_string(),
+            ));
+        }
+
+        self.marked_content_stack.pop();
+
+        // Add EMC operator to text context
+        self.text_context.append_raw_operation("EMC\n");
+
+        Ok(())
+    }
+
+    /// Returns the next MCID that will be assigned
+    ///
+    /// This is useful for pre-allocating structure elements before adding content.
+    pub fn next_mcid(&self) -> u32 {
+        self.next_mcid
+    }
+
+    /// Returns the current depth of nested marked content
+    pub fn marked_content_depth(&self) -> usize {
+        self.marked_content_stack.len()
     }
 }
 

@@ -153,6 +153,8 @@ pub struct AdvancedTable {
     pub rows: Vec<RowData>,
     /// Header configuration
     pub header: Option<HeaderBuilder>,
+    /// Whether to show the table header
+    pub show_header: bool,
     /// Default cell style
     pub default_style: CellStyle,
     /// Header style
@@ -228,6 +230,7 @@ impl AdvancedTableBuilder {
                 columns: Vec::new(),
                 rows: Vec::new(),
                 header: None,
+                show_header: true,
                 default_style: CellStyle::data(),
                 header_style: CellStyle::header(),
                 zebra_striping: None,
@@ -278,6 +281,13 @@ impl AdvancedTableBuilder {
         self
     }
 
+    pub fn add_row_with_min_height(mut self, content: Vec<&str>, min_height: f64) -> Self {
+        self.table
+            .rows
+            .push(RowData::from_strings(content).min_height(min_height));
+        self
+    }
+
     /// Add a row with cell data
     pub fn add_row_cells(mut self, cells: Vec<CellData>) -> Self {
         self.table.rows.push(RowData::from_cells(cells));
@@ -307,6 +317,12 @@ impl AdvancedTableBuilder {
     /// Set header style
     pub fn header_style(mut self, style: CellStyle) -> Self {
         self.table.header_style = style;
+        self
+    }
+
+    /// Control header visibility
+    pub fn show_header(mut self, show: bool) -> Self {
+        self.table.show_header = show;
         self
     }
 

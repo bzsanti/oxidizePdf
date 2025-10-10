@@ -1,15 +1,16 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-07 - Performance Benchmarks Modernized
+- **Last Session: 2025-10-10 - PR Reviews & CI Fixes
 - **Branch**: develop_santi (working branch)
 - **Version**: v1.3.0 released, planning v1.4.0
 - **Recent Work**:
-  - ✅ Honest Gap Analysis: 55-60% ISO compliance (20% higher than estimated!)
-  - ✅ Benchmark Suite Overhaul: Replaced trivial tests with realistic content
-  - 🎯 **New Realistic Benchmarks**: 5,500+ pages/sec with varied content
-- **Key Achievement**: All benchmarks now use unique content per page (no repetition)
-- **Next**: v1.4.0 release planning
+  - ✅ **coordinate_system.rs: 100% coverage** (+36 tests, +63% mejora) ⭐
+  - ✅ Test Coverage Strategy: "Wins E Impacto" documentada
+  - ✅ Coverage: 55.13% → 55.64% (+0.51%, +85 tests)
+  - ✅ Lecciones aprendidas actualizadas en CLAUDE.md
+- **Key Achievement**: Primera sesión con 100% cobertura (lógica pura + tests rigurosos)
+- **Next**: graphics/color.rs (82% → 100%, conversiones RGB↔CMYK)
 
 ## ✅ Funcionalidades Completadas
 
@@ -181,6 +182,73 @@ cargo clippy -- -D warnings # Check linting
 cargo fmt --all --check    # Verify formatting
 ```
 
+### 🎓 LECCIONES APRENDIDAS (Test Coverage) - 2025-10-10
+
+**CRÍTICO - Para mejorar cobertura REAL de código**:
+
+#### 1. **Test Quality ≠ Code Coverage**
+- ❌ Smoke tests (`assert!(result.is_ok())`) son INÚTILES para cobertura
+- ❌ Solo verificar que no falla != ejecutar código nuevo
+- ✅ Tests rigurosos verifican valores específicos con `assert_eq!`
+- ✅ **Regla**: Mejor 10 tests rigurosos que 50 smoke tests
+
+#### 2. **API Coverage ≠ Code Coverage**
+- ❌ Testear todas las funciones públicas != mejorar cobertura
+- ❌ Verificar que una función existe != ejecutar su lógica
+- ✅ Tests deben ejecutar **paths de código nuevos**
+- ✅ **Regla**: No confundir "cobertura de API" con "cobertura de código"
+
+#### 3. **Módulos con Dependencias Externas son Difíciles**
+- ❌ Módulos que requieren archivos (TTF, PDFs reales) son difíciles de testear
+- ❌ Error paths (file not found) no son paths nuevos
+- ✅ Buscar módulos con **lógica pura** (matemática, transformaciones, parsers)
+- ✅ **Regla**: Priorizar módulos con lógica pura para high-ROI wins
+
+#### 4. **Medir SIEMPRE con Tarpaulin**
+- ❌ NUNCA estimar cobertura sin medir
+- ✅ Ejecutar tarpaulin ANTES y DESPUÉS de agregar tests
+- ✅ **Regla**: "Si no está medido, no existe"
+
+#### 5. **Estrategia "Wins E Impacto" (NO son incompatibles)**
+
+**Criterios de Selección de Módulos** (ROI = (Valor + Impacto) / Esfuerzo):
+
+| Criterio | Bajo ROI | Alto ROI |
+|----------|----------|----------|
+| **Tamaño** | >500 líneas | <200 líneas |
+| **Lógica** | I/O, archivos, PDFs | Matemática, conversiones puras |
+| **Criticidad** | Utility, helpers | Core rendering, parsers |
+| **Cobertura actual** | <20% o >90% | 30-85% (fácil mejorar) |
+| **Esfuerzo** | Requiere PDFs reales | Solo tests con valores |
+
+**Estrategia Balanceada**:
+- ✅ **Quick Wins** (coordinate_system.rs): 51 líneas, lógica pura, 100% alcanzable
+  - Valor: Documenta comportamiento, previene regresiones
+  - Impacto: Crítico para rendering correcto
+  - **NO despreciar** por ser "fácil" - son wins legítimos
+
+- ✅ **High Impact Wins** (graphics/color.rs): 95 líneas, 82% → 100%, conversiones críticas
+  - Valor: Fórmulas RGB↔CMYK documentadas
+  - Impacto: Color incorrecto = bug visible en PDFs
+  - **Mejor estrategia**: Optimizar para AMBOS (wins E impacto)
+
+**Valor de Tests de Regresión**:
+- ✅ Tests "obvios" (defaults, equality) SÍ tienen valor
+- ✅ Documentan comportamiento esperado
+- ✅ Detectan cambios en derives (PartialEq, Default)
+- ✅ **NO son smoke tests** si verifican valores específicos
+- ⚠️ **Smoke test**: `assert!(result.is_ok())`
+- ✅ **Test riguroso**: `assert_eq!(Color::default(), Color::Gray(0.0))`
+
+**Ejemplos Honestos**:
+- ❌ Sesión 4: parser/reader.rs - +22 tests, **0% mejora** (smoke tests)
+- ❌ Sesión 5: fonts/mod.rs - +11 tests, **0% mejora** (requiere archivos reales)
+- ✅ **Sesión 6: coordinate_system.rs** - +36 tests, **+63% mejora** (100% cobertura)
+  - **Lección**: Lógica pura + tests rigurosos = wins reales
+  - **ROI**: 10/10 (esfuerzo bajo, impacto alto, win medible)
+
+**NO REPETIR ERRORES, SÍ REPLICAR ÉXITOS**
+
 ### Git Workflow
 1. Work on `develop_santi` branch
 2. Create PR to `main` when ready
@@ -202,7 +270,8 @@ cargo build --release                 # Production build
 
 ## 📊 Current State
 - **PDF Features**: Core features implemented and documented
-- **Tests**: 4,170 total tests in workspace (all passing)
+- **Tests**: 4,445 total tests in workspace (all passing) - Updated 2025-10-10
+- **Test Coverage**: 55.64% (17,708/31,827 lines) - Measured with Tarpaulin
 - **PDF Parsing**: 98.8% success rate (750/759 PDFs) - 42.6 PDFs/second
 - **Performance** (Realistic Benchmarks - 2025-10-07):
   - **Realistic Content**: 5,500-6,034 pages/second (varied paragraphs + tables + charts)

@@ -171,11 +171,6 @@ jobs:
             oxidize-pdf = "${{ steps.get_version.outputs.VERSION }}"
             ```
 
-            Or install the CLI:
-            ```bash
-            cargo install oxidize-pdf-cli
-            ```
-
       # Detect which packages changed
       - name: Detect changed packages
         id: changes

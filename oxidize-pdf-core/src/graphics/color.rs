@@ -599,4 +599,276 @@ mod tests {
         assert_eq!(cmyk_components.2, 0.0);
         assert!((cmyk_components.3 - 0.3).abs() < 1e-10);
     }
+
+    // =============================================================================
+    // RIGOROUS TESTS FOR UNCOVERED LINES (Target: 100% coverage)
+    // =============================================================================
+
+    #[test]
+    fn test_hex_color_invalid_length() {
+        // Line 24: hex string with invalid length should return black
+        let color1 = Color::hex("#FFF");
+        assert_eq!(
+            color1,
+            Color::black(),
+            "Short hex string should return black"
+        );
+
+        let color2 = Color::hex("#FFFFFFF");
+        assert_eq!(
+            color2,
+            Color::black(),
+            "Long hex string should return black"
+        );
+
+        let color3 = Color::hex("");
+        assert_eq!(
+            color3,
+            Color::black(),
+            "Empty hex string should return black"
+        );
+    }
+
+    #[test]
+    fn test_hex_color_valid() {
+        let color = Color::hex("#FF0080");
+
+        // Verify RGB components: FF = 255/255 = 1.0, 00 = 0/255 = 0.0, 80 = 128/255 ≈ 0.502
+        assert!((color.r() - 1.0).abs() < 0.01, "Red should be 1.0");
+        assert!((color.g() - 0.0).abs() < 0.01, "Green should be 0.0");
+        assert!((color.b() - 0.502).abs() < 0.01, "Blue should be ~0.502");
+    }
+
+    #[test]
+    fn test_hex_color_without_hash() {
+        let color = Color::hex("00FF00");
+
+        // Green color: 00 = 0, FF = 255, 00 = 0
+        assert_eq!(color.r(), 0.0, "Red should be 0.0");
+        assert_eq!(color.g(), 1.0, "Green should be 1.0");
+        assert_eq!(color.b(), 0.0, "Blue should be 0.0");
+    }
+
+    #[test]
+    fn test_cmyk_r_component() {
+        // Lines 110-111: Test CMYK branch of r() method
+        let cmyk_color = Color::cmyk(0.5, 0.2, 0.3, 0.1);
+        let r = cmyk_color.r();
+
+        // Formula: (1.0 - c) * (1.0 - k) = (1.0 - 0.5) * (1.0 - 0.1) = 0.5 * 0.9 = 0.45
+        assert!((r - 0.45).abs() < 1e-10, "CMYK r() should be 0.45");
+    }
+
+    #[test]
+    fn test_cmyk_g_component() {
+        // Lines 119-120: Test CMYK branch of g() method
+        let cmyk_color = Color::cmyk(0.2, 0.6, 0.3, 0.2);
+        let g = cmyk_color.g();
+
+        // Formula: (1.0 - m) * (1.0 - k) = (1.0 - 0.6) * (1.0 - 0.2) = 0.4 * 0.8 = 0.32
+        assert!((g - 0.32).abs() < 1e-10, "CMYK g() should be 0.32");
+    }
+
+    #[test]
+    fn test_cmyk_b_component() {
+        // Lines 128-129: Test CMYK branch of b() method
+        let cmyk_color = Color::cmyk(0.3, 0.2, 0.7, 0.15);
+        let b = cmyk_color.b();
+
+        // Formula: (1.0 - y) * (1.0 - k) = (1.0 - 0.7) * (1.0 - 0.15) = 0.3 * 0.85 = 0.255
+        assert!((b - 0.255).abs() < 1e-10, "CMYK b() should be 0.255");
+    }
+
+    #[test]
+    fn test_to_rgb_when_already_rgb() {
+        // Line 141: to_rgb() when color is already RGB should return self
+        let rgb_color = Color::rgb(0.5, 0.6, 0.7);
+        let converted = rgb_color.to_rgb();
+
+        assert_eq!(converted, rgb_color, "to_rgb() on RGB should return self");
+        assert_eq!(converted.r(), 0.5);
+        assert_eq!(converted.g(), 0.6);
+        assert_eq!(converted.b(), 0.7);
+    }
+
+    #[test]
+    fn test_to_cmyk_when_already_cmyk() {
+        // Lines 160-161: to_cmyk() when color is already CMYK should return self
+        let cmyk_color = Color::cmyk(0.1, 0.2, 0.3, 0.4);
+        let converted = cmyk_color.to_cmyk();
+
+        assert_eq!(
+            converted, cmyk_color,
+            "to_cmyk() on CMYK should return self"
+        );
+        let (c, m, y, k) = converted.cmyk_components();
+        assert_eq!(c, 0.1);
+        assert_eq!(m, 0.2);
+        assert_eq!(y, 0.3);
+        assert_eq!(k, 0.4);
+    }
+
+    #[test]
+    fn test_to_pdf_array_gray() {
+        // Line 175: to_pdf_array() for Gray color
+        use crate::objects::Object;
+
+        let gray = Color::gray(0.75);
+        let array = gray.to_pdf_array();
+
+        match array {
+            Object::Array(vec) => {
+                assert_eq!(vec.len(), 1, "Gray PDF array should have 1 element");
+                match &vec[0] {
+                    Object::Real(val) => assert_eq!(*val, 0.75, "Gray value should be 0.75"),
+                    _ => panic!("Expected Real object"),
+                }
+            }
+            _ => panic!("Expected Array object"),
+        }
+    }
+
+    #[test]
+    fn test_to_pdf_array_rgb() {
+        // Lines 211, 215-219: to_pdf_array() for RGB color
+        use crate::objects::Object;
+
+        let rgb = Color::rgb(0.2, 0.5, 0.9);
+        let array = rgb.to_pdf_array();
+
+        match array {
+            Object::Array(vec) => {
+                assert_eq!(vec.len(), 3, "RGB PDF array should have 3 elements");
+                match (&vec[0], &vec[1], &vec[2]) {
+                    (Object::Real(r), Object::Real(g), Object::Real(b)) => {
+                        assert_eq!(*r, 0.2, "Red should be 0.2");
+                        assert_eq!(*g, 0.5, "Green should be 0.5");
+                        assert_eq!(*b, 0.9, "Blue should be 0.9");
+                    }
+                    _ => panic!("Expected Real objects"),
+                }
+            }
+            _ => panic!("Expected Array object"),
+        }
+    }
+
+    #[test]
+    fn test_to_pdf_array_cmyk() {
+        // Lines 215-219: to_pdf_array() for CMYK color
+        use crate::objects::Object;
+
+        let cmyk = Color::cmyk(0.1, 0.3, 0.5, 0.7);
+        let array = cmyk.to_pdf_array();
+
+        match array {
+            Object::Array(vec) => {
+                assert_eq!(vec.len(), 4, "CMYK PDF array should have 4 elements");
+                match (&vec[0], &vec[1], &vec[2], &vec[3]) {
+                    (Object::Real(c), Object::Real(m), Object::Real(y), Object::Real(k)) => {
+                        assert_eq!(*c, 0.1, "Cyan should be 0.1");
+                        assert_eq!(*m, 0.3, "Magenta should be 0.3");
+                        assert_eq!(*y, 0.5, "Yellow should be 0.5");
+                        assert_eq!(*k, 0.7, "Black should be 0.7");
+                    }
+                    _ => panic!("Expected Real objects"),
+                }
+            }
+            _ => panic!("Expected Array object"),
+        }
+    }
+
+    #[test]
+    fn test_cmyk_components_all_branches() {
+        // Test all match branches in cmyk_components()
+
+        // CMYK color (direct return)
+        let cmyk = Color::cmyk(0.2, 0.4, 0.6, 0.8);
+        let (c, m, y, k) = cmyk.cmyk_components();
+        assert_eq!(c, 0.2);
+        assert_eq!(m, 0.4);
+        assert_eq!(y, 0.6);
+        assert_eq!(k, 0.8);
+
+        // RGB color (conversion)
+        let rgb = Color::rgb(0.5, 0.25, 0.75);
+        let (_c, _m, _y, k) = rgb.cmyk_components();
+        // k = 1.0 - max(0.5, 0.25, 0.75) = 1.0 - 0.75 = 0.25
+        assert!((k - 0.25).abs() < 1e-10, "K should be 0.25");
+
+        // Gray color (K channel only)
+        let gray = Color::gray(0.4);
+        let (c, m, y, k) = gray.cmyk_components();
+        assert_eq!(c, 0.0);
+        assert_eq!(m, 0.0);
+        assert_eq!(y, 0.0);
+        assert!((k - 0.6).abs() < 1e-10, "K should be 0.6 (1.0 - 0.4)");
+    }
+
+    #[test]
+    fn test_color_conversions_preserve_match_branches() {
+        // Ensure all conversion branches are exercised
+
+        // RGB → CMYK → RGB
+        let rgb = Color::rgb(0.8, 0.4, 0.6);
+        let as_cmyk = rgb.to_cmyk();
+        let back_to_rgb = as_cmyk.to_rgb();
+
+        // Verify conversion preserves color within tolerance
+        assert!((rgb.r() - back_to_rgb.r()).abs() < 0.01);
+        assert!((rgb.g() - back_to_rgb.g()).abs() < 0.01);
+        assert!((rgb.b() - back_to_rgb.b()).abs() < 0.01);
+
+        // Gray → CMYK
+        let gray = Color::gray(0.5);
+        let gray_as_cmyk = gray.to_cmyk();
+        let (c, m, y, k) = gray_as_cmyk.cmyk_components();
+        assert_eq!(c, 0.0);
+        assert_eq!(m, 0.0);
+        assert_eq!(y, 0.0);
+        assert!((k - 0.5).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_gray_r_g_b_components() {
+        // Lines 110, 119, 128: Gray branch of r(), g(), b()
+        let gray = Color::gray(0.6);
+
+        let r = gray.r();
+        let g = gray.g();
+        let b = gray.b();
+
+        // Gray returns same value for r, g, and b
+        assert_eq!(r, 0.6, "Gray r() should return gray value");
+        assert_eq!(g, 0.6, "Gray g() should return gray value");
+        assert_eq!(b, 0.6, "Gray b() should return gray value");
+    }
+
+    #[test]
+    fn test_to_rgb_gray_conversion() {
+        // Line 161: Gray → RGB conversion
+        let gray = Color::gray(0.4);
+        let rgb = gray.to_rgb();
+
+        match rgb {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 0.4, "Gray → RGB should set r = gray value");
+                assert_eq!(g, 0.4, "Gray → RGB should set g = gray value");
+                assert_eq!(b, 0.4, "Gray → RGB should set b = gray value");
+            }
+            _ => panic!("Expected RGB color from Gray.to_rgb()"),
+        }
+    }
+
+    #[test]
+    fn test_rgb_black_to_cmyk() {
+        // Line 141: RGB(0,0,0) should convert to CMYK (0,0,0,1) - pure black
+        let black_rgb = Color::rgb(0.0, 0.0, 0.0);
+        let (c, m, y, k) = black_rgb.cmyk_components();
+
+        // When all RGB are 0, k = 1.0 - max(0,0,0) = 1.0, so k >= 1.0 branch activates
+        assert_eq!(c, 0.0, "Cyan should be 0 for pure black");
+        assert_eq!(m, 0.0, "Magenta should be 0 for pure black");
+        assert_eq!(y, 0.0, "Yellow should be 0 for pure black");
+        assert_eq!(k, 1.0, "K should be 1.0 for pure black");
+    }
 }

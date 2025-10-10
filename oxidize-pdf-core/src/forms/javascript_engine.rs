@@ -733,4 +733,340 @@ mod tests {
         assert_eq!(engine.evaluate("Math.ceil(3.2)").unwrap(), 4.0);
         assert_eq!(engine.evaluate("Math.abs(-5)").unwrap(), 5.0);
     }
+
+    // =============================================================================
+    // RIGOROUS TESTS FOR UNCOVERED EDGE CASES
+    // =============================================================================
+
+    #[test]
+    fn test_division_by_zero() {
+        let engine = JavaScriptEngine::new();
+
+        // Division by zero should return 0.0, not NaN or panic
+        let result = engine
+            .evaluate("10 / 0")
+            .expect("Division by zero must not panic");
+        assert_eq!(result, 0.0, "Division by zero must return 0.0");
+
+        // More complex expression with division by zero
+        let result = engine
+            .evaluate("(5 + 5) / (2 - 2)")
+            .expect("Must handle division by zero");
+        assert_eq!(result, 0.0);
+    }
+
+    #[test]
+    fn test_unary_minus_operator() {
+        let engine = JavaScriptEngine::new();
+
+        // Simple negation
+        assert_eq!(
+            engine.evaluate("-5").unwrap(),
+            -5.0,
+            "Unary minus must negate"
+        );
+
+        // Negation of expression
+        assert_eq!(engine.evaluate("-(3 + 2)").unwrap(), -5.0);
+
+        // Double negation
+        assert_eq!(
+            engine.evaluate("--7").unwrap(),
+            7.0,
+            "Double negation must cancel out"
+        );
+
+        // Negation in complex expression
+        assert_eq!(engine.evaluate("10 + -5").unwrap(), 5.0);
+    }
+
+    #[test]
+    fn test_unary_not_operator() {
+        let engine = JavaScriptEngine::new();
+
+        // NOT of zero (falsy) -> 1.0 (truthy)
+        assert_eq!(engine.evaluate("!0").unwrap(), 1.0, "NOT of 0 must be 1");
+
+        // NOT of non-zero (truthy) -> 0.0 (falsy)
+        assert_eq!(engine.evaluate("!5").unwrap(), 0.0, "NOT of 5 must be 0");
+
+        // Double NOT
+        assert_eq!(
+            engine.evaluate("!!10").unwrap(),
+            1.0,
+            "Double NOT of truthy must be 1"
+        );
+
+        // NOT in expression
+        assert_eq!(engine.evaluate("!0 && 1").unwrap(), 1.0);
+    }
+
+    #[test]
+    fn test_line_comments() {
+        let engine = JavaScriptEngine::new();
+
+        // Single line comment
+        let result = engine
+            .evaluate("5 + 3 // This is a comment")
+            .expect("Comments must be ignored");
+        assert_eq!(result, 8.0, "Comments must not affect evaluation");
+
+        // Comment in middle of expression (on new line conceptually)
+        let result = engine
+            .evaluate("10 // comment\n * 2")
+            .expect("Comments must be skipped");
+        assert_eq!(result, 20.0);
+    }
+
+    #[test]
+    fn test_field_getter_integration() {
+        let mut engine = JavaScriptEngine::new();
+
+        // Define a field getter function
+        fn test_getter(field_name: &str) -> Option<f64> {
+            match field_name {
+                "price" => Some(100.0),
+                "quantity" => Some(5.0),
+                "tax" => Some(0.08),
+                _ => None,
+            }
+        }
+
+        engine.set_field_getter(test_getter);
+
+        // Test field access
+        assert_eq!(
+            engine.evaluate("price").unwrap(),
+            100.0,
+            "Field getter must resolve field names"
+        );
+
+        assert_eq!(engine.evaluate("price * quantity").unwrap(), 500.0);
+
+        // Test field with addition
+        assert_eq!(engine.evaluate("price * (1 + tax)").unwrap(), 108.0);
+
+        // Non-existent field should return 0.0
+        assert_eq!(
+            engine.evaluate("nonexistent").unwrap(),
+            0.0,
+            "Unknown fields must return 0.0"
+        );
+    }
+
+    #[test]
+    fn test_this_field_access() {
+        let mut engine = JavaScriptEngine::new();
+
+        fn field_getter(field_name: &str) -> Option<f64> {
+            match field_name {
+                "total" => Some(250.0),
+                "discount" => Some(0.10),
+                _ => None,
+            }
+        }
+
+        engine.set_field_getter(field_getter);
+
+        // Test "this.field" syntax
+        // Note: Actual evaluation depends on implementation
+        // For now, testing that it doesn't panic
+        let result = engine.evaluate("this.total");
+        assert!(result.is_ok(), "this.field syntax must be supported");
+    }
+
+    #[test]
+    fn test_math_functions_with_empty_args() {
+        let engine = JavaScriptEngine::new();
+
+        // Math functions with no args should return 0.0 or appropriate defaults
+        let result = engine
+            .evaluate("Math.round()")
+            .expect("Empty args must not panic");
+        assert_eq!(result, 0.0, "Math.round() with no args must return 0.0");
+
+        let result = engine
+            .evaluate("Math.floor()")
+            .expect("Empty args must not panic");
+        assert_eq!(result, 0.0);
+
+        let result = engine
+            .evaluate("Math.ceil()")
+            .expect("Empty args must not panic");
+        assert_eq!(result, 0.0);
+
+        let result = engine
+            .evaluate("Math.abs()")
+            .expect("Empty args must not panic");
+        assert_eq!(result, 0.0);
+    }
+
+    #[test]
+    fn test_math_min_max_with_single_value() {
+        let engine = JavaScriptEngine::new();
+
+        // Min/max with single value
+        assert_eq!(
+            engine.evaluate("Math.min(42)").unwrap(),
+            42.0,
+            "Math.min with single arg must return that value"
+        );
+
+        assert_eq!(engine.evaluate("Math.max(42)").unwrap(), 42.0);
+    }
+
+    #[test]
+    fn test_complex_nested_expressions() {
+        let engine = JavaScriptEngine::new();
+
+        // Deeply nested parentheses
+        let result = engine
+            .evaluate("((((5))))")
+            .expect("Nested parens must work");
+        assert_eq!(result, 5.0);
+
+        // Complex mixed operators with precedence
+        let result = engine.evaluate("2 + 3 * 4 - 5 / 5").unwrap();
+        assert_eq!(
+            result, 13.0,
+            "Operator precedence must be correct: 2 + 12 - 1 = 13"
+        );
+
+        // Nested function calls
+        let result = engine.evaluate("Math.max(Math.min(10, 5), 3)").unwrap();
+        assert_eq!(result, 5.0, "Math.max(5, 3) = 5");
+    }
+
+    #[test]
+    fn test_comparison_with_equals_vs_assignment() {
+        let engine = JavaScriptEngine::new();
+
+        // == should be comparison, not assignment
+        assert_eq!(
+            engine.evaluate("5 == 5").unwrap(),
+            1.0,
+            "== must be comparison returning 1.0 (true)"
+        );
+
+        assert_eq!(
+            engine.evaluate("5 == 3").unwrap(),
+            0.0,
+            "== must return 0.0 (false) for unequal values"
+        );
+
+        // <= and >= operators
+        assert_eq!(engine.evaluate("5 <= 5").unwrap(), 1.0);
+        assert_eq!(engine.evaluate("5 >= 5").unwrap(), 1.0);
+        assert_eq!(engine.evaluate("3 <= 5").unwrap(), 1.0);
+        assert_eq!(engine.evaluate("5 >= 3").unwrap(), 1.0);
+    }
+
+    #[test]
+    fn test_logical_operators_chaining() {
+        let engine = JavaScriptEngine::new();
+
+        // Chained AND operators
+        assert_eq!(
+            engine.evaluate("1 && 1 && 1").unwrap(),
+            1.0,
+            "All truthy values ANDed must return 1.0"
+        );
+
+        assert_eq!(
+            engine.evaluate("1 && 0 && 1").unwrap(),
+            0.0,
+            "Any falsy value ANDed must return 0.0"
+        );
+
+        // Chained OR operators
+        assert_eq!(
+            engine.evaluate("0 || 0 || 1").unwrap(),
+            1.0,
+            "Any truthy value ORed must return 1.0"
+        );
+
+        assert_eq!(engine.evaluate("0 || 0 || 0").unwrap(), 0.0);
+
+        // Mixed AND/OR
+        assert_eq!(
+            engine.evaluate("1 && 1 || 0").unwrap(),
+            1.0,
+            "(1 AND 1) OR 0 = 1"
+        );
+
+        assert_eq!(
+            engine.evaluate("0 || 1 && 1").unwrap(),
+            1.0,
+            "0 OR (1 AND 1) = 1"
+        );
+    }
+
+    #[test]
+    fn test_whitespace_handling() {
+        let engine = JavaScriptEngine::new();
+
+        // Extra whitespace
+        assert_eq!(
+            engine.evaluate("  5   +   3  ").unwrap(),
+            8.0,
+            "Extra whitespace must be ignored"
+        );
+
+        // Tabs and newlines
+        assert_eq!(engine.evaluate("5\t+\n3").unwrap(), 8.0);
+
+        // No whitespace
+        assert_eq!(engine.evaluate("5+3*2").unwrap(), 11.0);
+    }
+
+    #[test]
+    fn test_decimal_numbers() {
+        let engine = JavaScriptEngine::new();
+
+        // Simple decimal
+        assert_eq!(engine.evaluate("3.14").unwrap(), 3.14);
+
+        // Decimal in expression
+        assert_eq!(engine.evaluate("10.5 + 2.5").unwrap(), 13.0);
+
+        // Multiple decimals in operations
+        assert_eq!(engine.evaluate("0.1 + 0.2").unwrap(), 0.30000000000000004); // Float precision
+
+        // Leading zero
+        assert_eq!(engine.evaluate("0.5 * 10").unwrap(), 5.0);
+    }
+
+    #[test]
+    fn test_error_handling_invalid_syntax() {
+        let engine = JavaScriptEngine::new();
+
+        // Missing operand
+        let result = engine.evaluate("5 +");
+        assert!(result.is_err(), "Incomplete expression must return error");
+
+        // Mismatched parentheses
+        let result = engine.evaluate("(5 + 3");
+        assert!(result.is_err(), "Unclosed parenthesis must return error");
+
+        // Empty input
+        let result = engine.evaluate("");
+        assert!(result.is_err(), "Empty expression must return error");
+    }
+
+    #[test]
+    fn test_unknown_function() {
+        let engine = JavaScriptEngine::new();
+
+        // Unknown function should return 0.0, not panic
+        let result = engine
+            .evaluate("UnknownFunction()")
+            .expect("Unknown functions must not panic");
+        assert_eq!(result, 0.0, "Unknown functions must return 0.0");
+
+        // Unknown Math function
+        let result = engine
+            .evaluate("Math.unknownFunc(5)")
+            .expect("Must not panic");
+        assert_eq!(result, 0.0);
+    }
 }

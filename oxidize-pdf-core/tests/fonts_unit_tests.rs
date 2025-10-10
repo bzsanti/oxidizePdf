@@ -88,66 +88,9 @@ mod font_loader_tests {
 }
 
 // ===== FontEmbedder Tests =====
-// TODO: FontEmbedder is not yet exposed in the public API
-
-// FontEmbedder tests commented out as the feature is not yet exposed
-#[allow(dead_code)]
-mod font_embedder_tests {
-
-    #[test]
-    #[ignore] // FontEmbedder not yet available
-    fn test_embedder_subset_creation() {
-        // let mut embedder = FontEmbedder::new("TestFont");
-
-        // Add used characters
-        let text = "Hello, World! 123";
-        let unique_chars: std::collections::HashSet<_> = text.chars().collect();
-        assert_eq!(unique_chars.len(), 14); // Unique chars in text
-        assert!(unique_chars.contains(&'H'));
-        assert!(unique_chars.contains(&','));
-        assert!(unique_chars.contains(&' '));
-        assert!(unique_chars.contains(&'!'));
-    }
-
-    #[test]
-    #[ignore] // FontEmbedder not yet available
-    fn test_embedder_unicode_ranges() {
-        // Test Unicode character categorization
-        let test_chars = vec![
-            'A',  // Basic Latin
-            'Ä',  // Latin-1 Supplement
-            'Ω',  // Greek
-            'א',  // Hebrew
-            '中', // CJK
-        ];
-
-        let unique_chars: std::collections::HashSet<_> = test_chars.into_iter().collect();
-        assert_eq!(unique_chars.len(), 5);
-    }
-
-    #[test]
-    #[ignore] // FontEmbedder not yet available
-    fn test_embedder_duplicate_chars() {
-        // Test character deduplication
-        let mut chars = vec![];
-        for _ in 0..10 {
-            chars.push('A');
-        }
-        chars.push('B');
-        chars.push('B');
-
-        let unique_chars: std::collections::HashSet<_> = chars.into_iter().collect();
-        assert_eq!(unique_chars.len(), 2); // Only A and B
-    }
-
-    #[test]
-    #[ignore] // FontEmbedder not yet available
-    fn test_embedder_font_program_generation() {
-        // Placeholder for font program generation test
-        let font_name = "TestFont";
-        assert_eq!(font_name, "TestFont");
-    }
-}
+// NOTE: FontEmbedder is not yet exposed in the public API.
+// These tests are removed until the feature is implemented.
+// See fonts::embedder module for internal implementation.
 
 // ===== TTF Parser Detailed Tests =====
 
@@ -274,31 +217,10 @@ mod font_descriptor_tests {
 mod font_metrics_tests {
     use super::*;
 
-    #[test]
-    #[ignore] // Kerning not exposed in FontMetrics public API
-    fn test_metrics_kerning_pairs() {
-        // FontMetrics doesn't have kerning methods in public API
-        // This test is a placeholder for future kerning support
-        let pairs = [
-            ('A', 'V', -80),
-            ('A', 'W', -60),
-            ('T', 'o', -40),
-            ('V', 'a', -60),
-        ];
-
-        // Verify test data
-        assert_eq!(pairs.len(), 4);
-        assert_eq!(pairs[0].2, -80);
-    }
-
-    #[test]
-    #[ignore] // String width calculation not in FontMetrics public API
-    fn test_metrics_string_width_calculation() {
-        // FontMetrics doesn't have width calculation methods
-        // This is handled by GlyphMapping and text measurement
-        let text = "Hello";
-        assert_eq!(text.len(), 5);
-    }
+    // NOTE: Kerning and string width calculation tests removed.
+    // These features are not in public API.
+    // Kerning: future feature, not yet implemented
+    // String width: handled by GlyphMapping
 
     #[test]
     fn test_metrics_line_height_calculation() {

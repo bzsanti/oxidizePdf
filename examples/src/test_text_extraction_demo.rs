@@ -109,7 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   \"{}\"", first_line);
 
             // Check for the key words that should be present
-            let normalized = content.replace(" ", "").replace("​", ""); // Remove spaces and zero-width spaces
+            let normalized = content.replace(" ", "").replace("\u{200B}", ""); // Remove spaces and zero-width spaces
             if normalized.contains("Read")
                 && normalized.contains("your")
                 && normalized.contains("email")

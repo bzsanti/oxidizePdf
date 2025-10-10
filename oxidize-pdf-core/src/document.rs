@@ -5,7 +5,7 @@ use crate::objects::{Object, ObjectId};
 use crate::page::Page;
 use crate::page_labels::PageLabelTree;
 use crate::semantic::{BoundingBox, EntityType, RelationType, SemanticEntity};
-use crate::structure::{NamedDestinations, OutlineTree, PageTree};
+use crate::structure::{NamedDestinations, OutlineTree, PageTree, StructTree};
 use crate::text::{FontEncoding, FontWithEncoding};
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
@@ -67,6 +67,8 @@ pub struct Document {
     pub(crate) viewer_preferences: Option<crate::viewer_preferences::ViewerPreferences>,
     /// Semantic entities marked in the document for AI processing
     pub(crate) semantic_entities: Vec<SemanticEntity>,
+    /// Document structure tree for Tagged PDF (accessibility)
+    pub(crate) struct_tree: Option<StructTree>,
 }
 
 /// Metadata for a PDF document.
@@ -144,6 +146,7 @@ impl Document {
             open_action: None,
             viewer_preferences: None,
             semantic_entities: Vec::new(),
+            struct_tree: None,
         }
     }
 
@@ -224,6 +227,68 @@ impl Document {
     /// Get viewer preferences
     pub fn viewer_preferences(&self) -> Option<&crate::viewer_preferences::ViewerPreferences> {
         self.viewer_preferences.as_ref()
+    }
+
+    /// Set the document structure tree for Tagged PDF (accessibility)
+    ///
+    /// Tagged PDF provides semantic information about document content,
+    /// making PDFs accessible to screen readers and assistive technologies.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::{Document, structure::{StructTree, StructureElement, StandardStructureType}};
+    ///
+    /// let mut doc = Document::new();
+    /// let mut tree = StructTree::new();
+    ///
+    /// // Create document root
+    /// let doc_elem = StructureElement::new(StandardStructureType::Document);
+    /// let doc_idx = tree.set_root(doc_elem);
+    ///
+    /// // Add heading
+    /// let h1 = StructureElement::new(StandardStructureType::H1)
+    ///     .with_language("en-US")
+    ///     .with_actual_text("Welcome");
+    /// tree.add_child(doc_idx, h1).unwrap();
+    ///
+    /// doc.set_struct_tree(tree);
+    /// ```
+    pub fn set_struct_tree(&mut self, tree: StructTree) {
+        self.struct_tree = Some(tree);
+    }
+
+    /// Get a reference to the document structure tree
+    pub fn struct_tree(&self) -> Option<&StructTree> {
+        self.struct_tree.as_ref()
+    }
+
+    /// Get a mutable reference to the document structure tree
+    pub fn struct_tree_mut(&mut self) -> Option<&mut StructTree> {
+        self.struct_tree.as_mut()
+    }
+
+    /// Initialize a new structure tree if one doesn't exist and return a mutable reference
+    ///
+    /// This is a convenience method for adding Tagged PDF support.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::{Document, structure::{StructureElement, StandardStructureType}};
+    ///
+    /// let mut doc = Document::new();
+    /// let tree = doc.get_or_create_struct_tree();
+    ///
+    /// // Create document root
+    /// let doc_elem = StructureElement::new(StandardStructureType::Document);
+    /// tree.set_root(doc_elem);
+    /// ```
+    pub fn get_or_create_struct_tree(&mut self) -> &mut StructTree {
+        if self.struct_tree.is_none() {
+            self.struct_tree = Some(StructTree::new());
+        }
+        self.struct_tree.as_mut().unwrap()
     }
 
     /// Set document outline (bookmarks)
@@ -968,20 +1033,72 @@ impl Document {
         self.semantic_entities.len()
     }
 
-    /// Add XMP metadata stream to the document (Pro feature placeholder)
-    pub fn add_xmp_metadata(&mut self, _xmp_data: &str) -> Result<ObjectId> {
-        // This is a placeholder implementation for the Pro version
-        // In the community edition, this just returns a dummy ObjectId
-        tracing::info!("XMP metadata embedding requested but not available in community edition");
-        Ok(ObjectId::new(9999, 0)) // Dummy object ID
+    /// Create XMP metadata from document metadata
+    ///
+    /// Generates an XMP metadata object from the document's metadata.
+    /// The XMP metadata can be serialized and embedded in the PDF.
+    ///
+    /// # Returns
+    /// XMP metadata object populated with document information
+    pub fn create_xmp_metadata(&self) -> crate::metadata::XmpMetadata {
+        let mut xmp = crate::metadata::XmpMetadata::new();
+
+        // Add Dublin Core metadata
+        if let Some(title) = &self.metadata.title {
+            xmp.set_text(crate::metadata::XmpNamespace::DublinCore, "title", title);
+        }
+        if let Some(author) = &self.metadata.author {
+            xmp.set_text(crate::metadata::XmpNamespace::DublinCore, "creator", author);
+        }
+        if let Some(subject) = &self.metadata.subject {
+            xmp.set_text(
+                crate::metadata::XmpNamespace::DublinCore,
+                "description",
+                subject,
+            );
+        }
+
+        // Add XMP Basic metadata
+        if let Some(creator) = &self.metadata.creator {
+            xmp.set_text(
+                crate::metadata::XmpNamespace::XmpBasic,
+                "CreatorTool",
+                creator,
+            );
+        }
+        if let Some(creation_date) = &self.metadata.creation_date {
+            xmp.set_date(
+                crate::metadata::XmpNamespace::XmpBasic,
+                "CreateDate",
+                creation_date.to_rfc3339(),
+            );
+        }
+        if let Some(mod_date) = &self.metadata.modification_date {
+            xmp.set_date(
+                crate::metadata::XmpNamespace::XmpBasic,
+                "ModifyDate",
+                mod_date.to_rfc3339(),
+            );
+        }
+
+        // Add PDF specific metadata
+        if let Some(producer) = &self.metadata.producer {
+            xmp.set_text(crate::metadata::XmpNamespace::Pdf, "Producer", producer);
+        }
+
+        xmp
     }
 
-    /// Get XMP metadata from the document (Pro feature placeholder)  
-    pub fn get_xmp_metadata(&self) -> Result<Option<String>> {
-        // This is a placeholder implementation for the Pro version
-        // In the community edition, this always returns None
-        tracing::info!("XMP metadata extraction requested but not available in community edition");
-        Ok(None)
+    /// Get XMP packet as string
+    ///
+    /// Returns the XMP metadata packet that can be embedded in the PDF.
+    /// This is a convenience method that creates XMP from document metadata
+    /// and serializes it to XML.
+    ///
+    /// # Returns
+    /// XMP packet as XML string
+    pub fn get_xmp_packet(&self) -> String {
+        self.create_xmp_metadata().to_xmp_packet()
     }
 
     /// Extract text content from all pages (placeholder implementation)
