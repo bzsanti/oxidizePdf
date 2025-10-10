@@ -432,7 +432,10 @@ impl TableRenderer {
             CellAlignment::Justify => x + style.padding.left,
         };
 
-        let text_y = y + height / 2.0; // Vertically center for now
+        let mut text_y = y + height / 2.0; // Vertically center for now
+        // Apply padding
+        text_y -= style.padding.top;
+        text_y += style.padding.bottom;
 
         // Only render text if we have something to display
         if !display_text.is_empty() {
