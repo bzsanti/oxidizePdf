@@ -433,7 +433,9 @@ impl TableRenderer {
         };
 
         // Vertically center with padding applied
-        let text_y = style.padding.pad_vertically(&page.coordinate_system(), y + height / 2.0);
+        let text_y = style
+            .padding
+            .pad_vertically(&page.coordinate_system(), y + height / 2.0);
 
         // Only render text if we have something to display
         if !display_text.is_empty() {

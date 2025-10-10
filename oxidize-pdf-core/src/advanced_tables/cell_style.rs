@@ -1,8 +1,8 @@
 //! Cell styling system for advanced tables
 
-use crate::CoordinateSystem;
 use crate::graphics::Color;
 use crate::text::Font;
+use crate::CoordinateSystem;
 
 /// Border styles for table cells
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
