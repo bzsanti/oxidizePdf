@@ -430,3 +430,15 @@ path = "../examples/validation/validate_real_pdfs.rs"
 [[example]]
 name = "xmp_metadata_demo"
 path = "../examples/src/xmp_metadata_demo.rs"
+
+[[example]]
+name = "incremental_form_update"
+path = "../examples/incremental_form_update.rs"
+
+[[example]]
+name = "incremental_page_replacement_manual"
+path = "../examples/incremental_page_replacement_manual.rs"
+
+[[example]]
+name = "incremental_overlay_simple"
+path = "../examples/incremental_overlay_simple.rs"

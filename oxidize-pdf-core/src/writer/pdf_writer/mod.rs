@@ -19,6 +19,8 @@ pub struct WriterConfig {
     pub pdf_version: String,
     /// Enable compression for streams (default: true)
     pub compress_streams: bool,
+    /// Enable incremental updates mode (ISO 32000-1 §7.5.6)
+    pub incremental_update: bool,
 }
 
 impl Default for WriterConfig {
@@ -28,6 +30,7 @@ impl Default for WriterConfig {
             use_object_streams: false,
             pdf_version: "1.7".to_string(),
             compress_streams: true,
+            incremental_update: false,
         }
     }
 }
@@ -40,6 +43,7 @@ impl WriterConfig {
             use_object_streams: true,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
+            incremental_update: false,
         }
     }
 
@@ -50,6 +54,18 @@ impl WriterConfig {
             use_object_streams: false,
             pdf_version: "1.4".to_string(),
             compress_streams: true,
+            incremental_update: false,
+        }
+    }
+
+    /// Create configuration for incremental updates (ISO 32000-1 §7.5.6)
+    pub fn incremental() -> Self {
+        Self {
+            use_xref_streams: false,
+            use_object_streams: false,
+            pdf_version: "1.4".to_string(),
+            compress_streams: true,
+            incremental_update: true,
         }
     }
 }
@@ -77,6 +93,9 @@ pub struct PdfWriter<W: Write> {
     // Object stream buffering (when use_object_streams is enabled)
     buffered_objects: HashMap<ObjectId, Vec<u8>>,
     compressed_object_map: HashMap<ObjectId, (ObjectId, u32)>, // obj_id -> (stream_id, index)
+    // Incremental update support (ISO 32000-1 §7.5.6)
+    prev_xref_offset: Option<u64>,
+    base_pdf_size: Option<u64>,
 }
 
 impl<W: Write> PdfWriter<W> {
@@ -101,6 +120,8 @@ impl<W: Write> PdfWriter<W> {
             document_used_chars: None,
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
+            prev_xref_offset: None,
+            base_pdf_size: None,
         }
     }
 
@@ -154,6 +175,495 @@ impl<W: Write> PdfWriter<W> {
             // Flush succeeded
         }
         Ok(())
+    }
+
+    /// Write an incremental update to an existing PDF (ISO 32000-1 §7.5.6)
+    ///
+    /// This appends new/modified objects to the end of an existing PDF file
+    /// without modifying the original content. The base PDF is copied first,
+    /// then new pages are ADDED to the end of the document.
+    ///
+    /// For REPLACING specific pages (e.g., form filling), use `write_incremental_with_page_replacement`.
+    ///
+    /// # Arguments
+    ///
+    /// * `base_pdf_path` - Path to the existing PDF file
+    /// * `document` - Document containing NEW pages to add
+    ///
+    /// # Returns
+    ///
+    /// Returns Ok(()) if the incremental update was written successfully
+    ///
+    /// # Example - Adding Pages
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::{Document, Page, writer::{PdfWriter, WriterConfig}};
+    /// use std::fs::File;
+    /// use std::io::BufWriter;
+    ///
+    /// let mut doc = Document::new();
+    /// doc.add_page(Page::a4()); // This will be added as a NEW page
+    ///
+    /// let file = File::create("output.pdf").unwrap();
+    /// let writer = BufWriter::new(file);
+    /// let config = WriterConfig::incremental();
+    /// let mut pdf_writer = PdfWriter::with_config(writer, config);
+    /// pdf_writer.write_incremental_update("base.pdf", &mut doc).unwrap();
+    /// ```
+    pub fn write_incremental_update(
+        &mut self,
+        base_pdf_path: impl AsRef<std::path::Path>,
+        document: &mut Document,
+    ) -> Result<()> {
+        use std::io::{BufReader, Read, Seek, SeekFrom};
+
+        // Step 1: Parse the base PDF to get catalog and page information
+        let base_pdf_file = std::fs::File::open(base_pdf_path.as_ref())?;
+        let mut pdf_reader = crate::parser::PdfReader::new(BufReader::new(base_pdf_file))?;
+
+        // Get catalog from base PDF
+        let base_catalog = pdf_reader.catalog()?;
+
+        // Extract Pages reference from base catalog
+        let (base_pages_id, base_pages_gen) = base_catalog
+            .get("Pages")
+            .and_then(|obj| {
+                if let crate::parser::objects::PdfObject::Reference(id, gen) = obj {
+                    Some((*id, *gen))
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                crate::error::PdfError::InvalidStructure(
+                    "Base PDF catalog missing /Pages reference".to_string(),
+                )
+            })?;
+
+        // Get the pages dictionary from the base PDF using the reference
+        let base_pages_obj = pdf_reader.get_object(base_pages_id, base_pages_gen)?;
+        let base_pages_kids = if let crate::parser::objects::PdfObject::Dictionary(dict) =
+            base_pages_obj
+        {
+            dict.get("Kids")
+                .and_then(|obj| {
+                    if let crate::parser::objects::PdfObject::Array(arr) = obj {
+                        // Convert PdfObject::Reference to writer::Object::Reference
+                        // PdfArray.0 gives access to the internal Vec<PdfObject>
+                        Some(
+                            arr.0
+                                .iter()
+                                .filter_map(|item| {
+                                    if let crate::parser::objects::PdfObject::Reference(id, gen) =
+                                        item
+                                    {
+                                        Some(crate::objects::Object::Reference(
+                                            crate::objects::ObjectId::new(*id, *gen),
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        // Count existing pages
+        let base_page_count = base_pages_kids.len();
+
+        // Step 2: Copy the base PDF content
+        let base_pdf = std::fs::File::open(base_pdf_path.as_ref())?;
+        let mut base_reader = BufReader::new(base_pdf);
+
+        // Find the startxref offset in the base PDF
+        base_reader.seek(SeekFrom::End(-100))?;
+        let mut end_buffer = vec![0u8; 100];
+        let bytes_read = base_reader.read(&mut end_buffer)?;
+        end_buffer.truncate(bytes_read);
+
+        let end_str = String::from_utf8_lossy(&end_buffer);
+        let prev_xref = if let Some(startxref_pos) = end_str.find("startxref") {
+            let after_startxref = &end_str[startxref_pos + 9..];
+
+            let number_str: String = after_startxref
+                .chars()
+                .skip_while(|c| c.is_whitespace())
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+
+            number_str.parse::<u64>().map_err(|_| {
+                crate::error::PdfError::InvalidStructure(
+                    "Could not parse startxref offset".to_string(),
+                )
+            })?
+        } else {
+            return Err(crate::error::PdfError::InvalidStructure(
+                "startxref not found in base PDF".to_string(),
+            ));
+        };
+
+        // Copy entire base PDF
+        base_reader.seek(SeekFrom::Start(0))?;
+        let base_size = std::io::copy(&mut base_reader, &mut self.writer)? as u64;
+
+        // Store base PDF info for trailer
+        self.prev_xref_offset = Some(prev_xref);
+        self.base_pdf_size = Some(base_size);
+        self.current_position = base_size;
+
+        // Step 3: Write new/modified objects only
+        if !document.used_characters.is_empty() {
+            self.document_used_chars = Some(document.used_characters.clone());
+        }
+
+        // Allocate IDs for new objects
+        self.catalog_id = Some(self.allocate_object_id());
+        self.pages_id = Some(self.allocate_object_id());
+        self.info_id = Some(self.allocate_object_id());
+
+        // Write custom fonts first
+        let font_refs = self.write_fonts(document)?;
+
+        // Write NEW pages only (not rewriting all pages)
+        self.write_pages(document, &font_refs)?;
+
+        // Write form fields
+        self.write_form_fields(document)?;
+
+        // Step 4: Write modified catalog that references BOTH old and new pages
+        let catalog_id = self.catalog_id.expect("catalog_id must be set");
+        let new_pages_id = self.pages_id.expect("pages_id must be set");
+
+        let mut catalog = crate::objects::Dictionary::new();
+        catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
+        catalog.set("Pages", crate::objects::Object::Reference(new_pages_id));
+
+        // Note: For now, we only preserve the Pages reference.
+        // Full catalog preservation (Outlines, AcroForm, etc.) would require
+        // converting parser::PdfObject to writer::Object, which is a future enhancement.
+
+        self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
+
+        // Step 5: Write new Pages tree that includes BOTH base pages and new pages
+        let mut all_pages_kids = base_pages_kids.clone();
+
+        // Add references to new pages
+        for page_id in &self.page_ids {
+            all_pages_kids.push(crate::objects::Object::Reference(*page_id));
+        }
+
+        let mut pages_dict = crate::objects::Dictionary::new();
+        pages_dict.set("Type", crate::objects::Object::Name("Pages".to_string()));
+        pages_dict.set("Kids", crate::objects::Object::Array(all_pages_kids));
+        pages_dict.set(
+            "Count",
+            crate::objects::Object::Integer((base_page_count + self.page_ids.len()) as i64),
+        );
+
+        self.write_object(new_pages_id, crate::objects::Object::Dictionary(pages_dict))?;
+
+        // Write document info
+        self.write_info(document)?;
+
+        // Step 6: Write new XRef table with /Prev pointer
+        let xref_position = self.current_position;
+        self.write_xref()?;
+
+        // Step 7: Write trailer with /Prev
+        self.write_trailer(xref_position)?;
+
+        self.writer.flush()?;
+        Ok(())
+    }
+
+    /// Replaces pages in an existing PDF using incremental update structure (ISO 32000-1 §7.5.6).
+    ///
+    /// # Use Cases
+    /// This API is ideal for:
+    /// - **Dynamic page generation**: You have logic to generate complete pages from data
+    /// - **Template variants**: Switching between multiple pre-generated page versions
+    /// - **Page repair**: Regenerating corrupted or problematic pages from scratch
+    ///
+    /// # Manual Content Recreation Required
+    /// **IMPORTANT**: This API requires you to **manually recreate** the entire page content.
+    /// The replaced page will contain ONLY what you provide in `document.pages`.
+    ///
+    /// If you need to modify existing content (e.g., fill form fields on an existing page),
+    /// you must recreate the base content AND add your modifications.
+    ///
+    /// # Example: Form Filling with Manual Recreation
+    /// ```rust,no_run
+    /// use oxidize_pdf::{Document, Page, text::Font, writer::{PdfWriter, WriterConfig}};
+    /// use std::fs::File;
+    /// use std::io::BufWriter;
+    ///
+    /// let mut filled_doc = Document::new();
+    /// let mut page = Page::a4();
+    ///
+    /// // Step 1: Recreate the template content (REQUIRED - you must know this)
+    /// page.text()
+    ///     .set_font(Font::Helvetica, 12.0)
+    ///     .at(50.0, 700.0)
+    ///     .write("Name: _______________________________")?;
+    ///
+    /// // Step 2: Add your filled data at the appropriate position
+    /// page.text()
+    ///     .set_font(Font::Helvetica, 12.0)
+    ///     .at(110.0, 700.0)
+    ///     .write("John Smith")?;
+    ///
+    /// filled_doc.add_page(page);
+    ///
+    /// let file = File::create("filled.pdf")?;
+    /// let writer = BufWriter::new(file);
+    /// let mut pdf_writer = PdfWriter::with_config(writer, WriterConfig::incremental());
+    ///
+    /// pdf_writer.write_incremental_with_page_replacement("template.pdf", &mut filled_doc)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
+    /// # ISO Compliance
+    /// This function implements ISO 32000-1 §7.5.6 incremental updates:
+    /// - Preserves original PDF bytes (append-only)
+    /// - Uses /Prev pointer in trailer
+    /// - Maintains cross-reference chain
+    /// - Compatible with digital signatures on base PDF
+    ///
+    /// # Future: Automatic Overlay API
+    /// For automatic form filling (load + modify + save) without manual recreation,
+    /// a future `write_incremental_with_overlay()` API is planned. This will require
+    /// implementation of `Document::load()` and content overlay system.
+    ///
+    /// # Parameters
+    /// - `base_pdf_path`: Path to the existing PDF to modify
+    /// - `document`: Document containing replacement pages (first N pages will replace base pages 0..N-1)
+    ///
+    /// # Returns
+    /// - `Ok(())` if incremental update was written successfully
+    /// - `Err(PdfError)` if base PDF cannot be read, parsed, or structure is invalid
+    pub fn write_incremental_with_page_replacement(
+        &mut self,
+        base_pdf_path: impl AsRef<std::path::Path>,
+        document: &mut Document,
+    ) -> Result<()> {
+        use std::io::Cursor;
+
+        // Step 1: Read the entire base PDF into memory (avoids double file open)
+        let base_pdf_bytes = std::fs::read(base_pdf_path.as_ref())?;
+        let base_size = base_pdf_bytes.len() as u64;
+
+        // Step 2: Parse from memory to get page information
+        let mut pdf_reader = crate::parser::PdfReader::new(Cursor::new(&base_pdf_bytes))?;
+
+        let base_catalog = pdf_reader.catalog()?;
+
+        let (base_pages_id, base_pages_gen) = base_catalog
+            .get("Pages")
+            .and_then(|obj| {
+                if let crate::parser::objects::PdfObject::Reference(id, gen) = obj {
+                    Some((*id, *gen))
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                crate::error::PdfError::InvalidStructure(
+                    "Base PDF catalog missing /Pages reference".to_string(),
+                )
+            })?;
+
+        let base_pages_obj = pdf_reader.get_object(base_pages_id, base_pages_gen)?;
+        let base_pages_kids = if let crate::parser::objects::PdfObject::Dictionary(dict) =
+            base_pages_obj
+        {
+            dict.get("Kids")
+                .and_then(|obj| {
+                    if let crate::parser::objects::PdfObject::Array(arr) = obj {
+                        Some(
+                            arr.0
+                                .iter()
+                                .filter_map(|item| {
+                                    if let crate::parser::objects::PdfObject::Reference(id, gen) =
+                                        item
+                                    {
+                                        Some(crate::objects::Object::Reference(
+                                            crate::objects::ObjectId::new(*id, *gen),
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        let base_page_count = base_pages_kids.len();
+
+        // Step 3: Find startxref offset from the bytes
+        let start_search = if base_size > 100 { base_size - 100 } else { 0 } as usize;
+        let end_bytes = &base_pdf_bytes[start_search..];
+        let end_str = String::from_utf8_lossy(end_bytes);
+
+        let prev_xref = if let Some(startxref_pos) = end_str.find("startxref") {
+            let after_startxref = &end_str[startxref_pos + 9..];
+            let number_str: String = after_startxref
+                .chars()
+                .skip_while(|c| c.is_whitespace())
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+
+            number_str.parse::<u64>().map_err(|_| {
+                crate::error::PdfError::InvalidStructure(
+                    "Could not parse startxref offset".to_string(),
+                )
+            })?
+        } else {
+            return Err(crate::error::PdfError::InvalidStructure(
+                "startxref not found in base PDF".to_string(),
+            ));
+        };
+
+        // Step 4: Copy base PDF bytes to output
+        self.writer.write_all(&base_pdf_bytes)?;
+
+        self.prev_xref_offset = Some(prev_xref);
+        self.base_pdf_size = Some(base_size);
+        self.current_position = base_size;
+
+        // Step 3: Write replacement pages
+        if !document.used_characters.is_empty() {
+            self.document_used_chars = Some(document.used_characters.clone());
+        }
+
+        self.catalog_id = Some(self.allocate_object_id());
+        self.pages_id = Some(self.allocate_object_id());
+        self.info_id = Some(self.allocate_object_id());
+
+        let font_refs = self.write_fonts(document)?;
+        self.write_pages(document, &font_refs)?;
+        self.write_form_fields(document)?;
+
+        // Step 4: Create Pages tree with REPLACEMENTS
+        let catalog_id = self.catalog_id.expect("catalog_id must be set");
+        let new_pages_id = self.pages_id.expect("pages_id must be set");
+
+        let mut catalog = crate::objects::Dictionary::new();
+        catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
+        catalog.set("Pages", crate::objects::Object::Reference(new_pages_id));
+        self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
+
+        // Build new Kids array: replace first N pages, keep rest from base
+        let mut all_pages_kids = Vec::new();
+        let replacement_count = document.pages.len();
+
+        // Add replacement pages (these override base pages at same indices)
+        for page_id in &self.page_ids {
+            all_pages_kids.push(crate::objects::Object::Reference(*page_id));
+        }
+
+        // Add remaining base pages that weren't replaced
+        if replacement_count < base_page_count {
+            for i in replacement_count..base_page_count {
+                if let Some(page_ref) = base_pages_kids.get(i) {
+                    all_pages_kids.push(page_ref.clone());
+                }
+            }
+        }
+
+        let mut pages_dict = crate::objects::Dictionary::new();
+        pages_dict.set("Type", crate::objects::Object::Name("Pages".to_string()));
+        pages_dict.set(
+            "Kids",
+            crate::objects::Object::Array(all_pages_kids.clone()),
+        );
+        pages_dict.set(
+            "Count",
+            crate::objects::Object::Integer(all_pages_kids.len() as i64),
+        );
+
+        self.write_object(new_pages_id, crate::objects::Object::Dictionary(pages_dict))?;
+        self.write_info(document)?;
+
+        let xref_position = self.current_position;
+        self.write_xref()?;
+        self.write_trailer(xref_position)?;
+
+        self.writer.flush()?;
+        Ok(())
+    }
+
+    /// Overlays content onto existing PDF pages using incremental updates (PLANNED).
+    ///
+    /// **STATUS**: Not yet implemented. This API is planned for a future release.
+    ///
+    /// # What This Will Do
+    /// When implemented, this function will allow you to:
+    /// - Load an existing PDF
+    /// - Modify specific elements (fill form fields, add annotations, watermarks)
+    /// - Save incrementally without recreating entire pages
+    ///
+    /// # Difference from Page Replacement
+    /// - **Page Replacement** (`write_incremental_with_page_replacement`): Replaces entire pages with manually recreated content
+    /// - **Overlay** (this function): Modifies existing pages by adding/changing specific elements
+    ///
+    /// # Planned Usage (Future)
+    /// ```rust,ignore
+    /// // This code will work in a future release
+    /// let mut pdf_writer = PdfWriter::with_config(writer, WriterConfig::incremental());
+    ///
+    /// let overlays = vec![
+    ///     PageOverlay::new(0)
+    ///         .add_text(110.0, 700.0, "John Smith")
+    ///         .add_annotation(Annotation::text(200.0, 500.0, "Review this")),
+    /// ];
+    ///
+    /// pdf_writer.write_incremental_with_overlay("form.pdf", overlays)?;
+    /// ```
+    ///
+    /// # Implementation Requirements
+    /// This function requires:
+    /// 1. `Document::load()` - Load existing PDF into Document structure
+    /// 2. `Page::from_parsed()` - Convert parsed pages to writable format
+    /// 3. Content stream overlay system - Append to existing content streams
+    /// 4. Resource merging - Combine new resources with existing ones
+    ///
+    /// Estimated implementation effort: 6-7 days
+    ///
+    /// # Current Workaround
+    /// Until this is implemented, use `write_incremental_with_page_replacement()` with manual
+    /// page recreation. See that function's documentation for examples.
+    ///
+    /// # Parameters
+    /// - `base_pdf_path`: Path to the existing PDF to modify (future)
+    /// - `overlays`: Content to overlay on existing pages (future)
+    ///
+    /// # Returns
+    /// Currently always returns `PdfError::NotImplemented`
+    pub fn write_incremental_with_overlay<P: AsRef<std::path::Path>>(
+        &mut self,
+        _base_pdf_path: P,
+        _overlays: Vec<u8>, // Placeholder type - will be PageOverlay in future
+    ) -> Result<()> {
+        Err(crate::error::PdfError::InvalidOperation(
+            "write_incremental_with_overlay is not yet implemented. \
+             It requires Document::load() and content overlay system (planned for future release). \
+             \n\nCurrent workaround: Use write_incremental_with_page_replacement() with manual page recreation. \
+             See documentation for examples.".to_string()
+        ))
     }
 
     fn write_header(&mut self) -> Result<()> {
@@ -1700,6 +2210,8 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             document_used_chars: None,
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
+            prev_xref_offset: None,
+            base_pdf_size: None,
         })
     }
 }
@@ -2060,6 +2572,11 @@ impl<W: Write> PdfWriter<W> {
         trailer.set("Size", Object::Integer((max_obj_num + 1) as i64));
         trailer.set("Root", Object::Reference(catalog_id));
         trailer.set("Info", Object::Reference(info_id));
+
+        // Add /Prev pointer for incremental updates (ISO 32000-1 §7.5.6)
+        if let Some(prev_xref) = self.prev_xref_offset {
+            trailer.set("Prev", Object::Integer(prev_xref as i64));
+        }
 
         self.write_bytes(b"trailer\n")?;
         self.write_object_value(&Object::Dictionary(trailer))?;

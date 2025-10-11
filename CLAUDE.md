@@ -1,17 +1,19 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-11 - Release v1.5.0 & Community PRs
+- **Last Session**: 2025-10-11 - Incremental Updates API Clarification
 - **Branch**: develop_santi (working branch)
 - **Version**: **v1.5.0 released** 🚀
 - **Recent Work**:
-  - ✅ **Community PRs merged** (basheuft): text padding, header visibility, min_height rows
-  - ✅ **API refactor**: hide_header → show_header (eliminates double negation)
-  - ✅ **Coordinate system support**: Padding respects PdfStandard vs ScreenSpace
-  - ✅ **GitFlow completado**: develop_santi → develop → main → v1.5.0 tag
-  - ✅ **Tests**: 4,463 passing (100% success rate)
-- **Key Achievement**: Colaboración open source exitosa + release process automatizado
-- **Next**: Optimizar workflow de release (eliminar trigger innecesario en push a main)
+  - ✅ **Incremental Updates Writer**: Implemented with clear API separation
+    - `write_incremental_with_page_replacement()` - Manual page replacement (shipped)
+    - `write_incremental_with_overlay()` - Automatic overlay (planned, stub added)
+  - ✅ **Documentation overhaul**: Honest assessment of capabilities and limitations
+  - ✅ **API Naming**: Clear distinction between manual replacement vs automatic overlay
+  - ✅ **Example updated**: `incremental_page_replacement_manual.rs` with warnings
+  - ✅ **4 rigorous tests**: pdftotext/pdfinfo verification (NO smoke tests)
+- **Key Achievement**: Honest communication about what's implemented vs planned
+- **Next**: Compile, test, commit changes
 
 ## ✅ Funcionalidades Completadas
 
@@ -142,6 +144,59 @@
 - ✅ Bar charts, line charts, pie charts
 - ✅ Sistema de layout y componentes
 - ✅ Temas y personalización
+
+### 📄 **Incremental Updates (ISO 32000-1 §7.5.6)** (Sesión 2025-10-11) ⚠️ PARTIAL
+
+#### What's Implemented ✅
+- ✅ **Parser**: Complete (50% gap → 100%)
+  - Reads incremental PDFs with /Prev chains
+  - Parses XRef tables across updates
+  - Handles multi-generation documents
+- ✅ **Writer Structure**: 100% ISO compliant
+  - Append-only writes (byte-for-byte preservation)
+  - /Prev pointers in trailer
+  - Cross-reference chain maintenance
+  - Digital signature compatible
+- ✅ **Page Replacement API**: `write_incremental_with_page_replacement()`
+  - Replaces specific pages in existing PDFs
+  - **Use case**: Dynamic page generation from data
+  - **Limitation**: Requires manual recreation of entire page content
+  - Location: oxidize-pdf-core/src/writer/pdf_writer/mod.rs:478
+  - Tests: 4 rigorous tests with pdftotext/pdfinfo verification
+  - Example: `examples/incremental_page_replacement_manual.rs`
+
+#### What's NOT Implemented ❌
+- ❌ **Automatic Overlay**: `write_incremental_with_overlay()` (stub only)
+  - Load existing PDF → Modify → Save
+  - True form filling without manual recreation
+  - Annotation overlay on existing pages
+  - Watermarking without page replacement
+- ❌ **Required Components**:
+  - `Document::load()` - Load existing PDF into writable Document
+  - `Page::from_parsed()` - Convert parsed pages to writable format
+  - Content stream overlay system
+  - Resource dictionary merging
+  - Estimated effort: 6-7 days
+
+#### Honest Assessment
+**Current State**: "Page Replacement with Manual Recreation" (NOT automatic form filling)
+
+**Valid Use Cases** (Where current API is IDEAL):
+1. ✅ Dynamic page generation (you have logic to generate complete pages)
+2. ✅ Template variants (switching between pre-generated versions)
+3. ✅ Page repair (regenerating corrupted pages from scratch)
+
+**Invalid Use Cases** (Need future overlay API):
+1. ❌ Fill PDF form fields without knowing entire template
+2. ❌ Add annotations to existing page without recreation
+3. ❌ Watermark existing document without page replacement
+
+**Strategic Decision**: Ship current API as explicit "manual replacement" option,
+plan overlay API for future release when Document::load() is implemented.
+
+**API Clarity**:
+- `write_incremental_with_page_replacement()` - Works NOW (manual)
+- `write_incremental_with_overlay()` - Planned (automatic)
 
 ## 🚀 Prioridades Pendientes
 

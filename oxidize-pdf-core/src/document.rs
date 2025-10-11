@@ -545,6 +545,7 @@ impl Document {
             use_object_streams: false, // For now, keep object streams disabled by default
             pdf_version: if self.use_xref_streams { "1.5" } else { "1.7" }.to_string(),
             compress_streams: self.compress,
+            incremental_update: false,
         };
 
         use std::io::BufWriter;
@@ -747,6 +748,7 @@ impl Document {
             use_object_streams: false, // For now, keep object streams disabled by default
             pdf_version: if self.use_xref_streams { "1.5" } else { "1.7" }.to_string(),
             compress_streams: self.compress,
+            incremental_update: false,
         };
 
         // Use PdfWriter with the buffer as output and config
@@ -1917,6 +1919,7 @@ mod tests {
                 use_object_streams: false,
                 pdf_version: "1.5".to_string(),
                 compress_streams: true,
+                incremental_update: false,
             };
 
             // Generate PDF with custom config
@@ -2000,6 +2003,7 @@ mod tests {
                 use_object_streams: false,
                 pdf_version: "1.7".to_string(),
                 compress_streams: true,
+                incremental_update: false,
             };
 
             // Document setting should take precedence
