@@ -65,6 +65,11 @@ pub fn extract_font_references(content: &[u8]) -> HashSet<String> {
 /// # Returns
 /// New dictionary with renamed fonts (/F1 → /OrigF1, /Arial → /OrigArial)
 ///
+/// # Limitations
+/// - Does not detect naming collisions if /OrigF1 already exists (rare but possible)
+/// - Clones entire font dictionaries (acceptable for typical PDFs with <50 fonts)
+/// - No validation that font names are valid PDF names
+///
 /// # Example
 /// ```ignore
 /// use std::collections::HashMap;
@@ -101,6 +106,15 @@ pub fn rename_preserved_fonts(fonts: &crate::objects::Dictionary) -> crate::obje
 ///
 /// # Returns
 /// New content stream with updated font references
+///
+/// # Limitations
+/// - **Whitespace normalization**: Original whitespace (multiple spaces, tabs) is
+///   normalized to single spaces. PDF remains valid but loses formatting fidelity.
+/// - **Binary data risk**: Uses lossy UTF-8 conversion. Safe for text-only content streams,
+///   but may corrupt streams with inline images or binary data (rare in practice).
+/// - **Performance**: Creates complete copy of content stream. For very large streams
+///   (>5MB), consider streaming approach.
+/// - **No validation**: Does not verify that resulting PDF operators are valid.
 ///
 /// # Example
 /// ```ignore
@@ -464,5 +478,88 @@ mod tests {
         assert!(result.contains("100 200 m"));
         assert!(result.contains("300 400 l"));
         assert!(result.contains("(Text) Tj"));
+    }
+
+    // Edge case tests - documenting known limitations
+
+    #[test]
+    fn test_rewrite_font_references_normalizes_whitespace() {
+        // DOCUMENTED LIMITATION: Whitespace is normalized
+        let content = b"BT  /F1   12  Tf  (Text)  Tj  ET"; // Multiple spaces
+        let mut mappings = HashMap::new();
+        mappings.insert("F1".to_string(), "OrigF1".to_string());
+
+        let rewritten = rewrite_font_references(content, &mappings);
+        let result = String::from_utf8(rewritten).unwrap();
+
+        // Font renamed correctly
+        assert!(result.contains("/OrigF1 12 Tf"));
+        // Whitespace normalized (not "  /OrigF1   12")
+        assert!(!result.contains("  /OrigF1"));
+        // PDF is still valid (single spaces are sufficient)
+    }
+
+    #[test]
+    fn test_rewrite_font_references_with_indentation() {
+        // DOCUMENTED LIMITATION: Indentation is lost
+        let content = b"BT\n  /F1 12 Tf\n  100 700 Td\n  (Text) Tj\nET";
+        let mut mappings = HashMap::new();
+        mappings.insert("F1".to_string(), "OrigF1".to_string());
+
+        let rewritten = rewrite_font_references(content, &mappings);
+        let result = String::from_utf8(rewritten).unwrap();
+
+        // Font renamed
+        assert!(result.contains("/OrigF1 12 Tf"));
+        // Original indentation lost (becomes single line tokens)
+        // This is acceptable - PDF readers don't care about formatting
+    }
+
+    #[test]
+    fn test_rename_preserved_fonts_no_collision_detection() {
+        // DOCUMENTED LIMITATION: No collision detection
+        use crate::objects::{Dictionary, Object};
+
+        let mut fonts = Dictionary::new();
+        fonts.set("F1", Object::Integer(1));
+        fonts.set("OrigF1", Object::Integer(2)); // Already has "Orig" prefix!
+
+        let renamed = rename_preserved_fonts(&fonts);
+
+        // Both get renamed (collision not detected)
+        assert!(renamed.contains_key("OrigF1")); // From original "OrigF1"
+        assert!(renamed.contains_key("OrigOrigF1")); // From "F1"
+
+        // This is acceptable - naming collisions are extremely rare in real PDFs
+        // If needed, integration code can detect and handle this
+    }
+
+    #[test]
+    fn test_rewrite_font_references_with_tabs() {
+        // Tabs are normalized to spaces
+        let content = b"BT\t/F1\t12\tTf\t(Text)\tTj\tET";
+        let mut mappings = HashMap::new();
+        mappings.insert("F1".to_string(), "OrigF1".to_string());
+
+        let rewritten = rewrite_font_references(content, &mappings);
+        let result = String::from_utf8(rewritten).unwrap();
+
+        // Font renamed correctly despite tabs
+        assert!(result.contains("/OrigF1 12 Tf"));
+    }
+
+    #[test]
+    fn test_rewrite_font_references_hyphenated_font_names() {
+        // Font names with hyphens (common in real PDFs: Arial-Bold, etc.)
+        let content = b"BT /Arial-Bold 14 Tf (Text) Tj /Times-Italic 12 Tf (More) Tj ET";
+        let mut mappings = HashMap::new();
+        mappings.insert("Arial-Bold".to_string(), "OrigArial-Bold".to_string());
+        mappings.insert("Times-Italic".to_string(), "OrigTimes-Italic".to_string());
+
+        let rewritten = rewrite_font_references(content, &mappings);
+        let result = String::from_utf8(rewritten).unwrap();
+
+        assert!(result.contains("/OrigArial-Bold 14 Tf"));
+        assert!(result.contains("/OrigTimes-Italic 12 Tf"));
     }
 }
