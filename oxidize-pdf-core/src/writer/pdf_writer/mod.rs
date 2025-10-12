@@ -674,6 +674,58 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    /// Convert pdf_objects types to writer objects types
+    /// This is a temporary bridge until type unification is complete
+    fn convert_pdf_objects_dict_to_writer(
+        &self,
+        pdf_dict: &crate::pdf_objects::Dictionary,
+    ) -> crate::objects::Dictionary {
+        let mut writer_dict = crate::objects::Dictionary::new();
+
+        for (key, value) in pdf_dict.iter() {
+            let writer_obj = self.convert_pdf_object_to_writer(value);
+            writer_dict.set(key.as_str(), writer_obj);
+        }
+
+        writer_dict
+    }
+
+    fn convert_pdf_object_to_writer(
+        &self,
+        obj: &crate::pdf_objects::Object,
+    ) -> crate::objects::Object {
+        use crate::objects::Object as WriterObj;
+        use crate::pdf_objects::Object as PdfObj;
+
+        match obj {
+            PdfObj::Null => WriterObj::Null,
+            PdfObj::Boolean(b) => WriterObj::Boolean(*b),
+            PdfObj::Integer(i) => WriterObj::Integer(*i),
+            PdfObj::Real(f) => WriterObj::Real(*f),
+            PdfObj::String(s) => {
+                WriterObj::String(String::from_utf8_lossy(s.as_bytes()).to_string())
+            }
+            PdfObj::Name(n) => WriterObj::Name(n.as_str().to_string()),
+            PdfObj::Array(arr) => {
+                let items: Vec<WriterObj> = arr
+                    .iter()
+                    .map(|item| self.convert_pdf_object_to_writer(item))
+                    .collect();
+                WriterObj::Array(items)
+            }
+            PdfObj::Dictionary(dict) => {
+                WriterObj::Dictionary(self.convert_pdf_objects_dict_to_writer(dict))
+            }
+            PdfObj::Stream(stream) => {
+                let dict = self.convert_pdf_objects_dict_to_writer(&stream.dict);
+                WriterObj::Stream(dict, stream.data.clone())
+            }
+            PdfObj::Reference(id) => {
+                WriterObj::Reference(crate::objects::ObjectId::new(id.number(), id.generation()))
+            }
+        }
+    }
+
     fn write_catalog(&mut self, document: &mut Document) -> Result<()> {
         let catalog_id = self.catalog_id.expect("catalog_id must be set");
         let pages_id = self.pages_id.expect("pages_id must be set");
@@ -2143,6 +2195,32 @@ impl<W: Write> PdfWriter<W> {
             }
             if !extgstate_dict.is_empty() {
                 resources.set("ExtGState", Object::Dictionary(extgstate_dict));
+            }
+        }
+
+        // Merge preserved resources from original PDF (if any)
+        if let Some(preserved_res) = page.get_preserved_resources() {
+            // Convert pdf_objects::Dictionary to writer Dictionary
+            let preserved_writer_dict = self.convert_pdf_objects_dict_to_writer(preserved_res);
+
+            // Merge each resource category (Font, XObject, ColorSpace, etc.)
+            for (key, value) in preserved_writer_dict.iter() {
+                // If the resource category already exists, merge dictionaries
+                if let Some(Object::Dictionary(existing)) = resources.get(key) {
+                    if let Object::Dictionary(preserved_dict) = value {
+                        let mut merged = existing.clone();
+                        // Add all preserved resources, giving priority to existing (overlay wins)
+                        for (res_name, res_obj) in preserved_dict.iter() {
+                            if !merged.contains_key(res_name) {
+                                merged.set(res_name, res_obj.clone());
+                            }
+                        }
+                        resources.set(key, Object::Dictionary(merged));
+                    }
+                } else {
+                    // Resource category doesn't exist yet, add it directly
+                    resources.set(key, value.clone());
+                }
             }
         }
 
