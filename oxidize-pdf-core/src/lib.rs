@@ -202,6 +202,7 @@ pub mod page_tables;
 pub mod page_transitions;
 pub mod page_tree;
 pub mod parser;
+pub mod pdf_objects;
 #[cfg(feature = "performance")]
 pub mod performance;
 pub mod recovery;

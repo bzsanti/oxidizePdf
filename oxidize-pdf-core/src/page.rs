@@ -73,6 +73,9 @@ pub struct Page {
     next_mcid: u32,
     /// Currently open marked content tags (for nesting validation)
     marked_content_stack: Vec<String>,
+    /// Preserved resources from original PDF (for overlay operations)
+    /// Contains fonts, XObjects, ColorSpaces, etc. from parsed pages
+    preserved_resources: Option<crate::pdf_objects::Dictionary>,
 }
 
 impl Page {
@@ -95,6 +98,7 @@ impl Page {
             rotation: 0, // Default to no rotation
             next_mcid: 0,
             marked_content_stack: Vec::new(),
+            preserved_resources: None,
         }
     }
 
@@ -229,8 +233,10 @@ impl Page {
         // We'll need to wrap it with q/Q to isolate it when overlaying
         page.content = preserved_content;
 
-        // TODO: Extract and preserve Resources (fonts, images, XObjects)
-        // This requires deeper integration with the parser's resource manager
+        // Extract and preserve Resources (fonts, images, XObjects, etc.)
+        if let Some(resources) = parsed_page.get_resources() {
+            page.preserved_resources = Some(Self::convert_parser_dict_to_unified(resources));
+        }
 
         Ok(page)
     }
@@ -340,6 +346,61 @@ impl Page {
             225..=315 => 270,
             _ => 0, // Should not happen, but default to 0
         };
+    }
+
+    /// Converts a parser Dictionary to unified pdf_objects Dictionary
+    fn convert_parser_dict_to_unified(
+        parser_dict: &crate::parser::objects::PdfDictionary,
+    ) -> crate::pdf_objects::Dictionary {
+        use crate::pdf_objects::{Dictionary, Name};
+
+        let mut unified_dict = Dictionary::new();
+
+        for (key, value) in &parser_dict.0 {
+            let unified_key = Name::new(key.as_str());
+            let unified_value = Self::convert_parser_object_to_unified(value);
+            unified_dict.set(unified_key, unified_value);
+        }
+
+        unified_dict
+    }
+
+    /// Converts a parser PdfObject to unified Object
+    fn convert_parser_object_to_unified(
+        parser_obj: &crate::parser::objects::PdfObject,
+    ) -> crate::pdf_objects::Object {
+        use crate::parser::objects::PdfObject;
+        use crate::pdf_objects::{Array, BinaryString, Name, Object, ObjectId, Stream};
+
+        match parser_obj {
+            PdfObject::Null => Object::Null,
+            PdfObject::Boolean(b) => Object::Boolean(*b),
+            PdfObject::Integer(i) => Object::Integer(*i),
+            PdfObject::Real(f) => Object::Real(*f),
+            PdfObject::String(s) => Object::String(BinaryString::new(s.as_bytes().to_vec())),
+            PdfObject::Name(n) => Object::Name(Name::new(n.as_str())),
+            PdfObject::Array(arr) => {
+                let mut unified_arr = Array::new();
+                for item in &arr.0 {
+                    unified_arr.push(Self::convert_parser_object_to_unified(item));
+                }
+                Object::Array(unified_arr)
+            }
+            PdfObject::Dictionary(dict) => {
+                Object::Dictionary(Self::convert_parser_dict_to_unified(dict))
+            }
+            PdfObject::Stream(stream) => {
+                let dict = Self::convert_parser_dict_to_unified(&stream.dict);
+                let data = stream.data.clone();
+                Object::Stream(Stream::new(dict, data))
+            }
+            PdfObject::Reference(num, gen) => Object::Reference(ObjectId::new(*num, *gen)),
+        }
+    }
+
+    /// Gets the preserved resources from the original PDF (if any)
+    pub fn get_preserved_resources(&self) -> Option<&crate::pdf_objects::Dictionary> {
+        self.preserved_resources.as_ref()
     }
 
     /// Gets the current page rotation in degrees.
