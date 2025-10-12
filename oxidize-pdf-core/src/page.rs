@@ -235,7 +235,46 @@ impl Page {
 
         // Extract and preserve Resources (fonts, images, XObjects, etc.)
         if let Some(resources) = parsed_page.get_resources() {
-            page.preserved_resources = Some(Self::convert_parser_dict_to_unified(resources));
+            let mut unified_resources = Self::convert_parser_dict_to_unified(resources);
+
+            // Phase 3.2: Resolve embedded font streams
+            // For each font in resources, resolve FontDescriptor and font stream references
+            // and embed the stream data directly so writer doesn't need to resolve references
+            if let Some(crate::pdf_objects::Object::Dictionary(fonts)) =
+                unified_resources.get("Font")
+            {
+                let fonts_clone = fonts.clone();
+                let mut resolved_fonts = crate::pdf_objects::Dictionary::new();
+
+                for (font_name, font_obj) in fonts_clone.iter() {
+                    if let crate::pdf_objects::Object::Dictionary(font_dict) = font_obj {
+                        // Try to resolve embedded font streams
+                        match Self::resolve_font_streams(font_dict, document) {
+                            Ok(resolved_dict) => {
+                                resolved_fonts.set(
+                                    font_name.clone(),
+                                    crate::pdf_objects::Object::Dictionary(resolved_dict),
+                                );
+                            }
+                            Err(_) => {
+                                // If resolution fails, keep original (might be standard font)
+                                resolved_fonts.set(font_name.clone(), font_obj.clone());
+                            }
+                        }
+                    } else {
+                        // Not a dictionary, keep as-is
+                        resolved_fonts.set(font_name.clone(), font_obj.clone());
+                    }
+                }
+
+                // Replace Font dictionary with resolved version
+                unified_resources.set(
+                    "Font",
+                    crate::pdf_objects::Object::Dictionary(resolved_fonts),
+                );
+            }
+
+            page.preserved_resources = Some(unified_resources);
         }
 
         Ok(page)
@@ -396,6 +435,67 @@ impl Page {
             }
             PdfObject::Reference(num, gen) => Object::Reference(ObjectId::new(*num, *gen)),
         }
+    }
+
+    /// Resolves embedded font streams from a font dictionary (Phase 3.2)
+    ///
+    /// Takes a font dictionary and resolves any FontDescriptor + FontFile references,
+    /// embedding the stream data directly so the writer doesn't need to resolve references.
+    ///
+    /// # Returns
+    /// Font dictionary with embedded streams (if font has embedded data),
+    /// or original dictionary (if standard font or resolution fails)
+    fn resolve_font_streams<R: std::io::Read + std::io::Seek>(
+        font_dict: &crate::pdf_objects::Dictionary,
+        document: &crate::parser::document::PdfDocument<R>,
+    ) -> Result<crate::pdf_objects::Dictionary> {
+        use crate::pdf_objects::Object;
+
+        let mut resolved_dict = font_dict.clone();
+
+        // Check if font has a FontDescriptor
+        if let Some(Object::Reference(descriptor_id)) = font_dict.get("FontDescriptor") {
+            // Resolve FontDescriptor from document
+            let descriptor_obj =
+                document.get_object(descriptor_id.number(), descriptor_id.generation())?;
+
+            // Convert to unified format
+            let descriptor_unified = Self::convert_parser_object_to_unified(&descriptor_obj);
+
+            if let Object::Dictionary(mut descriptor_dict) = descriptor_unified {
+                // Check for embedded font streams (FontFile, FontFile2, FontFile3)
+                let font_file_keys = ["FontFile", "FontFile2", "FontFile3"];
+                let mut stream_resolved = false;
+
+                for key in &font_file_keys {
+                    if let Some(Object::Reference(stream_id)) = descriptor_dict.get(*key) {
+                        // Resolve font stream from document
+                        match document.get_object(stream_id.number(), stream_id.generation()) {
+                            Ok(stream_obj) => {
+                                // Convert to unified format (includes stream data)
+                                let stream_unified =
+                                    Self::convert_parser_object_to_unified(&stream_obj);
+
+                                // Replace reference with actual stream object
+                                descriptor_dict.set(*key, stream_unified);
+                                stream_resolved = true;
+                            }
+                            Err(_) => {
+                                // Resolution failed, keep reference as-is
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                // If we resolved any streams, update FontDescriptor in font dictionary
+                if stream_resolved {
+                    resolved_dict.set("FontDescriptor", Object::Dictionary(descriptor_dict));
+                }
+            }
+        }
+
+        Ok(resolved_dict)
     }
 
     /// Gets the preserved resources from the original PDF (if any)
