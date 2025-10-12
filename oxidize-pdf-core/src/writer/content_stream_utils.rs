@@ -178,6 +178,59 @@ pub fn rewrite_font_references(content: &[u8], mappings: &HashMap<String, String
     result.into_bytes()
 }
 
+/// Check if a font has embedded font data (FontFile/FontFile2/FontFile3)
+///
+/// Analyzes a font dictionary to determine if it contains embedded font program data.
+/// Embedded fonts have a FontDescriptor that references font stream objects.
+///
+/// # Font Stream Types (ISO 32000-1):
+/// - **FontFile**: Type 1 font program (PostScript)
+/// - **FontFile2**: TrueType font program
+/// - **FontFile3**: Subtype-specific font (CFF, OpenType, etc.)
+///
+/// # Arguments
+/// * `font_dict` - Font dictionary to analyze
+///
+/// # Returns
+/// `true` if font has embedded data, `false` for standard/base fonts
+///
+/// # Example
+/// ```ignore
+/// // Embedded font (e.g., Arial with TTF data)
+/// let font_dict = Dictionary::from([
+///     ("Type", "Font"),
+///     ("FontDescriptor", Reference(10, 0)), // -> has FontFile2
+/// ]);
+/// assert!(has_embedded_font_data(&font_dict)); // true
+///
+/// // Standard font (e.g., Helvetica)
+/// let standard_font = Dictionary::from([
+///     ("Type", "Font"),
+///     ("BaseFont", "Helvetica"),
+/// ]);
+/// assert!(!has_embedded_font_data(&standard_font)); // false
+/// ```
+#[allow(dead_code)] // Will be used in Phase 3.2
+pub fn has_embedded_font_data(font_dict: &crate::objects::Dictionary) -> bool {
+    use crate::objects::Object;
+
+    // Check if font has a FontDescriptor
+    if let Some(Object::Dictionary(descriptor)) = font_dict.get("FontDescriptor") {
+        // Check for any of the three font stream types
+        descriptor.contains_key("FontFile")
+            || descriptor.contains_key("FontFile2")
+            || descriptor.contains_key("FontFile3")
+    } else if let Some(Object::Reference(_)) = font_dict.get("FontDescriptor") {
+        // FontDescriptor is a reference - we need to resolve it to check
+        // For now, assume it MIGHT have embedded data (conservative approach)
+        // Phase 3.2 will handle proper resolution
+        true
+    } else {
+        // No FontDescriptor = standard font (Helvetica, Times, etc.)
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -561,5 +614,124 @@ mod tests {
 
         assert!(result.contains("/OrigArial-Bold 14 Tf"));
         assert!(result.contains("/OrigTimes-Italic 12 Tf"));
+    }
+
+    // Tests for has_embedded_font_data
+
+    #[test]
+    fn test_has_embedded_font_data_with_fontfile() {
+        use crate::objects::{Dictionary, Object, ObjectId};
+
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontFile", Object::Reference(ObjectId::new(10, 0))); // Type 1 font
+
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("FontDescriptor", Object::Dictionary(descriptor));
+
+        assert!(has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_with_fontfile2() {
+        use crate::objects::{Dictionary, Object, ObjectId};
+
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontFile2", Object::Reference(ObjectId::new(20, 0))); // TrueType
+
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("FontDescriptor", Object::Dictionary(descriptor));
+
+        assert!(has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_with_fontfile3() {
+        use crate::objects::{Dictionary, Object, ObjectId};
+
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontFile3", Object::Reference(ObjectId::new(30, 0))); // CFF/OpenType
+
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("FontDescriptor", Object::Dictionary(descriptor));
+
+        assert!(has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_descriptor_without_streams() {
+        use crate::objects::{Dictionary, Object};
+
+        // FontDescriptor exists but no font streams (unusual but possible)
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontName", Object::Name("Arial".to_string()));
+        // NO FontFile/FontFile2/FontFile3
+
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("FontDescriptor", Object::Dictionary(descriptor));
+
+        assert!(!has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_descriptor_as_reference() {
+        use crate::objects::{Dictionary, Object, ObjectId};
+
+        // FontDescriptor is a reference (common in real PDFs)
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("FontDescriptor", Object::Reference(ObjectId::new(100, 0)));
+
+        // Conservative: assume reference MIGHT have embedded data
+        assert!(has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_standard_font() {
+        use crate::objects::{Dictionary, Object};
+
+        // Standard font (Helvetica) - no FontDescriptor
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("Subtype", Object::Name("Type1".to_string()));
+        font_dict.set("BaseFont", Object::Name("Helvetica".to_string()));
+        // NO FontDescriptor
+
+        assert!(!has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_multiple_font_files() {
+        use crate::objects::{Dictionary, Object, ObjectId};
+
+        // Font with BOTH FontFile2 and FontFile3 (unusual but test it)
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontFile2", Object::Reference(ObjectId::new(10, 0)));
+        descriptor.set("FontFile3", Object::Reference(ObjectId::new(11, 0)));
+
+        let mut font_dict = Dictionary::new();
+        font_dict.set("Type", Object::Name("Font".to_string()));
+        font_dict.set("FontDescriptor", Object::Dictionary(descriptor));
+
+        // Should detect embedded data (has at least one stream)
+        assert!(has_embedded_font_data(&font_dict));
+    }
+
+    #[test]
+    fn test_has_embedded_font_data_empty_dict() {
+        use crate::objects::Dictionary;
+
+        // Empty font dictionary
+        let font_dict = Dictionary::new();
+
+        assert!(!has_embedded_font_data(&font_dict));
     }
 }
