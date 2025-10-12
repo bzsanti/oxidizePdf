@@ -1,14 +1,22 @@
 /// Test to validate that embedded fonts are preserved during overlay
 ///
-/// This test exposes the current limitation: preserved fonts are stored
-/// but not correctly referenced in content streams.
+/// CURRENT STATUS (Phase 3 Complete for Type 1 fonts):
+/// - ✅ Type 1 embedded fonts: WORKING (detection, resolution, copying)
+/// - ⚠️  CID/Type0 embedded fonts: PARTIAL (visible but not embedded)
+///
+/// This test uses Cold_Email_Hacks.pdf which contains CID/Type0 TrueType fonts
+/// (Arial-BoldMT, ArialMT). These require recursive resolution of:
+/// Type0 → DescendantFonts → CIDFont → FontDescriptor → FontFile2 → Stream
+///
+/// Phase 3.4 (CID font support) is required for this test to pass.
+/// See .private/PHASE3_SESSION_SUMMARY.md for details.
 use oxidize_pdf::error::Result;
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::{Document, Page};
 use tempfile::TempDir;
 
 #[test]
-#[ignore] // TODO: Enable when Phase 2-3 complete (font name mapping + descriptors)
+#[ignore] // TODO: Enable when Phase 3.4 complete (CID/Type0 font hierarchy resolution)
 fn test_overlay_preserves_embedded_fonts() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
 
