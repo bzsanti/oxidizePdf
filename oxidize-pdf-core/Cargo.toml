@@ -442,3 +442,11 @@ path = "../examples/incremental_page_replacement_manual.rs"
 [[example]]
 name = "incremental_overlay_simple"
 path = "../examples/incremental_overlay_simple.rs"
+
+[[example]]
+name = "page_overlay_mvp"
+path = "../examples/page_overlay_mvp.rs"
+
+[[example]]
+name = "page_overlay_with_content"
+path = "../examples/page_overlay_with_content.rs"
