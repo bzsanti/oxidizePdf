@@ -2213,6 +2213,27 @@ impl<W: Write> PdfWriter<W> {
                 preserved_writer_dict.set("Font", Object::Dictionary(renamed_fonts));
             }
 
+            // Phase 3.3: Write embedded font streams as indirect objects
+            // Fonts that were resolved in Phase 3.2 have embedded Stream objects
+            // We need to write these streams as separate PDF objects and replace with References
+            if let Some(Object::Dictionary(fonts)) = preserved_writer_dict.get("Font") {
+                let mut fonts_with_refs = crate::objects::Dictionary::new();
+
+                for (font_name, font_obj) in fonts.iter() {
+                    if let Object::Dictionary(font_dict) = font_obj {
+                        // Try to extract and write embedded font streams
+                        let updated_font = self.write_embedded_font_streams(font_dict)?;
+                        fonts_with_refs.set(font_name, Object::Dictionary(updated_font));
+                    } else {
+                        // Not a dictionary, keep as-is
+                        fonts_with_refs.set(font_name, font_obj.clone());
+                    }
+                }
+
+                // Replace Font dictionary with version that has References instead of Streams
+                preserved_writer_dict.set("Font", Object::Dictionary(fonts_with_refs));
+            }
+
             // Merge each resource category (Font, XObject, ColorSpace, etc.)
             for (key, value) in preserved_writer_dict.iter() {
                 // If the resource category already exists, merge dictionaries
@@ -2305,6 +2326,48 @@ impl PdfWriter<BufWriter<std::fs::File>> {
 }
 
 impl<W: Write> PdfWriter<W> {
+    /// Write embedded font streams as indirect objects (Phase 3.3)
+    ///
+    /// Takes a font dictionary that may contain embedded Stream objects
+    /// in its FontDescriptor, writes those streams as separate PDF objects,
+    /// and returns an updated font dictionary with References instead of Streams.
+    ///
+    /// # Example
+    /// FontDescriptor:
+    ///   FontFile2: Stream(dict, font_data)  → Write stream as obj 50
+    ///   FontFile2: Reference(50, 0)          → Updated reference
+    fn write_embedded_font_streams(
+        &mut self,
+        font_dict: &crate::objects::Dictionary,
+    ) -> Result<crate::objects::Dictionary> {
+        let mut updated_font = font_dict.clone();
+
+        // Check if font has a FontDescriptor
+        if let Some(Object::Dictionary(descriptor)) = font_dict.get("FontDescriptor") {
+            let mut updated_descriptor = descriptor.clone();
+            let font_file_keys = ["FontFile", "FontFile2", "FontFile3"];
+
+            // Check each font file key for embedded streams
+            for key in &font_file_keys {
+                if let Some(Object::Stream(stream_dict, stream_data)) = descriptor.get(*key) {
+                    // Found embedded stream! Write it as a separate object
+                    let stream_id = self.allocate_object_id();
+                    let stream_obj = Object::Stream(stream_dict.clone(), stream_data.clone());
+                    self.write_object(stream_id, stream_obj)?;
+
+                    // Replace Stream with Reference to the newly written object
+                    updated_descriptor.set(*key, Object::Reference(stream_id));
+                }
+                // If it's already a Reference, leave it as-is
+            }
+
+            // Update FontDescriptor in font dictionary
+            updated_font.set("FontDescriptor", Object::Dictionary(updated_descriptor));
+        }
+
+        Ok(updated_font)
+    }
+
     fn allocate_object_id(&mut self) -> ObjectId {
         let id = ObjectId::new(self.next_object_id, 0);
         self.next_object_id += 1;

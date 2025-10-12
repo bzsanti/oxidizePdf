@@ -247,23 +247,52 @@ impl Page {
                 let mut resolved_fonts = crate::pdf_objects::Dictionary::new();
 
                 for (font_name, font_obj) in fonts_clone.iter() {
-                    if let crate::pdf_objects::Object::Dictionary(font_dict) = font_obj {
-                        // Try to resolve embedded font streams
-                        match Self::resolve_font_streams(font_dict, document) {
-                            Ok(resolved_dict) => {
-                                resolved_fonts.set(
-                                    font_name.clone(),
-                                    crate::pdf_objects::Object::Dictionary(resolved_dict),
-                                );
-                            }
-                            Err(_) => {
-                                // If resolution fails, keep original (might be standard font)
-                                resolved_fonts.set(font_name.clone(), font_obj.clone());
+                    // Step 1: Resolve reference if needed to get actual font dictionary
+                    let font_dict = match font_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            // Resolve reference to get actual font dictionary from document
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    // Convert parser object to unified format
+                                    match Self::convert_parser_object_to_unified(&resolved_obj) {
+                                        crate::pdf_objects::Object::Dictionary(dict) => dict,
+                                        _ => {
+                                            // Not a dictionary, keep original reference
+                                            resolved_fonts.set(font_name.clone(), font_obj.clone());
+                                            continue;
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    // Resolution failed, keep original reference
+                                    resolved_fonts.set(font_name.clone(), font_obj.clone());
+                                    continue;
+                                }
                             }
                         }
-                    } else {
-                        // Not a dictionary, keep as-is
-                        resolved_fonts.set(font_name.clone(), font_obj.clone());
+                        crate::pdf_objects::Object::Dictionary(dict) => dict.clone(),
+                        _ => {
+                            // Neither reference nor dictionary, keep as-is
+                            resolved_fonts.set(font_name.clone(), font_obj.clone());
+                            continue;
+                        }
+                    };
+
+                    // Step 2: Now font_dict is guaranteed to be a Dictionary, resolve embedded streams
+                    match Self::resolve_font_streams(&font_dict, document) {
+                        Ok(resolved_dict) => {
+                            resolved_fonts.set(
+                                font_name.clone(),
+                                crate::pdf_objects::Object::Dictionary(resolved_dict),
+                            );
+                        }
+                        Err(_) => {
+                            // If stream resolution fails, keep the resolved dictionary without streams
+                            resolved_fonts.set(
+                                font_name.clone(),
+                                crate::pdf_objects::Object::Dictionary(font_dict),
+                            );
+                        }
                     }
                 }
 
