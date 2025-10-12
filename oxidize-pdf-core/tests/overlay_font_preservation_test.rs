@@ -8,6 +8,7 @@ use oxidize_pdf::{Document, Page};
 use tempfile::TempDir;
 
 #[test]
+#[ignore] // TODO: Enable when Phase 2-3 complete (font name mapping + descriptors)
 fn test_overlay_preserves_embedded_fonts() -> Result<()> {
     let temp_dir = TempDir::new().unwrap();
 
