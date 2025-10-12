@@ -659,7 +659,36 @@ impl Page {
         final_content.extend_from_slice(&self.text_context.generate_operations()?);
 
         // Add any content that was added via add_text_flow
-        final_content.extend_from_slice(&self.content);
+        // Phase 2.3: Rewrite font references in preserved content if fonts were renamed
+        let content_to_add = if let Some(ref preserved_res) = self.preserved_resources {
+            // Check if we have preserved fonts that need renaming
+            if let Some(fonts_dict) = preserved_res.get("Font") {
+                if let crate::pdf_objects::Object::Dictionary(ref fonts) = fonts_dict {
+                    // Build font mapping (F1 → OrigF1, Arial → OrigArial, etc.)
+                    let mut font_mapping = std::collections::HashMap::new();
+                    for (original_name, _) in fonts.iter() {
+                        let new_name = format!("Orig{}", original_name.as_str());
+                        font_mapping.insert(original_name.as_str().to_string(), new_name);
+                    }
+
+                    // Rewrite font references in preserved content
+                    if !font_mapping.is_empty() && !self.content.is_empty() {
+                        use crate::writer::rewrite_font_references;
+                        rewrite_font_references(&self.content, &font_mapping)
+                    } else {
+                        self.content.clone()
+                    }
+                } else {
+                    self.content.clone()
+                }
+            } else {
+                self.content.clone()
+            }
+        } else {
+            self.content.clone()
+        };
+
+        final_content.extend_from_slice(&content_to_add);
 
         // Render footer if present
         if let Some(footer) = &self.footer {

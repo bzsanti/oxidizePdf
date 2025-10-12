@@ -2199,9 +2199,19 @@ impl<W: Write> PdfWriter<W> {
         }
 
         // Merge preserved resources from original PDF (if any)
+        // Phase 2.3: Rename preserved fonts to avoid conflicts with overlay fonts
         if let Some(preserved_res) = page.get_preserved_resources() {
-            // Convert pdf_objects::Dictionary to writer Dictionary
-            let preserved_writer_dict = self.convert_pdf_objects_dict_to_writer(preserved_res);
+            // Convert pdf_objects::Dictionary to writer Dictionary FIRST
+            let mut preserved_writer_dict = self.convert_pdf_objects_dict_to_writer(preserved_res);
+
+            // Step 1: Rename preserved fonts (F1 → OrigF1)
+            if let Some(Object::Dictionary(fonts)) = preserved_writer_dict.get("Font") {
+                // Rename font dictionary keys using our utility function
+                let renamed_fonts = crate::writer::rename_preserved_fonts(fonts);
+
+                // Replace Font dictionary with renamed version
+                preserved_writer_dict.set("Font", Object::Dictionary(renamed_fonts));
+            }
 
             // Merge each resource category (Font, XObject, ColorSpace, etc.)
             for (key, value) in preserved_writer_dict.iter() {
