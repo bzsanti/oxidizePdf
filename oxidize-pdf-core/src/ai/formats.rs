@@ -21,6 +21,9 @@ use crate::Result;
 #[cfg(feature = "semantic")]
 use serde_json::{json, Value};
 
+#[cfg(feature = "semantic")]
+use super::chunking::DocumentChunk;
+
 /// Metadata about a PDF document for export
 #[derive(Debug, Clone)]
 pub struct DocumentMetadata {
@@ -586,6 +589,74 @@ impl JsonExporter {
         serde_json::to_string_pretty(&doc)
             .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
     }
+
+    /// Export document chunks to JSON format
+    ///
+    /// This method is ideal for RAG (Retrieval Augmented Generation) pipelines
+    /// where you need structured chunks with metadata for embedding and retrieval.
+    ///
+    /// Each chunk includes:
+    /// - Content text
+    /// - Token count
+    /// - Page numbers where the chunk appears
+    /// - Position metadata (character offsets, page range)
+    /// - Confidence score
+    /// - Whether sentence boundaries were respected
+    ///
+    /// # Arguments
+    ///
+    /// * `chunks` - Vector of document chunks from DocumentChunker
+    ///
+    /// # Returns
+    ///
+    /// A JSON string with structured chunk data
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::ai::{DocumentChunker, JsonExporter};
+    ///
+    /// # fn main() -> oxidize_pdf::Result<()> {
+    /// let chunker = DocumentChunker::new(512, 50);
+    /// let chunks = chunker.chunk_text("Long document text...")?;
+    /// let json = JsonExporter::export_with_chunks(&chunks)?;
+    /// println!("{}", json);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn export_with_chunks(chunks: &[DocumentChunk]) -> Result<String> {
+        let chunk_objects: Vec<Value> = chunks
+            .iter()
+            .map(|chunk| {
+                json!({
+                    "id": chunk.id,
+                    "content": chunk.content,
+                    "tokens": chunk.tokens,
+                    "page_numbers": chunk.page_numbers,
+                    "chunk_index": chunk.chunk_index,
+                    "metadata": {
+                        "position": {
+                            "start_char": chunk.metadata.position.start_char,
+                            "end_char": chunk.metadata.position.end_char,
+                            "first_page": chunk.metadata.position.first_page,
+                            "last_page": chunk.metadata.position.last_page
+                        },
+                        "confidence": chunk.metadata.confidence,
+                        "sentence_boundary_respected": chunk.metadata.sentence_boundary_respected
+                    }
+                })
+            })
+            .collect();
+
+        let doc = json!({
+            "type": "chunked_document",
+            "chunk_count": chunks.len(),
+            "chunks": chunk_objects
+        });
+
+        serde_json::to_string_pretty(&doc)
+            .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+    }
 }
 
 #[cfg(test)]
@@ -949,5 +1020,198 @@ mod tests {
 
         assert_eq!(parsed["page_count"], 0);
         assert_eq!(parsed["pages"].as_array().unwrap().len(), 0);
+    }
+
+    // JSON Chunks Export Tests
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_export_with_chunks_basic() {
+        use crate::ai::chunking::{ChunkMetadata, ChunkPosition};
+
+        let chunks = vec![
+            DocumentChunk {
+                id: "chunk_0".to_string(),
+                content: "First chunk content".to_string(),
+                tokens: 10,
+                page_numbers: vec![1],
+                chunk_index: 0,
+                metadata: ChunkMetadata {
+                    position: ChunkPosition {
+                        start_char: 0,
+                        end_char: 100,
+                        first_page: 1,
+                        last_page: 1,
+                    },
+                    confidence: 1.0,
+                    sentence_boundary_respected: true,
+                },
+            },
+            DocumentChunk {
+                id: "chunk_1".to_string(),
+                content: "Second chunk content".to_string(),
+                tokens: 12,
+                page_numbers: vec![1, 2],
+                chunk_index: 1,
+                metadata: ChunkMetadata {
+                    position: ChunkPosition {
+                        start_char: 90,
+                        end_char: 200,
+                        first_page: 1,
+                        last_page: 2,
+                    },
+                    confidence: 0.95,
+                    sentence_boundary_respected: false,
+                },
+            },
+        ];
+
+        let json = JsonExporter::export_with_chunks(&chunks).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        // Validate structure
+        assert_eq!(parsed["type"], "chunked_document");
+        assert_eq!(parsed["chunk_count"], 2);
+
+        let chunks_array = parsed["chunks"].as_array().unwrap();
+        assert_eq!(chunks_array.len(), 2);
+
+        // Validate first chunk
+        assert_eq!(chunks_array[0]["id"], "chunk_0");
+        assert_eq!(chunks_array[0]["tokens"], 10);
+        assert_eq!(chunks_array[0]["content"], "First chunk content");
+        assert_eq!(chunks_array[0]["page_numbers"][0], 1);
+        assert_eq!(chunks_array[0]["chunk_index"], 0);
+        assert_eq!(chunks_array[0]["metadata"]["confidence"], 1.0);
+        assert_eq!(
+            chunks_array[0]["metadata"]["sentence_boundary_respected"],
+            true
+        );
+        assert_eq!(chunks_array[0]["metadata"]["position"]["start_char"], 0);
+        assert_eq!(chunks_array[0]["metadata"]["position"]["end_char"], 100);
+        assert_eq!(chunks_array[0]["metadata"]["position"]["first_page"], 1);
+        assert_eq!(chunks_array[0]["metadata"]["position"]["last_page"], 1);
+
+        // Validate second chunk
+        assert_eq!(chunks_array[1]["id"], "chunk_1");
+        assert_eq!(chunks_array[1]["chunk_index"], 1);
+        assert_eq!(chunks_array[1]["tokens"], 12);
+        assert_eq!(chunks_array[1]["page_numbers"].as_array().unwrap().len(), 2);
+        // Use approximate comparison for f32 values serialized through JSON
+        let confidence = chunks_array[1]["metadata"]["confidence"].as_f64().unwrap();
+        assert!(
+            (confidence - 0.95).abs() < 0.01,
+            "Confidence should be approximately 0.95, got {}",
+            confidence
+        );
+        assert_eq!(
+            chunks_array[1]["metadata"]["sentence_boundary_respected"],
+            false
+        );
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_export_with_chunks_empty() {
+        let chunks: Vec<DocumentChunk> = vec![];
+        let json = JsonExporter::export_with_chunks(&chunks).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["type"], "chunked_document");
+        assert_eq!(parsed["chunk_count"], 0);
+        assert_eq!(parsed["chunks"].as_array().unwrap().len(), 0);
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_export_with_chunks_position_metadata() {
+        use crate::ai::chunking::{ChunkMetadata, ChunkPosition};
+
+        // Test that all position metadata is correctly serialized
+        let chunk = DocumentChunk {
+            id: "test_chunk".to_string(),
+            content: "Test content for position tracking".to_string(),
+            tokens: 5,
+            page_numbers: vec![5, 6, 7],
+            chunk_index: 10,
+            metadata: ChunkMetadata {
+                position: ChunkPosition {
+                    start_char: 1000,
+                    end_char: 2000,
+                    first_page: 5,
+                    last_page: 7,
+                },
+                confidence: 0.85,
+                sentence_boundary_respected: false,
+            },
+        };
+
+        let json = JsonExporter::export_with_chunks(&[chunk]).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["chunk_count"], 1);
+
+        let chunk_obj = &parsed["chunks"][0];
+        assert_eq!(chunk_obj["id"], "test_chunk");
+        assert_eq!(chunk_obj["tokens"], 5);
+        assert_eq!(chunk_obj["chunk_index"], 10);
+        assert_eq!(chunk_obj["content"], "Test content for position tracking");
+
+        // Validate page numbers array
+        let pages = chunk_obj["page_numbers"].as_array().unwrap();
+        assert_eq!(pages.len(), 3);
+        assert_eq!(pages[0], 5);
+        assert_eq!(pages[1], 6);
+        assert_eq!(pages[2], 7);
+
+        // Validate position metadata
+        let pos = &chunk_obj["metadata"]["position"];
+        assert_eq!(pos["start_char"], 1000);
+        assert_eq!(pos["end_char"], 2000);
+        assert_eq!(pos["first_page"], 5);
+        assert_eq!(pos["last_page"], 7);
+
+        // Validate other metadata (use approximate comparison for f32)
+        let confidence = chunk_obj["metadata"]["confidence"].as_f64().unwrap();
+        assert!(
+            (confidence - 0.85).abs() < 0.01,
+            "Confidence should be approximately 0.85, got {}",
+            confidence
+        );
+        assert_eq!(chunk_obj["metadata"]["sentence_boundary_respected"], false);
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_export_with_chunks_multiple_pages() {
+        use crate::ai::chunking::{ChunkMetadata, ChunkPosition};
+
+        // Test chunk spanning multiple pages
+        let chunk = DocumentChunk {
+            id: "multipage".to_string(),
+            content: "Content spanning pages".to_string(),
+            tokens: 20,
+            page_numbers: vec![2, 3, 4],
+            chunk_index: 0,
+            metadata: ChunkMetadata {
+                position: ChunkPosition {
+                    start_char: 500,
+                    end_char: 1500,
+                    first_page: 2,
+                    last_page: 4,
+                },
+                confidence: 1.0,
+                sentence_boundary_respected: true,
+            },
+        };
+
+        let json = JsonExporter::export_with_chunks(&[chunk]).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        let chunk_obj = &parsed["chunks"][0];
+        let pages = chunk_obj["page_numbers"].as_array().unwrap();
+
+        assert_eq!(pages.len(), 3);
+        assert_eq!(chunk_obj["metadata"]["position"]["first_page"], 2);
+        assert_eq!(chunk_obj["metadata"]["position"]["last_page"], 4);
     }
 }
