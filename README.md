@@ -510,7 +510,7 @@ AGPL-3.0 ensures that oxidize-pdf remains free and open source while protecting 
 - ✅ Custom feature development
 - ✅ Access to commercial products (API, CLI, PRO library)
 
-**Contact**: [bzsanti@outlook.com](mailto:bzsanti@outlook.com) for commercial licensing inquiries.
+For commercial licensing inquiries, please open an issue on the GitHub repository.
 
 ## Known Limitations
 

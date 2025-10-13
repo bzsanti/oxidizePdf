@@ -1926,6 +1926,7 @@ mod comprehensive_tests {
             use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
+            incremental_update: false,
         };
         let mut writer = PdfWriter::with_config(&mut buffer, config);
         writer.write_document(&mut document).unwrap();
@@ -1972,6 +1973,7 @@ mod comprehensive_tests {
             use_object_streams: false,
             pdf_version: "1.4".to_string(),
             compress_streams: true,
+            incremental_update: false,
         };
         let mut writer = PdfWriter::with_config(&mut buffer, config);
         writer.write_document(&mut document).unwrap();
@@ -2002,6 +2004,7 @@ mod comprehensive_tests {
             use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
+            incremental_update: false,
         };
         let mut writer = PdfWriter::with_config(&mut buffer, config);
         writer.write_document(&mut document).unwrap();
@@ -2375,6 +2378,7 @@ mod comprehensive_tests {
             use_object_streams: false,
                 pdf_version: "1.5".to_string(),
                 compress_streams: true,
+            incremental_update: false,
             };
 
             let mut writer = PdfWriter::with_config(&mut buffer, config);
@@ -2491,6 +2495,7 @@ mod comprehensive_tests {
             use_object_streams: false,
             pdf_version: "2.0".to_string(),
             compress_streams: false,
+            incremental_update: false,
         };
         assert!(config.use_xref_streams);
         assert_eq!(config.pdf_version, "2.0");
@@ -2515,6 +2520,7 @@ mod comprehensive_tests {
             use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: false,
+            incremental_update: false,
         };
         let buffer = Vec::new();
         let writer = PdfWriter::with_config(buffer, config.clone());
@@ -3337,6 +3343,7 @@ mod comprehensive_tests {
         {
             let config = WriterConfig {
                 compress_streams: true,
+            incremental_update: false,
                 ..Default::default()
             };
             let mut writer = PdfWriter::with_config(&mut buffer_compressed, config);
@@ -3348,6 +3355,7 @@ mod comprehensive_tests {
         {
             let config = WriterConfig {
                 compress_streams: false,
+            incremental_update: false,
                 ..Default::default()
             };
             let mut writer = PdfWriter::with_config(&mut buffer_uncompressed, config);
@@ -4294,3 +4302,6 @@ mod comprehensive_tests {
         // Note: We don't fail the test if file write fails (e.g., in CI without examples dir)
     }
 }
+
+mod form_filling_tests;
+mod incremental_update_tests;

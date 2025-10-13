@@ -285,12 +285,14 @@ fn test_config_propagation_roundtrip() -> Result<()> {
             use_object_streams: false,
             pdf_version: "1.4".to_string(),
             compress_streams: false,
+            incremental_update: false,
         },
         WriterConfig {
             use_xref_streams: true,
             use_object_streams: false,
             pdf_version: "1.5".to_string(),
             compress_streams: true,
+            incremental_update: false,
         },
     ];
 

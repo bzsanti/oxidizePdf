@@ -2513,3 +2513,22 @@ This text does not contain the magic word and continues for a very long time wit
         assert!(!name_set.contains(&PdfName::new("Font".to_string())));
     }
 }
+
+// ============================================================================
+// DEPRECATED TYPE ALIASES - Migration to unified pdf_objects module
+// ============================================================================
+//
+// These type aliases provide backward compatibility during migration to the
+// unified pdf_objects module. They will be removed in v2.0.0.
+//
+// Migration guide:
+// - Replace `parser::objects::PdfObject` with `crate::pdf_objects::Object`
+// - Replace `parser::objects::PdfDictionary` with `crate::pdf_objects::Dictionary`
+// - Replace `parser::objects::PdfName` with `crate::pdf_objects::Name`
+// - Replace `parser::objects::PdfArray` with `crate::pdf_objects::Array`
+// - Replace `parser::objects::PdfString` with `crate::pdf_objects::BinaryString`
+// - Replace `parser::objects::PdfStream` with `crate::pdf_objects::Stream`
+
+// Note: The actual types above remain unchanged for now. The aliases below
+// would be added once we complete the full migration and update internal code.
+// For now, this documents the migration path.
