@@ -230,6 +230,134 @@ impl MarkdownExporter {
 
         Ok(output)
     }
+
+    /// Export multi-page text with page break markers
+    ///
+    /// This method creates a Markdown document with clear page boundaries,
+    /// making it easy for LLMs to understand document structure.
+    ///
+    /// # Arguments
+    ///
+    /// * `page_texts` - Vector of (page_number, text) tuples (1-indexed)
+    ///
+    /// # Returns
+    ///
+    /// A Markdown-formatted string with page markers
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::MarkdownExporter;
+    ///
+    /// let pages = vec![
+    ///     (1, "Page 1 content".to_string()),
+    ///     (2, "Page 2 content".to_string()),
+    ///     (3, "Page 3 content".to_string()),
+    /// ];
+    ///
+    /// let markdown = MarkdownExporter::export_with_pages(&pages).unwrap();
+    /// assert!(markdown.contains("**Page 1**"));
+    /// assert!(markdown.contains("**Page 2**"));
+    /// ```
+    pub fn export_with_pages(page_texts: &[(usize, String)]) -> Result<String> {
+        let mut output = String::new();
+        output.push_str("# Document\n\n");
+
+        for (i, (page_num, text)) in page_texts.iter().enumerate() {
+            if i > 0 {
+                // Add page break separator
+                output.push_str("\n\n---\n\n");
+            }
+
+            output.push_str(&format!("**Page {}**\n\n", page_num));
+            output.push_str(text);
+        }
+
+        Ok(output)
+    }
+
+    /// Export multi-page text with metadata and page breaks
+    ///
+    /// Combines metadata frontmatter with page-by-page content.
+    ///
+    /// # Arguments
+    ///
+    /// * `page_texts` - Vector of (page_number, text) tuples (1-indexed)
+    /// * `metadata` - Document metadata
+    ///
+    /// # Returns
+    ///
+    /// A Markdown-formatted string with YAML frontmatter and page markers
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::{MarkdownExporter, DocumentMetadata};
+    ///
+    /// let metadata = DocumentMetadata {
+    ///     title: "Multi-Page Doc".to_string(),
+    ///     page_count: 2,
+    ///     created_at: None,
+    ///     author: None,
+    /// };
+    ///
+    /// let pages = vec![
+    ///     (1, "First page".to_string()),
+    ///     (2, "Second page".to_string()),
+    /// ];
+    ///
+    /// let markdown = MarkdownExporter::export_with_metadata_and_pages(&pages, &metadata).unwrap();
+    /// assert!(markdown.contains("pages: 2"));
+    /// assert!(markdown.contains("**Page 1**"));
+    /// ```
+    pub fn export_with_metadata_and_pages(
+        page_texts: &[(usize, String)],
+        metadata: &DocumentMetadata,
+    ) -> Result<String> {
+        let mut output = String::new();
+
+        // YAML frontmatter
+        output.push_str("---\n");
+
+        let escaped_title = if metadata.title.contains(':') || metadata.title.contains('#') {
+            format!("\"{}\"", metadata.title.replace('"', "\\\""))
+        } else {
+            metadata.title.clone()
+        };
+
+        output.push_str(&format!("title: {}\n", escaped_title));
+        output.push_str(&format!("pages: {}\n", metadata.page_count));
+
+        if let Some(ref created) = metadata.created_at {
+            output.push_str(&format!("created: {}\n", created));
+        }
+
+        if let Some(ref author) = metadata.author {
+            let escaped_author = if author.contains(':') {
+                format!("\"{}\"", author.replace('"', "\\\""))
+            } else {
+                author.clone()
+            };
+            output.push_str(&format!("author: {}\n", escaped_author));
+        }
+
+        output.push_str("---\n\n");
+
+        // Title
+        output.push_str(&format!("# {}\n\n", metadata.title));
+
+        // Pages
+        for (i, (page_num, text)) in page_texts.iter().enumerate() {
+            if i > 0 {
+                output.push_str("\n\n---\n\n");
+            }
+
+            output.push_str(&format!("**Page {}**\n\n", page_num));
+            output.push_str(text);
+        }
+
+        Ok(output)
+    }
 }
 
 #[cfg(test)]
@@ -366,5 +494,115 @@ mod tests {
         assert_eq!(metadata.page_count, 0);
         assert!(metadata.created_at.is_none());
         assert!(metadata.author.is_none());
+    }
+
+    #[test]
+    fn test_multipage_markdown() {
+        let pages = vec![
+            (1, "Content of page 1".to_string()),
+            (2, "Content of page 2".to_string()),
+            (3, "Content of page 3".to_string()),
+        ];
+
+        let result = MarkdownExporter::export_with_pages(&pages).unwrap();
+
+        // Check document header
+        assert!(result.starts_with("# Document\n\n"));
+
+        // Check all page markers
+        assert!(result.contains("**Page 1**"));
+        assert!(result.contains("**Page 2**"));
+        assert!(result.contains("**Page 3**"));
+
+        // Check page content
+        assert!(result.contains("Content of page 1"));
+        assert!(result.contains("Content of page 2"));
+        assert!(result.contains("Content of page 3"));
+
+        // Check page separators (---)
+        let separator_count = result.matches("\n---\n").count();
+        assert_eq!(separator_count, 2, "Should have 2 separators for 3 pages");
+    }
+
+    #[test]
+    fn test_page_numbers_correct() {
+        let pages = vec![
+            (1, "First".to_string()),
+            (2, "Second".to_string()),
+        ];
+
+        let result = MarkdownExporter::export_with_pages(&pages).unwrap();
+
+        // Verify page numbers appear in order
+        let page1_pos = result.find("**Page 1**").unwrap();
+        let page2_pos = result.find("**Page 2**").unwrap();
+        assert!(page1_pos < page2_pos, "Page 1 should appear before Page 2");
+    }
+
+    #[test]
+    fn test_single_page_no_separator() {
+        let pages = vec![(1, "Single page content".to_string())];
+
+        let result = MarkdownExporter::export_with_pages(&pages).unwrap();
+
+        // Should not have separator for single page
+        assert!(!result.contains("---"), "Single page should not have separator");
+        assert!(result.contains("**Page 1**"));
+        assert!(result.contains("Single page content"));
+    }
+
+    #[test]
+    fn test_empty_pages_list() {
+        let pages: Vec<(usize, String)> = vec![];
+        let result = MarkdownExporter::export_with_pages(&pages).unwrap();
+
+        // Should just have document header
+        assert_eq!(result, "# Document\n\n");
+    }
+
+    #[test]
+    fn test_metadata_and_pages_combined() {
+        let metadata = DocumentMetadata {
+            title: "Test Document".to_string(),
+            page_count: 2,
+            created_at: Some("2025-10-13".to_string()),
+            author: Some("John Doe".to_string()),
+        };
+
+        let pages = vec![
+            (1, "Page one text".to_string()),
+            (2, "Page two text".to_string()),
+        ];
+
+        let result = MarkdownExporter::export_with_metadata_and_pages(&pages, &metadata).unwrap();
+
+        // Check YAML frontmatter
+        assert!(result.starts_with("---\n"));
+        assert!(result.contains("title: Test Document"));
+        assert!(result.contains("pages: 2"));
+        assert!(result.contains("created: 2025-10-13"));
+        assert!(result.contains("author: John Doe"));
+
+        // Check title header
+        assert!(result.contains("# Test Document"));
+
+        // Check pages
+        assert!(result.contains("**Page 1**"));
+        assert!(result.contains("**Page 2**"));
+        assert!(result.contains("Page one text"));
+        assert!(result.contains("Page two text"));
+    }
+
+    #[test]
+    fn test_page_separator_format() {
+        let pages = vec![
+            (1, "A".to_string()),
+            (2, "B".to_string()),
+        ];
+
+        let result = MarkdownExporter::export_with_pages(&pages).unwrap();
+
+        // Check separator format is exactly "\n\n---\n\n"
+        assert!(result.contains("\n\n---\n\n"));
     }
 }
