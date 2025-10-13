@@ -792,6 +792,7 @@ impl Document {
     ///     use_object_streams: false,
     ///     pdf_version: "1.5".to_string(),
     ///     compress_streams: true,
+    ///     incremental_update: false,
     /// };
     ///
     /// let pdf_bytes = doc.to_bytes_with_config(config).unwrap();
