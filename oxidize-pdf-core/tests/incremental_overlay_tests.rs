@@ -16,6 +16,7 @@ use std::io::BufWriter;
 use tempfile::TempDir;
 
 #[test]
+#[ignore] // Requires pdftotext (not available in CI)
 fn test_overlay_preserves_original_text() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
 
@@ -135,6 +136,7 @@ fn test_overlay_maintains_incremental_structure() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+#[ignore] // Requires pdftotext (not available in CI)
 fn test_overlay_multi_page() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
 
@@ -196,6 +198,7 @@ fn test_overlay_multi_page() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+#[ignore] // Requires pdftotext (not available in CI)
 fn test_overlay_with_graphics() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = TempDir::new()?;
 
