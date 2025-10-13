@@ -1,19 +1,17 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-11 - Incremental Updates API Clarification
-- **Branch**: develop_santi (working branch)
-- **Version**: **v1.5.0 released** 🚀
+- **Last Session**: 2025-10-13 - v1.6.0 Release Preparation
+- **Branch**: develop (ready for release)
+- **Version**: **v1.6.0 prepared** 🚀
 - **Recent Work**:
-  - ✅ **Incremental Updates Writer**: Implemented with clear API separation
-    - `write_incremental_with_page_replacement()` - Manual page replacement (shipped)
-    - `write_incremental_with_overlay()` - Automatic overlay (planned, stub added)
-  - ✅ **Documentation overhaul**: Honest assessment of capabilities and limitations
-  - ✅ **API Naming**: Clear distinction between manual replacement vs automatic overlay
-  - ✅ **Example updated**: `incremental_page_replacement_manual.rs` with warnings
-  - ✅ **4 rigorous tests**: pdftotext/pdfinfo verification (NO smoke tests)
-- **Key Achievement**: Honest communication about what's implemented vs planned
-- **Next**: Compile, test, commit changes
+  - ✅ **PR #80 Merged**: Feature 2.1.2 → develop (LLM formats)
+  - ✅ **Merge Conflicts Resolved**: 2 rounds (develop_santi→develop, main→develop)
+  - ✅ **PR #81 Configured**: develop → main for v1.6.0 release
+  - ✅ **Tests Passing**: 4,542/4,545 (0 failed, 3 ignored)
+  - ✅ **CI Status**: MERGEABLE, running final checks
+- **Key Achievement**: Feature 2.1.2 complete and ready for production release
+- **Next**: Merge PR #81, tag v1.6.0, publish release
 
 ## ✅ Funcionalidades Completadas
 
