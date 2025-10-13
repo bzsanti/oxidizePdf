@@ -444,6 +444,10 @@ name = "incremental_overlay_simple"
 path = "../examples/incremental_overlay_simple.rs"
 
 [[example]]
+name = "incremental_overlay_working"
+path = "../examples/incremental_overlay_working.rs"
+
+[[example]]
 name = "page_overlay_mvp"
 path = "../examples/page_overlay_mvp.rs"
 

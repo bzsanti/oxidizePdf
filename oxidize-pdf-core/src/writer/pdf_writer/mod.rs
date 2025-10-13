@@ -655,15 +655,118 @@ impl<W: Write> PdfWriter<W> {
     /// Currently always returns `PdfError::NotImplemented`
     pub fn write_incremental_with_overlay<P: AsRef<std::path::Path>>(
         &mut self,
-        _base_pdf_path: P,
-        _overlays: Vec<u8>, // Placeholder type - will be PageOverlay in future
+        base_pdf_path: P,
+        mut overlay_fn: impl FnMut(&mut crate::Page) -> Result<()>,
     ) -> Result<()> {
-        Err(crate::error::PdfError::InvalidOperation(
-            "write_incremental_with_overlay is not yet implemented. \
-             It requires Document::load() and content overlay system (planned for future release). \
-             \n\nCurrent workaround: Use write_incremental_with_page_replacement() with manual page recreation. \
-             See documentation for examples.".to_string()
-        ))
+        use std::io::Cursor;
+
+        // Step 1: Read the entire base PDF into memory
+        let base_pdf_bytes = std::fs::read(base_pdf_path.as_ref())?;
+        let base_size = base_pdf_bytes.len() as u64;
+
+        // Step 2: Parse from memory to get page information
+        let pdf_reader = crate::parser::PdfReader::new(Cursor::new(&base_pdf_bytes))?;
+        let parsed_doc = crate::parser::PdfDocument::new(pdf_reader);
+
+        // Get all pages from base PDF
+        let page_count = parsed_doc.page_count()?;
+
+        // Step 3: Find startxref offset from the bytes
+        let start_search = if base_size > 100 { base_size - 100 } else { 0 } as usize;
+        let end_bytes = &base_pdf_bytes[start_search..];
+        let end_str = String::from_utf8_lossy(end_bytes);
+
+        let prev_xref = if let Some(startxref_pos) = end_str.find("startxref") {
+            let after_startxref = &end_str[startxref_pos + 9..];
+            let number_str: String = after_startxref
+                .chars()
+                .skip_while(|c| c.is_whitespace())
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+
+            number_str.parse::<u64>().map_err(|_| {
+                crate::error::PdfError::InvalidStructure(
+                    "Could not parse startxref offset".to_string(),
+                )
+            })?
+        } else {
+            return Err(crate::error::PdfError::InvalidStructure(
+                "startxref not found in base PDF".to_string(),
+            ));
+        };
+
+        // Step 5: Copy base PDF bytes to output
+        self.writer.write_all(&base_pdf_bytes)?;
+
+        self.prev_xref_offset = Some(prev_xref);
+        self.base_pdf_size = Some(base_size);
+        self.current_position = base_size;
+
+        // Step 6: Build temporary document with overlaid pages
+        let mut temp_doc = crate::Document::new();
+
+        for page_idx in 0..page_count {
+            // Convert parsed page to writable with content preservation
+            let parsed_page = parsed_doc.get_page(page_idx)?;
+            let mut writable_page =
+                crate::Page::from_parsed_with_content(&parsed_page, &parsed_doc)?;
+
+            // Apply overlay function
+            overlay_fn(&mut writable_page)?;
+
+            // Add to temporary document
+            temp_doc.add_page(writable_page);
+        }
+
+        // Step 7: Write document with standard writer methods
+        // This ensures consistent object numbering
+        if !temp_doc.used_characters.is_empty() {
+            self.document_used_chars = Some(temp_doc.used_characters.clone());
+        }
+
+        self.catalog_id = Some(self.allocate_object_id());
+        self.pages_id = Some(self.allocate_object_id());
+        self.info_id = Some(self.allocate_object_id());
+
+        let font_refs = self.write_fonts(&temp_doc)?;
+        self.write_pages(&temp_doc, &font_refs)?;
+        self.write_form_fields(&mut temp_doc)?;
+
+        // Step 8: Create new catalog and pages tree
+        let catalog_id = self.catalog_id.expect("catalog_id must be set");
+        let new_pages_id = self.pages_id.expect("pages_id must be set");
+
+        let mut catalog = crate::objects::Dictionary::new();
+        catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
+        catalog.set("Pages", crate::objects::Object::Reference(new_pages_id));
+        self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
+
+        // Build new Kids array with ALL overlaid pages
+        let mut all_pages_kids = Vec::new();
+        for page_id in &self.page_ids {
+            all_pages_kids.push(crate::objects::Object::Reference(*page_id));
+        }
+
+        let mut pages_dict = crate::objects::Dictionary::new();
+        pages_dict.set("Type", crate::objects::Object::Name("Pages".to_string()));
+        pages_dict.set(
+            "Kids",
+            crate::objects::Object::Array(all_pages_kids.clone()),
+        );
+        pages_dict.set(
+            "Count",
+            crate::objects::Object::Integer(all_pages_kids.len() as i64),
+        );
+
+        self.write_object(new_pages_id, crate::objects::Object::Dictionary(pages_dict))?;
+        self.write_info(&temp_doc)?;
+
+        let xref_position = self.current_position;
+        self.write_xref()?;
+        self.write_trailer(xref_position)?;
+
+        self.writer.flush()?;
+        Ok(())
     }
 
     fn write_header(&mut self) -> Result<()> {
