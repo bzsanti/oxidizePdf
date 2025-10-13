@@ -659,6 +659,228 @@ impl JsonExporter {
     }
 }
 
+/// Exporter for converting PDF content to contextual format
+///
+/// Contextual format is optimized for direct injection into LLM prompts,
+/// providing document content in a conversational, easy-to-understand structure
+/// without heavy formatting or metadata overhead.
+///
+/// This format is ideal for:
+/// - Direct LLM prompt injection
+/// - Question-answering over documents
+/// - Summarization tasks
+/// - Conversational AI with document context
+///
+/// # Example
+///
+/// ```
+/// use oxidize_pdf::ai::ContextualFormat;
+///
+/// let text = "This is the document content.";
+/// let contextual = ContextualFormat::export_simple(text).unwrap();
+/// // Output: "Document content:\n\nThis is the document content."
+/// ```
+#[derive(Debug, Clone)]
+pub struct ContextualFormat;
+
+impl ContextualFormat {
+    /// Export plain text to contextual format
+    ///
+    /// Creates a simple, conversational representation of the document
+    /// content without heavy formatting.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text content to export
+    ///
+    /// # Returns
+    ///
+    /// A contextual-formatted string
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::ContextualFormat;
+    ///
+    /// let text = "Sample document text.";
+    /// let result = ContextualFormat::export_simple(text).unwrap();
+    /// assert!(result.contains("Document content:"));
+    /// assert!(result.contains("Sample document text."));
+    /// ```
+    pub fn export_simple(text: &str) -> Result<String> {
+        let mut output = String::new();
+        output.push_str("Document content:\n\n");
+        output.push_str(text);
+        Ok(output)
+    }
+
+    /// Export text with metadata in conversational format
+    ///
+    /// Creates a natural language description of the document with metadata,
+    /// ideal for LLM understanding without structured parsing.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text content
+    /// * `metadata` - Document metadata
+    ///
+    /// # Returns
+    ///
+    /// A contextual-formatted string with metadata
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::{ContextualFormat, DocumentMetadata};
+    ///
+    /// let metadata = DocumentMetadata {
+    ///     title: "Annual Report".to_string(),
+    ///     page_count: 25,
+    ///     created_at: Some("2025-01-15".to_string()),
+    ///     author: Some("Jane Smith".to_string()),
+    /// };
+    ///
+    /// let result = ContextualFormat::export_with_metadata("Report text...", &metadata).unwrap();
+    /// assert!(result.contains("This is a document titled \"Annual Report\""));
+    /// assert!(result.contains("25 pages"));
+    /// ```
+    pub fn export_with_metadata(text: &str, metadata: &DocumentMetadata) -> Result<String> {
+        let mut output = String::new();
+
+        // Natural language metadata introduction
+        output.push_str(&format!("This is a document titled \"{}\"", metadata.title));
+
+        if metadata.page_count > 0 {
+            output.push_str(&format!(
+                " with {} page{}",
+                metadata.page_count,
+                if metadata.page_count == 1 { "" } else { "s" }
+            ));
+        }
+
+        if let Some(ref author) = metadata.author {
+            output.push_str(&format!(", written by {}", author));
+        }
+
+        if let Some(ref created) = metadata.created_at {
+            output.push_str(&format!(", created on {}", created));
+        }
+
+        output.push_str(".\n\n");
+        output.push_str("Content:\n\n");
+        output.push_str(text);
+
+        Ok(output)
+    }
+
+    /// Export multi-page document with conversational page markers
+    ///
+    /// # Arguments
+    ///
+    /// * `page_texts` - Vector of (page_number, text) tuples
+    ///
+    /// # Returns
+    ///
+    /// A contextual-formatted string with page indicators
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::ContextualFormat;
+    ///
+    /// let pages = vec![
+    ///     (1, "First page content".to_string()),
+    ///     (2, "Second page content".to_string()),
+    /// ];
+    ///
+    /// let result = ContextualFormat::export_with_pages(&pages).unwrap();
+    /// assert!(result.contains("On page 1:"));
+    /// assert!(result.contains("On page 2:"));
+    /// ```
+    pub fn export_with_pages(page_texts: &[(usize, String)]) -> Result<String> {
+        let mut output = String::new();
+        output.push_str("Document content:\n\n");
+
+        for (page_num, text) in page_texts.iter() {
+            output.push_str(&format!("On page {}:\n", page_num));
+            output.push_str(text);
+            output.push_str("\n\n");
+        }
+
+        Ok(output)
+    }
+
+    /// Export multi-page document with metadata and conversational formatting
+    ///
+    /// # Arguments
+    ///
+    /// * `page_texts` - Vector of (page_number, text) tuples
+    /// * `metadata` - Document metadata
+    ///
+    /// # Returns
+    ///
+    /// A contextual-formatted string with metadata and page content
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::{ContextualFormat, DocumentMetadata};
+    ///
+    /// let metadata = DocumentMetadata {
+    ///     title: "Technical Guide".to_string(),
+    ///     page_count: 3,
+    ///     created_at: None,
+    ///     author: None,
+    /// };
+    ///
+    /// let pages = vec![
+    ///     (1, "Introduction".to_string()),
+    ///     (2, "Main content".to_string()),
+    /// ];
+    ///
+    /// let result = ContextualFormat::export_with_metadata_and_pages(&pages, &metadata).unwrap();
+    /// assert!(result.contains("titled \"Technical Guide\""));
+    /// assert!(result.contains("On page 1:"));
+    /// ```
+    pub fn export_with_metadata_and_pages(
+        page_texts: &[(usize, String)],
+        metadata: &DocumentMetadata,
+    ) -> Result<String> {
+        let mut output = String::new();
+
+        // Natural language metadata introduction
+        output.push_str(&format!("This is a document titled \"{}\"", metadata.title));
+
+        if metadata.page_count > 0 {
+            output.push_str(&format!(
+                " with {} page{}",
+                metadata.page_count,
+                if metadata.page_count == 1 { "" } else { "s" }
+            ));
+        }
+
+        if let Some(ref author) = metadata.author {
+            output.push_str(&format!(", written by {}", author));
+        }
+
+        if let Some(ref created) = metadata.created_at {
+            output.push_str(&format!(", created on {}", created));
+        }
+
+        output.push_str(".\n\n");
+        output.push_str("Content:\n\n");
+
+        // Add page content with conversational markers
+        for (page_num, text) in page_texts.iter() {
+            output.push_str(&format!("On page {}:\n", page_num));
+            output.push_str(text);
+            output.push_str("\n\n");
+        }
+
+        Ok(output)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1213,5 +1435,158 @@ mod tests {
         assert_eq!(pages.len(), 3);
         assert_eq!(chunk_obj["metadata"]["position"]["first_page"], 2);
         assert_eq!(chunk_obj["metadata"]["position"]["last_page"], 4);
+    }
+
+    // Contextual Format Tests
+    #[test]
+    fn test_contextual_simple() {
+        let text = "This is sample content.";
+        let result = ContextualFormat::export_simple(text).unwrap();
+
+        assert!(result.contains("Document content:"));
+        assert!(result.contains("This is sample content."));
+        assert_eq!(result, "Document content:\n\nThis is sample content.");
+    }
+
+    #[test]
+    fn test_contextual_with_metadata_full() {
+        let metadata = DocumentMetadata {
+            title: "Annual Report".to_string(),
+            page_count: 25,
+            created_at: Some("2025-01-15".to_string()),
+            author: Some("Jane Smith".to_string()),
+        };
+
+        let result =
+            ContextualFormat::export_with_metadata("Report content here.", &metadata).unwrap();
+
+        // Check natural language introduction
+        assert!(result.contains("This is a document titled \"Annual Report\""));
+        assert!(result.contains("with 25 pages"));
+        assert!(result.contains("written by Jane Smith"));
+        assert!(result.contains("created on 2025-01-15"));
+        assert!(result.contains("Content:"));
+        assert!(result.contains("Report content here."));
+
+        // Check sentence flow (singular vs plural)
+        assert!(!result.contains("page,"));
+        assert!(result.contains("pages,"));
+    }
+
+    #[test]
+    fn test_contextual_with_metadata_minimal() {
+        let metadata = DocumentMetadata {
+            title: "Simple Doc".to_string(),
+            page_count: 1,
+            created_at: None,
+            author: None,
+        };
+
+        let result = ContextualFormat::export_with_metadata("Content", &metadata).unwrap();
+
+        assert!(result.contains("titled \"Simple Doc\""));
+        assert!(result.contains("with 1 page"));
+        assert!(!result.contains("pages")); // Should use singular "page"
+        assert!(!result.contains("written by"));
+        assert!(!result.contains("created on"));
+    }
+
+    #[test]
+    fn test_contextual_with_metadata_no_page_count() {
+        let metadata = DocumentMetadata {
+            title: "Test".to_string(),
+            page_count: 0,
+            created_at: None,
+            author: None,
+        };
+
+        let result = ContextualFormat::export_with_metadata("Text", &metadata).unwrap();
+
+        // When page_count is 0, should not mention pages
+        assert!(!result.contains("with"));
+        assert!(!result.contains("page"));
+        assert!(result.contains("This is a document titled \"Test\"."));
+    }
+
+    #[test]
+    fn test_contextual_with_pages() {
+        let pages = vec![
+            (1, "First page text".to_string()),
+            (2, "Second page text".to_string()),
+            (3, "Third page text".to_string()),
+        ];
+
+        let result = ContextualFormat::export_with_pages(&pages).unwrap();
+
+        assert!(result.starts_with("Document content:\n\n"));
+        assert!(result.contains("On page 1:\nFirst page text"));
+        assert!(result.contains("On page 2:\nSecond page text"));
+        assert!(result.contains("On page 3:\nThird page text"));
+    }
+
+    #[test]
+    fn test_contextual_with_pages_empty() {
+        let pages: Vec<(usize, String)> = vec![];
+        let result = ContextualFormat::export_with_pages(&pages).unwrap();
+
+        assert_eq!(result, "Document content:\n\n");
+    }
+
+    #[test]
+    fn test_contextual_with_pages_single() {
+        let pages = vec![(1, "Only page".to_string())];
+        let result = ContextualFormat::export_with_pages(&pages).unwrap();
+
+        assert!(result.contains("On page 1:\nOnly page"));
+    }
+
+    #[test]
+    fn test_contextual_with_metadata_and_pages() {
+        let metadata = DocumentMetadata {
+            title: "Technical Guide".to_string(),
+            page_count: 2,
+            created_at: Some("2025-10-13".to_string()),
+            author: Some("John Doe".to_string()),
+        };
+
+        let pages = vec![
+            (1, "Introduction text".to_string()),
+            (2, "Main content".to_string()),
+        ];
+
+        let result = ContextualFormat::export_with_metadata_and_pages(&pages, &metadata).unwrap();
+
+        // Check metadata introduction
+        assert!(result.contains("titled \"Technical Guide\""));
+        assert!(result.contains("with 2 pages"));
+        assert!(result.contains("written by John Doe"));
+        assert!(result.contains("created on 2025-10-13"));
+
+        // Check content section
+        assert!(result.contains("Content:"));
+        assert!(result.contains("On page 1:\nIntroduction text"));
+        assert!(result.contains("On page 2:\nMain content"));
+    }
+
+    #[test]
+    fn test_contextual_natural_language_flow() {
+        // Test that the format reads naturally
+        let metadata = DocumentMetadata {
+            title: "Report".to_string(),
+            page_count: 5,
+            created_at: Some("2025-01-01".to_string()),
+            author: Some("Alice".to_string()),
+        };
+
+        let result = ContextualFormat::export_with_metadata("Text", &metadata).unwrap();
+
+        // Should read as a natural sentence
+        assert!(result.starts_with("This is a document titled \"Report\" with 5 pages, written by Alice, created on 2025-01-01."));
+    }
+
+    #[test]
+    fn test_contextual_empty_text() {
+        let result = ContextualFormat::export_simple("").unwrap();
+        assert_eq!(result, "Document content:\n\n");
     }
 }

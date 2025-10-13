@@ -8,7 +8,7 @@ pub mod chunking;
 pub mod formats;
 
 pub use chunking::{ChunkMetadata, ChunkPosition, DocumentChunk, DocumentChunker};
-pub use formats::{DocumentMetadata, MarkdownExporter, MarkdownOptions};
+pub use formats::{ContextualFormat, DocumentMetadata, MarkdownExporter, MarkdownOptions};
 
 #[cfg(feature = "semantic")]
 pub use formats::{JsonExporter, JsonOptions};
