@@ -458,3 +458,7 @@ path = "../examples/page_overlay_with_content.rs"
 [[example]]
 name = "llm_export_formats"
 path = "../examples/llm_export_formats.rs"
+
+[[example]]
+name = "pdf_to_llm_formats"
+path = "../examples/pdf_to_llm_formats.rs"
