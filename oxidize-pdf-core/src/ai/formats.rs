@@ -18,6 +18,9 @@
 
 use crate::Result;
 
+#[cfg(feature = "semantic")]
+use serde_json::{json, Value};
+
 /// Metadata about a PDF document for export
 #[derive(Debug, Clone)]
 pub struct DocumentMetadata {
@@ -360,6 +363,231 @@ impl MarkdownExporter {
     }
 }
 
+/// Configuration options for JSON export
+#[cfg(feature = "semantic")]
+#[derive(Debug, Clone)]
+pub struct JsonOptions {
+    /// Whether to pretty-print the JSON output
+    pub pretty_print: bool,
+
+    /// Whether to include chunk information
+    pub include_chunks: bool,
+}
+
+#[cfg(feature = "semantic")]
+impl Default for JsonOptions {
+    fn default() -> Self {
+        Self {
+            pretty_print: true,
+            include_chunks: false,
+        }
+    }
+}
+
+/// Exporter for converting PDF content to JSON format
+///
+/// JSON is a structured format that's easy to parse programmatically,
+/// making it ideal for feeding PDF content into data pipelines and LLM APIs.
+///
+/// # Example
+///
+/// ```no_run
+/// use oxidize_pdf::ai::{JsonExporter, JsonOptions};
+///
+/// # fn main() -> oxidize_pdf::Result<()> {
+/// let exporter = JsonExporter::new(JsonOptions::default());
+/// let json = JsonExporter::export_simple("Hello, world!")?;
+/// println!("{}", json);
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(feature = "semantic")]
+#[derive(Debug, Clone)]
+pub struct JsonExporter {
+    options: JsonOptions,
+}
+
+#[cfg(feature = "semantic")]
+impl JsonExporter {
+    /// Create a new JSON exporter with the given options
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Configuration for the export process
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::{JsonExporter, JsonOptions};
+    ///
+    /// let exporter = JsonExporter::new(JsonOptions {
+    ///     pretty_print: true,
+    ///     include_chunks: false,
+    /// });
+    /// ```
+    pub fn new(options: JsonOptions) -> Self {
+        Self { options }
+    }
+
+    /// Create a new JSON exporter with default options
+    pub fn default() -> Self {
+        Self::new(JsonOptions::default())
+    }
+
+    /// Export text using the configured options
+    ///
+    /// This method respects the exporter's options for formatting.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text content to export
+    ///
+    /// # Returns
+    ///
+    /// A JSON-formatted string
+    pub fn export(&self, text: &str) -> Result<String> {
+        let doc = json!({
+            "type": "document",
+            "content": text
+        });
+
+        if self.options.pretty_print {
+            serde_json::to_string_pretty(&doc)
+                .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+        } else {
+            serde_json::to_string(&doc)
+                .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+        }
+    }
+
+    /// Export plain text to simple JSON format
+    ///
+    /// This is the simplest export method, converting raw text to a basic
+    /// JSON document structure.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text content to export
+    ///
+    /// # Returns
+    ///
+    /// A pretty-printed JSON string
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::JsonExporter;
+    ///
+    /// let text = "This is a sample document.";
+    /// let json = JsonExporter::export_simple(text).unwrap();
+    /// assert!(json.contains("\"type\": \"document\""));
+    /// assert!(json.contains("This is a sample document."));
+    /// ```
+    pub fn export_simple(text: &str) -> Result<String> {
+        let doc = json!({
+            "type": "document",
+            "content": text
+        });
+        serde_json::to_string_pretty(&doc)
+            .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+    }
+
+    /// Export text with metadata
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The text content
+    /// * `metadata` - Document metadata
+    ///
+    /// # Returns
+    ///
+    /// A JSON string with metadata and content
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::{JsonExporter, DocumentMetadata};
+    ///
+    /// let metadata = DocumentMetadata {
+    ///     title: "My Document".to_string(),
+    ///     page_count: 5,
+    ///     created_at: Some("2025-10-13".to_string()),
+    ///     author: Some("John Doe".to_string()),
+    /// };
+    ///
+    /// let json = JsonExporter::export_with_metadata("Content here", &metadata).unwrap();
+    /// assert!(json.contains("\"title\": \"My Document\""));
+    /// ```
+    pub fn export_with_metadata(text: &str, metadata: &DocumentMetadata) -> Result<String> {
+        let mut meta_obj = json!({
+            "title": metadata.title,
+            "page_count": metadata.page_count
+        });
+
+        if let Some(ref created) = metadata.created_at {
+            meta_obj["created_at"] = json!(created);
+        }
+
+        if let Some(ref author) = metadata.author {
+            meta_obj["author"] = json!(author);
+        }
+
+        let doc = json!({
+            "type": "document",
+            "metadata": meta_obj,
+            "content": text
+        });
+
+        serde_json::to_string_pretty(&doc)
+            .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+    }
+
+    /// Export multi-page document to JSON
+    ///
+    /// # Arguments
+    ///
+    /// * `page_texts` - Vector of (page_number, text) tuples
+    ///
+    /// # Returns
+    ///
+    /// A JSON string with page-by-page structure
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use oxidize_pdf::ai::JsonExporter;
+    ///
+    /// let pages = vec![
+    ///     (1, "Page 1 content".to_string()),
+    ///     (2, "Page 2 content".to_string()),
+    /// ];
+    ///
+    /// let json = JsonExporter::export_pages(&pages).unwrap();
+    /// assert!(json.contains("\"page_number\": 1"));
+    /// assert!(json.contains("\"page_number\": 2"));
+    /// ```
+    pub fn export_pages(page_texts: &[(usize, String)]) -> Result<String> {
+        let pages: Vec<Value> = page_texts
+            .iter()
+            .map(|(page_num, text)| {
+                json!({
+                    "page_number": page_num,
+                    "content": text
+                })
+            })
+            .collect();
+
+        let doc = json!({
+            "type": "document",
+            "page_count": page_texts.len(),
+            "pages": pages
+        });
+
+        serde_json::to_string_pretty(&doc)
+            .map_err(|e| crate::error::PdfError::SerializationError(e.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,10 +754,7 @@ mod tests {
 
     #[test]
     fn test_page_numbers_correct() {
-        let pages = vec![
-            (1, "First".to_string()),
-            (2, "Second".to_string()),
-        ];
+        let pages = vec![(1, "First".to_string()), (2, "Second".to_string())];
 
         let result = MarkdownExporter::export_with_pages(&pages).unwrap();
 
@@ -546,7 +771,10 @@ mod tests {
         let result = MarkdownExporter::export_with_pages(&pages).unwrap();
 
         // Should not have separator for single page
-        assert!(!result.contains("---"), "Single page should not have separator");
+        assert!(
+            !result.contains("---"),
+            "Single page should not have separator"
+        );
         assert!(result.contains("**Page 1**"));
         assert!(result.contains("Single page content"));
     }
@@ -595,14 +823,131 @@ mod tests {
 
     #[test]
     fn test_page_separator_format() {
-        let pages = vec![
-            (1, "A".to_string()),
-            (2, "B".to_string()),
-        ];
+        let pages = vec![(1, "A".to_string()), (2, "B".to_string())];
 
         let result = MarkdownExporter::export_with_pages(&pages).unwrap();
 
         // Check separator format is exactly "\n\n---\n\n"
         assert!(result.contains("\n\n---\n\n"));
+    }
+
+    // JSON Exporter Tests
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_basic_json_export() {
+        let text = "Hello, world!";
+        let result = JsonExporter::export_simple(text).unwrap();
+
+        // Should be valid JSON
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+
+        // Check structure
+        assert_eq!(parsed["type"], "document");
+        assert_eq!(parsed["content"], "Hello, world!");
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_json_parsing() {
+        let text = "Sample content";
+        let json = JsonExporter::export_simple(text).unwrap();
+
+        // Parse back the JSON
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert!(parsed.is_object());
+        assert_eq!(parsed["type"], "document");
+        assert_eq!(parsed["content"], "Sample content");
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_json_with_metadata() {
+        let metadata = DocumentMetadata {
+            title: "Test Doc".to_string(),
+            page_count: 10,
+            created_at: Some("2025-10-13".to_string()),
+            author: Some("Jane Doe".to_string()),
+        };
+
+        let json = JsonExporter::export_with_metadata("Content", &metadata).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        // Check metadata structure
+        assert_eq!(parsed["metadata"]["title"], "Test Doc");
+        assert_eq!(parsed["metadata"]["page_count"], 10);
+        assert_eq!(parsed["metadata"]["created_at"], "2025-10-13");
+        assert_eq!(parsed["metadata"]["author"], "Jane Doe");
+        assert_eq!(parsed["content"], "Content");
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_json_pages_export() {
+        let pages = vec![
+            (1, "Page 1 text".to_string()),
+            (2, "Page 2 text".to_string()),
+            (3, "Page 3 text".to_string()),
+        ];
+
+        let json = JsonExporter::export_pages(&pages).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        // Check structure
+        assert_eq!(parsed["type"], "document");
+        assert_eq!(parsed["page_count"], 3);
+
+        // Check pages array
+        let pages_array = parsed["pages"].as_array().unwrap();
+        assert_eq!(pages_array.len(), 3);
+
+        assert_eq!(pages_array[0]["page_number"], 1);
+        assert_eq!(pages_array[0]["content"], "Page 1 text");
+
+        assert_eq!(pages_array[1]["page_number"], 2);
+        assert_eq!(pages_array[1]["content"], "Page 2 text");
+
+        assert_eq!(pages_array[2]["page_number"], 3);
+        assert_eq!(pages_array[2]["content"], "Page 3 text");
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_json_exporter_options() {
+        let exporter = JsonExporter::new(JsonOptions {
+            pretty_print: false,
+            include_chunks: false,
+        });
+
+        let result = exporter.export("test").unwrap();
+
+        // Non-pretty print should not have newlines
+        assert!(!result.contains('\n'));
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_json_pretty_print() {
+        let exporter = JsonExporter::new(JsonOptions {
+            pretty_print: true,
+            include_chunks: false,
+        });
+
+        let result = exporter.export("test").unwrap();
+
+        // Pretty print should have newlines and indentation
+        assert!(result.contains('\n'));
+        assert!(result.contains("  ")); // Indentation
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn test_json_empty_pages() {
+        let pages: Vec<(usize, String)> = vec![];
+        let json = JsonExporter::export_pages(&pages).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed["page_count"], 0);
+        assert_eq!(parsed["pages"].as_array().unwrap().len(), 0);
     }
 }
