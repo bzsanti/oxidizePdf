@@ -55,6 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use_object_streams: false,
         pdf_version: "1.4".to_string(),
         compress_streams: true,
+        incremental_update: false,
     };
 
     let file = File::create(&traditional_path)?;
@@ -74,6 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use_object_streams: false,
         pdf_version: "1.5".to_string(),
         compress_streams: true,
+        incremental_update: false,
     };
 
     // Note: Full integration with PdfWriter will be done in next step

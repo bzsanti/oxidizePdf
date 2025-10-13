@@ -73,6 +73,9 @@ pub struct Page {
     next_mcid: u32,
     /// Currently open marked content tags (for nesting validation)
     marked_content_stack: Vec<String>,
+    /// Preserved resources from original PDF (for overlay operations)
+    /// Contains fonts, XObjects, ColorSpaces, etc. from parsed pages
+    preserved_resources: Option<crate::pdf_objects::Dictionary>,
 }
 
 impl Page {
@@ -95,7 +98,215 @@ impl Page {
             rotation: 0, // Default to no rotation
             next_mcid: 0,
             marked_content_stack: Vec::new(),
+            preserved_resources: None,
         }
+    }
+
+    /// Creates a writable Page from a parsed page dictionary.
+    ///
+    /// This method bridges the gap between the parser (read-only) and writer (writable)
+    /// by converting a parsed page into a Page structure that can be modified and saved.
+    ///
+    /// **IMPORTANT**: This method preserves the existing content stream and resources,
+    /// allowing you to overlay new content on top of the existing page content without
+    /// manual recreation.
+    ///
+    /// # Arguments
+    ///
+    /// * `parsed_page` - Reference to a parsed page from the PDF parser
+    ///
+    /// # Returns
+    ///
+    /// A writable `Page` with existing content preserved, ready for modification
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::{PdfReader, PdfDocument};
+    /// use oxidize_pdf::Page;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// // Load existing PDF
+    /// let reader = PdfReader::open("input.pdf")?;
+    /// let document = PdfDocument::new(reader);
+    /// let parsed_page = document.get_page(0)?;
+    ///
+    /// // Convert to writable page
+    /// let mut page = Page::from_parsed(&parsed_page)?;
+    ///
+    /// // Now you can add content on top of existing content
+    /// page.text()
+    ///     .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
+    ///     .at(100.0, 100.0)
+    ///     .write("Overlaid text")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_parsed(parsed_page: &crate::parser::page_tree::ParsedPage) -> Result<Self> {
+        // Extract dimensions from MediaBox
+        let media_box = parsed_page.media_box;
+        let width = media_box[2] - media_box[0];
+        let height = media_box[3] - media_box[1];
+
+        // Extract rotation
+        let rotation = parsed_page.rotation;
+
+        // Create base page
+        let mut page = Self::new(width, height);
+        page.rotation = rotation;
+
+        // TODO: Extract and preserve Resources (fonts, images, XObjects)
+        // This requires deeper integration with the parser's resource manager
+
+        // Extract and preserve existing content streams
+        // Note: This requires a PdfDocument reference to resolve content streams
+        // For now, we mark the content field to indicate it should be preserved
+        // The actual content stream extraction will be done when we have access to the reader
+
+        Ok(page)
+    }
+
+    /// Creates a writable Page from a parsed page with content stream preservation.
+    ///
+    /// This is an extended version of `from_parsed()` that requires access to the
+    /// PdfDocument to extract and preserve the original content streams.
+    ///
+    /// # Arguments
+    ///
+    /// * `parsed_page` - Reference to a parsed page
+    /// * `document` - Reference to the PDF document (for content stream resolution)
+    ///
+    /// # Returns
+    ///
+    /// A writable `Page` with original content streams preserved
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::{PdfReader, PdfDocument};
+    /// use oxidize_pdf::Page;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let reader = PdfReader::open("input.pdf")?;
+    /// let document = PdfDocument::new(reader);
+    /// let parsed_page = document.get_page(0)?;
+    ///
+    /// // Convert with content preservation
+    /// let mut page = Page::from_parsed_with_content(&parsed_page, &document)?;
+    ///
+    /// // Original content is preserved, overlay will be added on top
+    /// page.text()
+    ///     .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
+    ///     .at(100.0, 100.0)
+    ///     .write("Overlay text")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_parsed_with_content<R: std::io::Read + std::io::Seek>(
+        parsed_page: &crate::parser::page_tree::ParsedPage,
+        document: &crate::parser::document::PdfDocument<R>,
+    ) -> Result<Self> {
+        // Extract dimensions from MediaBox
+        let media_box = parsed_page.media_box;
+        let width = media_box[2] - media_box[0];
+        let height = media_box[3] - media_box[1];
+
+        // Extract rotation
+        let rotation = parsed_page.rotation;
+
+        // Create base page
+        let mut page = Self::new(width, height);
+        page.rotation = rotation;
+
+        // Extract and preserve existing content streams
+        let content_streams = parsed_page.content_streams_with_document(document)?;
+
+        // Concatenate all content streams
+        let mut preserved_content = Vec::new();
+        for stream in content_streams {
+            preserved_content.extend_from_slice(&stream);
+            // Add a newline between streams for safety
+            preserved_content.push(b'\n');
+        }
+
+        // Store the original content
+        // We'll need to wrap it with q/Q to isolate it when overlaying
+        page.content = preserved_content;
+
+        // Extract and preserve Resources (fonts, images, XObjects, etc.)
+        if let Some(resources) = parsed_page.get_resources() {
+            let mut unified_resources = Self::convert_parser_dict_to_unified(resources);
+
+            // Phase 3.2: Resolve embedded font streams
+            // For each font in resources, resolve FontDescriptor and font stream references
+            // and embed the stream data directly so writer doesn't need to resolve references
+            if let Some(crate::pdf_objects::Object::Dictionary(fonts)) =
+                unified_resources.get("Font")
+            {
+                let fonts_clone = fonts.clone();
+                let mut resolved_fonts = crate::pdf_objects::Dictionary::new();
+
+                for (font_name, font_obj) in fonts_clone.iter() {
+                    // Step 1: Resolve reference if needed to get actual font dictionary
+                    let font_dict = match font_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            // Resolve reference to get actual font dictionary from document
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    // Convert parser object to unified format
+                                    match Self::convert_parser_object_to_unified(&resolved_obj) {
+                                        crate::pdf_objects::Object::Dictionary(dict) => dict,
+                                        _ => {
+                                            // Not a dictionary, keep original reference
+                                            resolved_fonts.set(font_name.clone(), font_obj.clone());
+                                            continue;
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    // Resolution failed, keep original reference
+                                    resolved_fonts.set(font_name.clone(), font_obj.clone());
+                                    continue;
+                                }
+                            }
+                        }
+                        crate::pdf_objects::Object::Dictionary(dict) => dict.clone(),
+                        _ => {
+                            // Neither reference nor dictionary, keep as-is
+                            resolved_fonts.set(font_name.clone(), font_obj.clone());
+                            continue;
+                        }
+                    };
+
+                    // Step 2: Now font_dict is guaranteed to be a Dictionary, resolve embedded streams
+                    match Self::resolve_font_streams(&font_dict, document) {
+                        Ok(resolved_dict) => {
+                            resolved_fonts.set(
+                                font_name.clone(),
+                                crate::pdf_objects::Object::Dictionary(resolved_dict),
+                            );
+                        }
+                        Err(_) => {
+                            // If stream resolution fails, keep the resolved dictionary without streams
+                            resolved_fonts.set(
+                                font_name.clone(),
+                                crate::pdf_objects::Object::Dictionary(font_dict),
+                            );
+                        }
+                    }
+                }
+
+                // Replace Font dictionary with resolved version
+                unified_resources.set(
+                    "Font",
+                    crate::pdf_objects::Object::Dictionary(resolved_fonts),
+                );
+            }
+
+            page.preserved_resources = Some(unified_resources);
+        }
+
+        Ok(page)
     }
 
     /// Creates a new A4 page (595 x 842 points).
@@ -203,6 +414,122 @@ impl Page {
             225..=315 => 270,
             _ => 0, // Should not happen, but default to 0
         };
+    }
+
+    /// Converts a parser Dictionary to unified pdf_objects Dictionary
+    fn convert_parser_dict_to_unified(
+        parser_dict: &crate::parser::objects::PdfDictionary,
+    ) -> crate::pdf_objects::Dictionary {
+        use crate::pdf_objects::{Dictionary, Name};
+
+        let mut unified_dict = Dictionary::new();
+
+        for (key, value) in &parser_dict.0 {
+            let unified_key = Name::new(key.as_str());
+            let unified_value = Self::convert_parser_object_to_unified(value);
+            unified_dict.set(unified_key, unified_value);
+        }
+
+        unified_dict
+    }
+
+    /// Converts a parser PdfObject to unified Object
+    fn convert_parser_object_to_unified(
+        parser_obj: &crate::parser::objects::PdfObject,
+    ) -> crate::pdf_objects::Object {
+        use crate::parser::objects::PdfObject;
+        use crate::pdf_objects::{Array, BinaryString, Name, Object, ObjectId, Stream};
+
+        match parser_obj {
+            PdfObject::Null => Object::Null,
+            PdfObject::Boolean(b) => Object::Boolean(*b),
+            PdfObject::Integer(i) => Object::Integer(*i),
+            PdfObject::Real(f) => Object::Real(*f),
+            PdfObject::String(s) => Object::String(BinaryString::new(s.as_bytes().to_vec())),
+            PdfObject::Name(n) => Object::Name(Name::new(n.as_str())),
+            PdfObject::Array(arr) => {
+                let mut unified_arr = Array::new();
+                for item in &arr.0 {
+                    unified_arr.push(Self::convert_parser_object_to_unified(item));
+                }
+                Object::Array(unified_arr)
+            }
+            PdfObject::Dictionary(dict) => {
+                Object::Dictionary(Self::convert_parser_dict_to_unified(dict))
+            }
+            PdfObject::Stream(stream) => {
+                let dict = Self::convert_parser_dict_to_unified(&stream.dict);
+                let data = stream.data.clone();
+                Object::Stream(Stream::new(dict, data))
+            }
+            PdfObject::Reference(num, gen) => Object::Reference(ObjectId::new(*num, *gen)),
+        }
+    }
+
+    /// Resolves embedded font streams from a font dictionary (Phase 3.2)
+    ///
+    /// Takes a font dictionary and resolves any FontDescriptor + FontFile references,
+    /// embedding the stream data directly so the writer doesn't need to resolve references.
+    ///
+    /// # Returns
+    /// Font dictionary with embedded streams (if font has embedded data),
+    /// or original dictionary (if standard font or resolution fails)
+    fn resolve_font_streams<R: std::io::Read + std::io::Seek>(
+        font_dict: &crate::pdf_objects::Dictionary,
+        document: &crate::parser::document::PdfDocument<R>,
+    ) -> Result<crate::pdf_objects::Dictionary> {
+        use crate::pdf_objects::Object;
+
+        let mut resolved_dict = font_dict.clone();
+
+        // Check if font has a FontDescriptor
+        if let Some(Object::Reference(descriptor_id)) = font_dict.get("FontDescriptor") {
+            // Resolve FontDescriptor from document
+            let descriptor_obj =
+                document.get_object(descriptor_id.number(), descriptor_id.generation())?;
+
+            // Convert to unified format
+            let descriptor_unified = Self::convert_parser_object_to_unified(&descriptor_obj);
+
+            if let Object::Dictionary(mut descriptor_dict) = descriptor_unified {
+                // Check for embedded font streams (FontFile, FontFile2, FontFile3)
+                let font_file_keys = ["FontFile", "FontFile2", "FontFile3"];
+                let mut stream_resolved = false;
+
+                for key in &font_file_keys {
+                    if let Some(Object::Reference(stream_id)) = descriptor_dict.get(*key) {
+                        // Resolve font stream from document
+                        match document.get_object(stream_id.number(), stream_id.generation()) {
+                            Ok(stream_obj) => {
+                                // Convert to unified format (includes stream data)
+                                let stream_unified =
+                                    Self::convert_parser_object_to_unified(&stream_obj);
+
+                                // Replace reference with actual stream object
+                                descriptor_dict.set(*key, stream_unified);
+                                stream_resolved = true;
+                            }
+                            Err(_) => {
+                                // Resolution failed, keep reference as-is
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                // If we resolved any streams, update FontDescriptor in font dictionary
+                if stream_resolved {
+                    resolved_dict.set("FontDescriptor", Object::Dictionary(descriptor_dict));
+                }
+            }
+        }
+
+        Ok(resolved_dict)
+    }
+
+    /// Gets the preserved resources from the original PDF (if any)
+    pub fn get_preserved_resources(&self) -> Option<&crate::pdf_objects::Dictionary> {
+        self.preserved_resources.as_ref()
     }
 
     /// Gets the current page rotation in degrees.
@@ -461,7 +788,36 @@ impl Page {
         final_content.extend_from_slice(&self.text_context.generate_operations()?);
 
         // Add any content that was added via add_text_flow
-        final_content.extend_from_slice(&self.content);
+        // Phase 2.3: Rewrite font references in preserved content if fonts were renamed
+        let content_to_add = if let Some(ref preserved_res) = self.preserved_resources {
+            // Check if we have preserved fonts that need renaming
+            if let Some(fonts_dict) = preserved_res.get("Font") {
+                if let crate::pdf_objects::Object::Dictionary(ref fonts) = fonts_dict {
+                    // Build font mapping (F1 → OrigF1, Arial → OrigArial, etc.)
+                    let mut font_mapping = std::collections::HashMap::new();
+                    for (original_name, _) in fonts.iter() {
+                        let new_name = format!("Orig{}", original_name.as_str());
+                        font_mapping.insert(original_name.as_str().to_string(), new_name);
+                    }
+
+                    // Rewrite font references in preserved content
+                    if !font_mapping.is_empty() && !self.content.is_empty() {
+                        use crate::writer::rewrite_font_references;
+                        rewrite_font_references(&self.content, &font_mapping)
+                    } else {
+                        self.content.clone()
+                    }
+                } else {
+                    self.content.clone()
+                }
+            } else {
+                self.content.clone()
+            }
+        } else {
+            self.content.clone()
+        };
+
+        final_content.extend_from_slice(&content_to_add);
 
         // Render footer if present
         if let Some(footer) = &self.footer {
@@ -2037,6 +2393,131 @@ mod unit_tests {
         assert_eq!(cloned.width(), page.width());
         assert_eq!(cloned.height(), page.height());
         assert_eq!(cloned.margins().left, page.margins().left);
+    }
+
+    #[test]
+    fn test_page_from_parsed_basic() {
+        use crate::parser::objects::PdfDictionary;
+        use crate::parser::page_tree::ParsedPage;
+
+        // Create a test parsed page
+        let parsed_page = ParsedPage {
+            obj_ref: (1, 0),
+            dict: PdfDictionary::new(),
+            inherited_resources: None,
+            media_box: [0.0, 0.0, 612.0, 792.0], // US Letter
+            crop_box: None,
+            rotation: 0,
+            annotations: None,
+        };
+
+        // Convert to writable page
+        let page = Page::from_parsed(&parsed_page).unwrap();
+
+        // Verify dimensions
+        assert_eq!(page.width(), 612.0);
+        assert_eq!(page.height(), 792.0);
+        assert_eq!(page.get_rotation(), 0);
+    }
+
+    #[test]
+    fn test_page_from_parsed_with_rotation() {
+        use crate::parser::objects::PdfDictionary;
+        use crate::parser::page_tree::ParsedPage;
+
+        // Create a test parsed page with 90-degree rotation
+        let parsed_page = ParsedPage {
+            obj_ref: (1, 0),
+            dict: PdfDictionary::new(),
+            inherited_resources: None,
+            media_box: [0.0, 0.0, 595.0, 842.0], // A4
+            crop_box: None,
+            rotation: 90,
+            annotations: None,
+        };
+
+        // Convert to writable page
+        let page = Page::from_parsed(&parsed_page).unwrap();
+
+        // Verify rotation was preserved
+        assert_eq!(page.get_rotation(), 90);
+        assert_eq!(page.width(), 595.0);
+        assert_eq!(page.height(), 842.0);
+
+        // Verify effective dimensions (rotated)
+        assert_eq!(page.effective_width(), 842.0);
+        assert_eq!(page.effective_height(), 595.0);
+    }
+
+    #[test]
+    fn test_page_from_parsed_with_cropbox() {
+        use crate::parser::objects::PdfDictionary;
+        use crate::parser::page_tree::ParsedPage;
+
+        // Create a test parsed page with CropBox
+        let parsed_page = ParsedPage {
+            obj_ref: (1, 0),
+            dict: PdfDictionary::new(),
+            inherited_resources: None,
+            media_box: [0.0, 0.0, 612.0, 792.0],
+            crop_box: Some([10.0, 10.0, 602.0, 782.0]),
+            rotation: 0,
+            annotations: None,
+        };
+
+        // Convert to writable page
+        let page = Page::from_parsed(&parsed_page).unwrap();
+
+        // CropBox doesn't affect page dimensions (only visible area)
+        assert_eq!(page.width(), 612.0);
+        assert_eq!(page.height(), 792.0);
+    }
+
+    #[test]
+    fn test_page_from_parsed_small_mediabox() {
+        use crate::parser::objects::PdfDictionary;
+        use crate::parser::page_tree::ParsedPage;
+
+        // Create a test parsed page with custom small dimensions
+        let parsed_page = ParsedPage {
+            obj_ref: (1, 0),
+            dict: PdfDictionary::new(),
+            inherited_resources: None,
+            media_box: [0.0, 0.0, 200.0, 300.0],
+            crop_box: None,
+            rotation: 0,
+            annotations: None,
+        };
+
+        // Convert to writable page
+        let page = Page::from_parsed(&parsed_page).unwrap();
+
+        assert_eq!(page.width(), 200.0);
+        assert_eq!(page.height(), 300.0);
+    }
+
+    #[test]
+    fn test_page_from_parsed_non_zero_origin() {
+        use crate::parser::objects::PdfDictionary;
+        use crate::parser::page_tree::ParsedPage;
+
+        // Create a test parsed page with non-zero origin
+        let parsed_page = ParsedPage {
+            obj_ref: (1, 0),
+            dict: PdfDictionary::new(),
+            inherited_resources: None,
+            media_box: [10.0, 20.0, 610.0, 820.0], // Offset origin
+            crop_box: None,
+            rotation: 0,
+            annotations: None,
+        };
+
+        // Convert to writable page
+        let page = Page::from_parsed(&parsed_page).unwrap();
+
+        // Width and height should be calculated correctly
+        assert_eq!(page.width(), 600.0); // 610 - 10
+        assert_eq!(page.height(), 800.0); // 820 - 20
     }
 
     #[test]

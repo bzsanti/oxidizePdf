@@ -46,3 +46,4 @@ Check: https://lib.rs/~bzsanti/dash.xml
 3. Si una feature parece necesaria pero no está:
    - Pregunta al humano
    - No la implementes sin confirmación
+- Lee siempre el archivo .private/ROADMAP_MASTER.md al inicio de la sesion. Actualiza el archivo ROADMAP_MASTER.md con los avances del proyecto

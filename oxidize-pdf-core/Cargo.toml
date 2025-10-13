@@ -430,3 +430,35 @@ path = "../examples/validation/validate_real_pdfs.rs"
 [[example]]
 name = "xmp_metadata_demo"
 path = "../examples/src/xmp_metadata_demo.rs"
+
+[[example]]
+name = "incremental_form_update"
+path = "../examples/incremental_form_update.rs"
+
+[[example]]
+name = "incremental_page_replacement_manual"
+path = "../examples/incremental_page_replacement_manual.rs"
+
+[[example]]
+name = "incremental_overlay_simple"
+path = "../examples/incremental_overlay_simple.rs"
+
+[[example]]
+name = "incremental_overlay_working"
+path = "../examples/incremental_overlay_working.rs"
+
+[[example]]
+name = "page_overlay_mvp"
+path = "../examples/page_overlay_mvp.rs"
+
+[[example]]
+name = "page_overlay_with_content"
+path = "../examples/page_overlay_with_content.rs"
+
+[[example]]
+name = "llm_export_formats"
+path = "../examples/llm_export_formats.rs"
+
+[[example]]
+name = "pdf_to_llm_formats"
+path = "../examples/pdf_to_llm_formats.rs"

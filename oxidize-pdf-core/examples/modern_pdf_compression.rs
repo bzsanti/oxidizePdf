@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use_object_streams: false,
         pdf_version: "1.5".to_string(),
         compress_streams: true,
+        incremental_update: false,
     };
     let mut doc2 = create_test_document()?;
     let xref_only_size = write_pdf(&mut doc2, &xref_only_path, xref_only_config)?;
