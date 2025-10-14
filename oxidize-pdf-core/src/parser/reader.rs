@@ -53,6 +53,10 @@ pub struct PdfReader<R: Read + Seek> {
     options: super::ParseOptions,
     /// Encryption handler (if PDF is encrypted)
     encryption_handler: Option<EncryptionHandler>,
+    /// Track objects currently being reconstructed (circular reference detection)
+    objects_being_reconstructed: std::sync::Mutex<std::collections::HashSet<u32>>,
+    /// Maximum reconstruction depth (prevents pathological cases)
+    max_reconstruction_depth: u32,
 }
 
 impl<R: Read + Seek> PdfReader<R> {
@@ -217,6 +221,10 @@ impl<R: Read + Seek> PdfReader<R> {
                     parse_context: StackSafeContext::new(),
                     options: options.clone(),
                     encryption_handler: None,
+                    objects_being_reconstructed: std::sync::Mutex::new(
+                        std::collections::HashSet::new(),
+                    ),
+                    max_reconstruction_depth: 100,
                 };
 
                 // Load encryption dictionary
@@ -269,6 +277,8 @@ impl<R: Read + Seek> PdfReader<R> {
             parse_context: StackSafeContext::new(),
             options,
             encryption_handler,
+            objects_being_reconstructed: std::sync::Mutex::new(std::collections::HashSet::new()),
+            max_reconstruction_depth: 100,
         })
     }
 
@@ -1132,10 +1142,49 @@ impl<R: Read + Seek> PdfReader<R> {
         gen_num: u16,
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
+        // PROTECTION 1: Circular reference detection
+        if self
+            .objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .contains(&obj_num)
+        {
+            eprintln!(
+                "DEBUG: Circular reconstruction detected for object {} {} - breaking cycle with null object",
+                obj_num, gen_num
+            );
+            // Return null object to break cycle
+            self.object_cache
+                .insert((obj_num, gen_num), PdfObject::Null);
+            return Ok(&self.object_cache[&(obj_num, gen_num)]);
+        }
+
+        // PROTECTION 2: Depth limit check
+        let current_depth = self.objects_being_reconstructed.lock().unwrap().len() as u32;
+        if current_depth >= self.max_reconstruction_depth {
+            eprintln!(
+                "DEBUG: Maximum reconstruction depth ({}) exceeded for object {} {}",
+                self.max_reconstruction_depth, obj_num, gen_num
+            );
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Maximum reconstruction depth ({}) exceeded for object {} {}",
+                    self.max_reconstruction_depth, obj_num, gen_num
+                ),
+            });
+        }
+
         eprintln!(
-            "DEBUG: Attempting smart reconstruction for object {} {}",
-            obj_num, gen_num
+            "DEBUG: Attempting smart reconstruction for object {} {} (depth: {}/{})",
+            obj_num, gen_num, current_depth, self.max_reconstruction_depth
         );
+
+        // Mark as being reconstructed (prevents circular references)
+        self.objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .insert(obj_num);
 
         // Try multiple reconstruction strategies
         let reconstructed_obj = match self.smart_object_reconstruction(obj_num, gen_num) {
@@ -1153,12 +1202,23 @@ impl<R: Read + Seek> PdfReader<R> {
                             );
                             PdfObject::Null
                         } else {
+                            // Unmark before returning error
+                            self.objects_being_reconstructed
+                                .lock()
+                                .unwrap()
+                                .remove(&obj_num);
                             return Err(e);
                         }
                     }
                 }
             }
         };
+
+        // Unmark (reconstruction complete)
+        self.objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .remove(&obj_num);
 
         self.object_cache
             .insert((obj_num, gen_num), reconstructed_obj);
