@@ -2875,7 +2875,7 @@ mod tests {
 
         // ASCII text should use simple encoding
         ctx.draw_text("ASCII", 0.0, 0.0).unwrap();
-        let ops_ascii = ctx.operations();
+        let _ops_ascii = ctx.operations();
 
         ctx.clear();
 

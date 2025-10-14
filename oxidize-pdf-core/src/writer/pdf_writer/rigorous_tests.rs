@@ -7,7 +7,6 @@
 //! - No "relaxed" assertions
 
 use super::*;
-use crate::objects::{Object, ObjectId};
 use crate::page::Page;
 
 // =============================================================================
