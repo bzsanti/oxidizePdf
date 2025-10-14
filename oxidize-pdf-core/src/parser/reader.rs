@@ -395,9 +395,79 @@ impl<R: Read + Seek> PdfReader<R> {
         }
     }
 
-    /// Get an object by reference
+    /// Get an object by reference with circular reference protection
     pub fn get_object(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<&PdfObject> {
-        self.load_object_from_disk(obj_num, gen_num)
+        let key = (obj_num, gen_num);
+
+        // Fast path: check cache first
+        if self.object_cache.contains_key(&key) {
+            return Ok(&self.object_cache[&key]);
+        }
+
+        // PROTECTION 1: Check for circular reference
+        {
+            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            if being_loaded.contains(&obj_num) {
+                drop(being_loaded);
+                if self.options.collect_warnings {
+                    eprintln!(
+                        "DEBUG: Circular reference detected while loading object {} {} - breaking cycle with null object",
+                        obj_num, gen_num
+                    );
+                }
+                self.object_cache.insert(key, PdfObject::Null);
+                return Ok(&self.object_cache[&key]);
+            }
+        }
+
+        // PROTECTION 2: Check depth limit
+        {
+            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            let depth = being_loaded.len() as u32;
+            if depth >= self.max_reconstruction_depth {
+                drop(being_loaded);
+                if self.options.collect_warnings {
+                    eprintln!(
+                        "DEBUG: Maximum object loading depth ({}) exceeded for object {} {}",
+                        self.max_reconstruction_depth, obj_num, gen_num
+                    );
+                }
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: format!(
+                        "Maximum object loading depth ({}) exceeded",
+                        self.max_reconstruction_depth
+                    ),
+                });
+            }
+        }
+
+        // Mark object as being loaded
+        self.objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .insert(obj_num);
+
+        // Load object - if successful, it will be in cache
+        match self.load_object_from_disk(obj_num, gen_num) {
+            Ok(_) => {
+                // Object successfully loaded, now unmark and return from cache
+                self.objects_being_reconstructed
+                    .lock()
+                    .unwrap()
+                    .remove(&obj_num);
+                // Object must be in cache now
+                Ok(&self.object_cache[&key])
+            }
+            Err(e) => {
+                // Loading failed, unmark and propagate error
+                self.objects_being_reconstructed
+                    .lock()
+                    .unwrap()
+                    .remove(&obj_num);
+                Err(e)
+            }
+        }
     }
 
     /// Internal method to load an object from disk without stack management
@@ -695,8 +765,8 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // Load the object stream if not cached
         if !self.object_stream_cache.contains_key(&stream_obj_num) {
-            // Get the stream object using the internal method (no stack tracking)
-            let stream_obj = self.load_object_from_disk(stream_obj_num, 0)?;
+            // Get the stream object using get_object (with circular ref protection)
+            let stream_obj = self.get_object(stream_obj_num, 0)?;
 
             if let Some(stream) = stream_obj.as_stream() {
                 // Parse the object stream
