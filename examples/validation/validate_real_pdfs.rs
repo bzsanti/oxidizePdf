@@ -120,7 +120,7 @@ impl ValidationReport {
     }
 
     fn print_summary(&self) {
-        println!("\n  📊 Results:");
+        println!("\n  📊 Results for: {}", self.pdf_name);
         println!("     Pages: {}", self.page_count);
         println!("     Original text: {} chars", self.total_text_chars);
         println!("     Chunks created: {}", self.chunk_count);

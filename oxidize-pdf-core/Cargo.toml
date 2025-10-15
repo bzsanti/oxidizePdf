@@ -84,6 +84,8 @@ criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1.7"
 tempfile = "3.8"
 serde_json = { workspace = true }
+clap = { version = "4.4", features = ["derive"] }
+indicatif = "0.17"
 
 [[example]]
 name = "font_spacing_test"
@@ -230,12 +232,15 @@ path = "../examples/src/extract_page_14.rs"
 name = "extract_multiple_pages"
 path = "../examples/src/extract_multiple_pages.rs"
 
+# Batch processing example
+[[example]]
+name = "batch_processing"
+path = "../examples/src/batch_processing.rs"
+required-features = ["rayon"]
+
 # Temporarily disabled examples with compilation errors
 # [[example]]
 # name = "streaming_support"
-
-# [[example]]
-# name = "batch_processing"
 
 # [[example]]
 # name = "error_recovery"

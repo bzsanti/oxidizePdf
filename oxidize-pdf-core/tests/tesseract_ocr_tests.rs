@@ -30,6 +30,7 @@ mod tesseract_tests {
         ]
     }
 
+    #[allow(dead_code)]
     fn create_mock_png_data() -> Vec<u8> {
         vec![
             0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
@@ -155,8 +156,6 @@ mod tesseract_tests {
     #[test]
     #[ignore = "Requires Tesseract installation and O&M contract PDFs"]
     fn test_tesseract_with_real_contract_pdfs() {
-        use oxidize_pdf::operations::page_analysis::PageContentAnalyzer;
-        use oxidize_pdf::parser::{PdfDocument, PdfReader};
         use std::path::Path;
 
         let home_dir =

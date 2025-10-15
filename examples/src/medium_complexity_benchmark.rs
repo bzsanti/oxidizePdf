@@ -255,7 +255,6 @@ fn main() -> Result<()> {
 
             // Chart with unique data per page
             let chart_width = 400.0;
-            let chart_height = 80.0;
             let num_bars = 6;
             let bar_width = chart_width / num_bars as f64;
 
@@ -341,8 +340,6 @@ fn main() -> Result<()> {
                     .at(x + 5.0, y_pos + 20.0)
                     .write(label_text)?;
             }
-
-            y_pos -= chart_height + 35.0;
         }
 
         // === FOOTER (with unique identifiers) ===
