@@ -53,6 +53,10 @@ pub struct PdfReader<R: Read + Seek> {
     options: super::ParseOptions,
     /// Encryption handler (if PDF is encrypted)
     encryption_handler: Option<EncryptionHandler>,
+    /// Track objects currently being reconstructed (circular reference detection)
+    objects_being_reconstructed: std::sync::Mutex<std::collections::HashSet<u32>>,
+    /// Maximum reconstruction depth (prevents pathological cases)
+    max_reconstruction_depth: u32,
 }
 
 impl<R: Read + Seek> PdfReader<R> {
@@ -217,6 +221,10 @@ impl<R: Read + Seek> PdfReader<R> {
                     parse_context: StackSafeContext::new(),
                     options: options.clone(),
                     encryption_handler: None,
+                    objects_being_reconstructed: std::sync::Mutex::new(
+                        std::collections::HashSet::new(),
+                    ),
+                    max_reconstruction_depth: 100,
                 };
 
                 // Load encryption dictionary
@@ -269,6 +277,8 @@ impl<R: Read + Seek> PdfReader<R> {
             parse_context: StackSafeContext::new(),
             options,
             encryption_handler,
+            objects_being_reconstructed: std::sync::Mutex::new(std::collections::HashSet::new()),
+            max_reconstruction_depth: 100,
         })
     }
 
@@ -385,9 +395,79 @@ impl<R: Read + Seek> PdfReader<R> {
         }
     }
 
-    /// Get an object by reference
+    /// Get an object by reference with circular reference protection
     pub fn get_object(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<&PdfObject> {
-        self.load_object_from_disk(obj_num, gen_num)
+        let key = (obj_num, gen_num);
+
+        // Fast path: check cache first
+        if self.object_cache.contains_key(&key) {
+            return Ok(&self.object_cache[&key]);
+        }
+
+        // PROTECTION 1: Check for circular reference
+        {
+            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            if being_loaded.contains(&obj_num) {
+                drop(being_loaded);
+                if self.options.collect_warnings {
+                    eprintln!(
+                        "DEBUG: Circular reference detected while loading object {} {} - breaking cycle with null object",
+                        obj_num, gen_num
+                    );
+                }
+                self.object_cache.insert(key, PdfObject::Null);
+                return Ok(&self.object_cache[&key]);
+            }
+        }
+
+        // PROTECTION 2: Check depth limit
+        {
+            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            let depth = being_loaded.len() as u32;
+            if depth >= self.max_reconstruction_depth {
+                drop(being_loaded);
+                if self.options.collect_warnings {
+                    eprintln!(
+                        "DEBUG: Maximum object loading depth ({}) exceeded for object {} {}",
+                        self.max_reconstruction_depth, obj_num, gen_num
+                    );
+                }
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: format!(
+                        "Maximum object loading depth ({}) exceeded",
+                        self.max_reconstruction_depth
+                    ),
+                });
+            }
+        }
+
+        // Mark object as being loaded
+        self.objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .insert(obj_num);
+
+        // Load object - if successful, it will be in cache
+        match self.load_object_from_disk(obj_num, gen_num) {
+            Ok(_) => {
+                // Object successfully loaded, now unmark and return from cache
+                self.objects_being_reconstructed
+                    .lock()
+                    .unwrap()
+                    .remove(&obj_num);
+                // Object must be in cache now
+                Ok(&self.object_cache[&key])
+            }
+            Err(e) => {
+                // Loading failed, unmark and propagate error
+                self.objects_being_reconstructed
+                    .lock()
+                    .unwrap()
+                    .remove(&obj_num);
+                Err(e)
+            }
+        }
     }
 
     /// Internal method to load an object from disk without stack management
@@ -685,8 +765,8 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // Load the object stream if not cached
         if !self.object_stream_cache.contains_key(&stream_obj_num) {
-            // Get the stream object using the internal method (no stack tracking)
-            let stream_obj = self.load_object_from_disk(stream_obj_num, 0)?;
+            // Get the stream object using get_object (with circular ref protection)
+            let stream_obj = self.get_object(stream_obj_num, 0)?;
 
             if let Some(stream) = stream_obj.as_stream() {
                 // Parse the object stream
@@ -1132,10 +1212,49 @@ impl<R: Read + Seek> PdfReader<R> {
         gen_num: u16,
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
+        // PROTECTION 1: Circular reference detection
+        if self
+            .objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .contains(&obj_num)
+        {
+            eprintln!(
+                "DEBUG: Circular reconstruction detected for object {} {} - breaking cycle with null object",
+                obj_num, gen_num
+            );
+            // Return null object to break cycle
+            self.object_cache
+                .insert((obj_num, gen_num), PdfObject::Null);
+            return Ok(&self.object_cache[&(obj_num, gen_num)]);
+        }
+
+        // PROTECTION 2: Depth limit check
+        let current_depth = self.objects_being_reconstructed.lock().unwrap().len() as u32;
+        if current_depth >= self.max_reconstruction_depth {
+            eprintln!(
+                "DEBUG: Maximum reconstruction depth ({}) exceeded for object {} {}",
+                self.max_reconstruction_depth, obj_num, gen_num
+            );
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Maximum reconstruction depth ({}) exceeded for object {} {}",
+                    self.max_reconstruction_depth, obj_num, gen_num
+                ),
+            });
+        }
+
         eprintln!(
-            "DEBUG: Attempting smart reconstruction for object {} {}",
-            obj_num, gen_num
+            "DEBUG: Attempting smart reconstruction for object {} {} (depth: {}/{})",
+            obj_num, gen_num, current_depth, self.max_reconstruction_depth
         );
+
+        // Mark as being reconstructed (prevents circular references)
+        self.objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .insert(obj_num);
 
         // Try multiple reconstruction strategies
         let reconstructed_obj = match self.smart_object_reconstruction(obj_num, gen_num) {
@@ -1153,12 +1272,23 @@ impl<R: Read + Seek> PdfReader<R> {
                             );
                             PdfObject::Null
                         } else {
+                            // Unmark before returning error
+                            self.objects_being_reconstructed
+                                .lock()
+                                .unwrap()
+                                .remove(&obj_num);
                             return Err(e);
                         }
                     }
                 }
             }
         };
+
+        // Unmark (reconstruction complete)
+        self.objects_being_reconstructed
+            .lock()
+            .unwrap()
+            .remove(&obj_num);
 
         self.object_cache
             .insert((obj_num, gen_num), reconstructed_obj);

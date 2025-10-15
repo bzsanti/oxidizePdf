@@ -4,7 +4,6 @@ use oxidize_pdf::encryption::{
     EncryptionDictionary, EncryptionKey, Permissions, StandardSecurityHandler,
 };
 use oxidize_pdf::objects::ObjectId;
-use oxidize_pdf::{Document, Page};
 
 // NOTE: Full document encryption via Document::encrypt_with_passwords() is not yet
 // fully integrated with the writer. The encryption primitives (handlers, keys, dictionaries)

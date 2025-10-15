@@ -1,21 +1,65 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-11 - Incremental Updates API Clarification
-- **Branch**: develop_santi (working branch)
-- **Version**: **v1.5.0 released** 🚀
+- **Last Session**: 2025-10-14 - v1.6.0 Release
+- **Branch**: main (v1.6.0 tagged and released)
+- **Version**: **v1.6.0 released** 🚀
 - **Recent Work**:
-  - ✅ **Incremental Updates Writer**: Implemented with clear API separation
-    - `write_incremental_with_page_replacement()` - Manual page replacement (shipped)
-    - `write_incremental_with_overlay()` - Automatic overlay (planned, stub added)
-  - ✅ **Documentation overhaul**: Honest assessment of capabilities and limitations
-  - ✅ **API Naming**: Clear distinction between manual replacement vs automatic overlay
-  - ✅ **Example updated**: `incremental_page_replacement_manual.rs` with warnings
-  - ✅ **4 rigorous tests**: pdftotext/pdfinfo verification (NO smoke tests)
-- **Key Achievement**: Honest communication about what's implemented vs planned
-- **Next**: Compile, test, commit changes
+  - ✅ **v1.6.0 Tagged**: develop → main merged via PR #81
+  - ✅ **CI Pipeline**: Release workflow completed successfully
+  - ✅ **Published**: crates.io + GitHub release
+  - ✅ **Feature 2.1.2**: LLM-optimized formats (Markdown, JSON, plain text)
+  - ✅ **Incremental Updates**: Page replacement API shipped
+  - ✅ **Content Stream Utils**: 737 lines of overlay infrastructure
+  - ✅ **8,000+ lines**: New functionality with comprehensive tests
+- **Key Achievement**: Major feature release with AI/LLM integration
+- **Next**: Continue development on develop branch
 
 ## ✅ Funcionalidades Completadas
+
+### 🤖 **Feature 2.1.2: LLM-Optimized Formats** (v1.6.0 - 2025-10-14) ⭐ RELEASED
+
+#### AI/LLM Export Formats ✅
+- ✅ **Markdown Export**: Structured document hierarchy
+  - Headings, paragraphs, lists, tables
+  - Code blocks and preformatted text
+  - Optimal for RAG systems and LLM training
+- ✅ **Plain Text Export**: Clean, readable text
+  - Unicode normalization
+  - Paragraph preservation
+  - Whitespace cleanup
+- ✅ **Structured JSON Export**: Semantic document model
+  - Sections with metadata
+  - Text runs with formatting
+  - Position and style information
+  - Perfect for document analysis pipelines
+- ✅ **Implementation**: `oxidize-pdf-core/src/ai/formats.rs` (1,592 lines)
+- ✅ **Examples**:
+  - `examples/llm_export_formats.rs` - Format demonstrations
+  - `examples/pdf_to_llm_formats.rs` - Conversion utilities
+- ✅ **Testing**: Comprehensive format validation
+- ✅ **Documentation**: MVP README with usage guides
+
+#### Incremental Updates Writer ✅
+- ✅ **Page Replacement API**: `write_incremental_with_page_replacement()`
+  - Replace specific pages in existing PDFs
+  - ISO 32000-1 §7.5.6 compliant
+  - Append-only writes (digital signature compatible)
+  - Location: oxidize-pdf-core/src/writer/pdf_writer/mod.rs:478
+- ✅ **Content Stream Utilities**: 737 lines of overlay infrastructure
+  - Stream parsing and manipulation
+  - Resource dictionary merging
+  - Text/graphics state management
+  - Location: oxidize-pdf-core/src/writer/content_stream_utils.rs
+- ✅ **Testing**: 4 rigorous tests with pdftotext/pdfinfo verification
+- ✅ **Example**: `examples/incremental_page_replacement_manual.rs`
+
+#### 📊 v1.6.0 Release Summary
+- **Scope**: 8,000+ lines of new functionality
+- **Focus**: AI/LLM integration + PDF manipulation
+- **Tests**: Comprehensive coverage with real PDF validation
+- **Impact**: Enables modern document processing workflows
+- **Released**: 2025-10-14 via crates.io
 
 ### 🎯 **Sprint 2.2: ISO Core Fundamentals** (Sesión 2025-10-07) ⭐ COMPLETE
 
