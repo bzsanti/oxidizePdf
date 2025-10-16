@@ -366,7 +366,10 @@ impl<R: Read + Seek> PdfReader<R> {
         if !needs_reconstruction {
             // Object is valid, get it again to return the reference
             let catalog = self.get_object(obj_num, gen_num)?;
-            return Ok(catalog.as_dict().unwrap());
+            return catalog.as_dict().ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!("Catalog object {} {} is not a dictionary", obj_num, gen_num),
+            });
         }
 
         // If we reach here, reconstruction is needed
@@ -437,7 +440,13 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // PROTECTION 1: Check for circular reference
         {
-            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            let being_loaded =
+                self.objects_being_reconstructed
+                    .lock()
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Mutex poisoned during circular reference check".to_string(),
+                    })?;
             if being_loaded.contains(&obj_num) {
                 drop(being_loaded);
                 if self.options.collect_warnings {
@@ -453,7 +462,13 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // PROTECTION 2: Check depth limit
         {
-            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            let being_loaded =
+                self.objects_being_reconstructed
+                    .lock()
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Mutex poisoned during depth limit check".to_string(),
+                    })?;
             let depth = being_loaded.len() as u32;
             if depth >= self.max_reconstruction_depth {
                 drop(being_loaded);
@@ -476,7 +491,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Mark object as being loaded
         self.objects_being_reconstructed
             .lock()
-            .unwrap()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned while marking object as being loaded".to_string(),
+            })?
             .insert(obj_num);
 
         // Load object - if successful, it will be in cache
@@ -485,17 +503,21 @@ impl<R: Read + Seek> PdfReader<R> {
                 // Object successfully loaded, now unmark and return from cache
                 self.objects_being_reconstructed
                     .lock()
-                    .unwrap()
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Mutex poisoned while unmarking object after successful load"
+                            .to_string(),
+                    })?
                     .remove(&obj_num);
                 // Object must be in cache now
                 Ok(&self.object_cache[&key])
             }
             Err(e) => {
                 // Loading failed, unmark and propagate error
-                self.objects_being_reconstructed
-                    .lock()
-                    .unwrap()
-                    .remove(&obj_num);
+                // Note: If mutex is poisoned here, we prioritize the original error
+                if let Ok(mut guard) = self.objects_being_reconstructed.lock() {
+                    guard.remove(&obj_num);
+                }
                 Err(e)
             }
         }
@@ -1244,12 +1266,16 @@ impl<R: Read + Seek> PdfReader<R> {
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
         // PROTECTION 1: Circular reference detection
-        if self
+        let is_circular = self
             .objects_being_reconstructed
             .lock()
-            .unwrap()
-            .contains(&obj_num)
-        {
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned during circular reference check".to_string(),
+            })?
+            .contains(&obj_num);
+
+        if is_circular {
             eprintln!(
                 "DEBUG: Circular reconstruction detected for object {} {} - breaking cycle with null object",
                 obj_num, gen_num
@@ -1261,7 +1287,14 @@ impl<R: Read + Seek> PdfReader<R> {
         }
 
         // PROTECTION 2: Depth limit check
-        let current_depth = self.objects_being_reconstructed.lock().unwrap().len() as u32;
+        let current_depth = self
+            .objects_being_reconstructed
+            .lock()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned during depth check".to_string(),
+            })?
+            .len() as u32;
         if current_depth >= self.max_reconstruction_depth {
             eprintln!(
                 "DEBUG: Maximum reconstruction depth ({}) exceeded for object {} {}",
@@ -1284,7 +1317,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Mark as being reconstructed (prevents circular references)
         self.objects_being_reconstructed
             .lock()
-            .unwrap()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned while marking object as being reconstructed".to_string(),
+            })?
             .insert(obj_num);
 
         // Try multiple reconstruction strategies
@@ -1303,11 +1339,10 @@ impl<R: Read + Seek> PdfReader<R> {
                             );
                             PdfObject::Null
                         } else {
-                            // Unmark before returning error
-                            self.objects_being_reconstructed
-                                .lock()
-                                .unwrap()
-                                .remove(&obj_num);
+                            // Unmark before returning error (best effort - ignore if mutex poisoned)
+                            if let Ok(mut guard) = self.objects_being_reconstructed.lock() {
+                                guard.remove(&obj_num);
+                            }
                             return Err(e);
                         }
                     }
@@ -1318,7 +1353,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Unmark (reconstruction complete)
         self.objects_being_reconstructed
             .lock()
-            .unwrap()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned while unmarking reconstructed object".to_string(),
+            })?
             .remove(&obj_num);
 
         self.object_cache
@@ -1337,7 +1375,15 @@ impl<R: Read + Seek> PdfReader<R> {
             obj_num, gen_num
         );
 
-        Ok(self.object_cache.get(&(obj_num, gen_num)).unwrap())
+        self.object_cache
+            .get(&(obj_num, gen_num))
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Object {} {} not in cache after reconstruction",
+                    obj_num, gen_num
+                ),
+            })
     }
 
     /// Smart object reconstruction using multiple heuristics
