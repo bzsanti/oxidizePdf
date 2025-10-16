@@ -860,23 +860,200 @@ impl XRefTable {
         }
 
         // Fallback to common object numbers if catalog not found by content
+        // FIX for Issue #83: Validate object type before accepting as catalog
         if catalog_candidate.is_none() {
             for obj_num in [1, 2, 3, 4, 5] {
-                if table.entries.contains_key(&obj_num) {
-                    catalog_candidate = Some(obj_num);
-                    eprintln!("Using fallback catalog candidate: object {}", obj_num);
-                    break;
+                if let Some(entry) = table.entries.get(&obj_num) {
+                    if entry.in_use {
+                        let offset = entry.offset as usize;
+                        if offset < buffer.len() {
+                            // Check if this object is /Type/Catalog (not /Type/Sig)
+                            if let Some(obj_start) =
+                                content[offset..].find(&format!("{} 0 obj", obj_num))
+                            {
+                                let absolute_start = offset + obj_start;
+                                if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                                    let absolute_end = absolute_start + endobj_pos;
+                                    let obj_content = &content[absolute_start..absolute_end];
+
+                                    // Skip /Type/Sig objects (digital signatures)
+                                    if obj_content.contains("/Type/Sig")
+                                        || obj_content.contains("/Type /Sig")
+                                    {
+                                        eprintln!("Skipping object {} (Type: Sig)", obj_num);
+                                        continue;
+                                    }
+
+                                    // Accept if it has /Type/Catalog or /Pages (catalog indicator)
+                                    if obj_content.contains("/Type/Catalog")
+                                        || obj_content.contains("/Type /Catalog")
+                                        || obj_content.contains("/Pages")
+                                    {
+                                        catalog_candidate = Some(obj_num);
+                                        eprintln!("Using fallback catalog candidate: object {} (validated)", obj_num);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // If still no Root found, use the first object as a last resort
+        // If still no Root found, scan ALL objects as last resort (not just first)
+        // FIX for Issue #83: In signed PDFs, catalog might be anywhere, not just object 1
         if catalog_candidate.is_none() && !table.entries.is_empty() {
-            catalog_candidate = Some(*table.entries.keys().min().unwrap_or(&1));
             eprintln!(
-                "Using last resort catalog candidate: object {}",
-                catalog_candidate.unwrap()
+                "Last resort: Scanning all {} objects for any with /Pages or /Catalog",
+                table.entries.len()
             );
+
+            // Sort object numbers to check in order
+            let mut obj_numbers: Vec<u32> = table.entries.keys().copied().collect();
+            obj_numbers.sort_unstable();
+
+            for obj_num in obj_numbers {
+                if let Some(entry) = table.entries.get(&obj_num) {
+                    if entry.in_use {
+                        let offset = entry.offset as usize;
+                        if offset < buffer.len() {
+                            if let Some(obj_start) =
+                                content[offset..].find(&format!("{} 0 obj", obj_num))
+                            {
+                                let absolute_start = offset + obj_start;
+                                if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                                    let absolute_end = absolute_start + endobj_pos;
+                                    let obj_content = &content[absolute_start..absolute_end];
+
+                                    // Skip signature objects
+                                    if obj_content.contains("/Type/Sig")
+                                        || obj_content.contains("/Type /Sig")
+                                    {
+                                        continue;
+                                    }
+
+                                    // Look for catalog indicators: /Type/Catalog OR /Pages key
+                                    if obj_content.contains("/Type/Catalog")
+                                        || obj_content.contains("/Type /Catalog")
+                                    {
+                                        catalog_candidate = Some(obj_num);
+                                        eprintln!("Last resort: Found catalog at object {} (/Type/Catalog)", obj_num);
+                                        break;
+                                    } else if obj_content.contains("/Pages") {
+                                        catalog_candidate = Some(obj_num);
+                                        eprintln!(
+                                            "Last resort: Found catalog at object {} (has /Pages)",
+                                            obj_num
+                                        );
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // If STILL nothing found, search END of file content (not entire file)
+            // FIX for Issue #83: When XRef table is completely corrupted/empty,
+            // table entries are unreliable - search last 100KB only (performance optimization)
+            if catalog_candidate.is_none() {
+                eprintln!("Extreme last resort: Scanning last 100KB for /Type/Catalog");
+
+                // Search for "/Type/Catalog" in LAST 100KB only (catalog is at end in signed PDFs)
+                // This avoids performance issues with large PDFs (>1MB)
+                const SEARCH_WINDOW: usize = 100 * 1024; // 100KB
+                let search_start = if content.len() > SEARCH_WINDOW {
+                    content.len() - SEARCH_WINDOW
+                } else {
+                    0
+                };
+                let search_content = &content[search_start..];
+
+                let catalog_pattern = "/Type/Catalog";
+                if let Some(catalog_pos) = search_content.rfind(catalog_pattern) {
+                    let absolute_pos = search_start + catalog_pos;
+                    eprintln!(
+                        "Extreme last resort: Found /Type/Catalog at position {}",
+                        absolute_pos
+                    );
+
+                    // Find the "obj_num 0 obj" pattern BEFORE this /Type/Catalog
+                    // Search backwards up to 200 bytes
+                    let local_search_start = if catalog_pos > 200 {
+                        catalog_pos - 200
+                    } else {
+                        0
+                    };
+                    let search_area = &search_content[local_search_start..catalog_pos];
+
+                    // Look for pattern "NNNN 0 obj" where NNNN is object number
+                    if let Some(obj_pattern_pos) = search_area.rfind(" 0 obj") {
+                        // Find the number before " 0 obj"
+                        let before_obj = &search_area[..obj_pattern_pos];
+
+                        // Find the last sequence of digits
+                        let trimmed = before_obj.trim_end();
+                        if let Some(digit_start) = trimmed.rfind(|c: char| !c.is_ascii_digit()) {
+                            let num_str = trimmed[digit_start + 1..].trim();
+                            if !num_str.is_empty() {
+                                if let Ok(obj_num) = num_str.parse::<u32>() {
+                                    eprintln!(
+                                        "Extreme last resort: Found /Type/Catalog at object {}",
+                                        obj_num
+                                    );
+                                    catalog_candidate = Some(obj_num);
+                                }
+                            }
+                        } else {
+                            // No non-digit found, entire string might be the number
+                            let num_str = trimmed.trim();
+                            if let Ok(obj_num) = num_str.parse::<u32>() {
+                                eprintln!(
+                                    "Extreme last resort: Found /Type/Catalog at object {}",
+                                    obj_num
+                                );
+                                catalog_candidate = Some(obj_num);
+                            }
+                        }
+                    }
+                } else {
+                    eprintln!("Extreme last resort: No /Type/Catalog found in last 100KB");
+                }
+
+                // If STILL nothing, fallback to first non-Sig object in table
+                if catalog_candidate.is_none() {
+                    eprintln!("Warning: Could not find any catalog object, using first non-signature object as absolute last resort");
+                    for obj_num in table.entries.keys().copied().collect::<Vec<_>>().iter() {
+                        let offset = match table.entries.get(obj_num) {
+                            Some(entry) => entry.offset as usize,
+                            None => continue, // Skip if entry not found (shouldn't happen)
+                        };
+                        if offset < buffer.len() {
+                            if let Some(obj_start) =
+                                content[offset..].find(&format!("{} 0 obj", obj_num))
+                            {
+                                let absolute_start = offset + obj_start;
+                                if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                                    let absolute_end = absolute_start + endobj_pos;
+                                    let obj_content = &content[absolute_start..absolute_end];
+                                    if !obj_content.contains("/Type/Sig")
+                                        && !obj_content.contains("/Type /Sig")
+                                    {
+                                        catalog_candidate = Some(*obj_num);
+                                        eprintln!(
+                                            "Using object {} as absolute last resort",
+                                            obj_num
+                                        );
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if let Some(root_obj) = catalog_candidate {

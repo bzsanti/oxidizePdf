@@ -123,6 +123,9 @@ impl XRefStream {
             index, widths
         );
 
+        // Calculate entry size from W array for XRef stream predictor handling
+        let entry_size = widths.iter().sum::<usize>();
+
         // Decode the stream data
         let decoded_data = if let Some(filter_obj) = stream_dict.get("Filter") {
             // Apply filters
@@ -137,8 +140,25 @@ impl XRefStream {
                     let decode_params = stream_dict.get("DecodeParms");
 
                     if let Some(params_obj) = decode_params {
-                        if let Some(params_dict) = params_obj.as_dict() {
-                            apply_filter_with_params(&stream_data, filter, Some(params_dict))?
+                        if let Some(mut params_dict) = params_obj.as_dict().cloned() {
+                            // FIX for Issue #83: XRef streams with PNG predictor
+                            // Override /Columns with actual entry size from W array
+                            // This fixes predictor mismatch (e.g., Columns=4 but W=[1,3,2] requires 6)
+                            if params_dict
+                                .get("Predictor")
+                                .and_then(|p| p.as_integer())
+                                .is_some()
+                            {
+                                params_dict.insert(
+                                    "Columns".to_string(),
+                                    PdfObject::Integer(entry_size as i64),
+                                );
+                                eprintln!(
+                                    "DEBUG: Overriding /Columns with entry_size {} for XRef predictor",
+                                    entry_size
+                                );
+                            }
+                            apply_filter_with_params(&stream_data, filter, Some(&params_dict))?
                         } else {
                             apply_filter(&stream_data, filter)?
                         }

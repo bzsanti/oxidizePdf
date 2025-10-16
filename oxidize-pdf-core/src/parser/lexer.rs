@@ -678,7 +678,9 @@ impl<R: Read> Lexer<R> {
 
         // First consume any peeked byte to avoid duplication
         if self.peek_buffer.is_some() && n > 0 {
-            bytes.push(self.consume_char()?.unwrap());
+            if let Some(byte) = self.consume_char()? {
+                bytes.push(byte);
+            }
         }
 
         // Read remaining bytes directly
