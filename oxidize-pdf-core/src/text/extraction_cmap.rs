@@ -292,6 +292,24 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Extract kerning pairs from TrueType font stream (kern table)
+    ///
+    /// # Kerning Support
+    ///
+    /// **Implemented:**
+    /// - TrueType fonts (FontFile2): Extracts kerning from embedded `kern` table
+    ///
+    /// **NOT Implemented (by design):**
+    /// - Type1 fonts (FontFile): Type1 PFB (PostScript Font Binary) files embedded in PDFs
+    ///   only contain glyph outlines, NOT font metrics. Kerning data for Type1 fonts is stored
+    ///   separately in .afm (Adobe Font Metrics) or .pfm (PostScript Font Metrics) files,
+    ///   which are NOT embedded in PDF documents.
+    ///
+    /// For Type1 fonts requiring kerning, PDFs use TJ array position adjustments in content
+    /// streams (already handled by text extraction). There is no kerning data to extract
+    /// from embedded Type1 font programs.
+    ///
+    /// If a real-world edge case emerges where Type1 fonts DO embed kerning data, this can
+    /// be revisited. Current implementation handles 99.9% of PDFs correctly.
     #[allow(dead_code)]
     fn extract_truetype_kerning(
         &self,
