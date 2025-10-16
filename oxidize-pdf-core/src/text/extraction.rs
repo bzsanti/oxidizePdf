@@ -251,23 +251,27 @@ impl TextExtractor {
 
                             extracted_text.push_str(&decoded);
 
+                            // Get font info for accurate width calculation
+                            let font_info = state.font_name.as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+
                             if self.options.preserve_layout {
                                 fragments.push(TextFragment {
                                     text: decoded.clone(),
                                     x,
                                     y,
-                                    width: calculate_text_width(&decoded, state.font_size),
+                                    width: calculate_text_width(&decoded, state.font_size, font_info),
                                     height: state.font_size,
                                     font_size: state.font_size,
                                 });
                             }
 
                             // Update position for next text
-                            last_x = x + calculate_text_width(&decoded, state.font_size);
+                            last_x = x + calculate_text_width(&decoded, state.font_size, font_info);
                             last_y = y;
 
                             // Update text matrix for next show operation
-                            let text_width = calculate_text_width(&decoded, state.font_size);
+                            let text_width = calculate_text_width(&decoded, state.font_size, font_info);
                             let tx = text_width * state.horizontal_scale / 100.0;
                             state.text_matrix =
                                 multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
@@ -276,6 +280,10 @@ impl TextExtractor {
 
                     ContentOperation::ShowTextArray(array) => {
                         if in_text_object {
+                            // Get font info for accurate width calculation
+                            let font_info = state.font_name.as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+
                             for item in array {
                                 match item {
                                     TextElement::Text(text_bytes) => {
@@ -284,7 +292,7 @@ impl TextExtractor {
 
                                         // Update text matrix
                                         let text_width =
-                                            calculate_text_width(&decoded, state.font_size);
+                                            calculate_text_width(&decoded, state.font_size, font_info);
                                         let tx = text_width * state.horizontal_scale / 100.0;
                                         state.text_matrix = multiply_matrix(
                                             &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
@@ -607,9 +615,37 @@ fn transform_point(x: f64, y: f64, matrix: &[f64; 6]) -> (f64, f64) {
     (tx, ty)
 }
 
-/// Calculate approximate text width (simplified)
-fn calculate_text_width(text: &str, font_size: f64) -> f64 {
-    // Approximate: assume average character width is 0.5 * font_size
+/// Calculate text width using actual font metrics
+fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>) -> f64 {
+    // If we have font metrics, use them for accurate width calculation
+    if let Some(font) = font_info {
+        if let Some(ref widths) = font.metrics.widths {
+            let first_char = font.metrics.first_char.unwrap_or(0);
+            let last_char = font.metrics.last_char.unwrap_or(255);
+            let missing_width = font.metrics.missing_width.unwrap_or(500.0);
+
+            let mut total_width = 0.0;
+
+            for ch in text.chars() {
+                let char_code = ch as u32;
+
+                // Get width from Widths array or use missing_width
+                let width = if char_code >= first_char && char_code <= last_char {
+                    let index = (char_code - first_char) as usize;
+                    widths.get(index).copied().unwrap_or(missing_width)
+                } else {
+                    missing_width
+                };
+
+                // Convert from glyph space (1/1000 units) to user space
+                total_width += width / 1000.0 * font_size;
+            }
+
+            return total_width;
+        }
+    }
+
+    // Fallback to simplified calculation if no metrics available
     text.len() as f64 * font_size * 0.5
 }
 

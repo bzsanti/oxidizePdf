@@ -11,6 +11,34 @@ use crate::text::extraction::TextExtractor;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
+/// Font metrics for accurate text width calculation
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct FontMetrics {
+    /// First character code in the Widths array
+    pub first_char: Option<u32>,
+    /// Last character code in the Widths array
+    pub last_char: Option<u32>,
+    /// Character widths (in glyph space units, typically 1/1000)
+    pub widths: Option<Vec<f64>>,
+    /// Missing width (default width for characters not in Widths array)
+    pub missing_width: Option<f64>,
+    /// Kerning pairs: (char1, char2) -> adjustment
+    pub kerning: Option<HashMap<(u32, u32), f64>>,
+}
+
+impl Default for FontMetrics {
+    fn default() -> Self {
+        Self {
+            first_char: None,
+            last_char: None,
+            widths: None,
+            missing_width: Some(500.0), // Default to 500 units (typical average)
+            kerning: None,
+        }
+    }
+}
+
 /// Font information with CMap support
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -29,6 +57,8 @@ pub struct FontInfo {
     pub descendant_font: Option<Box<FontInfo>>,
     /// For CIDFonts: CIDToGIDMap
     pub cid_to_gid_map: Option<Vec<u16>>,
+    /// Font metrics (widths, kerning)
+    pub metrics: FontMetrics,
 }
 
 /// Enhanced text extractor with CMap support
@@ -79,6 +109,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            metrics: FontMetrics::default(),
         };
 
         // Extract encoding
@@ -112,6 +143,9 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                 }
             }
         }
+
+        // Extract font metrics (Widths, FirstChar, LastChar)
+        font_info.metrics = self.extract_font_metrics(font_dict, document)?;
 
         // Handle Type0 (composite) fonts
         if font_type.as_str() == "Type0" {
@@ -164,6 +198,79 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     ) -> ParseResult<CMap> {
         let data = stream.decode(&ParseOptions::default())?;
         CMap::parse(&data)
+    }
+
+    /// Extract font metrics (widths, kerning) from font dictionary
+    #[allow(dead_code)]
+    fn extract_font_metrics(
+        &self,
+        font_dict: &PdfDictionary,
+        document: &PdfDocument<R>,
+    ) -> ParseResult<FontMetrics> {
+        let mut metrics = FontMetrics::default();
+
+        // Extract FirstChar and LastChar
+        if let Some(PdfObject::Integer(first)) = font_dict.get("FirstChar") {
+            metrics.first_char = Some(*first as u32);
+        }
+
+        if let Some(PdfObject::Integer(last)) = font_dict.get("LastChar") {
+            metrics.last_char = Some(*last as u32);
+        }
+
+        // Extract Widths array
+        if let Some(widths_obj) = font_dict.get("Widths") {
+            match widths_obj {
+                PdfObject::Array(widths_array) => {
+                    let mut widths = Vec::new();
+                    for width_obj in &widths_array.0 {
+                        match width_obj {
+                            PdfObject::Integer(w) => widths.push(*w as f64),
+                            PdfObject::Real(w) => widths.push(*w),
+                            _ => widths.push(0.0),
+                        }
+                    }
+                    metrics.widths = Some(widths);
+                }
+                PdfObject::Reference(obj_num, gen_num) => {
+                    // Widths might be a reference to an array
+                    if let Ok(PdfObject::Array(widths_array)) =
+                        document.get_object(*obj_num, *gen_num)
+                    {
+                        let mut widths = Vec::new();
+                        for width_obj in &widths_array.0 {
+                            match width_obj {
+                                PdfObject::Integer(w) => widths.push(*w as f64),
+                                PdfObject::Real(w) => widths.push(*w),
+                                _ => widths.push(0.0),
+                            }
+                        }
+                        metrics.widths = Some(widths);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Extract MissingWidth from font descriptor
+        if let Some(desc_ref) = font_dict.get("FontDescriptor").and_then(|o| o.as_reference()) {
+            if let Ok(PdfObject::Dictionary(desc_dict)) =
+                document.get_object(desc_ref.0, desc_ref.1)
+            {
+                if let Some(missing_width_obj) = desc_dict.get("MissingWidth") {
+                    match missing_width_obj {
+                        PdfObject::Integer(w) => metrics.missing_width = Some(*w as f64),
+                        PdfObject::Real(w) => metrics.missing_width = Some(*w),
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        // TODO: Extract kerning tables (will be implemented in Phase 2)
+        // For now, kerning remains None
+
+        Ok(metrics)
     }
 
     /// Decode text using font information and CMap
@@ -458,6 +565,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            metrics: FontMetrics::default(),
         };
 
         assert_eq!(font_info.name, "Helvetica");
