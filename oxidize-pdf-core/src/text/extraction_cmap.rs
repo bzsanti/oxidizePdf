@@ -267,10 +267,187 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             }
         }
 
-        // TODO: Extract kerning tables (will be implemented in Phase 2)
-        // For now, kerning remains None
+        // Extract kerning from TrueType fonts (if embedded)
+        if let Some(desc_ref) = font_dict.get("FontDescriptor").and_then(|o| o.as_reference()) {
+            if let Ok(PdfObject::Dictionary(desc_dict)) =
+                document.get_object(desc_ref.0, desc_ref.1)
+            {
+                // Look for embedded TrueType font (FontFile2)
+                if let Some(font_file_ref) = desc_dict.get("FontFile2").and_then(|o| o.as_reference()) {
+                    if let Ok(PdfObject::Stream(font_stream)) =
+                        document.get_object(font_file_ref.0, font_file_ref.1)
+                    {
+                        // Try to extract kerning from TrueType font
+                        if let Ok(kerning_pairs) = self.extract_truetype_kerning(&font_stream) {
+                            if !kerning_pairs.is_empty() {
+                                metrics.kerning = Some(kerning_pairs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Ok(metrics)
+    }
+
+    /// Extract kerning pairs from TrueType font stream (kern table)
+    #[allow(dead_code)]
+    fn extract_truetype_kerning(
+        &self,
+        font_stream: &PdfStream,
+    ) -> ParseResult<HashMap<(u32, u32), f64>> {
+        // Decode the font stream
+        let font_data = match font_stream.decode(&ParseOptions::default()) {
+            Ok(data) => data,
+            Err(_) => return Ok(HashMap::new()), // Silently fail if can't decode
+        };
+
+        // Parse TrueType font tables
+        match self.parse_truetype_kern_table(&font_data) {
+            Ok(pairs) => Ok(pairs),
+            Err(_) => Ok(HashMap::new()), // Silently fail if parsing fails
+        }
+    }
+
+    /// Parse TrueType kern table (Format 0 only)
+    #[allow(dead_code)]
+    fn parse_truetype_kern_table(
+        &self,
+        font_data: &[u8],
+    ) -> ParseResult<HashMap<(u32, u32), f64>> {
+        // TrueType fonts start with a table directory
+        if font_data.len() < 12 {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Font data too short for TrueType header".to_string(),
+            });
+        }
+
+        // Read table directory offset (offset 12 + 16 * numTables)
+        let num_tables = u16::from_be_bytes([font_data[4], font_data[5]]) as usize;
+
+        // Find 'kern' table in table directory
+        let mut kern_offset = None;
+        let mut kern_length = None;
+
+        for i in 0..num_tables {
+            let table_offset = 12 + i * 16;
+            if table_offset + 16 > font_data.len() {
+                break;
+            }
+
+            // Read table tag (4 bytes)
+            let tag = &font_data[table_offset..table_offset + 4];
+
+            if tag == b"kern" {
+                // Read table offset and length
+                kern_offset = Some(u32::from_be_bytes([
+                    font_data[table_offset + 8],
+                    font_data[table_offset + 9],
+                    font_data[table_offset + 10],
+                    font_data[table_offset + 11],
+                ]) as usize);
+
+                kern_length = Some(u32::from_be_bytes([
+                    font_data[table_offset + 12],
+                    font_data[table_offset + 13],
+                    font_data[table_offset + 14],
+                    font_data[table_offset + 15],
+                ]) as usize);
+
+                break;
+            }
+        }
+
+        // If no kern table found, return empty map
+        let (offset, length) = match (kern_offset, kern_length) {
+            (Some(o), Some(l)) => (o, l),
+            _ => return Ok(HashMap::new()),
+        };
+
+        if offset + length > font_data.len() {
+            return Err(ParseError::SyntaxError {
+                position: offset,
+                message: "Invalid kern table offset".to_string(),
+            });
+        }
+
+        // Parse kern table header
+        let kern_data = &font_data[offset..offset + length];
+        if kern_data.len() < 4 {
+            return Ok(HashMap::new());
+        }
+
+        // Version and nTables
+        let n_tables = u32::from_be_bytes([kern_data[2], kern_data[3], 0, 0]) as usize;
+
+        let mut kerning_pairs = HashMap::new();
+        let mut table_offset = 4; // After header
+
+        // Parse each subtable (we only support Format 0)
+        for _ in 0..n_tables {
+            if table_offset + 6 > kern_data.len() {
+                break;
+            }
+
+            // Subtable header
+            let subtable_length = u32::from_be_bytes([
+                0,
+                0,
+                kern_data[table_offset + 2],
+                kern_data[table_offset + 3],
+            ]) as usize;
+
+            let coverage = u16::from_be_bytes([
+                kern_data[table_offset + 4],
+                kern_data[table_offset + 5],
+            ]);
+
+            let format = (coverage >> 8) & 0xFF; // Upper byte is format
+
+            // Only process Format 0 (ordered pair list)
+            if format == 0 && table_offset + subtable_length <= kern_data.len() {
+                let subtable_data = &kern_data[table_offset + 6..table_offset + subtable_length];
+
+                if subtable_data.len() >= 8 {
+                    let n_pairs = u16::from_be_bytes([subtable_data[0], subtable_data[1]]) as usize;
+
+                    // Skip searchRange, entrySelector, rangeShift (6 bytes)
+                    let mut pair_offset = 8;
+
+                    for _ in 0..n_pairs {
+                        if pair_offset + 6 > subtable_data.len() {
+                            break;
+                        }
+
+                        let left_glyph = u16::from_be_bytes([
+                            subtable_data[pair_offset],
+                            subtable_data[pair_offset + 1],
+                        ]) as u32;
+
+                        let right_glyph = u16::from_be_bytes([
+                            subtable_data[pair_offset + 2],
+                            subtable_data[pair_offset + 3],
+                        ]) as u32;
+
+                        let value = i16::from_be_bytes([
+                            subtable_data[pair_offset + 4],
+                            subtable_data[pair_offset + 5],
+                        ]) as f64;
+
+                        // Store kerning pair (value is in FUnits, typically 1/1000)
+                        kerning_pairs.insert((left_glyph, right_glyph), value);
+
+                        pair_offset += 6;
+                    }
+                }
+            }
+
+            table_offset += subtable_length;
+        }
+
+        Ok(kerning_pairs)
     }
 
     /// Decode text using font information and CMap

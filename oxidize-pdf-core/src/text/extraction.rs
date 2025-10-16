@@ -615,7 +615,7 @@ fn transform_point(x: f64, y: f64, matrix: &[f64; 6]) -> (f64, f64) {
     (tx, ty)
 }
 
-/// Calculate text width using actual font metrics
+/// Calculate text width using actual font metrics (including kerning)
 fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>) -> f64 {
     // If we have font metrics, use them for accurate width calculation
     if let Some(font) = font_info {
@@ -625,8 +625,9 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
             let missing_width = font.metrics.missing_width.unwrap_or(500.0);
 
             let mut total_width = 0.0;
+            let chars: Vec<char> = text.chars().collect();
 
-            for ch in text.chars() {
+            for (i, &ch) in chars.iter().enumerate() {
                 let char_code = ch as u32;
 
                 // Get width from Widths array or use missing_width
@@ -639,6 +640,17 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 
                 // Convert from glyph space (1/1000 units) to user space
                 total_width += width / 1000.0 * font_size;
+
+                // Apply kerning if available (for character pairs)
+                if let Some(ref kerning) = font.metrics.kerning {
+                    if i + 1 < chars.len() {
+                        let next_char = chars[i + 1] as u32;
+                        if let Some(&kern_value) = kerning.get(&(char_code, next_char)) {
+                            // Kerning is in FUnits (1/1000), convert to user space
+                            total_width += kern_value / 1000.0 * font_size;
+                        }
+                    }
+                }
             }
 
             return total_width;
