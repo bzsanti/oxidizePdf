@@ -12,7 +12,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 
 ## Features
 
-- 🚀 **100% Pure Rust** - No C dependencies or external PDF libraries
+- 🚀 **Pure Rust Core** - No C dependencies for PDF operations (OCR feature requires Tesseract)
 - 📄 **PDF Generation** - Create multi-page documents with text, graphics, and images
 - 🔍 **PDF Parsing** - Read and extract content from existing PDFs (tested on 759 real-world PDFs*)
 - 🛡️ **Corruption Recovery** - Robust error recovery for damaged or malformed PDFs (98.8% success rate)
@@ -455,7 +455,7 @@ cargo run --example cjk_text_extraction
 - **Parsing**: Fast for PDFs with basic features
 - **Generation**: Efficient for simple documents
 - **Memory efficient**: Streaming operations available
-- **Pure Rust**: No external C dependencies
+- **Pure Rust**: No external C dependencies for PDF operations
 
 ## Examples
 

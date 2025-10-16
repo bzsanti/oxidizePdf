@@ -175,10 +175,14 @@ impl PerformanceMonitor {
             return OperationToken(0);
         }
 
-        let mut next_token = self.next_token.lock().unwrap();
-        let token = OperationToken(*next_token);
-        *next_token += 1;
-        drop(next_token);
+        let token = match self.next_token.lock() {
+            Ok(mut next_token) => {
+                let token = OperationToken(*next_token);
+                *next_token += 1;
+                token
+            }
+            Err(_) => return OperationToken(0), // Lock poisoned, return disabled token
+        };
 
         let active_op = ActiveOperation {
             operation,
@@ -187,10 +191,10 @@ impl PerformanceMonitor {
             memory_start: self.estimate_memory_usage(),
         };
 
-        self.active_operations
-            .lock()
-            .unwrap()
-            .insert(token.0, active_op);
+        // Best-effort insert, ignore lock poisoning
+        if let Ok(mut active_ops) = self.active_operations.lock() {
+            active_ops.insert(token.0, active_op);
+        }
         token
     }
 
@@ -200,7 +204,11 @@ impl PerformanceMonitor {
             return Duration::ZERO;
         }
 
-        let active_op = self.active_operations.lock().unwrap().remove(&token.0);
+        let active_op = self
+            .active_operations
+            .lock()
+            .ok()
+            .and_then(|mut ops| ops.remove(&token.0));
 
         if let Some(active_op) = active_op {
             let duration = active_op.start_time.elapsed();
@@ -216,18 +224,18 @@ impl PerformanceMonitor {
                 timestamp: SystemTime::now(),
             };
 
-            // Store completed operation
-            self.completed_operations
-                .write()
-                .unwrap()
-                .push(completed_op.clone());
+            // Store completed operation (best-effort)
+            if let Ok(mut completed_ops) = self.completed_operations.write() {
+                completed_ops.push(completed_op.clone());
+            }
 
-            // Update operation statistics
-            let mut stats = self.operation_stats.write().unwrap();
-            let op_stats = stats
-                .entry(operation.clone())
-                .or_insert_with(|| OperationStats::new(operation));
-            op_stats.add_measurement(duration, memory_used);
+            // Update operation statistics (best-effort)
+            if let Ok(mut stats) = self.operation_stats.write() {
+                let op_stats = stats
+                    .entry(operation.clone())
+                    .or_insert_with(|| OperationStats::new(operation));
+                op_stats.add_measurement(duration, memory_used);
+            }
 
             duration
         } else {
@@ -248,12 +256,20 @@ impl PerformanceMonitor {
 
     /// Get current performance statistics
     pub fn get_stats(&self) -> PerformanceMetrics {
-        let operation_stats = self.operation_stats.read().unwrap().clone();
-        let completed_ops = self.completed_operations.read().unwrap();
+        let operation_stats = self
+            .operation_stats
+            .read()
+            .map(|guard| guard.clone())
+            .unwrap_or_default();
+        let completed_ops = self.completed_operations.read().ok();
 
         let uptime = self.start_time.elapsed().unwrap_or(Duration::ZERO);
-        let total_operations = completed_ops.len();
-        let active_operations = self.active_operations.lock().unwrap().len();
+        let total_operations = completed_ops.as_ref().map(|ops| ops.len()).unwrap_or(0);
+        let active_operations = self
+            .active_operations
+            .lock()
+            .map(|ops| ops.len())
+            .unwrap_or(0);
 
         // Calculate category statistics
         let mut category_stats = HashMap::new();
@@ -283,25 +299,31 @@ impl PerformanceMonitor {
 
     /// Get statistics for a specific operation
     pub fn get_operation_stats(&self, operation: Operation) -> Option<OperationStats> {
-        self.operation_stats
-            .read()
-            .unwrap()
-            .get(&operation)
-            .cloned()
+        self.operation_stats.read().ok()?.get(&operation).cloned()
     }
 
     /// Get recent operations (last N)
     pub fn get_recent_operations(&self, limit: usize) -> Vec<CompletedOperation> {
-        let completed_ops = self.completed_operations.read().unwrap();
-        let start_idx = completed_ops.len().saturating_sub(limit);
-        completed_ops[start_idx..].to_vec()
+        if let Ok(completed_ops) = self.completed_operations.read() {
+            let start_idx = completed_ops.len().saturating_sub(limit);
+            completed_ops[start_idx..].to_vec()
+        } else {
+            Vec::new()
+        }
     }
 
     /// Clear all collected metrics
     pub fn clear(&self) {
-        self.active_operations.lock().unwrap().clear();
-        self.completed_operations.write().unwrap().clear();
-        self.operation_stats.write().unwrap().clear();
+        // Best-effort clear - ignore lock poisoning
+        if let Ok(mut active_ops) = self.active_operations.lock() {
+            active_ops.clear();
+        }
+        if let Ok(mut completed_ops) = self.completed_operations.write() {
+            completed_ops.clear();
+        }
+        if let Ok(mut stats) = self.operation_stats.write() {
+            stats.clear();
+        }
     }
 
     /// Check if monitoring is enabled
@@ -349,8 +371,16 @@ impl PerformanceMonitor {
     fn estimate_memory_usage(&self) -> usize {
         // This is a simplified memory estimation
         // In a real implementation, you might use system APIs or memory profiling
-        let active_count = self.active_operations.lock().unwrap().len();
-        let completed_count = self.completed_operations.read().unwrap().len();
+        let active_count = self
+            .active_operations
+            .lock()
+            .map(|ops| ops.len())
+            .unwrap_or(0);
+        let completed_count = self
+            .completed_operations
+            .read()
+            .map(|ops| ops.len())
+            .unwrap_or(0);
 
         // Rough estimate: 1KB per active operation, 100 bytes per completed
         active_count * 1024 + completed_count * 100

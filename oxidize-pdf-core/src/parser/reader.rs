@@ -291,7 +291,38 @@ impl<R: Read + Seek> PdfReader<R> {
     pub fn catalog(&mut self) -> ParseResult<&PdfDictionary> {
         // Try to get root from trailer
         let (obj_num, gen_num) = match self.trailer.root() {
-            Ok(root) => root,
+            Ok(root) => {
+                // FIX for Issue #83: Validate that Root actually points to a Catalog
+                // In signed PDFs, Root might point to /Type/Sig instead of /Type/Catalog
+                if let Ok(obj) = self.get_object(root.0, root.1) {
+                    if let Some(dict) = obj.as_dict() {
+                        // Check if it's really a catalog
+                        if let Some(type_obj) = dict.get("Type") {
+                            if let Some(type_name) = type_obj.as_name() {
+                                if type_name.0 != "Catalog" {
+                                    eprintln!("Warning: Trailer /Root points to /Type/{} (not Catalog), scanning for real catalog", type_name.0);
+                                    // Root points to wrong object type, scan for real catalog
+                                    if let Ok(catalog_ref) = self.find_catalog_object() {
+                                        catalog_ref
+                                    } else {
+                                        root // Fallback to original if scan fails
+                                    }
+                                } else {
+                                    root // It's a valid catalog
+                                }
+                            } else {
+                                root // No type field, assume it's catalog
+                            }
+                        } else {
+                            root // No Type key, assume it's catalog
+                        }
+                    } else {
+                        root // Not a dict, will fail later but keep trying
+                    }
+                } else {
+                    root // Can't get object, will fail later
+                }
+            }
             Err(_) => {
                 // If Root is missing, try fallback methods
                 #[cfg(debug_assertions)]
@@ -335,7 +366,10 @@ impl<R: Read + Seek> PdfReader<R> {
         if !needs_reconstruction {
             // Object is valid, get it again to return the reference
             let catalog = self.get_object(obj_num, gen_num)?;
-            return Ok(catalog.as_dict().unwrap());
+            return catalog.as_dict().ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!("Catalog object {} {} is not a dictionary", obj_num, gen_num),
+            });
         }
 
         // If we reach here, reconstruction is needed
@@ -406,7 +440,13 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // PROTECTION 1: Check for circular reference
         {
-            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            let being_loaded =
+                self.objects_being_reconstructed
+                    .lock()
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Mutex poisoned during circular reference check".to_string(),
+                    })?;
             if being_loaded.contains(&obj_num) {
                 drop(being_loaded);
                 if self.options.collect_warnings {
@@ -422,7 +462,13 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // PROTECTION 2: Check depth limit
         {
-            let being_loaded = self.objects_being_reconstructed.lock().unwrap();
+            let being_loaded =
+                self.objects_being_reconstructed
+                    .lock()
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Mutex poisoned during depth limit check".to_string(),
+                    })?;
             let depth = being_loaded.len() as u32;
             if depth >= self.max_reconstruction_depth {
                 drop(being_loaded);
@@ -445,7 +491,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Mark object as being loaded
         self.objects_being_reconstructed
             .lock()
-            .unwrap()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned while marking object as being loaded".to_string(),
+            })?
             .insert(obj_num);
 
         // Load object - if successful, it will be in cache
@@ -454,17 +503,21 @@ impl<R: Read + Seek> PdfReader<R> {
                 // Object successfully loaded, now unmark and return from cache
                 self.objects_being_reconstructed
                     .lock()
-                    .unwrap()
+                    .map_err(|_| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Mutex poisoned while unmarking object after successful load"
+                            .to_string(),
+                    })?
                     .remove(&obj_num);
                 // Object must be in cache now
                 Ok(&self.object_cache[&key])
             }
             Err(e) => {
                 // Loading failed, unmark and propagate error
-                self.objects_being_reconstructed
-                    .lock()
-                    .unwrap()
-                    .remove(&obj_num);
+                // Note: If mutex is poisoned here, we prioritize the original error
+                if let Ok(mut guard) = self.objects_being_reconstructed.lock() {
+                    guard.remove(&obj_num);
+                }
                 Err(e)
             }
         }
@@ -1213,12 +1266,16 @@ impl<R: Read + Seek> PdfReader<R> {
         _current_offset: u64,
     ) -> ParseResult<&PdfObject> {
         // PROTECTION 1: Circular reference detection
-        if self
+        let is_circular = self
             .objects_being_reconstructed
             .lock()
-            .unwrap()
-            .contains(&obj_num)
-        {
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned during circular reference check".to_string(),
+            })?
+            .contains(&obj_num);
+
+        if is_circular {
             eprintln!(
                 "DEBUG: Circular reconstruction detected for object {} {} - breaking cycle with null object",
                 obj_num, gen_num
@@ -1230,7 +1287,14 @@ impl<R: Read + Seek> PdfReader<R> {
         }
 
         // PROTECTION 2: Depth limit check
-        let current_depth = self.objects_being_reconstructed.lock().unwrap().len() as u32;
+        let current_depth = self
+            .objects_being_reconstructed
+            .lock()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned during depth check".to_string(),
+            })?
+            .len() as u32;
         if current_depth >= self.max_reconstruction_depth {
             eprintln!(
                 "DEBUG: Maximum reconstruction depth ({}) exceeded for object {} {}",
@@ -1253,7 +1317,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Mark as being reconstructed (prevents circular references)
         self.objects_being_reconstructed
             .lock()
-            .unwrap()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned while marking object as being reconstructed".to_string(),
+            })?
             .insert(obj_num);
 
         // Try multiple reconstruction strategies
@@ -1272,11 +1339,10 @@ impl<R: Read + Seek> PdfReader<R> {
                             );
                             PdfObject::Null
                         } else {
-                            // Unmark before returning error
-                            self.objects_being_reconstructed
-                                .lock()
-                                .unwrap()
-                                .remove(&obj_num);
+                            // Unmark before returning error (best effort - ignore if mutex poisoned)
+                            if let Ok(mut guard) = self.objects_being_reconstructed.lock() {
+                                guard.remove(&obj_num);
+                            }
                             return Err(e);
                         }
                     }
@@ -1287,7 +1353,10 @@ impl<R: Read + Seek> PdfReader<R> {
         // Unmark (reconstruction complete)
         self.objects_being_reconstructed
             .lock()
-            .unwrap()
+            .map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: "Mutex poisoned while unmarking reconstructed object".to_string(),
+            })?
             .remove(&obj_num);
 
         self.object_cache
@@ -1306,7 +1375,15 @@ impl<R: Read + Seek> PdfReader<R> {
             obj_num, gen_num
         );
 
-        Ok(self.object_cache.get(&(obj_num, gen_num)).unwrap())
+        self.object_cache
+            .get(&(obj_num, gen_num))
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Object {} {} not in cache after reconstruction",
+                    obj_num, gen_num
+                ),
+            })
     }
 
     /// Smart object reconstruction using multiple heuristics
@@ -1527,7 +1604,110 @@ impl<R: Read + Seek> PdfReader<R> {
                     // Manually parse the object content based on object number
                     let mut result_dict = HashMap::new();
 
-                    if obj_num == 102 {
+                    // FIX for Issue #83: Generic catalog parsing for ANY object number
+                    // Check if this is a Catalog object (regardless of object number)
+                    if dict_content.contains("/Type/Catalog")
+                        || dict_content.contains("/Type /Catalog")
+                    {
+                        eprintln!(
+                            "DEBUG: Detected /Type/Catalog in object {}, parsing as catalog",
+                            obj_num
+                        );
+
+                        result_dict.insert(
+                            PdfName("Type".to_string()),
+                            PdfObject::Name(PdfName("Catalog".to_string())),
+                        );
+
+                        // Parse /Pages reference using regex-like pattern matching
+                        // Pattern: /Pages <number> <gen> R
+                        // Note: PDF can have compact format like "/Pages 13 0 R" or "/Pages13 0 R"
+                        if let Some(pages_start) = dict_content.find("/Pages") {
+                            let after_pages = &dict_content[pages_start + 6..]; // Skip "/Pages"
+                                                                                // Trim any leading whitespace, then extract numbers
+                            let trimmed = after_pages.trim_start();
+                            // Split by whitespace to get object number, generation, and "R"
+                            let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                            if parts.len() >= 3 {
+                                // parts[0] should be the object number
+                                // parts[1] should be the generation
+                                // parts[2] should be "R" or "R/..." (compact format)
+                                if let (Ok(obj), Ok(gen)) =
+                                    (parts[0].parse::<u32>(), parts[1].parse::<u16>())
+                                {
+                                    if parts[2] == "R" || parts[2].starts_with('R') {
+                                        result_dict.insert(
+                                            PdfName("Pages".to_string()),
+                                            PdfObject::Reference(obj, gen),
+                                        );
+                                        eprintln!(
+                                            "DEBUG: Parsed /Pages {} {} R from catalog",
+                                            obj, gen
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        // Parse other common catalog entries
+                        // /Version
+                        if let Some(ver_start) = dict_content.find("/Version") {
+                            let after_ver = &dict_content[ver_start + 8..];
+                            if let Some(ver_end) = after_ver.find(|c: char| c == '/' || c == '>') {
+                                let version_str = after_ver[..ver_end].trim();
+                                result_dict.insert(
+                                    PdfName("Version".to_string()),
+                                    PdfObject::Name(PdfName(
+                                        version_str.trim_start_matches('/').to_string(),
+                                    )),
+                                );
+                            }
+                        }
+
+                        // /Metadata reference
+                        if let Some(meta_start) = dict_content.find("/Metadata") {
+                            let after_meta = &dict_content[meta_start + 9..];
+                            let parts: Vec<&str> = after_meta.split_whitespace().collect();
+                            if parts.len() >= 3 {
+                                if let (Ok(obj), Ok(gen)) =
+                                    (parts[0].parse::<u32>(), parts[1].parse::<u16>())
+                                {
+                                    if parts[2] == "R" {
+                                        result_dict.insert(
+                                            PdfName("Metadata".to_string()),
+                                            PdfObject::Reference(obj, gen),
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        // /AcroForm reference
+                        if let Some(acro_start) = dict_content.find("/AcroForm") {
+                            let after_acro = &dict_content[acro_start + 9..];
+                            // Check if it's a reference or dictionary
+                            if after_acro.trim_start().starts_with("<<") {
+                                // It's an inline dictionary, skip for now (too complex)
+                                eprintln!("DEBUG: /AcroForm is inline dictionary, skipping");
+                            } else {
+                                let parts: Vec<&str> = after_acro.split_whitespace().collect();
+                                if parts.len() >= 3 {
+                                    if let (Ok(obj), Ok(gen)) =
+                                        (parts[0].parse::<u32>(), parts[1].parse::<u16>())
+                                    {
+                                        if parts[2] == "R" {
+                                            result_dict.insert(
+                                                PdfName("AcroForm".to_string()),
+                                                PdfObject::Reference(obj, gen),
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        eprintln!("DEBUG: Generic catalog parsing completed for object {} with {} entries", obj_num, result_dict.len());
+                    } else if obj_num == 102 {
                         // Verify this is actually a catalog before reconstructing
                         if dict_content.contains("/Type /Catalog") {
                             // Parse catalog object
@@ -2358,12 +2538,65 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Find catalog object by scanning
     fn find_catalog_object(&mut self) -> ParseResult<(u32, u16)> {
-        // Simple fallback - try common object numbers
-        // Real implementation would need to scan objects, but that's complex
-        // due to borrow checker constraints
+        // FIX for Issue #83: Scan for actual catalog object, not just assume object 1
+        // In signed PDFs, object 1 is often /Type/Sig (signature), not the catalog
 
-        // Most PDFs have catalog at object 1
-        Ok((1, 0))
+        eprintln!("DEBUG: Scanning for catalog object...");
+
+        // Get all object numbers from xref
+        let obj_numbers: Vec<u32> = self.xref.entries().keys().copied().collect();
+
+        eprintln!("DEBUG: Found {} objects in xref table", obj_numbers.len());
+
+        // Scan objects looking for /Type/Catalog
+        for obj_num in obj_numbers {
+            // Try to get object (generation 0 is most common)
+            if let Ok(obj) = self.get_object(obj_num, 0) {
+                if let Some(dict) = obj.as_dict() {
+                    // Check if it's a catalog
+                    if let Some(type_obj) = dict.get("Type") {
+                        if let Some(type_name) = type_obj.as_name() {
+                            if type_name.0 == "Catalog" {
+                                eprintln!("DEBUG: Found catalog at object {} 0 R", obj_num);
+                                return Ok((obj_num, 0));
+                            }
+                            // Skip known non-catalog types
+                            if type_name.0 == "Sig"
+                                || type_name.0 == "Pages"
+                                || type_name.0 == "Page"
+                            {
+                                eprintln!(
+                                    "DEBUG: Skipping object {} 0 R (Type: {})",
+                                    obj_num, type_name.0
+                                );
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: try common object numbers if scan failed
+        eprintln!("DEBUG: Catalog scan failed, trying common object numbers");
+        for obj_num in [1, 2, 3, 4, 5] {
+            if let Ok(obj) = self.get_object(obj_num, 0) {
+                if let Some(dict) = obj.as_dict() {
+                    // Check if it has catalog-like properties (Pages key)
+                    if dict.contains_key("Pages") {
+                        eprintln!(
+                            "DEBUG: Assuming object {} 0 R is catalog (has /Pages)",
+                            obj_num
+                        );
+                        return Ok((obj_num, 0));
+                    }
+                }
+            }
+        }
+
+        Err(ParseError::MissingKey(
+            "Could not find Catalog object".to_string(),
+        ))
     }
 
     /// Create a synthetic Pages dictionary when the catalog is missing one
