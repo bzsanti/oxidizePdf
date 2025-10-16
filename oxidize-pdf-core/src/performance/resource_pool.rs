@@ -286,8 +286,18 @@ impl ResourcePool {
             hash,
         };
 
-        let mut fonts = self.fonts.write().unwrap();
-        let mut stats = self.stats.write().unwrap();
+        let mut fonts = self
+            .fonts
+            .write()
+            .map_err(|_| crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (fonts)".to_string()
+            ))?;
+        let mut stats = self
+            .stats
+            .write()
+            .map_err(|_| crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (stats)".to_string()
+            ))?;
 
         if fonts.contains_key(&key) {
             stats.font_duplicates_avoided += 1;
@@ -312,8 +322,18 @@ impl ResourcePool {
             hash,
         };
 
-        let mut images = self.images.write().unwrap();
-        let mut stats = self.stats.write().unwrap();
+        let mut images = self
+            .images
+            .write()
+            .map_err(|_| crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (images)".to_string()
+            ))?;
+        let mut stats = self
+            .stats
+            .write()
+            .map_err(|_| crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (stats)".to_string()
+            ))?;
 
         if images.contains_key(&key) {
             stats.image_duplicates_avoided += 1;
@@ -338,8 +358,18 @@ impl ResourcePool {
             hash,
         };
 
-        let mut patterns = self.patterns.write().unwrap();
-        let mut stats = self.stats.write().unwrap();
+        let mut patterns = self
+            .patterns
+            .write()
+            .map_err(|_| crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (patterns)".to_string()
+            ))?;
+        let mut stats = self
+            .stats
+            .write()
+            .map_err(|_| crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (stats)".to_string()
+            ))?;
 
         if patterns.contains_key(&key) {
             stats.pattern_duplicates_avoided += 1;
@@ -358,37 +388,58 @@ impl ResourcePool {
 
     /// Get a font resource by key
     pub fn get_font(&self, key: &ResourceKey) -> Option<Arc<FontResource>> {
-        self.fonts.read().unwrap().get(key).cloned()
+        self.fonts.read().ok()?.get(key).cloned()
     }
 
     /// Get an image resource by key
     pub fn get_image(&self, key: &ResourceKey) -> Option<Arc<ImageResource>> {
-        self.images.read().unwrap().get(key).cloned()
+        self.images.read().ok()?.get(key).cloned()
     }
 
     /// Get a pattern resource by key
     pub fn get_pattern(&self, key: &ResourceKey) -> Option<Arc<PatternResource>> {
-        self.patterns.read().unwrap().get(key).cloned()
+        self.patterns.read().ok()?.get(key).cloned()
     }
 
     /// Get resource pool statistics
     pub fn stats(&self) -> ResourcePoolStats {
-        self.stats.read().unwrap().clone()
+        self.stats
+            .read()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
     }
 
     /// Clear all resources (useful for testing)
     pub fn clear(&self) {
-        self.fonts.write().unwrap().clear();
-        self.images.write().unwrap().clear();
-        self.patterns.write().unwrap().clear();
-        *self.stats.write().unwrap() = ResourcePoolStats::default();
+        // Best-effort clear - ignore lock poisoning
+        if let Ok(mut guard) = self.fonts.write() {
+            guard.clear();
+        }
+        if let Ok(mut guard) = self.images.write() {
+            guard.clear();
+        }
+        if let Ok(mut guard) = self.patterns.write() {
+            guard.clear();
+        }
+        if let Ok(mut guard) = self.stats.write() {
+            *guard = ResourcePoolStats::default();
+        }
     }
 
     /// Get total memory usage estimate
     pub fn memory_usage(&self) -> usize {
-        let fonts = self.fonts.read().unwrap();
-        let images = self.images.read().unwrap();
-        let patterns = self.patterns.read().unwrap();
+        let fonts = match self.fonts.read() {
+            Ok(guard) => guard,
+            Err(_) => return 0, // Lock poisoned, return 0
+        };
+        let images = match self.images.read() {
+            Ok(guard) => guard,
+            Err(_) => return 0,
+        };
+        let patterns = match self.patterns.read() {
+            Ok(guard) => guard,
+            Err(_) => return 0,
+        };
 
         let font_memory: usize = fonts
             .values()
