@@ -828,4 +828,332 @@ mod tests {
         assert_eq!(extractor.options.column_threshold, options.column_threshold);
         assert_eq!(extractor.options.merge_hyphenated, options.merge_hyphenated);
     }
+
+    // =========================================================================
+    // RIGOROUS TESTS FOR FONT METRICS TEXT WIDTH CALCULATION
+    // =========================================================================
+
+    #[test]
+    fn test_calculate_text_width_with_no_font_info() {
+        // Test fallback: should use simplified calculation
+        let width = calculate_text_width("Hello", 12.0, None);
+
+        // Expected: 5 chars * 12.0 * 0.5 = 30.0
+        assert_eq!(
+            width, 30.0,
+            "Without font info, should use simplified calculation: len * font_size * 0.5"
+        );
+    }
+
+    #[test]
+    fn test_calculate_text_width_with_empty_metrics() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Font with no widths array
+        let font_info = FontInfo {
+            name: "TestFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: None,
+                last_char: None,
+                widths: None,
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+        };
+
+        let width = calculate_text_width("Hello", 12.0, Some(&font_info));
+
+        // Should fall back to simplified calculation
+        assert_eq!(
+            width, 30.0,
+            "Without widths array, should fall back to simplified calculation"
+        );
+    }
+
+    #[test]
+    fn test_calculate_text_width_with_complete_metrics() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Font with complete metrics for ASCII range 32-126
+        // Simulate typical Helvetica widths (in 1/1000 units)
+        let mut widths = vec![0.0; 95]; // 95 chars from 32 to 126
+
+        // Set specific widths for "Hello" (H=722, e=556, l=278, o=611)
+        widths[72 - 32] = 722.0; // 'H' is ASCII 72
+        widths[101 - 32] = 556.0; // 'e' is ASCII 101
+        widths[108 - 32] = 278.0; // 'l' is ASCII 108
+        widths[111 - 32] = 611.0; // 'o' is ASCII 111
+
+        let font_info = FontInfo {
+            name: "Helvetica".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(32),
+                last_char: Some(126),
+                widths: Some(widths),
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+        };
+
+        let width = calculate_text_width("Hello", 12.0, Some(&font_info));
+
+        // Expected calculation (widths in glyph space / 1000 * font_size):
+        // H: 722/1000 * 12 = 8.664
+        // e: 556/1000 * 12 = 6.672
+        // l: 278/1000 * 12 = 3.336
+        // l: 278/1000 * 12 = 3.336
+        // o: 611/1000 * 12 = 7.332
+        // Total: 29.34
+        let expected = (722.0 + 556.0 + 278.0 + 278.0 + 611.0) / 1000.0 * 12.0;
+        let tolerance = 0.0001; // Floating point tolerance
+        assert!(
+            (width - expected).abs() < tolerance,
+            "Should calculate width using actual character metrics: expected {}, got {}, diff {}",
+            expected,
+            width,
+            (width - expected).abs()
+        );
+
+        // Verify it's different from simplified calculation
+        let simplified = 5.0 * 12.0 * 0.5; // 30.0
+        assert_ne!(
+            width, simplified,
+            "Metrics-based calculation should differ from simplified (30.0)"
+        );
+    }
+
+    #[test]
+    fn test_calculate_text_width_character_outside_range() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Font with narrow range (only covers 'A'-'Z')
+        let widths = vec![722.0; 26]; // All uppercase letters same width
+
+        let font_info = FontInfo {
+            name: "TestFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(65), // 'A'
+                last_char: Some(90),  // 'Z'
+                widths: Some(widths),
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+        };
+
+        // Test with character outside range
+        let width = calculate_text_width("A1", 10.0, Some(&font_info));
+
+        // Expected:
+        // 'A' (65) is in range: 722/1000 * 10 = 7.22
+        // '1' (49) is outside range: missing_width 500/1000 * 10 = 5.0
+        // Total: 12.22
+        let expected = (722.0 / 1000.0 * 10.0) + (500.0 / 1000.0 * 10.0);
+        assert_eq!(
+            width, expected,
+            "Should use missing_width for characters outside range"
+        );
+    }
+
+    #[test]
+    fn test_calculate_text_width_missing_width_in_array() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Font with incomplete widths array (some characters have 0.0)
+        let mut widths = vec![500.0; 95]; // Default width
+        widths[10] = 0.0; // Character at index 10 has no width defined
+
+        let font_info = FontInfo {
+            name: "TestFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(32),
+                last_char: Some(126),
+                widths: Some(widths),
+                missing_width: Some(600.0),
+                kerning: None,
+            },
+        };
+
+        // Character 42 (index 10 from first_char 32)
+        let char_code = 42u8 as char; // '*'
+        let text = char_code.to_string();
+        let width = calculate_text_width(&text, 10.0, Some(&font_info));
+
+        // Character is in range but width is 0.0, should NOT fall back to missing_width
+        // (0.0 is a valid width for zero-width characters)
+        assert_eq!(
+            width, 0.0,
+            "Should use 0.0 width from array, not missing_width"
+        );
+    }
+
+    #[test]
+    fn test_calculate_text_width_empty_string() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        let font_info = FontInfo {
+            name: "TestFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(32),
+                last_char: Some(126),
+                widths: Some(vec![500.0; 95]),
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+        };
+
+        let width = calculate_text_width("", 12.0, Some(&font_info));
+        assert_eq!(width, 0.0, "Empty string should have zero width");
+
+        // Also test without font info
+        let width_no_font = calculate_text_width("", 12.0, None);
+        assert_eq!(width_no_font, 0.0, "Empty string should have zero width (no font)");
+    }
+
+    #[test]
+    fn test_calculate_text_width_unicode_characters() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Font with limited ASCII range
+        let font_info = FontInfo {
+            name: "TestFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(32),
+                last_char: Some(126),
+                widths: Some(vec![500.0; 95]),
+                missing_width: Some(600.0),
+                kerning: None,
+            },
+        };
+
+        // Test with Unicode characters outside ASCII range
+        let width = calculate_text_width("Ñ", 10.0, Some(&font_info));
+
+        // 'Ñ' (U+00D1, code 209) is outside range, should use missing_width
+        // Expected: 600/1000 * 10 = 6.0
+        assert_eq!(
+            width, 6.0,
+            "Unicode character outside range should use missing_width"
+        );
+    }
+
+    #[test]
+    fn test_calculate_text_width_different_font_sizes() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        let font_info = FontInfo {
+            name: "TestFont".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(65), // 'A'
+                last_char: Some(65),  // 'A'
+                widths: Some(vec![722.0]),
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+        };
+
+        // Test same character with different font sizes
+        let width_10 = calculate_text_width("A", 10.0, Some(&font_info));
+        let width_20 = calculate_text_width("A", 20.0, Some(&font_info));
+
+        // Widths should scale linearly with font size
+        assert_eq!(width_10, 722.0 / 1000.0 * 10.0);
+        assert_eq!(width_20, 722.0 / 1000.0 * 20.0);
+        assert_eq!(width_20, width_10 * 2.0, "Width should scale linearly with font size");
+    }
+
+    #[test]
+    fn test_calculate_text_width_proportional_vs_monospace() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Simulate proportional font (different widths)
+        let proportional_widths = vec![278.0, 556.0, 722.0]; // i, m, W
+        let proportional_font = FontInfo {
+            name: "Helvetica".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(105), // 'i'
+                last_char: Some(107),  // covers i, j, k
+                widths: Some(proportional_widths),
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+        };
+
+        // Simulate monospace font (same width)
+        let monospace_widths = vec![600.0, 600.0, 600.0];
+        let monospace_font = FontInfo {
+            name: "Courier".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(105),
+                last_char: Some(107),
+                widths: Some(monospace_widths),
+                missing_width: Some(600.0),
+                kerning: None,
+            },
+        };
+
+        let prop_width = calculate_text_width("i", 12.0, Some(&proportional_font));
+        let mono_width = calculate_text_width("i", 12.0, Some(&monospace_font));
+
+        // Proportional 'i' should be narrower than monospace 'i'
+        assert!(
+            prop_width < mono_width,
+            "Proportional 'i' ({}) should be narrower than monospace 'i' ({})",
+            prop_width,
+            mono_width
+        );
+    }
 }
