@@ -1026,7 +1026,10 @@ impl XRefTable {
                 if catalog_candidate.is_none() {
                     eprintln!("Warning: Could not find any catalog object, using first non-signature object as absolute last resort");
                     for obj_num in table.entries.keys().copied().collect::<Vec<_>>().iter() {
-                        let offset = table.entries.get(obj_num).unwrap().offset as usize;
+                        let offset = match table.entries.get(obj_num) {
+                            Some(entry) => entry.offset as usize,
+                            None => continue, // Skip if entry not found (shouldn't happen)
+                        };
                         if offset < buffer.len() {
                             if let Some(obj_start) =
                                 content[offset..].find(&format!("{} 0 obj", obj_num))
