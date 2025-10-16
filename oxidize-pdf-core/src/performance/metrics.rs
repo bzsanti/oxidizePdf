@@ -299,11 +299,7 @@ impl PerformanceMonitor {
 
     /// Get statistics for a specific operation
     pub fn get_operation_stats(&self, operation: Operation) -> Option<OperationStats> {
-        self.operation_stats
-            .read()
-            .ok()?
-            .get(&operation)
-            .cloned()
+        self.operation_stats.read().ok()?.get(&operation).cloned()
     }
 
     /// Get recent operations (last N)
@@ -375,7 +371,11 @@ impl PerformanceMonitor {
     fn estimate_memory_usage(&self) -> usize {
         // This is a simplified memory estimation
         // In a real implementation, you might use system APIs or memory profiling
-        let active_count = self.active_operations.lock().map(|ops| ops.len()).unwrap_or(0);
+        let active_count = self
+            .active_operations
+            .lock()
+            .map(|ops| ops.len())
+            .unwrap_or(0);
         let completed_count = self
             .completed_operations
             .read()

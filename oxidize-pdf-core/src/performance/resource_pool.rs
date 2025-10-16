@@ -286,18 +286,16 @@ impl ResourcePool {
             hash,
         };
 
-        let mut fonts = self
-            .fonts
-            .write()
-            .map_err(|_| crate::error::PdfError::InvalidStructure(
-                "Resource pool lock poisoned (fonts)".to_string()
-            ))?;
-        let mut stats = self
-            .stats
-            .write()
-            .map_err(|_| crate::error::PdfError::InvalidStructure(
-                "Resource pool lock poisoned (stats)".to_string()
-            ))?;
+        let mut fonts = self.fonts.write().map_err(|_| {
+            crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (fonts)".to_string(),
+            )
+        })?;
+        let mut stats = self.stats.write().map_err(|_| {
+            crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (stats)".to_string(),
+            )
+        })?;
 
         if fonts.contains_key(&key) {
             stats.font_duplicates_avoided += 1;
@@ -322,18 +320,16 @@ impl ResourcePool {
             hash,
         };
 
-        let mut images = self
-            .images
-            .write()
-            .map_err(|_| crate::error::PdfError::InvalidStructure(
-                "Resource pool lock poisoned (images)".to_string()
-            ))?;
-        let mut stats = self
-            .stats
-            .write()
-            .map_err(|_| crate::error::PdfError::InvalidStructure(
-                "Resource pool lock poisoned (stats)".to_string()
-            ))?;
+        let mut images = self.images.write().map_err(|_| {
+            crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (images)".to_string(),
+            )
+        })?;
+        let mut stats = self.stats.write().map_err(|_| {
+            crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (stats)".to_string(),
+            )
+        })?;
 
         if images.contains_key(&key) {
             stats.image_duplicates_avoided += 1;
@@ -358,18 +354,16 @@ impl ResourcePool {
             hash,
         };
 
-        let mut patterns = self
-            .patterns
-            .write()
-            .map_err(|_| crate::error::PdfError::InvalidStructure(
-                "Resource pool lock poisoned (patterns)".to_string()
-            ))?;
-        let mut stats = self
-            .stats
-            .write()
-            .map_err(|_| crate::error::PdfError::InvalidStructure(
-                "Resource pool lock poisoned (stats)".to_string()
-            ))?;
+        let mut patterns = self.patterns.write().map_err(|_| {
+            crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (patterns)".to_string(),
+            )
+        })?;
+        let mut stats = self.stats.write().map_err(|_| {
+            crate::error::PdfError::InvalidStructure(
+                "Resource pool lock poisoned (stats)".to_string(),
+            )
+        })?;
 
         if patterns.contains_key(&key) {
             stats.pattern_duplicates_avoided += 1;
