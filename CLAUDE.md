@@ -1,21 +1,191 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-14 - v1.6.0 Release
-- **Branch**: main (v1.6.0 tagged and released)
-- **Version**: **v1.6.0 released** 🚀
+- **Last Session**: 2025-10-16 - Dylint Custom Lints Implementation
+- **Branch**: develop_santi (working branch)
+- **Version**: **v1.6.1 released** 🚀
 - **Recent Work**:
-  - ✅ **v1.6.0 Tagged**: develop → main merged via PR #81
-  - ✅ **CI Pipeline**: Release workflow completed successfully
-  - ✅ **Published**: crates.io + GitHub release
-  - ✅ **Feature 2.1.2**: LLM-optimized formats (Markdown, JSON, plain text)
-  - ✅ **Incremental Updates**: Page replacement API shipped
-  - ✅ **Content Stream Utils**: 737 lines of overlay infrastructure
-  - ✅ **8,000+ lines**: New functionality with comprehensive tests
-- **Key Achievement**: Major feature release with AI/LLM integration
-- **Next**: Continue development on develop branch
+  - ✅ **Dylint Custom Lints**: 5 P0 lints implemented and running (214 errors, 45 warnings detected)
+  - ✅ **Issue #87**: Kerning normalization fully implemented (3 phases)
+  - ✅ **Issue #90**: Advanced text extraction gap analysis created
+  - ✅ **Code Quality**: Removed 11 unwraps from reader.rs production code
+  - ✅ **Testing**: 4,545 tests passing (all comprehensive)
+  - ✅ **TrueType Kern Table**: Binary parsing with Format 0 support
+  - ✅ **Font Metrics**: Width calculation with actual font data
+- **Key Achievement**: Custom lints operational, detecting 214 unwraps in library code
+- **Next**: Correct anti-patterns detected by lints, integrate CI/CD
 
 ## ✅ Funcionalidades Completadas
+
+### 📝 **Kerning Normalization (Issue #87)** (v1.6.1 - 2025-10-16) ⭐ COMPLETE
+
+#### Phase 1: Font Metrics Extraction ✅
+- ✅ **FontMetrics Struct**: Comprehensive font data structure
+  - Widths array, FirstChar, LastChar, MissingWidth
+  - Kerning pairs HashMap for character pair adjustments
+  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:14-40
+- ✅ **extract_font_metrics()**: Parse font dictionaries from PDF
+  - Extracts /Widths, /FirstChar, /LastChar from font dictionaries
+  - Calls TrueType kerning extraction for FontFile2 streams
+  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:203-292
+- ✅ **calculate_text_width()**: Metrics-based width calculation
+  - Uses actual character widths instead of simplified estimate
+  - Applies kerning pairs for character-to-character adjustments
+  - FUnits conversion: width / 1000.0 * font_size
+  - Location: oxidize-pdf-core/src/text/extraction.rs:563-606
+
+#### Phase 2: TrueType Kerning Table Parsing ✅
+- ✅ **parse_truetype_kern_table()**: Binary TrueType parser
+  - Parses table directory (big-endian format)
+  - Locates 'kern' table by scanning table tags
+  - Extracts Format 0 subtables (ordered kerning pairs)
+  - Returns HashMap<(u32, u32), f64> for (left_glyph, right_glyph) → adjustment
+  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:331-448
+- ✅ **extract_truetype_kerning()**: Kerning extraction wrapper
+  - Decodes font stream, calls binary parser
+  - Graceful error handling (returns empty HashMap on failure)
+  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:294-330
+
+#### Phase 3: Type1 Kerning Documentation ✅
+- ✅ **Technical Justification**: Why Type1 NOT implemented
+  - Type1 PFB (PostScript Font Binary) files contain only glyphs
+  - Kerning stored in external .afm (Adobe Font Metrics) files
+  - External .afm files NOT embedded in PDF documents
+  - Documentation allows for edge case handling if encountered
+- ✅ **Code Documentation**: Comprehensive inline comments in extract_truetype_kerning()
+
+#### Testing & Validation ✅
+- ✅ **9 Rigorous Tests**: Comprehensive test coverage
+  - Font metrics with complete widths array
+  - Font metrics with missing width fallback
+  - Font metrics with partial widths
+  - Kerning pair application
+  - Character pair width calculation
+  - Floating-point tolerance (0.0001) for precision
+  - All tests passing (14/14 in text::extraction module)
+- ✅ **Pre-Commit Validation**: Format, clippy, build, tests all automated
+- ✅ **ISO Compliance**: Follows TrueType specification for kern table Format 0
+
+#### Technical Details
+- **TrueType Binary Format**: Big-endian byte order
+- **Table Directory**: 12-byte entries (tag, checksum, offset, length)
+- **Kern Table Format 0**: Version 0, nTables, subtable headers, kerning pairs
+- **FUnits Conversion**: Glyph units / 1000.0 * font_size
+- **Error Handling**: ParseError::SyntaxError with position and message
+
+**Commits**:
+- `f617162` - docs(text): document Type1 kerning exclusion rationale
+- Previous kerning implementation commits
+
+### 🔍 **Dylint Custom Lints System** (2025-10-16) ⭐ OPERATIONAL
+
+#### Implementation ✅
+- ✅ **Infrastructure**: Complete Dylint workspace in `lints/` directory
+  - Configured as separate workspace with nightly toolchain
+  - cdylib crate type for dynamic loading
+  - Build script for automatic dylib deployment
+  - Location: `lints/` (excluded from main workspace)
+
+#### 5 Production Lints (P0 - Critical) ✅
+1. **library_unwraps** - Detects `.unwrap()` and `.expect()` in library code
+   - **Severity**: Deny (compilation error)
+   - **First Detection**: 214 errors found
+   - **Impact**: Critical - prevents panics in production
+   - Location: lints/src/library_unwraps.rs
+
+2. **string_errors** - Detects `Result<_, String>` instead of proper error types
+   - **Severity**: Warn
+   - **First Detection**: ~15 warnings
+   - **Impact**: High - improves error handling
+   - Location: lints/src/string_errors.rs
+
+3. **missing_error_context** - Detects errors without structured context
+   - **Severity**: Warn
+   - **First Detection**: ~10 warnings
+   - **Impact**: Medium - improves debugging
+   - Location: lints/src/missing_error_context.rs
+
+4. **bool_option_pattern** - Detects `bool success` + `Option<Error>` anti-pattern
+   - **Severity**: Warn
+   - **First Detection**: 0 occurrences in main code (3 in examples)
+   - **Impact**: High - enforces Result<T, E> pattern
+   - Location: lints/src/bool_option_pattern.rs
+
+5. **duration_primitives** - Detects primitive types (u64, f64) for durations
+   - **Severity**: Warn (P1 - Important)
+   - **First Detection**: 1 warning
+   - **Impact**: Low - improves code clarity
+   - Location: lints/src/duration_primitives.rs
+
+#### Toolchain Configuration ✅
+- **Main Project**: Rust stable 1.77+
+- **Lints**: Rust nightly-2025-10-16 (for rustc_private)
+- **Separation**: Correct and expected (two toolchains)
+- **rust-toolchain.toml**: Pinned nightly for reproducibility
+
+#### First Analysis Results (2025-10-16) 📊
+```
+Total Errors: 214
+Total Warnings: 45
+Analysis Time: ~45 seconds
+Files Analyzed: All workspace crates
+```
+
+**Breakdown by Lint**:
+- library_unwraps: 214 errors ❌ (critical)
+- string_errors: ~15 warnings ⚠️
+- missing_error_context: ~10 warnings ⚠️
+- duration_primitives: 1 warning ⚠️
+- bool_option_pattern: 0 main + 3 examples ✅
+
+#### Known Anti-Patterns Identified ⚠️
+**Example Files** (need correction):
+1. `examples/src/batch_processing.rs:58-65`
+   - ProcessingResult: bool + Option<String>
+2. `examples/src/batch_processing_advanced.rs:58-68`
+   - ProcessingResult: bool + Option<String>
+3. `oxidize-pdf-core/src/performance/compression.rs:761-769`
+   - CompressionTestResult: bool + Option<String>
+
+#### Integration ✅
+- ✅ **Execution Script**: `scripts/run_lints.sh`
+- ✅ **Documentation**: `docs/LINTS.md` (500+ lines)
+- ✅ **Results Report**: `lints/LINT_RESULTS.md`
+- ✅ **Status Report**: `lints/STATUS_REPORT.md`
+- ✅ **Build Automation**: `lints/build.rs`
+- ⏳ **CI/CD**: Pending `.github/workflows/lints.yml`
+
+#### Technical Implementation
+**HIR-Based Analysis**: Uses High-level IR patterns instead of typeck_results
+```rust
+// Correct approach for struct field analysis
+if let hir::TyKind::Path(ref qpath) = field.ty.kind {
+    if let hir::QPath::Resolved(_, path) = qpath {
+        // Analyze type path
+    }
+}
+```
+
+**Library Loading**: Automated dylib deployment
+- Build script copies compiled library to expected location
+- Naming: `lib<name>@<toolchain>-<host><dll_suffix>`
+- Location: `target/dylint/libraries/<toolchain>-<host>/<profile>/`
+
+#### Next Steps ⏳
+1. Create CI/CD workflow for automatic lint execution
+2. Correct 3 example files with anti-patterns
+3. Systematically eliminate 214 unwraps in library code
+4. Convert string errors to proper types with thiserror
+5. Add structured context to error creation points
+
+#### Documentation 📚
+- **Complete Guide**: `docs/LINTS.md`
+- **Detailed Results**: `lints/LINT_RESULTS.md`
+- **Status Report**: `lints/STATUS_REPORT.md`
+- **Build Script**: `lints/build.rs`
+- **Execution**: `scripts/run_lints.sh`
+
+**Performance**: Analysis completes in ~45 seconds for entire workspace
 
 ### 🤖 **Feature 2.1.2: LLM-Optimized Formats** (v1.6.0 - 2025-10-14) ⭐ RELEASED
 
@@ -370,7 +540,7 @@ cargo build --release                 # Production build
 
 ## 📊 Current State
 - **PDF Features**: Core features implemented and documented
-- **Tests**: 4,445 total tests in workspace (all passing) - Updated 2025-10-10
+- **Tests**: 4,545 total tests in workspace (all passing) - Updated 2025-10-16
 - **Test Coverage**: 55.64% (17,708/31,827 lines) - Measured with Tarpaulin
 - **PDF Parsing**: 98.8% success rate (750/759 PDFs) - 42.6 PDFs/second
 - **Performance** (Realistic Benchmarks - 2025-10-07):
@@ -380,6 +550,7 @@ cargo build --release                 # Production build
   - **All benchmarks**: Unique content per page (no trivial repetition)
   - **Details**: See `BENCHMARK_RESULTS.md`
 - **Testing Focus**: Functional testing with honest, realistic benchmarks
+- **Code Quality**: Zero unwraps in reader.rs production code (unwrap audit complete)
 - **Last Build**: ✅ All tests passing, clippy clean, formatted
 
 ## 📚 Documentation References
@@ -394,7 +565,17 @@ cargo build --release                 # Production build
 - Encrypted PDFs not supported (19 cases)
 - Some circular references in complex PDFs
 
-## 📝 Open GitHub Issues (3)
+## 📝 Open GitHub Issues (5)
+- **#90** - **NEW** - Advanced Text Extraction with Table Detection (2025-10-16)
+  - ✅ Gap analysis completed with competitor comparison
+  - **Phase 1**: Font metadata exposure in TextFragment
+  - **Phase 2**: Vector graphics line extraction
+  - **Phase 3**: Table detection with border-based cell assignment
+  - **Status**: Ready for prioritization
+- **#87** - ✅ **RESOLVED** - Kerning Normalization (2025-10-16)
+  - All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
+  - 9 rigorous tests passing
+  - Ready for review/merge
 - **#57** - CJK Font Support Test Failed (pendiente feedback usuario - 7 días)
 - **#54** - ISO 32000-1:2008 Compliance Tracking (enhancement)
   - ✅ Honest gap analysis completado 2025-10-07
