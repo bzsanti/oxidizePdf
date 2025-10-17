@@ -565,24 +565,25 @@ cargo build --release                 # Production build
 - Encrypted PDFs not supported (19 cases)
 - Some circular references in complex PDFs
 
-## 📝 Open GitHub Issues (5)
-- **#90** - **NEW** - Advanced Text Extraction with Table Detection (2025-10-16)
+## 📝 Open GitHub Issues (3)
+- **#90** - **OPEN** - Advanced Text Extraction with Table Detection (2025-10-16)
   - ✅ Gap analysis completed with competitor comparison
   - **Phase 1**: Font metadata exposure in TextFragment
   - **Phase 2**: Vector graphics line extraction
   - **Phase 3**: Table detection with border-based cell assignment
   - **Status**: Ready for prioritization
-- **#87** - ✅ **RESOLVED** - Kerning Normalization (2025-10-16)
-  - All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
-  - 9 rigorous tests passing
-  - Ready for review/merge
-- **#57** - CJK Font Support Test Failed (pendiente feedback usuario - 7 días)
-- **#54** - ISO 32000-1:2008 Compliance Tracking (enhancement)
-  - ✅ Honest gap analysis completado 2025-10-07
+  - **Estimated effort**: 28-42 hours (3.5-5 days)
+- **#87** - **OPEN** - Kerning Normalization (2025-10-16)
+  - ✅ All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
+  - ✅ 9 rigorous tests passing
+  - **Action**: Close issue with documentation summary
+- **#54** - **OPEN** - ISO 32000-1:2008 Compliance Tracking (2025-10-13)
+  - ✅ Honest gap analysis completed 2025-10-07
   - **Finding**: 55-60% compliance (not 35-40%)
   - Sprint 2.2 features verified as already implemented
   - **Action**: Update issue with honest assessment
-- **#46** - Source Han Sans font support (pendiente feedback usuario - 7 días)
+- **#57** - ✅ **CLOSED** - CJK Font Support Test Failed (2025-10-11)
+- **#46** - ✅ **CLOSED** - Source Han Sans font support (2025-10-11)
 
 ## 🎯 Próximas Prioridades (REVISED)
 
