@@ -228,26 +228,29 @@ impl TextValidator {
         }
 
         // Extract monetary amounts
-        let money_regex =
-            Regex::new(r"\$\s*[\d,]+(?:\.\d{2})?(?:\s*(?:million|thousand|M|K))?").unwrap();
-        let mut amounts = Vec::new();
-        for mat in money_regex.find_iter(text) {
-            amounts.push(mat.as_str().to_string());
-        }
-        if !amounts.is_empty() {
-            extracted.insert("monetary_amounts".to_string(), amounts);
+        if let Ok(money_regex) =
+            Regex::new(r"\$\s*[\d,]+(?:\.\d{2})?(?:\s*(?:million|thousand|M|K))?")
+        {
+            let mut amounts = Vec::new();
+            for mat in money_regex.find_iter(text) {
+                amounts.push(mat.as_str().to_string());
+            }
+            if !amounts.is_empty() {
+                extracted.insert("monetary_amounts".to_string(), amounts);
+            }
         }
 
         // Extract potential party names (capitalized words followed by organization suffixes)
-        let org_regex =
+        if let Ok(org_regex) =
             Regex::new(r"\b([A-Z][A-Za-z\s&,\.]+(?:LLC|Ltd|Corp|Corporation|Inc|Company|Co\.)\b)")
-                .unwrap();
-        let mut organizations = Vec::new();
-        for mat in org_regex.find_iter(text) {
-            organizations.push(mat.as_str().to_string());
-        }
-        if !organizations.is_empty() {
-            extracted.insert("organizations".to_string(), organizations);
+        {
+            let mut organizations = Vec::new();
+            for mat in org_regex.find_iter(text) {
+                organizations.push(mat.as_str().to_string());
+            }
+            if !organizations.is_empty() {
+                extracted.insert("organizations".to_string(), organizations);
+            }
         }
 
         extracted
