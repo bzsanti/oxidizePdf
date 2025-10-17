@@ -1,6 +1,7 @@
 //! Header builder for complex table headers with spanning support
 
 use super::cell_style::CellStyle;
+use super::error::TableError;
 
 /// A header cell that can span multiple columns and rows
 #[derive(Debug, Clone)]
@@ -244,17 +245,19 @@ impl HeaderBuilder {
     }
 
     /// Validate the header structure
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), TableError> {
         for (level_idx, level) in self.levels.iter().enumerate() {
             let mut column_coverage = vec![false; self.total_columns];
 
             for cell in level {
                 // Check if cell extends beyond table width
                 if cell.start_col + cell.colspan > self.total_columns {
-                    return Err(format!(
-                        "Header cell at level {} extends beyond table width ({} + {} > {})",
-                        level_idx, cell.start_col, cell.colspan, self.total_columns
-                    ));
+                    return Err(TableError::HeaderOutOfBounds {
+                        level: level_idx,
+                        start: cell.start_col,
+                        span: cell.colspan,
+                        total: self.total_columns,
+                    });
                 }
 
                 // Check for overlapping cells
@@ -265,10 +268,10 @@ impl HeaderBuilder {
                     .take(cell.colspan)
                 {
                     if *coverage {
-                        return Err(format!(
-                            "Overlapping header cells at level {} column {}",
-                            level_idx, col
-                        ));
+                        return Err(TableError::HeaderOverlap {
+                            level: level_idx,
+                            column: col,
+                        });
                     }
                     *coverage = true;
                 }
