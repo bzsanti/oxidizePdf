@@ -2227,7 +2227,7 @@ impl<W: Write> PdfWriter<W> {
                 // Check if image has transparency (alpha channel)
                 if image.has_transparency() {
                     // Handle transparent images with SMask
-                    let (mut main_obj, smask_obj) = image.to_pdf_object_with_transparency();
+                    let (mut main_obj, smask_obj) = image.to_pdf_object_with_transparency()?;
 
                     // If we have a soft mask, write it as a separate object and reference it
                     if let Some(smask_stream) = smask_obj {

@@ -89,10 +89,9 @@ impl DashboardComponent for PivotTable {
         table.ensure_computed()?;
 
         // SAFETY: ensure_computed() guarantees computed_data is Some
-        let computed = table
-            .computed_data
-            .as_ref()
-            .ok_or_else(|| PdfError::InvalidOperation("Failed to compute pivot data".to_string()))?;
+        let computed = table.computed_data.as_ref().ok_or_else(|| {
+            PdfError::InvalidOperation("Failed to compute pivot data".to_string())
+        })?;
 
         if computed.headers.is_empty() {
             return Ok(());

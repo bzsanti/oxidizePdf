@@ -207,7 +207,10 @@ impl HeaderBuilder {
             .row_level(level);
 
         // SAFETY: levels is guaranteed non-empty by the check above
-        debug_assert!(!self.levels.is_empty(), "levels must be non-empty after initialization");
+        debug_assert!(
+            !self.levels.is_empty(),
+            "levels must be non-empty after initialization"
+        );
         if let Some(last_level) = self.levels.last_mut() {
             last_level.push(cell);
         }

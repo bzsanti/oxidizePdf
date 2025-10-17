@@ -216,9 +216,9 @@ impl DashboardBuilder {
         self.finish_current_row();
 
         // Validate required fields
-        let title = self.title.ok_or_else(|| {
-            PdfError::InvalidOperation("Dashboard title is required".to_string())
-        })?;
+        let title = self
+            .title
+            .ok_or_else(|| PdfError::InvalidOperation("Dashboard title is required".to_string()))?;
 
         // Validate components
         for component in &self.components {

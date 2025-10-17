@@ -179,7 +179,7 @@ fn test_png_to_pdf_object_with_transparency() -> Result<()> {
     let image = Image::from_png_data(png_data)?;
 
     // Convert to PDF objects
-    let (main_obj, smask_obj) = image.to_pdf_object_with_transparency();
+    let (main_obj, smask_obj) = image.to_pdf_object_with_transparency()?;
 
     // Check main object
     if let oxidize_pdf::objects::Object::Stream(dict, _) = main_obj {

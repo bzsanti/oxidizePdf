@@ -74,8 +74,7 @@ impl DataAggregator {
             .filter_map(|value| value.parse::<f64>().ok())
             .filter(|v| !v.is_nan()) // Filter out NaN values before comparison
             .min_by(|a, b| {
-                a.partial_cmp(b)
-                    .unwrap_or(std::cmp::Ordering::Equal) // NaN values treated as equal (shouldn't happen after filter)
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal) // NaN values treated as equal (shouldn't happen after filter)
             })
     }
 
@@ -87,8 +86,7 @@ impl DataAggregator {
             .filter_map(|value| value.parse::<f64>().ok())
             .filter(|v| !v.is_nan()) // Filter out NaN values before comparison
             .max_by(|a, b| {
-                a.partial_cmp(b)
-                    .unwrap_or(std::cmp::Ordering::Equal) // NaN values treated as equal (shouldn't happen after filter)
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal) // NaN values treated as equal (shouldn't happen after filter)
             })
     }
 
