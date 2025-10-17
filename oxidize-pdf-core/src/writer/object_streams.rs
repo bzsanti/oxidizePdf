@@ -177,13 +177,14 @@ impl ObjectStreamWriter {
         }
 
         // Create new stream if needed
-        if self.current_stream.is_none()
+        let needs_new_stream = self.current_stream.is_none()
             || self
                 .current_stream
                 .as_ref()
-                .unwrap()
-                .is_full(self.config.max_objects_per_stream)
-        {
+                .map(|s| s.is_full(self.config.max_objects_per_stream))
+                .unwrap_or(false);
+
+        if needs_new_stream {
             self.flush_current_stream();
             let stream_id = ObjectId::new(self.next_stream_id, 0);
             self.next_stream_id += 1;
