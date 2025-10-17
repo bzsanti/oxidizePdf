@@ -253,7 +253,10 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         // Extract MissingWidth from font descriptor
-        if let Some(desc_ref) = font_dict.get("FontDescriptor").and_then(|o| o.as_reference()) {
+        if let Some(desc_ref) = font_dict
+            .get("FontDescriptor")
+            .and_then(|o| o.as_reference())
+        {
             if let Ok(PdfObject::Dictionary(desc_dict)) =
                 document.get_object(desc_ref.0, desc_ref.1)
             {
@@ -268,12 +271,17 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         // Extract kerning from TrueType fonts (if embedded)
-        if let Some(desc_ref) = font_dict.get("FontDescriptor").and_then(|o| o.as_reference()) {
+        if let Some(desc_ref) = font_dict
+            .get("FontDescriptor")
+            .and_then(|o| o.as_reference())
+        {
             if let Ok(PdfObject::Dictionary(desc_dict)) =
                 document.get_object(desc_ref.0, desc_ref.1)
             {
                 // Look for embedded TrueType font (FontFile2)
-                if let Some(font_file_ref) = desc_dict.get("FontFile2").and_then(|o| o.as_reference()) {
+                if let Some(font_file_ref) =
+                    desc_dict.get("FontFile2").and_then(|o| o.as_reference())
+                {
                     if let Ok(PdfObject::Stream(font_stream)) =
                         document.get_object(font_file_ref.0, font_file_ref.1)
                     {
@@ -330,10 +338,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
 
     /// Parse TrueType kern table (Format 0 only)
     #[allow(dead_code)]
-    fn parse_truetype_kern_table(
-        &self,
-        font_data: &[u8],
-    ) -> ParseResult<HashMap<(u32, u32), f64>> {
+    fn parse_truetype_kern_table(&self, font_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
         // TrueType fonts start with a table directory
         if font_data.len() < 12 {
             return Err(ParseError::SyntaxError {
@@ -398,7 +403,8 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         }
 
         // Version and nTables
-        let n_tables = u32::from_be_bytes([kern_data[2], kern_data[3], 0, 0]) as usize;
+        // nTables is a u16 at bytes 2-3
+        let n_tables = u16::from_be_bytes([kern_data[2], kern_data[3]]) as usize;
 
         let mut kerning_pairs = HashMap::new();
         let mut table_offset = 4; // After header
@@ -417,12 +423,11 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                 kern_data[table_offset + 3],
             ]) as usize;
 
-            let coverage = u16::from_be_bytes([
-                kern_data[table_offset + 4],
-                kern_data[table_offset + 5],
-            ]);
+            let coverage =
+                u16::from_be_bytes([kern_data[table_offset + 4], kern_data[table_offset + 5]]);
 
-            let format = (coverage >> 8) & 0xFF; // Upper byte is format
+            // Format is in the lower byte per TrueType spec (ISO 14496-22:2019)
+            let format = coverage & 0xFF;
 
             // Only process Format 0 (ordered pair list)
             if format == 0 && table_offset + subtable_length <= kern_data.len() {
@@ -767,4 +772,28 @@ mod tests {
         assert_eq!(font_info.font_type, "Type1");
         assert_eq!(font_info.encoding, Some("WinAnsiEncoding".to_string()));
     }
+}
+
+// =========================================================================
+// PUBLIC TEST HELPERS FOR KERNING (Issue #87 - Quality Agent Required)
+// =========================================================================
+
+/// Extract kerning pairs from raw TrueType font data (public wrapper for tests)
+///
+/// This is a convenience function for testing kerning extraction without
+/// needing a full PdfDocument context.
+#[allow(dead_code)]
+pub fn extract_truetype_kerning(font_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
+    let extractor: CMapTextExtractor<std::fs::File> = CMapTextExtractor::new();
+    extractor.parse_truetype_kern_table(font_data)
+}
+
+/// Parse TrueType kern table from raw kern table data (public wrapper for tests)
+///
+/// This function parses the kern table data directly, useful for unit testing
+/// the kern table parser without needing a full TrueType font file.
+#[allow(dead_code)]
+pub fn parse_truetype_kern_table(kern_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
+    let extractor: CMapTextExtractor<std::fs::File> = CMapTextExtractor::new();
+    extractor.parse_truetype_kern_table(kern_data)
 }

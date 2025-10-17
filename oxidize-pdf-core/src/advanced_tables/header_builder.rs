@@ -206,7 +206,11 @@ impl HeaderBuilder {
             .rowspan(rowspan)
             .row_level(level);
 
-        self.levels.last_mut().unwrap().push(cell);
+        // SAFETY: levels is guaranteed non-empty by the check above
+        debug_assert!(!self.levels.is_empty(), "levels must be non-empty after initialization");
+        if let Some(last_level) = self.levels.last_mut() {
+            last_level.push(cell);
+        }
         self
     }
 

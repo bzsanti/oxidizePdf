@@ -252,7 +252,9 @@ impl TextExtractor {
                             extracted_text.push_str(&decoded);
 
                             // Get font info for accurate width calculation
-                            let font_info = state.font_name.as_ref()
+                            let font_info = state
+                                .font_name
+                                .as_ref()
                                 .and_then(|name| self.font_cache.get(name));
 
                             if self.options.preserve_layout {
@@ -260,7 +262,11 @@ impl TextExtractor {
                                     text: decoded.clone(),
                                     x,
                                     y,
-                                    width: calculate_text_width(&decoded, state.font_size, font_info),
+                                    width: calculate_text_width(
+                                        &decoded,
+                                        state.font_size,
+                                        font_info,
+                                    ),
                                     height: state.font_size,
                                     font_size: state.font_size,
                                 });
@@ -271,7 +277,8 @@ impl TextExtractor {
                             last_y = y;
 
                             // Update text matrix for next show operation
-                            let text_width = calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width =
+                                calculate_text_width(&decoded, state.font_size, font_info);
                             let tx = text_width * state.horizontal_scale / 100.0;
                             state.text_matrix =
                                 multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
@@ -281,7 +288,9 @@ impl TextExtractor {
                     ContentOperation::ShowTextArray(array) => {
                         if in_text_object {
                             // Get font info for accurate width calculation
-                            let font_info = state.font_name.as_ref()
+                            let font_info = state
+                                .font_name
+                                .as_ref()
                                 .and_then(|name| self.font_cache.get(name));
 
                             for item in array {
@@ -291,8 +300,11 @@ impl TextExtractor {
                                         extracted_text.push_str(&decoded);
 
                                         // Update text matrix
-                                        let text_width =
-                                            calculate_text_width(&decoded, state.font_size, font_info);
+                                        let text_width = calculate_text_width(
+                                            &decoded,
+                                            state.font_size,
+                                            font_info,
+                                        );
                                         let tx = text_width * state.horizontal_scale / 100.0;
                                         state.text_matrix = multiply_matrix(
                                             &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
@@ -1048,7 +1060,10 @@ mod tests {
 
         // Also test without font info
         let width_no_font = calculate_text_width("", 12.0, None);
-        assert_eq!(width_no_font, 0.0, "Empty string should have zero width (no font)");
+        assert_eq!(
+            width_no_font, 0.0,
+            "Empty string should have zero width (no font)"
+        );
     }
 
     #[test]
@@ -1112,7 +1127,11 @@ mod tests {
         // Widths should scale linearly with font size
         assert_eq!(width_10, 722.0 / 1000.0 * 10.0);
         assert_eq!(width_20, 722.0 / 1000.0 * 20.0);
-        assert_eq!(width_20, width_10 * 2.0, "Width should scale linearly with font size");
+        assert_eq!(
+            width_20,
+            width_10 * 2.0,
+            "Width should scale linearly with font size"
+        );
     }
 
     #[test]
@@ -1166,6 +1185,214 @@ mod tests {
             "Proportional 'i' ({}) should be narrower than monospace 'i' ({})",
             prop_width,
             mono_width
+        );
+    }
+
+    // =========================================================================
+    // CRITICAL KERNING TESTS (Issue #87 - Quality Agent Required)
+    // =========================================================================
+
+    #[test]
+    fn test_calculate_text_width_with_kerning() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+        use std::collections::HashMap;
+
+        // Create a font with kerning pairs
+        let mut widths = vec![500.0; 95]; // ASCII 32-126
+        widths[65 - 32] = 722.0; // 'A'
+        widths[86 - 32] = 722.0; // 'V'
+        widths[87 - 32] = 944.0; // 'W'
+
+        let mut kerning = HashMap::new();
+        // Typical kerning pairs (in FUnits, 1/1000)
+        kerning.insert((65, 86), -50.0); // 'A' + 'V' → tighten by 50 FUnits
+        kerning.insert((65, 87), -40.0); // 'A' + 'W' → tighten by 40 FUnits
+
+        let font_info = FontInfo {
+            name: "Helvetica".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            metrics: FontMetrics {
+                first_char: Some(32),
+                last_char: Some(126),
+                widths: Some(widths),
+                missing_width: Some(500.0),
+                kerning: Some(kerning),
+            },
+        };
+
+        // Test "AV" with kerning
+        let width_av = calculate_text_width("AV", 12.0, Some(&font_info));
+        // Expected: (722 + 722)/1000 * 12 + (-50/1000 * 12)
+        //         = 17.328 - 0.6 = 16.728
+        let expected_av = (722.0 + 722.0) / 1000.0 * 12.0 + (-50.0 / 1000.0 * 12.0);
+        let tolerance = 0.0001;
+        assert!(
+            (width_av - expected_av).abs() < tolerance,
+            "AV with kerning: expected {}, got {}, diff {}",
+            expected_av,
+            width_av,
+            (width_av - expected_av).abs()
+        );
+
+        // Test "AW" with different kerning value
+        let width_aw = calculate_text_width("AW", 12.0, Some(&font_info));
+        // Expected: (722 + 944)/1000 * 12 + (-40/1000 * 12)
+        //         = 19.992 - 0.48 = 19.512
+        let expected_aw = (722.0 + 944.0) / 1000.0 * 12.0 + (-40.0 / 1000.0 * 12.0);
+        assert!(
+            (width_aw - expected_aw).abs() < tolerance,
+            "AW with kerning: expected {}, got {}, diff {}",
+            expected_aw,
+            width_aw,
+            (width_aw - expected_aw).abs()
+        );
+
+        // Test "VA" with NO kerning (pair not in HashMap)
+        let width_va = calculate_text_width("VA", 12.0, Some(&font_info));
+        // Expected: (722 + 722)/1000 * 12 = 17.328 (no kerning adjustment)
+        let expected_va = (722.0 + 722.0) / 1000.0 * 12.0;
+        assert!(
+            (width_va - expected_va).abs() < tolerance,
+            "VA without kerning: expected {}, got {}, diff {}",
+            expected_va,
+            width_va,
+            (width_va - expected_va).abs()
+        );
+
+        // Verify kerning makes a measurable difference
+        assert!(
+            width_av < width_va,
+            "AV with kerning ({}) should be narrower than VA without kerning ({})",
+            width_av,
+            width_va
+        );
+    }
+
+    #[test]
+    fn test_parse_truetype_kern_table_minimal() {
+        use crate::text::extraction_cmap::parse_truetype_kern_table;
+
+        // Complete TrueType font with kern table (Format 0, 2 kerning pairs)
+        // Structure:
+        // 1. Offset table (12 bytes)
+        // 2. Table directory (2 tables: 'head' and 'kern', each 16 bytes = 32 total)
+        // 3. 'head' table data (54 bytes)
+        // 4. 'kern' table data (30 bytes)
+        // Total: 128 bytes
+        let mut ttf_data = vec![
+            // Offset table
+            0x00, 0x01, 0x00, 0x00, // scaler type: TrueType
+            0x00, 0x02, // numTables: 2
+            0x00, 0x20, // searchRange: 32
+            0x00, 0x01, // entrySelector: 1
+            0x00, 0x00, // rangeShift: 0
+        ];
+
+        // Table directory entry 1: 'head' table
+        ttf_data.extend_from_slice(b"head"); // tag
+        ttf_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // checksum
+        ttf_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x2C]); // offset: 44 (12 + 32)
+        ttf_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x36]); // length: 54
+
+        // Table directory entry 2: 'kern' table
+        ttf_data.extend_from_slice(b"kern"); // tag
+        ttf_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // checksum
+        ttf_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x62]); // offset: 98 (44 + 54)
+        ttf_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x1E]); // length: 30 (actual kern table size)
+
+        // 'head' table data (54 bytes of zeros - minimal valid head table)
+        ttf_data.extend_from_slice(&[0u8; 54]);
+
+        // 'kern' table data (34 bytes)
+        ttf_data.extend_from_slice(&[
+            // Kern table header
+            0x00, 0x00, // version: 0
+            0x00, 0x01, // nTables: 1
+            // Subtable header
+            0x00, 0x00, // version: 0
+            0x00, 0x1A, // length: 26 bytes (header 6 + nPairs data 8 + pairs 2*6=12)
+            0x00, 0x00, // coverage: 0x0000 (Format 0 in lower byte, horizontal)
+            0x00, 0x02, // nPairs: 2
+            0x00, 0x08, // searchRange: 8
+            0x00, 0x00, // entrySelector: 0
+            0x00, 0x04, // rangeShift: 4
+            // Kerning pair 1: A + V → -50
+            0x00, 0x41, // left glyph: 65 ('A')
+            0x00, 0x56, // right glyph: 86 ('V')
+            0xFF, 0xCE, // value: -50 (signed 16-bit big-endian)
+            // Kerning pair 2: A + W → -40
+            0x00, 0x41, // left glyph: 65 ('A')
+            0x00, 0x57, // right glyph: 87 ('W')
+            0xFF, 0xD8, // value: -40 (signed 16-bit big-endian)
+        ]);
+
+        let result = parse_truetype_kern_table(&ttf_data);
+        assert!(
+            result.is_ok(),
+            "Should parse minimal kern table successfully: {:?}",
+            result.err()
+        );
+
+        let kerning_map = result.unwrap();
+        assert_eq!(kerning_map.len(), 2, "Should extract 2 kerning pairs");
+
+        // Verify pair 1: A + V → -50
+        assert_eq!(
+            kerning_map.get(&(65, 86)),
+            Some(&-50.0),
+            "Should have A+V kerning pair with value -50"
+        );
+
+        // Verify pair 2: A + W → -40
+        assert_eq!(
+            kerning_map.get(&(65, 87)),
+            Some(&-40.0),
+            "Should have A+W kerning pair with value -40"
+        );
+    }
+
+    #[test]
+    fn test_parse_kern_table_no_kern_table() {
+        use crate::text::extraction_cmap::extract_truetype_kerning;
+
+        // TrueType font data WITHOUT a 'kern' table
+        // Structure:
+        // - Offset table: scaler type + numTables + searchRange + entrySelector + rangeShift
+        // - Table directory: 1 entry for 'head' table (not 'kern')
+        let ttf_data = vec![
+            // Offset table
+            0x00, 0x01, 0x00, 0x00, // scaler type: TrueType
+            0x00, 0x01, // numTables: 1
+            0x00, 0x10, // searchRange: 16
+            0x00, 0x00, // entrySelector: 0
+            0x00, 0x00, // rangeShift: 0
+            // Table directory entry: 'head' table (not 'kern')
+            b'h', b'e', b'a', b'd', // tag: 'head'
+            0x00, 0x00, 0x00, 0x00, // checksum
+            0x00, 0x00, 0x00, 0x1C, // offset: 28
+            0x00, 0x00, 0x00, 0x36, // length: 54
+            // Mock 'head' table data (54 bytes of zeros)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ];
+
+        let result = extract_truetype_kerning(&ttf_data);
+        assert!(
+            result.is_ok(),
+            "Should gracefully handle missing kern table"
+        );
+
+        let kerning_map = result.unwrap();
+        assert!(
+            kerning_map.is_empty(),
+            "Should return empty HashMap when no kern table exists"
         );
     }
 }

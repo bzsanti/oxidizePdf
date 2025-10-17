@@ -88,7 +88,11 @@ impl DashboardComponent for PivotTable {
         let mut table = self.clone();
         table.ensure_computed()?;
 
-        let computed = table.computed_data.as_ref().unwrap();
+        // SAFETY: ensure_computed() guarantees computed_data is Some
+        let computed = table
+            .computed_data
+            .as_ref()
+            .ok_or_else(|| PdfError::InvalidOperation("Failed to compute pivot data".to_string()))?;
 
         if computed.headers.is_empty() {
             return Ok(());

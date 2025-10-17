@@ -80,6 +80,11 @@ strip = true
 opt-level = 0
 debug = true
 
+[workspace.metadata.dylint]
+libraries = [
+    { path = "lints" }
+]
+
 [workspace.metadata.release]
 # Don't sign commits or tags (requires GPG setup)
 sign-commit = false
