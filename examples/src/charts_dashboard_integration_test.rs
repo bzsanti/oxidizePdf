@@ -74,7 +74,7 @@ fn main() -> Result<()> {
     println!("   📊 Components: {}", stats.component_count);
     println!(
         "   ⏱️  Est. render time: {}ms",
-        stats.estimated_render_time_ms
+        stats.estimated_render_time.as_millis()
     );
     println!("   💾 Est. memory usage: {:.1}MB", stats.memory_usage_mb);
     println!("   🎯 Complexity score: {}/100", stats.complexity_score);

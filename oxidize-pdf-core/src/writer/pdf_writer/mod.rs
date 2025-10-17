@@ -2030,7 +2030,7 @@ impl<W: Write> PdfWriter<W> {
         document: &Document,
         font_refs: &HashMap<String, ObjectId>,
     ) -> Result<()> {
-        let pages_id = self.pages_id.expect("pages_id must be set");
+        let pages_id = self.get_pages_id()?;
         let mut pages_dict = Dictionary::new();
         pages_dict.set("Type", Object::Name("Pages".to_string()));
         pages_dict.set("Count", Object::Integer(document.pages.len() as i64));
@@ -2735,8 +2735,8 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_xref_stream(&mut self) -> Result<()> {
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let info_id = self.info_id.expect("info_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let info_id = self.get_info_id()?;
 
         // Allocate object ID for the xref stream
         let xref_stream_id = self.allocate_object_id();
@@ -2839,8 +2839,8 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_trailer(&mut self, xref_position: u64) -> Result<()> {
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let info_id = self.info_id.expect("info_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let info_id = self.get_info_id()?;
         // Find the highest object number to determine size
         let max_obj_num = self
             .xref_positions
