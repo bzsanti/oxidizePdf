@@ -1,77 +1,68 @@
-# Progreso del Proyecto - Sesión 2025-10-16
+# Progreso del Proyecto - 2025-10-17
 
-## Estado Actual
-- **Rama**: develop_santi
-- **Versión**: v1.6.1
-- **Tests**: ✅ 4,551 pasando (3 ignorados)
-- **Último trabajo**: Dylint Custom Lints Implementation
+## Estado Actual de la Sesión
 
-## Dylint Custom Lints - COMPLETADO ✅
+### Trabajo Completado
+- **Batch 8**: Eliminación de 7 unwraps en módulos templates y text
+  - templates/parser.rs: 4 unwraps en regex captures y char iteration
+  - templates/context.rs: 1 unwrap con HashMap entry API  
+  - text/validation.rs: 2 unwraps en Regex::new
 
-### Implementación
-- ✅ 5 lints P0 (Critical) implementados y funcionando
-- ✅ Infraestructura completa en `lints/` directory
-- ✅ Build script para automatizar deployment
-- ✅ Documentación completa (500+ líneas)
+- **Batch 9**: Eliminación de 2 unwraps + corrección de bug lógico
+  - fonts/embedder.rs: Bug crítico en detección de rangos consecutivos CID
+  - charts/chart_renderer.rs: 1 unwrap en draw_area_fill
 
-### Primer Análisis del Codebase
-```
-Total Errores: 214 (library_unwraps)
-Total Advertencias: 45
-Tiempo: ~45 segundos
-Estado: OPERACIONAL
-```
+### Métricas
+- **Total unwraps eliminados**: 34+ en 9 batches
+- **Errores de lints restantes**: 167 (principalmente expect() en String writes que son correctos)
+- **Tests pasando**: Pendiente verificación completa
 
-### Lints Implementados
-1. **library_unwraps** - 214 errores detectados ❌
-2. **string_errors** - ~15 warnings ⚠️
-3. **missing_error_context** - ~10 warnings ⚠️
-4. **duration_primitives** - 1 warning ⚠️
-5. **bool_option_pattern** - 0 en código principal ✅
+### Commits Realizados
+- `3731fb5` - fix(core): eliminate 7 unwraps in templates and text modules (Batch 8)
+- `e078968` - fix(core): eliminate 2 unwraps and fix logic bug (Batch 9)
 
-### Archivos Creados/Modificados
-- `lints/src/lib.rs` - Registro de lints
-- `lints/src/*.rs` - 5 implementaciones de lints
-- `lints/build.rs` - Build script
-- `lints/Cargo.toml` - Configuración
-- `lints/rust-toolchain.toml` - Nightly toolchain
-- `docs/LINTS.md` - Documentación completa
-- `lints/LINT_RESULTS.md` - Resultados detallados
-- `lints/STATUS_REPORT.md` - Reporte de estado
-- `scripts/run_lints.sh` - Script de ejecución
-- `CLAUDE.md` - Actualizado con sección Dylint
+### Rama de Trabajo
+- Rama actual: develop_santi
+- Estado: Sincronizada con cambios locales
+- Pendiente: Push al repositorio remoto
+
+## Bugs Corregidos
+
+### fonts/embedder.rs - Bug Crítico en CID Range Detection
+**Problema**: Lógica incorrecta en `create_cid_widths_array()`
+- Código original: `code == start + (current_range_start.unwrap() - start)`
+- Simplificaba a: `code == start` (siempre comparando contra inicio de rango)
+- **Impacto**: Rangos consecutivos nunca se detectaban correctamente
+- **Solución**: Tracking separado de `range_end`, comparación `code == end + 1`
 
 ## Próximos Pasos
 
-### Inmediato (Esta Semana)
-1. ⏳ Crear CI/CD workflow (`.github/workflows/lints.yml`)
-2. ⏳ Corregir 3 archivos de examples con anti-patrones
-3. ⏳ Documentar proceso de corrección de unwraps
+1. **Continuar eliminación de unwraps**: 167 lints restantes (mayormente String writes correctos)
+2. **Refinar custom lints**: Mejorar library_unwraps para permitir expect() en String writes
+3. **Verificar funcionalidad CID fonts**: Validar que el bug fix no introduce regresiones
+4. **Documentar patrones**: Actualizar guías de código con patrones de unwrap seguros
 
-### Corto Plazo (Próxima Semana)
-1. Corregir top 20 casos de `library_unwraps` más críticos
-2. Refactorizar `string_errors` a tipos propios con thiserror
-3. Agregar contexto a errores en `missing_error_context`
+## Archivos Modificados en Esta Sesión
 
-### Mediano Plazo (Este Mes)
-1. Eliminar TODOS los `library_unwraps` (214 casos)
-2. Alcanzar 100% compliance en lints P0
-3. Integrar lints en pre-commit hooks
+```
+M  oxidize-pdf-core/src/charts/chart_renderer.rs
+M  oxidize-pdf-core/src/fonts/embedder.rs  
+M  oxidize-pdf-core/src/templates/context.rs
+M  oxidize-pdf-core/src/templates/parser.rs
+M  oxidize-pdf-core/src/text/validation.rs
+```
 
-## Issues Relacionados
-- Issue #87: ✅ Kerning Normalization (COMPLETADO)
-- Issue #90: Advanced Text Extraction (Pendiente priorización)
-- Issue #54: ISO Compliance Tracking (55-60% actual)
+## Notas Técnicas
 
-## Métricas del Proyecto
-- **Tests**: 4,551 pasando
-- **Test Coverage**: 55.64%
-- **PDF Parsing**: 98.8% success rate
-- **Performance**: 5,500-6,034 páginas/segundo
-- **Code Quality**: Dylint operacional, 214 unwraps detectados
+### Unwrap Safety Patterns Identificados
+1. **String writes (fmt::Write)**: Error = Infallible → expect() es correcto
+2. **Regex captures garantizados**: Indexación directa OK con comentario
+3. **Entry API**: Preferible a insert + unwrap manual
+4. **Range tracking**: Usar variables separadas para start/end evita unwraps
 
-## Lecciones de Esta Sesión
-1. **HIR vs typeck_results**: Usar HIR patterns para análisis de structs
-2. **Dylint Location**: Dylib debe estar en ubicación específica
-3. **Dos Toolchains**: Stable para proyecto, nightly para lints (correcto)
-4. **Performance**: 45 segundos es aceptable para análisis completo
+### Lecciones de Esta Sesión
+- ❌ **Error**: Regex replacement agresivo creó código malformado
+- ✅ **Éxito**: Revert rápido + fixes manuales cuidadosos
+- ✅ **Descubrimiento**: Bug lógico encontrado durante eliminación de unwraps
+- ✅ **Proceso**: Commits pequeños y frecuentes facilitan recovery
+
