@@ -459,12 +459,9 @@ impl CalculationEngine {
                     if stack.len() < 2 {
                         return Err(PdfError::InvalidStructure("Invalid expression".to_string()));
                     }
-                    let right = stack
-                        .pop()
-                        .expect("Stack should have at least 2 elements after length check");
-                    let left = stack
-                        .pop()
-                        .expect("Stack should have at least 2 elements after length check");
+                    // Safe: stack length is guaranteed >= 2 after check above
+                    let right = stack.pop().unwrap_or(0.0);
+                    let left = stack.pop().unwrap_or(0.0);
                     stack.push(op.apply(left, right));
                 }
                 _ => {}
