@@ -1,7 +1,7 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-18 - Unwrap Elimination Batches 10-15
+- **Last Session**: 2025-10-18 - Unwrap Elimination Batches 10-15 + Lint Refinement
 - **Branch**: develop_santi (working branch)
 - **Version**: **v1.6.1 released** 🚀
 - **Recent Work**:
@@ -10,10 +10,15 @@
   - ✅ **Batch 12**: Eliminated 2 expects in structure/name_tree (BTreeMap operations)
   - ✅ **Batch 13**: Eliminated 5 unwraps in operations/extract_images (file path handling)
   - ✅ **Batch 14**: Made constructors infallible (TemplateParser, TemplateRenderer, RustyTesseractProvider)
-  - ✅ **Batch 15**: Refined library_unwraps lint (infallible operation detection)
+  - ✅ **Batch 15**: Refined library_unwraps lint - **97% false positive reduction** (153 → 5 errors)
   - ✅ **Testing**: All 4554 workspace tests passing
-- **Key Achievement**: 51 unwraps eliminated total (17 this session), cleaner APIs, better error handling
-- **Next**: Debug lint pattern matching, continue unwrap elimination
+  - ✅ **New Project**: Created mojobytes-lints for reusable custom lints
+- **Key Achievement**:
+  - 51 unwraps eliminated (17 this session)
+  - Lint refinement: Type checking + infallible detection
+  - 148 false positives eliminated (97% reduction)
+  - Only 5 real unwraps remaining in codebase
+- **Next**: Fix remaining 5 unwraps, continue quality improvements
 
 ## ✅ Funcionalidades Completadas
 
@@ -95,24 +100,35 @@
 - **Testing**: 42 templates tests + 709 text tests passing
 - **Commit**: `1af9d98`
 
-#### Batch 15: Lint Refinement ✅
-- **lints/src/library_unwraps.rs** (infrastructure improvement):
-  - Added detection for infallible operations
-  - Checks expect() messages for patterns like "Writing to String should never fail"
-  - Removed if_chain dependency for clearer logic
-  - Added case-insensitive matching
-  - Note: Pattern detection needs further debugging with HIR structure
-- **Testing**: Lint compiles successfully, logic in place
-- **Commit**: `9205e91`
+#### Batch 15: Lint Refinement ✅ **COMPLETED**
+- **lints/src/library_unwraps.rs** (CRITICAL infrastructure improvement):
+  - **Type checking**: Only flag unwrap/expect on actual Option<T> and Result<T, E>
+  - **Infallible detection**: Detects write_fmt().expect() from write!/writeln! macros
+  - **Message patterns**: Checks expect() messages for "infallible" keywords
+  - **Impact**: 97% false positive reduction (148 eliminated)
+- **Testing**: Comprehensive HIR analysis with test fixtures
+- **Synced**: mojobytes-lints project created for reusability
+- **Commits**:
+  - `9205e91` - Initial attempt
+  - `fef6542` - Final refinement with type checking
 
 #### Progress Metrics 📊
 - **Total unwraps eliminated**: 51 across 15 batches
   - Batches 1-9: 34 unwraps (previous session)
   - Batches 10-15: 17 unwraps (this session)
-- **Lint errors**: 214 → 168 → 154 (60 fixed, lint refinement needs debugging)
+- **Lint errors**: 214 → 168 → 154 → **5** ✅ (97% false positive reduction)
+  - Before refinement: 153 errors (97% false positives)
+  - After refinement: 5 real issues remaining
 - **API improvements**: 3 constructor families made infallible
-- **Files modified**: 13 files this session
+- **Files modified**: 14 files this session (13 oxidize-pdf + 1 lint)
 - **Tests**: All 4554 workspace tests passing
+
+#### Remaining 5 Real Unwraps (Post-Refinement)
+1. `forms/validation.rs:445` - Email regex .expect()
+2. `forms/validation.rs:455` - URL regex .expect()
+3. `operations/rotate.rs:57` - RotationAngle .expect()
+4. `recovery/corruption.rs:264` - Iterator .expect()
+5. `templates/parser.rs:43` - Placeholder regex .expect()
 
 #### Technical Insights 🧠
 **Safe Unwrap Patterns Identified**:
