@@ -79,10 +79,30 @@ fn is_infallible_expect(msg: &str) -> bool {
     })
 }
 
+/// Check if the receiver of expect/unwrap is a write_fmt call (from write!/writeln!)
+fn is_write_fmt_call<'tcx>(receiver: &'tcx Expr<'tcx>) -> bool {
+    if let ExprKind::MethodCall(method, _inner_receiver, _args, _span) = &receiver.kind {
+        let method_name = method.ident.name.as_str();
+        method_name == "write_fmt" || method_name == "write_str"
+    } else {
+        false
+    }
+}
+
+/// Check if the receiver type is Option or Result from std
+fn is_option_or_result<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) -> bool {
+    let ty = cx.typeck_results().expr_ty_adjusted(expr);
+    let ty_str = format!("{:?}", ty);
+
+    // Simple string matching for Option<T> and Result<T, E>
+    // This works because we're looking at the fully qualified type
+    ty_str.contains("Option<") || ty_str.contains("Result<")
+}
+
 impl<'tcx> LateLintPass<'tcx> for LibraryUnwraps {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
         // Check for method calls
-        if let ExprKind::MethodCall(method, _receiver, args, _span) = &expr.kind {
+        if let ExprKind::MethodCall(method, receiver, args, _span) = &expr.kind {
             let method_name = method.ident.name.as_str();
 
             // Check if the method is one of the panic-inducing methods
@@ -93,7 +113,20 @@ impl<'tcx> LateLintPass<'tcx> for LibraryUnwraps {
                 return;
             }
 
-            // Special case for expect() with infallible messages
+            // IMPORTANT: Only check if this is actually Option/Result's unwrap/expect
+            // Many custom types have methods with these names that are NOT panicking
+            if !is_option_or_result(cx, receiver) {
+                return;
+            }
+
+            // Special case 1: Check if this is write_fmt().expect() (from write!/writeln! macros)
+            // These are infallible for String/Vec<u8>
+            if (method_name == "expect" || method_name == "unwrap") && is_write_fmt_call(receiver) {
+                // This is write!(...).expect() or writeln!(...).expect() - ALLOW it
+                return;
+            }
+
+            // Special case 2: expect() with infallible message
             if method_name == "expect" && !args.is_empty() {
                 // In HIR MethodCall, receiver is separate and args contains the arguments
                 // args[0] is the message for expect()
