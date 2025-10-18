@@ -62,6 +62,12 @@ pub enum OperationError {
     #[error("Parse error: {0}")]
     ParseError(String),
 
+    /// Invalid file path
+    #[error("Invalid file path: {reason}")]
+    InvalidPath {
+        reason: String,
+    },
+
     /// IO error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
