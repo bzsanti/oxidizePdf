@@ -1,22 +1,23 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-17 - Unwrap Elimination Batches 8 & 9
+- **Last Session**: 2025-10-18 - Unwrap Elimination Batches 10-15
 - **Branch**: develop_santi (working branch)
 - **Version**: **v1.6.1 released** 🚀
 - **Recent Work**:
-  - ✅ **Batch 8**: Eliminated 7 unwraps from templates and text modules
-  - ✅ **Batch 9**: Eliminated 2 unwraps + fixed critical CID font bug
-  - ✅ **Bug Fix**: Corrected consecutive range detection in CID widths array
-  - ✅ **Testing**: All 132 tests passing (10 ignored)
-  - ✅ **Lints**: Reduced from 214 to 167 errors (47 unwraps eliminated total)
-  - ✅ **Code Quality**: Production code increasingly panic-free
-- **Key Achievement**: 34+ unwraps eliminated across 9 batches, critical bug fixed
-- **Next**: Continue systematic unwrap elimination, refine custom lints
+  - ✅ **Batch 10**: Eliminated 2 unwraps in document.rs (get_or_insert_with pattern)
+  - ✅ **Batch 11**: Eliminated 3 expects in parser/xref and forms/javascript_engine
+  - ✅ **Batch 12**: Eliminated 2 expects in structure/name_tree (BTreeMap operations)
+  - ✅ **Batch 13**: Eliminated 5 unwraps in operations/extract_images (file path handling)
+  - ✅ **Batch 14**: Made constructors infallible (TemplateParser, TemplateRenderer, RustyTesseractProvider)
+  - ✅ **Batch 15**: Refined library_unwraps lint (infallible operation detection)
+  - ✅ **Testing**: All 4554 workspace tests passing
+- **Key Achievement**: 51 unwraps eliminated total (17 this session), cleaner APIs, better error handling
+- **Next**: Debug lint pattern matching, continue unwrap elimination
 
 ## ✅ Funcionalidades Completadas
 
-### 🔧 **Unwrap Elimination Campaign** (2025-10-17) ⭐ IN PROGRESS
+### 🔧 **Unwrap Elimination Campaign** (2025-10-17 to 2025-10-18) ⭐ IN PROGRESS
 
 #### Batch 8: Templates & Text Modules ✅
 - **templates/parser.rs** (4 unwraps eliminated):
@@ -45,12 +46,73 @@
 - **Testing**: 16 tests passing in fonts::embedder
 - **Commit**: `e078968`
 
+#### Batch 10: Logic Guarantees ✅
+- **document.rs** (2 unwraps eliminated):
+  - get_or_create_struct_tree(): Replace manual check + unwrap with get_or_insert_with
+  - enable_forms(): Same pattern for FormManager initialization
+  - Impact: Eliminates potential panics in public API methods
+- **Testing**: 183 tests passing in document module
+- **Commit**: `cd3973e`
+
+#### Batch 11: Iterator Guarantees ✅
+- **parser/xref.rs** (1 expect eliminated):
+  - Replace .chars().last().expect() with ok_or(ParseError::InvalidXRef)
+- **forms/javascript_engine.rs** (2 expects eliminated):
+  - Replace .next().expect() after peek with ok_or_else() + proper error
+  - Applied to both number literal and identifier parsing
+- **Testing**: 69 xref tests + 21 javascript_engine tests passing
+- **Commit**: `a3bbb11`
+
+#### Batch 12: Hash Operations ✅
+- **structure/name_tree.rs** (2 expects eliminated):
+  - Replace BTreeMap.keys().next/last().expect() with if let pattern
+  - Use first_key_value() and last_key_value() methods
+  - More idiomatic and panic-free
+- **Testing**: 29 name_tree tests passing
+- **Commit**: `611fbdb`
+
+#### Batch 13: File Path Operations ✅
+- **operations/mod.rs**: Added InvalidPath error variant
+- **operations/extract_images.rs** (5 unwraps eliminated):
+  - file_stem().unwrap() → and_then(|s| s.to_str()).ok_or_else()
+  - extension().unwrap() → and_then(|s| s.to_str()).ok_or_else()
+  - parent().unwrap() → ok_or_else() with meaningful error messages
+- **Testing**: 52 extract_images tests passing
+- **Commit**: `260434e`
+
+#### Batch 14: Miscellaneous (Constructor Cleanup) ✅
+- **templates/parser.rs** (API improvement):
+  - TemplateParser::new() now returns Self instead of Result<Self, _>
+  - Hardcoded regex pattern guaranteed to compile
+  - Default::default() simplified
+- **templates/renderer.rs** (API improvement):
+  - TemplateRenderer::new() now returns Self
+  - All factory methods updated
+- **text/tesseract_provider.rs** (API improvement):
+  - RustyTesseractProvider::new() now returns Self
+  - for_contracts() and for_large_documents() simplified
+  - Config-only constructors cannot fail
+- **Testing**: 42 templates tests + 709 text tests passing
+- **Commit**: `1af9d98`
+
+#### Batch 15: Lint Refinement ✅
+- **lints/src/library_unwraps.rs** (infrastructure improvement):
+  - Added detection for infallible operations
+  - Checks expect() messages for patterns like "Writing to String should never fail"
+  - Removed if_chain dependency for clearer logic
+  - Added case-insensitive matching
+  - Note: Pattern detection needs further debugging with HIR structure
+- **Testing**: Lint compiles successfully, logic in place
+- **Commit**: `9205e91`
+
 #### Progress Metrics 📊
-- **Total unwraps eliminated**: 34+ across 9 batches
-- **Lint errors**: 214 → 167 (47 unwraps fixed)
-- **Remaining**: 167 errors (mostly correct .expect() on String writes)
-- **Files modified**: 5 files this session
-- **Tests**: All 132 workspace tests passing
+- **Total unwraps eliminated**: 51 across 15 batches
+  - Batches 1-9: 34 unwraps (previous session)
+  - Batches 10-15: 17 unwraps (this session)
+- **Lint errors**: 214 → 168 → 154 (60 fixed, lint refinement needs debugging)
+- **API improvements**: 3 constructor families made infallible
+- **Files modified**: 13 files this session
+- **Tests**: All 4554 workspace tests passing
 
 #### Technical Insights 🧠
 **Safe Unwrap Patterns Identified**:
