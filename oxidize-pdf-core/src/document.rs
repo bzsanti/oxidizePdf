@@ -285,10 +285,7 @@ impl Document {
     /// tree.set_root(doc_elem);
     /// ```
     pub fn get_or_create_struct_tree(&mut self) -> &mut StructTree {
-        if self.struct_tree.is_none() {
-            self.struct_tree = Some(StructTree::new());
-        }
-        self.struct_tree.as_mut().unwrap()
+        self.struct_tree.get_or_insert_with(StructTree::new)
     }
 
     /// Set document outline (bookmarks)
@@ -512,16 +509,10 @@ impl Document {
     /// Enables interactive forms by creating a FormManager if not already present.
     /// The FormManager handles both the AcroForm and the connection with page widgets.
     pub fn enable_forms(&mut self) -> &mut FormManager {
-        if self.form_manager.is_none() {
-            self.form_manager = Some(FormManager::new());
-        }
         if self.acro_form.is_none() {
             self.acro_form = Some(AcroForm::new());
         }
-        // This should always succeed since we just ensured form_manager exists
-        self.form_manager
-            .as_mut()
-            .expect("FormManager should exist after initialization")
+        self.form_manager.get_or_insert_with(FormManager::new)
     }
 
     /// Disables interactive forms by removing both the AcroForm and FormManager.
