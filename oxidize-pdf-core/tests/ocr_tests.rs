@@ -276,18 +276,11 @@ mod ocr_integration_tests {
     #[cfg(feature = "ocr-tesseract")]
     #[test]
     fn test_tesseract_provider_creation() {
-        // This test requires Tesseract to be installed
-        match RustyTesseractProvider::new() {
-            Ok(provider) => {
-                println!("✅ Tesseract provider created successfully");
-                let engine_type = provider.engine_type();
-                assert_eq!(engine_type, oxidize_pdf::text::OcrEngine::Tesseract);
-            }
-            Err(e) => {
-                println!("⚠️  Tesseract not available (this is OK for CI): {}", e);
-                // This is acceptable if Tesseract is not installed
-            }
-        }
+        // Provider creation is now infallible (config-based constructor)
+        let provider = RustyTesseractProvider::new();
+        println!("✅ Tesseract provider created successfully");
+        let engine_type = provider.engine_type();
+        assert_eq!(engine_type, oxidize_pdf::text::OcrEngine::Tesseract);
     }
 
     #[test]

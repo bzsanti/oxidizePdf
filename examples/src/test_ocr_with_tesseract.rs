@@ -27,15 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let analyzer = PageContentAnalyzer::with_options(document, AnalysisOptions::default());
 
-    // Create Tesseract provider optimized for contracts
-    let ocr_provider = match RustyTesseractProvider::for_contracts() {
-        Ok(provider) => provider,
-        Err(e) => {
-            println!("❌ Failed to create Tesseract provider: {}", e);
-            println!("Make sure Tesseract is installed and available in PATH");
-            return Ok(());
-        }
-    };
+    // Create Tesseract provider optimized for contracts (now infallible)
+    let ocr_provider = RustyTesseractProvider::for_contracts();
 
     let ocr_options = OcrOptions::default();
 
