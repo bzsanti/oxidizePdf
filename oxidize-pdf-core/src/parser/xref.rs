@@ -1199,7 +1199,7 @@ impl XRefTable {
                 let flag_char = gen_part
                     .chars()
                     .last()
-                    .expect("String should have at least one character after ends_with check");
+                    .ok_or(ParseError::InvalidXRef)?;
                 let gen_str = &gen_part[..gen_part.len() - 1];
                 if gen_str.is_empty() {
                     // Just the flag, no generation number

@@ -225,7 +225,7 @@ impl JavaScriptEngine {
                             num_str.push(
                                 chars
                                     .next()
-                                    .expect("Character should be available after peek"),
+                                    .ok_or_else(|| PdfError::InvalidFormat("Unexpected end of number literal".to_string()))?,
                             );
                         } else {
                             break;
@@ -244,7 +244,7 @@ impl JavaScriptEngine {
                             ident.push(
                                 chars
                                     .next()
-                                    .expect("Character should be available after peek"),
+                                    .ok_or_else(|| PdfError::InvalidFormat("Unexpected end of identifier".to_string()))?,
                             );
                         } else {
                             break;
