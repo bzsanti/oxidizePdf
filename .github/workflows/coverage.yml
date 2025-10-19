@@ -27,8 +27,8 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Tesseract OCR
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev
+      - name: Install Tesseract OCR and PDF tools
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev poppler-utils
 
       - name: Cache cargo registry
         uses: actions/cache@v3
