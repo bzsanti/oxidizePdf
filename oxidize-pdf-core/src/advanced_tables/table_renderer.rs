@@ -80,7 +80,9 @@ impl TableRenderer {
         y: f64,
     ) -> Result<f64, PdfError> {
         // Validate table structure
-        table.validate().map_err(PdfError::InvalidOperation)?;
+        table
+            .validate()
+            .map_err(|e| PdfError::InvalidOperation(e.to_string()))?;
 
         let mut current_y = y;
 

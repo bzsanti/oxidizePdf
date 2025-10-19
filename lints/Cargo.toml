@@ -1,0 +1,24 @@
+[package]
+name = "oxidize-pdf-lints"
+version = "0.1.0"
+edition = "2021"
+description = "Custom lints for oxidize-pdf to enforce idiomatic Rust patterns"
+authors = ["oxidize-pdf contributors"]
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy" }
+dylint_linting = "3.2"
+if_chain = "1.0"
+
+[dev-dependencies]
+dylint_testing = "3.2"
+
+[package.metadata.rust-analyzer]
+rustc_private = true
+
+[[package.metadata.dylint.libraries]]
+pattern = "target/release/liboxidize_pdf_lints.dylib"

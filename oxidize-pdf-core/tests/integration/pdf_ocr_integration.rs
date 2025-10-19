@@ -102,42 +102,38 @@ mod pdf_ocr_integration {
         // Test OCR conversion workflow
         let converter = PdfOcrConverter::new()?;
 
-        // Try with Tesseract if available, otherwise skip
-        let tesseract_available = RustyTesseractProvider::new().is_ok();
-
-        if tesseract_available {
-            let ocr_provider = RustyTesseractProvider::new()?;
-            let options = ConversionOptions {
-                ocr_options: OcrOptions {
-                    language: "eng".to_string(),
-                    min_confidence: 0.5, // Lower threshold for testing
-                    ..Default::default()
-                },
-                min_confidence: 0.5,
-                skip_text_pages: false, // Process all pages
-                dpi: 150, // Lower DPI for faster testing
+        // Initialize Tesseract OCR provider (infallible constructor)
+        let ocr_provider = RustyTesseractProvider::new();
+        let options = ConversionOptions {
+            ocr_options: OcrOptions {
+                language: "eng".to_string(),
+                min_confidence: 0.5, // Lower threshold for testing
                 ..Default::default()
-            };
+            },
+            min_confidence: 0.5,
+            skip_text_pages: false, // Process all pages
+            dpi: 150, // Lower DPI for faster testing
+            ..Default::default()
+        };
 
-            match converter.convert_to_searchable_pdf(
-                &input_path,
-                &output_path,
-                &ocr_provider,
-                &options,
-            ) {
-                Ok(result) => {
-                    assert!(output_path.exists(), "Output PDF should be created");
-                    assert!(result.pages_processed > 0, "Should process at least one page");
-                    println!("✅ OCR conversion successful: {} pages processed, {} with OCR",
-                            result.pages_processed, result.pages_ocr_processed);
-                }
-                Err(e) => {
-                    println!("⚠️  OCR conversion failed: {}", e);
-                    // This might fail due to page analysis limitations, which is acceptable
-                }
+        match converter.convert_to_searchable_pdf(
+            &input_path,
+            &output_path,
+            &ocr_provider,
+            &options,
+        ) {
+            Ok(result) => {
+                assert!(output_path.exists(), "Output PDF should be created");
+                assert!(result.pages_processed > 0, "Should process at least one page");
+                println!(
+                    "✅ OCR conversion successful: {} pages processed, {} with OCR",
+                    result.pages_processed, result.pages_ocr_processed
+                );
             }
-        } else {
-            println!("⚠️  Tesseract not available, skipping OCR test");
+            Err(e) => {
+                println!("⚠️  OCR conversion failed: {}", e);
+                // This might fail due to page analysis limitations, which is acceptable
+            }
         }
 
         Ok(())
@@ -154,32 +150,29 @@ mod pdf_ocr_integration {
 
         let converter = PdfOcrConverter::new()?;
 
-        if RustyTesseractProvider::new().is_ok() {
-            let ocr_provider = RustyTesseractProvider::new()?;
+        // Tesseract OCR provider (infallible constructor)
+        let ocr_provider = RustyTesseractProvider::new();
 
-            // Test with skip_text_pages = true
-            let options_skip = ConversionOptions {
-                skip_text_pages: true,
-                ..Default::default()
-            };
+        // Test with skip_text_pages = true
+        let options_skip = ConversionOptions {
+            skip_text_pages: true,
+            ..Default::default()
+        };
 
-            match converter.convert_to_searchable_pdf(
-                &input_path,
-                &output_path,
-                &ocr_provider,
-                &options_skip,
-            ) {
-                Ok(result) => {
-                    // Should skip pages with existing text
-                    println!("✅ Skip text pages test: {} processed, {} skipped",
-                            result.pages_processed, result.pages_skipped);
-                }
-                Err(e) => {
-                    println!("⚠️  Skip text pages test failed: {}", e);
-                }
+        match converter.convert_to_searchable_pdf(
+            &input_path,
+            &output_path,
+            &ocr_provider,
+            &options_skip,
+        ) {
+            Ok(result) => {
+                // Should skip pages with existing text
+                println!("✅ Skip text pages test: {} processed, {} skipped",
+                        result.pages_processed, result.pages_skipped);
             }
-        } else {
-            println!("⚠️  Tesseract not available, skipping text page test");
+            Err(e) => {
+                println!("⚠️  Skip text pages test failed: {}", e);
+            }
         }
 
         Ok(())
@@ -202,39 +195,36 @@ mod pdf_ocr_integration {
 
         let converter = PdfOcrConverter::new()?;
 
-        if RustyTesseractProvider::new().is_ok() {
-            let ocr_provider = RustyTesseractProvider::new()?;
-            let options = ConversionOptions {
-                min_confidence: 0.5,
-                dpi: 150, // Lower DPI for faster batch testing
-                ..Default::default()
-            };
+        // Tesseract OCR provider (infallible constructor)
+        let ocr_provider = RustyTesseractProvider::new();
+        let options = ConversionOptions {
+            min_confidence: 0.5,
+            dpi: 150, // Lower DPI for faster batch testing
+            ..Default::default()
+        };
 
-            let input_files: Vec<_> = fs::read_dir(&input_dir)?
-                .filter_map(|entry| entry.ok())
-                .map(|entry| entry.path())
-                .filter(|path| path.extension().map_or(false, |ext| ext == "pdf"))
-                .collect();
+        let input_files: Vec<_> = fs::read_dir(&input_dir)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().map_or(false, |ext| ext == "pdf"))
+            .collect();
 
-            match converter.batch_convert(
-                &input_files,
-                &output_dir,
-                &ocr_provider,
-                &options,
-            ) {
-                Ok(results) => {
-                    println!("✅ Batch conversion: {} files processed", results.len());
-                    for (i, result) in results.iter().enumerate() {
-                        println!("  File {}: {} pages, confidence {:.1}%",
-                                i + 1, result.pages_processed, result.average_confidence * 100.0);
-                    }
-                }
-                Err(e) => {
-                    println!("⚠️  Batch conversion failed: {}", e);
+        match converter.batch_convert(
+            &input_files,
+            &output_dir,
+            &ocr_provider,
+            &options,
+        ) {
+            Ok(results) => {
+                println!("✅ Batch conversion: {} files processed", results.len());
+                for (i, result) in results.iter().enumerate() {
+                    println!("  File {}: {} pages, confidence {:.1}%",
+                            i + 1, result.pages_processed, result.average_confidence * 100.0);
                 }
             }
-        } else {
-            println!("⚠️  Tesseract not available, skipping batch test");
+            Err(e) => {
+                println!("⚠️  Batch conversion failed: {}", e);
+            }
         }
 
         Ok(())
@@ -250,38 +240,35 @@ mod pdf_ocr_integration {
 
         let converter = PdfOcrConverter::new()?;
 
-        if RustyTesseractProvider::new().is_ok() {
-            let ocr_provider = RustyTesseractProvider::new()?;
+        // Tesseract OCR provider (infallible constructor)
+        let ocr_provider = RustyTesseractProvider::new();
 
-            // Test with multiple languages
-            let options = ConversionOptions {
-                ocr_options: OcrOptions {
-                    language: "eng+spa".to_string(), // English + Spanish
-                    min_confidence: 0.6,
-                    ..Default::default()
-                },
+        // Test with multiple languages
+        let options = ConversionOptions {
+            ocr_options: OcrOptions {
+                language: "eng+spa".to_string(), // English + Spanish
                 min_confidence: 0.6,
-                dpi: 150,
                 ..Default::default()
-            };
+            },
+            min_confidence: 0.6,
+            dpi: 150,
+            ..Default::default()
+        };
 
-            match converter.convert_to_searchable_pdf(
-                &input_path,
-                &output_path,
-                &ocr_provider,
-                &options,
-            ) {
-                Ok(result) => {
-                    println!("✅ Multilingual OCR test: {} pages processed",
-                            result.pages_processed);
-                }
-                Err(e) => {
-                    println!("⚠️  Multilingual OCR test failed: {}", e);
-                    // Language packs might not be available, which is acceptable
-                }
+        match converter.convert_to_searchable_pdf(
+            &input_path,
+            &output_path,
+            &ocr_provider,
+            &options,
+        ) {
+            Ok(result) => {
+                println!("✅ Multilingual OCR test: {} pages processed",
+                        result.pages_processed);
             }
-        } else {
-            println!("⚠️  Tesseract not available, skipping multilingual test");
+            Err(e) => {
+                println!("⚠️  Multilingual OCR test failed: {}", e);
+                // Language packs might not be available, which is acceptable
+            }
         }
 
         Ok(())
@@ -296,36 +283,33 @@ mod pdf_ocr_integration {
 
         let converter = PdfOcrConverter::new()?;
 
-        if RustyTesseractProvider::new().is_ok() {
-            let ocr_provider = RustyTesseractProvider::new()?;
+        // Tesseract OCR provider (infallible constructor)
+        let ocr_provider = RustyTesseractProvider::new();
 
-            // Test different DPI settings
-            for dpi in &[150, 300] {
-                let output_path = temp_dir.path().join(format!("output_{}dpi.pdf", dpi));
+        // Test different DPI settings
+        for dpi in &[150, 300] {
+            let output_path = temp_dir.path().join(format!("output_{}dpi.pdf", dpi));
 
-                let options = ConversionOptions {
-                    dpi: *dpi,
-                    min_confidence: 0.5,
-                    ..Default::default()
-                };
+            let options = ConversionOptions {
+                dpi: *dpi,
+                min_confidence: 0.5,
+                ..Default::default()
+            };
 
-                match converter.convert_to_searchable_pdf(
-                    &input_path,
-                    &output_path,
-                    &ocr_provider,
-                    &options,
-                ) {
-                    Ok(result) => {
-                        println!("✅ DPI {} test: {} pages, {:.1}% confidence",
-                                dpi, result.pages_processed, result.average_confidence * 100.0);
-                    }
-                    Err(e) => {
-                        println!("⚠️  DPI {} test failed: {}", dpi, e);
-                    }
+            match converter.convert_to_searchable_pdf(
+                &input_path,
+                &output_path,
+                &ocr_provider,
+                &options,
+            ) {
+                Ok(result) => {
+                    println!("✅ DPI {} test: {} pages, {:.1}% confidence",
+                            dpi, result.pages_processed, result.average_confidence * 100.0);
+                }
+                Err(e) => {
+                    println!("⚠️  DPI {} test failed: {}", dpi, e);
                 }
             }
-        } else {
-            println!("⚠️  Tesseract not available, skipping DPI tests");
         }
 
         Ok(())
@@ -341,34 +325,31 @@ mod pdf_ocr_integration {
 
         let converter = PdfOcrConverter::new()?;
 
-        if RustyTesseractProvider::new().is_ok() {
-            let ocr_provider = RustyTesseractProvider::new()?;
+        // Tesseract OCR provider (infallible constructor)
+        let ocr_provider = RustyTesseractProvider::new();
 
-            // Test different confidence thresholds
-            for confidence in &[0.3, 0.5, 0.7, 0.9] {
-                let options = ConversionOptions {
-                    min_confidence: *confidence,
-                    dpi: 150,
-                    ..Default::default()
-                };
+        // Test different confidence thresholds
+        for confidence in &[0.3, 0.5, 0.7, 0.9] {
+            let options = ConversionOptions {
+                min_confidence: *confidence,
+                dpi: 150,
+                ..Default::default()
+            };
 
-                match converter.convert_to_searchable_pdf(
-                    &input_path,
-                    &output_path,
-                    &ocr_provider,
-                    &options,
-                ) {
-                    Ok(result) => {
-                        println!("✅ Confidence {:.1} test: {} OCR pages, {:.1}% avg confidence",
-                                confidence, result.pages_ocr_processed, result.average_confidence * 100.0);
-                    }
-                    Err(e) => {
-                        println!("⚠️  Confidence {:.1} test failed: {}", confidence, e);
-                    }
+            match converter.convert_to_searchable_pdf(
+                &input_path,
+                &output_path,
+                &ocr_provider,
+                &options,
+            ) {
+                Ok(result) => {
+                    println!("✅ Confidence {:.1} test: {} OCR pages, {:.1}% avg confidence",
+                            confidence, result.pages_ocr_processed, result.average_confidence * 100.0);
+                }
+                Err(e) => {
+                    println!("⚠️  Confidence {:.1} test failed: {}", confidence, e);
                 }
             }
-        } else {
-            println!("⚠️  Tesseract not available, skipping confidence tests");
         }
 
         Ok(())

@@ -715,28 +715,13 @@ impl<R: Read + Seek> PdfDocument<R> {
                 });
             }
 
+            // After length check, we know array has exactly 4 elements
+            // Safe to index directly without unwrap
             let rect = [
-                array
-                    .0
-                    .first()
-                    .expect("Array should have at least 4 elements after length check")
-                    .as_real()
-                    .unwrap_or(0.0),
-                array
-                    .get(1)
-                    .expect("Array should have at least 4 elements after length check")
-                    .as_real()
-                    .unwrap_or(0.0),
-                array
-                    .get(2)
-                    .expect("Array should have at least 4 elements after length check")
-                    .as_real()
-                    .unwrap_or(0.0),
-                array
-                    .get(3)
-                    .expect("Array should have at least 4 elements after length check")
-                    .as_real()
-                    .unwrap_or(0.0),
+                array.0[0].as_real().unwrap_or(0.0),
+                array.0[1].as_real().unwrap_or(0.0),
+                array.0[2].as_real().unwrap_or(0.0),
+                array.0[3].as_real().unwrap_or(0.0),
             ];
 
             Ok(Some(rect))

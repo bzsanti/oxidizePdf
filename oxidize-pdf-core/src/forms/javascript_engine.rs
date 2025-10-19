@@ -222,11 +222,11 @@ impl JavaScriptEngine {
                     num_str.push(ch);
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_ascii_digit() || next_ch == '.' {
-                            num_str.push(
-                                chars
-                                    .next()
-                                    .expect("Character should be available after peek"),
-                            );
+                            num_str.push(chars.next().ok_or_else(|| {
+                                PdfError::InvalidFormat(
+                                    "Unexpected end of number literal".to_string(),
+                                )
+                            })?);
                         } else {
                             break;
                         }
@@ -241,11 +241,9 @@ impl JavaScriptEngine {
                     ident.push(ch);
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_alphanumeric() || next_ch == '_' {
-                            ident.push(
-                                chars
-                                    .next()
-                                    .expect("Character should be available after peek"),
-                            );
+                            ident.push(chars.next().ok_or_else(|| {
+                                PdfError::InvalidFormat("Unexpected end of identifier".to_string())
+                            })?);
                         } else {
                             break;
                         }

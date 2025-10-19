@@ -1,6 +1,7 @@
 //! Advanced table builder for creating complex tables with professional styling
 
 use super::cell_style::CellStyle;
+use super::error::TableError;
 use super::header_builder::HeaderBuilder;
 use crate::graphics::Color;
 use std::collections::HashMap;
@@ -395,9 +396,9 @@ impl AdvancedTableBuilder {
     }
 
     /// Build with error handling (for compatibility with tests)
-    pub fn build(self) -> Result<AdvancedTable, String> {
+    pub fn build(self) -> Result<AdvancedTable, TableError> {
         if self.table.columns.is_empty() {
-            return Err("Table must have at least one column".to_string());
+            return Err(TableError::NoColumns);
         }
         Ok(self.table)
     }
@@ -547,17 +548,16 @@ impl AdvancedTable {
     }
 
     /// Validate table structure (e.g., consistent column counts)
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), TableError> {
         let expected_cols = self.columns.len();
 
         for (row_idx, row) in self.rows.iter().enumerate() {
             if row.cells.len() != expected_cols {
-                return Err(format!(
-                    "Row {} has {} cells but expected {} columns",
-                    row_idx,
-                    row.cells.len(),
-                    expected_cols
-                ));
+                return Err(TableError::ColumnMismatch {
+                    row: row_idx,
+                    found: row.cells.len(),
+                    expected: expected_cols,
+                });
             }
         }
 

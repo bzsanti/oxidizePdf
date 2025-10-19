@@ -165,12 +165,14 @@ impl TemplateContext {
         key: K,
     ) -> &mut HashMap<String, TemplateValue> {
         let key = key.into();
-        self.variables
-            .insert(key.clone(), TemplateValue::Object(HashMap::new()));
-
-        match self.variables.get_mut(&key).unwrap() {
+        // Use entry API to avoid unwrap - returns a mutable reference directly
+        match self
+            .variables
+            .entry(key)
+            .or_insert_with(|| TemplateValue::Object(HashMap::new()))
+        {
             TemplateValue::Object(map) => map,
-            _ => unreachable!(),
+            _ => unreachable!("We just created an Object variant"),
         }
     }
 }

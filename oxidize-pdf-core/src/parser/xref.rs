@@ -1196,10 +1196,7 @@ impl XRefTable {
                 (0, gen_part.chars().next())
             } else if gen_part.ends_with('n') || gen_part.ends_with('f') {
                 // Flag is attached to generation (e.g., "0n", "1f")
-                let flag_char = gen_part
-                    .chars()
-                    .last()
-                    .expect("String should have at least one character after ends_with check");
+                let flag_char = gen_part.chars().last().ok_or(ParseError::InvalidXRef)?;
                 let gen_str = &gen_part[..gen_part.len() - 1];
                 if gen_str.is_empty() {
                     // Just the flag, no generation number

@@ -267,21 +267,23 @@ impl<'a> FontEmbedder<'a> {
         sorted_chars.sort_by_key(|(code, _)| *code);
 
         let mut current_range_start = None;
+        let mut current_range_end = None; // Track the end of the current range
         let mut current_width = None;
 
         for (&code, &width) in sorted_chars {
-            match current_range_start {
-                None => {
+            match (current_range_start, current_range_end) {
+                (None, _) => {
                     // Start a new range
                     current_range_start = Some(code);
+                    current_range_end = Some(code);
                     current_width = Some(width);
                 }
-                Some(start) => {
-                    if current_width == Some(width)
-                        && code == start + (current_range_start.unwrap() - start)
-                    {
-                        // Continue the range (consecutive CID with same width)
-                        continue;
+                (Some(_start), Some(end)) => {
+                    // Check if we can continue the current range
+                    // (consecutive code AND same width)
+                    if current_width == Some(width) && code == end + 1 {
+                        // Continue the range
+                        current_range_end = Some(code);
                     } else {
                         // End current range and add to array
                         if let (Some(start_code), Some(w)) = (current_range_start, current_width) {
@@ -291,8 +293,13 @@ impl<'a> FontEmbedder<'a> {
 
                         // Start new range
                         current_range_start = Some(code);
+                        current_range_end = Some(code);
                         current_width = Some(width);
                     }
+                }
+                (Some(_), None) => {
+                    // This should never happen (invariant: if start is Some, end must be Some)
+                    unreachable!("Range start without range end (this is a bug)")
                 }
             }
         }

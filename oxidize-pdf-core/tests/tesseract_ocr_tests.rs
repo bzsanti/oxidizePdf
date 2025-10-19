@@ -67,7 +67,7 @@ mod tesseract_tests {
 
     #[test]
     fn test_tesseract_config_contracts_preset() {
-        let provider = RustyTesseractProvider::for_contracts().expect("Failed to create provider");
+        let provider = RustyTesseractProvider::for_contracts();
         assert_eq!(provider.config().language, "eng");
         assert_eq!(provider.config().psm, Some(1));
         assert_eq!(provider.config().oem, Some(1));
@@ -87,7 +87,7 @@ mod tesseract_tests {
 
     #[test]
     fn test_tesseract_supported_formats() {
-        let provider = RustyTesseractProvider::new().expect("Failed to create provider");
+        let provider = RustyTesseractProvider::new();
         let formats = provider.supported_formats();
         assert!(formats.contains(&ImageFormat::Jpeg));
         assert!(formats.contains(&ImageFormat::Png));
@@ -103,7 +103,7 @@ mod tesseract_tests {
     #[test]
     #[ignore = "Requires Tesseract installation"]
     fn test_tesseract_provider_creation() {
-        let provider = RustyTesseractProvider::new().expect("Failed to create provider");
+        let provider = RustyTesseractProvider::new();
         assert_eq!(provider.engine_name(), "rusty-tesseract");
         assert_eq!(provider.engine_type(), OcrEngine::Tesseract);
 
@@ -123,8 +123,7 @@ mod tesseract_tests {
             dpi: Some(300),
             config_variables: HashMap::new(),
         };
-        let provider =
-            RustyTesseractProvider::with_config(config).expect("Failed to create provider");
+        let provider = RustyTesseractProvider::with_config(config);
 
         assert_eq!(provider.config().psm, Some(1));
         assert_eq!(provider.config().oem, Some(1));
@@ -133,7 +132,7 @@ mod tesseract_tests {
     #[test]
     #[ignore = "Requires Tesseract installation and sample image"]
     fn test_tesseract_process_image() {
-        let provider = RustyTesseractProvider::new().expect("Failed to create provider");
+        let provider = RustyTesseractProvider::new();
         let options = OcrOptions::default();
 
         // Note: This test will fail with mock data but verifies the interface
@@ -168,14 +167,7 @@ mod tesseract_tests {
             ("confidential_document_2.pdf", "year2"),
         ];
 
-        let ocr_provider = match RustyTesseractProvider::for_contracts() {
-            Ok(provider) => provider,
-            Err(e) => {
-                println!("⚠️  Cannot create OCR provider: {}", e);
-                println!("   Make sure tesseract is installed: brew install tesseract");
-                return;
-            }
-        };
+        let ocr_provider = RustyTesseractProvider::for_contracts();
 
         let mut successful_tests = 0;
         let mut total_pages_processed = 0;
@@ -349,7 +341,7 @@ mod tesseract_tests {
     #[test]
     #[ignore = "Requires Tesseract installation"]
     fn test_tesseract_timeout_handling() {
-        let provider = RustyTesseractProvider::new().expect("Failed to create provider");
+        let provider = RustyTesseractProvider::new();
 
         let options = OcrOptions {
             timeout_seconds: 1, // Very short timeout

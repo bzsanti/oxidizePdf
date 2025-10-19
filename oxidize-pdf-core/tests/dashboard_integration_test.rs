@@ -53,7 +53,7 @@ mod dashboard_tests {
         let stats = dashboard.get_stats();
         assert_eq!(stats.component_count, 2, "Should have 2 KPI components");
         assert!(
-            stats.estimated_render_time_ms > 0,
+            stats.estimated_render_time.as_millis() > 0,
             "Should have positive render time"
         );
         assert!(

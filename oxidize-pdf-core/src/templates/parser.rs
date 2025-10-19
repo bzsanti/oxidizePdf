@@ -36,12 +36,14 @@ pub struct TemplateParser {
 
 impl TemplateParser {
     /// Create a new template parser
-    pub fn new() -> TemplateResult<Self> {
+    pub fn new() -> Self {
         // Regex to match {{variable_name}} patterns
         // Supports alphanumeric, underscore, and dot notation
-        let placeholder_regex = Regex::new(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*\}\}")?;
+        // SAFETY: This is a hardcoded valid regex pattern that is guaranteed to compile
+        let placeholder_regex = Regex::new(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*\}\}")
+            .expect("Hardcoded regex pattern should always compile");
 
-        Ok(Self { placeholder_regex })
+        Self { placeholder_regex }
     }
 
     /// Parse a template string and extract all placeholders
@@ -49,13 +51,14 @@ impl TemplateParser {
         let mut placeholders = Vec::new();
 
         for captures in self.placeholder_regex.captures_iter(template) {
-            let full_match = captures.get(0).unwrap();
-            let variable_match = captures.get(1).unwrap();
+            // Group 0 (full match) and group 1 (captured group) are guaranteed by successful regex match
+            let full_match = &captures[0];
+            let variable_name_str = &captures[1];
 
-            let full_text = full_match.as_str().to_string();
-            let variable_name = variable_match.as_str().to_string();
-            let start = full_match.start();
-            let end = full_match.end();
+            let full_text = full_match.to_string();
+            let variable_name = variable_name_str.to_string();
+            let start = captures.get(0).map(|m| m.start()).unwrap_or(0);
+            let end = captures.get(0).map(|m| m.end()).unwrap_or(0);
 
             // Validate variable name
             self.validate_variable_name(&variable_name)?;
@@ -93,7 +96,12 @@ impl TemplateParser {
         }
 
         // Check if it starts with a letter or underscore
-        if !name.chars().next().unwrap().is_alphabetic() && !name.starts_with('_') {
+        if let Some(first_char) = name.chars().next() {
+            if !first_char.is_alphabetic() && first_char != '_' {
+                return Err(TemplateError::InvalidVariableName(name.to_string()));
+            }
+        } else {
+            // Empty name (should have been caught earlier, but be defensive)
             return Err(TemplateError::InvalidVariableName(name.to_string()));
         }
 
@@ -172,7 +180,8 @@ impl TemplateParser {
         let all_double_braces_regex = Regex::new(r"\{\{\s*([^}]*)\s*\}\}")?;
 
         for captures in all_double_braces_regex.captures_iter(template) {
-            let variable_name = captures.get(1).unwrap().as_str().trim();
+            // Group 1 is guaranteed by successful regex match (pattern has one capture group)
+            let variable_name = captures[1].trim();
 
             // If this variable name is invalid, report it
             if self.validate_variable_name(variable_name).is_err() {
@@ -188,7 +197,7 @@ impl TemplateParser {
 
 impl Default for TemplateParser {
     fn default() -> Self {
-        Self::new().expect("Failed to create default TemplateParser")
+        Self::new()
     }
 }
 
@@ -198,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_basic_placeholder_parsing() {
-        let parser = TemplateParser::new().unwrap();
+        let parser = TemplateParser::new();
         let template = "Hello {{name}}, your total is {{total}}.";
 
         let placeholders = parser.parse(template).unwrap();
@@ -214,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_dot_notation_variables() {
-        let parser = TemplateParser::new().unwrap();
+        let parser = TemplateParser::new();
         let template = "User: {{user.name}} ({{user.age}} years old)";
 
         let placeholders = parser.parse(template).unwrap();
@@ -226,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_whitespace_handling() {
-        let parser = TemplateParser::new().unwrap();
+        let parser = TemplateParser::new();
         let template = "{{ name }} and {{  total  }}";
 
         let placeholders = parser.parse(template).unwrap();
@@ -238,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_get_variable_names() {
-        let parser = TemplateParser::new().unwrap();
+        let parser = TemplateParser::new();
         let template = "{{name}} {{total}} {{name}} {{user.age}}";
 
         let names = parser.get_variable_names(template).unwrap();
@@ -247,8 +256,7 @@ mod tests {
 
     #[test]
     fn test_invalid_variable_names() {
-        let parser = TemplateParser::new().unwrap();
-
+        let parser = TemplateParser::new();
         // Test invalid starting character
         let template = "{{123invalid}}";
         let result = parser.parse(template);
@@ -257,8 +265,7 @@ mod tests {
 
     #[test]
     fn test_invalid_placeholder_patterns() {
-        let parser = TemplateParser::new().unwrap();
-
+        let parser = TemplateParser::new();
         // Test single braces
         let template = "Hello {name}";
         let result = parser.parse(template);
@@ -277,16 +284,14 @@ mod tests {
 
     #[test]
     fn test_has_placeholders() {
-        let parser = TemplateParser::new().unwrap();
-
+        let parser = TemplateParser::new();
         assert!(parser.has_placeholders("Hello {{name}}"));
         assert!(!parser.has_placeholders("Hello world"));
     }
 
     #[test]
     fn test_count_placeholders() {
-        let parser = TemplateParser::new().unwrap();
-
+        let parser = TemplateParser::new();
         assert_eq!(parser.count_placeholders("{{a}} {{b}} {{c}}"), 3);
         assert_eq!(parser.count_placeholders("No placeholders here"), 0);
         assert_eq!(parser.count_placeholders("{{duplicate}} {{duplicate}}"), 2);
@@ -294,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_placeholder_positions() {
-        let parser = TemplateParser::new().unwrap();
+        let parser = TemplateParser::new();
         let template = "Start {{var1}} middle {{var2}} end";
 
         let placeholders = parser.parse(template).unwrap();

@@ -18,21 +18,12 @@ pub struct NameTreeNode {
 impl NameTreeNode {
     /// Create leaf node
     pub fn leaf(names: BTreeMap<String, Object>) -> Self {
-        let limits = if names.is_empty() {
-            None
-        } else {
-            let min = names
-                .keys()
-                .next()
-                .expect("BTreeMap should have at least one key after is_empty check")
-                .clone();
-            let max = names
-                .keys()
-                .last()
-                .expect("BTreeMap should have at least one key after is_empty check")
-                .clone();
-            Some((min, max))
-        };
+        let limits =
+            if let (Some(first), Some(last)) = (names.first_key_value(), names.last_key_value()) {
+                Some((first.0.clone(), last.0.clone()))
+            } else {
+                None
+            };
 
         Self {
             names: Some(names),
