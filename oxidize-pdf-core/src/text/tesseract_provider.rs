@@ -15,7 +15,7 @@
 //! ```rust,no_run
 //! use oxidize_pdf::text::{RustyTesseractProvider, OcrOptions, OcrProvider};
 //!
-//! let provider = RustyTesseractProvider::new()?;
+//! let provider = RustyTesseractProvider::new();
 //! let options = OcrOptions::default();
 //! let image_data = std::fs::read("document.png")?;
 //!

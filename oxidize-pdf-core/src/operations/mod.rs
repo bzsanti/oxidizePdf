@@ -64,9 +64,7 @@ pub enum OperationError {
 
     /// Invalid file path
     #[error("Invalid file path: {reason}")]
-    InvalidPath {
-        reason: String,
-    },
+    InvalidPath { reason: String },
 
     /// IO error
     #[error("IO error: {0}")]

@@ -200,8 +200,7 @@ fn create_ocr_provider(
         println!("🔧 Initializing Tesseract OCR engine...");
     }
 
-    let provider = RustyTesseractProvider::new()
-        .map_err(|e| format!("Failed to initialize OCR provider: {}", e))?;
+    let provider = RustyTesseractProvider::new();
 
     if options.verbose {
         println!("✅ OCR engine ready");

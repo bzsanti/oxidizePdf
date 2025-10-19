@@ -18,11 +18,12 @@ pub struct NameTreeNode {
 impl NameTreeNode {
     /// Create leaf node
     pub fn leaf(names: BTreeMap<String, Object>) -> Self {
-        let limits = if let (Some(first), Some(last)) = (names.first_key_value(), names.last_key_value()) {
-            Some((first.0.clone(), last.0.clone()))
-        } else {
-            None
-        };
+        let limits =
+            if let (Some(first), Some(last)) = (names.first_key_value(), names.last_key_value()) {
+                Some((first.0.clone(), last.0.clone()))
+            } else {
+                None
+            };
 
         Self {
             names: Some(names),

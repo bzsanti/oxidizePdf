@@ -19,7 +19,7 @@
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let converter = PdfOcrConverter::new()?;
-//! let ocr_provider = RustyTesseractProvider::new()?;
+//! let ocr_provider = RustyTesseractProvider::new();
 //! let options = ConversionOptions::default();
 //!
 //! converter.convert_to_searchable_pdf(

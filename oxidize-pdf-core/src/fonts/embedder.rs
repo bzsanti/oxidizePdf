@@ -267,7 +267,7 @@ impl<'a> FontEmbedder<'a> {
         sorted_chars.sort_by_key(|(code, _)| *code);
 
         let mut current_range_start = None;
-        let mut current_range_end = None;  // Track the end of the current range
+        let mut current_range_end = None; // Track the end of the current range
         let mut current_width = None;
 
         for (&code, &width) in sorted_chars {

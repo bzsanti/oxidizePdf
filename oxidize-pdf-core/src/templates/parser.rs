@@ -207,9 +207,11 @@ mod tests {
 
     #[test]
     fn test_basic_placeholder_parsing() {
-        let parser = TemplateParser::new();        let template = "Hello {{name}}, your total is {{total}}.";
+        let parser = TemplateParser::new();
+        let template = "Hello {{name}}, your total is {{total}}.";
 
-        let placeholders = parser.parse(template).unwrap();        assert_eq!(placeholders.len(), 2);
+        let placeholders = parser.parse(template).unwrap();
+        assert_eq!(placeholders.len(), 2);
 
         assert_eq!(placeholders[0].variable_name, "name");
         assert_eq!(placeholders[0].full_text, "{{name}}");
@@ -221,9 +223,11 @@ mod tests {
 
     #[test]
     fn test_dot_notation_variables() {
-        let parser = TemplateParser::new();        let template = "User: {{user.name}} ({{user.age}} years old)";
+        let parser = TemplateParser::new();
+        let template = "User: {{user.name}} ({{user.age}} years old)";
 
-        let placeholders = parser.parse(template).unwrap();        assert_eq!(placeholders.len(), 2);
+        let placeholders = parser.parse(template).unwrap();
+        assert_eq!(placeholders.len(), 2);
 
         assert_eq!(placeholders[0].variable_name, "user.name");
         assert_eq!(placeholders[1].variable_name, "user.age");
@@ -231,9 +235,11 @@ mod tests {
 
     #[test]
     fn test_whitespace_handling() {
-        let parser = TemplateParser::new();        let template = "{{ name }} and {{  total  }}";
+        let parser = TemplateParser::new();
+        let template = "{{ name }} and {{  total  }}";
 
-        let placeholders = parser.parse(template).unwrap();        assert_eq!(placeholders.len(), 2);
+        let placeholders = parser.parse(template).unwrap();
+        assert_eq!(placeholders.len(), 2);
 
         assert_eq!(placeholders[0].variable_name, "name");
         assert_eq!(placeholders[1].variable_name, "total");
@@ -241,9 +247,11 @@ mod tests {
 
     #[test]
     fn test_get_variable_names() {
-        let parser = TemplateParser::new();        let template = "{{name}} {{total}} {{name}} {{user.age}}";
+        let parser = TemplateParser::new();
+        let template = "{{name}} {{total}} {{name}} {{user.age}}";
 
-        let names = parser.get_variable_names(template).unwrap();        assert_eq!(names, vec!["name", "total", "user.age"]);
+        let names = parser.get_variable_names(template).unwrap();
+        assert_eq!(names, vec!["name", "total", "user.age"]);
     }
 
     #[test]
@@ -291,9 +299,11 @@ mod tests {
 
     #[test]
     fn test_placeholder_positions() {
-        let parser = TemplateParser::new();        let template = "Start {{var1}} middle {{var2}} end";
+        let parser = TemplateParser::new();
+        let template = "Start {{var1}} middle {{var2}} end";
 
-        let placeholders = parser.parse(template).unwrap();        assert_eq!(placeholders[0].start, 6);
+        let placeholders = parser.parse(template).unwrap();
+        assert_eq!(placeholders[0].start, 6);
         assert_eq!(placeholders[0].end, 14); // 6 + len("{{var1}}") = 6 + 8 = 14
         assert_eq!(placeholders[1].start, 22);
         assert_eq!(placeholders[1].end, 30); // 22 + len("{{var2}}") = 22 + 8 = 30

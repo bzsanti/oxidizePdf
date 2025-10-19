@@ -795,22 +795,32 @@ impl ImageExtractor {
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .ok_or_else(|| OperationError::InvalidPath {
-                    reason: format!("Image path has no valid filename: {:?}", extracted_image.file_path),
+                    reason: format!(
+                        "Image path has no valid filename: {:?}",
+                        extracted_image.file_path
+                    ),
                 })?;
             let output_extension = extracted_image
                 .file_path
                 .extension()
                 .and_then(|s| s.to_str())
                 .ok_or_else(|| OperationError::InvalidPath {
-                    reason: format!("Image path has no valid extension: {:?}", extracted_image.file_path),
+                    reason: format!(
+                        "Image path has no valid extension: {:?}",
+                        extracted_image.file_path
+                    ),
                 })?;
 
-            let parent_dir = extracted_image
-                .file_path
-                .parent()
-                .ok_or_else(|| OperationError::InvalidPath {
-                    reason: format!("Image path has no parent directory: {:?}", extracted_image.file_path),
-                })?;
+            let parent_dir =
+                extracted_image
+                    .file_path
+                    .parent()
+                    .ok_or_else(|| OperationError::InvalidPath {
+                        reason: format!(
+                            "Image path has no parent directory: {:?}",
+                            extracted_image.file_path
+                        ),
+                    })?;
             let transformed_path = parent_dir.join(format!(
                 "{}_transformed.{}",
                 output_filename, output_extension

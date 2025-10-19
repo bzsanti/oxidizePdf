@@ -123,8 +123,7 @@ mod tesseract_tests {
             dpi: Some(300),
             config_variables: HashMap::new(),
         };
-        let provider =
-            RustyTesseractProvider::with_config(config).expect("Failed to create provider");
+        let provider = RustyTesseractProvider::with_config(config);
 
         assert_eq!(provider.config().psm, Some(1));
         assert_eq!(provider.config().oem, Some(1));
