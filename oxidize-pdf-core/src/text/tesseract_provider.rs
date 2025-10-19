@@ -15,7 +15,7 @@
 //! ```rust,no_run
 //! use oxidize_pdf::text::{RustyTesseractProvider, OcrOptions, OcrProvider};
 //!
-//! let provider = RustyTesseractProvider::new()?;
+//! let provider = RustyTesseractProvider::new();
 //! let options = OcrOptions::default();
 //! let image_data = std::fs::read("document.png")?;
 //!
@@ -85,17 +85,17 @@ pub struct RustyTesseractProvider {
 #[cfg(feature = "ocr-tesseract")]
 impl RustyTesseractProvider {
     /// Create a new Tesseract OCR provider with default configuration
-    pub fn new() -> OcrResult<Self> {
+    pub fn new() -> Self {
         Self::with_config(RustyTesseractConfig::default())
     }
 
     /// Create a new Tesseract OCR provider with custom configuration
-    pub fn with_config(config: RustyTesseractConfig) -> OcrResult<Self> {
-        Ok(Self { config })
+    pub fn with_config(config: RustyTesseractConfig) -> Self {
+        Self { config }
     }
 
     /// Create a new Tesseract OCR provider optimized for legal documents and contracts
-    pub fn for_contracts() -> OcrResult<Self> {
+    pub fn for_contracts() -> Self {
         let mut config_vars = HashMap::new();
 
         // Optimize specifically for legal/contract documents
@@ -115,11 +115,11 @@ impl RustyTesseractProvider {
             config_variables: config_vars,
         };
 
-        Ok(Self { config })
+        Self { config }
     }
 
     /// Create a new Tesseract OCR provider optimized for large documents with potential rotation issues
-    pub fn for_large_documents() -> OcrResult<Self> {
+    pub fn for_large_documents() -> Self {
         let mut config_vars = HashMap::new();
 
         // Optimize for speed and rotation handling
@@ -145,7 +145,7 @@ impl RustyTesseractProvider {
             config_variables: config_vars,
         };
 
-        Ok(Self { config })
+        Self { config }
     }
 
     /// Test if Tesseract is available and working
@@ -319,7 +319,7 @@ fn estimate_confidence(text: &str) -> f32 {
 #[cfg(feature = "ocr-tesseract")]
 impl Default for RustyTesseractProvider {
     fn default() -> Self {
-        Self::new().expect("Failed to create default RustyTesseractProvider")
+        Self::new()
     }
 }
 
@@ -351,8 +351,8 @@ mod tests {
     #[cfg(feature = "ocr-tesseract")]
     #[test]
     fn test_provider_creation() {
-        let provider = RustyTesseractProvider::new();
-        assert!(provider.is_ok());
+        let _provider = RustyTesseractProvider::new();
+        // Provider creation is now infallible
     }
 
     #[cfg(feature = "ocr-tesseract")]
@@ -372,7 +372,7 @@ mod tests {
     #[cfg(feature = "ocr-tesseract")]
     #[test]
     fn test_engine_info() {
-        let provider = RustyTesseractProvider::new().unwrap();
+        let provider = RustyTesseractProvider::new();
         assert_eq!(provider.engine_type(), OcrEngine::Tesseract);
         assert_eq!(provider.engine_name(), "rusty-tesseract");
     }

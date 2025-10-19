@@ -72,7 +72,10 @@ impl DataAggregator {
             .iter()
             .filter_map(|record| record.get(field))
             .filter_map(|value| value.parse::<f64>().ok())
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .filter(|v| !v.is_nan()) // Filter out NaN values before comparison
+            .min_by(|a, b| {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal) // NaN values treated as equal (shouldn't happen after filter)
+            })
     }
 
     /// Get maximum value of a numeric field
@@ -81,7 +84,10 @@ impl DataAggregator {
             .iter()
             .filter_map(|record| record.get(field))
             .filter_map(|value| value.parse::<f64>().ok())
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .filter(|v| !v.is_nan()) // Filter out NaN values before comparison
+            .max_by(|a, b| {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal) // NaN values treated as equal (shouldn't happen after filter)
+            })
     }
 
     /// Filter data by a condition

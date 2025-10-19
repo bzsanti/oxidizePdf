@@ -850,10 +850,13 @@ impl ChartRenderer {
             graphics.line_to(x, y);
         }
 
-        graphics
-            .line_to(points.last().unwrap().0, area.y)
-            .fill()
-            .restore_state();
+        // Safe to unwrap: points.len() >= 2 is guaranteed by check at line 833
+        if let Some(last_point) = points.last() {
+            graphics
+                .line_to(last_point.0, area.y)
+                .fill()
+                .restore_state();
+        }
 
         Ok(())
     }

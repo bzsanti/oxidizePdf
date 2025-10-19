@@ -61,68 +61,53 @@ fn create_test_pdf() -> Result<(), Box<dyn std::error::Error>> {
 fn test_ocr_conversion() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔧 Testing OCR conversion...");
 
-    // Check if Tesseract is available
-    match RustyTesseractProvider::new() {
-        Ok(ocr_provider) => {
-            println!("✅ Tesseract OCR engine initialized");
+    // Initialize Tesseract OCR provider
+    let ocr_provider = RustyTesseractProvider::new();
+    println!("✅ Tesseract OCR provider initialized");
 
-            let converter = PdfOcrConverter::new()?;
-            let options = ConversionOptions {
-                ocr_options: OcrOptions {
-                    language: "eng".to_string(),
-                    min_confidence: 0.5, // Lower threshold for testing
-                    ..Default::default()
-                },
-                min_confidence: 0.5,
-                skip_text_pages: false, // Process all pages for testing
-                ..Default::default()
-            };
+    let converter = PdfOcrConverter::new()?;
+    let options = ConversionOptions {
+        ocr_options: OcrOptions {
+            language: "eng".to_string(),
+            min_confidence: 0.5, // Lower threshold for testing
+            ..Default::default()
+        },
+        min_confidence: 0.5,
+        skip_text_pages: false, // Process all pages for testing
+        ..Default::default()
+    };
 
-            // Convert the test PDF
-            match converter.convert_to_searchable_pdf(
-                "examples/results/test_input.pdf",
-                "examples/results/test_output_searchable.pdf",
-                &ocr_provider,
-                &options,
-            ) {
-                Ok(result) => {
-                    println!("🎉 OCR conversion successful!");
-                    println!("   Pages processed: {}", result.pages_processed);
-                    println!("   Pages with OCR: {}", result.pages_ocr_processed);
-                    println!(
-                        "   Processing time: {:.2}s",
-                        result.processing_time.as_secs_f64()
-                    );
-                    println!(
-                        "   Average confidence: {:.1}%",
-                        result.average_confidence * 100.0
-                    );
-                    println!(
-                        "   Characters extracted: {}",
-                        result.total_characters_extracted
-                    );
-                    println!("✅ Output saved: examples/results/test_output_searchable.pdf");
-                }
-                Err(e) => {
-                    println!("❌ OCR conversion failed: {}", e);
-                    println!("This might be due to:");
-                    println!("  - Missing Tesseract installation");
-                    println!("  - Incompatible image format");
-                    println!("  - Insufficient text in test PDF");
-                }
-            }
+    // Convert the test PDF
+    match converter.convert_to_searchable_pdf(
+        "examples/results/test_input.pdf",
+        "examples/results/test_output_searchable.pdf",
+        &ocr_provider,
+        &options,
+    ) {
+        Ok(result) => {
+            println!("🎉 OCR conversion successful!");
+            println!("   Pages processed: {}", result.pages_processed);
+            println!("   Pages with OCR: {}", result.pages_ocr_processed);
+            println!(
+                "   Processing time: {:.2}s",
+                result.processing_time.as_secs_f64()
+            );
+            println!(
+                "   Average confidence: {:.1}%",
+                result.average_confidence * 100.0
+            );
+            println!(
+                "   Characters extracted: {}",
+                result.total_characters_extracted
+            );
+            println!("✅ Output saved: examples/results/test_output_searchable.pdf");
         }
         Err(e) => {
-            println!("❌ Failed to initialize Tesseract: {}", e);
-            println!();
-            println!("To install Tesseract:");
-            println!("  macOS: brew install tesseract");
-            println!("  Ubuntu: sudo apt-get install tesseract-ocr");
-            println!("  Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki");
-            println!();
-            println!("For additional languages:");
-            println!("  macOS: brew install tesseract-lang");
-            println!("  Ubuntu: sudo apt-get install tesseract-ocr-spa tesseract-ocr-fra");
+            println!("❌ OCR conversion failed: {}", e);
+            println!("This might be due to:");
+            println!("  - Missing Tesseract installation");
+            println!("  - Incompatible image format");
+            println!("  - Insufficient text in test PDF");
         }
     }
 

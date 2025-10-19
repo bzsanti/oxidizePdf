@@ -364,7 +364,7 @@ impl Image {
     }
 
     /// Convert to PDF XObject with SMask for transparency
-    pub fn to_pdf_object_with_transparency(&self) -> (Object, Option<Object>) {
+    pub fn to_pdf_object_with_transparency(&self) -> Result<(Object, Option<Object>)> {
         use flate2::write::ZlibEncoder;
         use flate2::Compression;
         use std::io::Write as IoWrite;
@@ -401,14 +401,22 @@ impl Image {
                 // Compress raw RGB data with FlateDecode
                 main_dict.set("Filter", Object::Name("FlateDecode".to_string()));
                 let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-                encoder.write_all(&self.data).unwrap();
-                encoder.finish().unwrap()
+                encoder.write_all(&self.data).map_err(|e| {
+                    PdfError::InvalidImage(format!("Failed to compress image data: {}", e))
+                })?;
+                encoder.finish().map_err(|e| {
+                    PdfError::InvalidImage(format!("Failed to finalize image compression: {}", e))
+                })?
             }
             ImageFormat::Tiff => {
                 main_dict.set("Filter", Object::Name("FlateDecode".to_string()));
                 let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-                encoder.write_all(&self.data).unwrap();
-                encoder.finish().unwrap()
+                encoder.write_all(&self.data).map_err(|e| {
+                    PdfError::InvalidImage(format!("Failed to compress TIFF data: {}", e))
+                })?;
+                encoder.finish().map_err(|e| {
+                    PdfError::InvalidImage(format!("Failed to finalize TIFF compression: {}", e))
+                })?
             }
         };
 
@@ -428,8 +436,12 @@ impl Image {
 
             // Compress alpha channel data
             let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-            encoder.write_all(&mask.data).unwrap();
-            let compressed_mask_data = encoder.finish().unwrap();
+            encoder.write_all(&mask.data).map_err(|e| {
+                PdfError::InvalidImage(format!("Failed to compress alpha channel: {}", e))
+            })?;
+            let compressed_mask_data = encoder.finish().map_err(|e| {
+                PdfError::InvalidImage(format!("Failed to finalize alpha compression: {}", e))
+            })?;
 
             // Set Length for SMask stream
             mask_dict.set("Length", Object::Integer(compressed_mask_data.len() as i64));
@@ -442,7 +454,7 @@ impl Image {
         // Note: The SMask reference would need to be set by the caller
         // as it requires object references which we don't have here
 
-        (Object::Stream(main_dict, main_data), smask_obj)
+        Ok((Object::Stream(main_dict, main_data), smask_obj))
     }
 
     /// Check if this image has transparency

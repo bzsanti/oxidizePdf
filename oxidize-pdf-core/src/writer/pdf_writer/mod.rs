@@ -1,5 +1,5 @@
 use crate::document::Document;
-use crate::error::Result;
+use crate::error::{PdfError, Result};
 use crate::objects::{Dictionary, Object, ObjectId};
 use crate::text::fonts::embedding::CjkFontType;
 use crate::writer::{ObjectStreamConfig, ObjectStreamWriter, XRefStreamWriter};
@@ -338,8 +338,8 @@ impl<W: Write> PdfWriter<W> {
         self.write_form_fields(document)?;
 
         // Step 4: Write modified catalog that references BOTH old and new pages
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let new_pages_id = self.pages_id.expect("pages_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let new_pages_id = self.get_pages_id()?;
 
         let mut catalog = crate::objects::Dictionary::new();
         catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
@@ -558,8 +558,8 @@ impl<W: Write> PdfWriter<W> {
         self.write_form_fields(document)?;
 
         // Step 4: Create Pages tree with REPLACEMENTS
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let new_pages_id = self.pages_id.expect("pages_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let new_pages_id = self.get_pages_id()?;
 
         let mut catalog = crate::objects::Dictionary::new();
         catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
@@ -733,8 +733,8 @@ impl<W: Write> PdfWriter<W> {
         self.write_form_fields(&mut temp_doc)?;
 
         // Step 8: Create new catalog and pages tree
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let new_pages_id = self.pages_id.expect("pages_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let new_pages_id = self.get_pages_id()?;
 
         let mut catalog = crate::objects::Dictionary::new();
         catalog.set("Type", crate::objects::Object::Name("Catalog".to_string()));
@@ -830,8 +830,8 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_catalog(&mut self, document: &mut Document) -> Result<()> {
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let pages_id = self.pages_id.expect("pages_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let pages_id = self.get_pages_id()?;
 
         let mut catalog = Dictionary::new();
         catalog.set("Type", Object::Name("Catalog".to_string()));
@@ -1240,7 +1240,7 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_info(&mut self, document: &Document) -> Result<()> {
-        let info_id = self.info_id.expect("info_id must be set");
+        let info_id = self.get_info_id()?;
         let mut info_dict = Dictionary::new();
 
         if let Some(ref title) = document.metadata.title {
@@ -2030,7 +2030,7 @@ impl<W: Write> PdfWriter<W> {
         document: &Document,
         font_refs: &HashMap<String, ObjectId>,
     ) -> Result<()> {
-        let pages_id = self.pages_id.expect("pages_id must be set");
+        let pages_id = self.get_pages_id()?;
         let mut pages_dict = Dictionary::new();
         pages_dict.set("Type", Object::Name("Pages".to_string()));
         pages_dict.set("Count", Object::Integer(document.pages.len() as i64));
@@ -2227,7 +2227,7 @@ impl<W: Write> PdfWriter<W> {
                 // Check if image has transparency (alpha channel)
                 if image.has_transparency() {
                     // Handle transparent images with SMask
-                    let (mut main_obj, smask_obj) = image.to_pdf_object_with_transparency();
+                    let (mut main_obj, smask_obj) = image.to_pdf_object_with_transparency()?;
 
                     // If we have a soft mask, write it as a separate object and reference it
                     if let Some(smask_stream) = smask_obj {
@@ -2477,6 +2477,33 @@ impl<W: Write> PdfWriter<W> {
         id
     }
 
+    /// Get catalog_id, returning error if not initialized
+    fn get_catalog_id(&self) -> Result<ObjectId> {
+        self.catalog_id.ok_or_else(|| {
+            PdfError::InvalidOperation(
+                "catalog_id not initialized - write_document() must be called first".to_string(),
+            )
+        })
+    }
+
+    /// Get pages_id, returning error if not initialized
+    fn get_pages_id(&self) -> Result<ObjectId> {
+        self.pages_id.ok_or_else(|| {
+            PdfError::InvalidOperation(
+                "pages_id not initialized - write_document() must be called first".to_string(),
+            )
+        })
+    }
+
+    /// Get info_id, returning error if not initialized
+    fn get_info_id(&self) -> Result<ObjectId> {
+        self.info_id.ok_or_else(|| {
+            PdfError::InvalidOperation(
+                "info_id not initialized - write_document() must be called first".to_string(),
+            )
+        })
+    }
+
     fn write_object(&mut self, id: ObjectId, object: Object) -> Result<()> {
         use crate::writer::ObjectStreamWriter;
 
@@ -2708,8 +2735,8 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_xref_stream(&mut self) -> Result<()> {
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let info_id = self.info_id.expect("info_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let info_id = self.get_info_id()?;
 
         // Allocate object ID for the xref stream
         let xref_stream_id = self.allocate_object_id();
@@ -2812,8 +2839,8 @@ impl<W: Write> PdfWriter<W> {
     }
 
     fn write_trailer(&mut self, xref_position: u64) -> Result<()> {
-        let catalog_id = self.catalog_id.expect("catalog_id must be set");
-        let info_id = self.info_id.expect("info_id must be set");
+        let catalog_id = self.get_catalog_id()?;
+        let info_id = self.get_info_id()?;
         // Find the highest object number to determine size
         let max_obj_num = self
             .xref_positions

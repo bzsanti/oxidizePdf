@@ -256,20 +256,25 @@ impl Dashboard {
     pub fn get_stats(&self) -> DashboardStats {
         DashboardStats {
             component_count: self.components.len(),
-            estimated_render_time_ms: self.estimate_render_time(),
+            estimated_render_time: self.estimate_render_time(),
             memory_usage_mb: self.estimate_memory_usage(),
             complexity_score: self.calculate_complexity_score(),
         }
     }
 
-    /// Estimate rendering time in milliseconds
-    fn estimate_render_time(&self) -> u32 {
+    /// Estimate rendering time
+    fn estimate_render_time(&self) -> std::time::Duration {
+        use std::time::Duration;
+
         // Base render time + component complexity
-        50 + self
+        let base_time_ms = 50u64;
+        let component_time_ms: u64 = self
             .components
             .iter()
-            .map(|c| c.estimated_render_time_ms())
-            .sum::<u32>()
+            .map(|c| c.estimated_render_time_ms() as u64)
+            .sum();
+
+        Duration::from_millis(base_time_ms + component_time_ms)
     }
 
     /// Estimate memory usage in MB
@@ -300,8 +305,8 @@ impl Dashboard {
 pub struct DashboardStats {
     /// Total number of components
     pub component_count: usize,
-    /// Estimated rendering time in milliseconds
-    pub estimated_render_time_ms: u32,
+    /// Estimated rendering time
+    pub estimated_render_time: std::time::Duration,
     /// Estimated memory usage in MB
     pub memory_usage_mb: f64,
     /// Complexity score (0-100, higher = more complex)
@@ -333,7 +338,7 @@ mod tests {
             .unwrap();
 
         let stats = dashboard.get_stats();
-        assert!(stats.estimated_render_time_ms > 0);
+        assert!(stats.estimated_render_time.as_millis() > 0);
         assert!(stats.memory_usage_mb > 0.0);
     }
 

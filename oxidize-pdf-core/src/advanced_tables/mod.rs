@@ -31,11 +31,13 @@
 //! ```
 
 mod cell_style;
+mod error;
 mod header_builder;
 mod table_builder;
 mod table_renderer;
 
 pub use cell_style::{BorderStyle, CellAlignment, CellStyle, Padding};
+pub use error::TableError;
 pub use header_builder::{HeaderBuilder, HeaderCell};
 pub use table_builder::{AdvancedTable, AdvancedTableBuilder, Column};
 pub use table_renderer::TableRenderer;

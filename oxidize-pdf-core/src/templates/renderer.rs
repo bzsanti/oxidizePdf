@@ -11,10 +11,10 @@ pub struct TemplateRenderer {
 
 impl TemplateRenderer {
     /// Create a new template renderer
-    pub fn new() -> TemplateResult<Self> {
-        Ok(Self {
-            parser: TemplateParser::new()?,
-        })
+    pub fn new() -> Self {
+        Self {
+            parser: TemplateParser::new(),
+        }
     }
 
     /// Render a template with the given context
@@ -133,7 +133,7 @@ pub struct TemplateAnalysis {
 
 impl Default for TemplateRenderer {
     fn default() -> Self {
-        Self::new().expect("Failed to create default TemplateRenderer")
+        Self::new()
     }
 }
 
@@ -143,7 +143,7 @@ pub struct Template;
 impl Template {
     /// Render a template string with the given context
     pub fn render(template: &str, context: &TemplateContext) -> TemplateResult<String> {
-        let renderer = TemplateRenderer::new()?;
+        let renderer = TemplateRenderer::new();
         renderer.render(template, context)
     }
 
@@ -158,19 +158,19 @@ impl Template {
 
     /// Validate that a template has correct syntax
     pub fn validate(template: &str) -> TemplateResult<()> {
-        let renderer = TemplateRenderer::new()?;
+        let renderer = TemplateRenderer::new();
         renderer.validate_template(template)
     }
 
     /// Get all variable names required by a template
     pub fn get_variables(template: &str) -> TemplateResult<Vec<String>> {
-        let renderer = TemplateRenderer::new()?;
+        let renderer = TemplateRenderer::new();
         renderer.get_required_variables(template)
     }
 
     /// Get detailed analysis of a template
     pub fn analyze(template: &str) -> TemplateResult<TemplateAnalysis> {
-        let renderer = TemplateRenderer::new()?;
+        let renderer = TemplateRenderer::new();
         renderer.analyze_template(template)
     }
 }

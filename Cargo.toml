@@ -2,6 +2,9 @@
 members = [
     "oxidize-pdf-core",
 ]
+exclude = [
+    "lints",  # Dylint lints workspace (requires nightly)
+]
 resolver = "2"
 
 [workspace.package]
@@ -76,6 +79,11 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
+
+[workspace.metadata.dylint]
+libraries = [
+    { path = "lints" }
+]
 
 [workspace.metadata.release]
 # Don't sign commits or tags (requires GPG setup)

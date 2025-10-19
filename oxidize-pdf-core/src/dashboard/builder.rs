@@ -216,11 +216,9 @@ impl DashboardBuilder {
         self.finish_current_row();
 
         // Validate required fields
-        if self.title.is_none() {
-            return Err(PdfError::InvalidOperation(
-                "Dashboard title is required".to_string(),
-            ));
-        }
+        let title = self
+            .title
+            .ok_or_else(|| PdfError::InvalidOperation("Dashboard title is required".to_string()))?;
 
         // Validate components
         for component in &self.components {
@@ -231,7 +229,7 @@ impl DashboardBuilder {
         let layout = DashboardLayout::new(self.layout_config);
 
         Ok(Dashboard {
-            title: self.title.unwrap(),
+            title,
             subtitle: self.subtitle,
             layout,
             theme: self.theme,

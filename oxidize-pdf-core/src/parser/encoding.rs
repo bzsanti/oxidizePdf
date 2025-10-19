@@ -148,11 +148,11 @@ impl EnhancedDecoder {
     fn initialize_encoding_tables(&mut self) {
         // Latin-1 (ISO 8859-1) mapping - direct 1:1 mapping for 0x80-0xFF
         for i in 0x80..=0xFF {
-            self.latin1_map.insert(
-                i,
-                char::from_u32(i as u32)
-                    .expect("All Latin-1 values should be valid Unicode codepoints"),
-            );
+            // Safety: All values in 0x80-0xFF range are valid Unicode codepoints (ISO/IEC 8859-1)
+            // This is guaranteed by the Unicode standard which includes Latin-1 supplement block
+            if let Some(ch) = char::from_u32(i as u32) {
+                self.latin1_map.insert(i, ch);
+            }
         }
 
         // Windows-1252 mapping (extends Latin-1 for 0x80-0x9F range)
