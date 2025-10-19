@@ -77,37 +77,59 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
-      - name: Check CI status for this commit
+
+      - name: Wait for CI checks to complete
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           COMMIT_SHA=$(git rev-parse HEAD)
-          echo "Checking CI status for commit: $COMMIT_SHA"
-          
-          # Get all check runs for this commit
-          gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs \
-            --jq '.check_runs[] | select(.name != "Verify CI Status") | {name: .name, status: .status, conclusion: .conclusion}' > check_results.json
-          
-          # Display results
-          echo "CI Check Results:"
-          cat check_results.json
-          
-          # Check if any required checks failed (ignore Code Coverage and Generate Coverage Report)
-          FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
-          PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
-          
-          if [ "$FAILED_CHECKS" -gt 0 ]; then
-            echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
-            exit 1
-          fi
-          
-          if [ "$PENDING_CHECKS" -gt 0 ]; then
-            echo "⏳ Release blocked: $PENDING_CHECKS CI checks still pending"
-            exit 1
-          fi
-          
-          echo "✅ All CI checks passed. Release can proceed."
+          echo "Waiting for CI status for commit: $COMMIT_SHA"
+
+          # Wait up to 30 minutes for CI to complete
+          MAX_WAIT_SECONDS=1800
+          WAIT_INTERVAL=30
+          ELAPSED=0
+
+          while [ $ELAPSED -lt $MAX_WAIT_SECONDS ]; do
+            echo ""
+            echo "⏱️ Checking CI status (elapsed: ${ELAPSED}s / max: ${MAX_WAIT_SECONDS}s)..."
+
+            # Get all check runs for this commit
+            gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs \
+              --jq '.check_runs[] | select(.name != "Verify CI Status" and .name != "Verify Release Conditions") | {name: .name, status: .status, conclusion: .conclusion}' > check_results.json
+
+            # Display results
+            echo "CI Check Results:"
+            cat check_results.json | jq -r '"  - \(.name): \(.status) (\(.conclusion // "pending"))"'
+
+            # Check if any required checks failed (ignore Code Coverage and Generate Coverage Report)
+            FAILED_CHECKS=$(cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
+            PENDING_CHECKS=$(cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage" and .name != "Generate Coverage Report") | .name' | wc -l)
+
+            if [ "$FAILED_CHECKS" -gt 0 ]; then
+              echo ""
+              echo "❌ Release blocked: $FAILED_CHECKS CI checks failed"
+              cat check_results.json | jq -r 'select(.conclusion == "failure" and .name != "Code Coverage" and .name != "Generate Coverage Report") | "  - \(.name)"'
+              exit 1
+            fi
+
+            if [ "$PENDING_CHECKS" -eq 0 ]; then
+              echo ""
+              echo "✅ All CI checks passed. Release can proceed."
+              exit 0
+            fi
+
+            echo "⏳ $PENDING_CHECKS CI checks still pending, waiting ${WAIT_INTERVAL}s..."
+            sleep $WAIT_INTERVAL
+            ELAPSED=$((ELAPSED + WAIT_INTERVAL))
+          done
+
+          # Timeout reached
+          echo ""
+          echo "❌ Timeout: CI checks did not complete within ${MAX_WAIT_SECONDS}s"
+          echo "Pending checks:"
+          cat check_results.json | jq -r 'select((.status == "in_progress" or .status == "queued") and .name != "Code Coverage" and .name != "Generate Coverage Report") | "  - \(.name)"'
+          exit 1
 
   release:
     name: Release
