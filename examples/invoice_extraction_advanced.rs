@@ -250,7 +250,9 @@ fn export_to_json(results: &[ProcessingResult]) -> Result<(), Box<dyn std::error
             if let Some(ref data) = result.data {
                 let invoice_json = InvoiceJson {
                     source_file: result.filename.clone(),
-                    language: data.metadata.language.to_string(),
+                    language: data.metadata.language
+                        .map(|l| l.code().to_string())
+                        .unwrap_or_else(|| "unknown".to_string()),
                     confidence: data.metadata.extraction_confidence,
                     fields: data.fields.iter().map(|f| FieldJson {
                         field_name: f.field_type.name().to_string(),

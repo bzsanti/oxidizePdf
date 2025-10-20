@@ -322,17 +322,12 @@ impl InvoiceExtractor {
             InvoiceFieldType::LineItemDescription => {
                 Some(InvoiceField::LineItemDescription(value.to_string()))
             }
-            InvoiceFieldType::LineItemQuantity => value
-                .replace(',', ".")
-                .parse::<f64>()
-                .ok()
-                .map(InvoiceField::LineItemQuantity),
-            InvoiceFieldType::LineItemUnitPrice => value
-                .replace('.', "")
-                .replace(',', ".")
-                .parse::<f64>()
-                .ok()
-                .map(InvoiceField::LineItemUnitPrice),
+            InvoiceFieldType::LineItemQuantity => {
+                self.parse_amount(value).map(InvoiceField::LineItemQuantity)
+            }
+            InvoiceFieldType::LineItemUnitPrice => {
+                self.parse_amount(value).map(InvoiceField::LineItemUnitPrice)
+            }
         }
     }
 }
@@ -424,8 +419,13 @@ impl InvoiceExtractorBuilder {
     ///     .confidence_threshold(0.9)
     ///     .build();
     /// ```
+    ///
+    /// # Validation
+    ///
+    /// The threshold is automatically clamped to the valid range [0.0, 1.0].
+    /// Values outside this range are silently adjusted to the nearest valid value.
     pub fn confidence_threshold(mut self, threshold: f64) -> Self {
-        self.confidence_threshold = threshold;
+        self.confidence_threshold = threshold.clamp(0.0, 1.0);
         self
     }
 

@@ -615,8 +615,8 @@ mod tests {
 
     #[test]
     fn test_pattern_matches() {
-        let pattern =
-            FieldPattern::new(InvoiceFieldType::InvoiceNumber, r"INV-(\d+)", 0.9, None).unwrap();
+        let pattern = FieldPattern::new(InvoiceFieldType::InvoiceNumber, r"INV-(\d+)", 0.9, None)
+            .expect("Hardcoded regex pattern should be valid");
 
         assert_eq!(pattern.matches("INV-12345"), Some("12345".to_string()));
         assert_eq!(pattern.matches("Invoice INV-999"), Some("999".to_string()));
