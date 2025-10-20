@@ -261,10 +261,10 @@ fn determine_corruption_type(report: &mut CorruptionReport) {
     if types.is_empty() && report.severity > 0 {
         report.corruption_type = CorruptionType::Unknown;
     } else if types.len() == 1 {
-        report.corruption_type = types
-            .into_iter()
-            .next()
-            .expect("Set should have exactly one element after len() == 1 check");
+        // SAFETY: We just checked len() == 1, so next() must return Some
+        if let Some(corruption_type) = types.into_iter().next() {
+            report.corruption_type = corruption_type;
+        }
     } else if types.len() > 1 {
         report.corruption_type = CorruptionType::Multiple(types);
     }

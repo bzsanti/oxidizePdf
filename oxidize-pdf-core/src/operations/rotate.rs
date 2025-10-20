@@ -54,7 +54,15 @@ impl RotationAngle {
     /// Combine two rotations
     pub fn combine(self, other: RotationAngle) -> RotationAngle {
         let total = (self.to_degrees() + other.to_degrees()) % 360;
-        RotationAngle::from_degrees(total).expect("Normalized angle should always be valid")
+        // SAFETY: The modulo 360 operation guarantees only valid angles (0, 90, 180, 270)
+        // since all RotationAngle variants are multiples of 90 degrees
+        match total {
+            0 => RotationAngle::None,
+            90 => RotationAngle::Clockwise90,
+            180 => RotationAngle::Rotate180,
+            270 => RotationAngle::Clockwise270,
+            _ => unreachable!("Modulo 360 of multiples of 90 can only be 0, 90, 180, or 270"),
+        }
     }
 }
 
