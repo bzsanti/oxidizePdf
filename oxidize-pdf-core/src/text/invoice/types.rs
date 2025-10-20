@@ -1,15 +1,62 @@
 //! Data types for invoice extraction
+//!
+//! This module provides the core data structures used by the invoice extraction system.
+//! It includes language definitions, field types, confidence scoring, and metadata.
+//!
+//! # Overview
+//!
+//! The invoice extraction system works in several stages:
+//! 1. Text extraction from PDF pages
+//! 2. Pattern matching against language-specific templates
+//! 3. Type conversion and confidence scoring
+//! 4. Structured data output with metadata
+//!
+//! # Examples
+//!
+//! ```
+//! use oxidize_pdf::text::invoice::{Language, InvoiceField, InvoiceExtractor};
+//!
+//! // Create extractor for Spanish invoices
+//! let extractor = InvoiceExtractor::builder()
+//!     .with_language("es")
+//!     .confidence_threshold(0.7)
+//!     .build();
+//! ```
 
 /// Supported languages for invoice extraction
+///
+/// Each language has specific patterns for:
+/// - Invoice number formats (e.g., "Factura Nº" vs "Invoice Number")
+/// - Date formats (DD/MM/YYYY vs MM/DD/YYYY vs DD.MM.YYYY)
+/// - Number formats (1.234,56 vs 1,234.56)
+/// - Field labels and terminology
+///
+/// # Language-Specific Behaviors
+///
+/// - **Spanish**: Uses European number format (1.234,56), DD/MM/YYYY dates
+/// - **English**: Uses US/UK number format (1,234.56), DD/MM/YYYY dates
+/// - **German**: Uses European number format (1.234,56), DD.MM.YYYY dates
+/// - **Italian**: Uses European number format (1.234,56), DD/MM/YYYY dates
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Language {
-    /// Spanish
+    /// Spanish (Spain, Latin America)
+    ///
+    /// Patterns include: "Factura", "CIF", "Base Imponible", "IVA"
     Spanish,
-    /// English (UK)
+
+    /// English (UK, US, International)
+    ///
+    /// Patterns include: "Invoice", "VAT Number", "Subtotal", "Total"
     English,
-    /// German
+
+    /// German (Germany, Austria, Switzerland)
+    ///
+    /// Patterns include: "Rechnung", "USt-IdNr.", "Nettobetrag", "MwSt."
     German,
-    /// Italian
+
+    /// Italian (Italy)
+    ///
+    /// Patterns include: "Fattura", "Partita IVA", "Imponibile", "IVA"
     Italian,
 }
 
@@ -46,16 +93,45 @@ impl Language {
     }
 }
 
-/// Bounding box for text positioning
+/// Bounding box for text positioning in PDF coordinate space
+///
+/// PDF coordinates start at bottom-left (0,0) with Y increasing upward.
+/// This structure represents a rectangular region where extracted text was found.
+///
+/// # Coordinate System
+///
+/// ```text
+/// (0, height)         (width, height)
+///     ┌─────────────────────┐
+///     │                     │
+///     │   Text content      │
+///     │                     │
+///     └─────────────────────┘
+/// (0, 0)              (width, 0)
+/// ```
+///
+/// # Examples
+///
+/// ```
+/// use oxidize_pdf::text::invoice::BoundingBox;
+///
+/// let bbox = BoundingBox::new(50.0, 100.0, 200.0, 20.0);
+/// assert!(bbox.contains(150.0, 110.0));  // Point inside
+/// assert!(!bbox.contains(300.0, 110.0)); // Point outside
+/// assert_eq!(bbox.area(), 4000.0);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BoundingBox {
-    /// X coordinate (left)
+    /// X coordinate of left edge (in PDF points from page origin)
     pub x: f64,
-    /// Y coordinate (bottom)
+
+    /// Y coordinate of bottom edge (in PDF points from page origin)
     pub y: f64,
-    /// Width
+
+    /// Width of the box (in PDF points)
     pub width: f64,
-    /// Height
+
+    /// Height of the box (in PDF points)
     pub height: f64,
 }
 
@@ -84,49 +160,104 @@ impl BoundingBox {
     }
 }
 
-/// Type of invoice field
+/// Extracted invoice field with strongly-typed data
+///
+/// Each variant represents a different type of information that can be extracted
+/// from an invoice. Fields are matched using language-specific patterns and
+/// converted to appropriate types (String for text, f64 for amounts).
+///
+/// # Type Conversion
+///
+/// - **String fields**: Invoice numbers, dates, names (preserved as-is)
+/// - **Amount fields**: Parsed with language-aware decimal handling
+///   - European format: `1.234,56` → `1234.56`
+///   - US/UK format: `1,234.56` → `1234.56`
+/// - **Quantity fields**: Parsed as floating-point numbers
+///
+/// # Examples
+///
+/// ```
+/// use oxidize_pdf::text::invoice::InvoiceField;
+///
+/// let invoice_number = InvoiceField::InvoiceNumber("INV-2025-001".to_string());
+/// let total = InvoiceField::TotalAmount(1234.56);
+///
+/// assert_eq!(invoice_number.name(), "Invoice Number");
+/// assert_eq!(total.name(), "Total Amount");
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum InvoiceField {
-    /// Invoice number (e.g., "INV-2025-001")
+    /// Invoice number (e.g., "INV-2025-001", "Factura Nº: 2025-001")
+    ///
+    /// Typically appears near the top of the invoice. Format varies by country
+    /// and company, but usually includes alphanumeric identifiers.
     InvoiceNumber(String),
 
-    /// Invoice date (ISO 8601 format)
+    /// Invoice date as extracted from document
+    ///
+    /// Format varies by language:
+    /// - Spanish/Italian: DD/MM/YYYY
+    /// - German: DD.MM.YYYY
+    /// - English: DD/MM/YYYY or MM/DD/YYYY
+    ///
+    /// Note: Stored as string, not parsed to Date type (MVP)
     InvoiceDate(String),
 
-    /// Due date (ISO 8601 format)
+    /// Due date for payment
+    ///
+    /// Same format considerations as InvoiceDate.
     DueDate(String),
 
-    /// Total amount including tax
+    /// Total amount including all taxes (in currency units)
+    ///
+    /// Also known as: "Total", "Grand Total", "Gesamtbetrag", "Totale"
     TotalAmount(f64),
 
-    /// Tax amount (VAT/IVA/MwSt)
+    /// Tax amount (VAT/IVA/MwSt/IVA in currency units)
+    ///
+    /// Represents the total tax charged. May include breakdown of different
+    /// tax rates (e.g., 21% VAT, 10% reduced rate).
     TaxAmount(f64),
 
-    /// Net amount (before tax)
+    /// Net amount before tax (in currency units)
+    ///
+    /// Also known as: "Subtotal", "Net Amount", "Base Imponible", "Nettobetrag", "Imponibile"
     NetAmount(f64),
 
     /// VAT/Tax identification number
+    ///
+    /// Format varies by country:
+    /// - Spain: CIF (A12345678)
+    /// - UK: VAT Number (GB123456789)
+    /// - Germany: USt-IdNr. (DE123456789)
+    /// - Italy: Partita IVA (IT12345678901)
     VatNumber(String),
 
-    /// Supplier/Vendor name
+    /// Supplier/Vendor name (company issuing the invoice)
     SupplierName(String),
 
-    /// Customer/Client name
+    /// Customer/Client name (company receiving the invoice)
     CustomerName(String),
 
-    /// Currency code (ISO 4217, e.g., "EUR", "GBP", "USD")
+    /// Currency code (ISO 4217)
+    ///
+    /// Examples: "EUR", "GBP", "USD", "CHF"
     Currency(String),
 
-    /// Article/Product number
+    /// Article/Product number for line items
+    ///
+    /// SKU, part number, or product code.
     ArticleNumber(String),
 
-    /// Line item description
+    /// Line item description/name
+    ///
+    /// Textual description of product or service.
     LineItemDescription(String),
 
-    /// Line item quantity
+    /// Line item quantity (units ordered/delivered)
     LineItemQuantity(f64),
 
-    /// Line item unit price
+    /// Line item unit price (price per unit, before tax)
     LineItemUnitPrice(f64),
 }
 

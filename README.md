@@ -25,12 +25,23 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🅰️ **Custom Fonts** - Load and embed TrueType/OpenType fonts with full Unicode support
 - 🔍 **OCR Support** - Extract text from scanned PDFs using Tesseract OCR (v0.1.3+)
 - 🤖 **AI/RAG Integration** - Document chunking for LLM pipelines with sentence boundaries and metadata (v1.3.0+)
+- 📋 **Invoice Extraction** - Automatic structured data extraction from invoice PDFs with multi-language support (v1.6.2+)
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
 ## 🎉 What's New
 
-**Latest: v1.3.0 - AI/RAG Integration:**
+**Latest: v1.6.2 - Invoice Data Extraction:**
+- 📋 **Structured Invoice Extraction** - Pattern-based field extraction with confidence scoring
+- 🌍 **Multi-Language Support** - Spanish, English, German, and Italian invoice formats
+- 🎯 **14 Field Types** - Invoice numbers, dates, amounts, VAT numbers, supplier/customer names, line items
+- 🔢 **Smart Number Parsing** - Language-aware decimal handling (1.234,56 vs 1,234.56)
+- 📊 **Confidence Scoring** - 0.0-1.0 confidence scores with configurable thresholds
+- 🔧 **Builder Pattern API** - Ergonomic configuration with sensible defaults
+- 📖 **Comprehensive Documentation** - 500+ line user guide with examples and troubleshooting
+- ⚡ **High Performance** - <100ms extraction for typical invoices, thread-safe extractor
+
+**v1.3.0 - AI/RAG Integration:**
 - 🤖 **Document Chunking for LLMs** - Production-ready chunking with 0.62ms for 100 pages
 - 📊 **Rich Metadata** - Page tracking, position info, confidence scores
 - ✂️ **Smart Boundaries** - Sentence boundary detection for semantic coherence
@@ -179,6 +190,61 @@ fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+### Invoice Data Extraction (v1.6.2+)
+
+```rust
+use oxidize_pdf::Document;
+use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
+use oxidize_pdf::text::invoice::{InvoiceExtractor, InvoiceField};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Open PDF invoice
+    let doc = Document::open("invoice.pdf")?;
+    let page = doc.get_page(1)?;
+
+    // Extract text from page
+    let text_extractor = TextExtractor::new();
+    let extracted = text_extractor.extract_text(&doc, page, &ExtractionOptions::default())?;
+
+    // Extract structured invoice data
+    let invoice_extractor = InvoiceExtractor::builder()
+        .with_language("es")           // Spanish invoices
+        .confidence_threshold(0.7)      // 70% minimum confidence
+        .build();
+
+    let invoice = invoice_extractor.extract(&extracted.fragments)?;
+
+    // Access extracted fields
+    println!("Extracted {} fields with {:.0}% overall confidence",
+        invoice.field_count(),
+        invoice.metadata.extraction_confidence * 100.0
+    );
+
+    for field in &invoice.fields {
+        match &field.field_type {
+            InvoiceField::InvoiceNumber(number) => {
+                println!("Invoice: {} ({:.0}% confidence)", number, field.confidence * 100.0);
+            }
+            InvoiceField::TotalAmount(amount) => {
+                println!("Total: €{:.2} ({:.0}% confidence)", amount, field.confidence * 100.0);
+            }
+            InvoiceField::InvoiceDate(date) => {
+                println!("Date: {} ({:.0}% confidence)", date, field.confidence * 100.0);
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+```
+
+**Supported Languages**: Spanish (ES), English (EN), German (DE), Italian (IT)
+
+**Extracted Fields**: Invoice number, dates, amounts (total/tax/net), VAT numbers, supplier/customer names, currency, line items
+
+See [docs/INVOICE_EXTRACTION_GUIDE.md](docs/INVOICE_EXTRACTION_GUIDE.md) for complete documentation.
 
 ### Custom Fonts Example
 
