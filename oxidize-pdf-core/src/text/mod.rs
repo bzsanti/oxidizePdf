@@ -12,6 +12,7 @@ mod layout;
 mod list;
 pub mod metrics;
 pub mod ocr;
+pub mod plaintext;
 pub mod table;
 pub mod validation;
 
@@ -39,6 +40,7 @@ pub use ocr::{
     OcrOptions, OcrPostProcessor, OcrProcessingResult, OcrProvider, OcrRegion, OcrResult,
     OcrTextFragment, WordConfidence,
 };
+pub use plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor, PlainTextResult};
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 
