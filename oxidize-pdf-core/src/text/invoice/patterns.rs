@@ -4,9 +4,8 @@
 //! structured data from invoice text.
 
 use super::error::{ExtractionError, Result};
-use super::types::{InvoiceField, Language};
+use super::types::Language;
 use regex::Regex;
-use std::collections::HashMap;
 
 /// A pattern for matching invoice fields
 #[derive(Debug, Clone)]
@@ -134,7 +133,114 @@ impl PatternLibrary {
 
     /// Load Spanish invoice patterns
     fn load_spanish_patterns(&mut self) {
-        // TODO: Implement Spanish patterns
+        // Invoice number patterns
+        // Matches: "Factura N° 2025-001", "Factura Nº: 12345", "Núm. Factura: INV-001"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::InvoiceNumber,
+            r"(?:Factura|FACTURA|Fac\.?)\s+(?:N[úuº°]?\.?|Número)\s*:?\s*([A-Z0-9][A-Z0-9\-/]*)",
+            0.9,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "factura".to_string(),
+                "número".to_string(),
+                "nº".to_string(),
+            ]));
+        }
+
+        // Invoice date patterns
+        // Matches: "Fecha: 15/03/2025", "Fecha de emisión: 15-03-2025"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::InvoiceDate,
+            r"(?:Fecha(?:\s+de\s+emisión)?|FECHA):?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+            0.85,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "fecha".to_string(),
+                "emisión".to_string(),
+            ]));
+        }
+
+        // Due date patterns
+        // Matches: "Vencimiento: 15/04/2025"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::DueDate,
+            r"(?:Vencimiento|Fecha\s+de\s+vencimiento|VENCIMIENTO):?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+            0.85,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "vencimiento".to_string(),
+            ]));
+        }
+
+        // Total amount patterns
+        // Matches: "Total: 1.234,56 €", "TOTAL: € 1.234,56", "Importe Total: 1234.56"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::TotalAmount,
+            r"(?:Total|TOTAL|Importe\s+Total):?\s*€?\s*([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2})\s*€?",
+            0.9,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "total".to_string(),
+                "importe".to_string(),
+            ]));
+        }
+
+        // Tax amount (IVA) patterns
+        // Matches: "IVA (21%): 123,45 €"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::TaxAmount,
+            r"(?:IVA|I\.V\.A\.|Impuesto).*?:?\s*€?\s*([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2})\s*€?",
+            0.85,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "iva".to_string(),
+                "impuesto".to_string(),
+            ]));
+        }
+
+        // Net amount patterns
+        // Matches: "Base Imponible: 500,00 €"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::NetAmount,
+            r"(?:Base\s+Imponible|Base):?\s*€?\s*([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2})\s*€?",
+            0.85,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "base".to_string(),
+                "imponible".to_string(),
+            ]));
+        }
+
+        // VAT number patterns (Spanish CIF/NIF)
+        // Matches: "CIF: A12345678", "NIF: 12345678Z"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::VatNumber,
+            r"(?:CIF|NIF|N\.I\.F\.|C\.I\.F\.):?\s*([A-Z]?[0-9]{8}[A-Z0-9])",
+            0.9,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern.with_hints(vec![
+                "cif".to_string(),
+                "nif".to_string(),
+            ]));
+        }
+
+        // Currency pattern
+        // Matches: "€", "EUR"
+        if let Ok(pattern) = FieldPattern::new(
+            InvoiceFieldType::Currency,
+            r"(€|EUR)",
+            0.7,
+            Some(Language::Spanish),
+        ) {
+            self.add_pattern(pattern);
+        }
     }
 
     /// Load English invoice patterns

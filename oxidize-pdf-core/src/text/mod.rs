@@ -1,6 +1,6 @@
 pub mod cmap;
 mod encoding;
-mod extraction;
+pub mod extraction;
 mod extraction_cmap;
 mod flow;
 mod font;
