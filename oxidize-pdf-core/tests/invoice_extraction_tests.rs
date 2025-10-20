@@ -131,10 +131,7 @@ fn test_extract_spanish_invoice_basic() {
             field.confidence >= 0.7,
             "All fields should meet confidence threshold"
         );
-        assert!(
-            field.confidence <= 1.0,
-            "Confidence should not exceed 1.0"
-        );
+        assert!(field.confidence <= 1.0, "Confidence should not exceed 1.0");
     }
 
     // Verify overall confidence
@@ -146,9 +143,7 @@ fn test_extract_spanish_invoice_basic() {
 
 #[test]
 fn test_extract_empty_fragments() {
-    let extractor = InvoiceExtractor::builder()
-        .with_language("es")
-        .build();
+    let extractor = InvoiceExtractor::builder().with_language("es").build();
 
     let result = extractor.extract(&[]);
     assert!(result.is_err(), "Should fail with empty fragments");
@@ -248,9 +243,7 @@ fn test_european_number_format() {
         },
     ];
 
-    let extractor = InvoiceExtractor::builder()
-        .with_language("es")
-        .build();
+    let extractor = InvoiceExtractor::builder().with_language("es").build();
 
     let result = extractor.extract(&fragments).unwrap();
 

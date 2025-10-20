@@ -186,8 +186,7 @@ impl InvoiceExtractor {
         let mut fields = Vec::new();
         for (field_type, matched_value, base_confidence) in matches {
             // Calculate confidence score with context
-            let confidence =
-                self.calculate_confidence(base_confidence, &matched_value, &full_text);
+            let confidence = self.calculate_confidence(base_confidence, &matched_value, &full_text);
 
             // Skip fields below threshold
             if confidence < self.confidence_threshold {
@@ -198,8 +197,7 @@ impl InvoiceExtractor {
             let position = self.find_match_position(&matched_value, text_fragments);
 
             // Convert to proper InvoiceField with typed data
-            if let Some(invoice_field) = self.convert_to_invoice_field(field_type, &matched_value)
-            {
+            if let Some(invoice_field) = self.convert_to_invoice_field(field_type, &matched_value) {
                 fields.push(ExtractedField::new(
                     invoice_field,
                     confidence,
@@ -269,11 +267,7 @@ impl InvoiceExtractor {
     }
 
     /// Find the bounding box of a matched value in the fragments
-    fn find_match_position(
-        &self,
-        matched_value: &str,
-        fragments: &[TextFragment],
-    ) -> BoundingBox {
+    fn find_match_position(&self, matched_value: &str, fragments: &[TextFragment]) -> BoundingBox {
         // Simple approach: find first fragment containing the value
         for fragment in fragments {
             if fragment.text.contains(matched_value) {
@@ -302,32 +296,22 @@ impl InvoiceExtractor {
             InvoiceFieldType::TotalAmount => {
                 self.parse_amount(value).map(InvoiceField::TotalAmount)
             }
-            InvoiceFieldType::TaxAmount => {
-                self.parse_amount(value).map(InvoiceField::TaxAmount)
-            }
-            InvoiceFieldType::NetAmount => {
-                self.parse_amount(value).map(InvoiceField::NetAmount)
-            }
+            InvoiceFieldType::TaxAmount => self.parse_amount(value).map(InvoiceField::TaxAmount),
+            InvoiceFieldType::NetAmount => self.parse_amount(value).map(InvoiceField::NetAmount),
             InvoiceFieldType::VatNumber => Some(InvoiceField::VatNumber(value.to_string())),
-            InvoiceFieldType::SupplierName => {
-                Some(InvoiceField::SupplierName(value.to_string()))
-            }
-            InvoiceFieldType::CustomerName => {
-                Some(InvoiceField::CustomerName(value.to_string()))
-            }
+            InvoiceFieldType::SupplierName => Some(InvoiceField::SupplierName(value.to_string())),
+            InvoiceFieldType::CustomerName => Some(InvoiceField::CustomerName(value.to_string())),
             InvoiceFieldType::Currency => Some(InvoiceField::Currency(value.to_string())),
-            InvoiceFieldType::ArticleNumber => {
-                Some(InvoiceField::ArticleNumber(value.to_string()))
-            }
+            InvoiceFieldType::ArticleNumber => Some(InvoiceField::ArticleNumber(value.to_string())),
             InvoiceFieldType::LineItemDescription => {
                 Some(InvoiceField::LineItemDescription(value.to_string()))
             }
             InvoiceFieldType::LineItemQuantity => {
                 self.parse_amount(value).map(InvoiceField::LineItemQuantity)
             }
-            InvoiceFieldType::LineItemUnitPrice => {
-                self.parse_amount(value).map(InvoiceField::LineItemUnitPrice)
-            }
+            InvoiceFieldType::LineItemUnitPrice => self
+                .parse_amount(value)
+                .map(InvoiceField::LineItemUnitPrice),
         }
     }
 }
@@ -472,9 +456,7 @@ mod tests {
 
     #[test]
     fn test_builder_with_language() {
-        let extractor = InvoiceExtractor::builder()
-            .with_language("es")
-            .build();
+        let extractor = InvoiceExtractor::builder().with_language("es").build();
         assert_eq!(extractor.language, Some(Language::Spanish));
     }
 
@@ -488,9 +470,7 @@ mod tests {
 
     #[test]
     fn test_builder_use_kerning() {
-        let extractor = InvoiceExtractor::builder()
-            .use_kerning(false)
-            .build();
+        let extractor = InvoiceExtractor::builder().use_kerning(false).build();
         assert!(!extractor.use_kerning);
     }
 }

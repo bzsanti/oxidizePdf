@@ -148,10 +148,7 @@ impl BoundingBox {
 
     /// Check if this bounding box contains a point
     pub fn contains(&self, px: f64, py: f64) -> bool {
-        px >= self.x
-            && px <= self.x + self.width
-            && py >= self.y
-            && py <= self.y + self.height
+        px >= self.x && px <= self.x + self.width && py >= self.y && py <= self.y + self.height
     }
 
     /// Calculate the area of the bounding box

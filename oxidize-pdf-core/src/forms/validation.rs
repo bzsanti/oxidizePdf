@@ -444,7 +444,9 @@ impl FormValidationSystem {
                 let text = value.to_string();
                 // SAFETY: Hardcoded regex pattern is compile-time validated
                 // If this fails, it's a programmer error that should be caught in tests
-                if let Ok(email_regex) = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$") {
+                if let Ok(email_regex) =
+                    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                {
                     if email_regex.is_match(&text) {
                         Ok(())
                     } else {

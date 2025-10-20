@@ -110,11 +110,7 @@ impl PatternLibrary {
 
         for pattern in &self.patterns {
             if let Some(matched_value) = pattern.matches(text) {
-                matches.push((
-                    pattern.field_type,
-                    matched_value,
-                    pattern.confidence_base,
-                ));
+                matches.push((pattern.field_type, matched_value, pattern.confidence_base));
             }
         }
 
@@ -156,10 +152,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Spanish),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "fecha".to_string(),
-                "emisión".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["fecha".to_string(), "emisión".to_string()]));
         }
 
         // Due date patterns
@@ -170,9 +163,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Spanish),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "vencimiento".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["vencimiento".to_string()]));
         }
 
         // Total amount patterns
@@ -183,10 +174,7 @@ impl PatternLibrary {
             0.9,
             Some(Language::Spanish),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "total".to_string(),
-                "importe".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["total".to_string(), "importe".to_string()]));
         }
 
         // Tax amount (IVA) patterns
@@ -197,10 +185,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Spanish),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "iva".to_string(),
-                "impuesto".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["iva".to_string(), "impuesto".to_string()]));
         }
 
         // Net amount patterns
@@ -211,10 +196,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Spanish),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "base".to_string(),
-                "imponible".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["base".to_string(), "imponible".to_string()]));
         }
 
         // VAT number patterns (Spanish CIF/NIF)
@@ -225,10 +207,7 @@ impl PatternLibrary {
             0.9,
             Some(Language::Spanish),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "cif".to_string(),
-                "nif".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["cif".to_string(), "nif".to_string()]));
         }
 
         // Currency pattern
@@ -268,10 +247,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::English),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "date".to_string(),
-                "invoice".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["date".to_string(), "invoice".to_string()]));
         }
 
         // Due date patterns
@@ -282,10 +258,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::English),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "due".to_string(),
-                "payment".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["due".to_string(), "payment".to_string()]));
         }
 
         // Total amount patterns
@@ -311,10 +284,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::English),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "vat".to_string(),
-                "tax".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["vat".to_string(), "tax".to_string()]));
         }
 
         // Net amount patterns
@@ -325,10 +295,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::English),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "subtotal".to_string(),
-                "net".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["subtotal".to_string(), "net".to_string()]));
         }
 
         // VAT number patterns
@@ -339,10 +306,9 @@ impl PatternLibrary {
             0.9,
             Some(Language::English),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "vat".to_string(),
-                "registration".to_string(),
-            ]));
+            self.add_pattern(
+                pattern.with_hints(vec!["vat".to_string(), "registration".to_string()]),
+            );
         }
 
         // Currency pattern
@@ -382,10 +348,9 @@ impl PatternLibrary {
             0.85,
             Some(Language::German),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "datum".to_string(),
-                "rechnungsdatum".to_string(),
-            ]));
+            self.add_pattern(
+                pattern.with_hints(vec!["datum".to_string(), "rechnungsdatum".to_string()]),
+            );
         }
 
         // Due date patterns
@@ -396,10 +361,9 @@ impl PatternLibrary {
             0.85,
             Some(Language::German),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "fälligkeitsdatum".to_string(),
-                "zahlbar".to_string(),
-            ]));
+            self.add_pattern(
+                pattern.with_hints(vec!["fälligkeitsdatum".to_string(), "zahlbar".to_string()]),
+            );
         }
 
         // Total amount patterns
@@ -440,10 +404,9 @@ impl PatternLibrary {
             0.85,
             Some(Language::German),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "nettobetrag".to_string(),
-                "zwischensumme".to_string(),
-            ]));
+            self.add_pattern(
+                pattern.with_hints(vec!["nettobetrag".to_string(), "zwischensumme".to_string()]),
+            );
         }
 
         // VAT number patterns (German USt-IdNr or Steuernummer)
@@ -454,10 +417,9 @@ impl PatternLibrary {
             0.9,
             Some(Language::German),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "ust-idnr".to_string(),
-                "steuernummer".to_string(),
-            ]));
+            self.add_pattern(
+                pattern.with_hints(vec!["ust-idnr".to_string(), "steuernummer".to_string()]),
+            );
         }
 
         // Currency pattern
@@ -482,10 +444,7 @@ impl PatternLibrary {
             0.9,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "fattura".to_string(),
-                "numero".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["fattura".to_string(), "numero".to_string()]));
         }
 
         // Invoice date patterns
@@ -496,10 +455,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "data".to_string(),
-                "fattura".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["data".to_string(), "fattura".to_string()]));
         }
 
         // Due date patterns
@@ -510,9 +466,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "scadenza".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["scadenza".to_string()]));
         }
 
         // Total amount patterns
@@ -523,10 +477,7 @@ impl PatternLibrary {
             0.9,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "totale".to_string(),
-                "importo".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["totale".to_string(), "importo".to_string()]));
         }
 
         // Tax amount (IVA) patterns
@@ -537,10 +488,7 @@ impl PatternLibrary {
             0.85,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "iva".to_string(),
-                "imposta".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["iva".to_string(), "imposta".to_string()]));
         }
 
         // Net amount patterns
@@ -551,10 +499,9 @@ impl PatternLibrary {
             0.85,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "imponibile".to_string(),
-                "subtotale".to_string(),
-            ]));
+            self.add_pattern(
+                pattern.with_hints(vec!["imponibile".to_string(), "subtotale".to_string()]),
+            );
         }
 
         // VAT number patterns (Italian P.IVA)
@@ -565,10 +512,7 @@ impl PatternLibrary {
             0.9,
             Some(Language::Italian),
         ) {
-            self.add_pattern(pattern.with_hints(vec![
-                "p.iva".to_string(),
-                "partita".to_string(),
-            ]));
+            self.add_pattern(pattern.with_hints(vec!["p.iva".to_string(), "partita".to_string()]));
         }
 
         // Currency pattern
@@ -602,8 +546,7 @@ mod tests {
 
     #[test]
     fn test_field_pattern_creation() {
-        let pattern =
-            FieldPattern::new(InvoiceFieldType::InvoiceNumber, r"INV-(\d+)", 0.9, None);
+        let pattern = FieldPattern::new(InvoiceFieldType::InvoiceNumber, r"INV-(\d+)", 0.9, None);
         assert!(pattern.is_ok());
     }
 
