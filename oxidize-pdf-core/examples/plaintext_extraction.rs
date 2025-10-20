@@ -23,7 +23,7 @@
 //! Plain text extraction is >30% faster than TextExtractor when position
 //! data is not needed.
 
-use oxidize_pdf::parser::document::PdfDocument;
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor};
 use std::env;
 use std::fs::File;
@@ -44,7 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Open PDF document
     let file = File::open(pdf_path)?;
-    let doc = PdfDocument::open(file)?;
+    let reader = PdfReader::new(file)?;
+    let doc = PdfDocument::new(reader);
 
     let page_count = doc.page_count()?;
     println!("📖 Document has {} pages\n", page_count);

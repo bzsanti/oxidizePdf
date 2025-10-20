@@ -17,10 +17,9 @@
 //! - Direct text stream processing
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use oxidize_pdf::parser::document::PdfDocument;
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::text::plaintext::PlainTextExtractor;
-use std::fs::File;
 use std::io::Cursor;
 
 /// Create a simple in-memory PDF for testing
@@ -81,8 +80,9 @@ fn benchmark_plaintext_extractor(c: &mut Criterion) {
     c.bench_function("plaintext_extractor", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor)
-                .expect("Failed to open benchmark PDF - check create_test_pdf()");
+            let reader = PdfReader::new(cursor)
+                .expect("Failed to create reader from benchmark PDF - check create_test_pdf()");
+            let doc = PdfDocument::new(reader);
             let mut extractor = PlainTextExtractor::new();
             let result = extractor.extract(&doc, 0)
                 .expect("Failed to extract text from benchmark PDF");
@@ -97,8 +97,9 @@ fn benchmark_standard_text_extractor(c: &mut Criterion) {
     c.bench_function("standard_text_extractor", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor)
-                .expect("Failed to open benchmark PDF - check create_test_pdf()");
+            let reader = PdfReader::new(cursor)
+                .expect("Failed to create reader from benchmark PDF - check create_test_pdf()");
+            let doc = PdfDocument::new(reader);
             let mut extractor = TextExtractor::with_options(ExtractionOptions::default());
             let result = extractor.extract_from_page(&doc, 0)
                 .expect("Failed to extract text from benchmark PDF");
@@ -115,8 +116,9 @@ fn benchmark_comparison(c: &mut Criterion) {
     group.bench_function("plaintext", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor)
-                .expect("Failed to open benchmark PDF - check create_test_pdf()");
+            let reader = PdfReader::new(cursor)
+                .expect("Failed to create reader from benchmark PDF - check create_test_pdf()");
+            let doc = PdfDocument::new(reader);
             let mut extractor = PlainTextExtractor::new();
             let result = extractor.extract(&doc, 0)
                 .expect("Failed to extract text from benchmark PDF");
@@ -127,8 +129,9 @@ fn benchmark_comparison(c: &mut Criterion) {
     group.bench_function("standard", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor)
-                .expect("Failed to open benchmark PDF - check create_test_pdf()");
+            let reader = PdfReader::new(cursor)
+                .expect("Failed to create reader from benchmark PDF - check create_test_pdf()");
+            let doc = PdfDocument::new(reader);
             let mut extractor = TextExtractor::with_options(ExtractionOptions::default());
             let result = extractor.extract_from_page(&doc, 0)
                 .expect("Failed to extract text from benchmark PDF");

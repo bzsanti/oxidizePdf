@@ -379,6 +379,10 @@ harness = false
 name = "ai_chunking"
 harness = false
 
+[[bench]]
+name = "plaintext_benchmark"
+harness = false
+
 [features]
 default = ["compression", "ocr-tesseract"]
 
