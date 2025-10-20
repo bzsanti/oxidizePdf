@@ -162,7 +162,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result_normalize = extractor_normalize.extract(&doc, page_index)?;
     println!("📝 Normalize mode (joins hyphenated words):");
     println!("   Lines: {}", result_normalize.line_count);
-    println!("   Sample: {}\n", truncate_text(&result_normalize.text, 200));
+    println!(
+        "   Sample: {}\n",
+        truncate_text(&result_normalize.text, 200)
+    );
 
     // Summary
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

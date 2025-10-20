@@ -13,6 +13,7 @@ mod list;
 pub mod metrics;
 pub mod ocr;
 pub mod plaintext;
+pub mod structured;
 pub mod table;
 pub mod validation;
 

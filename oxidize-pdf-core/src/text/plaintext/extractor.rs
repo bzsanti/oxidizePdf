@@ -155,7 +155,9 @@ impl PlainTextExtractor {
         self.text_extractor = TextExtractor::with_options(options);
 
         // Extract text using the base extractor
-        let extracted = self.text_extractor.extract_from_page(document, page_index)?;
+        let extracted = self
+            .text_extractor
+            .extract_from_page(document, page_index)?;
 
         // Apply line break mode processing (text is already assembled)
         let processed_text = self.apply_line_break_mode(&extracted.text);
@@ -195,11 +197,7 @@ impl PlainTextExtractor {
     ) -> ParseResult<Vec<String>> {
         let result = self.extract(document, page_index)?;
 
-        Ok(result
-            .text
-            .lines()
-            .map(|line| line.to_string())
-            .collect())
+        Ok(result.text.lines().map(|line| line.to_string()).collect())
     }
 
     /// Convert PlainTextConfig to ExtractionOptions
@@ -216,7 +214,6 @@ impl PlainTextExtractor {
             merge_hyphenated: matches!(self.config.line_break_mode, LineBreakMode::Normalize),
         }
     }
-
 
     /// Apply line break mode processing
     ///
@@ -392,7 +389,10 @@ mod tests {
         let text = "First sentence.\nSecond sentence.\nThird sentence.";
         let processed = extractor.auto_line_breaks(text);
         // Should preserve newlines after punctuation
-        assert_eq!(processed, "First sentence.\nSecond sentence.\nThird sentence.");
+        assert_eq!(
+            processed,
+            "First sentence.\nSecond sentence.\nThird sentence."
+        );
     }
 
     #[test]
