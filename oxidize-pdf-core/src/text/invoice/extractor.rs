@@ -11,6 +11,7 @@ use crate::text::extraction::TextFragment;
 pub struct InvoiceExtractor {
     pattern_library: PatternLibrary,
     confidence_threshold: f64,
+    #[allow(dead_code)] // TODO: Use in reconstruct_text() for kerning-aware spacing
     use_kerning: bool,
     language: Option<Language>,
 }
@@ -85,6 +86,25 @@ impl InvoiceExtractor {
             .join(" ")
     }
 
+    /// Parse amount with language-aware decimal handling
+    fn parse_amount(&self, value: &str) -> Option<f64> {
+        // Determine decimal format based on language
+        let uses_european_format = matches!(
+            self.language,
+            Some(Language::Spanish) | Some(Language::German) | Some(Language::Italian)
+        );
+
+        let normalized = if uses_european_format {
+            // European format: 1.234,56 → remove dots (thousands), replace comma with dot (decimal)
+            value.replace('.', "").replace(',', ".")
+        } else {
+            // US/UK format: 1,234.56 → remove commas (thousands), dot is already decimal
+            value.replace(',', "")
+        };
+
+        normalized.parse::<f64>().ok()
+    }
+
     /// Calculate confidence score for a match
     fn calculate_confidence(
         &self,
@@ -132,20 +152,13 @@ impl InvoiceExtractor {
             InvoiceFieldType::InvoiceDate => Some(InvoiceField::InvoiceDate(value.to_string())),
             InvoiceFieldType::DueDate => Some(InvoiceField::DueDate(value.to_string())),
             InvoiceFieldType::TotalAmount => {
-                // Parse amount (handle European format: 1.234,56)
-                let normalized = value.replace('.', "").replace(',', ".");
-                normalized
-                    .parse::<f64>()
-                    .ok()
-                    .map(InvoiceField::TotalAmount)
+                self.parse_amount(value).map(InvoiceField::TotalAmount)
             }
             InvoiceFieldType::TaxAmount => {
-                let normalized = value.replace('.', "").replace(',', ".");
-                normalized.parse::<f64>().ok().map(InvoiceField::TaxAmount)
+                self.parse_amount(value).map(InvoiceField::TaxAmount)
             }
             InvoiceFieldType::NetAmount => {
-                let normalized = value.replace('.', "").replace(',', ".");
-                normalized.parse::<f64>().ok().map(InvoiceField::NetAmount)
+                self.parse_amount(value).map(InvoiceField::NetAmount)
             }
             InvoiceFieldType::VatNumber => Some(InvoiceField::VatNumber(value.to_string())),
             InvoiceFieldType::SupplierName => {
