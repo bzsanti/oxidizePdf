@@ -7,6 +7,7 @@ mod font;
 pub mod font_manager;
 pub mod fonts;
 mod header_footer;
+pub mod invoice;
 mod layout;
 mod list;
 pub mod metrics;
