@@ -81,9 +81,11 @@ fn benchmark_plaintext_extractor(c: &mut Criterion) {
     c.bench_function("plaintext_extractor", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor).unwrap();
+            let doc = PdfDocument::open(cursor)
+                .expect("Failed to open benchmark PDF - check create_test_pdf()");
             let mut extractor = PlainTextExtractor::new();
-            let result = extractor.extract(&doc, 0).unwrap();
+            let result = extractor.extract(&doc, 0)
+                .expect("Failed to extract text from benchmark PDF");
             black_box(result);
         });
     });
@@ -95,9 +97,11 @@ fn benchmark_standard_text_extractor(c: &mut Criterion) {
     c.bench_function("standard_text_extractor", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor).unwrap();
+            let doc = PdfDocument::open(cursor)
+                .expect("Failed to open benchmark PDF - check create_test_pdf()");
             let mut extractor = TextExtractor::with_options(ExtractionOptions::default());
-            let result = extractor.extract_from_page(&doc, 0).unwrap();
+            let result = extractor.extract_from_page(&doc, 0)
+                .expect("Failed to extract text from benchmark PDF");
             black_box(result);
         });
     });
@@ -111,9 +115,11 @@ fn benchmark_comparison(c: &mut Criterion) {
     group.bench_function("plaintext", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor).unwrap();
+            let doc = PdfDocument::open(cursor)
+                .expect("Failed to open benchmark PDF - check create_test_pdf()");
             let mut extractor = PlainTextExtractor::new();
-            let result = extractor.extract(&doc, 0).unwrap();
+            let result = extractor.extract(&doc, 0)
+                .expect("Failed to extract text from benchmark PDF");
             black_box(result);
         });
     });
@@ -121,9 +127,11 @@ fn benchmark_comparison(c: &mut Criterion) {
     group.bench_function("standard", |b| {
         b.iter(|| {
             let cursor = Cursor::new(pdf_data.clone());
-            let doc = PdfDocument::open(cursor).unwrap();
+            let doc = PdfDocument::open(cursor)
+                .expect("Failed to open benchmark PDF - check create_test_pdf()");
             let mut extractor = TextExtractor::with_options(ExtractionOptions::default());
-            let result = extractor.extract_from_page(&doc, 0).unwrap();
+            let result = extractor.extract_from_page(&doc, 0)
+                .expect("Failed to extract text from benchmark PDF");
             black_box(result);
         });
     });
