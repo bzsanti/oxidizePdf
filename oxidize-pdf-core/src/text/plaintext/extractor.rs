@@ -1,7 +1,7 @@
-//! Plain text extractor implementation with direct content stream parsing
+//! Plain text extractor implementation with simplified API
 //!
-//! This module implements optimized extraction that parses content streams
-//! directly without creating position data structures.
+//! This module provides simplified text extraction that returns clean strings
+//! instead of position-annotated fragments.
 
 use super::types::{LineBreakMode, PlainTextConfig, PlainTextResult};
 use crate::parser::content::{ContentOperation, ContentParser};
