@@ -16,7 +16,7 @@
 //! providing robust validation beyond unit tests.
 
 use oxidize_pdf::parser::PdfReader;
-use oxidize_pdf::text::extraction::TextExtractor;
+use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::text::invoice::{InvoiceExtractor, InvoiceField};
 use oxidize_pdf::text::plaintext::PlainTextExtractor;
 use oxidize_pdf::text::structured::StructuredDataDetector;
@@ -45,7 +45,7 @@ fn create_test_invoice() -> Vec<u8> {
         .write("Fecha: 20/01/2025")
         .unwrap()
         .at(50.0, 680.0)
-        .write("CIF: A12345678")
+        .write("CIF: A12345678Z") // Spanish CIF format: Letter + 8 digits + check char
         .unwrap();
 
     // Amounts (European format: 1.000,00)
@@ -86,8 +86,12 @@ fn test_invoice_extraction_end_to_end() {
     // 2. Open PDF with parser
     let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
 
-    // 3. Extract text with TextExtractor
-    let mut text_extractor = TextExtractor::new();
+    // 3. Extract text with TextExtractor (enable fragments for invoice extraction)
+    let options = ExtractionOptions {
+        preserve_layout: true, // Required for fragment-based features
+        ..Default::default()
+    };
+    let mut text_extractor = TextExtractor::with_options(options);
     let extracted = text_extractor
         .extract_from_page(&pdf_doc, 0)
         .expect("Failed to extract text");
@@ -134,8 +138,8 @@ fn test_invoice_extraction_end_to_end() {
         match &field.field_type {
             InvoiceField::VatNumber(value) => {
                 assert!(
-                    value.contains("A12345678"),
-                    "VAT number should contain A12345678, got: {}",
+                    value.contains("A12345678Z"),
+                    "VAT number should contain A12345678Z, got: {}",
                     value
                 );
             }
@@ -184,8 +188,14 @@ fn test_plaintext_extraction_end_to_end() {
     // 2. Open PDF with parser
     let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
 
-    // 3. Extract with PlainTextExtractor
-    let mut extractor = PlainTextExtractor::new();
+    // 3. Extract with PlainTextExtractor (preserve_layout + PreserveAll for testing)
+    use oxidize_pdf::text::plaintext::{LineBreakMode, PlainTextConfig};
+    let config = PlainTextConfig {
+        preserve_layout: true, // Required for correct newline insertion
+        line_break_mode: LineBreakMode::PreserveAll, // Keep all line breaks for testing
+        ..Default::default()
+    };
+    let mut extractor = PlainTextExtractor::with_config(config);
     let result = extractor
         .extract(&pdf_doc, 0)
         .expect("Failed to extract plain text");
@@ -203,7 +213,7 @@ fn test_plaintext_extraction_end_to_end() {
         "Should contain invoice number"
     );
     assert!(
-        result.text.contains("A12345678"),
+        result.text.contains("A12345678Z"),
         "Should contain CIF/VAT number"
     );
     assert!(
@@ -242,8 +252,12 @@ fn test_structured_data_extraction_end_to_end() {
     // 2. Open PDF with parser
     let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
 
-    // 3. Extract text fragments
-    let mut text_extractor = TextExtractor::new();
+    // 3. Extract text fragments (enable fragments for structured data detection)
+    let options = ExtractionOptions {
+        preserve_layout: true, // Required for fragment-based features
+        ..Default::default()
+    };
+    let mut text_extractor = TextExtractor::with_options(options);
     let extracted = text_extractor
         .extract_from_page(&pdf_doc, 0)
         .expect("Failed to extract text");

@@ -32,6 +32,7 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 80.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "Email: john@example.com".to_string(),
@@ -40,6 +41,7 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 120.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "Phone: (555) 123-4567".to_string(),
@@ -48,6 +50,7 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 110.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
     ];
 
@@ -77,6 +80,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 50.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "$125.00".to_string(),
@@ -85,6 +89,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 50.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         // Second line
         TextFragment {
@@ -94,6 +99,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 30.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "$12.50".to_string(),
@@ -102,6 +108,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 45.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
     ];
 
@@ -132,6 +139,7 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 80.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "Priority\tHigh".to_string(),
@@ -140,6 +148,7 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
             width: 70.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
     ];
 
@@ -171,6 +180,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             width: 120.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "Date: 2025-10-20".to_string(),
@@ -179,6 +189,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             width: 90.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         // Spatially aligned
         TextFragment {
@@ -188,6 +199,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             width: 60.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "Acme Corp".to_string(),
@@ -196,6 +208,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             width: 70.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         // Tab-separated
         TextFragment {
@@ -205,6 +218,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             width: 80.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
     ];
 

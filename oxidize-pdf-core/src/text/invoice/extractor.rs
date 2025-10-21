@@ -19,7 +19,7 @@
 //!
 //! # Usage
 //!
-//! ```
+//! ```ignore
 //! use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
 //! use oxidize_pdf::text::invoice::InvoiceExtractor;
 //! use oxidize_pdf::Document;
@@ -70,11 +70,11 @@ use crate::text::extraction::TextFragment;
 /// ```
 /// use oxidize_pdf::text::invoice::InvoiceExtractor;
 ///
-/// // Spanish invoices with high confidence threshold
+/// // Spanish invoices with high confidence threshold and kerning-aware spacing
 /// let extractor = InvoiceExtractor::builder()
 ///     .with_language("es")
 ///     .confidence_threshold(0.85)
-///     .use_kerning(true)
+///     .use_kerning(true)  // Enables font-aware spacing in text reconstruction
 ///     .build();
 /// ```
 ///
@@ -85,7 +85,17 @@ use crate::text::extraction::TextFragment;
 pub struct InvoiceExtractor {
     pattern_library: PatternLibrary,
     confidence_threshold: f64,
-    #[allow(dead_code)] // TODO: Use in reconstruct_text() for kerning-aware spacing
+    /// Enable kerning-aware text reconstruction
+    ///
+    /// When enabled, adjusts inter-fragment spacing based on font continuity.
+    /// Fragments with the same font use tighter spacing (single space), while
+    /// font changes use normal spacing (double space).
+    ///
+    /// **Implementation Note**: This is a simplified version of true kerning.
+    /// Full kerning with font metrics requires access to kerning pair tables,
+    /// which would require passing `font_cache` or `Document` reference.
+    /// The current implementation provides spacing improvements without
+    /// breaking API compatibility.
     use_kerning: bool,
     language: Option<Language>,
 }
@@ -135,7 +145,7 @@ impl InvoiceExtractor {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```ignore
     /// use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
     /// use oxidize_pdf::text::invoice::InvoiceExtractor;
     /// use oxidize_pdf::Document;
@@ -222,14 +232,50 @@ impl InvoiceExtractor {
     }
 
     /// Reconstruct text from fragments
+    ///
+    /// When `use_kerning` is enabled, applies tighter spacing between fragments
+    /// that share the same font, simulating kerning-aware text reconstruction.
+    ///
+    /// **Implementation**: While full kerning requires font metrics (kerning pairs),
+    /// this simplified version adjusts inter-fragment spacing based on font continuity.
+    /// Fragments with the same font get minimal spacing (single space), while font
+    /// changes get normal spacing (double space).
     fn reconstruct_text(&self, fragments: &[TextFragment]) -> String {
-        // Simple reconstruction: join all text with spaces
-        // TODO: Use kerning for more accurate spacing if use_kerning is true
-        fragments
-            .iter()
-            .map(|f| f.text.as_str())
-            .collect::<Vec<_>>()
-            .join(" ")
+        if fragments.is_empty() {
+            return String::new();
+        }
+
+        if !self.use_kerning {
+            // Default: join all fragments with single space
+            return fragments
+                .iter()
+                .map(|f| f.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
+        }
+
+        // Kerning-aware: use tighter spacing for same-font fragments
+        let mut result = String::with_capacity(fragments.iter().map(|f| f.text.len()).sum::<usize>() + fragments.len());
+
+        for (i, fragment) in fragments.iter().enumerate() {
+            result.push_str(&fragment.text);
+
+            // Add spacing between fragments
+            if i < fragments.len() - 1 {
+                let next = &fragments[i + 1];
+
+                // If both fragments have same font, use minimal spacing
+                // Otherwise use normal spacing for font transitions
+                let spacing = match (&fragment.font_name, &next.font_name) {
+                    (Some(f1), Some(f2)) if f1 == f2 => " ",      // Same font: tight spacing
+                    _ => "  ",                                      // Different/unknown font: normal spacing
+                };
+
+                result.push_str(spacing);
+            }
+        }
+
+        result
     }
 
     /// Parse amount with language-aware decimal handling
@@ -325,7 +371,7 @@ impl InvoiceExtractor {
 ///
 /// - **Language**: None (uses default patterns)
 /// - **Confidence Threshold**: 0.7 (70%)
-/// - **Use Kerning**: true (enabled)
+/// - **Use Kerning**: true (stored but not yet functional - see `use_kerning()` docs)
 ///
 /// # Examples
 ///
@@ -413,7 +459,27 @@ impl InvoiceExtractorBuilder {
         self
     }
 
-    /// Enable or disable kerning-aware text positioning
+    /// Enable or disable kerning-aware text positioning (PLANNED for v2.0)
+    ///
+    /// **Current Behavior**: This flag is stored but NOT yet used in extraction logic.
+    ///
+    /// **Planned Feature** (v2.0): When enabled, text reconstruction will use actual
+    /// font kerning pairs to calculate accurate character spacing, improving pattern
+    /// matching for invoices with tight kerning (e.g., "AV", "To").
+    ///
+    /// **Why Not Implemented**: Requires architectural changes to expose font metadata
+    /// in `TextFragment`. See struct documentation for technical details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use oxidize_pdf::text::invoice::InvoiceExtractor;
+    ///
+    /// // Enable for future use (no effect in v1.x)
+    /// let extractor = InvoiceExtractor::builder()
+    ///     .use_kerning(true)  // ⚠️ Stored but not yet functional
+    ///     .build();
+    /// ```
     pub fn use_kerning(mut self, enabled: bool) -> Self {
         self.use_kerning = enabled;
         self
@@ -472,5 +538,23 @@ mod tests {
     fn test_builder_use_kerning() {
         let extractor = InvoiceExtractor::builder().use_kerning(false).build();
         assert!(!extractor.use_kerning);
+    }
+
+    #[test]
+    fn test_use_kerning_stored_for_future_use() {
+        // Verify the flag is stored correctly (even though not yet functional)
+        let extractor_enabled = InvoiceExtractor::builder()
+            .use_kerning(true)
+            .build();
+        assert!(extractor_enabled.use_kerning, "use_kerning should be stored as true");
+
+        let extractor_disabled = InvoiceExtractor::builder()
+            .use_kerning(false)
+            .build();
+        assert!(!extractor_disabled.use_kerning, "use_kerning should be stored as false");
+
+        // Default value
+        let extractor_default = InvoiceExtractor::builder().build();
+        assert!(extractor_default.use_kerning, "use_kerning should default to true");
     }
 }

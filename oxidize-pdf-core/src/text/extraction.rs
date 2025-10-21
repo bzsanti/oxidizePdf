@@ -69,6 +69,8 @@ pub struct TextFragment {
     pub height: f64,
     /// Font size
     pub font_size: f64,
+    /// Font name (if known) - used for kerning-aware text spacing
+    pub font_name: Option<String>,
 }
 
 /// Text extraction state
@@ -269,6 +271,7 @@ impl TextExtractor {
                                     ),
                                     height: state.font_size,
                                     font_size: state.font_size,
+                                    font_name: state.font_name.clone(),
                                 });
                             }
 
@@ -738,6 +741,7 @@ mod tests {
             width: 50.0,
             height: 12.0,
             font_size: 10.0,
+            font_name: None,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -757,6 +761,7 @@ mod tests {
                 width: 50.0,
                 height: 12.0,
                 font_size: 10.0,
+                font_name: None,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -765,6 +770,7 @@ mod tests {
                 width: 50.0,
                 height: 12.0,
                 font_size: 10.0,
+                font_name: None,
             },
         ];
 

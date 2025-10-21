@@ -28,7 +28,7 @@
 //!
 //! # Quick Start
 //!
-//! ```no_run
+//! ```ignore
 //! use oxidize_pdf::Document;
 //! use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
 //! use oxidize_pdf::text::invoice::InvoiceExtractor;

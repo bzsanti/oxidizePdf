@@ -1,9 +1,0 @@
-{
-  "benchmark": "realistic_document",
-  "bytes_per_page": 1529,
-  "duration_secs": 0.022104263,
-  "file_size_bytes": 1529471,
-  "library": "lopdf",
-  "pages": 1000,
-  "pages_per_second": 45240.142139097785
-}

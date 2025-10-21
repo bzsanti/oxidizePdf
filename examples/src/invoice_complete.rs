@@ -127,9 +127,13 @@ impl Default for InvoiceGenerator {
             background_color: Color::RGB(1.0, 1.0, 1.0),   // White
             
             title_font_size: 24.0,
+            font_name: None,
             header_font_size: 12.0,
+            font_name: None,
             body_font_size: 10.0,
+            font_name: None,
             small_font_size: 8.0,
+            font_name: None,
             
             margin: 50.0,
             line_spacing: 1.2,

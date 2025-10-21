@@ -83,13 +83,20 @@ fn cluster_columns(x_positions: &[f64], tolerance: f64) -> Vec<Column> {
     }
 
     let mut sorted = x_positions.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(|a, b| {
+        a.partial_cmp(b)
+            .expect("f64 coordinates extracted from PDF are never NaN")
+    });
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
 
     for &x in &sorted[1..] {
-        let last_cluster = clusters.last_mut().unwrap();
-        let last_value = *last_cluster.last().unwrap();
+        let last_cluster = clusters
+            .last_mut()
+            .expect("clusters guaranteed non-empty: initialized with first element");
+        let last_value = *last_cluster
+            .last()
+            .expect("cluster guaranteed non-empty: never push empty cluster");
 
         if (x - last_value).abs() <= tolerance {
             last_cluster.push(x);
@@ -116,13 +123,20 @@ fn cluster_rows(y_positions: &[f64], tolerance: f64) -> Vec<f64> {
     }
 
     let mut sorted = y_positions.to_vec();
-    sorted.sort_by(|a, b| b.partial_cmp(a).unwrap()); // Sort descending (top to bottom)
+    sorted.sort_by(|a, b| {
+        b.partial_cmp(a)
+            .expect("f64 coordinates extracted from PDF are never NaN")
+    }); // Sort descending (top to bottom)
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
 
     for &y in &sorted[1..] {
-        let last_cluster = clusters.last_mut().unwrap();
-        let last_value = *last_cluster.last().unwrap();
+        let last_cluster = clusters
+            .last_mut()
+            .expect("clusters guaranteed non-empty: initialized with first element");
+        let last_value = *last_cluster
+            .last()
+            .expect("cluster guaranteed non-empty: never push empty cluster");
 
         if (y - last_value).abs() <= tolerance {
             last_cluster.push(y);
@@ -173,7 +187,9 @@ fn find_cell_for_fragment(
         .min_by(|(_, &y1), (_, &y2)| {
             let dist1 = (fragment.y - y1).abs();
             let dist2 = (fragment.y - y2).abs();
-            dist1.partial_cmp(&dist2).unwrap()
+            dist1
+                .partial_cmp(&dist2)
+                .expect("f64 distances are never NaN: calculated from valid coordinates")
         })
         .map(|(idx, &y)| {
             if (fragment.y - y).abs() <= config.row_alignment_tolerance * 2.0 {
@@ -191,7 +207,9 @@ fn find_cell_for_fragment(
         .min_by(|(_, col1), (_, col2)| {
             let dist1 = (fragment.x - col1.x_position).abs();
             let dist2 = (fragment.x - col2.x_position).abs();
-            dist1.partial_cmp(&dist2).unwrap()
+            dist1
+                .partial_cmp(&dist2)
+                .expect("f64 distances are never NaN: calculated from valid coordinates")
         })
         .map(|(idx, col)| {
             if (fragment.x - col.x_position).abs() <= config.column_alignment_tolerance * 2.0 {
@@ -220,8 +238,12 @@ fn calculate_table_bbox(row_positions: &[f64], columns: &[Column]) -> BoundingBo
         .map(|c| c.right())
         .fold(f64::NEG_INFINITY, f64::max);
 
-    let max_y = *row_positions.first().unwrap();
-    let min_y = *row_positions.last().unwrap();
+    let max_y = *row_positions
+        .first()
+        .expect("row_positions guaranteed non-empty by check at line 228");
+    let min_y = *row_positions
+        .last()
+        .expect("row_positions guaranteed non-empty by check at line 228");
 
     BoundingBox::new(min_x, min_y, max_x - min_x, max_y - min_y)
 }
@@ -265,6 +287,7 @@ mod tests {
             width: 50.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         }
     }
 
@@ -346,10 +369,34 @@ mod tests {
         let table = &tables[0];
 
         // Check cell contents
-        assert_eq!(table.get_cell(0, 0).unwrap().text, "Header1");
-        assert_eq!(table.get_cell(0, 1).unwrap().text, "Header2");
-        assert_eq!(table.get_cell(1, 0).unwrap().text, "Data1");
-        assert_eq!(table.get_cell(1, 1).unwrap().text, "Data2");
+        assert_eq!(
+            table
+                .get_cell(0, 0)
+                .expect("cell (0,0) should exist in 2x2 table")
+                .text,
+            "Header1"
+        );
+        assert_eq!(
+            table
+                .get_cell(0, 1)
+                .expect("cell (0,1) should exist in 2x2 table")
+                .text,
+            "Header2"
+        );
+        assert_eq!(
+            table
+                .get_cell(1, 0)
+                .expect("cell (1,0) should exist in 2x2 table")
+                .text,
+            "Data1"
+        );
+        assert_eq!(
+            table
+                .get_cell(1, 1)
+                .expect("cell (1,1) should exist in 2x2 table")
+                .text,
+            "Data2"
+        );
     }
 
     #[test]
@@ -414,6 +461,9 @@ mod tests {
         assert_eq!(table.column_count(), 3);
 
         // Check that B2 cell exists but is empty
-        assert!(table.get_cell(1, 1).unwrap().is_empty());
+        assert!(table
+            .get_cell(1, 1)
+            .expect("cell (1,1) should exist in irregular table")
+            .is_empty());
     }
 }

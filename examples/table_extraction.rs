@@ -35,6 +35,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 50.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "Age".to_string(),
@@ -43,6 +44,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 30.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "City".to_string(),
@@ -51,6 +53,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 40.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         // Data row 1 (Y = 680)
         TextFragment {
@@ -60,6 +63,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 40.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "30".to_string(),
@@ -68,6 +72,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 20.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "NYC".to_string(),
@@ -76,6 +81,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 30.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         // Data row 2 (Y = 660)
         TextFragment {
@@ -85,6 +91,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 30.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "25".to_string(),
@@ -93,6 +100,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 20.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
         TextFragment {
             text: "LA".to_string(),
@@ -101,6 +109,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             width: 20.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         },
     ];
 

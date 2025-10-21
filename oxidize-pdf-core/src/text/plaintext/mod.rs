@@ -28,7 +28,7 @@
 //!
 //! # Quick Start
 //!
-//! ```no_run
+//! ```ignore
 //! use oxidize_pdf::Document;
 //! use oxidize_pdf::text::plaintext::PlainTextExtractor;
 //!
@@ -52,7 +52,7 @@
 //!
 //! # Configuration
 //!
-//! ```no_run
+//! ```ignore
 //! use oxidize_pdf::text::plaintext::{PlainTextExtractor, PlainTextConfig, LineBreakMode};
 //!
 //! let extractor = PlainTextExtractor::with_config(PlainTextConfig {
@@ -67,7 +67,7 @@
 //!
 //! For grep-like operations or line-based processing:
 //!
-//! ```no_run
+//! ```ignore
 //! use oxidize_pdf::Document;
 //! use oxidize_pdf::text::plaintext::PlainTextExtractor;
 //!

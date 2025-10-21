@@ -16,8 +16,8 @@ use crate::text::extraction::TextFragment;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use oxidize_pdf_core::text::structured::{StructuredDataDetector, StructuredDataConfig};
-/// use oxidize_pdf_core::text::extraction::TextFragment;
+/// use oxidize_pdf::text::structured::{StructuredDataDetector, StructuredDataConfig};
+/// use oxidize_pdf::text::extraction::TextFragment;
 ///
 /// let config = StructuredDataConfig::default();
 /// let detector = StructuredDataDetector::new(config);
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn test_detector_empty_input() {
         let detector = StructuredDataDetector::default();
-        let result = detector.detect(&[]).unwrap();
+        let result = detector.detect(&[]).expect("detector should handle empty input");
 
         assert_eq!(result.tables.len(), 0);
         assert_eq!(result.key_value_pairs.len(), 0);
@@ -157,9 +157,10 @@ mod tests {
             width: 50.0,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         }];
 
-        let result = detector.detect(&fragments).unwrap();
+        let result = detector.detect(&fragments).expect("detect should succeed with valid input");
 
         // Tables disabled, so should be empty
         assert_eq!(result.tables.len(), 0);

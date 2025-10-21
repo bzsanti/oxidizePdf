@@ -24,8 +24,8 @@
 //! # Examples
 //!
 //! ```rust,no_run
-//! use oxidize_pdf_core::text::structured::{StructuredDataDetector, StructuredDataConfig};
-//! use oxidize_pdf_core::text::extraction::TextFragment;
+//! use oxidize_pdf::text::structured::{StructuredDataDetector, StructuredDataConfig};
+//! use oxidize_pdf::text::extraction::TextFragment;
 //!
 //! let config = StructuredDataConfig::default();
 //! let detector = StructuredDataDetector::new(config);

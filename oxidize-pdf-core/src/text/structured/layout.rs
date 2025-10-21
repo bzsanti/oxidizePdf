@@ -44,7 +44,10 @@ fn detect_column_boundaries(fragments: &[TextFragment], min_gap: f64) -> Vec<Col
     // Collect all X ranges (start and end of each fragment)
     let mut x_ranges: Vec<(f64, f64)> = fragments.iter().map(|f| (f.x, f.x + f.width)).collect();
 
-    x_ranges.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    x_ranges.sort_by(|a, b| {
+        a.0.partial_cmp(&b.0)
+            .expect("f64 coordinates extracted from PDF are never NaN")
+    });
 
     let mut boundaries = Vec::new();
 
@@ -91,8 +94,11 @@ fn assign_to_columns(
             let mut sorted = frags.clone();
             sorted.sort_by(|a, b| {
                 b.y.partial_cmp(&a.y)
-                    .unwrap()
-                    .then_with(|| a.x.partial_cmp(&b.x).unwrap())
+                    .expect("f64 coordinates extracted from PDF are never NaN")
+                    .then_with(|| {
+                        a.x.partial_cmp(&b.x)
+                            .expect("f64 coordinates extracted from PDF are never NaN")
+                    })
             });
 
             // Concatenate text
@@ -125,8 +131,11 @@ fn create_single_column_section(fragments: &[TextFragment]) -> ColumnSection {
     let mut sorted = fragments.to_vec();
     sorted.sort_by(|a, b| {
         b.y.partial_cmp(&a.y)
-            .unwrap()
-            .then_with(|| a.x.partial_cmp(&b.x).unwrap())
+            .expect("f64 coordinates extracted from PDF are never NaN")
+            .then_with(|| {
+                a.x.partial_cmp(&b.x)
+                    .expect("f64 coordinates extracted from PDF are never NaN")
+            })
     });
 
     let text = sorted
@@ -175,6 +184,7 @@ mod tests {
             width,
             height: 12.0,
             font_size: 12.0,
+            font_name: None,
         }
     }
 
