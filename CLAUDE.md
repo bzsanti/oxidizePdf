@@ -1,15 +1,118 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
+- **Last Session**: 2025-10-21 - Documentation Cleanup & Invoice Analysis Phase 1
 - **Branch**: develop_santi (working branch)
 - **Version**: **v1.6.3 (pending release)** 🚀
-- **Status**: Sprint 2.2 Complete (3/3 features shipped in 26% of estimated time)
+- **Status**:
+  - Sprint 2.2: ✅ Complete (3/3 features shipped)
+  - Documentation: ✅ Performance claims validated (Phase C)
+  - Benchmarks: ✅ Performance investigation complete (Phase B)
+  - Invoice Analysis: 🔄 Phase 1 Complete, Phase 2 Blocked
 - **Quality Metrics**:
   - Tests: 4633 passing (all green)
   - Clippy: Clean (0 warnings)
   - Zero Unwraps: 100% library code compliance
-  - Documentation: 100% rustdoc coverage
-- **Next**: v1.6.3 release → Sprint 2.3 planning
+  - Documentation: 100% rustdoc coverage with validated performance claims
+- **Next**:
+  - Fix Phase 2 invoice testing script (API mismatches)
+  - OR review Phase 1 reconnaissance findings before continuing
+  - Then: v1.6.3 release → Sprint 2.3 planning
+
+## 📊 **Session 2025-10-21: Documentation Validation & Invoice Analysis** ✅ PARTIAL
+
+### Phase C: Documentation Reposition (COMPLETE) ✅
+- **Task**: Validate and correct all performance claims in public documentation
+- **Findings**: 6 unvalidated claims found and corrected
+- **Changes**:
+  - README.md: 5 corrections (2x faster → validated metrics)
+  - CHANGELOG.md: 1 correction (215+ PDFs/s → 35.9 PDFs/s)
+- **Result**: All public documentation now reflects honest, tested performance
+- **Commit**: `7e401a0` - "docs: validate and correct performance claims"
+
+### Phase B: Performance Investigation (COMPLETE) ✅
+- **Task**: Validate PlainTextExtractor "faster" claim via benchmarks
+- **Critical Discovery**: Benchmark contamination by DEBUG logging
+  - Initial (contaminated): PlainTextExtractor 44% faster
+  - Clean results: PlainTextExtractor 3.75% SLOWER
+  - Root cause: 37+ `eprintln!("DEBUG: ...")` statements affecting benchmarks
+- **Impact**: Performance comparison completely inverted (47.75 percentage points)
+- **Resolution**:
+  - Updated module docs to remove "optimized" claim
+  - Documented true performance (minor overhead acceptable for API simplicity)
+  - Created forensic reports: `/tmp/performance_analysis.md`, `/tmp/critical_performance_finding.md`
+- **Commit**: `ae54e9a` - "docs(text): correct PlainTextExtractor performance claims"
+
+### Invoice Analysis - Phase 1: Reconnaissance (COMPLETE) ✅
+- **Scope Discovery**: 80 PDFs total (36 invoices + 44 quotations)
+  - Originally thought: 36 invoices only
+  - Actual: 80 PDFs across 23 client directories
+  - Total size: 27.72 MB, 208 pages
+- **Sample Analysis**: 5 representative PDFs analyzed
+  - 3 invoices: Structured formats (Spanish S.r.l., UK VAT formats)
+  - 2 quotations: Narrative formats with embedded costs
+- **Diversity Assessment**: HIGH
+  - Languages: ~30-40% Spanish, ~60-70% English
+  - Formats: Invoices (structured) vs Quotations (narrative)
+  - Number formats: European (1.234,56) vs Anglo-Saxon (1,234.56)
+- **Coverage Predictions**:
+  - Invoices: 70-85% field extraction expected
+  - Quotations: 40-60% (narrative format challenge)
+- **Artifacts Created** (.private/):
+  - `results/inventory.json` - Complete 80 PDF metadata
+  - `results/sample_selection.json` - 5 analyzed samples
+  - `results/phase2_invoice_selection.json` - 10 test invoices
+  - `reports/reconnaissance_report.md` - 25-page analysis
+  - `samples/*.txt` - Plain text extractions (5 files)
+
+### Invoice Analysis - Phase 2: Testing (BLOCKED) ⚠️
+- **Task**: Test InvoiceExtractor on 10 representative invoices
+- **Status**: Script created but compilation failed
+- **Script**: `.private/scripts/test_invoice_extractor.rs` (430 lines)
+- **Blocking Issues**: 3 API mismatches
+  1. `PdfDocument::parse()` doesn't exist → need `PdfReader::new() + PdfDocument::new()`
+  2. `TextExtractor.extract()` signature incorrect
+  3. `InvoiceExtractor::new()` doesn't exist → need builder pattern
+- **Correct API** (discovered from tests):
+  ```rust
+  let extractor = InvoiceExtractor::builder()
+      .with_language("es")
+      .confidence_threshold(0.7)
+      .build();
+  ```
+- **Required Work**: 1-2 hours to refactor script
+- **Decision Pending**: User to choose next step
+  - Option A: Pause and review Phase 1 findings (RECOMMENDED)
+  - Option B: Continue debugging script (1-2h effort)
+  - Option C: Manual testing of 2-3 invoices (30 min)
+
+### Technical Debt Identified 🔧
+- **DEBUG Logging**: 37+ eprintln! statements in production code
+  - Location: `parser/reader.rs`, `parser/xref.rs`
+  - Impact: Contaminates benchmarks, pollutes stderr
+  - Recommendation: Remove or gate behind feature flag (v1.7.0)
+
+### Time Investment ⏱️
+- **Phase C**: 30 minutes (documentation corrections)
+- **Phase B**: 2 hours (performance investigation + forensic analysis)
+- **Phase 1**: 2 hours (reconnaissance + report generation)
+- **Phase 2**: 1 hour (script creation, blocked at compilation)
+- **Total**: 5.5 hours
+
+### Files Modified 📁
+- `README.md` - Performance claims validated
+- `CHANGELOG.md` - Performance claim corrected
+- `oxidize-pdf-core/src/text/plaintext/extractor.rs` - Module docs updated
+- `/tmp/performance_analysis.md` - Benchmark investigation report
+- `/tmp/critical_performance_finding.md` - Forensic analysis
+- `/tmp/resumen_fase1_y_siguiente_paso.md` - Decision point summary
+- `.private/` directory - 9 new files (inventory, reports, samples, scripts)
+
+### Next Session Actions 📋
+1. **DECIDE**: Phase 2 approach (pause/debug/manual)
+2. **IF continuing**: Fix test_invoice_extractor.rs API issues
+3. **IF pausing**: Review reconnaissance_report.md findings
+4. **Future**: Remove DEBUG eprintln! statements (technical debt)
 
 ## ✅ Features Completadas (v1.6.x)
 
