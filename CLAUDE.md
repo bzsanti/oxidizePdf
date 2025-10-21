@@ -277,7 +277,7 @@ cargo build --release                # Production build
 - Encrypted PDFs not supported (19 cases)
 - Some circular references in complex PDFs
 
-## 📝 Open GitHub Issues
+## 📝 Open GitHub Issues (2)
 
 - **#90** - **OPEN** - Advanced Text Extraction with Table Detection (2025-10-16)
   - ✅ Gap analysis completed with competitor comparison
@@ -287,16 +287,21 @@ cargo build --release                # Production build
   - **Status**: Ready for prioritization
   - **Estimated effort**: 28-42 hours (3.5-5 days)
 
-- **#87** - **OPEN** - Kerning Normalization (2025-10-16)
-  - ✅ All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
-  - ✅ 9 rigorous tests passing
-  - **Action**: Close issue with documentation summary
-
 - **#54** - **OPEN** - ISO 32000-1:2008 Compliance Tracking (2025-10-13)
   - ✅ Honest gap analysis completed 2025-10-07
   - **Finding**: 55-60% compliance (not 35-40%)
   - Sprint 2.2 features verified as already implemented
   - **Action**: Update issue with honest assessment
+
+## 📝 Recently Closed Issues
+
+- **#87** - ✅ **CLOSED** - Kerning Normalization (2025-10-17)
+  - ✅ All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
+  - ✅ 9 rigorous tests passing
+  - ✅ Shipped in v1.6.1
+
+- **#57** - ✅ **CLOSED** - CJK Font Support Test Failed (2025-10-11)
+- **#46** - ✅ **CLOSED** - Source Han Sans font support (2025-10-11)
 
 ## 🎯 Próximas Prioridades (REVISED)
 
