@@ -3,18 +3,18 @@
 //! This example demonstrates how to automatically detect and extract tables
 //! from PDF documents using spatial clustering algorithms.
 
-use oxidize_pdf_core::text::extraction::{TextExtractor, ExtractionOptions};
-use oxidize_pdf_core::text::structured::{StructuredDataDetector, StructuredDataConfig};
-use oxidize_pdf_core::parser::PdfReader;
-use std::fs::File;
-use std::io::BufReader;
+use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
+use oxidize_pdf::text::structured::{StructuredDataDetector, StructuredDataConfig};
+use oxidize_pdf::parser::PdfReader;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== PDF Table Extraction Demo ===\n");
 
-    // For this example, we'll create a synthetic dataset
-    // In a real scenario, you would load a PDF with tables
+    // Demo with synthetic data
     demo_table_detection()?;
+
+    // Uncomment to extract tables from a real PDF:
+    // extract_tables_from_pdf("path/to/document.pdf")?;
 
     println!("\n=== Example completed successfully ===");
     Ok(())
@@ -24,7 +24,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
     println!("Demonstrating table detection with synthetic data...\n");
 
     // Create synthetic text fragments representing a 3x3 table
-    use oxidize_pdf_core::text::extraction::TextFragment;
+    use oxidize_pdf::text::extraction::TextFragment;
 
     let fragments = vec![
         // Header row (Y = 700)
@@ -156,21 +156,19 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // Helper function to extract tables from a real PDF file
+// Uncomment the call in main() to use this function
 #[allow(dead_code)]
 fn extract_tables_from_pdf(pdf_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // Open PDF file
-    let file = File::open(pdf_path)?;
-    let reader = BufReader::new(file);
-    let pdf_reader = PdfReader::new(reader)?;
+    // Open PDF document using correct API
+    let document = PdfReader::open_document(pdf_path)?;
 
-    // Extract text from first page
-    let extractor = TextExtractor::new();
-    let options = ExtractionOptions {
+    // Extract text from first page (page_index = 0)
+    let mut extractor = TextExtractor::with_options(ExtractionOptions {
         preserve_layout: true,
         ..Default::default()
-    };
+    });
 
-    let extracted = extractor.extract_text(&pdf_reader, &options)?;
+    let extracted = extractor.extract_from_page(&document, 0)?;
 
     // Detect tables
     let config = StructuredDataConfig::default();

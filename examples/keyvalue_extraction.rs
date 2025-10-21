@@ -4,8 +4,8 @@
 //! key-value pairs from forms and structured documents using multiple
 //! pattern matching strategies.
 
-use oxidize_pdf_core::text::extraction::TextFragment;
-use oxidize_pdf_core::text::structured::{StructuredDataDetector, StructuredDataConfig, KeyValuePattern};
+use oxidize_pdf::text::extraction::TextFragment;
+use oxidize_pdf::text::structured::{StructuredDataDetector, KeyValuePattern};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
