@@ -448,8 +448,8 @@ This release transforms oxidize-pdf from a development-stage parser to a **produ
 #### Enhanced 🚀
 
 **Performance Improvements**
-- **215+ PDFs/second** processing speed with parallel architecture
-- **3.5 second analysis** for complete 749-PDF compatibility assessment  
+- **35.9 PDFs/second** single-threaded parsing (validated on 759 real-world PDFs)
+- **98.8% success rate** for PDF parsing compatibility
 - **Memory efficient**: Stack-based circular reference detection
 - **Scalable**: Multi-threaded processing with configurable worker count
 

@@ -8,7 +8,7 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready for basic PDF functionality. Generate PDFs 2x faster than PDFSharp, with memory safety guarantees and a 5.2MB binary size.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready for basic PDF functionality with validated performance of 3,000-4,000 pages/second for realistic business documents, memory safety guarantees, and a compact 5.2MB binary size.
 
 ## Features
 
@@ -45,7 +45,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🤖 **Document Chunking for LLMs** - Production-ready chunking with 0.62ms for 100 pages
 - 📊 **Rich Metadata** - Page tracking, position info, confidence scores
 - ✂️ **Smart Boundaries** - Sentence boundary detection for semantic coherence
-- ⚡ **Exceptional Performance** - 161x better than target, 160K pages/second throughput
+- ⚡ **High Performance** - 3,000-4,000 pages/second for realistic business documents
 - 📚 **Complete Examples** - RAG pipeline with embeddings and vector store integration
 
 **Production-Ready Features (v1.2.3-v1.2.5):**
@@ -75,7 +75,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 **Significant improvements in PDF compatibility:**
 - 📈 **Better parsing**: Handles circular references, XRef streams, object streams
 - 🛡️ **Stack overflow protection** - Production-ready resilience against malformed PDFs
-- 🚀 **Performance**: 215+ PDFs/second processing speed
+- 🚀 **Performance**: 35.9 PDFs/second parsing speed (validated on 759 real-world PDFs)
 - ⚡ **Error recovery** - Multiple fallback strategies for corrupted files
 - 🔧 **Lenient parsing** - Graceful handling of malformed structures
 - 💾 **Memory optimization**: `OptimizedPdfReader` with LRU cache
@@ -85,7 +85,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 ## 🏆 Why oxidize-pdf?
 
 ### Performance & Efficiency
-- **2x faster than PDFSharp** - Process 215 PDFs/second
+- **Production-ready performance** - 3,000-4,000 pages/second generation, 35.9 PDFs/second parsing
 - **5.2 MB binary** - 3x smaller than PDFSharp, 40x smaller than IronPDF
 - **Zero dependencies** - No runtime, no Chrome, just a single binary
 - **Low memory usage** - Efficient streaming for large PDFs
@@ -518,10 +518,14 @@ cargo run --example cjk_text_extraction
 
 ## Performance
 
-- **Parsing**: Fast for PDFs with basic features
-- **Generation**: Efficient for simple documents
-- **Memory efficient**: Streaming operations available
+**Validated Metrics** (based on comprehensive benchmarking):
+- **PDF Generation**: 3,000-4,000 pages/second for realistic business documents
+- **Complex Content**: 670 pages/second for dense analytics dashboards
+- **PDF Parsing**: 35.9 PDFs/second (98.8% success rate on 759 real-world PDFs)
+- **Memory Efficient**: Streaming operations available for large documents
 - **Pure Rust**: No external C dependencies for PDF operations
+
+See [PERFORMANCE_HONEST_REPORT.md](docs/PERFORMANCE_HONEST_REPORT.md) for detailed benchmarking methodology and results.
 
 ## Examples
 
