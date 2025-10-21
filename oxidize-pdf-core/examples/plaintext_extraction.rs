@@ -1,7 +1,7 @@
 //! Plain Text Extraction Example
 //!
-//! Demonstrates the use of PlainTextExtractor for fast text extraction
-//! without position overhead.
+//! Demonstrates the use of PlainTextExtractor for simplified text extraction
+//! without position metadata.
 //!
 //! # Usage
 //!
@@ -18,10 +18,10 @@
 //! 5. Line-by-line extraction
 //! 6. Line break mode processing (Auto, PreserveAll, Normalize)
 //!
-//! # Performance
+//! # API Benefits
 //!
-//! Plain text extraction is >30% faster than TextExtractor when position
-//! data is not needed.
+//! PlainTextExtractor returns `String` and `Vec<String>` instead of
+//! `Vec<TextFragment>`, making it easier to use for text search and indexing.
 
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor};
@@ -181,7 +181,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   - Use loose config for wide-spaced PDFs");
     println!("   - Use preserve_layout for tabular data");
     println!("   - Use extract_lines() for grep-like operations");
-    println!("   - Plain text extraction is >30% faster than TextExtractor\n");
+    println!("   - Returns String/Vec<String> for simpler API than TextExtractor\n");
 
     Ok(())
 }

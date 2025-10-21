@@ -1,15 +1,15 @@
-//! Plain text extraction optimized for performance
+//! Plain text extraction focused on simplicity
 //!
-//! This module provides optimized text extraction without position overhead.
+//! This module provides simplified text extraction without position metadata.
 //! It's designed for use cases where you need plain text content without
-//! detailed layout information, achieving >30% performance improvement over
-//! the standard TextExtractor.
+//! detailed layout information, offering a simpler API and output format
+//! compared to the standard TextExtractor.
 //!
 //! # Overview
 //!
-//! The plain text extractor works directly with PDF content streams to extract
-//! text without calculating precise positioning information. This results in
-//! significantly faster extraction when layout preservation is not required.
+//! The plain text extractor returns `String` and `Vec<String>` instead of
+//! `Vec<TextFragment>`, making it easier to use for text analysis and search
+//! indexing where position data is not required.
 //!
 //! # Use Cases
 //!
@@ -17,13 +17,13 @@
 //! - **Content analysis**: Analyze document content without layout
 //! - **Text classification**: Feed text to ML models for categorization
 //! - **Simple grep operations**: Extract line-by-line for pattern matching
-//! - **Large batch processing**: Process many documents quickly
+//! - **Copy-paste text extraction**: Get readable text for clipboard use
 //!
-//! # Performance
+//! # API Design
 //!
-//! - **>30% faster** than TextExtractor with position tracking
+//! - **Simple output**: Returns `String` and `Vec<String>`, not `Vec<TextFragment>`
+//! - **Comparable performance**: Uses same content stream parser as TextExtractor
 //! - Memory efficient (no position data stored)
-//! - Direct content stream processing
 //! - Configurable space/newline detection
 //!
 //! # Quick Start
@@ -89,11 +89,12 @@
 //!
 //! | Feature | PlainTextExtractor | TextExtractor |
 //! |---------|-------------------|---------------|
-//! | Performance | **Fast** (optimized) | Standard |
-//! | Position Data | ❌ No | ✅ Yes |
-//! | Layout Preservation | Basic | Advanced |
-//! | Memory Usage | **Low** | Higher |
-//! | Use Case | Full-text, search | Layout analysis |
+//! | Output Type | String, Vec\<String\> | Vec\<TextFragment\> |
+//! | Position Data | ❌ No | ✅ Yes (x, y coordinates) |
+//! | Font Metadata | ❌ No | ✅ Yes (size, family) |
+//! | API Complexity | **Simple** | More detailed |
+//! | Performance | Comparable | Comparable |
+//! | Use Case | Text search, indexing | Layout analysis, tables |
 //!
 //! # Limitations
 //!
