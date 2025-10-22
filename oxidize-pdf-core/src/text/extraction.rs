@@ -71,6 +71,10 @@ pub struct TextFragment {
     pub font_size: f64,
     /// Font name (if known) - used for kerning-aware text spacing
     pub font_name: Option<String>,
+    /// Whether the font is bold (detected from font name)
+    pub is_bold: bool,
+    /// Whether the font is italic (detected from font name)
+    pub is_italic: bool,
 }
 
 /// Text extraction state
@@ -116,6 +120,45 @@ impl Default for TextState {
             render_mode: 0,
         }
     }
+}
+
+/// Parse font style (bold/italic) from font name
+///
+/// Detects bold and italic styles from common font naming patterns.
+/// Works with PostScript font names (e.g., "Helvetica-Bold", "Times-BoldItalic")
+/// and TrueType names (e.g., "Arial Bold", "Courier Oblique").
+///
+/// # Examples
+///
+/// ```
+/// use oxidize_pdf::text::extraction::parse_font_style;
+///
+/// assert_eq!(parse_font_style("Helvetica-Bold"), (true, false));
+/// assert_eq!(parse_font_style("Times-BoldItalic"), (true, true));
+/// assert_eq!(parse_font_style("Courier"), (false, false));
+/// assert_eq!(parse_font_style("Arial-Italic"), (false, true));
+/// ```
+///
+/// # Returns
+///
+/// Tuple of (is_bold, is_italic)
+pub fn parse_font_style(font_name: &str) -> (bool, bool) {
+    let name_lower = font_name.to_lowercase();
+
+    // Detect bold from common patterns
+    let is_bold = name_lower.contains("bold")
+        || name_lower.contains("-b")
+        || name_lower.contains(" b ")
+        || name_lower.ends_with(" b");
+
+    // Detect italic/oblique from common patterns
+    let is_italic = name_lower.contains("italic")
+        || name_lower.contains("oblique")
+        || name_lower.contains("-i")
+        || name_lower.contains(" i ")
+        || name_lower.ends_with(" i");
+
+    (is_bold, is_italic)
 }
 
 /// Text extractor for PDF pages with CMap support
@@ -260,6 +303,13 @@ impl TextExtractor {
                                 .and_then(|name| self.font_cache.get(name));
 
                             if self.options.preserve_layout {
+                                // Detect bold/italic from font name
+                                let (is_bold, is_italic) = state
+                                    .font_name
+                                    .as_ref()
+                                    .map(|name| parse_font_style(name))
+                                    .unwrap_or((false, false));
+
                                 fragments.push(TextFragment {
                                     text: decoded.clone(),
                                     x,
@@ -272,6 +322,8 @@ impl TextExtractor {
                                     height: state.font_size,
                                     font_size: state.font_size,
                                     font_name: state.font_name.clone(),
+                                    is_bold,
+                                    is_italic,
                                 });
                             }
 
@@ -733,6 +785,60 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_font_style_bold() {
+        // PostScript style
+        assert_eq!(parse_font_style("Helvetica-Bold"), (true, false));
+        assert_eq!(parse_font_style("TimesNewRoman-Bold"), (true, false));
+
+        // TrueType style
+        assert_eq!(parse_font_style("Arial Bold"), (true, false));
+        assert_eq!(parse_font_style("Calibri Bold"), (true, false));
+
+        // Short form
+        assert_eq!(parse_font_style("Helvetica-B"), (true, false));
+    }
+
+    #[test]
+    fn test_parse_font_style_italic() {
+        // PostScript style
+        assert_eq!(parse_font_style("Helvetica-Italic"), (false, true));
+        assert_eq!(parse_font_style("Times-Oblique"), (false, true));
+
+        // TrueType style
+        assert_eq!(parse_font_style("Arial Italic"), (false, true));
+        assert_eq!(parse_font_style("Courier Oblique"), (false, true));
+
+        // Short form
+        assert_eq!(parse_font_style("Helvetica-I"), (false, true));
+    }
+
+    #[test]
+    fn test_parse_font_style_bold_italic() {
+        assert_eq!(parse_font_style("Helvetica-BoldItalic"), (true, true));
+        assert_eq!(parse_font_style("Times-BoldOblique"), (true, true));
+        assert_eq!(parse_font_style("Arial Bold Italic"), (true, true));
+    }
+
+    #[test]
+    fn test_parse_font_style_regular() {
+        assert_eq!(parse_font_style("Helvetica"), (false, false));
+        assert_eq!(parse_font_style("Times-Roman"), (false, false));
+        assert_eq!(parse_font_style("Courier"), (false, false));
+        assert_eq!(parse_font_style("Arial"), (false, false));
+    }
+
+    #[test]
+    fn test_parse_font_style_edge_cases() {
+        // Empty and unusual cases
+        assert_eq!(parse_font_style(""), (false, false));
+        assert_eq!(parse_font_style("UnknownFont"), (false, false));
+
+        // Case insensitive
+        assert_eq!(parse_font_style("HELVETICA-BOLD"), (true, false));
+        assert_eq!(parse_font_style("times-ITALIC"), (false, true));
+    }
+
+    #[test]
     fn test_text_fragment() {
         let fragment = TextFragment {
             text: "Hello".to_string(),
@@ -742,6 +848,8 @@ mod tests {
             height: 12.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -762,6 +870,8 @@ mod tests {
                 height: 12.0,
                 font_size: 10.0,
                 font_name: None,
+                is_bold: false,
+                is_italic: false,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -771,6 +881,8 @@ mod tests {
                 height: 12.0,
                 font_size: 10.0,
                 font_name: None,
+                is_bold: false,
+                is_italic: false,
             },
         ];
 

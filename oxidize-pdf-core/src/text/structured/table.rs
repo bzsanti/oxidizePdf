@@ -288,6 +288,8 @@ mod tests {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         }
     }
 
