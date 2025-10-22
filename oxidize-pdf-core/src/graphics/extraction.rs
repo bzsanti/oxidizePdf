@@ -291,10 +291,12 @@ impl GraphicsExtractor {
 
                 // Path construction
                 ContentOperation::MoveTo(x, y) => {
-                    state.move_to(*x as f64, *y as f64);
+                    let (tx, ty) = state.transform_point(*x as f64, *y as f64);
+                    state.move_to(tx, ty);
                 }
                 ContentOperation::LineTo(x, y) => {
-                    state.line_to(*x as f64, *y as f64);
+                    let (tx, ty) = state.transform_point(*x as f64, *y as f64);
+                    state.line_to(tx, ty);
                 }
                 ContentOperation::Rectangle(x, y, width, height) => {
                     self.extract_rectangle_lines(*x as f64, *y as f64, *width as f64, *height as f64, state, graphics);
@@ -323,6 +325,8 @@ impl GraphicsExtractor {
     }
 
     /// Extracts lines from a rectangle operation.
+    ///
+    /// Transforms all 4 corners using the current CTM to handle rotations and scaling.
     fn extract_rectangle_lines(
         &self,
         x: f64,
@@ -334,17 +338,23 @@ impl GraphicsExtractor {
     ) {
         let stroke_width = state.stroke_width;
 
-        // Bottom edge (horizontal)
-        graphics.add_line(VectorLine::new(x, y, x + width, y, stroke_width, true));
+        // Transform all 4 corners
+        let (x1, y1) = state.transform_point(x, y);                    // Bottom-left
+        let (x2, y2) = state.transform_point(x + width, y);            // Bottom-right
+        let (x3, y3) = state.transform_point(x + width, y + height);   // Top-right
+        let (x4, y4) = state.transform_point(x, y + height);           // Top-left
 
-        // Right edge (vertical)
-        graphics.add_line(VectorLine::new(x + width, y, x + width, y + height, stroke_width, true));
+        // Bottom edge
+        graphics.add_line(VectorLine::new(x1, y1, x2, y2, stroke_width, true));
 
-        // Top edge (horizontal)
-        graphics.add_line(VectorLine::new(x + width, y + height, x, y + height, stroke_width, true));
+        // Right edge
+        graphics.add_line(VectorLine::new(x2, y2, x3, y3, stroke_width, true));
 
-        // Left edge (vertical)
-        graphics.add_line(VectorLine::new(x, y + height, x, y, stroke_width, true));
+        // Top edge
+        graphics.add_line(VectorLine::new(x3, y3, x4, y4, stroke_width, true));
+
+        // Left edge
+        graphics.add_line(VectorLine::new(x4, y4, x1, y1, stroke_width, true));
     }
 
     /// Extracts lines from the current path.
@@ -442,6 +452,16 @@ impl GraphicsState {
         ];
     }
 
+    /// Transforms a point using the current transformation matrix.
+    ///
+    /// Applies the CTM to convert user space coordinates to device space.
+    fn transform_point(&self, x: f64, y: f64) -> (f64, f64) {
+        let [a, b, c, d, e, f] = self.ctm;
+        let tx = a * x + c * y + e;
+        let ty = b * x + d * y + f;
+        (tx, ty)
+    }
+
     fn move_to(&mut self, x: f64, y: f64) {
         self.current_point = Some((x, y));
     }
@@ -454,8 +474,24 @@ impl GraphicsState {
     }
 
     fn close_path(&mut self) {
-        // Closing path would add line back to start, but we handle this in painting
-        // For now, just keep current point as-is
+        // Close path by adding line from current point back to the start
+        if let Some((start_x, start_y)) = self.path.first().map(|seg| match seg {
+            PathSegment::Line { x1, y1, .. } => (*x1, *y1),
+        }) {
+            if let Some((x, y)) = self.current_point {
+                // Only add closing line if current point is different from start
+                const EPSILON: f64 = 0.01;
+                if (x - start_x).abs() > EPSILON || (y - start_y).abs() > EPSILON {
+                    self.path.push(PathSegment::Line {
+                        x1: x,
+                        y1: y,
+                        x2: start_x,
+                        y2: start_y,
+                    });
+                    self.current_point = Some((start_x, start_y));
+                }
+            }
+        }
     }
 
     fn clear_path(&mut self) {
@@ -605,5 +641,128 @@ mod tests {
         assert_eq!(config.min_line_length, 1.0);
         assert!(!config.extract_diagonals);
         assert!(config.stroked_only);
+    }
+
+    // CTM (Current Transformation Matrix) tests
+    #[test]
+    fn test_ctm_transform_point_identity() {
+        let state = GraphicsState::new();
+        let (tx, ty) = state.transform_point(100.0, 200.0);
+        assert!((tx - 100.0).abs() < 0.001);
+        assert!((ty - 200.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_ctm_transform_point_translation() {
+        let mut state = GraphicsState::new();
+        // Translate by (50, 75)
+        state.apply_transform(1.0, 0.0, 0.0, 1.0, 50.0, 75.0);
+
+        let (tx, ty) = state.transform_point(100.0, 200.0);
+        assert!((tx - 150.0).abs() < 0.001); // 100 + 50
+        assert!((ty - 275.0).abs() < 0.001); // 200 + 75
+    }
+
+    #[test]
+    fn test_ctm_transform_point_scale() {
+        let mut state = GraphicsState::new();
+        // Scale by 2x
+        state.apply_transform(2.0, 0.0, 0.0, 2.0, 0.0, 0.0);
+
+        let (tx, ty) = state.transform_point(100.0, 200.0);
+        assert!((tx - 200.0).abs() < 0.001); // 100 * 2
+        assert!((ty - 400.0).abs() < 0.001); // 200 * 2
+    }
+
+    #[test]
+    fn test_ctm_transform_point_combined() {
+        let mut state = GraphicsState::new();
+        // Scale 2x + translate (10, 20)
+        state.apply_transform(2.0, 0.0, 0.0, 2.0, 10.0, 20.0);
+
+        let (tx, ty) = state.transform_point(5.0, 5.0);
+        assert!((tx - 20.0).abs() < 0.001); // 5*2 + 10
+        assert!((ty - 30.0).abs() < 0.001); // 5*2 + 20
+    }
+
+    #[test]
+    fn test_graphics_state_save_restore() {
+        let mut state = GraphicsState::new();
+        state.stroke_width = 2.0;
+        state.apply_transform(2.0, 0.0, 0.0, 2.0, 10.0, 20.0);
+
+        state.save();
+        state.stroke_width = 5.0;
+        state.apply_transform(1.0, 0.0, 0.0, 1.0, 50.0, 50.0);
+
+        state.restore();
+        assert_eq!(state.stroke_width, 2.0);
+
+        // Verify CTM was restored
+        let (tx, ty) = state.transform_point(5.0, 5.0);
+        assert!((tx - 20.0).abs() < 0.001);
+        assert!((ty - 30.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_graphics_state_nested_save_restore() {
+        let mut state = GraphicsState::new();
+        state.stroke_width = 2.0;
+
+        state.save();
+        state.stroke_width = 5.0;
+
+        state.save();
+        state.stroke_width = 10.0;
+
+        state.restore();
+        assert_eq!(state.stroke_width, 5.0);
+
+        state.restore();
+        assert_eq!(state.stroke_width, 2.0);
+
+        // Restore on empty stack should be no-op
+        state.restore();
+        assert_eq!(state.stroke_width, 2.0);
+    }
+
+    #[test]
+    fn test_close_path_creates_closing_line() {
+        let mut state = GraphicsState::new();
+
+        // Create a triangle path
+        state.move_to(100.0, 100.0);
+        state.line_to(200.0, 100.0);
+        state.line_to(200.0, 200.0);
+        state.close_path();
+
+        // Should have 3 lines: 2 explicit + 1 from closepath
+        assert_eq!(state.path.len(), 3);
+
+        // Last line should close back to start
+        if let PathSegment::Line { x1, y1, x2, y2 } = &state.path[2] {
+            assert!((*x1 - 200.0).abs() < 0.01);
+            assert!((*y1 - 200.0).abs() < 0.01);
+            assert!((*x2 - 100.0).abs() < 0.01);
+            assert!((*y2 - 100.0).abs() < 0.01);
+        } else {
+            panic!("Expected Line segment");
+        }
+    }
+
+    #[test]
+    fn test_close_path_no_duplicate_if_already_closed() {
+        let mut state = GraphicsState::new();
+
+        // Create a closed square manually
+        state.move_to(100.0, 100.0);
+        state.line_to(200.0, 100.0);
+        state.line_to(200.0, 200.0);
+        state.line_to(100.0, 200.0);
+        state.line_to(100.0, 100.0); // Manually close
+        state.close_path(); // Should not add duplicate
+
+        // Should have 4 lines (not 5)
+        assert_eq!(state.path.len(), 4);
     }
 }
