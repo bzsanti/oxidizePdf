@@ -84,24 +84,24 @@ fn cluster_columns(x_positions: &[f64], tolerance: f64) -> Vec<Column> {
 
     let mut sorted = x_positions.to_vec();
     sorted.sort_by(|a, b| {
+        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         a.partial_cmp(b)
-            .expect("f64 coordinates extracted from PDF are never NaN")
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
 
     for &x in &sorted[1..] {
-        let last_cluster = clusters
-            .last_mut()
-            .expect("clusters guaranteed non-empty: initialized with first element");
-        let last_value = *last_cluster
-            .last()
-            .expect("cluster guaranteed non-empty: never push empty cluster");
-
-        if (x - last_value).abs() <= tolerance {
-            last_cluster.push(x);
-        } else {
-            clusters.push(vec![x]);
+        // Safe: clusters guaranteed non-empty (initialized with first element above)
+        if let Some(last_cluster) = clusters.last_mut() {
+            // Safe: cluster guaranteed non-empty (never push empty clusters)
+            if let Some(&last_value) = last_cluster.last() {
+                if (x - last_value).abs() <= tolerance {
+                    last_cluster.push(x);
+                } else {
+                    clusters.push(vec![x]);
+                }
+            }
         }
     }
 
@@ -124,24 +124,24 @@ fn cluster_rows(y_positions: &[f64], tolerance: f64) -> Vec<f64> {
 
     let mut sorted = y_positions.to_vec();
     sorted.sort_by(|a, b| {
+        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         b.partial_cmp(a)
-            .expect("f64 coordinates extracted from PDF are never NaN")
+            .unwrap_or(std::cmp::Ordering::Equal)
     }); // Sort descending (top to bottom)
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
 
     for &y in &sorted[1..] {
-        let last_cluster = clusters
-            .last_mut()
-            .expect("clusters guaranteed non-empty: initialized with first element");
-        let last_value = *last_cluster
-            .last()
-            .expect("cluster guaranteed non-empty: never push empty cluster");
-
-        if (y - last_value).abs() <= tolerance {
-            last_cluster.push(y);
-        } else {
-            clusters.push(vec![y]);
+        // Safe: clusters guaranteed non-empty (initialized with first element above)
+        if let Some(last_cluster) = clusters.last_mut() {
+            // Safe: cluster guaranteed non-empty (never push empty clusters)
+            if let Some(&last_value) = last_cluster.last() {
+                if (y - last_value).abs() <= tolerance {
+                    last_cluster.push(y);
+                } else {
+                    clusters.push(vec![y]);
+                }
+            }
         }
     }
 
@@ -187,9 +187,10 @@ fn find_cell_for_fragment(
         .min_by(|(_, &y1), (_, &y2)| {
             let dist1 = (fragment.y - y1).abs();
             let dist2 = (fragment.y - y2).abs();
+            // Use unwrap_or for f64 comparison (NaN sorts as Equal)
             dist1
                 .partial_cmp(&dist2)
-                .expect("f64 distances are never NaN: calculated from valid coordinates")
+                .unwrap_or(std::cmp::Ordering::Equal)
         })
         .map(|(idx, &y)| {
             if (fragment.y - y).abs() <= config.row_alignment_tolerance * 2.0 {
@@ -207,9 +208,10 @@ fn find_cell_for_fragment(
         .min_by(|(_, col1), (_, col2)| {
             let dist1 = (fragment.x - col1.x_position).abs();
             let dist2 = (fragment.x - col2.x_position).abs();
+            // Use unwrap_or for f64 comparison (NaN sorts as Equal)
             dist1
                 .partial_cmp(&dist2)
-                .expect("f64 distances are never NaN: calculated from valid coordinates")
+                .unwrap_or(std::cmp::Ordering::Equal)
         })
         .map(|(idx, col)| {
             if (fragment.x - col.x_position).abs() <= config.column_alignment_tolerance * 2.0 {
@@ -238,12 +240,9 @@ fn calculate_table_bbox(row_positions: &[f64], columns: &[Column]) -> BoundingBo
         .map(|c| c.right())
         .fold(f64::NEG_INFINITY, f64::max);
 
-    let max_y = *row_positions
-        .first()
-        .expect("row_positions guaranteed non-empty by check at line 228");
-    let min_y = *row_positions
-        .last()
-        .expect("row_positions guaranteed non-empty by check at line 228");
+    // Safe: row_positions guaranteed non-empty by check above
+    let max_y = row_positions.first().copied().unwrap_or(0.0);
+    let min_y = row_positions.last().copied().unwrap_or(0.0);
 
     BoundingBox::new(min_x, min_y, max_x - min_x, max_y - min_y)
 }

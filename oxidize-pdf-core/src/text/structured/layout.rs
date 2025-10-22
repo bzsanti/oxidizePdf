@@ -45,8 +45,9 @@ fn detect_column_boundaries(fragments: &[TextFragment], min_gap: f64) -> Vec<Col
     let mut x_ranges: Vec<(f64, f64)> = fragments.iter().map(|f| (f.x, f.x + f.width)).collect();
 
     x_ranges.sort_by(|a, b| {
+        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         a.0.partial_cmp(&b.0)
-            .expect("f64 coordinates extracted from PDF are never NaN")
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let mut boundaries = Vec::new();
@@ -93,11 +94,12 @@ fn assign_to_columns(
             // Sort fragments in reading order (top to bottom, left to right)
             let mut sorted = frags.clone();
             sorted.sort_by(|a, b| {
+                // Use unwrap_or for f64 comparison (NaN sorts as Equal)
                 b.y.partial_cmp(&a.y)
-                    .expect("f64 coordinates extracted from PDF are never NaN")
+                    .unwrap_or(std::cmp::Ordering::Equal)
                     .then_with(|| {
                         a.x.partial_cmp(&b.x)
-                            .expect("f64 coordinates extracted from PDF are never NaN")
+                            .unwrap_or(std::cmp::Ordering::Equal)
                     })
             });
 
@@ -130,11 +132,12 @@ fn find_column_index(x: f64, boundaries: &[ColumnBoundary]) -> usize {
 fn create_single_column_section(fragments: &[TextFragment]) -> ColumnSection {
     let mut sorted = fragments.to_vec();
     sorted.sort_by(|a, b| {
+        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         b.y.partial_cmp(&a.y)
-            .expect("f64 coordinates extracted from PDF are never NaN")
+            .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| {
                 a.x.partial_cmp(&b.x)
-                    .expect("f64 coordinates extracted from PDF are never NaN")
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
     });
 

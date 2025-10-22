@@ -132,26 +132,27 @@ fn group_by_y_position(fragments: &[TextFragment], tolerance: f64) -> Vec<Vec<Te
 
     let mut sorted = fragments.to_vec();
     sorted.sort_by(|a, b| {
+        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         b.y.partial_cmp(&a.y)
-            .expect("f64 coordinates extracted from PDF are never NaN")
+            .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| {
                 a.x.partial_cmp(&b.x)
-                    .expect("f64 coordinates extracted from PDF are never NaN")
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
     });
 
     let mut lines: Vec<Vec<TextFragment>> = vec![vec![sorted[0].clone()]];
 
     for fragment in &sorted[1..] {
-        let last_line = lines
-            .last_mut()
-            .expect("lines guaranteed non-empty: initialized with first element");
-        let last_y = last_line[0].y;
+        // Safe: lines is guaranteed non-empty (initialized with first element above)
+        if let Some(last_line) = lines.last_mut() {
+            let last_y = last_line[0].y;
 
-        if (fragment.y - last_y).abs() <= tolerance {
-            last_line.push(fragment.clone());
-        } else {
-            lines.push(vec![fragment.clone()]);
+            if (fragment.y - last_y).abs() <= tolerance {
+                last_line.push(fragment.clone());
+            } else {
+                lines.push(vec![fragment.clone()]);
+            }
         }
     }
 
