@@ -1,5 +1,6 @@
 pub mod calibrated_color;
 pub mod clipping;
+pub mod extraction;
 mod color;
 mod color_profiles;
 pub mod devicen_color;
