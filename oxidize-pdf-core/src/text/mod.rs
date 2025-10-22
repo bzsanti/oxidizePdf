@@ -15,6 +15,7 @@ pub mod ocr;
 pub mod plaintext;
 pub mod structured;
 pub mod table;
+pub mod table_detection;
 pub mod validation;
 
 #[cfg(test)]
