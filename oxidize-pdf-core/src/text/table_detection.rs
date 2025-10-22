@@ -45,6 +45,23 @@
 
 use crate::graphics::extraction::{ExtractedGraphics, LineOrientation, VectorLine};
 use crate::text::extraction::TextFragment;
+use thiserror::Error;
+
+/// Errors that can occur during table detection.
+#[derive(Debug, Error)]
+pub enum TableDetectionError {
+    /// Invalid coordinate value (NaN or Infinity)
+    #[error("Invalid coordinate value: expected valid f64, found NaN or Infinity")]
+    InvalidCoordinate,
+
+    /// Grid has no rows or columns
+    #[error("Invalid grid: {0}")]
+    InvalidGrid(String),
+
+    /// Internal logic error
+    #[error("Internal error: {0}")]
+    InternalError(String),
+}
 
 /// Configuration for table detection.
 #[derive(Debug, Clone)]
@@ -247,7 +264,7 @@ impl TableDetector {
         &self,
         graphics: &ExtractedGraphics,
         text_fragments: &[TextFragment],
-    ) -> Result<Vec<DetectedTable>, String> {
+    ) -> Result<Vec<DetectedTable>, TableDetectionError> {
         let mut tables = Vec::new();
 
         // Check if there are enough lines for a table
@@ -280,7 +297,7 @@ impl TableDetector {
         &self,
         graphics: &ExtractedGraphics,
         text_fragments: &[TextFragment],
-    ) -> Result<Option<DetectedTable>, String> {
+    ) -> Result<Option<DetectedTable>, TableDetectionError> {
         // Extract horizontal and vertical lines
         let h_lines: Vec<&VectorLine> = graphics.horizontal_lines().collect();
         let v_lines: Vec<&VectorLine> = graphics.vertical_lines().collect();
@@ -300,7 +317,7 @@ impl TableDetector {
         let cells_with_text = self.assign_text_to_cells(cells, text_fragments);
 
         // Create table bounding box
-        let bbox = self.calculate_table_bbox(&grid);
+        let bbox = self.calculate_table_bbox(&grid)?;
 
         // Check minimum area
         if bbox.area() < self.config.min_table_area {
@@ -321,12 +338,12 @@ impl TableDetector {
         &self,
         h_lines: &[&VectorLine],
         v_lines: &[&VectorLine],
-    ) -> Result<GridPattern, String> {
+    ) -> Result<GridPattern, TableDetectionError> {
         // Cluster horizontal lines by Y coordinate
-        let mut rows = self.cluster_lines_by_position(h_lines, LineOrientation::Horizontal);
+        let mut rows = self.cluster_lines_by_position(h_lines, LineOrientation::Horizontal)?;
 
         // Cluster vertical lines by X coordinate
-        let columns = self.cluster_lines_by_position(v_lines, LineOrientation::Vertical);
+        let columns = self.cluster_lines_by_position(v_lines, LineOrientation::Vertical)?;
 
         // Reverse rows so row 0 is at the top (highest Y) for intuitive indexing
         rows.reverse();
@@ -339,9 +356,9 @@ impl TableDetector {
         &self,
         lines: &[&VectorLine],
         orientation: LineOrientation,
-    ) -> Vec<f64> {
+    ) -> Result<Vec<f64>, TableDetectionError> {
         if lines.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
 
         // Extract positions
@@ -354,17 +371,25 @@ impl TableDetector {
             })
             .collect();
 
-        // Sort positions
+        // Sort positions (return error if NaN/Infinity found)
         positions.sort_by(|a, b| {
             a.partial_cmp(b)
-                .expect("f64 coordinates should not be NaN")
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
+
+        // Validate no NaN or Infinity values
+        if positions.iter().any(|p| !p.is_finite()) {
+            return Err(TableDetectionError::InvalidCoordinate);
+        }
 
         // Cluster by tolerance - group nearby positions
         let mut clusters: Vec<Vec<f64>> = vec![vec![positions[0]]];
 
         for &pos in &positions[1..] {
-            let last_cluster = clusters.last_mut().expect("clusters is non-empty");
+            let last_cluster = clusters.last_mut()
+                .ok_or_else(|| TableDetectionError::InternalError(
+                    "cluster list unexpectedly empty".to_string()
+                ))?;
             let cluster_mean = last_cluster.iter().sum::<f64>() / last_cluster.len() as f64;
 
             if (pos - cluster_mean).abs() <= self.config.alignment_tolerance {
@@ -377,10 +402,10 @@ impl TableDetector {
         }
 
         // Return mean position of each cluster
-        clusters
+        Ok(clusters
             .iter()
             .map(|cluster| cluster.iter().sum::<f64>() / cluster.len() as f64)
-            .collect()
+            .collect())
     }
 
     /// Creates cell boundaries from grid pattern.
@@ -447,20 +472,23 @@ impl TableDetector {
     }
 
     /// Calculates the table bounding box from grid pattern.
-    fn calculate_table_bbox(&self, grid: &GridPattern) -> BoundingBox {
+    fn calculate_table_bbox(&self, grid: &GridPattern) -> Result<BoundingBox, TableDetectionError> {
         let min_x = *grid
             .columns
             .first()
-            .expect("grid has at least one column");
-        let max_x = *grid.columns.last().expect("grid has at least one column");
+            .ok_or_else(|| TableDetectionError::InvalidGrid("no columns".to_string()))?;
+        let max_x = *grid.columns.last()
+            .ok_or_else(|| TableDetectionError::InvalidGrid("no columns".to_string()))?;
 
         // Get min/max Y regardless of row order (ascending or descending)
-        let first_y = *grid.rows.first().expect("grid has at least one row");
-        let last_y = *grid.rows.last().expect("grid has at least one row");
+        let first_y = *grid.rows.first()
+            .ok_or_else(|| TableDetectionError::InvalidGrid("no rows".to_string()))?;
+        let last_y = *grid.rows.last()
+            .ok_or_else(|| TableDetectionError::InvalidGrid("no rows".to_string()))?;
         let min_y = first_y.min(last_y);
         let max_y = first_y.max(last_y);
 
-        BoundingBox::new(min_x, min_y, max_x - min_x, max_y - min_y)
+        Ok(BoundingBox::new(min_x, min_y, max_x - min_x, max_y - min_y))
     }
 }
 

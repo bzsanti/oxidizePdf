@@ -11,7 +11,7 @@ use oxidize_pdf::document::Document;
 use oxidize_pdf::graphics::extraction::{ExtractionConfig, GraphicsExtractor};
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
-use oxidize_pdf::text::table_detection::TableDetector;
+use oxidize_pdf::text::table_detection::{TableDetector, TableDetectionError};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::writer::{PdfWriter, WriterConfig};
 use oxidize_pdf::Color;
