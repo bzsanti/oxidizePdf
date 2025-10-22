@@ -908,10 +908,90 @@ impl<R: Read + Seek> PdfReader<R> {
         };
 
         // Now we can get the pages object without holding a reference to catalog
-        let pages_obj = self.get_object(pages_obj_num, pages_gen_num)?;
+        // First, check if we need double indirection by peeking at the object
+        let needs_double_resolve = {
+            let pages_obj = self.get_object(pages_obj_num, pages_gen_num)?;
+            pages_obj.as_reference()
+        };
+
+        // If it's a reference, resolve the double indirection
+        let (final_obj_num, final_gen_num) = if let Some((ref_obj_num, ref_gen_num)) = needs_double_resolve {
+            (ref_obj_num, ref_gen_num)
+        } else {
+            (pages_obj_num, pages_gen_num)
+        };
+
+        // Determine which object number to use for Pages (validate and potentially search)
+        let actual_pages_num = {
+            // Check if the referenced object is valid (in a scope to drop borrows)
+            let is_valid_dict = {
+                let pages_obj = self.get_object(final_obj_num, final_gen_num)?;
+                pages_obj.as_dict().is_some()
+            };
+
+            if is_valid_dict {
+                // The referenced object is valid
+                final_obj_num
+            } else {
+                // If Pages reference resolves to Null or non-dictionary, try to find Pages manually (corrupted PDF)
+                #[cfg(debug_assertions)]
+                eprintln!("Warning: Pages reference invalid, searching for valid Pages object");
+
+                if self.options.lenient_syntax {
+                    // Search for a valid Pages object number
+                    let xref_len = self.xref.len() as u32;
+                    let mut found_pages_num = None;
+
+                    for i in 1..xref_len {
+                        // Check in a scope to drop the borrow
+                        let is_pages = {
+                            if let Ok(obj) = self.get_object(i, 0) {
+                                if let Some(dict) = obj.as_dict() {
+                                    if let Some(obj_type) = dict.get("Type").and_then(|t| t.as_name()) {
+                                        obj_type.0 == "Pages"
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        };
+
+                        if is_pages {
+                            found_pages_num = Some(i);
+                            break;
+                        }
+                    }
+
+                    if let Some(obj_num) = found_pages_num {
+                        #[cfg(debug_assertions)]
+                        eprintln!("Found valid Pages object at {} 0 R", obj_num);
+                        obj_num
+                    } else {
+                        // No valid Pages found
+                        return Err(ParseError::SyntaxError {
+                            position: 0,
+                            message: "Pages is not a dictionary and no valid Pages object found".to_string(),
+                        });
+                    }
+                } else {
+                    // Lenient mode disabled, can't search
+                    return Err(ParseError::SyntaxError {
+                        position: 0,
+                        message: "Pages is not a dictionary".to_string(),
+                    });
+                }
+            }
+        };
+
+        // Now get the final Pages object (all validation/search done above)
+        let pages_obj = self.get_object(actual_pages_num, 0)?;
         pages_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
             position: 0,
-            message: "Pages is not a dictionary".to_string(),
+            message: "Pages object is not a dictionary".to_string(),
         })
     }
 
@@ -1277,13 +1357,32 @@ impl<R: Read + Seek> PdfReader<R> {
 
         if is_circular {
             eprintln!(
-                "DEBUG: Circular reconstruction detected for object {} {} - breaking cycle with null object",
+                "Warning: Circular reconstruction detected for object {} {} - attempting manual extraction",
                 obj_num, gen_num
             );
-            // Return null object to break cycle
-            self.object_cache
-                .insert((obj_num, gen_num), PdfObject::Null);
-            return Ok(&self.object_cache[&(obj_num, gen_num)]);
+
+            // Instead of immediately returning Null, try to manually extract the object
+            // This is particularly important for stream objects where /Length creates
+            // a false circular dependency, but the stream data is actually available
+            match self.extract_object_or_stream_manually(obj_num) {
+                Ok(obj) => {
+                    eprintln!(
+                        "         Successfully extracted object {} {} manually despite circular reference",
+                        obj_num, gen_num
+                    );
+                    self.object_cache.insert((obj_num, gen_num), obj);
+                    return Ok(&self.object_cache[&(obj_num, gen_num)]);
+                }
+                Err(e) => {
+                    eprintln!(
+                        "         Manual extraction failed: {} - breaking cycle with null object",
+                        e
+                    );
+                    // Only return Null if we truly can't reconstruct it
+                    self.object_cache.insert((obj_num, gen_num), PdfObject::Null);
+                    return Ok(&self.object_cache[&(obj_num, gen_num)]);
+                }
+            }
         }
 
         // PROTECTION 2: Depth limit check
@@ -2090,6 +2189,9 @@ impl<R: Read + Seek> PdfReader<R> {
         // Parse dictionary content
         let mut dict = HashMap::new();
 
+        eprintln!("DEBUG: reconstruct_stream_object_bytes() dict_content: {:?}",
+            dict_content.chars().take(150).collect::<String>());
+
         // Simple parsing for /Filter and /Length
         if dict_content.contains("/Filter /FlateDecode") {
             dict.insert(
@@ -2100,17 +2202,33 @@ impl<R: Read + Seek> PdfReader<R> {
 
         if let Some(length_start) = dict_content.find("/Length ") {
             let length_part = &dict_content[length_start + 8..];
-            if let Some(space_pos) = length_part.find(' ') {
+            eprintln!("DEBUG: Length parsing - length_part: {:?}",
+                length_part.chars().take(30).collect::<String>());
+
+            // Check if this is an indirect reference (e.g., "8 0 R")
+            // Pattern: number + space + number + space + "R"
+            let is_indirect_ref = length_part.trim().contains(" R") ||
+                                  length_part.trim().contains(" 0 R");
+
+            if is_indirect_ref {
+                eprintln!("DEBUG: /Length is an indirect reference - ignoring and using stream/endstream markers");
+                // Don't insert Length into dict - we'll use actual stream data length
+            } else if let Some(space_pos) = length_part.find(' ') {
                 let length_str = &length_part[..space_pos];
+                eprintln!("DEBUG: Found space at pos {}, length_str: {:?}", space_pos, length_str);
                 if let Ok(length) = length_str.parse::<i64>() {
+                    eprintln!("DEBUG: Parsed Length as direct integer: {}", length);
                     dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
                 }
             } else {
                 // Length might be at the end
                 if let Ok(length) = length_part.trim().parse::<i64>() {
+                    eprintln!("DEBUG: Parsed Length at end: {}", length);
                     dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
                 }
             }
+        } else {
+            eprintln!("DEBUG: /Length not found in dict_content");
         }
 
         // Find stream data
@@ -2129,23 +2247,28 @@ impl<R: Read + Seek> PdfReader<R> {
             };
 
             if let Some(endstream_pos) = find_bytes(after_dict, b"endstream") {
+                eprintln!("DEBUG: Found endstream at offset {} in after_dict", endstream_pos);
+                eprintln!("DEBUG: stream_data_start={}, endstream_pos={}", stream_data_start, endstream_pos);
+
                 let mut stream_data = &after_dict[stream_data_start..endstream_pos];
+                eprintln!("DEBUG: Initial stream_data length: {} bytes", stream_data.len());
 
                 // Respect the Length field if present
                 if let Some(PdfObject::Integer(length)) = dict.get(&PdfName("Length".to_string())) {
                     let expected_length = *length as usize;
+                    eprintln!("DEBUG: Length field says {} bytes", expected_length);
                     if stream_data.len() > expected_length {
+                        eprintln!("DEBUG: Stream data ({} bytes) > Length ({} bytes), trimming",
+                            stream_data.len(), expected_length);
                         stream_data = &stream_data[..expected_length];
-                        eprintln!(
-                            "DEBUG: Trimmed stream data from {} to {} bytes based on Length field",
-                            after_dict[stream_data_start..endstream_pos].len(),
-                            expected_length
-                        );
+                    } else if stream_data.len() < expected_length {
+                        eprintln!("WARNING: Stream data ({} bytes) < Length ({} bytes)!",
+                            stream_data.len(), expected_length);
                     }
                 }
 
                 eprintln!(
-                    "DEBUG: Reconstructed stream object {} with {} bytes of stream data",
+                    "DEBUG: Final reconstructed stream object {} with {} bytes of stream data",
                     obj_num,
                     stream_data.len()
                 );
@@ -2156,6 +2279,8 @@ impl<R: Read + Seek> PdfReader<R> {
                 };
 
                 return Ok(PdfObject::Stream(stream));
+            } else {
+                eprintln!("DEBUG: endstream NOT found in after_dict (size: {} bytes)", after_dict.len());
             }
         }
 
