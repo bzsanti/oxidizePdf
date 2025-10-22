@@ -84,7 +84,6 @@ struct TextState {
     /// Current text line matrix
     text_line_matrix: [f64; 6],
     /// Current transformation matrix (CTM)
-    #[allow(dead_code)]
     ctm: [f64; 6],
     /// Text leading (line spacing)
     leading: f64,
@@ -279,8 +278,10 @@ impl TextExtractor {
                             let text_bytes = &text;
                             let decoded = self.decode_text(text_bytes, &state)?;
 
-                            // Calculate position
-                            let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
+                            // Calculate position: Apply text_matrix, then CTM
+                            // Concatenate: final = CTM × text_matrix
+                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
+                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
 
                             // Add spacing based on position change
                             if !extracted_text.is_empty() {
@@ -406,6 +407,25 @@ impl TextExtractor {
 
                     ContentOperation::SetTextRenderMode(mode) => {
                         state.render_mode = mode as u8;
+                    }
+
+                    ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
+                        // Update CTM: new_ctm = concat_matrix * current_ctm
+                        let [a0, b0, c0, d0, e0, f0] = state.ctm;
+                        let a = a as f64;
+                        let b = b as f64;
+                        let c = c as f64;
+                        let d = d as f64;
+                        let e = e as f64;
+                        let f = f as f64;
+                        state.ctm = [
+                            a * a0 + b * c0,
+                            a * b0 + b * d0,
+                            c * a0 + d * c0,
+                            c * b0 + d * d0,
+                            e * a0 + f * c0 + e0,
+                            e * b0 + f * d0 + f0,
+                        ];
                     }
 
                     _ => {
