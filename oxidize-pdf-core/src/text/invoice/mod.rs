@@ -120,9 +120,11 @@ pub mod error;
 pub mod extractor;
 pub mod patterns;
 pub mod types;
+pub mod validators;
 
 pub use error::{ExtractionError, Result};
 pub use extractor::{InvoiceExtractor, InvoiceExtractorBuilder};
+pub use patterns::{FieldPattern, InvoiceFieldType, PatternLibrary};
 pub use types::{
     BoundingBox, ExtractedField, InvoiceData, InvoiceField, InvoiceMetadata, Language,
 };

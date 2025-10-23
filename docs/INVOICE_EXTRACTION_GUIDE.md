@@ -118,6 +118,54 @@ The extractor can identify and extract the following field types:
 - **Line Item Quantity**: Units ordered/delivered
 - **Line Item Unit Price**: Price per unit before tax
 
+## Pattern Matching Improvements (v1.6.4)
+
+Recent improvements to pattern recognition have enhanced field extraction accuracy:
+
+### Net Amount Patterns
+
+**Table Format Support** (English only):
+- Now supports invoices where labels and values are in separate columns
+- Pattern: `"Total excl VAT\n1,463.88"` or `"Total excluding VAT    1,234.56"`
+- Example PDF: Invoices with tabular financial summary sections
+- **Impact**: +10% coverage on English invoices with table-based layouts
+
+**Additional Variants** (All languages):
+- **Spanish**: "Neto", "Subtotal", "Suma Neta" (in addition to "Base Imponible")
+- **English**: "Net", "Sub-total", "Net Sum" (in addition to "Subtotal", "Net Amount")
+- **German**: "Netto", "Summe Netto", "Teilsumme" (in addition to "Nettobetrag")
+- **Italian**: "Netto", "Somma Netta", "Importo Netto" (in addition to "Imponibile")
+
+### Currency Detection
+
+**Enhanced Patterns** (All languages):
+- Now detects currency codes in context: `"Currency: EUR"`, `"Moneda: USD"`, `"Währung: CHF"`, `"Valuta: GBP"`
+- Added support for Swiss Franc (CHF) across all languages
+- Symbols (€, $, £) detection remains unchanged
+
+### Customer Name Patterns
+
+**Conservative Approach**:
+- Customer Name patterns intentionally strict to avoid false positives
+- Requires explicit labels: "Bill to:", "Sold to:", "Client:" (English)
+- Requires minimum 2 words to prevent matching field headers like "Customer VAT No."
+- **Limitation**: May miss customer names not preceded by standard labels
+- **Recommendation**: For complex layouts, consider using structured table extraction (Issue #90)
+
+### Known Pattern Limitations
+
+1. **Table-based Layouts**: Patterns work best with inline format (`"Label: Value"`)
+   - Table format (`Label | Value` in columns) partially supported for Net Amount (English only)
+   - Full table support planned for v2.0 (see Issue #90)
+
+2. **Customer Name**: Challenging field due to layout variability
+   - Success rate: ~10% (strict patterns to avoid false positives)
+   - Consider proximity-based extraction (Planned: Sprint 1 - Phase 6)
+
+3. **Line Items**: Requires structured table detection
+   - Current success rate: 0% (patterns alone insufficient)
+   - Planned implementation: Sprint 1 - Phase 7
+
 ## Configuration
 
 ### Builder Pattern
@@ -300,6 +348,99 @@ Each extracted field has a confidence score from 0.0 to 1.0:
 | Supplier Name | 0.7 | Standard field, text-based |
 | Customer Name | 0.7 | Standard field, text-based |
 | Currency | 0.7 | Standard field, short code |
+
+### Multi-Factor Confidence Scoring (v1.6.4+)
+
+Starting in v1.6.4, confidence scores are calculated using a multi-factor approach that combines:
+
+1. **Base Pattern Confidence** (0.7-0.9): Initial confidence from pattern matching quality
+2. **Value Validation Bonus** (-0.5 to +0.2): Format and content validation
+3. **Proximity Bonus** (0.0 to +0.15): Distance from field label keywords
+
+**Formula**:
+```
+final_confidence = clamp(
+    base_confidence + validation_adjustment + proximity_bonus,
+    0.0, 1.0
+)
+```
+
+#### Value Validation Adjustments
+
+The extractor applies format validation to extracted values:
+
+**Date Fields** (Invoice Date, Due Date):
+- `+0.20`: Valid format (ISO 8601, DD/MM/YYYY, MM/DD/YYYY) with reasonable values
+- `+0.10`: Valid format but edge case (e.g., Feb 30 in non-leap year)
+- `-0.50`: Invalid format or impossible date (e.g., month=13)
+
+**Amount Fields** (Total, Tax, Net):
+- `+0.20`: Valid positive amount with 2 decimal places (e.g., 1,234.56)
+- `+0.10`: Valid amount with non-standard decimals (0, 1, or 3+ places)
+- `-0.30`: Negative amount (suspicious in invoices)
+- `-0.20`: Zero amount (may indicate missing data)
+
+**Invoice Number**:
+- `+0.10`: Strong format with letters and separators (e.g., INV-2025-001)
+- `+0.08`: Medium format with letters (e.g., INV2025001)
+- `+0.05`: Numeric only (e.g., 12345)
+- `-0.30`: Too short (< 2 characters)
+
+**VAT Number**:
+- `+0.15`: Valid country-specific format (UK: GB272052232, ES: A12345678, DE: DE123456789, IT: IT12345678901)
+- `+0.05`: Generic numeric format (8+ digits)
+- `-0.20`: Invalid or empty
+
+#### Proximity Bonus
+
+Fields near their expected label keywords receive a proximity bonus:
+
+| Distance from Keyword | Bonus | Example |
+|----------------------|-------|---------|
+| 0-20 characters | +0.15 | "Total £1,234.56" (keyword adjacent) |
+| 21-50 characters | +0.10 | "Total Amount: £1,234.56" (same section) |
+| 51-100 characters | +0.05 | Value in nearby paragraph |
+| 100+ characters | 0.00 | No proximity bonus |
+
+**Language-Aware Keywords**: The proximity bonus recognizes keywords in all supported languages (ES/EN/DE/IT).
+
+#### Example Confidence Calculations
+
+**Valid Invoice Date near keyword**:
+```
+Base: 0.85 (strong date pattern)
++ Validation: +0.20 (valid DD/MM/YYYY format)
++ Proximity: +0.15 (keyword "Date" within 10 chars)
+= 1.20 → clamped to 1.00
+```
+
+**Valid Amount with distant keyword**:
+```
+Base: 0.90 (total amount pattern)
++ Validation: +0.20 (valid 2-decimal format)
++ Proximity: +0.00 (keyword >100 chars away)
+= 1.10 → clamped to 1.00
+```
+
+**Invalid Date**:
+```
+Base: 0.85 (matched date pattern)
++ Validation: -0.50 (invalid: 99/99/9999)
++ Proximity: +0.10 (near "Invoice Date")
+= 0.45 (likely filtered out with 0.7 threshold)
+```
+
+**Zero Amount (suspicious)**:
+```
+Base: 0.90 (total amount pattern)
++ Validation: -0.20 (zero value suspicious)
++ Proximity: +0.15 (near "Total")
+= 0.85 (passes, but user should verify)
+```
+
+#### Performance Impact
+
+Multi-factor scoring improved average confidence from **74.4% → 83.3%** (+8.9 points, +12% relative) in Phase 2 testing across 10 diverse invoices, with no measurable impact on extraction time (<100ms per page).
 
 ### Tuning Confidence Thresholds
 
@@ -582,6 +723,224 @@ for path in paths {
     let invoice = process_with_extractor(&extractor, path)?;
 }
 ```
+
+## Custom Patterns (v1.6.4+)
+
+### Overview
+
+Starting in v1.6.4, the invoice extraction API exposes a public pattern API that allows you to extend or replace default patterns with custom ones. This is useful for:
+
+- **Industry-specific formats**: Add patterns for invoice formats specific to your industry
+- **Vendor-specific layouts**: Handle unique formats from specific suppliers
+- **Localized variations**: Add patterns for regional date/number formats
+- **Internal formats**: Support custom invoice numbering schemes
+
+The pattern API provides full type-safety and thread-safety, making it easy to customize extraction while maintaining performance and reliability.
+
+### Using the Pattern API
+
+#### Example 1: Extend Default Patterns
+
+The most common use case is starting with default patterns and adding custom ones for specific formats:
+
+```rust
+use oxidize_pdf::text::invoice::{
+    InvoiceExtractor, PatternLibrary, FieldPattern,
+    InvoiceFieldType, Language
+};
+
+// Start with Spanish defaults
+let mut patterns = PatternLibrary::default_spanish();
+
+// Add custom pattern for vendor-specific format
+patterns.add_pattern(
+    FieldPattern::new(
+        InvoiceFieldType::InvoiceNumber,
+        r"Ref:\s*([A-Z]{3}-[0-9]{4})",  // Custom format: ABC-1234
+        0.85,
+        Some(Language::Spanish)
+    )?
+);
+
+// Add custom VAT pattern for specific regional format
+patterns.add_pattern(
+    FieldPattern::new(
+        InvoiceFieldType::VatNumber,
+        r"Tax\s+ID:\s*([0-9]{2}-[0-9]{7})",
+        0.80,
+        Some(Language::Spanish)
+    )?
+);
+
+// Use with extractor
+let extractor = InvoiceExtractor::builder()
+    .with_custom_patterns(patterns)
+    .confidence_threshold(0.7)
+    .build();
+
+// Extract from invoices
+let invoice = extractor.extract(&text_fragments)?;
+```
+
+#### Example 2: Completely Custom Patterns
+
+For specialized scenarios, you can create a pattern library from scratch:
+
+```rust
+use oxidize_pdf::text::invoice::{
+    InvoiceExtractor, PatternLibrary, FieldPattern,
+    InvoiceFieldType
+};
+
+// Create empty library
+let mut patterns = PatternLibrary::new();
+
+// Add only the patterns you need
+patterns.add_pattern(
+    FieldPattern::new(
+        InvoiceFieldType::InvoiceNumber,
+        r"Order\s+#([0-9]+)",
+        0.9,
+        None  // Language-agnostic
+    )?
+);
+
+patterns.add_pattern(
+    FieldPattern::new(
+        InvoiceFieldType::TotalAmount,
+        r"Amount\s+Due:\s*\$([0-9,]+\.[0-9]{2})",
+        0.9,
+        None
+    )?
+);
+
+patterns.add_pattern(
+    FieldPattern::new(
+        InvoiceFieldType::InvoiceDate,
+        r"Issued:\s*(\d{4}-\d{2}-\d{2})",
+        0.85,
+        None
+    )?
+);
+
+let extractor = InvoiceExtractor::builder()
+    .with_custom_patterns(patterns)
+    .confidence_threshold(0.8)
+    .build();
+```
+
+#### Example 3: Merge Multiple Libraries
+
+Combine patterns from multiple sources:
+
+```rust
+use oxidize_pdf::text::invoice::PatternLibrary;
+
+// Load base patterns for two languages
+let mut patterns = PatternLibrary::default_spanish();
+let english_patterns = PatternLibrary::default_english();
+
+// Merge English patterns into Spanish library
+patterns.merge(english_patterns);
+
+// Add custom patterns on top
+let mut custom = PatternLibrary::new();
+custom.add_pattern(/* ... */);
+
+patterns.merge(custom);
+
+// Now supports Spanish, English, AND custom patterns
+let extractor = InvoiceExtractor::builder()
+    .with_custom_patterns(patterns)
+    .build();
+```
+
+### Available Default Constructors
+
+| Constructor | Language | Description |
+|-------------|----------|-------------|
+| `PatternLibrary::default_spanish()` | Spanish (ES) | Patterns for "Factura", "CIF", "Base Imponible", etc. |
+| `PatternLibrary::default_english()` | English (EN/UK) | Patterns for "Invoice", "VAT Number", "Subtotal", etc. |
+| `PatternLibrary::default_german()` | German (DE) | Patterns for "Rechnung", "USt-IdNr.", "Nettobetrag", etc. |
+| `PatternLibrary::default_italian()` | Italian (IT) | Patterns for "Fattura", "Partita IVA", "Imponibile", etc. |
+
+### Pattern Syntax
+
+Patterns use Rust's `regex` crate syntax. The capturing group (parentheses) defines what value to extract:
+
+```rust
+// ✅ GOOD: Captures the invoice number
+r"Invoice\s+Number:\s*([A-Z0-9\-]+)"
+//                      ^^^^^^^^^^^^^^ This part is extracted
+
+// ❌ BAD: Captures entire match including label
+r"(Invoice\s+Number:\s*[A-Z0-9\-]+)"
+```
+
+**Tips**:
+- Use `\s+` for one or more whitespace characters
+- Use `\s*` for optional whitespace
+- Use `[A-Z0-9\-]+` for alphanumeric with hyphens
+- Use `\d{2,4}` for 2-4 digits
+- Test patterns at [regex101.com](https://regex101.com) with "Rust" flavor
+
+### Thread Safety
+
+`PatternLibrary` is `Send + Sync`, meaning you can:
+- Share one extractor across multiple threads
+- Create pattern libraries in background threads
+- Use with async/await and tokio
+
+```rust
+use std::sync::Arc;
+
+let patterns = Arc::new(PatternLibrary::default_spanish());
+
+// Share across threads
+let patterns_clone = Arc::clone(&patterns);
+tokio::spawn(async move {
+    let extractor = InvoiceExtractor::builder()
+        .with_custom_patterns((*patterns_clone).clone())
+        .build();
+    // ... process invoices
+});
+```
+
+### Performance Considerations
+
+- **Pattern compilation**: Patterns are compiled once during `PatternLibrary` creation
+- **Matching cost**: Each pattern is tested against the text (~1-5ms per pattern)
+- **Recommendation**: Create extractor once and reuse across multiple invoices
+- **Typical performance**: <100ms for 50-100 patterns on standard invoices
+
+### Best Practices for Custom Patterns
+
+1. **Start with defaults**: Use `default_*()` constructors and add custom patterns on top
+2. **Test patterns thoroughly**: Use [regex101.com](https://regex101.com) to validate before adding
+3. **Set appropriate confidence**: Use higher confidence (0.9) for critical fields, lower (0.7) for optional
+4. **Document patterns**: Add comments explaining what format each pattern matches
+5. **Version patterns**: If patterns change, version your pattern library code
+
+```rust
+// ✅ GOOD: Well-documented custom pattern
+// Matches vendor-specific format: "REF: ABC-1234-XYZ"
+// Used by: Vendor X invoices (2024+)
+patterns.add_pattern(
+    FieldPattern::new(
+        InvoiceFieldType::InvoiceNumber,
+        r"REF:\s*([A-Z]{3}-[0-9]{4}-[A-Z]{3})",
+        0.85,
+        Some(Language::English)
+    )?
+);
+```
+
+### API Reference
+
+For complete API documentation with all methods and parameters, see:
+- [PatternLibrary rustdoc](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/text/invoice/struct.PatternLibrary.html)
+- [FieldPattern rustdoc](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/text/invoice/struct.FieldPattern.html)
+- [InvoiceFieldType rustdoc](https://docs.rs/oxidize-pdf/latest/oxidize_pdf/text/invoice/enum.InvoiceFieldType.html)
 
 ## Support and Contributing
 

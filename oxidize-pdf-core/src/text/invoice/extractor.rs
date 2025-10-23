@@ -58,6 +58,7 @@ use super::patterns::{InvoiceFieldType, PatternLibrary};
 use super::types::{
     BoundingBox, ExtractedField, InvoiceData, InvoiceField, InvoiceMetadata, Language,
 };
+use super::validators;
 use crate::text::extraction::TextFragment;
 
 /// Invoice data extractor with configurable pattern matching
@@ -196,7 +197,7 @@ impl InvoiceExtractor {
         let mut fields = Vec::new();
         for (field_type, matched_value, base_confidence) in matches {
             // Calculate confidence score with context
-            let confidence = self.calculate_confidence(base_confidence, &matched_value, &full_text);
+            let confidence = self.calculate_confidence(&field_type, base_confidence, &matched_value, &full_text);
 
             // Skip fields below threshold
             if confidence < self.confidence_threshold {
@@ -229,6 +230,61 @@ impl InvoiceExtractor {
             .with_language(self.language.unwrap_or(Language::English));
 
         Ok(InvoiceData::new(fields, metadata))
+    }
+
+    /// Extract invoice data from plain text (convenience method for testing)
+    ///
+    /// This is a convenience wrapper around `extract()` that creates synthetic
+    /// TextFragment objects from plain text input. Primarily useful for testing
+    /// and simple scenarios where you don't have actual PDF text fragments.
+    ///
+    /// **Note**: This method creates fragments without position information,
+    /// so proximity-based scoring may be less accurate than with real PDF fragments.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - Plain text string to extract invoice data from
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(InvoiceData)` with extracted fields, or `Err` if text is empty
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use oxidize_pdf::text::invoice::InvoiceExtractor;
+    ///
+    /// let extractor = InvoiceExtractor::builder()
+    ///     .with_language("en")
+    ///     .confidence_threshold(0.7)
+    ///     .build();
+    ///
+    /// let invoice_text = "Invoice Number: INV-001\nTotal: £100.00";
+    /// let result = extractor.extract_from_text(invoice_text)?;
+    ///
+    /// assert!(!result.fields.is_empty());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn extract_from_text(&self, text: &str) -> Result<InvoiceData> {
+        if text.is_empty() {
+            return Err(ExtractionError::NoTextFound(1));
+        }
+
+        // Create a single synthetic TextFragment from the text
+        let fragment = TextFragment {
+            text: text.to_string(),
+            x: 0.0,
+            y: 0.0,
+            width: 0.0,
+            height: 12.0,
+            font_size: 12.0,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
+        };
+
+        // Use the standard extract method
+        self.extract(&[fragment])
     }
 
     /// Reconstruct text from fragments
@@ -297,19 +353,173 @@ impl InvoiceExtractor {
         normalized.parse::<f64>().ok()
     }
 
-    /// Calculate confidence score for a match
+    /// Calculate confidence score for a match using multi-factor scoring
+    ///
+    /// Combines multiple factors to produce a final confidence score:
+    /// 1. **Base Pattern Confidence** (0.7-0.9): From pattern matching quality
+    /// 2. **Value Validation Bonus** (-0.5 to +0.2): Format and content validation
+    /// 3. **Proximity Bonus** (0.0 to +0.15): Distance from field label keywords
+    ///
+    /// # Arguments
+    ///
+    /// * `field_type` - The type of field being scored (affects which validator is applied)
+    /// * `base_confidence` - Initial confidence from pattern match quality
+    /// * `matched_value` - The extracted value (used for validation)
+    /// * `full_text` - Complete text of the invoice (used for proximity calculation)
+    ///
+    /// # Returns
+    ///
+    /// Final confidence score clamped to [0.0, 1.0]
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Invoice date with valid format gets validation bonus
+    /// let confidence = extractor.calculate_confidence(
+    ///     &InvoiceFieldType::InvoiceDate,
+    ///     0.85,  // base from pattern
+    ///     "20/01/2025",
+    ///     full_text
+    /// );
+    /// // Result: 0.85 + 0.20 (valid date) + proximity = ~1.0
+    /// ```
     fn calculate_confidence(
         &self,
+        field_type: &InvoiceFieldType,
         base_confidence: f64,
-        _matched_value: &str,
-        _full_text: &str,
+        matched_value: &str,
+        full_text: &str,
     ) -> f64 {
-        // For now, just return base confidence
-        // TODO: Add context-aware scoring:
-        // - Bonus for context hints nearby
-        // - Bonus for typical positions (header/footer)
-        // - Penalty for ambiguous values
-        base_confidence
+        // Start with base confidence from pattern matching
+        let mut score = base_confidence;
+
+        // Apply value validation adjustments based on field type
+        let validation_adjustment = match field_type {
+            InvoiceFieldType::InvoiceDate | InvoiceFieldType::DueDate => {
+                validators::validate_date(matched_value)
+            }
+            InvoiceFieldType::TotalAmount
+            | InvoiceFieldType::TaxAmount
+            | InvoiceFieldType::NetAmount
+            | InvoiceFieldType::LineItemUnitPrice => {
+                validators::validate_amount(matched_value)
+            }
+            InvoiceFieldType::InvoiceNumber => {
+                validators::validate_invoice_number(matched_value)
+            }
+            InvoiceFieldType::VatNumber => {
+                validators::validate_vat_number(matched_value)
+            }
+            // No validators yet for these fields
+            InvoiceFieldType::SupplierName
+            | InvoiceFieldType::CustomerName
+            | InvoiceFieldType::Currency
+            | InvoiceFieldType::ArticleNumber
+            | InvoiceFieldType::LineItemDescription
+            | InvoiceFieldType::LineItemQuantity => 0.0,
+        };
+
+        score += validation_adjustment;
+
+        // Apply proximity bonus (closeness to field label in text)
+        let proximity_bonus = self.calculate_proximity_bonus(field_type, matched_value, full_text);
+        score += proximity_bonus;
+
+        // Clamp to valid range [0.0, 1.0]
+        score.clamp(0.0, 1.0)
+    }
+
+    /// Calculate proximity bonus based on distance from field label keywords
+    ///
+    /// Fields that appear close to their expected label keywords receive a bonus.
+    /// This helps distinguish between correct matches and ambiguous values that
+    /// happen to match the pattern but appear in the wrong context.
+    ///
+    /// # Proximity Bonus Scale
+    ///
+    /// - **+0.15**: Keyword within 20 characters of match
+    /// - **+0.10**: Keyword within 50 characters
+    /// - **+0.05**: Keyword within 100 characters
+    /// - **0.00**: Keyword beyond 100 characters or not found
+    ///
+    /// # Arguments
+    ///
+    /// * `field_type` - The type of field (determines which keywords to search for)
+    /// * `matched_value` - The extracted value
+    /// * `full_text` - Complete invoice text
+    ///
+    /// # Returns
+    ///
+    /// Proximity bonus in range [0.0, 0.15]
+    fn calculate_proximity_bonus(
+        &self,
+        field_type: &InvoiceFieldType,
+        matched_value: &str,
+        full_text: &str,
+    ) -> f64 {
+        // Define keywords for each field type (language-agnostic where possible)
+        let keywords: Vec<&str> = match field_type {
+            InvoiceFieldType::InvoiceNumber => {
+                vec!["Invoice", "Factura", "Rechnung", "Fattura", "Number", "Número", "Nr"]
+            }
+            InvoiceFieldType::InvoiceDate => {
+                vec!["Date", "Fecha", "Datum", "Data", "Invoice Date"]
+            }
+            InvoiceFieldType::DueDate => {
+                vec!["Due", "Vencimiento", "Fällig", "Scadenza", "Payment"]
+            }
+            InvoiceFieldType::TotalAmount => {
+                vec!["Total", "Grand Total", "Amount Due", "Gesamtbetrag", "Totale"]
+            }
+            InvoiceFieldType::TaxAmount => {
+                vec!["VAT", "IVA", "MwSt", "Tax", "Impuesto"]
+            }
+            InvoiceFieldType::NetAmount => {
+                vec!["Subtotal", "Net", "Neto", "Nettobetrag", "Imponibile", "Base"]
+            }
+            InvoiceFieldType::VatNumber => {
+                vec!["VAT", "CIF", "NIF", "USt", "Partita IVA", "Tax ID"]
+            }
+            InvoiceFieldType::CustomerName => {
+                vec!["Bill to", "Customer", "Client", "Cliente"]
+            }
+            InvoiceFieldType::SupplierName => {
+                vec!["From", "Supplier", "Vendor", "Proveedor"]
+            }
+            _ => return 0.0, // No proximity bonus for other fields
+        };
+
+        // Find the matched value position in full text
+        let match_pos = match full_text.find(matched_value) {
+            Some(pos) => pos,
+            None => return 0.0, // Value not found in text (shouldn't happen)
+        };
+
+        // Find the closest keyword and calculate distance
+        let mut min_distance = usize::MAX;
+        for keyword in keywords {
+            // Case-insensitive search
+            let text_lower = full_text.to_lowercase();
+            let keyword_lower = keyword.to_lowercase();
+
+            if let Some(keyword_pos) = text_lower.find(&keyword_lower) {
+                let distance = if keyword_pos < match_pos {
+                    match_pos - keyword_pos
+                } else {
+                    keyword_pos - match_pos
+                };
+
+                min_distance = min_distance.min(distance);
+            }
+        }
+
+        // Award bonus based on proximity (distance in characters)
+        match min_distance {
+            0..=20 => 0.15,   // Very close (same line, adjacent)
+            21..=50 => 0.10,  // Close (nearby in layout)
+            51..=100 => 0.05, // Moderately close
+            _ => 0.0,         // Too far or not found
+        }
     }
 
     /// Find the bounding box of a matched value in the fragments
@@ -394,6 +604,7 @@ pub struct InvoiceExtractorBuilder {
     language: Option<Language>,
     confidence_threshold: f64,
     use_kerning: bool,
+    custom_patterns: Option<PatternLibrary>,
 }
 
 impl InvoiceExtractorBuilder {
@@ -408,6 +619,7 @@ impl InvoiceExtractorBuilder {
             language: None,
             confidence_threshold: 0.7,
             use_kerning: true,
+            custom_patterns: None,
         }
     }
 
@@ -485,9 +697,70 @@ impl InvoiceExtractorBuilder {
         self
     }
 
+    /// Use a custom pattern library instead of language-based defaults
+    ///
+    /// Allows complete control over invoice pattern matching by providing a
+    /// custom `PatternLibrary`. Useful for specialized invoice formats or
+    /// combining default patterns with custom additions.
+    ///
+    /// **Note**: When using custom patterns, the `with_language()` setting is ignored.
+    ///
+    /// # Examples
+    ///
+    /// **Example 1: Use default patterns and add custom ones**
+    /// ```
+    /// use oxidize_pdf::text::invoice::{InvoiceExtractor, PatternLibrary, FieldPattern, InvoiceFieldType, Language};
+    ///
+    /// // Start with Spanish defaults
+    /// let mut patterns = PatternLibrary::default_spanish();
+    ///
+    /// // Add custom pattern for your specific invoice format
+    /// patterns.add_pattern(
+    ///     FieldPattern::new(
+    ///         InvoiceFieldType::InvoiceNumber,
+    ///         r"Ref:\s*([A-Z0-9\-]+)",  // Your custom format
+    ///         0.85,
+    ///         Some(Language::Spanish)
+    ///     ).unwrap()
+    /// );
+    ///
+    /// let extractor = InvoiceExtractor::builder()
+    ///     .with_custom_patterns(patterns)
+    ///     .build();
+    /// ```
+    ///
+    /// **Example 2: Build completely custom pattern library**
+    /// ```
+    /// use oxidize_pdf::text::invoice::{InvoiceExtractor, PatternLibrary, FieldPattern, InvoiceFieldType, Language};
+    ///
+    /// let mut patterns = PatternLibrary::new();
+    ///
+    /// // Add only the patterns you need
+    /// patterns.add_pattern(
+    ///     FieldPattern::new(
+    ///         InvoiceFieldType::InvoiceNumber,
+    ///         r"Order\s+#([0-9]+)",
+    ///         0.9,
+    ///         None  // Language-agnostic
+    ///     ).unwrap()
+    /// );
+    ///
+    /// let extractor = InvoiceExtractor::builder()
+    ///     .with_custom_patterns(patterns)
+    ///     .confidence_threshold(0.8)
+    ///     .build();
+    /// ```
+    pub fn with_custom_patterns(mut self, patterns: PatternLibrary) -> Self {
+        self.custom_patterns = Some(patterns);
+        self
+    }
+
     /// Build the InvoiceExtractor
     pub fn build(self) -> InvoiceExtractor {
-        let pattern_library = if let Some(lang) = self.language {
+        // Use custom patterns if provided, otherwise create from language
+        let pattern_library = if let Some(custom) = self.custom_patterns {
+            custom
+        } else if let Some(lang) = self.language {
             PatternLibrary::with_language(lang)
         } else {
             PatternLibrary::new()

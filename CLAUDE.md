@@ -1,25 +1,28 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-21 - Documentation Cleanup & Invoice Analysis Phase 1
+- **Last Session**: 2025-10-23 - Fase 6A: Custom Pattern API (Public API for oxidize-pdf-pro)
 - **Branch**: develop_santi (working branch)
-- **Version**: **v1.6.3 (pending release)** 🚀
+- **Version**: **v1.6.4 (ready for oxidize-pdf-pro migration)** 🚀
 - **Status**:
   - Sprint 2.2: ✅ Complete (3/3 features shipped)
-  - Documentation: ✅ Performance claims validated (Phase C)
-  - Benchmarks: ✅ Performance investigation complete (Phase B)
-  - Invoice Analysis: 🔄 Phase 1 Complete, Phase 2 Blocked
+  - Documentation: ✅ Performance claims validated
+  - Benchmarks: ✅ Performance investigation complete
+  - Invoice Analysis: ✅ Phase 1 & 2 Complete (10 invoices tested)
+  - **Fase 6A**: ✅ Custom Pattern API Complete (ready for private repo)
 - **Quality Metrics**:
-  - Tests: 4633 passing (all green)
-  - Clippy: Clean (0 warnings)
+  - Tests: 4682 passing (all green) - added 9 API tests
+  - Clippy: Clean (0 warnings on lib)
   - Zero Unwraps: 100% library code compliance
-  - Documentation: 100% rustdoc coverage with validated performance claims
+  - Documentation: 100% rustdoc + INVOICE_EXTRACTION_GUIDE.md updated
 - **Next**:
-  - Fix Phase 2 invoice testing script (API mismatches)
-  - OR review Phase 1 reconnaissance findings before continuing
-  - Then: v1.6.3 release → Sprint 2.3 planning
+  - **MIGRATE to oxidize-pdf-pro** - Add commercial patterns using public API
+  - Keep vendor-specific patterns (BayWa, Tresun, etc.) as private IP
+  - Target: 33% → 80%+ coverage with proprietary patterns
 
-## 📊 **Session 2025-10-21: Documentation Validation & Invoice Analysis** ✅ PARTIAL
+## 📊 **Session 2025-10-23: Invoice Analysis Phase 2** ✅ COMPLETE
+
+*(Previous session: 2025-10-21 - Documentation Validation & Phase 1)*
 
 ### Phase C: Documentation Reposition (COMPLETE) ✅
 - **Task**: Validate and correct all performance claims in public documentation
@@ -65,26 +68,54 @@
   - `reports/reconnaissance_report.md` - 25-page analysis
   - `samples/*.txt` - Plain text extractions (5 files)
 
-### Invoice Analysis - Phase 2: Testing (BLOCKED) ⚠️
+### Invoice Analysis - Phase 2: Testing (COMPLETE) ✅
 - **Task**: Test InvoiceExtractor on 10 representative invoices
-- **Status**: Script created but compilation failed
-- **Script**: `.private/scripts/test_invoice_extractor.rs` (430 lines)
-- **Blocking Issues**: 3 API mismatches
-  1. `PdfDocument::parse()` doesn't exist → need `PdfReader::new() + PdfDocument::new()`
-  2. `TextExtractor.extract()` signature incorrect
-  3. `InvoiceExtractor::new()` doesn't exist → need builder pattern
-- **Correct API** (discovered from tests):
-  ```rust
-  let extractor = InvoiceExtractor::builder()
-      .with_language("es")
-      .confidence_threshold(0.7)
-      .build();
-  ```
-- **Required Work**: 1-2 hours to refactor script
-- **Decision Pending**: User to choose next step
-  - Option A: Pause and review Phase 1 findings (RECOMMENDED)
-  - Option B: Continue debugging script (1-2h effort)
-  - Option C: Manual testing of 2-3 invoices (30 min)
+- **Status**: Script debugged and executed successfully
+- **Script**: `oxidize-pdf-core/examples/phase2_invoice_test.rs` (481 lines)
+- **Fix Applied**: Added `preserve_layout: true` to ExtractionOptions (critical for fragments)
+- **Results Summary**:
+  - **Success Rate**: 5/10 (50%) - 5 PDFs image-based (require OCR)
+  - **Average Coverage**: 22.2% field extraction
+  - **Average Confidence**: 0.685 (68.5%) on detected fields
+  - **Extraction Speed**: 19-25ms per invoice
+- **Field Coverage**:
+  - Tax Amount: 40% ⭐ (best pattern detection)
+  - Total Amount: 20%
+  - Invoice Number, Date, Currency, VAT: 10% each
+  - Net Amount, Customer Name, Line Items: 0% (gaps identified)
+- **Best Case**: Invoice 1450118.pdf (RES, English)
+  - Fields: 6/9 (66.7%) - Invoice #, Date, Total, Tax, Currency, VAT
+  - Confidence: 0.85, Time: 19ms
+- **Identified Gaps**:
+  1. **Image-based PDFs**: 50% require OCR (5 PDFs with "No text found")
+  2. **Line Items**: 0% coverage - needs table detection (relates to #90)
+  3. **Net Amount**: Pattern not detected in current regex set
+  4. **Customer Name**: Variable layout position challenges
+- **Artifacts Created** (.private/):
+  - `results/phase2_extraction_results.json` - Detailed results for 10 invoices
+  - `scripts/test_invoice_extractor.rs` - Corrected script (deprecated, use examples/)
+
+### Fase 6A: Custom Pattern API (COMPLETE) ✅
+- **Strategic Decision**: Separate commercial patterns from open-source
+  - **Open-source (oxidize-pdf)**: Public API + generic patterns only
+  - **Private (oxidize-pdf-pro)**: Vendor-specific patterns (BayWa, Tresun, etc.) as IP
+- **API Implementation** (+243 lines total):
+  - **Exported Types**: PatternLibrary, FieldPattern, InvoiceFieldType (mod.rs)
+  - **Language Constructors**: default_spanish/english/german/italian() (+52 lines, patterns.rs:56-107)
+  - **Pattern Merging**: merge() method for combining libraries (+8 lines, patterns.rs:109-116)
+  - **Builder Integration**: with_custom_patterns() overrides with_language() (+67 lines, extractor.rs)
+- **Tests**: Created comprehensive API tests (+255 lines)
+  - File: `oxidize-pdf-core/tests/invoice_pattern_api_tests.rs`
+  - Coverage: 9 tests (empty library, defaults, extend, merge, builder, override, thread-safety)
+  - Result: ✅ All 9 passing
+- **Documentation**: Updated INVOICE_EXTRACTION_GUIDE.md (+220 lines)
+  - New Section: "Custom Patterns (v1.6.4+)" (lines 727-943)
+  - 3 Complete Examples: Extend defaults, completely custom, merge libraries
+  - Pattern syntax guide, thread safety, performance, best practices
+- **Backward Compatibility**: 100% - custom_patterns Optional in builder
+- **Thread Safety**: PatternLibrary is Send + Sync (verified in tests)
+- **Time Investment**: 2 hours (API + tests + docs)
+- **Bonus Fix**: Fixed pre-existing clippy warning in graphics/extraction.rs:743 (irrefutable pattern)
 
 ### Technical Debt Identified 🔧
 - **DEBUG Logging**: 37+ eprintln! statements in production code
@@ -96,23 +127,34 @@
 - **Phase C**: 30 minutes (documentation corrections)
 - **Phase B**: 2 hours (performance investigation + forensic analysis)
 - **Phase 1**: 2 hours (reconnaissance + report generation)
-- **Phase 2**: 1 hour (script creation, blocked at compilation)
-- **Total**: 5.5 hours
+- **Phase 2**: 1.5 hours (script debugging + testing execution + analysis)
+- **Fase 6A**: 2 hours (Custom Pattern API + tests + docs)
+- **Total**: 8 hours
 
 ### Files Modified 📁
 - `README.md` - Performance claims validated
 - `CHANGELOG.md` - Performance claim corrected
 - `oxidize-pdf-core/src/text/plaintext/extractor.rs` - Module docs updated
+- `oxidize-pdf-core/examples/phase2_invoice_test.rs` - Created (481 lines)
+- `.private/scripts/test_invoice_extractor.rs` - Corrected (deprecated)
 - `/tmp/performance_analysis.md` - Benchmark investigation report
 - `/tmp/critical_performance_finding.md` - Forensic analysis
-- `/tmp/resumen_fase1_y_siguiente_paso.md` - Decision point summary
-- `.private/` directory - 9 new files (inventory, reports, samples, scripts)
+- `.private/` directory - 10 new files (inventory, reports, samples, scripts, results)
 
-### Next Session Actions 📋
-1. **DECIDE**: Phase 2 approach (pause/debug/manual)
-2. **IF continuing**: Fix test_invoice_extractor.rs API issues
-3. **IF pausing**: Review reconnaissance_report.md findings
-4. **Future**: Remove DEBUG eprintln! statements (technical debt)
+**Fase 6A Files**:
+- `oxidize-pdf-core/src/text/invoice/mod.rs` - Public exports for API
+- `oxidize-pdf-core/src/text/invoice/patterns.rs` - Language constructors + merge() (+60 lines)
+- `oxidize-pdf-core/src/text/invoice/extractor.rs` - with_custom_patterns() builder method (+67 lines)
+- `oxidize-pdf-core/tests/invoice_pattern_api_tests.rs` - NEW (255 lines, 9 tests)
+- `docs/INVOICE_EXTRACTION_GUIDE.md` - Custom Patterns section (+220 lines)
+- `oxidize-pdf-core/src/graphics/extraction.rs` - Fixed clippy warning (line 743)
+
+### Key Learnings 🎓
+- **API Discovery**: TextExtractor requires `preserve_layout: true` for invoice extraction
+- **Reality Check**: 22% coverage vs 70-85% prediction (image-based PDFs + pattern gaps)
+- **Pattern Strength**: Tax Amount detection (40%) stronger than other fields
+- **OCR Gap**: 50% of real-world invoices are image-based (not text-based)
+- **Table Detection**: Line Items require structured table extraction (#90)
 
 ## ✅ Features Completadas (v1.6.x)
 
@@ -120,7 +162,7 @@
 |---------|---------|----------|--------|------|
 | **Structured Data Extraction** | v1.6.3 | `oxidize-pdf-core/src/text/structured/` | ✅ Shipped | rustdoc (41 tests) |
 | **Plain Text Optimization** | v1.6.3 | `oxidize-pdf-core/src/text/plaintext/` | ✅ Shipped | rustdoc (23 tests) |
-| **Invoice Data Extraction** | v1.6.3 | `oxidize-pdf-core/src/text/invoice/` | ✅ Shipped | `INVOICE_EXTRACTION_GUIDE.md` (23 tests) |
+| **Invoice Data Extraction** | v1.6.4 | `oxidize-pdf-core/src/text/invoice/` | ✅ Shipped + Custom API | `INVOICE_EXTRACTION_GUIDE.md` (32 tests) |
 | **Unwrap Elimination Campaign** | v1.6.2 | Workspace-wide | ✅ Complete | `LINTS.md` (51 unwraps eliminated) |
 | **Kerning Normalization** | v1.6.1 | `src/text/extraction_cmap.rs` | ✅ Complete | rustdoc (9 tests) |
 | **Dylint Custom Lints** | v1.6.1 | `lints/` workspace | ✅ Operational | `LINTS.md` (5 production lints) |

@@ -740,14 +740,11 @@ mod tests {
         assert_eq!(state.path.len(), 3);
 
         // Last line should close back to start
-        if let PathSegment::Line { x1, y1, x2, y2 } = &state.path[2] {
-            assert!((*x1 - 200.0).abs() < 0.01);
-            assert!((*y1 - 200.0).abs() < 0.01);
-            assert!((*x2 - 100.0).abs() < 0.01);
-            assert!((*y2 - 100.0).abs() < 0.01);
-        } else {
-            panic!("Expected Line segment");
-        }
+        let PathSegment::Line { x1, y1, x2, y2 } = &state.path[2];
+        assert!((*x1 - 200.0).abs() < 0.01);
+        assert!((*y1 - 200.0).abs() < 0.01);
+        assert!((*x2 - 100.0).abs() < 0.01);
+        assert!((*y2 - 100.0).abs() < 0.01);
     }
 
     #[test]
