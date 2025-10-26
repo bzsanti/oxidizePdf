@@ -119,26 +119,15 @@ impl XRefTable {
                     "Circular reference in XRef chain at offset {} (already visited)",
                     offset
                 );
-                eprintln!("DEBUG: Visited offsets so far: {:?}", visited_offsets);
                 break;
             }
             visited_offsets.insert(offset);
 
-            eprintln!(
-                "DEBUG: Parsing XRef at offset {}, visited count: {}",
-                offset,
-                visited_offsets.len()
-            );
 
             // Parse the xref table at this offset
             reader.seek(SeekFrom::Start(offset))?;
             let table = Self::parse_primary_with_options(reader, options)?;
 
-            eprintln!(
-                "DEBUG: Parsed XRef table with {} entries, {} extended entries",
-                table.entries.len(),
-                table.extended_entries.len()
-            );
 
             // Get the previous offset from trailer
             let prev_offset = table
@@ -148,15 +137,13 @@ impl XRefTable {
                 .and_then(|obj| obj.as_integer())
                 .map(|i| i as u64);
 
-            if let Some(prev) = prev_offset {
-                eprintln!("DEBUG: Found /Prev pointer to offset {}", prev);
+            if let Some(_prev) = prev_offset {
             } else {
-                eprintln!("DEBUG: No /Prev in trailer, end of chain");
             }
 
             // Merge entries (newer entries override older ones)
-            let regular_count = table.entries.len();
-            let extended_count = table.extended_entries.len();
+            let _regular_count = table.entries.len();
+            let _extended_count = table.extended_entries.len();
 
             for (obj_num, entry) in table.entries {
                 merged_table.entries.entry(obj_num).or_insert(entry);
@@ -168,10 +155,6 @@ impl XRefTable {
                     .or_insert(ext_entry);
             }
 
-            eprintln!(
-                "DEBUG: Merged {} regular + {} extended entries from this XRef",
-                regular_count, extended_count
-            );
 
             // Use the most recent trailer
             if merged_table.trailer.is_none() {
@@ -182,11 +165,6 @@ impl XRefTable {
             current_offset = prev_offset;
         }
 
-        eprintln!(
-            "DEBUG: XRef chain parsing complete. Total entries: {}, extended: {}",
-            merged_table.entries.len(),
-            merged_table.extended_entries.len()
-        );
 
         // Check if we have a hybrid-reference file (XRef stream with missing objects)
         // This happens when the PDF has direct objects (1-N) that aren't listed in XRef streams
@@ -194,17 +172,10 @@ impl XRefTable {
         if options.lenient_syntax || options.collect_warnings {
             // Scan for objects that exist in the PDF but aren't in the XRef
             // This is necessary for hybrid files where XRef stream only lists some objects
-            eprintln!("DEBUG: Scanning PDF for objects not in XRef (hybrid file support)");
             reader.seek(SeekFrom::Start(0))?;
 
-            if let Err(e) = Self::scan_and_fill_missing_objects(reader, &mut merged_table) {
-                eprintln!("DEBUG: Object scanning failed (non-fatal): {:?}", e);
+            if let Err(_e) = Self::scan_and_fill_missing_objects(reader, &mut merged_table) {
             } else {
-                eprintln!(
-                    "DEBUG: After scanning - Total entries: {}, extended: {}",
-                    merged_table.entries.len(),
-                    merged_table.extended_entries.len()
-                );
             }
         }
 
@@ -369,10 +340,6 @@ impl XRefTable {
                                 stream_object_number,
                                 index_within_stream,
                             } => {
-                                eprintln!(
-                                    "DEBUG: Adding compressed object {} -> stream {} index {}",
-                                    obj_num, stream_object_number, index_within_stream
-                                );
                                 // Create extended entry for compressed object
                                 let ext_entry = XRefEntryExt {
                                     basic: XRefEntry {
@@ -653,7 +620,7 @@ impl XRefTable {
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer)?;
 
-        let mut objects_added = 0;
+        let mut _objects_added = 0;
 
         // Scan for object headers using byte patterns (not String to preserve offsets)
         let mut pos = 0;
@@ -691,7 +658,7 @@ impl XRefTable {
                                 in_use: true,
                             },
                         );
-                        objects_added += 1;
+                        _objects_added += 1;
                     }
                 }
 
@@ -701,10 +668,6 @@ impl XRefTable {
             }
         }
 
-        eprintln!(
-            "DEBUG: scan_and_fill_missing_objects added {} objects",
-            objects_added
-        );
 
         Ok(())
     }
