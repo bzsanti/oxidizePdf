@@ -472,10 +472,6 @@ path = "../examples/llm_export_formats.rs"
 name = "pdf_to_llm_formats"
 path = "../examples/pdf_to_llm_formats.rs"
 
-[[example]]
-name = "debug_writer_parser"
-path = "../examples/debug_writer_parser.rs"
-
 # Disabled - API incompatibility (deferred to v1.6.4)
 # [[example]]
 # name = "invoice_extraction_basic"
@@ -497,7 +493,3 @@ path = "../examples/table_extraction.rs"
 # [[example]]
 # name = "plaintext_benchmark"
 # path = "../benches/plaintext_benchmark.rs"
-
-[[example]]
-name = "debug_invoice_pdf"
-path = "../examples/debug_invoice_pdf.rs"
