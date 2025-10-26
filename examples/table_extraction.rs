@@ -3,9 +3,9 @@
 //! This example demonstrates how to automatically detect and extract tables
 //! from PDF documents using spatial clustering algorithms.
 
-use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
-use oxidize_pdf::text::structured::{StructuredDataDetector, StructuredDataConfig};
 use oxidize_pdf::parser::PdfReader;
+use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
+use oxidize_pdf::text::structured::{StructuredDataConfig, StructuredDataDetector};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== PDF Table Extraction Demo ===\n");
@@ -36,6 +36,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Age".to_string(),
@@ -45,6 +47,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "City".to_string(),
@@ -54,6 +58,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         // Data row 1 (Y = 680)
         TextFragment {
@@ -64,6 +70,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "30".to_string(),
@@ -73,6 +81,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "NYC".to_string(),
@@ -82,6 +92,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         // Data row 2 (Y = 660)
         TextFragment {
@@ -92,6 +104,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "25".to_string(),
@@ -101,6 +115,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "LA".to_string(),
@@ -110,6 +126,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -130,9 +148,14 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
 
     for (idx, table) in result.tables.iter().enumerate() {
         println!("Table #{}:", idx + 1);
-        println!("  Dimensions: {} rows × {} columns", table.row_count(), table.column_count());
+        println!(
+            "  Dimensions: {} rows × {} columns",
+            table.row_count(),
+            table.column_count()
+        );
         println!("  Confidence: {:.2}%", table.confidence * 100.0);
-        println!("  Bounding box: ({:.1}, {:.1}) - ({:.1}, {:.1})",
+        println!(
+            "  Bounding box: ({:.1}, {:.1}) - ({:.1}, {:.1})",
             table.bounding_box.x,
             table.bounding_box.y,
             table.bounding_box.right(),
@@ -154,7 +177,9 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(table) = result.tables.first() {
         println!("CSV Export:");
         for row in &table.rows {
-            let csv_line: Vec<String> = row.cells.iter()
+            let csv_line: Vec<String> = row
+                .cells
+                .iter()
                 .map(|cell| format!("\"{}\"", cell.text))
                 .collect();
             println!("{}", csv_line.join(","));

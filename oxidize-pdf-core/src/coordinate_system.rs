@@ -44,10 +44,12 @@ pub enum CoordinateSystem {
 ///
 /// Represents a 3x3 matrix in the form:
 /// ```text
-/// [a c e]   [x]   [ax + cy + e]
-/// [b d f] × [y] = [bx + dy + f]
-/// [0 0 1]   [1]   [    1      ]
+/// [a c e]   [x]     [ax + cy + e]
+/// [b d f] × [y]  =  [bx + dy + f]
+/// [0 0 1]   [1]     [    1      ]
 /// ```
+///
+/// Where `[x]`, `[y]`, and `[1]` represent the input vector.
 ///
 /// Common transformations:
 /// - Identity: `a=1, b=0, c=0, d=1, e=0, f=0`

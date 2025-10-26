@@ -11,7 +11,7 @@ use oxidize_pdf::document::Document;
 use oxidize_pdf::graphics::extraction::{ExtractionConfig, GraphicsExtractor};
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
-use oxidize_pdf::text::table_detection::{TableDetector, TableDetectionError};
+use oxidize_pdf::text::table_detection::{TableDetectionError, TableDetector};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::writer::{PdfWriter, WriterConfig};
 use oxidize_pdf::Color;
@@ -222,7 +222,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !all_content_tests {
                 eprintln!(
                     "   - Cell assignment has issues ({}/{} cells correct)",
-                    content_tests_passed, expected_contents.len()
+                    content_tests_passed,
+                    expected_contents.len()
                 );
             }
             std::process::exit(1);

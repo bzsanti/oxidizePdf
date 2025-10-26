@@ -92,7 +92,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 3: Verify font metadata
     println!("3. Verifying font metadata:");
-    println!("   {:<45} {:>10} {:>10} {:>8}", "Text", "Font", "Bold", "Italic");
+    println!(
+        "   {:<45} {:>10} {:>10} {:>8}",
+        "Text", "Font", "Bold", "Italic"
+    );
     println!("   {}", "-".repeat(78));
 
     let mut tests_passed = 0;

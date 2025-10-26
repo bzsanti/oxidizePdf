@@ -90,18 +90,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Font::Helvetica
             };
 
-            page.text()
-                .set_font(font, 10.0)
-                .at(x, y)
-                .write(text)?;
+            page.text().set_font(font, 10.0).at(x, y).write(text)?;
         }
     }
 
     // Total line
     page.text()
         .set_font(Font::HelveticaBold, 12.0)
-        .at(table_start_x + col_widths[..3].iter().sum::<f64>(),
-            table_start_y - (num_rows as f64 * row_height) - 30.0)
+        .at(
+            table_start_x + col_widths[..3].iter().sum::<f64>(),
+            table_start_y - (num_rows as f64 * row_height) - 30.0,
+        )
         .write("TOTAL: $524.99")?;
 
     doc.add_page(page);
@@ -126,10 +125,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut text_extractor = TextExtractor::with_options(text_options);
     let text_result = text_extractor.extract_from_page(&pdf_doc, 0)?;
 
-    println!("   ✓ Extracted {} text fragments", text_result.fragments.len());
+    println!(
+        "   ✓ Extracted {} text fragments",
+        text_result.fragments.len()
+    );
 
     // Show font diversity
-    let mut fonts: Vec<String> = text_result.fragments
+    let mut fonts: Vec<String> = text_result
+        .fragments
         .iter()
         .filter_map(|f| f.font_name.as_ref())
         .map(|s| s.to_string())
@@ -148,7 +151,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut graphics_extractor = GraphicsExtractor::new(graphics_config);
     let graphics = graphics_extractor.extract_from_page(&pdf_doc, 0)?;
 
-    println!("   ✓ Extracted {} lines ({} H, {} V)",
+    println!(
+        "   ✓ Extracted {} lines ({} H, {} V)",
         graphics.lines.len(),
         graphics.horizontal_count,
         graphics.vertical_count
@@ -164,7 +168,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 5: Display results
     if let Some(table) = tables.first() {
         println!("\n5. Extracted Table Data:");
-        println!("   Dimensions: {} rows × {} columns", table.row_count(), table.column_count());
+        println!(
+            "   Dimensions: {} rows × {} columns",
+            table.row_count(),
+            table.column_count()
+        );
         println!("   Confidence: {:.2}%\n", table.confidence * 100.0);
 
         println!("   Cell Contents:");
@@ -174,7 +182,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             print!("   ");
             for col in 0..table.column_count() {
                 if let Some(cell) = table.get_cell(row, col) {
-                    print!("| {:^18}",
+                    print!(
+                        "| {:^18}",
                         if cell.text.len() > 18 {
                             format!("{}...", &cell.text[..15])
                         } else {
@@ -193,16 +202,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Verify data extraction
         println!("\n6. Verification:");
-        let header_row_correct = table.get_cell(0, 0).map(|c| c.text.contains("Description")).unwrap_or(false) &&
-                                 table.get_cell(0, 3).map(|c| c.text.contains("Total")).unwrap_or(false);
+        let header_row_correct = table
+            .get_cell(0, 0)
+            .map(|c| c.text.contains("Description"))
+            .unwrap_or(false)
+            && table
+                .get_cell(0, 3)
+                .map(|c| c.text.contains("Total"))
+                .unwrap_or(false);
 
-        let data_row_correct = table.get_cell(1, 0).map(|c| c.text.contains("Widget")).unwrap_or(false) &&
-                               table.get_cell(1, 3).map(|c| c.text.contains("$250")).unwrap_or(false);
+        let data_row_correct = table
+            .get_cell(1, 0)
+            .map(|c| c.text.contains("Widget"))
+            .unwrap_or(false)
+            && table
+                .get_cell(1, 3)
+                .map(|c| c.text.contains("$250"))
+                .unwrap_or(false);
 
-        println!("   {} Header row extracted correctly", if header_row_correct { "✓" } else { "✗" });
-        println!("   {} Data rows extracted correctly", if data_row_correct { "✓" } else { "✗" });
-        println!("   {} Font metadata preserved (bold headers)",
-            if fonts.contains(&"Helvetica-Bold".to_string()) { "✓" } else { "✗" });
+        println!(
+            "   {} Header row extracted correctly",
+            if header_row_correct { "✓" } else { "✗" }
+        );
+        println!(
+            "   {} Data rows extracted correctly",
+            if data_row_correct { "✓" } else { "✗" }
+        );
+        println!(
+            "   {} Font metadata preserved (bold headers)",
+            if fonts.contains(&"Helvetica-Bold".to_string()) {
+                "✓"
+            } else {
+                "✗"
+            }
+        );
 
         if header_row_correct && data_row_correct {
             println!("\n✅ Success: Complete table extraction pipeline working!");

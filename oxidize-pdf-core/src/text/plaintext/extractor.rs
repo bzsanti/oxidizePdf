@@ -208,10 +208,7 @@ impl PlainTextExtractor {
             let operations = match ContentParser::parse_content(&stream_data) {
                 Ok(ops) => ops,
                 Err(e) => {
-                    eprintln!(
-                        "Warning: Failed to parse content stream, skipping: {}",
-                        e
-                    );
+                    eprintln!("Warning: Failed to parse content stream, skipping: {}", e);
                     continue;
                 }
             };
@@ -352,8 +349,7 @@ impl PlainTextExtractor {
                             document.get_object(font_ref.0, font_ref.1)
                         {
                             // Create a CMap extractor to use its font extraction logic
-                            let mut cmap_extractor: CMapTextExtractor<R> =
-                                CMapTextExtractor::new();
+                            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
 
                             if let Ok(font_info) =
                                 cmap_extractor.extract_font_info(&font_dict, document)
@@ -370,11 +366,18 @@ impl PlainTextExtractor {
     }
 
     /// Decode text using CMap if available
-    fn decode_text<R: Read + Seek>(&self, text_bytes: &[u8], state: &TextState) -> ParseResult<String> {
+    fn decode_text<R: Read + Seek>(
+        &self,
+        text_bytes: &[u8],
+        state: &TextState,
+    ) -> ParseResult<String> {
         // Try CMap-based decoding first (using cached extractor)
         if let Some(ref font_name) = state.font_name {
             if let Some(font_info) = self.font_cache.get(font_name) {
-                if let Ok(decoded) = self.cmap_extractor.decode_text_with_font(text_bytes, font_info) {
+                if let Ok(decoded) = self
+                    .cmap_extractor
+                    .decode_text_with_font(text_bytes, font_info)
+                {
                     return Ok(decoded);
                 }
             }
@@ -384,7 +387,10 @@ impl PlainTextExtractor {
         let encoding = if let Some(ref font_name) = state.font_name {
             // Check for encoding type without allocating lowercase string
             let font_lower = font_name.as_bytes();
-            if font_lower.iter().any(|&b| b.to_ascii_lowercase() == b'r' && font_name.contains("roman")) {
+            if font_lower
+                .iter()
+                .any(|&b| b.to_ascii_lowercase() == b'r' && font_name.contains("roman"))
+            {
                 TextEncoding::MacRomanEncoding
             } else if font_name.contains("WinAnsi") || font_name.contains("winansi") {
                 TextEncoding::WinAnsiEncoding

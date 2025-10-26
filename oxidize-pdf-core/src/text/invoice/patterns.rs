@@ -447,7 +447,11 @@ impl PatternLibrary {
             0.85,
             Some(Language::English),
         ) {
-            self.add_pattern(pattern.with_hints(vec!["total".to_string(), "excl".to_string(), "vat".to_string()]));
+            self.add_pattern(pattern.with_hints(vec![
+                "total".to_string(),
+                "excl".to_string(),
+                "vat".to_string(),
+            ]));
         }
 
         // VAT number patterns
@@ -586,7 +590,9 @@ impl PatternLibrary {
             0.80,
             Some(Language::German),
         ) {
-            self.add_pattern(pattern.with_hints(vec!["netto".to_string(), "teilsumme".to_string()]));
+            self.add_pattern(
+                pattern.with_hints(vec!["netto".to_string(), "teilsumme".to_string()]),
+            );
         }
 
         // VAT number patterns (German USt-IdNr or Steuernummer)

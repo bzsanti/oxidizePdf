@@ -135,10 +135,7 @@ fn group_by_y_position(fragments: &[TextFragment], tolerance: f64) -> Vec<Vec<Te
         // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         b.y.partial_cmp(&a.y)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                a.x.partial_cmp(&b.x)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .then_with(|| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
     });
 
     let mut lines: Vec<Vec<TextFragment>> = vec![vec![sorted[0].clone()]];
@@ -350,9 +347,7 @@ mod tests {
             .find(|p| p.pattern == KeyValuePattern::ColonSeparated);
         assert!(colon_pair.is_some());
         assert_eq!(
-            colon_pair
-                .expect("colon pattern should be detected")
-                .key,
+            colon_pair.expect("colon pattern should be detected").key,
             "Name"
         );
 

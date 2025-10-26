@@ -121,7 +121,9 @@ mod tests {
     #[test]
     fn test_detector_empty_input() {
         let detector = StructuredDataDetector::default();
-        let result = detector.detect(&[]).expect("detector should handle empty input");
+        let result = detector
+            .detect(&[])
+            .expect("detector should handle empty input");
 
         assert_eq!(result.tables.len(), 0);
         assert_eq!(result.key_value_pairs.len(), 0);
@@ -162,7 +164,9 @@ mod tests {
             is_italic: false,
         }];
 
-        let result = detector.detect(&fragments).expect("detect should succeed with valid input");
+        let result = detector
+            .detect(&fragments)
+            .expect("detect should succeed with valid input");
 
         // Tables disabled, so should be empty
         assert_eq!(result.tables.len(), 0);

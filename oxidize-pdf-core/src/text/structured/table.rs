@@ -85,8 +85,7 @@ fn cluster_columns(x_positions: &[f64], tolerance: f64) -> Vec<Column> {
     let mut sorted = x_positions.to_vec();
     sorted.sort_by(|a, b| {
         // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        a.partial_cmp(b)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
@@ -125,8 +124,7 @@ fn cluster_rows(y_positions: &[f64], tolerance: f64) -> Vec<f64> {
     let mut sorted = y_positions.to_vec();
     sorted.sort_by(|a, b| {
         // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        b.partial_cmp(a)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal)
     }); // Sort descending (top to bottom)
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];

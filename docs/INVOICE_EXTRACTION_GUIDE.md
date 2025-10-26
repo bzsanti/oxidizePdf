@@ -118,7 +118,7 @@ The extractor can identify and extract the following field types:
 - **Line Item Quantity**: Units ordered/delivered
 - **Line Item Unit Price**: Price per unit before tax
 
-## Pattern Matching Improvements (v1.6.4)
+## Pattern Matching Improvements (v1.6.3)
 
 Recent improvements to pattern recognition have enhanced field extraction accuracy:
 
@@ -349,9 +349,9 @@ Each extracted field has a confidence score from 0.0 to 1.0:
 | Customer Name | 0.7 | Standard field, text-based |
 | Currency | 0.7 | Standard field, short code |
 
-### Multi-Factor Confidence Scoring (v1.6.4+)
+### Multi-Factor Confidence Scoring (v1.6.3+)
 
-Starting in v1.6.4, confidence scores are calculated using a multi-factor approach that combines:
+Starting in v1.6.3, confidence scores are calculated using a multi-factor approach that combines:
 
 1. **Base Pattern Confidence** (0.7-0.9): Initial confidence from pattern matching quality
 2. **Value Validation Bonus** (-0.5 to +0.2): Format and content validation
@@ -724,11 +724,11 @@ for path in paths {
 }
 ```
 
-## Custom Patterns (v1.6.4+)
+## Custom Patterns (v1.6.3+)
 
 ### Overview
 
-Starting in v1.6.4, the invoice extraction API exposes a public pattern API that allows you to extend or replace default patterns with custom ones. This is useful for:
+Starting in v1.6.3, the invoice extraction API exposes a public pattern API that allows you to extend or replace default patterns with custom ones. This is useful for:
 
 - **Industry-specific formats**: Add patterns for invoice formats specific to your industry
 - **Vendor-specific layouts**: Handle unique formats from specific suppliers

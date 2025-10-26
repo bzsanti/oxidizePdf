@@ -228,16 +228,23 @@ impl TextExtractor {
                 Ok(ops) => ops,
                 Err(e) => {
                     // Enhanced diagnostic logging for content stream parsing failures
-                    eprintln!("Warning: Failed to parse content stream on page {}, stream {}/{}",
-                        page_index + 1, stream_idx + 1, streams.len());
+                    eprintln!(
+                        "Warning: Failed to parse content stream on page {}, stream {}/{}",
+                        page_index + 1,
+                        stream_idx + 1,
+                        streams.len()
+                    );
                     eprintln!("         Error: {}", e);
                     eprintln!("         Stream size: {} bytes", stream_data.len());
 
                     // Show first 100 bytes for diagnosis (or less if stream is smaller)
                     let preview_len = stream_data.len().min(100);
                     let preview = String::from_utf8_lossy(&stream_data[..preview_len]);
-                    eprintln!("         Stream preview (first {} bytes): {:?}", preview_len,
-                        preview.chars().take(80).collect::<String>());
+                    eprintln!(
+                        "         Stream preview (first {} bytes): {:?}",
+                        preview_len,
+                        preview.chars().take(80).collect::<String>()
+                    );
 
                     // Continue processing other streams
                     continue;

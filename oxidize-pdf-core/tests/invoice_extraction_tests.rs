@@ -165,7 +165,7 @@ fn test_extract_no_matches() {
         width: 200.0,
         height: 12.0,
         font_size: 12.0,
-            font_name: None,
+        font_name: None,
     }];
 
     let extractor = InvoiceExtractor::builder()

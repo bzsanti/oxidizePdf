@@ -46,8 +46,7 @@ fn detect_column_boundaries(fragments: &[TextFragment], min_gap: f64) -> Vec<Col
 
     x_ranges.sort_by(|a, b| {
         // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        a.0.partial_cmp(&b.0)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let mut boundaries = Vec::new();
@@ -97,10 +96,7 @@ fn assign_to_columns(
                 // Use unwrap_or for f64 comparison (NaN sorts as Equal)
                 b.y.partial_cmp(&a.y)
                     .unwrap_or(std::cmp::Ordering::Equal)
-                    .then_with(|| {
-                        a.x.partial_cmp(&b.x)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
+                    .then_with(|| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
             });
 
             // Concatenate text
@@ -135,10 +131,7 @@ fn create_single_column_section(fragments: &[TextFragment]) -> ColumnSection {
         // Use unwrap_or for f64 comparison (NaN sorts as Equal)
         b.y.partial_cmp(&a.y)
             .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                a.x.partial_cmp(&b.x)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .then_with(|| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
     });
 
     let text = sorted

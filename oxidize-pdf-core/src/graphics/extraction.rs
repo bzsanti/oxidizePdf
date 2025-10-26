@@ -48,7 +48,7 @@
 //! ```
 
 use crate::parser::content::{ContentOperation, ContentParser};
-use crate::parser::{PdfDocument, ParseError};
+use crate::parser::{ParseError, PdfDocument};
 use std::fmt;
 
 /// Orientation of a line segment.
@@ -201,9 +201,9 @@ pub struct ExtractionConfig {
 impl Default for ExtractionConfig {
     fn default() -> Self {
         Self {
-            min_line_length: 1.0, // Ignore very short lines
+            min_line_length: 1.0,     // Ignore very short lines
             extract_diagonals: false, // Tables use only H/V lines
-            stroked_only: true, // Only visible lines
+            stroked_only: true,       // Only visible lines
         }
     }
 }
@@ -263,8 +263,9 @@ impl GraphicsExtractor {
 
         // Process each content stream
         for stream in streams {
-            let operations = ContentParser::parse(&stream)
-                .map_err(|e| ExtractionError::ParseError(format!("Failed to parse content: {}", e)))?;
+            let operations = ContentParser::parse(&stream).map_err(|e| {
+                ExtractionError::ParseError(format!("Failed to parse content: {}", e))
+            })?;
 
             self.process_operations(&operations, &mut state, &mut graphics)?;
         }
@@ -286,7 +287,9 @@ impl GraphicsExtractor {
                 ContentOperation::RestoreGraphicsState => state.restore(),
                 ContentOperation::SetLineWidth(w) => state.stroke_width = *w as f64,
                 ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
-                    state.apply_transform(*a as f64, *b as f64, *c as f64, *d as f64, *e as f64, *f as f64);
+                    state.apply_transform(
+                        *a as f64, *b as f64, *c as f64, *d as f64, *e as f64, *f as f64,
+                    );
                 }
 
                 // Path construction
@@ -299,7 +302,14 @@ impl GraphicsExtractor {
                     state.line_to(tx, ty);
                 }
                 ContentOperation::Rectangle(x, y, width, height) => {
-                    self.extract_rectangle_lines(*x as f64, *y as f64, *width as f64, *height as f64, state, graphics);
+                    self.extract_rectangle_lines(
+                        *x as f64,
+                        *y as f64,
+                        *width as f64,
+                        *height as f64,
+                        state,
+                        graphics,
+                    );
                 }
                 ContentOperation::ClosePath => {
                     state.close_path();
@@ -339,10 +349,10 @@ impl GraphicsExtractor {
         let stroke_width = state.stroke_width;
 
         // Transform all 4 corners
-        let (x1, y1) = state.transform_point(x, y);                    // Bottom-left
-        let (x2, y2) = state.transform_point(x + width, y);            // Bottom-right
-        let (x3, y3) = state.transform_point(x + width, y + height);   // Top-right
-        let (x4, y4) = state.transform_point(x, y + height);           // Top-left
+        let (x1, y1) = state.transform_point(x, y); // Bottom-left
+        let (x2, y2) = state.transform_point(x + width, y); // Bottom-right
+        let (x3, y3) = state.transform_point(x + width, y + height); // Top-right
+        let (x4, y4) = state.transform_point(x, y + height); // Top-left
 
         // Bottom edge
         graphics.add_line(VectorLine::new(x1, y1, x2, y2, stroke_width, true));
@@ -468,7 +478,12 @@ impl GraphicsState {
 
     fn line_to(&mut self, x: f64, y: f64) {
         if let Some((x1, y1)) = self.current_point {
-            self.path.push(PathSegment::Line { x1, y1, x2: x, y2: y });
+            self.path.push(PathSegment::Line {
+                x1,
+                y1,
+                x2: x,
+                y2: y,
+            });
             self.current_point = Some((x, y));
         }
     }

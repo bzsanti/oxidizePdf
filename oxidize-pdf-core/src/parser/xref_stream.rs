@@ -118,7 +118,6 @@ impl XRefStream {
                 vec![(0, size)]
             };
 
-
         // Calculate entry size from W array for XRef stream predictor handling
         let entry_size = widths.iter().sum::<usize>();
 
@@ -180,7 +179,6 @@ impl XRefStream {
             stream_data
         };
 
-
         Ok(XRefStream {
             dict: stream_dict,
             data: decoded_data,
@@ -201,11 +199,9 @@ impl XRefStream {
             });
         }
 
-
         let mut data_offset = 0;
 
         for &(first_obj, count) in &self.index {
-
             for i in 0..count {
                 if data_offset + entry_size > self.data.len() {
                     return Err(ParseError::SyntaxError {

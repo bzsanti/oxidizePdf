@@ -197,7 +197,8 @@ impl InvoiceExtractor {
         let mut fields = Vec::new();
         for (field_type, matched_value, base_confidence) in matches {
             // Calculate confidence score with context
-            let confidence = self.calculate_confidence(&field_type, base_confidence, &matched_value, &full_text);
+            let confidence =
+                self.calculate_confidence(&field_type, base_confidence, &matched_value, &full_text);
 
             // Skip fields below threshold
             if confidence < self.confidence_threshold {
@@ -311,7 +312,9 @@ impl InvoiceExtractor {
         }
 
         // Kerning-aware: use tighter spacing for same-font fragments
-        let mut result = String::with_capacity(fragments.iter().map(|f| f.text.len()).sum::<usize>() + fragments.len());
+        let mut result = String::with_capacity(
+            fragments.iter().map(|f| f.text.len()).sum::<usize>() + fragments.len(),
+        );
 
         for (i, fragment) in fragments.iter().enumerate() {
             result.push_str(&fragment.text);
@@ -323,8 +326,8 @@ impl InvoiceExtractor {
                 // If both fragments have same font, use minimal spacing
                 // Otherwise use normal spacing for font transitions
                 let spacing = match (&fragment.font_name, &next.font_name) {
-                    (Some(f1), Some(f2)) if f1 == f2 => " ",      // Same font: tight spacing
-                    _ => "  ",                                      // Different/unknown font: normal spacing
+                    (Some(f1), Some(f2)) if f1 == f2 => " ", // Same font: tight spacing
+                    _ => "  ", // Different/unknown font: normal spacing
                 };
 
                 result.push_str(spacing);
@@ -401,15 +404,9 @@ impl InvoiceExtractor {
             InvoiceFieldType::TotalAmount
             | InvoiceFieldType::TaxAmount
             | InvoiceFieldType::NetAmount
-            | InvoiceFieldType::LineItemUnitPrice => {
-                validators::validate_amount(matched_value)
-            }
-            InvoiceFieldType::InvoiceNumber => {
-                validators::validate_invoice_number(matched_value)
-            }
-            InvoiceFieldType::VatNumber => {
-                validators::validate_vat_number(matched_value)
-            }
+            | InvoiceFieldType::LineItemUnitPrice => validators::validate_amount(matched_value),
+            InvoiceFieldType::InvoiceNumber => validators::validate_invoice_number(matched_value),
+            InvoiceFieldType::VatNumber => validators::validate_vat_number(matched_value),
             // No validators yet for these fields
             InvoiceFieldType::SupplierName
             | InvoiceFieldType::CustomerName
@@ -460,7 +457,9 @@ impl InvoiceExtractor {
         // Define keywords for each field type (language-agnostic where possible)
         let keywords: Vec<&str> = match field_type {
             InvoiceFieldType::InvoiceNumber => {
-                vec!["Invoice", "Factura", "Rechnung", "Fattura", "Number", "Número", "Nr"]
+                vec![
+                    "Invoice", "Factura", "Rechnung", "Fattura", "Number", "Número", "Nr",
+                ]
             }
             InvoiceFieldType::InvoiceDate => {
                 vec!["Date", "Fecha", "Datum", "Data", "Invoice Date"]
@@ -469,13 +468,26 @@ impl InvoiceExtractor {
                 vec!["Due", "Vencimiento", "Fällig", "Scadenza", "Payment"]
             }
             InvoiceFieldType::TotalAmount => {
-                vec!["Total", "Grand Total", "Amount Due", "Gesamtbetrag", "Totale"]
+                vec![
+                    "Total",
+                    "Grand Total",
+                    "Amount Due",
+                    "Gesamtbetrag",
+                    "Totale",
+                ]
             }
             InvoiceFieldType::TaxAmount => {
                 vec!["VAT", "IVA", "MwSt", "Tax", "Impuesto"]
             }
             InvoiceFieldType::NetAmount => {
-                vec!["Subtotal", "Net", "Neto", "Nettobetrag", "Imponibile", "Base"]
+                vec![
+                    "Subtotal",
+                    "Net",
+                    "Neto",
+                    "Nettobetrag",
+                    "Imponibile",
+                    "Base",
+                ]
             }
             InvoiceFieldType::VatNumber => {
                 vec!["VAT", "CIF", "NIF", "USt", "Partita IVA", "Tax ID"]
@@ -816,18 +828,23 @@ mod tests {
     #[test]
     fn test_use_kerning_stored_for_future_use() {
         // Verify the flag is stored correctly (even though not yet functional)
-        let extractor_enabled = InvoiceExtractor::builder()
-            .use_kerning(true)
-            .build();
-        assert!(extractor_enabled.use_kerning, "use_kerning should be stored as true");
+        let extractor_enabled = InvoiceExtractor::builder().use_kerning(true).build();
+        assert!(
+            extractor_enabled.use_kerning,
+            "use_kerning should be stored as true"
+        );
 
-        let extractor_disabled = InvoiceExtractor::builder()
-            .use_kerning(false)
-            .build();
-        assert!(!extractor_disabled.use_kerning, "use_kerning should be stored as false");
+        let extractor_disabled = InvoiceExtractor::builder().use_kerning(false).build();
+        assert!(
+            !extractor_disabled.use_kerning,
+            "use_kerning should be stored as false"
+        );
 
         // Default value
         let extractor_default = InvoiceExtractor::builder().build();
-        assert!(extractor_default.use_kerning, "use_kerning should default to true");
+        assert!(
+            extractor_default.use_kerning,
+            "use_kerning should default to true"
+        );
     }
 }

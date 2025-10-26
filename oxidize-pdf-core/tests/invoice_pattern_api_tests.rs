@@ -91,8 +91,8 @@ fn test_extend_default_patterns() {
     );
 
     // Test that both default and custom patterns work
-    let text1 = "Factura Nº: 2025-001";  // Default pattern
-    let text2 = "Ref: CUSTOM-123";       // Custom pattern
+    let text1 = "Factura Nº: 2025-001"; // Default pattern
+    let text2 = "Ref: CUSTOM-123"; // Custom pattern
 
     let matches1 = patterns.match_text(text1);
     let matches2 = patterns.match_text(text2);
@@ -126,8 +126,8 @@ fn test_merge_pattern_libraries() {
     spanish.merge(custom);
 
     // Test that both work
-    let text1 = "Factura Nº: 2025-001";  // Spanish pattern
-    let text2 = "Order #9999";            // Custom pattern
+    let text1 = "Factura Nº: 2025-001"; // Spanish pattern
+    let text2 = "Order #9999"; // Custom pattern
 
     let matches1 = spanish.match_text(text1);
     let matches2 = spanish.match_text(text2);
@@ -204,7 +204,11 @@ fn test_custom_patterns_override_language() {
     let spanish_text = "Factura Nº: 2025-001";
     let result1 = extractor.extract_from_text(spanish_text);
     let fields1 = result1.unwrap().fields;
-    assert_eq!(fields1.len(), 0, "Spanish pattern should NOT work (overridden by custom)");
+    assert_eq!(
+        fields1.len(),
+        0,
+        "Spanish pattern should NOT work (overridden by custom)"
+    );
 
     // Custom pattern should work
     let custom_text = "Order #9999";
@@ -238,7 +242,10 @@ fn test_combine_default_and_custom() {
     // Test default German pattern
     let text1 = "Rechnung Nr. 2025-001";
     let result1 = extractor.extract_from_text(text1).unwrap();
-    assert!(result1.fields.len() > 0, "Default German pattern should work");
+    assert!(
+        result1.fields.len() > 0,
+        "Default German pattern should work"
+    );
 
     // Test custom pattern
     let text2 = "Bestellnummer: CUSTOM-999";

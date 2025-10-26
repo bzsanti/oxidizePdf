@@ -5,7 +5,7 @@
 //! pattern matching strategies.
 
 use oxidize_pdf::text::extraction::TextFragment;
-use oxidize_pdf::text::structured::{StructuredDataDetector, KeyValuePattern};
+use oxidize_pdf::text::structured::{KeyValuePattern, StructuredDataDetector};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,6 +33,8 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Email: john@example.com".to_string(),
@@ -42,6 +44,8 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Phone: (555) 123-4567".to_string(),
@@ -51,6 +55,8 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -59,8 +65,12 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Found {} key-value pairs:", result.key_value_pairs.len());
     for pair in &result.key_value_pairs {
-        println!("   {} = {} (confidence: {:.0}%)",
-            pair.key, pair.value, pair.confidence * 100.0);
+        println!(
+            "   {} = {} (confidence: {:.0}%)",
+            pair.key,
+            pair.value,
+            pair.confidence * 100.0
+        );
     }
     println!();
 
@@ -81,6 +91,8 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "$125.00".to_string(),
@@ -90,6 +102,8 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         // Second line
         TextFragment {
@@ -100,6 +114,8 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "$12.50".to_string(),
@@ -109,6 +125,8 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -116,11 +134,17 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
     let result = detector.detect(&fragments)?;
 
     println!("   Found {} key-value pairs:", result.key_value_pairs.len());
-    for pair in result.key_value_pairs.iter()
+    for pair in result
+        .key_value_pairs
+        .iter()
         .filter(|p| p.pattern == KeyValuePattern::SpatialAlignment)
     {
-        println!("   {} = {} (confidence: {:.0}%)",
-            pair.key, pair.value, pair.confidence * 100.0);
+        println!(
+            "   {} = {} (confidence: {:.0}%)",
+            pair.key,
+            pair.value,
+            pair.confidence * 100.0
+        );
     }
     println!();
 
@@ -140,6 +164,8 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Priority\tHigh".to_string(),
@@ -149,6 +175,8 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -156,11 +184,17 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
     let result = detector.detect(&fragments)?;
 
     println!("   Found {} key-value pairs:", result.key_value_pairs.len());
-    for pair in result.key_value_pairs.iter()
+    for pair in result
+        .key_value_pairs
+        .iter()
         .filter(|p| p.pattern == KeyValuePattern::Tabular)
     {
-        println!("   {} = {} (confidence: {:.0}%)",
-            pair.key, pair.value, pair.confidence * 100.0);
+        println!(
+            "   {} = {} (confidence: {:.0}%)",
+            pair.key,
+            pair.value,
+            pair.confidence * 100.0
+        );
     }
     println!();
 
@@ -181,6 +215,8 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Date: 2025-10-20".to_string(),
@@ -190,6 +226,8 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         // Spatially aligned
         TextFragment {
@@ -200,6 +238,8 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Acme Corp".to_string(),
@@ -209,6 +249,8 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         // Tab-separated
         TextFragment {
@@ -219,6 +261,8 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -232,8 +276,13 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             KeyValuePattern::SpatialAlignment => "spatial",
             KeyValuePattern::Tabular => "tabular",
         };
-        println!("   {} = {} ({}, {:.0}%)",
-            pair.key, pair.value, pattern_name, pair.confidence * 100.0);
+        println!(
+            "   {} = {} ({}, {:.0}%)",
+            pair.key,
+            pair.value,
+            pattern_name,
+            pair.confidence * 100.0
+        );
     }
 
     // Export as JSON

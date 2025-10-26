@@ -92,10 +92,14 @@ fn validate_date_components(year: i32, month: i32, day: i32) -> f64 {
     let max_days = match month {
         2 => {
             // February: check leap year
-            if is_leap_year(year) { 29 } else { 28 }
+            if is_leap_year(year) {
+                29
+            } else {
+                28
+            }
         }
         4 | 6 | 9 | 11 => 30, // April, June, September, November
-        _ => 31,               // Other months
+        _ => 31,              // Other months
     };
 
     if day > max_days {
@@ -133,7 +137,10 @@ pub fn validate_amount(value: &str) -> f64 {
     let cleaned = value.replace(",", "").replace(".", "");
 
     // Check if numeric
-    if !cleaned.chars().all(|c| c.is_ascii_digit() || c == '-' || c == '.') {
+    if !cleaned
+        .chars()
+        .all(|c| c.is_ascii_digit() || c == '-' || c == '.')
+    {
         return -0.50;
     }
 
@@ -306,7 +313,7 @@ mod tests {
     fn test_validate_date_slash_format() {
         assert_eq!(validate_date("20/01/2025"), 0.20); // European
         assert_eq!(validate_date("01/20/2025"), 0.20); // US
-        assert_eq!(validate_date("20/01/25"), 0.20);   // 2-digit year
+        assert_eq!(validate_date("20/01/25"), 0.20); // 2-digit year
     }
 
     #[test]
@@ -319,13 +326,13 @@ mod tests {
     #[test]
     fn test_validate_amount_invalid() {
         assert_eq!(validate_amount("-123.45"), -0.30); // Negative
-        assert_eq!(validate_amount("0.00"), -0.20);    // Zero
+        assert_eq!(validate_amount("0.00"), -0.20); // Zero
     }
 
     #[test]
     fn test_validate_amount_non_standard() {
-        assert_eq!(validate_amount("1234"), 0.10);     // No decimals
-        assert_eq!(validate_amount("1234.5"), 0.10);   // 1 decimal
+        assert_eq!(validate_amount("1234"), 0.10); // No decimals
+        assert_eq!(validate_amount("1234.5"), 0.10); // 1 decimal
         assert_eq!(validate_amount("1234.567"), 0.10); // 3 decimals
     }
 
@@ -340,12 +347,12 @@ mod tests {
 
     #[test]
     fn test_validate_vat_number() {
-        assert_eq!(validate_vat_number("GB272052232"), 0.15);  // UK
-        assert_eq!(validate_vat_number("A12345678Z"), 0.15);   // Spanish
+        assert_eq!(validate_vat_number("GB272052232"), 0.15); // UK
+        assert_eq!(validate_vat_number("A12345678Z"), 0.15); // Spanish
         assert_eq!(validate_vat_number("IT12345678901"), 0.15); // Italian
-        assert_eq!(validate_vat_number("DE123456789"), 0.15);  // German
-        assert_eq!(validate_vat_number("123456789"), 0.05);    // Generic
-        assert_eq!(validate_vat_number(""), -0.20);            // Empty
+        assert_eq!(validate_vat_number("DE123456789"), 0.15); // German
+        assert_eq!(validate_vat_number("123456789"), 0.05); // Generic
+        assert_eq!(validate_vat_number(""), -0.20); // Empty
     }
 
     #[test]

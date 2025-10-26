@@ -123,11 +123,9 @@ impl XRefTable {
             }
             visited_offsets.insert(offset);
 
-
             // Parse the xref table at this offset
             reader.seek(SeekFrom::Start(offset))?;
             let table = Self::parse_primary_with_options(reader, options)?;
-
 
             // Get the previous offset from trailer
             let prev_offset = table
@@ -155,7 +153,6 @@ impl XRefTable {
                     .or_insert(ext_entry);
             }
 
-
             // Use the most recent trailer
             if merged_table.trailer.is_none() {
                 merged_table.trailer = table.trailer;
@@ -164,7 +161,6 @@ impl XRefTable {
 
             current_offset = prev_offset;
         }
-
 
         // Check if we have a hybrid-reference file (XRef stream with missing objects)
         // This happens when the PDF has direct objects (1-N) that aren't listed in XRef streams
@@ -667,7 +663,6 @@ impl XRefTable {
                 break;
             }
         }
-
 
         Ok(())
     }

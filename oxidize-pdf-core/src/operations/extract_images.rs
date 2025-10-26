@@ -230,7 +230,6 @@ impl ImageExtractor {
 
         // If no XObjects found via resources, try alternative method
         if extracted.is_empty() {
-
             // Analyze content streams for image references
             if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
                 for stream_data in &content_streams {
@@ -609,7 +608,6 @@ impl ImageExtractor {
         let image_with_transform = self.parse_images_with_transformations(&content)?;
 
         for (image_name, transform_matrix) in image_with_transform {
-
             // Try to find this object by scanning all objects in the document
             if let Some(mut extracted_image) =
                 self.find_and_extract_xobject_by_name(&image_name, page_number, *image_index)?
@@ -635,7 +633,6 @@ impl ImageExtractor {
         page_number: usize,
         image_index: usize,
     ) -> OperationResult<Option<ExtractedImage>> {
-
         // This is a brute force approach - scan through objects looking for image streams
         // In a real implementation, we would have better object mapping, but for now
         // this should work for common landscape-in-portrait cases
@@ -746,7 +743,6 @@ impl ImageExtractor {
         mut extracted_image: ExtractedImage,
         _matrix: &TransformMatrix,
     ) -> OperationResult<ExtractedImage> {
-
         #[cfg(feature = "external-images")]
         {
             // Read the extracted image file
@@ -807,12 +803,10 @@ impl ImageExtractor {
             extracted_image.file_path = transformed_path;
             extracted_image.width = new_width;
             extracted_image.height = new_height;
-
         }
 
         #[cfg(not(feature = "external-images"))]
-        {
-        }
+        {}
 
         Ok(extracted_image)
     }
@@ -869,11 +863,9 @@ impl ImageExtractor {
         original_width: u32,
         original_height: u32,
     ) -> OperationResult<DynamicImage> {
-
         // Convert to raw grayscale data
         let gray_img = img.to_luma8();
         let pixel_data = gray_img.as_raw();
-
 
         // Try different row strides to fix misalignment
         let bytes_per_row = original_width as usize;
@@ -891,12 +883,10 @@ impl ImageExtractor {
             min_bytes_per_row + 4,          // +4 padding
         ];
 
-
         for (_i, &stride) in possible_strides.iter().enumerate() {
             let expected_total = stride * original_height as usize;
 
             if expected_total <= pixel_data.len() {
-
                 // Extract using this stride
                 let mut corrected_data = Vec::new();
                 for row in 0..original_height {
@@ -1227,7 +1217,6 @@ impl ImageExtractor {
         // Try to detect the correct stride by checking data patterns
         let correct_stride =
             self.detect_correct_row_stride(data, width, height, &possible_strides)?;
-
 
         for row in 0..height {
             let row_start = row as usize * correct_stride;

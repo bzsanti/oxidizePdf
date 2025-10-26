@@ -3,7 +3,7 @@
 ## 🎯 Current Focus
 - **Last Session**: 2025-10-23 - Fase 6A Complete + Quality Fixes (Session ENDED ✅)
 - **Branch**: develop_santi (working branch)
-- **Version**: **v1.6.4 (ready for oxidize-pdf-pro migration)** 🚀
+- **Version**: **v1.6.3 (ready for oxidize-pdf-pro migration)** 🚀
 - **Status**:
   - Sprint 2.2: ✅ Complete (3/3 features shipped)
   - Documentation: ✅ Performance claims validated
@@ -112,7 +112,7 @@
   - Coverage: 9 tests (empty library, defaults, extend, merge, builder, override, thread-safety)
   - Result: ✅ All 9 passing
 - **Documentation**: Updated INVOICE_EXTRACTION_GUIDE.md (+220 lines)
-  - New Section: "Custom Patterns (v1.6.4+)" (lines 727-943)
+  - New Section: "Custom Patterns (v1.6.3+)" (lines 727-943)
   - 3 Complete Examples: Extend defaults, completely custom, merge libraries
   - Pattern syntax guide, thread safety, performance, best practices
 - **Backward Compatibility**: 100% - custom_patterns Optional in builder
@@ -175,7 +175,7 @@
 **Commits**: 2 (c1b5094, adf6ab2)
 **Lines Changed**: +860 added, +13 modified
 **Quality Grade**: B+ → A- (85 → 92/100)
-**Status**: ✅ Production ready for v1.6.4
+**Status**: ✅ Production ready for v1.6.3
 **Stashed**: 2 stashes (8 files from previous sessions)
 
 **Achievements**:
@@ -192,7 +192,7 @@
 |---------|---------|----------|--------|------|
 | **Structured Data Extraction** | v1.6.3 | `oxidize-pdf-core/src/text/structured/` | ✅ Shipped | rustdoc (41 tests) |
 | **Plain Text Optimization** | v1.6.3 | `oxidize-pdf-core/src/text/plaintext/` | ✅ Shipped | rustdoc (23 tests) |
-| **Invoice Data Extraction** | v1.6.4 | `oxidize-pdf-core/src/text/invoice/` | ✅ Shipped + Custom API | `INVOICE_EXTRACTION_GUIDE.md` (32 tests) |
+| **Invoice Data Extraction** | v1.6.3 | `oxidize-pdf-core/src/text/invoice/` | ✅ Shipped + Custom API | `INVOICE_EXTRACTION_GUIDE.md` (32 tests) |
 | **Unwrap Elimination Campaign** | v1.6.2 | Workspace-wide | ✅ Complete | `LINTS.md` (51 unwraps eliminated) |
 | **Kerning Normalization** | v1.6.1 | `src/text/extraction_cmap.rs` | ✅ Complete | rustdoc (9 tests) |
 | **Dylint Custom Lints** | v1.6.1 | `lints/` workspace | ✅ Operational | `LINTS.md` (5 production lints) |
@@ -314,8 +314,8 @@ cargo build --release                # Production build
 
 ## 📊 Current State
 - **PDF Features**: Core features implemented and documented
-- **Tests**: 4,633 total tests in workspace (all passing)
-- **Test Coverage**: 55.64% (17,708/31,827 lines) - Measured with Tarpaulin
+- **Tests**: 4,673 total tests in workspace (all passing)
+- **Test Coverage**: 54.03% (18,674/34,565 lines) - Measured with Tarpaulin
 - **PDF Parsing**: 98.8% success rate (750/759 PDFs) - 42.6 PDFs/second
 - **Performance** (Realistic Benchmarks - 2025-10-07):
   - **Realistic Content**: 5,500-6,034 pages/second (varied paragraphs + tables + charts)

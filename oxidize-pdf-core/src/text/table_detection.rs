@@ -85,7 +85,7 @@ impl Default for TableDetectionConfig {
             min_columns: 2,
             alignment_tolerance: 2.0, // 2 points tolerance for line alignment
             min_table_area: 1000.0,   // Minimum 1000 sq points (~35x35 pt square)
-            detect_borderless: false,  // Start with bordered tables only
+            detect_borderless: false, // Start with bordered tables only
         }
     }
 }
@@ -210,7 +210,12 @@ pub struct BoundingBox {
 impl BoundingBox {
     /// Creates a new bounding box.
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// Returns the right edge X coordinate.
@@ -305,8 +310,7 @@ impl TableDetector {
         // Find grid pattern
         let grid = self.detect_grid_pattern(&h_lines, &v_lines)?;
 
-        if grid.rows.len() < self.config.min_rows || grid.columns.len() < self.config.min_columns
-        {
+        if grid.rows.len() < self.config.min_rows || grid.columns.len() < self.config.min_columns {
             return Ok(None);
         }
 
@@ -372,10 +376,7 @@ impl TableDetector {
             .collect();
 
         // Sort positions (return error if NaN/Infinity found)
-        positions.sort_by(|a, b| {
-            a.partial_cmp(b)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        positions.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         // Validate no NaN or Infinity values
         if positions.iter().any(|p| !p.is_finite()) {
@@ -386,10 +387,9 @@ impl TableDetector {
         let mut clusters: Vec<Vec<f64>> = vec![vec![positions[0]]];
 
         for &pos in &positions[1..] {
-            let last_cluster = clusters.last_mut()
-                .ok_or_else(|| TableDetectionError::InternalError(
-                    "cluster list unexpectedly empty".to_string()
-                ))?;
+            let last_cluster = clusters.last_mut().ok_or_else(|| {
+                TableDetectionError::InternalError("cluster list unexpectedly empty".to_string())
+            })?;
             let cluster_mean = last_cluster.iter().sum::<f64>() / last_cluster.len() as f64;
 
             if (pos - cluster_mean).abs() <= self.config.alignment_tolerance {
@@ -489,13 +489,19 @@ impl TableDetector {
             .columns
             .first()
             .ok_or_else(|| TableDetectionError::InvalidGrid("no columns".to_string()))?;
-        let max_x = *grid.columns.last()
+        let max_x = *grid
+            .columns
+            .last()
             .ok_or_else(|| TableDetectionError::InvalidGrid("no columns".to_string()))?;
 
         // Get min/max Y regardless of row order (ascending or descending)
-        let first_y = *grid.rows.first()
+        let first_y = *grid
+            .rows
+            .first()
             .ok_or_else(|| TableDetectionError::InvalidGrid("no rows".to_string()))?;
-        let last_y = *grid.rows.last()
+        let last_y = *grid
+            .rows
+            .last()
             .ok_or_else(|| TableDetectionError::InvalidGrid("no rows".to_string()))?;
         let min_y = first_y.min(last_y);
         let max_y = first_y.max(last_y);
@@ -630,8 +636,16 @@ fn normalize_coordinates_if_needed(
     let cell_width = cell_bbox.2 - cell_bbox.0;
     let cell_height = cell_bbox.3 - cell_bbox.1;
 
-    let scale_x = if text_width > 0.0 { cell_width / text_width } else { 1.0 };
-    let scale_y = if text_height > 0.0 { cell_height / text_height } else { 1.0 };
+    let scale_x = if text_width > 0.0 {
+        cell_width / text_width
+    } else {
+        1.0
+    };
+    let scale_y = if text_height > 0.0 {
+        cell_height / text_height
+    } else {
+        1.0
+    };
 
     let translate_x = cell_bbox.0 - (text_bbox.0 * scale_x);
     let translate_y = cell_bbox.1 - (text_bbox.1 * scale_y);
@@ -656,17 +670,29 @@ fn normalize_coordinates_if_needed(
 /// Calculates combined bounding box for cells: (min_x, min_y, max_x, max_y)
 fn calculate_combined_bbox_cells(cells: &[TableCell]) -> (f64, f64, f64, f64) {
     let min_x = cells.iter().map(|c| c.bbox.x).fold(f64::INFINITY, f64::min);
-    let max_x = cells.iter().map(|c| c.bbox.right()).fold(f64::NEG_INFINITY, f64::max);
+    let max_x = cells
+        .iter()
+        .map(|c| c.bbox.right())
+        .fold(f64::NEG_INFINITY, f64::max);
     let min_y = cells.iter().map(|c| c.bbox.y).fold(f64::INFINITY, f64::min);
-    let max_y = cells.iter().map(|c| c.bbox.top()).fold(f64::NEG_INFINITY, f64::max);
+    let max_y = cells
+        .iter()
+        .map(|c| c.bbox.top())
+        .fold(f64::NEG_INFINITY, f64::max);
     (min_x, min_y, max_x, max_y)
 }
 
 /// Calculates combined bounding box for text fragments: (min_x, min_y, max_x, max_y)
 fn calculate_combined_bbox_fragments(fragments: &[TextFragment]) -> (f64, f64, f64, f64) {
     let min_x = fragments.iter().map(|f| f.x).fold(f64::INFINITY, f64::min);
-    let max_x = fragments.iter().map(|f| f.x + f.width).fold(f64::NEG_INFINITY, f64::max);
+    let max_x = fragments
+        .iter()
+        .map(|f| f.x + f.width)
+        .fold(f64::NEG_INFINITY, f64::max);
     let min_y = fragments.iter().map(|f| f.y).fold(f64::INFINITY, f64::min);
-    let max_y = fragments.iter().map(|f| f.y + f.height).fold(f64::NEG_INFINITY, f64::max);
+    let max_y = fragments
+        .iter()
+        .map(|f| f.y + f.height)
+        .fold(f64::NEG_INFINITY, f64::max);
     (min_x, min_y, max_x, max_y)
 }

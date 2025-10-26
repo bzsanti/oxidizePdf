@@ -269,10 +269,7 @@ fn test_structured_data_extraction_end_to_end() {
         .expect("Failed to detect structured data");
 
     // 5. RIGOROUS validation (NOT smoke tests)
-    println!(
-        "Detected {} key-value pairs",
-        result.key_value_pairs.len()
-    );
+    println!("Detected {} key-value pairs", result.key_value_pairs.len());
     println!("Detected {} tables", result.tables.len());
     println!("Detected {} column sections", result.column_sections.len());
 

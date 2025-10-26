@@ -3,8 +3,8 @@
 //! Tests InvoiceExtractor on 10 representative invoices to validate
 //! extraction coverage and identify gaps.
 
-use oxidize_pdf::parser::{PdfReader, PdfDocument};
-use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
+use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::text::invoice::{InvoiceExtractor, InvoiceField};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -113,13 +113,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let selection_file = File::open(selection_path)?;
     let selection: InvoiceSelection = serde_json::from_reader(BufReader::new(selection_file))?;
 
-    println!("📋 Testing {} invoices selected for Phase 2\n", selection.selected_count);
+    println!(
+        "📋 Testing {} invoices selected for Phase 2\n",
+        selection.selected_count
+    );
 
     let mut results = Vec::new();
     let start_time = Instant::now();
 
     for (idx, invoice_meta) in selection.selected.iter().enumerate() {
-        println!("📄 [{}/{}] Processing: {}",
+        println!(
+            "📄 [{}/{}] Processing: {}",
             idx + 1,
             selection.selected_count,
             invoice_meta.filename
@@ -131,9 +135,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match &result {
             Ok(res) => {
-                println!("   ✅ Extracted {} fields (avg confidence: {:.2})",
-                    res.fields_extracted,
-                    res.average_confidence
+                println!(
+                    "   ✅ Extracted {} fields (avg confidence: {:.2})",
+                    res.fields_extracted, res.average_confidence
                 );
             }
             Err(e) => {
@@ -194,7 +198,7 @@ fn process_invoice(
 
     // Extract text from first page with layout preservation (needed for fragments)
     let options = ExtractionOptions {
-        preserve_layout: true,  // CRITICAL: needed to generate fragments for InvoiceExtractor
+        preserve_layout: true, // CRITICAL: needed to generate fragments for InvoiceExtractor
         ..Default::default()
     };
     let mut text_extractor = TextExtractor::with_options(options);
@@ -289,12 +293,14 @@ fn process_invoice(
     let line_items_count = invoice_data
         .fields
         .iter()
-        .filter(|f| matches!(
-            f.field_type,
-            InvoiceField::LineItemDescription(_) |
-            InvoiceField::LineItemQuantity(_) |
-            InvoiceField::LineItemUnitPrice(_)
-        ))
+        .filter(|f| {
+            matches!(
+                f.field_type,
+                InvoiceField::LineItemDescription(_)
+                    | InvoiceField::LineItemQuantity(_)
+                    | InvoiceField::LineItemUnitPrice(_)
+            )
+        })
         .count();
     if line_items_count > 0 {
         fields_extracted += 1;
@@ -316,7 +322,10 @@ fn process_invoice(
     .collect();
 
     let average_confidence = if !fields_with_confidence.is_empty() {
-        fields_with_confidence.iter().map(|f| f.confidence).sum::<f64>()
+        fields_with_confidence
+            .iter()
+            .map(|f| f.confidence)
+            .sum::<f64>()
             / fields_with_confidence.len() as f64
     } else {
         0.0
@@ -346,7 +355,10 @@ fn process_invoice(
     })
 }
 
-fn calculate_summary(results: Vec<ExtractionResult>, _total_time: std::time::Duration) -> TestSummary {
+fn calculate_summary(
+    results: Vec<ExtractionResult>,
+    _total_time: std::time::Duration,
+) -> TestSummary {
     let total_tested = results.len();
     let successful_extractions = results.iter().filter(|r| r.error.is_none()).count();
     let failed_extractions = total_tested - successful_extractions;
@@ -453,11 +465,13 @@ fn print_summary(summary: &TestSummary) {
     println!("\n📊 PHASE 2 SUMMARY");
     println!("==================\n");
     println!("Total tested:        {}", summary.total_tested);
-    println!("Successful:          {} ({:.1}%)",
+    println!(
+        "Successful:          {} ({:.1}%)",
         summary.successful_extractions,
         (summary.successful_extractions as f64 / summary.total_tested as f64) * 100.0
     );
-    println!("Failed:              {} ({:.1}%)",
+    println!(
+        "Failed:              {} ({:.1}%)",
         summary.failed_extractions,
         (summary.failed_extractions as f64 / summary.total_tested as f64) * 100.0
     );
@@ -466,15 +480,39 @@ fn print_summary(summary: &TestSummary) {
 
     println!("\n📋 FIELD COVERAGE:");
     println!("------------------");
-    println!("Invoice Number:  {:5.1}%", summary.fields_coverage.invoice_number);
-    println!("Invoice Date:    {:5.1}%", summary.fields_coverage.invoice_date);
-    println!("Total Amount:    {:5.1}%", summary.fields_coverage.total_amount);
-    println!("Tax Amount:      {:5.1}%", summary.fields_coverage.tax_amount);
-    println!("Net Amount:      {:5.1}%", summary.fields_coverage.net_amount);
+    println!(
+        "Invoice Number:  {:5.1}%",
+        summary.fields_coverage.invoice_number
+    );
+    println!(
+        "Invoice Date:    {:5.1}%",
+        summary.fields_coverage.invoice_date
+    );
+    println!(
+        "Total Amount:    {:5.1}%",
+        summary.fields_coverage.total_amount
+    );
+    println!(
+        "Tax Amount:      {:5.1}%",
+        summary.fields_coverage.tax_amount
+    );
+    println!(
+        "Net Amount:      {:5.1}%",
+        summary.fields_coverage.net_amount
+    );
     println!("Currency:        {:5.1}%", summary.fields_coverage.currency);
-    println!("Customer Name:   {:5.1}%", summary.fields_coverage.customer_name);
-    println!("VAT Number:      {:5.1}%", summary.fields_coverage.vat_number);
-    println!("Line Items:      {:5.1}%", summary.fields_coverage.line_items);
+    println!(
+        "Customer Name:   {:5.1}%",
+        summary.fields_coverage.customer_name
+    );
+    println!(
+        "VAT Number:      {:5.1}%",
+        summary.fields_coverage.vat_number
+    );
+    println!(
+        "Line Items:      {:5.1}%",
+        summary.fields_coverage.line_items
+    );
 
     println!("\n✅ Phase 2 complete!");
 }
