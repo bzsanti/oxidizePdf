@@ -3,7 +3,7 @@
 //! Tests for document catalog structure and required entries
 //! as defined in ISO 32000-1:2008 Section 7.5.2
 
-use crate::iso_verification::{create_basic_test_pdf, verify_pdf_at_level, iso_test};
+use crate::iso_verification::{create_basic_test_pdf, iso_test, verify_pdf_at_level};
 use oxidize_pdf::verification::{parser::parse_pdf, VerificationLevel};
 use oxidize_pdf::{Document, Font, Page, Result as PdfResult};
 
@@ -15,8 +15,8 @@ iso_test!(
     {
         // Generate PDF with document catalog
         let pdf_bytes = create_basic_test_pdf(
-            "Catalog Type Test", 
-            "Testing document catalog /Type entry compliance"
+            "Catalog Type Test",
+            "Testing document catalog /Type entry compliance",
         )?;
 
         // Verify PDF generation (Level 2)
@@ -24,7 +24,7 @@ iso_test!(
             &pdf_bytes,
             "7.5.2.1",
             VerificationLevel::GeneratesPdf,
-            "Document catalog /Type entry generation"
+            "Document catalog /Type entry generation",
         );
 
         let passed = result.passed && pdf_bytes.len() > 1000;
@@ -47,16 +47,15 @@ iso_test!(
     {
         // Generate PDF
         let pdf_bytes = create_basic_test_pdf(
-            "Catalog Type Verification", 
-            "Testing catalog /Type entry content verification"
+            "Catalog Type Verification",
+            "Testing catalog /Type entry content verification",
         )?;
 
         // Parse and verify content (Level 3)
         let parsed = parse_pdf(&pdf_bytes)?;
-        
+
         let catalog_valid = if let Some(catalog) = &parsed.catalog {
-            catalog.contains_key("Type") && 
-            catalog.get("Type") == Some(&"Catalog".to_string())
+            catalog.contains_key("Type") && catalog.get("Type") == Some(&"Catalog".to_string())
         } else {
             false
         };
@@ -82,14 +81,14 @@ iso_test!(
         // Generate PDF with pages
         let mut doc = Document::new();
         doc.set_title("Pages Reference Test");
-        
+
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(100.0, 700.0)
             .write("Testing catalog /Pages reference")?;
         doc.add_page(page);
-        
+
         let pdf_bytes = doc.to_bytes()?;
 
         // Verify PDF generation
@@ -97,7 +96,7 @@ iso_test!(
             &pdf_bytes,
             "7.5.2.2",
             VerificationLevel::GeneratesPdf,
-            "Document catalog /Pages reference generation"
+            "Document catalog /Pages reference generation",
         );
 
         let passed = result.passed && pdf_bytes.len() > 1000;
@@ -121,22 +120,21 @@ iso_test!(
         // Generate PDF
         let mut doc = Document::new();
         doc.set_title("Pages Reference Verification");
-        
+
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(100.0, 700.0)
             .write("Testing catalog pages reference verification")?;
         doc.add_page(page);
-        
+
         let pdf_bytes = doc.to_bytes()?;
 
         // Parse and verify content
         let parsed = parse_pdf(&pdf_bytes)?;
-        
+
         let pages_reference_valid = if let Some(catalog) = &parsed.catalog {
-            catalog.contains_key("Pages") && 
-            parsed.page_tree.is_some()
+            catalog.contains_key("Pages") && parsed.page_tree.is_some()
         } else {
             false
         };
@@ -178,27 +176,27 @@ iso_test!(
         let mut doc = Document::new();
         doc.set_title("Complete Catalog Test");
         doc.set_author("ISO Test Suite");
-        
+
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .at(50.0, 750.0)
             .write("Complete Document Catalog Test")?;
-            
+
         page.text()
             .set_font(Font::TimesRoman, 12.0)
             .at(50.0, 700.0)
             .write("This PDF tests all required catalog entries")?;
-        
+
         doc.add_page(page);
         let pdf_bytes = doc.to_bytes()?;
 
         // Parse and verify all required entries
         let parsed = parse_pdf(&pdf_bytes)?;
-        
+
         let mut missing_entries = Vec::new();
         let mut valid_entries = Vec::new();
-        
+
         if let Some(catalog) = &parsed.catalog {
             // Check required entries
             if catalog.contains_key("Type") && catalog.get("Type") == Some(&"Catalog".to_string()) {
@@ -206,7 +204,7 @@ iso_test!(
             } else {
                 missing_entries.push("Type");
             }
-            
+
             if catalog.contains_key("Pages") {
                 valid_entries.push("Pages");
             } else {
@@ -250,12 +248,12 @@ mod integration_tests {
                 .set_font(Font::Helvetica, 14.0)
                 .at(50.0, 750.0)
                 .write(&format!("Page {}", i))?;
-                
+
             page.text()
                 .set_font(Font::TimesRoman, 12.0)
                 .at(50.0, 700.0)
                 .write("Testing multi-page document catalog")?;
-            
+
             doc.add_page(page);
         }
 
@@ -267,11 +265,14 @@ mod integration_tests {
         println!("✓ Successfully parsed PDF");
         println!("  - Version: {}", parsed.version);
         println!("  - Object count: {}", parsed.object_count);
-        
+
         if let Some(catalog) = &parsed.catalog {
-            println!("  - Catalog entries: {:?}", catalog.keys().collect::<Vec<_>>());
+            println!(
+                "  - Catalog entries: {:?}",
+                catalog.keys().collect::<Vec<_>>()
+            );
         }
-        
+
         if let Some(page_tree) = &parsed.page_tree {
             println!("  - Page count: {}", page_tree.page_count);
         }
@@ -279,7 +280,7 @@ mod integration_tests {
         // Verify essential catalog structure
         assert!(parsed.catalog.is_some(), "PDF must have document catalog");
         assert!(parsed.page_tree.is_some(), "PDF must have page tree");
-        
+
         println!("✅ Catalog integration test passed");
         Ok(())
     }

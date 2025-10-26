@@ -1,6 +1,6 @@
+use oxidize_pdf::operations::page_analysis::PageContentAnalyzer;
 use oxidize_pdf::parser::document::PdfDocument;
 use oxidize_pdf::parser::pdf_reader::PdfReader;
-use oxidize_pdf::operations::page_analysis::PageContentAnalyzer;
 use oxidize_pdf::text::ocr::OcrProvider;
 use std::fs::File;
 use std::path::Path;
@@ -28,7 +28,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let document = PdfDocument::new(reader);
     let analyzer = PageContentAnalyzer::new(document);
 
-    println!("✅ PDF opened successfully. Pages: {}", analyzer.document.get_page_count()?);
+    println!(
+        "✅ PDF opened successfully. Pages: {}",
+        analyzer.document.get_page_count()?
+    );
 
     // Test specific pages
     let test_pages = [0, 30, 65];

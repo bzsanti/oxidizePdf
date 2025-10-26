@@ -12,20 +12,20 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Standard 14 Fonts Test");
-        
+
         let mut page = Page::a4();
-        
+
         // Test different standard fonts
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .at(50.0, 750.0)
             .write("Helvetica Font Test")?;
-            
+
         page.text()
             .set_font(Font::TimesRoman, 14.0)
             .at(50.0, 720.0)
             .write("Times-Roman Font Test")?;
-            
+
         page.text()
             .set_font(Font::Courier, 14.0)
             .at(50.0, 690.0)
@@ -54,7 +54,7 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Font Detection Test");
-        
+
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)

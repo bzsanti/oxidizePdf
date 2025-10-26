@@ -142,7 +142,8 @@ fn bench_lopdf_legacy() -> CompressionResult {
         "Count" => NUM_PAGES as i64,
         "Kids" => page_ids.into_iter().map(lopdf::Object::Reference).collect::<Vec<_>>(),
     };
-    doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+    doc.objects
+        .insert(pages_id, lopdf::Object::Dictionary(pages_dict));
 
     let catalog_id = doc.add_object(lopdf::dictionary! {
         "Type" => "Catalog",
@@ -286,7 +287,8 @@ fn bench_lopdf_modern() -> CompressionResult {
         "Count" => NUM_PAGES as i64,
         "Kids" => page_ids.into_iter().map(lopdf::Object::Reference).collect::<Vec<_>>(),
     };
-    doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+    doc.objects
+        .insert(pages_id, lopdf::Object::Dictionary(pages_dict));
 
     let catalog_id = doc.add_object(lopdf::dictionary! {
         "Type" => "Catalog",
@@ -356,8 +358,7 @@ fn print_summary(results: &[CompressionResult]) {
             .find(|r| r.library == "lopdf" && r.mode == *mode);
 
         if let (Some(ox), Some(lo)) = (oxidize, lopdf) {
-            let size_diff =
-                ((ox.file_size_bytes as f64 / lo.file_size_bytes as f64) - 1.0) * 100.0;
+            let size_diff = ((ox.file_size_bytes as f64 / lo.file_size_bytes as f64) - 1.0) * 100.0;
 
             println!("Mode: {}", mode);
             println!("  oxidize-pdf: {} bytes", ox.file_size_bytes);
@@ -379,10 +380,9 @@ fn print_summary(results: &[CompressionResult]) {
         .find(|r| r.library == "oxidize-pdf" && r.mode == "modern");
 
     if let (Some(leg), Some(mod_)) = (ox_legacy, ox_modern) {
-        let improvement =
-            ((leg.file_size_bytes as f64 - mod_.file_size_bytes as f64)
-                / leg.file_size_bytes as f64)
-                * 100.0;
+        let improvement = ((leg.file_size_bytes as f64 - mod_.file_size_bytes as f64)
+            / leg.file_size_bytes as f64)
+            * 100.0;
         println!(
             "📉 oxidize-pdf modern compression: {:.1}% reduction vs legacy",
             improvement
@@ -397,10 +397,9 @@ fn print_summary(results: &[CompressionResult]) {
         .find(|r| r.library == "lopdf" && r.mode == "modern");
 
     if let (Some(leg), Some(mod_)) = (lo_legacy, lo_modern) {
-        let improvement =
-            ((leg.file_size_bytes as f64 - mod_.file_size_bytes as f64)
-                / leg.file_size_bytes as f64)
-                * 100.0;
+        let improvement = ((leg.file_size_bytes as f64 - mod_.file_size_bytes as f64)
+            / leg.file_size_bytes as f64)
+            * 100.0;
         println!(
             "📉 lopdf modern compression:       {:.1}% reduction vs legacy",
             improvement

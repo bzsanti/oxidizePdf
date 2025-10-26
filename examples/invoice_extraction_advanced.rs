@@ -9,8 +9,8 @@
 //!
 //! Run with: cargo run --example invoice_extraction_advanced
 
-use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
-use oxidize_pdf::text::invoice::{InvoiceExtractor, InvoiceData, InvoiceField};
+use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
+use oxidize_pdf::text::invoice::{InvoiceData, InvoiceExtractor, InvoiceField};
 use oxidize_pdf::{Document, PageSize};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -54,7 +54,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let successful = results.iter().filter(|r| r.success).count();
     let failed = results.len() - successful;
-    println!("   ✓ Processed: {} successful, {} failed\n", successful, failed);
+    println!(
+        "   ✓ Processed: {} successful, {} failed\n",
+        successful, failed
+    );
 
     // Step 3: Export successful extractions to JSON
     println!("3. Exporting to JSON...");
@@ -70,13 +73,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if result.success {
             if let Some(ref data) = result.data {
-                println!("✓ {} fields extracted ({:.0}% confidence)",
+                println!(
+                    "✓ {} fields extracted ({:.0}% confidence)",
                     data.field_count(),
                     data.metadata.extraction_confidence * 100.0
                 );
             }
         } else {
-            println!("✗ Error: {}", result.error.as_ref().unwrap_or(&"Unknown".to_string()));
+            println!(
+                "✗ Error: {}",
+                result.error.as_ref().unwrap_or(&"Unknown".to_string())
+            );
         }
     }
 
@@ -113,12 +120,18 @@ fn create_spanish_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> 
     let mut page = doc.add_page(PageSize::A4);
 
     page.add_text("FACTURA", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Factura Nº: ESP-2025-001", 50.0, 720.0)?.set_font_size(12.0);
-    page.add_text("Fecha: 20/01/2025", 50.0, 700.0)?.set_font_size(10.0);
-    page.add_text("CIF: A12345678", 50.0, 680.0)?.set_font_size(10.0);
-    page.add_text("Base Imponible: 1.000,00 €", 50.0, 300.0)?.set_font_size(12.0);
-    page.add_text("IVA (21%): 210,00 €", 50.0, 280.0)?.set_font_size(12.0);
-    page.add_text("Total: 1.210,00 €", 50.0, 260.0)?.set_font_size(14.0);
+    page.add_text("Factura Nº: ESP-2025-001", 50.0, 720.0)?
+        .set_font_size(12.0);
+    page.add_text("Fecha: 20/01/2025", 50.0, 700.0)?
+        .set_font_size(10.0);
+    page.add_text("CIF: A12345678", 50.0, 680.0)?
+        .set_font_size(10.0);
+    page.add_text("Base Imponible: 1.000,00 €", 50.0, 300.0)?
+        .set_font_size(12.0);
+    page.add_text("IVA (21%): 210,00 €", 50.0, 280.0)?
+        .set_font_size(12.0);
+    page.add_text("Total: 1.210,00 €", 50.0, 260.0)?
+        .set_font_size(14.0);
 
     doc.save(path)?;
     Ok(())
@@ -130,12 +143,18 @@ fn create_english_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> 
     let mut page = doc.add_page(PageSize::A4);
 
     page.add_text("INVOICE", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Invoice Number: UK-2025-042", 50.0, 720.0)?.set_font_size(12.0);
-    page.add_text("Date: 20/01/2025", 50.0, 700.0)?.set_font_size(10.0);
-    page.add_text("VAT Number: GB123456789", 50.0, 680.0)?.set_font_size(10.0);
-    page.add_text("Subtotal: £850.00", 50.0, 300.0)?.set_font_size(12.0);
-    page.add_text("VAT (20%): £170.00", 50.0, 280.0)?.set_font_size(12.0);
-    page.add_text("Total: £1,020.00", 50.0, 260.0)?.set_font_size(14.0);
+    page.add_text("Invoice Number: UK-2025-042", 50.0, 720.0)?
+        .set_font_size(12.0);
+    page.add_text("Date: 20/01/2025", 50.0, 700.0)?
+        .set_font_size(10.0);
+    page.add_text("VAT Number: GB123456789", 50.0, 680.0)?
+        .set_font_size(10.0);
+    page.add_text("Subtotal: £850.00", 50.0, 300.0)?
+        .set_font_size(12.0);
+    page.add_text("VAT (20%): £170.00", 50.0, 280.0)?
+        .set_font_size(12.0);
+    page.add_text("Total: £1,020.00", 50.0, 260.0)?
+        .set_font_size(14.0);
 
     doc.save(path)?;
     Ok(())
@@ -147,12 +166,18 @@ fn create_german_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut page = doc.add_page(PageSize::A4);
 
     page.add_text("RECHNUNG", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Rechnungsnummer: DE-2025-089", 50.0, 720.0)?.set_font_size(12.0);
-    page.add_text("Datum: 20.01.2025", 50.0, 700.0)?.set_font_size(10.0);
-    page.add_text("USt-IdNr.: DE123456789", 50.0, 680.0)?.set_font_size(10.0);
-    page.add_text("Nettobetrag: 1.500,00 €", 50.0, 300.0)?.set_font_size(12.0);
-    page.add_text("MwSt. (19%): 285,00 €", 50.0, 280.0)?.set_font_size(12.0);
-    page.add_text("Gesamtbetrag: 1.785,00 €", 50.0, 260.0)?.set_font_size(14.0);
+    page.add_text("Rechnungsnummer: DE-2025-089", 50.0, 720.0)?
+        .set_font_size(12.0);
+    page.add_text("Datum: 20.01.2025", 50.0, 700.0)?
+        .set_font_size(10.0);
+    page.add_text("USt-IdNr.: DE123456789", 50.0, 680.0)?
+        .set_font_size(10.0);
+    page.add_text("Nettobetrag: 1.500,00 €", 50.0, 300.0)?
+        .set_font_size(12.0);
+    page.add_text("MwSt. (19%): 285,00 €", 50.0, 280.0)?
+        .set_font_size(12.0);
+    page.add_text("Gesamtbetrag: 1.785,00 €", 50.0, 260.0)?
+        .set_font_size(14.0);
 
     doc.save(path)?;
     Ok(())
@@ -164,12 +189,18 @@ fn create_italian_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> 
     let mut page = doc.add_page(PageSize::A4);
 
     page.add_text("FATTURA", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Numero Fattura: IT-2025-156", 50.0, 720.0)?.set_font_size(12.0);
-    page.add_text("Data: 20/01/2025", 50.0, 700.0)?.set_font_size(10.0);
-    page.add_text("Partita IVA: IT12345678901", 50.0, 680.0)?.set_font_size(10.0);
-    page.add_text("Imponibile: 2.000,00 €", 50.0, 300.0)?.set_font_size(12.0);
-    page.add_text("IVA (22%): 440,00 €", 50.0, 280.0)?.set_font_size(12.0);
-    page.add_text("Totale: 2.440,00 €", 50.0, 260.0)?.set_font_size(14.0);
+    page.add_text("Numero Fattura: IT-2025-156", 50.0, 720.0)?
+        .set_font_size(12.0);
+    page.add_text("Data: 20/01/2025", 50.0, 700.0)?
+        .set_font_size(10.0);
+    page.add_text("Partita IVA: IT12345678901", 50.0, 680.0)?
+        .set_font_size(10.0);
+    page.add_text("Imponibile: 2.000,00 €", 50.0, 300.0)?
+        .set_font_size(12.0);
+    page.add_text("IVA (22%): 440,00 €", 50.0, 280.0)?
+        .set_font_size(12.0);
+    page.add_text("Totale: 2.440,00 €", 50.0, 260.0)?
+        .set_font_size(14.0);
 
     doc.save(path)?;
     Ok(())
@@ -250,15 +281,21 @@ fn export_to_json(results: &[ProcessingResult]) -> Result<(), Box<dyn std::error
             if let Some(ref data) = result.data {
                 let invoice_json = InvoiceJson {
                     source_file: result.filename.clone(),
-                    language: data.metadata.language
+                    language: data
+                        .metadata
+                        .language
                         .map(|l| l.code().to_string())
                         .unwrap_or_else(|| "unknown".to_string()),
                     confidence: data.metadata.extraction_confidence,
-                    fields: data.fields.iter().map(|f| FieldJson {
-                        field_name: f.field_type.name().to_string(),
-                        value: field_value_to_string(&f.field_type),
-                        confidence: f.confidence,
-                    }).collect(),
+                    fields: data
+                        .fields
+                        .iter()
+                        .map(|f| FieldJson {
+                            field_name: f.field_type.name().to_string(),
+                            value: field_value_to_string(&f.field_type),
+                            confidence: f.confidence,
+                        })
+                        .collect(),
                 };
 
                 json_data.push(invoice_json);
@@ -313,7 +350,11 @@ fn demonstrate_threshold_tuning() -> Result<(), Box<dyn std::error::Error>> {
 
         let data = extractor.extract(&extracted_text.fragments)?;
 
-        println!("   Threshold {:.1}: {} fields extracted", threshold, data.field_count());
+        println!(
+            "   Threshold {:.1}: {} fields extracted",
+            threshold,
+            data.field_count()
+        );
     }
 
     Ok(())

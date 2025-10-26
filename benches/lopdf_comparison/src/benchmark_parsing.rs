@@ -79,11 +79,7 @@ fn bench_oxidize_parsing(pdfs: &[PathBuf]) -> ParsingResult {
             }
             Err(e) => {
                 failed += 1;
-                println!(
-                    "\n  ⚠️  Failed to parse {}: {}",
-                    pdf_path.display(),
-                    e
-                );
+                println!("\n  ⚠️  Failed to parse {}: {}", pdf_path.display(), e);
             }
         }
     }
@@ -118,11 +114,7 @@ fn bench_lopdf_parsing(pdfs: &[PathBuf]) -> ParsingResult {
             }
             Err(e) => {
                 failed += 1;
-                println!(
-                    "\n  ⚠️  Failed to parse {}: {}",
-                    pdf_path.display(),
-                    e
-                );
+                println!("\n  ⚠️  Failed to parse {}: {}", pdf_path.display(), e);
             }
         }
     }
@@ -156,9 +148,15 @@ fn print_summary(oxidize: &ParsingResult, lopdf: &ParsingResult) {
     println!("==================\n");
 
     println!("oxidize-pdf:");
-    println!("  ✅ Successful: {}/{}", oxidize.successful, oxidize.pdf_count);
+    println!(
+        "  ✅ Successful: {}/{}",
+        oxidize.successful, oxidize.pdf_count
+    );
     println!("  ❌ Failed:     {}/{}", oxidize.failed, oxidize.pdf_count);
-    println!("  ⚡ Speed:      {:.2} PDFs/second", oxidize.pdfs_per_second);
+    println!(
+        "  ⚡ Speed:      {:.2} PDFs/second",
+        oxidize.pdfs_per_second
+    );
     println!("  ⏱️  Duration:   {:.2}ms\n", oxidize.total_duration_ms);
 
     println!("lopdf:");
@@ -177,9 +175,6 @@ fn print_summary(oxidize: &ParsingResult, lopdf: &ParsingResult) {
     let success_diff = oxidize.successful as f64 / oxidize.pdf_count as f64
         - lopdf.successful as f64 / lopdf.pdf_count as f64;
     if success_diff.abs() > 0.01 {
-        println!(
-            "📊 Success rate difference: {:.1}%",
-            success_diff * 100.0
-        );
+        println!("📊 Success rate difference: {:.1}%", success_diff * 100.0);
     }
 }

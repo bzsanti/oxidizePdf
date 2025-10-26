@@ -2,7 +2,7 @@
 
 use crate::iso_verification::{create_basic_test_pdf, iso_test};
 use oxidize_pdf::verification::VerificationLevel;
-use oxidize_pdf::{Document, Font, Page, Color, Result as PdfResult};
+use oxidize_pdf::{Color, Document, Font, Page, Result as PdfResult};
 
 iso_test!(
     test_path_construction_level_2,
@@ -12,23 +12,19 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Path Construction Test");
-        
+
         let mut page = Page::a4();
-        
+
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 750.0)
             .write("Path Construction Test")?;
 
         // Rectangle path
-        page.graphics()
-            .rectangle(50.0, 700.0, 100.0, 50.0)
-            .stroke();
-            
+        page.graphics().rectangle(50.0, 700.0, 100.0, 50.0).stroke();
+
         // Line path
-        page.graphics()
-            .line(50.0, 650.0, 150.0, 600.0)
-            .stroke();
+        page.graphics().line(50.0, 650.0, 150.0, 600.0).stroke();
 
         doc.add_page(page);
         let pdf_bytes = doc.to_bytes()?;
@@ -53,9 +49,9 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Path Painting Test");
-        
+
         let mut page = Page::a4();
-        
+
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 750.0)
@@ -66,7 +62,7 @@ iso_test!(
             .set_fill_color(Color::rgb(0.7, 0.7, 0.9))
             .rectangle(50.0, 700.0, 100.0, 50.0)
             .fill();
-            
+
         // Stroked rectangle
         page.graphics()
             .set_stroke_color(Color::rgb(0.2, 0.2, 0.2))

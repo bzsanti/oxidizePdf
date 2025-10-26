@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example invoice_extraction_basic
 
-use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
+use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::text::invoice::{InvoiceExtractor, InvoiceField};
 use oxidize_pdf::{Document, PageSize};
 
@@ -18,8 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut page = doc.add_page(PageSize::A4);
 
     // Add invoice content (Spanish)
-    page.add_text("FACTURA", 50.0, 750.0)?
-        .set_font_size(24.0);
+    page.add_text("FACTURA", 50.0, 750.0)?.set_font_size(24.0);
 
     page.add_text("Factura Nº: 2025-001", 50.0, 720.0)?
         .set_font_size(12.0);
@@ -62,14 +61,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let page = doc.get_page(1)?;
     let extracted_text = text_extractor.extract_text(&doc, page, &options)?;
 
-    println!("   ✓ Extracted {} text fragments\n", extracted_text.fragments.len());
+    println!(
+        "   ✓ Extracted {} text fragments\n",
+        extracted_text.fragments.len()
+    );
 
     // Step 3: Extract invoice data
     println!("3. Extracting invoice fields...");
 
     let invoice_extractor = InvoiceExtractor::builder()
-        .with_language("es")           // Spanish
-        .confidence_threshold(0.7)      // 70% minimum confidence
+        .with_language("es") // Spanish
+        .confidence_threshold(0.7) // 70% minimum confidence
         .build();
 
     let invoice_data = invoice_extractor.extract(&extracted_text.fragments)?;
@@ -112,7 +114,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Show confidence
         let confidence_bar = "█".repeat((field.confidence * 20.0) as usize);
-        println!("      Confidence: {}{} ({:.0}%)",
+        println!(
+            "      Confidence: {}{} ({:.0}%)",
             confidence_bar,
             " ".repeat(20 - confidence_bar.len()),
             field.confidence * 100.0
@@ -120,18 +123,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("   {}", "=".repeat(60));
-    println!("\n   Overall Confidence: {:.0}%",
-        invoice_data.metadata.extraction_confidence * 100.0);
+    println!(
+        "\n   Overall Confidence: {:.0}%",
+        invoice_data.metadata.extraction_confidence * 100.0
+    );
 
     // Step 5: Filter by confidence
     println!("\n5. High-Confidence Fields (>85%):");
     let high_confidence = invoice_data.clone().filter_by_confidence(0.85);
 
     for field in &high_confidence.fields {
-        println!("   • {}: {:?}",
-            field.field_type.name(),
-            field.field_type
-        );
+        println!("   • {}: {:?}", field.field_type.name(), field.field_type);
     }
 
     println!("\n✓ Extraction complete!");

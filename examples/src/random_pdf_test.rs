@@ -72,14 +72,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     }
                                     let preview = &content[..end];
 
-                                    println!("   📝 Preview: \"{}{}\"",
+                                    println!(
+                                        "   📝 Preview: \"{}{}\"",
                                         preview,
-                                        if content.len() > preview_len { "..." } else { "" }
+                                        if content.len() > preview_len {
+                                            "..."
+                                        } else {
+                                            ""
+                                        }
                                     );
 
                                     // Check readability
-                                    let readable_chars = content.chars()
-                                        .filter(|c| c.is_alphabetic() || c.is_whitespace() || c.is_ascii_punctuation())
+                                    let readable_chars = content
+                                        .chars()
+                                        .filter(|c| {
+                                            c.is_alphabetic()
+                                                || c.is_whitespace()
+                                                || c.is_ascii_punctuation()
+                                        })
                                         .count();
                                     let total_chars = content.chars().count();
                                     let readability = if total_chars > 0 {
@@ -90,11 +100,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                     if readability > 0.8 {
                                         readable_pdfs += 1;
-                                        println!("   ✅ Text is readable ({}% standard chars)",
-                                            (readability * 100.0) as u32);
+                                        println!(
+                                            "   ✅ Text is readable ({}% standard chars)",
+                                            (readability * 100.0) as u32
+                                        );
                                     } else {
-                                        println!("   ⚠️  Text may be garbled ({}% standard chars)",
-                                            (readability * 100.0) as u32);
+                                        println!(
+                                            "   ⚠️  Text may be garbled ({}% standard chars)",
+                                            (readability * 100.0) as u32
+                                        );
                                     }
                                 }
                             }
@@ -120,7 +134,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📊 Total PDFs tested: {}", test_pdfs.len());
     println!("✅ Successful extractions: {}", successful_extractions);
     println!("📝 Total characters extracted: {}", total_chars_extracted);
-    println!("🔤 Readable PDFs: {} ({:.1}%)",
+    println!(
+        "🔤 Readable PDFs: {} ({:.1}%)",
         readable_pdfs,
         if successful_extractions > 0 {
             readable_pdfs as f64 / successful_extractions as f64 * 100.0
@@ -130,8 +145,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     if successful_extractions > 0 {
-        println!("📏 Average chars per extraction: {}",
-            total_chars_extracted / successful_extractions);
+        println!(
+            "📏 Average chars per extraction: {}",
+            total_chars_extracted / successful_extractions
+        );
     }
 
     Ok(())

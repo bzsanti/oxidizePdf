@@ -6,10 +6,10 @@
 //! - Compare original vs subset sizes
 //! - Embed subset fonts in PDFs
 
-use oxidize_pdf::{Document, Page, Result};
-use oxidize_pdf::text::{Font, FontManager, TrueTypeSubsetter, SubsettingOptions};
-use oxidize_pdf::graphics::GraphicsContext;
 use oxidize_pdf::geometry::Point;
+use oxidize_pdf::graphics::GraphicsContext;
+use oxidize_pdf::text::{Font, FontManager, SubsettingOptions, TrueTypeSubsetter};
+use oxidize_pdf::{Document, Page, Result};
 use std::fs;
 use std::path::Path;
 
@@ -30,12 +30,12 @@ fn main() -> Result<()> {
     let output = "examples/results/truetype_subsetting.pdf";
     fs::create_dir_all("examples/results")?;
     doc.save(output)?;
-    
+
     println!("✓ Created {}", output);
-    
+
     // Demonstrate standalone subsetting
     demonstrate_standalone_subsetting()?;
-    
+
     Ok(())
 }
 
@@ -43,24 +43,24 @@ fn main() -> Result<()> {
 fn create_subsetting_demo_page(doc: &mut Document) -> Result<()> {
     let mut page = Page::new(595.0, 842.0); // A4 size
     let mut graphics = GraphicsContext::new();
-    
+
     // Title
     graphics.set_font(&Font::helvetica_bold(), 18.0);
     graphics.text_at(Point::new(50.0, 780.0), "TrueType Font Subsetting Demo");
-    
+
     // Example text that uses limited glyphs
     let sample_text = "Hello World! This PDF uses font subsetting.";
-    
+
     graphics.set_font(&Font::helvetica(), 12.0);
     graphics.text_at(Point::new(50.0, 740.0), "Original Text:");
-    
+
     graphics.set_font(&Font::helvetica(), 14.0);
     graphics.text_at(Point::new(50.0, 720.0), sample_text);
-    
+
     // Explain subsetting
     graphics.set_font(&Font::helvetica(), 10.0);
     let mut y = 680.0;
-    
+
     let explanations = vec![
         "Font Subsetting Benefits:",
         "• Reduces PDF file size by 50-95%",
@@ -70,49 +70,49 @@ fn create_subsetting_demo_page(doc: &mut Document) -> Result<()> {
         "",
         "Characters Used in This Example:",
     ];
-    
+
     for text in explanations {
         graphics.text_at(Point::new(50.0, y), text);
         y -= 15.0;
     }
-    
+
     // Show unique characters
     let unique_chars = get_unique_characters(sample_text);
     graphics.set_font(&Font::courier(), 11.0);
     graphics.text_at(Point::new(70.0, y), &format!("{:?}", unique_chars));
-    
+
     y -= 30.0;
     graphics.set_font(&Font::helvetica(), 10.0);
     graphics.text_at(
         Point::new(50.0, y),
-        &format!("Total unique characters: {}", unique_chars.len())
+        &format!("Total unique characters: {}", unique_chars.len()),
     );
-    
+
     // Show glyph mapping
     y -= 40.0;
     graphics.set_font(&Font::helvetica_bold(), 12.0);
     graphics.text_at(Point::new(50.0, y), "Glyph Mapping Example:");
-    
+
     y -= 20.0;
     graphics.set_font(&Font::courier(), 9.0);
-    
+
     // Show character to glyph mapping
     let mapping_examples = vec![
-        ("H", 72),  // ASCII code
+        ("H", 72), // ASCII code
         ("e", 101),
         ("l", 108),
         ("o", 111),
         ("!", 33),
     ];
-    
+
     for (ch, code) in mapping_examples {
         graphics.text_at(
             Point::new(70.0, y),
-            &format!("'{}' → U+{:04X} → Glyph ID (subset)", ch, code)
+            &format!("'{}' → U+{:04X} → Glyph ID (subset)", ch, code),
         );
         y -= 12.0;
     }
-    
+
     page.set_graphics_context(graphics);
     doc.add_page(page);
     Ok(())
@@ -122,11 +122,11 @@ fn create_subsetting_demo_page(doc: &mut Document) -> Result<()> {
 fn create_size_comparison_page(doc: &mut Document) -> Result<()> {
     let mut page = Page::new(595.0, 842.0);
     let mut graphics = GraphicsContext::new();
-    
+
     // Title
     graphics.set_font(&Font::helvetica_bold(), 18.0);
     graphics.text_at(Point::new(50.0, 780.0), "Font Size Comparison");
-    
+
     // Create comparison data
     let comparisons = vec![
         FontComparison {
@@ -158,9 +158,9 @@ fn create_size_comparison_page(doc: &mut Document) -> Result<()> {
             glyphs_subset: 94,
         },
     ];
-    
+
     let mut y = 720.0;
-    
+
     // Headers
     graphics.set_font(&Font::helvetica_bold(), 11.0);
     graphics.text_at(Point::new(50.0, y), "Font Name");
@@ -168,77 +168,80 @@ fn create_size_comparison_page(doc: &mut Document) -> Result<()> {
     graphics.text_at(Point::new(300.0, y), "Subset Size");
     graphics.text_at(Point::new(400.0, y), "Reduction");
     graphics.text_at(Point::new(480.0, y), "Glyphs");
-    
+
     y -= 5.0;
     // Draw line
     graphics.set_line_width(0.5);
     graphics.move_to(Point::new(50.0, y));
     graphics.line_to(Point::new(545.0, y));
     graphics.stroke();
-    
+
     y -= 15.0;
     graphics.set_font(&Font::helvetica(), 10.0);
-    
+
     for comp in comparisons {
         graphics.text_at(Point::new(50.0, y), &comp.name);
         graphics.text_at(Point::new(200.0, y), &format_bytes(comp.original_size));
         graphics.text_at(Point::new(300.0, y), &format_bytes(comp.subset_size));
-        
+
         let reduction = calculate_reduction(comp.original_size, comp.subset_size);
         graphics.text_at(Point::new(400.0, y), &format!("{:.1}%", reduction));
-        
+
         graphics.text_at(
             Point::new(480.0, y),
-            &format!("{}/{}", comp.glyphs_subset, comp.glyphs_original)
+            &format!("{}/{}", comp.glyphs_subset, comp.glyphs_original),
         );
-        
+
         y -= 20.0;
     }
-    
+
     // Add visual chart
     y -= 40.0;
     graphics.set_font(&Font::helvetica_bold(), 12.0);
     graphics.text_at(Point::new(50.0, y), "Visual Size Comparison:");
-    
+
     y -= 30.0;
-    
+
     // Draw bars
     for comp in &comparisons {
         graphics.set_font(&Font::helvetica(), 9.0);
         graphics.text_at(Point::new(50.0, y + 5.0), &comp.name);
-        
+
         // Original size bar (scaled)
         let orig_width = (comp.original_size as f64 / 10000.0).min(200.0);
         graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.8, 0.2, 0.2));
         graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-            150.0, y, orig_width, 10.0
+            150.0, y, orig_width, 10.0,
         ));
-        
+
         // Subset size bar
         let subset_width = (comp.subset_size as f64 / 10000.0).min(200.0);
         graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.2, 0.8, 0.2));
         graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-            150.0, y - 12.0, subset_width, 10.0
+            150.0,
+            y - 12.0,
+            subset_width,
+            10.0,
         ));
-        
+
         y -= 35.0;
     }
-    
+
     // Legend
     graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.8, 0.2, 0.2));
     graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-        400.0, 200.0, 20.0, 10.0
+        400.0, 200.0, 20.0, 10.0,
     ));
     graphics.set_fill_color(oxidize_pdf::graphics::Color::black());
     graphics.text_at(Point::new(425.0, 202.0), "Original");
-    
+
     graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.2, 0.8, 0.2));
     graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-        400.0, 185.0, 20.0, 10.0
+        400.0, 185.0, 20.0, 10.0,
     ));
     graphics.set_fill_color(oxidize_pdf::graphics::Color::black());
     graphics.text_at(Point::new(425.0, 187.0), "Subset");
-    
+
     page.set_graphics_context(graphics);
     doc.add_page(page);
     Ok(())
@@ -248,18 +251,18 @@ fn create_size_comparison_page(doc: &mut Document) -> Result<()> {
 fn create_multilingual_subset_page(doc: &mut Document) -> Result<()> {
     let mut page = Page::new(595.0, 842.0);
     let mut graphics = GraphicsContext::new();
-    
+
     // Title
     graphics.set_font(&Font::helvetica_bold(), 18.0);
     graphics.text_at(Point::new(50.0, 780.0), "Multilingual Font Subsetting");
-    
+
     let mut y = 740.0;
-    
+
     graphics.set_font(&Font::helvetica(), 12.0);
     graphics.text_at(Point::new(50.0, y), "Subsetting with Multiple Languages:");
-    
+
     y -= 30.0;
-    
+
     // Language examples
     let languages = vec![
         ("English", "Hello, World!", 13),
@@ -269,24 +272,24 @@ fn create_multilingual_subset_page(doc: &mut Document) -> Result<()> {
         ("Italian", "Ciao, Mondo!", 12),
         ("Portuguese", "Olá, Mundo!", 11),
     ];
-    
+
     graphics.set_font(&Font::helvetica(), 11.0);
-    
+
     for (lang, text, chars) in &languages {
         graphics.text_at(Point::new(70.0, y), &format!("{:12} {}", lang, text));
         graphics.text_at(Point::new(350.0, y), &format!("({} unique chars)", chars));
         y -= 20.0;
     }
-    
+
     y -= 20.0;
-    
+
     // Combined statistics
     graphics.set_font(&Font::helvetica_bold(), 12.0);
     graphics.text_at(Point::new(50.0, y), "Combined Subset Statistics:");
-    
+
     y -= 20.0;
     graphics.set_font(&Font::helvetica(), 10.0);
-    
+
     let stats = vec![
         "• Total unique characters across all languages: 47",
         "• Original font glyphs: 3,381",
@@ -294,20 +297,20 @@ fn create_multilingual_subset_page(doc: &mut Document) -> Result<()> {
         "• Size reduction: 98.6%",
         "• Subset includes: Latin Basic, Latin-1 Supplement",
     ];
-    
+
     for stat in stats {
         graphics.text_at(Point::new(70.0, y), stat);
         y -= 15.0;
     }
-    
+
     // Technical details
     y -= 30.0;
     graphics.set_font(&Font::helvetica_bold(), 12.0);
     graphics.text_at(Point::new(50.0, y), "Technical Implementation:");
-    
+
     y -= 20.0;
     graphics.set_font(&Font::courier(), 9.0);
-    
+
     let code = vec![
         "// Create subsetter with options",
         "let options = SubsettingOptions {",
@@ -323,12 +326,12 @@ fn create_multilingual_subset_page(doc: &mut Document) -> Result<()> {
         "// Create subset",
         "let subset_font = subsetter.create_subset()?;",
     ];
-    
+
     for line in code {
         graphics.text_at(Point::new(70.0, y), line);
         y -= 11.0;
     }
-    
+
     page.set_graphics_context(graphics);
     doc.add_page(page);
     Ok(())
@@ -337,10 +340,10 @@ fn create_multilingual_subset_page(doc: &mut Document) -> Result<()> {
 /// Demonstrate standalone font subsetting
 fn demonstrate_standalone_subsetting() -> Result<()> {
     println!("\n=== Standalone Font Subsetting Demo ===");
-    
+
     // Create dummy font data for demonstration
     let dummy_font = create_dummy_font_data();
-    
+
     // Create subsetter
     let options = SubsettingOptions {
         include_kerning: true,
@@ -349,29 +352,29 @@ fn demonstrate_standalone_subsetting() -> Result<()> {
         optimize_size: true,
         include_notdef: true,
     };
-    
+
     match TrueTypeSubsetter::new(dummy_font.clone(), options) {
         Ok(mut subsetter) => {
             // Add some glyphs
             let sample_text = "Hello, PDF World! 0123456789";
             println!("Sample text: {}", sample_text);
-            
+
             // In a real scenario, this would map characters to glyph IDs
-            let glyph_ids: Vec<u16> = sample_text
-                .chars()
-                .map(|c| c as u16)
-                .collect();
-            
+            let glyph_ids: Vec<u16> = sample_text.chars().map(|c| c as u16).collect();
+
             subsetter.add_glyphs(&glyph_ids);
-            
+
             // Get statistics
             let stats = subsetter.get_statistics();
             println!("\nSubsetting Statistics:");
             println!("  Original font size: {} bytes", stats.original_size);
             println!("  Glyphs in subset: {}", stats.subset_glyphs);
             println!("  Total glyphs in font: {}", stats.total_glyphs);
-            println!("  Compression ratio: {:.2}%", stats.compression_ratio * 100.0);
-            
+            println!(
+                "  Compression ratio: {:.2}%",
+                stats.compression_ratio * 100.0
+            );
+
             // Create subset (in real implementation)
             match subsetter.create_subset() {
                 Ok(subset_data) => {
@@ -394,14 +397,14 @@ fn demonstrate_standalone_subsetting() -> Result<()> {
             println!("Error: {:?}", e);
         }
     }
-    
+
     println!("\n=== Benefits of Font Subsetting ===");
     println!("1. Dramatically reduces PDF file size");
     println!("2. Faster download and rendering");
     println!("3. Lower bandwidth usage");
     println!("4. Maintains full font quality");
     println!("5. Supports all Unicode characters used");
-    
+
     Ok(())
 }
 
@@ -444,18 +447,20 @@ fn create_dummy_font_data() -> Vec<u8> {
     // Create minimal valid TrueType font structure for testing
     // This is just for demonstration - real fonts are much more complex
     let mut data = Vec::new();
-    
+
     // Offset table
     data.extend_from_slice(&0x00010000u32.to_be_bytes()); // Version
     data.extend_from_slice(&9u16.to_be_bytes()); // numTables
     data.extend_from_slice(&128u16.to_be_bytes()); // searchRange
     data.extend_from_slice(&3u16.to_be_bytes()); // entrySelector
     data.extend_from_slice(&16u16.to_be_bytes()); // rangeShift
-    
+
     // Add dummy table entries
-    let tables = ["cmap", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "name", "post"];
+    let tables = [
+        "cmap", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "name", "post",
+    ];
     let mut offset = 12 + tables.len() * 16;
-    
+
     for table in &tables {
         let mut tag = [b' '; 4];
         for (i, &b) in table.bytes().take(4).enumerate() {
@@ -467,11 +472,11 @@ fn create_dummy_font_data() -> Vec<u8> {
         data.extend_from_slice(&100u32.to_be_bytes()); // length
         offset += 100;
     }
-    
+
     // Add dummy table data
     for _ in tables {
         data.extend_from_slice(&[0u8; 100]);
     }
-    
+
     data
 }

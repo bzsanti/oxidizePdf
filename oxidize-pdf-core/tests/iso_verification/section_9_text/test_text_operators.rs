@@ -12,20 +12,20 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Text Positioning Test");
-        
+
         let mut page = Page::a4();
-        
+
         // Text at different positions
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .at(50.0, 750.0)
             .write("Text at position (50, 750)")?;
-            
+
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(100.0, 700.0)
             .write("Text at position (100, 700)")?;
-            
+
         page.text()
             .set_font(Font::Helvetica, 10.0)
             .at(150.0, 650.0)
@@ -54,7 +54,7 @@ iso_test!(
     {
         let pdf_bytes = create_basic_test_pdf(
             "Text Showing Test",
-            "Testing text showing operators and text rendering"
+            "Testing text showing operators and text rendering",
         )?;
 
         let passed = pdf_bytes.len() > 1000;

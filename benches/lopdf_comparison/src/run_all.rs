@@ -20,7 +20,10 @@ fn main() {
 
     let total_duration = total_start.elapsed();
 
-    println!("\n✅ All benchmarks completed in {:.2}s", total_duration.as_secs_f64());
+    println!(
+        "\n✅ All benchmarks completed in {:.2}s",
+        total_duration.as_secs_f64()
+    );
     println!("\n📁 Results saved to: benches/lopdf_comparison/results/");
     println!("   - creation_benchmark.json");
     println!("   - parsing_benchmark.json");
@@ -63,10 +66,15 @@ fn generate_summary_report() {
 
     let mut report = String::new();
     report.push_str("# oxidize-pdf vs lopdf Benchmark Results\n\n");
-    report.push_str(&format!("**Date**: {}\n\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S")));
+    report.push_str(&format!(
+        "**Date**: {}\n\n",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    ));
 
     // Read and summarize creation benchmark
-    if let Ok(data) = std::fs::read_to_string("benches/lopdf_comparison/results/creation_benchmark.json") {
+    if let Ok(data) =
+        std::fs::read_to_string("benches/lopdf_comparison/results/creation_benchmark.json")
+    {
         if let Ok(results) = serde_json::from_str::<Vec<serde_json::Value>>(&data) {
             report.push_str("## 📄 Creation Performance\n\n");
             report.push_str("| Test | Library | Pages/Sec | File Size | Duration |\n");
@@ -89,7 +97,9 @@ fn generate_summary_report() {
     }
 
     // Read and summarize parsing benchmark
-    if let Ok(data) = std::fs::read_to_string("benches/lopdf_comparison/results/parsing_benchmark.json") {
+    if let Ok(data) =
+        std::fs::read_to_string("benches/lopdf_comparison/results/parsing_benchmark.json")
+    {
         if let Ok(results) = serde_json::from_str::<Vec<serde_json::Value>>(&data) {
             report.push_str("## 🔍 Parsing Performance\n\n");
             report.push_str("| Library | Success Rate | PDFs/Sec | Duration |\n");
@@ -113,7 +123,9 @@ fn generate_summary_report() {
     }
 
     // Read and summarize compression benchmark
-    if let Ok(data) = std::fs::read_to_string("benches/lopdf_comparison/results/compression_benchmark.json") {
+    if let Ok(data) =
+        std::fs::read_to_string("benches/lopdf_comparison/results/compression_benchmark.json")
+    {
         if let Ok(results) = serde_json::from_str::<Vec<serde_json::Value>>(&data) {
             report.push_str("## 🗜️  Compression Performance\n\n");
             report.push_str("| Mode | Library | File Size | Duration |\n");
@@ -141,8 +153,11 @@ fn generate_summary_report() {
     report.push_str("- lopdf: 0.37\n");
 
     // Save report
-    std::fs::write("benches/lopdf_comparison/results/BENCHMARK_REPORT.md", &report)
-        .expect("Failed to write report");
+    std::fs::write(
+        "benches/lopdf_comparison/results/BENCHMARK_REPORT.md",
+        &report,
+    )
+    .expect("Failed to write report");
 
     println!("✅ Summary report: benches/lopdf_comparison/results/BENCHMARK_REPORT.md");
 }

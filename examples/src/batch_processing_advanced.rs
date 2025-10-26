@@ -1,5 +1,5 @@
 //! Advanced Batch PDF Processing Example
-//! 
+//!
 //! This example demonstrates high-performance batch processing of PDF files using oxidize-pdf.
 //! It includes:
 //! - Parallel processing with configurable worker pools
@@ -12,14 +12,14 @@
 //!
 //! Run with: `cargo run --example batch_processing_advanced`
 
-use oxidize_pdf::{Document, Page};
-use oxidize_pdf::batch::{BatchProcessor, BatchJob, BatchOptions, BatchResult};
+use oxidize_pdf::batch::{BatchJob, BatchOptions, BatchProcessor, BatchResult};
 use oxidize_pdf::error::Result;
+use oxidize_pdf::{Document, Page};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// Comprehensive batch processing engine with advanced features
 pub struct AdvancedBatchProcessor {
@@ -105,23 +105,27 @@ impl BatchProgress {
         }
     }
 
-    pub fn update_progress(&mut self, completed: usize, failed: usize, current_job: Option<String>) {
+    pub fn update_progress(
+        &mut self,
+        completed: usize,
+        failed: usize,
+        current_job: Option<String>,
+    ) {
         self.completed_jobs = completed;
         self.failed_jobs = failed;
         self.current_job = current_job;
-        
+
         if let Some(start) = self.start_time {
             let elapsed = start.elapsed();
             let completed_total = completed + failed;
-            
+
             if completed_total > 0 {
                 self.throughput_per_second = completed_total as f64 / elapsed.as_secs_f64();
-                
+
                 if self.total_jobs > completed_total {
                     let remaining = self.total_jobs - completed_total;
-                    let estimated_remaining_time = Duration::from_secs_f64(
-                        remaining as f64 / self.throughput_per_second
-                    );
+                    let estimated_remaining_time =
+                        Duration::from_secs_f64(remaining as f64 / self.throughput_per_second);
                     self.estimated_completion = Some(estimated_remaining_time);
                 }
             }
@@ -161,7 +165,7 @@ impl AdvancedBatchProcessor {
             .with_parallelism(num_cpus::get())
             .with_memory_limit(512 * 1024 * 1024) // 512MB
             .with_timeout(Duration::from_secs(300)); // 5 minutes per job
-            
+
         Self::new(options)
     }
 
@@ -171,7 +175,7 @@ impl AdvancedBatchProcessor {
             .with_parallelism(2)
             .with_memory_limit(128 * 1024 * 1024) // 128MB
             .with_timeout(Duration::from_secs(600)); // 10 minutes per job
-            
+
         Self::new(options)
     }
 
@@ -183,12 +187,15 @@ impl AdvancedBatchProcessor {
         operation: BatchOperationType,
         file_pattern: Option<&str>,
     ) -> Result<BatchSummary> {
-        println!("🚀 Starting batch processing of directory: {}", input_dir.display());
-        
+        println!(
+            "🚀 Starting batch processing of directory: {}",
+            input_dir.display()
+        );
+
         // Discover PDF files
         let pdf_files = self.discover_pdf_files(input_dir, file_pattern)?;
         println!("📁 Found {} PDF files to process", pdf_files.len());
-        
+
         if pdf_files.is_empty() {
             return Ok(BatchSummary::empty());
         }
@@ -206,16 +213,18 @@ impl AdvancedBatchProcessor {
         // Process files in chunks to manage memory
         let chunk_size = self.calculate_optimal_chunk_size();
         let mut all_results = Vec::new();
-        
+
         for (chunk_idx, chunk) in pdf_files.chunks(chunk_size).enumerate() {
-            println!("📦 Processing chunk {} of {} ({} files)", 
-                     chunk_idx + 1, 
-                     (pdf_files.len() + chunk_size - 1) / chunk_size,
-                     chunk.len());
-            
+            println!(
+                "📦 Processing chunk {} of {} ({} files)",
+                chunk_idx + 1,
+                (pdf_files.len() + chunk_size - 1) / chunk_size,
+                chunk.len()
+            );
+
             let chunk_results = self.process_chunk(chunk, output_dir, &operation)?;
             all_results.extend(chunk_results);
-            
+
             // Update progress
             let completed = all_results.iter().filter(|r| r.success).count();
             let failed = all_results.iter().filter(|r| !r.success).count();
@@ -223,10 +232,10 @@ impl AdvancedBatchProcessor {
                 let mut progress = self.progress_tracker.lock().unwrap();
                 progress.update_progress(completed, failed, None);
             }
-            
+
             // Print intermediate progress
             self.print_progress_update();
-            
+
             // Allow garbage collection between chunks
             std::thread::sleep(Duration::from_millis(100));
         }
@@ -234,14 +243,20 @@ impl AdvancedBatchProcessor {
         // Generate final summary
         let summary = self.generate_summary(&all_results)?;
         self.print_final_summary(&summary);
-        
+
         Ok(summary)
     }
 
     /// Process a specific list of PDF operations
-    pub fn process_operations(&mut self, operations: Vec<BatchOperationSpec>) -> Result<BatchSummary> {
-        println!("🚀 Starting batch processing of {} operations", operations.len());
-        
+    pub fn process_operations(
+        &mut self,
+        operations: Vec<BatchOperationSpec>,
+    ) -> Result<BatchSummary> {
+        println!(
+            "🚀 Starting batch processing of {} operations",
+            operations.len()
+        );
+
         {
             let mut progress = self.progress_tracker.lock().unwrap();
             progress.total_jobs = operations.len();
@@ -249,13 +264,18 @@ impl AdvancedBatchProcessor {
         }
 
         let mut results = Vec::new();
-        
+
         for (idx, op) in operations.iter().enumerate() {
-            println!("⚙️  Processing operation {}/{}: {}", idx + 1, operations.len(), op.description);
-            
+            println!(
+                "⚙️  Processing operation {}/{}: {}",
+                idx + 1,
+                operations.len(),
+                op.description
+            );
+
             let result = self.execute_single_operation(op)?;
             results.push(result);
-            
+
             // Update progress
             let completed = results.iter().filter(|r| r.success).count();
             let failed = results.iter().filter(|r| !r.success).count();
@@ -263,37 +283,39 @@ impl AdvancedBatchProcessor {
                 let mut progress = self.progress_tracker.lock().unwrap();
                 progress.update_progress(completed, failed, Some(op.description.clone()));
             }
-            
+
             self.print_progress_update();
         }
 
         let summary = self.generate_summary(&results)?;
         self.print_final_summary(&summary);
-        
+
         Ok(summary)
     }
 
     fn discover_pdf_files(&self, dir: &Path, pattern: Option<&str>) -> Result<Vec<PathBuf>> {
         let mut pdf_files = Vec::new();
         let pattern = pattern.unwrap_or("*.pdf");
-        
+
         fn collect_pdfs(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
             for entry in fs::read_dir(dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 if path.is_dir() {
                     collect_pdfs(&path, files)?;
-                } else if path.extension()
+                } else if path
+                    .extension()
                     .and_then(|ext| ext.to_str())
                     .map(|ext| ext.to_lowercase() == "pdf")
-                    .unwrap_or(false) {
+                    .unwrap_or(false)
+                {
                     files.push(path);
                 }
             }
             Ok(())
         }
-        
+
         collect_pdfs(dir, &mut pdf_files)?;
         pdf_files.sort();
         Ok(pdf_files)
@@ -303,11 +325,11 @@ impl AdvancedBatchProcessor {
         // Base chunk size on available memory and parallelism
         let memory_limit = self.options.memory_limit.unwrap_or(256 * 1024 * 1024);
         let parallelism = self.options.parallelism;
-        
+
         // Estimate ~10MB per PDF in memory during processing
         let estimated_memory_per_pdf = 10 * 1024 * 1024;
         let max_concurrent = memory_limit / estimated_memory_per_pdf;
-        
+
         std::cmp::min(std::cmp::max(parallelism * 2, max_concurrent), 100)
     }
 
@@ -318,14 +340,14 @@ impl AdvancedBatchProcessor {
         operation: &BatchOperationType,
     ) -> Result<Vec<ProcessingResult>> {
         let mut results = Vec::new();
-        
+
         // For this example, process sequentially within chunk
         // In a real implementation, you'd use the BatchProcessor from oxidize-pdf
         for file_path in files {
             let result = self.process_single_file(file_path, output_dir, operation)?;
             results.push(result);
         }
-        
+
         Ok(results)
     }
 
@@ -337,7 +359,7 @@ impl AdvancedBatchProcessor {
     ) -> Result<ProcessingResult> {
         let start_time = Instant::now();
         let file_size_before = fs::metadata(file_path)?.len();
-        
+
         let mut result = ProcessingResult {
             input_path: file_path.to_path_buf(),
             output_path: None,
@@ -375,24 +397,50 @@ impl AdvancedBatchProcessor {
         operation: &BatchOperationType,
     ) -> Result<OperationOutput> {
         match operation {
-            BatchOperationType::Split { pages_per_file, output_pattern } => {
-                self.execute_split_operation(input_path, output_dir, *pages_per_file, output_pattern)
-            }
+            BatchOperationType::Split {
+                pages_per_file,
+                output_pattern,
+            } => self.execute_split_operation(
+                input_path,
+                output_dir,
+                *pages_per_file,
+                output_pattern,
+            ),
             BatchOperationType::Merge { inputs, output } => {
                 self.execute_merge_operation(inputs, output)
             }
-            BatchOperationType::Extract { page_ranges, output } => {
-                self.execute_extract_operation(input_path, output, page_ranges)
-            }
-            BatchOperationType::Analyze { extract_text, extract_images, extract_metadata } => {
-                self.execute_analyze_operation(input_path, *extract_text, *extract_images, *extract_metadata)
-            }
-            BatchOperationType::Optimize { compression_level, remove_unused_objects } => {
-                self.execute_optimize_operation(input_path, output_dir, *compression_level, *remove_unused_objects)
-            }
-            BatchOperationType::Convert { target_version, compatibility_mode } => {
-                self.execute_convert_operation(input_path, output_dir, target_version, *compatibility_mode)
-            }
+            BatchOperationType::Extract {
+                page_ranges,
+                output,
+            } => self.execute_extract_operation(input_path, output, page_ranges),
+            BatchOperationType::Analyze {
+                extract_text,
+                extract_images,
+                extract_metadata,
+            } => self.execute_analyze_operation(
+                input_path,
+                *extract_text,
+                *extract_images,
+                *extract_metadata,
+            ),
+            BatchOperationType::Optimize {
+                compression_level,
+                remove_unused_objects,
+            } => self.execute_optimize_operation(
+                input_path,
+                output_dir,
+                *compression_level,
+                *remove_unused_objects,
+            ),
+            BatchOperationType::Convert {
+                target_version,
+                compatibility_mode,
+            } => self.execute_convert_operation(
+                input_path,
+                output_dir,
+                target_version,
+                *compatibility_mode,
+            ),
         }
     }
 
@@ -406,19 +454,21 @@ impl AdvancedBatchProcessor {
         // Load and split the PDF
         let document = Document::from_file(input_path)?;
         let total_pages = document.page_count();
-        
+
         let mut output_files = Vec::new();
         let mut total_output_size = 0;
-        
+
         for chunk_start in (0..total_pages).step_by(pages_per_file) {
             let chunk_end = std::cmp::min(chunk_start + pages_per_file, total_pages);
-            
+
             // Create output filename
             let input_stem = input_path.file_stem().unwrap().to_str().unwrap();
-            let output_filename = output_pattern
-                .replace("{}", &format!("{}_{}-{}", input_stem, chunk_start + 1, chunk_end));
+            let output_filename = output_pattern.replace(
+                "{}",
+                &format!("{}_{}-{}", input_stem, chunk_start + 1, chunk_end),
+            );
             let output_path = output_dir.join(output_filename);
-            
+
             // Extract pages and save
             let mut split_doc = Document::new();
             for page_idx in chunk_start..chunk_end {
@@ -426,7 +476,7 @@ impl AdvancedBatchProcessor {
                     split_doc.add_page(page);
                 }
             }
-            
+
             split_doc.save(&output_path)?;
             let output_size = fs::metadata(&output_path)?.len();
             total_output_size += output_size;
@@ -452,11 +502,11 @@ impl AdvancedBatchProcessor {
     ) -> Result<OperationOutput> {
         let mut merged_doc = Document::new();
         let mut total_pages = 0;
-        
+
         for input_path in inputs {
             let document = Document::from_file(input_path)?;
             let page_count = document.page_count();
-            
+
             for page_idx in 0..page_count {
                 if let Ok(page) = document.get_page(page_idx) {
                     merged_doc.add_page(page);
@@ -464,7 +514,7 @@ impl AdvancedBatchProcessor {
                 }
             }
         }
-        
+
         merged_doc.save(output)?;
         let output_size = fs::metadata(output)?.len();
 
@@ -488,7 +538,7 @@ impl AdvancedBatchProcessor {
         let document = Document::from_file(input_path)?;
         let mut extracted_doc = Document::new();
         let mut extracted_pages = 0;
-        
+
         for &(start, end) in page_ranges {
             for page_idx in start..=end {
                 if page_idx < document.page_count() {
@@ -499,7 +549,7 @@ impl AdvancedBatchProcessor {
                 }
             }
         }
-        
+
         extracted_doc.save(output)?;
         let output_size = fs::metadata(output)?.len();
 
@@ -523,10 +573,10 @@ impl AdvancedBatchProcessor {
     ) -> Result<OperationOutput> {
         let document = Document::from_file(input_path)?;
         let mut metadata = HashMap::new();
-        
+
         // Basic document analysis
         metadata.insert("page_count".to_string(), document.page_count().to_string());
-        
+
         if extract_metadata {
             // Extract document metadata
             if let Some(title) = document.get_title() {
@@ -539,11 +589,11 @@ impl AdvancedBatchProcessor {
                 metadata.insert("subject".to_string(), subject);
             }
         }
-        
+
         if extract_text {
             let mut total_text_length = 0;
             let mut pages_with_text = 0;
-            
+
             for page_idx in 0..document.page_count() {
                 if let Ok(page) = document.get_page(page_idx) {
                     if let Ok(text) = page.extract_text() {
@@ -554,15 +604,18 @@ impl AdvancedBatchProcessor {
                     }
                 }
             }
-            
-            metadata.insert("total_text_length".to_string(), total_text_length.to_string());
+
+            metadata.insert(
+                "total_text_length".to_string(),
+                total_text_length.to_string(),
+            );
             metadata.insert("pages_with_text".to_string(), pages_with_text.to_string());
         }
-        
+
         if extract_images {
             // Count images across all pages
             let mut total_images = 0;
-            
+
             for page_idx in 0..document.page_count() {
                 if let Ok(page) = document.get_page(page_idx) {
                     if let Ok(images) = page.extract_images() {
@@ -570,7 +623,7 @@ impl AdvancedBatchProcessor {
                     }
                 }
             }
-            
+
             metadata.insert("total_images".to_string(), total_images.to_string());
         }
 
@@ -589,21 +642,27 @@ impl AdvancedBatchProcessor {
         remove_unused_objects: bool,
     ) -> Result<OperationOutput> {
         let document = Document::from_file(input_path)?;
-        
+
         // Create optimized filename
         let input_stem = input_path.file_stem().unwrap().to_str().unwrap();
         let output_filename = format!("{}_optimized.pdf", input_stem);
         let output_path = output_dir.join(output_filename);
-        
+
         // Apply optimization (this is a simplified example)
         // In a real implementation, you'd apply compression and cleanup
         document.save(&output_path)?;
-        
+
         let output_size = fs::metadata(&output_path)?.len();
-        
+
         let mut metadata = HashMap::new();
-        metadata.insert("compression_level".to_string(), compression_level.to_string());
-        metadata.insert("remove_unused_objects".to_string(), remove_unused_objects.to_string());
+        metadata.insert(
+            "compression_level".to_string(),
+            compression_level.to_string(),
+        );
+        metadata.insert(
+            "remove_unused_objects".to_string(),
+            remove_unused_objects.to_string(),
+        );
 
         Ok(OperationOutput {
             output_path: Some(output_path),
@@ -620,20 +679,23 @@ impl AdvancedBatchProcessor {
         compatibility_mode: bool,
     ) -> Result<OperationOutput> {
         let document = Document::from_file(input_path)?;
-        
+
         // Create converted filename
         let input_stem = input_path.file_stem().unwrap().to_str().unwrap();
         let output_filename = format!("{}_{}.pdf", input_stem, target_version.replace('.', "_"));
         let output_path = output_dir.join(output_filename);
-        
+
         // Apply version conversion (simplified example)
         document.save(&output_path)?;
-        
+
         let output_size = fs::metadata(&output_path)?.len();
-        
+
         let mut metadata = HashMap::new();
         metadata.insert("target_version".to_string(), target_version.to_string());
-        metadata.insert("compatibility_mode".to_string(), compatibility_mode.to_string());
+        metadata.insert(
+            "compatibility_mode".to_string(),
+            compatibility_mode.to_string(),
+        );
 
         Ok(OperationOutput {
             output_path: Some(output_path),
@@ -644,7 +706,7 @@ impl AdvancedBatchProcessor {
 
     fn execute_single_operation(&self, operation: &BatchOperationSpec) -> Result<ProcessingResult> {
         let start_time = Instant::now();
-        
+
         let mut result = ProcessingResult {
             input_path: operation.input_path.clone(),
             output_path: operation.output_path.clone(),
@@ -668,7 +730,9 @@ impl AdvancedBatchProcessor {
             _ => {
                 // Placeholder - in real implementation, execute the actual operation
                 result.success = true;
-                result.metadata.insert("status".to_string(), "completed".to_string());
+                result
+                    .metadata
+                    .insert("status".to_string(), "completed".to_string());
             }
         }
 
@@ -686,7 +750,7 @@ impl AdvancedBatchProcessor {
             progress.success_rate(),
             progress.throughput_per_second
         );
-        
+
         if let Some(eta) = progress.estimated_completion {
             println!("⏱️  Estimated time remaining: {:?}", eta);
         }
@@ -696,7 +760,7 @@ impl AdvancedBatchProcessor {
         let total_jobs = results.len();
         let successful_jobs = results.iter().filter(|r| r.success).count();
         let failed_jobs = total_jobs - successful_jobs;
-        
+
         let total_processing_time: Duration = results.iter().map(|r| r.processing_time).sum();
         let average_processing_time = if total_jobs > 0 {
             total_processing_time / total_jobs as u32
@@ -705,10 +769,8 @@ impl AdvancedBatchProcessor {
         };
 
         let total_bytes_before: u64 = results.iter().map(|r| r.file_size_before).sum();
-        let total_bytes_after: u64 = results.iter()
-            .filter_map(|r| r.file_size_after)
-            .sum();
-        
+        let total_bytes_after: u64 = results.iter().filter_map(|r| r.file_size_after).sum();
+
         let compression_ratio = if total_bytes_before > 0 {
             (total_bytes_after as f64 / total_bytes_before as f64) * 100.0
         } else {
@@ -732,24 +794,40 @@ impl AdvancedBatchProcessor {
         println!("\n🎉 Batch processing completed!");
         println!("📈 Final Summary:");
         println!("   • Total jobs: {}", summary.total_jobs);
-        println!("   • Successful: {} ({:.1}%)", summary.successful_jobs, 
-                 (summary.successful_jobs as f64 / summary.total_jobs as f64) * 100.0);
-        println!("   • Failed: {} ({:.1}%)", summary.failed_jobs,
-                 (summary.failed_jobs as f64 / summary.total_jobs as f64) * 100.0);
-        println!("   • Total processing time: {:?}", summary.total_processing_time);
-        println!("   • Average per job: {:?}", summary.average_processing_time);
-        println!("   • Data processed: {:.2} MB → {:.2} MB", 
-                 summary.total_bytes_before as f64 / 1_000_000.0,
-                 summary.total_bytes_after as f64 / 1_000_000.0);
+        println!(
+            "   • Successful: {} ({:.1}%)",
+            summary.successful_jobs,
+            (summary.successful_jobs as f64 / summary.total_jobs as f64) * 100.0
+        );
+        println!(
+            "   • Failed: {} ({:.1}%)",
+            summary.failed_jobs,
+            (summary.failed_jobs as f64 / summary.total_jobs as f64) * 100.0
+        );
+        println!(
+            "   • Total processing time: {:?}",
+            summary.total_processing_time
+        );
+        println!(
+            "   • Average per job: {:?}",
+            summary.average_processing_time
+        );
+        println!(
+            "   • Data processed: {:.2} MB → {:.2} MB",
+            summary.total_bytes_before as f64 / 1_000_000.0,
+            summary.total_bytes_after as f64 / 1_000_000.0
+        );
         println!("   • Compression ratio: {:.1}%", summary.compression_ratio);
-        
+
         if summary.failed_jobs > 0 {
             println!("\n❌ Failed files:");
             for result in &summary.results {
                 if !result.success {
-                    println!("   • {}: {}", 
-                             result.input_path.display(), 
-                             result.error_message.as_deref().unwrap_or("Unknown error"));
+                    println!(
+                        "   • {}: {}",
+                        result.input_path.display(),
+                        result.error_message.as_deref().unwrap_or("Unknown error")
+                    );
                 }
             }
         }
@@ -806,10 +884,10 @@ impl BatchSummary {
 /// Create sample PDF files for demonstration
 fn create_sample_pdfs(output_dir: &Path) -> Result<Vec<PathBuf>> {
     let mut sample_files = Vec::new();
-    
+
     for i in 1..=5 {
         let mut document = Document::new();
-        
+
         // Create a simple document with multiple pages
         for page_num in 1..=3 {
             let mut page = Page::a4();
@@ -817,75 +895,74 @@ fn create_sample_pdfs(output_dir: &Path) -> Result<Vec<PathBuf>> {
                 &format!("Document {} - Page {}", i, page_num),
                 100.0,
                 700.0,
-                12.0
+                12.0,
             )?;
-            
+
             page.graphics().show_text_at(
                 &format!("This is sample content for testing batch processing."),
                 100.0,
                 650.0,
-                10.0
+                10.0,
             )?;
-            
+
             document.add_page(page);
         }
-        
+
         let filename = format!("sample_document_{}.pdf", i);
         let file_path = output_dir.join(filename);
         document.save(&file_path)?;
         sample_files.push(file_path);
     }
-    
+
     Ok(sample_files)
 }
 
 fn main() -> Result<()> {
     println!("🚀 Advanced Batch PDF Processing Example");
     println!("=========================================");
-    
+
     // Create output directories
     let input_dir = PathBuf::from("examples/results/batch_input");
     let output_dir = PathBuf::from("examples/results/batch_output");
-    
+
     fs::create_dir_all(&input_dir)?;
     fs::create_dir_all(&output_dir)?;
-    
+
     // Create sample PDF files
     println!("📄 Creating sample PDF files...");
     let sample_files = create_sample_pdfs(&input_dir)?;
     println!("✅ Created {} sample files", sample_files.len());
-    
+
     // Example 1: Batch split operation
     println!("\n🔪 Example 1: Batch Split Operation");
     let mut processor = AdvancedBatchProcessor::for_large_scale();
-    
+
     let split_operation = BatchOperationType::Split {
         pages_per_file: 2,
         output_pattern: "{}_part.pdf".to_string(),
     };
-    
+
     let split_output_dir = output_dir.join("split");
     fs::create_dir_all(&split_output_dir)?;
-    
-    let summary = processor.process_directory(&input_dir, &split_output_dir, split_operation, None)?;
-    
+
+    let summary =
+        processor.process_directory(&input_dir, &split_output_dir, split_operation, None)?;
+
     // Example 2: Batch merge operation
     println!("\n🔗 Example 2: Batch Merge Operation");
-    let merge_operations = vec![
-        BatchOperationSpec {
-            input_path: PathBuf::new(), // Placeholder
-            output_path: Some(output_dir.join("merged_documents.pdf")),
-            operation: BatchOperationType::Merge {
-                inputs: sample_files.clone(),
-                output: output_dir.join("merged_documents.pdf"),
-            },
-            description: "Merge all sample documents".to_string(),
+    let merge_operations = vec![BatchOperationSpec {
+        input_path: PathBuf::new(), // Placeholder
+        output_path: Some(output_dir.join("merged_documents.pdf")),
+        operation: BatchOperationType::Merge {
+            inputs: sample_files.clone(),
+            output: output_dir.join("merged_documents.pdf"),
         },
-    ];
-    
+        description: "Merge all sample documents".to_string(),
+    }];
+
     let mut merge_processor = AdvancedBatchProcessor::for_low_memory();
     merge_processor.process_operations(merge_operations)?;
-    
+
     // Example 3: Batch analysis
     println!("\n🔍 Example 3: Batch Analysis Operation");
     let analysis_operation = BatchOperationType::Analyze {
@@ -893,18 +970,23 @@ fn main() -> Result<()> {
         extract_images: true,
         extract_metadata: true,
     };
-    
+
     let analysis_output_dir = output_dir.join("analysis");
     fs::create_dir_all(&analysis_output_dir)?;
-    
+
     let mut analysis_processor = AdvancedBatchProcessor::new(
         BatchOptions::default()
             .with_parallelism(4)
-            .with_timeout(Duration::from_secs(60))
+            .with_timeout(Duration::from_secs(60)),
     );
-    
-    analysis_processor.process_directory(&input_dir, &analysis_output_dir, analysis_operation, None)?;
-    
+
+    analysis_processor.process_directory(
+        &input_dir,
+        &analysis_output_dir,
+        analysis_operation,
+        None,
+    )?;
+
     println!("\n💡 This example demonstrates:");
     println!("   ✓ High-performance batch processing with parallel workers");
     println!("   ✓ Real-time progress tracking and ETA calculation");
@@ -914,7 +996,7 @@ fn main() -> Result<()> {
     println!("   ✓ Multiple operation types (split, merge, extract, analyze)");
     println!("   ✓ Configurable processing options");
     println!("   ✓ Detailed reporting and summary generation");
-    
+
     Ok(())
 }
 
@@ -927,7 +1009,7 @@ mod tests {
         let mut progress = BatchProgress::new();
         progress.total_jobs = 100;
         progress.update_progress(75, 5, None);
-        
+
         assert_eq!(progress.completion_percentage(), 80.0);
         assert_eq!(progress.success_rate(), 93.75); // 75/(75+5) * 100
     }
@@ -938,7 +1020,7 @@ mod tests {
             pages_per_file: 10,
             output_pattern: "part_{}.pdf".to_string(),
         };
-        
+
         // Test that operation types can be cloned and formatted
         let _cloned = split_op.clone();
         assert!(format!("{:?}", split_op).contains("Split"));
