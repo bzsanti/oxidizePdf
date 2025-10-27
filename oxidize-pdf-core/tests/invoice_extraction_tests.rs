@@ -180,8 +180,8 @@ fn test_extract_no_matches() {
         height: 12.0,
         font_size: 12.0,
         font_name: None,
-            is_bold: false,
-            is_italic: false,
+        is_bold: false,
+        is_italic: false,
     }];
 
     let extractor = InvoiceExtractor::builder()
