@@ -379,6 +379,10 @@ harness = false
 name = "ai_chunking"
 harness = false
 
+[[bench]]
+name = "plaintext_benchmark"
+harness = false
+
 [features]
 default = ["compression", "ocr-tesseract"]
 
@@ -467,3 +471,25 @@ path = "../examples/llm_export_formats.rs"
 [[example]]
 name = "pdf_to_llm_formats"
 path = "../examples/pdf_to_llm_formats.rs"
+
+# Disabled - API incompatibility (deferred to v1.6.4)
+# [[example]]
+# name = "invoice_extraction_basic"
+# path = "../examples/invoice_extraction_basic.rs"
+
+# [[example]]
+# name = "invoice_extraction_advanced"
+# path = "../examples/invoice_extraction_advanced.rs"
+
+[[example]]
+name = "keyvalue_extraction"
+path = "../examples/keyvalue_extraction.rs"
+
+[[example]]
+name = "table_extraction"
+path = "../examples/table_extraction.rs"
+
+# Disabled - requires benchmark framework
+# [[example]]
+# name = "plaintext_benchmark"
+# path = "../benches/plaintext_benchmark.rs"

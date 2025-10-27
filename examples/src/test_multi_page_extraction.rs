@@ -51,7 +51,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             unique_sizes.insert(size);
 
                             // Save the image
-                            let output_path = format!("examples/results/extracted_page_{}.jpg", page_num);
+                            let output_path =
+                                format!("examples/results/extracted_page_{}.jpg", page_num);
                             std::fs::write(&output_path, &image_data)?;
                             println!("   ✅ Extracted image saved as: {}", output_path);
                         }

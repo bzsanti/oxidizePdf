@@ -69,6 +69,12 @@ pub struct TextFragment {
     pub height: f64,
     /// Font size
     pub font_size: f64,
+    /// Font name (if known) - used for kerning-aware text spacing
+    pub font_name: Option<String>,
+    /// Whether the font is bold (detected from font name)
+    pub is_bold: bool,
+    /// Whether the font is italic (detected from font name)
+    pub is_italic: bool,
 }
 
 /// Text extraction state
@@ -78,7 +84,6 @@ struct TextState {
     /// Current text line matrix
     text_line_matrix: [f64; 6],
     /// Current transformation matrix (CTM)
-    #[allow(dead_code)]
     ctm: [f64; 6],
     /// Text leading (line spacing)
     leading: f64,
@@ -114,6 +119,45 @@ impl Default for TextState {
             render_mode: 0,
         }
     }
+}
+
+/// Parse font style (bold/italic) from font name
+///
+/// Detects bold and italic styles from common font naming patterns.
+/// Works with PostScript font names (e.g., "Helvetica-Bold", "Times-BoldItalic")
+/// and TrueType names (e.g., "Arial Bold", "Courier Oblique").
+///
+/// # Examples
+///
+/// ```
+/// use oxidize_pdf::text::extraction::parse_font_style;
+///
+/// assert_eq!(parse_font_style("Helvetica-Bold"), (true, false));
+/// assert_eq!(parse_font_style("Times-BoldItalic"), (true, true));
+/// assert_eq!(parse_font_style("Courier"), (false, false));
+/// assert_eq!(parse_font_style("Arial-Italic"), (false, true));
+/// ```
+///
+/// # Returns
+///
+/// Tuple of (is_bold, is_italic)
+pub fn parse_font_style(font_name: &str) -> (bool, bool) {
+    let name_lower = font_name.to_lowercase();
+
+    // Detect bold from common patterns
+    let is_bold = name_lower.contains("bold")
+        || name_lower.contains("-b")
+        || name_lower.contains(" b ")
+        || name_lower.ends_with(" b");
+
+    // Detect italic/oblique from common patterns
+    let is_italic = name_lower.contains("italic")
+        || name_lower.contains("oblique")
+        || name_lower.contains("-i")
+        || name_lower.contains(" i ")
+        || name_lower.ends_with(" i");
+
+    (is_bold, is_italic)
 }
 
 /// Text extractor for PDF pages with CMap support
@@ -179,12 +223,30 @@ impl TextExtractor {
         let mut last_y = 0.0;
 
         // Process each content stream
-        for stream_data in streams {
-            let operations = match ContentParser::parse_content(&stream_data) {
+        for (stream_idx, stream_data) in streams.iter().enumerate() {
+            let operations = match ContentParser::parse_content(stream_data) {
                 Ok(ops) => ops,
                 Err(e) => {
-                    // Log the error but continue processing other streams
-                    eprintln!("Warning: Failed to parse content stream, skipping: {}", e);
+                    // Enhanced diagnostic logging for content stream parsing failures
+                    eprintln!(
+                        "Warning: Failed to parse content stream on page {}, stream {}/{}",
+                        page_index + 1,
+                        stream_idx + 1,
+                        streams.len()
+                    );
+                    eprintln!("         Error: {}", e);
+                    eprintln!("         Stream size: {} bytes", stream_data.len());
+
+                    // Show first 100 bytes for diagnosis (or less if stream is smaller)
+                    let preview_len = stream_data.len().min(100);
+                    let preview = String::from_utf8_lossy(&stream_data[..preview_len]);
+                    eprintln!(
+                        "         Stream preview (first {} bytes): {:?}",
+                        preview_len,
+                        preview.chars().take(80).collect::<String>()
+                    );
+
+                    // Continue processing other streams
                     continue;
                 }
             };
@@ -234,8 +296,10 @@ impl TextExtractor {
                             let text_bytes = &text;
                             let decoded = self.decode_text(text_bytes, &state)?;
 
-                            // Calculate position
-                            let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
+                            // Calculate position: Apply text_matrix, then CTM
+                            // Concatenate: final = CTM × text_matrix
+                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
+                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
 
                             // Add spacing based on position change
                             if !extracted_text.is_empty() {
@@ -258,6 +322,13 @@ impl TextExtractor {
                                 .and_then(|name| self.font_cache.get(name));
 
                             if self.options.preserve_layout {
+                                // Detect bold/italic from font name
+                                let (is_bold, is_italic) = state
+                                    .font_name
+                                    .as_ref()
+                                    .map(|name| parse_font_style(name))
+                                    .unwrap_or((false, false));
+
                                 fragments.push(TextFragment {
                                     text: decoded.clone(),
                                     x,
@@ -269,6 +340,9 @@ impl TextExtractor {
                                     ),
                                     height: state.font_size,
                                     font_size: state.font_size,
+                                    font_name: state.font_name.clone(),
+                                    is_bold,
+                                    is_italic,
                                 });
                             }
 
@@ -351,6 +425,25 @@ impl TextExtractor {
 
                     ContentOperation::SetTextRenderMode(mode) => {
                         state.render_mode = mode as u8;
+                    }
+
+                    ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
+                        // Update CTM: new_ctm = concat_matrix * current_ctm
+                        let [a0, b0, c0, d0, e0, f0] = state.ctm;
+                        let a = a as f64;
+                        let b = b as f64;
+                        let c = c as f64;
+                        let d = d as f64;
+                        let e = e as f64;
+                        let f = f as f64;
+                        state.ctm = [
+                            a * a0 + b * c0,
+                            a * b0 + b * d0,
+                            c * a0 + d * c0,
+                            c * b0 + d * d0,
+                            e * a0 + f * c0 + e0,
+                            e * b0 + f * d0 + f0,
+                        ];
                     }
 
                     _ => {
@@ -730,6 +823,60 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_font_style_bold() {
+        // PostScript style
+        assert_eq!(parse_font_style("Helvetica-Bold"), (true, false));
+        assert_eq!(parse_font_style("TimesNewRoman-Bold"), (true, false));
+
+        // TrueType style
+        assert_eq!(parse_font_style("Arial Bold"), (true, false));
+        assert_eq!(parse_font_style("Calibri Bold"), (true, false));
+
+        // Short form
+        assert_eq!(parse_font_style("Helvetica-B"), (true, false));
+    }
+
+    #[test]
+    fn test_parse_font_style_italic() {
+        // PostScript style
+        assert_eq!(parse_font_style("Helvetica-Italic"), (false, true));
+        assert_eq!(parse_font_style("Times-Oblique"), (false, true));
+
+        // TrueType style
+        assert_eq!(parse_font_style("Arial Italic"), (false, true));
+        assert_eq!(parse_font_style("Courier Oblique"), (false, true));
+
+        // Short form
+        assert_eq!(parse_font_style("Helvetica-I"), (false, true));
+    }
+
+    #[test]
+    fn test_parse_font_style_bold_italic() {
+        assert_eq!(parse_font_style("Helvetica-BoldItalic"), (true, true));
+        assert_eq!(parse_font_style("Times-BoldOblique"), (true, true));
+        assert_eq!(parse_font_style("Arial Bold Italic"), (true, true));
+    }
+
+    #[test]
+    fn test_parse_font_style_regular() {
+        assert_eq!(parse_font_style("Helvetica"), (false, false));
+        assert_eq!(parse_font_style("Times-Roman"), (false, false));
+        assert_eq!(parse_font_style("Courier"), (false, false));
+        assert_eq!(parse_font_style("Arial"), (false, false));
+    }
+
+    #[test]
+    fn test_parse_font_style_edge_cases() {
+        // Empty and unusual cases
+        assert_eq!(parse_font_style(""), (false, false));
+        assert_eq!(parse_font_style("UnknownFont"), (false, false));
+
+        // Case insensitive
+        assert_eq!(parse_font_style("HELVETICA-BOLD"), (true, false));
+        assert_eq!(parse_font_style("times-ITALIC"), (false, true));
+    }
+
+    #[test]
     fn test_text_fragment() {
         let fragment = TextFragment {
             text: "Hello".to_string(),
@@ -738,6 +885,9 @@ mod tests {
             width: 50.0,
             height: 12.0,
             font_size: 10.0,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -757,6 +907,9 @@ mod tests {
                 width: 50.0,
                 height: 12.0,
                 font_size: 10.0,
+                font_name: None,
+                is_bold: false,
+                is_italic: false,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -765,6 +918,9 @@ mod tests {
                 width: 50.0,
                 height: 12.0,
                 font_size: 10.0,
+                font_name: None,
+                is_bold: false,
+                is_italic: false,
             },
         ];
 

@@ -3,6 +3,7 @@ pub mod clipping;
 mod color;
 mod color_profiles;
 pub mod devicen_color;
+pub mod extraction;
 pub mod form_xobject;
 mod indexed_color;
 pub mod lab_color;

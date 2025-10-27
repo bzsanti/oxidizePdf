@@ -8,29 +8,29 @@ pub mod test_utils {
     /// Create a minimal but valid TrueType font for testing
     pub fn create_test_font() -> Vec<u8> {
         let mut font = Vec::new();
-        
+
         // TTF Header (Offset 0x00)
         font.extend(&[0x00, 0x01, 0x00, 0x00]); // version 1.0
         font.extend(&[0x00, 0x07]); // numTables = 7
         font.extend(&[0x00, 0x80]); // searchRange = 128
         font.extend(&[0x00, 0x03]); // entrySelector = 3
         font.extend(&[0x00, 0x70]); // rangeShift = 112
-        
+
         // Calculate table offsets
         let table_dir_size = 12 + (7 * 16); // header + 7 table entries
         let mut current_offset = table_dir_size;
-        
+
         // Table directory entries
         let tables = [
-            (b"cmap", 256),   // Character to glyph mapping
-            (b"glyf", 128),   // Glyph data
-            (b"head", 54),    // Font header
-            (b"hhea", 36),    // Horizontal header
-            (b"hmtx", 16),    // Horizontal metrics
-            (b"loca", 10),    // Index to location
-            (b"maxp", 32),    // Maximum profile
+            (b"cmap", 256), // Character to glyph mapping
+            (b"glyf", 128), // Glyph data
+            (b"head", 54),  // Font header
+            (b"hhea", 36),  // Horizontal header
+            (b"hmtx", 16),  // Horizontal metrics
+            (b"loca", 10),  // Index to location
+            (b"maxp", 32),  // Maximum profile
         ];
-        
+
         // Write table directory
         for (tag, size) in &tables {
             font.extend(*tag);
@@ -39,7 +39,7 @@ pub mod test_utils {
             font.extend(&(*size as u32).to_be_bytes()); // length
             current_offset += size;
         }
-        
+
         // head table
         font.extend(&[0x00, 0x01, 0x00, 0x00]); // version
         font.extend(&[0x00, 0x01, 0x00, 0x00]); // fontRevision
@@ -58,7 +58,7 @@ pub mod test_utils {
         font.extend(&[0x00, 0x02]); // fontDirectionHint
         font.extend(&[0x00, 0x00]); // indexToLocFormat = 0 (short)
         font.extend(&[0x00, 0x00]); // glyphDataFormat
-        
+
         // hhea table
         font.extend(&[0x00, 0x01, 0x00, 0x00]); // version
         font.extend(&[0x03, 0x00]); // ascender = 768
@@ -77,7 +77,7 @@ pub mod test_utils {
         font.extend(&[0x00, 0x00]); // reserved
         font.extend(&[0x00, 0x00]); // metricDataFormat
         font.extend(&[0x00, 0x04]); // numberOfHMetrics = 4
-        
+
         // maxp table
         font.extend(&[0x00, 0x01, 0x00, 0x00]); // version 1.0
         font.extend(&[0x00, 0x04]); // numGlyphs = 4
@@ -94,15 +94,15 @@ pub mod test_utils {
         font.extend(&[0x00, 0x00]); // maxSizeOfInstructions
         font.extend(&[0x00, 0x00]); // maxComponentElements
         font.extend(&[0x00, 0x00]); // maxComponentDepth
-        
+
         // cmap table
         font.extend(&[0x00, 0x00]); // version
         font.extend(&[0x00, 0x01]); // numTables
-        // encoding record
+                                    // encoding record
         font.extend(&[0x00, 0x03]); // platformID = 3 (Windows)
         font.extend(&[0x00, 0x01]); // encodingID = 1 (Unicode)
         font.extend(&[0x00, 0x00, 0x00, 0x0C]); // offset = 12
-        
+
         // Format 4 subtable
         font.extend(&[0x00, 0x04]); // format = 4
         font.extend(&[0x00, 0x20]); // length = 32
@@ -111,58 +111,58 @@ pub mod test_utils {
         font.extend(&[0x00, 0x04]); // searchRange
         font.extend(&[0x00, 0x01]); // entrySelector
         font.extend(&[0x00, 0x00]); // rangeShift
-        // End codes
+                                    // End codes
         font.extend(&[0x00, 0x7F]); // End code for segment
         font.extend(&[0xFF, 0xFF]); // End code 0xFFFF
         font.extend(&[0x00, 0x00]); // Reserved pad
-        // Start codes
+                                    // Start codes
         font.extend(&[0x00, 0x20]); // Start code 0x20
         font.extend(&[0xFF, 0xFF]); // Start code 0xFFFF
-        // ID deltas
+                                    // ID deltas
         font.extend(&[0x00, 0x00]); // Delta = 0
         font.extend(&[0x00, 0x01]); // Delta = 1
-        // ID range offsets
+                                    // ID range offsets
         font.extend(&[0x00, 0x00]); // Offset = 0
         font.extend(&[0x00, 0x00]); // Offset = 0
-        
+
         // Pad cmap to full size
         while font.len() < table_dir_size + 256 {
             font.push(0);
         }
-        
+
         // glyf table - empty glyphs
         for _ in 0..128 {
             font.push(0);
         }
-        
+
         // Ensure we've written head table at the right offset
         while font.len() < table_dir_size + 256 + 128 {
             font.push(0);
         }
-        
+
         // Already written head table above, skip to hhea offset
         while font.len() < table_dir_size + 256 + 128 + 54 {
             font.push(0);
         }
-        
+
         // Already written hhea table above, skip to hmtx
         while font.len() < table_dir_size + 256 + 128 + 54 + 36 {
             font.push(0);
         }
-        
+
         // hmtx table
         font.extend(&[0x02, 0x00, 0x00, 0x00]); // glyph 0: width=512, lsb=0
         font.extend(&[0x02, 0x00, 0x00, 0x00]); // glyph 1
         font.extend(&[0x02, 0x00, 0x00, 0x00]); // glyph 2
         font.extend(&[0x02, 0x00, 0x00, 0x00]); // glyph 3
-        
+
         // loca table (short format)
         font.extend(&[0x00, 0x00]); // glyph 0 offset
-        font.extend(&[0x00, 0x20]); // glyph 1 offset  
+        font.extend(&[0x00, 0x20]); // glyph 1 offset
         font.extend(&[0x00, 0x40]); // glyph 2 offset
         font.extend(&[0x00, 0x60]); // glyph 3 offset
         font.extend(&[0x00, 0x80]); // glyph 4 offset (end)
-        
+
         font
     }
 

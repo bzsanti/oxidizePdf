@@ -3,9 +3,12 @@
 //! Tests for color space implementation and device color spaces
 //! as defined in ISO 32000-1:2008 Section 8.6
 
-use crate::iso_verification::{create_basic_test_pdf, verify_pdf_at_level, iso_test, run_external_validation, get_available_validators};
+use crate::iso_verification::{
+    create_basic_test_pdf, get_available_validators, iso_test, run_external_validation,
+    verify_pdf_at_level,
+};
 use oxidize_pdf::verification::{parser::parse_pdf, VerificationLevel};
-use oxidize_pdf::{Document, Font, Page, Color, Result as PdfResult};
+use oxidize_pdf::{Color, Document, Font, Page, Result as PdfResult};
 
 iso_test!(
     test_device_rgb_level_2,
@@ -15,16 +18,16 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("DeviceRGB Test");
-        
+
         let mut page = Page::a4();
-        
+
         // Add text with RGB color
         page.text()
             .set_font(Font::Helvetica, 16.0)
             .set_color(Color::rgb(1.0, 0.0, 0.0)) // Red
             .at(50.0, 750.0)
             .write("DeviceRGB Color Test")?;
-            
+
         page.text()
             .set_font(Font::TimesRoman, 12.0)
             .set_color(Color::rgb(0.0, 0.5, 0.0)) // Green
@@ -60,7 +63,7 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("DeviceRGB Verification");
-        
+
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)
@@ -95,16 +98,16 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("DeviceGray Test");
-        
+
         let mut page = Page::a4();
-        
+
         // Add grayscale content
         page.text()
             .set_font(Font::Helvetica, 16.0)
             .set_color(Color::gray(0.3))
             .at(50.0, 750.0)
             .write("DeviceGray Color Test")?;
-            
+
         page.text()
             .set_font(Font::TimesRoman, 12.0)
             .set_color(Color::gray(0.6))
@@ -140,7 +143,7 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("DeviceGray Verification");
-        
+
         let mut page = Page::a4();
         page.text()
             .set_font(Font::Helvetica, 12.0)
@@ -190,16 +193,16 @@ iso_test!(
         // Test multiple color spaces in one document
         let mut doc = Document::new();
         doc.set_title("Color Space Selection Test");
-        
+
         let mut page = Page::a4();
-        
+
         // RGB content
         page.text()
             .set_font(Font::Helvetica, 14.0)
             .set_color(Color::rgb(1.0, 0.0, 0.0))
             .at(50.0, 750.0)
             .write("RGB Text")?;
-            
+
         // Grayscale content
         page.text()
             .set_font(Font::Helvetica, 14.0)
@@ -212,7 +215,7 @@ iso_test!(
             .set_fill_color(Color::rgb(0.0, 1.0, 0.0))
             .rectangle(50.0, 700.0, 100.0, 30.0)
             .fill();
-            
+
         page.graphics()
             .set_fill_color(Color::gray(0.3))
             .rectangle(200.0, 700.0, 100.0, 30.0)
@@ -224,11 +227,14 @@ iso_test!(
         let parsed = parse_pdf(&pdf_bytes)?;
         let uses_rgb = parsed.uses_device_rgb;
         let uses_gray = parsed.uses_device_gray;
-        
+
         let passed = uses_rgb || uses_gray; // At least one color space should be detected
         let level_achieved = if passed { 3 } else { 2 };
         let notes = if passed {
-            format!("Color spaces detected - RGB: {}, Gray: {}", uses_rgb, uses_gray)
+            format!(
+                "Color spaces detected - RGB: {}, Gray: {}",
+                uses_rgb, uses_gray
+            )
         } else {
             "No color spaces detected in content"
         };
@@ -246,9 +252,9 @@ iso_test!(
         // Test document with graphics but no explicit color setting
         let mut doc = Document::new();
         doc.set_title("Default Color Spaces Test");
-        
+
         let mut page = Page::a4();
-        
+
         // Text without explicit color (should use default)
         page.text()
             .set_font(Font::Helvetica, 12.0)
@@ -256,9 +262,7 @@ iso_test!(
             .write("Default color text")?;
 
         // Graphics without explicit color
-        page.graphics()
-            .rectangle(50.0, 700.0, 200.0, 30.0)
-            .stroke();
+        page.graphics().rectangle(50.0, 700.0, 200.0, 30.0).stroke();
 
         doc.add_page(page);
         let pdf_bytes = doc.to_bytes()?;
@@ -288,7 +292,7 @@ mod integration_tests {
         doc.set_author("ISO Test Suite");
 
         let mut page = Page::a4();
-        
+
         // Title
         page.text()
             .set_font(Font::Helvetica, 18.0)
@@ -302,14 +306,14 @@ mod integration_tests {
             .set_color(Color::rgb(0.8, 0.0, 0.0))
             .at(50.0, 700.0)
             .write("RGB Colors:")?;
-            
+
         let rgb_colors = [
             (Color::rgb(1.0, 0.0, 0.0), "Red"),
-            (Color::rgb(0.0, 1.0, 0.0), "Green"), 
+            (Color::rgb(0.0, 1.0, 0.0), "Green"),
             (Color::rgb(0.0, 0.0, 1.0), "Blue"),
             (Color::rgb(1.0, 1.0, 0.0), "Yellow"),
         ];
-        
+
         for (i, (color, name)) in rgb_colors.iter().enumerate() {
             let y = 670.0 - (i as f64 * 25.0);
             page.text()
@@ -317,7 +321,7 @@ mod integration_tests {
                 .set_color(*color)
                 .at(70.0, y)
                 .write(name)?;
-                
+
             page.graphics()
                 .set_fill_color(*color)
                 .rectangle(150.0, y - 5.0, 50.0, 15.0)
@@ -330,7 +334,7 @@ mod integration_tests {
             .set_color(Color::gray(0.2))
             .at(250.0, 700.0)
             .write("Grayscale:")?;
-            
+
         let gray_values = [0.1, 0.3, 0.5, 0.7, 0.9];
         for (i, &gray) in gray_values.iter().enumerate() {
             let y = 670.0 - (i as f64 * 25.0);
@@ -339,7 +343,7 @@ mod integration_tests {
                 .set_color(Color::gray(gray))
                 .at(270.0, y)
                 .write(&format!("{:.1}", gray))?;
-                
+
             page.graphics()
                 .set_fill_color(Color::gray(gray))
                 .rectangle(350.0, y - 5.0, 50.0, 15.0)
@@ -349,12 +353,15 @@ mod integration_tests {
         doc.add_page(page);
         let pdf_bytes = doc.to_bytes()?;
 
-        println!("✓ Generated comprehensive color PDF: {} bytes", pdf_bytes.len());
+        println!(
+            "✓ Generated comprehensive color PDF: {} bytes",
+            pdf_bytes.len()
+        );
 
         // Parse and verify color usage
         let parsed = parse_pdf(&pdf_bytes)?;
         println!("✓ Successfully parsed color PDF");
-        
+
         println!("Color space usage:");
         println!("  - DeviceRGB: {}", parsed.uses_device_rgb);
         println!("  - DeviceGray: {}", parsed.uses_device_gray);
@@ -362,7 +369,7 @@ mod integration_tests {
 
         // Should detect RGB usage
         assert!(parsed.uses_device_rgb, "Should detect RGB color usage");
-        
+
         // May detect grayscale usage depending on implementation
         if parsed.uses_device_gray {
             println!("✓ DeviceGray color space detected");
@@ -375,7 +382,11 @@ mod integration_tests {
         if !validators.is_empty() {
             for validator in &validators {
                 if let Some(result) = run_external_validation(&pdf_bytes, validator) {
-                    println!("External validation ({}): {}", validator, if result { "PASS" } else { "FAIL" });
+                    println!(
+                        "External validation ({}): {}",
+                        validator,
+                        if result { "PASS" } else { "FAIL" }
+                    );
                 }
             }
         }

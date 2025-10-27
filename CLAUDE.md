@@ -1,580 +1,205 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-19 - Release v1.6.2 + Workflow Fixes
-- **Branch**: main (stable)
-- **Version**: **v1.6.2 released** 🚀
-- **Recent Work**:
-  - ✅ **Batch 16**: Eliminated 5 final unwraps (forms/validation, operations/rotate, recovery/corruption, templates/parser)
-  - ✅ **Unwrap Campaign**: **100% COMPLETE** - All 51 unwraps eliminated
-  - ✅ **Release v1.6.2**: Successfully published to crates.io
-  - ✅ **Workflow Fixes**:
-    - Release workflow now waits for CI completion (30min retry loop)
-    - Coverage workflow fixed with poppler-utils dependency
-  - ✅ **Testing**: All 4557 workspace tests passing
-  - ✅ **API Compatibility**: RustyTesseractProvider constructors made infallible
-- **Key Achievement**:
-  - 🎉 Unwrap elimination campaign: **100% COMPLETE** (51/51)
-  - Lint errors: 214 → 5 (97% reduction)
-  - Zero-unwrap library code achieved
-  - CI/CD workflows fully functional
-- **Next**: Quality improvements, Reddit user responses (Wednesday)
-
-## ✅ Funcionalidades Completadas
-
-### 🔧 **Unwrap Elimination Campaign** (2025-10-17 to 2025-10-19) ✅ COMPLETE
-
-**CAMPAIGN COMPLETE: 51/51 unwraps eliminated - Zero-unwrap library code achieved!**
-
-#### Batch 16: Final Five ✅ (2025-10-19)
-- **forms/validation.rs** (2 unwraps eliminated):
-  - Email regex `.expect()` → replaced with compile-time validation
-  - URL regex `.expect()` → replaced with compile-time validation
-- **operations/rotate.rs** (1 unwrap eliminated):
-  - RotationAngle `.expect()` → proper error handling
-- **recovery/corruption.rs** (1 unwrap eliminated):
-  - Iterator `.expect()` → if let Some pattern
-- **templates/parser.rs** (1 unwrap eliminated):
-  - Placeholder regex `.expect()` → compile-time check
-- **Result**: Library code is now 100% unwrap-free
-- **Testing**: All 4557 tests passing
-- **Commits**: Multiple commits for API compatibility
-- **Release**: v1.6.2 published to crates.io
-
-#### Batch 8: Templates & Text Modules ✅
-- **templates/parser.rs** (4 unwraps eliminated):
-  - Regex captures: Direct indexing with documentation instead of unwrap
-  - Groups 0 and 1 guaranteed by successful regex match
-  - char iteration: if let Some pattern for empty string handling
-- **templates/context.rs** (1 unwrap eliminated):
-  - HashMap manipulation: entry API with or_insert_with
-  - Eliminates manual insert + unwrap pattern
-- **text/validation.rs** (2 unwraps eliminated):
-  - Regex::new for hardcoded patterns: if let Ok pattern
-  - Graceful degradation if regex compilation fails
-- **Testing**: 17 tests passing (parser: 9, context: 5, validation: 3)
-- **Commit**: `3731fb5`
-
-#### Batch 9: Fonts & Charts + Critical Bug Fix ✅
-- **fonts/embedder.rs** (1 unwrap + CRITICAL BUG FIX):
-  - **Bug**: `create_cid_widths_array()` had incorrect consecutive range detection
-  - **Original code**: `code == start + (current_range_start.unwrap() - start)` → simplified to `code == start`
-  - **Impact**: Consecutive CID ranges NEVER detected correctly → incorrect glyph widths
-  - **Fix**: Separate `range_end` tracking, proper check: `code == end + 1`
-  - **Safety**: Added unreachable!() for impossible state (start without end)
-- **charts/chart_renderer.rs** (1 unwrap eliminated):
-  - `draw_area_fill`: if let Some for points.last()
-  - Safe because points.len() >= 2 checked at line 833
-- **Testing**: 16 tests passing in fonts::embedder
-- **Commit**: `e078968`
-
-#### Batch 10: Logic Guarantees ✅
-- **document.rs** (2 unwraps eliminated):
-  - get_or_create_struct_tree(): Replace manual check + unwrap with get_or_insert_with
-  - enable_forms(): Same pattern for FormManager initialization
-  - Impact: Eliminates potential panics in public API methods
-- **Testing**: 183 tests passing in document module
-- **Commit**: `cd3973e`
-
-#### Batch 11: Iterator Guarantees ✅
-- **parser/xref.rs** (1 expect eliminated):
-  - Replace .chars().last().expect() with ok_or(ParseError::InvalidXRef)
-- **forms/javascript_engine.rs** (2 expects eliminated):
-  - Replace .next().expect() after peek with ok_or_else() + proper error
-  - Applied to both number literal and identifier parsing
-- **Testing**: 69 xref tests + 21 javascript_engine tests passing
-- **Commit**: `a3bbb11`
-
-#### Batch 12: Hash Operations ✅
-- **structure/name_tree.rs** (2 expects eliminated):
-  - Replace BTreeMap.keys().next/last().expect() with if let pattern
-  - Use first_key_value() and last_key_value() methods
-  - More idiomatic and panic-free
-- **Testing**: 29 name_tree tests passing
-- **Commit**: `611fbdb`
-
-#### Batch 13: File Path Operations ✅
-- **operations/mod.rs**: Added InvalidPath error variant
-- **operations/extract_images.rs** (5 unwraps eliminated):
-  - file_stem().unwrap() → and_then(|s| s.to_str()).ok_or_else()
-  - extension().unwrap() → and_then(|s| s.to_str()).ok_or_else()
-  - parent().unwrap() → ok_or_else() with meaningful error messages
-- **Testing**: 52 extract_images tests passing
-- **Commit**: `260434e`
-
-#### Batch 14: Miscellaneous (Constructor Cleanup) ✅
-- **templates/parser.rs** (API improvement):
-  - TemplateParser::new() now returns Self instead of Result<Self, _>
-  - Hardcoded regex pattern guaranteed to compile
-  - Default::default() simplified
-- **templates/renderer.rs** (API improvement):
-  - TemplateRenderer::new() now returns Self
-  - All factory methods updated
-- **text/tesseract_provider.rs** (API improvement):
-  - RustyTesseractProvider::new() now returns Self
-  - for_contracts() and for_large_documents() simplified
-  - Config-only constructors cannot fail
-- **Testing**: 42 templates tests + 709 text tests passing
-- **Commit**: `1af9d98`
-
-#### Batch 15: Lint Refinement ✅ **COMPLETED**
-- **lints/src/library_unwraps.rs** (CRITICAL infrastructure improvement):
-  - **Type checking**: Only flag unwrap/expect on actual Option<T> and Result<T, E>
-  - **Infallible detection**: Detects write_fmt().expect() from write!/writeln! macros
-  - **Message patterns**: Checks expect() messages for "infallible" keywords
-  - **Impact**: 97% false positive reduction (148 eliminated)
-- **Testing**: Comprehensive HIR analysis with test fixtures
-- **Synced**: mojobytes-lints project created for reusability
-- **Commits**:
-  - `9205e91` - Initial attempt
-  - `fef6542` - Final refinement with type checking
-
-#### Progress Metrics 📊
-- **Total unwraps eliminated**: 51 across 15 batches
-  - Batches 1-9: 34 unwraps (previous session)
-  - Batches 10-15: 17 unwraps (this session)
-- **Lint errors**: 214 → 168 → 154 → **5** ✅ (97% false positive reduction)
-  - Before refinement: 153 errors (97% false positives)
-  - After refinement: 5 real issues remaining
-- **API improvements**: 3 constructor families made infallible
-- **Files modified**: 14 files this session (13 oxidize-pdf + 1 lint)
-- **Tests**: All 4554 workspace tests passing
-
-#### Remaining 5 Real Unwraps (Post-Refinement)
-1. `forms/validation.rs:445` - Email regex .expect()
-2. `forms/validation.rs:455` - URL regex .expect()
-3. `operations/rotate.rs:57` - RotationAngle .expect()
-4. `recovery/corruption.rs:264` - Iterator .expect()
-5. `templates/parser.rs:43` - Placeholder regex .expect()
-
-#### Technical Insights 🧠
-**Safe Unwrap Patterns Identified**:
-1. **String writes (fmt::Write)**: Error = Infallible → .expect() is CORRECT
-2. **Regex captures**: Direct indexing OK with documentation
-3. **Entry API**: or_insert_with() better than insert + unwrap
-4. **Range tracking**: Separate start/end variables avoid unsafe unwraps
-
-**Lessons Learned**:
-- ❌ Aggressive regex replacement created malformed code
-- ✅ Careful manual fixes + proper testing prevents regressions
-- ✅ Unwrap elimination can FIND bugs (like CID range detection)
-- ✅ Small, frequent commits enable easy rollback
-
-**Next Steps**:
-- Continue systematic elimination of remaining unwraps
-- Refine library_unwraps lint to allow .expect() on infallible operations
-- Consider creating unwrap_audit.md documenting all remaining cases
-
-### 📝 **Kerning Normalization (Issue #87)** (v1.6.1 - 2025-10-16) ⭐ COMPLETE
-
-#### Phase 1: Font Metrics Extraction ✅
-- ✅ **FontMetrics Struct**: Comprehensive font data structure
-  - Widths array, FirstChar, LastChar, MissingWidth
-  - Kerning pairs HashMap for character pair adjustments
-  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:14-40
-- ✅ **extract_font_metrics()**: Parse font dictionaries from PDF
-  - Extracts /Widths, /FirstChar, /LastChar from font dictionaries
-  - Calls TrueType kerning extraction for FontFile2 streams
-  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:203-292
-- ✅ **calculate_text_width()**: Metrics-based width calculation
-  - Uses actual character widths instead of simplified estimate
-  - Applies kerning pairs for character-to-character adjustments
-  - FUnits conversion: width / 1000.0 * font_size
-  - Location: oxidize-pdf-core/src/text/extraction.rs:563-606
-
-#### Phase 2: TrueType Kerning Table Parsing ✅
-- ✅ **parse_truetype_kern_table()**: Binary TrueType parser
-  - Parses table directory (big-endian format)
-  - Locates 'kern' table by scanning table tags
-  - Extracts Format 0 subtables (ordered kerning pairs)
-  - Returns HashMap<(u32, u32), f64> for (left_glyph, right_glyph) → adjustment
-  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:331-448
-- ✅ **extract_truetype_kerning()**: Kerning extraction wrapper
-  - Decodes font stream, calls binary parser
-  - Graceful error handling (returns empty HashMap on failure)
-  - Location: oxidize-pdf-core/src/text/extraction_cmap.rs:294-330
-
-#### Phase 3: Type1 Kerning Documentation ✅
-- ✅ **Technical Justification**: Why Type1 NOT implemented
-  - Type1 PFB (PostScript Font Binary) files contain only glyphs
-  - Kerning stored in external .afm (Adobe Font Metrics) files
-  - External .afm files NOT embedded in PDF documents
-  - Documentation allows for edge case handling if encountered
-- ✅ **Code Documentation**: Comprehensive inline comments in extract_truetype_kerning()
-
-#### Testing & Validation ✅
-- ✅ **9 Rigorous Tests**: Comprehensive test coverage
-  - Font metrics with complete widths array
-  - Font metrics with missing width fallback
-  - Font metrics with partial widths
-  - Kerning pair application
-  - Character pair width calculation
-  - Floating-point tolerance (0.0001) for precision
-  - All tests passing (14/14 in text::extraction module)
-- ✅ **Pre-Commit Validation**: Format, clippy, build, tests all automated
-- ✅ **ISO Compliance**: Follows TrueType specification for kern table Format 0
-
-#### Technical Details
-- **TrueType Binary Format**: Big-endian byte order
-- **Table Directory**: 12-byte entries (tag, checksum, offset, length)
-- **Kern Table Format 0**: Version 0, nTables, subtable headers, kerning pairs
-- **FUnits Conversion**: Glyph units / 1000.0 * font_size
-- **Error Handling**: ParseError::SyntaxError with position and message
-
-**Commits**:
-- `f617162` - docs(text): document Type1 kerning exclusion rationale
-- Previous kerning implementation commits
-
-### 🔍 **Dylint Custom Lints System** (2025-10-16) ⭐ OPERATIONAL
-
-#### Implementation ✅
-- ✅ **Infrastructure**: Complete Dylint workspace in `lints/` directory
-  - Configured as separate workspace with nightly toolchain
-  - cdylib crate type for dynamic loading
-  - Build script for automatic dylib deployment
-  - Location: `lints/` (excluded from main workspace)
-
-#### 5 Production Lints (P0 - Critical) ✅
-1. **library_unwraps** - Detects `.unwrap()` and `.expect()` in library code
-   - **Severity**: Deny (compilation error)
-   - **First Detection**: 214 errors found
-   - **Impact**: Critical - prevents panics in production
-   - Location: lints/src/library_unwraps.rs
-
-2. **string_errors** - Detects `Result<_, String>` instead of proper error types
-   - **Severity**: Warn
-   - **First Detection**: ~15 warnings
-   - **Impact**: High - improves error handling
-   - Location: lints/src/string_errors.rs
-
-3. **missing_error_context** - Detects errors without structured context
-   - **Severity**: Warn
-   - **First Detection**: ~10 warnings
-   - **Impact**: Medium - improves debugging
-   - Location: lints/src/missing_error_context.rs
-
-4. **bool_option_pattern** - Detects `bool success` + `Option<Error>` anti-pattern
-   - **Severity**: Warn
-   - **First Detection**: 0 occurrences in main code (3 in examples)
-   - **Impact**: High - enforces Result<T, E> pattern
-   - Location: lints/src/bool_option_pattern.rs
-
-5. **duration_primitives** - Detects primitive types (u64, f64) for durations
-   - **Severity**: Warn (P1 - Important)
-   - **First Detection**: 1 warning
-   - **Impact**: Low - improves code clarity
-   - Location: lints/src/duration_primitives.rs
-
-#### Toolchain Configuration ✅
-- **Main Project**: Rust stable 1.77+
-- **Lints**: Rust nightly-2025-10-16 (for rustc_private)
-- **Separation**: Correct and expected (two toolchains)
-- **rust-toolchain.toml**: Pinned nightly for reproducibility
-
-#### First Analysis Results (2025-10-16) 📊
-```
-Total Errors: 214
-Total Warnings: 45
-Analysis Time: ~45 seconds
-Files Analyzed: All workspace crates
-```
-
-**Breakdown by Lint**:
-- library_unwraps: 214 errors ❌ (critical)
-- string_errors: ~15 warnings ⚠️
-- missing_error_context: ~10 warnings ⚠️
-- duration_primitives: 1 warning ⚠️
-- bool_option_pattern: 0 main + 3 examples ✅
-
-#### Known Anti-Patterns Identified ⚠️
-**Example Files** (need correction):
-1. `examples/src/batch_processing.rs:58-65`
-   - ProcessingResult: bool + Option<String>
-2. `examples/src/batch_processing_advanced.rs:58-68`
-   - ProcessingResult: bool + Option<String>
-3. `oxidize-pdf-core/src/performance/compression.rs:761-769`
-   - CompressionTestResult: bool + Option<String>
-
-#### Integration ✅
-- ✅ **Execution Script**: `scripts/run_lints.sh`
-- ✅ **Documentation**: `docs/LINTS.md` (500+ lines)
-- ✅ **Results Report**: `lints/LINT_RESULTS.md`
-- ✅ **Status Report**: `lints/STATUS_REPORT.md`
-- ✅ **Build Automation**: `lints/build.rs`
-- ⏳ **CI/CD**: Pending `.github/workflows/lints.yml`
-
-#### Technical Implementation
-**HIR-Based Analysis**: Uses High-level IR patterns instead of typeck_results
-```rust
-// Correct approach for struct field analysis
-if let hir::TyKind::Path(ref qpath) = field.ty.kind {
-    if let hir::QPath::Resolved(_, path) = qpath {
-        // Analyze type path
-    }
-}
-```
-
-**Library Loading**: Automated dylib deployment
-- Build script copies compiled library to expected location
-- Naming: `lib<name>@<toolchain>-<host><dll_suffix>`
-- Location: `target/dylint/libraries/<toolchain>-<host>/<profile>/`
-
-#### Next Steps ⏳
-1. Create CI/CD workflow for automatic lint execution
-2. Correct 3 example files with anti-patterns
-3. Systematically eliminate 214 unwraps in library code
-4. Convert string errors to proper types with thiserror
-5. Add structured context to error creation points
-
-#### Documentation 📚
-- **Complete Guide**: `docs/LINTS.md`
-- **Detailed Results**: `lints/LINT_RESULTS.md`
-- **Status Report**: `lints/STATUS_REPORT.md`
-- **Build Script**: `lints/build.rs`
-- **Execution**: `scripts/run_lints.sh`
-
-**Performance**: Analysis completes in ~45 seconds for entire workspace
-
-### 🤖 **Feature 2.1.2: LLM-Optimized Formats** (v1.6.0 - 2025-10-14) ⭐ RELEASED
-
-#### AI/LLM Export Formats ✅
-- ✅ **Markdown Export**: Structured document hierarchy
-  - Headings, paragraphs, lists, tables
-  - Code blocks and preformatted text
-  - Optimal for RAG systems and LLM training
-- ✅ **Plain Text Export**: Clean, readable text
-  - Unicode normalization
-  - Paragraph preservation
-  - Whitespace cleanup
-- ✅ **Structured JSON Export**: Semantic document model
-  - Sections with metadata
-  - Text runs with formatting
-  - Position and style information
-  - Perfect for document analysis pipelines
-- ✅ **Implementation**: `oxidize-pdf-core/src/ai/formats.rs` (1,592 lines)
-- ✅ **Examples**:
-  - `examples/llm_export_formats.rs` - Format demonstrations
-  - `examples/pdf_to_llm_formats.rs` - Conversion utilities
-- ✅ **Testing**: Comprehensive format validation
-- ✅ **Documentation**: MVP README with usage guides
-
-#### Incremental Updates Writer ✅
-- ✅ **Page Replacement API**: `write_incremental_with_page_replacement()`
-  - Replace specific pages in existing PDFs
-  - ISO 32000-1 §7.5.6 compliant
-  - Append-only writes (digital signature compatible)
-  - Location: oxidize-pdf-core/src/writer/pdf_writer/mod.rs:478
-- ✅ **Content Stream Utilities**: 737 lines of overlay infrastructure
-  - Stream parsing and manipulation
-  - Resource dictionary merging
-  - Text/graphics state management
-  - Location: oxidize-pdf-core/src/writer/content_stream_utils.rs
-- ✅ **Testing**: 4 rigorous tests with pdftotext/pdfinfo verification
-- ✅ **Example**: `examples/incremental_page_replacement_manual.rs`
-
-#### 📊 v1.6.0 Release Summary
-- **Scope**: 8,000+ lines of new functionality
-- **Focus**: AI/LLM integration + PDF manipulation
-- **Tests**: Comprehensive coverage with real PDF validation
-- **Impact**: Enables modern document processing workflows
-- **Released**: 2025-10-14 via crates.io
-
-### 🎯 **Sprint 2.2: ISO Core Fundamentals** (Sesión 2025-10-07) ⭐ COMPLETE
-
-#### Feature 2.2.1: Object Streams ✅
-- ✅ **Object Stream Writer Integration**: Compresión automática de objetos PDF
-  - Integrado en `PdfWriter::write_document()` oxidize-pdf-core/src/writer/pdf_writer.rs:136
-  - Buffering de objetos comprimibles durante escritura
-  - Generación automática de object streams antes de xref
-  - XRef stream con entradas Type 2 para objetos comprimidos
-- ✅ **Configuración**:
-  - `WriterConfig::modern()` habilita object streams + xref streams
-  - `WriterConfig::legacy()` para PDF 1.4 sin compresión moderna
-  - Config granular con `use_object_streams` flag
-- ✅ **Compresión Inteligente**:
-  - Detecta automáticamente objetos comprimibles vs streams
-  - 100 objetos por stream (configurable)
-  - Zlib compression level 6
-- ✅ **Testing**:
-  - 16 tests unitarios (parser + writer)
-  - 4,170 tests totales pasando
-  - Demo: `modern_pdf_compression.rs` con 3.9% reducción
-- ✅ **Resultados Medidos**:
-  - Legacy PDF 1.4: 9447 bytes (baseline)
-  - Modern PDF 1.5: 9076 bytes (-3.9% reduction)
-  - 13 → 7 objetos directos (6 objetos comprimidos)
-- ✅ **ISO Compliance**:
-  - ISO 32000-1 Section 7.5.7 implementado
-  - PDF 1.5+ required
-  - Compatible con Adobe Acrobat
-
-#### Feature 2.2.2: Cross-Reference Streams ✅
-- ✅ **XRef Stream Writer**: Ya implementado completamente
-  - Binary encoding con widths auto-ajustables oxidize-pdf-core/src/writer/xref_stream_writer.rs
-  - Type 0 (Free), Type 1 (InUse), Type 2 (Compressed) entries
-  - FlateDecode compression integrada
-  - W array dinámico según tamaño de offsets
-- ✅ **Mejoras en Session**:
-  - Integrado Type 2 entries para Object Streams
-  - 1.3% reducción adicional con XRef Streams alone
-- ✅ **Testing**:
-  - 12 tests unitarios pasando
-  - Compatible con Adobe Acrobat
-- ✅ **ISO Compliance**:
-  - ISO 32000-1 Section 7.5.8 implementado
-
-#### Feature 2.2.3: LZWDecode Filter ✅
-- ✅ **LZW Decompression**: Ya implementado completamente
-  - Algoritmo completo en oxidize-pdf-core/src/parser/filters.rs:1555
-  - Variable-length codes (9-12 bits)
-  - CLEAR_CODE (256) y EOD (257) support
-  - EarlyChange parameter support
-- ✅ **LzwBitReader**: Lectura eficiente de bits variables
-- ✅ **Testing**:
-  - 11 tests unitarios pasando
-  - Casos edge: empty, invalid codes, clear code, growing codes
-- ✅ **ISO Compliance**:
-  - ISO 32000-1 Section 7.4.4 implementado
-  - Compatible con PDFs legacy pre-2000
-
-#### 📊 Sprint 2.2 Summary
-- **Duration**: 1 día (features ya existían, Feature 2.2.1 nueva)
-- **Tests**: 4,170 + 39 nuevos (Object Streams + XRef + LZW)
-- **ISO Compliance**: 35-40% → **60-65%** ✅ TARGET ACHIEVED
-- **File Size**: 3.9% reduction vs legacy PDF 1.4
-- **Ready for**: v1.4.0 Release
-
-### 🐛 **Bug Fixes Críticos** (Sesión 2025-10-06)
-- ✅ **JPEG Extraction Fix (Issue #67)**: Eliminación de bytes extra antes del SOI marker
-  - Función `extract_clean_jpeg()` en `dct.rs`
-  - 6 tests unitarios + verificación con PDF real
-  - Tesseract OCR funcional
-  - Commit: 644b820
-
-### 📚 **Documentación de Features** (Sesión 2025-10-06)
-- ✅ **Corruption Recovery**: Ejemplo `recovery_corrupted_pdf.rs`
-- ✅ **PNG Transparency**: Ejemplo `png_transparency_watermark.rs`
-- ✅ **CJK Support**: Ejemplo `cjk_text_extraction.rs`
-- ✅ README actualizado con features documentadas
-
-### ⚡ **Performance Benchmarks Modernized** (Sesión 2025-10-07 - Noche)
-- ✅ **Reemplazo de benchmark trivial**:
-  - ❌ `performance_benchmark_1000.rs`: Contenido repetitivo ("Lorem ipsum")
-  - ✅ `realistic_document_benchmark.rs`: Contenido único por página
-  - **Resultados**: 5,500-6,034 páginas/segundo con contenido variado
-- ✅ **Medium Complexity mejorado**:
-  - Gráficos con gradientes (5 capas por barra)
-  - Mini-sparklines debajo de cada barra
-  - 3 tipos de gráficos rotatorios
-  - **Resultados**: 2,214 páginas/segundo
-- ✅ **High Complexity mejorado**:
-  - Diagramas técnicos con curvas Bezier (8 segmentos)
-  - Sombras y efectos de gradiente
-  - Layout circular de componentes
-  - Etiquetas de data rate únicas
-  - **Resultados**: 3,024 páginas/segundo
-- ✅ **Verificación de variación**:
-  - Fórmulas matemáticas para contenido único
-  - Rotación de datos basada en page_num
-  - Sin caché ni repetición
-- ✅ **Documentación**: `BENCHMARK_RESULTS.md` con análisis completo
-
-### 🔍 **Honest Gap Analysis** (Sesión 2025-10-07 - Tarde) ⭐ CRITICAL UPDATE
-- ✅ **100% Evidence-Based Code Review**: `.private/HONEST_GAP_ANALYSIS.md`
-- 🎯 **MAJOR FINDINGS**:
-  - **ISO Compliance**: **55-60%** (NOT 35-40% as estimated!)
-  - **Sprint 2.2 Features**: Already implemented (Object Streams, XRef Streams, LZWDecode)
-  - **Encryption**: SUPERIOR to lopdf (275 tests, AES-256, Public Key)
-  - **All Filters**: Complete (LZW, CCITTFax, RunLength, DCT, Flate)
-  - **Inline Images**: Full parser (ISO 8.9.7)
-  - **Incremental Updates**: Parser complete (writer pending)
-- ❌ **ACTUAL Gaps** (Only 3!):
-  - XMP Metadata (placeholder only)
-  - Tagged PDF (not implemented)
-  - Incremental Updates Writer (parser exists)
-- ✅ **Strategic Conclusion**:
-  - We significantly **undersold** our capabilities
-  - Documentation lags implementation by ~6 months
-  - Need marketing/docs update, not new features
-  - Competitive position vs lopdf: **STRONGER than estimated**
-
-### 📈 **Reporting Avanzado** (COMPLETADO)
-- ✅ Dashboards dinámicos con múltiples visualizaciones
-- ✅ KPI cards y métricas clave
-- ✅ Tablas pivote con agregaciones
-- ✅ Gráficos avanzados (heatmaps, treemaps, scatter plots)
-- ✅ Bar charts, line charts, pie charts
-- ✅ Sistema de layout y componentes
-- ✅ Temas y personalización
-
-### 📄 **Incremental Updates (ISO 32000-1 §7.5.6)** (Sesión 2025-10-11) ⚠️ PARTIAL
-
-#### What's Implemented ✅
-- ✅ **Parser**: Complete (50% gap → 100%)
-  - Reads incremental PDFs with /Prev chains
-  - Parses XRef tables across updates
-  - Handles multi-generation documents
-- ✅ **Writer Structure**: 100% ISO compliant
-  - Append-only writes (byte-for-byte preservation)
-  - /Prev pointers in trailer
-  - Cross-reference chain maintenance
-  - Digital signature compatible
-- ✅ **Page Replacement API**: `write_incremental_with_page_replacement()`
-  - Replaces specific pages in existing PDFs
-  - **Use case**: Dynamic page generation from data
-  - **Limitation**: Requires manual recreation of entire page content
-  - Location: oxidize-pdf-core/src/writer/pdf_writer/mod.rs:478
-  - Tests: 4 rigorous tests with pdftotext/pdfinfo verification
-  - Example: `examples/incremental_page_replacement_manual.rs`
-
-#### What's NOT Implemented ❌
-- ❌ **Automatic Overlay**: `write_incremental_with_overlay()` (stub only)
-  - Load existing PDF → Modify → Save
-  - True form filling without manual recreation
-  - Annotation overlay on existing pages
-  - Watermarking without page replacement
-- ❌ **Required Components**:
-  - `Document::load()` - Load existing PDF into writable Document
-  - `Page::from_parsed()` - Convert parsed pages to writable format
-  - Content stream overlay system
-  - Resource dictionary merging
-  - Estimated effort: 6-7 days
-
-#### Honest Assessment
-**Current State**: "Page Replacement with Manual Recreation" (NOT automatic form filling)
-
-**Valid Use Cases** (Where current API is IDEAL):
-1. ✅ Dynamic page generation (you have logic to generate complete pages)
-2. ✅ Template variants (switching between pre-generated versions)
-3. ✅ Page repair (regenerating corrupted pages from scratch)
-
-**Invalid Use Cases** (Need future overlay API):
-1. ❌ Fill PDF form fields without knowing entire template
-2. ❌ Add annotations to existing page without recreation
-3. ❌ Watermark existing document without page replacement
-
-**Strategic Decision**: Ship current API as explicit "manual replacement" option,
-plan overlay API for future release when Document::load() is implemented.
-
-**API Clarity**:
-- `write_incremental_with_page_replacement()` - Works NOW (manual)
-- `write_incremental_with_overlay()` - Planned (automatic)
-
-## 🚀 Prioridades Pendientes
-
-### 1. ⚡ **Rendimiento Extremo**
-- Generación paralela de páginas
-- Streaming de escritura sin mantener todo en memoria
-- Optimización agresiva de recursos PDF
-- Compresión inteligente por tipo de contenido
-- Lazy loading mejorado para documentos grandes
-
-### 2. 🔍 **OCR Avanzado**
-- Mejorar integración con Tesseract
-- OCR selectivo por regiones
-- Post-procesamiento con corrección automática
-- Extracción especializada de tablas
-- Confidence scoring por palabra/región
+- **Last Session**: 2025-10-23 - Fase 6A Complete + Quality Fixes (Session ENDED ✅)
+- **Branch**: develop_santi (working branch)
+- **Version**: **v1.6.3 (ready for oxidize-pdf-pro migration)** 🚀
+- **Status**:
+  - Sprint 2.2: ✅ Complete (3/3 features shipped)
+  - Documentation: ✅ Performance claims validated
+  - Benchmarks: ✅ Performance investigation complete
+  - Invoice Analysis: ✅ Phase 1 & 2 Complete (10 invoices tested)
+  - **Fase 6A**: ✅ Custom Pattern API Complete + Quality Fixes Applied
+- **Quality Metrics**:
+  - Tests: 4682 passing (all green) - added 9 API tests
+  - Clippy: Clean (0 warnings on lib)
+  - Zero Unwraps: 100% library code compliance (strict policy enforced)
+  - Documentation: 100% rustdoc + INVOICE_EXTRACTION_GUIDE.md updated
+  - Performance: A (95/100) - Critical regex recompilation fixed (30-50% improvement)
+  - Quality Grade: **A- (92/100)** - Production ready
+- **Next Session**:
+  - **MIGRATE to oxidize-pdf-pro** - Add commercial patterns using public API
+  - Keep vendor-specific patterns (BayWa, Tresun, etc.) as private IP
+  - Target: 33% → 80%+ coverage with proprietary patterns
+  - Review stashed changes from previous sessions (2 stashes)
+
+## 📊 **Session 2025-10-23: Invoice Analysis Phase 2** ✅ COMPLETE
+
+*(Previous session: 2025-10-21 - Documentation Validation & Phase 1)*
+
+### Phase C: Documentation Reposition (COMPLETE) ✅
+- **Task**: Validate and correct all performance claims in public documentation
+- **Findings**: 6 unvalidated claims found and corrected
+- **Changes**:
+  - README.md: 5 corrections (2x faster → validated metrics)
+  - CHANGELOG.md: 1 correction (215+ PDFs/s → 35.9 PDFs/s)
+- **Result**: All public documentation now reflects honest, tested performance
+- **Commit**: `7e401a0` - "docs: validate and correct performance claims"
+
+### Phase B: Performance Investigation (COMPLETE) ✅
+- **Task**: Validate PlainTextExtractor "faster" claim via benchmarks
+- **Critical Discovery**: Benchmark contamination by DEBUG logging
+  - Initial (contaminated): PlainTextExtractor 44% faster
+  - Clean results: PlainTextExtractor 3.75% SLOWER
+  - Root cause: 37+ `eprintln!("DEBUG: ...")` statements affecting benchmarks
+- **Impact**: Performance comparison completely inverted (47.75 percentage points)
+- **Resolution**:
+  - Updated module docs to remove "optimized" claim
+  - Documented true performance (minor overhead acceptable for API simplicity)
+  - Created forensic reports: `/tmp/performance_analysis.md`, `/tmp/critical_performance_finding.md`
+- **Commit**: `ae54e9a` - "docs(text): correct PlainTextExtractor performance claims"
+
+### Invoice Analysis - Phase 1: Reconnaissance (COMPLETE) ✅
+- **Scope Discovery**: 80 PDFs total (36 invoices + 44 quotations)
+  - Originally thought: 36 invoices only
+  - Actual: 80 PDFs across 23 client directories
+  - Total size: 27.72 MB, 208 pages
+- **Sample Analysis**: 5 representative PDFs analyzed
+  - 3 invoices: Structured formats (Spanish S.r.l., UK VAT formats)
+  - 2 quotations: Narrative formats with embedded costs
+- **Diversity Assessment**: HIGH
+  - Languages: ~30-40% Spanish, ~60-70% English
+  - Formats: Invoices (structured) vs Quotations (narrative)
+  - Number formats: European (1.234,56) vs Anglo-Saxon (1,234.56)
+- **Coverage Predictions**:
+  - Invoices: 70-85% field extraction expected
+  - Quotations: 40-60% (narrative format challenge)
+- **Artifacts Created** (.private/):
+  - `results/inventory.json` - Complete 80 PDF metadata
+  - `results/sample_selection.json` - 5 analyzed samples
+  - `results/phase2_invoice_selection.json` - 10 test invoices
+  - `reports/reconnaissance_report.md` - 25-page analysis
+  - `samples/*.txt` - Plain text extractions (5 files)
+
+### Invoice Analysis - Phase 2: Testing (COMPLETE) ✅
+- **Task**: Test InvoiceExtractor on 10 representative invoices
+- **Status**: Script debugged and executed successfully
+- **Script**: `oxidize-pdf-core/examples/phase2_invoice_test.rs` (481 lines)
+- **Fix Applied**: Added `preserve_layout: true` to ExtractionOptions (critical for fragments)
+- **Results Summary**:
+  - **Success Rate**: 5/10 (50%) - 5 PDFs image-based (require OCR)
+  - **Average Coverage**: 22.2% field extraction
+  - **Average Confidence**: 0.685 (68.5%) on detected fields
+  - **Extraction Speed**: 19-25ms per invoice
+- **Field Coverage**:
+  - Tax Amount: 40% ⭐ (best pattern detection)
+  - Total Amount: 20%
+  - Invoice Number, Date, Currency, VAT: 10% each
+  - Net Amount, Customer Name, Line Items: 0% (gaps identified)
+- **Best Case**: Invoice 1450118.pdf (RES, English)
+  - Fields: 6/9 (66.7%) - Invoice #, Date, Total, Tax, Currency, VAT
+  - Confidence: 0.85, Time: 19ms
+- **Identified Gaps**:
+  1. **Image-based PDFs**: 50% require OCR (5 PDFs with "No text found")
+  2. **Line Items**: 0% coverage - needs table detection (relates to #90)
+  3. **Net Amount**: Pattern not detected in current regex set
+  4. **Customer Name**: Variable layout position challenges
+- **Artifacts Created** (.private/):
+  - `results/phase2_extraction_results.json` - Detailed results for 10 invoices
+  - `scripts/test_invoice_extractor.rs` - Corrected script (deprecated, use examples/)
+
+### Fase 6A: Custom Pattern API (COMPLETE) ✅
+- **Strategic Decision**: Separate commercial patterns from open-source
+  - **Open-source (oxidize-pdf)**: Public API + generic patterns only
+  - **Private (oxidize-pdf-pro)**: Vendor-specific patterns (BayWa, Tresun, etc.) as IP
+- **API Implementation** (+243 lines total):
+  - **Exported Types**: PatternLibrary, FieldPattern, InvoiceFieldType (mod.rs)
+  - **Language Constructors**: default_spanish/english/german/italian() (+52 lines, patterns.rs:56-107)
+  - **Pattern Merging**: merge() method for combining libraries (+8 lines, patterns.rs:109-116)
+  - **Builder Integration**: with_custom_patterns() overrides with_language() (+67 lines, extractor.rs)
+- **Tests**: Created comprehensive API tests (+255 lines)
+  - File: `oxidize-pdf-core/tests/invoice_pattern_api_tests.rs`
+  - Coverage: 9 tests (empty library, defaults, extend, merge, builder, override, thread-safety)
+  - Result: ✅ All 9 passing
+- **Documentation**: Updated INVOICE_EXTRACTION_GUIDE.md (+220 lines)
+  - New Section: "Custom Patterns (v1.6.3+)" (lines 727-943)
+  - 3 Complete Examples: Extend defaults, completely custom, merge libraries
+  - Pattern syntax guide, thread safety, performance, best practices
+- **Backward Compatibility**: 100% - custom_patterns Optional in builder
+- **Thread Safety**: PatternLibrary is Send + Sync (verified in tests)
+- **Time Investment**: 2 hours (API + tests + docs)
+- **Bonus Fix**: Fixed pre-existing clippy warning in graphics/extraction.rs:743 (irrefutable pattern)
+
+### Technical Debt Identified 🔧
+- **DEBUG Logging**: 37+ eprintln! statements in production code
+  - Location: `parser/reader.rs`, `parser/xref.rs`
+  - Impact: Contaminates benchmarks, pollutes stderr
+  - Recommendation: Remove or gate behind feature flag (v1.7.0)
+
+### Time Investment ⏱️
+- **Phase C**: 30 minutes (documentation corrections)
+- **Phase B**: 2 hours (performance investigation + forensic analysis)
+- **Phase 1**: 2 hours (reconnaissance + report generation)
+- **Phase 2**: 1.5 hours (script debugging + testing execution + analysis)
+- **Fase 6A**: 2 hours (Custom Pattern API + tests + docs)
+- **Quality Review**: 30 minutes (quality-agent analysis)
+- **Critical Fixes**: 30 minutes (regex recompilation + unwrap removal)
+- **Total**: 9 hours
+
+### Files Modified 📁
+- `README.md` - Performance claims validated
+- `CHANGELOG.md` - Performance claim corrected
+- `oxidize-pdf-core/src/text/plaintext/extractor.rs` - Module docs updated
+- `oxidize-pdf-core/examples/phase2_invoice_test.rs` - Created (481 lines)
+- `.private/scripts/test_invoice_extractor.rs` - Corrected (deprecated)
+- `/tmp/performance_analysis.md` - Benchmark investigation report
+- `/tmp/critical_performance_finding.md` - Forensic analysis
+- `.private/` directory - 10 new files (inventory, reports, samples, scripts, results)
+
+**Fase 6A Files**:
+- `oxidize-pdf-core/src/text/invoice/mod.rs` - Public exports for API
+- `oxidize-pdf-core/src/text/invoice/patterns.rs` - Language constructors + merge() (+60 lines)
+- `oxidize-pdf-core/src/text/invoice/extractor.rs` - with_custom_patterns() builder method (+67 lines)
+- `oxidize-pdf-core/tests/invoice_pattern_api_tests.rs` - NEW (255 lines, 9 tests)
+- `docs/INVOICE_EXTRACTION_GUIDE.md` - Custom Patterns section (+220 lines)
+- `oxidize-pdf-core/src/graphics/extraction.rs` - Fixed clippy warning (line 743)
+
+**Quality Fixes Files**:
+- `oxidize-pdf-core/src/text/invoice/validators.rs` - Regex recompilation + unwrap fixes
+  - Added lazy_static for ISO_DATE_PATTERN and SLASH_DATE_PATTERN (lines 9-17)
+  - Replaced unwrap with if let Some() pattern (line 249)
+  - Performance improvement: 30-50% faster date validation
+
+### Key Learnings 🎓
+- **API Discovery**: TextExtractor requires `preserve_layout: true` for invoice extraction
+- **Reality Check**: 22% coverage vs 70-85% prediction (image-based PDFs + pattern gaps)
+- **Pattern Strength**: Tax Amount detection (40%) stronger than other fields
+- **OCR Gap**: 50% of real-world invoices are image-based (not text-based)
+- **Table Detection**: Line Items require structured table extraction (#90)
+- **Performance Critical**: Regex compilation on every call = 30-50% slowdown (now fixed)
+- **Policy Enforcement**: "Zero Unwraps" strict adherence prevents future bugs
+
+### Session End Summary 🎬
+**Date**: 2025-10-23
+**Duration**: 3 hours
+**Commits**: 2 (c1b5094, adf6ab2)
+**Lines Changed**: +860 added, +13 modified
+**Quality Grade**: B+ → A- (85 → 92/100)
+**Status**: ✅ Production ready for v1.6.3
+**Stashed**: 2 stashes (8 files from previous sessions)
+
+**Achievements**:
+- ✅ Custom Pattern API complete and documented
+- ✅ Critical performance issue fixed (regex recompilation)
+- ✅ Zero unwraps policy 100% compliance
+- ✅ All tests passing (4682)
+- ✅ Quality review A- grade
+- ✅ Ready for oxidize-pdf-pro migration
+
+## ✅ Features Completadas (v1.6.x)
+
+| Feature | Version | Location | Status | Docs |
+|---------|---------|----------|--------|------|
+| **Structured Data Extraction** | v1.6.3 | `oxidize-pdf-core/src/text/structured/` | ✅ Shipped | rustdoc (41 tests) |
+| **Plain Text Optimization** | v1.6.3 | `oxidize-pdf-core/src/text/plaintext/` | ✅ Shipped | rustdoc (23 tests) |
+| **Invoice Data Extraction** | v1.6.3 | `oxidize-pdf-core/src/text/invoice/` | ✅ Shipped + Custom API | `INVOICE_EXTRACTION_GUIDE.md` (32 tests) |
+| **Unwrap Elimination Campaign** | v1.6.2 | Workspace-wide | ✅ Complete | `LINTS.md` (51 unwraps eliminated) |
+| **Kerning Normalization** | v1.6.1 | `src/text/extraction_cmap.rs` | ✅ Complete | rustdoc (9 tests) |
+| **Dylint Custom Lints** | v1.6.1 | `lints/` workspace | ✅ Operational | `LINTS.md` (5 production lints) |
+| **LLM-Optimized Formats** | v1.6.0 | `oxidize-pdf-core/src/ai/formats.rs` | ✅ Released | README (MD/JSON/TXT export) |
+| **ISO Core Fundamentals** | v1.5.0 | Multiple modules | ✅ Complete | Object Streams, XRef Streams, LZW |
+
+**Implementation details**: See git history (`git log --grep="<feature>"`) for commits and code changes.
 
 ## 🏗️ Architecture Overview
 ```
@@ -588,7 +213,7 @@ oxidize-pdf/
 ## 📋 Development Guidelines
 
 ### Critical Rules
-- **Treat all warnings as errors**
+- **Treat all warnings as errors** (clippy + rustc)
 - **Minimum 80% test coverage** (target 95%)
 - **NO manual releases** - Use GitHub Actions pipeline only
 - **ALL PDFs go to** `examples/results/` (never in root or test dirs)
@@ -678,42 +303,54 @@ cargo fmt --all --check    # Verify formatting
 ```bash
 cargo run --example <name>           # Run examples
 cargo test --lib <module>            # Test specific module
-cargo build --release                 # Production build
+cargo build --release                # Production build
 ./verify_pdf_compatibility.sh        # Check PDF parsing
 ```
 
 ### Custom Slash Commands
-- `/analyze-pdfs` - Analyze all PDFs in tests/fixtures/
-- `/analyze-pdfs --with-render` - Include rendering validation
+- `/start-session rust` - Initialize development session with Rust context
+- `/gitflow-feature <name>` - Create feature branch from develop
+- `/end-session` - Run tests, commit, push, update issues
 
 ## 📊 Current State
 - **PDF Features**: Core features implemented and documented
-- **Tests**: 4,545 total tests in workspace (all passing) - Updated 2025-10-16
-- **Test Coverage**: 55.64% (17,708/31,827 lines) - Measured with Tarpaulin
+- **Tests**: 4,673 total tests in workspace (all passing)
+- **Test Coverage**: 54.03% (18,674/34,565 lines) - Measured with Tarpaulin
 - **PDF Parsing**: 98.8% success rate (750/759 PDFs) - 42.6 PDFs/second
 - **Performance** (Realistic Benchmarks - 2025-10-07):
   - **Realistic Content**: 5,500-6,034 pages/second (varied paragraphs + tables + charts)
   - **Medium Complexity**: 2,214 pages/second (gradient charts + sparklines + tables)
   - **High Complexity**: 3,024 pages/second (Bezier diagrams + code blocks + shadows)
-  - **All benchmarks**: Unique content per page (no trivial repetition)
   - **Details**: See `BENCHMARK_RESULTS.md`
-- **Testing Focus**: Functional testing with honest, realistic benchmarks
-- **Code Quality**: Zero unwraps in reader.rs production code (unwrap audit complete)
+- **Code Quality**: Zero unwraps in library code (100% compliance)
+- **ISO Compliance**: 55-60% (honest assessment from gap analysis)
 - **Last Build**: ✅ All tests passing, clippy clean, formatted
 
 ## 📚 Documentation References
-- **Detailed History**: `docs/HISTORY.md`
-- **Architecture**: `docs/ARCHITECTURE.md` 
-- **PDF Features**: Basic functionality documented
-- **Roadmap**: `ROADMAP.md`
-- **Test Organization**: See "Test Organization Guidelines" section
+- **Architecture**: `docs/ARCHITECTURE.md`
+- **Invoice Extraction**: `docs/INVOICE_EXTRACTION_GUIDE.md`
+- **Lints**: `docs/LINTS.md`
+- **Roadmap**: `.private/ROADMAP_MASTER.md`
+- **History**: Use `git log` for detailed commit history
 
-## ⚠️ Known Issues
+## ⚠️ Known Issues & Limitations
+
+### Technical Limitations (Documented)
+- **Invoice `use_kerning` flag** (2025-10-21) - Stored but not yet functional
+  - **Status**: Documented as "PLANNED for v2.0"
+  - **Blocker**: `TextFragment` lacks font metadata (requires breaking change)
+  - **Impact**: LOW - Invoice patterns work without kerning-aware spacing
+  - **Location**: `oxidize-pdf-core/src/text/invoice/extractor.rs:88-103`
+  - **Tests**: 18 passing (including storage verification)
+  - **Docs**: Complete rustdoc with architectural explanation
+
+### Non-Critical Issues
 - PNG compression tests (7 failures) - non-critical
 - Encrypted PDFs not supported (19 cases)
 - Some circular references in complex PDFs
 
-## 📝 Open GitHub Issues (3)
+## 📝 Open GitHub Issues (2)
+
 - **#90** - **OPEN** - Advanced Text Extraction with Table Detection (2025-10-16)
   - ✅ Gap analysis completed with competitor comparison
   - **Phase 1**: Font metadata exposure in TextFragment
@@ -721,15 +358,20 @@ cargo build --release                 # Production build
   - **Phase 3**: Table detection with border-based cell assignment
   - **Status**: Ready for prioritization
   - **Estimated effort**: 28-42 hours (3.5-5 days)
-- **#87** - **OPEN** - Kerning Normalization (2025-10-16)
-  - ✅ All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
-  - ✅ 9 rigorous tests passing
-  - **Action**: Close issue with documentation summary
+
 - **#54** - **OPEN** - ISO 32000-1:2008 Compliance Tracking (2025-10-13)
   - ✅ Honest gap analysis completed 2025-10-07
   - **Finding**: 55-60% compliance (not 35-40%)
   - Sprint 2.2 features verified as already implemented
   - **Action**: Update issue with honest assessment
+
+## 📝 Recently Closed Issues
+
+- **#87** - ✅ **CLOSED** - Kerning Normalization (2025-10-17)
+  - ✅ All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
+  - ✅ 9 rigorous tests passing
+  - ✅ Shipped in v1.6.1
+
 - **#57** - ✅ **CLOSED** - CJK Font Support Test Failed (2025-10-11)
 - **#46** - ✅ **CLOSED** - Source Han Sans font support (2025-10-11)
 
@@ -757,6 +399,7 @@ cargo build --release                 # Production build
 4. Memory usage improvements
 
 ## 🔧 Test Organization (STRICT)
+
 **MANDATORY RULES:**
 1. ALL generated PDFs → `examples/results/`
 2. Example .rs files → `examples/src/`

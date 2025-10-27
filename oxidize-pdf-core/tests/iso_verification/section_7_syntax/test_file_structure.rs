@@ -3,7 +3,10 @@
 //! Tests for basic PDF file structure: header, body, cross-reference table,
 //! and trailer as defined in ISO 32000-1:2008 Sections 7.1-7.4
 
-use crate::iso_verification::{create_basic_test_pdf, verify_pdf_at_level, iso_test, run_external_validation, get_available_validators};
+use crate::iso_verification::{
+    create_basic_test_pdf, get_available_validators, iso_test, run_external_validation,
+    verify_pdf_at_level,
+};
 use oxidize_pdf::verification::{parser::parse_pdf, VerificationLevel};
 use oxidize_pdf::{Document, Font, Page, Result as PdfResult};
 
@@ -13,10 +16,7 @@ iso_test!(
     VerificationLevel::GeneratesPdf,
     "PDF file must start with %PDF- header",
     {
-        let pdf_bytes = create_basic_test_pdf(
-            "Header Test", 
-            "Testing PDF header compliance"
-        )?;
+        let pdf_bytes = create_basic_test_pdf("Header Test", "Testing PDF header compliance")?;
 
         // Check if PDF starts with correct header
         let pdf_string = String::from_utf8_lossy(&pdf_bytes[..20]);
@@ -40,19 +40,17 @@ iso_test!(
     VerificationLevel::ContentVerified,
     "Verify PDF header version format compliance",
     {
-        let pdf_bytes = create_basic_test_pdf(
-            "Header Version Test", 
-            "Testing PDF header version format"
-        )?;
+        let pdf_bytes =
+            create_basic_test_pdf("Header Version Test", "Testing PDF header version format")?;
 
         // Parse and verify header
         let parsed = parse_pdf(&pdf_bytes)?;
-        
+
         // Check version format (should be X.Y)
-        let version_valid = parsed.version.len() >= 3 && 
-                          parsed.version.chars().nth(1) == Some('.') &&
-                          parsed.version.chars().nth(0).unwrap().is_ascii_digit() &&
-                          parsed.version.chars().nth(2).unwrap().is_ascii_digit();
+        let version_valid = parsed.version.len() >= 3
+            && parsed.version.chars().nth(1) == Some('.')
+            && parsed.version.chars().nth(0).unwrap().is_ascii_digit()
+            && parsed.version.chars().nth(2).unwrap().is_ascii_digit();
 
         let passed = version_valid;
         let level_achieved = if passed { 3 } else { 2 };
@@ -72,10 +70,7 @@ iso_test!(
     VerificationLevel::GeneratesPdf,
     "PDF file must end with %%EOF marker",
     {
-        let pdf_bytes = create_basic_test_pdf(
-            "EOF Test", 
-            "Testing PDF end-of-file marker"
-        )?;
+        let pdf_bytes = create_basic_test_pdf("EOF Test", "Testing PDF end-of-file marker")?;
 
         // Check if PDF ends with %%EOF
         let pdf_string = String::from_utf8_lossy(&pdf_bytes);
@@ -100,19 +95,22 @@ iso_test!(
     "Verify cross-reference table structure and validity",
     {
         let pdf_bytes = create_basic_test_pdf(
-            "Cross-Reference Test", 
-            "Testing cross-reference table compliance"
+            "Cross-Reference Test",
+            "Testing cross-reference table compliance",
         )?;
 
         // Parse and verify cross-reference table
         let parsed = parse_pdf(&pdf_bytes)?;
-        
+
         let xref_valid = parsed.xref_valid && parsed.object_count > 0;
 
         let passed = xref_valid;
         let level_achieved = if passed { 3 } else { 2 };
         let notes = if passed {
-            format!("Cross-reference table valid with {} objects", parsed.object_count)
+            format!(
+                "Cross-reference table valid with {} objects",
+                parsed.object_count
+            )
         } else {
             "Cross-reference table invalid or corrupted"
         };
@@ -128,8 +126,8 @@ iso_test!(
     "PDF objects must follow proper indirect object format",
     {
         let pdf_bytes = create_basic_test_pdf(
-            "Object Structure Test", 
-            "Testing PDF object structure compliance"
+            "Object Structure Test",
+            "Testing PDF object structure compliance",
         )?;
 
         // Basic verification - PDF should contain objects
@@ -155,13 +153,13 @@ iso_test!(
     "Verify object numbering and reference integrity",
     {
         let pdf_bytes = create_basic_test_pdf(
-            "Object Integrity Test", 
-            "Testing PDF object integrity and references"
+            "Object Integrity Test",
+            "Testing PDF object integrity and references",
         )?;
 
         // Parse and count objects
         let parsed = parse_pdf(&pdf_bytes)?;
-        
+
         // Verify we have essential objects
         let has_catalog = parsed.catalog.is_some();
         let has_pages = parsed.page_tree.is_some();
@@ -170,7 +168,10 @@ iso_test!(
         let passed = has_catalog && has_pages && sufficient_objects;
         let level_achieved = if passed { 3 } else { 2 };
         let notes = if passed {
-            format!("Object structure valid: {} objects with catalog and pages", parsed.object_count)
+            format!(
+                "Object structure valid: {} objects with catalog and pages",
+                parsed.object_count
+            )
         } else {
             "Object structure incomplete - missing essential objects"
         };
@@ -185,10 +186,7 @@ iso_test!(
     VerificationLevel::GeneratesPdf,
     "PDF trailer must contain required entries",
     {
-        let pdf_bytes = create_basic_test_pdf(
-            "Trailer Test", 
-            "Testing PDF trailer structure"
-        )?;
+        let pdf_bytes = create_basic_test_pdf("Trailer Test", "Testing PDF trailer structure")?;
 
         // Check for trailer presence
         let pdf_string = String::from_utf8_lossy(&pdf_bytes);
@@ -213,15 +211,14 @@ iso_test!(
     "Complete PDF file structure validation with external tools",
     {
         let pdf_bytes = create_basic_test_pdf(
-            "Complete Structure Test", 
-            "Testing complete PDF file structure for ISO compliance"
+            "Complete Structure Test",
+            "Testing complete PDF file structure for ISO compliance",
         )?;
 
         // First verify internal parsing works (Level 3)
         let parsed = parse_pdf(&pdf_bytes)?;
-        let internal_valid = parsed.xref_valid && 
-                           parsed.catalog.is_some() && 
-                           parsed.object_count > 0;
+        let internal_valid =
+            parsed.xref_valid && parsed.catalog.is_some() && parsed.object_count > 0;
 
         if !internal_valid {
             return Ok((false, 3, "Internal structure validation failed".to_string()));
@@ -230,7 +227,11 @@ iso_test!(
         // Try external validation for Level 4
         let validators = get_available_validators();
         if validators.is_empty() {
-            return Ok((true, 3, "Level 3 achieved - no external validators available".to_string()));
+            return Ok((
+                true,
+                3,
+                "Level 3 achieved - no external validators available".to_string(),
+            ));
         }
 
         // Try qpdf validation first
@@ -246,7 +247,11 @@ iso_test!(
         }
 
         // Fallback to Level 3 if external validation unavailable
-        Ok((true, 3, "Level 3 - external validation tools not available".to_string()))
+        Ok((
+            true,
+            3,
+            "Level 3 - external validation tools not available".to_string(),
+        ))
     }
 );
 
@@ -266,26 +271,24 @@ mod integration_tests {
 
         // Add content to ensure substantial file
         let mut page = Page::a4();
-        
+
         page.text()
             .set_font(Font::Helvetica, 16.0)
             .at(50.0, 750.0)
             .write("PDF File Structure Compliance Test")?;
-            
+
         page.text()
             .set_font(Font::TimesRoman, 12.0)
             .at(50.0, 700.0)
             .write("This document tests compliance with ISO 32000-1:2008")?;
-            
+
         page.text()
             .set_font(Font::TimesRoman, 12.0)
             .at(50.0, 680.0)
             .write("Sections 7.1-7.4: File Structure")?;
 
         // Add some graphics to increase object count
-        page.graphics()
-            .line(50.0, 650.0, 300.0, 650.0)
-            .stroke();
+        page.graphics().line(50.0, 650.0, 300.0, 650.0).stroke();
 
         doc.add_page(page);
         let pdf_bytes = doc.to_bytes()?;
@@ -309,7 +312,7 @@ mod integration_tests {
         assert!(parsed.xref_valid, "Cross-reference table must be valid");
         assert!(parsed.catalog.is_some(), "Must have document catalog");
         assert!(parsed.object_count > 0, "Must have objects");
-        
+
         println!("✓ Parsed successfully:");
         println!("  - Version: {}", parsed.version);
         println!("  - Objects: {}", parsed.object_count);
@@ -319,10 +322,14 @@ mod integration_tests {
         let validators = get_available_validators();
         if !validators.is_empty() {
             println!("Available validators: {:?}", validators);
-            
+
             for validator in &validators {
                 if let Some(result) = run_external_validation(&pdf_bytes, validator) {
-                    println!("✓ {} validation: {}", validator, if result { "PASS" } else { "FAIL" });
+                    println!(
+                        "✓ {} validation: {}",
+                        validator,
+                        if result { "PASS" } else { "FAIL" }
+                    );
                 }
             }
         } else {

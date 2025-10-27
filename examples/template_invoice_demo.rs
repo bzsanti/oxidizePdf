@@ -101,7 +101,8 @@ Due Date: {{due_date}}
 {{company.city}}
 Phone: {{company.phone}}
 Email: {{company.email}}
-    "#.trim();
+    "#
+    .trim();
 
     // Customer section template
     let customer_template = r#"
@@ -111,14 +112,16 @@ Attn: {{customer.contact}}
 {{customer.address}}
 {{customer.city}}
 Email: {{customer.email}}
-    "#.trim();
+    "#
+    .trim();
 
     // Services template
     let services_template = r#"
 SERVICES PROVIDED:
 Project: {{project_name}}
 Hours: {{hours}} @ {{rate}} = {{billing.subtotal}}
-    "#.trim();
+    "#
+    .trim();
 
     // Billing template
     let billing_template = r#"
@@ -129,7 +132,8 @@ TOTAL AMOUNT DUE: {{billing.total}}
 
 Payment Terms: {{payment_terms}}
 Late Fee: {{late_fee}}
-    "#.trim();
+    "#
+    .trim();
 
     // Render all sections
     let header = Template::render(header_template, context)
@@ -244,7 +248,8 @@ mod tests {
 Company: {{company.name}}
 Customer: {{customer.name}}
 Total: {{billing.total}}
-        "#.trim();
+        "#
+        .trim();
 
         let result = Template::render(template, &context)?;
         let lines: Vec<&str> = result.lines().collect();
@@ -273,9 +278,15 @@ Total: {{billing.total}}
 
         assert_eq!(analysis.total_placeholders, 3);
         assert_eq!(analysis.unique_variables, 3);
-        assert!(analysis.variable_names.contains(&"invoice_number".to_string()));
-        assert!(analysis.variable_names.contains(&"customer.name".to_string()));
-        assert!(analysis.variable_names.contains(&"billing.total".to_string()));
+        assert!(analysis
+            .variable_names
+            .contains(&"invoice_number".to_string()));
+        assert!(analysis
+            .variable_names
+            .contains(&"customer.name".to_string()));
+        assert!(analysis
+            .variable_names
+            .contains(&"billing.total".to_string()));
 
         Ok(())
     }

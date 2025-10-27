@@ -373,17 +373,9 @@ impl<R: Read + Seek> PdfReader<R> {
         }
 
         // If we reach here, reconstruction is needed
-        eprintln!(
-            "DEBUG: Catalog object {} needs reconstruction, attempting manual reconstruction",
-            obj_num
-        );
 
         match self.extract_object_manually(obj_num) {
             Ok(dict) => {
-                eprintln!(
-                    "DEBUG: Successfully reconstructed catalog {} manually",
-                    obj_num
-                );
                 // Cache the reconstructed object
                 let obj = PdfObject::Dictionary(dict);
                 self.object_cache.insert(key, obj);
@@ -396,16 +388,13 @@ impl<R: Read + Seek> PdfReader<R> {
                     in_use: true,
                 };
                 self.xref.add_entry(obj_num, xref_entry);
-                eprintln!("DEBUG: Added catalog object {} to XRef table", obj_num);
 
                 // Return reference to cached dictionary
                 if let Some(PdfObject::Dictionary(ref dict)) = self.object_cache.get(&key) {
                     return Ok(dict);
                 }
             }
-            Err(e) => {
-                eprintln!("DEBUG: Manual catalog reconstruction failed: {:?}", e);
-            }
+            Err(_e) => {}
         }
 
         // Return error if all reconstruction attempts failed
@@ -449,12 +438,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     })?;
             if being_loaded.contains(&obj_num) {
                 drop(being_loaded);
-                if self.options.collect_warnings {
-                    eprintln!(
-                        "DEBUG: Circular reference detected while loading object {} {} - breaking cycle with null object",
-                        obj_num, gen_num
-                    );
-                }
+                if self.options.collect_warnings {}
                 self.object_cache.insert(key, PdfObject::Null);
                 return Ok(&self.object_cache[&key]);
             }
@@ -472,12 +456,7 @@ impl<R: Read + Seek> PdfReader<R> {
             let depth = being_loaded.len() as u32;
             if depth >= self.max_reconstruction_depth {
                 drop(being_loaded);
-                if self.options.collect_warnings {
-                    eprintln!(
-                        "DEBUG: Maximum object loading depth ({}) exceeded for object {} {}",
-                        self.max_reconstruction_depth, obj_num, gen_num
-                    );
-                }
+                if self.options.collect_warnings {}
                 return Err(ParseError::SyntaxError {
                     position: 0,
                     message: format!(
@@ -535,10 +514,6 @@ impl<R: Read + Seek> PdfReader<R> {
         // Check if this is a compressed object
         if let Some(ext_entry) = self.xref.get_extended_entry(obj_num) {
             if let Some((stream_obj_num, index_in_stream)) = ext_entry.compressed_info {
-                eprintln!(
-                    "DEBUG: Object {} found in Object Stream {} at index {}",
-                    obj_num, stream_obj_num, index_in_stream
-                );
                 // This is a compressed object - need to extract from object stream
                 return self.get_compressed_object(
                     obj_num,
@@ -548,7 +523,6 @@ impl<R: Read + Seek> PdfReader<R> {
                 );
             }
         } else {
-            eprintln!("DEBUG: Object {} not found in extended entries", obj_num);
         }
 
         // Get xref entry and extract needed values
@@ -580,7 +554,6 @@ impl<R: Read + Seek> PdfReader<R> {
                 None => {
                     // Object not found in XRef table
                     if self.is_reconstructible_object(obj_num) {
-                        eprintln!("DEBUG: Object {} not found in XRef table, attempting manual reconstruction", obj_num);
                         return self.attempt_manual_object_reconstruction(obj_num, gen_num, 0);
                     } else {
                         if self.options.lenient_syntax {
@@ -690,13 +663,7 @@ impl<R: Read + Seek> PdfReader<R> {
             Ok(obj) => {
                 self.parse_context.exit();
                 // Debug: Print what object we actually parsed
-                if obj_num == 102 && self.options.collect_warnings {
-                    eprintln!("DEBUG: Parsed object 102: {:?}", obj);
-                    eprintln!(
-                        "DEBUG: Object 102 is dictionary: {}",
-                        obj.as_dict().is_some()
-                    );
-                }
+                if obj_num == 102 && self.options.collect_warnings {}
                 obj
             }
             Err(e) => {
@@ -706,31 +673,15 @@ impl<R: Read + Seek> PdfReader<R> {
                 if self.is_reconstructible_object(obj_num)
                     && self.can_attempt_manual_reconstruction(&e)
                 {
-                    eprintln!(
-                        "DEBUG: Normal parsing failed for object {}: {:?}",
-                        obj_num, e
-                    );
-                    eprintln!("DEBUG: Attempting manual reconstruction as fallback");
-
                     match self.attempt_manual_object_reconstruction(
                         obj_num,
                         gen_num,
                         current_offset,
                     ) {
                         Ok(reconstructed_obj) => {
-                            eprintln!(
-                                "DEBUG: Successfully reconstructed object {} manually",
-                                obj_num
-                            );
                             return Ok(reconstructed_obj);
                         }
-                        Err(reconstruction_error) => {
-                            eprintln!(
-                                "DEBUG: Manual reconstruction also failed: {:?}",
-                                reconstruction_error
-                            );
-                            eprintln!("DEBUG: Falling back to original error");
-                        }
+                        Err(_reconstruction_error) => {}
                     }
                 }
 
@@ -908,10 +859,94 @@ impl<R: Read + Seek> PdfReader<R> {
         };
 
         // Now we can get the pages object without holding a reference to catalog
-        let pages_obj = self.get_object(pages_obj_num, pages_gen_num)?;
+        // First, check if we need double indirection by peeking at the object
+        let needs_double_resolve = {
+            let pages_obj = self.get_object(pages_obj_num, pages_gen_num)?;
+            pages_obj.as_reference()
+        };
+
+        // If it's a reference, resolve the double indirection
+        let (final_obj_num, final_gen_num) =
+            if let Some((ref_obj_num, ref_gen_num)) = needs_double_resolve {
+                (ref_obj_num, ref_gen_num)
+            } else {
+                (pages_obj_num, pages_gen_num)
+            };
+
+        // Determine which object number to use for Pages (validate and potentially search)
+        let actual_pages_num = {
+            // Check if the referenced object is valid (in a scope to drop borrows)
+            let is_valid_dict = {
+                let pages_obj = self.get_object(final_obj_num, final_gen_num)?;
+                pages_obj.as_dict().is_some()
+            };
+
+            if is_valid_dict {
+                // The referenced object is valid
+                final_obj_num
+            } else {
+                // If Pages reference resolves to Null or non-dictionary, try to find Pages manually (corrupted PDF)
+                #[cfg(debug_assertions)]
+                eprintln!("Warning: Pages reference invalid, searching for valid Pages object");
+
+                if self.options.lenient_syntax {
+                    // Search for a valid Pages object number
+                    let xref_len = self.xref.len() as u32;
+                    let mut found_pages_num = None;
+
+                    for i in 1..xref_len {
+                        // Check in a scope to drop the borrow
+                        let is_pages = {
+                            if let Ok(obj) = self.get_object(i, 0) {
+                                if let Some(dict) = obj.as_dict() {
+                                    if let Some(obj_type) =
+                                        dict.get("Type").and_then(|t| t.as_name())
+                                    {
+                                        obj_type.0 == "Pages"
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        };
+
+                        if is_pages {
+                            found_pages_num = Some(i);
+                            break;
+                        }
+                    }
+
+                    if let Some(obj_num) = found_pages_num {
+                        #[cfg(debug_assertions)]
+                        eprintln!("Found valid Pages object at {} 0 R", obj_num);
+                        obj_num
+                    } else {
+                        // No valid Pages found
+                        return Err(ParseError::SyntaxError {
+                            position: 0,
+                            message: "Pages is not a dictionary and no valid Pages object found"
+                                .to_string(),
+                        });
+                    }
+                } else {
+                    // Lenient mode disabled, can't search
+                    return Err(ParseError::SyntaxError {
+                        position: 0,
+                        message: "Pages is not a dictionary".to_string(),
+                    });
+                }
+            }
+        };
+
+        // Now get the final Pages object (all validation/search done above)
+        let pages_obj = self.get_object(actual_pages_num, 0)?;
         pages_obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
             position: 0,
-            message: "Pages is not a dictionary".to_string(),
+            message: "Pages object is not a dictionary".to_string(),
         })
     }
 
@@ -1053,7 +1088,6 @@ impl<R: Read + Seek> PdfReader<R> {
     #[allow(dead_code)]
     fn find_object_pattern(&mut self, obj_num: u32, gen_num: u16) -> Option<u64> {
         let pattern = format!("{} {} obj", obj_num, gen_num);
-        eprintln!("DEBUG: Searching for pattern: '{}'", pattern);
 
         // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
@@ -1080,31 +1114,20 @@ impl<R: Read + Seek> PdfReader<R> {
         // Convert to string and search
         let content = String::from_utf8_lossy(&file_content);
         if let Some(pattern_pos) = content.find(&pattern) {
-            eprintln!(
-                "DEBUG: Found pattern '{}' at position {}",
-                pattern, pattern_pos
-            );
-
             // Now search for the << after the pattern
             let after_pattern = pattern_pos + pattern.len();
             let search_area = &content[after_pattern..];
 
             if let Some(dict_start_offset) = search_area.find("<<") {
                 let dict_start_pos = after_pattern + dict_start_offset;
-                eprintln!(
-                    "DEBUG: Found '<<' at position {} (offset {} from pattern)",
-                    dict_start_pos, dict_start_offset
-                );
 
                 // Restore original position
                 self.reader.seek(SeekFrom::Start(original_pos)).ok();
                 return Some(dict_start_pos as u64);
             } else {
-                eprintln!("DEBUG: Could not find '<<' after pattern");
             }
         }
 
-        eprintln!("DEBUG: Pattern '{}' not found in file", pattern);
         // Restore original position
         self.reader.seek(SeekFrom::Start(original_pos)).ok();
         None
@@ -1164,7 +1187,7 @@ impl<R: Read + Seek> PdfReader<R> {
             crate::parser::objects::PdfName,
             crate::parser::objects::PdfObject,
         >,
-        obj_num: u32,
+        _obj_num: u32,
     ) -> ParseResult<()> {
         use crate::parser::objects::{PdfArray, PdfName, PdfObject};
         use std::collections::HashMap;
@@ -1189,7 +1212,6 @@ impl<R: Read + Seek> PdfReader<R> {
                         ]);
                         result_dict
                             .insert(PdfName("MediaBox".to_string()), PdfObject::Array(mediabox));
-                        eprintln!("DEBUG: Added MediaBox for object {}: {:?}", obj_num, values);
                     }
                 }
             }
@@ -1209,10 +1231,6 @@ impl<R: Read + Seek> PdfReader<R> {
                             PdfName("Contents".to_string()),
                             PdfObject::Reference(obj_ref, gen_ref),
                         );
-                        eprintln!(
-                            "DEBUG: Added Contents reference for object {}: {} {} R",
-                            obj_num, obj_ref, gen_ref
-                        );
                     }
                 }
             }
@@ -1224,33 +1242,18 @@ impl<R: Read + Seek> PdfReader<R> {
                 PdfName("Parent".to_string()),
                 PdfObject::Reference(113, 0), // Always point to our reconstructed Pages object
             );
-            eprintln!(
-                "DEBUG: Added Parent reference for object {}: 113 0 R",
-                obj_num
-            );
         }
 
         // Parse Resources (improved implementation)
         if dict_content.contains("/Resources") {
-            eprintln!(
-                "DEBUG: Found Resources in object {}, content: {}",
-                obj_num,
-                dict_content.chars().take(200).collect::<String>()
-            );
-
             if let Ok(parsed_resources) = self.parse_resources_from_content(&dict_content) {
                 result_dict.insert(PdfName("Resources".to_string()), parsed_resources);
-                eprintln!("DEBUG: Added parsed Resources for object {}", obj_num);
             } else {
                 // Fallback to empty Resources
                 let resources = HashMap::new();
                 result_dict.insert(
                     PdfName("Resources".to_string()),
                     PdfObject::Dictionary(crate::parser::objects::PdfDictionary(resources)),
-                );
-                eprintln!(
-                    "DEBUG: Added empty Resources for object {} (parsing failed)",
-                    obj_num
                 );
             }
         }
@@ -1277,13 +1280,33 @@ impl<R: Read + Seek> PdfReader<R> {
 
         if is_circular {
             eprintln!(
-                "DEBUG: Circular reconstruction detected for object {} {} - breaking cycle with null object",
+                "Warning: Circular reconstruction detected for object {} {} - attempting manual extraction",
                 obj_num, gen_num
             );
-            // Return null object to break cycle
-            self.object_cache
-                .insert((obj_num, gen_num), PdfObject::Null);
-            return Ok(&self.object_cache[&(obj_num, gen_num)]);
+
+            // Instead of immediately returning Null, try to manually extract the object
+            // This is particularly important for stream objects where /Length creates
+            // a false circular dependency, but the stream data is actually available
+            match self.extract_object_or_stream_manually(obj_num) {
+                Ok(obj) => {
+                    eprintln!(
+                        "         Successfully extracted object {} {} manually despite circular reference",
+                        obj_num, gen_num
+                    );
+                    self.object_cache.insert((obj_num, gen_num), obj);
+                    return Ok(&self.object_cache[&(obj_num, gen_num)]);
+                }
+                Err(e) => {
+                    eprintln!(
+                        "         Manual extraction failed: {} - breaking cycle with null object",
+                        e
+                    );
+                    // Only return Null if we truly can't reconstruct it
+                    self.object_cache
+                        .insert((obj_num, gen_num), PdfObject::Null);
+                    return Ok(&self.object_cache[&(obj_num, gen_num)]);
+                }
+            }
         }
 
         // PROTECTION 2: Depth limit check
@@ -1296,10 +1319,6 @@ impl<R: Read + Seek> PdfReader<R> {
             })?
             .len() as u32;
         if current_depth >= self.max_reconstruction_depth {
-            eprintln!(
-                "DEBUG: Maximum reconstruction depth ({}) exceeded for object {} {}",
-                self.max_reconstruction_depth, obj_num, gen_num
-            );
             return Err(ParseError::SyntaxError {
                 position: 0,
                 message: format!(
@@ -1308,11 +1327,6 @@ impl<R: Read + Seek> PdfReader<R> {
                 ),
             });
         }
-
-        eprintln!(
-            "DEBUG: Attempting smart reconstruction for object {} {} (depth: {}/{})",
-            obj_num, gen_num, current_depth, self.max_reconstruction_depth
-        );
 
         // Mark as being reconstructed (prevents circular references)
         self.objects_being_reconstructed
@@ -1333,10 +1347,6 @@ impl<R: Read + Seek> PdfReader<R> {
                     Err(e) => {
                         // Last resort: create a null object
                         if self.options.lenient_syntax {
-                            eprintln!(
-                                "DEBUG: Creating null object for missing {} {}",
-                                obj_num, gen_num
-                            );
                             PdfObject::Null
                         } else {
                             // Unmark before returning error (best effort - ignore if mutex poisoned)
@@ -1370,10 +1380,6 @@ impl<R: Read + Seek> PdfReader<R> {
             in_use: true,
         };
         self.xref.add_entry(obj_num, xref_entry);
-        eprintln!(
-            "DEBUG: Successfully reconstructed and cached object {} {}",
-            obj_num, gen_num
-        );
 
         self.object_cache
             .get(&(obj_num, gen_num))
@@ -1482,7 +1488,7 @@ impl<R: Read + Seek> PdfReader<R> {
         }
     }
 
-    fn create_font_object(&self, obj_num: u32) -> PdfObject {
+    fn create_font_object(&self, _obj_num: u32) -> PdfObject {
         use super::objects::{PdfDictionary, PdfName, PdfObject};
         let mut font_dict = PdfDictionary::new();
         font_dict.insert(
@@ -1497,11 +1503,10 @@ impl<R: Read + Seek> PdfReader<R> {
             "BaseFont".to_string(),
             PdfObject::Name(PdfName("Helvetica".to_string())),
         );
-        eprintln!("DEBUG: Created synthetic Font object {}", obj_num);
         PdfObject::Dictionary(font_dict)
     }
 
-    fn create_xobject(&self, obj_num: u32) -> PdfObject {
+    fn create_xobject(&self, _obj_num: u32) -> PdfObject {
         use super::objects::{PdfDictionary, PdfName, PdfObject};
         let mut xobj_dict = PdfDictionary::new();
         xobj_dict.insert(
@@ -1512,11 +1517,10 @@ impl<R: Read + Seek> PdfReader<R> {
             "Subtype".to_string(),
             PdfObject::Name(PdfName("Form".to_string())),
         );
-        eprintln!("DEBUG: Created synthetic XObject {}", obj_num);
         PdfObject::Dictionary(xobj_dict)
     }
 
-    fn create_content_stream(&self, obj_num: u32) -> PdfObject {
+    fn create_content_stream(&self, _obj_num: u32) -> PdfObject {
         use super::objects::{PdfDictionary, PdfObject, PdfStream};
         let mut stream_dict = PdfDictionary::new();
         stream_dict.insert("Length".to_string(), PdfObject::Integer(0));
@@ -1525,15 +1529,13 @@ impl<R: Read + Seek> PdfReader<R> {
             dict: stream_dict,
             data: Vec::new(),
         };
-        eprintln!("DEBUG: Created synthetic content stream {}", obj_num);
         PdfObject::Stream(stream)
     }
 
-    fn create_resources_dict(&self, obj_num: u32) -> PdfObject {
+    fn create_resources_dict(&self, _obj_num: u32) -> PdfObject {
         use super::objects::{PdfArray, PdfDictionary, PdfObject};
         let mut res_dict = PdfDictionary::new();
         res_dict.insert("ProcSet".to_string(), PdfObject::Array(PdfArray::new()));
-        eprintln!("DEBUG: Created synthetic Resources dict {}", obj_num);
         PdfObject::Dictionary(res_dict)
     }
 
@@ -1595,11 +1597,6 @@ impl<R: Read + Seek> PdfReader<R> {
 
                 if let Some(dict_end) = dict_end {
                     let dict_content = &search_area[dict_start + 2..dict_end];
-                    eprintln!(
-                        "DEBUG: Found object {} dictionary content: '{}'",
-                        obj_num,
-                        dict_content.chars().take(500).collect::<String>()
-                    );
 
                     // Manually parse the object content based on object number
                     let mut result_dict = HashMap::new();
@@ -1609,11 +1606,6 @@ impl<R: Read + Seek> PdfReader<R> {
                     if dict_content.contains("/Type/Catalog")
                         || dict_content.contains("/Type /Catalog")
                     {
-                        eprintln!(
-                            "DEBUG: Detected /Type/Catalog in object {}, parsing as catalog",
-                            obj_num
-                        );
-
                         result_dict.insert(
                             PdfName("Type".to_string()),
                             PdfObject::Name(PdfName("Catalog".to_string())),
@@ -1639,10 +1631,6 @@ impl<R: Read + Seek> PdfReader<R> {
                                         result_dict.insert(
                                             PdfName("Pages".to_string()),
                                             PdfObject::Reference(obj, gen),
-                                        );
-                                        eprintln!(
-                                            "DEBUG: Parsed /Pages {} {} R from catalog",
-                                            obj, gen
                                         );
                                     }
                                 }
@@ -1688,7 +1676,6 @@ impl<R: Read + Seek> PdfReader<R> {
                             // Check if it's a reference or dictionary
                             if after_acro.trim_start().starts_with("<<") {
                                 // It's an inline dictionary, skip for now (too complex)
-                                eprintln!("DEBUG: /AcroForm is inline dictionary, skipping");
                             } else {
                                 let parts: Vec<&str> = after_acro.split_whitespace().collect();
                                 if parts.len() >= 3 {
@@ -1705,8 +1692,6 @@ impl<R: Read + Seek> PdfReader<R> {
                                 }
                             }
                         }
-
-                        eprintln!("DEBUG: Generic catalog parsing completed for object {} with {} entries", obj_num, result_dict.len());
                     } else if obj_num == 102 {
                         // Verify this is actually a catalog before reconstructing
                         if dict_content.contains("/Type /Catalog") {
@@ -1733,7 +1718,6 @@ impl<R: Read + Seek> PdfReader<R> {
                             }
                         } else {
                             // This object 102 is not a catalog, don't reconstruct it
-                            eprintln!("DEBUG: Object 102 is not a catalog (content: '{}'), skipping reconstruction", dict_content.trim());
                             // Restore original position
                             self.reader.seek(SeekFrom::Start(original_pos)).ok();
                             return Err(ParseError::SyntaxError {
@@ -1745,7 +1729,6 @@ impl<R: Read + Seek> PdfReader<R> {
                         }
                     } else if obj_num == 113 {
                         // Object 113 is the main Pages object - need to find all Page objects
-                        eprintln!("DEBUG: Creating object 113 as main Pages object with real page references");
 
                         result_dict.insert(
                             PdfName("Type".to_string()),
@@ -1755,20 +1738,10 @@ impl<R: Read + Seek> PdfReader<R> {
                         // Find all Page objects in the PDF
                         let page_refs = match self.find_page_objects() {
                             Ok(refs) => refs,
-                            Err(e) => {
-                                eprintln!(
-                                    "DEBUG: Failed to find page objects: {:?}, using empty array",
-                                    e
-                                );
+                            Err(_e) => {
                                 vec![]
                             }
                         };
-
-                        eprintln!(
-                            "DEBUG: Found {} page objects for 113 Kids array: {:?}",
-                            page_refs.len(),
-                            page_refs
-                        );
 
                         // Set count based on actual found pages
                         let page_count = if page_refs.is_empty() {
@@ -1791,7 +1764,6 @@ impl<R: Read + Seek> PdfReader<R> {
                         );
                     } else if obj_num == 114 {
                         // Parse object 114 - this should be a Pages object based on the string output
-                        eprintln!("DEBUG: Parsing object 114 as Pages node");
 
                         result_dict.insert(
                             PdfName("Type".to_string()),
@@ -1801,20 +1773,10 @@ impl<R: Read + Seek> PdfReader<R> {
                         // Find all Page objects in the PDF
                         let page_refs = match self.find_page_objects() {
                             Ok(refs) => refs,
-                            Err(e) => {
-                                eprintln!(
-                                    "DEBUG: Failed to find page objects: {:?}, using empty array",
-                                    e
-                                );
+                            Err(_e) => {
                                 vec![]
                             }
                         };
-
-                        eprintln!(
-                            "DEBUG: Found {} page objects for Kids array: {:?}",
-                            page_refs.len(),
-                            page_refs
-                        );
 
                         // Set count based on actual found pages
                         let page_count = if page_refs.is_empty() {
@@ -1835,14 +1797,8 @@ impl<R: Read + Seek> PdfReader<R> {
                             PdfName("Kids".to_string()),
                             PdfObject::Array(PdfArray(kids_array)),
                         );
-
-                        eprintln!(
-                            "DEBUG: Object 114 created as Pages node with {} Kids",
-                            page_count
-                        );
                     } else if self.is_page_object(obj_num) {
                         // This is a page object - parse the page dictionary
-                        eprintln!("DEBUG: Manually reconstructing Page object {}", obj_num);
 
                         result_dict.insert(
                             PdfName("Type".to_string()),
@@ -1860,11 +1816,6 @@ impl<R: Read + Seek> PdfReader<R> {
                     // Restore original position
                     self.reader.seek(SeekFrom::Start(original_pos)).ok();
 
-                    eprintln!(
-                        "DEBUG: Manually created object {} with {} entries",
-                        obj_num,
-                        result_dict.len()
-                    );
                     return Ok(PdfDictionary(result_dict));
                 }
             }
@@ -1875,7 +1826,6 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // Special case: if object 113 or 114 was not found in PDF, create fallback objects
         if obj_num == 113 {
-            eprintln!("DEBUG: Object 113 not found in PDF content, creating fallback Pages object");
             let mut result_dict = HashMap::new();
             result_dict.insert(
                 PdfName("Type".to_string()),
@@ -1885,20 +1835,10 @@ impl<R: Read + Seek> PdfReader<R> {
             // Find all Page objects in the PDF
             let page_refs = match self.find_page_objects() {
                 Ok(refs) => refs,
-                Err(e) => {
-                    eprintln!(
-                        "DEBUG: Failed to find page objects: {:?}, using empty array",
-                        e
-                    );
+                Err(_e) => {
                     vec![]
                 }
             };
-
-            eprintln!(
-                "DEBUG: Found {} page objects for fallback 113 Kids array: {:?}",
-                page_refs.len(),
-                page_refs
-            );
 
             // Set count based on actual found pages
             let page_count = if page_refs.is_empty() {
@@ -1919,14 +1859,8 @@ impl<R: Read + Seek> PdfReader<R> {
                 PdfObject::Array(PdfArray(kids_array)),
             );
 
-            eprintln!(
-                "DEBUG: Created fallback object 113 with {} entries and {} Kids",
-                result_dict.len(),
-                page_count
-            );
             return Ok(PdfDictionary(result_dict));
         } else if obj_num == 114 {
-            eprintln!("DEBUG: Object 114 not found in PDF content, creating fallback Pages object");
             let mut result_dict = HashMap::new();
             result_dict.insert(
                 PdfName("Type".to_string()),
@@ -1936,20 +1870,10 @@ impl<R: Read + Seek> PdfReader<R> {
             // Find all Page objects in the PDF
             let page_refs = match self.find_page_objects() {
                 Ok(refs) => refs,
-                Err(e) => {
-                    eprintln!(
-                        "DEBUG: Failed to find page objects: {:?}, using empty array",
-                        e
-                    );
+                Err(_e) => {
                     vec![]
                 }
             };
-
-            eprintln!(
-                "DEBUG: Found {} page objects for fallback Kids array: {:?}",
-                page_refs.len(),
-                page_refs
-            );
 
             // Set count based on actual found pages
             let page_count = if page_refs.is_empty() {
@@ -1970,11 +1894,6 @@ impl<R: Read + Seek> PdfReader<R> {
                 PdfObject::Array(PdfArray(kids_array)),
             );
 
-            eprintln!(
-                "DEBUG: Created fallback object 114 with {} entries and {} Kids",
-                result_dict.len(),
-                page_count
-            );
             return Ok(PdfDictionary(result_dict));
         }
 
@@ -2043,12 +1962,6 @@ impl<R: Read + Seek> PdfReader<R> {
                     let dict_content_bytes = &search_area[dict_start_abs..dict_end_abs];
                     let dict_content = String::from_utf8_lossy(dict_content_bytes);
 
-                    eprintln!(
-                        "DEBUG: Found object {} dictionary content: '{}'",
-                        obj_num,
-                        dict_content.chars().take(200).collect::<String>()
-                    );
-
                     // Check if this is followed by stream data - be specific about positioning
                     let after_dict = &search_area[dict_end_abs + 2..];
                     if is_immediate_stream_start(after_dict) {
@@ -2100,7 +2013,15 @@ impl<R: Read + Seek> PdfReader<R> {
 
         if let Some(length_start) = dict_content.find("/Length ") {
             let length_part = &dict_content[length_start + 8..];
-            if let Some(space_pos) = length_part.find(' ') {
+
+            // Check if this is an indirect reference (e.g., "8 0 R")
+            // Pattern: number + space + number + space + "R"
+            let is_indirect_ref =
+                length_part.trim().contains(" R") || length_part.trim().contains(" 0 R");
+
+            if is_indirect_ref {
+                // Don't insert Length into dict - we'll use actual stream data length
+            } else if let Some(space_pos) = length_part.find(' ') {
                 let length_str = &length_part[..space_pos];
                 if let Ok(length) = length_str.parse::<i64>() {
                     dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
@@ -2111,6 +2032,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
                 }
             }
+        } else {
         }
 
         // Find stream data
@@ -2136,19 +2058,14 @@ impl<R: Read + Seek> PdfReader<R> {
                     let expected_length = *length as usize;
                     if stream_data.len() > expected_length {
                         stream_data = &stream_data[..expected_length];
+                    } else if stream_data.len() < expected_length {
                         eprintln!(
-                            "DEBUG: Trimmed stream data from {} to {} bytes based on Length field",
-                            after_dict[stream_data_start..endstream_pos].len(),
+                            "WARNING: Stream data ({} bytes) < Length ({} bytes)!",
+                            stream_data.len(),
                             expected_length
                         );
                     }
                 }
-
-                eprintln!(
-                    "DEBUG: Reconstructed stream object {} with {} bytes of stream data",
-                    obj_num,
-                    stream_data.len()
-                );
 
                 let stream = PdfStream {
                     dict: PdfDictionary(dict),
@@ -2156,6 +2073,7 @@ impl<R: Read + Seek> PdfReader<R> {
                 };
 
                 return Ok(PdfObject::Stream(stream));
+            } else {
             }
         }
 
@@ -2198,7 +2116,6 @@ impl<R: Read + Seek> PdfReader<R> {
 
                 if bracket_count == 0 {
                     let resources_content = &dict_content[abs_bracket_start..end_pos - 2];
-                    eprintln!("DEBUG: Parsing Resources content: {}", resources_content);
 
                     // Parse basic Resources structure
                     let mut resources_dict = HashMap::new();
@@ -2234,10 +2151,6 @@ impl<R: Read + Seek> PdfReader<R> {
                                                 font_dict.insert(
                                                     PdfName(font_name[1..].to_string()), // Remove leading /
                                                     PdfObject::Reference(obj_num, gen_num),
-                                                );
-                                                eprintln!(
-                                                    "DEBUG: Found font {} -> {} {} R",
-                                                    font_name, obj_num, gen_num
                                                 );
                                             }
                                         }
@@ -2469,20 +2382,16 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Find all page objects by scanning the entire PDF
     fn find_page_objects(&mut self) -> ParseResult<Vec<(u32, u16)>> {
-        eprintln!("DEBUG: Starting find_page_objects scan");
-
         // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
 
         // Read entire PDF content
         if self.reader.seek(SeekFrom::Start(0)).is_err() {
-            eprintln!("DEBUG: Failed to seek to start");
             return Ok(vec![]);
         }
 
         let mut buffer = Vec::new();
         if self.reader.read_to_end(&mut buffer).is_err() {
-            eprintln!("DEBUG: Failed to read PDF content");
             return Ok(vec![]);
         }
 
@@ -2494,7 +2403,6 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // Search for patterns like "n 0 obj" followed by "/Type /Page"
         let lines: Vec<&str> = content.lines().collect();
-        eprintln!("DEBUG: Scanning {} lines for Page objects", lines.len());
 
         for (i, line) in lines.iter().enumerate() {
             // Check for object start pattern "n 0 obj"
@@ -2508,7 +2416,6 @@ impl<R: Read + Seek> PdfReader<R> {
                                 if future_line.contains("/Type /Page")
                                     && !future_line.contains("/Type /Pages")
                                 {
-                                    eprintln!("DEBUG: Found Page object at object {}", obj_num);
                                     page_objects.push((obj_num, 0));
                                     break;
                                 }
@@ -2528,11 +2435,6 @@ impl<R: Read + Seek> PdfReader<R> {
         page_objects.sort();
         page_objects.dedup();
 
-        eprintln!(
-            "DEBUG: Found {} Page objects: {:?}",
-            page_objects.len(),
-            page_objects
-        );
         Ok(page_objects)
     }
 
@@ -2541,12 +2443,8 @@ impl<R: Read + Seek> PdfReader<R> {
         // FIX for Issue #83: Scan for actual catalog object, not just assume object 1
         // In signed PDFs, object 1 is often /Type/Sig (signature), not the catalog
 
-        eprintln!("DEBUG: Scanning for catalog object...");
-
         // Get all object numbers from xref
         let obj_numbers: Vec<u32> = self.xref.entries().keys().copied().collect();
-
-        eprintln!("DEBUG: Found {} objects in xref table", obj_numbers.len());
 
         // Scan objects looking for /Type/Catalog
         for obj_num in obj_numbers {
@@ -2557,7 +2455,6 @@ impl<R: Read + Seek> PdfReader<R> {
                     if let Some(type_obj) = dict.get("Type") {
                         if let Some(type_name) = type_obj.as_name() {
                             if type_name.0 == "Catalog" {
-                                eprintln!("DEBUG: Found catalog at object {} 0 R", obj_num);
                                 return Ok((obj_num, 0));
                             }
                             // Skip known non-catalog types
@@ -2565,10 +2462,6 @@ impl<R: Read + Seek> PdfReader<R> {
                                 || type_name.0 == "Pages"
                                 || type_name.0 == "Page"
                             {
-                                eprintln!(
-                                    "DEBUG: Skipping object {} 0 R (Type: {})",
-                                    obj_num, type_name.0
-                                );
                                 continue;
                             }
                         }
@@ -2578,16 +2471,11 @@ impl<R: Read + Seek> PdfReader<R> {
         }
 
         // Fallback: try common object numbers if scan failed
-        eprintln!("DEBUG: Catalog scan failed, trying common object numbers");
         for obj_num in [1, 2, 3, 4, 5] {
             if let Ok(obj) = self.get_object(obj_num, 0) {
                 if let Some(dict) = obj.as_dict() {
                     // Check if it has catalog-like properties (Pages key)
                     if dict.contains_key("Pages") {
-                        eprintln!(
-                            "DEBUG: Assuming object {} 0 R is catalog (has /Pages)",
-                            obj_num
-                        );
                         return Ok((obj_num, 0));
                     }
                 }
@@ -2606,11 +2494,6 @@ impl<R: Read + Seek> PdfReader<R> {
     ) -> ParseResult<&PdfDictionary> {
         use super::objects::{PdfArray, PdfName};
 
-        eprintln!(
-            "DEBUG: Creating synthetic Pages tree with {} pages",
-            page_refs.len()
-        );
-
         // Validate and repair page objects first
         let mut valid_page_refs = Vec::new();
         for (obj_num, gen_num) in page_refs {
@@ -2626,10 +2509,6 @@ impl<R: Read + Seek> PdfReader<R> {
 
                     // If no Type but has page-like properties, treat as page
                     if page_dict.contains_key("MediaBox") || page_dict.contains_key("Contents") {
-                        eprintln!(
-                            "DEBUG: Assuming {} {} R is a Page (missing Type)",
-                            obj_num, gen_num
-                        );
                         valid_page_refs.push((*obj_num, *gen_num));
                     }
                 }
@@ -2642,12 +2521,6 @@ impl<R: Read + Seek> PdfReader<R> {
                 message: "No valid page objects found for synthetic Pages tree".to_string(),
             });
         }
-
-        eprintln!(
-            "DEBUG: Found {} valid page objects out of {}",
-            valid_page_refs.len(),
-            page_refs.len()
-        );
 
         // Create hierarchical tree for many pages (more than 10)
         if valid_page_refs.len() > 10 {
@@ -2716,11 +2589,6 @@ impl<R: Read + Seek> PdfReader<R> {
     ) -> ParseResult<&PdfDictionary> {
         use super::objects::{PdfArray, PdfName};
 
-        eprintln!(
-            "DEBUG: Creating hierarchical Pages tree with {} pages",
-            page_refs.len()
-        );
-
         const PAGES_PER_NODE: usize = 10; // Max pages per intermediate node
 
         // Split pages into groups
@@ -2782,11 +2650,6 @@ impl<R: Read + Seek> PdfReader<R> {
         let root_key = (u32::MAX - 1, 0);
         self.object_cache
             .insert(root_key, PdfObject::Dictionary(root_pages_dict));
-
-        eprintln!(
-            "DEBUG: Created hierarchical tree with {} intermediate nodes",
-            intermediate_nodes.len()
-        );
 
         // Return reference to cached dictionary
         if let PdfObject::Dictionary(dict) = &self.object_cache[&root_key] {

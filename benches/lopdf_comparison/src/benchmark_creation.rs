@@ -105,9 +105,7 @@ fn bench_oxidize_simple() -> BenchmarkResult {
 
     println!(
         "  oxidize-pdf: {:.2} pages/sec | {} bytes | {:.2}ms",
-        result.pages_per_second,
-        result.file_size_bytes,
-        result.duration_ms
+        result.pages_per_second, result.file_size_bytes, result.duration_ms
     );
 
     result
@@ -172,7 +170,8 @@ fn bench_lopdf_simple() -> BenchmarkResult {
         "Count" => NUM_PAGES as i64,
         "Kids" => page_ids.into_iter().map(lopdf::Object::Reference).collect::<Vec<_>>(),
     };
-    doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+    doc.objects
+        .insert(pages_id, lopdf::Object::Dictionary(pages_dict));
 
     let catalog_id = doc.add_object(lopdf::dictionary! {
         "Type" => "Catalog",
@@ -196,13 +195,15 @@ fn bench_lopdf_simple() -> BenchmarkResult {
         file_size_bytes: pdf_bytes.len(),
     };
 
-    std::fs::write("benches/lopdf_comparison/results/lopdf_simple.pdf", pdf_bytes).ok();
+    std::fs::write(
+        "benches/lopdf_comparison/results/lopdf_simple.pdf",
+        pdf_bytes,
+    )
+    .ok();
 
     println!(
         "  lopdf:       {:.2} pages/sec | {} bytes | {:.2}ms",
-        result.pages_per_second,
-        result.file_size_bytes,
-        result.duration_ms
+        result.pages_per_second, result.file_size_bytes, result.duration_ms
     );
 
     result
@@ -279,9 +280,7 @@ fn bench_oxidize_medium() -> BenchmarkResult {
 
     println!(
         "  oxidize-pdf: {:.2} pages/sec | {} bytes | {:.2}ms",
-        result.pages_per_second,
-        result.file_size_bytes,
-        result.duration_ms
+        result.pages_per_second, result.file_size_bytes, result.duration_ms
     );
 
     result
@@ -329,11 +328,7 @@ fn bench_lopdf_medium() -> BenchmarkResult {
         content.push_str("0.27 0.51 0.71 rg\n");
         for i in 0..5 {
             let height = ((page_num + i) * 13) % 100 + 20;
-            content.push_str(&format!(
-                "{} 600 60 {} re f\n",
-                100 + i * 80,
-                height
-            ));
+            content.push_str(&format!("{} 600 60 {} re f\n", 100 + i * 80, height));
         }
 
         let content_id = doc.add_object(lopdf::Stream::new(
@@ -362,7 +357,8 @@ fn bench_lopdf_medium() -> BenchmarkResult {
         "Count" => NUM_PAGES as i64,
         "Kids" => page_ids.into_iter().map(lopdf::Object::Reference).collect::<Vec<_>>(),
     };
-    doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+    doc.objects
+        .insert(pages_id, lopdf::Object::Dictionary(pages_dict));
 
     let catalog_id = doc.add_object(lopdf::dictionary! {
         "Type" => "Catalog",
@@ -394,9 +390,7 @@ fn bench_lopdf_medium() -> BenchmarkResult {
 
     println!(
         "  lopdf:       {:.2} pages/sec | {} bytes | {:.2}ms",
-        result.pages_per_second,
-        result.file_size_bytes,
-        result.duration_ms
+        result.pages_per_second, result.file_size_bytes, result.duration_ms
     );
 
     result
@@ -457,9 +451,7 @@ fn bench_oxidize_high() -> BenchmarkResult {
 
     println!(
         "  oxidize-pdf: {:.2} pages/sec | {} bytes | {:.2}ms",
-        result.pages_per_second,
-        result.file_size_bytes,
-        result.duration_ms
+        result.pages_per_second, result.file_size_bytes, result.duration_ms
     );
 
     result
@@ -531,7 +523,8 @@ fn bench_lopdf_high() -> BenchmarkResult {
         "Count" => NUM_PAGES as i64,
         "Kids" => page_ids.into_iter().map(lopdf::Object::Reference).collect::<Vec<_>>(),
     };
-    doc.objects.insert(pages_id, lopdf::Object::Dictionary(pages_dict));
+    doc.objects
+        .insert(pages_id, lopdf::Object::Dictionary(pages_dict));
 
     let catalog_id = doc.add_object(lopdf::dictionary! {
         "Type" => "Catalog",
@@ -555,17 +548,11 @@ fn bench_lopdf_high() -> BenchmarkResult {
         file_size_bytes: pdf_bytes.len(),
     };
 
-    std::fs::write(
-        "benches/lopdf_comparison/results/lopdf_high.pdf",
-        pdf_bytes,
-    )
-    .ok();
+    std::fs::write("benches/lopdf_comparison/results/lopdf_high.pdf", pdf_bytes).ok();
 
     println!(
         "  lopdf:       {:.2} pages/sec | {} bytes | {:.2}ms",
-        result.pages_per_second,
-        result.file_size_bytes,
-        result.duration_ms
+        result.pages_per_second, result.file_size_bytes, result.duration_ms
     );
 
     result
@@ -587,17 +574,16 @@ fn print_summary(results: &[BenchmarkResult]) {
     println!("==========\n");
 
     for test in &["simple", "medium", "high_complexity"] {
-        let oxidize = results.iter().find(|r| {
-            r.library == "oxidize-pdf" && r.test_name == *test
-        });
-        let lopdf_result = results.iter().find(|r| {
-            r.library == "lopdf" && r.test_name == *test
-        });
+        let oxidize = results
+            .iter()
+            .find(|r| r.library == "oxidize-pdf" && r.test_name == *test);
+        let lopdf_result = results
+            .iter()
+            .find(|r| r.library == "lopdf" && r.test_name == *test);
 
         if let (Some(ox), Some(lo)) = (oxidize, lopdf_result) {
             let speedup = ox.pages_per_second / lo.pages_per_second;
-            let size_diff =
-                ((ox.file_size_bytes as f64 / lo.file_size_bytes as f64) - 1.0) * 100.0;
+            let size_diff = ((ox.file_size_bytes as f64 / lo.file_size_bytes as f64) - 1.0) * 100.0;
 
             println!("Test: {}", test);
             println!(

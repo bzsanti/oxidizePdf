@@ -16,9 +16,8 @@ use std::path::{Path, PathBuf};
 use image::{DynamicImage, GenericImageView, ImageBuffer, ImageFormat as ImageLibFormat, Luma};
 
 /// PDF transformation matrix (a, b, c, d, e, f)
-/// Represents: [a c e] [x]   [a*x + c*y + e]
-///             [b d f] [y] = [b*x + d*y + f]
-///             [0 0 1] [1]   [      1      ]
+///
+/// Represents a 3x3 matrix: `[a c e; b d f; 0 0 1]` that transforms point `(x,y)` to `(a*x + c*y + e, b*x + d*y + f)`
 #[derive(Debug, Clone)]
 pub struct TransformMatrix {
     pub a: f64, // x scaling
@@ -231,8 +230,6 @@ impl ImageExtractor {
 
         // If no XObjects found via resources, try alternative method
         if extracted.is_empty() {
-            eprintln!("DEBUG: No XObjects found via resources, trying content stream analysis...");
-
             // Analyze content streams for image references
             if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
                 for stream_data in &content_streams {
@@ -604,10 +601,6 @@ impl ImageExtractor {
         // Convert to string for parsing
         let content = String::from_utf8_lossy(stream_data);
 
-        eprintln!(
-            "DEBUG: Content stream analysis for page {}:",
-            page_number + 1
-        );
         eprintln!("       Content: {}", content);
 
         // Parse transformation matrices and image references together
@@ -615,11 +608,6 @@ impl ImageExtractor {
         let image_with_transform = self.parse_images_with_transformations(&content)?;
 
         for (image_name, transform_matrix) in image_with_transform {
-            eprintln!(
-                "DEBUG: Found XObject reference: /{} with transform: {:?}",
-                image_name, transform_matrix
-            );
-
             // Try to find this object by scanning all objects in the document
             if let Some(mut extracted_image) =
                 self.find_and_extract_xobject_by_name(&image_name, page_number, *image_index)?
@@ -645,8 +633,6 @@ impl ImageExtractor {
         page_number: usize,
         image_index: usize,
     ) -> OperationResult<Option<ExtractedImage>> {
-        eprintln!("DEBUG: Searching for XObject named '{}'", name);
-
         // This is a brute force approach - scan through objects looking for image streams
         // In a real implementation, we would have better object mapping, but for now
         // this should work for common landscape-in-portrait cases
@@ -658,13 +644,11 @@ impl ImageExtractor {
                 if let Some(extracted) =
                     self.try_extract_image_from_object(&obj, page_number, image_index, name)?
                 {
-                    eprintln!("DEBUG: Found image in object {}", obj_num);
                     return Ok(Some(extracted));
                 }
             }
         }
 
-        eprintln!("DEBUG: Could not find XObject '{}'", name);
         Ok(None)
     }
 
@@ -682,22 +666,17 @@ impl ImageExtractor {
                 stream.dict.0.get(&PdfName("Subtype".to_string()))
             {
                 if subtype.0 == "Image" {
-                    eprintln!("DEBUG: Found Image stream, attempting extraction...");
                     return self.extract_image_xobject(stream, page_number, image_index);
                 }
             }
 
             // Also check for streams that might be images but don't have proper Subtype
-            if let Some(PdfObject::Integer(width)) =
+            if let Some(PdfObject::Integer(_width)) =
                 stream.dict.0.get(&PdfName("Width".to_string()))
             {
-                if let Some(PdfObject::Integer(height)) =
+                if let Some(PdfObject::Integer(_height)) =
                     stream.dict.0.get(&PdfName("Height".to_string()))
                 {
-                    eprintln!(
-                        "DEBUG: Found stream with Width/Height ({}x{}), treating as image",
-                        width, height
-                    );
                     return self.extract_image_xobject(stream, page_number, image_index);
                 }
             }
@@ -733,10 +712,6 @@ impl ImageExtractor {
                         parts[5].parse::<f64>(),
                     ) {
                         current_matrix = Some(TransformMatrix::new(a, b, c, d, e, f));
-                        eprintln!(
-                            "DEBUG: Found transformation matrix: {} {} {} {} {} {}",
-                            a, b, c, d, e, f
-                        );
                     }
                 }
             }
@@ -748,10 +723,6 @@ impl ImageExtractor {
                     if part.starts_with('/') && !part.contains("Do") {
                         let image_name = part[1..].to_string(); // Remove the '/'
                         results.push((image_name, current_matrix.clone()));
-                        eprintln!(
-                            "DEBUG: Parsed image '{}' with matrix: {:?}",
-                            part, current_matrix
-                        );
                     }
                 }
             }
@@ -770,10 +741,8 @@ impl ImageExtractor {
     fn apply_transformation_to_image(
         &self,
         mut extracted_image: ExtractedImage,
-        matrix: &TransformMatrix,
+        _matrix: &TransformMatrix,
     ) -> OperationResult<ExtractedImage> {
-        eprintln!("DEBUG: Applying transformation to image: {:?}", matrix);
-
         #[cfg(feature = "external-images")]
         {
             // Read the extracted image file
@@ -785,7 +754,6 @@ impl ImageExtractor {
             })?;
 
             // IGNORE TRANSFORMATION FOR NOW - FOCUS ON STRIDE PROBLEM
-            eprintln!("DEBUG: Skipping transformation, focusing on stride correction");
             let transformed_img =
                 self.fix_stride_problem(img, extracted_image.width, extracted_image.height)?;
 
@@ -835,17 +803,10 @@ impl ImageExtractor {
             extracted_image.file_path = transformed_path;
             extracted_image.width = new_width;
             extracted_image.height = new_height;
-
-            eprintln!(
-                "DEBUG: Saved transformed image to: {}",
-                extracted_image.file_path.display()
-            );
         }
 
         #[cfg(not(feature = "external-images"))]
-        {
-            eprintln!("DEBUG: External-images feature not enabled, skipping transformation");
-        }
+        {}
 
         Ok(extracted_image)
     }
@@ -902,16 +863,9 @@ impl ImageExtractor {
         original_width: u32,
         original_height: u32,
     ) -> OperationResult<DynamicImage> {
-        eprintln!(
-            "DEBUG: Fixing stride problem for {}x{} image",
-            original_width, original_height
-        );
-
         // Convert to raw grayscale data
         let gray_img = img.to_luma8();
         let pixel_data = gray_img.as_raw();
-
-        eprintln!("DEBUG: Image has {} bytes of pixel data", pixel_data.len());
 
         // Try different row strides to fix misalignment
         let bytes_per_row = original_width as usize;
@@ -929,20 +883,10 @@ impl ImageExtractor {
             min_bytes_per_row + 4,          // +4 padding
         ];
 
-        eprintln!(
-            "DEBUG: Trying {} different stride alignments",
-            possible_strides.len()
-        );
-
-        for (i, &stride) in possible_strides.iter().enumerate() {
+        for (_i, &stride) in possible_strides.iter().enumerate() {
             let expected_total = stride * original_height as usize;
 
             if expected_total <= pixel_data.len() {
-                eprintln!(
-                    "DEBUG: Trying stride {}: {} bytes/row (total needed: {})",
-                    i, stride, expected_total
-                );
-
                 // Extract using this stride
                 let mut corrected_data = Vec::new();
                 for row in 0..original_height {
@@ -964,24 +908,13 @@ impl ImageExtractor {
                         original_height,
                         corrected_data,
                     ) {
-                        eprintln!(
-                            "DEBUG: Successfully created corrected image with stride {}",
-                            stride
-                        );
                         return Ok(DynamicImage::ImageLuma8(corrected_img));
                     }
                 }
             } else {
-                eprintln!(
-                    "DEBUG: Stride {} too large (need {}, have {})",
-                    stride,
-                    expected_total,
-                    pixel_data.len()
-                );
             }
         }
 
-        eprintln!("DEBUG: No stride correction worked, returning original");
         Ok(img)
     }
 
@@ -1285,11 +1218,6 @@ impl ImageExtractor {
         let correct_stride =
             self.detect_correct_row_stride(data, width, height, &possible_strides)?;
 
-        eprintln!(
-            "DEBUG: width={}, height={}, min_bytes={}, detected_stride={}",
-            width, height, min_bytes_per_row, correct_stride
-        );
-
         for row in 0..height {
             let row_start = row as usize * correct_stride;
 
@@ -1336,12 +1264,6 @@ impl ImageExtractor {
             if expected_size <= data.len() && (data.len() - expected_size) < stride * 2 {
                 // Allow some tolerance
 
-                eprintln!(
-                    "DEBUG: Selected stride {} (expected_size={}, actual={})",
-                    stride,
-                    expected_size,
-                    data.len()
-                );
                 return Ok(stride);
             }
         }
@@ -1349,18 +1271,10 @@ impl ImageExtractor {
         // If no stride fits perfectly, calculate from data length
         let calculated_stride = data.len() / height as usize;
         if calculated_stride >= min_bytes_per_row {
-            eprintln!(
-                "DEBUG: Calculated stride from data length: {}",
-                calculated_stride
-            );
             return Ok(calculated_stride);
         }
 
         // Fallback to minimum
-        eprintln!(
-            "DEBUG: Using fallback minimum stride: {}",
-            min_bytes_per_row
-        );
         Ok(min_bytes_per_row)
     }
 

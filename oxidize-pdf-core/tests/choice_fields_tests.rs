@@ -136,7 +136,7 @@ fn test_listbox_to_dict() {
 #[test]
 fn test_choice_widget_creation() {
     let rect = Rectangle::new(Point::new(100.0, 100.0), Point::new(250.0, 125.0));
-    let widget = ChoiceWidget::new(rect.clone());
+    let widget = ChoiceWidget::new(rect);
 
     assert_eq!(widget.rect, rect);
     assert_eq!(widget.font, Font::Helvetica);
@@ -285,7 +285,7 @@ fn test_large_listbox() {
 #[test]
 fn test_widget_rect_dimensions() {
     let rect = Rectangle::new(Point::new(100.0, 200.0), Point::new(300.0, 250.0));
-    let widget = ChoiceWidget::new(rect.clone());
+    let widget = ChoiceWidget::new(rect);
 
     assert_eq!(widget.rect.width(), 200.0);
     assert_eq!(widget.rect.height(), 50.0);

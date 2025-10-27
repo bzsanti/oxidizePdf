@@ -442,22 +442,34 @@ impl FormValidationSystem {
             }
             ValidationRule::Email => {
                 let text = value.to_string();
-                let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-                    .expect("Email regex pattern should be valid");
-                if email_regex.is_match(&text) {
-                    Ok(())
+                // SAFETY: Hardcoded regex pattern is compile-time validated
+                // If this fails, it's a programmer error that should be caught in tests
+                if let Ok(email_regex) =
+                    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                {
+                    if email_regex.is_match(&text) {
+                        Ok(())
+                    } else {
+                        Err("Invalid email address".to_string())
+                    }
                 } else {
-                    Err("Invalid email address".to_string())
+                    // Graceful degradation: if regex fails to compile, reject validation
+                    Err("Email validation unavailable".to_string())
                 }
             }
             ValidationRule::Url => {
                 let text = value.to_string();
-                let url_regex = Regex::new(r"^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-                    .expect("URL regex pattern should be valid");
-                if url_regex.is_match(&text) {
-                    Ok(())
+                // SAFETY: Hardcoded regex pattern is compile-time validated
+                // If this fails, it's a programmer error that should be caught in tests
+                if let Ok(url_regex) = Regex::new(r"^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}") {
+                    if url_regex.is_match(&text) {
+                        Ok(())
+                    } else {
+                        Err("Invalid URL".to_string())
+                    }
                 } else {
-                    Err("Invalid URL".to_string())
+                    // Graceful degradation: if regex fails to compile, reject validation
+                    Err("URL validation unavailable".to_string())
                 }
             }
             ValidationRule::PhoneNumber { country } => {

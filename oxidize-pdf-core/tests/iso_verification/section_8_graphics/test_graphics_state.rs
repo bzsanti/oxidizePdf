@@ -4,7 +4,7 @@
 
 use crate::iso_verification::{create_basic_test_pdf, iso_test};
 use oxidize_pdf::verification::VerificationLevel;
-use oxidize_pdf::{Document, Font, Page, Color, Result as PdfResult};
+use oxidize_pdf::{Color, Document, Font, Page, Result as PdfResult};
 
 iso_test!(
     test_graphics_state_stack_level_2,
@@ -14,9 +14,9 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Graphics State Stack Test");
-        
+
         let mut page = Page::a4();
-        
+
         // Content that uses graphics state changes
         page.text()
             .set_font(Font::Helvetica, 16.0)
@@ -53,22 +53,18 @@ iso_test!(
     {
         let mut doc = Document::new();
         doc.set_title("Line Width Test");
-        
+
         let mut page = Page::a4();
-        
+
         page.text()
             .set_font(Font::Helvetica, 12.0)
             .at(50.0, 750.0)
             .write("Line Width Test")?;
 
         // Draw lines with different widths (if supported)
-        page.graphics()
-            .line(50.0, 700.0, 200.0, 700.0)
-            .stroke();
-            
-        page.graphics()
-            .line(50.0, 680.0, 200.0, 680.0)
-            .stroke();
+        page.graphics().line(50.0, 700.0, 200.0, 700.0).stroke();
+
+        page.graphics().line(50.0, 680.0, 200.0, 680.0).stroke();
 
         doc.add_page(page);
         let pdf_bytes = doc.to_bytes()?;

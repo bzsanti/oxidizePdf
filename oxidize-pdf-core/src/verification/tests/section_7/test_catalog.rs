@@ -2,19 +2,19 @@
 //!
 //! These tests verify document catalog structure compliance
 
-use super::super::{iso_test, create_basic_test_pdf};
+use super::super::{create_basic_test_pdf, iso_test};
 use crate::verification::{parser::parse_pdf, VerificationLevel};
 use crate::{Document, Font, Page, Result as PdfResult};
 
 iso_test!(
     test_catalog_type_entry_level_2,
-    "7.5.2.1", 
+    "7.5.2.1",
     VerificationLevel::GeneratesPdf,
     "Test passed".to_string(),
     {
         let pdf_bytes = create_basic_test_pdf(
             "Test passed".to_string(),
-            "Testing document catalog /Type entry"
+            "Testing document catalog /Type entry",
         )?;
 
         let passed = pdf_bytes.len() > 1000;
@@ -37,7 +37,7 @@ iso_test!(
     {
         let pdf_bytes = create_basic_test_pdf(
             "Test passed".to_string(),
-            "Testing catalog /Pages reference"
+            "Testing catalog /Pages reference",
         )?;
 
         // Parse and verify content

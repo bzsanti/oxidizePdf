@@ -8,7 +8,7 @@
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready for basic PDF functionality. Generate PDFs 2x faster than PDFSharp, with memory safety guarantees and a 5.2MB binary size.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready for basic PDF functionality with validated performance of 3,000-4,000 pages/second for realistic business documents, memory safety guarantees, and a compact 5.2MB binary size.
 
 ## Features
 
@@ -25,16 +25,27 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🅰️ **Custom Fonts** - Load and embed TrueType/OpenType fonts with full Unicode support
 - 🔍 **OCR Support** - Extract text from scanned PDFs using Tesseract OCR (v0.1.3+)
 - 🤖 **AI/RAG Integration** - Document chunking for LLM pipelines with sentence boundaries and metadata (v1.3.0+)
+- 📋 **Invoice Extraction** - Automatic structured data extraction from invoice PDFs with multi-language support (v1.6.2+)
 - 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
 ## 🎉 What's New
 
-**Latest: v1.3.0 - AI/RAG Integration:**
+**Latest: v1.6.2 - Invoice Data Extraction:**
+- 📋 **Structured Invoice Extraction** - Pattern-based field extraction with confidence scoring
+- 🌍 **Multi-Language Support** - Spanish, English, German, and Italian invoice formats
+- 🎯 **14 Field Types** - Invoice numbers, dates, amounts, VAT numbers, supplier/customer names, line items
+- 🔢 **Smart Number Parsing** - Language-aware decimal handling (1.234,56 vs 1,234.56)
+- 📊 **Confidence Scoring** - 0.0-1.0 confidence scores with configurable thresholds
+- 🔧 **Builder Pattern API** - Ergonomic configuration with sensible defaults
+- 📖 **Comprehensive Documentation** - 500+ line user guide with examples and troubleshooting
+- ⚡ **High Performance** - <100ms extraction for typical invoices, thread-safe extractor
+
+**v1.3.0 - AI/RAG Integration:**
 - 🤖 **Document Chunking for LLMs** - Production-ready chunking with 0.62ms for 100 pages
 - 📊 **Rich Metadata** - Page tracking, position info, confidence scores
 - ✂️ **Smart Boundaries** - Sentence boundary detection for semantic coherence
-- ⚡ **Exceptional Performance** - 161x better than target, 160K pages/second throughput
+- ⚡ **High Performance** - 3,000-4,000 pages/second for realistic business documents
 - 📚 **Complete Examples** - RAG pipeline with embeddings and vector store integration
 
 **Production-Ready Features (v1.2.3-v1.2.5):**
@@ -64,7 +75,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 **Significant improvements in PDF compatibility:**
 - 📈 **Better parsing**: Handles circular references, XRef streams, object streams
 - 🛡️ **Stack overflow protection** - Production-ready resilience against malformed PDFs
-- 🚀 **Performance**: 215+ PDFs/second processing speed
+- 🚀 **Performance**: 35.9 PDFs/second parsing speed (validated on 759 real-world PDFs)
 - ⚡ **Error recovery** - Multiple fallback strategies for corrupted files
 - 🔧 **Lenient parsing** - Graceful handling of malformed structures
 - 💾 **Memory optimization**: `OptimizedPdfReader` with LRU cache
@@ -74,7 +85,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 ## 🏆 Why oxidize-pdf?
 
 ### Performance & Efficiency
-- **2x faster than PDFSharp** - Process 215 PDFs/second
+- **Production-ready performance** - 3,000-4,000 pages/second generation, 35.9 PDFs/second parsing
 - **5.2 MB binary** - 3x smaller than PDFSharp, 40x smaller than IronPDF
 - **Zero dependencies** - No runtime, no Chrome, just a single binary
 - **Low memory usage** - Efficient streaming for large PDFs
@@ -179,6 +190,61 @@ fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+### Invoice Data Extraction (v1.6.2+)
+
+```rust
+use oxidize_pdf::Document;
+use oxidize_pdf::text::extraction::{TextExtractor, ExtractionOptions};
+use oxidize_pdf::text::invoice::{InvoiceExtractor, InvoiceField};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Open PDF invoice
+    let doc = Document::open("invoice.pdf")?;
+    let page = doc.get_page(1)?;
+
+    // Extract text from page
+    let text_extractor = TextExtractor::new();
+    let extracted = text_extractor.extract_text(&doc, page, &ExtractionOptions::default())?;
+
+    // Extract structured invoice data
+    let invoice_extractor = InvoiceExtractor::builder()
+        .with_language("es")           // Spanish invoices
+        .confidence_threshold(0.7)      // 70% minimum confidence
+        .build();
+
+    let invoice = invoice_extractor.extract(&extracted.fragments)?;
+
+    // Access extracted fields
+    println!("Extracted {} fields with {:.0}% overall confidence",
+        invoice.field_count(),
+        invoice.metadata.extraction_confidence * 100.0
+    );
+
+    for field in &invoice.fields {
+        match &field.field_type {
+            InvoiceField::InvoiceNumber(number) => {
+                println!("Invoice: {} ({:.0}% confidence)", number, field.confidence * 100.0);
+            }
+            InvoiceField::TotalAmount(amount) => {
+                println!("Total: €{:.2} ({:.0}% confidence)", amount, field.confidence * 100.0);
+            }
+            InvoiceField::InvoiceDate(date) => {
+                println!("Date: {} ({:.0}% confidence)", date, field.confidence * 100.0);
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+```
+
+**Supported Languages**: Spanish (ES), English (EN), German (DE), Italian (IT)
+
+**Extracted Fields**: Invoice number, dates, amounts (total/tax/net), VAT numbers, supplier/customer names, currency, line items
+
+See [docs/INVOICE_EXTRACTION_GUIDE.md](docs/INVOICE_EXTRACTION_GUIDE.md) for complete documentation.
 
 ### Custom Fonts Example
 
@@ -452,10 +518,14 @@ cargo run --example cjk_text_extraction
 
 ## Performance
 
-- **Parsing**: Fast for PDFs with basic features
-- **Generation**: Efficient for simple documents
-- **Memory efficient**: Streaming operations available
+**Validated Metrics** (based on comprehensive benchmarking):
+- **PDF Generation**: 3,000-4,000 pages/second for realistic business documents
+- **Complex Content**: 670 pages/second for dense analytics dashboards
+- **PDF Parsing**: 35.9 PDFs/second (98.8% success rate on 759 real-world PDFs)
+- **Memory Efficient**: Streaming operations available for large documents
 - **Pure Rust**: No external C dependencies for PDF operations
+
+See [PERFORMANCE_HONEST_REPORT.md](docs/PERFORMANCE_HONEST_REPORT.md) for detailed benchmarking methodology and results.
 
 ## Examples
 

@@ -1,17 +1,21 @@
 pub mod cmap;
 mod encoding;
-mod extraction;
+pub mod extraction;
 mod extraction_cmap;
 mod flow;
 mod font;
 pub mod font_manager;
 pub mod fonts;
 mod header_footer;
+pub mod invoice;
 mod layout;
 mod list;
 pub mod metrics;
 pub mod ocr;
+pub mod plaintext;
+pub mod structured;
 pub mod table;
+pub mod table_detection;
 pub mod validation;
 
 #[cfg(test)]
@@ -38,6 +42,7 @@ pub use ocr::{
     OcrOptions, OcrPostProcessor, OcrProcessingResult, OcrProvider, OcrRegion, OcrResult,
     OcrTextFragment, WordConfidence,
 };
+pub use plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor, PlainTextResult};
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
 pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 

@@ -6,11 +6,10 @@
 //! 3. Verifying the internal structure
 //! 4. Optionally validating with external tools
 
-use oxidize_pdf::{Document, Page, Font, Result};
 use oxidize_pdf::verification::{
-    verify_iso_requirement, IsoRequirement, VerificationLevel,
-    parser::parse_pdf
+    parser::parse_pdf, verify_iso_requirement, IsoRequirement, VerificationLevel,
 };
+use oxidize_pdf::{Document, Font, Page, Result};
 
 /// Test 7.5.2.1: Document catalog must have /Type /Catalog
 #[test]
@@ -43,24 +42,36 @@ fn test_iso_7_5_2_1_catalog_type_entry() -> Result<()> {
 
     // Verify the requirement
     let verification_result = verify_iso_requirement(&pdf_bytes, &requirement)?;
-    
-    assert!(verification_result.passed, 
-           "ISO 7.5.2.1 verification failed: {}", verification_result.details);
+
+    assert!(
+        verification_result.passed,
+        "ISO 7.5.2.1 verification failed: {}",
+        verification_result.details
+    );
 
     // Additional detailed verification: Parse the PDF and check catalog
     let parsed_pdf = parse_pdf(&pdf_bytes)?;
-    
+
     // Verify catalog exists and has correct type
     assert!(parsed_pdf.catalog.is_some(), "Document catalog must exist");
-    
+
     let catalog = parsed_pdf.catalog.unwrap();
-    assert!(catalog.contains_key("Type"), "Catalog must have /Type entry");
-    assert_eq!(catalog.get("Type"), Some(&"Catalog".to_string()), 
-              "Catalog /Type must be /Catalog");
+    assert!(
+        catalog.contains_key("Type"),
+        "Catalog must have /Type entry"
+    );
+    assert_eq!(
+        catalog.get("Type"),
+        Some(&"Catalog".to_string()),
+        "Catalog /Type must be /Catalog"
+    );
 
     // Verify PDF version is valid
-    assert!(parsed_pdf.version.starts_with("1."), 
-           "PDF version should be 1.x, got: {}", parsed_pdf.version);
+    assert!(
+        parsed_pdf.version.starts_with("1."),
+        "PDF version should be 1.x, got: {}",
+        parsed_pdf.version
+    );
 
     // Check that PDF has basic structure
     assert!(parsed_pdf.object_count > 0, "PDF must have objects");
@@ -98,21 +109,25 @@ fn test_iso_7_5_2_2_catalog_version_entry() -> Result<()> {
     doc.add_page(page);
     let pdf_bytes = doc.to_bytes()?;
 
-    // Verify the requirement  
+    // Verify the requirement
     let verification_result = verify_iso_requirement(&pdf_bytes, &requirement)?;
-    
+
     // This should fail since it's not implemented
-    assert!(!verification_result.passed, 
-           "ISO 7.5.2.2 should fail since /Version entry is not implemented");
+    assert!(
+        !verification_result.passed,
+        "ISO 7.5.2.2 should fail since /Version entry is not implemented"
+    );
     assert_eq!(verification_result.level, VerificationLevel::NotImplemented);
 
     // Parse and verify that Version entry is indeed missing from catalog
     let parsed_pdf = parse_pdf(&pdf_bytes)?;
-    
+
     if let Some(catalog) = &parsed_pdf.catalog {
         // Version entry should not be present (we rely on PDF header)
-        assert!(!catalog.contains_key("Version"), 
-               "Catalog should not have /Version entry (not implemented)");
+        assert!(
+            !catalog.contains_key("Version"),
+            "Catalog should not have /Version entry (not implemented)"
+        );
     }
 
     println!("✓ ISO 7.5.2.2: Correctly identified as not implemented");
@@ -140,18 +155,30 @@ fn test_catalog_pages_reference() -> Result<()> {
 
     // Parse and verify catalog structure
     let parsed_pdf = parse_pdf(&pdf_bytes)?;
-    
+
     // Verify catalog has Pages reference
-    assert!(parsed_pdf.catalog.is_some(), "Multi-page document must have catalog");
-    
+    assert!(
+        parsed_pdf.catalog.is_some(),
+        "Multi-page document must have catalog"
+    );
+
     let catalog = parsed_pdf.catalog.unwrap();
-    assert!(catalog.contains_key("Pages"), "Catalog must reference page tree");
-    
+    assert!(
+        catalog.contains_key("Pages"),
+        "Catalog must reference page tree"
+    );
+
     // Verify page tree structure
-    assert!(parsed_pdf.page_tree.is_some(), "Document must have page tree");
-    
+    assert!(
+        parsed_pdf.page_tree.is_some(),
+        "Document must have page tree"
+    );
+
     let page_tree = parsed_pdf.page_tree.unwrap();
-    assert_eq!(page_tree.root_type, "Pages", "Page tree root must be /Pages");
+    assert_eq!(
+        page_tree.root_type, "Pages",
+        "Page tree root must be /Pages"
+    );
     assert!(page_tree.page_count > 0, "Page tree must have page count");
 
     println!("✓ Multi-page catalog structure verified");
@@ -167,12 +194,18 @@ fn test_empty_document_catalog() -> Result<()> {
 
     // Parse and verify minimal catalog structure
     let parsed_pdf = parse_pdf(&pdf_bytes)?;
-    
+
     // Even empty document should have catalog
-    assert!(parsed_pdf.catalog.is_some(), "Empty document must still have catalog");
-    
+    assert!(
+        parsed_pdf.catalog.is_some(),
+        "Empty document must still have catalog"
+    );
+
     let catalog = parsed_pdf.catalog.unwrap();
-    assert!(catalog.contains_key("Type"), "Empty document catalog must have /Type");
+    assert!(
+        catalog.contains_key("Type"),
+        "Empty document catalog must have /Type"
+    );
     assert_eq!(catalog.get("Type"), Some(&"Catalog".to_string()));
 
     // Document should have valid structure
@@ -193,18 +226,18 @@ fn test_catalog_pdf_specification_compliance() -> Result<()> {
     doc.set_subject("Testing catalog compliance with ISO 32000-1:2008");
 
     let mut page = Page::a4();
-    
+
     // Add text to test font resources
     page.text()
         .set_font(Font::Helvetica, 16.0)
         .at(50.0, 750.0)
         .write("Comprehensive Catalog Test")?;
-        
+
     page.text()
         .set_font(Font::TimesRoman, 12.0)
         .at(50.0, 700.0)
         .write("This document tests the document catalog structure")?;
-        
+
     page.text()
         .set_font(Font::Courier, 10.0)
         .at(50.0, 650.0)
@@ -215,36 +248,44 @@ fn test_catalog_pdf_specification_compliance() -> Result<()> {
 
     // Comprehensive parsing and verification
     let parsed_pdf = parse_pdf(&pdf_bytes)?;
-    
+
     // 1. Catalog structure verification
     assert!(parsed_pdf.catalog.is_some(), "Document must have catalog");
     let catalog = parsed_pdf.catalog.unwrap();
-    
+
     // Required entries per ISO specification
-    assert!(catalog.contains_key("Type"), "Catalog missing required /Type");
+    assert!(
+        catalog.contains_key("Type"),
+        "Catalog missing required /Type"
+    );
     assert_eq!(catalog.get("Type"), Some(&"Catalog".to_string()));
-    
+
     // 2. Document structure verification
-    assert!(parsed_pdf.object_count >= 4, 
-           "Document should have at least 4 objects (catalog, page tree, page, content)");
-    
+    assert!(
+        parsed_pdf.object_count >= 4,
+        "Document should have at least 4 objects (catalog, page tree, page, content)"
+    );
+
     // 3. Cross-reference table verification
     assert!(parsed_pdf.xref_valid, "Cross-reference table must be valid");
-    
+
     // 4. Font usage verification (from content)
     assert!(!parsed_pdf.fonts.is_empty(), "Document should have fonts");
-    
+
     // 5. Version compliance
     let version_parts: Vec<&str> = parsed_pdf.version.split('.').collect();
-    assert!(version_parts.len() >= 2, "Version should have major.minor format");
-    
+    assert!(
+        version_parts.len() >= 2,
+        "Version should have major.minor format"
+    );
+
     println!("✓ Comprehensive catalog specification compliance verified");
     println!("  - Catalog structure: ✓");
     println!("  - Object count: {} ✓", parsed_pdf.object_count);
     println!("  - XRef validity: ✓");
     println!("  - Font resources: {} ✓", parsed_pdf.fonts.len());
     println!("  - PDF version: {} ✓", parsed_pdf.version);
-    
+
     Ok(())
 }
 
@@ -271,7 +312,7 @@ mod catalog_verification_tests {
         };
 
         let non_compliant_requirement = IsoRequirement {
-            id: "test.non_compliant".to_string(), 
+            id: "test.non_compliant".to_string(),
             name: "Test Non-Compliant Feature".to_string(),
             description: "A feature we know is not implemented".to_string(),
             iso_reference: "Test".to_string(),
@@ -290,14 +331,24 @@ mod catalog_verification_tests {
 
         // Test verification system responses
         let compliant_result = verify_iso_requirement(&pdf_bytes, &compliant_requirement).unwrap();
-        let non_compliant_result = verify_iso_requirement(&pdf_bytes, &non_compliant_requirement).unwrap();
+        let non_compliant_result =
+            verify_iso_requirement(&pdf_bytes, &non_compliant_requirement).unwrap();
 
         // Verify the verification system is working correctly
-        assert!(compliant_result.passed, "Verification system should pass compliant features");
-        assert!(!non_compliant_result.passed, "Verification system should fail non-compliant features");
-        
+        assert!(
+            compliant_result.passed,
+            "Verification system should pass compliant features"
+        );
+        assert!(
+            !non_compliant_result.passed,
+            "Verification system should fail non-compliant features"
+        );
+
         assert_eq!(compliant_result.level, VerificationLevel::ContentVerified);
-        assert_eq!(non_compliant_result.level, VerificationLevel::NotImplemented);
+        assert_eq!(
+            non_compliant_result.level,
+            VerificationLevel::NotImplemented
+        );
 
         println!("✓ Verification system accuracy confirmed");
     }

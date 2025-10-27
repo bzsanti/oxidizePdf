@@ -99,7 +99,10 @@ fn main() {
         content.push_str("BT\n");
         content.push_str("/F1 14 Tf\n");
         content.push_str("50 800 Td\n");
-        content.push_str(&format!("(Realistic Business Report - Page {}) Tj\n", page_num + 1));
+        content.push_str(&format!(
+            "(Realistic Business Report - Page {}) Tj\n",
+            page_num + 1
+        ));
         content.push_str("ET\n");
 
         // Add 5 paragraphs (matching oxidize-pdf)
@@ -111,9 +114,10 @@ fn main() {
             let text = generate_paragraph(page_num, para_idx);
 
             // PDF text escaping
-            let escaped = text.replace('\\', "\\\\")
-                             .replace('(', "\\(")
-                             .replace(')', "\\)");
+            let escaped = text
+                .replace('\\', "\\\\")
+                .replace('(', "\\(")
+                .replace(')', "\\)");
 
             content.push_str(&format!("50 {} Td\n", y_pos));
             content.push_str(&format!("({}) Tj\n", escaped));
@@ -129,10 +133,7 @@ fn main() {
         }
 
         // Create content stream
-        let content_id = doc.add_object(Stream::new(
-            dictionary! {},
-            content.into_bytes(),
-        ));
+        let content_id = doc.add_object(Stream::new(dictionary! {}, content.into_bytes()));
 
         // Create page object
         let page_id = doc.add_object(dictionary! {
@@ -186,15 +187,16 @@ fn main() {
     println!("   Pages generated: {}", page_count);
     println!("   Time elapsed:    {:.2}s", duration.as_secs_f64());
     println!("   Performance:     {:.2} pages/second", pages_per_sec);
-    println!("   File size:       {} bytes ({:.2} MB)",
-             buffer.len(),
-             buffer.len() as f64 / 1024.0 / 1024.0);
+    println!(
+        "   File size:       {} bytes ({:.2} MB)",
+        buffer.len(),
+        buffer.len() as f64 / 1024.0 / 1024.0
+    );
     println!("   Avg per page:    {} bytes", buffer.len() / page_count);
 
     // Save to file
     std::fs::create_dir_all("results").ok();
-    std::fs::write("results/lopdf_realistic.pdf", &buffer)
-        .expect("Failed to write PDF file");
+    std::fs::write("results/lopdf_realistic.pdf", &buffer).expect("Failed to write PDF file");
 
     println!("\n✅ PDF saved to: results/lopdf_realistic.pdf");
 
@@ -211,6 +213,7 @@ fn main() {
 
     std::fs::write(
         "results/lopdf_realistic.json",
-        serde_json::to_string_pretty(&results).unwrap()
-    ).ok();
+        serde_json::to_string_pretty(&results).unwrap(),
+    )
+    .ok();
 }

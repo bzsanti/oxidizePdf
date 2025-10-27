@@ -118,11 +118,6 @@ impl XRefStream {
                 vec![(0, size)]
             };
 
-        eprintln!(
-            "DEBUG: XRefStream parsing - Index: {:?}, W: {:?}",
-            index, widths
-        );
-
         // Calculate entry size from W array for XRef stream predictor handling
         let entry_size = widths.iter().sum::<usize>();
 
@@ -152,10 +147,6 @@ impl XRefStream {
                                 params_dict.insert(
                                     "Columns".to_string(),
                                     PdfObject::Integer(entry_size as i64),
-                                );
-                                eprintln!(
-                                    "DEBUG: Overriding /Columns with entry_size {} for XRef predictor",
-                                    entry_size
                                 );
                             }
                             apply_filter_with_params(&stream_data, filter, Some(&params_dict))?
@@ -188,11 +179,6 @@ impl XRefStream {
             stream_data
         };
 
-        eprintln!(
-            "DEBUG: XRefStream decoded data length: {} bytes",
-            decoded_data.len()
-        );
-
         Ok(XRefStream {
             dict: stream_dict,
             data: decoded_data,
@@ -213,25 +199,11 @@ impl XRefStream {
             });
         }
 
-        eprintln!(
-            "DEBUG: to_xref_entries - entry_size: {}, data.len: {}, index: {:?}",
-            entry_size,
-            self.data.len(),
-            self.index
-        );
-
         let mut data_offset = 0;
 
         for &(first_obj, count) in &self.index {
-            eprintln!(
-                "DEBUG: Processing index range: first_obj={}, count={}",
-                first_obj, count
-            );
-
             for i in 0..count {
                 if data_offset + entry_size > self.data.len() {
-                    eprintln!("DEBUG: Data truncated at offset {} (need {}, have {}), processed {} of {} entries",
-                              data_offset, data_offset + entry_size, self.data.len(), i, count);
                     return Err(ParseError::SyntaxError {
                         position: data_offset,
                         message: format!("Xref stream data truncated at obj {}", first_obj + i),

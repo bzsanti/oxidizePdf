@@ -6,7 +6,7 @@
 mod pdf_ocr_integration {
     use oxidize_pdf::operations::pdf_ocr_converter::{ConversionOptions, PdfOcrConverter};
     use oxidize_pdf::text::{OcrOptions, RustyTesseractProvider};
-    use oxidize_pdf::{Document, Page, Font, Color};
+    use oxidize_pdf::{Color, Document, Font, Page};
     use std::fs;
     use std::path::Path;
     use tempfile::TempDir;
@@ -46,17 +46,20 @@ mod pdf_ocr_integration {
         doc.add_page(page.clone());
 
         let mut page2 = Page::a4();
-        page2.graphics()
+        page2
+            .graphics()
             .set_fill_color(Color::rgb(250.0, 250.0, 250.0))
             .rect(0.0, 0.0, 595.0, 842.0)
             .fill();
 
-        page2.text()
+        page2
+            .text()
             .set_font(Font::Helvetica, 12.0)
             .at(72.0, 750.0)
             .write("PAGE TWO")?;
 
-        page2.text()
+        page2
+            .text()
             .set_font(Font::Helvetica, 10.0)
             .at(72.0, 720.0)
             .write("Second page with additional content for testing.")?;
@@ -78,7 +81,10 @@ mod pdf_ocr_integration {
             page.text()
                 .set_font(Font::Helvetica, 10.0)
                 .at(72.0, 750.0 - (i as f64 * 20.0))
-                .write(&format!("This is line {} of existing text content in the PDF.", i + 1))?;
+                .write(&format!(
+                    "This is line {} of existing text content in the PDF.",
+                    i + 1
+                ))?;
         }
 
         doc.add_page(page);
@@ -112,7 +118,7 @@ mod pdf_ocr_integration {
             },
             min_confidence: 0.5,
             skip_text_pages: false, // Process all pages
-            dpi: 150, // Lower DPI for faster testing
+            dpi: 150,               // Lower DPI for faster testing
             ..Default::default()
         };
 
@@ -124,7 +130,10 @@ mod pdf_ocr_integration {
         ) {
             Ok(result) => {
                 assert!(output_path.exists(), "Output PDF should be created");
-                assert!(result.pages_processed > 0, "Should process at least one page");
+                assert!(
+                    result.pages_processed > 0,
+                    "Should process at least one page"
+                );
                 println!(
                     "✅ OCR conversion successful: {} pages processed, {} with OCR",
                     result.pages_processed, result.pages_ocr_processed
@@ -167,8 +176,10 @@ mod pdf_ocr_integration {
         ) {
             Ok(result) => {
                 // Should skip pages with existing text
-                println!("✅ Skip text pages test: {} processed, {} skipped",
-                        result.pages_processed, result.pages_skipped);
+                println!(
+                    "✅ Skip text pages test: {} processed, {} skipped",
+                    result.pages_processed, result.pages_skipped
+                );
             }
             Err(e) => {
                 println!("⚠️  Skip text pages test failed: {}", e);
@@ -209,17 +220,16 @@ mod pdf_ocr_integration {
             .filter(|path| path.extension().map_or(false, |ext| ext == "pdf"))
             .collect();
 
-        match converter.batch_convert(
-            &input_files,
-            &output_dir,
-            &ocr_provider,
-            &options,
-        ) {
+        match converter.batch_convert(&input_files, &output_dir, &ocr_provider, &options) {
             Ok(results) => {
                 println!("✅ Batch conversion: {} files processed", results.len());
                 for (i, result) in results.iter().enumerate() {
-                    println!("  File {}: {} pages, confidence {:.1}%",
-                            i + 1, result.pages_processed, result.average_confidence * 100.0);
+                    println!(
+                        "  File {}: {} pages, confidence {:.1}%",
+                        i + 1,
+                        result.pages_processed,
+                        result.average_confidence * 100.0
+                    );
                 }
             }
             Err(e) => {
@@ -262,8 +272,10 @@ mod pdf_ocr_integration {
             &options,
         ) {
             Ok(result) => {
-                println!("✅ Multilingual OCR test: {} pages processed",
-                        result.pages_processed);
+                println!(
+                    "✅ Multilingual OCR test: {} pages processed",
+                    result.pages_processed
+                );
             }
             Err(e) => {
                 println!("⚠️  Multilingual OCR test failed: {}", e);
@@ -303,8 +315,12 @@ mod pdf_ocr_integration {
                 &options,
             ) {
                 Ok(result) => {
-                    println!("✅ DPI {} test: {} pages, {:.1}% confidence",
-                            dpi, result.pages_processed, result.average_confidence * 100.0);
+                    println!(
+                        "✅ DPI {} test: {} pages, {:.1}% confidence",
+                        dpi,
+                        result.pages_processed,
+                        result.average_confidence * 100.0
+                    );
                 }
                 Err(e) => {
                     println!("⚠️  DPI {} test failed: {}", dpi, e);
@@ -343,8 +359,12 @@ mod pdf_ocr_integration {
                 &options,
             ) {
                 Ok(result) => {
-                    println!("✅ Confidence {:.1} test: {} OCR pages, {:.1}% avg confidence",
-                            confidence, result.pages_ocr_processed, result.average_confidence * 100.0);
+                    println!(
+                        "✅ Confidence {:.1} test: {} OCR pages, {:.1}% avg confidence",
+                        confidence,
+                        result.pages_ocr_processed,
+                        result.average_confidence * 100.0
+                    );
                 }
                 Err(e) => {
                     println!("⚠️  Confidence {:.1} test failed: {}", confidence, e);
