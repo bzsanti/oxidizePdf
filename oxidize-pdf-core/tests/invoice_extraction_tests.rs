@@ -15,6 +15,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Factura Nº: 2025-001".to_string(),
@@ -24,6 +26,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Fecha: 20/10/2025".to_string(),
@@ -33,6 +37,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "CIF: A12345678".to_string(),
@@ -42,6 +48,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Base Imponible: 500,00 €".to_string(),
@@ -51,6 +59,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "IVA (21%): 105,00 €".to_string(),
@@ -60,6 +70,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Total: 605,00 €".to_string(),
@@ -69,6 +81,8 @@ fn test_extract_spanish_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -166,6 +180,8 @@ fn test_extract_no_matches() {
         height: 12.0,
         font_size: 12.0,
         font_name: None,
+            is_bold: false,
+            is_italic: false,
     }];
 
     let extractor = InvoiceExtractor::builder()
@@ -195,6 +211,8 @@ fn test_confidence_threshold_filtering() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Total: 100,00 €".to_string(),
@@ -204,6 +222,8 @@ fn test_confidence_threshold_filtering() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -243,6 +263,8 @@ fn test_european_number_format() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "IVA: 234,56 €".to_string(),
@@ -252,6 +274,8 @@ fn test_european_number_format() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -288,6 +312,8 @@ fn test_extract_english_invoice_basic() {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Invoice Number: INV-2025-001".to_string(),
@@ -297,6 +323,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Date: 10/20/2025".to_string(),
@@ -306,6 +334,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Due Date: 11/20/2025".to_string(),
@@ -315,6 +345,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "VAT No: GB123456789".to_string(),
@@ -324,6 +356,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Subtotal: $500.00".to_string(),
@@ -333,6 +367,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "VAT (20%): $100.00".to_string(),
@@ -342,6 +378,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Total: $600.00".to_string(),
@@ -351,6 +389,8 @@ fn test_extract_english_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -435,6 +475,8 @@ fn test_extract_german_invoice_basic() {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Rechnungsnummer: 2025-DE-001".to_string(),
@@ -444,6 +486,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Datum: 20.10.2025".to_string(),
@@ -453,6 +497,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Fälligkeitsdatum: 20.11.2025".to_string(),
@@ -462,6 +508,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "USt-IdNr: DE123456789".to_string(),
@@ -471,6 +519,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Nettobetrag: 500,00 €".to_string(),
@@ -480,6 +530,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "MwSt (19%): 95,00 €".to_string(),
@@ -489,6 +541,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Gesamtbetrag: 595,00 €".to_string(),
@@ -498,6 +552,8 @@ fn test_extract_german_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
@@ -582,6 +638,8 @@ fn test_extract_italian_invoice_basic() {
             height: 12.0,
             font_size: 12.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Fattura N. 2025-IT-001".to_string(),
@@ -591,6 +649,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Data: 20/10/2025".to_string(),
@@ -600,6 +660,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Scadenza: 20/11/2025".to_string(),
@@ -609,6 +671,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "P.IVA: IT12345678901".to_string(),
@@ -618,6 +682,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Imponibile: 500,00 €".to_string(),
@@ -627,6 +693,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "IVA (22%): 110,00 €".to_string(),
@@ -636,6 +704,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
         TextFragment {
             text: "Totale: 610,00 €".to_string(),
@@ -645,6 +715,8 @@ fn test_extract_italian_invoice_basic() {
             height: 10.0,
             font_size: 10.0,
             font_name: None,
+            is_bold: false,
+            is_italic: false,
         },
     ];
 
