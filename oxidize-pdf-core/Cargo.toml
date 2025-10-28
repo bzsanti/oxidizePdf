@@ -501,6 +501,10 @@ path = "../examples/keyvalue_extraction.rs"
 name = "table_extraction"
 path = "../examples/table_extraction.rs"
 
+[[example]]
+name = "tagged_pdf_demo"
+path = "../examples/src/tagged_pdf_demo.rs"
+
 # Disabled - requires benchmark framework
 # [[example]]
 # name = "plaintext_benchmark"
