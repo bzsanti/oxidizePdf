@@ -108,9 +108,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ===========================================
     let list_items = vec![
         ("• Structure tree defining document hierarchy", 610.0),
-        ("• Marked content operators (BDC/EMC) in content streams", 590.0),
-        ("• MCID (Marked Content ID) linking content to structure", 570.0),
-        ("• Support for semantic elements (H1-H6, P, Div, etc.)", 550.0),
+        (
+            "• Marked content operators (BDC/EMC) in content streams",
+            590.0,
+        ),
+        (
+            "• MCID (Marked Content ID) linking content to structure",
+            570.0,
+        ),
+        (
+            "• Support for semantic elements (H1-H6, P, Div, etc.)",
+            550.0,
+        ),
     ];
 
     println!("\nAdding list items:");

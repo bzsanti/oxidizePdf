@@ -78,7 +78,7 @@ fn generate_minimal_pdf(num_pages: usize) -> Vec<u8> {
             num_pages * 2 + 3,
             xref_start
         )
-        .as_bytes()
+        .as_bytes(),
     );
 
     pdf

@@ -45,9 +45,7 @@ fn bench_sequential_parsing(c: &mut Criterion) {
 
     for num_pdfs in [1, 5, 10, 20].iter() {
         // Pre-generate PDFs
-        let pdfs: Vec<Vec<u8>> = (0..*num_pdfs)
-            .map(|_| create_simple_pdf(5))
-            .collect();
+        let pdfs: Vec<Vec<u8>> = (0..*num_pdfs).map(|_| create_simple_pdf(5)).collect();
 
         group.throughput(Throughput::Elements(*num_pdfs as u64));
         group.bench_with_input(

@@ -395,6 +395,10 @@ harness = false
 name = "batch_processing_benchmark"
 harness = false
 
+[[bench]]
+name = "marked_content_benchmark"
+harness = false
+
 [features]
 default = ["compression", "ocr-tesseract"]
 

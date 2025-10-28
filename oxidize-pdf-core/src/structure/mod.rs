@@ -9,7 +9,7 @@ mod page_tree;
 mod tagged;
 
 pub use destination::{Destination, DestinationType, PageDestination};
-pub use marked_content::MarkedContent;
+pub use marked_content::{MarkedContent, MarkedContentProperty};
 pub use name_tree::{NameTree, NameTreeNode, NamedDestinations};
 pub use outline::{outline_item_to_dict, OutlineBuilder, OutlineItem, OutlineTree};
 pub use page_tree::{PageTree, PageTreeBuilder, PageTreeNode};
