@@ -1,0 +1,91 @@
+name: Benchmark PR
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'oxidize-pdf-core/src/**'
+      - 'oxidize-pdf-core/benches/**'
+      - 'Cargo.toml'
+      - 'oxidize-pdf-core/Cargo.toml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark-pr:
+    name: PR Performance Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+    - name: Checkout PR code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-bench-pr-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-bench-pr-
+          ${{ runner.os }}-cargo-bench-
+
+    - name: Run quick benchmarks
+      run: |
+        echo "Running lightweight performance checks..."
+        cargo bench --package oxidize-pdf --bench ai_chunking -- --quick
+        cargo bench --package oxidize-pdf --bench plaintext_benchmark -- --quick
+
+    - name: Check for baseline
+      id: check_baseline
+      run: |
+        if [ -d ".github/benchmarks/baseline" ]; then
+          echo "baseline_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "baseline_exists=false" >> $GITHUB_OUTPUT
+          echo "::notice::No baseline found. Benchmarks will run but no comparison available."
+        fi
+
+    - name: Install critcmp (if baseline exists)
+      if: steps.check_baseline.outputs.baseline_exists == 'true'
+      run: cargo install critcmp
+
+    - name: Compare with baseline
+      if: steps.check_baseline.outputs.baseline_exists == 'true'
+      continue-on-error: true
+      run: |
+        echo "Comparing PR benchmarks with baseline..."
+        mkdir -p target/criterion_baseline
+        cp -r .github/benchmarks/baseline/* target/criterion_baseline/ || true
+
+        critcmp target/criterion_baseline target/criterion > comparison.txt || true
+
+        if [ -s comparison.txt ]; then
+          echo "## Benchmark Comparison" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat comparison.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          # Check for regressions (>15% slower)
+          if grep -E "\+1[5-9]\.[0-9]+%|\+[2-9][0-9]\.[0-9]+%" comparison.txt; then
+            echo "::warning::Potential performance regression detected (>15% slower)"
+          fi
+        fi
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: pr-benchmark-results
+        path: target/criterion/
+        retention-days: 7

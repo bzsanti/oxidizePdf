@@ -37,22 +37,19 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
         
-    - name: Build release binary
-      run: cargo build --release --bin oxidizepdf
-      
     - name: Run all benchmarks
       run: |
-        echo "Running core benchmarks..."
-        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
-        
-        echo "Running parser benchmarks..."
-        cargo bench --package oxidize-pdf-test-suite --bench parser_bench
-        
-        echo "Running memory benchmarks..."
-        cargo bench --package oxidize-pdf-test-suite --bench memory_benchmarks
-        
-        echo "Running CLI benchmarks..."
-        cargo bench --package oxidize-pdf-test-suite --bench cli_benchmarks
+        echo "Running performance benchmarks..."
+        cargo bench --package oxidize-pdf --bench performance_benchmarks
+
+        echo "Running AI chunking benchmarks..."
+        cargo bench --package oxidize-pdf --bench ai_chunking
+
+        echo "Running plaintext extraction benchmarks..."
+        cargo bench --package oxidize-pdf --bench plaintext_benchmark
+
+        echo "Running OCR benchmarks..."
+        cargo bench --package oxidize-pdf --bench ocr_benchmarks
         
     - name: Create baseline directory
       run: |
