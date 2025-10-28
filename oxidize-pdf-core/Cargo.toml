@@ -383,6 +383,18 @@ harness = false
 name = "plaintext_benchmark"
 harness = false
 
+[[bench]]
+name = "parsing_benchmark"
+harness = false
+
+[[bench]]
+name = "image_extraction_benchmark"
+harness = false
+
+[[bench]]
+name = "batch_processing_benchmark"
+harness = false
+
 [features]
 default = ["compression", "ocr-tesseract"]
 

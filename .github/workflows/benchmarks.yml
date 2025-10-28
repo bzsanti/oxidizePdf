@@ -58,7 +58,19 @@ jobs:
     - name: Run OCR benchmarks
       run: |
         cargo bench --package oxidize-pdf --bench ocr_benchmarks
-        
+
+    - name: Run parsing benchmarks
+      run: |
+        cargo bench --package oxidize-pdf --bench parsing_benchmark
+
+    - name: Run image extraction benchmarks
+      run: |
+        cargo bench --package oxidize-pdf --bench image_extraction_benchmark
+
+    - name: Run batch processing benchmarks
+      run: |
+        cargo bench --package oxidize-pdf --bench batch_processing_benchmark
+
     - name: Archive benchmark results
       uses: actions/upload-artifact@v4
       if: always()

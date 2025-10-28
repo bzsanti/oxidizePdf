@@ -50,7 +50,16 @@ jobs:
 
         echo "Running OCR benchmarks..."
         cargo bench --package oxidize-pdf --bench ocr_benchmarks
-        
+
+        echo "Running parsing benchmarks..."
+        cargo bench --package oxidize-pdf --bench parsing_benchmark
+
+        echo "Running image extraction benchmarks..."
+        cargo bench --package oxidize-pdf --bench image_extraction_benchmark
+
+        echo "Running batch processing benchmarks..."
+        cargo bench --package oxidize-pdf --bench batch_processing_benchmark
+
     - name: Create baseline directory
       run: |
         mkdir -p .github/benchmarks/baseline

@@ -44,6 +44,8 @@ jobs:
         echo "Running lightweight performance checks..."
         cargo bench --package oxidize-pdf --bench ai_chunking -- --quick
         cargo bench --package oxidize-pdf --bench plaintext_benchmark -- --quick
+        cargo bench --package oxidize-pdf --bench parsing_benchmark -- --quick
+        cargo bench --package oxidize-pdf --bench batch_processing_benchmark -- --quick
 
     - name: Check for baseline
       id: check_baseline
