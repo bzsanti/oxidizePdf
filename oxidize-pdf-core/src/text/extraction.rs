@@ -579,12 +579,15 @@ impl TextExtractor {
 
     /// Reconstruct text from sorted fragments
     fn reconstruct_text_from_fragments(&self, fragments: &[TextFragment]) -> String {
+        // First, merge consecutive fragments that are very close together
+        let merged_fragments = self.merge_close_fragments(fragments);
+
         let mut result = String::new();
         let mut last_y = f64::INFINITY;
         let mut last_x = 0.0;
         let mut last_line_ended_with_hyphen = false;
 
-        for fragment in fragments {
+        for fragment in &merged_fragments {
             // Check if we need a newline
             let y_diff = (last_y - fragment.y).abs();
             if !result.is_empty() && y_diff > self.options.newline_threshold {
@@ -612,6 +615,42 @@ impl TextExtractor {
         }
 
         result
+    }
+
+    /// Merge fragments that are very close together on the same line
+    /// This fixes artifacts like "IN VO ICE" -> "INVOICE"
+    fn merge_close_fragments(&self, fragments: &[TextFragment]) -> Vec<TextFragment> {
+        if fragments.is_empty() {
+            return Vec::new();
+        }
+
+        let mut merged = Vec::new();
+        let mut current = fragments[0].clone();
+
+        for fragment in &fragments[1..] {
+            // Check if this fragment is on the same line and very close
+            let y_diff = (current.y - fragment.y).abs();
+            let x_gap = fragment.x - (current.x + current.width);
+
+            // Merge if on same line and gap is less than a character width
+            // Use 0.5 * font_size as threshold - this catches most artificial spacing
+            let should_merge = y_diff < 1.0  // Same line (very tight tolerance)
+                && x_gap >= 0.0  // Fragment is to the right
+                && x_gap < fragment.font_size * 0.5;  // Gap less than 50% of font size
+
+            if should_merge {
+                // Merge this fragment into current
+                current.text.push_str(&fragment.text);
+                current.width = (fragment.x + fragment.width) - current.x;
+            } else {
+                // Start a new fragment
+                merged.push(current);
+                current = fragment.clone();
+            }
+        }
+
+        merged.push(current);
+        merged
     }
 
     /// Extract font resources from page
