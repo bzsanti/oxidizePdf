@@ -478,6 +478,12 @@ impl TextExtractor {
             self.sort_and_merge_fragments(&mut fragments);
         }
 
+        // Merge close fragments to eliminate spacing artifacts
+        // This is crucial for table detection and structured data extraction
+        if self.options.preserve_layout && !fragments.is_empty() {
+            fragments = self.merge_close_fragments(&fragments);
+        }
+
         // Reconstruct text from sorted fragments if layout is preserved
         if self.options.preserve_layout && !fragments.is_empty() {
             extracted_text = self.reconstruct_text_from_fragments(&fragments);
