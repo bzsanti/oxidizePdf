@@ -623,26 +623,55 @@ impl TextExtractor {
         // Clear previous font cache
         self.font_cache.clear();
 
-        // Get page resources
-        if let Some(resources) = page.get_resources() {
+        // Try to get resources manually from page dictionary first
+        // This is necessary because ParsedPage.get_resources() may not always work
+        if let Some(res_ref) = page.dict.get("Resources").and_then(|o| o.as_reference()) {
+            if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1) {
+                if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
+                    // Extract each font
+                    for (font_name, font_obj) in font_dict.0.iter() {
+                        if let Some(font_ref) = font_obj.as_reference() {
+                            if let Ok(PdfObject::Dictionary(font_dict)) =
+                                document.get_object(font_ref.0, font_ref.1)
+                            {
+                                // Create a CMap extractor to use its font extraction logic
+                                let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+
+                                if let Ok(font_info) =
+                                    cmap_extractor.extract_font_info(&font_dict, document)
+                                {
+                                    let has_to_unicode = font_info.to_unicode.is_some();
+                                    self.font_cache.insert(font_name.0.clone(), font_info);
+                                    tracing::debug!(
+                                        "Cached font: {} (ToUnicode: {})",
+                                        font_name.0,
+                                        has_to_unicode
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if let Some(resources) = page.get_resources() {
+            // Fallback to get_resources() if Resources is not a reference
             if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                // Extract each font
                 for (font_name, font_obj) in font_dict.0.iter() {
                     if let Some(font_ref) = font_obj.as_reference() {
                         if let Ok(PdfObject::Dictionary(font_dict)) =
                             document.get_object(font_ref.0, font_ref.1)
                         {
-                            // Create a CMap extractor to use its font extraction logic
                             let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
 
                             if let Ok(font_info) =
                                 cmap_extractor.extract_font_info(&font_dict, document)
                             {
+                                let has_to_unicode = font_info.to_unicode.is_some();
                                 self.font_cache.insert(font_name.0.clone(), font_info);
                                 tracing::debug!(
-                                    "Cached font: {} -> {:?}",
+                                    "Cached font: {} (ToUnicode: {})",
                                     font_name.0,
-                                    self.font_cache.get(&font_name.0)
+                                    has_to_unicode
                                 );
                             }
                         }
@@ -666,17 +695,20 @@ impl TextExtractor {
 
                 // Try CMap-based decoding first
                 if let Ok(decoded) = cmap_extractor.decode_text_with_font(text, font_info) {
-                    tracing::debug!(
-                        "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
-                        font_name,
-                        text,
-                        decoded
-                    );
-                    return Ok(decoded);
+                    // Only accept if we got meaningful text (not all null bytes or garbage)
+                    if !decoded.trim().is_empty() && !decoded.chars().all(|c| c == '\0' || c.is_ascii_control()) {
+                        tracing::debug!(
+                            "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
+                            font_name,
+                            text,
+                            decoded
+                        );
+                        return Ok(decoded);
+                    }
                 }
 
                 tracing::debug!(
-                    "CMap decoding failed for font {}, falling back to encoding",
+                    "CMap decoding failed or produced garbage for font {}, falling back to encoding",
                     font_name
                 );
             }

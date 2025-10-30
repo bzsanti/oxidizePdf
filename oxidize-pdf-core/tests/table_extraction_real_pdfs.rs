@@ -1,79 +1,161 @@
-/// Integration test for table extraction with real PDFs from fixtures
+/// Integration test for table extraction with real PDFs
 /// Tests Phase 1-4 complete: Font metadata, Vector lines, Table detection, Color extraction
 use oxidize_pdf::graphics::extraction::GraphicsExtractor;
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::text::table_detection::TableDetector;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// Collect PDFs from multiple test directories
+fn collect_test_pdfs() -> Vec<PathBuf> {
+    let mut pdfs = Vec::new();
+
+    // Priority directories with PDFs likely to contain tables
+    let search_dirs = vec![
+        "/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf-render/tests/fixtures",
+        "tests/fixtures",
+        "../test-pdfs",
+        "examples/results",
+    ];
+
+    for &dir in &search_dirs {
+        let path = Path::new(dir);
+        if path.exists() {
+            if let Ok(entries) = std::fs::read_dir(path) {
+                for entry in entries.flatten() {
+                    let entry_path = entry.path();
+                    if entry_path.extension().map_or(false, |ext| ext == "pdf") {
+                        // Prioritize PDFs with "table", "invoice", or "advanced" in name
+                        let name = entry_path.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("");
+                        if name.contains("table") ||
+                           name.contains("invoice") ||
+                           name.contains("Invoice") ||
+                           name.contains("Factura") ||
+                           name.contains("advanced") ||
+                           name.contains("Cold_Email") {
+                            pdfs.push(entry_path);
+                            if pdfs.len() >= 20 {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If no priority PDFs found, collect any PDFs
+    if pdfs.is_empty() {
+        for &dir in &search_dirs {
+            let path = Path::new(dir);
+            if path.exists() {
+                if let Ok(entries) = std::fs::read_dir(path) {
+                    for entry in entries.flatten() {
+                        let entry_path = entry.path();
+                        if entry_path.extension().map_or(false, |ext| ext == "pdf") {
+                            pdfs.push(entry_path);
+                            if pdfs.len() >= 10 {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if pdfs.len() >= 10 {
+                break;
+            }
+        }
+    }
+
+    pdfs
+}
 
 #[test]
 fn test_table_extraction_with_real_pdfs() {
-    let fixtures_dir = Path::new("tests/fixtures");
-
-    // Skip if fixtures directory doesn't exist
-    if !fixtures_dir.exists() {
-        println!("Skipping test: fixtures directory not found");
-        return;
-    }
-
-    let pdf_files: Vec<_> = std::fs::read_dir(fixtures_dir)
-        .expect("Failed to read fixtures directory")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()? == "pdf" {
-                Some(path)
-            } else {
-                None
-            }
-        })
-        .take(5) // Test first 5 PDFs
-        .collect();
+    let pdf_files = collect_test_pdfs();
 
     if pdf_files.is_empty() {
         println!("No PDF files found in fixtures directory");
         return;
     }
 
-    println!("\n=== Testing Table Extraction on {} Real PDFs ===\n", pdf_files.len());
+    println!("\n╔═══════════════════════════════════════════════════════════════╗");
+    println!("║  Table Extraction Test - Phase 1-4 Complete                 ║");
+    println!("║  Testing {} PDFs from multiple directories                   ║", pdf_files.len());
+    println!("╚═══════════════════════════════════════════════════════════════╝\n");
 
     let mut total_tables = 0;
+    let mut total_pages = 0;
     let mut pdfs_with_tables = 0;
     let mut pdfs_with_colors = 0;
+    let mut total_colored_text = 0;
+    let mut total_colored_lines = 0;
+    let mut successful_extractions = 0;
 
-    for pdf_path in &pdf_files {
-        println!("Processing: {}", pdf_path.display());
+    for (idx, pdf_path) in pdf_files.iter().enumerate() {
+        let filename = pdf_path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
 
-        match test_single_pdf(&pdf_path) {
+        println!("[{}/{}] 📄 {}", idx + 1, pdf_files.len(), filename);
+
+        match test_single_pdf(pdf_path) {
             Ok(result) => {
-                println!("  ✓ Pages: {}", result.page_count);
-                println!("  ✓ Tables detected: {}", result.table_count);
-                println!("  ✓ Text fragments with color: {}", result.colored_text_count);
-                println!("  ✓ Lines with color: {}", result.colored_lines_count);
-
+                successful_extractions += 1;
+                total_pages += result.page_count;
                 total_tables += result.table_count;
+                total_colored_text += result.colored_text_count;
+                total_colored_lines += result.colored_lines_count;
+
                 if result.table_count > 0 {
                     pdfs_with_tables += 1;
+                    println!("  ✅ Tables: {} | Pages: {} | Colored text: {} | Colored lines: {}",
+                        result.table_count, result.page_count,
+                        result.colored_text_count, result.colored_lines_count);
+                } else {
+                    println!("  ⚠️  No tables detected | Pages: {} | Colored text: {} | Colored lines: {}",
+                        result.page_count, result.colored_text_count, result.colored_lines_count);
                 }
+
                 if result.colored_text_count > 0 || result.colored_lines_count > 0 {
                     pdfs_with_colors += 1;
                 }
             }
             Err(e) => {
-                println!("  ✗ Error: {}", e);
+                println!("  ❌ Error: {}", e);
             }
         }
         println!();
     }
 
-    println!("=== Summary ===");
-    println!("Total tables found: {}", total_tables);
-    println!("PDFs with tables: {}", pdfs_with_tables);
-    println!("PDFs with colors: {}", pdfs_with_colors);
+    println!("╔═══════════════════════════════════════════════════════════════╗");
+    println!("║                      SUMMARY STATISTICS                       ║");
+    println!("╠═══════════════════════════════════════════════════════════════╣");
+    println!("║  Successful extractions: {}/{} ({:.1}%)",
+        successful_extractions, pdf_files.len(),
+        (successful_extractions as f64 / pdf_files.len() as f64) * 100.0);
+    println!("║  Total pages processed: {}", total_pages);
+    println!("║  Total tables found: {}", total_tables);
+    println!("║  PDFs with tables: {}/{} ({:.1}%)",
+        pdfs_with_tables, successful_extractions,
+        if successful_extractions > 0 {
+            (pdfs_with_tables as f64 / successful_extractions as f64) * 100.0
+        } else { 0.0 });
+    println!("║  PDFs with color info: {}/{} ({:.1}%)",
+        pdfs_with_colors, successful_extractions,
+        if successful_extractions > 0 {
+            (pdfs_with_colors as f64 / successful_extractions as f64) * 100.0
+        } else { 0.0 });
+    println!("║  Total colored text fragments: {}", total_colored_text);
+    println!("║  Total colored lines: {}", total_colored_lines);
+    println!("╚═══════════════════════════════════════════════════════════════╝\n");
 
     // Test passes if we successfully processed at least one PDF
-    assert!(!pdf_files.is_empty(), "Should have processed at least one PDF");
+    assert!(!pdf_files.is_empty(), "Should have found at least one PDF");
+    assert!(successful_extractions > 0, "Should have successfully processed at least one PDF");
 }
 
 struct ExtractionResult {
@@ -116,7 +198,16 @@ fn test_single_pdf(path: &Path) -> Result<ExtractionResult, Box<dyn std::error::
         if let Ok(graphics) = graphics_ext.extract_from_page(&doc, page_num) {
             let detector = TableDetector::default();
             if let Ok(tables) = detector.detect(&graphics, &text.fragments) {
-                table_count = tables.len();
+                // Only count tables that have actual text content and reasonable confidence
+                table_count = tables.iter()
+                    .filter(|t| {
+                        let non_empty_cells = t.cells.iter()
+                            .filter(|c| !c.text.trim().is_empty())
+                            .count();
+                        // Table must have text AND confidence >= 30%
+                        non_empty_cells > 0 && t.confidence >= 0.30
+                    })
+                    .count();
             }
         }
     }
