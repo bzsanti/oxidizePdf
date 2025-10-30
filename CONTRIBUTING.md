@@ -311,6 +311,85 @@ cargo test --test integration_test_name
 - Address all clippy warnings
 - Prefer explicit error handling over `unwrap()`
 
+### Anti-Patterns to Avoid
+
+Based on community feedback and code reviews, please avoid these patterns:
+
+#### ❌ Bool + Option<Error> Pattern
+
+**Bad:**
+```rust
+struct ProcessingResult {
+    success: bool,
+    error: Option<String>,
+    data: Option<Data>,
+}
+```
+
+**Why**: Allows impossible states (`success: true` with `error: Some(...)`).
+
+**Good:**
+```rust
+struct ProcessingResult {
+    filename: String,
+    duration: Duration,
+    result: Result<Data, Error>,
+}
+```
+
+**Rationale**: `Result<T, E>` enforces mutual exclusivity and is idiomatic Rust.
+
+#### ❌ Primitives for Duration
+
+**Bad:**
+```rust
+struct Metrics {
+    duration_ms: u64,  // What if we need microseconds later?
+}
+```
+
+**Good:**
+```rust
+struct Metrics {
+    duration: Duration,  // Self-documenting, flexible
+}
+```
+
+**Rationale**: `Duration` provides type safety, prevents unit confusion, and offers rich API.
+
+#### ⚠️ When `.cloned().collect()` is OK
+
+`.cloned().collect()` is **NOT automatically wrong**. It's correct when:
+
+```rust
+// ✅ Avoiding borrow conflicts
+let keys: Vec<String> = dict.keys().cloned().collect();
+for key in keys {
+    dict.remove(&key);  // Mutating dict - can't hold reference
+}
+
+// ✅ API contract requires owned values
+pub fn get_keys(&self) -> Vec<String> {
+    self.map.keys().cloned().collect()
+}
+
+// ❌ Unnecessary clone
+let data: Vec<_> = vec.iter().cloned().collect();  // Just use vec.clone()
+```
+
+**Rule of thumb**: If you're cloning to avoid borrow checker issues or to satisfy an API contract, it's fine.
+
+#### Custom Lints
+
+We use [dylint](https://github.com/trailofbits/dylint) to enforce project-specific patterns:
+
+```bash
+# Run custom lints
+./scripts/run_lints.sh
+```
+
+See `docs/LINTS.md` for details on our 5 production lints.
+
 ### Documentation
 - Document all public APIs with `///` comments
 - Include examples in documentation comments

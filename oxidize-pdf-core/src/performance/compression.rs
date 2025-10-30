@@ -600,25 +600,19 @@ impl IntelligentCompressor {
         let result = self.compress(data.to_vec(), content_type);
         let test_time = start.elapsed();
 
-        match result {
-            Ok(compressed) => CompressionTestResult {
-                original_size,
+        let test_result = match result {
+            Ok(compressed) => Ok(CompressionSuccess {
                 compressed_size: compressed.compressed_size,
                 compression_ratio: compressed.compressed_size as f64 / original_size as f64,
                 algorithm_used: compressed.algorithm,
-                compression_time: test_time,
-                success: true,
-                error_message: None,
-            },
-            Err(e) => CompressionTestResult {
-                original_size,
-                compressed_size: original_size,
-                compression_ratio: 1.0,
-                algorithm_used: CompressionAlgorithm::None,
-                compression_time: test_time,
-                success: false,
-                error_message: Some(e.to_string()),
-            },
+            }),
+            Err(e) => Err(e.to_string()),
+        };
+
+        CompressionTestResult {
+            original_size,
+            compression_time: test_time,
+            result: test_result,
         }
     }
 }
@@ -760,12 +754,15 @@ impl ContentTypeStats {
 #[derive(Debug)]
 pub struct CompressionTestResult {
     pub original_size: usize,
+    pub compression_time: Duration,
+    pub result: Result<CompressionSuccess, String>,
+}
+
+#[derive(Debug)]
+pub struct CompressionSuccess {
     pub compressed_size: usize,
     pub compression_ratio: f64,
     pub algorithm_used: CompressionAlgorithm,
-    pub compression_time: Duration,
-    pub success: bool,
-    pub error_message: Option<String>,
 }
 
 #[cfg(test)]

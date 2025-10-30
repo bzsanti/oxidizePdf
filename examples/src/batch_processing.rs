@@ -57,11 +57,21 @@ struct Args {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ProcessingResult {
     filename: String,
-    success: bool,
-    pages: Option<usize>,
-    text_chars: Option<usize>,
-    duration_ms: u64,
-    error: Option<String>,
+    duration: std::time::Duration,
+    #[serde(flatten)]
+    result: ProcessingData,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+enum ProcessingData {
+    Success {
+        pages: usize,
+        text_chars: usize,
+    },
+    Error {
+        error: String,
+    },
 }
 
 /// Summary statistics for the batch
@@ -112,8 +122,8 @@ fn main() -> oxidize_pdf::Result<()> {
     // Generate summary
     let summary = BatchSummary {
         total: pdf_files.len(),
-        successful: results.iter().filter(|r| r.success).count(),
-        failed: results.iter().filter(|r| !r.success).count(),
+        successful: results.iter().filter(|r| matches!(r.result, ProcessingData::Success { .. })).count(),
+        failed: results.iter().filter(|r| matches!(r.result, ProcessingData::Error { .. })).count(),
         total_duration_ms: total_duration.as_millis() as u64,
         throughput_docs_per_sec: pdf_files.len() as f64 / total_duration.as_secs_f64(),
         results,
@@ -176,6 +186,7 @@ fn process_pdf(path: &Path, verbose: bool) -> ProcessingResult {
                 Ok(pages) => {
                     let page_count = pages.len();
                     let text_chars: usize = pages.iter().map(|p| p.text.len()).sum();
+                    let duration = start.elapsed();
 
                     if verbose {
                         eprintln!(
@@ -186,11 +197,11 @@ fn process_pdf(path: &Path, verbose: bool) -> ProcessingResult {
 
                     ProcessingResult {
                         filename,
-                        success: true,
-                        pages: Some(page_count),
-                        text_chars: Some(text_chars),
-                        duration_ms: start.elapsed().as_millis() as u64,
-                        error: None,
+                        duration,
+                        result: ProcessingData::Success {
+                            pages: page_count,
+                            text_chars,
+                        },
                     }
                 }
                 Err(e) => {
@@ -199,11 +210,10 @@ fn process_pdf(path: &Path, verbose: bool) -> ProcessingResult {
                     }
                     ProcessingResult {
                         filename,
-                        success: false,
-                        pages: None,
-                        text_chars: None,
-                        duration_ms: start.elapsed().as_millis() as u64,
-                        error: Some(format!("Text extraction failed: {}", e)),
+                        duration: start.elapsed(),
+                        result: ProcessingData::Error {
+                            error: format!("Text extraction failed: {}", e),
+                        },
                     }
                 }
             }
@@ -214,11 +224,10 @@ fn process_pdf(path: &Path, verbose: bool) -> ProcessingResult {
             }
             ProcessingResult {
                 filename,
-                success: false,
-                pages: None,
-                text_chars: None,
-                duration_ms: start.elapsed().as_millis() as u64,
-                error: Some(format!("Failed to open PDF: {}", e)),
+                duration: start.elapsed(),
+                result: ProcessingData::Error {
+                    error: format!("Failed to open PDF: {}", e),
+                },
             }
         }
     };
@@ -250,8 +259,8 @@ fn process_pdfs_console(pdf_files: &[PathBuf], verbose: bool) -> Vec<ProcessingR
 
         // Update message
         let current_results = results.lock().unwrap();
-        let successful = current_results.iter().filter(|r| r.success).count();
-        let failed = current_results.iter().filter(|r| !r.success).count();
+        let successful = current_results.iter().filter(|r| matches!(r.result, ProcessingData::Success { .. })).count();
+        let failed = current_results.iter().filter(|r| matches!(r.result, ProcessingData::Error { .. })).count();
         pb.set_message(format!("✅ {} | ❌ {}", successful, failed));
     });
 
@@ -299,14 +308,14 @@ fn print_summary(summary: &BatchSummary) {
     );
 
     if summary.successful > 0 {
-        let avg_ms: u64 = summary
+        let avg_duration: std::time::Duration = summary
             .results
             .iter()
-            .filter(|r| r.success)
-            .map(|r| r.duration_ms)
-            .sum::<u64>()
-            / summary.successful as u64;
-        println!("   Avg per doc:     {}ms", avg_ms);
+            .filter(|r| matches!(r.result, ProcessingData::Success { .. }))
+            .map(|r| r.duration)
+            .sum::<std::time::Duration>()
+            / summary.successful as u32;
+        println!("   Avg per doc:     {}ms", avg_duration.as_millis());
     }
 
     // Show failed files
@@ -314,15 +323,8 @@ fn print_summary(summary: &BatchSummary) {
         println!();
         println!("❌ Failed files:");
         for result in &summary.results {
-            if !result.success {
-                println!(
-                    "   • {} - {}",
-                    result.filename,
-                    result
-                        .error
-                        .as_ref()
-                        .unwrap_or(&"Unknown error".to_string())
-                );
+            if let ProcessingData::Error { error } = &result.result {
+                println!("   • {} - {}", result.filename, error);
             }
         }
     }
