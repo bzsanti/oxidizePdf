@@ -114,7 +114,6 @@ fn test_structure_preservation_roundtrip() -> Result<()> {
     // Attempt to parse (may not be fully implemented)
     let parse_result = PdfReader::open(&original_path);
     if let Ok(reader) = parse_result {
-
         // Verify basic structure elements
         assert!(reader.version().major >= 1);
 

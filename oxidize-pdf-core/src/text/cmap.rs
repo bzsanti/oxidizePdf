@@ -342,12 +342,10 @@ fn parse_bf_range_entries(line: &str) -> Option<Vec<CMapEntry>> {
             let parts: Vec<&str> = before_array.split_whitespace().collect();
 
             if parts.len() >= 2 {
-                if let (Some(src_start), Some(src_end)) = (
-                    parse_hex(parts[0]),
-                    parse_hex(parts[1]),
-                ) {
+                if let (Some(src_start), Some(src_end)) = (parse_hex(parts[0]), parse_hex(parts[1]))
+                {
                     // Extract array values
-                    let after_bracket = &line[array_start+1..];
+                    let after_bracket = &line[array_start + 1..];
                     if let Some(array_end) = after_bracket.find(']') {
                         let array_content = &after_bracket[..array_end];
 

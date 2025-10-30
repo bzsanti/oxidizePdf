@@ -112,9 +112,7 @@ fn test_batch_error_handling() {
 
     processor.add_job(BatchJob::Custom {
         name: "Failure Job".to_string(),
-        operation: Box::new(|| {
-            Err(std::io::Error::other("Simulated error").into())
-        }),
+        operation: Box::new(|| Err(std::io::Error::other("Simulated error").into())),
     });
 
     processor.add_job(BatchJob::Custom {

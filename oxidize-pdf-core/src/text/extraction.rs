@@ -463,7 +463,8 @@ impl TextExtractor {
                     }
 
                     ContentOperation::SetNonStrokingCMYK(c, m, y, k) => {
-                        state.fill_color = Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
+                        state.fill_color =
+                            Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
                     }
 
                     _ => {
@@ -642,7 +643,7 @@ impl TextExtractor {
             // Use 0.5 * font_size as threshold - this catches most artificial spacing
             let should_merge = y_diff < 1.0  // Same line (very tight tolerance)
                 && x_gap >= 0.0  // Fragment is to the right
-                && x_gap < fragment.font_size * 0.5;  // Gap less than 50% of font size
+                && x_gap < fragment.font_size * 0.5; // Gap less than 50% of font size
 
             if should_merge {
                 // Merge this fragment into current
@@ -671,7 +672,8 @@ impl TextExtractor {
         // Try to get resources manually from page dictionary first
         // This is necessary because ParsedPage.get_resources() may not always work
         if let Some(res_ref) = page.dict.get("Resources").and_then(|o| o.as_reference()) {
-            if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1) {
+            if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1)
+            {
                 if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
                     // Extract each font
                     for (font_name, font_obj) in font_dict.0.iter() {
@@ -680,7 +682,8 @@ impl TextExtractor {
                                 document.get_object(font_ref.0, font_ref.1)
                             {
                                 // Create a CMap extractor to use its font extraction logic
-                                let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+                                let mut cmap_extractor: CMapTextExtractor<R> =
+                                    CMapTextExtractor::new();
 
                                 if let Ok(font_info) =
                                     cmap_extractor.extract_font_info(&font_dict, document)
@@ -741,7 +744,9 @@ impl TextExtractor {
                 // Try CMap-based decoding first
                 if let Ok(decoded) = cmap_extractor.decode_text_with_font(text, font_info) {
                     // Only accept if we got meaningful text (not all null bytes or garbage)
-                    if !decoded.trim().is_empty() && !decoded.chars().all(|c| c == '\0' || c.is_ascii_control()) {
+                    if !decoded.trim().is_empty()
+                        && !decoded.chars().all(|c| c == '\0' || c.is_ascii_control())
+                    {
                         tracing::debug!(
                             "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
                             font_name,

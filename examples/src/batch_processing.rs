@@ -65,13 +65,8 @@ struct ProcessingResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 enum ProcessingData {
-    Success {
-        pages: usize,
-        text_chars: usize,
-    },
-    Error {
-        error: String,
-    },
+    Success { pages: usize, text_chars: usize },
+    Error { error: String },
 }
 
 /// Summary statistics for the batch
@@ -122,8 +117,14 @@ fn main() -> oxidize_pdf::Result<()> {
     // Generate summary
     let summary = BatchSummary {
         total: pdf_files.len(),
-        successful: results.iter().filter(|r| matches!(r.result, ProcessingData::Success { .. })).count(),
-        failed: results.iter().filter(|r| matches!(r.result, ProcessingData::Error { .. })).count(),
+        successful: results
+            .iter()
+            .filter(|r| matches!(r.result, ProcessingData::Success { .. }))
+            .count(),
+        failed: results
+            .iter()
+            .filter(|r| matches!(r.result, ProcessingData::Error { .. }))
+            .count(),
         total_duration_ms: total_duration.as_millis() as u64,
         throughput_docs_per_sec: pdf_files.len() as f64 / total_duration.as_secs_f64(),
         results,
@@ -259,8 +260,14 @@ fn process_pdfs_console(pdf_files: &[PathBuf], verbose: bool) -> Vec<ProcessingR
 
         // Update message
         let current_results = results.lock().unwrap();
-        let successful = current_results.iter().filter(|r| matches!(r.result, ProcessingData::Success { .. })).count();
-        let failed = current_results.iter().filter(|r| matches!(r.result, ProcessingData::Error { .. })).count();
+        let successful = current_results
+            .iter()
+            .filter(|r| matches!(r.result, ProcessingData::Success { .. }))
+            .count();
+        let failed = current_results
+            .iter()
+            .filter(|r| matches!(r.result, ProcessingData::Error { .. }))
+            .count();
         pb.set_message(format!("✅ {} | ❌ {}", successful, failed));
     });
 

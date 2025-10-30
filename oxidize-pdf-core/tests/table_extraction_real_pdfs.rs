@@ -27,15 +27,17 @@ fn collect_test_pdfs() -> Vec<PathBuf> {
                     let entry_path = entry.path();
                     if entry_path.extension().map_or(false, |ext| ext == "pdf") {
                         // Prioritize PDFs with "table", "invoice", or "advanced" in name
-                        let name = entry_path.file_name()
+                        let name = entry_path
+                            .file_name()
                             .and_then(|n| n.to_str())
                             .unwrap_or("");
-                        if name.contains("table") ||
-                           name.contains("invoice") ||
-                           name.contains("Invoice") ||
-                           name.contains("Factura") ||
-                           name.contains("advanced") ||
-                           name.contains("Cold_Email") {
+                        if name.contains("table")
+                            || name.contains("invoice")
+                            || name.contains("Invoice")
+                            || name.contains("Factura")
+                            || name.contains("advanced")
+                            || name.contains("Cold_Email")
+                        {
                             pdfs.push(entry_path);
                             if pdfs.len() >= 20 {
                                 break;
@@ -84,7 +86,10 @@ fn test_table_extraction_with_real_pdfs() {
 
     println!("\n╔═══════════════════════════════════════════════════════════════╗");
     println!("║  Table Extraction Test - Phase 1-4 Complete                 ║");
-    println!("║  Testing {} PDFs from multiple directories                   ║", pdf_files.len());
+    println!(
+        "║  Testing {} PDFs from multiple directories                   ║",
+        pdf_files.len()
+    );
     println!("╚═══════════════════════════════════════════════════════════════╝\n");
 
     let mut total_tables = 0;
@@ -96,7 +101,8 @@ fn test_table_extraction_with_real_pdfs() {
     let mut successful_extractions = 0;
 
     for (idx, pdf_path) in pdf_files.iter().enumerate() {
-        let filename = pdf_path.file_name()
+        let filename = pdf_path
+            .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown");
 
@@ -112,9 +118,13 @@ fn test_table_extraction_with_real_pdfs() {
 
                 if result.table_count > 0 {
                     pdfs_with_tables += 1;
-                    println!("  ✅ Tables: {} | Pages: {} | Colored text: {} | Colored lines: {}",
-                        result.table_count, result.page_count,
-                        result.colored_text_count, result.colored_lines_count);
+                    println!(
+                        "  ✅ Tables: {} | Pages: {} | Colored text: {} | Colored lines: {}",
+                        result.table_count,
+                        result.page_count,
+                        result.colored_text_count,
+                        result.colored_lines_count
+                    );
                 } else {
                     println!("  ⚠️  No tables detected | Pages: {} | Colored text: {} | Colored lines: {}",
                         result.page_count, result.colored_text_count, result.colored_lines_count);
@@ -134,28 +144,44 @@ fn test_table_extraction_with_real_pdfs() {
     println!("╔═══════════════════════════════════════════════════════════════╗");
     println!("║                      SUMMARY STATISTICS                       ║");
     println!("╠═══════════════════════════════════════════════════════════════╣");
-    println!("║  Successful extractions: {}/{} ({:.1}%)",
-        successful_extractions, pdf_files.len(),
-        (successful_extractions as f64 / pdf_files.len() as f64) * 100.0);
+    println!(
+        "║  Successful extractions: {}/{} ({:.1}%)",
+        successful_extractions,
+        pdf_files.len(),
+        (successful_extractions as f64 / pdf_files.len() as f64) * 100.0
+    );
     println!("║  Total pages processed: {}", total_pages);
     println!("║  Total tables found: {}", total_tables);
-    println!("║  PDFs with tables: {}/{} ({:.1}%)",
-        pdfs_with_tables, successful_extractions,
+    println!(
+        "║  PDFs with tables: {}/{} ({:.1}%)",
+        pdfs_with_tables,
+        successful_extractions,
         if successful_extractions > 0 {
             (pdfs_with_tables as f64 / successful_extractions as f64) * 100.0
-        } else { 0.0 });
-    println!("║  PDFs with color info: {}/{} ({:.1}%)",
-        pdfs_with_colors, successful_extractions,
+        } else {
+            0.0
+        }
+    );
+    println!(
+        "║  PDFs with color info: {}/{} ({:.1}%)",
+        pdfs_with_colors,
+        successful_extractions,
         if successful_extractions > 0 {
             (pdfs_with_colors as f64 / successful_extractions as f64) * 100.0
-        } else { 0.0 });
+        } else {
+            0.0
+        }
+    );
     println!("║  Total colored text fragments: {}", total_colored_text);
     println!("║  Total colored lines: {}", total_colored_lines);
     println!("╚═══════════════════════════════════════════════════════════════╝\n");
 
     // Test passes if we successfully processed at least one PDF
     assert!(!pdf_files.is_empty(), "Should have found at least one PDF");
-    assert!(successful_extractions > 0, "Should have successfully processed at least one PDF");
+    assert!(
+        successful_extractions > 0,
+        "Should have successfully processed at least one PDF"
+    );
 }
 
 struct ExtractionResult {
@@ -181,7 +207,11 @@ fn test_single_pdf(path: &Path) -> Result<ExtractionResult, Box<dyn std::error::
     // Extract graphics (lines)
     let mut graphics_ext = GraphicsExtractor::default();
     if let Ok(graphics) = graphics_ext.extract_from_page(&doc, page_num) {
-        colored_lines_count = graphics.lines.iter().filter(|line| line.color.is_some()).count();
+        colored_lines_count = graphics
+            .lines
+            .iter()
+            .filter(|line| line.color.is_some())
+            .count();
     }
 
     // Extract text with layout
@@ -192,18 +222,22 @@ fn test_single_pdf(path: &Path) -> Result<ExtractionResult, Box<dyn std::error::
     let mut text_ext = TextExtractor::with_options(options);
 
     if let Ok(text) = text_ext.extract_from_page(&doc, page_num as u32) {
-        colored_text_count = text.fragments.iter().filter(|frag| frag.color.is_some()).count();
+        colored_text_count = text
+            .fragments
+            .iter()
+            .filter(|frag| frag.color.is_some())
+            .count();
 
         // Try table detection
         if let Ok(graphics) = graphics_ext.extract_from_page(&doc, page_num) {
             let detector = TableDetector::default();
             if let Ok(tables) = detector.detect(&graphics, &text.fragments) {
                 // Only count tables that have actual text content and reasonable confidence
-                table_count = tables.iter()
+                table_count = tables
+                    .iter()
                     .filter(|t| {
-                        let non_empty_cells = t.cells.iter()
-                            .filter(|c| !c.text.trim().is_empty())
-                            .count();
+                        let non_empty_cells =
+                            t.cells.iter().filter(|c| !c.text.trim().is_empty()).count();
                         // Table must have text AND confidence >= 30%
                         non_empty_cells > 0 && t.confidence >= 0.30
                     })
@@ -239,12 +273,16 @@ fn test_color_extraction_with_cold_email_hacks() {
         ..Default::default()
     };
     let mut text_ext = TextExtractor::with_options(options);
-    let text = text_ext.extract_from_page(&doc, 0).expect("Failed to extract text");
+    let text = text_ext
+        .extract_from_page(&doc, 0)
+        .expect("Failed to extract text");
 
     println!("\n=== Cold Email Hacks PDF Analysis ===");
     println!("Total text fragments: {}", text.fragments.len());
 
-    let colored_fragments: Vec<_> = text.fragments.iter()
+    let colored_fragments: Vec<_> = text
+        .fragments
+        .iter()
         .filter(|frag| frag.color.is_some())
         .collect();
 
@@ -253,18 +291,26 @@ fn test_color_extraction_with_cold_email_hacks() {
     // Show first 5 colored fragments
     for (i, frag) in colored_fragments.iter().take(5).enumerate() {
         if let Some(color) = &frag.color {
-            println!("  Fragment {}: '{}' - Color: {:?}", i + 1,
-                frag.text.chars().take(30).collect::<String>(), color);
+            println!(
+                "  Fragment {}: '{}' - Color: {:?}",
+                i + 1,
+                frag.text.chars().take(30).collect::<String>(),
+                color
+            );
         }
     }
 
     // Extract graphics
     let mut graphics_ext = GraphicsExtractor::default();
-    let graphics = graphics_ext.extract_from_page(&doc, 0).expect("Failed to extract graphics");
+    let graphics = graphics_ext
+        .extract_from_page(&doc, 0)
+        .expect("Failed to extract graphics");
 
     println!("\nTotal lines: {}", graphics.lines.len());
 
-    let colored_lines: Vec<_> = graphics.lines.iter()
+    let colored_lines: Vec<_> = graphics
+        .lines
+        .iter()
         .filter(|line| line.color.is_some())
         .collect();
 

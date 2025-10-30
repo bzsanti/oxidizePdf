@@ -309,10 +309,13 @@ impl GraphicsExtractor {
                     state.stroke_color = Some(crate::graphics::Color::gray(*gray as f64));
                 }
                 ContentOperation::SetStrokingRGB(r, g, b) => {
-                    state.stroke_color = Some(crate::graphics::Color::rgb(*r as f64, *g as f64, *b as f64));
+                    state.stroke_color =
+                        Some(crate::graphics::Color::rgb(*r as f64, *g as f64, *b as f64));
                 }
                 ContentOperation::SetStrokingCMYK(c, m, y, k) => {
-                    state.stroke_color = Some(crate::graphics::Color::cmyk(*c as f64, *m as f64, *y as f64, *k as f64));
+                    state.stroke_color = Some(crate::graphics::Color::cmyk(
+                        *c as f64, *m as f64, *y as f64, *k as f64,
+                    ));
                 }
 
                 // Path construction
@@ -401,7 +404,15 @@ impl GraphicsExtractor {
 
         for segment in &state.path {
             let PathSegment::Line { x1, y1, x2, y2 } = segment;
-            let line = VectorLine::new(*x1, *y1, *x2, *y2, stroke_width, is_stroked, state.stroke_color);
+            let line = VectorLine::new(
+                *x1,
+                *y1,
+                *x2,
+                *y2,
+                stroke_width,
+                is_stroked,
+                state.stroke_color,
+            );
 
             // Apply filters
             if self.config.stroked_only && !is_stroked {
