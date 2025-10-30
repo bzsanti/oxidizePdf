@@ -302,7 +302,7 @@ fn test_devicen_pdf_object_creation() {
             assert!(arr.len() >= 4); // [DeviceN, names, alternate, function, ...]
 
             // First element should be /DeviceN
-            if let Some(oxidize_pdf::objects::Object::Name(name)) = arr.get(0) {
+            if let Some(oxidize_pdf::objects::Object::Name(name)) = arr.first() {
                 assert_eq!(name, "DeviceN");
             } else {
                 panic!("First element should be /DeviceN name");

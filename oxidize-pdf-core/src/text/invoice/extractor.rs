@@ -282,6 +282,7 @@ impl InvoiceExtractor {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         };
 
         // Use the standard extract method

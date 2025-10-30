@@ -197,7 +197,7 @@ fn test_table_show_header() {
         .build()
         .unwrap();
 
-    assert_eq!(table.show_header, true);
+    assert!(table.show_header);
 
     let table = AdvancedTableBuilder::new()
         .title("Title Only")
@@ -206,5 +206,5 @@ fn test_table_show_header() {
         .build()
         .unwrap();
 
-    assert_eq!(table.show_header, false);
+    assert!(!table.show_header);
 }

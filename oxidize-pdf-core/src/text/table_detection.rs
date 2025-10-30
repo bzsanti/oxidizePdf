@@ -663,6 +663,7 @@ fn normalize_coordinates_if_needed(
             font_name: frag.font_name.clone(),
             is_bold: frag.is_bold,
             is_italic: frag.is_italic,
+            color: frag.color,
         })
         .collect()
 }

@@ -3,6 +3,7 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+use crate::graphics::Color;
 use crate::parser::content::{ContentOperation, ContentParser, TextElement};
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::PdfObject;
@@ -75,6 +76,8 @@ pub struct TextFragment {
     pub is_bold: bool,
     /// Whether the font is italic (detected from font name)
     pub is_italic: bool,
+    /// Fill color of the text (from graphics state)
+    pub color: Option<Color>,
 }
 
 /// Text extraction state
@@ -101,6 +104,8 @@ struct TextState {
     font_name: Option<String>,
     /// Render mode (0 = fill, 1 = stroke, etc.)
     render_mode: u8,
+    /// Fill color (for text rendering)
+    fill_color: Option<Color>,
 }
 
 impl Default for TextState {
@@ -117,6 +122,7 @@ impl Default for TextState {
             font_size: 0.0,
             font_name: None,
             render_mode: 0,
+            fill_color: None,
         }
     }
 }
@@ -343,6 +349,7 @@ impl TextExtractor {
                                     font_name: state.font_name.clone(),
                                     is_bold,
                                     is_italic,
+                                    color: state.fill_color,
                                 });
                             }
 
@@ -444,6 +451,19 @@ impl TextExtractor {
                             e * a0 + f * c0 + e0,
                             e * b0 + f * d0 + f0,
                         ];
+                    }
+
+                    // Color operations (Phase 4: Color extraction)
+                    ContentOperation::SetNonStrokingGray(gray) => {
+                        state.fill_color = Some(Color::gray(gray as f64));
+                    }
+
+                    ContentOperation::SetNonStrokingRGB(r, g, b) => {
+                        state.fill_color = Some(Color::rgb(r as f64, g as f64, b as f64));
+                    }
+
+                    ContentOperation::SetNonStrokingCMYK(c, m, y, k) => {
+                        state.fill_color = Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
                     }
 
                     _ => {
@@ -888,6 +908,7 @@ mod tests {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -910,6 +931,7 @@ mod tests {
                 font_name: None,
                 is_bold: false,
                 is_italic: false,
+                color: None,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -921,6 +943,7 @@ mod tests {
                 font_name: None,
                 is_bold: false,
                 is_italic: false,
+                color: None,
             },
         ];
 
