@@ -1,24 +1,128 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-30 - Issue #90 Table Detection Complete (Session ENDED ✅)
-- **Branch**: develop_santi (4 commits ahead)
-- **Version**: **v1.6.3+4 commits** (ready for v1.7.0)
+- **Last Session**: 2025-10-31 - v1.6.4 Release + Issue #93 Analysis (Session ENDED ✅)
+- **Branch**: develop_santi (2 commits ahead of main)
+- **Version**: **v1.6.4** (released to crates.io + GitHub)
 - **Status**:
-  - Issue #90: ✅ Table Detection Complete (all 4 phases)
-  - Text Extraction: ✅ ToUnicode CMap fixed (critical bug)
-  - Fragment Merging: ✅ Spacing artifacts eliminated
-  - Validation: ✅ 3/3 test invoices with legible table text
+  - v1.6.4: ✅ Released successfully (table detection + text fixes)
+  - Issue #93: 🔍 Analyzed - Fix plan documented (ready for implementation)
+  - Reddit Post: 📝 Responses prepared for v1.6.4 updates
+  - Code Quality: ✅ Idioms fixed (unwrap → expect in lazy_static)
 - **Quality Metrics**:
   - Tests: 4693 passing (all green)
   - Clippy: Clean (0 warnings on lib)
-  - Zero Unwraps: 100% library code compliance
+  - Zero Unwraps: 100% library code compliance (enforced)
   - Table Detection: 100% success on test invoices (3/3)
   - Quality Grade: **A (95/100)** - Production ready
 - **Next Session**:
-  - Option A: Create v1.7.0 release (table detection + text fixes)
-  - Option B: Investigate Issue #93 (Panic UTF-8)
-  - Option C: MIGRATE to oxidize-pdf-pro (commercial patterns)
+  - **Priority 1**: Implement Issue #93 fix (UTF-8 panic in XRef recovery) - 2-3 hours
+  - **Priority 2**: Object Streams implementation (GAP crítico vs lopdf) - 5-7 days
+  - **Priority 3**: Performance benchmarks validation - 1-2 days
+
+## 📊 **Session 2025-10-31: v1.6.4 Release + Issue #93 Analysis** ✅ COMPLETE
+
+### Release v1.6.4 (COMPLETE) ✅
+- **Task**: Create and publish v1.6.4 release to crates.io and GitHub
+- **Process**:
+  - Merged PR #95 (develop_santi → main) with 15 commits
+  - Created annotated tag v1.6.4 with comprehensive release notes
+  - GitHub Actions release workflow executed successfully
+  - Published to crates.io: oxidize-pdf, oxidize-pdf-cli, oxidize-pdf-api
+- **Release URL**: https://github.com/bzsanti/oxidizePdf/releases/tag/v1.6.4
+- **Time**: 15 minutes
+- **Result**: ✅ v1.6.4 live in production
+
+### Reddit Post Response Analysis (COMPLETE) ✅
+- **Task**: Review Reddit feedback and prepare accurate responses for v1.6.4
+- **Findings**:
+  - matthieum: Idiomatic Rust issues → **Already fixed** in batch_processing.rs
+  - Bird476Shed: Table detection questions → **Needs update** with v1.6.4 info
+  - asmx85: ZUGFeRD invoice extraction → **Needs update** with fragment merging fix
+- **Discovery**: Original responses were OUTDATED
+  - ❌ Claimed: "Border-based cell assignment: NOT IMPLEMENTED"
+  - ✅ Reality: **FULLY IMPLEMENTED** in `text/table_detection.rs` (v1.6.4)
+  - Two implementations: Border-based (`table_detection.rs`) + Spatial clustering (`structured/table.rs`)
+- **Responses prepared** (concise, ready to post)
+
+### Code Quality Fixes (COMPLETE) ✅
+- **Idioms fix**: Replaced `unwrap()` with `expect()` in lazy_static regex (marked_content.rs:45)
+- **Branch workflow fix**: Moved 2 commits from `main` to `develop_santi` (correct workflow)
+- **Commits**:
+  - `cc32e3c` - fix(idioms): replace unwrap with expect in lazy_static regex
+  - `32bb5ab` - docs: correct Issue #90 status to CLOSED in CLAUDE.md
+- **Validation**: All 4,693 tests passing, clippy clean
+
+### Issue #93 Investigation (COMPLETE) 🔍
+- **Task**: Analyze UTF-8 char boundary panic in XRef recovery
+- **Issue**: https://github.com/bzsanti/oxidizePdf/issues/93
+- **Problem**: Panic when parsing PDFs with non-ASCII (Romanian, Cyrillic, etc.)
+  ```
+  byte index 139531 is not a char boundary; it is inside '\u{352}'
+  ```
+- **Root Cause**: `xref.rs` converts binary buffer to String, then slices with byte offsets
+  - 5 dangerous slicing points identified (lines 710, 723, 731, 930, 947)
+  - Line 930 is the reported panic location
+- **Solution Design**: Convert XRef recovery to byte-based operations
+  - Remove `String::from_utf8_lossy()` conversion
+  - Replace string operations with `&buffer` (bytes) and `.windows()` pattern matching
+  - Convert to String only small slices when parsing numeric values
+- **Estimated effort**: 2-3 hours
+- **Documentation**: Complete implementation plan created (`.private/ISSUE_93_UTF8_FIX_PLAN.md`)
+- **Status**: Ready for implementation in next session
+
+### Table Detection Discovery (COMPLETE) ✅
+- **Finding**: Issue #90 was **INCORRECTLY marked as OPEN** in CLAUDE.md
+- **Reality**: All 4 phases completed in v1.6.4
+  - ✅ Phase 1: Font metadata (font_name, is_bold, is_italic, color)
+  - ✅ Phase 2: Vector line extraction (VectorLine struct with color)
+  - ✅ Phase 3: Border-based table detection (TableDetector with grid intersection)
+  - ✅ Phase 4: Color extraction (completed 2025-10-30)
+- **Implementations**:
+  - `text/table_detection.rs`: Border-based detection (uses VectorLine + TextFragment)
+  - `text/structured/table.rs`: Spatial clustering (fallback for borderless tables)
+- **Tests**: `table_extraction_real_pdfs.rs` validates with real invoices
+- **Corrected**: Moved Issue #90 from "Open" to "Recently Closed" section
+
+### Time Investment ⏱️
+- v1.6.4 Release: 15 minutes
+- Reddit response analysis: 1 hour
+- Code quality fixes: 30 minutes
+- Issue #93 investigation: 1.5 hours
+- Issue #93 documentation: 1 hour
+- Table detection verification: 30 minutes
+- CLAUDE.md updates: 30 minutes
+- **Total**: 5 hours
+
+### Files Modified 📁
+- `CLAUDE.md` - Updated current focus, moved Issue #90 to closed
+- `oxidize-pdf-core/src/structure/marked_content.rs` - Idioms fix (unwrap → expect)
+- `.private/ISSUE_93_UTF8_FIX_PLAN.md` - NEW (complete implementation guide)
+
+### Commits 📝
+- `cc32e3c` - fix(idioms): replace unwrap with expect in lazy_static regex
+- `32bb5ab` - docs: correct Issue #90 status to CLOSED in CLAUDE.md
+
+### Session End Summary 🎬
+**Date**: 2025-10-31
+**Duration**: 5 hours
+**Commits**: 2 (pushed to develop_santi)
+**Quality Grade**: A (95/100) - Production ready
+**Status**: ✅ v1.6.4 released, Issue #93 ready for implementation
+
+**Achievements**:
+- ✅ v1.6.4 released successfully to crates.io + GitHub
+- ✅ Reddit responses prepared with accurate v1.6.4 info
+- ✅ Issue #93 fully analyzed with implementation plan
+- ✅ Table detection status corrected in documentation
+- ✅ Code quality maintained (zero unwraps, clippy clean)
+- ✅ Branch workflow corrected (commits in develop_santi)
+
+**Next Session Priority**:
+- Implement Issue #93 fix (UTF-8 panic) - 2-3 hours
+- Use `.private/ISSUE_93_UTF8_FIX_PLAN.md` as implementation guide
+
+---
 
 ## 📊 **Session 2025-10-30: Issue #90 - Table Detection Complete** ✅ COMPLETE
 
