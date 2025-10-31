@@ -35,6 +35,7 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "Email: john@example.com".to_string(),
@@ -46,6 +47,7 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "Phone: (555) 123-4567".to_string(),
@@ -57,6 +59,7 @@ fn demo_colon_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
     ];
 
@@ -93,6 +96,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "$125.00".to_string(),
@@ -104,6 +108,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         // Second line
         TextFragment {
@@ -116,6 +121,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "$12.50".to_string(),
@@ -127,6 +133,7 @@ fn demo_spatial_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
     ];
 
@@ -166,6 +173,7 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "Priority\tHigh".to_string(),
@@ -177,6 +185,7 @@ fn demo_tabular_pattern() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
     ];
 
@@ -217,6 +226,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "Date: 2025-10-20".to_string(),
@@ -228,6 +238,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         // Spatially aligned
         TextFragment {
@@ -240,6 +251,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "Acme Corp".to_string(),
@@ -251,6 +263,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         // Tab-separated
         TextFragment {
@@ -263,6 +276,7 @@ fn demo_mixed_patterns() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
     ];
 
