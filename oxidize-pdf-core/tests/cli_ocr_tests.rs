@@ -52,7 +52,7 @@ mod cli_ocr_tests {
     #[test]
     fn test_cli_ocr_help_command() {
         let output = Command::new(cargo_example_path())
-            .args(&["run", "--example", "convert_pdf_ocr", "--", "--help"])
+            .args(["run", "--example", "convert_pdf_ocr", "--", "--help"])
             .output();
 
         match output {
@@ -72,7 +72,7 @@ mod cli_ocr_tests {
     #[test]
     fn test_cli_version_info() {
         let output = Command::new(cargo_example_path())
-            .args(&["run", "--example", "convert_pdf_ocr", "--", "--help"])
+            .args(["run", "--example", "convert_pdf_ocr", "--", "--help"])
             .output();
 
         match output {
@@ -99,7 +99,7 @@ mod cli_ocr_tests {
 
         // Test CLI conversion (may fail if Tesseract not available)
         let output = Command::new(cargo_example_path())
-            .args(&[
+            .args([
                 "run",
                 "--example",
                 "convert_pdf_ocr",
@@ -142,7 +142,7 @@ mod cli_ocr_tests {
         create_simple_test_pdf(&input_path)?;
 
         let output = Command::new(cargo_example_path())
-            .args(&[
+            .args([
                 "run",
                 "--example",
                 "convert_pdf_ocr",
@@ -183,7 +183,7 @@ mod cli_ocr_tests {
         create_simple_test_pdf(&input_path)?;
 
         let output = Command::new(cargo_example_path())
-            .args(&[
+            .args([
                 "run",
                 "--example",
                 "convert_pdf_ocr",
@@ -231,7 +231,7 @@ mod cli_ocr_tests {
         }
 
         let output = Command::new(cargo_example_path())
-            .args(&[
+            .args([
                 "run",
                 "--example",
                 "convert_pdf_ocr",
@@ -266,7 +266,7 @@ mod cli_ocr_tests {
     fn test_cli_error_handling() {
         // Test with non-existent file
         let output = Command::new(cargo_example_path())
-            .args(&[
+            .args([
                 "run",
                 "--example",
                 "convert_pdf_ocr",
@@ -297,7 +297,7 @@ mod cli_ocr_tests {
     fn test_cli_invalid_arguments() {
         // Test with invalid arguments
         let output = Command::new(cargo_example_path())
-            .args(&[
+            .args([
                 "run",
                 "--example",
                 "convert_pdf_ocr",

@@ -29,12 +29,10 @@ pub fn fixtures_available() -> bool {
 
     // Quick check for PDF files
     if let Ok(entries) = fs::read_dir(fixtures_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(ext) = entry.path().extension() {
-                    if ext == "pdf" {
-                        return true;
-                    }
+        for entry in entries.flatten() {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "pdf" {
+                    return true;
                 }
             }
         }
@@ -53,13 +51,11 @@ pub fn get_fixture_pdfs() -> Vec<PathBuf> {
     let mut pdfs = Vec::new();
 
     if let Ok(entries) = fs::read_dir(fixtures_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if let Some(ext) = path.extension() {
-                    if ext == "pdf" {
-                        pdfs.push(path);
-                    }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(ext) = path.extension() {
+                if ext == "pdf" {
+                    pdfs.push(path);
                 }
             }
         }

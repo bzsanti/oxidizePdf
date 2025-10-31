@@ -43,26 +43,34 @@ jobs:
           ${{ runner.os }}-cargo-bench-
           ${{ runner.os }}-cargo-
           
-    - name: Install CLI binary for benchmarks
+    - name: Run performance benchmarks
       run: |
-        cargo build --release --bin oxidizepdf
-        
-    - name: Run core library benchmarks
+        cargo bench --package oxidize-pdf --bench performance_benchmarks
+
+    - name: Run AI chunking benchmarks
       run: |
-        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
-        
-    - name: Run parser benchmarks
+        cargo bench --package oxidize-pdf --bench ai_chunking
+
+    - name: Run plaintext extraction benchmarks
       run: |
-        cargo bench --package oxidize-pdf-test-suite --bench parser_bench
-        
-    - name: Run memory benchmarks
+        cargo bench --package oxidize-pdf --bench plaintext_benchmark
+
+    - name: Run OCR benchmarks
       run: |
-        cargo bench --package oxidize-pdf-test-suite --bench memory_benchmarks
-        
-    - name: Run CLI benchmarks
+        cargo bench --package oxidize-pdf --bench ocr_benchmarks
+
+    - name: Run parsing benchmarks
       run: |
-        cargo bench --package oxidize-pdf-test-suite --bench cli_benchmarks
-        
+        cargo bench --package oxidize-pdf --bench parsing_benchmark
+
+    - name: Run image extraction benchmarks
+      run: |
+        cargo bench --package oxidize-pdf --bench image_extraction_benchmark
+
+    - name: Run batch processing benchmarks
+      run: |
+        cargo bench --package oxidize-pdf --bench batch_processing_benchmark
+
     - name: Archive benchmark results
       uses: actions/upload-artifact@v4
       if: always()
@@ -130,8 +138,9 @@ jobs:
     - name: Run current benchmarks
       if: steps.check_baseline.outputs.baseline_exists == 'true'
       run: |
-        cargo build --release --bin oxidizepdf
-        cargo bench --package oxidize-pdf-test-suite --bench core_benchmarks
+        cargo bench --package oxidize-pdf --bench performance_benchmarks
+        cargo bench --package oxidize-pdf --bench ai_chunking
+        cargo bench --package oxidize-pdf --bench plaintext_benchmark
         
     - name: Install critcmp
       if: steps.check_baseline.outputs.baseline_exists == 'true'

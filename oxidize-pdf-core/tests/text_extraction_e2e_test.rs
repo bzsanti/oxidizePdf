@@ -276,7 +276,7 @@ fn test_structured_data_extraction_end_to_end() {
     // Validate key-value pair detection
     // Invoice has clear key-value patterns: "Factura Nº: ESP-2025-001"
     assert!(
-        result.key_value_pairs.len() > 0,
+        !result.key_value_pairs.is_empty(),
         "Should detect at least one key-value pair (e.g., 'Factura Nº: ESP-2025-001')"
     );
 

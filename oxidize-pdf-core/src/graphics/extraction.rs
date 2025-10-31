@@ -79,6 +79,8 @@ pub struct VectorLine {
     pub stroke_width: f64,
     /// Whether this line was stroked (visible)
     pub is_stroked: bool,
+    /// Stroke color of the line (from graphics state)
+    pub color: Option<crate::graphics::Color>,
 }
 
 impl VectorLine {
@@ -90,11 +92,20 @@ impl VectorLine {
     /// * `x2`, `y2` - End coordinates
     /// * `stroke_width` - Line thickness
     /// * `is_stroked` - Whether line is visible (stroked)
+    /// * `color` - Stroke color (optional)
     ///
     /// # Returns
     ///
     /// A new `VectorLine` with computed orientation.
-    pub fn new(x1: f64, y1: f64, x2: f64, y2: f64, stroke_width: f64, is_stroked: bool) -> Self {
+    pub fn new(
+        x1: f64,
+        y1: f64,
+        x2: f64,
+        y2: f64,
+        stroke_width: f64,
+        is_stroked: bool,
+        color: Option<crate::graphics::Color>,
+    ) -> Self {
         let orientation = Self::compute_orientation(x1, y1, x2, y2);
         Self {
             x1,
@@ -104,6 +115,7 @@ impl VectorLine {
             orientation,
             stroke_width,
             is_stroked,
+            color,
         }
     }
 
@@ -292,6 +304,20 @@ impl GraphicsExtractor {
                     );
                 }
 
+                // Color operations (Phase 4: Stroke color extraction)
+                ContentOperation::SetStrokingGray(gray) => {
+                    state.stroke_color = Some(crate::graphics::Color::gray(*gray as f64));
+                }
+                ContentOperation::SetStrokingRGB(r, g, b) => {
+                    state.stroke_color =
+                        Some(crate::graphics::Color::rgb(*r as f64, *g as f64, *b as f64));
+                }
+                ContentOperation::SetStrokingCMYK(c, m, y, k) => {
+                    state.stroke_color = Some(crate::graphics::Color::cmyk(
+                        *c as f64, *m as f64, *y as f64, *k as f64,
+                    ));
+                }
+
                 // Path construction
                 ContentOperation::MoveTo(x, y) => {
                     let (tx, ty) = state.transform_point(*x as f64, *y as f64);
@@ -355,16 +381,16 @@ impl GraphicsExtractor {
         let (x4, y4) = state.transform_point(x, y + height); // Top-left
 
         // Bottom edge
-        graphics.add_line(VectorLine::new(x1, y1, x2, y2, stroke_width, true));
+        graphics.add_line(VectorLine::new(x1, y1, x2, y2, stroke_width, true, None));
 
         // Right edge
-        graphics.add_line(VectorLine::new(x2, y2, x3, y3, stroke_width, true));
+        graphics.add_line(VectorLine::new(x2, y2, x3, y3, stroke_width, true, None));
 
         // Top edge
-        graphics.add_line(VectorLine::new(x3, y3, x4, y4, stroke_width, true));
+        graphics.add_line(VectorLine::new(x3, y3, x4, y4, stroke_width, true, None));
 
         // Left edge
-        graphics.add_line(VectorLine::new(x4, y4, x1, y1, stroke_width, true));
+        graphics.add_line(VectorLine::new(x4, y4, x1, y1, stroke_width, true, None));
     }
 
     /// Extracts lines from the current path.
@@ -378,7 +404,15 @@ impl GraphicsExtractor {
 
         for segment in &state.path {
             let PathSegment::Line { x1, y1, x2, y2 } = segment;
-            let line = VectorLine::new(*x1, *y1, *x2, *y2, stroke_width, is_stroked);
+            let line = VectorLine::new(
+                *x1,
+                *y1,
+                *x2,
+                *y2,
+                stroke_width,
+                is_stroked,
+                state.stroke_color,
+            );
 
             // Apply filters
             if self.config.stroked_only && !is_stroked {
@@ -404,6 +438,8 @@ struct GraphicsState {
     ctm: [f64; 6],
     /// Current stroke width
     stroke_width: f64,
+    /// Current stroke color
+    stroke_color: Option<crate::graphics::Color>,
     /// Current path being constructed
     path: Vec<PathSegment>,
     /// Current pen position
@@ -417,6 +453,7 @@ struct GraphicsState {
 struct SavedState {
     ctm: [f64; 6],
     stroke_width: f64,
+    stroke_color: Option<crate::graphics::Color>,
 }
 
 /// Path segment types.
@@ -430,6 +467,7 @@ impl GraphicsState {
         Self {
             ctm: [1.0, 0.0, 0.0, 1.0, 0.0, 0.0], // Identity matrix
             stroke_width: 1.0,
+            stroke_color: None,
             path: Vec::new(),
             current_point: None,
             state_stack: Vec::new(),
@@ -440,6 +478,7 @@ impl GraphicsState {
         self.state_stack.push(SavedState {
             ctm: self.ctm,
             stroke_width: self.stroke_width,
+            stroke_color: self.stroke_color,
         });
     }
 
@@ -447,6 +486,7 @@ impl GraphicsState {
         if let Some(saved) = self.state_stack.pop() {
             self.ctm = saved.ctm;
             self.stroke_width = saved.stroke_width;
+            self.stroke_color = saved.stroke_color;
         }
     }
 
@@ -566,42 +606,42 @@ mod tests {
 
     #[test]
     fn test_line_orientation_horizontal() {
-        let line = VectorLine::new(100.0, 200.0, 300.0, 200.0, 1.0, true);
+        let line = VectorLine::new(100.0, 200.0, 300.0, 200.0, 1.0, true, None);
         assert_eq!(line.orientation, LineOrientation::Horizontal);
     }
 
     #[test]
     fn test_line_orientation_vertical() {
-        let line = VectorLine::new(100.0, 200.0, 100.0, 400.0, 1.0, true);
+        let line = VectorLine::new(100.0, 200.0, 100.0, 400.0, 1.0, true, None);
         assert_eq!(line.orientation, LineOrientation::Vertical);
     }
 
     #[test]
     fn test_line_orientation_diagonal() {
-        let line = VectorLine::new(100.0, 200.0, 300.0, 400.0, 1.0, true);
+        let line = VectorLine::new(100.0, 200.0, 300.0, 400.0, 1.0, true, None);
         assert_eq!(line.orientation, LineOrientation::Diagonal);
     }
 
     #[test]
     fn test_line_orientation_tolerance() {
         // Almost horizontal (within tolerance)
-        let line = VectorLine::new(100.0, 200.0, 300.0, 200.05, 1.0, true);
+        let line = VectorLine::new(100.0, 200.0, 300.0, 200.05, 1.0, true, None);
         assert_eq!(line.orientation, LineOrientation::Horizontal);
 
         // Almost vertical (within tolerance)
-        let line = VectorLine::new(100.0, 200.0, 100.05, 400.0, 1.0, true);
+        let line = VectorLine::new(100.0, 200.0, 100.05, 400.0, 1.0, true, None);
         assert_eq!(line.orientation, LineOrientation::Vertical);
     }
 
     #[test]
     fn test_line_length() {
-        let line = VectorLine::new(0.0, 0.0, 3.0, 4.0, 1.0, true);
+        let line = VectorLine::new(0.0, 0.0, 3.0, 4.0, 1.0, true, None);
         assert!((line.length() - 5.0).abs() < 0.001); // 3-4-5 triangle
     }
 
     #[test]
     fn test_line_midpoint() {
-        let line = VectorLine::new(100.0, 200.0, 300.0, 400.0, 1.0, true);
+        let line = VectorLine::new(100.0, 200.0, 300.0, 400.0, 1.0, true, None);
         let (mx, my) = line.midpoint();
         assert!((mx - 200.0).abs() < 0.001);
         assert!((my - 300.0).abs() < 0.001);
@@ -611,9 +651,9 @@ mod tests {
     fn test_extracted_graphics_add_line() {
         let mut graphics = ExtractedGraphics::new();
 
-        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 0.0, 1.0, true)); // H
-        graphics.add_line(VectorLine::new(0.0, 0.0, 0.0, 100.0, 1.0, true)); // V
-        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 100.0, 1.0, true)); // D
+        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 0.0, 1.0, true, None)); // H
+        graphics.add_line(VectorLine::new(0.0, 0.0, 0.0, 100.0, 1.0, true, None)); // V
+        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 100.0, 1.0, true, None)); // D
 
         assert_eq!(graphics.horizontal_count, 1);
         assert_eq!(graphics.vertical_count, 1);
@@ -624,9 +664,9 @@ mod tests {
     fn test_extracted_graphics_iterators() {
         let mut graphics = ExtractedGraphics::new();
 
-        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 0.0, 1.0, true)); // H
-        graphics.add_line(VectorLine::new(0.0, 0.0, 0.0, 100.0, 1.0, true)); // V
-        graphics.add_line(VectorLine::new(0.0, 100.0, 100.0, 100.0, 1.0, true)); // H
+        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 0.0, 1.0, true, None)); // H
+        graphics.add_line(VectorLine::new(0.0, 0.0, 0.0, 100.0, 1.0, true, None)); // V
+        graphics.add_line(VectorLine::new(0.0, 100.0, 100.0, 100.0, 1.0, true, None)); // H
 
         assert_eq!(graphics.horizontal_lines().count(), 2);
         assert_eq!(graphics.vertical_lines().count(), 1);
@@ -640,13 +680,13 @@ mod tests {
         assert!(!graphics.has_table_structure());
 
         // Add 2 horizontal, 1 vertical (insufficient)
-        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 0.0, 1.0, true));
-        graphics.add_line(VectorLine::new(0.0, 100.0, 100.0, 100.0, 1.0, true));
-        graphics.add_line(VectorLine::new(0.0, 0.0, 0.0, 100.0, 1.0, true));
+        graphics.add_line(VectorLine::new(0.0, 0.0, 100.0, 0.0, 1.0, true, None));
+        graphics.add_line(VectorLine::new(0.0, 100.0, 100.0, 100.0, 1.0, true, None));
+        graphics.add_line(VectorLine::new(0.0, 0.0, 0.0, 100.0, 1.0, true, None));
         assert!(!graphics.has_table_structure());
 
         // Add 2nd vertical (sufficient)
-        graphics.add_line(VectorLine::new(100.0, 0.0, 100.0, 100.0, 1.0, true));
+        graphics.add_line(VectorLine::new(100.0, 0.0, 100.0, 100.0, 1.0, true, None));
         assert!(graphics.has_table_structure());
     }
 

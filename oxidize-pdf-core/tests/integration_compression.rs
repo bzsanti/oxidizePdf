@@ -16,7 +16,7 @@ fn test_compress_decompress_pdf_content() {
 
     // Compress the content
     let compressed = compress(content).unwrap();
-    assert!(compressed.len() > 0);
+    assert!(!compressed.is_empty());
     // Note: For small content, compression may not reduce size due to headers
     // The important thing is that the round-trip works correctly
 
@@ -55,7 +55,7 @@ fn test_compress_binary_pdf_data() {
     }
 
     let compressed = compress(&binary_data).unwrap();
-    assert!(compressed.len() > 0);
+    assert!(!compressed.is_empty());
 
     let decompressed = decompress(&compressed).unwrap();
     assert_eq!(decompressed, binary_data);
@@ -96,7 +96,7 @@ fn test_compress_empty_stream() {
     let compressed = compress(empty).unwrap();
 
     // Even empty data produces some output (headers)
-    assert!(compressed.len() > 0);
+    assert!(!compressed.is_empty());
 
     let decompressed = decompress(&compressed).unwrap();
     assert_eq!(decompressed, empty);
@@ -146,7 +146,7 @@ fn test_compress_unicode_pdf_text() {
     let unicode_text = "Hello 世界! 🎉 PDF Unicode test äöü €".as_bytes();
 
     let compressed = compress(unicode_text).unwrap();
-    assert!(compressed.len() > 0);
+    assert!(!compressed.is_empty());
 
     let decompressed = decompress(&compressed).unwrap();
     assert_eq!(decompressed, unicode_text);

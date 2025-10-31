@@ -192,6 +192,7 @@ mod tests {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         }
     }
 

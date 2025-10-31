@@ -187,8 +187,14 @@ impl CMap {
             } else if line == "endbfrange" {
                 in_bf_range = false;
             } else if in_bf_range {
-                if let Some(entry) = parse_bf_range(line) {
-                    cmap.mappings.push(entry);
+                // Handle both simple format and array format
+                if let Some(entries) = parse_bf_range_entries(line) {
+                    for entry in entries {
+                        if let CMapEntry::Single { ref src, ref dst } = entry {
+                            cmap.single_mappings.insert(src.clone(), dst.clone());
+                        }
+                        cmap.mappings.push(entry);
+                    }
                 }
             }
         }
@@ -326,8 +332,59 @@ fn parse_bf_char(line: &str) -> Option<(Vec<u8>, Vec<u8>)> {
     parse_hex_range(line)
 }
 
-/// Parse a bfrange line like "<0000> <005F> <0020>"
-fn parse_bf_range(line: &str) -> Option<CMapEntry> {
+/// Parse a bfrange line - returns Vec of entries (array format creates multiple entries)
+fn parse_bf_range_entries(line: &str) -> Option<Vec<CMapEntry>> {
+    // Check if line contains an array (format: <start> <end> [<dst1> <dst2> ...])
+    if line.contains('[') {
+        // Parse array format: <srcStart> <srcEnd> [<dst1> <dst2> <dst3> ...]
+        if let Some(array_start) = line.find('[') {
+            let before_array = &line[..array_start];
+            let parts: Vec<&str> = before_array.split_whitespace().collect();
+
+            if parts.len() >= 2 {
+                if let (Some(src_start), Some(src_end)) = (parse_hex(parts[0]), parse_hex(parts[1]))
+                {
+                    // Extract array values
+                    let after_bracket = &line[array_start + 1..];
+                    if let Some(array_end) = after_bracket.find(']') {
+                        let array_content = &after_bracket[..array_end];
+
+                        // Parse each hex value in the array
+                        let hex_values: Vec<Vec<u8>> = array_content
+                            .split_whitespace()
+                            .filter_map(parse_hex)
+                            .collect();
+
+                        // Create individual Single entries for each mapping
+                        let mut entries = Vec::new();
+                        let mut current_src = src_start.clone();
+
+                        for dst in hex_values {
+                            entries.push(CMapEntry::Single {
+                                src: current_src.clone(),
+                                dst,
+                            });
+
+                            // Increment source code
+                            if let Some(last) = current_src.last_mut() {
+                                *last = last.wrapping_add(1);
+                            }
+
+                            // Stop if we've reached src_end
+                            if current_src > src_end {
+                                break;
+                            }
+                        }
+
+                        return Some(entries);
+                    }
+                }
+            }
+        }
+        return None;
+    }
+
+    // Original simple format: <start> <end> <dst>
     let parts: Vec<&str> = line.split_whitespace().collect();
     if parts.len() >= 3 {
         if let (Some(start), Some(end), Some(dst)) = (
@@ -335,11 +392,11 @@ fn parse_bf_range(line: &str) -> Option<CMapEntry> {
             parse_hex(parts[1]),
             parse_hex(parts[2]),
         ) {
-            return Some(CMapEntry::Range {
+            return Some(vec![CMapEntry::Range {
                 src_start: start,
                 src_end: end,
                 dst_start: dst,
-            });
+            }]);
         }
     }
     None

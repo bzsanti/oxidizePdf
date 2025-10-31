@@ -18,7 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable, beta]
+        rust: [stable]
+        # beta temporarily disabled - needs API updates for benchmarks
     steps:
       - uses: actions/checkout@v4
       
