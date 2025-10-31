@@ -483,15 +483,7 @@ cargo build --release                # Production build
 - Encrypted PDFs not supported (19 cases)
 - Some circular references in complex PDFs
 
-## 📝 Open GitHub Issues (2)
-
-- **#90** - **OPEN** - Advanced Text Extraction with Table Detection (2025-10-16)
-  - ✅ Gap analysis completed with competitor comparison
-  - **Phase 1**: Font metadata exposure in TextFragment
-  - **Phase 2**: Vector graphics line extraction
-  - **Phase 3**: Table detection with border-based cell assignment
-  - **Status**: Ready for prioritization
-  - **Estimated effort**: 28-42 hours (3.5-5 days)
+## 📝 Open GitHub Issues (1)
 
 - **#54** - **OPEN** - ISO 32000-1:2008 Compliance Tracking (2025-10-13)
   - ✅ Honest gap analysis completed 2025-10-07
@@ -500,6 +492,13 @@ cargo build --release                # Production build
   - **Action**: Update issue with honest assessment
 
 ## 📝 Recently Closed Issues
+
+- **#90** - ✅ **CLOSED** - Advanced Text Extraction with Table Detection (2025-10-30)
+  - ✅ All 4 phases completed (Font metadata, Vector lines, Table detection, Color extraction)
+  - ✅ Border-based cell assignment fully implemented (`text/table_detection.rs`)
+  - ✅ Spatial clustering fallback for borderless tables (`text/structured/table.rs`)
+  - ✅ Validated on 3 real invoices with 100% detection success
+  - ✅ Shipped in v1.6.4
 
 - **#87** - ✅ **CLOSED** - Kerning Normalization (2025-10-17)
   - ✅ All 3 phases completed (font metrics, TrueType kerning, Type1 documentation)
