@@ -130,7 +130,7 @@ fn bench_parse_and_access_catalog(c: &mut Criterion) {
                     let cursor = Cursor::new(pdf_data.clone());
                     let reader = BufReader::new(cursor);
                     if let Ok(mut pdf_reader) = PdfReader::new(reader) {
-                        let catalog = pdf_reader.catalog();
+                        let catalog = pdf_reader.catalog().ok();
                         black_box(catalog)
                     }
                 });
@@ -157,7 +157,7 @@ fn bench_parse_page_tree(c: &mut Criterion) {
                     let cursor = Cursor::new(pdf_data.clone());
                     let reader = BufReader::new(cursor);
                     if let Ok(mut pdf_reader) = PdfReader::new(reader) {
-                        let num_pages = pdf_reader.num_pages();
+                        let num_pages = pdf_reader.page_count().ok();
                         black_box(num_pages)
                     }
                 });
@@ -185,14 +185,14 @@ fn bench_full_document_parse(c: &mut Criterion) {
                     let reader = BufReader::new(cursor);
                     if let Ok(mut pdf_reader) = PdfReader::new(reader) {
                         // Access catalog
-                        let _ = pdf_reader.catalog();
+                        let _ = pdf_reader.catalog().ok();
                         // Get page count
-                        let num_pages = pdf_reader.num_pages();
+                        let num_pages = pdf_reader.page_count().unwrap_or(0);
                         // Access first and last page if available
                         if num_pages > 0 {
-                            let _ = pdf_reader.get_page(0);
+                            let _ = pdf_reader.get_page(0).ok();
                             if num_pages > 1 {
-                                let _ = pdf_reader.get_page(num_pages - 1);
+                                let _ = pdf_reader.get_page(num_pages - 1).ok();
                             }
                         }
                         black_box(num_pages)
