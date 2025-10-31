@@ -12,6 +12,9 @@ use oxidize_pdf::writer::WriterConfig;
 use std::fs;
 use tempfile::TempDir;
 
+type EdgeCaseSetupFn = fn(&mut Document);
+type EdgeCase = (&'static str, EdgeCaseSetupFn);
+
 /// Helper function to create a test PDF in memory
 fn create_test_pdf() -> Result<Vec<u8>> {
     let mut doc = Document::new();
@@ -110,9 +113,7 @@ fn test_structure_preservation_roundtrip() -> Result<()> {
 
     // Attempt to parse (may not be fully implemented)
     let parse_result = PdfReader::open(&original_path);
-    if parse_result.is_ok() {
-        let reader = parse_result.unwrap();
-
+    if let Ok(reader) = parse_result {
         // Verify basic structure elements
         assert!(reader.version().major >= 1);
 
@@ -462,7 +463,7 @@ fn test_edge_case_roundtrip() -> Result<()> {
         doc.add_page(page);
     }
 
-    let edge_cases: Vec<(&str, fn(&mut Document))> = vec![
+    let edge_cases: Vec<EdgeCase> = vec![
         ("Empty document", setup_empty_document),
         ("Single character", setup_single_character),
         ("Unicode content", setup_unicode_content),

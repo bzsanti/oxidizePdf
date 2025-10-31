@@ -38,6 +38,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "Age".to_string(),
@@ -49,6 +50,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "City".to_string(),
@@ -60,6 +62,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         // Data row 1 (Y = 680)
         TextFragment {
@@ -72,6 +75,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "30".to_string(),
@@ -83,6 +87,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "NYC".to_string(),
@@ -94,6 +99,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         // Data row 2 (Y = 660)
         TextFragment {
@@ -106,6 +112,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "25".to_string(),
@@ -117,6 +124,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
         TextFragment {
             text: "LA".to_string(),
@@ -128,6 +136,7 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         },
     ];
 

@@ -3,6 +3,7 @@
 //! This module provides functionality to extract text from PDF pages,
 //! handling text positioning, transformations, and basic encodings.
 
+use crate::graphics::Color;
 use crate::parser::content::{ContentOperation, ContentParser, TextElement};
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::PdfObject;
@@ -75,6 +76,8 @@ pub struct TextFragment {
     pub is_bold: bool,
     /// Whether the font is italic (detected from font name)
     pub is_italic: bool,
+    /// Fill color of the text (from graphics state)
+    pub color: Option<Color>,
 }
 
 /// Text extraction state
@@ -101,6 +104,8 @@ struct TextState {
     font_name: Option<String>,
     /// Render mode (0 = fill, 1 = stroke, etc.)
     render_mode: u8,
+    /// Fill color (for text rendering)
+    fill_color: Option<Color>,
 }
 
 impl Default for TextState {
@@ -117,6 +122,7 @@ impl Default for TextState {
             font_size: 0.0,
             font_name: None,
             render_mode: 0,
+            fill_color: None,
         }
     }
 }
@@ -343,6 +349,7 @@ impl TextExtractor {
                                     font_name: state.font_name.clone(),
                                     is_bold,
                                     is_italic,
+                                    color: state.fill_color,
                                 });
                             }
 
@@ -446,6 +453,20 @@ impl TextExtractor {
                         ];
                     }
 
+                    // Color operations (Phase 4: Color extraction)
+                    ContentOperation::SetNonStrokingGray(gray) => {
+                        state.fill_color = Some(Color::gray(gray as f64));
+                    }
+
+                    ContentOperation::SetNonStrokingRGB(r, g, b) => {
+                        state.fill_color = Some(Color::rgb(r as f64, g as f64, b as f64));
+                    }
+
+                    ContentOperation::SetNonStrokingCMYK(c, m, y, k) => {
+                        state.fill_color =
+                            Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
+                    }
+
                     _ => {
                         // Other operations don't affect text extraction
                     }
@@ -456,6 +477,12 @@ impl TextExtractor {
         // Sort and process fragments if requested
         if self.options.sort_by_position && !fragments.is_empty() {
             self.sort_and_merge_fragments(&mut fragments);
+        }
+
+        // Merge close fragments to eliminate spacing artifacts
+        // This is crucial for table detection and structured data extraction
+        if self.options.preserve_layout && !fragments.is_empty() {
+            fragments = self.merge_close_fragments(&fragments);
         }
 
         // Reconstruct text from sorted fragments if layout is preserved
@@ -559,12 +586,15 @@ impl TextExtractor {
 
     /// Reconstruct text from sorted fragments
     fn reconstruct_text_from_fragments(&self, fragments: &[TextFragment]) -> String {
+        // First, merge consecutive fragments that are very close together
+        let merged_fragments = self.merge_close_fragments(fragments);
+
         let mut result = String::new();
         let mut last_y = f64::INFINITY;
         let mut last_x = 0.0;
         let mut last_line_ended_with_hyphen = false;
 
-        for fragment in fragments {
+        for fragment in &merged_fragments {
             // Check if we need a newline
             let y_diff = (last_y - fragment.y).abs();
             if !result.is_empty() && y_diff > self.options.newline_threshold {
@@ -594,6 +624,42 @@ impl TextExtractor {
         result
     }
 
+    /// Merge fragments that are very close together on the same line
+    /// This fixes artifacts like "IN VO ICE" -> "INVOICE"
+    fn merge_close_fragments(&self, fragments: &[TextFragment]) -> Vec<TextFragment> {
+        if fragments.is_empty() {
+            return Vec::new();
+        }
+
+        let mut merged = Vec::new();
+        let mut current = fragments[0].clone();
+
+        for fragment in &fragments[1..] {
+            // Check if this fragment is on the same line and very close
+            let y_diff = (current.y - fragment.y).abs();
+            let x_gap = fragment.x - (current.x + current.width);
+
+            // Merge if on same line and gap is less than a character width
+            // Use 0.5 * font_size as threshold - this catches most artificial spacing
+            let should_merge = y_diff < 1.0  // Same line (very tight tolerance)
+                && x_gap >= 0.0  // Fragment is to the right
+                && x_gap < fragment.font_size * 0.5; // Gap less than 50% of font size
+
+            if should_merge {
+                // Merge this fragment into current
+                current.text.push_str(&fragment.text);
+                current.width = (fragment.x + fragment.width) - current.x;
+            } else {
+                // Start a new fragment
+                merged.push(current);
+                current = fragment.clone();
+            }
+        }
+
+        merged.push(current);
+        merged
+    }
+
     /// Extract font resources from page
     fn extract_font_resources<R: Read + Seek>(
         &mut self,
@@ -603,26 +669,57 @@ impl TextExtractor {
         // Clear previous font cache
         self.font_cache.clear();
 
-        // Get page resources
-        if let Some(resources) = page.get_resources() {
+        // Try to get resources manually from page dictionary first
+        // This is necessary because ParsedPage.get_resources() may not always work
+        if let Some(res_ref) = page.dict.get("Resources").and_then(|o| o.as_reference()) {
+            if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1)
+            {
+                if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
+                    // Extract each font
+                    for (font_name, font_obj) in font_dict.0.iter() {
+                        if let Some(font_ref) = font_obj.as_reference() {
+                            if let Ok(PdfObject::Dictionary(font_dict)) =
+                                document.get_object(font_ref.0, font_ref.1)
+                            {
+                                // Create a CMap extractor to use its font extraction logic
+                                let mut cmap_extractor: CMapTextExtractor<R> =
+                                    CMapTextExtractor::new();
+
+                                if let Ok(font_info) =
+                                    cmap_extractor.extract_font_info(&font_dict, document)
+                                {
+                                    let has_to_unicode = font_info.to_unicode.is_some();
+                                    self.font_cache.insert(font_name.0.clone(), font_info);
+                                    tracing::debug!(
+                                        "Cached font: {} (ToUnicode: {})",
+                                        font_name.0,
+                                        has_to_unicode
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if let Some(resources) = page.get_resources() {
+            // Fallback to get_resources() if Resources is not a reference
             if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                // Extract each font
                 for (font_name, font_obj) in font_dict.0.iter() {
                     if let Some(font_ref) = font_obj.as_reference() {
                         if let Ok(PdfObject::Dictionary(font_dict)) =
                             document.get_object(font_ref.0, font_ref.1)
                         {
-                            // Create a CMap extractor to use its font extraction logic
                             let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
 
                             if let Ok(font_info) =
                                 cmap_extractor.extract_font_info(&font_dict, document)
                             {
+                                let has_to_unicode = font_info.to_unicode.is_some();
                                 self.font_cache.insert(font_name.0.clone(), font_info);
                                 tracing::debug!(
-                                    "Cached font: {} -> {:?}",
+                                    "Cached font: {} (ToUnicode: {})",
                                     font_name.0,
-                                    self.font_cache.get(&font_name.0)
+                                    has_to_unicode
                                 );
                             }
                         }
@@ -646,17 +743,22 @@ impl TextExtractor {
 
                 // Try CMap-based decoding first
                 if let Ok(decoded) = cmap_extractor.decode_text_with_font(text, font_info) {
-                    tracing::debug!(
-                        "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
-                        font_name,
-                        text,
-                        decoded
-                    );
-                    return Ok(decoded);
+                    // Only accept if we got meaningful text (not all null bytes or garbage)
+                    if !decoded.trim().is_empty()
+                        && !decoded.chars().all(|c| c == '\0' || c.is_ascii_control())
+                    {
+                        tracing::debug!(
+                            "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
+                            font_name,
+                            text,
+                            decoded
+                        );
+                        return Ok(decoded);
+                    }
                 }
 
                 tracing::debug!(
-                    "CMap decoding failed for font {}, falling back to encoding",
+                    "CMap decoding failed or produced garbage for font {}, falling back to encoding",
                     font_name
                 );
             }
@@ -888,6 +990,7 @@ mod tests {
             font_name: None,
             is_bold: false,
             is_italic: false,
+            color: None,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -910,6 +1013,7 @@ mod tests {
                 font_name: None,
                 is_bold: false,
                 is_italic: false,
+                color: None,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -921,6 +1025,7 @@ mod tests {
                 font_name: None,
                 is_bold: false,
                 is_italic: false,
+                color: None,
             },
         ];
 
