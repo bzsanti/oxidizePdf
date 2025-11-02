@@ -1,24 +1,71 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-10-31 - v1.6.4 Release + Issue #93 Analysis (Session ENDED ✅)
-- **Branch**: develop_santi (2 commits ahead of main)
-- **Version**: **v1.6.4** (released to crates.io + GitHub)
+- **Last Session**: 2025-11-02 - Issue #93 UTF-8 Panic Fix (Session ENDED ✅)
+- **Branch**: develop_santi (uncommitted changes)
+- **Version**: v1.6.4 (next: v1.6.5 with Issue #93 fix)
 - **Status**:
-  - v1.6.4: ✅ Released successfully (table detection + text fixes)
-  - Issue #93: 🔍 Analyzed - Fix plan documented (ready for implementation)
-  - Reddit Post: 📝 Responses prepared for v1.6.4 updates
-  - Code Quality: ✅ Idioms fixed (unwrap → expect in lazy_static)
+  - Issue #93: ✅ **FIXED** - UTF-8 panic in XRef recovery eliminated
+  - Tests: 4697 passing (4693 lib + 4 Issue #93 tests)
+  - All existing tests still pass - no regressions
+  - Ready to commit and release v1.6.5
 - **Quality Metrics**:
-  - Tests: 4693 passing (all green)
+  - Tests: 4697 passing (all green) ⬆️ +4
   - Clippy: Clean (0 warnings on lib)
   - Zero Unwraps: 100% library code compliance (enforced)
   - Table Detection: 100% success on test invoices (3/3)
   - Quality Grade: **A (95/100)** - Production ready
 - **Next Session**:
-  - **Priority 1**: Implement Issue #93 fix (UTF-8 panic in XRef recovery) - 2-3 hours
+  - **Priority 1**: Release v1.6.5 (Issue #93 fix) - 15 minutes
   - **Priority 2**: Object Streams implementation (GAP crítico vs lopdf) - 5-7 days
   - **Priority 3**: Performance benchmarks validation - 1-2 days
+
+## 📊 **Session 2025-11-02: Issue #93 - UTF-8 Panic Fix** ✅ COMPLETE
+
+### Issue #93 - UTF-8 Char Boundary Panic in XRef Recovery (COMPLETE) ✅
+
+**Problem**: XRef recovery panics when parsing PDFs with non-ASCII characters (Romanian ț, â, Cyrillic, etc.) because it converts binary buffer to String, then slices at byte offsets that may fall inside multi-byte UTF-8 characters.
+
+**Panic Location**: `src/parser/xref.rs:930` (and 5 other locations)
+
+**Root Cause**: `String::from_utf8_lossy(&buffer)` followed by unsafe slicing like `&content[pos..]` where `pos` may be inside a multi-byte UTF-8 character.
+
+**Solution**: Converted XRef recovery to byte-based operations:
+- Added helper functions: `find_byte_pattern()`, `rfind_byte_pattern()`, `parse_obj_header_bytes()`
+- Refactored 6 critical sections to use `&[u8]` operations instead of String slicing
+- Convert to String only for small slices when parsing numeric values
+
+**Sections Refactored**:
+1. ✅ `recover_linearized_xref()` (lines 575-610)
+2. ✅ `recover_xref_table()` main scan loop (lines 753-779)
+3. ✅ First fallback catalog search (lines 865-904)
+4. ✅ Second fallback catalog search (lines 1036-1066)
+5. ✅ `validate_offset()` (lines 1118-1124)
+6. ✅ `find_catalog_by_content()` (lines 2696-2722)
+
+**Tests Created** (`tests/issue_93_utf8_panic.rs`):
+- ✅ `test_romanian_pdf_xref_recovery_succeeds` - Integration test with real Romanian PDF
+- ✅ `test_utf8_multi_byte_boundary_safety` - Unit test for byte-based pattern matching
+- ✅ `test_byte_pattern_matching_with_cyrillic` - Cyrillic character test
+- ✅ `test_edge_case_pattern_at_utf8_boundary` - Edge case slicing test
+
+**Results**:
+- All 4 new tests passing ✅
+- All 4,693 existing tests still passing ✅ (no regressions)
+- No timeouts or hangs (previously would hang indefinitely)
+- Clean error handling instead of panics
+
+**Time Investment**: 3 hours (analysis from previous session + implementation)
+
+**Files Modified**:
+- `oxidize-pdf-core/src/parser/xref.rs` - 6 sections refactored, +40 lines (helper functions)
+- `oxidize-pdf-core/tests/issue_93_utf8_panic.rs` - NEW (216 lines, 4 tests)
+- `test-pdfs/issue-93-romanian.pdf` - NEW (131KB test PDF)
+- `CLAUDE.md` - Updated with session notes
+
+**Commits**: Ready for commit
+
+---
 
 ## 📊 **Session 2025-10-31: v1.6.4 Release + Issue #93 Analysis** ✅ COMPLETE
 
