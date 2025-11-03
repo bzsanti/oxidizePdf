@@ -121,7 +121,7 @@ impl XRefTable {
             Ok(table) => Ok(table),
             Err(e) => {
                 if options.lenient_syntax {
-                    eprintln!("Primary XRef parsing failed: {e:?}, attempting recovery");
+                    tracing::warn!("Primary XRef parsing failed: {e:?}, attempting recovery");
 
                     // Reset reader position and try recovery
                     reader.seek(SeekFrom::Start(0))?;
@@ -157,7 +157,7 @@ impl XRefTable {
         while let Some(offset) = current_offset {
             // Prevent infinite loops
             if visited_offsets.contains(&offset) {
-                eprintln!(
+                tracing::debug!(
                     "Circular reference in XRef chain at offset {} (already visited)",
                     offset
                 );
@@ -240,7 +240,7 @@ impl XRefTable {
         // Check for linearized PDF by looking for the first object
         reader.seek(SeekFrom::Start(0))?;
         if let Ok(xref_offset) = Self::find_linearized_xref(reader) {
-            eprintln!("Found linearized PDF with XRef at offset {xref_offset}");
+            tracing::debug!("Found linearized PDF with XRef at offset {xref_offset}");
 
             // Validate offset before using it
             Self::validate_offset(reader, xref_offset)?;
@@ -270,7 +270,7 @@ impl XRefTable {
             // Traditional xref table
             Self::parse_traditional_xref_with_options(reader, &mut table, options)?;
         } else {
-            eprintln!(
+            tracing::debug!(
                 "Not a traditional xref, checking for xref stream. Line: {:?}",
                 line.trim()
             );
@@ -287,7 +287,7 @@ impl XRefTable {
                 _ => return Err(ParseError::InvalidXRef),
             };
 
-            eprintln!("Found object {obj_num} at xref position");
+            tracing::debug!("Found object {obj_num} at xref position");
 
             let _gen_num = match lexer.next_token()? {
                 super::lexer::Token::Integer(n) => n as u16,
@@ -311,26 +311,26 @@ impl XRefTable {
                     .map(|n| n.as_str())
                     == Some("XRef")
                 {
-                    eprintln!("Parsing XRef stream");
+                    tracing::debug!("Parsing XRef stream");
 
                     // Try to decode the stream, with fallback for corrupted streams
                     let decoded_data = match stream.decode(options) {
                         Ok(data) => data,
                         Err(e) => {
-                            eprintln!(
+                            tracing::debug!(
                                 "XRef stream decode failed: {e:?}, attempting raw data fallback"
                             );
 
                             // If decode fails, try using raw stream data
                             // This helps with corrupted Flate streams
                             if !stream.data.is_empty() {
-                                eprintln!(
+                                tracing::debug!(
                                     "Using raw stream data ({} bytes) as fallback",
                                     stream.data.len()
                                 );
                                 stream.data.clone()
                             } else {
-                                eprintln!("No raw stream data available, triggering recovery mode");
+                                tracing::debug!("No raw stream data available, triggering recovery mode");
                                 return Err(e);
                             }
                         }
@@ -346,7 +346,7 @@ impl XRefTable {
 
                     // Convert entries to our format
                     let entries = xref_stream_parser.to_xref_entries()?;
-                    eprintln!("XRef stream parsed, found {} entries", entries.len());
+                    tracing::debug!("XRef stream parsed, found {} entries", entries.len());
 
                     // Copy entries from xref stream
                     for (obj_num, entry) in entries {
@@ -451,7 +451,7 @@ impl XRefTable {
 
             // Also check if the line looks like a trailer (might have been reached prematurely)
             if trimmed_line.starts_with("<<") {
-                eprintln!("Warning: Found trailer dictionary without 'trailer' keyword");
+                tracing::warn!(" Found trailer dictionary without 'trailer' keyword");
                 // Try to parse it as trailer
                 break;
             }
@@ -486,7 +486,7 @@ impl XRefTable {
 
                 // Check if we've hit EOF or trailer prematurely
                 if bytes_read == 0 || trimmed == "trailer" {
-                    eprintln!(
+                    tracing::debug!(
                         "Warning: XRef subsection incomplete - expected {count} entries but found only {entries_parsed}"
                     );
                     // Put the "trailer" line back for the next phase
@@ -503,7 +503,7 @@ impl XRefTable {
                         entries_parsed += 1;
                     }
                     Err(_) => {
-                        eprintln!(
+                        tracing::debug!(
                             "Warning: Invalid XRef entry at position {}: {:?}",
                             i,
                             line.trim()
@@ -532,7 +532,7 @@ impl XRefTable {
                     if let Some(max_obj_num) = table.entries.keys().max() {
                         let max_expected = (*max_obj_num + 1) as i64;
                         if max_expected > expected_size {
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: XRef table has object {} but trailer Size is only {}",
                                 max_obj_num, expected_size
                             );
@@ -575,7 +575,7 @@ impl XRefTable {
         // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
         // Look for patterns that indicate a linearized PDF
         // Linearized PDFs typically have a linearization dictionary as the first object
-        eprintln!(
+        tracing::debug!(
             "Checking for linearized PDF, first 100 bytes: {:?}",
             String::from_utf8_lossy(&buffer[..buffer.len().min(100)])
         );
@@ -632,7 +632,7 @@ impl XRefTable {
 
         // Debug: print last part of file
         let debug_content = content.chars().take(200).collect::<String>();
-        eprintln!("XRef search in last {read_size} bytes: {debug_content:?}");
+        tracing::debug!("XRef search in last {read_size} bytes: {debug_content:?}");
 
         let mut lines = content.pdf_lines();
 
@@ -735,7 +735,7 @@ impl XRefTable {
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer)?;
 
-        eprintln!("XRef recovery: scanning {} bytes for objects", buffer.len());
+        tracing::debug!("XRef recovery: scanning {} bytes for objects", buffer.len());
 
         // Try to extract Root from XRef stream first (more reliable than searching)
         // Keep content String for sections not yet refactored (will be removed progressively)
@@ -744,7 +744,7 @@ impl XRefTable {
         let mut xref_root_candidate = None;
         if let Some(root_match) = extract_root_from_xref_stream(&content) {
             xref_root_candidate = Some(root_match);
-            eprintln!("XRef recovery: Found Root {} in XRef stream", root_match);
+            tracing::debug!("XRef recovery: Found Root {} in XRef stream", root_match);
         }
 
         let mut objects_found = 0;
@@ -809,7 +809,7 @@ impl XRefTable {
                                     if check_str.contains("/Type") && check_str.contains("/ObjStm")
                                     {
                                         object_streams.push(obj_num);
-                                        eprintln!(
+                                        tracing::debug!(
                                             "XRef recovery: found object stream at object {obj_num}"
                                         );
                                     }
@@ -825,7 +825,7 @@ impl XRefTable {
             }
         }
 
-        eprintln!(
+        tracing::debug!(
             "XRef recovery: found {} objects and {} object streams",
             objects_found,
             object_streams.len()
@@ -852,9 +852,9 @@ impl XRefTable {
         if let Some(xref_root) = xref_root_candidate {
             if table.entries.contains_key(&xref_root) {
                 catalog_candidate = Some(xref_root);
-                eprintln!("Using Root {} from XRef stream as catalog", xref_root);
+                tracing::debug!("Using Root {} from XRef stream as catalog", xref_root);
             } else {
-                eprintln!(
+                tracing::debug!(
                     "Warning: XRef Root {} not found in object table, searching manually",
                     xref_root
                 );
@@ -890,7 +890,7 @@ impl XRefTable {
                                     if obj_content.contains("/Type/Sig")
                                         || obj_content.contains("/Type /Sig")
                                     {
-                                        eprintln!("Skipping object {} (Type: Sig)", obj_num);
+                                        tracing::debug!("Skipping object {} (Type: Sig)", obj_num);
                                         continue;
                                     }
 
@@ -900,7 +900,7 @@ impl XRefTable {
                                         || obj_content.contains("/Pages")
                                     {
                                         catalog_candidate = Some(obj_num);
-                                        eprintln!("Using fallback catalog candidate: object {} (validated)", obj_num);
+                                        tracing::debug!("Using fallback catalog candidate: object {} (validated)", obj_num);
                                         break;
                                     }
                                 }
@@ -914,7 +914,7 @@ impl XRefTable {
         // If still no Root found, scan ALL objects as last resort (not just first)
         // FIX for Issue #83: In signed PDFs, catalog might be anywhere, not just object 1
         if catalog_candidate.is_none() && !table.entries.is_empty() {
-            eprintln!(
+            tracing::debug!(
                 "Last resort: Scanning all {} objects for any with /Pages or /Catalog",
                 table.entries.len()
             );
@@ -953,11 +953,11 @@ impl XRefTable {
                                         || obj_content.contains("/Type /Catalog")
                                     {
                                         catalog_candidate = Some(obj_num);
-                                        eprintln!("Last resort: Found catalog at object {} (/Type/Catalog)", obj_num);
+                                        tracing::debug!("Last resort: Found catalog at object {} (/Type/Catalog)", obj_num);
                                         break;
                                     } else if obj_content.contains("/Pages") {
                                         catalog_candidate = Some(obj_num);
-                                        eprintln!(
+                                        tracing::debug!(
                                             "Last resort: Found catalog at object {} (has /Pages)",
                                             obj_num
                                         );
@@ -975,7 +975,7 @@ impl XRefTable {
             // table entries are unreliable - search last 100KB only (performance optimization)
             // FIX for Issue #93: Use byte-based operations to avoid UTF-8 char boundary panics
             if catalog_candidate.is_none() {
-                eprintln!("Extreme last resort: Scanning last 100KB for /Type/Catalog");
+                tracing::debug!("Extreme last resort: Scanning last 100KB for /Type/Catalog");
 
                 // Search for "/Type/Catalog" in LAST 100KB only (catalog is at end in signed PDFs)
                 // This avoids performance issues with large PDFs (>1MB)
@@ -990,7 +990,7 @@ impl XRefTable {
                 let catalog_pattern = b"/Type/Catalog";
                 if let Some(catalog_pos) = rfind_byte_pattern(search_buffer, catalog_pattern) {
                     let absolute_pos = search_start + catalog_pos;
-                    eprintln!(
+                    tracing::debug!(
                         "Extreme last resort: Found /Type/Catalog at position {}",
                         absolute_pos
                     );
@@ -1017,7 +1017,7 @@ impl XRefTable {
                             let num_str = trimmed[digit_start + 1..].trim();
                             if !num_str.is_empty() {
                                 if let Ok(obj_num) = num_str.parse::<u32>() {
-                                    eprintln!(
+                                    tracing::debug!(
                                         "Extreme last resort: Found /Type/Catalog at object {}",
                                         obj_num
                                     );
@@ -1028,7 +1028,7 @@ impl XRefTable {
                             // No non-digit found, entire string might be the number
                             let num_str = trimmed.trim();
                             if let Ok(obj_num) = num_str.parse::<u32>() {
-                                eprintln!(
+                                tracing::debug!(
                                     "Extreme last resort: Found /Type/Catalog at object {}",
                                     obj_num
                                 );
@@ -1037,13 +1037,13 @@ impl XRefTable {
                         }
                     }
                 } else {
-                    eprintln!("Extreme last resort: No /Type/Catalog found in last 100KB");
+                    tracing::debug!("Extreme last resort: No /Type/Catalog found in last 100KB");
                 }
 
                 // If STILL nothing, fallback to first non-Sig object in table
                 // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
                 if catalog_candidate.is_none() {
-                    eprintln!("Warning: Could not find any catalog object, using first non-signature object as absolute last resort");
+                    tracing::warn!(" Could not find any catalog object, using first non-signature object as absolute last resort");
                     for obj_num in table.entries.keys().copied().collect::<Vec<_>>().iter() {
                         let offset = match table.entries.get(obj_num) {
                             Some(entry) => entry.offset as usize,
@@ -1063,7 +1063,7 @@ impl XRefTable {
                                         && !obj_content.contains("/Type /Sig")
                                     {
                                         catalog_candidate = Some(*obj_num);
-                                        eprintln!(
+                                        tracing::debug!(
                                             "Using object {} as absolute last resort",
                                             obj_num
                                         );
@@ -1109,7 +1109,7 @@ impl XRefTable {
 
         if offset >= file_size {
             #[cfg(debug_assertions)]
-            eprintln!("Warning: XRef offset {offset} exceeds file size {file_size}");
+            tracing::warn!(" XRef offset {offset} exceeds file size {file_size}");
             return Err(ParseError::InvalidXRef);
         }
 
@@ -1120,7 +1120,7 @@ impl XRefTable {
 
         if read_bytes == 0 {
             #[cfg(debug_assertions)]
-            eprintln!("Warning: XRef offset {offset} points to EOF");
+            tracing::warn!(" XRef offset {offset} points to EOF");
             return Err(ParseError::InvalidXRef);
         }
 
@@ -1135,7 +1135,7 @@ impl XRefTable {
             {
                 let debug_len = std::cmp::min(10, read_bytes);
                 let debug_content = String::from_utf8_lossy(&peek[..debug_len]);
-                eprintln!(
+                tracing::debug!(
                     "Warning: XRef offset {} does not point to valid XRef content: {:?}",
                     offset,
                     debug_content
@@ -1263,7 +1263,7 @@ impl XRefTable {
                 _ => {
                     // Unknown flag, log warning in debug mode and assume in-use
                     #[cfg(debug_assertions)]
-                    eprintln!("Warning: Invalid xref flag '{}', assuming 'n'", parts[2]);
+                    tracing::warn!(" Invalid xref flag '{}', assuming 'n'", parts[2]);
                     true
                 }
             }
@@ -1502,7 +1502,7 @@ impl XRefStream {
                         // Custom types are treated as in-use objects
                         // Log only in debug mode to avoid spam
                         #[cfg(debug_assertions)]
-                        eprintln!(
+                        tracing::debug!(
                             "Note: Custom xref entry type {} for object {} (treating as in-use)",
                             _type_num,
                             first_obj_num + i
@@ -2699,7 +2699,7 @@ fn extract_root_from_xref_stream(content: &str) -> Option<u32> {
                 if let Some(space_pos) = after_root.find(' ') {
                     let number_part = &after_root[..space_pos];
                     if let Ok(root_obj) = number_part.parse::<u32>() {
-                        eprintln!("Extracted Root {} from XRef stream", root_obj);
+                        tracing::debug!("Extracted Root {} from XRef stream", root_obj);
                         return Some(root_obj);
                     }
                 }
@@ -2730,7 +2730,7 @@ fn find_catalog_by_content(table: &XRefTable, buffer: &[u8]) -> Option<u32> {
 
                         // Validate that this object contains "/Type /Catalog" within its boundaries
                         if obj_content.contains("/Type /Catalog") {
-                            eprintln!(
+                            tracing::debug!(
                                 "Found catalog candidate at object {} (validated structure)",
                                 obj_num
                             );
@@ -2742,6 +2742,6 @@ fn find_catalog_by_content(table: &XRefTable, buffer: &[u8]) -> Option<u32> {
         }
     }
 
-    eprintln!("No valid catalog found by content search");
+    tracing::debug!("No valid catalog found by content search");
     None
 }
