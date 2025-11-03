@@ -1,24 +1,127 @@
 # CLAUDE.md - oxidize-pdf Project Context
 
 ## 🎯 Current Focus
-- **Last Session**: 2025-11-02 - Issue #93 UTF-8 Panic Fix (Session ENDED ✅)
-- **Branch**: develop_santi (uncommitted changes)
-- **Version**: v1.6.4 (next: v1.6.5 with Issue #93 fix)
+- **Current Session**: 2025-11-03 - Sprint 1: Code Hygiene (IN PROGRESS 🚀)
+- **Branch**: develop_santi (clean working tree)
+- **Version**: v1.6.4 (next: v1.6.5 ready for release)
 - **Status**:
-  - Issue #93: ✅ **FIXED** - UTF-8 panic in XRef recovery eliminated
-  - Tests: 4697 passing (4693 lib + 4 Issue #93 tests)
-  - All existing tests still pass - no regressions
-  - Ready to commit and release v1.6.5
+  - Sprint 1 Progress: 7/11 tasks completed (63%)
+  - Print Migration: 163/296 migrated (55%)
+  - Tests: 4697 passing (all green)
+  - Clippy: Clean (0 warnings)
+  - Zero Unwraps: 100% compliance
 - **Quality Metrics**:
-  - Tests: 4697 passing (all green) ⬆️ +4
-  - Clippy: Clean (0 warnings on lib)
-  - Zero Unwraps: 100% library code compliance (enforced)
-  - Table Detection: 100% success on test invoices (3/3)
-  - Quality Grade: **A (95/100)** - Production ready
-- **Next Session**:
-  - **Priority 1**: Release v1.6.5 (Issue #93 fix) - 15 minutes
-  - **Priority 2**: Object Streams implementation (GAP crítico vs lopdf) - 5-7 days
-  - **Priority 3**: Performance benchmarks validation - 1-2 days
+  - Current Grade: **B+ (88/100)** → Target: **A- (90/100)** after Sprint 1
+  - Tests: 4697 passing
+  - Code Hygiene: Significant improvement (backup files removed, tracing infrastructure, 163 prints migrated)
+- **Sprint 1 Completed Tasks**:
+  1. ✅ Issue #93 committed + GitHub issue closed
+  2. ✅ Backup files removed (292KB cleanup)
+  3. ✅ Print statement audit (523 total identified)
+  4. ✅ Tracing infrastructure (verbose-debug feature + tests)
+  5. ✅ parser/reader.rs (33 prints → tracing)
+  6. ✅ parser/xref.rs (42 prints → tracing)
+  7. ✅ operations/page_analysis.rs (88 prints → tracing)
+- **Sprint 1 Remaining**:
+  - Task 8: lib.rs audit (16 prints)
+  - Task 9: Remaining library prints (~100)
+  - Task 11: TODO/FIXME triage (18 markers)
+
+## 📊 **Session 2025-11-03: Sprint 1 - Code Hygiene** 🚀 IN PROGRESS
+
+### Quality Assessment & TDD Plan (COMPLETE) ✅
+
+**Trigger**: quality-agent review revealed B+ (88/100) grade with critical code hygiene issues.
+
+**Key Findings**:
+- ✅ Clippy failure fixed (calibrated_color_tests.rs)
+- 531 print statements contaminating benchmarks (47.75pp performance inversion documented)
+- 292KB backup files in git
+- 18 TODO/FIXME markers needing triage
+
+**TDD Plan Created**: 25 tasks across 3 sprints (B+ → A+ in 3-4 weeks)
+- **Sprint 1**: Code Hygiene (1 week) → A- (90/100)
+- **Sprint 2**: Performance Audit (1-2 weeks) → A (93/100)
+- **Sprint 3**: CI Pipeline (1 week) → A+ (95/100)
+
+### Sprint 1: Code Hygiene - Phase 1.0 (COMPLETE) ✅
+
+**Task 1: Commit Issue #93 Fix** (5 min)
+- ✅ Verified 4 tests passing in `tests/issue_93_utf8_panic.rs`
+- ✅ Committed fix with detailed message (closes #93)
+- ✅ Pushed to develop_santi
+- ✅ Closed GitHub issue #93 with explanation
+- **Also**: Fixed clippy warning in calibrated_color_tests.rs (separate commit)
+
+**Task 2: Remove Backup Files** (15 min)
+- ✅ Created CI test to prevent backup files (RED phase)
+- ✅ Removed 2 files: pdf_writer.rs.backup (244KB), tesseract_provider_old.rs (48KB)
+- ✅ Added .gitignore patterns: `*.backup`, `*_old.rs`
+- ✅ CI test passes (GREEN phase)
+- ✅ Committed + pushed
+
+### Sprint 1: Code Hygiene - Phase 1.1: Print Migration (COMPLETE) ✅
+
+**Task 3: Audit Print Statements** (30 min)
+- ✅ Analyzed 523 print statements across codebase
+- ✅ Categorized: 150 tests (keep), 296 library (migrate), 0 CLI/API (clean)
+- ✅ Identified priority modules: parser (153), operations (102), other (41)
+- ✅ Created audit report: `.private/reports/print_audit.md`
+- ✅ Task 10 (CLI review) skipped - already clean
+
+**Task 4: Create Tracing Infrastructure** (60 min)
+- ✅ Added `verbose-debug` feature flag (disabled by default for zero runtime cost)
+- ✅ Added `tracing-subscriber` to dev-dependencies
+- ✅ Created 3 passing tests in `tests/tracing_infrastructure.rs`
+- ✅ Documented usage for migration from println!/eprintln!
+- ✅ Validated: Default build has debug logs compiled out
+
+**Task 5: Migrate parser/reader.rs** (30 min)
+- ✅ Migrated 33 print statements: 10 warnings + 23 debug
+- ✅ All `eprintln!` → `tracing::warn!()` or `tracing::debug!()`
+- ✅ 78 tests passing in parser::reader module
+- ✅ Zero prints remaining in file
+
+**Task 6: Migrate parser/xref.rs** (30 min)
+- ✅ Migrated 42 print statements: 6 warnings + 36 debug
+- ✅ Critical fix: XRef recovery was top contamination source (47.75pp benchmark inversion)
+- ✅ 69 tests passing in parser::xref module
+- ✅ Zero prints remaining in file
+
+**Task 7: Migrate operations/page_analysis.rs** (45 min)
+- ✅ Migrated 88 print statements: 4 errors + 1 info + 83 debug
+- ✅ Preserved 14 println in doc comments (rustdoc examples)
+- ✅ Highest-volume file (102 total prints, 88 migrated)
+- ✅ 82 tests passing in operations::page_analysis module
+
+### Sprint 1 Progress Summary
+
+**Time Investment**: 3.5 hours (7 tasks)
+**Commits**: 7 (all pushed to develop_santi)
+**Tests**: All 4697 passing (zero regressions)
+**Print Migration**: 163/296 completed (55%)
+
+**Breakdown**:
+- ✅ Warnings: 16 (tracing::warn!)
+- ✅ Errors: 4 (tracing::error!)
+- ✅ Info: 1 (tracing::info!)
+- ✅ Debug: 142 (tracing::debug!)
+- 📄 Doc comments: 14 preserved (rustdoc examples)
+
+**Quality Impact**:
+- Benchmark contamination eliminated in parser modules
+- Stderr pollution removed
+- Thread-safe structured logging
+- Zero runtime cost in release builds
+
+**Remaining Sprint 1 Tasks**:
+- Task 8: lib.rs audit (16 prints) - 30 min
+- Task 9: Remaining library prints (~100) - 2 hours
+- Task 11: TODO/FIXME triage (18 markers) - 60 min
+
+**Expected Sprint 1 Completion**: 4.5 hours total (1.5 hours remaining)
+
+---
 
 ## 📊 **Session 2025-11-02: Issue #93 - UTF-8 Panic Fix** ✅ COMPLETE
 
