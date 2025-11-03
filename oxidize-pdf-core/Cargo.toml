@@ -86,6 +86,7 @@ tempfile = "3.8"
 serde_json = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
 indicatif = "0.17"
+tracing-subscriber = { workspace = true }
 
 [[example]]
 name = "font_spacing_test"
@@ -405,6 +406,9 @@ default = ["compression", "ocr-tesseract"]
 
 # Basic features
 compression = ["dep:flate2"]
+
+# Debug features
+verbose-debug = []  # Enable verbose debug logging (disabled by default for zero runtime cost)
 
 # Image processing features
 external-images = ["dep:image"]
