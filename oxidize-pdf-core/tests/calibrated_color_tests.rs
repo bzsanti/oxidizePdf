@@ -306,7 +306,7 @@ fn test_edge_case_gamma_values() {
     // Test large gamma
     let cs = CalGrayColorSpace::new().with_gamma(10.0);
     let corrected = cs.apply_gamma(0.9);
-    assert!(corrected >= 0.0 && corrected <= 1.0);
+    assert!((0.0..=1.0).contains(&corrected));
 }
 
 #[test]
