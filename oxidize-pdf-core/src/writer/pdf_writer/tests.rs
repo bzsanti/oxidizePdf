@@ -445,8 +445,8 @@ mod integration_tests {
         let content_str = String::from_utf8_lossy(&content);
 
         // Debug output
-        println!("PDF size: {} bytes", content.len());
-        println!("Contains 'XObject': {}", content_str.contains("XObject"));
+        tracing::debug!("PDF size: {} bytes", content.len());
+        tracing::debug!("Contains 'XObject': {}", content_str.contains("XObject"));
 
         // Verify XObject is properly written
         assert!(content_str.contains("XObject"));
@@ -1903,7 +1903,7 @@ mod comprehensive_tests {
                         }
                     }
 
-                    println!("✅ PDF structure validation passed: all {count} object references are valid (max ID: {max_valid_id})");
+                    tracing::debug!("✅ PDF structure validation passed: all {count} object references are valid (max ID: {max_valid_id})");
                 }
             }
         } else {

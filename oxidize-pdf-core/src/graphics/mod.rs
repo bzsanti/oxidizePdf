@@ -1140,7 +1140,7 @@ impl GraphicsContext {
 
         if has_unicode {
             // Warning: Text contains Unicode characters but no Unicode font is set
-            eprintln!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
+            tracing::debug!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
         }
 
         // Begin text object

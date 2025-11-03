@@ -358,7 +358,7 @@ impl ImageExtractor {
                     ImageFormat::Png
                 }
                 _ => {
-                    eprintln!("Unsupported image filter: {}", filter.0);
+                    tracing::debug!("Unsupported image filter: {}", filter.0);
                     return Ok(None);
                 }
             },
@@ -396,7 +396,7 @@ impl ImageExtractor {
                             ImageFormat::Png
                         }
                         _ => {
-                            eprintln!("Unsupported image filter: {}", filter.0);
+                            tracing::debug!("Unsupported image filter: {}", filter.0);
                             return Ok(None);
                         }
                     }
@@ -601,7 +601,7 @@ impl ImageExtractor {
         // Convert to string for parsing
         let content = String::from_utf8_lossy(stream_data);
 
-        eprintln!("       Content: {}", content);
+        tracing::debug!("       Content: {}", content);
 
         // Parse transformation matrices and image references together
         // Pattern: look for cm matrices followed by Do operators

@@ -235,7 +235,7 @@ impl HighPerformanceDocument {
         }
 
         let duration = start.elapsed();
-        println!(
+        tracing::debug!(
             "Performance: Saved {} pages in {:.2}ms",
             self.pages.len(),
             duration.as_secs_f64() * 1000.0

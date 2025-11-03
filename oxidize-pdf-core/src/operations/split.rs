@@ -199,7 +199,7 @@ impl PdfSplitter {
                 }
                 Err(e) => {
                     // If parsing fails, fall back to placeholder
-                    eprintln!("Warning: Failed to parse content stream: {e}");
+                    tracing::debug!("Warning: Failed to parse content stream: {e}");
                 }
             }
         }

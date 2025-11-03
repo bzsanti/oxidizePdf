@@ -99,14 +99,14 @@ pub fn extract_clean_jpeg(data: &[u8]) -> ParseResult<Vec<u8>> {
 
     // Extract clean JPEG data
     if soi_pos > 0 {
-        eprintln!(
+        tracing::debug!(
             "⚠️  [DCTDecode] Found {} extraneous bytes before JPEG SOI marker, removing them",
             soi_pos
         );
     }
 
     if eoi_abs_pos < data.len() {
-        eprintln!(
+        tracing::debug!(
             "⚠️  [DCTDecode] Found {} extraneous bytes after JPEG EOI marker, removing them",
             data.len() - eoi_abs_pos
         );
@@ -426,7 +426,7 @@ mod tests {
 
         let result = parse_jpeg_info(&data);
         if let Err(e) = &result {
-            println!("Parse error in test_color_space_detection: {e}");
+            tracing::debug!("Parse error in test_color_space_detection: {e}");
         }
         assert!(result.is_ok());
         let info = result.unwrap();

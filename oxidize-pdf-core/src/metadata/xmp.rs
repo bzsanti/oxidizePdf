@@ -228,7 +228,7 @@ impl XmpMetadata {
         // Validate date format
         if !Self::is_valid_iso8601_date(&date_str) {
             // Store as text if invalid
-            eprintln!(
+            tracing::debug!(
                 "Warning: Invalid ISO 8601 date '{}' for property '{}'. Storing as text.",
                 date_str, name_str
             );

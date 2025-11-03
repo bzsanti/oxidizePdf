@@ -338,7 +338,7 @@ startxref
             }
             Err(e) => {
                 // If validation fails due to missing tools, that's expected
-                println!(
+                tracing::debug!(
                     "External validation failed (expected in environments without PDF tools): {}",
                     e
                 );
