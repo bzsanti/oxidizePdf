@@ -58,6 +58,13 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Check for backup files
+        run: |
+          if find . -name "*.backup" -o -name "*_old.rs" | grep .; then
+            echo "ERROR: Backup files found in repository"
+            exit 1
+          fi
+
       - name: Run clippy
         run: cargo clippy --all -- -D warnings
 
