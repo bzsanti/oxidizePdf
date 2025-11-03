@@ -489,7 +489,7 @@ impl<R: Read + Seek> PdfDocument<R> {
                         .and_then(|obj| obj.as_array())
                         .or_else(|| {
                             // If Kids is missing, use empty array
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: Missing Kids array in Pages node, using empty array"
                             );
                             Some(&super::objects::EMPTY_PDF_ARRAY)
@@ -528,7 +528,7 @@ impl<R: Read + Seek> PdfDocument<R> {
                             Some(dict) => dict,
                             None => {
                                 // Skip invalid page tree nodes in lenient mode
-                                eprintln!(
+                                tracing::debug!(
                                     "Warning: Page tree node {} {} R is not a dictionary, skipping",
                                     kid_ref.0, kid_ref.1
                                 );
@@ -619,7 +619,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         }
 
         // Try fallback: search for the page by direct object scanning
-        eprintln!(
+        tracing::debug!(
             "Warning: Page {} not found in tree, attempting direct lookup",
             target_index
         );
@@ -657,7 +657,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             None => {
                 // Use default Letter size if MediaBox is missing
                 #[cfg(debug_assertions)]
-                eprintln!(
+                tracing::debug!(
                     "Warning: Page {} {} R missing MediaBox, using default Letter size",
                     obj_ref.0, obj_ref.1
                 );

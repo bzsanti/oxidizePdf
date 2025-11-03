@@ -1565,13 +1565,13 @@ mod tests {
             let content_str = String::from_utf8_lossy(&content);
 
             // Debug: print what we're looking for
-            println!("PDF size: {} bytes", content.len());
-            println!("Contains 'XObject': {}", content_str.contains("XObject"));
-            println!("Contains '/XObject': {}", content_str.contains("/XObject"));
+            tracing::debug!("PDF size: {} bytes", content.len());
+            tracing::debug!("Contains 'XObject': {}", content_str.contains("XObject"));
+            tracing::debug!("Contains '/XObject': {}", content_str.contains("/XObject"));
 
             // Check for image-related content
             if content_str.contains("/Type /Image") || content_str.contains("DCTDecode") {
-                println!("Found image-related content but no XObject dictionary");
+                tracing::debug!("Found image-related content but no XObject dictionary");
             }
 
             // Verify XObject is properly written
