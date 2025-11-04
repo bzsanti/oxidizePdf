@@ -9,11 +9,12 @@ use std::fs::File;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let pdf_path = if args.len() > 1 {
-        &args[1]
-    } else {
-        "/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf-render/tests/fixtures/Factura_22058.pdf"
-    };
+    if args.len() < 2 {
+        eprintln!("Usage: {} <pdf_path>", args[0]);
+        eprintln!("Example: {} test-pdfs/sample.pdf", args[0]);
+        std::process::exit(1);
+    }
+    let pdf_path = &args[1];
 
     println!("=== Analyzing: {} ===\n", pdf_path);
 
