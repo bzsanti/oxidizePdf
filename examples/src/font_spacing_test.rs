@@ -65,7 +65,7 @@ fn main() -> Result<()> {
     let custom_fonts = ["Arial", "Avenir", "Georgia"];
 
     for font_name in &custom_fonts {
-        let custom_font = Font::custom(font_name.to_string());
+        let custom_font = Font::custom((*font_name).to_string());
         page.text()
             .set_font(custom_font, 14.0)
             .at(70.0, y_pos)

@@ -634,7 +634,7 @@ mod tests {
         // Add items in random order
         let items = ["Zebra", "Alpha", "Mike", "Charlie", "Bravo"];
         for (i, name) in items.iter().enumerate() {
-            tree.add(name.to_string(), Object::Integer(i as i64));
+            tree.add((*name).to_string(), Object::Integer(i as i64));
         }
 
         // Convert to dict and check that names are in sorted order

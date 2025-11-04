@@ -3069,7 +3069,7 @@ mod tests {
         for (i, pattern) in bad_patterns.iter().enumerate() {
             let validator = FieldValidator {
                 field_name: format!("regex_test_{}", i),
-                rules: vec![ValidationRule::Pattern(pattern.to_string())],
+                rules: vec![ValidationRule::Pattern((*pattern).to_string())],
                 format_mask: None,
                 error_message: Some("Custom regex error".to_string()),
             };

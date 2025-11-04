@@ -878,7 +878,7 @@ mod tests {
                 x: 0.0,
                 y: 0.0,
                 font_size: 12.0,
-                font_name: Some(font.to_string()),
+                font_name: Some((*font).to_string()),
             });
         }
 

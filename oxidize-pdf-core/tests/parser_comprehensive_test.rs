@@ -249,7 +249,7 @@ mod objects_parser_tests {
         }
 
         match null_obj {
-            PdfObject::Null => assert!(true),
+            PdfObject::Null => {} // Test passes if we match Null
             _ => panic!("Wrong type"),
         }
     }
@@ -327,7 +327,7 @@ mod parser_error_tests {
         assert!(result.is_err());
 
         match result.unwrap_err() {
-            ParseError::UnexpectedToken { .. } => assert!(true),
+            ParseError::UnexpectedToken { .. } => {} // Test passes if we match this error
             _ => panic!("Wrong error type"),
         }
     }
@@ -341,7 +341,7 @@ mod parser_error_tests {
         let parse_err = ParseError::from(io_err);
 
         match parse_err {
-            ParseError::Io(_) => assert!(true),
+            ParseError::Io(_) => {} // Test passes if we match IO error
             _ => panic!("Wrong error type"),
         }
     }

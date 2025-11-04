@@ -37,7 +37,7 @@ fn test_massive_dictionary() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_obj) => {
                 println!("Parsed massive dictionary in {:?}", start.elapsed());
@@ -74,7 +74,7 @@ fn test_massive_array() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_obj) => {
                 println!("Parsed massive array in {:?}", start.elapsed());
@@ -104,7 +104,7 @@ fn test_pathological_xref() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Parsed pathological xref in {:?}", start.elapsed()),
         Err(e) => println!("Xref parsing error: {}", e),
     }
@@ -142,7 +142,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should detect exponential expansion
             let start = Instant::now();
@@ -187,7 +187,7 @@ stream
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled potential zip bomb"),
             Err(e) => println!("Zip bomb protection: {}", e),
@@ -225,7 +225,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should be able to read good objects even if one is corrupted
             let mut successful_reads = 0;
@@ -286,7 +286,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 2..=3 {
                 match doc.get_object(i, 0) {
@@ -330,7 +330,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed Type3 font with invalid program"),
             Err(e) => println!("Font parsing error: {}", e),
@@ -374,7 +374,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n400\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should detect recursion when trying to render
             println!("Parser created with recursive forms");
@@ -411,7 +411,7 @@ fn test_object_count_exhaustion() {
     let cursor = Cursor::new(pdf);
 
     let start = Instant::now();
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled 10,000 objects in {:?}", start.elapsed()),
         Err(e) => println!("Object count limit: {}", e),
     }
@@ -446,7 +446,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n500\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should parse but not execute JavaScript
             for i in 1..=2 {
@@ -486,7 +486,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should handle circular outline references
             match doc.get_object(1, 0) {
@@ -520,7 +520,7 @@ stream
     pdf.extend_from_slice(b"startxref\n1200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed corrupted image data"),
             Err(e) => println!("Image data error: {}", e),
@@ -559,7 +559,7 @@ fn test_parser_timeout() {
     let start = Instant::now();
     let timeout = Duration::from_secs(5);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => {
                 let elapsed = start.elapsed();
@@ -617,7 +617,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n500\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should be able to work with valid parts despite some corruption
             let mut valid_count = 0;

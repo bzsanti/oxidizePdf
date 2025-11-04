@@ -2534,7 +2534,7 @@ mod tests {
 
         for (i, (text_val, expected)) in edge_cases.iter().enumerate() {
             let field_name = format!("edge_case_{}", i);
-            engine.set_field_value(&field_name, FieldValue::Text(text_val.to_string()));
+            engine.set_field_value(&field_name, FieldValue::Text((*text_val).to_string()));
 
             let result = engine.get_field_value(&field_name).unwrap().to_number();
 

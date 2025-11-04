@@ -968,7 +968,7 @@ mod comprehensive_tests {
             writer
                 .write_object(
                     ObjectId::new(i as u32 + 1, 0),
-                    Object::String(s.to_string()),
+                    Object::String((*s).to_string()),
                 )
                 .unwrap();
         }
@@ -1000,7 +1000,7 @@ mod comprehensive_tests {
             writer
                 .write_object(
                     ObjectId::new(i as u32 + 1, 0),
-                    Object::Name(name.to_string()),
+                    Object::Name((*name).to_string()),
                 )
                 .unwrap();
         }

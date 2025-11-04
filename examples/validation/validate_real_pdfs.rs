@@ -48,14 +48,14 @@ fn main() -> Result<()> {
                     passed_tests += 1;
                     println!("✅ PASSED - {}", name);
                 } else {
-                    failed_tests.push((name.to_string(), report.failures()));
+                    failed_tests.push(((*name).to_string(), report.failures()));
                     println!("❌ FAILED - {}", name);
                 }
                 report.print_summary();
             }
             Err(e) => {
                 println!("❌ ERROR loading PDF: {}", e);
-                failed_tests.push((name.to_string(), vec![format!("Load error: {}", e)]));
+                failed_tests.push(((*name).to_string(), vec![format!("Load error: {}", e)]));
                 total_tests += 1;
             }
         }
