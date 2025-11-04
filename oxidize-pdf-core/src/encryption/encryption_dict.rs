@@ -296,12 +296,7 @@ mod tests {
         let user_hash = vec![1u8; 32];
         let permissions = Permissions::all();
 
-        let enc_dict = EncryptionDictionary::rc4_128bit(
-            owner_hash,
-            user_hash,
-            permissions,
-            None,
-        );
+        let enc_dict = EncryptionDictionary::rc4_128bit(owner_hash, user_hash, permissions, None);
 
         assert_eq!(enc_dict.filter, "Standard");
         assert_eq!(enc_dict.v, 2);
@@ -412,12 +407,8 @@ mod tests {
         let permissions = Permissions::new();
         let file_id = vec![42u8; 16];
 
-        let enc_dict = EncryptionDictionary::rc4_40bit(
-            owner_hash,
-            user_hash,
-            permissions,
-            Some(file_id),
-        );
+        let enc_dict =
+            EncryptionDictionary::rc4_40bit(owner_hash, user_hash, permissions, Some(file_id));
 
         // The file_id is used internally but not stored as a separate field
         assert_eq!(enc_dict.filter, "Standard");
@@ -430,12 +421,7 @@ mod tests {
         let user_hash = vec![1u8; 32];
         let permissions = Permissions::all();
 
-        let enc_dict = EncryptionDictionary::rc4_128bit(
-            owner_hash,
-            user_hash,
-            permissions,
-            None,
-        );
+        let enc_dict = EncryptionDictionary::rc4_128bit(owner_hash, user_hash, permissions, None);
 
         assert_eq!(enc_dict.v, 2);
         assert_eq!(enc_dict.length, Some(16));

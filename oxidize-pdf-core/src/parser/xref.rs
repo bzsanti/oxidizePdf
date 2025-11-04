@@ -330,7 +330,9 @@ impl XRefTable {
                                 );
                                 stream.data.clone()
                             } else {
-                                tracing::debug!("No raw stream data available, triggering recovery mode");
+                                tracing::debug!(
+                                    "No raw stream data available, triggering recovery mode"
+                                );
                                 return Err(e);
                             }
                         }
@@ -534,7 +536,8 @@ impl XRefTable {
                         if max_expected > expected_size {
                             tracing::debug!(
                                 "Warning: XRef table has object {} but trailer Size is only {}",
-                                max_obj_num, expected_size
+                                max_obj_num,
+                                expected_size
                             );
                             // Don't fail here, let the recovery mode handle it
                             return Err(ParseError::InvalidXRef);
@@ -593,7 +596,8 @@ impl XRefTable {
 
             // Otherwise, look for an XRef stream (object with /Type /XRef)
             if find_byte_pattern(&buffer, b"/Type/XRef").is_some()
-                || find_byte_pattern(&buffer, b"/Type /XRef").is_some() {
+                || find_byte_pattern(&buffer, b"/Type /XRef").is_some()
+            {
                 // Need to parse to find the exact position
                 // For now, we'll use a heuristic
                 if let Some(obj_pos) = find_byte_pattern(&buffer, b" obj") {
@@ -603,7 +607,8 @@ impl XRefTable {
                         let after_first_obj = &buffer[search_from..];
                         if let Some(next_obj) = find_byte_pattern(after_first_obj, b" obj") {
                             // Position of second object
-                            let second_obj_start = pos + (search_from + next_obj).saturating_sub(10) as u64;
+                            let second_obj_start =
+                                pos + (search_from + next_obj).saturating_sub(10) as u64;
                             return Ok(second_obj_start);
                         }
                     }
@@ -881,7 +886,9 @@ impl XRefTable {
                                 find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
                             {
                                 let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) = find_byte_pattern(&buffer[absolute_start..], b"endobj") {
+                                if let Some(endobj_pos) =
+                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                                {
                                     let absolute_end = absolute_start + endobj_pos;
                                     let obj_content_bytes = &buffer[absolute_start..absolute_end];
                                     let obj_content = String::from_utf8_lossy(obj_content_bytes);
@@ -934,7 +941,9 @@ impl XRefTable {
                                 find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
                             {
                                 let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) = find_byte_pattern(&buffer[absolute_start..], b"endobj") {
+                                if let Some(endobj_pos) =
+                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                                {
                                     let absolute_end = absolute_start + endobj_pos;
                                     let obj_content_bytes = &buffer[absolute_start..absolute_end];
 
@@ -1055,7 +1064,9 @@ impl XRefTable {
                                 find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
                             {
                                 let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) = find_byte_pattern(&buffer[absolute_start..], b"endobj") {
+                                if let Some(endobj_pos) =
+                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                                {
                                     let absolute_end = absolute_start + endobj_pos;
                                     let obj_content_bytes = &buffer[absolute_start..absolute_end];
                                     let obj_content = String::from_utf8_lossy(obj_content_bytes);
@@ -2719,11 +2730,15 @@ fn find_catalog_by_content(table: &XRefTable, buffer: &[u8]) -> Option<u32> {
             if offset < buffer.len() {
                 // Look for the complete object structure: "obj_num 0 obj ... /Type /Catalog ... endobj"
                 let obj_pattern = format!("{} 0 obj", obj_num);
-                if let Some(obj_start) = find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes()) {
+                if let Some(obj_start) =
+                    find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
+                {
                     let absolute_start = offset + obj_start;
 
                     // Find the end of this object
-                    if let Some(endobj_pos) = find_byte_pattern(&buffer[absolute_start..], b"endobj") {
+                    if let Some(endobj_pos) =
+                        find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                    {
                         let absolute_end = absolute_start + endobj_pos;
                         let obj_content_bytes = &buffer[absolute_start..absolute_end];
                         let obj_content = String::from_utf8_lossy(obj_content_bytes);

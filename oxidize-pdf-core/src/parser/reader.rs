@@ -559,8 +559,11 @@ impl<R: Read + Seek> PdfReader<R> {
                         if self.options.lenient_syntax {
                             // In lenient mode, return null object instead of failing completely
                             if self.options.collect_warnings {
-                                tracing::warn!("Object {} {} R not found in XRef, returning null object",
-                                    obj_num, gen_num);
+                                tracing::warn!(
+                                    "Object {} {} R not found in XRef, returning null object",
+                                    obj_num,
+                                    gen_num
+                                );
                             }
                             self.object_cache.insert(key, PdfObject::Null);
                             return Ok(&self.object_cache[&key]);
@@ -624,7 +627,9 @@ impl<R: Read + Seek> PdfReader<R> {
                     // Try fallback recovery
                     if self.options.lenient_syntax {
                         if self.options.collect_warnings {
-                            tracing::warn!("Using generation 0 instead of parsed token for object {obj_num}");
+                            tracing::warn!(
+                                "Using generation 0 instead of parsed token for object {obj_num}"
+                            );
                         }
                         0
                     } else {
@@ -1075,7 +1080,10 @@ impl<R: Read + Seek> PdfReader<R> {
 
                     if !num_str.is_empty() {
                         if let Ok(page_count) = num_str.parse::<u32>() {
-                            tracing::debug!("Extracted page count from raw content: {}", page_count);
+                            tracing::debug!(
+                                "Extracted page count from raw content: {}",
+                                page_count
+                            );
                             return Some(page_count);
                         }
                     }

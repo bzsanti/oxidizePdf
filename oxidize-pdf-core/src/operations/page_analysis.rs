@@ -749,7 +749,8 @@ impl PageContentAnalyzer {
                     Err(e) => {
                         tracing::debug!(
                             "🔍 [DEBUG] Page {} failed to resolve Resources: {}",
-                            page_number, e
+                            page_number,
+                            e
                         );
                     }
                 }
@@ -971,7 +972,10 @@ impl PageContentAnalyzer {
                                         .unwrap_or(0);
                                     tracing::debug!(
                                         "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
-                                        xobject_name, obj_num, width, height
+                                        xobject_name,
+                                        obj_num,
+                                        width,
+                                        height
                                     );
                                     return self.extract_image_stream_for_ocr(&stream);
                                 }
@@ -992,7 +996,8 @@ impl PageContentAnalyzer {
                 Ok(crate::parser::objects::PdfObject::Dictionary(resolved_dict)) => {
                     tracing::debug!(
                         "🔍 [DEBUG] Page-specific fallback: resolved Resources {} {} R",
-                        res_obj, res_gen
+                        res_obj,
+                        res_gen
                     );
                     if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) =
                         resolved_dict
@@ -1003,7 +1008,8 @@ impl PageContentAnalyzer {
                         for (name, obj) in &xobjects.0 {
                             tracing::debug!(
                                 "🔍 [DEBUG] Page-specific fallback XObject: {} -> {:?}",
-                                name.0, obj
+                                name.0,
+                                obj
                             );
                         }
                         if let Some(xobject_ref) = xobjects
@@ -1155,7 +1161,10 @@ impl PageContentAnalyzer {
 
                                     tracing::debug!(
                                         "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
-                                        xobject_name, obj_num, width, height
+                                        xobject_name,
+                                        obj_num,
+                                        width,
+                                        height
                                     );
                                     return self.extract_image_stream_for_ocr(&stream);
                                 }
@@ -1220,7 +1229,10 @@ impl PageContentAnalyzer {
                         if width > 100 && height > 100 {
                             tracing::debug!(
                                 "🔍 [DEBUG] Using XObject {} -> Object {} ({}x{})",
-                                xobject_name, obj_num, width, height
+                                xobject_name,
+                                obj_num,
+                                width,
+                                height
                             );
                             return self.extract_image_stream_for_ocr(&stream);
                         }
@@ -1598,7 +1610,10 @@ impl PageContentAnalyzer {
 
         tracing::debug!(
             "🔍 [DEBUG] Rotation analysis - PDF: {}x{}, Image: {}x{}",
-            pdf_width, pdf_height, actual_img_width, actual_img_height
+            pdf_width,
+            pdf_height,
+            actual_img_width,
+            actual_img_height
         );
 
         // Check if this is the typical portrait PDF with likely rotated content
@@ -1687,7 +1702,9 @@ impl PageContentAnalyzer {
                 match result {
                     Ok(output) if output.status.success() => match fs::read(&output_path) {
                         Ok(data) => {
-                            tracing::debug!("🔍 [DEBUG] Successfully rotated image using ImageMagick");
+                            tracing::debug!(
+                                "🔍 [DEBUG] Successfully rotated image using ImageMagick"
+                            );
                             data
                         }
                         Err(e) => {
@@ -1717,7 +1734,9 @@ impl PageContentAnalyzer {
                 match result {
                     Ok(output) if output.status.success() => match fs::read(&output_path) {
                         Ok(data) => {
-                            tracing::debug!("🔍 [DEBUG] Successfully rotated image using ImageMagick");
+                            tracing::debug!(
+                                "🔍 [DEBUG] Successfully rotated image using ImageMagick"
+                            );
                             data
                         }
                         Err(e) => {

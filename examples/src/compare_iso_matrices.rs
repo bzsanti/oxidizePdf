@@ -607,4 +607,3 @@ fn generate_executive_summary(
 
     Ok(summary)
 }
-

@@ -49,8 +49,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Add text content to cells
-    let table_data = [vec!["Header 1", "Header 2", "Header 3"],
-        vec!["Data 1", "Data 2", "Data 3"]];
+    let table_data = [
+        vec!["Header 1", "Header 2", "Header 3"],
+        vec!["Data 1", "Data 2", "Data 3"],
+    ];
 
     for (row, row_data) in table_data.iter().enumerate() {
         for (col, &text) in row_data.iter().enumerate() {

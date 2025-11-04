@@ -26,11 +26,8 @@ fn test_devicen_basic_creation() {
         undercolor_removal: None,
     });
 
-    let devicen = DeviceNColorSpace::new(
-        colorants,
-        DeviceNAlternateColorSpace::DeviceCMYK,
-        transform,
-    );
+    let devicen =
+        DeviceNColorSpace::new(colorants, DeviceNAlternateColorSpace::DeviceCMYK, transform);
 
     assert_eq!(devicen.colorant_count(), 4);
     assert_eq!(devicen.colorant_name(0), Some("Cyan"));

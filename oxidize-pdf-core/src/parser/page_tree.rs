@@ -413,7 +413,8 @@ impl PageTree {
                         #[cfg(debug_assertions)]
                         tracing::debug!(
                             "Warning: Page {} {} R missing MediaBox, using default Letter size",
-                            obj_ref.0, obj_ref.1
+                            obj_ref.0,
+                            obj_ref.1
                         );
                         [0.0, 0.0, 612.0, 792.0]
                     });

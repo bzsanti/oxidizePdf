@@ -291,7 +291,9 @@ pub struct ConsolePasswordProvider;
 
 impl PasswordProvider for ConsolePasswordProvider {
     fn prompt_user_password(&self) -> ParseResult<Option<String>> {
-        tracing::debug!("PDF is encrypted. Enter user password (or press Enter for empty password):");
+        tracing::debug!(
+            "PDF is encrypted. Enter user password (or press Enter for empty password):"
+        );
 
         let mut input = String::new();
         std::io::stdin()

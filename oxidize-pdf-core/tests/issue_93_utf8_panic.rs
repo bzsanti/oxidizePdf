@@ -1,3 +1,4 @@
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 /// Tests for Issue #93: UTF-8 char boundary panic in XRef recovery
 ///
 /// Problem: XRef recovery panics when parsing PDFs with non-ASCII characters
@@ -6,10 +7,8 @@
 ///
 /// Panic location: src/parser/xref.rs:930
 /// Root cause: String::from_utf8_lossy(&buffer) followed by &content[pos..]
-
 use std::fs::File;
 use std::io::{Cursor, Read};
-use oxidize_pdf::parser::{PdfReader, PdfDocument};
 
 #[test]
 fn test_romanian_pdf_xref_recovery_succeeds() {
@@ -53,9 +52,15 @@ fn test_romanian_pdf_xref_recovery_succeeds() {
         match document.extract_text() {
             Ok(pages) if !pages.is_empty() => {
                 let total_chars: usize = pages.iter().map(|p| p.text.len()).sum();
-                eprintln!("✓ Bonus: Successfully extracted {} chars from {} pages", total_chars, pages.len());
+                eprintln!(
+                    "✓ Bonus: Successfully extracted {} chars from {} pages",
+                    total_chars,
+                    pages.len()
+                );
             }
-            Ok(_) => eprintln!("✓ Parsing succeeded but no text extracted (acceptable for this PDF)"),
+            Ok(_) => {
+                eprintln!("✓ Parsing succeeded but no text extracted (acceptable for this PDF)")
+            }
             Err(e) => eprintln!("✓ Text extraction failed (acceptable): {:?}", e),
         }
     }
@@ -147,7 +152,10 @@ fn test_byte_pattern_matching_with_cyrillic() {
         .windows(obj_pattern.len())
         .position(|window| window == obj_pattern);
 
-    assert!(found.is_some(), "Should find ' 0 obj' pattern with Cyrillic nearby");
+    assert!(
+        found.is_some(),
+        "Should find ' 0 obj' pattern with Cyrillic nearby"
+    );
     eprintln!("✓ Found pattern at position: {:?}", found);
 
     // Verify safe slicing around multi-byte characters
@@ -192,7 +200,10 @@ fn test_edge_case_pattern_at_utf8_boundary() {
 
     // Even though we started slicing at byte 3 (inside UTF-8 char boundary),
     // byte operations are safe - no panic
-    assert!(partial_search.is_some(), "Should find pattern even when starting mid-UTF8");
+    assert!(
+        partial_search.is_some(),
+        "Should find pattern even when starting mid-UTF8"
+    );
 
     eprintln!("✓ Pattern search safe even when starting at UTF-8 boundary");
 }

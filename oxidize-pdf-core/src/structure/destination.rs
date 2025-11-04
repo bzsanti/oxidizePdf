@@ -618,7 +618,10 @@ mod tests {
         {
             let array = dest.to_array();
             assert_eq!(array.len(), *expected_len);
-            assert_eq!(array.get(1), Some(&Object::Name((*expected_name).to_string())));
+            assert_eq!(
+                array.get(1),
+                Some(&Object::Name((*expected_name).to_string()))
+            );
         }
     }
 

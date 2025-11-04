@@ -230,7 +230,8 @@ impl XmpMetadata {
             // Store as text if invalid
             tracing::debug!(
                 "Warning: Invalid ISO 8601 date '{}' for property '{}'. Storing as text.",
-                date_str, name_str
+                date_str,
+                name_str
             );
             self.properties.push(XmpProperty {
                 namespace,

@@ -530,7 +530,8 @@ impl<R: Read + Seek> PdfDocument<R> {
                                 // Skip invalid page tree nodes in lenient mode
                                 tracing::debug!(
                                     "Warning: Page tree node {} {} R is not a dictionary, skipping",
-                                    kid_ref.0, kid_ref.1
+                                    kid_ref.0,
+                                    kid_ref.1
                                 );
                                 current_idx += 1; // Count as processed but skip
                                 continue;
@@ -659,7 +660,8 @@ impl<R: Read + Seek> PdfDocument<R> {
                 #[cfg(debug_assertions)]
                 tracing::debug!(
                     "Warning: Page {} {} R missing MediaBox, using default Letter size",
-                    obj_ref.0, obj_ref.1
+                    obj_ref.0,
+                    obj_ref.1
                 );
                 [0.0, 0.0, 612.0, 792.0]
             }

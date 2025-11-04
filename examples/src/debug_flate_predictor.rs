@@ -127,7 +127,8 @@ fn find_stream_end(data: &[u8]) -> Option<usize> {
     // Buscar "endstream"
     let endstream_marker = b"endstream";
 
-    (0..data.len().saturating_sub(endstream_marker.len())).find(|&i| &data[i..i + endstream_marker.len()] == endstream_marker)
+    (0..data.len().saturating_sub(endstream_marker.len()))
+        .find(|&i| &data[i..i + endstream_marker.len()] == endstream_marker)
 }
 
 fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {

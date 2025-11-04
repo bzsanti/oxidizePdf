@@ -207,11 +207,13 @@ mod regression_tests {
     #[test]
     fn test_font_type_cff_does_not_break_existing() {
         // Ensure adding FontType::CFF doesn't break existing font types
-        let types = [FontType::Type1,
+        let types = [
+            FontType::Type1,
             FontType::TrueType,
             FontType::CFF,
             FontType::Type3,
-            FontType::Type0];
+            FontType::Type0,
+        ];
 
         // All types should be distinct
         for (i, type1) in types.iter().enumerate() {

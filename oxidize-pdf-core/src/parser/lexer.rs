@@ -161,7 +161,8 @@ impl<R: Read> Lexer<R> {
                     if self.options.collect_warnings {
                         tracing::debug!(
                             "Warning: Skipping unexpected character '{}' at position {}",
-                            ch as char, self.position
+                            ch as char,
+                            self.position
                         );
                     }
                     self.consume_char()?;

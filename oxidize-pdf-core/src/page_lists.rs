@@ -323,8 +323,7 @@ mod tests {
             "Third item".to_string(),
         ];
 
-        let result =
-            page.add_quick_ordered_list(items, 50.0, 700.0, OrderedListStyle::Decimal);
+        let result = page.add_quick_ordered_list(items, 50.0, 700.0, OrderedListStyle::Decimal);
         assert!(result.is_ok());
     }
 

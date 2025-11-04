@@ -95,8 +95,7 @@ fn test_submit_form_with_fields() {
 #[test]
 fn test_submit_form_excluding_fields() {
     let fields = vec!["password".to_string(), "ssn".to_string()];
-    let action =
-        SubmitFormAction::new("https://example.com/submit").excluding_fields(fields);
+    let action = SubmitFormAction::new("https://example.com/submit").excluding_fields(fields);
 
     let dict = action.to_dict();
 
