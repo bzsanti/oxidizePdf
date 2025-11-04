@@ -1149,7 +1149,7 @@ mod tests {
         ];
         let image = Image::from_jpeg_data(jpeg_data).unwrap();
 
-        page.add_image("test_image", image.clone());
+        page.add_image("test_image", image);
         assert!(page.images().contains_key("test_image"));
         assert_eq!(page.images().len(), 1);
     }
@@ -2229,7 +2229,7 @@ mod unit_tests {
         let mut page = Page::a4();
         let header = HeaderFooter::new_header("Test Header");
 
-        page.set_header(header.clone());
+        page.set_header(header);
         assert!(page.header().is_some());
 
         if let Some(h) = page.header() {
@@ -2244,7 +2244,7 @@ mod unit_tests {
         let mut page = Page::a4();
         let footer = HeaderFooter::new_footer("Page {{page}} of {{total}}");
 
-        page.set_footer(footer.clone());
+        page.set_footer(footer);
         assert!(page.footer().is_some());
 
         if let Some(f) = page.footer() {

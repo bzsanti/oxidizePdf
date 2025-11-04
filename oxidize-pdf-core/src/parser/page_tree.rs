@@ -1036,7 +1036,7 @@ mod tests {
         let mut tree = PageTree::new(10);
         let page = create_test_page();
 
-        tree.cache_page(0, page.clone());
+        tree.cache_page(0, page);
 
         let cached = tree.get_cached_page(0);
         assert!(cached.is_some());
@@ -1077,7 +1077,7 @@ mod tests {
         let page = create_test_page();
 
         tree.cache_page(0, page.clone());
-        tree.cache_page(1, page.clone());
+        tree.cache_page(1, page);
         assert_eq!(tree.pages.len(), 2);
 
         tree.clear_cache();

@@ -2935,7 +2935,7 @@ mod tests {
 
         // Begin transparency group
         let group = TransparencyGroup::new();
-        ctx.begin_transparency_group(group.clone());
+        ctx.begin_transparency_group(group);
         assert!(ctx.in_transparency_group());
         assert!(ctx.current_transparency_group().is_some());
 

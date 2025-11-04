@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let graphics = graphics_ext.extract_from_page(&doc, 0)?;
 
     println!("Lines found: {}", graphics.lines.len());
-    if graphics.lines.len() > 0 {
+    if !graphics.lines.is_empty() {
         println!("Sample lines (first 5):");
         for (i, line) in graphics.lines.iter().take(5).enumerate() {
             println!("  {:?}", line.orientation);
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let text = text_ext.extract_from_page(&doc, 0)?;
 
     println!("\nText fragments: {}", text.fragments.len());
-    if text.fragments.len() > 0 {
+    if !text.fragments.is_empty() {
         println!("Sample text (first 5):");
         for (i, frag) in text.fragments.iter().take(5).enumerate() {
             let preview: String = frag.text.chars().take(30).collect();

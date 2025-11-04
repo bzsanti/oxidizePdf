@@ -589,7 +589,7 @@ fn main() -> Result<()> {
                     .set_font(font, 9.0)
                     .set_fill_color(text_color)
                     .at(col_x + 5.0, row_y - 8.0)
-                    .write(*cell_data)?;
+                    .write(cell_data)?;
 
                 col_x += col_width;
             }

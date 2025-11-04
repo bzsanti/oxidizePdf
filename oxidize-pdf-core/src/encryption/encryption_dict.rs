@@ -297,8 +297,8 @@ mod tests {
         let permissions = Permissions::all();
 
         let enc_dict = EncryptionDictionary::rc4_128bit(
-            owner_hash.clone(),
-            user_hash.clone(),
+            owner_hash,
+            user_hash,
             permissions,
             None,
         );
@@ -334,9 +334,9 @@ mod tests {
         let custom = StreamFilter::Custom("MyFilter".to_string());
 
         // Test that they can be created and cloned
-        let _identity_clone = identity.clone();
-        let _std_cf_clone = std_cf.clone();
-        let _custom_clone = custom.clone();
+        let _identity_clone = identity;
+        let _std_cf_clone = std_cf;
+        let _custom_clone = custom;
     }
 
     #[test]
@@ -346,9 +346,9 @@ mod tests {
         let custom = StringFilter::Custom("MyStringFilter".to_string());
 
         // Test that they can be created and cloned
-        let _identity_clone = identity.clone();
-        let _std_cf_clone = std_cf.clone();
-        let _custom_clone = custom.clone();
+        let _identity_clone = identity;
+        let _std_cf_clone = std_cf;
+        let _custom_clone = custom;
     }
 
     #[test]
@@ -413,10 +413,10 @@ mod tests {
         let file_id = vec![42u8; 16];
 
         let enc_dict = EncryptionDictionary::rc4_40bit(
-            owner_hash.clone(),
-            user_hash.clone(),
+            owner_hash,
+            user_hash,
             permissions,
-            Some(file_id.clone()),
+            Some(file_id),
         );
 
         // The file_id is used internally but not stored as a separate field
@@ -431,8 +431,8 @@ mod tests {
         let permissions = Permissions::all();
 
         let enc_dict = EncryptionDictionary::rc4_128bit(
-            owner_hash.clone(),
-            user_hash.clone(),
+            owner_hash,
+            user_hash,
             permissions,
             None,
         );

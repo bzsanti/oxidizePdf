@@ -168,12 +168,12 @@ fn test_cal_rgb_to_pdf_array() {
 #[test]
 fn test_calibrated_color_creation() {
     let gray_cs = CalGrayColorSpace::new().with_gamma(2.2);
-    let gray_color = CalibratedColor::cal_gray(0.5, gray_cs.clone());
+    let gray_color = CalibratedColor::cal_gray(0.5, gray_cs);
 
     assert_eq!(gray_color.values(), vec![0.5]);
 
     let rgb_cs = CalRgbColorSpace::srgb();
-    let rgb_color = CalibratedColor::cal_rgb([0.8, 0.4, 0.2], rgb_cs.clone());
+    let rgb_color = CalibratedColor::cal_rgb([0.8, 0.4, 0.2], rgb_cs);
 
     assert_eq!(rgb_color.values(), vec![0.8, 0.4, 0.2]);
 }

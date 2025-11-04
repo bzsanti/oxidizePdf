@@ -266,7 +266,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Success rate
-    let success_rate = if selected_pdfs.len() > 0 {
+    let success_rate = if !selected_pdfs.is_empty() {
         stats.successful_extractions as f64 / selected_pdfs.len() as f64 * 100.0
     } else {
         0.0

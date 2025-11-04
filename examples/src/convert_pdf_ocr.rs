@@ -226,7 +226,7 @@ fn process_single_file(
     if !options
         .input_path
         .extension()
-        .map_or(false, |ext| ext == "pdf")
+        .is_some_and(|ext| ext == "pdf")
     {
         return Err("Input file must be a PDF".into());
     }
@@ -276,7 +276,7 @@ fn process_batch(
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "pdf") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "pdf") {
             pdf_files.push(path);
         }
     }

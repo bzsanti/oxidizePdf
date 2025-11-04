@@ -3089,7 +3089,7 @@ startxref
             ..Default::default()
         };
 
-        let cloned = metadata.clone();
+        let cloned = metadata;
         assert_eq!(cloned.title, Some("Test".to_string()));
         assert_eq!(cloned.version, "1.4".to_string());
     }
@@ -3196,7 +3196,7 @@ startxref
         options.lenient_streams = true;
         options.max_recovery_bytes = 2000;
         options.collect_warnings = true;
-        let cloned = options.clone();
+        let cloned = options;
         assert!(cloned.lenient_streams);
         assert_eq!(cloned.max_recovery_bytes, 2000);
         assert!(cloned.collect_warnings);

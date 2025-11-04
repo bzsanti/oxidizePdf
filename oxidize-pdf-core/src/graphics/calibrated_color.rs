@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn test_calibrated_color() {
         let cs = CalGrayColorSpace::new().with_gamma(2.2);
-        let color = CalibratedColor::cal_gray(0.5, cs.clone());
+        let color = CalibratedColor::cal_gray(0.5, cs);
 
         assert_eq!(color.values(), vec![0.5]);
 

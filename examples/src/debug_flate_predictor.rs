@@ -127,12 +127,7 @@ fn find_stream_end(data: &[u8]) -> Option<usize> {
     // Buscar "endstream"
     let endstream_marker = b"endstream";
 
-    for i in 0..data.len().saturating_sub(endstream_marker.len()) {
-        if &data[i..i + endstream_marker.len()] == endstream_marker {
-            return Some(i);
-        }
-    }
-    None
+    (0..data.len().saturating_sub(endstream_marker.len())).find(|&i| &data[i..i + endstream_marker.len()] == endstream_marker)
 }
 
 fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
@@ -150,7 +145,7 @@ fn try_raw_deflate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     Ok(result)
 }
 
-fn analyze_xref_stream(data: &[u8]) -> () {
+fn analyze_xref_stream(data: &[u8]) {
     println!("\n--- Análisis del XRef stream decodificado ---");
 
     if data.len() < 10 {

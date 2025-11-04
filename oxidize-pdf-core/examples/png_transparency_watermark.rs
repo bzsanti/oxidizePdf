@@ -102,7 +102,7 @@ fn demonstrate_basic_transparency() -> Result<(), Box<dyn std::error::Error>> {
         .at(100.0, 450.0)
         .write("Opacity Levels:")?;
 
-    let opacities = vec![1.0, 0.75, 0.5, 0.25];
+    let opacities = [1.0, 0.75, 0.5, 0.25];
     for (i, opacity) in opacities.iter().enumerate() {
         let y = 400.0 - (i as f64 * 50.0);
         let group = TransparencyGroup::new().with_opacity(*opacity);

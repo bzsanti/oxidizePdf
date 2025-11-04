@@ -415,7 +415,7 @@ mod tests {
         assert!(debug_str.contains("512"));
         assert!(debug_str.contains("1024"));
 
-        let cloned = options.clone();
+        let cloned = options;
         assert_eq!(cloned.buffer_size, 512);
         assert_eq!(cloned.max_stream_size, 1024);
         assert!(!cloned.skip_images);

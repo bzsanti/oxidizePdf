@@ -67,7 +67,7 @@ impl WorkerPool {
         // Spawn result collector thread
         let results = vec![None; num_jobs];
         let results_handle = {
-            let mut results = results.clone();
+            let mut results = results;
             thread::spawn(move || {
                 for (idx, result) in result_receiver {
                     results[idx] = Some(result);

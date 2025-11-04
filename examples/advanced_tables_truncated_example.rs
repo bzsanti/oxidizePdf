@@ -116,9 +116,9 @@ fn create_truncation_demo_table(
         ])
         .add_row_with_mixed_styles(vec![
             (left_style.clone(), "A"),
-            (center_style.clone(), "B"),
-            (right_style.clone(), "C"),
-            (left_style.clone(), "D - This text is way too long for the cell and will be truncated"),
+            (center_style, "B"),
+            (right_style, "C"),
+            (left_style, "D - This text is way too long for the cell and will be truncated"),
         ])
         .build()?;
 
@@ -208,11 +208,11 @@ fn create_financial_table_with_truncation(
             (number_style.clone(), "$1,440,000"),
         ])
         .add_row_with_mixed_styles(vec![
-            (data_style.clone(), "Operations & Logistics"), // Will be truncated
+            (data_style, "Operations & Logistics"), // Will be truncated
             (number_style.clone(), "$780,000"),
             (number_style.clone(), "$820,000"),
             (number_style.clone(), "$890,000"),
-            (number_style.clone(), "$2,490,000"),
+            (number_style, "$2,490,000"),
         ])
         .build()?;
 
@@ -341,11 +341,11 @@ fn create_inventory_table_with_truncation(
                 data_style.clone(),
                 "Mechanical Gaming Keyboard with Backlight",
             ), // Will be truncated
-            (data_style.clone(), "Input Devices & Keyboards"), // Will be truncated
+            (data_style, "Input Devices & Keyboards"), // Will be truncated
             (number_style.clone(), "67"),
             (number_style.clone(), "10"),
             (number_style.clone(), "$45.00"),
-            (number_style.clone(), "$129.99"),
+            (number_style, "$129.99"),
         ])
         .build()?;
 

@@ -112,7 +112,7 @@ fn extract_decode_params(dict_str: &str) {
     }
 }
 
-fn analyze_xref_content(data: &[u8]) -> () {
+fn analyze_xref_content(data: &[u8]) {
     println!("\n📋 Análisis del contenido XRef decodificado:");
 
     // Los XRef streams contienen datos binarios estructurados
@@ -203,12 +203,7 @@ fn simulate_predictor_12(data: &[u8]) {
 }
 
 fn find_pattern(data: &[u8], pattern: &[u8]) -> Option<usize> {
-    for i in 0..data.len().saturating_sub(pattern.len()) {
-        if &data[i..i + pattern.len()] == pattern {
-            return Some(i);
-        }
-    }
-    None
+    (0..data.len().saturating_sub(pattern.len())).find(|&i| &data[i..i + pattern.len()] == pattern)
 }
 
 fn find_stream_start(data: &[u8]) -> Option<usize> {
@@ -229,12 +224,7 @@ fn find_stream_start(data: &[u8]) -> Option<usize> {
 
 fn find_stream_end(data: &[u8]) -> Option<usize> {
     let endstream_marker = b"endstream";
-    for i in 0..data.len().saturating_sub(endstream_marker.len()) {
-        if &data[i..i + endstream_marker.len()] == endstream_marker {
-            return Some(i);
-        }
-    }
-    None
+    (0..data.len().saturating_sub(endstream_marker.len())).find(|&i| &data[i..i + endstream_marker.len()] == endstream_marker)
 }
 
 fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {

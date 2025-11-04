@@ -81,7 +81,7 @@ fn test_writer_config_default_values() {
 fn test_writer_with_modern_config() {
     let buffer = Vec::new();
     let config = WriterConfig::modern();
-    let writer = PdfWriter::with_config(buffer, config.clone());
+    let writer = PdfWriter::with_config(buffer, config);
 
     // Verify config is stored
     assert_eq!(writer.config.pdf_version, "1.5");
@@ -93,7 +93,7 @@ fn test_writer_with_modern_config() {
 fn test_writer_with_legacy_config() {
     let buffer = Vec::new();
     let config = WriterConfig::legacy();
-    let writer = PdfWriter::with_config(buffer, config.clone());
+    let writer = PdfWriter::with_config(buffer, config);
 
     // Verify config is stored
     assert_eq!(writer.config.pdf_version, "1.4");

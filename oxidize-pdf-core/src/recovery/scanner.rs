@@ -441,7 +441,7 @@ mod tests {
         ];
 
         let result = ScanResult {
-            objects: objects.clone(),
+            objects: objects,
             total_objects: 2,
             valid_objects: 2,
             estimated_pages: 1,

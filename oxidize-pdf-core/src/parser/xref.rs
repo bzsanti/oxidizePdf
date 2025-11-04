@@ -1816,7 +1816,7 @@ mod tests {
             compressed_info: Some((5, 10)),
         };
 
-        table.add_extended_entry(15, ext_entry.clone());
+        table.add_extended_entry(15, ext_entry);
         assert_eq!(table.extended_entries.len(), 1);
         assert!(table.extended_entries.contains_key(&15));
     }

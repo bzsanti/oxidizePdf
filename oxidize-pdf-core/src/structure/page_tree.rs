@@ -319,7 +319,7 @@ mod tests {
             parent: Some(ObjectId::new(1, 0)),
         };
 
-        let cloned = node.clone();
+        let cloned = node;
         match cloned {
             PageTreeNode::Pages { kids, count, .. } => {
                 assert_eq!(kids.len(), 2);
@@ -334,7 +334,7 @@ mod tests {
         let page = Page::a4();
         let parent_id = ObjectId::new(1, 0);
         let node = PageTreeNode::Page {
-            page: page.clone(),
+            page: page,
             parent: parent_id,
         };
 

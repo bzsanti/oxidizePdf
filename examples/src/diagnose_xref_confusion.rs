@@ -46,13 +46,12 @@ fn analyze_xref_position(pdf_data: &[u8], offset: usize, name: &str) {
             // Extraer longitud del stream si está disponible
             if let Some(length_start) = dict_str.find("/Length") {
                 let after_length = &dict_str[length_start + "/Length".len()..];
-                if let Some(number_match) = after_length
+                if let Ok(number_match) = after_length
                     .chars()
                     .skip_while(|c| !c.is_ascii_digit())
                     .take_while(|c| c.is_ascii_digit())
                     .collect::<String>()
                     .parse::<usize>()
-                    .ok()
                 {
                     println!("   Stream Length: {} bytes", number_match);
 
@@ -129,12 +128,7 @@ fn analyze_problematic_object(pdf_data: &[u8]) {
 }
 
 fn find_pattern(data: &[u8], pattern: &[u8]) -> Option<usize> {
-    for i in 0..data.len().saturating_sub(pattern.len()) {
-        if &data[i..i + pattern.len()] == pattern {
-            return Some(i);
-        }
-    }
-    None
+    (0..data.len().saturating_sub(pattern.len())).find(|&i| &data[i..i + pattern.len()] == pattern)
 }
 
 fn find_stream_start(data: &[u8]) -> Option<usize> {

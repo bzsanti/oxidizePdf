@@ -21,11 +21,11 @@ mod content_parser_tests {
         match result {
             Ok(ops) => {
                 // Should contain inline image operation if supported
-                let has_inline_image = ops
+                let _has_inline_image = ops
                     .iter()
                     .any(|op| matches!(op, ContentOperation::BeginInlineImage));
                 // Parser may or may not support inline images, just verify no crash
-                assert!(has_inline_image || !has_inline_image);
+                // Test passes if we reach here without panicking
             }
             Err(_) => {
                 // Parser might not fully support inline images yet - acceptable

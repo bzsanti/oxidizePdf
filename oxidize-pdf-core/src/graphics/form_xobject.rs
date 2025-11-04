@@ -574,7 +574,7 @@ mod tests {
             .fill()
             .build();
 
-        let content = String::from_utf8(form.content.clone()).unwrap();
+        let content = String::from_utf8(form.content).unwrap();
         assert!(content.contains("1 0 0 rg"));
         assert!(content.contains("10 10 80 80 re"));
         assert!(content.contains("f"));
@@ -608,7 +608,7 @@ mod tests {
         assert_eq!(form.bbox.width(), 20.0);
         assert_eq!(form.bbox.height(), 20.0);
 
-        let content = String::from_utf8(form.content.clone()).unwrap();
+        let content = String::from_utf8(form.content).unwrap();
         assert!(content.contains("0 0.5 0 RG")); // Green color
     }
 
@@ -618,7 +618,7 @@ mod tests {
 
         assert_eq!(form.bbox.width(), 30.0);
 
-        let content = String::from_utf8(form.content.clone()).unwrap();
+        let content = String::from_utf8(form.content).unwrap();
         assert!(content.contains("0.8 0 0 RG")); // Red color
     }
 
@@ -630,8 +630,8 @@ mod tests {
         assert_eq!(filled_circle.bbox.width(), 50.0);
         assert_eq!(stroked_circle.bbox.width(), 50.0);
 
-        let filled_content = String::from_utf8(filled_circle.content.clone()).unwrap();
-        let stroked_content = String::from_utf8(stroked_circle.content.clone()).unwrap();
+        let filled_content = String::from_utf8(filled_circle.content).unwrap();
+        let stroked_content = String::from_utf8(stroked_circle.content).unwrap();
 
         assert!(filled_content.contains("f")); // Fill
         assert!(stroked_content.contains("S")); // Stroke
@@ -643,7 +643,7 @@ mod tests {
 
         assert_eq!(star.bbox.width(), 100.0);
 
-        let content = String::from_utf8(star.content.clone()).unwrap();
+        let content = String::from_utf8(star.content).unwrap();
         assert!(content.contains("1 0.8 0 rg")); // Gold color
     }
 

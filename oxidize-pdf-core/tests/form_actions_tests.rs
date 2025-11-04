@@ -78,7 +78,7 @@ fn test_submit_form_action_pdf() {
 #[test]
 fn test_submit_form_with_fields() {
     let fields = vec!["name".to_string(), "email".to_string(), "phone".to_string()];
-    let action = SubmitFormAction::new("https://example.com/submit").with_fields(fields.clone());
+    let action = SubmitFormAction::new("https://example.com/submit").with_fields(fields);
 
     let dict = action.to_dict();
 
@@ -96,7 +96,7 @@ fn test_submit_form_with_fields() {
 fn test_submit_form_excluding_fields() {
     let fields = vec!["password".to_string(), "ssn".to_string()];
     let action =
-        SubmitFormAction::new("https://example.com/submit").excluding_fields(fields.clone());
+        SubmitFormAction::new("https://example.com/submit").excluding_fields(fields);
 
     let dict = action.to_dict();
 
@@ -144,7 +144,7 @@ fn test_reset_form_action_all_fields() {
 #[test]
 fn test_reset_form_action_specific_fields() {
     let fields = vec!["field1".to_string(), "field2".to_string()];
-    let action = ResetFormAction::new().with_fields(fields.clone());
+    let action = ResetFormAction::new().with_fields(fields);
 
     let dict = action.to_dict();
 
@@ -160,7 +160,7 @@ fn test_reset_form_action_specific_fields() {
 #[test]
 fn test_reset_form_action_excluding_fields() {
     let fields = vec!["readonly1".to_string(), "readonly2".to_string()];
-    let action = ResetFormAction::new().excluding_fields(fields.clone());
+    let action = ResetFormAction::new().excluding_fields(fields);
 
     let dict = action.to_dict();
 
@@ -197,7 +197,7 @@ fn test_hide_action_multiple_targets() {
         "field2".to_string(),
         "field3".to_string(),
     ];
-    let action = HideAction::new(targets.clone());
+    let action = HideAction::new(targets);
     let dict = action.to_dict();
 
     if let Some(Object::Array(targets_array)) = dict.get("T") {
@@ -352,7 +352,7 @@ fn test_hide_action_builder() {
     assert_eq!(hide_dict.get("H"), Some(&Object::Boolean(true)));
 
     // Test show
-    let show_action = HideAction::new(targets.clone()).show();
+    let show_action = HideAction::new(targets).show();
     let show_dict = show_action.to_dict();
     assert_eq!(show_dict.get("H"), Some(&Object::Boolean(false)));
 }

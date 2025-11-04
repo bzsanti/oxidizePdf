@@ -675,7 +675,7 @@ mod tests {
         assert!(debug_str.contains("XYZ"));
         assert!(debug_str.contains("100.0"));
 
-        let cloned = dest.clone();
+        let cloned = dest;
         if let LinkDestination::XYZ {
             left, top, zoom, ..
         } = cloned
@@ -696,7 +696,7 @@ mod tests {
         assert!(debug_str.contains("URI"));
         assert!(debug_str.contains("https://test.com"));
 
-        let cloned = action.clone();
+        let cloned = action;
         if let LinkAction::URI { uri } = cloned {
             assert_eq!(uri, "https://test.com");
         }
@@ -711,7 +711,7 @@ mod tests {
         let debug_str = format!("{link:?}");
         assert!(debug_str.contains("LinkAnnotation"));
 
-        let cloned = link.clone();
+        let cloned = link;
         assert!(matches!(cloned.highlight_mode, HighlightMode::Outline));
     }
 

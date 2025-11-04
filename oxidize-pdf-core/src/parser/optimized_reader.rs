@@ -220,7 +220,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
 
         // Store in LRU cache
         let arc_obj = Arc::new(obj);
-        self.object_cache.put(object_id, arc_obj.clone());
+        self.object_cache.put(object_id, arc_obj);
         self.memory_stats.cached_objects = self.object_cache.len();
 
         // Return reference to cached object

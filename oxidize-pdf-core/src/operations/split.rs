@@ -567,7 +567,7 @@ mod tests {
             PageRange::Range(1, 3),
             PageRange::Single(5),
         ];
-        let mode = SplitMode::Ranges(ranges.clone());
+        let mode = SplitMode::Ranges(ranges);
 
         match mode {
             SplitMode::Ranges(r) => {

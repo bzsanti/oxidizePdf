@@ -324,7 +324,7 @@ mod tests {
         ];
 
         let result =
-            page.add_quick_ordered_list(items.clone(), 50.0, 700.0, OrderedListStyle::Decimal);
+            page.add_quick_ordered_list(items, 50.0, 700.0, OrderedListStyle::Decimal);
         assert!(result.is_ok());
     }
 

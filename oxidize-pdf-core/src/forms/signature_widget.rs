@@ -963,7 +963,7 @@ mod tests {
         ];
 
         let visual = SignatureVisualType::InkSignature {
-            strokes: strokes.clone(),
+            strokes: strokes,
             color: Color::rgb(0.0, 0.0, 0.5),
             width: 1.5,
         };

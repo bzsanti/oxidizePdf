@@ -46,7 +46,7 @@ fn test_page_tree_caching() {
     };
 
     // Cache it
-    page_tree.cache_page(0, page.clone());
+    page_tree.cache_page(0, page);
 
     // Should be cached now
     assert!(page_tree.get_cached_page(0).is_some());

@@ -218,7 +218,7 @@ fn validate_pdf(path: &str) -> Result<ValidationReport> {
         .iter()
         .filter(|c| c.metadata.sentence_boundary_respected)
         .count();
-    let sentence_boundary_pct = if chunks.len() > 0 {
+    let sentence_boundary_pct = if !chunks.is_empty() {
         (chunks_with_boundaries as f32 / chunks.len() as f32) * 100.0
     } else {
         0.0

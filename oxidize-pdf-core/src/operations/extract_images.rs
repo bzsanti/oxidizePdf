@@ -1816,7 +1816,7 @@ startxref\n\
     fn test_output_path_combinations() {
         let base_dir = PathBuf::from("/output");
         let options = ExtractImagesOptions {
-            output_dir: base_dir.clone(),
+            output_dir: base_dir,
             name_pattern: "img_{page}_{index}.{format}".to_string(),
             ..Default::default()
         };

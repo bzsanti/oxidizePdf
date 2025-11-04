@@ -69,13 +69,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Table data
-    let table_data = vec![
-        vec!["Description", "Qty", "Price", "Total"],
+    let table_data = [vec!["Description", "Qty", "Price", "Total"],
         vec!["Widget Pro", "5", "$50.00", "$250.00"],
         vec!["Service Plan", "1", "$99.99", "$99.99"],
         vec!["Installation", "2", "$75.00", "$150.00"],
-        vec!["Shipping", "1", "$25.00", "$25.00"],
-    ];
+        vec!["Shipping", "1", "$25.00", "$25.00"]];
 
     // Add text to cells
     for (row, row_data) in table_data.iter().enumerate() {

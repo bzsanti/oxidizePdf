@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  - Status entries: {}", status.status.len());
 
             // Calculate basic statistics
-            if status.status.len() > 0 {
+            if !status.status.is_empty() {
                 let levels: Vec<u8> = status.status.values().map(|s| s.level).collect();
                 let level_0 = levels.iter().filter(|&&l| l == 0).count();
                 let level_1 = levels.iter().filter(|&&l| l == 1).count();

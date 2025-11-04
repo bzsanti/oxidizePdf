@@ -299,7 +299,7 @@ mod tests {
         dict.insert("Root".to_string(), PdfObject::Reference(1, 0));
 
         let trailer = PdfTrailer::from_dict(dict, 1000).unwrap();
-        let chain = TrailerChain::new(trailer.clone());
+        let chain = TrailerChain::new(trailer);
 
         assert!(!chain.has_previous());
         assert_eq!(chain.all().len(), 1);

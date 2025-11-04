@@ -146,13 +146,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(parent) = Path::new(&report_path).parent() {
         fs::create_dir_all(parent)?;
     }
-    fs::write(&report_path, &report)?;
+    fs::write(report_path, &report)?;
 
     println!("✓ Summary report generated: {}", report_path);
 
     // Save raw extracted text for reference
     let text_path = "examples/results/iso_spec_extracted_text.txt";
-    fs::write(&text_path, &full_text)?;
+    fs::write(text_path, &full_text)?;
 
     println!("✓ Raw extracted text saved: {}", text_path);
 
@@ -304,7 +304,7 @@ fn extract_section_requirements(
                 };
 
                 // Extract context (surrounding lines)
-                let context_start = if i > 2 { i - 2 } else { 0 };
+                let context_start = i.saturating_sub(2);
                 let context_end = if i + 3 < lines.len() {
                     i + 3
                 } else {
@@ -337,7 +337,7 @@ fn extract_section_requirements(
         if table_content.contains("required") || table_content.contains("shall") {
             let requirement = IsoRequirement {
                 id: format!("{}.table.{}", section_id, req_counter),
-                name: format!("Table Definition"),
+                name: "Table Definition".to_string(),
                 description: table_content
                     .lines()
                     .next()
@@ -363,7 +363,7 @@ fn extract_section_requirements(
 /// Extract a short name for the requirement from the line
 fn extract_requirement_name(line: &str) -> String {
     // Take first few words, clean up
-    let words: Vec<&str> = line.trim().split_whitespace().take(8).collect();
+    let words: Vec<&str> = line.split_whitespace().take(8).collect();
     let name = words.join(" ");
 
     // Remove common prefixes/suffixes

@@ -1031,7 +1031,7 @@ mod tests {
 
         let extracted = ExtractedText {
             text: "Hello World".to_string(),
-            fragments: fragments.clone(),
+            fragments: fragments,
         };
 
         assert_eq!(extracted.text, "Hello World");

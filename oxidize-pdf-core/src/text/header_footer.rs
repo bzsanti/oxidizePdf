@@ -229,7 +229,7 @@ mod tests {
             date_format: Some("%d/%m/%Y".to_string()),
         };
 
-        let header = HeaderFooter::new_header("Test").with_options(options.clone());
+        let header = HeaderFooter::new_header("Test").with_options(options);
         assert_eq!(header.options().font_size, 12.0);
         assert_eq!(header.options().margin, 20.0);
     }

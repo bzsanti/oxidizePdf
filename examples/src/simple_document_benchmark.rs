@@ -73,7 +73,7 @@ fn main() -> Result<()> {
                     page.text()
                         .set_font(Font::Helvetica, 10.0)
                         .at(70.0, y_pos)
-                        .write(&line.trim())?;
+                        .write(line.trim())?;
 
                     y_pos -= 15.0;
                     line.clear();

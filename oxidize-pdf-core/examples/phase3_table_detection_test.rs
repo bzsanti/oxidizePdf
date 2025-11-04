@@ -11,7 +11,7 @@ use oxidize_pdf::document::Document;
 use oxidize_pdf::graphics::extraction::{ExtractionConfig, GraphicsExtractor};
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
-use oxidize_pdf::text::table_detection::{TableDetectionError, TableDetector};
+use oxidize_pdf::text::table_detection::TableDetector;
 use oxidize_pdf::text::Font;
 use oxidize_pdf::writer::{PdfWriter, WriterConfig};
 use oxidize_pdf::Color;
@@ -49,10 +49,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Add text content to cells
-    let table_data = vec![
-        vec!["Header 1", "Header 2", "Header 3"],
-        vec!["Data 1", "Data 2", "Data 3"],
-    ];
+    let table_data = [vec!["Header 1", "Header 2", "Header 3"],
+        vec!["Data 1", "Data 2", "Data 3"]];
 
     for (row, row_data) in table_data.iter().enumerate() {
         for (col, &text) in row_data.iter().enumerate() {

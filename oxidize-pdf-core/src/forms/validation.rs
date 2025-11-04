@@ -298,7 +298,7 @@ impl FormValidationSystem {
                     Err(e) => errors.push(ValidationError {
                         field_name: field_name.to_string(),
                         error_type: ValidationErrorType::Format,
-                        message: e.to_string(),
+                        message: e,
                         details: None,
                     }),
                 }
@@ -1507,7 +1507,7 @@ mod tests {
         };
 
         let mut system = FormValidationSystem::new();
-        system.settings = settings.clone();
+        system.settings = settings;
 
         assert!(system.settings.validate_on_change);
         assert!(system.settings.show_format_hints);

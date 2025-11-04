@@ -452,7 +452,7 @@ mod tests {
         let id2 = ObjectId::new(2, 0);
         let id3 = ObjectId::new(3, 0);
 
-        cache.put(id1, obj1.clone());
+        cache.put(id1, obj1);
         cache.put(id2, obj2.clone());
 
         let stats = cache.stats();
@@ -535,7 +535,7 @@ mod tests {
         assert!(debug_str.contains("5"));
         assert!(debug_str.contains("10"));
 
-        let cloned = stats.clone();
+        let cloned = stats;
         assert_eq!(cloned.size, 5);
         assert_eq!(cloned.capacity, 10);
 

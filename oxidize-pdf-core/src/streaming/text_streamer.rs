@@ -477,8 +477,8 @@ mod tests {
             font_name: Some("Arial".to_string()),
         };
 
-        streamer.buffer.push_back(chunk1.clone());
-        streamer.buffer.push_back(chunk2.clone());
+        streamer.buffer.push_back(chunk1);
+        streamer.buffer.push_back(chunk2);
 
         let chunks = streamer.get_buffered_chunks();
         assert_eq!(chunks.len(), 2);
@@ -794,7 +794,7 @@ mod tests {
 
         let mut collected = Vec::new();
         let result = stream_text(streams, |chunk| {
-            collected.push(chunk.text.clone());
+            collected.push(chunk.text);
             Ok(())
         });
 

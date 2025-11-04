@@ -631,7 +631,7 @@ mod tests {
     #[test]
     fn test_merge_input_with_page_list() {
         let pages = vec![0, 2, 4, 6];
-        let input = MergeInput::with_pages("document.pdf", PageRange::List(pages.clone()));
+        let input = MergeInput::with_pages("document.pdf", PageRange::List(pages));
         assert_eq!(input.path, PathBuf::from("document.pdf"));
         assert!(input.pages.is_some());
     }

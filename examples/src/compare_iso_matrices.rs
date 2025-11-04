@@ -591,7 +591,7 @@ fn generate_executive_summary(
     summary.push_str("2. **External Validation**: Integrate industry-standard validation tools\n");
     summary.push_str("3. **Performance Optimization**: Optimize existing implementations\n\n");
 
-    summary.push_str(&format!("## Risk Assessment\n\n"));
+    summary.push_str(&"## Risk Assessment\n\n".to_string());
 
     if critical_gaps > 3 {
         summary
@@ -608,4 +608,3 @@ fn generate_executive_summary(
     Ok(summary)
 }
 
-use chrono;

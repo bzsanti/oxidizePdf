@@ -437,7 +437,7 @@ fn test_complex_document_workflow() -> std::result::Result<(), Box<dyn std::erro
 
     // Step 4: Merge some chunks
     // Use the actual file names created
-    let chunk1 = if split_files.len() > 0 {
+    let chunk1 = if !split_files.is_empty() {
         split_files[0].clone()
     } else {
         return Err("No files created from split".into());

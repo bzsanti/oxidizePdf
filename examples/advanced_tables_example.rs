@@ -299,13 +299,13 @@ fn create_schedule_table(
             (time_style.clone(), "12:30 PM"),
             (break_style.clone(), "Lunch"),
             (break_style.clone(), "Lunch"),
-            (break_style.clone(), "Lunch"),
+            (break_style, "Lunch"),
         ])
         .add_row_with_mixed_styles(vec![
-            (time_style.clone(), "2:00 PM"),
+            (time_style, "2:00 PM"),
             (event_style.clone(), "Workshop: Microservices"),
             (event_style.clone(), "Case Study: Scaling"),
-            (event_style.clone(), "Hands-on: Kubernetes"),
+            (event_style, "Hands-on: Kubernetes"),
         ])
         .build()?;
 

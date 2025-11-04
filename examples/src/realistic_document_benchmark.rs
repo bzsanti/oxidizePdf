@@ -202,7 +202,7 @@ fn main() -> Result<()> {
     let start_time = Instant::now();
 
     let mut doc = Document::new();
-    doc.set_title(&format!(
+    doc.set_title(format!(
         "Realistic Business Document - {} Pages",
         page_count
     ));
