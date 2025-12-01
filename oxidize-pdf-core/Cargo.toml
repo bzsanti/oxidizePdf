@@ -154,39 +154,39 @@ path = "examples/demo_issues_fixed.rs"
 
 [[example]]
 name = "advanced_tables_example"
-path = "../examples/advanced_tables_example.rs"
+path = "examples/advanced_tables_example.rs"
 
 [[example]]
 name = "advanced_tables_landscape_example"
-path = "../examples/advanced_tables_landscape_example.rs"
+path = "examples/advanced_tables_landscape_example.rs"
 
 [[example]]
 name = "advanced_tables_adjusted_example"
-path = "../examples/advanced_tables_adjusted_example.rs"
+path = "examples/advanced_tables_adjusted_example.rs"
 
 [[example]]
 name = "advanced_tables_truncated_example"
-path = "../examples/advanced_tables_truncated_example.rs"
+path = "examples/advanced_tables_truncated_example.rs"
 
 [[example]]
 name = "charts_example"
-path = "../examples/charts_example.rs"
+path = "examples/charts_example.rs"
 
 [[example]]
 name = "charts_coordinate_problem"
-path = "../examples/charts_coordinate_problem.rs"
+path = "examples/charts_coordinate_problem.rs"
 
 [[example]]
 name = "charts_fixed_example"
-path = "../examples/charts_fixed_example.rs"
+path = "examples/charts_fixed_example.rs"
 
 [[example]]
 name = "charts_text_alignment_test"
-path = "../examples/charts_text_alignment_test.rs"
+path = "examples/charts_text_alignment_test.rs"
 
 [[example]]
 name = "charts_comprehensive_test"
-path = "../examples/charts_comprehensive_test.rs"
+path = "examples/charts_comprehensive_test.rs"
 
 [[example]]
 name = "realistic_document_benchmark"
@@ -446,52 +446,40 @@ name = "ai_ready_resume"
 path = "examples/ai_ready_resume.rs"
 
 [[example]]
-name = "basic_chunking"
-path = "../examples/ai_pipelines/basic_chunking.rs"
-
-[[example]]
-name = "rag_pipeline"
-path = "../examples/ai_pipelines/rag_pipeline.rs"
-
-[[example]]
-name = "validate_real_pdfs"
-path = "../examples/validation/validate_real_pdfs.rs"
-
-[[example]]
 name = "xmp_metadata_demo"
 path = "examples/xmp_metadata_demo.rs"
 
 [[example]]
 name = "incremental_form_update"
-path = "../examples/incremental_form_update.rs"
+path = "examples/incremental_form_update.rs"
 
 [[example]]
 name = "incremental_page_replacement_manual"
-path = "../examples/incremental_page_replacement_manual.rs"
+path = "examples/incremental_page_replacement_manual.rs"
 
 [[example]]
 name = "incremental_overlay_simple"
-path = "../examples/incremental_overlay_simple.rs"
+path = "examples/incremental_overlay_simple.rs"
 
 [[example]]
 name = "incremental_overlay_working"
-path = "../examples/incremental_overlay_working.rs"
+path = "examples/incremental_overlay_working.rs"
 
 [[example]]
 name = "page_overlay_mvp"
-path = "../examples/page_overlay_mvp.rs"
+path = "examples/page_overlay_mvp.rs"
 
 [[example]]
 name = "page_overlay_with_content"
-path = "../examples/page_overlay_with_content.rs"
+path = "examples/page_overlay_with_content.rs"
 
 [[example]]
 name = "llm_export_formats"
-path = "../examples/llm_export_formats.rs"
+path = "examples/llm_export_formats.rs"
 
 [[example]]
 name = "pdf_to_llm_formats"
-path = "../examples/pdf_to_llm_formats.rs"
+path = "examples/pdf_to_llm_formats.rs"
 
 # Disabled - API incompatibility (deferred to v1.6.4)
 # [[example]]
@@ -504,11 +492,11 @@ path = "../examples/pdf_to_llm_formats.rs"
 
 [[example]]
 name = "keyvalue_extraction"
-path = "../examples/keyvalue_extraction.rs"
+path = "examples/keyvalue_extraction.rs"
 
 [[example]]
 name = "table_extraction"
-path = "../examples/table_extraction.rs"
+path = "examples/table_extraction.rs"
 
 [[example]]
 name = "tagged_pdf_demo"
