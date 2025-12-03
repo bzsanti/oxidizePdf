@@ -1,20 +1,20 @@
-//! Example demonstrating TrueType font subsetting
+//! Example demonstrating TrueType font subsetting concepts
 //!
-//! This example shows how to:
-//! - Load a TrueType font
-//! - Create a subset with only used glyphs
-//! - Compare original vs subset sizes
-//! - Embed subset fonts in PDFs
+//! This example shows:
+//! - What font subsetting is and why it matters
+//! - How glyphs are mapped to characters
+//! - Size reduction benefits of subsetting
+//! - Educational visualization of subsetting process
+//!
+//! Note: This is an educational example showing font subsetting concepts.
+//! The actual subsetting is handled internally by oxidize-pdf when embedding fonts.
 
-use oxidize_pdf::geometry::Point;
-use oxidize_pdf::graphics::GraphicsContext;
-use oxidize_pdf::text::{Font, FontManager, SubsettingOptions, TrueTypeSubsetter};
-use oxidize_pdf::{Document, Page, Result};
+use oxidize_pdf::error::Result;
+use oxidize_pdf::{Color, Document, Font, Page};
 use std::fs;
-use std::path::Path;
 
 fn main() -> Result<()> {
-    println!("Creating TrueType Font Subsetting example...");
+    println!("Creating TrueType Font Subsetting educational example...");
 
     // Create a new document
     let mut doc = Document::new();
@@ -22,402 +22,451 @@ fn main() -> Result<()> {
     doc.set_author("Oxidize PDF");
 
     // Create demonstration pages
-    create_subsetting_demo_page(&mut doc)?;
+    create_subsetting_intro_page(&mut doc)?;
     create_size_comparison_page(&mut doc)?;
-    create_multilingual_subset_page(&mut doc)?;
+    create_glyph_mapping_page(&mut doc)?;
 
     // Save the document
     let output = "examples/results/truetype_subsetting.pdf";
     fs::create_dir_all("examples/results")?;
     doc.save(output)?;
 
-    println!("✓ Created {}", output);
+    println!("Created {}", output);
 
-    // Demonstrate standalone subsetting
-    demonstrate_standalone_subsetting()?;
+    // Print educational summary
+    print_subsetting_summary();
 
     Ok(())
 }
 
-/// Create a page demonstrating font subsetting
-fn create_subsetting_demo_page(doc: &mut Document) -> Result<()> {
-    let mut page = Page::new(595.0, 842.0); // A4 size
-    let mut graphics = GraphicsContext::new();
+/// Create a page explaining font subsetting
+fn create_subsetting_intro_page(doc: &mut Document) -> Result<()> {
+    let mut page = Page::a4();
 
     // Title
-    graphics.set_font(&Font::helvetica_bold(), 18.0);
-    graphics.text_at(Point::new(50.0, 780.0), "TrueType Font Subsetting Demo");
+    page.text()
+        .set_font(Font::HelveticaBold, 24.0)
+        .at(50.0, 780.0)
+        .write("TrueType Font Subsetting")?;
 
-    // Example text that uses limited glyphs
-    let sample_text = "Hello World! This PDF uses font subsetting.";
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 755.0)
+        .write("Reducing PDF file size by including only used glyphs")?;
 
-    graphics.set_font(&Font::helvetica(), 12.0);
-    graphics.text_at(Point::new(50.0, 740.0), "Original Text:");
+    // What is font subsetting section
+    let mut y = 710.0;
+    page.text()
+        .set_font(Font::HelveticaBold, 14.0)
+        .at(50.0, y)
+        .write("What is Font Subsetting?")?;
 
-    graphics.set_font(&Font::helvetica(), 14.0);
-    graphics.text_at(Point::new(50.0, 720.0), sample_text);
-
-    // Explain subsetting
-    graphics.set_font(&Font::helvetica(), 10.0);
-    let mut y = 680.0;
-
-    let explanations = vec![
-        "Font Subsetting Benefits:",
-        "• Reduces PDF file size by 50-95%",
-        "• Includes only glyphs actually used in the document",
-        "• Maintains full quality and hinting information",
-        "• Improves loading and rendering performance",
+    y -= 25.0;
+    let intro_text = [
+        "Font subsetting is the process of creating a smaller version of a font",
+        "that contains only the glyphs (characters) actually used in a document.",
         "",
-        "Characters Used in This Example:",
+        "A typical TrueType font contains thousands of glyphs:",
+        "  - Arial: ~3,300 glyphs",
+        "  - Times New Roman: ~3,400 glyphs",
+        "  - Full Unicode fonts: ~65,000+ glyphs",
+        "",
+        "Most documents use only 50-200 unique characters!",
     ];
 
-    for text in explanations {
-        graphics.text_at(Point::new(50.0, y), text);
+    page.text().set_font(Font::Helvetica, 11.0);
+    for line in &intro_text {
+        page.text().at(60.0, y).write(line)?;
         y -= 15.0;
     }
 
-    // Show unique characters
-    let unique_chars = get_unique_characters(sample_text);
-    graphics.set_font(&Font::courier(), 11.0);
-    graphics.text_at(Point::new(70.0, y), &format!("{:?}", unique_chars));
-
-    y -= 30.0;
-    graphics.set_font(&Font::helvetica(), 10.0);
-    graphics.text_at(
-        Point::new(50.0, y),
-        &format!("Total unique characters: {}", unique_chars.len()),
-    );
-
-    // Show glyph mapping
-    y -= 40.0;
-    graphics.set_font(&Font::helvetica_bold(), 12.0);
-    graphics.text_at(Point::new(50.0, y), "Glyph Mapping Example:");
-
+    // Benefits section
     y -= 20.0;
-    graphics.set_font(&Font::courier(), 9.0);
+    page.text()
+        .set_font(Font::HelveticaBold, 14.0)
+        .at(50.0, y)
+        .write("Benefits of Font Subsetting")?;
 
-    // Show character to glyph mapping
-    let mapping_examples = vec![
-        ("H", 72), // ASCII code
-        ("e", 101),
-        ("l", 108),
-        ("o", 111),
-        ("!", 33),
+    y -= 25.0;
+
+    // Draw benefit boxes
+    let benefits = [
+        ("File Size", "50-95% smaller fonts"),
+        ("Speed", "Faster download/render"),
+        ("Bandwidth", "Lower network usage"),
+        ("Quality", "Full font fidelity"),
     ];
 
-    for (ch, code) in mapping_examples {
-        graphics.text_at(
-            Point::new(70.0, y),
-            &format!("'{}' → U+{:04X} → Glyph ID (subset)", ch, code),
-        );
-        y -= 12.0;
+    for (i, (title, desc)) in benefits.iter().enumerate() {
+        let x = 50.0 + (i as f64 * 130.0);
+
+        // Box background
+        page.graphics()
+            .set_fill_color(Color::rgb(0.9, 0.95, 1.0))
+            .set_stroke_color(Color::rgb(0.3, 0.5, 0.8))
+            .set_line_width(1.0)
+            .rect(x, y - 45.0, 120.0, 50.0)
+            .fill_stroke();
+
+        // Title
+        page.text()
+            .set_font(Font::HelveticaBold, 10.0)
+            .at(x + 10.0, y - 10.0)
+            .write(title)?;
+
+        // Description
+        page.text()
+            .set_font(Font::Helvetica, 9.0)
+            .at(x + 10.0, y - 30.0)
+            .write(desc)?;
     }
 
-    page.set_graphics_context(graphics);
+    // Example section
+    y -= 100.0;
+    page.text()
+        .set_font(Font::HelveticaBold, 14.0)
+        .at(50.0, y)
+        .write("Example: \"Hello World!\"")?;
+
+    y -= 25.0;
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(60.0, y)
+        .write("This simple phrase uses only 10 unique characters:")?;
+
+    y -= 20.0;
+
+    // Show unique characters
+    let unique_chars = get_unique_characters("Hello World!");
+    page.text()
+        .set_font(Font::Courier, 14.0)
+        .at(80.0, y)
+        .write(&format!("{:?}", unique_chars))?;
+
+    y -= 30.0;
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(60.0, y)
+        .write("Full Arial font: 3,300 glyphs (756 KB)")?;
+
+    y -= 15.0;
+    page.text()
+        .at(60.0, y)
+        .write("Subset for \"Hello World!\": 10 glyphs (~8 KB)")?;
+
+    y -= 15.0;
+    page.text()
+        .set_font(Font::HelveticaBold, 11.0)
+        .at(60.0, y)
+        .write("Size reduction: 98.9%")?;
+
+    // Visual bar comparison
+    y -= 40.0;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(60.0, y)
+        .write("Full font:")?;
+
+    page.graphics()
+        .set_fill_color(Color::rgb(0.8, 0.2, 0.2))
+        .rect(140.0, y - 5.0, 350.0, 15.0)
+        .fill();
+
+    y -= 25.0;
+    page.text().at(60.0, y).write("Subset:")?;
+
+    page.graphics()
+        .set_fill_color(Color::rgb(0.2, 0.7, 0.3))
+        .rect(140.0, y - 5.0, 4.0, 15.0)
+        .fill();
+
     doc.add_page(page);
     Ok(())
 }
 
-/// Create a page showing size comparison
+/// Create a page showing size comparisons
 fn create_size_comparison_page(doc: &mut Document) -> Result<()> {
-    let mut page = Page::new(595.0, 842.0);
-    let mut graphics = GraphicsContext::new();
+    let mut page = Page::a4();
 
     // Title
-    graphics.set_font(&Font::helvetica_bold(), 18.0);
-    graphics.text_at(Point::new(50.0, 780.0), "Font Size Comparison");
+    page.text()
+        .set_font(Font::HelveticaBold, 18.0)
+        .at(50.0, 780.0)
+        .write("Font Size Comparison")?;
 
-    // Create comparison data
-    let comparisons = vec![
-        FontComparison {
-            name: "Arial Regular",
-            original_size: 756_072,
-            subset_size: 23_456,
-            glyphs_original: 3381,
-            glyphs_subset: 52,
-        },
-        FontComparison {
-            name: "Times New Roman",
-            original_size: 934_556,
-            subset_size: 31_234,
-            glyphs_original: 3381,
-            glyphs_subset: 76,
-        },
-        FontComparison {
-            name: "Courier New",
-            original_size: 652_432,
-            subset_size: 18_765,
-            glyphs_original: 2665,
-            glyphs_subset: 43,
-        },
-        FontComparison {
-            name: "Calibri",
-            original_size: 1_234_567,
-            subset_size: 45_678,
-            glyphs_original: 3053,
-            glyphs_subset: 94,
-        },
+    // Create comparison table
+    let comparisons = [
+        ("Arial", 756_072, 23_456, 3381, 52),
+        ("Times New Roman", 934_556, 31_234, 3381, 76),
+        ("Courier New", 652_432, 18_765, 2665, 43),
+        ("Calibri", 1_234_567, 45_678, 3053, 94),
     ];
 
     let mut y = 720.0;
 
-    // Headers
-    graphics.set_font(&Font::helvetica_bold(), 11.0);
-    graphics.text_at(Point::new(50.0, y), "Font Name");
-    graphics.text_at(Point::new(200.0, y), "Original Size");
-    graphics.text_at(Point::new(300.0, y), "Subset Size");
-    graphics.text_at(Point::new(400.0, y), "Reduction");
-    graphics.text_at(Point::new(480.0, y), "Glyphs");
+    // Table headers
+    page.text()
+        .set_font(Font::HelveticaBold, 11.0)
+        .at(50.0, y)
+        .write("Font Name")?;
+    page.text().at(180.0, y).write("Original")?;
+    page.text().at(270.0, y).write("Subset")?;
+    page.text().at(350.0, y).write("Reduction")?;
+    page.text().at(430.0, y).write("Glyphs")?;
 
+    // Draw header line
     y -= 5.0;
-    // Draw line
-    graphics.set_line_width(0.5);
-    graphics.move_to(Point::new(50.0, y));
-    graphics.line_to(Point::new(545.0, y));
-    graphics.stroke();
+    page.graphics()
+        .set_stroke_color(Color::gray(0.3))
+        .set_line_width(0.5)
+        .move_to(50.0, y)
+        .line_to(520.0, y)
+        .stroke();
 
-    y -= 15.0;
-    graphics.set_font(&Font::helvetica(), 10.0);
+    y -= 20.0;
+    page.text().set_font(Font::Helvetica, 10.0);
 
-    for comp in comparisons {
-        graphics.text_at(Point::new(50.0, y), &comp.name);
-        graphics.text_at(Point::new(200.0, y), &format_bytes(comp.original_size));
-        graphics.text_at(Point::new(300.0, y), &format_bytes(comp.subset_size));
+    for (name, original, subset, glyphs_orig, glyphs_sub) in &comparisons {
+        page.text().at(50.0, y).write(name)?;
+        page.text().at(180.0, y).write(&format_bytes(*original))?;
+        page.text().at(270.0, y).write(&format_bytes(*subset))?;
 
-        let reduction = calculate_reduction(comp.original_size, comp.subset_size);
-        graphics.text_at(Point::new(400.0, y), &format!("{:.1}%", reduction));
-
-        graphics.text_at(
-            Point::new(480.0, y),
-            &format!("{}/{}", comp.glyphs_subset, comp.glyphs_original),
-        );
+        let reduction = calculate_reduction(*original, *subset);
+        page.text()
+            .at(350.0, y)
+            .write(&format!("{:.1}%", reduction))?;
+        page.text()
+            .at(430.0, y)
+            .write(&format!("{}/{}", glyphs_sub, glyphs_orig))?;
 
         y -= 20.0;
     }
 
-    // Add visual chart
-    y -= 40.0;
-    graphics.set_font(&Font::helvetica_bold(), 12.0);
-    graphics.text_at(Point::new(50.0, y), "Visual Size Comparison:");
+    // Visual bar chart
+    y -= 30.0;
+    page.text()
+        .set_font(Font::HelveticaBold, 14.0)
+        .at(50.0, y)
+        .write("Visual Size Comparison")?;
+
+    y -= 30.0;
+    let max_width = 300.0;
+    let max_size = 1_234_567.0;
+
+    for (name, original, subset, _, _) in &comparisons {
+        // Font name
+        page.text()
+            .set_font(Font::Helvetica, 9.0)
+            .at(50.0, y + 12.0)
+            .write(name)?;
+
+        // Original bar (red)
+        let orig_width = (*original as f64 / max_size) * max_width;
+        page.graphics()
+            .set_fill_color(Color::rgb(0.85, 0.3, 0.3))
+            .rect(150.0, y + 10.0, orig_width, 12.0)
+            .fill();
+
+        // Subset bar (green)
+        let subset_width = (*subset as f64 / max_size) * max_width;
+        page.graphics()
+            .set_fill_color(Color::rgb(0.3, 0.75, 0.35))
+            .rect(150.0, y - 5.0, subset_width, 12.0)
+            .fill();
+
+        y -= 40.0;
+    }
+
+    // Legend
+    y -= 10.0;
+    page.graphics()
+        .set_fill_color(Color::rgb(0.85, 0.3, 0.3))
+        .rect(150.0, y, 20.0, 12.0)
+        .fill();
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(175.0, y + 2.0)
+        .write("Original Font")?;
+
+    page.graphics()
+        .set_fill_color(Color::rgb(0.3, 0.75, 0.35))
+        .rect(280.0, y, 20.0, 12.0)
+        .fill();
+    page.text().at(305.0, y + 2.0).write("Subset Font")?;
+
+    // Key insight
+    y -= 50.0;
+    page.graphics()
+        .set_fill_color(Color::rgb(1.0, 0.98, 0.9))
+        .set_stroke_color(Color::rgb(0.8, 0.7, 0.3))
+        .set_line_width(1.5)
+        .rect(50.0, y - 50.0, 500.0, 60.0)
+        .fill_stroke();
+
+    page.text()
+        .set_font(Font::HelveticaBold, 12.0)
+        .at(60.0, y - 10.0)
+        .write("Key Insight")?;
+
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(60.0, y - 30.0)
+        .write("Average document uses <100 unique characters = 97%+ size reduction!")?;
+
+    doc.add_page(page);
+    Ok(())
+}
+
+/// Create a page showing glyph mapping
+fn create_glyph_mapping_page(doc: &mut Document) -> Result<()> {
+    let mut page = Page::a4();
+
+    // Title
+    page.text()
+        .set_font(Font::HelveticaBold, 18.0)
+        .at(50.0, 780.0)
+        .write("Glyph Mapping Process")?;
+
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(50.0, 755.0)
+        .write("How characters become glyphs in the subset font")?;
+
+    // Step-by-step process
+    let mut y = 710.0;
+    page.text()
+        .set_font(Font::HelveticaBold, 14.0)
+        .at(50.0, y)
+        .write("The Subsetting Process")?;
 
     y -= 30.0;
 
-    // Draw bars
-    for comp in &comparisons {
-        graphics.set_font(&Font::helvetica(), 9.0);
-        graphics.text_at(Point::new(50.0, y + 5.0), &comp.name);
+    let steps = [
+        ("1. Scan Document", "Identify all unique characters used"),
+        (
+            "2. Map to Unicode",
+            "Convert characters to Unicode code points",
+        ),
+        ("3. Find Glyphs", "Look up glyph IDs in font's cmap table"),
+        ("4. Extract Glyphs", "Copy only needed glyphs to new font"),
+        ("5. Create Mapping", "Build new character-to-glyph mapping"),
+        ("6. Embed Font", "Include subset font in PDF"),
+    ];
 
-        // Original size bar (scaled)
-        let orig_width = (comp.original_size as f64 / 10000.0).min(200.0);
-        graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.8, 0.2, 0.2));
-        graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-            150.0, y, orig_width, 10.0,
-        ));
+    for (step, desc) in &steps {
+        // Step box
+        page.graphics()
+            .set_fill_color(Color::rgb(0.2, 0.4, 0.7))
+            .rect(60.0, y - 15.0, 130.0, 25.0)
+            .fill();
 
-        // Subset size bar
-        let subset_width = (comp.subset_size as f64 / 10000.0).min(200.0);
-        graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.2, 0.8, 0.2));
-        graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-            150.0,
-            y - 12.0,
-            subset_width,
-            10.0,
-        ));
+        page.text()
+            .set_font(Font::HelveticaBold, 10.0)
+            .at(70.0, y - 5.0)
+            .write(step)?;
+
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(200.0, y - 5.0)
+            .write(desc)?;
 
         y -= 35.0;
     }
 
-    // Legend
-    graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.8, 0.2, 0.2));
-    graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-        400.0, 200.0, 20.0, 10.0,
-    ));
-    graphics.set_fill_color(oxidize_pdf::graphics::Color::black());
-    graphics.text_at(Point::new(425.0, 202.0), "Original");
+    // Character to glyph mapping example
+    y -= 20.0;
+    page.text()
+        .set_font(Font::HelveticaBold, 14.0)
+        .at(50.0, y)
+        .write("Example: Character to Glyph Mapping")?;
 
-    graphics.set_fill_color(oxidize_pdf::graphics::Color::rgb(0.2, 0.8, 0.2));
-    graphics.fill_rect(oxidize_pdf::geometry::Rectangle::from_position_and_size(
-        400.0, 185.0, 20.0, 10.0,
-    ));
-    graphics.set_fill_color(oxidize_pdf::graphics::Color::black());
-    graphics.text_at(Point::new(425.0, 187.0), "Subset");
+    y -= 25.0;
 
-    page.set_graphics_context(graphics);
+    // Headers
+    page.text()
+        .set_font(Font::HelveticaBold, 10.0)
+        .at(60.0, y)
+        .write("Char")?;
+    page.text().at(120.0, y).write("Unicode")?;
+    page.text().at(200.0, y).write("Original GID")?;
+    page.text().at(300.0, y).write("Subset GID")?;
+
+    y -= 5.0;
+    page.graphics()
+        .set_stroke_color(Color::gray(0.5))
+        .set_line_width(0.5)
+        .move_to(60.0, y)
+        .line_to(380.0, y)
+        .stroke();
+
+    y -= 20.0;
+
+    let mappings = [
+        ('H', 0x0048, 43, 1),
+        ('e', 0x0065, 72, 2),
+        ('l', 0x006C, 79, 3),
+        ('o', 0x006F, 82, 4),
+        (' ', 0x0020, 3, 5),
+        ('W', 0x0057, 58, 6),
+        ('r', 0x0072, 85, 7),
+        ('d', 0x0064, 71, 8),
+        ('!', 0x0021, 4, 9),
+    ];
+
+    page.text().set_font(Font::Courier, 10.0);
+
+    for (ch, unicode, orig_gid, new_gid) in &mappings {
+        let char_display = if *ch == ' ' {
+            "' '"
+        } else {
+            &format!("'{}'", ch)
+        };
+        page.text().at(60.0, y).write(char_display)?;
+        page.text()
+            .at(120.0, y)
+            .write(&format!("U+{:04X}", unicode))?;
+        page.text().at(220.0, y).write(&format!("{}", orig_gid))?;
+        page.text().at(320.0, y).write(&format!("{}", new_gid))?;
+
+        y -= 16.0;
+    }
+
+    // Note at bottom
+    y -= 30.0;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, y)
+        .write("Note: In subset fonts, glyph IDs are renumbered sequentially")?;
+
+    y -= 15.0;
+    page.text()
+        .at(50.0, y)
+        .write("starting from 0 (.notdef) to minimize file size.")?;
+
+    // oxidize-pdf note
+    y -= 40.0;
+    page.graphics()
+        .set_fill_color(Color::rgb(0.95, 0.95, 0.95))
+        .set_stroke_color(Color::gray(0.6))
+        .set_line_width(1.0)
+        .rect(50.0, y - 40.0, 500.0, 50.0)
+        .fill_stroke();
+
+    page.text()
+        .set_font(Font::HelveticaBold, 11.0)
+        .at(60.0, y - 10.0)
+        .write("oxidize-pdf Font Handling")?;
+
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(60.0, y - 28.0)
+        .write("Font subsetting is handled automatically when embedding TrueType fonts.")?;
+
     doc.add_page(page);
     Ok(())
 }
 
-/// Create a page with multilingual subset example
-fn create_multilingual_subset_page(doc: &mut Document) -> Result<()> {
-    let mut page = Page::new(595.0, 842.0);
-    let mut graphics = GraphicsContext::new();
-
-    // Title
-    graphics.set_font(&Font::helvetica_bold(), 18.0);
-    graphics.text_at(Point::new(50.0, 780.0), "Multilingual Font Subsetting");
-
-    let mut y = 740.0;
-
-    graphics.set_font(&Font::helvetica(), 12.0);
-    graphics.text_at(Point::new(50.0, y), "Subsetting with Multiple Languages:");
-
-    y -= 30.0;
-
-    // Language examples
-    let languages = vec![
-        ("English", "Hello, World!", 13),
-        ("Spanish", "¡Hola, Mundo!", 13),
-        ("French", "Bonjour, le Monde!", 18),
-        ("German", "Hallo, Welt!", 12),
-        ("Italian", "Ciao, Mondo!", 12),
-        ("Portuguese", "Olá, Mundo!", 11),
-    ];
-
-    graphics.set_font(&Font::helvetica(), 11.0);
-
-    for (lang, text, chars) in &languages {
-        graphics.text_at(Point::new(70.0, y), &format!("{:12} {}", lang, text));
-        graphics.text_at(Point::new(350.0, y), &format!("({} unique chars)", chars));
-        y -= 20.0;
-    }
-
-    y -= 20.0;
-
-    // Combined statistics
-    graphics.set_font(&Font::helvetica_bold(), 12.0);
-    graphics.text_at(Point::new(50.0, y), "Combined Subset Statistics:");
-
-    y -= 20.0;
-    graphics.set_font(&Font::helvetica(), 10.0);
-
-    let stats = vec![
-        "• Total unique characters across all languages: 47",
-        "• Original font glyphs: 3,381",
-        "• Subset glyphs needed: 47",
-        "• Size reduction: 98.6%",
-        "• Subset includes: Latin Basic, Latin-1 Supplement",
-    ];
-
-    for stat in stats {
-        graphics.text_at(Point::new(70.0, y), stat);
-        y -= 15.0;
-    }
-
-    // Technical details
-    y -= 30.0;
-    graphics.set_font(&Font::helvetica_bold(), 12.0);
-    graphics.text_at(Point::new(50.0, y), "Technical Implementation:");
-
-    y -= 20.0;
-    graphics.set_font(&Font::courier(), 9.0);
-
-    let code = vec![
-        "// Create subsetter with options",
-        "let options = SubsettingOptions {",
-        "    include_kerning: true,",
-        "    optimize_size: true,",
-        "    preserve_hinting: false,",
-        "};",
-        "",
-        "// Add glyphs for text",
-        "subsetter.add_glyphs_for_string(\"Hello, World!\");",
-        "subsetter.add_glyphs_for_string(\"¡Hola, Mundo!\");",
-        "",
-        "// Create subset",
-        "let subset_font = subsetter.create_subset()?;",
-    ];
-
-    for line in code {
-        graphics.text_at(Point::new(70.0, y), line);
-        y -= 11.0;
-    }
-
-    page.set_graphics_context(graphics);
-    doc.add_page(page);
-    Ok(())
-}
-
-/// Demonstrate standalone font subsetting
-fn demonstrate_standalone_subsetting() -> Result<()> {
-    println!("\n=== Standalone Font Subsetting Demo ===");
-
-    // Create dummy font data for demonstration
-    let dummy_font = create_dummy_font_data();
-
-    // Create subsetter
-    let options = SubsettingOptions {
-        include_kerning: true,
-        include_opentype_features: false,
-        preserve_hinting: false,
-        optimize_size: true,
-        include_notdef: true,
-    };
-
-    match TrueTypeSubsetter::new(dummy_font.clone(), options) {
-        Ok(mut subsetter) => {
-            // Add some glyphs
-            let sample_text = "Hello, PDF World! 0123456789";
-            println!("Sample text: {}", sample_text);
-
-            // In a real scenario, this would map characters to glyph IDs
-            let glyph_ids: Vec<u16> = sample_text.chars().map(|c| c as u16).collect();
-
-            subsetter.add_glyphs(&glyph_ids);
-
-            // Get statistics
-            let stats = subsetter.get_statistics();
-            println!("\nSubsetting Statistics:");
-            println!("  Original font size: {} bytes", stats.original_size);
-            println!("  Glyphs in subset: {}", stats.subset_glyphs);
-            println!("  Total glyphs in font: {}", stats.total_glyphs);
-            println!(
-                "  Compression ratio: {:.2}%",
-                stats.compression_ratio * 100.0
-            );
-
-            // Create subset (in real implementation)
-            match subsetter.create_subset() {
-                Ok(subset_data) => {
-                    println!("  Subset size: {} bytes", subset_data.len());
-                    let reduction = if dummy_font.len() > 0 {
-                        100.0 - (subset_data.len() as f64 / dummy_font.len() as f64 * 100.0)
-                    } else {
-                        0.0
-                    };
-                    println!("  Size reduction: {:.1}%", reduction);
-                }
-                Err(e) => {
-                    println!("  Note: Subset creation requires real font data");
-                    println!("  Error: {:?}", e);
-                }
-            }
-        }
-        Err(e) => {
-            println!("Note: Subsetter requires real TrueType font data");
-            println!("Error: {:?}", e);
-        }
-    }
-
-    println!("\n=== Benefits of Font Subsetting ===");
-    println!("1. Dramatically reduces PDF file size");
-    println!("2. Faster download and rendering");
-    println!("3. Lower bandwidth usage");
-    println!("4. Maintains full font quality");
-    println!("5. Supports all Unicode characters used");
-
-    Ok(())
-}
-
-// Helper structures and functions
-
-struct FontComparison {
-    name: &'static str,
-    original_size: usize,
-    subset_size: usize,
-    glyphs_original: usize,
-    glyphs_subset: usize,
-}
-
+/// Get unique characters from text
 fn get_unique_characters(text: &str) -> Vec<char> {
     let mut chars: Vec<char> = text.chars().collect();
     chars.sort_unstable();
@@ -425,6 +474,7 @@ fn get_unique_characters(text: &str) -> Vec<char> {
     chars
 }
 
+/// Format bytes to human-readable string
 fn format_bytes(bytes: usize) -> String {
     if bytes < 1024 {
         format!("{} B", bytes)
@@ -435,6 +485,7 @@ fn format_bytes(bytes: usize) -> String {
     }
 }
 
+/// Calculate percentage reduction
 fn calculate_reduction(original: usize, subset: usize) -> f64 {
     if original == 0 {
         0.0
@@ -443,40 +494,37 @@ fn calculate_reduction(original: usize, subset: usize) -> f64 {
     }
 }
 
-fn create_dummy_font_data() -> Vec<u8> {
-    // Create minimal valid TrueType font structure for testing
-    // This is just for demonstration - real fonts are much more complex
-    let mut data = Vec::new();
+/// Print educational summary to console
+fn print_subsetting_summary() {
+    println!("\n=== Font Subsetting Benefits ===");
+    println!("1. Dramatically reduces PDF file size (50-98%)");
+    println!("2. Faster PDF download and rendering");
+    println!("3. Lower bandwidth usage");
+    println!("4. Maintains full font quality");
+    println!("5. Supports all Unicode characters used");
+    println!("\noxidize-pdf handles font subsetting automatically!");
+}
 
-    // Offset table
-    data.extend_from_slice(&0x00010000u32.to_be_bytes()); // Version
-    data.extend_from_slice(&9u16.to_be_bytes()); // numTables
-    data.extend_from_slice(&128u16.to_be_bytes()); // searchRange
-    data.extend_from_slice(&3u16.to_be_bytes()); // entrySelector
-    data.extend_from_slice(&16u16.to_be_bytes()); // rangeShift
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // Add dummy table entries
-    let tables = [
-        "cmap", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "name", "post",
-    ];
-    let mut offset = 12 + tables.len() * 16;
-
-    for table in &tables {
-        let mut tag = [b' '; 4];
-        for (i, &b) in table.bytes().take(4).enumerate() {
-            tag[i] = b;
-        }
-        data.extend_from_slice(&tag);
-        data.extend_from_slice(&0u32.to_be_bytes()); // checksum
-        data.extend_from_slice(&(offset as u32).to_be_bytes()); // offset
-        data.extend_from_slice(&100u32.to_be_bytes()); // length
-        offset += 100;
+    #[test]
+    fn test_unique_characters() {
+        let chars = get_unique_characters("Hello");
+        assert_eq!(chars.len(), 4); // H, e, l, o
     }
 
-    // Add dummy table data
-    for _ in tables {
-        data.extend_from_slice(&[0u8; 100]);
+    #[test]
+    fn test_format_bytes() {
+        assert_eq!(format_bytes(500), "500 B");
+        assert_eq!(format_bytes(2048), "2.0 KB");
+        assert_eq!(format_bytes(1_048_576), "1.00 MB");
     }
 
-    data
+    #[test]
+    fn test_reduction() {
+        let reduction = calculate_reduction(1000, 100);
+        assert!((reduction - 90.0).abs() < 0.1);
+    }
 }
