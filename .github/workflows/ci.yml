@@ -59,11 +59,22 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Check for backup files
+        if: matrix.os != 'windows-latest'
         run: |
           if find . -name "*.backup" -o -name "*_old.rs" | grep .; then
             echo "ERROR: Backup files found in repository"
             exit 1
           fi
+
+      - name: Check for backup files (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $backups = Get-ChildItem -Recurse -Include "*.backup","*_old.rs" -ErrorAction SilentlyContinue
+          if ($backups) {
+            Write-Error "ERROR: Backup files found in repository"
+            exit 1
+          }
 
       - name: Run clippy
         run: cargo clippy --all -- -D warnings
