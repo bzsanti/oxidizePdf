@@ -9,6 +9,48 @@ use crate::parser::reader::PDFLines;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 
+// ============================================================================
+// Helper functions for byte-based pattern matching
+// (Issue #93: Avoid UTF-8 char boundary panics in XRef recovery)
+// ============================================================================
+
+/// Find byte pattern in buffer (replaces String::find for binary-safe searching)
+///
+/// # Safety
+/// This function operates on raw bytes and never panics on UTF-8 boundaries.
+/// PDFs are binary files and may contain arbitrary byte sequences.
+fn find_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
+    buffer
+        .windows(pattern.len())
+        .position(|window| window == pattern)
+}
+
+/// Find last occurrence of byte pattern (replaces String::rfind)
+fn rfind_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
+    buffer
+        .windows(pattern.len())
+        .rposition(|window| window == pattern)
+}
+
+/// Parse "N G obj" header from bytes
+///
+/// Converts only the small line to String for number parsing,
+/// avoiding UTF-8 issues with large buffer slicing.
+fn parse_obj_header_bytes(line_bytes: &[u8]) -> Option<(u32, u16)> {
+    // Convert only this small line to String (safe)
+    let line = String::from_utf8_lossy(line_bytes);
+    let parts: Vec<&str> = line.trim().split_whitespace().collect();
+
+    if parts.len() >= 3 && parts[2] == "obj" {
+        let obj_num = parts[0].parse::<u32>().ok()?;
+        let gen_num = parts[1].parse::<u16>().ok()?;
+        return Some((obj_num, gen_num));
+    }
+    None
+}
+
+// ============================================================================
+
 /// Cross-reference entry (traditional format)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct XRefEntry {
@@ -79,7 +121,7 @@ impl XRefTable {
             Ok(table) => Ok(table),
             Err(e) => {
                 if options.lenient_syntax {
-                    eprintln!("Primary XRef parsing failed: {e:?}, attempting recovery");
+                    tracing::warn!("Primary XRef parsing failed: {e:?}, attempting recovery");
 
                     // Reset reader position and try recovery
                     reader.seek(SeekFrom::Start(0))?;
@@ -115,7 +157,7 @@ impl XRefTable {
         while let Some(offset) = current_offset {
             // Prevent infinite loops
             if visited_offsets.contains(&offset) {
-                eprintln!(
+                tracing::debug!(
                     "Circular reference in XRef chain at offset {} (already visited)",
                     offset
                 );
@@ -185,39 +227,21 @@ impl XRefTable {
     }
 
     /// Parse xref table from a reader with options
+    ///
+    /// Note: This expects the reader to already be positioned at the xref offset.
+    /// For the primary xref (from startxref), the caller should position the reader.
+    /// For /Prev chain xrefs, the reader is already positioned at the correct offset.
     fn parse_primary_with_options<R: Read + Seek>(
         reader: &mut BufReader<R>,
         options: &super::ParseOptions,
     ) -> ParseResult<Self> {
         let mut table = Self::new();
 
-        // First, check if this is a linearized PDF with XRef at the beginning
-        // Save current position
-        let saved_pos = reader.stream_position()?;
-
-        // Check for linearized PDF by looking for the first object
-        reader.seek(SeekFrom::Start(0))?;
-        if let Ok(xref_offset) = Self::find_linearized_xref(reader) {
-            eprintln!("Found linearized PDF with XRef at offset {xref_offset}");
-
-            // Validate offset before using it
-            Self::validate_offset(reader, xref_offset)?;
-
-            table.xref_offset = xref_offset;
-            reader.seek(SeekFrom::Start(xref_offset))?;
-        } else {
-            // Restore position and try traditional approach
-            reader.seek(SeekFrom::Start(saved_pos))?;
-
-            // Find and parse xref the traditional way
-            let xref_offset = Self::find_xref_offset(reader)?;
-
-            // Validate offset before using it
-            Self::validate_offset(reader, xref_offset)?;
-
-            table.xref_offset = xref_offset;
-            reader.seek(SeekFrom::Start(xref_offset))?;
-        }
+        // The reader should already be positioned at the correct xref offset
+        // (either from startxref for primary, or from /Prev for chain entries)
+        // We record the current position as our xref offset
+        let xref_offset = reader.stream_position()?;
+        table.xref_offset = xref_offset;
 
         // Check if this is a traditional xref table or xref stream
         let mut line = String::new();
@@ -228,7 +252,7 @@ impl XRefTable {
             // Traditional xref table
             Self::parse_traditional_xref_with_options(reader, &mut table, options)?;
         } else {
-            eprintln!(
+            tracing::debug!(
                 "Not a traditional xref, checking for xref stream. Line: {:?}",
                 line.trim()
             );
@@ -245,7 +269,7 @@ impl XRefTable {
                 _ => return Err(ParseError::InvalidXRef),
             };
 
-            eprintln!("Found object {obj_num} at xref position");
+            tracing::debug!("Found object {obj_num} at xref position");
 
             let _gen_num = match lexer.next_token()? {
                 super::lexer::Token::Integer(n) => n as u16,
@@ -269,26 +293,28 @@ impl XRefTable {
                     .map(|n| n.as_str())
                     == Some("XRef")
                 {
-                    eprintln!("Parsing XRef stream");
+                    tracing::debug!("Parsing XRef stream");
 
                     // Try to decode the stream, with fallback for corrupted streams
                     let decoded_data = match stream.decode(options) {
                         Ok(data) => data,
                         Err(e) => {
-                            eprintln!(
+                            tracing::debug!(
                                 "XRef stream decode failed: {e:?}, attempting raw data fallback"
                             );
 
                             // If decode fails, try using raw stream data
                             // This helps with corrupted Flate streams
                             if !stream.data.is_empty() {
-                                eprintln!(
+                                tracing::debug!(
                                     "Using raw stream data ({} bytes) as fallback",
                                     stream.data.len()
                                 );
                                 stream.data.clone()
                             } else {
-                                eprintln!("No raw stream data available, triggering recovery mode");
+                                tracing::debug!(
+                                    "No raw stream data available, triggering recovery mode"
+                                );
                                 return Err(e);
                             }
                         }
@@ -304,7 +330,7 @@ impl XRefTable {
 
                     // Convert entries to our format
                     let entries = xref_stream_parser.to_xref_entries()?;
-                    eprintln!("XRef stream parsed, found {} entries", entries.len());
+                    tracing::debug!("XRef stream parsed, found {} entries", entries.len());
 
                     // Copy entries from xref stream
                     for (obj_num, entry) in entries {
@@ -409,7 +435,7 @@ impl XRefTable {
 
             // Also check if the line looks like a trailer (might have been reached prematurely)
             if trimmed_line.starts_with("<<") {
-                eprintln!("Warning: Found trailer dictionary without 'trailer' keyword");
+                tracing::warn!(" Found trailer dictionary without 'trailer' keyword");
                 // Try to parse it as trailer
                 break;
             }
@@ -444,7 +470,7 @@ impl XRefTable {
 
                 // Check if we've hit EOF or trailer prematurely
                 if bytes_read == 0 || trimmed == "trailer" {
-                    eprintln!(
+                    tracing::debug!(
                         "Warning: XRef subsection incomplete - expected {count} entries but found only {entries_parsed}"
                     );
                     // Put the "trailer" line back for the next phase
@@ -461,7 +487,7 @@ impl XRefTable {
                         entries_parsed += 1;
                     }
                     Err(_) => {
-                        eprintln!(
+                        tracing::debug!(
                             "Warning: Invalid XRef entry at position {}: {:?}",
                             i,
                             line.trim()
@@ -490,9 +516,10 @@ impl XRefTable {
                     if let Some(max_obj_num) = table.entries.keys().max() {
                         let max_expected = (*max_obj_num + 1) as i64;
                         if max_expected > expected_size {
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: XRef table has object {} but trailer Size is only {}",
-                                max_obj_num, expected_size
+                                max_obj_num,
+                                expected_size
                             );
                             // Don't fail here, let the recovery mode handle it
                             return Err(ParseError::InvalidXRef);
@@ -508,7 +535,13 @@ impl XRefTable {
         Ok(())
     }
 
-    /// Find linearized XRef by checking if there's an XRef stream near the beginning
+    /// Find linearized XRef by checking if there's an XRef stream near the beginning.
+    ///
+    /// NOTE: This function was previously used incorrectly in `parse_primary_with_options`
+    /// which caused Issue #98 (linearized PDFs failing to find Pages object).
+    /// The function is preserved for potential future use in detecting linearized PDFs,
+    /// but should NOT be used to override the XRef offset from startxref.
+    #[allow(dead_code)]
     fn find_linearized_xref<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<u64> {
         // Skip PDF header
         reader.seek(SeekFrom::Start(0))?;
@@ -530,36 +563,42 @@ impl XRefTable {
         let bytes_read = reader.read(&mut buffer)?;
         buffer.truncate(bytes_read);
 
-        let content = String::from_utf8_lossy(&buffer);
-
+        // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
         // Look for patterns that indicate a linearized PDF
         // Linearized PDFs typically have a linearization dictionary as the first object
-        eprintln!(
-            "Checking for linearized PDF, first 100 chars: {:?}",
-            &content.chars().take(100).collect::<String>()
+        tracing::debug!(
+            "Checking for linearized PDF, first 100 bytes: {:?}",
+            String::from_utf8_lossy(&buffer[..buffer.len().min(100)])
         );
 
-        if content.contains("/Linearized") {
+        // Check for /Linearized pattern
+        if find_byte_pattern(&buffer, b"/Linearized").is_some() {
             // This is likely a linearized PDF
             // The XRef is usually right after the linearization dictionary
             // Look for either "xref" or an XRef stream object
 
             // First, try to find "xref" keyword
-            if let Some(xref_pos) = content.find("xref") {
+            if let Some(xref_pos) = find_byte_pattern(&buffer, b"xref") {
                 return Ok(pos + xref_pos as u64);
             }
 
             // Otherwise, look for an XRef stream (object with /Type /XRef)
-            if content.contains("/Type/XRef") || content.contains("/Type /XRef") {
+            if find_byte_pattern(&buffer, b"/Type/XRef").is_some()
+                || find_byte_pattern(&buffer, b"/Type /XRef").is_some()
+            {
                 // Need to parse to find the exact position
                 // For now, we'll use a heuristic
-                if let Some(obj_pos) = content.find(" obj") {
+                if let Some(obj_pos) = find_byte_pattern(&buffer, b" obj") {
                     // Look for the next object after linearization dict
-                    let after_first_obj = &content[obj_pos + 4..];
-                    if let Some(next_obj) = after_first_obj.find(" obj") {
-                        // Position of second object
-                        let second_obj_start = pos + (obj_pos + 4 + next_obj - 10) as u64;
-                        return Ok(second_obj_start);
+                    let search_from = obj_pos + 4;
+                    if search_from < buffer.len() {
+                        let after_first_obj = &buffer[search_from..];
+                        if let Some(next_obj) = find_byte_pattern(after_first_obj, b" obj") {
+                            // Position of second object
+                            let second_obj_start =
+                                pos + (search_from + next_obj).saturating_sub(10) as u64;
+                            return Ok(second_obj_start);
+                        }
                     }
                 }
             }
@@ -586,7 +625,7 @@ impl XRefTable {
 
         // Debug: print last part of file
         let debug_content = content.chars().take(200).collect::<String>();
-        eprintln!("XRef search in last {read_size} bytes: {debug_content:?}");
+        tracing::debug!("XRef search in last {read_size} bytes: {debug_content:?}");
 
         let mut lines = content.pdf_lines();
 
@@ -688,29 +727,31 @@ impl XRefTable {
         // Read entire file into memory for scanning
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer)?;
-        let content = String::from_utf8_lossy(&buffer);
 
-        eprintln!("XRef recovery: scanning {} bytes for objects", buffer.len());
+        tracing::debug!("XRef recovery: scanning {} bytes for objects", buffer.len());
 
         // Try to extract Root from XRef stream first (more reliable than searching)
+        // Keep content String for sections not yet refactored (will be removed progressively)
+        let content = String::from_utf8_lossy(&buffer);
+
         let mut xref_root_candidate = None;
         if let Some(root_match) = extract_root_from_xref_stream(&content) {
             xref_root_candidate = Some(root_match);
-            eprintln!("XRef recovery: Found Root {} in XRef stream", root_match);
+            tracing::debug!("XRef recovery: Found Root {} in XRef stream", root_match);
         }
 
         let mut objects_found = 0;
         let mut object_streams = Vec::new();
 
-        // Scan using pattern matching for object headers
-        // Also look for patterns like "1 0 obj" at the start of lines
+        // Scan using byte-based pattern matching for object headers
+        // (Issue #93: Avoid UTF-8 char boundary panics)
         let mut pos = 0;
-        while pos < content.len() {
-            // Look for " obj" or check if we're at the start of a line with a number
-            let remaining = &content[pos..];
+        while pos < buffer.len() {
+            // Look for "obj" keyword using byte operations
+            let remaining = &buffer[pos..];
 
-            // Find the next "obj" keyword
-            if let Some(obj_pos) = remaining.find("obj") {
+            // Find the next "obj" keyword (byte pattern b"obj")
+            if let Some(obj_pos) = find_byte_pattern(remaining, b"obj") {
                 // Make sure it's preceded by whitespace and numbers
                 let abs_pos = pos + obj_pos;
                 if abs_pos < 4 {
@@ -719,18 +760,19 @@ impl XRefTable {
                 }
 
                 // Look backwards for the object number and generation
-                // Handle both \n and \r as line endings
-                let line_start = content[..abs_pos]
-                    .rfind(['\n', '\r'])
+                // Handle both \n and \r as line endings (search in bytes)
+                let line_start = buffer[..abs_pos]
+                    .iter()
+                    .rposition(|&b| b == b'\n' || b == b'\r')
                     .map(|p| p + 1)
                     .unwrap_or(0);
                 let line_end = abs_pos + 3; // Include "obj"
 
                 // Make sure we don't go out of bounds
-                if line_end <= content.len() {
-                    let line = &content[line_start..line_end];
+                if line_end <= buffer.len() {
+                    let line_bytes = &buffer[line_start..line_end];
 
-                    if let Some((obj_num, gen_num)) = Self::parse_obj_header(line.trim()) {
+                    if let Some((obj_num, gen_num)) = parse_obj_header_bytes(line_bytes) {
                         let offset = line_start;
 
                         // Add entry if not already present (avoid duplicates)
@@ -760,7 +802,7 @@ impl XRefTable {
                                     if check_str.contains("/Type") && check_str.contains("/ObjStm")
                                     {
                                         object_streams.push(obj_num);
-                                        eprintln!(
+                                        tracing::debug!(
                                             "XRef recovery: found object stream at object {obj_num}"
                                         );
                                     }
@@ -776,7 +818,7 @@ impl XRefTable {
             }
         }
 
-        eprintln!(
+        tracing::debug!(
             "XRef recovery: found {} objects and {} object streams",
             objects_found,
             object_streams.len()
@@ -803,9 +845,9 @@ impl XRefTable {
         if let Some(xref_root) = xref_root_candidate {
             if table.entries.contains_key(&xref_root) {
                 catalog_candidate = Some(xref_root);
-                eprintln!("Using Root {} from XRef stream as catalog", xref_root);
+                tracing::debug!("Using Root {} from XRef stream as catalog", xref_root);
             } else {
-                eprintln!(
+                tracing::debug!(
                     "Warning: XRef Root {} not found in object table, searching manually",
                     xref_root
                 );
@@ -814,11 +856,12 @@ impl XRefTable {
 
         // If XRef Root not found or not in table, search manually
         if catalog_candidate.is_none() {
-            catalog_candidate = find_catalog_by_content(&table, &buffer, &content);
+            catalog_candidate = find_catalog_by_content(&table, &buffer);
         }
 
         // Fallback to common object numbers if catalog not found by content
         // FIX for Issue #83: Validate object type before accepting as catalog
+        // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
         if catalog_candidate.is_none() {
             for obj_num in [1, 2, 3, 4, 5] {
                 if let Some(entry) = table.entries.get(&obj_num) {
@@ -826,19 +869,23 @@ impl XRefTable {
                         let offset = entry.offset as usize;
                         if offset < buffer.len() {
                             // Check if this object is /Type/Catalog (not /Type/Sig)
+                            let obj_pattern = format!("{} 0 obj", obj_num);
                             if let Some(obj_start) =
-                                content[offset..].find(&format!("{} 0 obj", obj_num))
+                                find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
                             {
                                 let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                                if let Some(endobj_pos) =
+                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                                {
                                     let absolute_end = absolute_start + endobj_pos;
-                                    let obj_content = &content[absolute_start..absolute_end];
+                                    let obj_content_bytes = &buffer[absolute_start..absolute_end];
+                                    let obj_content = String::from_utf8_lossy(obj_content_bytes);
 
                                     // Skip /Type/Sig objects (digital signatures)
                                     if obj_content.contains("/Type/Sig")
                                         || obj_content.contains("/Type /Sig")
                                     {
-                                        eprintln!("Skipping object {} (Type: Sig)", obj_num);
+                                        tracing::debug!("Skipping object {} (Type: Sig)", obj_num);
                                         continue;
                                     }
 
@@ -848,7 +895,7 @@ impl XRefTable {
                                         || obj_content.contains("/Pages")
                                     {
                                         catalog_candidate = Some(obj_num);
-                                        eprintln!("Using fallback catalog candidate: object {} (validated)", obj_num);
+                                        tracing::debug!("Using fallback catalog candidate: object {} (validated)", obj_num);
                                         break;
                                     }
                                 }
@@ -862,7 +909,7 @@ impl XRefTable {
         // If still no Root found, scan ALL objects as last resort (not just first)
         // FIX for Issue #83: In signed PDFs, catalog might be anywhere, not just object 1
         if catalog_candidate.is_none() && !table.entries.is_empty() {
-            eprintln!(
+            tracing::debug!(
                 "Last resort: Scanning all {} objects for any with /Pages or /Catalog",
                 table.entries.len()
             );
@@ -876,13 +923,20 @@ impl XRefTable {
                     if entry.in_use {
                         let offset = entry.offset as usize;
                         if offset < buffer.len() {
+                            // Use byte-based search to avoid UTF-8 char boundary issues (Issue #93)
+                            let obj_pattern = format!("{} 0 obj", obj_num);
                             if let Some(obj_start) =
-                                content[offset..].find(&format!("{} 0 obj", obj_num))
+                                find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
                             {
                                 let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                                if let Some(endobj_pos) =
+                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                                {
                                     let absolute_end = absolute_start + endobj_pos;
-                                    let obj_content = &content[absolute_start..absolute_end];
+                                    let obj_content_bytes = &buffer[absolute_start..absolute_end];
+
+                                    // Convert to String only for content checks (small section)
+                                    let obj_content = String::from_utf8_lossy(obj_content_bytes);
 
                                     // Skip signature objects
                                     if obj_content.contains("/Type/Sig")
@@ -896,11 +950,11 @@ impl XRefTable {
                                         || obj_content.contains("/Type /Catalog")
                                     {
                                         catalog_candidate = Some(obj_num);
-                                        eprintln!("Last resort: Found catalog at object {} (/Type/Catalog)", obj_num);
+                                        tracing::debug!("Last resort: Found catalog at object {} (/Type/Catalog)", obj_num);
                                         break;
                                     } else if obj_content.contains("/Pages") {
                                         catalog_candidate = Some(obj_num);
-                                        eprintln!(
+                                        tracing::debug!(
                                             "Last resort: Found catalog at object {} (has /Pages)",
                                             obj_num
                                         );
@@ -916,23 +970,24 @@ impl XRefTable {
             // If STILL nothing found, search END of file content (not entire file)
             // FIX for Issue #83: When XRef table is completely corrupted/empty,
             // table entries are unreliable - search last 100KB only (performance optimization)
+            // FIX for Issue #93: Use byte-based operations to avoid UTF-8 char boundary panics
             if catalog_candidate.is_none() {
-                eprintln!("Extreme last resort: Scanning last 100KB for /Type/Catalog");
+                tracing::debug!("Extreme last resort: Scanning last 100KB for /Type/Catalog");
 
                 // Search for "/Type/Catalog" in LAST 100KB only (catalog is at end in signed PDFs)
                 // This avoids performance issues with large PDFs (>1MB)
                 const SEARCH_WINDOW: usize = 100 * 1024; // 100KB
-                let search_start = if content.len() > SEARCH_WINDOW {
-                    content.len() - SEARCH_WINDOW
+                let search_start = if buffer.len() > SEARCH_WINDOW {
+                    buffer.len() - SEARCH_WINDOW
                 } else {
                     0
                 };
-                let search_content = &content[search_start..];
+                let search_buffer = &buffer[search_start..];
 
-                let catalog_pattern = "/Type/Catalog";
-                if let Some(catalog_pos) = search_content.rfind(catalog_pattern) {
+                let catalog_pattern = b"/Type/Catalog";
+                if let Some(catalog_pos) = rfind_byte_pattern(search_buffer, catalog_pattern) {
                     let absolute_pos = search_start + catalog_pos;
-                    eprintln!(
+                    tracing::debug!(
                         "Extreme last resort: Found /Type/Catalog at position {}",
                         absolute_pos
                     );
@@ -944,20 +999,22 @@ impl XRefTable {
                     } else {
                         0
                     };
-                    let search_area = &search_content[local_search_start..catalog_pos];
+                    let search_area = &search_buffer[local_search_start..catalog_pos];
 
                     // Look for pattern "NNNN 0 obj" where NNNN is object number
-                    if let Some(obj_pattern_pos) = search_area.rfind(" 0 obj") {
+                    if let Some(obj_pattern_pos) = rfind_byte_pattern(search_area, b" 0 obj") {
                         // Find the number before " 0 obj"
                         let before_obj = &search_area[..obj_pattern_pos];
 
-                        // Find the last sequence of digits
-                        let trimmed = before_obj.trim_end();
+                        // Convert only this small section to String for parsing
+                        let before_obj_str = String::from_utf8_lossy(before_obj);
+                        let trimmed = before_obj_str.trim_end();
+
                         if let Some(digit_start) = trimmed.rfind(|c: char| !c.is_ascii_digit()) {
                             let num_str = trimmed[digit_start + 1..].trim();
                             if !num_str.is_empty() {
                                 if let Ok(obj_num) = num_str.parse::<u32>() {
-                                    eprintln!(
+                                    tracing::debug!(
                                         "Extreme last resort: Found /Type/Catalog at object {}",
                                         obj_num
                                     );
@@ -968,7 +1025,7 @@ impl XRefTable {
                             // No non-digit found, entire string might be the number
                             let num_str = trimmed.trim();
                             if let Ok(obj_num) = num_str.parse::<u32>() {
-                                eprintln!(
+                                tracing::debug!(
                                     "Extreme last resort: Found /Type/Catalog at object {}",
                                     obj_num
                                 );
@@ -977,30 +1034,35 @@ impl XRefTable {
                         }
                     }
                 } else {
-                    eprintln!("Extreme last resort: No /Type/Catalog found in last 100KB");
+                    tracing::debug!("Extreme last resort: No /Type/Catalog found in last 100KB");
                 }
 
                 // If STILL nothing, fallback to first non-Sig object in table
+                // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
                 if catalog_candidate.is_none() {
-                    eprintln!("Warning: Could not find any catalog object, using first non-signature object as absolute last resort");
+                    tracing::warn!(" Could not find any catalog object, using first non-signature object as absolute last resort");
                     for obj_num in table.entries.keys().copied().collect::<Vec<_>>().iter() {
                         let offset = match table.entries.get(obj_num) {
                             Some(entry) => entry.offset as usize,
                             None => continue, // Skip if entry not found (shouldn't happen)
                         };
                         if offset < buffer.len() {
+                            let obj_pattern = format!("{} 0 obj", obj_num);
                             if let Some(obj_start) =
-                                content[offset..].find(&format!("{} 0 obj", obj_num))
+                                find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
                             {
                                 let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                                if let Some(endobj_pos) =
+                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                                {
                                     let absolute_end = absolute_start + endobj_pos;
-                                    let obj_content = &content[absolute_start..absolute_end];
+                                    let obj_content_bytes = &buffer[absolute_start..absolute_end];
+                                    let obj_content = String::from_utf8_lossy(obj_content_bytes);
                                     if !obj_content.contains("/Type/Sig")
                                         && !obj_content.contains("/Type /Sig")
                                     {
                                         catalog_candidate = Some(*obj_num);
-                                        eprintln!(
+                                        tracing::debug!(
                                             "Using object {} as absolute last resort",
                                             obj_num
                                         );
@@ -1039,14 +1101,18 @@ impl XRefTable {
         None
     }
 
-    /// Validate XRef offset before using it
+    /// Validate XRef offset before using it.
+    ///
+    /// NOTE: This function was previously used in the buggy linearized XRef handling
+    /// that caused Issue #98. Currently unused but preserved for potential future use.
+    #[allow(dead_code)]
     fn validate_offset<R: Read + Seek>(reader: &mut BufReader<R>, offset: u64) -> ParseResult<()> {
         // Get file size
         let file_size = reader.seek(SeekFrom::End(0))?;
 
         if offset >= file_size {
             #[cfg(debug_assertions)]
-            eprintln!("Warning: XRef offset {offset} exceeds file size {file_size}");
+            tracing::warn!(" XRef offset {offset} exceeds file size {file_size}");
             return Err(ParseError::InvalidXRef);
         }
 
@@ -1057,19 +1123,27 @@ impl XRefTable {
 
         if read_bytes == 0 {
             #[cfg(debug_assertions)]
-            eprintln!("Warning: XRef offset {offset} points to EOF");
+            tracing::warn!(" XRef offset {offset} points to EOF");
             return Err(ParseError::InvalidXRef);
         }
 
+        // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
         // Look for expected XRef markers
-        let content = String::from_utf8_lossy(&peek[..read_bytes]);
-        if !content.starts_with("xref") && !content.chars().next().unwrap_or(' ').is_ascii_digit() {
+        let peek_slice = &peek[..read_bytes];
+        let starts_with_xref = peek_slice.len() >= 4 && &peek_slice[..4] == b"xref";
+        let starts_with_digit = peek_slice.first().map_or(false, |&b| b.is_ascii_digit());
+
+        if !starts_with_xref && !starts_with_digit {
             #[cfg(debug_assertions)]
-            eprintln!(
-                "Warning: XRef offset {} does not point to valid XRef content: {:?}",
-                offset,
-                &content[..std::cmp::min(10, content.len())]
-            );
+            {
+                let debug_len = std::cmp::min(10, read_bytes);
+                let debug_content = String::from_utf8_lossy(&peek[..debug_len]);
+                tracing::debug!(
+                    "Warning: XRef offset {} does not point to valid XRef content: {:?}",
+                    offset,
+                    debug_content
+                );
+            }
             // Don't fail here, as some PDFs might have variations
         }
 
@@ -1192,7 +1266,7 @@ impl XRefTable {
                 _ => {
                     // Unknown flag, log warning in debug mode and assume in-use
                     #[cfg(debug_assertions)]
-                    eprintln!("Warning: Invalid xref flag '{}', assuming 'n'", parts[2]);
+                    tracing::warn!(" Invalid xref flag '{}', assuming 'n'", parts[2]);
                     true
                 }
             }
@@ -1431,7 +1505,7 @@ impl XRefStream {
                         // Custom types are treated as in-use objects
                         // Log only in debug mode to avoid spam
                         #[cfg(debug_assertions)]
-                        eprintln!(
+                        tracing::debug!(
                             "Note: Custom xref entry type {} for object {} (treating as in-use)",
                             _type_num,
                             first_obj_num + i
@@ -1745,7 +1819,7 @@ mod tests {
             compressed_info: Some((5, 10)),
         };
 
-        table.add_extended_entry(15, ext_entry.clone());
+        table.add_extended_entry(15, ext_entry);
         assert_eq!(table.extended_entries.len(), 1);
         assert!(table.extended_entries.contains_key(&15));
     }
@@ -2628,7 +2702,7 @@ fn extract_root_from_xref_stream(content: &str) -> Option<u32> {
                 if let Some(space_pos) = after_root.find(' ') {
                     let number_part = &after_root[..space_pos];
                     if let Ok(root_obj) = number_part.parse::<u32>() {
-                        eprintln!("Extracted Root {} from XRef stream", root_obj);
+                        tracing::debug!("Extracted Root {} from XRef stream", root_obj);
                         return Some(root_obj);
                     }
                 }
@@ -2640,23 +2714,30 @@ fn extract_root_from_xref_stream(content: &str) -> Option<u32> {
 }
 
 /// Find catalog by searching content and validating structure
-fn find_catalog_by_content(table: &XRefTable, buffer: &[u8], content: &str) -> Option<u32> {
+/// FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
+fn find_catalog_by_content(table: &XRefTable, buffer: &[u8]) -> Option<u32> {
     for (obj_num, entry) in &table.entries {
         if entry.in_use {
             let offset = entry.offset as usize;
             if offset < buffer.len() {
                 // Look for the complete object structure: "obj_num 0 obj ... /Type /Catalog ... endobj"
-                if let Some(obj_start) = content[offset..].find(&format!("{} 0 obj", obj_num)) {
+                let obj_pattern = format!("{} 0 obj", obj_num);
+                if let Some(obj_start) =
+                    find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
+                {
                     let absolute_start = offset + obj_start;
 
                     // Find the end of this object
-                    if let Some(endobj_pos) = content[absolute_start..].find("endobj") {
+                    if let Some(endobj_pos) =
+                        find_byte_pattern(&buffer[absolute_start..], b"endobj")
+                    {
                         let absolute_end = absolute_start + endobj_pos;
-                        let obj_content = &content[absolute_start..absolute_end];
+                        let obj_content_bytes = &buffer[absolute_start..absolute_end];
+                        let obj_content = String::from_utf8_lossy(obj_content_bytes);
 
                         // Validate that this object contains "/Type /Catalog" within its boundaries
                         if obj_content.contains("/Type /Catalog") {
-                            eprintln!(
+                            tracing::debug!(
                                 "Found catalog candidate at object {} (validated structure)",
                                 obj_num
                             );
@@ -2668,6 +2749,6 @@ fn find_catalog_by_content(table: &XRefTable, buffer: &[u8], content: &str) -> O
         }
     }
 
-    eprintln!("No valid catalog found by content search");
+    tracing::debug!("No valid catalog found by content search");
     None
 }

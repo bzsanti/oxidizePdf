@@ -208,7 +208,7 @@ impl PlainTextExtractor {
             let operations = match ContentParser::parse_content(&stream_data) {
                 Ok(ops) => ops,
                 Err(e) => {
-                    eprintln!("Warning: Failed to parse content stream, skipping: {}", e);
+                    tracing::debug!("Warning: Failed to parse content stream, skipping: {}", e);
                     continue;
                 }
             };

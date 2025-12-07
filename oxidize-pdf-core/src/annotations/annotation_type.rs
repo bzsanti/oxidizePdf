@@ -1144,7 +1144,7 @@ mod tests {
         assert!(debug_str.contains("FreeTextAnnotation"));
         assert!(debug_str.contains("Debug test"));
 
-        let cloned = free_text.clone();
+        let cloned = free_text;
         assert_eq!(cloned.quadding, 1);
         assert_eq!(cloned.annotation.contents, Some("Debug test".to_string()));
     }
@@ -1157,7 +1157,7 @@ mod tests {
         let debug_str = format!("{line:?}");
         assert!(debug_str.contains("LineAnnotation"));
 
-        let cloned = line.clone();
+        let cloned = line;
         assert!(matches!(cloned.start_style, LineEndingStyle::Circle));
         assert!(matches!(cloned.end_style, LineEndingStyle::Square));
     }
@@ -1173,7 +1173,7 @@ mod tests {
         assert!(debug_str.contains("BorderEffect"));
         assert!(debug_str.contains("Cloudy"));
 
-        let cloned = effect.clone();
+        let cloned = effect;
         assert!(matches!(cloned.style, BorderEffectStyle::Cloudy));
         assert_eq!(cloned.intensity, 1.2);
     }
@@ -1185,11 +1185,11 @@ mod tests {
         let debug_str = format!("{stamp:?}");
         assert!(debug_str.contains("TopSecret"));
 
-        let cloned = stamp.clone();
+        let cloned = stamp;
         assert!(matches!(cloned, StampName::TopSecret));
 
         let custom = StampName::Custom("TestStamp".to_string());
-        let custom_clone = custom.clone();
+        let custom_clone = custom;
         if let StampName::Custom(name) = custom_clone {
             assert_eq!(name, "TestStamp");
         }

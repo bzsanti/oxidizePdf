@@ -168,7 +168,7 @@ impl FormManager {
             }
         }
 
-        let field_name = field.name.clone();
+        let field_name = field.name;
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
@@ -201,7 +201,7 @@ impl FormManager {
             }
         }
 
-        let field_name = combo.name.clone();
+        let field_name = combo.name;
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
@@ -234,7 +234,7 @@ impl FormManager {
             }
         }
 
-        let field_name = listbox.name.clone();
+        let field_name = listbox.name;
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
@@ -267,7 +267,7 @@ impl FormManager {
             }
         }
 
-        let field_name = radio.name.clone();
+        let field_name = radio.name;
         let mut form_field = FormField::new(field_dict);
 
         // Add widgets if provided
@@ -303,7 +303,7 @@ impl FormManager {
             }
         }
 
-        let field_name = checkbox.name.clone();
+        let field_name = checkbox.name;
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
@@ -333,7 +333,7 @@ impl FormManager {
             }
         }
 
-        let field_name = button.name.clone();
+        let field_name = button.name;
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
@@ -363,7 +363,7 @@ impl FormManager {
             }
         }
 
-        let field_name = radio.name.clone();
+        let field_name = radio.name;
         let mut form_field = FormField::new(field_dict);
 
         // Add all widgets
@@ -1031,7 +1031,7 @@ mod tests {
             ObjectReference::new(1, 0),
             ObjectReference::new(2, 0),
         ];
-        acro_form.co = Some(calc_order.clone());
+        acro_form.co = Some(calc_order);
 
         let dict = acro_form.to_dict();
 

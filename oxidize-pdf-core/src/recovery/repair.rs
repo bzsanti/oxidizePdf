@@ -480,7 +480,7 @@ mod tests {
         let debug_str = format!("{strategy:?}");
         assert!(debug_str.contains("RebuildXRef"));
 
-        let cloned = strategy.clone();
+        let cloned = strategy;
         assert!(matches!(cloned, RepairStrategy::RebuildXRef));
     }
 

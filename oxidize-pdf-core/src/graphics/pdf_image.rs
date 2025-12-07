@@ -1547,7 +1547,7 @@ mod tests {
                 0xFF, 0xD9, // EOI marker
             ];
 
-            let image1 = Image::from_jpeg_data(jpeg_data.clone()).unwrap();
+            let image1 = Image::from_jpeg_data(jpeg_data).unwrap();
             let image2 = image1.clone();
 
             assert_eq!(image1.width(), image2.width());

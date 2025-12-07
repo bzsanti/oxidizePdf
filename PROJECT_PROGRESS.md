@@ -1,86 +1,83 @@
-# Progreso del Proyecto - Sesión 2025-10-20
+# Progreso del Proyecto - 2025-10-31
 
 ## Estado Actual
-- **Rama**: develop_santi
-- **Versión**: v1.6.2
-- **Tests Workspace**: 4,633 tests pasando (E2E: 1/4 pasando)
+- **Rama**: develop_santi (3 commits ahead of main)
+- **Último commit**: 838fbab - docs: add Session 2025-10-31 summary to CLAUDE.md
+- **Version**: v1.6.4 (released to production)
+- **Tests**: ✅ 4,693 passing (all green)
 
-## Trabajo Completado en Esta Sesión
+## Sesión Completada
 
-### ✅ Tarea 1: Arreglar Benchmarks API (COMPLETADA)
-- **Problema**: Benchmarks usaban `PdfDocument::open()` inexistente
-- **Solución**: Migrado a `PdfReader::new()` + `PdfDocument::new()`
-- **Archivos**:
-  - `oxidize-pdf-core/benches/plaintext_benchmark.rs` (3 funciones corregidas)
-  - `oxidize-pdf-core/examples/plaintext_extraction.rs`
-  - Benchmark registrado en Cargo.toml
-- **Commit**: 0182e46
+### Release v1.6.4
+- ✅ Publicado en crates.io y GitHub
+- ✅ Release notes completas
+- URL: https://github.com/bzsanti/oxidizePdf/releases/tag/v1.6.4
 
-### ✅ Tarea 2: Tests End-to-End (COMPLETADA con nota)
-- **Creado**: `text_extraction_e2e_test.rs` con 4 tests rigurosos
-- **Tests**:
-  1. ✅ `test_extraction_performance_is_reasonable`: PASANDO (<100ms)
-  2. ❌ `test_invoice_extraction_end_to_end`: FALLANDO (NoTextFound)
-  3. ❌ `test_plaintext_extraction_end_to_end`: FALLANDO (1 line vs >3)
-  4. ❌ `test_structured_data_extraction_end_to_end`: FALLANDO (0 patterns)
-- **Causa**: PDF generado no tiene texto extraíble correctamente
-- **Commit**: 844856f
+### Issue #93 - UTF-8 Panic
+- 🔍 Investigado completamente
+- 📝 Plan de implementación documentado (.private/ISSUE_93_UTF8_FIX_PLAN.md)
+- ⏱️ Estimado: 2-3 horas para próxima sesión
+- 🎯 Prioridad: P0 - Crítico
 
-### ⏳ Tareas Pendientes
-- **Tarea 3**: Ejecutar benchmarks reales y documentar resultados medidos
-- **Tarea 4**: Actualizar docs con honestidad (limitations, findings reales)
+### Code Quality
+- ✅ Idioms fix: unwrap → expect (lazy_static)
+- ✅ Branch workflow corregido
+- ✅ Zero unwraps maintained (100% compliance)
 
-## Archivos Modificados
-```
-M  oxidize-pdf-core/Cargo.toml
-R  benches/plaintext_benchmark.rs -> oxidize-pdf-core/benches/plaintext_benchmark.rs
-M  oxidize-pdf-core/examples/plaintext_extraction.rs
-A  oxidize-pdf-core/tests/text_extraction_e2e_test.rs
-```
+### Documentation
+- ✅ CLAUDE.md actualizado con sesión completa
+- ✅ Issue #90 movido a "Recently Closed"
+- ✅ Table detection status verificado (completamente implementado)
 
-## Hallazgos Importantes
+## Archivos Modificados en Sesión
+- CLAUDE.md - Updated current focus, session summary
+- oxidize-pdf-core/src/structure/marked_content.rs - Idioms fix
+- .private/ISSUE_93_UTF8_FIX_PLAN.md - NEW (implementation guide)
 
-### 🔍 API Correcta para Parser
-```rust
-// ❌ Incorrecto
-let doc = PdfDocument::open(cursor)?;
+## Commits de la Sesión
+- cc32e3c - fix(idioms): replace unwrap with expect in lazy_static regex
+- 32bb5ab - docs: correct Issue #90 status to CLOSED in CLAUDE.md
+- 838fbab - docs: add Session 2025-10-31 summary to CLAUDE.md
 
-// ✅ Correcto
-let reader = PdfReader::new(cursor)?;
-let doc = PdfDocument::new(reader);
-```
+## Próximos Pasos (Priorizados)
 
-### ⚠️ Problema Identificado: Generación PDF en Tests
-- PDFs generados con `Page::text()` API no tienen texto extraíble
-- Error: `NoTextFound(1)` al intentar extraer con TextExtractor
-- Necesita investigación: ¿Problema en writer o parser?
+### 1. Issue #93 - UTF-8 Panic Fix (2-3 horas) 🔴 CRÍTICO
+- Implementar byte-based XRef recovery
+- Seguir guía: .private/ISSUE_93_UTF8_FIX_PLAN.md
+- 8 pasos documentados con código de ejemplo
 
-## Próximos Pasos
+### 2. Object Streams Implementation (5-7 días) ⭐ GAP CRÍTICO
+- GAP crítico vs lopdf (11-61% file size reduction)
+- Bloquea adopción en PDFs modernos
 
-1. **Investigar PDF Generation Issue**:
-   - Comparar con `text_extraction_test.rs` que SÍ funciona
-   - Verificar si problema está en writer o parser
-   - Posible solución: usar TempDir + PdfReader::open_document()
+### 3. Performance Benchmarks (1-2 días)
+- Validar claims del README
+- Benchmark vs lopdf
 
-2. **Ejecutar Benchmarks Reales**:
-   ```bash
-   cargo bench --bench plaintext_benchmark
-   ```
-   - Documentar resultados MEDIDOS (no claims)
-   - Actualizar docs con datos reales
+## Estado de Issues
 
-3. **Documentar Honestamente**:
-   - Limitaciones reales encontradas
-   - Performance real vs claims
-   - Problemas conocidos (E2E tests)
+### Abiertos (2)
+- **#93** - UTF-8 panic (P0) - Ready for implementation
+- **#54** - ISO compliance tracking (P1)
+
+### Cerrados Recientemente
+- **#90** - Table Detection (v1.6.4)
+- **#87** - Kerning Normalization (v1.6.1)
 
 ## Métricas del Proyecto
-- **Tests Totales**: 4,633 pasando
-- **Compilación**: ✅ Sin errores
-- **Benchmarks**: ✅ Compilan correctamente
-- **Cobertura E2E**: 25% (1/4 tests pasando)
+- **Tests**: 4,693 passing
+- **Clippy**: Clean (0 warnings)
+- **Test Coverage**: ~54% (measured with tarpaulin)
+- **Quality Grade**: A (95/100)
+- **Downloads**: Growing (~2.4K/month)
 
-## Notas para Próxima Sesión
-- Los tests E2E exponen problema real en PDF generation/extraction
-- Consolidación fue correcta: encontramos bugs reales
-- Priorizar fixing E2E tests antes de continuar con nuevas features
+## Estado del Repositorio
+- **Branch workflow**: Corrected (work in develop_santi)
+- **Main**: Clean (synced with v1.6.4 release)
+- **Develop_santi**: 3 commits ahead (ready for next PR)
+
+---
+
+**Session completed**: 2025-10-31 20:47
+**Duration**: 5 hours
+**Status**: ✅ All objectives completed

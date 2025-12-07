@@ -282,7 +282,7 @@ impl PdfMerger {
                     has_content = true;
                 }
                 Err(e) => {
-                    eprintln!(
+                    tracing::debug!(
                         "Warning: Failed to parse content stream from document {}: {}",
                         input_idx + 1,
                         e
@@ -355,7 +355,7 @@ impl PdfMerger {
                         _ => {
                             // For non-standard fonts, default to Helvetica
                             // A complete implementation would preserve the original font
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: Font '{mapped_name}' not supported, using Helvetica"
                             );
                             crate::text::Font::Helvetica
@@ -419,7 +419,7 @@ impl PdfMerger {
                     // Note: In a complete implementation, we would copy the XObject
                     // resource (image or form) and paint it with the new reference.
                     // For now, we'll add a placeholder comment
-                    eprintln!(
+                    tracing::debug!(
                         "Info: XObject '{name}' (mapped to '{mapped_name}') would be painted here. \
                          Full XObject support requires resource copying."
                     );
@@ -631,7 +631,7 @@ mod tests {
     #[test]
     fn test_merge_input_with_page_list() {
         let pages = vec![0, 2, 4, 6];
-        let input = MergeInput::with_pages("document.pdf", PageRange::List(pages.clone()));
+        let input = MergeInput::with_pages("document.pdf", PageRange::List(pages));
         assert_eq!(input.path, PathBuf::from("document.pdf"));
         assert!(input.pages.is_some());
     }

@@ -165,7 +165,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
             Err(_) => {
                 // If Root is missing, try fallback methods
                 #[cfg(debug_assertions)]
-                eprintln!("Warning: Trailer missing Root entry, attempting recovery");
+                tracing::debug!("Warning: Trailer missing Root entry, attempting recovery");
 
                 // First try the fallback method
                 if let Some(root) = self.trailer.find_root_fallback() {
@@ -220,7 +220,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
 
         // Store in LRU cache
         let arc_obj = Arc::new(obj);
-        self.object_cache.put(object_id, arc_obj.clone());
+        self.object_cache.put(object_id, arc_obj);
         self.memory_stats.cached_objects = self.object_cache.len();
 
         // Return reference to cached object
@@ -280,7 +280,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
                 // Try fallback recovery
                 if self.options.lenient_syntax {
                     if self.options.collect_warnings {
-                        eprintln!(
+                        tracing::debug!(
                             "Warning: Using expected object number {obj_num} instead of parsed token"
                         );
                     }
@@ -310,7 +310,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
             _ => {
                 if self.options.lenient_syntax {
                     if self.options.collect_warnings {
-                        eprintln!(
+                        tracing::debug!(
                             "Warning: Using generation 0 instead of parsed token for object {obj_num}"
                         );
                     }
@@ -340,7 +340,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
             _ => {
                 if self.options.lenient_syntax {
                     if self.options.collect_warnings {
-                        eprintln!("Warning: Missing 'obj' keyword for object {obj_num}");
+                        tracing::debug!("Warning: Missing 'obj' keyword for object {obj_num}");
                     }
                 } else {
                     return Err(ParseError::SyntaxError {
@@ -359,7 +359,7 @@ impl<R: Read + Seek> OptimizedPdfReader<R> {
             if let super::lexer::Token::EndObj = token {
                 let _ = lexer.next_token();
             } else if !self.options.lenient_syntax && self.options.collect_warnings {
-                eprintln!("Warning: Missing 'endobj' for object {obj_num}");
+                tracing::debug!("Warning: Missing 'endobj' for object {obj_num}");
             }
         }
 

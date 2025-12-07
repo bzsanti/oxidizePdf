@@ -21,11 +21,11 @@ mod content_parser_tests {
         match result {
             Ok(ops) => {
                 // Should contain inline image operation if supported
-                let has_inline_image = ops
+                let _has_inline_image = ops
                     .iter()
                     .any(|op| matches!(op, ContentOperation::BeginInlineImage));
                 // Parser may or may not support inline images, just verify no crash
-                assert!(has_inline_image || !has_inline_image);
+                // Test passes if we reach here without panicking
             }
             Err(_) => {
                 // Parser might not fully support inline images yet - acceptable
@@ -249,7 +249,7 @@ mod objects_parser_tests {
         }
 
         match null_obj {
-            PdfObject::Null => assert!(true),
+            PdfObject::Null => {} // Test passes if we match Null
             _ => panic!("Wrong type"),
         }
     }
@@ -327,7 +327,7 @@ mod parser_error_tests {
         assert!(result.is_err());
 
         match result.unwrap_err() {
-            ParseError::UnexpectedToken { .. } => assert!(true),
+            ParseError::UnexpectedToken { .. } => {} // Test passes if we match this error
             _ => panic!("Wrong error type"),
         }
     }
@@ -341,7 +341,7 @@ mod parser_error_tests {
         let parse_err = ParseError::from(io_err);
 
         match parse_err {
-            ParseError::Io(_) => assert!(true),
+            ParseError::Io(_) => {} // Test passes if we match IO error
             _ => panic!("Wrong error type"),
         }
     }

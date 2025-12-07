@@ -179,7 +179,7 @@ fn test_string_types() {
 
     // String with escape sequences
     let escaped = PdfString::new(b"Line 1\\nLine 2\\t\\(escaped\\)".to_vec());
-    assert!(escaped.as_bytes().len() > 0);
+    assert!(!escaped.as_bytes().is_empty());
 
     // Binary string
     let binary = PdfString::new(vec![0xFF, 0x00, 0xAB, 0xCD]);
@@ -187,7 +187,7 @@ fn test_string_types() {
 
     // Unicode string (UTF-16BE with BOM)
     let unicode_marker = vec![0xFE, 0xFF]; // UTF-16BE BOM
-    let mut unicode = unicode_marker.clone();
+    let mut unicode = unicode_marker;
     unicode.extend_from_slice(&[0x00, 0x48, 0x00, 0x69]); // "Hi"
     let unicode_str = PdfString::new(unicode);
     assert!(unicode_str.as_bytes().starts_with(&[0xFE, 0xFF]));

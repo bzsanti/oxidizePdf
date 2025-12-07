@@ -25,7 +25,7 @@ fn collect_test_pdfs() -> Vec<PathBuf> {
             if let Ok(entries) = std::fs::read_dir(path) {
                 for entry in entries.flatten() {
                     let entry_path = entry.path();
-                    if entry_path.extension().map_or(false, |ext| ext == "pdf") {
+                    if entry_path.extension().is_some_and(|ext| ext == "pdf") {
                         // Prioritize PDFs with "table", "invoice", or "advanced" in name
                         let name = entry_path
                             .file_name()
@@ -57,7 +57,7 @@ fn collect_test_pdfs() -> Vec<PathBuf> {
                 if let Ok(entries) = std::fs::read_dir(path) {
                     for entry in entries.flatten() {
                         let entry_path = entry.path();
-                        if entry_path.extension().map_or(false, |ext| ext == "pdf") {
+                        if entry_path.extension().is_some_and(|ext| ext == "pdf") {
                             pdfs.push(entry_path);
                             if pdfs.len() >= 10 {
                                 break;
@@ -317,5 +317,5 @@ fn test_color_extraction_with_cold_email_hacks() {
     println!("Lines with color: {}", colored_lines.len());
 
     // Test passes regardless of whether colors are found (PDFs may not have colors)
-    assert!(text.fragments.len() > 0, "Should extract some text");
+    assert!(!text.fragments.is_empty(), "Should extract some text");
 }

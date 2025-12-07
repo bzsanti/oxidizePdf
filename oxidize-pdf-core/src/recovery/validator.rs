@@ -424,7 +424,7 @@ mod tests {
             "Page".to_string(),
             "XObject".to_string(),
         ];
-        let error = ValidationError::MissingObjects(missing.clone());
+        let error = ValidationError::MissingObjects(missing);
 
         match error {
             ValidationError::MissingObjects(objects) => {

@@ -183,7 +183,7 @@ impl PageExtractor {
                 }
                 Err(e) => {
                     // Log warning but continue with other streams
-                    eprintln!("Warning: Failed to parse content stream: {e}");
+                    tracing::debug!("Warning: Failed to parse content stream: {e}");
                 }
             }
         }

@@ -1,9 +1,0 @@
-# Ignorar resultados generados
-results/*.pdf
-results/*.txt
-results/*.log
-
-# Mantener la estructura de directorios
-!results/.gitkeep
-!src/.gitkeep
-!doc/.gitkeep

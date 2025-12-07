@@ -27,7 +27,7 @@ fn test_jpeg_extraction_no_byte_duplication() {
             eprintln!("⚠️  Skipping JPEG extraction test - no test PDF found");
             eprintln!("   This test validates that JPEG extraction doesn't duplicate bytes");
             eprintln!("   but requires a PDF file to run the extraction process");
-            return &"";
+            &""
         });
 
     if pdf_path.is_empty() {

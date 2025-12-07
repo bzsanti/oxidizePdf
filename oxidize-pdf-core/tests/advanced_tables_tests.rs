@@ -102,9 +102,9 @@ fn test_table_with_custom_row_styles() {
     let table = AdvancedTableBuilder::new()
         .columns(vec![("Name", 100.0), ("Value", 80.0)])
         .header_style(header_style.clone())
-        .data_style(data_style.clone())
+        .data_style(data_style)
         .add_row(vec!["Item 1", "100"])
-        .add_row_with_style(vec!["Total", "100"], header_style.clone())
+        .add_row_with_style(vec!["Total", "100"], header_style)
         .build()
         .unwrap();
 
@@ -132,7 +132,7 @@ fn test_table_with_mixed_styles() {
 
     let table = AdvancedTableBuilder::new()
         .columns(vec![("A", 50.0), ("B", 50.0)])
-        .add_row_with_mixed_styles(vec![(style1.clone(), "Red"), (style2.clone(), "Blue")])
+        .add_row_with_mixed_styles(vec![(style1, "Red"), (style2, "Blue")])
         .build()
         .unwrap();
 

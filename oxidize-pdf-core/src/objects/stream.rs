@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_large_stream() {
         let data: Vec<u8> = (0..1000).map(|i| (i % 256) as u8).collect();
-        let stream = Stream::new(data.clone());
+        let stream = Stream::new(data);
 
         assert_eq!(stream.data().len(), 1000);
         assert_eq!(

@@ -549,7 +549,7 @@ mod tests {
             recipients: None,
         };
 
-        manager.add_filter(filter.clone());
+        manager.add_filter(filter);
 
         let retrieved = manager.get_filter("CustomFilter");
         assert!(retrieved.is_some());
@@ -690,7 +690,7 @@ mod tests {
             method: CryptFilterMethod::AESV3,
             length: None,
             auth_event: AuthEvent::DocOpen,
-            recipients: Some(recipients.clone()),
+            recipients: Some(recipients),
         };
 
         let dict = filter.to_dict();

@@ -339,7 +339,7 @@ impl CustomFont {
         };
 
         let descriptor = FontDescriptor::new(
-            font_name.clone(),
+            font_name,
             flags,
             [-500.0, -300.0, 1500.0, 1000.0], // Font bbox
             0.0,                              // Italic angle

@@ -209,7 +209,10 @@ impl PdfOcrConverter {
             .map_err(|e| PdfError::ParseError(e.to_string()))?;
 
         // Create base page
-        let mut page = Page::a4(); // TODO: Get actual page dimensions
+        // Enhancement: Get actual page dimensions from source PDF
+        // Priority: MEDIUM - Currently defaults to A4 for all pages
+        // Would require passing page info from analyzer
+        let mut page = Page::a4();
 
         if analysis.is_scanned() && (!options.skip_text_pages || analysis.character_count < 50) {
             // Page needs OCR processing
@@ -263,7 +266,7 @@ impl PdfOcrConverter {
         } else {
             // Low confidence, just add the image without text layer
             self.add_image_to_page(page, &image_data)?;
-            eprintln!(
+            tracing::debug!(
                 "Warning: Low OCR confidence ({:.1}%) for page {}, skipping text layer",
                 ocr_result.confidence * 100.0,
                 page_num
@@ -352,7 +355,7 @@ impl PdfOcrConverter {
 
             match self.convert_to_searchable_pdf(input_path, output_path, ocr_provider, options) {
                 Ok(result) => {
-                    println!(
+                    tracing::debug!(
                         "✅ Converted: {} ({} pages)",
                         input_path.display(),
                         result.pages_processed
@@ -360,7 +363,7 @@ impl PdfOcrConverter {
                     results.push(result);
                 }
                 Err(e) => {
-                    eprintln!("❌ Failed to convert {}: {}", input_path.display(), e);
+                    tracing::debug!("❌ Failed to convert {}: {}", input_path.display(), e);
                 }
             }
         }

@@ -337,7 +337,7 @@ mod tests {
         assert!(state.mask.is_none());
 
         let mask1 = SoftMask::alpha("Group1".to_string());
-        state.set_mask(mask1.clone());
+        state.set_mask(mask1);
         assert!(!state.mask.is_none());
 
         let mask2 = SoftMask::luminosity("Group2".to_string());

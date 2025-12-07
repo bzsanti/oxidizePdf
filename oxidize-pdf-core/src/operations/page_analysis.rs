@@ -517,7 +517,7 @@ impl PageContentAnalyzer {
                     results.push((page_number, ocr_result));
                 }
                 Err(e) => {
-                    eprintln!("Failed to process page {page_number}: {e}");
+                    tracing::error!("Failed to process page {page_number}: {e}");
                     continue;
                 }
             }
@@ -614,7 +614,7 @@ impl PageContentAnalyzer {
                             thread_results.push((page_num, ocr_result));
                         }
                         Err(e) => {
-                            eprintln!("OCR failed for page {page_num}: {e}");
+                            tracing::error!("OCR failed for page {page_num}: {e}");
                         }
                     }
                 }
@@ -631,7 +631,7 @@ impl PageContentAnalyzer {
         // Wait for all threads to complete
         for handle in handles {
             if let Err(e) = handle.join() {
-                eprintln!("Thread panicked: {e:?}");
+                tracing::error!("Thread panicked: {e:?}");
             }
         }
 
@@ -671,7 +671,7 @@ impl PageContentAnalyzer {
         }
 
         for batch in scanned_pages.chunks(batch_size) {
-            println!("Processing batch of {} pages", batch.len());
+            tracing::info!("Processing batch of {} pages", batch.len());
 
             for &page_num in batch {
                 match self.extract_text_from_scanned_page(page_num, ocr_provider) {
@@ -679,7 +679,7 @@ impl PageContentAnalyzer {
                         results.push((page_num, ocr_result));
                     }
                     Err(e) => {
-                        eprintln!("OCR failed for page {page_num}: {e}");
+                        tracing::error!("OCR failed for page {page_num}: {e}");
                     }
                 }
             }
@@ -696,7 +696,7 @@ impl PageContentAnalyzer {
     /// This method extracts the primary image from a scanned page and converts
     /// it to a format suitable for OCR processing (PNG or JPEG).
     pub fn extract_page_image_data(&self, page_number: usize) -> OperationResult<Vec<u8>> {
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] extract_page_image_data called for page {}",
             page_number
         );
@@ -707,7 +707,7 @@ impl PageContentAnalyzer {
             .map_err(|e| OperationError::ParseError(e.to_string()))?;
 
         // Method 1: Check page resources for XObjects
-        println!("🔍 [DEBUG] Trying Method 1: Check page resources for XObjects");
+        tracing::debug!("🔍 [DEBUG] Trying Method 1: Check page resources for XObjects");
         let resources = self
             .document
             .get_page_resources(&page)
@@ -718,43 +718,44 @@ impl PageContentAnalyzer {
 
         if let Some(_resources) = &resources {
             // Standard case - resources found normally
-            println!(
+            tracing::debug!(
                 "🔍 [DEBUG] Page {} has resources via standard method",
                 page_number
             );
         } else {
             // If resources is None, try to resolve directly from page dictionary
-            println!(
+            tracing::debug!(
                 "🔍 [DEBUG] Page {} resources None, trying direct resolution",
                 page_number
             );
             if let Some(resources_ref) = page.dict.get("Resources") {
-                println!(
+                tracing::debug!(
                     "🔍 [DEBUG] Page {} has Resources entry, resolving reference",
                     page_number
                 );
                 match self.document.resolve(resources_ref) {
                     Ok(resolved_obj) => {
                         if let Some(resolved_dict) = resolved_obj.as_dict() {
-                            println!("🔍 [DEBUG] Page {} resolved Resources to dictionary with {} entries",
+                            tracing::debug!("🔍 [DEBUG] Page {} resolved Resources to dictionary with {} entries",
                                    page_number, resolved_dict.0.len());
                             resolved_resources_dict = Some(resolved_dict.clone());
                         } else {
-                            println!(
+                            tracing::debug!(
                                 "🔍 [DEBUG] Page {} Resources resolved but not a dictionary",
                                 page_number
                             );
                         }
                     }
                     Err(e) => {
-                        println!(
+                        tracing::debug!(
                             "🔍 [DEBUG] Page {} failed to resolve Resources: {}",
-                            page_number, e
+                            page_number,
+                            e
                         );
                     }
                 }
             } else {
-                println!(
+                tracing::debug!(
                     "🔍 [DEBUG] Page {} has no Resources entry in dict",
                     page_number
                 );
@@ -765,12 +766,12 @@ impl PageContentAnalyzer {
         let active_resources = resources.or(resolved_resources_dict.as_ref());
 
         if let Some(resources) = &active_resources {
-            println!("🔍 [DEBUG] Page {} has resources", page_number);
+            tracing::debug!("🔍 [DEBUG] Page {} has resources", page_number);
             if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) = resources
                 .0
                 .get(&crate::parser::objects::PdfName("XObject".to_string()))
             {
-                println!(
+                tracing::debug!(
                     "🔍 [DEBUG] Page {} has XObject dictionary with {} entries",
                     page_number,
                     xobjects.0.len()
@@ -817,7 +818,7 @@ impl PageContentAnalyzer {
                                         })
                                         .unwrap_or(0);
 
-                                    println!(
+                                    tracing::debug!(
                                         "🔍 [DEBUG] Page {} Method1 XObject {} -> Object {} ({}x{})",
                                         page_number, xobject_name.0, obj_num, width, height
                                     );
@@ -829,23 +830,23 @@ impl PageContentAnalyzer {
                     }
                 }
             } else {
-                println!("🔍 [DEBUG] Page {} has no XObject dictionary", page_number);
+                tracing::debug!("🔍 [DEBUG] Page {} has no XObject dictionary", page_number);
             }
         } else {
-            println!("🔍 [DEBUG] Page {} has no resources", page_number);
+            tracing::debug!("🔍 [DEBUG] Page {} has no resources", page_number);
         }
 
         // Method 2: Find XObject referenced by this specific page's content stream
-        println!("🔍 [DEBUG] Trying Method 2: Parse content streams for Do operators");
+        tracing::debug!("🔍 [DEBUG] Trying Method 2: Parse content streams for Do operators");
         if let Ok(content_streams) = self.document.get_page_content_streams(&page) {
-            println!(
+            tracing::debug!(
                 "🔍 [DEBUG] Page {} has {} content streams",
                 page_number,
                 content_streams.len()
             );
             for (i, content_stream) in content_streams.iter().enumerate() {
                 let content_str = String::from_utf8_lossy(content_stream);
-                println!(
+                tracing::debug!(
                     "🔍 [DEBUG] Content stream {} has {} bytes",
                     i,
                     content_stream.len()
@@ -859,13 +860,13 @@ impl PageContentAnalyzer {
                         let parts: Vec<&str> = line.split_whitespace().collect();
                         if parts.len() >= 2 && parts[parts.len() - 1] == "Do" {
                             let xobject_name = parts[parts.len() - 2];
-                            println!(
+                            tracing::debug!(
                                 "🔍 [DEBUG] Found Do operator with XObject: {}",
                                 xobject_name
                             );
                             if let Some(name) = xobject_name.strip_prefix('/') {
                                 // Remove leading '/'
-                                println!("🔍 [DEBUG] Looking for XObject: {}", name);
+                                tracing::debug!("🔍 [DEBUG] Looking for XObject: {}", name);
 
                                 // Try to find this specific XObject using page resources first
                                 if let Ok(image_data) =
@@ -873,12 +874,12 @@ impl PageContentAnalyzer {
                                 {
                                     return Ok(image_data);
                                 } else {
-                                    println!("🔍 [DEBUG] Page-specific XObject lookup failed for: {}, trying document-wide search", name);
+                                    tracing::debug!("🔍 [DEBUG] Page-specific XObject lookup failed for: {}, trying document-wide search", name);
                                     // Fallback to document-wide search for malformed PDFs
                                     if let Ok(image_data) = self.find_specific_xobject_image(name) {
                                         return Ok(image_data);
                                     } else {
-                                        println!("🔍 [DEBUG] Document-wide XObject lookup also failed for: {}", name);
+                                        tracing::debug!("🔍 [DEBUG] Document-wide XObject lookup also failed for: {}", name);
                                     }
                                 }
                             }
@@ -895,7 +896,7 @@ impl PageContentAnalyzer {
         }
 
         // Method 3: Last resort - scan document for any large images
-        println!("🔍 [DEBUG] Trying Method 3: Fallback scan for large images");
+        tracing::debug!("🔍 [DEBUG] Trying Method 3: Fallback scan for large images");
         match self.find_image_xobjects_in_document() {
             Ok(image_data) if !image_data.is_empty() => {
                 return Ok(image_data);
@@ -969,9 +970,12 @@ impl PageContentAnalyzer {
                                             }
                                         })
                                         .unwrap_or(0);
-                                    println!(
+                                    tracing::debug!(
                                         "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
-                                        xobject_name, obj_num, width, height
+                                        xobject_name,
+                                        obj_num,
+                                        width,
+                                        height
                                     );
                                     return self.extract_image_stream_for_ocr(&stream);
                                 }
@@ -990,20 +994,22 @@ impl PageContentAnalyzer {
         {
             match self.document.get_object(*res_obj, *res_gen) {
                 Ok(crate::parser::objects::PdfObject::Dictionary(resolved_dict)) => {
-                    println!(
+                    tracing::debug!(
                         "🔍 [DEBUG] Page-specific fallback: resolved Resources {} {} R",
-                        res_obj, res_gen
+                        res_obj,
+                        res_gen
                     );
                     if let Some(crate::parser::objects::PdfObject::Dictionary(xobjects)) =
                         resolved_dict
                             .0
                             .get(&crate::parser::objects::PdfName("XObject".to_string()))
                     {
-                        println!("🔍 [DEBUG] Page-specific fallback found XObject dictionary with {} entries", xobjects.0.len());
+                        tracing::debug!("🔍 [DEBUG] Page-specific fallback found XObject dictionary with {} entries", xobjects.0.len());
                         for (name, obj) in &xobjects.0 {
-                            println!(
+                            tracing::debug!(
                                 "🔍 [DEBUG] Page-specific fallback XObject: {} -> {:?}",
-                                name.0, obj
+                                name.0,
+                                obj
                             );
                         }
                         if let Some(xobject_ref) = xobjects
@@ -1013,10 +1019,10 @@ impl PageContentAnalyzer {
                             if let crate::parser::objects::PdfObject::Reference(obj_num, gen_num) =
                                 xobject_ref
                             {
-                                println!("🔍 [DEBUG] Page-specific fallback: trying to get object {} {} R", obj_num, gen_num);
+                                tracing::debug!("🔍 [DEBUG] Page-specific fallback: trying to get object {} {} R", obj_num, gen_num);
                                 match self.document.get_object(*obj_num, *gen_num) {
                                     Ok(crate::parser::objects::PdfObject::Stream(stream)) => {
-                                        println!(
+                                        tracing::debug!(
                                             "🔍 [DEBUG] Page-specific fallback: got stream object"
                                         );
                                         match stream.dict.0.get(&crate::parser::objects::PdfName(
@@ -1025,7 +1031,7 @@ impl PageContentAnalyzer {
                                             Some(crate::parser::objects::PdfObject::Name(
                                                 subtype,
                                             )) => {
-                                                println!("🔍 [DEBUG] Page-specific fallback: stream subtype = {}", subtype.0);
+                                                tracing::debug!("🔍 [DEBUG] Page-specific fallback: stream subtype = {}", subtype.0);
                                                 if subtype.0 == "Image" {
                                                     let width = stream
                                                         .dict
@@ -1053,46 +1059,46 @@ impl PageContentAnalyzer {
                                                             }
                                                         })
                                                         .unwrap_or(0);
-                                                    println!(
+                                                    tracing::debug!(
                                                         "🔍 [DEBUG] Page-specific fallback XObject {} -> Object {} ({}x{})",
                                                         xobject_name, obj_num, width, height
                                                     );
                                                     return self
                                                         .extract_image_stream_for_ocr(&stream);
                                                 } else {
-                                                    println!("🔍 [DEBUG] Page-specific fallback: stream is not an image (subtype: {})", subtype.0);
+                                                    tracing::debug!("🔍 [DEBUG] Page-specific fallback: stream is not an image (subtype: {})", subtype.0);
                                                 }
                                             }
                                             None => {
-                                                println!("🔍 [DEBUG] Page-specific fallback: stream has no Subtype");
+                                                tracing::debug!("🔍 [DEBUG] Page-specific fallback: stream has no Subtype");
                                             }
                                             _ => {
-                                                println!("🔍 [DEBUG] Page-specific fallback: stream Subtype is not a name");
+                                                tracing::debug!("🔍 [DEBUG] Page-specific fallback: stream Subtype is not a name");
                                             }
                                         }
                                     }
                                     Ok(obj) => {
-                                        println!("🔍 [DEBUG] Page-specific fallback: object {} {} R is not a stream, got: {:?}", obj_num, gen_num, std::any::type_name_of_val(&obj));
+                                        tracing::debug!("🔍 [DEBUG] Page-specific fallback: object {} {} R is not a stream, got: {:?}", obj_num, gen_num, std::any::type_name_of_val(&obj));
                                     }
                                     Err(e) => {
-                                        println!("🔍 [DEBUG] Page-specific fallback: failed to get object {} {} R: {}", obj_num, gen_num, e);
+                                        tracing::debug!("🔍 [DEBUG] Page-specific fallback: failed to get object {} {} R: {}", obj_num, gen_num, e);
                                     }
                                 }
                             } else {
-                                println!("🔍 [DEBUG] Page-specific fallback: XObject reference is not a Reference");
+                                tracing::debug!("🔍 [DEBUG] Page-specific fallback: XObject reference is not a Reference");
                             }
                         } else {
-                            println!("🔍 [DEBUG] Page-specific fallback: XObject '{}' not found in resolved resources", xobject_name);
+                            tracing::debug!("🔍 [DEBUG] Page-specific fallback: XObject '{}' not found in resolved resources", xobject_name);
                         }
                     } else {
-                        println!("🔍 [DEBUG] Page-specific fallback: no XObject dictionary in resolved resources");
+                        tracing::debug!("🔍 [DEBUG] Page-specific fallback: no XObject dictionary in resolved resources");
                     }
                 }
                 Ok(_) => {
-                    println!("🔍 [DEBUG] Page-specific fallback: Resources reference resolved to non-dictionary");
+                    tracing::debug!("🔍 [DEBUG] Page-specific fallback: Resources reference resolved to non-dictionary");
                 }
                 Err(e) => {
-                    println!(
+                    tracing::debug!(
                         "🔍 [DEBUG] Page-specific fallback: failed to resolve Resources: {}",
                         e
                     );
@@ -1153,9 +1159,12 @@ impl PageContentAnalyzer {
                                         })
                                         .unwrap_or(0);
 
-                                    println!(
+                                    tracing::debug!(
                                         "🔍 [DEBUG] Page-specific XObject {} -> Object {} ({}x{})",
-                                        xobject_name, obj_num, width, height
+                                        xobject_name,
+                                        obj_num,
+                                        width,
+                                        height
                                     );
                                     return self.extract_image_stream_for_ocr(&stream);
                                 }
@@ -1218,9 +1227,12 @@ impl PageContentAnalyzer {
 
                         // If it's a reasonably large image, likely a scanned page
                         if width > 100 && height > 100 {
-                            println!(
+                            tracing::debug!(
                                 "🔍 [DEBUG] Using XObject {} -> Object {} ({}x{})",
-                                xobject_name, obj_num, width, height
+                                xobject_name,
+                                obj_num,
+                                width,
+                                height
                             );
                             return self.extract_image_stream_for_ocr(&stream);
                         }
@@ -1296,7 +1308,7 @@ impl PageContentAnalyzer {
         &self,
         stream: &crate::parser::objects::PdfStream,
     ) -> OperationResult<Vec<u8>> {
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] extract_image_stream_for_ocr called with stream size: {}",
             stream.data.len()
         );
@@ -1345,7 +1357,7 @@ impl PageContentAnalyzer {
             .dict
             .0
             .get(&crate::parser::objects::PdfName("Filter".to_string()));
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] Image properties: {}x{}, {} bits, filter: {:?}",
             width,
             height,
@@ -1370,7 +1382,7 @@ impl PageContentAnalyzer {
                     // DCTDecode streams contain complete JPEG data including headers
                     let jpeg_data = &stream.data;
 
-                    println!(
+                    tracing::debug!(
                         "🔍 [DEBUG] Processing DCTDecode stream: {} bytes",
                         jpeg_data.len()
                     );
@@ -1390,12 +1402,12 @@ impl PageContentAnalyzer {
                         )));
                     }
 
-                    println!("✅ [DEBUG] JPEG SOI marker found");
+                    tracing::debug!("✅ [DEBUG] JPEG SOI marker found");
 
                     // Use the stream data as-is - DCTDecode streams are already complete JPEG files
                     let final_jpeg_data = jpeg_data.to_vec();
 
-                    println!(
+                    tracing::debug!(
                         "🔍 [DEBUG] Final JPEG size: {} bytes",
                         final_jpeg_data.len()
                     );
@@ -1406,13 +1418,13 @@ impl PageContentAnalyzer {
                 }
                 filter_name => {
                     // For other filters, we need to decode the stream first
-                    println!("🔍 [DEBUG] Decoding stream with filter: {}", filter_name);
+                    tracing::debug!("🔍 [DEBUG] Decoding stream with filter: {}", filter_name);
                     let parse_options = self.document.options();
                     let decoded_data = stream.decode(&parse_options).map_err(|e| {
                         OperationError::ParseError(format!("Failed to decode image stream: {e}"))
                     })?;
 
-                    println!(
+                    tracing::debug!(
                         "🔍 [DEBUG] Decoded stream data: {} bytes",
                         decoded_data.len()
                     );
@@ -1456,12 +1468,12 @@ impl PageContentAnalyzer {
                 if let Some(crate::parser::objects::PdfObject::Name(filter)) = filters.0.first() {
                     match filter.0.as_str() {
                         "DCTDecode" => {
-                            println!("🔍 [DEBUG] Array filter: Using raw JPEG stream data");
+                            tracing::debug!("🔍 [DEBUG] Array filter: Using raw JPEG stream data");
                             stream.data.clone()
                         }
                         filter_name => {
                             // Decode other filter types
-                            println!(
+                            tracing::debug!(
                                 "🔍 [DEBUG] Array filter: Decoding stream with filter: {}",
                                 filter_name
                             );
@@ -1505,7 +1517,7 @@ impl PageContentAnalyzer {
             }
             _ => {
                 // No filter - raw image data, convert to PNG
-                println!("🔍 [DEBUG] No filter: Converting raw image data to PNG");
+                tracing::debug!("🔍 [DEBUG] No filter: Converting raw image data to PNG");
                 let parse_options = self.document.options();
                 let decoded_data = stream.decode(&parse_options).map_err(|e| {
                     OperationError::ParseError(format!("Failed to decode raw image stream: {e}"))
@@ -1521,7 +1533,7 @@ impl PageContentAnalyzer {
             }
         };
 
-        println!("🔍 [DEBUG] Final image data for OCR: {} bytes", data.len());
+        tracing::debug!("🔍 [DEBUG] Final image data for OCR: {} bytes", data.len());
         Ok(data)
     }
 
@@ -1529,7 +1541,7 @@ impl PageContentAnalyzer {
     /// DCTDecode streams in PDFs are valid JPEG data - pass through unchanged
     #[allow(dead_code)]
     fn clean_jpeg_data(&self, raw_data: &[u8]) -> Vec<u8> {
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] Using raw DCTDecode stream as-is: {} bytes",
             raw_data.len()
         );
@@ -1547,7 +1559,7 @@ impl PageContentAnalyzer {
         pdf_width: u32,
         pdf_height: u32,
     ) -> OperationResult<Vec<u8>> {
-        println!("🔍 [DEBUG] Image rotation correction with external-images feature");
+        tracing::debug!("🔍 [DEBUG] Image rotation correction with external-images feature");
 
         // For now, apply a simple heuristic rotation fix for the known case
         // Based on your image showing 90 degree clockwise rotation
@@ -1558,7 +1570,7 @@ impl PageContentAnalyzer {
             // This is a temporary solution until we fix the image crate import
             self.rotate_image_externally(image_data, rotation_needed)
         } else {
-            println!("🔍 [DEBUG] No rotation correction needed based on dimensions");
+            tracing::debug!("🔍 [DEBUG] No rotation correction needed based on dimensions");
             Ok(image_data.to_vec())
         }
     }
@@ -1571,7 +1583,7 @@ impl PageContentAnalyzer {
         _pdf_width: u32,
         _pdf_height: u32,
     ) -> OperationResult<Vec<u8>> {
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] Image rotation correction disabled (external-images feature not enabled)"
         );
         Ok(image_data.to_vec())
@@ -1596,26 +1608,29 @@ impl PageContentAnalyzer {
             (img_width, img_height)
         };
 
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] Rotation analysis - PDF: {}x{}, Image: {}x{}",
-            pdf_width, pdf_height, actual_img_width, actual_img_height
+            pdf_width,
+            pdf_height,
+            actual_img_width,
+            actual_img_height
         );
 
         // Check if this is the typical portrait PDF with likely rotated content
         if pdf_height > pdf_width {
             // PDF is portrait - this is typical for scanned documents
             // Based on your image example which was rotated 90° clockwise, apply counter-rotation
-            println!("🔍 [DEBUG] Portrait PDF detected - applying 270° rotation to correct typical scan rotation");
+            tracing::debug!("🔍 [DEBUG] Portrait PDF detected - applying 270° rotation to correct typical scan rotation");
             return 3; // 270° = 90° counter-clockwise
         }
 
         // For landscape PDFs or when dimensions are swapped
         if pdf_width == actual_img_height && pdf_height == actual_img_width {
-            println!("🔍 [DEBUG] Dimensions swapped - applying 90° rotation");
+            tracing::debug!("🔍 [DEBUG] Dimensions swapped - applying 90° rotation");
             return 1; // 90° clockwise
         }
 
-        println!("🔍 [DEBUG] No rotation correction needed");
+        tracing::debug!("🔍 [DEBUG] No rotation correction needed");
         0
     }
 
@@ -1630,7 +1645,7 @@ impl PageContentAnalyzer {
 
         // Save input image
         if let Err(e) = fs::write(&input_path, image_data) {
-            println!("🔍 [DEBUG] Failed to write temp input file: {}", e);
+            tracing::debug!("🔍 [DEBUG] Failed to write temp input file: {}", e);
             return Ok(image_data.to_vec());
         }
 
@@ -1645,7 +1660,7 @@ impl PageContentAnalyzer {
             }
         };
 
-        println!(
+        tracing::debug!(
             "🔍 [DEBUG] Attempting to rotate image {} degrees using external tool",
             angle
         );
@@ -1662,16 +1677,16 @@ impl PageContentAnalyzer {
         let rotated_data = match sips_result {
             Ok(sips_output) if sips_output.status.success() => match fs::read(&output_path) {
                 Ok(data) => {
-                    println!("🔍 [DEBUG] Successfully rotated image using sips");
+                    tracing::debug!("🔍 [DEBUG] Successfully rotated image using sips");
                     data
                 }
                 Err(e) => {
-                    println!("🔍 [DEBUG] Failed to read sips-rotated image: {}", e);
+                    tracing::debug!("🔍 [DEBUG] Failed to read sips-rotated image: {}", e);
                     image_data.to_vec()
                 }
             },
             Ok(sips_output) => {
-                println!(
+                tracing::debug!(
                     "🔍 [DEBUG] sips failed: {}",
                     String::from_utf8_lossy(&sips_output.stderr)
                 );
@@ -1687,16 +1702,18 @@ impl PageContentAnalyzer {
                 match result {
                     Ok(output) if output.status.success() => match fs::read(&output_path) {
                         Ok(data) => {
-                            println!("🔍 [DEBUG] Successfully rotated image using ImageMagick");
+                            tracing::debug!(
+                                "🔍 [DEBUG] Successfully rotated image using ImageMagick"
+                            );
                             data
                         }
                         Err(e) => {
-                            println!("🔍 [DEBUG] Failed to read rotated image: {}", e);
+                            tracing::debug!("🔍 [DEBUG] Failed to read rotated image: {}", e);
                             image_data.to_vec()
                         }
                     },
                     _ => {
-                        println!(
+                        tracing::debug!(
                             "🔍 [DEBUG] Both sips and ImageMagick failed, using original image"
                         );
                         image_data.to_vec()
@@ -1704,8 +1721,8 @@ impl PageContentAnalyzer {
                 }
             }
             Err(e) => {
-                println!("🔍 [DEBUG] sips not available: {}", e);
-                println!("🔍 [DEBUG] Trying ImageMagick as fallback...");
+                tracing::debug!("🔍 [DEBUG] sips not available: {}", e);
+                tracing::debug!("🔍 [DEBUG] Trying ImageMagick as fallback...");
 
                 let result = Command::new("convert")
                     .arg(&input_path)
@@ -1717,16 +1734,18 @@ impl PageContentAnalyzer {
                 match result {
                     Ok(output) if output.status.success() => match fs::read(&output_path) {
                         Ok(data) => {
-                            println!("🔍 [DEBUG] Successfully rotated image using ImageMagick");
+                            tracing::debug!(
+                                "🔍 [DEBUG] Successfully rotated image using ImageMagick"
+                            );
                             data
                         }
                         Err(e) => {
-                            println!("🔍 [DEBUG] Failed to read rotated image: {}", e);
+                            tracing::debug!("🔍 [DEBUG] Failed to read rotated image: {}", e);
                             image_data.to_vec()
                         }
                     },
                     _ => {
-                        println!(
+                        tracing::debug!(
                             "🔍 [DEBUG] No external rotation tools available, using original image"
                         );
                         image_data.to_vec()
@@ -1754,7 +1773,7 @@ impl PageContentAnalyzer {
         use std::fs;
         use std::process::Command;
 
-        println!("🔧 [DEBUG] Cleaning corrupted JPEG using sips");
+        tracing::debug!("🔧 [DEBUG] Cleaning corrupted JPEG using sips");
 
         // Generate temp file paths
         let temp_id = std::process::id();
@@ -1766,7 +1785,7 @@ impl PageContentAnalyzer {
             OperationError::ProcessingError(format!("Failed to write temp JPEG: {e}"))
         })?;
 
-        println!("🔧 [DEBUG] Saved corrupted JPEG to: {}", input_path);
+        tracing::debug!("🔧 [DEBUG] Saved corrupted JPEG to: {}", input_path);
 
         // Use sips to recompress and clean the JPEG
         let output = Command::new("sips")
@@ -1786,14 +1805,14 @@ impl PageContentAnalyzer {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            println!("❌ [DEBUG] sips failed: {}", stderr);
+            tracing::debug!("❌ [DEBUG] sips failed: {}", stderr);
 
             // Cleanup temp files
             let _ = fs::remove_file(&input_path);
             let _ = fs::remove_file(&output_path);
 
             // Fall back to original data if sips fails
-            println!("🔧 [DEBUG] Falling back to original JPEG data");
+            tracing::debug!("🔧 [DEBUG] Falling back to original JPEG data");
             return Ok(corrupted_jpeg_data.to_vec());
         }
 
@@ -1802,7 +1821,7 @@ impl PageContentAnalyzer {
             OperationError::ProcessingError(format!("Failed to read cleaned JPEG: {e}"))
         })?;
 
-        println!(
+        tracing::debug!(
             "🔧 [DEBUG] Successfully cleaned JPEG: {} -> {} bytes",
             corrupted_jpeg_data.len(),
             cleaned_data.len()
@@ -2419,7 +2438,7 @@ mod comprehensive_tests {
             let result = analyzer.document.page_count();
             assert!(result.is_ok());
             assert_eq!(result.unwrap(), 1);
-            println!("Analyzer {i} works correctly");
+            tracing::debug!("Analyzer {i} works correctly");
         }
     }
 
@@ -2841,7 +2860,7 @@ startxref
             let analyzer = PageContentAnalyzer::new(doc);
             let result = analyzer.analyze_page(0);
             assert!(result.is_ok());
-            println!("Analyzer {i} completed analysis");
+            tracing::debug!("Analyzer {i} completed analysis");
         }
     }
 
@@ -2976,7 +2995,7 @@ startxref
 
         // Verify all analyzers produced consistent results
         for (i, page_type) in &all_results {
-            println!("Analyzer {i} detected page type: {page_type:?}");
+            tracing::debug!("Analyzer {i} detected page type: {page_type:?}");
         }
     }
 
@@ -3438,7 +3457,7 @@ startxref
         assert_eq!(ocr_results.len(), sequential_results.len());
         assert_eq!(ocr_results.len(), batch_results.len());
 
-        println!(
+        tracing::debug!(
             "Complete workflow test passed with {} pages analyzed",
             analyses.len()
         );

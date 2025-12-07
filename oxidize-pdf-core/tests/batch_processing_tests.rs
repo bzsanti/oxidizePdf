@@ -114,7 +114,7 @@ fn test_batch_merge_pdfs() {
     // Define merge groups
     let merge_groups = vec![
         (
-            vec![pdf1.clone(), pdf2.clone()],
+            vec![pdf1, pdf2.clone()],
             temp_dir.path().join("merged1.pdf"),
         ),
         (vec![pdf2, pdf3], temp_dir.path().join("merged2.pdf")),
@@ -287,7 +287,7 @@ fn test_batch_job_types() {
     });
 
     processor.add_job(BatchJob::Compress {
-        input: input_pdf.clone(),
+        input: input_pdf,
         output: temp_dir.path().join("compressed.pdf"),
         quality: 75,
     });

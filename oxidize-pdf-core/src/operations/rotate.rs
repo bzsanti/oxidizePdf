@@ -218,7 +218,7 @@ impl PageRotator {
                     has_content = true;
                 }
                 Err(e) => {
-                    eprintln!("Warning: Failed to parse content stream: {e}");
+                    tracing::debug!("Warning: Failed to parse content stream: {e}");
                 }
             }
         }
@@ -264,7 +264,7 @@ impl PageRotator {
                     has_content = true;
                 }
                 Err(e) => {
-                    eprintln!("Warning: Failed to parse content stream: {e}");
+                    tracing::debug!("Warning: Failed to parse content stream: {e}");
                 }
             }
         }

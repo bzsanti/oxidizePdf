@@ -357,7 +357,7 @@ fn parse_bf_range_entries(line: &str) -> Option<Vec<CMapEntry>> {
 
                         // Create individual Single entries for each mapping
                         let mut entries = Vec::new();
-                        let mut current_src = src_start.clone();
+                        let mut current_src = src_start;
 
                         for dst in hex_values {
                             entries.push(CMapEntry::Single {

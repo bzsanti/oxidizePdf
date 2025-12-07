@@ -51,6 +51,7 @@ pub use tesseract_provider::{RustyTesseractConfig, RustyTesseractProvider};
 
 use crate::error::Result;
 use crate::Color;
+use std::collections::HashSet;
 use std::fmt::Write;
 
 /// Text rendering mode for PDF text operations
@@ -92,6 +93,8 @@ pub struct TextContext {
     // Color parameters
     fill_color: Option<Color>,
     stroke_color: Option<Color>,
+    // Track used characters for font subsetting (fixes issue #97)
+    used_characters: HashSet<char>,
 }
 
 impl Default for TextContext {
@@ -116,6 +119,19 @@ impl TextContext {
             rendering_mode: None,
             fill_color: None,
             stroke_color: None,
+            used_characters: HashSet::new(),
+        }
+    }
+
+    /// Get the characters used in this text context for font subsetting.
+    ///
+    /// This is used to determine which glyphs need to be embedded when using
+    /// custom fonts (especially CJK fonts).
+    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
+        if self.used_characters.is_empty() {
+            None
+        } else {
+            Some(self.used_characters.clone())
         }
     }
 
@@ -212,6 +228,9 @@ impl TextContext {
                 self.operations.push_str(") Tj\n");
             }
         }
+
+        // Track used characters for font subsetting (fixes issue #97)
+        self.used_characters.extend(text.chars());
 
         // End text object
         self.operations.push_str("ET\n");
@@ -783,5 +802,59 @@ mod tests {
             ops.contains("1.000 0.000 0.000 rg") && ops.contains("0.000 0.000 1.000 RG"),
             "Both fill and stroke colors not found in: {ops}"
         );
+    }
+
+    // Issue #97: Test used_characters tracking
+    #[test]
+    fn test_used_characters_tracking_ascii() {
+        let mut context = TextContext::new();
+        context.write("Hello").unwrap();
+
+        let chars = context.get_used_characters();
+        assert!(chars.is_some());
+        let chars = chars.unwrap();
+        assert!(chars.contains(&'H'));
+        assert!(chars.contains(&'e'));
+        assert!(chars.contains(&'l'));
+        assert!(chars.contains(&'o'));
+        assert_eq!(chars.len(), 4); // H, e, l, o (l appears twice but HashSet dedupes)
+    }
+
+    #[test]
+    fn test_used_characters_tracking_cjk() {
+        let mut context = TextContext::new();
+        context.set_font(Font::Custom("NotoSansCJK".to_string()), 12.0);
+        context.write("中文测试").unwrap();
+
+        let chars = context.get_used_characters();
+        assert!(chars.is_some());
+        let chars = chars.unwrap();
+        assert!(chars.contains(&'中'));
+        assert!(chars.contains(&'文'));
+        assert!(chars.contains(&'测'));
+        assert!(chars.contains(&'试'));
+        assert_eq!(chars.len(), 4);
+    }
+
+    #[test]
+    fn test_used_characters_empty_initially() {
+        let context = TextContext::new();
+        assert!(context.get_used_characters().is_none());
+    }
+
+    #[test]
+    fn test_used_characters_multiple_writes() {
+        let mut context = TextContext::new();
+        context.write("AB").unwrap();
+        context.write("CD").unwrap();
+
+        let chars = context.get_used_characters();
+        assert!(chars.is_some());
+        let chars = chars.unwrap();
+        assert!(chars.contains(&'A'));
+        assert!(chars.contains(&'B'));
+        assert!(chars.contains(&'C'));
+        assert!(chars.contains(&'D'));
+        assert_eq!(chars.len(), 4);
     }
 }

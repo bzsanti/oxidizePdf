@@ -905,8 +905,21 @@ impl Page {
     }
 
     /// Gets all characters used in this page.
+    ///
+    /// Combines characters from both graphics_context and text_context
+    /// to ensure proper font subsetting for custom fonts (fixes issue #97).
     pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
-        self.graphics_context.get_used_characters()
+        let graphics_chars = self.graphics_context.get_used_characters();
+        let text_chars = self.text_context.get_used_characters();
+
+        match (graphics_chars, text_chars) {
+            (None, None) => None,
+            (Some(chars), None) | (None, Some(chars)) => Some(chars),
+            (Some(mut g_chars), Some(t_chars)) => {
+                g_chars.extend(t_chars);
+                Some(g_chars)
+            }
+        }
     }
 
     /// Gets all fonts used in this page.
@@ -1149,7 +1162,7 @@ mod tests {
         ];
         let image = Image::from_jpeg_data(jpeg_data).unwrap();
 
-        page.add_image("test_image", image.clone());
+        page.add_image("test_image", image);
         assert!(page.images().contains_key("test_image"));
         assert_eq!(page.images().len(), 1);
     }
@@ -1565,13 +1578,13 @@ mod tests {
             let content_str = String::from_utf8_lossy(&content);
 
             // Debug: print what we're looking for
-            println!("PDF size: {} bytes", content.len());
-            println!("Contains 'XObject': {}", content_str.contains("XObject"));
-            println!("Contains '/XObject': {}", content_str.contains("/XObject"));
+            tracing::debug!("PDF size: {} bytes", content.len());
+            tracing::debug!("Contains 'XObject': {}", content_str.contains("XObject"));
+            tracing::debug!("Contains '/XObject': {}", content_str.contains("/XObject"));
 
             // Check for image-related content
             if content_str.contains("/Type /Image") || content_str.contains("DCTDecode") {
-                println!("Found image-related content but no XObject dictionary");
+                tracing::debug!("Found image-related content but no XObject dictionary");
             }
 
             // Verify XObject is properly written
@@ -2103,6 +2116,59 @@ mod unit_tests {
         assert!(result.is_ok());
     }
 
+    // Issue #97: Test that get_used_characters combines both contexts
+    #[test]
+    fn test_get_used_characters_from_text_context() {
+        let mut page = Page::a4();
+
+        // Write text via text_context
+        page.text().write("ABC").unwrap();
+
+        // Should capture characters from text_context
+        let chars = page.get_used_characters();
+        assert!(chars.is_some());
+        let chars = chars.unwrap();
+        assert!(chars.contains(&'A'));
+        assert!(chars.contains(&'B'));
+        assert!(chars.contains(&'C'));
+    }
+
+    #[test]
+    fn test_get_used_characters_combines_both_contexts() {
+        let mut page = Page::a4();
+
+        // Write text via text_context
+        page.text().write("AB").unwrap();
+
+        // Write text via graphics_context
+        let _ = page.graphics().draw_text("CD", 100.0, 100.0);
+
+        // Should capture characters from both contexts
+        let chars = page.get_used_characters();
+        assert!(chars.is_some());
+        let chars = chars.unwrap();
+        assert!(chars.contains(&'A'));
+        assert!(chars.contains(&'B'));
+        assert!(chars.contains(&'C'));
+        assert!(chars.contains(&'D'));
+    }
+
+    #[test]
+    fn test_get_used_characters_cjk_via_text_context() {
+        let mut page = Page::a4();
+
+        // Write CJK text via text_context (the bug scenario from issue #97)
+        page.text()
+            .set_font(Font::Custom("NotoSansCJK".to_string()), 12.0);
+        page.text().write("中文").unwrap();
+
+        let chars = page.get_used_characters();
+        assert!(chars.is_some());
+        let chars = chars.unwrap();
+        assert!(chars.contains(&'中'));
+        assert!(chars.contains(&'文'));
+    }
+
     #[test]
     fn test_text_flow_creation() {
         let page = Page::a4();
@@ -2229,7 +2295,7 @@ mod unit_tests {
         let mut page = Page::a4();
         let header = HeaderFooter::new_header("Test Header");
 
-        page.set_header(header.clone());
+        page.set_header(header);
         assert!(page.header().is_some());
 
         if let Some(h) = page.header() {
@@ -2244,7 +2310,7 @@ mod unit_tests {
         let mut page = Page::a4();
         let footer = HeaderFooter::new_footer("Page {{page}} of {{total}}");
 
-        page.set_footer(footer.clone());
+        page.set_footer(footer);
         assert!(page.footer().is_some());
 
         if let Some(f) = page.footer() {

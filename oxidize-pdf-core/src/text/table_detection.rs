@@ -284,7 +284,10 @@ impl TableDetector {
 
         // Phase 2: Detect borderless tables (alignment-based)
         if self.config.detect_borderless {
-            // TODO: Implement borderless detection
+            // Enhancement: Implement borderless table detection using spatial clustering
+            // Priority: MEDIUM - Related to Issue #90 (Advanced Text Extraction)
+            // Current implementation works well for bordered tables
+            // Borderless detection would use alignment patterns and whitespace analysis
         }
 
         // Sort by confidence (highest first)

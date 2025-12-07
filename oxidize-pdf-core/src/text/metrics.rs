@@ -227,7 +227,7 @@ fn get_font_metrics(font: &Font) -> FontMetrics {
                 // Register default metrics for unknown custom fonts
                 let default_metrics = create_default_custom_metrics();
                 register_custom_font_metrics(font_name.clone(), default_metrics.clone());
-                eprintln!(
+                tracing::debug!(
                     "Warning: Using default metrics for unknown custom font: {}",
                     font_name
                 );
@@ -237,7 +237,7 @@ fn get_font_metrics(font: &Font) -> FontMetrics {
         _ => {
             // Standard fonts
             FONT_METRICS.get(font).cloned().unwrap_or_else(|| {
-                eprintln!(
+                tracing::debug!(
                     "Warning: Standard font metrics not found for {:?}, using default",
                     font
                 );

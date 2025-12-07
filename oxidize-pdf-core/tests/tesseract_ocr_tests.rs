@@ -232,7 +232,7 @@ mod tesseract_tests {
                 "   🎉 OCR PIPELINE WORKS! Successfully processed {} contract(s)",
                 successful_tests
             );
-        } else if test_contracts.len() == 0 {
+        } else if test_contracts.is_empty() {
             println!("   ⚠️  No test contracts found - ensure PDFs are in ~/Downloads/ocr/");
         } else {
             println!("   ❌ No contracts could be processed - check PDF parsing");
@@ -240,7 +240,7 @@ mod tesseract_tests {
 
         // The test passes if we can process contracts OR if no contracts are available
         assert!(
-            successful_tests > 0 || test_contracts.len() == 0,
+            successful_tests > 0 || test_contracts.is_empty(),
             "Should successfully process at least one contract or have no contracts to test"
         );
     }

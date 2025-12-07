@@ -1140,7 +1140,7 @@ impl GraphicsContext {
 
         if has_unicode {
             // Warning: Text contains Unicode characters but no Unicode font is set
-            eprintln!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
+            tracing::debug!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
         }
 
         // Begin text object
@@ -2935,7 +2935,7 @@ mod tests {
 
         // Begin transparency group
         let group = TransparencyGroup::new();
-        ctx.begin_transparency_group(group.clone());
+        ctx.begin_transparency_group(group);
         assert!(ctx.in_transparency_group());
         assert!(ctx.current_transparency_group().is_some());
 

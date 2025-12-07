@@ -352,7 +352,7 @@ impl<W: Write> PdfWriter<W> {
         self.write_object(catalog_id, crate::objects::Object::Dictionary(catalog))?;
 
         // Step 5: Write new Pages tree that includes BOTH base pages and new pages
-        let mut all_pages_kids = base_pages_kids.clone();
+        let mut all_pages_kids = base_pages_kids;
 
         // Add references to new pages
         for page_id in &self.page_ids {

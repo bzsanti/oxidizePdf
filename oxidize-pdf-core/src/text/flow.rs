@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn test_text_flow_context_new() {
         let margins = create_test_margins();
-        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let context = TextFlowContext::new(400.0, 600.0, margins);
 
         assert_eq!(context.current_font, Font::Helvetica);
         assert_eq!(context.font_size, 12.0);
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn test_set_font() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.set_font(Font::TimesBold, 16.0);
         assert_eq!(context.current_font, Font::TimesBold);
@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn test_set_line_height() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.set_line_height(1.5);
         assert_eq!(context.line_height(), 1.5);
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn test_set_alignment() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.set_alignment(TextAlign::Center);
         assert_eq!(context.alignment(), TextAlign::Center);
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn test_at_position() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.at(100.0, 200.0);
         let (x, y) = context.cursor_position();
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn test_content_width() {
         let margins = create_test_margins();
-        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let context = TextFlowContext::new(400.0, 600.0, margins);
 
         let content_width = context.content_width();
         assert_eq!(content_width, 300.0); // 400 - 50 - 50
@@ -317,7 +317,7 @@ mod tests {
     #[test]
     fn test_write_wrapped_simple() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.write_wrapped("Hello World").unwrap();
 
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn test_write_paragraph() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         let initial_y = context.cursor_y;
         context.write_paragraph("Test paragraph").unwrap();
@@ -359,7 +359,7 @@ mod tests {
     #[test]
     fn test_cursor_position() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.at(75.0, 125.0);
         let (x, y) = context.cursor_position();
@@ -370,7 +370,7 @@ mod tests {
     #[test]
     fn test_generate_operations() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.write_wrapped("Test").unwrap();
         let ops_bytes = context.generate_operations();
@@ -382,7 +382,7 @@ mod tests {
     #[test]
     fn test_clear_operations() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context.write_wrapped("Test").unwrap();
         assert!(!context.operations().is_empty());
@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn test_page_dimensions() {
         let margins = create_test_margins();
-        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let context = TextFlowContext::new(400.0, 600.0, margins);
 
         let (width, height) = context.page_dimensions();
         assert_eq!(width, 400.0);
@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn test_margins_access() {
         let margins = create_test_margins();
-        let context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let context = TextFlowContext::new(400.0, 600.0, margins);
 
         let ctx_margins = context.margins();
         assert_eq!(ctx_margins.left, 50.0);
@@ -416,7 +416,7 @@ mod tests {
     #[test]
     fn test_method_chaining() {
         let margins = create_test_margins();
-        let mut context = TextFlowContext::new(400.0, 600.0, margins.clone());
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
 
         context
             .set_font(Font::Courier, 10.0)

@@ -40,7 +40,7 @@ fn test_pdf_version_compatibility() {
         pdf.extend_from_slice(b"startxref\n50\n%%EOF\n");
 
         let cursor = Cursor::new(pdf);
-        let result = PdfReader::new(cursor).map(|reader| PdfDocument::new(reader));
+        let result = PdfReader::new(cursor).map(PdfDocument::new);
 
         if should_succeed {
             match result {
@@ -77,7 +77,7 @@ fn test_hybrid_xref_format() {
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled hybrid xref format"),
         Err(e) => println!("Hybrid xref error: {e}"),
     }
@@ -106,7 +106,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
@@ -155,7 +155,7 @@ fn test_deeply_nested_structures() {
     pdf.extend_from_slice(b"startxref\n2000\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Should handle deep nesting without stack overflow
             for i in 1..=2 {
@@ -205,7 +205,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=3 {
                 match doc.get_object(i, 0) {
@@ -244,7 +244,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Parser created with invalid object numbers"),
         Err(e) => println!("Object number validation error: {e}"),
     }
@@ -279,7 +279,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_doc) => {
             println!("Parser created with corrupted page tree");
             // Try to traverse the page tree
@@ -303,7 +303,7 @@ fn test_mixed_line_endings() {
     pdf.extend_from_slice(b"trailer\r<</Size 2>>\rstaartxref\n50\r\n%%EOF");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled mixed line endings"),
         Err(e) => println!("Line ending error: {e}"),
     }
@@ -344,7 +344,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n400\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=3 {
                 match doc.get_object(i, 0) {
@@ -381,7 +381,7 @@ endobject
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Parser created with corrupted indirect syntax"),
         Err(e) => println!("Indirect object syntax error: {e}"),
     }
@@ -404,7 +404,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n150\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Object parsed successfully: {obj:?}");
@@ -432,7 +432,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Number formats parsed successfully: {obj:?}");
@@ -456,7 +456,7 @@ fn test_whitespace_variations() {
     pdf.extend_from_slice(b"startxref\n100\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled various whitespace characters"),
             Err(e) => println!("Whitespace handling error: {e}"),
@@ -489,7 +489,7 @@ endobj% Comment after endobj
     pdf.extend_from_slice(b"startxref\n300\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled various comment placements"),
             Err(e) => println!("Comment parsing error: {e}"),
@@ -527,7 +527,7 @@ endobj
     pdf.extend_from_slice(b"startxref\n200\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=4 {
                 match doc.get_object(i, 0) {

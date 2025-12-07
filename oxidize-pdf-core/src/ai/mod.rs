@@ -88,7 +88,7 @@ pub fn export_to_markdown<R: Read + Seek>(
             .unwrap_or_else(|| "Untitled Document".to_string()),
         page_count: pages.len(),
         created_at: parsed_metadata.creation_date.clone(),
-        author: parsed_metadata.author.clone(),
+        author: parsed_metadata.author,
     };
 
     // Export with metadata and pages
@@ -149,7 +149,7 @@ pub fn export_to_contextual<R: Read + Seek>(
             .unwrap_or_else(|| "Untitled Document".to_string()),
         page_count: pages.len(),
         created_at: parsed_metadata.creation_date.clone(),
-        author: parsed_metadata.author.clone(),
+        author: parsed_metadata.author,
     };
 
     // Export with metadata and pages

@@ -516,7 +516,7 @@ mod tests {
         assert!(debug_str.contains("Highlight"));
 
         // Test Clone
-        let cloned = markup.clone();
+        let cloned = markup;
         assert_eq!(cloned.author, Some("Test Author".to_string()));
         assert!(matches!(cloned.markup_type, MarkupType::Highlight));
     }

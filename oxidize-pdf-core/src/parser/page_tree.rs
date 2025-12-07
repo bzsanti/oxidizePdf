@@ -198,7 +198,7 @@ impl PageTree {
                     // If it has Kids, it's likely a Pages node
                     if node.contains_key("Kids") {
                         if collect_warnings {
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: Inferred Type=Pages for object {} {} R (missing Type field, has Kids)",
                                 node_ref.0, node_ref.1
                             );
@@ -210,7 +210,7 @@ impl PageTree {
                         || (node.contains_key("MediaBox") && !node.contains_key("Kids"))
                     {
                         if collect_warnings {
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: Inferred Type=Page for object {} {} R (missing Type field, has Contents/MediaBox)",
                                 node_ref.0, node_ref.1
                             );
@@ -235,7 +235,7 @@ impl PageTree {
                         // If Kids is missing and we have lenient parsing, use empty array
                         if reader.options().lenient_syntax {
                             if reader.options().collect_warnings {
-                                eprintln!(
+                                tracing::debug!(
                                     "Warning: Missing Kids array in Pages node, using empty array"
                                 );
                             }
@@ -315,7 +315,7 @@ impl PageTree {
                                     // If it has Kids, it's likely a Pages node
                                     if kid_dict.contains_key("Kids") {
                                         if collect_warnings {
-                                            eprintln!(
+                                            tracing::debug!(
                                                 "Warning: Inferred Type=Pages for object {} 0 R (missing Type field, has Kids)",
                                                 kid_ref.0
                                             );
@@ -327,7 +327,7 @@ impl PageTree {
                                         || (kid_dict.contains_key("MediaBox") && !kid_dict.contains_key("Kids"))
                                     {
                                         if collect_warnings {
-                                            eprintln!(
+                                            tracing::debug!(
                                                 "Warning: Inferred Type=Page for object {} 0 R (missing Type field, has Contents/MediaBox)",
                                                 kid_ref.0
                                             );
@@ -411,9 +411,10 @@ impl PageTree {
                     Self::get_rectangle(node, inherited, "MediaBox")?.unwrap_or_else(|| {
                         // Use default Letter size if MediaBox is missing
                         #[cfg(debug_assertions)]
-                        eprintln!(
+                        tracing::debug!(
                             "Warning: Page {} {} R missing MediaBox, using default Letter size",
-                            obj_ref.0, obj_ref.1
+                            obj_ref.0,
+                            obj_ref.1
                         );
                         [0.0, 0.0, 612.0, 792.0]
                     });
@@ -1036,7 +1037,7 @@ mod tests {
         let mut tree = PageTree::new(10);
         let page = create_test_page();
 
-        tree.cache_page(0, page.clone());
+        tree.cache_page(0, page);
 
         let cached = tree.get_cached_page(0);
         assert!(cached.is_some());
@@ -1077,7 +1078,7 @@ mod tests {
         let page = create_test_page();
 
         tree.cache_page(0, page.clone());
-        tree.cache_page(1, page.clone());
+        tree.cache_page(1, page);
         assert_eq!(tree.pages.len(), 2);
 
         tree.clear_cache();

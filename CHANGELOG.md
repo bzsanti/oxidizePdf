@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.6.5] - 2025-12-07
+
+### Fixed
+- **🔧 Linearized PDF Parsing (Issue #98)** - Fixed "Pages is not a dictionary" error
+  - **Problem**: `parse_primary_with_options` was seeking to position 0 to find linearized XRef, ignoring the offset passed via `/Prev` chain
+  - **Root Cause**: This caused the parser to use the partial XRef at the beginning of linearized PDFs instead of the complete XRef at the end
+  - **Solution**: Simplified the function to trust the reader's position, which is already correctly set by the caller
+  - **Impact**: All linearized PDFs now parse correctly (12/12 production PDFs fixed)
+  - **Location**: `oxidize-pdf-core/src/parser/xref.rs`
+
+- **🔧 CJK Font Subsetting (Issue #97)** - Fixed `used_characters` tracking in TextContext
+  - **Problem**: CJK fonts weren't being subsetted correctly due to missing character tracking
+  - **Solution**: Properly track used characters for font subsetting
+
+### Added
+- **🧪 Linearized PDF Tests** - New test suite for linearized PDF parsing
+  - `oxidize-pdf-core/tests/linearized_xref_test.rs`
+  - Covers synthetic fixtures and real-world linearized PDFs
+  - Regression tests for non-linearized PDFs
+
+### Technical
+- **Tests**: 4,703 passing (all green)
+- **Clippy**: Zero warnings
+- **Breaking Changes**: None - All changes are backward compatible
+
 ## [1.6.4] - 2025-10-30
 
 ### Added

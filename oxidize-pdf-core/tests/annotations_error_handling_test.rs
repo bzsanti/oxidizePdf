@@ -117,7 +117,7 @@ fn test_free_text_with_invalid_font_specs() {
     // Test with very long appearance string
     let long_appearance = "x".repeat(10000);
     let mut free_text_long = FreeTextAnnotation::new(rect, "Long test");
-    free_text_long.default_appearance = long_appearance.clone();
+    free_text_long.default_appearance = long_appearance;
 
     let annotation_long = free_text_long.to_annotation();
     if let Some(Object::String(da)) = annotation_long.properties.get("DA") {

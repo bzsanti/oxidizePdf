@@ -291,7 +291,9 @@ pub struct ConsolePasswordProvider;
 
 impl PasswordProvider for ConsolePasswordProvider {
     fn prompt_user_password(&self) -> ParseResult<Option<String>> {
-        println!("PDF is encrypted. Enter user password (or press Enter for empty password):");
+        tracing::debug!(
+            "PDF is encrypted. Enter user password (or press Enter for empty password):"
+        );
 
         let mut input = String::new();
         std::io::stdin()
@@ -307,7 +309,7 @@ impl PasswordProvider for ConsolePasswordProvider {
     }
 
     fn prompt_owner_password(&self) -> ParseResult<Option<String>> {
-        println!("User password failed. Enter owner password:");
+        tracing::debug!("User password failed. Enter owner password:");
 
         let mut input = String::new();
         std::io::stdin()

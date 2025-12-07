@@ -389,7 +389,7 @@ impl PageTreeBuilder {
     /// Add a page to the tree
     pub fn add_page(mut self, page: Page) -> Self {
         self.tree.add_page(page).unwrap_or_else(|e| {
-            eprintln!("Warning: Failed to add page: {}", e);
+            tracing::debug!("Warning: Failed to add page: {}", e);
         });
         self
     }

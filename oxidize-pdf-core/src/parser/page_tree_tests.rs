@@ -63,7 +63,7 @@ startxref\n\
             annotations: None,
         };
 
-        tree.cache_page(0, page.clone());
+        tree.cache_page(0, page);
 
         // Test retrieving cached page
         let cached = tree.get_cached_page(0);
@@ -535,7 +535,7 @@ startxref\n\
         // Test invalid rotation (should be treated as 0)
         let page_invalid = ParsedPage {
             rotation: 45,
-            ..base_page.clone()
+            ..base_page
         };
         assert_eq!(page_invalid.width(), 612.0);
         assert_eq!(page_invalid.height(), 792.0);

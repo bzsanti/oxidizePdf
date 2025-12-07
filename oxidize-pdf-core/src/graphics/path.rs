@@ -391,7 +391,7 @@ mod tests {
         }
 
         let close_cmd = PathCommand::ClosePath;
-        let close_clone = close_cmd.clone();
+        let close_clone = close_cmd;
         match close_clone {
             PathCommand::ClosePath => {}
             _ => panic!("Clone failed for ClosePath"),
