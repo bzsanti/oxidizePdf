@@ -227,39 +227,21 @@ impl XRefTable {
     }
 
     /// Parse xref table from a reader with options
+    ///
+    /// Note: This expects the reader to already be positioned at the xref offset.
+    /// For the primary xref (from startxref), the caller should position the reader.
+    /// For /Prev chain xrefs, the reader is already positioned at the correct offset.
     fn parse_primary_with_options<R: Read + Seek>(
         reader: &mut BufReader<R>,
         options: &super::ParseOptions,
     ) -> ParseResult<Self> {
         let mut table = Self::new();
 
-        // First, check if this is a linearized PDF with XRef at the beginning
-        // Save current position
-        let saved_pos = reader.stream_position()?;
-
-        // Check for linearized PDF by looking for the first object
-        reader.seek(SeekFrom::Start(0))?;
-        if let Ok(xref_offset) = Self::find_linearized_xref(reader) {
-            tracing::debug!("Found linearized PDF with XRef at offset {xref_offset}");
-
-            // Validate offset before using it
-            Self::validate_offset(reader, xref_offset)?;
-
-            table.xref_offset = xref_offset;
-            reader.seek(SeekFrom::Start(xref_offset))?;
-        } else {
-            // Restore position and try traditional approach
-            reader.seek(SeekFrom::Start(saved_pos))?;
-
-            // Find and parse xref the traditional way
-            let xref_offset = Self::find_xref_offset(reader)?;
-
-            // Validate offset before using it
-            Self::validate_offset(reader, xref_offset)?;
-
-            table.xref_offset = xref_offset;
-            reader.seek(SeekFrom::Start(xref_offset))?;
-        }
+        // The reader should already be positioned at the correct xref offset
+        // (either from startxref for primary, or from /Prev for chain entries)
+        // We record the current position as our xref offset
+        let xref_offset = reader.stream_position()?;
+        table.xref_offset = xref_offset;
 
         // Check if this is a traditional xref table or xref stream
         let mut line = String::new();
@@ -553,7 +535,13 @@ impl XRefTable {
         Ok(())
     }
 
-    /// Find linearized XRef by checking if there's an XRef stream near the beginning
+    /// Find linearized XRef by checking if there's an XRef stream near the beginning.
+    ///
+    /// NOTE: This function was previously used incorrectly in `parse_primary_with_options`
+    /// which caused Issue #98 (linearized PDFs failing to find Pages object).
+    /// The function is preserved for potential future use in detecting linearized PDFs,
+    /// but should NOT be used to override the XRef offset from startxref.
+    #[allow(dead_code)]
     fn find_linearized_xref<R: Read + Seek>(reader: &mut BufReader<R>) -> ParseResult<u64> {
         // Skip PDF header
         reader.seek(SeekFrom::Start(0))?;
@@ -1113,7 +1101,11 @@ impl XRefTable {
         None
     }
 
-    /// Validate XRef offset before using it
+    /// Validate XRef offset before using it.
+    ///
+    /// NOTE: This function was previously used in the buggy linearized XRef handling
+    /// that caused Issue #98. Currently unused but preserved for potential future use.
+    #[allow(dead_code)]
     fn validate_offset<R: Read + Seek>(reader: &mut BufReader<R>, offset: u64) -> ParseResult<()> {
         // Get file size
         let file_size = reader.seek(SeekFrom::End(0))?;
