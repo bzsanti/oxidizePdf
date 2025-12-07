@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Lines found: {}", graphics.lines.len());
     if !graphics.lines.is_empty() {
         println!("Sample lines (first 5):");
-        for (i, line) in graphics.lines.iter().take(5).enumerate() {
+        for (_i, line) in graphics.lines.iter().take(5).enumerate() {
             println!("  {:?}", line.orientation);
         }
     }
@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nText fragments: {}", text.fragments.len());
     if !text.fragments.is_empty() {
         println!("Sample text (first 5):");
-        for (i, frag) in text.fragments.iter().take(5).enumerate() {
+        for (_i, frag) in text.fragments.iter().take(5).enumerate() {
             let preview: String = frag.text.chars().take(30).collect();
             println!("  '{}' at ({:.0},{:.0})", preview, frag.x, frag.y);
         }

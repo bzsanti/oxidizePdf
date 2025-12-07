@@ -9,12 +9,13 @@
 //!
 //! Run with: cargo run --example invoice_extraction_advanced
 
+use oxidize_pdf::document::Document;
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::text::invoice::{InvoiceData, InvoiceExtractor, InvoiceField};
-use oxidize_pdf::{Document, PageSize};
+use oxidize_pdf::{Font, Page};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::Path;
+use std::fs::{self, File};
 
 /// Serializable invoice data for JSON export
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +43,9 @@ struct ProcessingResult {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Invoice Extraction - Advanced Example ===\n");
+
+    // Ensure output directory exists
+    fs::create_dir_all("examples/results")?;
 
     // Step 1: Create sample invoices in different languages
     println!("1. Creating sample invoices...");
@@ -99,40 +103,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Create sample invoices in different languages
 fn create_sample_invoices() -> Result<(), Box<dyn std::error::Error>> {
-    let invoices = vec![
-        ("spanish", create_spanish_invoice),
-        ("english", create_english_invoice),
-        ("german", create_german_invoice),
-        ("italian", create_italian_invoice),
-    ];
-
-    for (lang, create_fn) in invoices {
-        let path = format!("examples/results/sample_invoice_{}.pdf", lang);
-        create_fn(&path)?;
-    }
-
+    create_spanish_invoice("examples/results/sample_invoice_spanish.pdf")?;
+    create_english_invoice("examples/results/sample_invoice_english.pdf")?;
+    create_german_invoice("examples/results/sample_invoice_german.pdf")?;
+    create_italian_invoice("examples/results/sample_invoice_italian.pdf")?;
     Ok(())
 }
 
 /// Create Spanish invoice
 fn create_spanish_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut doc = Document::new();
-    let mut page = doc.add_page(PageSize::A4);
+    let mut page = Page::a4();
 
-    page.add_text("FACTURA", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Factura Nº: ESP-2025-001", 50.0, 720.0)?
-        .set_font_size(12.0);
-    page.add_text("Fecha: 20/01/2025", 50.0, 700.0)?
-        .set_font_size(10.0);
-    page.add_text("CIF: A12345678", 50.0, 680.0)?
-        .set_font_size(10.0);
-    page.add_text("Base Imponible: 1.000,00 €", 50.0, 300.0)?
-        .set_font_size(12.0);
-    page.add_text("IVA (21%): 210,00 €", 50.0, 280.0)?
-        .set_font_size(12.0);
-    page.add_text("Total: 1.210,00 €", 50.0, 260.0)?
-        .set_font_size(14.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(50.0, 750.0)
+        .write("FACTURA")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 720.0)
+        .write("Factura Nº: ESP-2025-001")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 700.0)
+        .write("Fecha: 20/01/2025")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 680.0)
+        .write("CIF: A12345678")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 300.0)
+        .write("Base Imponible: 1.000,00 €")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 280.0)
+        .write("IVA (21%): 210,00 €")?;
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(50.0, 260.0)
+        .write("Total: 1.210,00 €")?;
 
+    doc.add_page(page);
     doc.save(path)?;
     Ok(())
 }
@@ -140,22 +152,38 @@ fn create_spanish_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> 
 /// Create English invoice
 fn create_english_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut doc = Document::new();
-    let mut page = doc.add_page(PageSize::A4);
+    let mut page = Page::a4();
 
-    page.add_text("INVOICE", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Invoice Number: UK-2025-042", 50.0, 720.0)?
-        .set_font_size(12.0);
-    page.add_text("Date: 20/01/2025", 50.0, 700.0)?
-        .set_font_size(10.0);
-    page.add_text("VAT Number: GB123456789", 50.0, 680.0)?
-        .set_font_size(10.0);
-    page.add_text("Subtotal: £850.00", 50.0, 300.0)?
-        .set_font_size(12.0);
-    page.add_text("VAT (20%): £170.00", 50.0, 280.0)?
-        .set_font_size(12.0);
-    page.add_text("Total: £1,020.00", 50.0, 260.0)?
-        .set_font_size(14.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(50.0, 750.0)
+        .write("INVOICE")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 720.0)
+        .write("Invoice Number: UK-2025-042")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 700.0)
+        .write("Date: 20/01/2025")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 680.0)
+        .write("VAT Number: GB123456789")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 300.0)
+        .write("Subtotal: £850.00")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 280.0)
+        .write("VAT (20%): £170.00")?;
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(50.0, 260.0)
+        .write("Total: £1,020.00")?;
 
+    doc.add_page(page);
     doc.save(path)?;
     Ok(())
 }
@@ -163,22 +191,38 @@ fn create_english_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> 
 /// Create German invoice
 fn create_german_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut doc = Document::new();
-    let mut page = doc.add_page(PageSize::A4);
+    let mut page = Page::a4();
 
-    page.add_text("RECHNUNG", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Rechnungsnummer: DE-2025-089", 50.0, 720.0)?
-        .set_font_size(12.0);
-    page.add_text("Datum: 20.01.2025", 50.0, 700.0)?
-        .set_font_size(10.0);
-    page.add_text("USt-IdNr.: DE123456789", 50.0, 680.0)?
-        .set_font_size(10.0);
-    page.add_text("Nettobetrag: 1.500,00 €", 50.0, 300.0)?
-        .set_font_size(12.0);
-    page.add_text("MwSt. (19%): 285,00 €", 50.0, 280.0)?
-        .set_font_size(12.0);
-    page.add_text("Gesamtbetrag: 1.785,00 €", 50.0, 260.0)?
-        .set_font_size(14.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(50.0, 750.0)
+        .write("RECHNUNG")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 720.0)
+        .write("Rechnungsnummer: DE-2025-089")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 700.0)
+        .write("Datum: 20.01.2025")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 680.0)
+        .write("USt-IdNr.: DE123456789")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 300.0)
+        .write("Nettobetrag: 1.500,00 €")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 280.0)
+        .write("MwSt. (19%): 285,00 €")?;
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(50.0, 260.0)
+        .write("Gesamtbetrag: 1.785,00 €")?;
 
+    doc.add_page(page);
     doc.save(path)?;
     Ok(())
 }
@@ -186,39 +230,57 @@ fn create_german_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 /// Create Italian invoice
 fn create_italian_invoice(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut doc = Document::new();
-    let mut page = doc.add_page(PageSize::A4);
+    let mut page = Page::a4();
 
-    page.add_text("FATTURA", 50.0, 750.0)?.set_font_size(24.0);
-    page.add_text("Numero Fattura: IT-2025-156", 50.0, 720.0)?
-        .set_font_size(12.0);
-    page.add_text("Data: 20/01/2025", 50.0, 700.0)?
-        .set_font_size(10.0);
-    page.add_text("Partita IVA: IT12345678901", 50.0, 680.0)?
-        .set_font_size(10.0);
-    page.add_text("Imponibile: 2.000,00 €", 50.0, 300.0)?
-        .set_font_size(12.0);
-    page.add_text("IVA (22%): 440,00 €", 50.0, 280.0)?
-        .set_font_size(12.0);
-    page.add_text("Totale: 2.440,00 €", 50.0, 260.0)?
-        .set_font_size(14.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(50.0, 750.0)
+        .write("FATTURA")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 720.0)
+        .write("Numero Fattura: IT-2025-156")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 700.0)
+        .write("Data: 20/01/2025")?;
+    page.text()
+        .set_font(Font::Helvetica, 10.0)
+        .at(50.0, 680.0)
+        .write("Partita IVA: IT12345678901")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 300.0)
+        .write("Imponibile: 2.000,00 €")?;
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(50.0, 280.0)
+        .write("IVA (22%): 440,00 €")?;
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(50.0, 260.0)
+        .write("Totale: 2.440,00 €")?;
 
+    doc.add_page(page);
     doc.save(path)?;
     Ok(())
 }
 
 /// Batch process multiple invoices with error handling
 fn batch_process_invoices() -> Result<Vec<ProcessingResult>, Box<dyn std::error::Error>> {
-    let languages = vec!["spanish", "english", "german", "italian"];
+    let languages = vec![
+        ("spanish", "es"),
+        ("english", "en"),
+        ("german", "de"),
+        ("italian", "it"),
+    ];
     let mut results = Vec::new();
 
-    let text_extractor = TextExtractor::new();
-    let options = ExtractionOptions::default();
-
-    for lang in languages {
-        let filename = format!("sample_invoice_{}.pdf", lang);
+    for (lang_name, lang_code) in languages {
+        let filename = format!("sample_invoice_{}.pdf", lang_name);
         let path = format!("examples/results/{}", filename);
 
-        let result = match process_single_invoice(&path, lang, &text_extractor, &options) {
+        let result = match process_single_invoice(&path, lang_code) {
             Ok(data) => ProcessingResult {
                 filename: filename.clone(),
                 success: true,
@@ -242,26 +304,19 @@ fn batch_process_invoices() -> Result<Vec<ProcessingResult>, Box<dyn std::error:
 /// Process a single invoice
 fn process_single_invoice(
     path: &str,
-    language: &str,
-    text_extractor: &TextExtractor,
-    options: &ExtractionOptions,
+    lang_code: &str,
 ) -> Result<InvoiceData, Box<dyn std::error::Error>> {
-    // Open PDF
-    let doc = Document::open(path)?;
+    // Open PDF using parser API
+    let file = File::open(path)?;
+    let reader = PdfReader::new(file)?;
+    let pdf_doc = PdfDocument::new(reader);
 
     // Extract text
-    let page = doc.get_page(1)?;
-    let extracted_text = text_extractor.extract_text(&doc, page, options)?;
+    let options = ExtractionOptions::default();
+    let mut text_extractor = TextExtractor::with_options(options);
+    let extracted_text = text_extractor.extract_from_page(&pdf_doc, 0)?;
 
     // Extract invoice data with language-specific configuration
-    let lang_code = match language {
-        "spanish" => "es",
-        "english" => "en",
-        "german" => "de",
-        "italian" => "it",
-        _ => "en",
-    };
-
     let extractor = InvoiceExtractor::builder()
         .with_language(lang_code)
         .confidence_threshold(0.7)
@@ -283,7 +338,7 @@ fn export_to_json(results: &[ProcessingResult]) -> Result<(), Box<dyn std::error
                     source_file: result.filename.clone(),
                     language: data
                         .metadata
-                        .language
+                        .detected_language
                         .map(|l| l.code().to_string())
                         .unwrap_or_else(|| "unknown".to_string()),
                     confidence: data.metadata.extraction_confidence,
@@ -332,13 +387,16 @@ fn field_value_to_string(field: &InvoiceField) -> String {
 /// Demonstrate how confidence threshold affects extraction
 fn demonstrate_threshold_tuning() -> Result<(), Box<dyn std::error::Error>> {
     let path = "examples/results/sample_invoice_spanish.pdf";
-    let doc = Document::open(path)?;
 
-    let text_extractor = TextExtractor::new();
+    // Open PDF
+    let file = File::open(path)?;
+    let reader = PdfReader::new(file)?;
+    let pdf_doc = PdfDocument::new(reader);
+
+    // Extract text
     let options = ExtractionOptions::default();
-
-    let page = doc.get_page(1)?;
-    let extracted_text = text_extractor.extract_text(&doc, page, &options)?;
+    let mut text_extractor = TextExtractor::with_options(options);
+    let extracted_text = text_extractor.extract_from_page(&pdf_doc, 0)?;
 
     let thresholds = vec![0.5, 0.7, 0.9];
 

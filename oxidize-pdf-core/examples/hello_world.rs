@@ -1,85 +1,79 @@
-use oxidize_pdf::geometry::{Point, Rectangle};
-use oxidize_pdf::graphics::{Color, PaintType};
-use oxidize_pdf::*;
-use std::fs;
+//! Hello World example - Basic PDF generation with oxidize-pdf
+//!
+//! This example demonstrates the basic functionality of oxidize-pdf:
+//! - Creating a document
+//! - Adding a page
+//! - Writing text with fonts
+//! - Drawing shapes
+//! - Saving the PDF
 
-/// Crear un PDF básico "Hello World" para verificar funcionalidad real
+use oxidize_pdf::error::Result;
+use oxidize_pdf::{Color, Document, Font, Page};
+
 fn main() -> Result<()> {
     println!("🚀 Creando PDF 'Hello World'...");
 
-    // Crear documento
-    let mut document = Document::new();
+    // Create a new document
+    let mut doc = Document::new();
 
-    // Configurar metadatos
-    document.set_title("Hello World PDF");
-    document.set_author("oxidize-pdf");
-    document.set_subject("Test de funcionalidad básica");
+    // Set document metadata
+    doc.set_title("Hello World PDF");
+    doc.set_author("oxidize-pdf");
+    doc.set_subject("Test de funcionalidad básica");
 
-    // Crear página
-    let page = document.add_page();
-    let mut graphics = page.graphics();
+    // Create an A4 page
+    let mut page = Page::a4();
 
-    // Configurar texto
-    let font = document.add_font("Helvetica")?;
+    // Add main title
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(100.0, 700.0)
+        .write("Hello World!")?;
 
-    // Configurar gráficos
-    graphics.begin_text_block()?;
-    graphics.set_font(&font, 24.0)?;
-    graphics.set_text_position(Point::new(100.0, 700.0))?;
-    graphics.set_fill_color(Color::rgb(0.0, 0.0, 0.0))?;
+    // Add subtitle
+    page.text()
+        .set_font(Font::Helvetica, 14.0)
+        .at(100.0, 650.0)
+        .write("Este PDF fue generado por oxidize-pdf")?;
 
-    // Escribir texto
-    graphics.show_text("Hello World!")?;
-    graphics.move_to(Point::new(100.0, 650.0))?;
-    graphics.show_text("Este PDF fue generado por oxidize-pdf")?;
-    graphics.move_to(Point::new(100.0, 600.0))?;
-    graphics.show_text(&format!(
-        "Fecha: {}",
-        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
-    ))?;
+    // Add timestamp
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(100.0, 600.0)
+        .write(&format!(
+            "Fecha: {}",
+            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
+        ))?;
 
-    graphics.end_text_block()?;
+    // Draw a blue rectangle
+    page.graphics()
+        .set_stroke_color(Color::rgb(0.0, 0.5, 1.0))
+        .set_line_width(2.0)
+        .rect(100.0, 400.0, 300.0, 100.0)
+        .stroke();
 
-    // Agregar forma geométrica simple
-    graphics.set_stroke_color(Color::rgb(0.0, 0.5, 1.0))?;
-    graphics.set_line_width(2.0)?;
-    graphics.rectangle(Rectangle::new(
-        Point::new(100.0, 400.0),
-        Point::new(400.0, 500.0),
-    ))?;
-    graphics.stroke()?;
+    // Draw a red circle
+    page.graphics()
+        .set_fill_color(Color::red())
+        .circle(250.0, 300.0, 50.0)
+        .fill();
 
-    // Agregar círculo
-    graphics.set_fill_color(Color::rgb(1.0, 0.0, 0.0))?;
-    graphics.circle(Point::new(250.0, 300.0), 50.0)?;
-    graphics.fill()?;
+    // Add the page to the document
+    doc.add_page(page);
 
-    // Crear directorio si no existe
-    fs::create_dir_all("examples/results")?;
-
-    // Generar PDF
-    let pdf_bytes = document.save()?;
-
-    // Guardar archivo
+    // Save the document
     let output_path = "examples/results/hello_world.pdf";
-    fs::write(output_path, &pdf_bytes)?;
+    doc.save(output_path)?;
 
-    println!("✅ PDF generado exitosamente: {}", output_path);
-    println!("📊 Tamaño: {} bytes", pdf_bytes.len());
-
-    // Verificar que el archivo se puede leer
-    if let Ok(file_size) = fs::metadata(output_path).map(|m| m.len()) {
-        println!("📁 Archivo verificado: {} bytes en disco", file_size);
-
-        if file_size > 0 {
-            println!("🎉 ¡Funcionalidad básica CONFIRMADA!");
-            return Ok(());
-        }
+    // Verify the file was created
+    if let Ok(metadata) = std::fs::metadata(output_path) {
+        let file_size = metadata.len();
+        println!("✅ PDF generado exitosamente: {}", output_path);
+        println!("📊 Tamaño: {} bytes", file_size);
+        println!("🎉 ¡Funcionalidad básica CONFIRMADA!");
     }
 
-    Err(PdfError::InvalidOperation(
-        "PDF generado pero vacío".to_string(),
-    ))
+    Ok(())
 }
 
 #[cfg(test)]
@@ -88,14 +82,17 @@ mod tests {
 
     #[test]
     fn test_hello_world_generation() {
+        // Ensure results directory exists
+        std::fs::create_dir_all("examples/results").ok();
+
         let result = main();
         assert!(result.is_ok(), "Should generate PDF successfully");
 
-        // Verificar que el archivo existe
+        // Verify the file exists
         let path = "examples/results/hello_world.pdf";
         assert!(std::path::Path::new(path).exists(), "PDF file should exist");
 
-        // Verificar que tiene contenido
+        // Verify it has content
         let file_size = std::fs::metadata(path).unwrap().len();
         assert!(file_size > 100, "PDF should have substantial content");
     }

@@ -24,22 +24,25 @@ use oxidize_pdf::performance::{
     PerformancePage, ResourcePool, StreamingOptions, StreamingPageContent, StreamingPdfWriter,
 };
 
+#[cfg(feature = "performance")]
 use oxidize_pdf::graphics::Color;
+#[cfg(feature = "performance")]
 use oxidize_pdf::text::Font;
+#[cfg(feature = "performance")]
 use std::sync::Arc;
+#[cfg(feature = "performance")]
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "performance"))]
     {
-        println!("❌ Performance features not enabled!");
+        println!("Performance features not enabled!");
         println!("Run with: cargo run --example high_performance_demo --features performance");
-        return Ok(());
     }
 
     #[cfg(feature = "performance")]
     {
-        println!("🚀 oxidize-pdf High Performance Demo");
+        println!("oxidize-pdf High Performance Demo");
         println!("=====================================");
         println!();
 
@@ -76,8 +79,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         print_performance_report(&monitor, total_time);
 
         println!();
-        println!("✅ Demo completed successfully!");
-        println!("📊 Check examples/results/ for generated PDF files");
+        println!("Demo completed successfully!");
+        println!("Check examples/results/ for generated PDF files");
     }
 
     Ok(())

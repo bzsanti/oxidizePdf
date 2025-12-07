@@ -137,16 +137,16 @@ Late Fee: {{late_fee}}
 
     // Render all sections
     let header = Template::render(header_template, context)
-        .map_err(|e| oxidize_pdf::OxidizePdfError::Custom(format!("Template error: {}", e)))?;
+        .map_err(|e| oxidize_pdf::PdfError::InvalidStructure(format!("Template error: {}", e)))?;
 
     let customer_section = Template::render(customer_template, context)
-        .map_err(|e| oxidize_pdf::OxidizePdfError::Custom(format!("Template error: {}", e)))?;
+        .map_err(|e| oxidize_pdf::PdfError::InvalidStructure(format!("Template error: {}", e)))?;
 
     let services_section = Template::render(services_template, context)
-        .map_err(|e| oxidize_pdf::OxidizePdfError::Custom(format!("Template error: {}", e)))?;
+        .map_err(|e| oxidize_pdf::PdfError::InvalidStructure(format!("Template error: {}", e)))?;
 
     let billing_section = Template::render(billing_template, context)
-        .map_err(|e| oxidize_pdf::OxidizePdfError::Custom(format!("Template error: {}", e)))?;
+        .map_err(|e| oxidize_pdf::PdfError::InvalidStructure(format!("Template error: {}", e)))?;
 
     Ok(InvoiceContent {
         header,
