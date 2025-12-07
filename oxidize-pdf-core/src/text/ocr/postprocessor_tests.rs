@@ -298,7 +298,7 @@ fn test_fragment_confidence_report() {
 
     let report = fragment.confidence_report();
 
-    println!("Confidence report:\n{}", report);
+    tracing::debug!("Confidence report:\n{}", report);
 
     // Should contain fragment confidence
     assert!(

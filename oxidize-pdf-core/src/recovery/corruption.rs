@@ -352,7 +352,7 @@ mod tests {
             CorruptionType::CorruptXRef,
             CorruptionType::MissingEOF,
         ];
-        let multiple = CorruptionType::Multiple(types.clone());
+        let multiple = CorruptionType::Multiple(types);
 
         match &multiple {
             CorruptionType::Multiple(inner) => {

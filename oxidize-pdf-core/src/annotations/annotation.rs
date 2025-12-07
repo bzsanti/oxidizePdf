@@ -783,7 +783,7 @@ mod tests {
             .with_contents("Free text annotation")
             .with_name("annotation_1")
             .with_color(Color::Rgb(0.0, 1.0, 0.0))
-            .with_border(border.clone())
+            .with_border(border)
             .with_flags(flags);
 
         assert_eq!(

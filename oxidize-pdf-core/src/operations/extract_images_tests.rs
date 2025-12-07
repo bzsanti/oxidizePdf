@@ -355,7 +355,7 @@ mod tests {
         let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0x00, 0x00];
         let result = extractor.detect_image_format_from_data(&jpeg_data);
         if result.is_err() {
-            println!("JPEG detection failed: {result:?}");
+            tracing::debug!("JPEG detection failed: {result:?}");
         }
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ImageFormat::Jpeg);
@@ -471,7 +471,7 @@ mod tests {
         // Test with actual PDF that contains images
         let fixture_path = "tests/fixtures/Cold_Email_Hacks.pdf";
         if !std::path::Path::new(fixture_path).exists() {
-            eprintln!("Skipping test: fixture not found");
+            tracing::debug!("Skipping test: fixture not found");
             return;
         }
 
@@ -495,7 +495,7 @@ mod tests {
 
         let images = result.unwrap();
         // Cold_Email_Hacks.pdf might have images, but we don't hardcode expectations
-        eprintln!(
+        tracing::debug!(
             "Extracted {} images from Cold_Email_Hacks.pdf",
             images.len()
         );
@@ -516,7 +516,7 @@ mod tests {
     fn test_extract_from_specific_page() {
         let fixture_path = "tests/fixtures/Cold_Email_Hacks.pdf";
         if !std::path::Path::new(fixture_path).exists() {
-            eprintln!("Skipping test: fixture not found");
+            tracing::debug!("Skipping test: fixture not found");
             return;
         }
 
@@ -739,7 +739,7 @@ mod tests {
         // Test that min_size filter works correctly
         let fixture_path = "tests/fixtures/Cold_Email_Hacks.pdf";
         if !std::path::Path::new(fixture_path).exists() {
-            eprintln!("Skipping test: fixture not found");
+            tracing::debug!("Skipping test: fixture not found");
             return;
         }
 

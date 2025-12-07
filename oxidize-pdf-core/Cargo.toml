@@ -86,156 +86,153 @@ tempfile = "3.8"
 serde_json = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
 indicatif = "0.17"
+tracing-subscriber = { workspace = true }
 
 [[example]]
 name = "font_spacing_test"
-path = "../examples/src/font_spacing_test.rs"
+path = "examples/font_spacing_test.rs"
 
 [[example]]
 name = "font_subsetting_test"
-path = "../examples/src/font_subsetting_test.rs"
+path = "examples/font_subsetting_test.rs"
 
 [[example]]
 name = "field_actions"
-path = "../examples/src/field_actions.rs"
+path = "examples/field_actions.rs"
 
 [[example]]
 name = "form_validation"
-path = "../examples/src/form_validation.rs"
+path = "examples/form_validation.rs"
 
 [[example]]
 name = "generate_jpeg_test_fixture"
-path = "../examples/src/generate_jpeg_test_fixture.rs"
+path = "examples/generate_jpeg_test_fixture.rs"
 
 [[example]]
 name = "button_fields_demo"
-path = "../examples/src/button_fields_demo.rs"
+path = "examples/button_fields_demo.rs"
 
 [[example]]
 name = "calibrated_colors_demo"
-path = "../examples/src/calibrated_colors_demo.rs"
+path = "examples/calibrated_colors_demo.rs"
 
 [[example]]
 name = "generate_compliance_report"
-path = "../examples/src/generate_compliance_report.rs"
+path = "examples/generate_compliance_report.rs"
 
 [[example]]
 name = "parse_iso_spec"
-path = "../examples/src/parse_iso_spec.rs"
+path = "examples/parse_iso_spec.rs"
 
 [[example]]
 name = "expand_iso_matrix"
-path = "../examples/src/expand_iso_matrix.rs"
+path = "examples/expand_iso_matrix.rs"
 
 [[example]]
 name = "compare_iso_matrices"
-path = "../examples/src/compare_iso_matrices.rs"
+path = "examples/compare_iso_matrices.rs"
 
 [[example]]
 name = "test_corrupt_pdf_issue47"
-path = "../examples/src/test_corrupt_pdf_issue47.rs"
+path = "examples/test_corrupt_pdf_issue47.rs"
 
 [[example]]
 name = "test_cjk_fonts"
-path = "../examples/src/test_cjk_fonts.rs"
+path = "examples/test_cjk_fonts.rs"
 
 [[example]]
 name = "test_cjk_comprehensive"
-path = "../examples/src/test_cjk_comprehensive.rs"
+path = "examples/test_cjk_comprehensive.rs"
 
 [[example]]
 name = "test_cjk_preview_compatibility"
-path = "../examples/src/test_cjk_preview_compatibility.rs"
+path = "examples/test_cjk_preview_compatibility.rs"
 
 [[example]]
 name = "demo_issues_fixed"
-path = "../examples/src/demo_issues_fixed.rs"
+path = "examples/demo_issues_fixed.rs"
 
 [[example]]
 name = "advanced_tables_example"
-path = "../examples/advanced_tables_example.rs"
+path = "examples/advanced_tables_example.rs"
 
 [[example]]
 name = "advanced_tables_landscape_example"
-path = "../examples/advanced_tables_landscape_example.rs"
+path = "examples/advanced_tables_landscape_example.rs"
 
 [[example]]
 name = "advanced_tables_adjusted_example"
-path = "../examples/advanced_tables_adjusted_example.rs"
+path = "examples/advanced_tables_adjusted_example.rs"
 
 [[example]]
 name = "advanced_tables_truncated_example"
-path = "../examples/advanced_tables_truncated_example.rs"
+path = "examples/advanced_tables_truncated_example.rs"
 
 [[example]]
 name = "charts_example"
-path = "../examples/charts_example.rs"
+path = "examples/charts_example.rs"
 
 [[example]]
 name = "charts_coordinate_problem"
-path = "../examples/charts_coordinate_problem.rs"
+path = "examples/charts_coordinate_problem.rs"
 
 [[example]]
 name = "charts_fixed_example"
-path = "../examples/charts_fixed_example.rs"
+path = "examples/charts_fixed_example.rs"
 
 [[example]]
 name = "charts_text_alignment_test"
-path = "../examples/charts_text_alignment_test.rs"
+path = "examples/charts_text_alignment_test.rs"
 
 [[example]]
 name = "charts_comprehensive_test"
-path = "../examples/charts_comprehensive_test.rs"
+path = "examples/charts_comprehensive_test.rs"
 
 [[example]]
 name = "realistic_document_benchmark"
-path = "../examples/src/realistic_document_benchmark.rs"
+path = "examples/realistic_document_benchmark.rs"
 
 # Legacy trivial benchmark (deprecated - use realistic_document_benchmark)
 [[example]]
 name = "simple_document_benchmark"
-path = "../examples/src/simple_document_benchmark.rs"
+path = "examples/simple_document_benchmark.rs"
 
 [[example]]
 name = "test_row_alignment_fix"
-path = "../examples/src/test_row_alignment_fix.rs"
+path = "examples/test_row_alignment_fix.rs"
 
 [[example]]
 name = "debug_flate_predictor"
-path = "../examples/src/debug_flate_predictor.rs"
+path = "examples/debug_flate_predictor.rs"
 
 [[example]]
 name = "analyze_decoded_stream"
-path = "../examples/src/analyze_decoded_stream.rs"
+path = "examples/analyze_decoded_stream.rs"
 
 [[example]]
 name = "debug_xref_streams"
-path = "../examples/src/debug_xref_streams.rs"
+path = "examples/debug_xref_streams.rs"
 
 [[example]]
 name = "analyze_failing_stream"
-path = "../examples/src/analyze_failing_stream.rs"
-
-[[example]]
-name = "diagnose_xref_confusion"
-path = "../examples/src/diagnose_xref_confusion.rs"
+path = "examples/analyze_failing_stream.rs"
 
 [[example]]
 name = "debug_predictor_structure"
-path = "../examples/src/debug_predictor_structure.rs"
+path = "examples/debug_predictor_structure.rs"
 
 [[example]]
 name = "extract_page_14"
-path = "../examples/src/extract_page_14.rs"
+path = "examples/extract_page_14.rs"
 
 [[example]]
 name = "extract_multiple_pages"
-path = "../examples/src/extract_multiple_pages.rs"
+path = "examples/extract_multiple_pages.rs"
 
 # Batch processing example
 [[example]]
 name = "batch_processing"
-path = "../examples/src/batch_processing.rs"
+path = "examples/batch_processing.rs"
 required-features = ["rayon"]
 
 # Temporarily disabled examples with compilation errors
@@ -252,118 +249,118 @@ required-features = ["rayon"]
 
 [[example]]
 name = "medium_complexity_benchmark"
-path = "../examples/src/medium_complexity_benchmark.rs"
+path = "examples/medium_complexity_benchmark.rs"
 
 [[example]]
 name = "high_complexity_benchmark"
-path = "../examples/src/high_complexity_benchmark.rs"
+path = "examples/high_complexity_benchmark.rs"
 
 [[example]]
 name = "extreme_complexity_benchmark"
-path = "../examples/src/extreme_complexity_benchmark.rs"
+path = "examples/extreme_complexity_benchmark.rs"
 
 [[example]]
 name = "tesseract_debug"
-path = "../examples/src/tesseract_debug.rs"
+path = "examples/tesseract_debug.rs"
 
 
 [[example]]
 name = "test_ocr_with_tesseract"
-path = "../examples/src/test_ocr_with_tesseract.rs"
+path = "examples/test_ocr_with_tesseract.rs"
 required-features = ["ocr-tesseract"]
 
 [[example]]
 name = "test_extract_text_issue47"
-path = "../examples/src/test_extract_text_issue47.rs"
+path = "examples/test_extract_text_issue47.rs"
 
 [[example]]
 name = "test_parent_resources"
-path = "../examples/src/test_parent_resources.rs"
+path = "examples/test_parent_resources.rs"
 
 [[example]]
 name = "test_issue47_verification"
-path = "../examples/src/test_issue47_verification.rs"
+path = "examples/test_issue47_verification.rs"
 
 [[example]]
 name = "debug_font_encoding"
-path = "../examples/src/debug_font_encoding.rs"
+path = "examples/debug_font_encoding.rs"
 
 [[example]]
 name = "test_random_fixtures"
-path = "../examples/src/test_random_fixtures.rs"
+path = "examples/test_random_fixtures.rs"
 
 [[example]]
 name = "test_random_fixtures_simple"
-path = "../examples/src/test_random_fixtures_simple.rs"
+path = "examples/test_random_fixtures_simple.rs"
 
 [[example]]
 name = "test_text_extraction_demo"
-path = "../examples/src/test_text_extraction_demo.rs"
+path = "examples/test_text_extraction_demo.rs"
 
 [[example]]
 name = "test_random_fixtures_extraction"
-path = "../examples/src/test_random_fixtures_extraction.rs"
+path = "examples/test_random_fixtures_extraction.rs"
 
 [[example]]
 name = "test_all_fixtures_extraction"
-path = "../examples/src/test_all_fixtures_extraction.rs"
+path = "examples/test_all_fixtures_extraction.rs"
 
 [[example]]
 name = "test_error_fixes"
-path = "../examples/src/test_error_fixes.rs"
+path = "examples/test_error_fixes.rs"
 required-features = ["rand"]
 
 [[example]]
 name = "transparency"
-path = "../examples/src/transparency.rs"
+path = "examples/transparency.rs"
 
 [[example]]
 name = "debug_transparency"
-path = "../examples/src/debug_transparency.rs"
+path = "examples/debug_transparency.rs"
 
 [[example]]
 name = "convert_pdf_ocr"
-path = "../examples/src/convert_pdf_ocr.rs"
+path = "examples/convert_pdf_ocr.rs"
 
 [[example]]
 name = "test_ocr_simple"
-path = "../examples/src/test_ocr_simple.rs"
+path = "examples/test_ocr_simple.rs"
 
 [[example]]
 name = "extract_images_demo"
-path = "../examples/src/extract_images_demo.rs"
+path = "examples/extract_images_demo.rs"
 
 [[example]]
 name = "dashboard_sales_report"
-path = "../examples/src/dashboard_sales_report.rs"
+path = "examples/dashboard_sales_report.rs"
 
 [[example]]
 name = "dashboard_templates_demo"
-path = "../examples/src/dashboard_templates_demo.rs"
+path = "examples/dashboard_templates_demo.rs"
 
 [[example]]
 name = "heatmap_simple_test"
-path = "../examples/src/heatmap_simple_test.rs"
+path = "examples/heatmap_simple_test.rs"
 
 [[example]]
 name = "pivot_table_simple_test"
-path = "../examples/src/pivot_table_simple_test.rs"
+path = "examples/pivot_table_simple_test.rs"
 
 [[example]]
 name = "scatter_plot_simple_test"
-path = "../examples/src/scatter_plot_simple_test.rs"
+path = "examples/scatter_plot_simple_test.rs"
 
 [[example]]
 name = "treemap_simple_test"
-path = "../examples/src/treemap_simple_test.rs"
+path = "examples/treemap_simple_test.rs"
 
 [[example]]
 name = "charts_dashboard_integration_test"
-path = "../examples/src/charts_dashboard_integration_test.rs"
+path = "examples/charts_dashboard_integration_test.rs"
 
 [[example]]
 name = "line_chart_dashboard_test"
-path = "../examples/src/line_chart_dashboard_test.rs"
+path = "examples/line_chart_dashboard_test.rs"
 
 # Removed test_confidential_ocr example - file deleted for cleanup
 
@@ -406,6 +403,9 @@ default = ["compression", "ocr-tesseract"]
 # Basic features
 compression = ["dep:flate2"]
 
+# Debug features
+verbose-debug = []  # Enable verbose debug logging (disabled by default for zero runtime cost)
+
 # Image processing features
 external-images = ["dep:image"]
 
@@ -431,63 +431,51 @@ enterprise = []  # Commercial Enterprise edition
 
 [[example]]
 name = "ai_ready_invoice"
-path = "../examples/src/ai_ready_invoice.rs"
+path = "examples/ai_ready_invoice.rs"
 
 [[example]]
 name = "ai_ready_contract"
-path = "../examples/src/ai_ready_contract.rs"
+path = "examples/ai_ready_contract.rs"
 
 [[example]]
 name = "ai_ready_resume"
-path = "../examples/src/ai_ready_resume.rs"
-
-[[example]]
-name = "basic_chunking"
-path = "../examples/ai_pipelines/basic_chunking.rs"
-
-[[example]]
-name = "rag_pipeline"
-path = "../examples/ai_pipelines/rag_pipeline.rs"
-
-[[example]]
-name = "validate_real_pdfs"
-path = "../examples/validation/validate_real_pdfs.rs"
+path = "examples/ai_ready_resume.rs"
 
 [[example]]
 name = "xmp_metadata_demo"
-path = "../examples/src/xmp_metadata_demo.rs"
+path = "examples/xmp_metadata_demo.rs"
 
 [[example]]
 name = "incremental_form_update"
-path = "../examples/incremental_form_update.rs"
+path = "examples/incremental_form_update.rs"
 
 [[example]]
 name = "incremental_page_replacement_manual"
-path = "../examples/incremental_page_replacement_manual.rs"
+path = "examples/incremental_page_replacement_manual.rs"
 
 [[example]]
 name = "incremental_overlay_simple"
-path = "../examples/incremental_overlay_simple.rs"
+path = "examples/incremental_overlay_simple.rs"
 
 [[example]]
 name = "incremental_overlay_working"
-path = "../examples/incremental_overlay_working.rs"
+path = "examples/incremental_overlay_working.rs"
 
 [[example]]
 name = "page_overlay_mvp"
-path = "../examples/page_overlay_mvp.rs"
+path = "examples/page_overlay_mvp.rs"
 
 [[example]]
 name = "page_overlay_with_content"
-path = "../examples/page_overlay_with_content.rs"
+path = "examples/page_overlay_with_content.rs"
 
 [[example]]
 name = "llm_export_formats"
-path = "../examples/llm_export_formats.rs"
+path = "examples/llm_export_formats.rs"
 
 [[example]]
 name = "pdf_to_llm_formats"
-path = "../examples/pdf_to_llm_formats.rs"
+path = "examples/pdf_to_llm_formats.rs"
 
 # Disabled - API incompatibility (deferred to v1.6.4)
 # [[example]]
@@ -500,15 +488,15 @@ path = "../examples/pdf_to_llm_formats.rs"
 
 [[example]]
 name = "keyvalue_extraction"
-path = "../examples/keyvalue_extraction.rs"
+path = "examples/keyvalue_extraction.rs"
 
 [[example]]
 name = "table_extraction"
-path = "../examples/table_extraction.rs"
+path = "examples/table_extraction.rs"
 
 [[example]]
 name = "tagged_pdf_demo"
-path = "../examples/src/tagged_pdf_demo.rs"
+path = "examples/tagged_pdf_demo.rs"
 
 # Disabled - requires benchmark framework
 # [[example]]

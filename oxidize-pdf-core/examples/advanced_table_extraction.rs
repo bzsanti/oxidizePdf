@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Table data
-    let table_data = vec![
+    let table_data = [
         vec!["Description", "Qty", "Price", "Total"],
         vec!["Widget Pro", "5", "$50.00", "$250.00"],
         vec!["Service Plan", "1", "$99.99", "$99.99"],

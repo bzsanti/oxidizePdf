@@ -563,11 +563,11 @@ mod tests {
         assert_eq!(cloned_options.preserve_metadata, options.preserve_metadata);
 
         let mode = SplitMode::SinglePages;
-        let cloned_mode = mode.clone();
+        let cloned_mode = mode;
         assert!(matches!(cloned_mode, SplitMode::SinglePages));
 
         let mode = SplitMode::ChunkSize(3);
-        let cloned_mode = mode.clone();
+        let cloned_mode = mode;
         if let SplitMode::ChunkSize(size) = cloned_mode {
             assert_eq!(size, 3);
         }

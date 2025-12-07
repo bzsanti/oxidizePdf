@@ -26,11 +26,8 @@ fn test_devicen_basic_creation() {
         undercolor_removal: None,
     });
 
-    let devicen = DeviceNColorSpace::new(
-        colorants.clone(),
-        DeviceNAlternateColorSpace::DeviceCMYK,
-        transform,
-    );
+    let devicen =
+        DeviceNColorSpace::new(colorants, DeviceNAlternateColorSpace::DeviceCMYK, transform);
 
     assert_eq!(devicen.colorant_count(), 4);
     assert_eq!(devicen.colorant_name(0), Some("Cyan"));
@@ -45,7 +42,7 @@ fn test_devicen_basic_creation() {
 fn test_devicen_cmyk_plus_spots() {
     let spot_colors = vec!["PANTONE 185 C".to_string(), "PANTONE 286 C".to_string()];
 
-    let devicen = DeviceNColorSpace::cmyk_plus_spots(spot_colors.clone());
+    let devicen = DeviceNColorSpace::cmyk_plus_spots(spot_colors);
 
     assert_eq!(devicen.colorant_count(), 6); // 4 CMYK + 2 spots
     assert!(devicen.has_process_colors());

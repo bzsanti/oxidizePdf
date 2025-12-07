@@ -243,7 +243,7 @@ fn test_combine_default_and_custom() {
     let text1 = "Rechnung Nr. 2025-001";
     let result1 = extractor.extract_from_text(text1).unwrap();
     assert!(
-        result1.fields.len() > 0,
+        !result1.fields.is_empty(),
         "Default German pattern should work"
     );
 

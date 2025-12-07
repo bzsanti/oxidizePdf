@@ -410,7 +410,7 @@ mod tests {
         let mut handler = SignatureHandler::new();
         let field = SignatureField::new("sig1").required();
 
-        handler.add_signature_field(field.clone()).unwrap();
+        handler.add_signature_field(field).unwrap();
 
         let results = handler.validate_all();
         assert_eq!(results.len(), 1);

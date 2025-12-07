@@ -446,7 +446,7 @@ fn test_maximum_length_passwords() {
     // Test maximum length passwords (PDF allows up to 127 bytes)
     let max_password_str = "A".repeat(127);
     let user_pwd = UserPassword(max_password_str.clone());
-    let owner_pwd = OwnerPassword(max_password_str.clone());
+    let owner_pwd = OwnerPassword(max_password_str);
 
     assert_eq!(user_pwd.0.len(), 127);
     assert_eq!(owner_pwd.0.len(), 127);

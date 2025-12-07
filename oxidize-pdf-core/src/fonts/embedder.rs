@@ -135,7 +135,7 @@ impl<'a> FontEmbedder<'a> {
         let font_name = self.font.postscript_name();
         let cid_font_subtype =
             if CjkFontType::should_use_cidfonttype2_for_preview_compatibility(font_name) {
-                println!(
+                tracing::debug!(
                     "Using CIDFontType2 for CJK font {} (Preview.app compatibility)",
                     font_name
                 );

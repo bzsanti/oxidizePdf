@@ -159,9 +159,10 @@ impl<R: Read> Lexer<R> {
                 } else if self.options.lenient_syntax {
                     // In lenient mode, skip unexpected characters with a warning
                     if self.options.collect_warnings {
-                        eprintln!(
+                        tracing::debug!(
                             "Warning: Skipping unexpected character '{}' at position {}",
-                            ch as char, self.position
+                            ch as char,
+                            self.position
                         );
                     }
                     self.consume_char()?;
@@ -1843,7 +1844,7 @@ mod tests {
             Token::String(bytes) => {
                 // Should contain the text, potentially with encoding recovery
                 let text = String::from_utf8_lossy(&bytes);
-                println!("Recovered text: {text}");
+                tracing::debug!("Recovered text: {text}");
                 assert!(!text.is_empty()); // Should not be empty
             }
             other => panic!("Expected String token, got {other:?}"),
@@ -1852,7 +1853,7 @@ mod tests {
         // Check that warnings were collected
         let warnings = lexer.warnings();
         if !warnings.is_empty() {
-            println!("Encoding warnings: {warnings:?}");
+            tracing::debug!("Encoding warnings: {warnings:?}");
         }
     }
 }

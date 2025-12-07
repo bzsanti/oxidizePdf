@@ -71,14 +71,33 @@ Thank you for your interest in contributing to oxidizePdf! This document provide
 
 ### Pre-commit Validation
 
-**Required checks before committing:**
+**Automated Pre-commit Hook** (Recommended)
+
+The project includes a pre-commit hook that automatically validates your changes:
+
+```bash
+# Install the hook (one-time setup)
+./scripts/install-hooks.sh
+```
+
+The hook will check:
+1. ✅ No backup files (*.backup, *_old.rs)
+2. ✅ Code formatting (cargo fmt)
+3. ✅ Clippy lints (including performance checks from Sprint 2)
+4. ✅ Library build success
+5. ✅ Library tests passing
+
+**Manual Validation** (if hook disabled):
 
 ```bash
 # 1. Format code
 cargo fmt --all
 
 # 2. Check for warnings (treat as errors)
-cargo clippy --all -- -D warnings
+cargo clippy --workspace --lib -- -D warnings \
+  -W clippy::redundant_clone \
+  -W clippy::inefficient_to_string \
+  -W clippy::assertions_on_constants
 
 # 3. Run all tests
 cargo test --workspace
@@ -86,6 +105,8 @@ cargo test --workspace
 # 4. Build entire workspace
 cargo build --workspace
 ```
+
+**Note**: The hook runs library checks only for speed (~2-3 min). Run `cargo test --workspace` before pushing to catch integration test failures.
 
 ### Submitting Changes
 
@@ -477,6 +498,136 @@ oxidizePdf/
 ├── .github/              # GitHub workflows
 └── README.md
 ```
+
+## CI/CD Pipeline
+
+oxidizePdf uses GitHub Actions for continuous integration and delivery. Understanding the CI pipeline helps you anticipate checks that will run on your pull requests.
+
+### CI Workflow Overview
+
+**File**: `.github/workflows/ci.yml`
+
+The CI pipeline runs on every push and pull request to ensure code quality:
+
+#### 1. Code Quality Checks
+
+```yaml
+- Formatting (cargo fmt --check)
+- Linting (cargo clippy)
+- Backup file detection (*.backup, *_old.rs)
+```
+
+**Sprint 2 Enhancements**: Clippy now includes performance lints:
+- `clippy::redundant_clone` - Detects unnecessary clones
+- `clippy::inefficient_to_string` - Catches double-string conversions
+- `clippy::assertions_on_constants` - Removes useless assertions
+
+#### 2. Build & Test Matrix
+
+Tests run across multiple platforms:
+- **Linux** (ubuntu-latest)
+- **macOS** (macos-latest)
+- **Windows** (windows-latest)
+
+Each platform runs:
+```bash
+cargo build --workspace
+cargo test --workspace
+```
+
+#### 3. Coverage Reporting
+
+**File**: `.github/workflows/coverage.yml`
+
+- Runs [Tarpaulin](https://github.com/xd009642/tarpaulin) for code coverage
+- Reports to [Codecov](https://codecov.io)
+- **Current Coverage**: 54.03% (18,674/34,565 lines)
+- **Target**: 60% by end of Sprint 3
+
+Coverage runs weekly and on `main` branch updates.
+
+### Release Workflow
+
+**File**: `.github/workflows/release.yml`
+
+Triggered by version tags (`v*`):
+
+1. **Build & Test**: Full workspace validation
+2. **Publish to crates.io**:
+   - `oxidize-pdf` (core library)
+   - `oxidize-pdf-cli` (command-line tool)
+   - `oxidize-pdf-api` (REST API server)
+3. **Create GitHub Release**: With generated changelog
+
+**Example**:
+```bash
+git tag v1.7.0
+git push origin v1.7.0
+# GitHub Actions handles the rest
+```
+
+### Local CI Simulation
+
+Run the same checks CI will run:
+
+```bash
+# Full CI simulation
+./scripts/ci-check.sh  # TODO: Create this script
+
+# Or manually:
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings \
+  -W clippy::redundant_clone \
+  -W clippy::inefficient_to_string
+cargo test --workspace
+cargo build --workspace --release
+```
+
+### CI Performance Tips
+
+**For Contributors**:
+- Pre-commit hook catches issues before CI (~2-3 min vs ~10 min CI)
+- Fix clippy warnings early (CI treats warnings as errors)
+- Run `cargo test --workspace` locally (CI matrix runs 3x platforms)
+
+**For Maintainers**:
+- Library-only checks are faster for iterative development
+- Full workspace tests before merging to `main`
+- Coverage runs weekly (expensive, ~15 min)
+
+### Troubleshooting CI Failures
+
+**"Backup files found"**:
+```bash
+find . -name "*.backup" -delete
+find . -name "*_old.rs" -delete
+```
+
+**"Formatting issues"**:
+```bash
+cargo fmt --all
+git add -u && git commit --amend --no-edit
+```
+
+**"Clippy warnings"**:
+```bash
+cargo clippy --workspace --all-targets -- -D warnings
+# Fix warnings or add #[allow(...)] with justification
+```
+
+**"Tests failing on platform X"**:
+- Check platform-specific code (Windows paths, macOS security)
+- Use `#[cfg(target_os = "...")]` for platform conditionals
+- Test locally with Docker or CI artifacts
+
+### Future Enhancements (Sprint 3+)
+
+- [ ] **Benchmark regression detection** (Task 22)
+- [ ] **Dependency security audits** (`cargo audit`)
+- [ ] **Documentation generation** (rustdoc deployment)
+- [ ] **Performance profiling** (criterion benchmarks in CI)
+
+---
 
 ## Getting Help
 

@@ -585,7 +585,7 @@ mod tests {
         );
 
         let metadata_mode = MetadataMode::FromFirst;
-        let cloned_mode = metadata_mode.clone();
+        let cloned_mode = metadata_mode;
         assert!(matches!(cloned_mode, MetadataMode::FromFirst));
     }
 }

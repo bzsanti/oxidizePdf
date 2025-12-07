@@ -428,7 +428,7 @@ mod tests {
             PageDestination::PageNumber(5),
             Rectangle::new(Point::new(100.0, 200.0), Point::new(300.0, 400.0)),
         );
-        let item = OutlineItem::new("Complex Destination").with_destination(dest.clone());
+        let item = OutlineItem::new("Complex Destination").with_destination(dest);
 
         assert!(item.destination.is_some());
         match &item.destination {

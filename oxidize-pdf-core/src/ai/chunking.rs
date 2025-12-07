@@ -252,7 +252,10 @@ impl DocumentChunker {
         }
 
         // Tokenize: simple whitespace split for now
-        // TODO: Use proper tokenizer (tiktoken) for accurate token counts
+        // Enhancement: Use proper tokenizer (tiktoken) for accurate token counts
+        // Priority: MEDIUM - Current whitespace split provides estimates
+        // Accurate tokenization would require tiktoken-rs external dependency
+        // Target: v1.7.0 for LLM integration improvements
         let tokens: Vec<&str> = text.split_whitespace().collect();
 
         if tokens.is_empty() {
@@ -653,8 +656,8 @@ mod tests {
         let chunks = chunker.chunk_text_with_pages(&page_texts).unwrap();
         let duration = start.elapsed();
 
-        println!("Chunked 100 pages in {:?}", duration);
-        println!("Created {} chunks", chunks.len());
+        tracing::debug!("Chunked 100 pages in {:?}", duration);
+        tracing::debug!("Created {} chunks", chunks.len());
 
         // Target: < 500ms for 100 pages (relaxed for debug builds)
         // In release mode this should be well under 100ms

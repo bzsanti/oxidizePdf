@@ -9,11 +9,12 @@ use std::fs::File;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let pdf_path = if args.len() > 1 {
-        &args[1]
-    } else {
-        "/Users/santifdezmunoz/Documents/repos/BelowZero/oxidize-pdf-render/tests/fixtures/Factura_22058.pdf"
-    };
+    if args.len() < 2 {
+        eprintln!("Usage: {} <pdf_path>", args[0]);
+        eprintln!("Example: {} test-pdfs/sample.pdf", args[0]);
+        std::process::exit(1);
+    }
+    let pdf_path = &args[1];
 
     println!("=== Analyzing: {} ===\n", pdf_path);
 
@@ -26,9 +27,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let graphics = graphics_ext.extract_from_page(&doc, 0)?;
 
     println!("Lines found: {}", graphics.lines.len());
-    if graphics.lines.len() > 0 {
+    if !graphics.lines.is_empty() {
         println!("Sample lines (first 5):");
-        for (i, line) in graphics.lines.iter().take(5).enumerate() {
+        for (_i, line) in graphics.lines.iter().take(5).enumerate() {
             println!("  {:?}", line.orientation);
         }
     }
@@ -42,9 +43,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let text = text_ext.extract_from_page(&doc, 0)?;
 
     println!("\nText fragments: {}", text.fragments.len());
-    if text.fragments.len() > 0 {
+    if !text.fragments.is_empty() {
         println!("Sample text (first 5):");
-        for (i, frag) in text.fragments.iter().take(5).enumerate() {
+        for (_i, frag) in text.fragments.iter().take(5).enumerate() {
             let preview: String = frag.text.chars().take(30).collect();
             println!("  '{}' at ({:.0},{:.0})", preview, frag.x, frag.y);
         }

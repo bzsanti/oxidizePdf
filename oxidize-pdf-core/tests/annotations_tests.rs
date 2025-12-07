@@ -134,7 +134,7 @@ fn test_file_attachment_annotation() -> Result<()> {
     let file_data = b"This is test file content".to_vec();
     let file_name = "test_document.txt".to_string();
 
-    let attachment = FileAttachmentAnnotation::new(rect, file_name.clone(), file_data.clone())
+    let attachment = FileAttachmentAnnotation::new(rect, file_name, file_data)
         .with_mime_type("text/plain".to_string())
         .with_icon(FileAttachmentIcon::Paperclip);
 

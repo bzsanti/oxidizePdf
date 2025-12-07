@@ -1119,7 +1119,7 @@ mod tests {
         let normal_stream = AppearanceStream::new(b"normal".to_vec(), [0.0, 0.0, 10.0, 10.0]);
         let down_stream = AppearanceStream::new(b"down".to_vec(), [0.0, 0.0, 10.0, 10.0]);
 
-        app_dict.set_appearance(AppearanceState::Normal, normal_stream.clone());
+        app_dict.set_appearance(AppearanceState::Normal, normal_stream);
         app_dict.set_appearance(AppearanceState::Down, down_stream);
 
         assert!(app_dict.get_appearance(AppearanceState::Normal).is_some());
@@ -1323,7 +1323,7 @@ mod tests {
         let mut dict = AppearanceDictionary::new();
         let stream = AppearanceStream::new(vec![1, 2, 3], [0.0, 0.0, 10.0, 10.0]);
 
-        dict.set_appearance(AppearanceState::Normal, stream.clone());
+        dict.set_appearance(AppearanceState::Normal, stream);
         assert!(dict.get_appearance(AppearanceState::Normal).is_some());
         assert!(dict.get_appearance(AppearanceState::Down).is_none());
     }

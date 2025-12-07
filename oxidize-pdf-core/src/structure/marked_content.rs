@@ -42,7 +42,8 @@ const MAX_NESTING_DEPTH: usize = 100; // Reasonable nesting limit
 
 lazy_static! {
     /// Valid PDF name pattern: alphanumeric, underscore, hyphen
-    static ref VALID_TAG_PATTERN: Regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
+    static ref VALID_TAG_PATTERN: Regex = Regex::new(r"^[A-Za-z0-9_-]+$")
+        .expect("VALID_TAG_PATTERN regex is hardcoded and must be valid");
 }
 
 /// Marked content builder for Tagged PDF

@@ -191,11 +191,11 @@ pub fn create_combo_box_dict(
         .iter()
         .map(|(export, display)| {
             if export == display {
-                Object::String(display.to_string())
+                Object::String((*display).to_string())
             } else {
                 Object::Array(vec![
-                    Object::String(export.to_string()),
-                    Object::String(display.to_string()),
+                    Object::String((*export).to_string()),
+                    Object::String((*display).to_string()),
                 ])
             }
         })
@@ -270,11 +270,11 @@ pub fn create_list_box_dict(
         .iter()
         .map(|(export, display)| {
             if export == display {
-                Object::String(display.to_string())
+                Object::String((*display).to_string())
             } else {
                 Object::Array(vec![
-                    Object::String(export.to_string()),
-                    Object::String(display.to_string()),
+                    Object::String((*export).to_string()),
+                    Object::String((*display).to_string()),
                 ])
             }
         })
@@ -291,7 +291,7 @@ pub fn create_list_box_dict(
             dict.set("I", Object::Array(indices));
         } else if let Some(&index) = selected.first() {
             if let Some((export_value, _)) = options.get(index) {
-                dict.set("V", Object::String(export_value.to_string()));
+                dict.set("V", Object::String((*export_value).to_string()));
             }
         }
     }
@@ -721,7 +721,7 @@ mod tests {
 
         for name in &field_names {
             let dict = create_text_field_dict(name, rect, None);
-            assert_eq!(dict.get("T"), Some(&Object::String(name.to_string())));
+            assert_eq!(dict.get("T"), Some(&Object::String((*name).to_string())));
         }
     }
 

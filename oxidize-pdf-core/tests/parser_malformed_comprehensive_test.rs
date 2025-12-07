@@ -44,7 +44,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Try to read the stream object
             match doc.get_object(1, 0) {
@@ -74,7 +74,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Unexpectedly succeeded with excessive stream length"),
             Err(e) => {
@@ -98,7 +98,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed stream without endstream"),
             Err(e) => {
@@ -125,7 +125,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Unexpectedly parsed corrupted object stream"),
             Err(e) => println!("Expected error: {e}"),
@@ -148,7 +148,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Parser created, xref stream handling tested"),
         Err(e) => {
             println!("Expected error: {e}");
@@ -174,7 +174,7 @@ endobj
     let cursor = Cursor::new(pdf);
 
     // Should handle linearized PDFs gracefully even if corrupted
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled linearized PDF"),
         Err(e) => println!("Error with linearized PDF: {e}"),
     }
@@ -198,7 +198,7 @@ fn test_incremental_update_invalid_prev() {
     pdf.extend_from_slice(b"startxref\n150\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled incremental update"),
         Err(e) => {
             println!("Expected error: {e}");
@@ -220,7 +220,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             // Try to read font objects
             for i in 1..=2 {
@@ -248,7 +248,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled recursive form XObject"),
             Err(e) => println!("Expected recursion error: {e}"),
@@ -274,7 +274,7 @@ endobj
     pdf.splice(insert_pos..insert_pos, encrypt_dict.iter().cloned());
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled corrupted encryption"),
         Err(e) => {
             println!("Expected encryption error: {e}");
@@ -299,7 +299,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(3, 0) {
             Ok(_) => println!("Read incomplete page object"),
             Err(e) => println!("Expected page error: {e}"),
@@ -325,7 +325,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled circular color space"),
             Err(e) => println!("Expected circular reference error: {e}"),
@@ -345,7 +345,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => println!("Parsed malformed hex strings: {obj:?}"),
             Err(e) => println!("Hex string error: {e}"),
@@ -368,7 +368,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
@@ -392,7 +392,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => {
                 println!("Dictionary parsed with duplicate keys: {obj:?}");
@@ -414,7 +414,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => println!("Parsed names with special characters: {obj:?}"),
             Err(e) => println!("Name parsing error: {e}"),
@@ -434,7 +434,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(obj) => println!("Parsed unbalanced strings: {obj:?}"),
             Err(e) => println!("String parsing error: {e}"),
@@ -456,7 +456,7 @@ fn test_xref_invalid_subsection() {
     pdf.extend_from_slice(b"startxref\n40\n%%EOF\n");
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled huge xref subsection"),
         Err(e) => {
             println!("Expected xref error: {e}");
@@ -478,7 +478,7 @@ fn test_multiple_eof_markers() {
     pdf.extend_from_slice(b"%%EOF\n"); // Third EOF
 
     let cursor = Cursor::new(pdf);
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(_) => println!("Handled multiple EOF markers"),
         Err(e) => println!("EOF handling error: {e}"),
     }
@@ -498,7 +498,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Read catalog with invalid generation"),
             Err(e) => println!("Expected reference error: {e}"),
@@ -521,7 +521,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Handled self-referencing object stream"),
             Err(e) => println!("Expected self-reference error: {e}"),
@@ -544,7 +544,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => match doc.get_object(1, 0) {
             Ok(_) => println!("Parsed invalid filter chain"),
             Err(e) => {
@@ -572,7 +572,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=3 {
                 match doc.get_object(i, 0) {
@@ -599,7 +599,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {
@@ -632,7 +632,7 @@ endobj
     let pdf = create_pdf_with_content(content);
     let cursor = Cursor::new(pdf);
 
-    match PdfReader::new(cursor).map(|reader| PdfDocument::new(reader)) {
+    match PdfReader::new(cursor).map(PdfDocument::new) {
         Ok(doc) => {
             for i in 1..=2 {
                 match doc.get_object(i, 0) {

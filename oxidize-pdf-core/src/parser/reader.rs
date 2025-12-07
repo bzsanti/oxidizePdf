@@ -300,7 +300,7 @@ impl<R: Read + Seek> PdfReader<R> {
                         if let Some(type_obj) = dict.get("Type") {
                             if let Some(type_name) = type_obj.as_name() {
                                 if type_name.0 != "Catalog" {
-                                    eprintln!("Warning: Trailer /Root points to /Type/{} (not Catalog), scanning for real catalog", type_name.0);
+                                    tracing::warn!("Trailer /Root points to /Type/{} (not Catalog), scanning for real catalog", type_name.0);
                                     // Root points to wrong object type, scan for real catalog
                                     if let Ok(catalog_ref) = self.find_catalog_object() {
                                         catalog_ref
@@ -326,7 +326,7 @@ impl<R: Read + Seek> PdfReader<R> {
             Err(_) => {
                 // If Root is missing, try fallback methods
                 #[cfg(debug_assertions)]
-                eprintln!("Warning: Trailer missing Root entry, attempting recovery");
+                tracing::warn!("Trailer missing Root entry, attempting recovery");
 
                 // First try the fallback method
                 if let Some(root) = self.trailer.find_root_fallback() {
@@ -541,7 +541,7 @@ impl<R: Read + Seek> PdfReader<R> {
                         if self.options.lenient_syntax {
                             // In lenient mode, warn but use the available generation
                             if self.options.collect_warnings {
-                                eprintln!("Warning: Object {} generation mismatch - expected {}, found {}, using available",
+                                tracing::warn!("Object {} generation mismatch - expected {}, found {}, using available",
                                     obj_num, gen_num, entry.generation);
                             }
                         } else {
@@ -559,8 +559,11 @@ impl<R: Read + Seek> PdfReader<R> {
                         if self.options.lenient_syntax {
                             // In lenient mode, return null object instead of failing completely
                             if self.options.collect_warnings {
-                                eprintln!("Warning: Object {} {} R not found in XRef, returning null object",
-                                    obj_num, gen_num);
+                                tracing::warn!(
+                                    "Object {} {} R not found in XRef, returning null object",
+                                    obj_num,
+                                    gen_num
+                                );
                             }
                             self.object_cache.insert(key, PdfObject::Null);
                             return Ok(&self.object_cache[&key]);
@@ -592,7 +595,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     if self.options.lenient_syntax {
                         // For now, use the expected object number and issue warning
                         if self.options.collect_warnings {
-                            eprintln!(
+                            tracing::debug!(
                                 "Warning: Using expected object number {obj_num} instead of parsed token: {:?}",
                                 token
                             );
@@ -624,7 +627,9 @@ impl<R: Read + Seek> PdfReader<R> {
                     // Try fallback recovery
                     if self.options.lenient_syntax {
                         if self.options.collect_warnings {
-                            eprintln!("Warning: Using generation 0 instead of parsed token for object {obj_num}");
+                            tracing::warn!(
+                                "Using generation 0 instead of parsed token for object {obj_num}"
+                            );
                         }
                         0
                     } else {
@@ -644,7 +649,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     if self.options.lenient_syntax {
                         // In lenient mode, warn but continue
                         if self.options.collect_warnings {
-                            eprintln!("Warning: Expected 'obj' keyword for object {obj_num} {gen_num}, continuing anyway");
+                            tracing::warn!("Expected 'obj' keyword for object {obj_num} {gen_num}, continuing anyway");
                         }
                     } else {
                         return Err(ParseError::SyntaxError {
@@ -697,7 +702,7 @@ impl<R: Read + Seek> PdfReader<R> {
                 if self.options.lenient_syntax {
                     // In lenient mode, warn but continue
                     if self.options.collect_warnings {
-                        eprintln!("Warning: Expected 'endobj' keyword after object {obj_num} {gen_num}, continuing anyway");
+                        tracing::warn!("Expected 'endobj' keyword after object {obj_num} {gen_num}, continuing anyway");
                     }
                 } else {
                     return Err(ParseError::SyntaxError {
@@ -818,7 +823,7 @@ impl<R: Read + Seek> PdfReader<R> {
             } else {
                 // If Pages is missing, try to find page objects by scanning
                 #[cfg(debug_assertions)]
-                eprintln!("Warning: Catalog missing Pages entry, attempting recovery");
+                tracing::warn!("Catalog missing Pages entry, attempting recovery");
 
                 // Look for objects that have Type = Page
                 if let Ok(page_refs) = self.find_page_objects() {
@@ -831,7 +836,7 @@ impl<R: Read + Seek> PdfReader<R> {
                 // If Pages is missing and we have lenient parsing, try to find it
                 if self.options.lenient_syntax {
                     if self.options.collect_warnings {
-                        eprintln!("Warning: Missing Pages in catalog, searching for page tree");
+                        tracing::warn!("Missing Pages in catalog, searching for page tree");
                     }
                     // Search for a Pages object in the document
                     let mut found_pages = None;
@@ -887,7 +892,7 @@ impl<R: Read + Seek> PdfReader<R> {
             } else {
                 // If Pages reference resolves to Null or non-dictionary, try to find Pages manually (corrupted PDF)
                 #[cfg(debug_assertions)]
-                eprintln!("Warning: Pages reference invalid, searching for valid Pages object");
+                tracing::warn!("Pages reference invalid, searching for valid Pages object");
 
                 if self.options.lenient_syntax {
                     // Search for a valid Pages object number
@@ -922,7 +927,7 @@ impl<R: Read + Seek> PdfReader<R> {
 
                     if let Some(obj_num) = found_pages_num {
                         #[cfg(debug_assertions)]
-                        eprintln!("Found valid Pages object at {} 0 R", obj_num);
+                        tracing::debug!("Found valid Pages object at {} 0 R", obj_num);
                         obj_num
                     } else {
                         // No valid Pages found
@@ -975,7 +980,7 @@ impl<R: Read + Seek> PdfReader<R> {
             }
             Err(_) => {
                 // If standard method fails, try fallback extraction
-                eprintln!("Standard page extraction failed, trying direct extraction");
+                tracing::debug!("Standard page extraction failed, trying direct extraction");
                 self.page_count_fallback()
             }
         }
@@ -985,13 +990,13 @@ impl<R: Read + Seek> PdfReader<R> {
     fn page_count_fallback(&mut self) -> ParseResult<u32> {
         // Try to extract from linearization info first (object 100 usually)
         if let Some(count) = self.extract_page_count_from_linearization() {
-            eprintln!("Found page count {} from linearization", count);
+            tracing::debug!("Found page count {} from linearization", count);
             return Ok(count);
         }
 
         // Fallback: count individual page objects
         if let Some(count) = self.count_page_objects_directly() {
-            eprintln!("Found {} pages by counting page objects", count);
+            tracing::debug!("Found {} pages by counting page objects", count);
             return Ok(count);
         }
 
@@ -1003,29 +1008,29 @@ impl<R: Read + Seek> PdfReader<R> {
         // Try to get object 100 which often contains linearization info
         match self.get_object(100, 0) {
             Ok(obj) => {
-                eprintln!("Found object 100: {:?}", obj);
+                tracing::debug!("Found object 100: {:?}", obj);
                 if let Some(dict) = obj.as_dict() {
-                    eprintln!("Object 100 is a dictionary with {} keys", dict.0.len());
+                    tracing::debug!("Object 100 is a dictionary with {} keys", dict.0.len());
                     // Look for /N (number of pages) in linearization dictionary
                     if let Some(n_obj) = dict.get("N") {
-                        eprintln!("Found /N field: {:?}", n_obj);
+                        tracing::debug!("Found /N field: {:?}", n_obj);
                         if let Some(count) = n_obj.as_integer() {
-                            eprintln!("Extracted page count from linearization: {}", count);
+                            tracing::debug!("Extracted page count from linearization: {}", count);
                             return Some(count as u32);
                         }
                     } else {
-                        eprintln!("No /N field found in object 100");
+                        tracing::debug!("No /N field found in object 100");
                         for (key, value) in &dict.0 {
-                            eprintln!("  {:?}: {:?}", key, value);
+                            tracing::debug!("  {:?}: {:?}", key, value);
                         }
                     }
                 } else {
-                    eprintln!("Object 100 is not a dictionary: {:?}", obj);
+                    tracing::debug!("Object 100 is not a dictionary: {:?}", obj);
                 }
             }
             Err(e) => {
-                eprintln!("Failed to get object 100: {:?}", e);
-                eprintln!("Attempting direct content extraction...");
+                tracing::debug!("Failed to get object 100: {:?}", e);
+                tracing::debug!("Attempting direct content extraction...");
                 // If parser fails, try direct extraction from raw content
                 return self.extract_n_value_from_raw_object_100();
             }
@@ -1051,12 +1056,12 @@ impl<R: Read + Seek> PdfReader<R> {
 
                 // Convert to string for pattern matching
                 let content = String::from_utf8_lossy(&buffer[..bytes_read]);
-                eprintln!("Raw content around object 100:\n{}", content);
+                tracing::debug!("Raw content around object 100:\n{}", content);
 
                 // Look for /N followed by a number
                 if let Some(n_pos) = content.find("/N ") {
                     let after_n = &content[n_pos + 3..];
-                    eprintln!(
+                    tracing::debug!(
                         "Content after /N: {}",
                         &after_n[..std::cmp::min(50, after_n.len())]
                     );
@@ -1075,7 +1080,10 @@ impl<R: Read + Seek> PdfReader<R> {
 
                     if !num_str.is_empty() {
                         if let Ok(page_count) = num_str.parse::<u32>() {
-                            eprintln!("Extracted page count from raw content: {}", page_count);
+                            tracing::debug!(
+                                "Extracted page count from raw content: {}",
+                                page_count
+                            );
                             return Some(page_count);
                         }
                     }
@@ -1279,7 +1287,7 @@ impl<R: Read + Seek> PdfReader<R> {
             .contains(&obj_num);
 
         if is_circular {
-            eprintln!(
+            tracing::debug!(
                 "Warning: Circular reconstruction detected for object {} {} - attempting manual extraction",
                 obj_num, gen_num
             );
@@ -1289,7 +1297,7 @@ impl<R: Read + Seek> PdfReader<R> {
             // a false circular dependency, but the stream data is actually available
             match self.extract_object_or_stream_manually(obj_num) {
                 Ok(obj) => {
-                    eprintln!(
+                    tracing::debug!(
                         "         Successfully extracted object {} {} manually despite circular reference",
                         obj_num, gen_num
                     );
@@ -1297,7 +1305,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     return Ok(&self.object_cache[&(obj_num, gen_num)]);
                 }
                 Err(e) => {
-                    eprintln!(
+                    tracing::debug!(
                         "         Manual extraction failed: {} - breaking cycle with null object",
                         e
                     );
@@ -2059,7 +2067,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     if stream_data.len() > expected_length {
                         stream_data = &stream_data[..expected_length];
                     } else if stream_data.len() < expected_length {
-                        eprintln!(
+                        tracing::debug!(
                             "WARNING: Stream data ({} bytes) < Length ({} bytes)!",
                             stream_data.len(),
                             expected_length
@@ -2199,13 +2207,13 @@ impl<R: Read + Seek> PdfReader<R> {
             let mut buffer = vec![0u8; 2048];
             if let Ok(bytes_read) = self.reader.read(&mut buffer) {
                 let content = String::from_utf8_lossy(&buffer[..bytes_read]);
-                eprintln!("Raw catalog content:\n{}", content);
+                tracing::debug!("Raw catalog content:\n{}", content);
 
                 // Look for the dictionary pattern << ... >>
                 if let Some(dict_start) = content.find("<<") {
                     if let Some(dict_end) = content[dict_start..].find(">>") {
                         let dict_content = &content[dict_start..dict_start + dict_end + 2];
-                        eprintln!("Found dictionary content: {}", dict_content);
+                        tracing::debug!("Found dictionary content: {}", dict_content);
 
                         // Try to parse this directly as a dictionary
                         if let Ok(dict) = self.parse_dictionary_from_string(dict_content) {
@@ -3089,7 +3097,7 @@ startxref
             ..Default::default()
         };
 
-        let cloned = metadata.clone();
+        let cloned = metadata;
         assert_eq!(cloned.title, Some("Test".to_string()));
         assert_eq!(cloned.version, "1.4".to_string());
     }
@@ -3196,7 +3204,7 @@ startxref
         options.lenient_streams = true;
         options.max_recovery_bytes = 2000;
         options.collect_warnings = true;
-        let cloned = options.clone();
+        let cloned = options;
         assert!(cloned.lenient_streams);
         assert_eq!(cloned.max_recovery_bytes, 2000);
         assert!(cloned.collect_warnings);

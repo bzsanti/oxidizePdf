@@ -199,7 +199,7 @@ impl PdfSplitter {
                 }
                 Err(e) => {
                     // If parsing fails, fall back to placeholder
-                    eprintln!("Warning: Failed to parse content stream: {e}");
+                    tracing::debug!("Warning: Failed to parse content stream: {e}");
                 }
             }
         }
@@ -567,7 +567,7 @@ mod tests {
             PageRange::Range(1, 3),
             PageRange::Single(5),
         ];
-        let mode = SplitMode::Ranges(ranges.clone());
+        let mode = SplitMode::Ranges(ranges);
 
         match mode {
             SplitMode::Ranges(r) => {

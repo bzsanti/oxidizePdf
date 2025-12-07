@@ -508,7 +508,7 @@ mod tests {
         ];
 
         let options = ChunkOptions {
-            chunk_types: all_types.clone(),
+            chunk_types: all_types,
             ..Default::default()
         };
 

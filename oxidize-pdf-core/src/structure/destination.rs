@@ -423,7 +423,7 @@ mod tests {
         assert!(debug_str.contains("PageNumber"));
         assert!(debug_str.contains("10"));
 
-        let cloned = page_dest.clone();
+        let cloned = page_dest;
         match cloned {
             PageDestination::PageNumber(n) => assert_eq!(n, 10),
             _ => panic!("Clone failed"),
@@ -437,7 +437,7 @@ mod tests {
         assert!(debug_str.contains("Destination"));
         assert!(debug_str.contains("Fit"));
 
-        let cloned = dest.clone();
+        let cloned = dest;
         match cloned.page {
             PageDestination::PageNumber(n) => assert_eq!(n, 3),
             _ => panic!("Clone failed"),
@@ -618,7 +618,10 @@ mod tests {
         {
             let array = dest.to_array();
             assert_eq!(array.len(), *expected_len);
-            assert_eq!(array.get(1), Some(&Object::Name(expected_name.to_string())));
+            assert_eq!(
+                array.get(1),
+                Some(&Object::Name((*expected_name).to_string()))
+            );
         }
     }
 

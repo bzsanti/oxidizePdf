@@ -118,15 +118,15 @@ impl TrueTypeSubsetter {
             }
         }
 
-        println!("Font subsetting analysis:");
-        println!("  Total glyphs in font: {}", self.font.num_glyphs);
-        println!("  Glyphs needed: {}", needed_glyphs.len());
-        println!("  Characters used: {}", used_chars.len());
+        tracing::debug!("Font subsetting analysis:");
+        tracing::debug!("  Total glyphs in font: {}", self.font.num_glyphs);
+        tracing::debug!("  Glyphs needed: {}", needed_glyphs.len());
+        tracing::debug!("  Characters used: {}", used_chars.len());
 
         // Always subset if we're using less than 10% of glyphs in a large font
         let subset_ratio = needed_glyphs.len() as f32 / self.font.num_glyphs as f32;
         if subset_ratio > 0.5 || self.font_data.len() < 100_000 {
-            println!(
+            tracing::debug!(
                 "  Keeping full font (using {:.1}% of glyphs)",
                 subset_ratio * 100.0
             );
@@ -140,7 +140,7 @@ impl TrueTypeSubsetter {
             });
         }
 
-        println!(
+        tracing::debug!(
             "  Subsetting font (using only {:.1}% of glyphs)",
             subset_ratio * 100.0
         );
@@ -168,7 +168,7 @@ impl TrueTypeSubsetter {
         // Build the actual subset font
         match self.build_subset_font(&needed_glyphs, &glyph_map, &new_cmap) {
             Ok(subset_font_data) => {
-                println!(
+                tracing::debug!(
                     "  Successfully subsetted: {} -> {} bytes ({:.1}% reduction)",
                     self.font_data.len(),
                     subset_font_data.len(),
@@ -181,7 +181,7 @@ impl TrueTypeSubsetter {
                 })
             }
             Err(e) => {
-                println!("  Subsetting failed: {:?}, using full font as fallback", e);
+                tracing::debug!("  Subsetting failed: {:?}, using full font as fallback", e);
                 // Fallback to full font if subsetting fails
                 Ok(SubsetResult {
                     font_data: self.font_data.clone(),

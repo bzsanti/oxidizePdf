@@ -572,7 +572,7 @@ fn test_compliance_system_dual_file_architecture() {
         .get("test_section")
         .unwrap()
         .requirements
-        .get(0)
+        .first()
         .unwrap();
     let req_status = compliance_system.status.status.get("test.1").unwrap();
 

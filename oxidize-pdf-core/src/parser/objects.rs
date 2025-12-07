@@ -538,7 +538,7 @@ impl PdfObject {
                 // If Length is missing and we have lenient parsing, try to find endstream
                 if options.lenient_streams {
                     if options.collect_warnings {
-                        eprintln!("Warning: Missing Length key in stream dictionary, will search for endstream marker");
+                        tracing::debug!("Warning: Missing Length key in stream dictionary, will search for endstream marker");
                     }
                     // Return a special marker to indicate we need to search for endstream
                     Some(&PdfObject::Integer(-1))
@@ -562,7 +562,7 @@ impl PdfObject {
                 // without a fixed limit since we don't know the actual size
                 if options.lenient_streams {
                     if options.collect_warnings {
-                        eprintln!("Warning: Stream length is an indirect reference ({obj_num} {gen_num} R). Using unlimited endstream search.");
+                        tracing::debug!("Warning: Stream length is an indirect reference ({obj_num} {gen_num} R). Using unlimited endstream search.");
                     }
                     // Use a special marker to indicate we need unlimited search
                     usize::MAX - 1 // MAX-1 means "indirect reference, search unlimited"
@@ -615,7 +615,7 @@ impl PdfObject {
             let mut found_endstream = false;
 
             if is_indirect_ref && options.collect_warnings {
-                eprintln!("Searching for endstream without fixed limit (up to {}MB) for indirect reference", max_search / 1024 / 1024);
+                tracing::debug!("Searching for endstream without fixed limit (up to {}MB) for indirect reference", max_search / 1024 / 1024);
             }
 
             for i in 0..max_search {
@@ -652,7 +652,7 @@ impl PdfObject {
                                 // We found "endstream"!
                                 found_endstream = true;
                                 if is_dct_decode {
-                                    eprintln!("🔍 [PARSER] Found 'endstream' after reading {} bytes for DCTDecode", data.len());
+                                    tracing::debug!("🔍 [PARSER] Found 'endstream' after reading {} bytes for DCTDecode", data.len());
                                 }
                                 break;
                             } else {
@@ -690,7 +690,7 @@ impl PdfObject {
                 // Current issue: "17 extraneous bytes before marker 0xc4"
                 // This fix resolves stream length issues but JPEG structure remains corrupted
                 // See: docs/JPEG_EXTRACTION_STATUS.md for current status
-                eprintln!(
+                tracing::debug!(
                     "DCTDecode stream: read {} bytes (full stream based on endstream marker)",
                     data.len()
                 );
@@ -731,7 +731,7 @@ impl PdfObject {
                     if is_dct_decode {
                         // For DCTDecode (JPEG) streams, don't extend beyond the specified length
                         // JPEGs are sensitive to extra data and the length should be accurate
-                        eprintln!("Warning: DCTDecode stream length mismatch at {length} bytes, but not extending JPEG data");
+                        tracing::debug!("Warning: DCTDecode stream length mismatch at {length} bytes, but not extending JPEG data");
 
                         // Skip ahead to find endstream without modifying the data
                         if let Some(additional_bytes) =
@@ -748,7 +748,7 @@ impl PdfObject {
                         Ok(stream_data)
                     } else {
                         // Try to find endstream within max_recovery_bytes for non-JPEG streams
-                        eprintln!("Warning: Stream length mismatch. Expected 'endstream' after {length} bytes, got {other_token:?}");
+                        tracing::debug!("Warning: Stream length mismatch. Expected 'endstream' after {length} bytes, got {other_token:?}");
 
                         // For indirect references (length == usize::MAX - 1), search with larger limit
                         let search_limit = if length == usize::MAX - 1 {
@@ -765,7 +765,7 @@ impl PdfObject {
                             stream_data.extend_from_slice(&extra_data);
 
                             let actual_length = stream_data.len();
-                            eprintln!(
+                            tracing::debug!(
                                 "Stream length corrected: declared={length}, actual={actual_length}"
                             );
 
@@ -796,7 +796,7 @@ impl PdfObject {
             Err(e) => {
                 if options.lenient_streams {
                     // Try to find endstream within max_recovery_bytes
-                    eprintln!(
+                    tracing::debug!(
                         "Warning: Stream length mismatch. Could not peek next token after {length} bytes"
                     );
 
@@ -815,7 +815,7 @@ impl PdfObject {
                         stream_data.extend_from_slice(&extra_data);
 
                         let actual_length = stream_data.len();
-                        eprintln!(
+                        tracing::debug!(
                             "Stream length corrected: declared={length}, actual={actual_length}"
                         );
 
@@ -1937,8 +1937,8 @@ mod tests {
 
         let result = PdfObject::parse_stream_data_with_options(&mut lexer, &dict, &options);
         if let Err(e) = &result {
-            eprintln!("Error in test_lenient_stream_parsing_too_short: {e:?}");
-            eprintln!("Warning: Stream length mismatch expected, checking if lenient parsing is working correctly");
+            tracing::debug!("Error in test_lenient_stream_parsing_too_short: {e:?}");
+            tracing::debug!("Warning: Stream length mismatch expected, checking if lenient parsing is working correctly");
         }
         assert!(result.is_ok());
 

@@ -1026,7 +1026,7 @@ mod tests {
 
         // Test padding longer than 16
         let invalid_padding = vec![0u8; 16];
-        let mut invalid_padding_vec = invalid_padding.clone();
+        let mut invalid_padding_vec = invalid_padding;
         invalid_padding_vec[15] = 17; // Invalid padding length
         assert!(aes.remove_pkcs7_padding(&invalid_padding_vec).is_err());
     }

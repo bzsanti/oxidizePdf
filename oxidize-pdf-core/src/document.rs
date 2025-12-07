@@ -1243,7 +1243,7 @@ mod tests {
         assert!(doc.objects.is_empty());
 
         let obj = Object::Boolean(true);
-        let id = doc.add_object(obj.clone());
+        let id = doc.add_object(obj);
 
         assert_eq!(id.number(), 1);
         assert_eq!(doc.objects.len(), 1);

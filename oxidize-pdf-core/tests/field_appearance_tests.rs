@@ -242,7 +242,7 @@ fn test_button_styles() {
         };
 
         let checked = generator.generate_checked().unwrap();
-        assert!(checked.data().len() > 0);
+        assert!(!checked.data().is_empty());
     }
 }
 
@@ -309,7 +309,7 @@ fn test_push_button_border_styles() {
         };
 
         let normal = generator.generate_normal().unwrap();
-        assert!(normal.data().len() > 0);
+        assert!(!normal.data().is_empty());
 
         // Dashed should contain dash pattern
         if style == ButtonBorderStyle::Dashed {
@@ -383,7 +383,7 @@ fn test_text_alignment() {
         };
 
         let stream = generator.generate_text_field().unwrap();
-        assert!(stream.data().len() > 0);
+        assert!(!stream.data().is_empty());
     }
 }
 
@@ -463,8 +463,8 @@ fn test_push_button_pressed_state() {
     let down = generator.generate_down().unwrap();
 
     // Both should be valid streams
-    assert!(normal.data().len() > 0);
-    assert!(down.data().len() > 0);
+    assert!(!normal.data().is_empty());
+    assert!(!down.data().is_empty());
 
     // Down state should have darker background
     let down_content = String::from_utf8_lossy(down.data());
@@ -491,7 +491,7 @@ fn test_multiline_overflow() {
     let stream = generator.generate_text_field().unwrap();
 
     // Should handle overflow gracefully
-    assert!(stream.data().len() > 0);
+    assert!(!stream.data().is_empty());
 }
 
 #[test]

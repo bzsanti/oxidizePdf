@@ -502,7 +502,7 @@ mod tests {
         assert_eq!(format!("{version:?}"), "PdfVersion { major: 1, minor: 4 }");
 
         let header = PdfHeader {
-            version: version.clone(),
+            version: version,
             has_binary_marker: true,
         };
         let cloned_header = header.clone();

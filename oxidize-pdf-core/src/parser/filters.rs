@@ -190,7 +190,7 @@ fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
 
     // Strategy 6: Try partial decompression for corrupted streams
     if let Ok(partial) = try_partial_flate_decode(data) {
-        eprintln!(
+        tracing::debug!(
             "Warning: Using partial FlateDecode recovery, {} bytes recovered",
             partial.len()
         );
@@ -201,7 +201,7 @@ fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
     if data.len() > 20 {
         for predictor in [10, 11, 12, 13, 14, 15] {
             if let Ok(result) = try_flate_decode_with_predictor(data, predictor) {
-                eprintln!(
+                tracing::debug!(
                     "Warning: FlateDecode succeeded with predictor {}",
                     predictor
                 );
@@ -211,7 +211,7 @@ fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
     }
 
     // Strategy 8: Last resort - return empty data instead of garbage
-    eprintln!("Warning: All FlateDecode strategies failed, returning empty data");
+    tracing::debug!("Warning: All FlateDecode strategies failed, returning empty data");
     Ok(Vec::new())
 }
 
@@ -1356,7 +1356,7 @@ fn apply_predictor(data: &[u8], predictor: u32, params: &PdfDictionary) -> Parse
         _ => {
             // Unknown predictor - return data as-is with warning
             #[cfg(debug_assertions)]
-            eprintln!("Warning: Unknown predictor {predictor}, returning data as-is");
+            tracing::debug!("Warning: Unknown predictor {predictor}, returning data as-is");
             Ok(data.to_vec())
         }
     }

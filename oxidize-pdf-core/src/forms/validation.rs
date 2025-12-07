@@ -298,7 +298,7 @@ impl FormValidationSystem {
                     Err(e) => errors.push(ValidationError {
                         field_name: field_name.to_string(),
                         error_type: ValidationErrorType::Format,
-                        message: e.to_string(),
+                        message: e,
                         details: None,
                     }),
                 }
@@ -1507,7 +1507,7 @@ mod tests {
         };
 
         let mut system = FormValidationSystem::new();
-        system.settings = settings.clone();
+        system.settings = settings;
 
         assert!(system.settings.validate_on_change);
         assert!(system.settings.show_format_hints);
@@ -3069,7 +3069,7 @@ mod tests {
         for (i, pattern) in bad_patterns.iter().enumerate() {
             let validator = FieldValidator {
                 field_name: format!("regex_test_{}", i),
-                rules: vec![ValidationRule::Pattern(pattern.to_string())],
+                rules: vec![ValidationRule::Pattern((*pattern).to_string())],
                 format_mask: None,
                 error_message: Some("Custom regex error".to_string()),
             };
