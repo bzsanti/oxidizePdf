@@ -4,12 +4,20 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-12-08 - CR-only line endings fix |
+| **Last Session** | 2025-12-09 - v1.6.6 released to crates.io |
 | **Branch** | develop_santi |
-| **Version** | v1.6.6 |
-| **Tests** | 4703 tests passing |
+| **Version** | v1.6.6 (released) |
+| **Tests** | 4703 unit + 184 doc tests passing |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (94/100) |
+
+### Session Summary (2025-12-09)
+- Released v1.6.6 with CR-only line endings fix (ISO 32000-1 Section 7.2.3)
+- Added `read_pdf_line()` helper for CR, LF, and CRLF terminators
+- Fixed HP Scan PDF parsing (Contrato renting noviembre firmado.pdf)
+- Fixed AES-128 decryption test padding handling
+- Created PRs #107 (develop_santi->develop), #106 (develop->main)
+- Tag v1.6.6 pushed, GitHub Actions release pipeline triggered
 
 ### Next Session Priority
 1. Fix Issue #104 (XRef with non-contiguous subsections) - 29 PDFs affected
