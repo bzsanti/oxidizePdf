@@ -1222,28 +1222,49 @@ impl ContentParser {
                     props.insert("__resource_ref".to_string(), name);
                     Ok(props)
                 }
-                Token::DictStart => {
-                    // Inline dictionary - parse key-value pairs
+                Token::DictEnd => {
+                    // Inline dictionary - tokens are on stack in reverse order:
+                    // Stack: [..., DictStart, Name("key"), Value, DictEnd] <- top
+                    // After popping DictEnd, we need to pop value-key pairs until DictStart
                     let mut props = HashMap::new();
 
-                    // Look for dictionary entries in remaining operands
+                    // Collect key-value pairs (values come before keys on stack)
                     while let Some(value_token) = operands.pop() {
-                        if matches!(value_token, Token::DictEnd) {
+                        if matches!(value_token, Token::DictStart) {
                             break;
                         }
 
-                        // Expect key-value pairs
-                        if let Token::Name(key) = value_token {
-                            if let Some(value_token) = operands.pop() {
-                                let value = match value_token {
-                                    Token::Name(name) => name,
-                                    Token::String(s) => String::from_utf8_lossy(&s).to_string(),
-                                    Token::Integer(i) => i.to_string(),
-                                    Token::Number(f) => f.to_string(),
-                                    _ => continue, // Skip unsupported value types
-                                };
-                                props.insert(key, value);
+                        // In PDF dict syntax: /Key Value
+                        // On stack after tokenization: [DictStart, Name(Key), Value, ...]
+                        // Popping gives us: Value first, then Key
+                        let value = match &value_token {
+                            Token::Name(name) => name.clone(),
+                            Token::String(s) => String::from_utf8_lossy(s).to_string(),
+                            Token::Integer(i) => i.to_string(),
+                            Token::Number(f) => f.to_string(),
+                            Token::ArrayEnd => {
+                                // Array value - collect elements until ArrayStart
+                                let mut array_elements = Vec::new();
+                                while let Some(arr_token) = operands.pop() {
+                                    match arr_token {
+                                        Token::ArrayStart => break,
+                                        Token::Name(n) => array_elements.push(n),
+                                        Token::String(s) => array_elements
+                                            .push(String::from_utf8_lossy(&s).to_string()),
+                                        Token::Integer(i) => array_elements.push(i.to_string()),
+                                        Token::Number(f) => array_elements.push(f.to_string()),
+                                        _ => {} // Skip other token types in array
+                                    }
+                                }
+                                array_elements.reverse();
+                                format!("[{}]", array_elements.join(", "))
                             }
+                            _ => continue, // Skip unsupported value types
+                        };
+
+                        // Now pop the key (should be a Name)
+                        if let Some(Token::Name(key)) = operands.pop() {
+                            props.insert(key, value);
                         }
                     }
 

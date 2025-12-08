@@ -4,17 +4,17 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-11-04 - Sprint 3: CI Pipeline & Test Coverage |
+| **Last Session** | 2025-12-08 - CR-only line endings fix |
 | **Branch** | develop_santi |
-| **Version** | v1.6.4 (v1.6.5 ready for release) |
-| **Tests** | 4710 passing |
+| **Version** | v1.6.6 |
+| **Tests** | 4703 tests passing |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (94/100) |
 
 ### Next Session Priority
-1. v1.6.5 release (Sprints 1-3 code ready)
-2. GitHub issues creation for triaged TODOs
-3. Sprint 4: ISO compliance improvements (optional)
+1. Fix Issue #104 (XRef with non-contiguous subsections) - 29 PDFs affected
+2. Sprint 4: ISO compliance improvements
+3. Improve PDF parsing success rate
 
 ## Sprint Summary
 
@@ -124,8 +124,11 @@ git push origin v1.2.3
 
 ### Open
 - **#54** - ISO 32000-1:2008 Compliance Tracking (55-60% actual compliance)
+- **#104** - XRef tables with non-contiguous subsections fail to parse (24 PDFs affected)
 
 ### Recently Closed
+- **#97** - TextContext used_characters fix (v1.6.5) - CJK font subsetting
+- **#98** - Linearized PDF XRef confusion (v1.6.5)
 - **#93** - UTF-8 Panic Fix (v1.6.4) - Byte-based XRef recovery
 - **#90** - Table Detection (v1.6.4) - 4 phases complete
 - **#87** - Kerning Normalization (v1.6.1)

@@ -210,10 +210,6 @@ name = "analyze_decoded_stream"
 path = "examples/analyze_decoded_stream.rs"
 
 [[example]]
-name = "debug_xref_streams"
-path = "examples/debug_xref_streams.rs"
-
-[[example]]
 name = "analyze_failing_stream"
 path = "examples/analyze_failing_stream.rs"
 
