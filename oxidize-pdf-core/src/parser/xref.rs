@@ -49,6 +49,61 @@ fn parse_obj_header_bytes(line_bytes: &[u8]) -> Option<(u32, u16)> {
     None
 }
 
+/// Read a line handling both CR (\r) and LF (\n) as line terminators.
+///
+/// PDF files can use CR, LF, or CRLF as line endings (ISO 32000-1 Section 7.2.3).
+/// Standard `BufRead::read_line()` only handles LF, causing issues with CR-only PDFs.
+///
+/// Returns the number of bytes read (including line terminator).
+fn read_pdf_line<R: BufRead>(reader: &mut R, buf: &mut String) -> std::io::Result<usize> {
+    buf.clear();
+    let mut total_bytes = 0;
+
+    loop {
+        let available = reader.fill_buf()?;
+        if available.is_empty() {
+            // EOF reached
+            break;
+        }
+
+        // Find the first CR or LF
+        let mut found_terminator = false;
+        let mut consume_len = 0;
+
+        for (i, &byte) in available.iter().enumerate() {
+            if byte == b'\r' || byte == b'\n' {
+                // Found a line terminator
+                // Include content up to (not including) the terminator
+                let content = &available[..i];
+                buf.push_str(&String::from_utf8_lossy(content));
+                consume_len = i + 1; // Consume content + terminator
+
+                // Check for CRLF sequence
+                if byte == b'\r' && i + 1 < available.len() && available[i + 1] == b'\n' {
+                    consume_len += 1; // Also consume the LF
+                }
+
+                found_terminator = true;
+                break;
+            }
+        }
+
+        if found_terminator {
+            reader.consume(consume_len);
+            total_bytes += consume_len;
+            break;
+        } else {
+            // No terminator found in buffer, consume all and continue
+            let len = available.len();
+            buf.push_str(&String::from_utf8_lossy(available));
+            reader.consume(len);
+            total_bytes += len;
+        }
+    }
+
+    Ok(total_bytes)
+}
+
 // ============================================================================
 
 /// Cross-reference entry (traditional format)
@@ -244,9 +299,10 @@ impl XRefTable {
         table.xref_offset = xref_offset;
 
         // Check if this is a traditional xref table or xref stream
+        // Use read_pdf_line to handle CR-only line endings (e.g., HP Scan PDFs)
         let mut line = String::new();
         let pos = reader.stream_position()?;
-        reader.read_line(&mut line)?;
+        read_pdf_line(reader, &mut line)?;
 
         if line.trim() == "xref" {
             // Traditional xref table
@@ -416,11 +472,14 @@ impl XRefTable {
         options: &super::ParseOptions,
     ) -> ParseResult<()> {
         let mut line = String::new();
+        let mut trailer_dict_offset: Option<u64> = None;
 
         // Parse subsections
+        // Use read_pdf_line to handle CR-only line endings (e.g., HP Scan PDFs)
         loop {
             line.clear();
-            reader.read_line(&mut line)?;
+            let line_start_pos = reader.stream_position()?;
+            read_pdf_line(reader, &mut line)?;
             let trimmed_line = line.trim();
 
             // Skip empty lines and comments
@@ -429,14 +488,29 @@ impl XRefTable {
             }
 
             // Check if we've reached the trailer
+            // Note: Some PDFs use \r instead of \n as line separator, so "trailer\r<<..."
+            // may appear as a single line. Use starts_with() instead of exact match.
             if trimmed_line == "trailer" {
+                // Normal case: trailer keyword on its own line
                 break;
+            }
+            if let Some(dict_pos) = trimmed_line.find("<<") {
+                if trimmed_line.starts_with("trailer") {
+                    // Trailer keyword followed by dict on same line (e.g., "trailer\r<<...>>")
+                    // Calculate the offset to the << in the original file
+                    let trailer_keyword_start =
+                        trimmed_line.as_ptr() as usize - line.as_ptr() as usize;
+                    trailer_dict_offset =
+                        Some(line_start_pos + (trailer_keyword_start + dict_pos) as u64);
+                    break;
+                }
             }
 
             // Also check if the line looks like a trailer (might have been reached prematurely)
             if trimmed_line.starts_with("<<") {
                 tracing::warn!(" Found trailer dictionary without 'trailer' keyword");
-                // Try to parse it as trailer
+                // Seek back to the start of this line so lexer can parse it
+                trailer_dict_offset = Some(line_start_pos);
                 break;
             }
 
@@ -460,7 +534,7 @@ impl XRefTable {
             let mut i = 0;
             while i < count {
                 line.clear();
-                let bytes_read = reader.read_line(&mut line)?;
+                let bytes_read = read_pdf_line(reader, &mut line)?;
                 let trimmed = line.trim();
 
                 // Skip comments
@@ -501,6 +575,11 @@ impl XRefTable {
         }
 
         // Parse trailer dictionary
+        // If we found the trailer dict embedded in the same line (e.g., "trailer\r<<...>>"),
+        // seek to that position first
+        if let Some(offset) = trailer_dict_offset {
+            reader.seek(SeekFrom::Start(offset))?;
+        }
         let mut lexer = super::lexer::Lexer::new_with_options(reader, options.clone());
         let trailer_obj = super::objects::PdfObject::parse_with_options(&mut lexer, options)?;
         // Trailer object parsed successfully
