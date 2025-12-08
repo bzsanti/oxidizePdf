@@ -4,17 +4,17 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-12-08 - v1.6.5 released + PDF failures analysis |
+| **Last Session** | 2025-12-08 - CR-only line endings fix |
 | **Branch** | develop_santi |
-| **Version** | v1.6.5 (released to crates.io) |
-| **Tests** | 184 doc tests passing |
+| **Version** | v1.6.6 |
+| **Tests** | 4703 tests passing |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (94/100) |
 
 ### Next Session Priority
-1. Fix Issue #104 (XRef with non-contiguous subsections) - 24 PDFs affected
+1. Fix Issue #104 (XRef with non-contiguous subsections) - 29 PDFs affected
 2. Sprint 4: ISO compliance improvements
-3. Improve PDF parsing success rate (currently 76% on failure dataset)
+3. Improve PDF parsing success rate
 
 ## Sprint Summary
 
