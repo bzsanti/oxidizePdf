@@ -4,25 +4,26 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-12-09 - v1.6.6 released to crates.io |
+| **Last Session** | 2025-12-10 - Failure analysis + Issue #104 closed |
 | **Branch** | develop_santi |
 | **Version** | v1.6.6 (released) |
-| **Tests** | 4703 unit + 184 doc tests passing |
+| **Tests** | 4700 unit + 184 doc tests passing |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (94/100) |
+| **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 
-### Session Summary (2025-12-09)
-- Released v1.6.6 with CR-only line endings fix (ISO 32000-1 Section 7.2.3)
-- Added `read_pdf_line()` helper for CR, LF, and CRLF terminators
-- Fixed HP Scan PDF parsing (Contrato renting noviembre firmado.pdf)
-- Fixed AES-128 decryption test padding handling
-- Created PRs #107 (develop_santi->develop), #106 (develop->main)
-- Tag v1.6.6 pushed, GitHub Actions release pipeline triggered
+### Session Summary (2025-12-10)
+- Analyzed 277 PDFs from `.private/oxidizepdf-failures/` directory
+- **275/277 (99.3%)** now parse and extract text successfully
+- Only 2 genuinely malformed PDFs remain (ASCII85 corruption, missing endstream newline)
+- Closed Issue #104 (XRef non-contiguous subsections) - verified fixed in v1.6.6
+- Created TDD plan for "known limitations" - found 3 of 4 are false positives
+- Updated ROADMAP_MASTER.md with current state
 
 ### Next Session Priority
-1. Fix Issue #104 (XRef with non-contiguous subsections) - 29 PDFs affected
-2. Sprint 4: ISO compliance improvements
-3. Improve PDF parsing success rate
+1. Sprint 4: ISO compliance improvements (Issue #54)
+2. Execute cleanup sprint for false "limitations" (4.5h)
+3. Improve test coverage (54% → 80%)
 
 ## Sprint Summary
 
@@ -132,9 +133,9 @@ git push origin v1.2.3
 
 ### Open
 - **#54** - ISO 32000-1:2008 Compliance Tracking (55-60% actual compliance)
-- **#104** - XRef tables with non-contiguous subsections fail to parse (24 PDFs affected)
 
 ### Recently Closed
+- **#104** - XRef tables with non-contiguous subsections (v1.6.6) - Verified fixed, 275/277 PDFs working
 - **#97** - TextContext used_characters fix (v1.6.5) - CJK font subsetting
 - **#98** - Linearized PDF XRef confusion (v1.6.5)
 - **#93** - UTF-8 Panic Fix (v1.6.4) - Byte-based XRef recovery
@@ -145,9 +146,10 @@ git push origin v1.2.3
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| Invoice `use_kerning` flag | LOW | Planned for v2.0 |
-| PNG compression tests (7 failures) | NON-CRITICAL | Documented |
-| Encrypted PDFs | Expected | Not supported |
+| Invoice `use_kerning` flag | LOW | Simplified impl works 80% cases |
+| PNG compression tests | ~~7 failures~~ | **ALL PASSING** (false alarm) |
+| Encrypted PDFs | Expected | Detection works, decryption not supported |
+| 2 malformed PDFs | VERY LOW | Genuine format violations, not bugs |
 
 ## Documentation References
 
