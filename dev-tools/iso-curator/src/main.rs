@@ -11,7 +11,8 @@ mod curation;
 mod matrix;
 mod report;
 
-use commands::{analyze, classify, consolidate, stats};
+use commands::{analyze, classify, consolidate, link, scan, stats};
+use commands::report as cmd_report;
 
 /// CLI tool for curating ISO 32000-1:2008 compliance matrix
 #[derive(Parser)]
@@ -81,6 +82,55 @@ enum Commands {
         #[arg(short, long)]
         compare: Option<String>,
     },
+
+    /// Scan codebase for ISO implementation references
+    Scan {
+        /// Path to source directory to scan
+        #[arg(short, long, default_value = "../../oxidize-pdf-core/src")]
+        source: String,
+
+        /// Export results to JSON file
+        #[arg(short, long)]
+        output: Option<String>,
+
+        /// Show verbose output with file details
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
+    /// Link scan results to curated matrix requirements
+    Link {
+        /// Path to scan results JSON file
+        #[arg(short = 'r', long, default_value = "scan_results.json")]
+        scan_results: String,
+
+        /// Path to curated matrix TOML file
+        #[arg(short, long, default_value = "../../ISO_COMPLIANCE_MATRIX_CURATED.toml")]
+        curated: String,
+
+        /// Output path for updated matrix (defaults to curated path)
+        #[arg(short, long)]
+        output: Option<String>,
+
+        /// Minimum confidence threshold for linking (0.0-1.0)
+        #[arg(short = 'c', long, default_value = "0.6")]
+        min_confidence: f64,
+    },
+
+    /// Generate compliance report from curated matrix
+    Report {
+        /// Path to curated matrix TOML file
+        #[arg(short, long, default_value = "../../ISO_COMPLIANCE_MATRIX_CURATED.toml")]
+        curated: String,
+
+        /// Export report to JSON file
+        #[arg(short, long)]
+        output: Option<String>,
+
+        /// Show detailed breakdown with unimplemented requirements
+        #[arg(short, long)]
+        detailed: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -124,6 +174,28 @@ fn main() -> Result<()> {
         }
         Commands::Stats { compare } => {
             stats::run(&cli.matrix, compare)?;
+        }
+        Commands::Scan {
+            source,
+            output,
+            verbose,
+        } => {
+            scan::run(&source, output, verbose)?;
+        }
+        Commands::Link {
+            scan_results,
+            curated,
+            output,
+            min_confidence,
+        } => {
+            link::run(&scan_results, &curated, output, min_confidence)?;
+        }
+        Commands::Report {
+            curated,
+            output,
+            detailed,
+        } => {
+            cmd_report::run(&curated, output, detailed)?;
         }
     }
 

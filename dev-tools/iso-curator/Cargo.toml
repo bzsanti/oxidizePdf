@@ -36,6 +36,9 @@ indicatif = "0.17"
 # Colored output
 colored = "2.1"
 
+# Date/time
+chrono = "0.4"
+
 [dev-dependencies]
 tempfile = "3.10"
 
