@@ -1,0 +1,43 @@
+[package]
+name = "iso-curator"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool for curating ISO 32000-1:2008 compliance matrix"
+authors = ["oxidize-pdf team"]
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "iso-curator"
+path = "src/main.rs"
+
+[dependencies]
+# CLI framework
+clap = { version = "4.4", features = ["derive"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Regex for pattern matching
+regex = "1.10"
+
+# Lazy static for compiled patterns
+once_cell = "1.19"
+
+# Progress display
+indicatif = "0.17"
+
+# Colored output
+colored = "2.1"
+
+[dev-dependencies]
+tempfile = "3.10"
+
+[features]
+default = []
