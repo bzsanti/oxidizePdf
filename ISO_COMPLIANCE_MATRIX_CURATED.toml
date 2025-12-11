@@ -1,0 +1,4977 @@
+[metadata]
+version = "1.0.0"
+curation_date = "2025-12-11"
+original_count = 7775
+curated_count = 310
+reduction_ratio = 0.9601
+
+[interactive]
+[[interactive.requirements]]
+id = "8.1145-name"
+name = "Name (8.1145)"
+description = """
+As its name suggests, a form XObject may serve as the template for an entire page.
+"""
+iso_section = "8.1145"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1145"]
+
+[[interactive.requirements]]
+id = "8.1147-general"
+name = "General (8.1147)"
+description = """
+12.5.5, \"Appearance Streams\"), shall be represented as form XObjects.
+"""
+iso_section = "8.1147"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1147"]
+
+[[interactive.requirements]]
+id = "8.1236-entry"
+name = "Entry (8.1236)"
+description = """
+In its simplest form, each dictionary shall contain a Type entry and a Name for presentation in a user interface.
+"""
+iso_section = "8.1236"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1236"]
+
+[[interactive.requirements]]
+id = "11.370-general"
+name = "General (11.370)"
+description = """
+Applications that perform caching of rendered form XObjects shall take this requirement into account.
+"""
+iso_section = "11.370"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.370"]
+
+[[interactive.requirements]]
+id = "12.161-entry"
+name = "Entry (12.161)"
+description = """
+This entry shall be omitted if there are no open outline items.
+"""
+iso_section = "12.161"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.161"]
+
+[[interactive.requirements]]
+id = "12.177-destination"
+name = "Destination (12.177)"
+description = """
+(PDF 1.0) An item may also specify a destination (Dest)
+"""
+iso_section = "12.177"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.177"]
+
+[[interactive.requirements]]
+id = "12.219-text"
+name = "Text (12.219)"
+description = """
+A text field. The field data shall be stored as a PDF text string.
+"""
+iso_section = "12.219"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.219"]
+
+[[interactive.requirements]]
+id = "12.351-annotation"
+name = "Annotation (12.351)"
+description = """
+“Viewer Preferences”). The first annotation that shall be visited is the first annotation in the topmost row.
+"""
+iso_section = "12.351"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.351"]
+
+[[interactive.requirements]]
+id = "12.352-annotation"
+name = "Annotation (12.352)"
+description = """
+When the end of a row is encountered, the first annotation in the next row shall be visited.
+"""
+iso_section = "12.352"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.352"]
+
+[[interactive.requirements]]
+id = "12.450-annotation"
+name = "Annotation (12.450)"
+description = """
+An annotation representing an interactive check box may have two appearance states named On and Off.
+"""
+iso_section = "12.450"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.450"]
+
+[[interactive.requirements]]
+id = "12.504-entry"
+name = "Entry (12.504)"
+description = """
+The IRT entry (see Table 173) shall refer to the original annotation.
+"""
+iso_section = "12.504"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.504"]
+
+[[interactive.requirements]]
+id = "12.656-text"
+name = "Text (12.656)"
+description = """
+The Contents entry of the annotation dictionary may specify descriptive text relating to the attached file.
+"""
+iso_section = "12.656"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.656"]
+
+[[interactive.requirements]]
+id = "12.680-annotation"
+name = "Annotation (12.680)"
+description = """
+“Movie Actions”) may use this title to reference the movie annotation.
+"""
+iso_section = "12.680"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.680"]
+
+[[interactive.requirements]]
+id = "12.815-action"
+name = "Action (12.815)"
+description = """
+7.7.2, “Document Catalog”) and shall be executed after such an action.
+"""
+iso_section = "12.815"
+requirement_type = "mandatory"
+priority = "P0"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.815"]
+
+[[interactive.requirements]]
+id = "12.835-action"
+name = "Action (12.835)"
+description = """
+The set-state action is considered obsolete and should not be used.
+"""
+iso_section = "12.835"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.835"]
+
+[[interactive.requirements]]
+id = "12.922-annotation"
+name = "Annotation (12.922)"
+description = """
+The dictionary shall include either an Annotation or a T entry but not both.
+"""
+iso_section = "12.922"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.922"]
+
+[[interactive.requirements]]
+id = "12.937-action"
+name = "Action (12.937)"
+description = """
+(Required) The name of the action that shall be performed (see Table 211).
+"""
+iso_section = "12.937"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.937"]
+
+[[interactive.requirements]]
+id = "12.967-action"
+name = "Action (12.967)"
+description = """
+12.6.2, “Action Dictionaries,” the Next entry in an action dictionary may specify a sequence of actions.
+"""
+iso_section = "12.967"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.967"]
+
+[[interactive.requirements]]
+id = "12.1038-text"
+name = "Text (12.1038)"
+description = """
+Annotations”). In some cases, however, the field may contain text whose value is not known until viewing time.
+"""
+iso_section = "12.1038"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1038"]
+
+[[interactive.requirements]]
+id = "12.1090-general"
+name = "General (12.1090)"
+description = """
+The following sub-clauses describe each of these field types in detail. Further types may be added in the future.
+"""
+iso_section = "12.1090"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1090"]
+
+[[interactive.requirements]]
+id = "12.1133-text"
+name = "Text (12.1133)"
+description = """
+(PDF 1.4) If set, text entered in the field shall not be spell-checked.
+"""
+iso_section = "12.1133"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1133"]
+
+[[interactive.requirements]]
+id = "12.1288-general"
+name = "General (12.1288)"
+description = """
+If set, field names and values shall be submitted as XFDF.
+"""
+iso_section = "12.1288"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1288"]
+
+[[interactive.requirements]]
+id = "12.1320-action"
+name = "Action (12.1320)"
+description = """
+Only one flag is defined for this type of action. All undefined flag bits shall be reserved and shall be set to 0.
+"""
+iso_section = "12.1320"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1320"]
+
+[[interactive.requirements]]
+id = "13.627-page"
+name = "Page (13.627)"
+description = """
+PC The annotation shall be deactivated as soon as the page is closed.
+"""
+iso_section = "13.627"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.627"]
+
+[[interactive.requirements]]
+id = "13.644-annotation"
+name = "Annotation (13.644)"
+description = """
+Otherwise, if any active annotation dictates that the artwork shall be instantiated, it shall be instantiated.
+"""
+iso_section = "13.644"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.644"]
+
+[[interactive.requirements]]
+id = "14.20-array"
+name = "Array (14.20)"
+description = """
+Annots array, the markup may be thought of as a child of the 3DA annotation.
+"""
+iso_section = "14.20"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.20"]
+
+[[interactive.requirements]]
+id = "14.409-font"
+name = "Font (14.409)"
+description = """
+Flags field of the font descriptor; otherwise, it shall be Normal.
+"""
+iso_section = "14.409"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.409"]
+
+[[interactive.requirements]]
+id = "14.412-general"
+name = "General (14.412)"
+description = """
+The ForceBold flag and the StemV field should not be used to set this attribute.
+"""
+iso_section = "14.412"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "interactive"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.412"]
+
+[fonts]
+[[fonts.requirements]]
+id = "7.254-stream"
+name = "Stream (7.254)"
+description = """
+The JBIG2 compression method may also be used for encoding multiple images into a single JBIG2 bit stream.
+"""
+iso_section = "7.254"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.254"]
+
+[[fonts.requirements]]
+id = "7.839-stream"
+name = "Stream (7.839)"
+description = """
+SOLIDUS character (2Fh) (/ ). Operators shall be meaningful only inside a content stream.
+"""
+iso_section = "7.839"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.839"]
+
+[[fonts.requirements]]
+id = "8.70-encoding"
+name = "Encoding (8.70)"
+description = """
+ASCII is a strict subset of PDFDocEncoding, this value shall also be considered to be in that encoding.
+"""
+iso_section = "8.70"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.70"]
+
+[[fonts.requirements]]
+id = "9.183-font"
+name = "Font (9.183)"
+description = """
+The width information for each glyph shall be stored both in the font dictionary and in the font program itself.
+"""
+iso_section = "9.183"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.183"]
+
+[[fonts.requirements]]
+id = "9.189-glyph"
+name = "Glyph (9.189)"
+description = """
+The glyph bounding box shall be the smallest rectangle (oriented with the axes of the glyph coordinate system)
+"""
+iso_section = "9.189"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.189"]
+
+[[fonts.requirements]]
+id = "9.330-font"
+name = "Font (9.330)"
+description = """
+(Required) The type of font; shall be Type1 for a Type 1 font.
+"""
+iso_section = "9.330"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.330"]
+
+[[fonts.requirements]]
+id = "9.353-font"
+name = "Font (9.353)"
+description = """
+These fonts, or their font metrics and suitable substitution fonts, shall be available to the conforming reader.
+"""
+iso_section = "9.353"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.353"]
+
+[[fonts.requirements]]
+id = "9.361-name"
+name = "Name (9.361)"
+description = """
+If the TrueType font program's “name” table contains a PostScript name, it shall be used.
+"""
+iso_section = "9.361"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.361"]
+
+[[fonts.requirements]]
+id = "9.375-font"
+name = "Font (9.375)"
+description = """
+A Type 3 font dictionary may contain the entries listed in Table 112.
+"""
+iso_section = "9.375"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.375"]
+
+[[fonts.requirements]]
+id = "9.377-type"
+name = "Type (9.377)"
+description = """
+(Required) The type of font; shall be Type3 for a Type 3 font.
+"""
+iso_section = "9.377"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.377"]
+
+[[fonts.requirements]]
+id = "9.461-font"
+name = "Font (9.461)"
+description = """
+Therefore, a TrueType font program in a PDF file may need to be modified to conform to these guidelines.
+"""
+iso_section = "9.461"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.461"]
+
+[[fonts.requirements]]
+id = "9.467-glyph"
+name = "Glyph (9.467)"
+description = """
+A character code shall be first mapped to a glyph name using the table described above.
+"""
+iso_section = "9.467"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.467"]
+
+[[fonts.requirements]]
+id = "9.469-glyph"
+name = "Glyph (9.469)"
+description = """
+Finally, the Unicode value shall be mapped to a glyph description according to the (3, 1) subtable.
+"""
+iso_section = "9.469"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.469"]
+
+[[fonts.requirements]]
+id = "9.470-name"
+name = "Name (9.470)"
+description = """
+A character code shall be first mapped to a glyph name using the table described above.
+"""
+iso_section = "9.470"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.470"]
+
+[[fonts.requirements]]
+id = "9.472-glyph"
+name = "Glyph (9.472)"
+description = """
+Finally, the code shall be mapped to a glyph description according to the (1, 0) subtable.
+"""
+iso_section = "9.472"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.472"]
+
+[[fonts.requirements]]
+id = "9.482-text"
+name = "Text (9.482)"
+description = """
+When the current font is composite, the text-showing operators shall behave differently than with simple fonts.
+"""
+iso_section = "9.482"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.482"]
+
+[[fonts.requirements]]
+id = "9.528-general"
+name = "General (9.528)"
+description = """
+Although in many fonts the CID value and GID value are the same, the CID and GID values may differ.
+"""
+iso_section = "9.528"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.528"]
+
+[[fonts.requirements]]
+id = "9.576-stream"
+name = "Stream (9.576)"
+description = """
+As a stream object whose contents shall be a CMap file.
+"""
+iso_section = "9.576"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.576"]
+
+[[fonts.requirements]]
+id = "9.601-font"
+name = "Font (9.601)"
+description = """
+The usefont operator, if present, shall specify a font number of 0.
+"""
+iso_section = "9.601"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.601"]
+
+[[fonts.requirements]]
+id = "9.607-font"
+name = "Font (9.607)"
+description = """
+(Required) The type of font; shall be Type0 for a Type 0 font.
+"""
+iso_section = "9.607"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.607"]
+
+[[fonts.requirements]]
+id = "9.622-string"
+name = "String (9.622)"
+description = """
+The code extracted from the string shall be looked up in the character code mappings for codes of that length.
+"""
+iso_section = "9.622"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.622"]
+
+[[fonts.requirements]]
+id = "11.79-general"
+name = "General (11.79)"
+description = """
+Scan conversion of character glyphs may be performed by a different algorithm from the preceding one.
+"""
+iso_section = "11.79"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.79"]
+
+[[fonts.requirements]]
+id = "12.1062-font"
+name = "Font (12.1062)"
+description = """
+Encloses text that shall be displayed in an italic font.
+"""
+iso_section = "12.1062"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1062"]
+
+[[fonts.requirements]]
+id = "12.1063-font"
+name = "Font (12.1063)"
+description = """
+Encloses text that shall be displayed in a bold font.
+"""
+iso_section = "12.1063"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1063"]
+
+[[fonts.requirements]]
+id = "14.1148-font"
+name = "Font (14.1148)"
+description = """
+The built-in encoding in an expert font program may be different from MacExpertEncoding.
+"""
+iso_section = "14.1148"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "fonts"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1148"]
+
+[parser]
+[[parser.requirements]]
+id = "7.37-integer"
+name = "Integer (7.37)"
+description = """
+Throughout this standard, the term number refers to an object whose type may be either integer or real.
+"""
+iso_section = "7.37"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.37"]
+
+[[parser.requirements]]
+id = "7.178-general"
+name = "General (7.178)"
+description = """
+These characters shall be immediately followed by the ~> EOD marker.
+"""
+iso_section = "7.178"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.178"]
+
+[[parser.requirements]]
+id = "7.196-general"
+name = "General (7.196)"
+description = """
+The LZWDecode and FlateDecode filters shall accept optional parameters to control the decoding process.
+"""
+iso_section = "7.196"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.196"]
+
+[[parser.requirements]]
+id = "7.213-general"
+name = "General (7.213)"
+description = """
+A row shall occupy a whole number of bytes, rounded up if necessary.
+"""
+iso_section = "7.213"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.213"]
+
+[[parser.requirements]]
+id = "7.214-general"
+name = "General (7.214)"
+description = """
+Samples and their components shall be packed into bytes from high-order to low-order bits.
+"""
+iso_section = "7.214"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.214"]
+
+[[parser.requirements]]
+id = "7.226-filter"
+name = "Filter (7.226)"
+description = """
+When a filter reaches EOD, it shall always skip to the next byte boundary following the encoded data.
+"""
+iso_section = "7.226"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.226"]
+
+[[parser.requirements]]
+id = "7.256-filter"
+name = "Filter (7.256)"
+description = """
+8.9, \"Images\"); however, the JBIG2Decode filter shall not be used with inline images.
+"""
+iso_section = "7.256"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.256"]
+
+[[parser.requirements]]
+id = "7.273-general"
+name = "General (7.273)"
+description = """
+Since these segments shall not be used in PDF, they are discarded.
+"""
+iso_section = "7.273"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.273"]
+
+[[parser.requirements]]
+id = "7.306-general"
+name = "General (7.306)"
+description = """
+An opacity channel provides samples that shall be interpreted as raw opacity information.
+"""
+iso_section = "7.306"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.306"]
+
+[[parser.requirements]]
+id = "7.316-general"
+name = "General (7.316)"
+description = """
+Width and Height shall match the corresponding width and height values in the JPEG2000 data.
+"""
+iso_section = "7.316"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.316"]
+
+[[parser.requirements]]
+id = "7.334-filter"
+name = "Filter (7.334)"
+description = """
+\"Crypt Filters\") shall be used. The Crypt filter shall be the first filter in the Filter array entry.
+"""
+iso_section = "7.334"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.334"]
+
+[[parser.requirements]]
+id = "7.346-general"
+name = "General (7.346)"
+description = """
+LINE FEED (0Ah), or both. PDF files with binary data may have arbitrarily long lines.
+"""
+iso_section = "7.346"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.346"]
+
+[[parser.requirements]]
+id = "7.362-object"
+name = "Object (7.362)"
+description = """
+A given object number shall not have an entry in more than one subsection within a single section.
+"""
+iso_section = "7.362"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.362"]
+
+[[parser.requirements]]
+id = "7.384-object"
+name = "Object (7.384)"
+description = """
+Except for object number 0, all objects in the cross-reference table shall initially have generation numbers of 0.
+"""
+iso_section = "7.384"
+requirement_type = "mandatory"
+priority = "P0"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.384"]
+
+[[parser.requirements]]
+id = "7.403-general"
+name = "General (7.403)"
+description = """
+Incremental updates may be used to save changes to documents in these contexts.
+"""
+iso_section = "7.403"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.403"]
+
+[[parser.requirements]]
+id = "7.426-object"
+name = "Object (7.426)"
+description = """
+An object in an object stream shall not consist solely of an object reference.
+"""
+iso_section = "7.426"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.426"]
+
+[[parser.requirements]]
+id = "7.487-array"
+name = "Array (7.487)"
+description = """
+In any array that is visible, every element shall be visible.
+"""
+iso_section = "7.487"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.487"]
+
+[[parser.requirements]]
+id = "7.511-general"
+name = "General (7.511)"
+description = """
+An algorithm that is undocumented. This value shall not be used.
+"""
+iso_section = "7.511"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.511"]
+
+[[parser.requirements]]
+id = "7.515-general"
+name = "General (7.515)"
+description = """
+The value shall be a multiple of 8, in the range 40 to 128. Default value: 40.
+"""
+iso_section = "7.515"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.515"]
+
+[[parser.requirements]]
+id = "7.587-general"
+name = "General (7.587)"
+description = """
+Conforming readers shall ignore all flags other than those at bit positions 3, 4, 5, 6, 9, 10, 11, and 12.
+"""
+iso_section = "7.587"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.587"]
+
+[[parser.requirements]]
+id = "7.608-general"
+name = "General (7.608)"
+description = """
+The CF, StmF, and StrF entries may be present when SubFilter is adbe.pkcs7.s5.
+"""
+iso_section = "7.608"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.608"]
+
+[[parser.requirements]]
+id = "7.613-general"
+name = "General (7.613)"
+description = """
+Conforming readers shall ignore all flags other than those at bit positions 2, 3, 4, 5, 6, 9, 10, 11, and 12.
+"""
+iso_section = "7.613"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.613"]
+
+[[parser.requirements]]
+id = "7.666-general"
+name = "General (7.666)"
+description = """
+Input data shall be passed through without any processing.
+"""
+iso_section = "7.666"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.666"]
+
+[[parser.requirements]]
+id = "7.744-page"
+name = "Page (7.744)"
+description = """
+Conforming products shall not be required to preserve the existing structure of the page tree.
+"""
+iso_section = "7.744"
+requirement_type = "mandatory"
+priority = "P0"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.744"]
+
+[[parser.requirements]]
+id = "7.752-general"
+name = "General (7.752)"
+description = """
+Attributes.\" Attributes that are not explicitly identified in the table as inheritable shall not be inherited.
+"""
+iso_section = "7.752"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.752"]
+
+[[parser.requirements]]
+id = "7.958-general"
+name = "General (7.958)"
+description = """
+All function dictionaries shall share the entries listed in Table 38.
+"""
+iso_section = "7.958"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.958"]
+
+[[parser.requirements]]
+id = "7.1003-array"
+name = "Array (7.1003)"
+description = """
+(Optional) An array of n numbers that shall define the function result when x = 0.0.
+"""
+iso_section = "7.1003"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.1003"]
+
+[[parser.requirements]]
+id = "7.1004-array"
+name = "Array (7.1004)"
+description = """
+(Optional) An array of n numbers that shall define the function result when x = 1.0.
+"""
+iso_section = "7.1004"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.1004"]
+
+[[parser.requirements]]
+id = "7.1017-general"
+name = "General (7.1017)"
+description = """
+Boundsk-2, is equal to Domain1 , then x ¢ shall be defined to be Encode2i .
+"""
+iso_section = "7.1017"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.1017"]
+
+[[parser.requirements]]
+id = "7.1030-general"
+name = "General (7.1030)"
+description = """
+This construct is purely syntactic; unlike in PostScript, no “procedure objects” shall be involved.
+"""
+iso_section = "7.1030"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.1030"]
+
+[[parser.requirements]]
+id = "7.1070-general"
+name = "General (7.1070)"
+description = """
+For Mac OS, all components shall be separated by COLONs.
+"""
+iso_section = "7.1070"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.1070"]
+
+[[parser.requirements]]
+id = "8.15-entry"
+name = "Entry (8.15)"
+description = """
+This entry is obsolescent and should not be used by conforming writers.
+"""
+iso_section = "8.15"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.15"]
+
+[[parser.requirements]]
+id = "8.17-entry"
+name = "Entry (8.17)"
+description = """
+This entry is obsolescent and should not be used by conforming writers.
+"""
+iso_section = "8.17"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.17"]
+
+[[parser.requirements]]
+id = "8.19-entry"
+name = "Entry (8.19)"
+description = """
+This entry is obsolescent and should not be used by conforming writers.
+"""
+iso_section = "8.19"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.19"]
+
+[[parser.requirements]]
+id = "8.25-general"
+name = "General (8.25)"
+description = """
+\"File Identifiers\") that should be included in the referenced file.
+"""
+iso_section = "8.25"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.25"]
+
+[[parser.requirements]]
+id = "8.189-type"
+name = "Type (8.189)"
+description = """
+Most parameters shall be of the correct type or have values that fall within a certain range.
+"""
+iso_section = "8.189"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.189"]
+
+[[parser.requirements]]
+id = "8.204-general"
+name = "General (8.204)"
+description = """
+A line width of 0 shall denote the thinnest line that can be rendered at device resolution: 1 device pixel wide.
+"""
+iso_section = "8.204"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.204"]
+
+[[parser.requirements]]
+id = "8.206-general"
+name = "General (8.206)"
+description = """
+The line cap style shall specify the shape that shall be used at the ends of open subpaths (and dashes, if any)
+"""
+iso_section = "8.206"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.206"]
+
+[[parser.requirements]]
+id = "8.404-general"
+name = "General (8.404)"
+description = """
+Colours in the DeviceRGB colour space shall be specified according to the additive RGB (red-green-blue)
+"""
+iso_section = "8.404"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.404"]
+
+[[parser.requirements]]
+id = "8.419-general"
+name = "General (8.419)"
+description = """
+Colour values in a CIE-based ABC colour space shall have three components, arbitrarily named A, B, and C.
+"""
+iso_section = "8.419"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.419"]
+
+[[parser.requirements]]
+id = "8.597-general"
+name = "General (8.597)"
+description = """
+DeviceN colour spaces (PDF 1.3) may contain an arbitrary number of colour components.
+"""
+iso_section = "8.597"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.597"]
+
+[[parser.requirements]]
+id = "8.688-entry"
+name = "Entry (8.688)"
+description = """
+If this entry is present, PrintingOrder shall also be present.
+"""
+iso_section = "8.688"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.688"]
+
+[[parser.requirements]]
+id = "8.711-general"
+name = "General (8.711)"
+description = """
+If overprinting is not supported, the value of the overprint parameter shall be ignored.
+"""
+iso_section = "8.711"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.711"]
+
+[[parser.requirements]]
+id = "8.728-general"
+name = "General (8.728)"
+description = """
+In an Indexed colour space, the initial colour value shall be 0.
+"""
+iso_section = "8.728"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.728"]
+
+[[parser.requirements]]
+id = "8.734-general"
+name = "General (8.734)"
+description = """
+For DeviceCMYK, four operands shall be required (n = 4).
+"""
+iso_section = "8.734"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.734"]
+
+[[parser.requirements]]
+id = "8.745-general"
+name = "General (8.745)"
+description = """
+The colour to use shall be specified as a function of position using any of a variety of methods.
+"""
+iso_section = "8.745"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.745"]
+
+[[parser.requirements]]
+id = "8.844-general"
+name = "General (8.844)"
+description = """
+Conversion to device colours shall occur only after all interpolation calculations have been performed.
+"""
+iso_section = "8.844"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.844"]
+
+[[parser.requirements]]
+id = "8.850-type"
+name = "Type (8.850)"
+description = """
+This type of shading shall not be used with an Indexed colour space.
+"""
+iso_section = "8.850"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.850"]
+
+[[parser.requirements]]
+id = "8.861-type"
+name = "Type (8.861)"
+description = """
+This type of shading shall not be used with an Indexed colour space.
+"""
+iso_section = "8.861"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.861"]
+
+[[parser.requirements]]
+id = "8.873-type"
+name = "Type (8.873)"
+description = """
+This type of shading shall not be used with an Indexed colour space.
+"""
+iso_section = "8.873"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.873"]
+
+[[parser.requirements]]
+id = "8.889-general"
+name = "General (8.889)"
+description = """
+Conceptually, all of the blend circles shall be painted in order of increasing values of s, from smallest to largest.
+"""
+iso_section = "8.889"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.889"]
+
+[[parser.requirements]]
+id = "8.915-entry"
+name = "Entry (8.915)"
+description = """
+This entry shall not be used with an Indexed colour space.
+"""
+iso_section = "8.915"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.915"]
+
+[[parser.requirements]]
+id = "8.943-entry"
+name = "Entry (8.943)"
+description = """
+This entry shall not be used with an Indexed colour space.
+"""
+iso_section = "8.943"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.943"]
+
+[[parser.requirements]]
+id = "8.967-entry"
+name = "Entry (8.967)"
+description = """
+This entry shall not be used with an Indexed colour space.
+"""
+iso_section = "8.967"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.967"]
+
+[[parser.requirements]]
+id = "8.975-page"
+name = "Page (8.975)"
+description = """
+PostScript page description language. PostScript XObjects should not be used.
+"""
+iso_section = "8.975"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.975"]
+
+[[parser.requirements]]
+id = "8.1060-entry"
+name = "Entry (8.1060)"
+description = """
+This entry is obsolescent and shall no longer be used.
+"""
+iso_section = "8.1060"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1060"]
+
+[[parser.requirements]]
+id = "8.1078-general"
+name = "General (8.1078)"
+description = """
+Decode arrays which shall be used with the various colour spaces by a conforming reader.
+"""
+iso_section = "8.1078"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1078"]
+
+[[parser.requirements]]
+id = "8.1105-entry"
+name = "Entry (8.1105)"
+description = """
+The value of the BitsPerComponent entry shall be 1.
+"""
+iso_section = "8.1105"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1105"]
+
+[[parser.requirements]]
+id = "8.1280-general"
+name = "General (8.1280)"
+description = """
+OCGs and P entries should also be provided to approximate the behaviour in non-conforming reader software.
+"""
+iso_section = "8.1280"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1280"]
+
+[[parser.requirements]]
+id = "8.1282-content"
+name = "Content (8.1282)"
+description = """
+Subsequent elements shall be either optional content groups or other visibility expressions.
+"""
+iso_section = "8.1282"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1282"]
+
+[[parser.requirements]]
+id = "9.16-general"
+name = "General (9.16)"
+description = """
+Unchanged The states of all groups shall be left unchanged.
+"""
+iso_section = "9.16"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.16"]
+
+[[parser.requirements]]
+id = "9.73-name"
+name = "Name (9.73)"
+description = """
+(optional) A name whose values shall be either ON or OFF.
+"""
+iso_section = "9.73"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.73"]
+
+[[parser.requirements]]
+id = "9.83-general"
+name = "General (9.83)"
+description = """
+The magnification factor below which the group shall be ON.
+"""
+iso_section = "9.83"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.83"]
+
+[[parser.requirements]]
+id = "9.108-array"
+name = "Array (9.108)"
+description = """
+Default value: an empty array, indicating that no groups shall be affected.
+"""
+iso_section = "9.108"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.108"]
+
+[[parser.requirements]]
+id = "9.121-entry"
+name = "Entry (9.121)"
+description = """
+Export: The state shall be the value of the ExportState entry.
+"""
+iso_section = "9.121"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.121"]
+
+[[parser.requirements]]
+id = "9.140-content"
+name = "Content (9.140)"
+description = """
+When a document is first opened, its optional content groups shall be assigned a state based on the D (default)
+"""
+iso_section = "9.140"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.140"]
+
+[[parser.requirements]]
+id = "9.141-general"
+name = "General (9.141)"
+description = """
+The value of BaseState shall be applied to all the groups.
+"""
+iso_section = "9.141"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.141"]
+
+[[parser.requirements]]
+id = "9.532-general"
+name = "General (9.532)"
+description = """
+Default value: none (the DW value shall be used for all glyphs).
+"""
+iso_section = "9.532"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.532"]
+
+[[parser.requirements]]
+id = "9.539-general"
+name = "General (9.539)"
+description = """
+2 × c and 2 × c + 1, where the first byte shall be the high-order byte.
+"""
+iso_section = "9.539"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.539"]
+
+[[parser.requirements]]
+id = "9.663-general"
+name = "General (9.663)"
+description = """
+At most, only one of the FontFile, FontFile2, and FontFile3 entries shall be present.
+"""
+iso_section = "9.663"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.663"]
+
+[[parser.requirements]]
+id = "9.701-general"
+name = "General (9.701)"
+description = """
+Latin glyphs, for example, may require different attributes than kanji glyphs.
+"""
+iso_section = "9.701"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.701"]
+
+[[parser.requirements]]
+id = "10.71-general"
+name = "General (10.71)"
+description = """
+The device colour values shall now be mapped through transfer functions, one for each colour component.
+"""
+iso_section = "10.71"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["10.71"]
+
+[[parser.requirements]]
+id = "10.83-general"
+name = "General (10.83)"
+description = """
+The CIE-based colour value shall be adjusted according to a CIE-based gamut mapping function.
+"""
+iso_section = "10.83"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["10.83"]
+
+[[parser.requirements]]
+id = "10.135-general"
+name = "General (10.135)"
+description = """
+Starting with PDF 1.2, transfer functions shall be defined as PDF function objects (see 7.10, \"Functions\").
+"""
+iso_section = "10.135"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["10.135"]
+
+[[parser.requirements]]
+id = "11.43-general"
+name = "General (11.43)"
+description = """
+Some of these may also be used as process colorants if the native colour space is nonstandard.
+"""
+iso_section = "11.43"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.43"]
+
+[[parser.requirements]]
+id = "11.89-page"
+name = "Page (11.89)"
+description = """
+Under the transparent imaging model, all of the objects on a page may potentially contribute to the result.
+"""
+iso_section = "11.89"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.89"]
+
+[[parser.requirements]]
+id = "11.136-general"
+name = "General (11.136)"
+description = """
+Same as Normal. This mode exists only for compatibility and should not be used.
+"""
+iso_section = "11.136"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.136"]
+
+[[parser.requirements]]
+id = "11.152-general"
+name = "General (11.152)"
+description = """
+Constant shape. The source shape may be modified at every point by a scalar shape constant.
+"""
+iso_section = "11.152"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.152"]
+
+[[parser.requirements]]
+id = "11.155-general"
+name = "General (11.155)"
+description = """
+Constant opacity. The source opacity may be modified at every point by a scalar opacity constant.
+"""
+iso_section = "11.155"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.155"]
+
+[[parser.requirements]]
+id = "11.157-general"
+name = "General (11.157)"
+description = """
+The three shape inputs shall be multiplied together, producing an intermediate value called the source shape.
+"""
+iso_section = "11.157"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.157"]
+
+[[parser.requirements]]
+id = "11.158-general"
+name = "General (11.158)"
+description = """
+The three opacity inputs shall be multiplied together, producing an intermediate value called the source opacity.
+"""
+iso_section = "11.158"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.158"]
+
+[[parser.requirements]]
+id = "11.164-general"
+name = "General (11.164)"
+description = """
+The result shape shall be the union of the backdrop and source shapes.
+"""
+iso_section = "11.164"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.164"]
+
+[[parser.requirements]]
+id = "11.170-general"
+name = "General (11.170)"
+description = """
+The objects contained within a group shall be treated as a separate transparency stack called the group stack.
+"""
+iso_section = "11.170"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.170"]
+
+[[parser.requirements]]
+id = "11.177-general"
+name = "General (11.177)"
+description = """
+An isolated group may specify its own blending colour space, independent of that of the group’s backdrop.
+"""
+iso_section = "11.177"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.177"]
+
+[[parser.requirements]]
+id = "11.185-general"
+name = "General (11.185)"
+description = """
+A conforming reader shall ensure that the backdrop’s contribution to the overall result is applied only once.
+"""
+iso_section = "11.185"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.185"]
+
+[[parser.requirements]]
+id = "11.209-general"
+name = "General (11.209)"
+description = """
+This averaging computation shall be performed for both colour and alpha.
+"""
+iso_section = "11.209"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.209"]
+
+[[parser.requirements]]
+id = "11.231-general"
+name = "General (11.231)"
+description = """
+C, f, and α results shall be the group’s colour, shape, and alpha, respectively, with the backdrop factored out.
+"""
+iso_section = "11.231"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.231"]
+
+[[parser.requirements]]
+id = "11.240-object"
+name = "Object (11.240)"
+description = """
+Knockout”). That is, all of a given object shall be considered to be one element of a transparency stack.
+"""
+iso_section = "11.240"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.240"]
+
+[[parser.requirements]]
+id = "11.253-general"
+name = "General (11.253)"
+description = """
+The following sub-clauses describe how each of these shape and opacity sources shall be specified in PDF.
+"""
+iso_section = "11.253"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.253"]
+
+[[parser.requirements]]
+id = "12.36-general"
+name = "General (12.36)"
+description = """
+Moreover, some other blend mode may be specifically desired for those components.
+"""
+iso_section = "12.36"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.36"]
+
+[[parser.requirements]]
+id = "12.43-general"
+name = "General (12.43)"
+description = """
+The Compatible blend mode shall be treated as equivalent to Normal.
+"""
+iso_section = "12.43"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.43"]
+
+[[parser.requirements]]
+id = "12.99-general"
+name = "General (12.99)"
+description = """
+FullScreen; it shall be ignored otherwise. Default value: UseNone.
+"""
+iso_section = "12.99"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.99"]
+
+[[parser.requirements]]
+id = "12.183-general"
+name = "General (12.183)"
+description = """
+Thumbnail images are not required, and may be included for some pages and not for others.
+"""
+iso_section = "12.183"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.183"]
+
+[[parser.requirements]]
+id = "12.282-entry"
+name = "Entry (12.282)"
+description = """
+(PDF 1.1) This entry shall be permitted only for the first bead of a thread.
+"""
+iso_section = "12.282"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.282"]
+
+[[parser.requirements]]
+id = "12.283-general"
+name = "General (12.283)"
+description = """
+(PDF 1.2) It shall be permitted for any bead but required only for the first.
+"""
+iso_section = "12.283"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.283"]
+
+[[parser.requirements]]
+id = "12.294-page"
+name = "Page (12.294)"
+description = """
+If no Dur entry is specified in the page object, the page shall not advance automatically.
+"""
+iso_section = "12.294"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.294"]
+
+[[parser.requirements]]
+id = "12.320-general"
+name = "General (12.320)"
+description = """
+The sequence of actions specified by NA (if present) shall be executed.
+"""
+iso_section = "12.320"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.320"]
+
+[[parser.requirements]]
+id = "12.322-general"
+name = "General (12.322)"
+description = """
+The node specified by Next (if present) shall become the new current navigation node.
+"""
+iso_section = "12.322"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.322"]
+
+[[parser.requirements]]
+id = "12.324-general"
+name = "General (12.324)"
+description = """
+The sequence of actions specified by PA (if present) shall be executed.
+"""
+iso_section = "12.324"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.324"]
+
+[[parser.requirements]]
+id = "12.336-general"
+name = "General (12.336)"
+description = """
+The node specified by Prev (if present) shall become the new current navigation node.
+"""
+iso_section = "12.336"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.336"]
+
+[[parser.requirements]]
+id = "12.339-general"
+name = "General (12.339)"
+description = """
+The navigation node represented by PresSteps shall become the current node.
+"""
+iso_section = "12.339"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.339"]
+
+[[parser.requirements]]
+id = "12.353-page"
+name = "Page (12.353)"
+description = """
+C (column order): Annotations shall be visited in columns running vertically up and down the page.
+"""
+iso_section = "12.353"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.353"]
+
+[[parser.requirements]]
+id = "12.415-general"
+name = "General (12.415)"
+description = """
+(Optional) The border width in points. If this value is 0, no border shall drawn.
+"""
+iso_section = "12.415"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.415"]
+
+[[parser.requirements]]
+id = "12.503-entry"
+name = "Entry (12.503)"
+description = """
+The T entry (see Table 170) shall specify the user.
+"""
+iso_section = "12.503"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.503"]
+
+[[parser.requirements]]
+id = "12.517-general"
+name = "General (12.517)"
+description = """
+Additional names may be supported as well. Default value: Note.
+"""
+iso_section = "12.517"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.517"]
+
+[[parser.requirements]]
+id = "12.646-general"
+name = "General (12.646)"
+description = """
+Additional names may be supported as well. Default value: Draft.
+"""
+iso_section = "12.646"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.646"]
+
+[[parser.requirements]]
+id = "12.669-general"
+name = "General (12.669)"
+description = """
+Additional names may be supported as well. Default value: PushPin.
+"""
+iso_section = "12.669"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.669"]
+
+[[parser.requirements]]
+id = "12.827-general"
+name = "General (12.827)"
+description = """
+An E (enter) event may occur only when the mouse button is up.
+"""
+iso_section = "12.827"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.827"]
+
+[[parser.requirements]]
+id = "12.828-general"
+name = "General (12.828)"
+description = """
+An X (exit) event may not occur without a preceding E event.
+"""
+iso_section = "12.828"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.828"]
+
+[[parser.requirements]]
+id = "12.829-general"
+name = "General (12.829)"
+description = """
+A U (up) event may not occur without a preceding E and D event.
+"""
+iso_section = "12.829"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.829"]
+
+[[parser.requirements]]
+id = "12.845-destination"
+name = "Destination (12.845)"
+description = """
+(Required) The file in which the destination shall be located.
+"""
+iso_section = "12.845"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.845"]
+
+[[parser.requirements]]
+id = "12.1068-general"
+name = "General (12.1068)"
+description = """
+When comparing strings, the versions shall be compared in order.
+"""
+iso_section = "12.1068"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1068"]
+
+[[parser.requirements]]
+id = "12.1125-general"
+name = "General (12.1125)"
+description = """
+XML format is not supported for file-select controls; therefore, no value shall be submitted in this case.
+"""
+iso_section = "12.1125"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1125"]
+
+[[parser.requirements]]
+id = "12.1160-entry"
+name = "Entry (12.1160)"
+description = """
+If this entry is not present, no choices should be presented to the user.
+"""
+iso_section = "12.1160"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1160"]
+
+[[parser.requirements]]
+id = "12.1276-general"
+name = "General (12.1276)"
+description = """
+If clear, fields without a value shall not be submitted.
+"""
+iso_section = "12.1276"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1276"]
+
+[[parser.requirements]]
+id = "12.1287-general"
+name = "General (12.1287)"
+description = """
+(PDF 1.4) shall be used only if the SubmitPDF flags are clear.
+"""
+iso_section = "12.1287"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1287"]
+
+[[parser.requirements]]
+id = "12.1303-general"
+name = "General (12.1303)"
+description = """
+PDF (in this case, the entire document shall be submitted rather than individual fields and values).
+"""
+iso_section = "12.1303"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1303"]
+
+[[parser.requirements]]
+id = "12.1337-object"
+name = "Object (12.1337)"
+description = """
+The length of a stream shall not be specified by an indirect object.
+"""
+iso_section = "12.1337"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1337"]
+
+[[parser.requirements]]
+id = "12.1365-entry"
+name = "Entry (12.1365)"
+description = """
+Status entries shall not be present together with this entry.
+"""
+iso_section = "12.1365"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1365"]
+
+[[parser.requirements]]
+id = "12.1488-entry"
+name = "Entry (12.1488)"
+description = """
+TransformParams entry shall specify the variable portions of the method.
+"""
+iso_section = "12.1488"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1488"]
+
+[[parser.requirements]]
+id = "12.1496-general"
+name = "General (12.1496)"
+description = """
+12.8.2.2, “DocMDP” for information on how these signatures shall be created and validated.
+"""
+iso_section = "12.1496"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1496"]
+
+[[parser.requirements]]
+id = "12.1599-general"
+name = "General (12.1599)"
+description = """
+2.2. If an unknown version is present, no rights shall be enabled.
+"""
+iso_section = "12.1599"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1599"]
+
+[[parser.requirements]]
+id = "12.1649-general"
+name = "General (12.1649)"
+description = """
+For maximum compatibility with earlier versions, conforming writers should follow this practice.
+"""
+iso_section = "12.1649"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1649"]
+
+[[parser.requirements]]
+id = "13.109-array"
+name = "Array (13.109)"
+description = """
+“Document Catalog”) shall specify an array of requirement dictionaries, whose entries are shown in Table 264.
+"""
+iso_section = "13.109"
+requirement_type = "mandatory"
+priority = "P0"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.109"]
+
+[[parser.requirements]]
+id = "13.139-general"
+name = "General (13.139)"
+description = """
+On-line media objects may be played efficiently, even when very large.
+"""
+iso_section = "13.139"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.139"]
+
+[[parser.requirements]]
+id = "13.268-general"
+name = "General (13.268)"
+description = """
+Absolute URls within the media shall not be affected.
+"""
+iso_section = "13.268"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.268"]
+
+[[parser.requirements]]
+id = "13.269-general"
+name = "General (13.269)"
+description = """
+If the media itself contains a base URL, that value shall be used in preference to BU.
+"""
+iso_section = "13.269"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.269"]
+
+[[parser.requirements]]
+id = "13.275-general"
+name = "General (13.275)"
+description = """
+An unrecognized value shall be treated as (TEMPNEVER).
+"""
+iso_section = "13.275"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.275"]
+
+[[parser.requirements]]
+id = "13.308-general"
+name = "General (13.308)"
+description = """
+The duration may be a specific amount of time, it may be infinity, or it may be the media’s intrinsic duration.
+"""
+iso_section = "13.308"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.308"]
+
+[[parser.requirements]]
+id = "13.323-general"
+name = "General (13.323)"
+description = """
+Relevant only for media that may be paused. Default value: true.
+"""
+iso_section = "13.323"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.323"]
+
+[[parser.requirements]]
+id = "13.361-general"
+name = "General (13.361)"
+description = """
+If a media format has an intrinsic background colour, B shall not override it.
+"""
+iso_section = "13.361"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.361"]
+
+[[parser.requirements]]
+id = "13.427-general"
+name = "General (13.427)"
+description = """
+If none of the conditions are true, the player may be used.
+"""
+iso_section = "13.427"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.427"]
+
+[[parser.requirements]]
+id = "13.466-general"
+name = "General (13.466)"
+description = """
+Software names shall be second-class names (see Annex E).
+"""
+iso_section = "13.466"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.466"]
+
+[[parser.requirements]]
+id = "13.525-entry"
+name = "Entry (13.525)"
+description = """
+If this entry is omitted, the movie shall be played from the beginning.
+"""
+iso_section = "13.525"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.525"]
+
+[[parser.requirements]]
+id = "13.691-type"
+name = "Type (13.691)"
+description = """
+This value shall be ignored for animation styles of type None.
+"""
+iso_section = "13.691"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.691"]
+
+[[parser.requirements]]
+id = "13.703-general"
+name = "General (13.703)"
+description = """
+Keyframe animations shall be driven linearly from beginning to end.
+"""
+iso_section = "13.703"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.703"]
+
+[[parser.requirements]]
+id = "13.742-entry"
+name = "Entry (13.742)"
+description = """
+NR entry specify how the state of each node shall be changed.
+"""
+iso_section = "13.742"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.742"]
+
+[[parser.requirements]]
+id = "13.772-general"
+name = "General (13.772)"
+description = """
+For orthographic projection, objects shall be projected onto the near plane by simply discarding their z value.
+"""
+iso_section = "13.772"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.772"]
+
+[[parser.requirements]]
+id = "13.837-entry"
+name = "Entry (13.837)"
+description = """
+The colour of these edges shall be determined by the AC entry.
+"""
+iso_section = "13.837"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.837"]
+
+[[parser.requirements]]
+id = "13.869-general"
+name = "General (13.869)"
+description = """
+0, no visible representation of the cutting plane shall be rendered.
+"""
+iso_section = "13.869"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.869"]
+
+[[parser.requirements]]
+id = "14.72-general"
+name = "General (14.72)"
+description = """
+New keys should be chosen with care so that they make sense to users.
+"""
+iso_section = "14.72"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.72"]
+
+[[parser.requirements]]
+id = "14.92-general"
+name = "General (14.92)"
+description = """
+Different servers may use different strategies for converting longer file names to this format.
+"""
+iso_section = "14.92"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.92"]
+
+[[parser.requirements]]
+id = "14.94-trailer"
+name = "Trailer (14.94)"
+description = """
+File identifiers shall be defined by the optional ID entry in a PDF file’s trailer dictionary (see 7.5.5, “File Trailer”).
+"""
+iso_section = "14.94"
+requirement_type = "mandatory"
+priority = "P0"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.94"]
+
+[[parser.requirements]]
+id = "14.104-general"
+name = "General (14.104)"
+description = """
+Photoshop®) but may be ignored by general-purpose conforming readers.
+"""
+iso_section = "14.104"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.104"]
+
+[[parser.requirements]]
+id = "14.121-page"
+name = "Page (14.121)"
+description = """
+A marked-content sequence may not cross page boundaries.
+"""
+iso_section = "14.121"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.121"]
+
+[[parser.requirements]]
+id = "14.147-general"
+name = "General (14.147)"
+description = """
+The q (save) and Q (restore) operators may not occur within a marked clipping sequence.
+"""
+iso_section = "14.147"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.147"]
+
+[[parser.requirements]]
+id = "14.213-content"
+name = "Content (14.213)"
+description = """
+Any structure element may have associated graphical content, consisting of one or more content items.
+"""
+iso_section = "14.213"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.213"]
+
+[[parser.requirements]]
+id = "14.258-reference"
+name = "Reference (14.258)"
+description = """
+Content Items”), the value shall be an indirect reference to the parent structure element.
+"""
+iso_section = "14.258"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.258"]
+
+[[parser.requirements]]
+id = "14.285-general"
+name = "General (14.285)"
+description = """
+1.6) attributes may be used to represent user properties (see 14.7.5.4, “User Properties”).
+"""
+iso_section = "14.285"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.285"]
+
+[[parser.requirements]]
+id = "14.331-general"
+name = "General (14.331)"
+description = """
+(Required) The attribute owner. Shall be UserProperties.
+"""
+iso_section = "14.331"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.331"]
+
+[[parser.requirements]]
+id = "14.371-general"
+name = "General (14.371)"
+description = """
+Conforming readers may recognize such discontinuities by examining the document’s logical structure.
+"""
+iso_section = "14.371"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.371"]
+
+[[parser.requirements]]
+id = "14.397-general"
+name = "General (14.397)"
+description = """
+14.8.2.5, “Identifying Word Breaks”) but shall not contain interior SPACEs.
+"""
+iso_section = "14.397"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.397"]
+
+[[parser.requirements]]
+id = "14.462-content"
+name = "Content (14.462)"
+description = """
+The structure types described in Table 337 shall be used for organizing the content of tables.
+"""
+iso_section = "14.462"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.462"]
+
+[[parser.requirements]]
+id = "14.529-general"
+name = "General (14.529)"
+description = """
+An illustration element without a Placement attribute shall be treated as an ILSE and laid out inline.
+"""
+iso_section = "14.529"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.529"]
+
+[[parser.requirements]]
+id = "14.696-general"
+name = "General (14.696)"
+description = """
+This attribute shall affect both the alignment and width of the glyphs.
+"""
+iso_section = "14.696"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.696"]
+
+[[parser.requirements]]
+id = "14.726-array"
+name = "Array (14.726)"
+description = """
+ColumnCount - 1 numbers, the excess array elements shall be ignored.
+"""
+iso_section = "14.726"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.726"]
+
+[[parser.requirements]]
+id = "14.747-general"
+name = "General (14.747)"
+description = """
+The value shall be one of: on, off (default), or neutral.
+"""
+iso_section = "14.747"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.747"]
+
+[[parser.requirements]]
+id = "14.761-header"
+name = "Header (14.761)"
+description = """
+This attribute may apply to header cells (TH) as well as data cells (TD)
+"""
+iso_section = "14.761"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.761"]
+
+[[parser.requirements]]
+id = "14.805-entry"
+name = "Entry (14.805)"
+description = """
+The Alt entry in property lists may be combined with other entries.
+"""
+iso_section = "14.805"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.805"]
+
+[[parser.requirements]]
+id = "14.834-general"
+name = "General (14.834)"
+description = """
+This value shall be a single real number, not a major and minor version number.
+"""
+iso_section = "14.834"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.834"]
+
+[[parser.requirements]]
+id = "14.841-general"
+name = "General (14.841)"
+description = """
+If the URL is relative, it shall be converted into an absolute URL.
+"""
+iso_section = "14.841"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.841"]
+
+[[parser.requirements]]
+id = "14.844-general"
+name = "General (14.844)"
+description = """
+If there is a host section, any uppercase ASCII characters therein shall be converted to lowercase ASCII.
+"""
+iso_section = "14.844"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.844"]
+
+[[parser.requirements]]
+id = "14.845-general"
+name = "General (14.845)"
+description = """
+If the scheme is file and the host is localhost, the host section shall be removed.
+"""
+iso_section = "14.845"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.845"]
+
+[[parser.requirements]]
+id = "14.917-entry"
+name = "Entry (14.917)"
+description = """
+The common destination (the last URL in a chain) may be omitted, since it is already identified by the U entry.
+"""
+iso_section = "14.917"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.917"]
+
+[[parser.requirements]]
+id = "14.946-general"
+name = "General (14.946)"
+description = """
+Command settings dictionaries may be shared by any command dictionaries that use the same settings.
+"""
+iso_section = "14.946"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.946"]
+
+[[parser.requirements]]
+id = "14.982-page"
+name = "Page (14.982)"
+description = """
+Conforming readers may offer the ability to display guidelines on the screen for the various page boundaries.
+"""
+iso_section = "14.982"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.982"]
+
+[[parser.requirements]]
+id = "14.984-page"
+name = "Page (14.984)"
+description = """
+This information is page-specific and may vary from one page to another.
+"""
+iso_section = "14.984"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.984"]
+
+[[parser.requirements]]
+id = "14.1006-general"
+name = "General (14.1006)"
+description = """
+Other guideline styles may be defined in the future. Default value: S.
+"""
+iso_section = "14.1006"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1006"]
+
+[[parser.requirements]]
+id = "14.1009-general"
+name = "General (14.1009)"
+description = """
+The dash phase shall not be specified and shall be assumed to be 0.
+"""
+iso_section = "14.1009"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1009"]
+
+[[parser.requirements]]
+id = "14.1064-array"
+name = "Array (14.1064)"
+description = """
+The LastModified entry may be used in place of the Version array to track changes to a page’s trap network.
+"""
+iso_section = "14.1064"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1064"]
+
+[[parser.requirements]]
+id = "14.1132-content"
+name = "Content (14.1132)"
+description = """
+This annex lists, in alphabetical order, all the operators that may be used in PDF content streams.
+"""
+iso_section = "14.1132"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1132"]
+
+[[parser.requirements]]
+id = "14.1221-stream"
+name = "Stream (14.1221)"
+description = """
+Part 5: Primary hint stream (may precede or follow part 6)
+"""
+iso_section = "14.1221"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1221"]
+
+[[parser.requirements]]
+id = "14.1222-page"
+name = "Page (14.1222)"
+description = """
+Part 6: First-page section (may precede or follow part 5)
+"""
+iso_section = "14.1222"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1222"]
+
+[[parser.requirements]]
+id = "14.1262-trailer"
+name = "Trailer (14.1262)"
+description = """
+The first-page trailer may optionally end with startxref, an integer, and %%EOF, just as in an ordinary trailer.
+"""
+iso_section = "14.1262"
+requirement_type = "optional"
+priority = "P0"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1262"]
+
+[[parser.requirements]]
+id = "14.1342-entry"
+name = "Entry (14.1342)"
+description = """
+The first entry (for object number 0) shall be a free entry.
+"""
+iso_section = "14.1342"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1342"]
+
+[[parser.requirements]]
+id = "14.1343-general"
+name = "General (14.1343)"
+description = """
+The remaining entries are for in-use objects, which shall be numbered consecutively, starting at 1.
+"""
+iso_section = "14.1343"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "parser"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.1343"]
+
+[encryption]
+[[encryption.requirements]]
+id = "7.335-dictionary"
+name = "Dictionary (7.335)"
+description = """
+In addition, the decode parameters dictionary may include entries that are private to the security handler.
+"""
+iso_section = "7.335"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "encryption"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.335"]
+
+[[encryption.requirements]]
+id = "7.557-general"
+name = "General (7.557)"
+description = """
+Whether additional operations shall be allowed on a decrypted document depends on which password (if any)
+"""
+iso_section = "7.557"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "encryption"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.557"]
+
+[[encryption.requirements]]
+id = "7.558-general"
+name = "General (7.558)"
+description = """
+Opening the document with the correct owner password should allow full (owner) access to the document.
+"""
+iso_section = "7.558"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "encryption"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.558"]
+
+[[encryption.requirements]]
+id = "7.605-entry"
+name = "Entry (7.605)"
+description = """
+The Filter entry shall be the name of a public-key security handler.
+"""
+iso_section = "7.605"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "encryption"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.605"]
+
+[[encryption.requirements]]
+id = "7.628-general"
+name = "General (7.628)"
+description = """
+For adbe.pkcs7.s4, security handlers of revision 3 permissions shall apply.
+"""
+iso_section = "7.628"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "encryption"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.628"]
+
+[[encryption.requirements]]
+id = "7.665-general"
+name = "General (7.665)"
+description = """
+\"Public-Key Security Handlers\"). When these entries are present, the value of CFM shall be V2 or AESV2.
+"""
+iso_section = "7.665"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "encryption"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.665"]
+
+[content]
+[[content.requirements]]
+id = "8.318-general"
+name = "General (8.318)"
+description = """
+For the v operator, the first control point shall coincide with initial point of the curve.
+"""
+iso_section = "8.318"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "content"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.318"]
+
+[[content.requirements]]
+id = "8.319-general"
+name = "General (8.319)"
+description = """
+For the y operator, the second control point shall coincide with final point of the curve.
+"""
+iso_section = "8.319"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "content"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.319"]
+
+[[content.requirements]]
+id = "8.1281-name"
+name = "Name (8.1281)"
+description = """
+Its first element shall be a name representing a boolean operator (And, Or, or Not).
+"""
+iso_section = "8.1281"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "content"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1281"]
+
+[[content.requirements]]
+id = "14.112-content"
+name = "Content (14.112)"
+description = """
+The MP and DP operators shall designate a single marked-content point in the content stream.
+"""
+iso_section = "14.112"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "content"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.112"]
+
+[[content.requirements]]
+id = "14.829-content"
+name = "Content (14.829)"
+description = """
+The mapping from a source content resource to a content set in a PDF document may be saved in the PDF file.
+"""
+iso_section = "14.829"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "content"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.829"]
+
+[advanced]
+[[advanced.requirements]]
+id = "7.8-reference"
+name = "Reference (7.8)"
+description = """
+Client-Side JavaScript Reference, (May 1999), Mozilla Foundation.
+"""
+iso_section = "7.8"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.8"]
+
+[[advanced.requirements]]
+id = "9.366-font"
+name = "Font (9.366)"
+description = """
+A TrueType font program may be embedded directly in a PDF file as a stream object.
+"""
+iso_section = "9.366"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.366"]
+
+[[advanced.requirements]]
+id = "10.1-object"
+name = "Object (10.1)"
+description = """
+A font program may be embedded in a PDF file as data contained in a PDF stream object.
+"""
+iso_section = "10.1"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["10.1"]
+
+[[advanced.requirements]]
+id = "12.852-general"
+name = "General (12.852)"
+description = """
+A child document shall be one that is embedded within another PDF file.
+"""
+iso_section = "12.852"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.852"]
+
+[[advanced.requirements]]
+id = "12.853-general"
+name = "General (12.853)"
+description = """
+The document in which a file is embedded shall be its parent.
+"""
+iso_section = "12.853"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.853"]
+
+[[advanced.requirements]]
+id = "12.950-general"
+name = "General (12.950)"
+description = """
+To trigger the execution of a JavaScript script that may perform custom operations.
+"""
+iso_section = "12.950"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.950"]
+
+[[advanced.requirements]]
+id = "13.129-general"
+name = "General (13.129)"
+description = """
+Arbitrary media types may be embedded in PDF files.
+"""
+iso_section = "13.129"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.129"]
+
+[[advanced.requirements]]
+id = "13.138-general"
+name = "General (13.138)"
+description = """
+Document authors may adapt the use of multimedia to accessibility requirements.
+"""
+iso_section = "13.138"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.138"]
+
+[[advanced.requirements]]
+id = "13.561-page"
+name = "Page (13.561)"
+description = """
+3D artwork may be rendered within a page; that is, not as a separate window or user interface element.
+"""
+iso_section = "13.561"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.561"]
+
+[[advanced.requirements]]
+id = "13.562-page"
+name = "Page (13.562)"
+description = """
+Multiple instances of 3D artwork may appear within a page or document.
+"""
+iso_section = "13.562"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.562"]
+
+[[advanced.requirements]]
+id = "13.579-general"
+name = "General (13.579)"
+description = """
+3D annotations (PDF 1.6) are the means by which 3D artwork shall be represented in a PDF document.
+"""
+iso_section = "13.579"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.579"]
+
+[[advanced.requirements]]
+id = "13.580-stream"
+name = "Stream (13.580)"
+description = """
+In addition to these entries, a 3D annotation shall provide an appearance stream in its AP entry (see Table 164)
+"""
+iso_section = "13.580"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.580"]
+
+[[advanced.requirements]]
+id = "13.680-entry"
+name = "Entry (13.680)"
+description = """
+The AN entry of the 3D stream shall specify a 3D animation style dictionary.
+"""
+iso_section = "13.680"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.680"]
+
+[[advanced.requirements]]
+id = "13.723-general"
+name = "General (13.723)"
+description = """
+If omitted, the view specified in the 3D artwork shall be used.
+"""
+iso_section = "13.723"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.723"]
+
+[[advanced.requirements]]
+id = "13.780-dictionary"
+name = "Dictionary (13.780)"
+description = """
+A 3D render mode dictionary (PDF 1.7) specifies the style in which the 3D artwork shall be rendered.
+"""
+iso_section = "13.780"
+requirement_type = "mandatory"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.780"]
+
+[[advanced.requirements]]
+id = "13.784-dictionary"
+name = "Dictionary (13.784)"
+description = """
+The RM entry in the 3D views dictionary may specify a 3D render mode dictionary.
+"""
+iso_section = "13.784"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "advanced"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.784"]
+
+[writer]
+[[writer.requirements]]
+id = "7.353-general"
+name = "General (7.353)"
+description = """
+The body of a PDF file shall consist of a sequence of indirect objects representing the contents of a document.
+"""
+iso_section = "7.353"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "writer"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.353"]
+
+[[writer.requirements]]
+id = "7.564-general"
+name = "General (7.564)"
+description = """
+Disallowing such printing may result in degradation of output quality.
+"""
+iso_section = "7.564"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "writer"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.564"]
+
+[[writer.requirements]]
+id = "8.116-general"
+name = "General (8.116)"
+description = """
+PDF files, but it should not be used by a PDF 1.7 conforming writer.
+"""
+iso_section = "8.116"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "writer"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.116"]
+
+[[writer.requirements]]
+id = "8.369-general"
+name = "General (8.369)"
+description = """
+Colour specification. A conforming writer may specify abstract colours in a device-independent way.
+"""
+iso_section = "8.369"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "writer"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.369"]
+
+[doc_metadata]
+[[doc_metadata.requirements]]
+id = "7.88-dictionary"
+name = "Dictionary (7.88)"
+description = """
+Multiple entries in the same dictionary shall not have the same key.
+"""
+iso_section = "7.88"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.88"]
+
+[[doc_metadata.requirements]]
+id = "7.89-dictionary"
+name = "Dictionary (7.89)"
+description = """
+A dictionary shall be written as a sequence of key-value pairs enclosed in double angle brackets (<< … >>)
+"""
+iso_section = "7.89"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.89"]
+
+[[doc_metadata.requirements]]
+id = "7.425-dictionary"
+name = "Dictionary (7.425)"
+description = """
+A compressed dictionary or array may contain indirect references.
+"""
+iso_section = "7.425"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.425"]
+
+[[doc_metadata.requirements]]
+id = "7.644-dictionary"
+name = "Dictionary (7.644)"
+description = """
+(Optional) If present, shall be CryptFilter for a crypt filter dictionary.
+"""
+iso_section = "7.644"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.644"]
+
+[[doc_metadata.requirements]]
+id = "7.693-dictionary"
+name = "Dictionary (7.693)"
+description = """
+Dictionary”, describes this dictionary and how it shall be used.
+"""
+iso_section = "7.693"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.693"]
+
+[[doc_metadata.requirements]]
+id = "7.738-dictionary"
+name = "Dictionary (7.738)"
+description = """
+Requirements\", describes this dictionary and how it shall be used.
+"""
+iso_section = "7.738"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.738"]
+
+[[doc_metadata.requirements]]
+id = "7.999-dictionary"
+name = "Dictionary (7.999)"
+description = """
+In addition to the entries in Table 38, a type 2 function dictionary shall include those listed in Table 40.
+"""
+iso_section = "7.999"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.999"]
+
+[[doc_metadata.requirements]]
+id = "7.1006-type"
+name = "Type (7.1006)"
+description = """
+In addition to the entries in Table 38, a type 3 function dictionary shall include those listed in Table 41.
+"""
+iso_section = "7.1006"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["7.1006"]
+
+[[doc_metadata.requirements]]
+id = "8.340-general"
+name = "General (8.340)"
+description = """
+Mitered joins shall be subject to the current miter limit (see 8.4.3.5, \"Miter Limit\").
+"""
+iso_section = "8.340"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.340"]
+
+[[doc_metadata.requirements]]
+id = "12.1055-dictionary"
+name = "Dictionary (12.1055)"
+description = """
+Resources dictionary shall be left intact, not replaced with the corresponding value from the DR dictionary.)
+"""
+iso_section = "12.1055"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1055"]
+
+[[doc_metadata.requirements]]
+id = "12.1438-page"
+name = "Page (12.1438)"
+description = """
+An FDF template dictionary shall contain information describing a named page that serves as a template.
+"""
+iso_section = "12.1438"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1438"]
+
+[[doc_metadata.requirements]]
+id = "12.1475-dictionary"
+name = "Dictionary (12.1475)"
+description = """
+Signature information shall be contained in a signature dictionary, whose entries are listed in Table 252.
+"""
+iso_section = "12.1475"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1475"]
+
+[[doc_metadata.requirements]]
+id = "12.1555-dictionary"
+name = "Dictionary (12.1555)"
+description = """
+A certification signature should have a legal attestation dictionary (see 12.8.5, “Legal Content Attestations”)
+"""
+iso_section = "12.1555"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1555"]
+
+[[doc_metadata.requirements]]
+id = "12.1659-entry"
+name = "Entry (12.1659)"
+description = """
+The Perms entry in the document catalogue (see Table 28) shall specify a permissions dictionary (PDF 1.5).
+"""
+iso_section = "12.1659"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.1659"]
+
+[[doc_metadata.requirements]]
+id = "13.48-dictionary"
+name = "Dictionary (13.48)"
+description = """
+A number format dictionary specifying feet should precede one specifying inches.
+"""
+iso_section = "13.48"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.48"]
+
+[[doc_metadata.requirements]]
+id = "13.266-dictionary"
+name = "Dictionary (13.266)"
+description = """
+If BU is in the MH dictionary and the base URL is not honoured the media clip data shall be non-viable.
+"""
+iso_section = "13.266"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.266"]
+
+[[doc_metadata.requirements]]
+id = "13.290-dictionary"
+name = "Dictionary (13.290)"
+description = """
+If B or E entry in a BE dictionary cannot be supported, it may be ignored at play-time.
+"""
+iso_section = "13.290"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.290"]
+
+[[doc_metadata.requirements]]
+id = "13.346-dictionary"
+name = "Dictionary (13.346)"
+description = """
+(Optional) A dictionary whose entries (see Table 283) should be honoured.
+"""
+iso_section = "13.346"
+requirement_type = "recommended"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.346"]
+
+[[doc_metadata.requirements]]
+id = "13.398-length"
+name = "Length (13.398)"
+description = """
+A timespan dictionary shall specify a length of time; its entries are shown in Table 289.
+"""
+iso_section = "13.398"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.398"]
+
+[[doc_metadata.requirements]]
+id = "14.43-metadata"
+name = "Metadata (14.43)"
+description = """
+Beginning with PDF 1.4, metadata may also be specified for individual components of a document.
+"""
+iso_section = "14.43"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.43"]
+
+[[doc_metadata.requirements]]
+id = "14.49-metadata"
+name = "Metadata (14.49)"
+description = """
+The contents of a metadata stream shall be the metadata represented in Extensible Markup Language (XML).
+"""
+iso_section = "14.49"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.49"]
+
+[[doc_metadata.requirements]]
+id = "14.885-dictionary"
+name = "Dictionary (14.885)"
+description = """
+(Required) The subtype of content set that this dictionary describes; shall be SIS.
+"""
+iso_section = "14.885"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "metadata"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.885"]
+
+[graphics]
+[[graphics.requirements]]
+id = "8.196-general"
+name = "General (8.196)"
+description = """
+The q operator shall push a copy of the entire graphics state onto the stack.
+"""
+iso_section = "8.196"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.196"]
+
+[[graphics.requirements]]
+id = "8.197-general"
+name = "General (8.197)"
+description = """
+The Q operator shall restore the entire graphics state to its former value by popping it from the stack.
+"""
+iso_section = "8.197"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.197"]
+
+[[graphics.requirements]]
+id = "8.210-path"
+name = "Path (8.210)"
+description = """
+Butt cap. The stroke shall be squared off at the endpoint of the path.
+"""
+iso_section = "8.210"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.210"]
+
+[[graphics.requirements]]
+id = "8.361-path"
+name = "Path (8.361)"
+description = """
+The initial clipping path shall include the entire page. A clipping path operator (W or W*, shown in Table 61)
+"""
+iso_section = "8.361"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.361"]
+
+[[graphics.requirements]]
+id = "8.843-general"
+name = "General (8.843)"
+description = """
+If ColorSpace is a CIE-based colour space, all gradient fill calculations shall be performed in that space.
+"""
+iso_section = "8.843"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.843"]
+
+[[graphics.requirements]]
+id = "8.997-image"
+name = "Image (8.997)"
+description = """
+All of these items shall be specified explicitly or implicitly by an image XObject or an inline image.
+"""
+iso_section = "8.997"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.997"]
+
+[[graphics.requirements]]
+id = "8.1085-image"
+name = "Image (8.1085)"
+description = """
+A base image (that is, the image XObject referred to in a resource dictionary) may contain an Alternates entry.
+"""
+iso_section = "8.1085"
+requirement_type = "optional"
+priority = "P1"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1085"]
+
+[[graphics.requirements]]
+id = "8.1097-image"
+name = "Image (8.1097)"
+description = """
+If the image’s OC entry specifies that the base image is visible, that image shall be displayed.
+"""
+iso_section = "8.1097"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.1097"]
+
+[[graphics.requirements]]
+id = "10.151-general"
+name = "General (10.151)"
+description = """
+All halftones are defined in device space, and shall be unaffected by the current transformation matrix.
+"""
+iso_section = "10.151"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["10.151"]
+
+[[graphics.requirements]]
+id = "11.257-image"
+name = "Image (11.257)"
+description = """
+For image masks (“Stencil Masking”), the shape shall be 1.0 for painted areas and 0.0 for masked areas.
+"""
+iso_section = "11.257"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.257"]
+
+[[graphics.requirements]]
+id = "11.354-stream"
+name = "Stream (11.354)"
+description = """
+The transparency group XObject’s content stream shall define the graphics objects belonging to the group.
+"""
+iso_section = "11.354"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "graphics"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["11.354"]
+
+[text]
+[[text.requirements]]
+id = "8.366-text"
+name = "Text (8.366)"
+description = """
+In addition to path objects, text objects may also be used for clipping; see 9.3.6, \"Text Rendering Mode\".
+"""
+iso_section = "8.366"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.366"]
+
+[[text.requirements]]
+id = "8.562-string"
+name = "String (8.562)"
+description = """
+The colour components for each entry in the table shall appear consecutively in the string or stream.
+"""
+iso_section = "8.562"
+requirement_type = "mandatory"
+priority = "P1"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["8.562"]
+
+[[text.requirements]]
+id = "9.222-text"
+name = "Text (9.222)"
+description = """
+Set the text rendering mode, Tmode , to render, which shall be an integer.
+"""
+iso_section = "9.222"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.222"]
+
+[[text.requirements]]
+id = "9.276-text"
+name = "Text (9.276)"
+description = """
+The text-positioning operators shall only appear within text objects.
+"""
+iso_section = "9.276"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.276"]
+
+[[text.requirements]]
+id = "9.286-text"
+name = "Text (9.286)"
+description = """
+The text-showing operators shall only appear within text objects.
+"""
+iso_section = "9.286"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["9.286"]
+
+[[text.requirements]]
+id = "12.162-text"
+name = "Text (12.162)"
+description = """
+(Required) The text that shall be displayed on the screen for this item.
+"""
+iso_section = "12.162"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.162"]
+
+[[text.requirements]]
+id = "12.214-text"
+name = "Text (12.214)"
+description = """
+Text strings shall be ordered lexically from smaller to larger, if ascending order is specified.
+"""
+iso_section = "12.214"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.214"]
+
+[[text.requirements]]
+id = "12.614-text"
+name = "Text (12.614)"
+description = """
+Text markup annotations shall appear as highlights, underlines, strikeouts (all PDF 1.3), or jagged (“squiggly”)
+"""
+iso_section = "12.614"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.614"]
+
+[[text.requirements]]
+id = "12.882-string"
+name = "String (12.882)"
+description = """
+This value shall be a simple string; it is not a file specification.
+"""
+iso_section = "12.882"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["12.882"]
+
+[[text.requirements]]
+id = "13.102-string"
+name = "String (13.102)"
+description = """
+U. An empty string indicates that no text shall be added.
+"""
+iso_section = "13.102"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["13.102"]
+
+[[text.requirements]]
+id = "14.73-text"
+name = "Text (14.73)"
+description = """
+The value associated with any key not specifically mentioned in Table 317 shall be a text string.
+"""
+iso_section = "14.73"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.73"]
+
+[[text.requirements]]
+id = "14.370-text"
+name = "Text (14.370)"
+description = """
+Content Order”), may contain places where the normal progression of text suffers a discontinuity.
+"""
+iso_section = "14.370"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.370"]
+
+[[text.requirements]]
+id = "14.700-content"
+name = "Content (14.700)"
+description = """
+For an ILSE that contains text, the height of the content rectangle shall be set by the LineHeight attribute.
+"""
+iso_section = "14.700"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.700"]
+
+[[text.requirements]]
+id = "14.769-text"
+name = "Text (14.769)"
+description = """
+Natural language may be specified for text in a document or for optional content.
+"""
+iso_section = "14.769"
+requirement_type = "optional"
+priority = "P3"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.769"]
+
+[[text.requirements]]
+id = "14.817-entry"
+name = "Entry (14.817)"
+description = """
+String Type”). Such a sequence shall override the prevailing Lang entry.
+"""
+iso_section = "14.817"
+requirement_type = "mandatory"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.817"]
+
+[[text.requirements]]
+id = "14.867-text"
+name = "Text (14.867)"
+description = """
+(such as those with no text) and may be omitted in these cases.
+"""
+iso_section = "14.867"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.867"]
+
+[[text.requirements]]
+id = "14.868-text"
+name = "Text (14.868)"
+description = """
+This identifier may be used to determine whether the text of a document has changed.
+"""
+iso_section = "14.868"
+requirement_type = "optional"
+priority = "P2"
+feature_area = "text"
+implemented = false
+implementation_refs = []
+test_refs = []
+verification_level = 0
+consolidates = ["14.868"]
+

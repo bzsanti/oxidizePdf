@@ -171,10 +171,16 @@ pub fn generate_curated_toml(requirements: &[CuratedRequirement]) -> String {
     output.push_str(&format!("reduction_ratio = {:.4}\n", reduction));
     output.push_str("\n");
 
-    // Group by feature area
+    // Group by feature area (prefix to avoid collision with [metadata] section)
     let mut by_area: HashMap<String, Vec<&CuratedRequirement>> = HashMap::new();
     for req in requirements {
-        by_area.entry(req.feature_area.clone()).or_default().push(req);
+        // Rename "metadata" area to "doc_metadata" to avoid TOML collision
+        let area = if req.feature_area == "metadata" {
+            "doc_metadata".to_string()
+        } else {
+            req.feature_area.clone()
+        };
+        by_area.entry(area).or_default().push(req);
     }
 
     for (area, reqs) in by_area {
