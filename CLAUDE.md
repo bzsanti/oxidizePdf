@@ -4,38 +4,37 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-12-19 - Issue #108 fix + Encrypted PDFs Phase 1.2 |
+| **Last Session** | 2025-12-19 - Encrypted PDFs Phase 1.3 complete |
 | **Branch** | develop_santi |
 | **Version** | v1.6.6 (released) |
-| **Tests** | 5927 passing (5743 unit + 184 doc tests) |
+| **Tests** | 4898 passing (4713 unit + 185 doc tests) |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
 ### Session Summary (2025-12-19)
-- **Issue #108 FIXED**: Dead code in `from_png_file`/`from_jpeg_file`
-  - Removed identical `#[cfg]` branches (-22 lines)
-  - Removed misleading "Fallback" comment
-  - Deleted redundant TDD stub tests (`iso_consolidation_rules_tests.rs`, -620 lines)
-- **Encrypted PDFs - Phase 1.2 COMPLETE** (TDD):
-  - Made `compute_object_key` public for object-specific key derivation
-  - Created 11 new tests for object decryption (strings, streams, recursive)
-  - Validates RC4 40-bit and 128-bit encryption/decryption
-  - Tests: `object_decryption_test.rs`
+- **Encrypted PDFs - Phase 1.3 COMPLETE** (TDD):
+  - Added `ParseError::WrongPassword` and `ParseError::PdfLocked` error variants
+  - Implemented `PdfReader::unlock()` fluent API for password-based decryption
+  - Added `ensure_unlocked()` guard for locked PDF detection
+  - Implemented `decrypt_object_if_needed()` for automatic string/stream decryption
+  - Modified `get_object()` and `get_compressed_object()` to auto-decrypt after unlock
+  - Handles Identity crypt filter (no decryption) per ISO 32000-1
+  - 10 integration tests in `reader_integration_test.rs`
 
 ### Encryption Progress
 | Phase | Tests | Status |
 |-------|-------|--------|
 | 1.1 Password Validation | 16 | ✅ COMPLETE |
 | 1.2 Object Decryption | 11 | ✅ COMPLETE |
-| 1.3 PdfReader Integration | 6 | ⏳ Pending |
+| 1.3 PdfReader Integration | 10 | ✅ COMPLETE |
 | 1.4 Real PDF Testing | 5 | ⏳ Pending |
 
 ### Next Session Priority
-1. Continue Encrypted PDFs - Phase 1.3: PdfReader Integration (2.5h)
-2. Phase 1.4: Real PDF Testing (2h)
-3. Consider Phase 2: CID/Type0 Fonts (6h)
+1. Continue Encrypted PDFs - Phase 1.4: Real PDF Testing (2h)
+2. Consider Phase 2: CID/Type0 Fonts (6h)
+3. Release v1.6.7 with encryption support
 
 ## Sprint Summary
 
