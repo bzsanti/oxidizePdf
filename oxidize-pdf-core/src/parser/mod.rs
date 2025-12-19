@@ -450,6 +450,14 @@ pub enum ParseError {
     #[error("PDF is encrypted. Decryption is not currently supported in the community edition")]
     EncryptionNotSupported,
 
+    /// Wrong password provided for encrypted PDF
+    #[error("Wrong password: the provided password is incorrect")]
+    WrongPassword,
+
+    /// PDF is locked - must call unlock() before reading objects
+    #[error("PDF is locked: call unlock() with the correct password before reading objects")]
+    PdfLocked,
+
     /// Empty file
     #[error("File is empty (0 bytes)")]
     EmptyFile,

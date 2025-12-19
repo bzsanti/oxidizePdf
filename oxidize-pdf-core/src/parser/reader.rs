@@ -5,11 +5,12 @@
 use super::encryption_handler::EncryptionHandler;
 use super::header::PdfHeader;
 use super::object_stream::ObjectStream;
-use super::objects::{PdfDictionary, PdfObject};
+use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfString};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
 use super::xref::XRefTable;
 use super::{ParseError, ParseResult};
+use crate::objects::ObjectId;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
@@ -111,6 +112,135 @@ impl<R: Read + Seek> PdfReader<R> {
         match &mut self.encryption_handler {
             Some(handler) => Ok(handler.try_empty_password().unwrap_or(false)),
             None => Ok(true), // Not encrypted
+        }
+    }
+
+    /// Unlock encrypted PDF with password
+    ///
+    /// Attempts to unlock the PDF using the provided password (tries both user
+    /// and owner passwords). If the PDF is not encrypted, this method returns
+    /// `Ok(())` immediately.
+    ///
+    /// # Arguments
+    ///
+    /// * `password` - User or owner password for the PDF
+    ///
+    /// # Errors
+    ///
+    /// Returns `ParseError::WrongPassword` if the password is incorrect.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::parser::PdfReader;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut reader = PdfReader::open("encrypted.pdf")?;
+    ///
+    /// if reader.is_encrypted() {
+    ///     reader.unlock("password")?;
+    /// }
+    ///
+    /// let catalog = reader.catalog()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn unlock(&mut self, password: &str) -> ParseResult<()> {
+        // If not encrypted, nothing to do
+        if !self.is_encrypted() {
+            return Ok(());
+        }
+
+        // Early return if already unlocked (idempotent)
+        if self.is_unlocked() {
+            return Ok(());
+        }
+
+        // Try to unlock with password (tries user and owner)
+        let success = self.unlock_with_password(password)?;
+
+        if success {
+            Ok(())
+        } else {
+            Err(ParseError::WrongPassword)
+        }
+    }
+
+    /// Check if PDF is locked and return error if so
+    fn ensure_unlocked(&self) -> ParseResult<()> {
+        if self.is_encrypted() && !self.is_unlocked() {
+            return Err(ParseError::PdfLocked);
+        }
+        Ok(())
+    }
+
+    /// Decrypt an object if encryption is active
+    ///
+    /// This method recursively decrypts strings and streams within the object.
+    /// Objects that don't contain encrypted data (numbers, names, booleans, null,
+    /// references) are returned unchanged.
+    fn decrypt_object_if_needed(
+        &self,
+        obj: PdfObject,
+        obj_num: u32,
+        gen_num: u16,
+    ) -> ParseResult<PdfObject> {
+        // Only decrypt if encryption is active and unlocked
+        let handler = match &self.encryption_handler {
+            Some(h) if h.is_unlocked() => h,
+            _ => return Ok(obj), // Not encrypted or not unlocked
+        };
+
+        let obj_id = ObjectId::new(obj_num, gen_num);
+
+        match obj {
+            PdfObject::String(ref s) => {
+                // Decrypt string
+                let decrypted_bytes = handler.decrypt_string(s.as_bytes(), &obj_id)?;
+                Ok(PdfObject::String(PdfString::new(decrypted_bytes)))
+            }
+            PdfObject::Stream(ref stream) => {
+                // Check if stream should be decrypted (Identity filter means no decryption)
+                let should_decrypt = stream
+                    .dict
+                    .get("StmF")
+                    .and_then(|o| o.as_name())
+                    .map(|n| n.0.as_str() != "Identity")
+                    .unwrap_or(true); // Default: decrypt if no /StmF
+
+                if should_decrypt {
+                    let decrypted_data = handler.decrypt_stream(&stream.data, &obj_id)?;
+
+                    // Create new stream with decrypted data
+                    let mut new_stream = stream.clone();
+                    new_stream.data = decrypted_data;
+                    Ok(PdfObject::Stream(new_stream))
+                } else {
+                    Ok(obj) // Don't decrypt /Identity streams
+                }
+            }
+            PdfObject::Dictionary(ref dict) => {
+                // Recursively decrypt dictionary values
+                let mut new_dict = PdfDictionary::new();
+                for (key, value) in dict.0.iter() {
+                    let decrypted_value =
+                        self.decrypt_object_if_needed(value.clone(), obj_num, gen_num)?;
+                    new_dict.insert(key.0.clone(), decrypted_value);
+                }
+                Ok(PdfObject::Dictionary(new_dict))
+            }
+            PdfObject::Array(ref arr) => {
+                // Recursively decrypt array elements
+                let mut new_arr = Vec::new();
+                for elem in arr.0.iter() {
+                    let decrypted_elem =
+                        self.decrypt_object_if_needed(elem.clone(), obj_num, gen_num)?;
+                    new_arr.push(decrypted_elem);
+                }
+                Ok(PdfObject::Array(PdfArray(new_arr)))
+            }
+            // Other types (Integer, Real, Boolean, Name, Null, Reference) don't get encrypted
+            _ => Ok(obj),
         }
     }
 }
@@ -420,6 +550,9 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Get an object by reference with circular reference protection
     pub fn get_object(&mut self, obj_num: u32, gen_num: u16) -> ParseResult<&PdfObject> {
+        // Check if PDF is locked (encrypted but not unlocked)
+        self.ensure_unlocked()?;
+
         let key = (obj_num, gen_num);
 
         // Fast path: check cache first
@@ -713,8 +846,11 @@ impl<R: Read + Seek> PdfReader<R> {
             }
         };
 
-        // Cache the object
-        self.object_cache.insert(key, obj);
+        // Decrypt if encryption is active
+        let decrypted_obj = self.decrypt_object_if_needed(obj, obj_num, gen_num)?;
+
+        // Cache the decrypted object
+        self.object_cache.insert(key, decrypted_obj);
 
         Ok(&self.object_cache[&key])
     }
@@ -798,8 +934,11 @@ impl<R: Read + Seek> PdfReader<R> {
                 message: format!("Object {obj_num} not found in object stream {stream_obj_num}"),
             })?;
 
-        // Cache the object
-        self.object_cache.insert(key, obj.clone());
+        // Decrypt if encryption is active (object stream contents may contain encrypted strings)
+        let decrypted_obj = self.decrypt_object_if_needed(obj.clone(), obj_num, gen_num)?;
+
+        // Cache the decrypted object
+        self.object_cache.insert(key, decrypted_obj);
         Ok(&self.object_cache[&key])
     }
 
