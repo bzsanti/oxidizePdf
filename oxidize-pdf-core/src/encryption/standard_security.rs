@@ -473,8 +473,8 @@ impl StandardSecurityHandler {
         Ok(user_hash.len() >= 32 && computed_hash[..32] == user_hash[..32])
     }
 
-    /// Compute object-specific encryption key
-    fn compute_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+    /// Compute object-specific encryption key (Algorithm 1, ISO 32000-1 §7.6.2)
+    pub fn compute_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         let mut data = Vec::new();
         data.extend_from_slice(&key.key);
         data.extend_from_slice(&obj_id.number().to_le_bytes()[..3]); // Low 3 bytes

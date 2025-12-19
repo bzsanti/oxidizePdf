@@ -4,31 +4,38 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-12-11 - Sprint 4 COMPLETE (All 5 Phases) |
+| **Last Session** | 2025-12-19 - Issue #108 fix + Encrypted PDFs Phase 1.2 |
 | **Branch** | develop_santi |
 | **Version** | v1.6.6 (released) |
-| **Tests** | 4710 unit + 184 doc tests passing |
+| **Tests** | 5927 passing (5743 unit + 184 doc tests) |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2025-12-11)
-- **Sprint 4 COMPLETE**: ISO Compliance Matrix Curation (TDD approach)
-  - Phase 1: TDD test infrastructure (27 tests)
-  - Phase 2: iso-curator CLI tool (analyze/classify/consolidate)
-  - Phase 3: Generated curated matrix - 310 requirements from 7,775 fragments
-  - Phase 4: CuratedIsoMatrix API integration (10 unit tests)
-  - Phase 5: Implementation linking (scan/link/report commands)
-- **Issue #54 CLOSED**: ISO 32000-1:2008 Compliance Tracking
-- Auto-detected 519 ISO implementations across 320 source files
-- All 310 requirements linked to implementation code
-- Created comprehensive compliance reporting system
+### Session Summary (2025-12-19)
+- **Issue #108 FIXED**: Dead code in `from_png_file`/`from_jpeg_file`
+  - Removed identical `#[cfg]` branches (-22 lines)
+  - Removed misleading "Fallback" comment
+  - Deleted redundant TDD stub tests (`iso_consolidation_rules_tests.rs`, -620 lines)
+- **Encrypted PDFs - Phase 1.2 COMPLETE** (TDD):
+  - Made `compute_object_key` public for object-specific key derivation
+  - Created 11 new tests for object decryption (strings, streams, recursive)
+  - Validates RC4 40-bit and 128-bit encryption/decryption
+  - Tests: `object_decryption_test.rs`
+
+### Encryption Progress
+| Phase | Tests | Status |
+|-------|-------|--------|
+| 1.1 Password Validation | 16 | ✅ COMPLETE |
+| 1.2 Object Decryption | 11 | ✅ COMPLETE |
+| 1.3 PdfReader Integration | 6 | ⏳ Pending |
+| 1.4 Real PDF Testing | 5 | ⏳ Pending |
 
 ### Next Session Priority
-1. Cleanup sprint for false "limitations" (~2-3h)
-2. Improve test coverage (54% → 70%)
-3. Consider v1.6.7 release with Sprint 4 tooling
+1. Continue Encrypted PDFs - Phase 1.3: PdfReader Integration (2.5h)
+2. Phase 1.4: Real PDF Testing (2h)
+3. Consider Phase 2: CID/Type0 Fonts (6h)
 
 ## Sprint Summary
 
@@ -158,9 +165,8 @@ git push origin v1.2.3
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| Invoice `use_kerning` flag | LOW | Simplified impl works 80% cases |
-| PNG compression tests | ~~7 failures~~ | **ALL PASSING** (false alarm) |
 | Encrypted PDFs | Expected | Detection works, decryption not supported |
+| CID/Type0 fonts | LOW | Partial support (Phase 3.4 pending) |
 | 2 malformed PDFs | VERY LOW | Genuine format violations, not bugs |
 
 ## Documentation References
