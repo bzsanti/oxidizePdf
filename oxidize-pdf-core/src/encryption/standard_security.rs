@@ -193,7 +193,7 @@ impl StandardSecurityHandler {
 
                 // Encrypt hash with RC4
                 let rc4_key = Rc4Key::from_slice(&key.key);
-                let mut result = rc4_encrypt(&rc4_key, &hash);
+                let mut result = rc4_encrypt(&rc4_key, hash.as_ref());
 
                 // Do 19 additional iterations
                 for i in 1..=19 {
@@ -253,6 +253,25 @@ impl StandardSecurityHandler {
                     data.extend_from_slice(id);
                 }
 
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("[DEBUG compute_key] padded[0..8]: {:02x?}", &padded[..8]);
+                    eprintln!("[DEBUG compute_key] owner_hash len: {}", owner_hash.len());
+                    eprintln!(
+                        "[DEBUG compute_key] P bytes: {:02x?}",
+                        permissions.bits().to_le_bytes()
+                    );
+                    eprintln!("[DEBUG compute_key] data len before MD5: {}", data.len());
+                    // Print full data for comparison
+                    let data_hex: String = data.iter().map(|b| format!("{:02x}", b)).collect();
+                    eprintln!("[DEBUG compute_key] full data hex: {}", data_hex);
+
+                    // Verify specific expected hash for debugging
+                    if data_hex == "7573657228bf4e5e4e758a4164004e56fffa01082e2e00b6d0683e802f0ca9fe94e8094419662a774442fb072e3d9f19e9d130ec09a4d0061e78fe920f7ab62ffcffffff9c5b2a0606f918182e6c5cc0cac374d6" {
+                        eprintln!("[DEBUG compute_key] DATA MATCHES EXPECTED - should produce eee5568378306e35...");
+                    }
+                }
+
                 // For R4 with metadata not encrypted, add extra bytes
                 if self.revision == SecurityHandlerRevision::R4 {
                     // In a full implementation, check EncryptMetadata flag
@@ -261,6 +280,17 @@ impl StandardSecurityHandler {
 
                 // Step 3: Create MD5 hash
                 let mut hash = md5::compute(&data).to_vec();
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!(
+                        "[DEBUG compute_key] initial hash[0..8]: {:02x?}",
+                        &hash[..8]
+                    );
+                    let hash_hex: String = hash.iter().map(|b| format!("{:02x}", b)).collect();
+                    eprintln!("[DEBUG compute_key] full hash: {}", hash_hex);
+                    eprintln!("[DEBUG compute_key] key_length: {}", self.key_length);
+                }
 
                 // Step 4: For revision 3+, do 50 additional iterations
                 if self.revision >= SecurityHandlerRevision::R3 {
@@ -271,6 +301,11 @@ impl StandardSecurityHandler {
 
                 // Step 5: Truncate to key length
                 hash.truncate(self.key_length);
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("[DEBUG compute_key] final key: {:02x?}", &hash);
+                }
 
                 Ok(EncryptionKey::new(hash))
             }
@@ -522,7 +557,7 @@ impl StandardSecurityHandler {
 
                 // Encrypt hash with RC4
                 let rc4_key = Rc4Key::from_slice(&key.key);
-                let mut encrypted = rc4_encrypt(&rc4_key, &hash);
+                let mut encrypted = rc4_encrypt(&rc4_key, hash.as_ref());
 
                 // Do 19 additional iterations with modified keys
                 for i in 1..=19 {
@@ -633,25 +668,7 @@ fn rc4_encrypt(key: &Rc4Key, data: &[u8]) -> Vec<u8> {
     cipher.process(data)
 }
 
-/// MD5 module (simplified for example)
-mod md5 {
-
-    pub fn compute(data: &[u8]) -> [u8; 16] {
-        // In production, use a proper MD5 implementation
-        // This is a placeholder that uses a hash function
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        data.hash(&mut hasher);
-        let hash_value = hasher.finish();
-
-        let mut result = [0u8; 16];
-        result[..8].copy_from_slice(&hash_value.to_le_bytes());
-        result[8..].copy_from_slice(&hash_value.to_be_bytes());
-        result
-    }
-}
+// Use the md5 crate for actual MD5 hashing (required for PDF encryption)
 
 /// SHA-256 implementation (simplified for example)
 fn sha256(data: &[u8]) -> Vec<u8> {

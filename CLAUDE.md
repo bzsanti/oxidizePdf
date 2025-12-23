@@ -4,24 +4,22 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2025-12-19 - Encrypted PDFs Phase 1.3 complete |
+| **Last Session** | 2025-12-23 - Encrypted PDFs Phase 1.4 complete (DECRYPTION WORKING!) |
 | **Branch** | develop_santi |
 | **Version** | v1.6.6 (released) |
-| **Tests** | 4898 passing (4713 unit + 185 doc tests) |
+| **Tests** | 4710+ unit + 185 doc tests passing |
 | **Coverage** | 54.20% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2025-12-19)
-- **Encrypted PDFs - Phase 1.3 COMPLETE** (TDD):
-  - Added `ParseError::WrongPassword` and `ParseError::PdfLocked` error variants
-  - Implemented `PdfReader::unlock()` fluent API for password-based decryption
-  - Added `ensure_unlocked()` guard for locked PDF detection
-  - Implemented `decrypt_object_if_needed()` for automatic string/stream decryption
-  - Modified `get_object()` and `get_compressed_object()` to auto-decrypt after unlock
-  - Handles Identity crypt filter (no decryption) per ISO 32000-1
-  - 10 integration tests in `reader_integration_test.rs`
+### Session Summary (2025-12-23)
+- **Encrypted PDFs - Phase 1.4 COMPLETE** (TDD):
+  - Fixed critical MD5 bug: local `mod md5` was shadowing the real `md5` crate with fake hash
+  - Implemented proper owner password derivation algorithm (RC4 decryption of O entry)
+  - Created test fixtures with qpdf: RC4 40-bit, RC4 128-bit, restricted permissions
+  - 9 real PDF tests passing (user password, owner password, permissions, etc.)
+  - Decryption now works end-to-end with real encrypted PDFs!
 
 ### Encryption Progress
 | Phase | Tests | Status |
@@ -29,12 +27,12 @@
 | 1.1 Password Validation | 16 | ✅ COMPLETE |
 | 1.2 Object Decryption | 11 | ✅ COMPLETE |
 | 1.3 PdfReader Integration | 10 | ✅ COMPLETE |
-| 1.4 Real PDF Testing | 5 | ⏳ Pending |
+| 1.4 Real PDF Testing | 9 | ✅ COMPLETE |
 
 ### Next Session Priority
-1. Continue Encrypted PDFs - Phase 1.4: Real PDF Testing (2h)
+1. Release v1.6.7 with encryption support
 2. Consider Phase 2: CID/Type0 Fonts (6h)
-3. Release v1.6.7 with encryption support
+3. AES-256 encryption support (R5/R6) - future enhancement
 
 ## Sprint Summary
 
@@ -164,7 +162,7 @@ git push origin v1.2.3
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| Encrypted PDFs | Expected | Detection works, decryption not supported |
+| Encrypted PDFs (AES-256) | LOW | RC4 works, AES-256 (R5/R6) not yet supported |
 | CID/Type0 fonts | LOW | Partial support (Phase 3.4 pending) |
 | 2 malformed PDFs | VERY LOW | Genuine format violations, not bugs |
 
