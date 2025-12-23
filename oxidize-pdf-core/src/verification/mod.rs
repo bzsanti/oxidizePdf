@@ -12,6 +12,7 @@
 
 pub mod comparators;
 pub mod compliance_report;
+pub mod curated_matrix;
 pub mod iso_matrix;
 pub mod parser;
 pub mod validators;
