@@ -5,7 +5,9 @@
 
 use super::objects::PdfDictionary;
 use super::{ParseError, ParseResult};
-use crate::encryption::{EncryptionKey, Permissions, StandardSecurityHandler, UserPassword};
+use crate::encryption::{
+    EncryptionKey, Permissions, Rc4, Rc4Key, StandardSecurityHandler, UserPassword,
+};
 use crate::objects::ObjectId;
 
 /// Encryption information extracted from PDF trailer
@@ -147,6 +149,35 @@ impl EncryptionHandler {
 
         // Compute what the U entry should be for this password
         let permissions = Permissions::from_bits(self.encryption_info.p as u32);
+
+        // Debug: show inputs
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("[DEBUG unlock] password len: {}", password.len());
+            eprintln!(
+                "[DEBUG unlock] O[0..8]: {:02x?}",
+                &self.encryption_info.o[..8.min(self.encryption_info.o.len())]
+            );
+            eprintln!(
+                "[DEBUG unlock] U[0..8]: {:02x?}",
+                &self.encryption_info.u[..8.min(self.encryption_info.u.len())]
+            );
+            eprintln!(
+                "[DEBUG unlock] P: {} (0x{:08X})",
+                self.encryption_info.p, self.encryption_info.p as u32
+            );
+            eprintln!("[DEBUG unlock] R: {}", self.encryption_info.r);
+            if let Some(ref fid) = self.file_id {
+                eprintln!(
+                    "[DEBUG unlock] file_id len: {}, first bytes: {:02x?}",
+                    fid.len(),
+                    &fid[..8.min(fid.len())]
+                );
+            } else {
+                eprintln!("[DEBUG unlock] file_id: None");
+            }
+        }
+
         let computed_u = self
             .security_handler
             .compute_user_hash(
@@ -162,6 +193,17 @@ impl EncryptionHandler {
 
         // Compare with stored U entry (first 16 bytes for R3+)
         let comparison_length = if self.encryption_info.r >= 3 { 16 } else { 32 };
+
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("[DEBUG unlock] computed_u[0..8]: {:02x?}", &computed_u[..8]);
+            eprintln!(
+                "[DEBUG unlock] stored_u[0..8]: {:02x?}",
+                &self.encryption_info.u[..8.min(self.encryption_info.u.len())]
+            );
+            eprintln!("[DEBUG unlock] comparison_length: {}", comparison_length);
+        }
+
         let matches =
             computed_u[..comparison_length] == self.encryption_info.u[..comparison_length];
 
@@ -186,13 +228,93 @@ impl EncryptionHandler {
     }
 
     /// Try to unlock PDF with owner password
+    ///
+    /// Owner password authentication works by:
+    /// 1. Deriving an RC4 key from the owner password
+    /// 2. Decrypting the O entry to recover the user password
+    /// 3. Using the recovered user password to compute the encryption key
     pub fn unlock_with_owner_password(&mut self, password: &str) -> ParseResult<bool> {
-        // For owner password, we need to derive the user password first
-        // This is a simplified implementation - full implementation would
-        // reverse the owner password algorithm
+        // Standard 32-byte padding from PDF spec
+        const PADDING: [u8; 32] = [
+            0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA,
+            0x01, 0x08, 0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE,
+            0x64, 0x53, 0x69, 0x7A,
+        ];
 
-        // For now, try the owner password as if it were a user password
-        self.unlock_with_user_password(password)
+        // Step 1: Pad owner password to 32 bytes
+        let mut padded = [0u8; 32];
+        let password_bytes = password.as_bytes();
+        let len = password_bytes.len().min(32);
+        padded[..len].copy_from_slice(&password_bytes[..len]);
+        if len < 32 {
+            padded[len..].copy_from_slice(&PADDING[..32 - len]);
+        }
+
+        // Step 2: MD5 hash the padded password
+        let mut hash = md5::compute(&padded).to_vec();
+
+        // Step 3: For R3+, do 50 additional MD5 iterations
+        let key_length = self.security_handler.key_length;
+        if self.encryption_info.r >= 3 {
+            for _ in 0..50 {
+                hash = md5::compute(&hash).to_vec();
+            }
+        }
+
+        // Step 4: Decrypt O entry to get user password
+        let mut decrypted = self.encryption_info.o[..32].to_vec();
+
+        if self.encryption_info.r >= 3 {
+            // For R3+, decrypt with keys XOR'd with 19, 18, ..., 0
+            for i in (0..20).rev() {
+                let mut key_bytes = hash[..key_length].to_vec();
+                for byte in &mut key_bytes {
+                    *byte ^= i as u8;
+                }
+                let rc4_key = Rc4Key::from_slice(&key_bytes);
+                let mut cipher = Rc4::new(&rc4_key);
+                decrypted = cipher.process(&decrypted);
+            }
+        } else {
+            // For R2, single RC4 decryption
+            let rc4_key = Rc4Key::from_slice(&hash[..key_length]);
+            let mut cipher = Rc4::new(&rc4_key);
+            decrypted = cipher.process(&decrypted);
+        }
+
+        // Step 5: The decrypted data is the padded user password
+        // Find where padding starts to extract the actual password
+        let user_pwd_end = decrypted
+            .iter()
+            .position(|&b| {
+                // Check if this byte is the start of the padding sequence
+                b == PADDING[0] && decrypted.len() > 1
+            })
+            .unwrap_or(32);
+
+        let user_password = String::from_utf8_lossy(&decrypted[..user_pwd_end]).to_string();
+
+        #[cfg(debug_assertions)]
+        {
+            eprintln!(
+                "[DEBUG owner unlock] derived user password: {:?}",
+                &user_password
+            );
+            eprintln!(
+                "[DEBUG owner unlock] decrypted bytes: {:02x?}",
+                &decrypted[..8]
+            );
+        }
+
+        // Step 6: Try to unlock with the derived user password
+        if self.unlock_with_user_password(&user_password)? {
+            return Ok(true);
+        }
+
+        // If the derived password didn't work, try with the full padded password
+        // (some PDFs may use the raw padded form)
+        let full_user_password = String::from_utf8_lossy(&decrypted).to_string();
+        self.unlock_with_user_password(&full_user_password)
     }
 
     /// Try to unlock with empty password (common case)
@@ -244,6 +366,16 @@ impl EncryptionHandler {
     /// Get permissions information
     pub fn permissions(&self) -> Permissions {
         Permissions::from_bits(self.encryption_info.p as u32)
+    }
+
+    /// Check if file ID is available
+    pub fn has_file_id(&self) -> bool {
+        self.file_id.is_some()
+    }
+
+    /// Get the encryption revision
+    pub fn revision(&self) -> i32 {
+        self.encryption_info.r
     }
 
     /// Check if strings should be encrypted

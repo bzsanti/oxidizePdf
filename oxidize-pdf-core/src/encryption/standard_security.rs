@@ -193,7 +193,7 @@ impl StandardSecurityHandler {
 
                 // Encrypt hash with RC4
                 let rc4_key = Rc4Key::from_slice(&key.key);
-                let mut result = rc4_encrypt(&rc4_key, &hash);
+                let mut result = rc4_encrypt(&rc4_key, hash.as_ref());
 
                 // Do 19 additional iterations
                 for i in 1..=19 {
@@ -253,6 +253,25 @@ impl StandardSecurityHandler {
                     data.extend_from_slice(id);
                 }
 
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("[DEBUG compute_key] padded[0..8]: {:02x?}", &padded[..8]);
+                    eprintln!("[DEBUG compute_key] owner_hash len: {}", owner_hash.len());
+                    eprintln!(
+                        "[DEBUG compute_key] P bytes: {:02x?}",
+                        permissions.bits().to_le_bytes()
+                    );
+                    eprintln!("[DEBUG compute_key] data len before MD5: {}", data.len());
+                    // Print full data for comparison
+                    let data_hex: String = data.iter().map(|b| format!("{:02x}", b)).collect();
+                    eprintln!("[DEBUG compute_key] full data hex: {}", data_hex);
+
+                    // Verify specific expected hash for debugging
+                    if data_hex == "7573657228bf4e5e4e758a4164004e56fffa01082e2e00b6d0683e802f0ca9fe94e8094419662a774442fb072e3d9f19e9d130ec09a4d0061e78fe920f7ab62ffcffffff9c5b2a0606f918182e6c5cc0cac374d6" {
+                        eprintln!("[DEBUG compute_key] DATA MATCHES EXPECTED - should produce eee5568378306e35...");
+                    }
+                }
+
                 // For R4 with metadata not encrypted, add extra bytes
                 if self.revision == SecurityHandlerRevision::R4 {
                     // In a full implementation, check EncryptMetadata flag
@@ -261,6 +280,17 @@ impl StandardSecurityHandler {
 
                 // Step 3: Create MD5 hash
                 let mut hash = md5::compute(&data).to_vec();
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!(
+                        "[DEBUG compute_key] initial hash[0..8]: {:02x?}",
+                        &hash[..8]
+                    );
+                    let hash_hex: String = hash.iter().map(|b| format!("{:02x}", b)).collect();
+                    eprintln!("[DEBUG compute_key] full hash: {}", hash_hex);
+                    eprintln!("[DEBUG compute_key] key_length: {}", self.key_length);
+                }
 
                 // Step 4: For revision 3+, do 50 additional iterations
                 if self.revision >= SecurityHandlerRevision::R3 {
@@ -271,6 +301,11 @@ impl StandardSecurityHandler {
 
                 // Step 5: Truncate to key length
                 hash.truncate(self.key_length);
+
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("[DEBUG compute_key] final key: {:02x?}", &hash);
+                }
 
                 Ok(EncryptionKey::new(hash))
             }
@@ -473,8 +508,8 @@ impl StandardSecurityHandler {
         Ok(user_hash.len() >= 32 && computed_hash[..32] == user_hash[..32])
     }
 
-    /// Compute object-specific encryption key
-    fn compute_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+    /// Compute object-specific encryption key (Algorithm 1, ISO 32000-1 §7.6.2)
+    pub fn compute_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         let mut data = Vec::new();
         data.extend_from_slice(&key.key);
         data.extend_from_slice(&obj_id.number().to_le_bytes()[..3]); // Low 3 bytes
@@ -484,6 +519,147 @@ impl StandardSecurityHandler {
         let key_len = (key.len() + 5).min(16);
         hash[..key_len].to_vec()
     }
+
+    /// Validate user password (Algorithm 6, ISO 32000-1 §7.6.3.4)
+    ///
+    /// Returns Ok(true) if password is correct, Ok(false) if incorrect.
+    /// Returns Err only on internal errors.
+    pub fn validate_user_password(
+        &self,
+        password: &UserPassword,
+        user_hash: &[u8],
+        owner_hash: &[u8],
+        permissions: Permissions,
+        file_id: Option<&[u8]>,
+    ) -> Result<bool> {
+        // Compute encryption key from provided password
+        let key = self.compute_encryption_key(password, owner_hash, permissions, file_id)?;
+
+        match self.revision {
+            SecurityHandlerRevision::R2 => {
+                // For R2: Encrypt padding with key and compare with U
+                let rc4_key = Rc4Key::from_slice(&key.key);
+                let encrypted_padding = rc4_encrypt(&rc4_key, &PADDING);
+
+                // Compare with stored user hash
+                Ok(user_hash.len() >= 32 && encrypted_padding[..] == user_hash[..32])
+            }
+            SecurityHandlerRevision::R3 | SecurityHandlerRevision::R4 => {
+                // For R3/R4: Compute MD5 hash including file ID
+                let mut data = Vec::new();
+                data.extend_from_slice(&PADDING);
+
+                if let Some(id) = file_id {
+                    data.extend_from_slice(id);
+                }
+
+                let hash = md5::compute(&data);
+
+                // Encrypt hash with RC4
+                let rc4_key = Rc4Key::from_slice(&key.key);
+                let mut encrypted = rc4_encrypt(&rc4_key, hash.as_ref());
+
+                // Do 19 additional iterations with modified keys
+                for i in 1..=19 {
+                    let mut key_bytes = key.key.clone();
+                    for byte in &mut key_bytes {
+                        *byte ^= i as u8;
+                    }
+                    let iter_key = Rc4Key::from_slice(&key_bytes);
+                    encrypted = rc4_encrypt(&iter_key, &encrypted);
+                }
+
+                // Compare first 16 bytes of result with first 16 bytes of U
+                Ok(user_hash.len() >= 16 && encrypted[..16] == user_hash[..16])
+            }
+            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
+                // For R5/R6, use AES-based validation
+                self.validate_aes_user_password(password, user_hash, permissions, file_id)
+            }
+        }
+    }
+
+    /// Validate owner password (Algorithm 7, ISO 32000-1 §7.6.3.4)
+    ///
+    /// Returns Ok(true) if password is correct, Ok(false) if incorrect.
+    /// Returns Err only on internal errors.
+    ///
+    /// Note: For owner password validation, we first decrypt the user password
+    /// from the owner hash, then validate that user password.
+    pub fn validate_owner_password(
+        &self,
+        owner_password: &OwnerPassword,
+        owner_hash: &[u8],
+        _user_password: &UserPassword, // Will be recovered from owner_hash
+        _permissions: Permissions,
+        _file_id: Option<&[u8]>,
+    ) -> Result<bool> {
+        match self.revision {
+            SecurityHandlerRevision::R2
+            | SecurityHandlerRevision::R3
+            | SecurityHandlerRevision::R4 => {
+                // Step 1: Pad owner password
+                let owner_pad = Self::pad_password(&owner_password.0);
+
+                // Step 2: Create MD5 hash of owner password
+                let mut hash = md5::compute(&owner_pad).to_vec();
+
+                // Step 3: For revision 3+, do 50 additional iterations
+                if self.revision >= SecurityHandlerRevision::R3 {
+                    for _ in 0..50 {
+                        hash = md5::compute(&hash).to_vec();
+                    }
+                }
+
+                // Step 4: Create RC4 key from hash (truncated to key length)
+                let rc4_key = Rc4Key::from_slice(&hash[..self.key_length]);
+
+                // Step 5: Decrypt owner hash to get user password
+                let mut decrypted = owner_hash[..32].to_vec();
+
+                // For R3+, do 19 iterations in reverse
+                if self.revision >= SecurityHandlerRevision::R3 {
+                    for i in (0..20).rev() {
+                        let mut key_bytes = hash[..self.key_length].to_vec();
+                        for byte in &mut key_bytes {
+                            *byte ^= i as u8;
+                        }
+                        let iter_key = Rc4Key::from_slice(&key_bytes);
+                        decrypted = rc4_encrypt(&iter_key, &decrypted);
+                    }
+                } else {
+                    // For R2, single decryption
+                    decrypted = rc4_encrypt(&rc4_key, &decrypted);
+                }
+
+                // Step 6: The decrypted data should be the padded user password
+                // Try to validate by computing what the owner hash SHOULD be
+                // with this owner password, and compare
+
+                // Extract potential user password (remove padding)
+                let user_pwd_bytes = decrypted
+                    .iter()
+                    .take_while(|&&b| b != 0x28 || decrypted.starts_with(&PADDING))
+                    .copied()
+                    .collect::<Vec<u8>>();
+
+                let recovered_user =
+                    UserPassword(String::from_utf8_lossy(&user_pwd_bytes).to_string());
+
+                // Compute what owner hash should be with this owner password
+                let computed_owner = self.compute_owner_hash(owner_password, &recovered_user);
+
+                // Compare with stored owner hash
+                Ok(computed_owner[..32] == owner_hash[..32])
+            }
+            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
+                // For R5/R6, owner password validation is different
+                // This is a simplified check - full R5/R6 is more complex
+                // For now, return false (not implemented)
+                Ok(false)
+            }
+        }
+    }
 }
 
 /// Helper function for RC4 encryption
@@ -492,25 +668,7 @@ fn rc4_encrypt(key: &Rc4Key, data: &[u8]) -> Vec<u8> {
     cipher.process(data)
 }
 
-/// MD5 module (simplified for example)
-mod md5 {
-
-    pub fn compute(data: &[u8]) -> [u8; 16] {
-        // In production, use a proper MD5 implementation
-        // This is a placeholder that uses a hash function
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        data.hash(&mut hasher);
-        let hash_value = hasher.finish();
-
-        let mut result = [0u8; 16];
-        result[..8].copy_from_slice(&hash_value.to_le_bytes());
-        result[8..].copy_from_slice(&hash_value.to_be_bytes());
-        result
-    }
-}
+// Use the md5 crate for actual MD5 hashing (required for PDF encryption)
 
 /// SHA-256 implementation (simplified for example)
 fn sha256(data: &[u8]) -> Vec<u8> {

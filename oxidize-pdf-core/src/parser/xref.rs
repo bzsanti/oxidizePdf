@@ -796,11 +796,6 @@ impl XRefTable {
         reader: &mut BufReader<R>,
         _options: &super::ParseOptions,
     ) -> ParseResult<Self> {
-        // Create lenient options for recovery mode
-        let mut recovery_options = _options.clone();
-        recovery_options.lenient_syntax = true;
-        recovery_options.collect_warnings = true;
-        recovery_options.recover_from_stream_errors = true;
         let mut table = Self::new();
 
         // Read entire file into memory for scanning

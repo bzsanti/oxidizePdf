@@ -66,21 +66,10 @@ pub enum ColorSpace {
 impl Image {
     /// Load a JPEG image from a file
     pub fn from_jpeg_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        #[cfg(feature = "external-images")]
-        {
-            // Fallback to reading file directly without external image processing
-            let mut file = File::open(path)?;
-            let mut data = Vec::new();
-            file.read_to_end(&mut data)?;
-            Self::from_jpeg_data(data)
-        }
-        #[cfg(not(feature = "external-images"))]
-        {
-            let mut file = File::open(path)?;
-            let mut data = Vec::new();
-            file.read_to_end(&mut data)?;
-            Self::from_jpeg_data(data)
-        }
+        let mut file = File::open(path)?;
+        let mut data = Vec::new();
+        file.read_to_end(&mut data)?;
+        Self::from_jpeg_data(data)
     }
 
     /// Create an image from JPEG data
@@ -102,21 +91,10 @@ impl Image {
 
     /// Load a PNG image from a file
     pub fn from_png_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        #[cfg(feature = "external-images")]
-        {
-            // Fallback to reading file directly without external image processing
-            let mut file = File::open(path)?;
-            let mut data = Vec::new();
-            file.read_to_end(&mut data)?;
-            Self::from_png_data(data)
-        }
-        #[cfg(not(feature = "external-images"))]
-        {
-            let mut file = File::open(path)?;
-            let mut data = Vec::new();
-            file.read_to_end(&mut data)?;
-            Self::from_png_data(data)
-        }
+        let mut file = File::open(path)?;
+        let mut data = Vec::new();
+        file.read_to_end(&mut data)?;
+        Self::from_png_data(data)
     }
 
     /// Create an image from PNG data with full transparency support
