@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.6.7] - 2025-12-23
+
+### Added
+- **🔐 Encrypted PDF Support (RC4)** - Complete decryption for RC4-encrypted PDFs
+  - **Phase 1.1**: Password validation (user & owner passwords)
+  - **Phase 1.2**: Object decryption infrastructure
+  - **Phase 1.3**: PdfReader integration for transparent decryption
+  - **Phase 1.4**: Real PDF testing with qpdf-generated fixtures
+  - **Algorithms**: RC4 40-bit and 128-bit encryption (R2-R4)
+  - **Location**: `oxidize-pdf-core/src/encryption/`, `src/parser/encryption_handler.rs`
+
+- **📋 ISO Curator CLI** - New tool for managing ISO 32000-1:2008 compliance
+  - **Commands**: analyze, classify, consolidate, scan, link, report
+  - **Curated Matrix**: 7,775 → 310 verified requirements
+  - **Auto-linking**: 519 implementations detected, 100% requirements linked
+  - **Location**: `dev-tools/iso-curator/`
+
+### Fixed
+- **🧹 Dead Code Removal** - Removed unused code in graphics module (#108)
+
+### Technical
+- **Tests**: 4,898 passing (4,713 unit + 185 doc tests)
+- **New Test Fixtures**: `encrypted_rc4_40bit.pdf`, `encrypted_rc4_128bit.pdf`, `encrypted_restricted.pdf`
+- **Breaking Changes**: None - All changes are backward compatible
+
+## [1.6.6] - 2025-12-15
+
+### Fixed
+- **🔧 XRef Non-Contiguous Subsections (Issue #104)** - Fixed parsing of XRef tables with gaps
+  - **Impact**: 275/277 failure corpus PDFs now parse correctly (99.3% success rate)
+
 ## [1.6.5] - 2025-12-07
 
 ### Fixed
