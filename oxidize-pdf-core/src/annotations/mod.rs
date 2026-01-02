@@ -5,6 +5,7 @@
 
 mod annotation;
 mod annotation_type;
+mod geometric;
 mod link;
 mod markup;
 mod polygon;

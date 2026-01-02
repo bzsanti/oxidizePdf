@@ -141,4 +141,29 @@ mod tests {
         assert_eq!(compressed.get_generation(), 0);
         assert_eq!(compressed.get_compressed_info(), Some((10, 20)));
     }
+
+    #[test]
+    fn test_to_value() {
+        assert_eq!(XRefEntryType::Free.to_value(), 0);
+        assert_eq!(XRefEntryType::Uncompressed.to_value(), 1);
+        assert_eq!(XRefEntryType::Compressed.to_value(), 2);
+        assert_eq!(XRefEntryType::Custom(53).to_value(), 53);
+        assert_eq!(XRefEntryType::Custom(255).to_value(), 255);
+    }
+
+    #[test]
+    fn test_free_entry_info() {
+        let free = XRefEntryInfo::new(XRefEntryType::Free, 100, 65535);
+        assert_eq!(free.get_offset(), None);
+        assert_eq!(free.get_generation(), 65535);
+        assert_eq!(free.get_compressed_info(), None);
+    }
+
+    #[test]
+    fn test_custom_entry_info() {
+        let custom = XRefEntryInfo::new(XRefEntryType::Custom(99), 500, 10);
+        assert_eq!(custom.get_offset(), None);
+        assert_eq!(custom.get_generation(), 0);
+        assert_eq!(custom.get_compressed_info(), None);
+    }
 }

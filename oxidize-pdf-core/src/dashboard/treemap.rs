@@ -265,3 +265,399 @@ impl TreeMapBuilder {
         TreeMap::new(vec![])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_treemap_data() -> Vec<TreeMapNode> {
+        vec![
+            TreeMapNode {
+                name: "Category A".to_string(),
+                value: 100.0,
+                color: None,
+                children: vec![],
+            },
+            TreeMapNode {
+                name: "Category B".to_string(),
+                value: 50.0,
+                color: Some(Color::rgb(0.0, 0.5, 1.0)),
+                children: vec![],
+            },
+            TreeMapNode {
+                name: "Category C".to_string(),
+                value: 30.0,
+                color: None,
+                children: vec![],
+            },
+        ]
+    }
+
+    #[test]
+    fn test_treemap_new() {
+        let data = sample_treemap_data();
+        let treemap = TreeMap::new(data.clone());
+
+        assert_eq!(treemap.data.len(), 3);
+        assert_eq!(treemap.data[0].name, "Category A");
+        assert_eq!(treemap.data[0].value, 100.0);
+    }
+
+    #[test]
+    fn test_treemap_with_options() {
+        let data = sample_treemap_data();
+        let options = TreeMapOptions {
+            title: Some("My TreeMap".to_string()),
+            show_labels: false,
+            padding: 5.0,
+        };
+
+        let treemap = TreeMap::new(data).with_options(options);
+
+        assert_eq!(treemap.options.title, Some("My TreeMap".to_string()));
+        assert!(!treemap.options.show_labels);
+        assert_eq!(treemap.options.padding, 5.0);
+    }
+
+    #[test]
+    fn test_treemap_options_default() {
+        let options = TreeMapOptions::default();
+
+        assert!(options.title.is_none());
+        assert!(options.show_labels);
+        assert_eq!(options.padding, 2.0);
+    }
+
+    #[test]
+    fn test_treemap_builder() {
+        let builder = TreeMapBuilder::new();
+        let treemap = builder.build();
+
+        assert!(treemap.data.is_empty());
+    }
+
+    #[test]
+    fn test_treemap_node_creation() {
+        let node = TreeMapNode {
+            name: "Test Node".to_string(),
+            value: 42.0,
+            color: Some(Color::rgb(1.0, 0.0, 0.0)),
+            children: vec![TreeMapNode {
+                name: "Child".to_string(),
+                value: 10.0,
+                color: None,
+                children: vec![],
+            }],
+        };
+
+        assert_eq!(node.name, "Test Node");
+        assert_eq!(node.value, 42.0);
+        assert!(node.color.is_some());
+        assert_eq!(node.children.len(), 1);
+        assert_eq!(node.children[0].name, "Child");
+    }
+
+    #[test]
+    fn test_layout_nodes_empty() {
+        let treemap = TreeMap::new(vec![]);
+        let mut rects = Vec::new();
+
+        treemap.layout_nodes(&[], 0.0, 0.0, 100.0, 100.0, &mut rects);
+
+        assert!(rects.is_empty());
+    }
+
+    #[test]
+    fn test_layout_nodes_single() {
+        let data = vec![TreeMapNode {
+            name: "Single".to_string(),
+            value: 100.0,
+            color: None,
+            children: vec![],
+        }];
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        treemap.layout_nodes(&data, 0.0, 0.0, 100.0, 100.0, &mut rects);
+
+        assert_eq!(rects.len(), 1);
+        assert_eq!(rects[0].0.name, "Single");
+    }
+
+    #[test]
+    fn test_layout_nodes_multiple() {
+        let data = sample_treemap_data();
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        treemap.layout_nodes(&data, 0.0, 0.0, 300.0, 200.0, &mut rects);
+
+        assert_eq!(rects.len(), 3);
+
+        // All rectangles should have positive dimensions
+        for (_, x, y, w, h) in &rects {
+            assert!(*x >= 0.0);
+            assert!(*y >= 0.0);
+            assert!(*w > 0.0);
+            assert!(*h > 0.0);
+        }
+    }
+
+    #[test]
+    fn test_layout_nodes_proportional() {
+        let data = vec![
+            TreeMapNode {
+                name: "A".to_string(),
+                value: 75.0,
+                color: None,
+                children: vec![],
+            },
+            TreeMapNode {
+                name: "B".to_string(),
+                value: 25.0,
+                color: None,
+                children: vec![],
+            },
+        ];
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        treemap.layout_nodes(&data, 0.0, 0.0, 100.0, 100.0, &mut rects);
+
+        // The larger node should have approximately 3x the area
+        let area_a = rects[0].3 * rects[0].4;
+        let area_b = rects[1].3 * rects[1].4;
+
+        // Due to padding, the ratio might not be exact
+        assert!(area_a > area_b);
+    }
+
+    #[test]
+    fn test_layout_nodes_zero_size() {
+        let data = sample_treemap_data();
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        // Zero width
+        treemap.layout_nodes(&data, 0.0, 0.0, 0.0, 100.0, &mut rects);
+        assert!(rects.is_empty());
+
+        // Zero height
+        rects.clear();
+        treemap.layout_nodes(&data, 0.0, 0.0, 100.0, 0.0, &mut rects);
+        assert!(rects.is_empty());
+    }
+
+    #[test]
+    fn test_layout_nodes_zero_total_value() {
+        let data = vec![
+            TreeMapNode {
+                name: "A".to_string(),
+                value: 0.0,
+                color: None,
+                children: vec![],
+            },
+            TreeMapNode {
+                name: "B".to_string(),
+                value: 0.0,
+                color: None,
+                children: vec![],
+            },
+        ];
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        treemap.layout_nodes(&data, 0.0, 0.0, 100.0, 100.0, &mut rects);
+
+        // Should not produce any rectangles when total is zero
+        assert!(rects.is_empty());
+    }
+
+    #[test]
+    fn test_is_dark_color_with_black() {
+        let treemap = TreeMap::new(vec![]);
+
+        assert!(treemap.is_dark_color(&Color::rgb(0.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_white() {
+        let treemap = TreeMap::new(vec![]);
+
+        assert!(!treemap.is_dark_color(&Color::rgb(1.0, 1.0, 1.0)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_gray() {
+        let treemap = TreeMap::new(vec![]);
+
+        // Gray(0.3) has luminance 0.3, which is < 0.5
+        assert!(treemap.is_dark_color(&Color::Gray(0.3)));
+        // Gray(0.7) has luminance 0.7, which is > 0.5
+        assert!(!treemap.is_dark_color(&Color::Gray(0.7)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_cmyk() {
+        let treemap = TreeMap::new(vec![]);
+
+        // CMYK black (0, 0, 0, 1) -> RGB (0, 0, 0)
+        assert!(treemap.is_dark_color(&Color::Cmyk(0.0, 0.0, 0.0, 1.0)));
+        // CMYK white-ish (0, 0, 0, 0) -> RGB (1, 1, 1)
+        assert!(!treemap.is_dark_color(&Color::Cmyk(0.0, 0.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_primary_colors() {
+        let treemap = TreeMap::new(vec![]);
+
+        // Red: luminance = 0.299
+        assert!(treemap.is_dark_color(&Color::rgb(1.0, 0.0, 0.0)));
+        // Green: luminance = 0.587
+        assert!(!treemap.is_dark_color(&Color::rgb(0.0, 1.0, 0.0)));
+        // Blue: luminance = 0.114
+        assert!(treemap.is_dark_color(&Color::rgb(0.0, 0.0, 1.0)));
+    }
+
+    #[test]
+    fn test_component_span() {
+        let data = sample_treemap_data();
+        let mut treemap = TreeMap::new(data);
+
+        // Default span
+        let span = treemap.get_span();
+        assert_eq!(span.columns, 6);
+
+        // Set new span
+        treemap.set_span(ComponentSpan::new(12));
+        assert_eq!(treemap.get_span().columns, 12);
+    }
+
+    #[test]
+    fn test_component_type() {
+        let treemap = TreeMap::new(vec![]);
+
+        assert_eq!(treemap.component_type(), "TreeMap");
+    }
+
+    #[test]
+    fn test_complexity_score() {
+        let treemap = TreeMap::new(vec![]);
+
+        assert_eq!(treemap.complexity_score(), 70);
+    }
+
+    #[test]
+    fn test_preferred_height() {
+        let treemap = TreeMap::new(vec![]);
+
+        assert_eq!(treemap.preferred_height(1000.0), 250.0);
+    }
+
+    #[test]
+    fn test_treemap_node_with_children() {
+        let data = vec![TreeMapNode {
+            name: "Parent".to_string(),
+            value: 100.0,
+            color: None,
+            children: vec![
+                TreeMapNode {
+                    name: "Child 1".to_string(),
+                    value: 60.0,
+                    color: None,
+                    children: vec![],
+                },
+                TreeMapNode {
+                    name: "Child 2".to_string(),
+                    value: 40.0,
+                    color: None,
+                    children: vec![],
+                },
+            ],
+        }];
+
+        let treemap = TreeMap::new(data.clone());
+
+        assert_eq!(treemap.data[0].children.len(), 2);
+        assert_eq!(treemap.data[0].children[0].value, 60.0);
+        assert_eq!(treemap.data[0].children[1].value, 40.0);
+    }
+
+    #[test]
+    fn test_layout_nodes_with_wide_rectangle() {
+        let data = vec![
+            TreeMapNode {
+                name: "A".to_string(),
+                value: 50.0,
+                color: None,
+                children: vec![],
+            },
+            TreeMapNode {
+                name: "B".to_string(),
+                value: 50.0,
+                color: None,
+                children: vec![],
+            },
+        ];
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        // Wide rectangle (width > height) should split horizontally
+        treemap.layout_nodes(&data, 0.0, 0.0, 200.0, 50.0, &mut rects);
+
+        assert_eq!(rects.len(), 2);
+    }
+
+    #[test]
+    fn test_layout_nodes_with_tall_rectangle() {
+        let data = vec![
+            TreeMapNode {
+                name: "A".to_string(),
+                value: 50.0,
+                color: None,
+                children: vec![],
+            },
+            TreeMapNode {
+                name: "B".to_string(),
+                value: 50.0,
+                color: None,
+                children: vec![],
+            },
+        ];
+        let treemap = TreeMap::new(data.clone());
+        let mut rects = Vec::new();
+
+        // Tall rectangle (height > width) should split vertically
+        treemap.layout_nodes(&data, 0.0, 0.0, 50.0, 200.0, &mut rects);
+
+        assert_eq!(rects.len(), 2);
+    }
+
+    #[test]
+    fn test_layout_respects_padding() {
+        let data = vec![TreeMapNode {
+            name: "Single".to_string(),
+            value: 100.0,
+            color: None,
+            children: vec![],
+        }];
+
+        let options = TreeMapOptions {
+            title: None,
+            show_labels: true,
+            padding: 10.0,
+        };
+        let treemap = TreeMap::new(data.clone()).with_options(options);
+        let mut rects = Vec::new();
+
+        treemap.layout_nodes(&data, 0.0, 0.0, 100.0, 100.0, &mut rects);
+
+        // With padding of 10.0, the rectangle should start at (10, 10)
+        // and have dimensions reduced by 2*10 = 20
+        let (_, x, y, w, h) = &rects[0];
+        assert!((*x - 10.0).abs() < 0.01);
+        assert!((*y - 10.0).abs() < 0.01);
+        assert!((*w - 80.0).abs() < 0.01);
+        assert!((*h - 80.0).abs() < 0.01);
+    }
+}

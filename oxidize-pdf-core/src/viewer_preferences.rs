@@ -575,4 +575,234 @@ mod tests {
         let dict = prefs.to_dict();
         assert!(dict.is_empty()); // No preferences set, should result in empty dictionary
     }
+
+    #[test]
+    fn test_non_full_screen_page_mode_names() {
+        assert_eq!(NonFullScreenPageMode::UseNone.to_pdf_name(), "UseNone");
+        assert_eq!(
+            NonFullScreenPageMode::UseOutlines.to_pdf_name(),
+            "UseOutlines"
+        );
+        assert_eq!(NonFullScreenPageMode::UseThumbs.to_pdf_name(), "UseThumbs");
+        assert_eq!(NonFullScreenPageMode::UseOC.to_pdf_name(), "UseOC");
+    }
+
+    #[test]
+    fn test_non_full_screen_page_mode_to_dict() {
+        let prefs =
+            ViewerPreferences::new().non_full_screen_page_mode(NonFullScreenPageMode::UseOutlines);
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("NonFullScreenPageMode"),
+            Some(&Object::Name("UseOutlines".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_direction_to_dict() {
+        let prefs_l2r = ViewerPreferences::new().direction(Direction::L2R);
+        let dict_l2r = prefs_l2r.to_dict();
+        assert_eq!(
+            dict_l2r.get("Direction"),
+            Some(&Object::Name("L2R".to_string()))
+        );
+
+        let prefs_r2l = ViewerPreferences::new().direction(Direction::R2L);
+        let dict_r2l = prefs_r2l.to_dict();
+        assert_eq!(
+            dict_r2l.get("Direction"),
+            Some(&Object::Name("R2L".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_view_area_and_clip() {
+        let mut prefs = ViewerPreferences::new();
+        prefs.view_area = Some("MediaBox".to_string());
+        prefs.view_clip = Some("CropBox".to_string());
+
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("ViewArea"),
+            Some(&Object::Name("MediaBox".to_string()))
+        );
+        assert_eq!(
+            dict.get("ViewClip"),
+            Some(&Object::Name("CropBox".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_print_area_and_clip() {
+        let mut prefs = ViewerPreferences::new();
+        prefs.print_area = Some("BleedBox".to_string());
+        prefs.print_clip = Some("TrimBox".to_string());
+
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("PrintArea"),
+            Some(&Object::Name("BleedBox".to_string()))
+        );
+        assert_eq!(
+            dict.get("PrintClip"),
+            Some(&Object::Name("TrimBox".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_pick_tray_by_pdf_size_to_dict() {
+        let prefs = ViewerPreferences::new().pick_tray_by_pdf_size(true);
+        let dict = prefs.to_dict();
+        assert_eq!(dict.get("PickTrayByPDFSize"), Some(&Object::Boolean(true)));
+
+        let prefs_false = ViewerPreferences::new().pick_tray_by_pdf_size(false);
+        let dict_false = prefs_false.to_dict();
+        assert_eq!(
+            dict_false.get("PickTrayByPDFSize"),
+            Some(&Object::Boolean(false))
+        );
+    }
+
+    #[test]
+    fn test_hide_window_ui_to_dict() {
+        let prefs = ViewerPreferences::new().hide_window_ui(true);
+        let dict = prefs.to_dict();
+        assert_eq!(dict.get("HideWindowUI"), Some(&Object::Boolean(true)));
+    }
+
+    #[test]
+    fn test_center_window_to_dict() {
+        let prefs = ViewerPreferences::new().center_window(true);
+        let dict = prefs.to_dict();
+        assert_eq!(dict.get("CenterWindow"), Some(&Object::Boolean(true)));
+    }
+
+    #[test]
+    fn test_display_doc_title_to_dict() {
+        let prefs = ViewerPreferences::new().display_doc_title(true);
+        let dict = prefs.to_dict();
+        assert_eq!(dict.get("DisplayDocTitle"), Some(&Object::Boolean(true)));
+    }
+
+    #[test]
+    fn test_page_mode_to_dict() {
+        let prefs = ViewerPreferences::new().page_mode(PageMode::UseAttachments);
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("PageMode"),
+            Some(&Object::Name("UseAttachments".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_print_page_range_reversed() {
+        // Test that reversed ranges are handled correctly (start > end)
+        let prefs = ViewerPreferences::new().add_print_page_range(10, 5);
+        let dict = prefs.to_dict();
+        if let Some(Object::Array(ranges)) = dict.get("PrintPageRange") {
+            assert_eq!(ranges[0], Object::Integer(5)); // min(10, 5) = 5
+            assert_eq!(ranges[1], Object::Integer(10)); // max(10, 5) = 10
+        } else {
+            panic!("Expected PrintPageRange array");
+        }
+    }
+
+    #[test]
+    fn test_all_page_layouts_to_dict() {
+        let layouts = [
+            (PageLayout::SinglePage, "SinglePage"),
+            (PageLayout::OneColumn, "OneColumn"),
+            (PageLayout::TwoColumnLeft, "TwoColumnLeft"),
+            (PageLayout::TwoColumnRight, "TwoColumnRight"),
+            (PageLayout::TwoPageLeft, "TwoPageLeft"),
+            (PageLayout::TwoPageRight, "TwoPageRight"),
+        ];
+
+        for (layout, expected_name) in layouts {
+            let prefs = ViewerPreferences::new().page_layout(layout);
+            let dict = prefs.to_dict();
+            assert_eq!(
+                dict.get("PageLayout"),
+                Some(&Object::Name(expected_name.to_string()))
+            );
+        }
+    }
+
+    #[test]
+    fn test_print_scaling_app_default_to_dict() {
+        let prefs = ViewerPreferences::new().print_scaling(PrintScaling::AppDefault);
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("PrintScaling"),
+            Some(&Object::Name("AppDefault".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_duplex_simplex_to_dict() {
+        let prefs = ViewerPreferences::new().duplex(Duplex::Simplex);
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("Duplex"),
+            Some(&Object::Name("Simplex".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_duplex_flip_short_edge_to_dict() {
+        let prefs = ViewerPreferences::new().duplex(Duplex::DuplexFlipShortEdge);
+        let dict = prefs.to_dict();
+        assert_eq!(
+            dict.get("Duplex"),
+            Some(&Object::Name("DuplexFlipShortEdge".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_full_preferences_to_dict() {
+        let mut prefs = ViewerPreferences::new()
+            .hide_toolbar(true)
+            .hide_menubar(true)
+            .hide_window_ui(true)
+            .fit_window(true)
+            .center_window(true)
+            .display_doc_title(true)
+            .page_layout(PageLayout::TwoColumnRight)
+            .page_mode(PageMode::UseOutlines)
+            .non_full_screen_page_mode(NonFullScreenPageMode::UseThumbs)
+            .direction(Direction::R2L)
+            .print_scaling(PrintScaling::None)
+            .duplex(Duplex::DuplexFlipLongEdge)
+            .num_copies(2)
+            .pick_tray_by_pdf_size(true)
+            .add_print_page_range(1, 10);
+
+        prefs.view_area = Some("MediaBox".to_string());
+        prefs.view_clip = Some("CropBox".to_string());
+        prefs.print_area = Some("BleedBox".to_string());
+        prefs.print_clip = Some("TrimBox".to_string());
+
+        let dict = prefs.to_dict();
+
+        // Verify all fields are present
+        assert!(dict.contains_key("HideToolbar"));
+        assert!(dict.contains_key("HideMenubar"));
+        assert!(dict.contains_key("HideWindowUI"));
+        assert!(dict.contains_key("FitWindow"));
+        assert!(dict.contains_key("CenterWindow"));
+        assert!(dict.contains_key("DisplayDocTitle"));
+        assert!(dict.contains_key("PageLayout"));
+        assert!(dict.contains_key("PageMode"));
+        assert!(dict.contains_key("NonFullScreenPageMode"));
+        assert!(dict.contains_key("Direction"));
+        assert!(dict.contains_key("ViewArea"));
+        assert!(dict.contains_key("ViewClip"));
+        assert!(dict.contains_key("PrintArea"));
+        assert!(dict.contains_key("PrintClip"));
+        assert!(dict.contains_key("PrintScaling"));
+        assert!(dict.contains_key("Duplex"));
+        assert!(dict.contains_key("PrintPageRange"));
+        assert!(dict.contains_key("NumCopies"));
+        assert!(dict.contains_key("PickTrayByPDFSize"));
+    }
 }
