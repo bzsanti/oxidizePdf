@@ -2,6 +2,13 @@
 //!
 //! This module provides AES-128 and AES-256 encryption support according to
 //! ISO 32000-1 Section 7.6 (PDF 1.6+ and PDF 2.0).
+//!
+//! Implementation uses production-grade RustCrypto crates (aes, cbc).
+
+use aes::{Aes128, Aes256};
+use cbc::{Decryptor, Encryptor};
+use cipher::block_padding::Pkcs7;
+use cipher::{BlockDecryptMut, BlockEncryptMut, KeyIvInit};
 
 /// AES key sizes supported by PDF
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -121,24 +128,23 @@ impl std::fmt::Display for AesError {
 
 impl std::error::Error for AesError {}
 
-/// AES cipher implementation
+/// AES cipher implementation using RustCrypto (production-grade)
 ///
-/// This is a basic implementation for PDF encryption. In production,
-/// you would typically use a well-tested crypto library like `aes` crate.
+/// This implementation uses the audited `aes` and `cbc` crates from the
+/// RustCrypto project for secure AES-128 and AES-256 encryption.
 pub struct Aes {
     key: AesKey,
-    /// Round keys for encryption/decryption
-    round_keys: Vec<Vec<u8>>,
 }
 
 impl Aes {
     /// Create new AES cipher
     pub fn new(key: AesKey) -> Self {
-        let round_keys = Self::expand_key(&key);
-        Self { key, round_keys }
+        Self { key }
     }
 
-    /// Encrypt data using AES-CBC mode
+    /// Encrypt data using AES-CBC mode with PKCS#7 padding
+    ///
+    /// Uses RustCrypto's `cbc` crate for production-grade encryption.
     pub fn encrypt_cbc(&self, data: &[u8], iv: &[u8]) -> Result<Vec<u8>, AesError> {
         if iv.len() != 16 {
             return Err(AesError::InvalidIvLength {
@@ -147,30 +153,53 @@ impl Aes {
             });
         }
 
-        // Add PKCS#7 padding
-        let padded_data = self.add_pkcs7_padding(data);
+        let iv_array: [u8; 16] = iv.try_into().map_err(|_| AesError::InvalidIvLength {
+            expected: 16,
+            actual: iv.len(),
+        })?;
 
-        // Encrypt using CBC mode
-        let mut encrypted = Vec::new();
-        let mut previous_block = iv.to_vec();
-
-        for chunk in padded_data.chunks(16) {
-            // XOR with previous block (CBC mode)
-            let mut block = Vec::new();
-            for (i, &byte) in chunk.iter().enumerate() {
-                block.push(byte ^ previous_block[i]);
+        match self.key.size() {
+            AesKeySize::Aes128 => {
+                let key_array: [u8; 16] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 16,
+                            actual: self.key.len(),
+                        })?;
+                let encryptor = Encryptor::<Aes128>::new(&key_array.into(), &iv_array.into());
+                // Buffer size: plaintext + padding (up to 16 bytes)
+                let mut buffer = vec![0u8; data.len() + 16];
+                buffer[..data.len()].copy_from_slice(data);
+                let ciphertext = encryptor
+                    .encrypt_padded_mut::<Pkcs7>(&mut buffer, data.len())
+                    .map_err(|e| AesError::EncryptionFailed(format!("Padding error: {e}")))?;
+                Ok(ciphertext.to_vec())
             }
-
-            // Encrypt block
-            let encrypted_block = self.encrypt_block(&block)?;
-            encrypted.extend_from_slice(&encrypted_block);
-            previous_block = encrypted_block;
+            AesKeySize::Aes256 => {
+                let key_array: [u8; 32] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 32,
+                            actual: self.key.len(),
+                        })?;
+                let encryptor = Encryptor::<Aes256>::new(&key_array.into(), &iv_array.into());
+                let mut buffer = vec![0u8; data.len() + 16];
+                buffer[..data.len()].copy_from_slice(data);
+                let ciphertext = encryptor
+                    .encrypt_padded_mut::<Pkcs7>(&mut buffer, data.len())
+                    .map_err(|e| AesError::EncryptionFailed(format!("Padding error: {e}")))?;
+                Ok(ciphertext.to_vec())
+            }
         }
-
-        Ok(encrypted)
     }
 
-    /// Decrypt data using AES-CBC mode
+    /// Decrypt data using AES-CBC mode with PKCS#7 padding removal
+    ///
+    /// Uses RustCrypto's `cbc` crate for production-grade decryption.
     pub fn decrypt_cbc(&self, data: &[u8], iv: &[u8]) -> Result<Vec<u8>, AesError> {
         if iv.len() != 16 {
             return Err(AesError::InvalidIvLength {
@@ -185,302 +214,156 @@ impl Aes {
             ));
         }
 
-        let mut decrypted = Vec::new();
-        let mut previous_block = iv.to_vec();
+        let iv_array: [u8; 16] = iv.try_into().map_err(|_| AesError::InvalidIvLength {
+            expected: 16,
+            actual: iv.len(),
+        })?;
 
-        for chunk in data.chunks(16) {
-            // Decrypt block
-            let decrypted_block = self.decrypt_block(chunk)?;
-
-            // XOR with previous block (CBC mode)
-            let mut block = Vec::new();
-            for (i, &byte) in decrypted_block.iter().enumerate() {
-                block.push(byte ^ previous_block[i]);
+        match self.key.size() {
+            AesKeySize::Aes128 => {
+                let key_array: [u8; 16] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 16,
+                            actual: self.key.len(),
+                        })?;
+                let decryptor = Decryptor::<Aes128>::new(&key_array.into(), &iv_array.into());
+                let mut buffer = data.to_vec();
+                let plaintext = decryptor
+                    .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+                    .map_err(|e| AesError::PaddingError(format!("Unpadding error: {e}")))?;
+                Ok(plaintext.to_vec())
             }
-
-            decrypted.extend_from_slice(&block);
-            previous_block = chunk.to_vec();
+            AesKeySize::Aes256 => {
+                let key_array: [u8; 32] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 32,
+                            actual: self.key.len(),
+                        })?;
+                let decryptor = Decryptor::<Aes256>::new(&key_array.into(), &iv_array.into());
+                let mut buffer = data.to_vec();
+                let plaintext = decryptor
+                    .decrypt_padded_mut::<Pkcs7>(&mut buffer)
+                    .map_err(|e| AesError::PaddingError(format!("Unpadding error: {e}")))?;
+                Ok(plaintext.to_vec())
+            }
         }
-
-        // Remove PKCS#7 padding
-        self.remove_pkcs7_padding(&decrypted)
     }
 
-    /// Encrypt data using AES-ECB mode (for Perms entry)
+    /// Encrypt data using AES-ECB mode (for Perms entry in R6)
+    ///
+    /// Note: ECB mode is generally insecure but required by PDF spec for Perms entry.
     pub fn encrypt_ecb(&self, data: &[u8]) -> Result<Vec<u8>, AesError> {
+        use aes::cipher::{BlockEncrypt, KeyInit};
+
         if data.len() % 16 != 0 {
             return Err(AesError::EncryptionFailed(
                 "Data length must be multiple of 16 bytes for ECB mode".to_string(),
             ));
         }
 
-        let mut encrypted = Vec::new();
+        let mut encrypted = Vec::with_capacity(data.len());
 
-        for chunk in data.chunks(16) {
-            let encrypted_block = self.encrypt_block(chunk)?;
-            encrypted.extend_from_slice(&encrypted_block);
+        match self.key.size() {
+            AesKeySize::Aes128 => {
+                let key_array: [u8; 16] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 16,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes128::new(&key_array.into());
+
+                for chunk in data.chunks(16) {
+                    let mut block =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+                    cipher.encrypt_block(&mut block);
+                    encrypted.extend_from_slice(&block);
+                }
+            }
+            AesKeySize::Aes256 => {
+                let key_array: [u8; 32] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 32,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes256::new(&key_array.into());
+
+                for chunk in data.chunks(16) {
+                    let mut block =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+                    cipher.encrypt_block(&mut block);
+                    encrypted.extend_from_slice(&block);
+                }
+            }
         }
 
         Ok(encrypted)
     }
 
-    /// Encrypt single 16-byte block
-    fn encrypt_block(&self, block: &[u8]) -> Result<Vec<u8>, AesError> {
-        if block.len() != 16 {
-            return Err(AesError::EncryptionFailed(
-                "Block must be exactly 16 bytes".to_string(),
-            ));
-        }
+    /// Decrypt data using AES-ECB mode (for Perms entry verification in R6)
+    #[allow(dead_code)] // Will be used in R6 implementation
+    pub fn decrypt_ecb(&self, data: &[u8]) -> Result<Vec<u8>, AesError> {
+        use aes::cipher::{BlockDecrypt, KeyInit};
 
-        // This is a simplified implementation
-        // In production, use a proper AES implementation
-        let mut state = block.to_vec();
-
-        // Add round key 0
-        self.add_round_key(&mut state, 0);
-
-        // Main rounds
-        let num_rounds = match self.key.size() {
-            AesKeySize::Aes128 => 10,
-            AesKeySize::Aes256 => 14,
-        };
-
-        for round in 1..num_rounds {
-            self.sub_bytes(&mut state);
-            self.shift_rows(&mut state);
-            self.mix_columns(&mut state);
-            self.add_round_key(&mut state, round);
-        }
-
-        // Final round (no mix columns)
-        self.sub_bytes(&mut state);
-        self.shift_rows(&mut state);
-        self.add_round_key(&mut state, num_rounds);
-
-        Ok(state)
-    }
-
-    /// Decrypt single 16-byte block
-    fn decrypt_block(&self, block: &[u8]) -> Result<Vec<u8>, AesError> {
-        if block.len() != 16 {
+        if data.len() % 16 != 0 {
             return Err(AesError::DecryptionFailed(
-                "Block must be exactly 16 bytes".to_string(),
+                "Data length must be multiple of 16 bytes for ECB mode".to_string(),
             ));
         }
 
-        // This is a simplified implementation
-        // In production, use a proper AES implementation
-        let mut state = block.to_vec();
+        let mut decrypted = Vec::with_capacity(data.len());
 
-        let num_rounds = match self.key.size() {
-            AesKeySize::Aes128 => 10,
-            AesKeySize::Aes256 => 14,
-        };
+        match self.key.size() {
+            AesKeySize::Aes128 => {
+                let key_array: [u8; 16] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 16,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes128::new(&key_array.into());
 
-        // Add round key
-        self.add_round_key(&mut state, num_rounds);
+                for chunk in data.chunks(16) {
+                    let mut block =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+                    cipher.decrypt_block(&mut block);
+                    decrypted.extend_from_slice(&block);
+                }
+            }
+            AesKeySize::Aes256 => {
+                let key_array: [u8; 32] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 32,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes256::new(&key_array.into());
 
-        // Inverse final round
-        self.inv_shift_rows(&mut state);
-        self.inv_sub_bytes(&mut state);
-
-        // Inverse main rounds
-        for round in (1..num_rounds).rev() {
-            self.add_round_key(&mut state, round);
-            self.inv_mix_columns(&mut state);
-            self.inv_shift_rows(&mut state);
-            self.inv_sub_bytes(&mut state);
-        }
-
-        // Add round key 0
-        self.add_round_key(&mut state, 0);
-
-        Ok(state)
-    }
-
-    /// Add PKCS#7 padding
-    fn add_pkcs7_padding(&self, data: &[u8]) -> Vec<u8> {
-        let padding_len = 16 - (data.len() % 16);
-        let mut padded = data.to_vec();
-        padded.extend(vec![padding_len as u8; padding_len]);
-        padded
-    }
-
-    /// Remove PKCS#7 padding
-    fn remove_pkcs7_padding(&self, data: &[u8]) -> Result<Vec<u8>, AesError> {
-        if data.is_empty() {
-            return Err(AesError::PaddingError("Empty data".to_string()));
-        }
-
-        // Safe: data is guaranteed non-empty after check above
-        let padding_len = data[data.len() - 1] as usize;
-
-        if padding_len == 0 || padding_len > 16 {
-            return Err(AesError::PaddingError(format!(
-                "Invalid padding length: {padding_len}"
-            )));
-        }
-
-        if data.len() < padding_len {
-            return Err(AesError::PaddingError(
-                "Data shorter than padding".to_string(),
-            ));
-        }
-
-        // Verify padding
-        let start = data.len() - padding_len;
-        for &byte in &data[start..] {
-            if byte != padding_len as u8 {
-                return Err(AesError::PaddingError("Invalid padding bytes".to_string()));
+                for chunk in data.chunks(16) {
+                    let mut block =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+                    cipher.decrypt_block(&mut block);
+                    decrypted.extend_from_slice(&block);
+                }
             }
         }
 
-        Ok(data[..start].to_vec())
-    }
-
-    /// Key expansion (simplified)
-    fn expand_key(key: &AesKey) -> Vec<Vec<u8>> {
-        // This is a very simplified key expansion
-        // In production, implement proper AES key expansion
-        let num_rounds = match key.size() {
-            AesKeySize::Aes128 => 11, // 10 rounds + initial
-            AesKeySize::Aes256 => 15, // 14 rounds + initial
-        };
-
-        let mut round_keys = Vec::new();
-
-        // First round key is the original key
-        round_keys.push(key.key().to_vec());
-
-        // Generate remaining round keys (simplified)
-        for i in 1..num_rounds {
-            let mut new_key = round_keys[i - 1].clone();
-            // Simple key derivation (not secure, just for demo)
-            for (j, item) in new_key.iter_mut().enumerate() {
-                *item = item.wrapping_add((i as u8).wrapping_mul(j as u8 + 1));
-            }
-            round_keys.push(new_key);
-        }
-
-        round_keys
-    }
-
-    /// Add round key
-    fn add_round_key(&self, state: &mut [u8], round: usize) {
-        let round_key = &self.round_keys[round];
-        for i in 0..16 {
-            state[i] ^= round_key[i % round_key.len()];
-        }
-    }
-
-    /// SubBytes transformation (simplified S-box)
-    fn sub_bytes(&self, state: &mut [u8]) {
-        for byte in state.iter_mut() {
-            *byte = self.sbox(*byte);
-        }
-    }
-
-    /// Inverse SubBytes transformation
-    fn inv_sub_bytes(&self, state: &mut [u8]) {
-        for byte in state.iter_mut() {
-            *byte = self.inv_sbox(*byte);
-        }
-    }
-
-    /// ShiftRows transformation
-    fn shift_rows(&self, state: &mut [u8]) {
-        // Row 0: no shift
-        // Row 1: shift left by 1
-        let temp = state[1];
-        state[1] = state[5];
-        state[5] = state[9];
-        state[9] = state[13];
-        state[13] = temp;
-
-        // Row 2: shift left by 2
-        let temp1 = state[2];
-        let temp2 = state[6];
-        state[2] = state[10];
-        state[6] = state[14];
-        state[10] = temp1;
-        state[14] = temp2;
-
-        // Row 3: shift left by 3
-        let temp = state[15];
-        state[15] = state[11];
-        state[11] = state[7];
-        state[7] = state[3];
-        state[3] = temp;
-    }
-
-    /// Inverse ShiftRows transformation
-    fn inv_shift_rows(&self, state: &mut [u8]) {
-        // Row 0: no shift
-        // Row 1: shift right by 1
-        let temp = state[13];
-        state[13] = state[9];
-        state[9] = state[5];
-        state[5] = state[1];
-        state[1] = temp;
-
-        // Row 2: shift right by 2
-        let temp1 = state[2];
-        let temp2 = state[6];
-        state[2] = state[10];
-        state[6] = state[14];
-        state[10] = temp1;
-        state[14] = temp2;
-
-        // Row 3: shift right by 3
-        let temp = state[3];
-        state[3] = state[7];
-        state[7] = state[11];
-        state[11] = state[15];
-        state[15] = temp;
-    }
-
-    /// MixColumns transformation (simplified)
-    fn mix_columns(&self, state: &mut [u8]) {
-        for i in 0..4 {
-            let col_start = i * 4;
-            let a = state[col_start];
-            let b = state[col_start + 1];
-            let c = state[col_start + 2];
-            let d = state[col_start + 3];
-
-            // Simplified mix columns
-            state[col_start] = a ^ b ^ c;
-            state[col_start + 1] = b ^ c ^ d;
-            state[col_start + 2] = c ^ d ^ a;
-            state[col_start + 3] = d ^ a ^ b;
-        }
-    }
-
-    /// Inverse MixColumns transformation (simplified)
-    fn inv_mix_columns(&self, state: &mut [u8]) {
-        // For this simplified implementation, use the same operation
-        // In real AES, this would be different
-        self.mix_columns(state);
-    }
-
-    /// Simplified S-box
-    fn sbox(&self, byte: u8) -> u8 {
-        // This is not the real AES S-box, just a simple substitution
-        // In production, use the proper AES S-box
-        let mut result = byte;
-        result = result.wrapping_mul(3).wrapping_add(1);
-        result = result.rotate_left(1);
-        result ^ 0x63
-    }
-
-    /// Simplified inverse S-box
-    fn inv_sbox(&self, byte: u8) -> u8 {
-        // This is not the real AES inverse S-box
-        // In production, use the proper AES inverse S-box
-        let mut result = byte ^ 0x63;
-        result = result.rotate_right(1);
-        result = result.wrapping_sub(1).wrapping_mul(171); // modular inverse of 3 mod 256
-        result
+        Ok(decrypted)
     }
 }
 
@@ -517,6 +400,8 @@ pub fn generate_iv() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ===== AesKey Tests =====
 
     #[test]
     fn test_aes_key_creation() {
@@ -561,172 +446,6 @@ mod tests {
     }
 
     #[test]
-    fn test_pkcs7_padding() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        // Test padding for different data lengths
-        let data1 = vec![1, 2, 3];
-        let padded1 = aes.add_pkcs7_padding(&data1);
-        assert_eq!(padded1.len(), 16);
-        assert_eq!(&padded1[0..3], &[1, 2, 3]);
-        assert_eq!(&padded1[3..], &[13; 13]);
-
-        // Test removal
-        let unpadded1 = aes.remove_pkcs7_padding(&padded1).unwrap();
-        assert_eq!(unpadded1, data1);
-
-        // Test full block
-        let data2 = vec![0u8; 16];
-        let padded2 = aes.add_pkcs7_padding(&data2);
-        assert_eq!(padded2.len(), 32);
-        assert_eq!(&padded2[16..], &[16; 16]);
-
-        let unpadded2 = aes.remove_pkcs7_padding(&padded2).unwrap();
-        assert_eq!(unpadded2, data2);
-    }
-
-    #[test]
-    fn test_aes_encrypt_decrypt_basic() {
-        let key = AesKey::new_128(vec![
-            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf,
-            0x4f, 0x3c,
-        ])
-        .unwrap();
-        let aes = Aes::new(key);
-
-        let data = b"Hello, AES World!";
-        let iv = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
-            0x0e, 0x0f,
-        ];
-
-        let encrypted = aes.encrypt_cbc(data, &iv).unwrap();
-        assert_ne!(encrypted, data);
-        assert!(encrypted.len() >= data.len());
-
-        // Note: This simplified AES implementation is for demonstration only
-        // The decrypt operation might not perfectly reverse encrypt due to the simplified nature
-        let _decrypted = aes.decrypt_cbc(&encrypted, &iv);
-        // For now, just test that the operations complete without panicking
-    }
-
-    #[test]
-    fn test_aes_256_encrypt_decrypt() {
-        let key = AesKey::new_256(vec![0u8; 32]).unwrap();
-        let aes = Aes::new(key);
-
-        let data = b"This is a test for AES-256 encryption!";
-        let iv = vec![0u8; 16]; // Fixed IV for consistency
-
-        let encrypted = aes.encrypt_cbc(data, &iv).unwrap();
-        assert_ne!(encrypted, data);
-
-        // Note: This simplified AES implementation is for demonstration only
-        let _decrypted = aes.decrypt_cbc(&encrypted, &iv);
-        // For now, just test that the operations complete without panicking
-    }
-
-    #[test]
-    fn test_aes_empty_data() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-        let iv = vec![0u8; 16]; // Fixed IV for consistency
-
-        let data = b"";
-        let encrypted = aes.encrypt_cbc(data, &iv).unwrap();
-        assert_eq!(encrypted.len(), 16); // Should be one block due to padding
-
-        // Note: This simplified AES implementation is for demonstration only
-        let _decrypted = aes.decrypt_cbc(&encrypted, &iv);
-        // For now, just test that the operations complete without panicking
-    }
-
-    #[test]
-    fn test_aes_invalid_iv() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        let data = b"test data";
-        let iv_short = vec![0u8; 15];
-        let iv_long = vec![0u8; 17];
-
-        assert!(aes.encrypt_cbc(data, &iv_short).is_err());
-        assert!(aes.encrypt_cbc(data, &iv_long).is_err());
-
-        let encrypted = aes.encrypt_cbc(data, &[0u8; 16]).unwrap();
-        assert!(aes.decrypt_cbc(&encrypted, &iv_short).is_err());
-        assert!(aes.decrypt_cbc(&encrypted, &iv_long).is_err());
-    }
-
-    #[test]
-    fn test_invalid_padding_removal() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        // Test invalid padding
-        let bad_padding = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17];
-        assert!(aes.remove_pkcs7_padding(&bad_padding).is_err());
-
-        // Test empty data
-        assert!(aes.remove_pkcs7_padding(&[]).is_err());
-
-        // Test zero padding
-        let zero_padding = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
-        assert!(aes.remove_pkcs7_padding(&zero_padding).is_err());
-    }
-
-    #[test]
-    fn test_generate_iv() {
-        let iv1 = generate_iv();
-        let iv2 = generate_iv();
-
-        assert_eq!(iv1.len(), 16);
-        assert_eq!(iv2.len(), 16);
-        // IVs should be different (though with this simple implementation,
-        // they might rarely be the same)
-    }
-
-    #[test]
-    fn test_aes_error_display() {
-        let error1 = AesError::InvalidKeyLength {
-            expected: 16,
-            actual: 15,
-        };
-        assert!(error1.to_string().contains("Invalid key length"));
-
-        let error2 = AesError::EncryptionFailed("test".to_string());
-        assert!(error2.to_string().contains("Encryption failed"));
-
-        let error3 = AesError::PaddingError("bad padding".to_string());
-        assert!(error3.to_string().contains("Padding error"));
-    }
-
-    #[test]
-    fn test_block_operations() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        let block = vec![0u8; 16];
-        let encrypted = aes.encrypt_block(&block).unwrap();
-
-        // Test that encryption produces different output
-        assert_ne!(encrypted, block);
-        assert_eq!(encrypted.len(), 16);
-
-        // Note: This simplified AES implementation is for demonstration only
-        let _decrypted = aes.decrypt_block(&encrypted);
-        // For now, just test that the operations complete without panicking
-
-        // Test invalid block size
-        let short_block = vec![0u8; 15];
-        assert!(aes.encrypt_block(&short_block).is_err());
-        assert!(aes.decrypt_block(&short_block).is_err());
-    }
-
-    // ===== Additional Comprehensive Tests =====
-
-    #[test]
     fn test_aes_key_size_equality() {
         assert_eq!(AesKeySize::Aes128, AesKeySize::Aes128);
         assert_eq!(AesKeySize::Aes256, AesKeySize::Aes256);
@@ -737,13 +456,6 @@ mod tests {
     fn test_aes_key_size_debug() {
         assert_eq!(format!("{:?}", AesKeySize::Aes128), "Aes128");
         assert_eq!(format!("{:?}", AesKeySize::Aes256), "Aes256");
-    }
-
-    #[test]
-    fn test_aes_key_size_clone() {
-        let size = AesKeySize::Aes128;
-        let cloned = size;
-        assert_eq!(size, cloned);
     }
 
     #[test]
@@ -771,7 +483,6 @@ mod tests {
 
     #[test]
     fn test_aes_key_various_patterns() {
-        // Test with different key patterns
         let patterns = vec![
             vec![0xFF; 16],                     // All 1s
             vec![0x00; 16],                     // All 0s
@@ -800,6 +511,23 @@ mod tests {
             assert_eq!(key.key(), &pattern);
             assert_eq!(key.len(), 32);
         }
+    }
+
+    // ===== AesError Tests =====
+
+    #[test]
+    fn test_aes_error_display() {
+        let error1 = AesError::InvalidKeyLength {
+            expected: 16,
+            actual: 15,
+        };
+        assert!(error1.to_string().contains("Invalid key length"));
+
+        let error2 = AesError::EncryptionFailed("test".to_string());
+        assert!(error2.to_string().contains("Encryption failed"));
+
+        let error3 = AesError::PaddingError("bad padding".to_string());
+        assert!(error3.to_string().contains("Padding error"));
     }
 
     #[test]
@@ -899,20 +627,78 @@ mod tests {
         assert_eq!(error.to_string(), "Padding error: test");
     }
 
+    // ===== AES Encryption/Decryption Tests (Using RustCrypto) =====
+
     #[test]
-    fn test_aes_new() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
+    fn test_aes_128_encrypt_decrypt_roundtrip() {
+        // Now with RustCrypto, roundtrip should work perfectly
+        let key = AesKey::new_128(vec![
+            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf,
+            0x4f, 0x3c,
+        ])
+        .unwrap();
         let aes = Aes::new(key);
-        assert_eq!(aes.key.size(), AesKeySize::Aes128);
-        assert_eq!(aes.round_keys.len(), 11); // 10 rounds + initial
+
+        let data = b"Hello, AES World!";
+        let iv = vec![
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+            0x0e, 0x0f,
+        ];
+
+        let encrypted = aes.encrypt_cbc(data, &iv).unwrap();
+        assert_ne!(encrypted, data);
+        assert!(encrypted.len() >= data.len());
+        assert_eq!(encrypted.len() % 16, 0);
+
+        // With RustCrypto, decryption should produce exact original
+        let decrypted = aes.decrypt_cbc(&encrypted, &iv).unwrap();
+        assert_eq!(decrypted.as_slice(), data.as_slice());
     }
 
     #[test]
-    fn test_aes_256_new() {
-        let key = AesKey::new_256(vec![0u8; 32]).unwrap();
+    fn test_aes_256_encrypt_decrypt_roundtrip() {
+        let key = AesKey::new_256(vec![0x42; 32]).unwrap();
         let aes = Aes::new(key);
-        assert_eq!(aes.key.size(), AesKeySize::Aes256);
-        assert_eq!(aes.round_keys.len(), 15); // 14 rounds + initial
+
+        let data = b"This is a test for AES-256 encryption!";
+        let iv = vec![0x33; 16];
+
+        let encrypted = aes.encrypt_cbc(data, &iv).unwrap();
+        assert_ne!(encrypted.as_slice(), data.as_slice());
+
+        let decrypted = aes.decrypt_cbc(&encrypted, &iv).unwrap();
+        assert_eq!(decrypted.as_slice(), data.as_slice());
+    }
+
+    #[test]
+    fn test_aes_empty_data() {
+        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
+        let aes = Aes::new(key);
+        let iv = vec![0u8; 16];
+
+        let data = b"";
+        let encrypted = aes.encrypt_cbc(data, &iv).unwrap();
+        assert_eq!(encrypted.len(), 16); // One block due to PKCS#7 padding
+
+        let decrypted = aes.decrypt_cbc(&encrypted, &iv).unwrap();
+        assert_eq!(decrypted.as_slice(), data.as_slice());
+    }
+
+    #[test]
+    fn test_aes_invalid_iv() {
+        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
+        let aes = Aes::new(key);
+
+        let data = b"test data";
+        let iv_short = vec![0u8; 15];
+        let iv_long = vec![0u8; 17];
+
+        assert!(aes.encrypt_cbc(data, &iv_short).is_err());
+        assert!(aes.encrypt_cbc(data, &iv_long).is_err());
+
+        let encrypted = aes.encrypt_cbc(data, &[0u8; 16]).unwrap();
+        assert!(aes.decrypt_cbc(&encrypted, &iv_short).is_err());
+        assert!(aes.decrypt_cbc(&encrypted, &iv_long).is_err());
     }
 
     #[test]
@@ -925,6 +711,9 @@ mod tests {
         let data = vec![0x55; 48]; // 3 blocks exactly
         let encrypted = aes.encrypt_cbc(&data, &iv).unwrap();
         assert_eq!(encrypted.len(), 64); // PKCS#7 adds padding even for exact blocks
+
+        let decrypted = aes.decrypt_cbc(&encrypted, &iv).unwrap();
+        assert_eq!(decrypted, data);
     }
 
     #[test]
@@ -933,11 +722,14 @@ mod tests {
         let aes = Aes::new(key);
         let iv = vec![0x22; 16];
 
-        // Test with larger data
-        let data = vec![0x33; 1024]; // 1KB of data
+        // Test with larger data (1KB)
+        let data = vec![0x33; 1024];
         let encrypted = aes.encrypt_cbc(&data, &iv).unwrap();
         assert!(encrypted.len() >= 1024);
-        assert_eq!(encrypted.len() % 16, 0); // Should be multiple of block size
+        assert_eq!(encrypted.len() % 16, 0);
+
+        let decrypted = aes.decrypt_cbc(&encrypted, &iv).unwrap();
+        assert_eq!(decrypted, data);
     }
 
     #[test]
@@ -946,19 +738,20 @@ mod tests {
         let aes = Aes::new(key);
         let iv = vec![0xBB; 16];
 
-        // Test various data sizes
         for size in [1, 15, 16, 17, 31, 32, 33, 63, 64, 65, 127, 128, 129] {
             let data = vec![0xCC; size];
             let encrypted = aes.encrypt_cbc(&data, &iv).unwrap();
 
-            // Encrypted size should be padded to next multiple of 16
-            // PKCS#7 always adds padding, even for exact multiples
-            let expected_size = if size.is_multiple_of(16) {
+            // PKCS#7 always adds padding
+            let expected_size = if size % 16 == 0 {
                 size + 16
             } else {
-                size.div_ceil(16) * 16
+                (size / 16 + 1) * 16
             };
-            assert_eq!(encrypted.len(), expected_size);
+            assert_eq!(encrypted.len(), expected_size, "size={size}");
+
+            let decrypted = aes.decrypt_cbc(&encrypted, &iv).unwrap();
+            assert_eq!(decrypted, data, "size={size}");
         }
     }
 
@@ -981,226 +774,6 @@ mod tests {
     }
 
     #[test]
-    fn test_pkcs7_padding_edge_cases() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        // Test padding for exact block size
-        let data = vec![0xAB; 16];
-        let padded = aes.add_pkcs7_padding(&data);
-        assert_eq!(padded.len(), 32);
-        assert_eq!(&padded[16..], &[16; 16]);
-
-        // Test padding for one byte short of block
-        let data = vec![0xCD; 15];
-        let padded = aes.add_pkcs7_padding(&data);
-        assert_eq!(padded.len(), 16);
-        assert_eq!(padded[15], 1);
-
-        // Test empty data
-        let data = vec![];
-        let padded = aes.add_pkcs7_padding(&data);
-        assert_eq!(padded.len(), 16);
-        assert_eq!(&padded[..], &[16; 16]);
-    }
-
-    #[test]
-    fn test_pkcs7_padding_removal_edge_cases() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        // Test invalid padding values
-        let bad_paddings = vec![
-            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 2], // Wrong padding byte (says 2 but only last byte is 2)
-            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 2, 3, 4], // Inconsistent padding (says 4 but doesn't have 4 bytes of value 4)
-            vec![1, 2, 3, 4, 5], // Too short (not a multiple of block size after removing padding)
-        ];
-
-        for (i, bad_padding) in bad_paddings.iter().enumerate() {
-            let result = aes.remove_pkcs7_padding(bad_padding);
-            assert!(
-                result.is_err(),
-                "Bad padding {i} should fail but got {result:?}"
-            );
-        }
-
-        // Test padding longer than 16
-        let invalid_padding = vec![0u8; 16];
-        let mut invalid_padding_vec = invalid_padding;
-        invalid_padding_vec[15] = 17; // Invalid padding length
-        assert!(aes.remove_pkcs7_padding(&invalid_padding_vec).is_err());
-    }
-
-    #[test]
-    fn test_encrypt_decrypt_roundtrip_simple() {
-        // Note: This test is limited by the simplified AES implementation
-        // It verifies the operations complete without errors
-        let key = AesKey::new_128(vec![0x01; 16]).unwrap();
-        let aes = Aes::new(key);
-        let iv = vec![0x02; 16];
-
-        let test_cases = vec![
-            b"A".to_vec(),
-            b"Hello".to_vec(),
-            b"1234567890123456".to_vec(), // Exactly one block
-            b"This is a longer message that spans multiple blocks!".to_vec(),
-        ];
-
-        for data in test_cases {
-            let encrypted = aes.encrypt_cbc(&data, &iv).unwrap();
-            assert_ne!(encrypted, data);
-            assert!(encrypted.len() >= data.len());
-
-            // Verify decryption doesn't panic
-            let _ = aes.decrypt_cbc(&encrypted, &iv);
-        }
-    }
-
-    #[test]
-    fn test_shift_rows_correctness() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        // Create a state with distinct values
-        let mut state = (0..16).map(|i| i as u8).collect::<Vec<_>>();
-        let original = state.clone();
-
-        // Apply shift rows
-        aes.shift_rows(&mut state);
-
-        // Verify the shifts
-        // Row 0 (indices 0, 4, 8, 12) - no shift
-        assert_eq!(state[0], original[0]);
-        assert_eq!(state[4], original[4]);
-        assert_eq!(state[8], original[8]);
-        assert_eq!(state[12], original[12]);
-
-        // Row 1 (indices 1, 5, 9, 13) - shift left by 1
-        assert_eq!(state[1], original[5]);
-        assert_eq!(state[5], original[9]);
-        assert_eq!(state[9], original[13]);
-        assert_eq!(state[13], original[1]);
-
-        // Apply inverse
-        aes.inv_shift_rows(&mut state);
-        assert_eq!(state, original);
-    }
-
-    #[test]
-    fn test_sbox_properties() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        // Test that S-box is bijective (each input maps to unique output)
-        let mut outputs = std::collections::HashSet::new();
-        for i in 0..=255u8 {
-            let output = aes.sbox(i);
-            outputs.insert(output);
-        }
-        // Should have 256 unique outputs for 256 inputs
-        assert_eq!(outputs.len(), 256);
-
-        // Test inverse S-box
-        for i in 0..=255u8 {
-            let sbox_out = aes.sbox(i);
-            let _inv_out = aes.inv_sbox(sbox_out);
-            // Note: Due to simplified implementation, perfect inversion might not hold
-            // Just verify no panics occur
-            // inv_out is u8, so it's always <= 255
-        }
-    }
-
-    #[test]
-    fn test_key_expansion_consistency() {
-        // Test that same key produces same round keys
-        let key_bytes = vec![
-            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf,
-            0x4f, 0x3c,
-        ];
-
-        let key1 = AesKey::new_128(key_bytes.clone()).unwrap();
-        let key2 = AesKey::new_128(key_bytes).unwrap();
-
-        let aes1 = Aes::new(key1);
-        let aes2 = Aes::new(key2);
-
-        assert_eq!(aes1.round_keys.len(), aes2.round_keys.len());
-        for (rk1, rk2) in aes1.round_keys.iter().zip(aes2.round_keys.iter()) {
-            assert_eq!(rk1, rk2);
-        }
-    }
-
-    #[test]
-    fn test_generate_iv_properties() {
-        // Test multiple IV generations
-        let ivs: Vec<Vec<u8>> = (0..10).map(|_| generate_iv()).collect();
-
-        // All should be 16 bytes
-        for iv in &ivs {
-            assert_eq!(iv.len(), 16);
-        }
-
-        // Check that not all IVs are identical (though collisions are possible)
-        let first = &ivs[0];
-        let all_same = ivs.iter().all(|iv| iv == first);
-        // With proper randomness, having all 10 IVs identical is extremely unlikely
-        // but with our simple implementation, we just check they're generated
-        assert!(!all_same || ivs.len() == 1);
-    }
-
-    #[test]
-    fn test_mix_columns_basic() {
-        let key = AesKey::new_128(vec![0u8; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        let mut state = vec![0u8; 16];
-        let _original = state.clone();
-
-        // Apply mix columns
-        aes.mix_columns(&mut state);
-
-        // State should be changed (for non-zero input)
-        // With all zeros, simplified version might not change
-
-        // Test with non-zero state
-        let mut state2 = (0..16).map(|i| i as u8).collect::<Vec<_>>();
-        let original2 = state2.clone();
-        aes.mix_columns(&mut state2);
-        assert_ne!(state2, original2);
-    }
-
-    #[test]
-    fn test_round_key_application() {
-        let key = AesKey::new_128(vec![0xFF; 16]).unwrap();
-        let aes = Aes::new(key);
-
-        let mut state = vec![0xAA; 16];
-        let original = state.clone();
-
-        // Apply round key
-        aes.add_round_key(&mut state, 0);
-
-        // State should be XORed with round key
-        assert_ne!(state, original);
-
-        // Applying same round key twice should restore original
-        aes.add_round_key(&mut state, 0);
-        assert_eq!(state, original);
-    }
-
-    #[test]
-    fn test_aes_256_round_keys() {
-        let key = AesKey::new_256(vec![0x55; 32]).unwrap();
-        let aes = Aes::new(key);
-
-        // AES-256 should have 15 round keys (14 rounds + initial)
-        assert_eq!(aes.round_keys.len(), 15);
-
-        // First round key should be the original key
-        assert_eq!(aes.round_keys[0].len(), 32);
-    }
-
-    #[test]
     fn test_encrypt_with_different_ivs() {
         let key = AesKey::new_128(vec![0x42; 16]).unwrap();
         let aes = Aes::new(key);
@@ -1215,16 +788,21 @@ mod tests {
         // Same data with different IVs should produce different ciphertexts
         assert_ne!(encrypted1, encrypted2);
         assert_eq!(encrypted1.len(), encrypted2.len());
+
+        // Both should decrypt correctly with their respective IVs
+        let decrypted1 = aes.decrypt_cbc(&encrypted1, &iv1).unwrap();
+        let decrypted2 = aes.decrypt_cbc(&encrypted2, &iv2).unwrap();
+        assert_eq!(decrypted1.as_slice(), data.as_slice());
+        assert_eq!(decrypted2.as_slice(), data.as_slice());
     }
 
     #[test]
-    fn test_block_cipher_modes() {
+    fn test_cbc_mode_no_patterns() {
         let key = AesKey::new_128(vec![0x11; 16]).unwrap();
         let aes = Aes::new(key);
 
-        // Test that ECB mode (same plaintext blocks) would produce patterns
-        // while CBC mode doesn't
-        let data = vec![0x44; 32]; // Two identical blocks
+        // Two identical plaintext blocks
+        let data = vec![0x44; 32];
         let iv = vec![0x55; 16];
 
         let encrypted = aes.encrypt_cbc(&data, &iv).unwrap();
@@ -1238,7 +816,6 @@ mod tests {
 
     #[test]
     fn test_error_propagation() {
-        // Test that errors are properly propagated
         let key = AesKey::new_128(vec![0u8; 16]).unwrap();
         let aes = Aes::new(key);
 
@@ -1252,19 +829,118 @@ mod tests {
         assert!(matches!(result, Err(AesError::InvalidIvLength { .. })));
     }
 
+    // ===== ECB Mode Tests =====
+
     #[test]
-    fn test_state_array_operations() {
+    fn test_ecb_encrypt_decrypt_roundtrip() {
+        let key = AesKey::new_256(vec![0x55; 32]).unwrap();
+        let aes = Aes::new(key);
+
+        // ECB requires data multiple of 16
+        let data = vec![0xAB; 32]; // Two blocks
+
+        let encrypted = aes.encrypt_ecb(&data).unwrap();
+        assert_eq!(encrypted.len(), 32);
+        assert_ne!(encrypted, data);
+
+        let decrypted = aes.decrypt_ecb(&encrypted).unwrap();
+        assert_eq!(decrypted, data);
+    }
+
+    #[test]
+    fn test_ecb_invalid_data_length() {
         let key = AesKey::new_128(vec![0u8; 16]).unwrap();
         let aes = Aes::new(key);
 
-        // Test sub_bytes transforms each byte
-        let mut state = (0..16).map(|i| i as u8).collect::<Vec<_>>();
-        let original = state.clone();
-        aes.sub_bytes(&mut state);
+        // ECB requires data multiple of 16
+        let invalid_data = vec![0u8; 17];
+        assert!(aes.encrypt_ecb(&invalid_data).is_err());
+        assert!(aes.decrypt_ecb(&invalid_data).is_err());
+    }
 
-        // Each byte should be transformed
-        for i in 0..16 {
-            assert_eq!(state[i], aes.sbox(original[i]));
+    #[test]
+    fn test_ecb_shows_patterns() {
+        // ECB mode produces same ciphertext for same plaintext blocks
+        let key = AesKey::new_128(vec![0x11; 16]).unwrap();
+        let aes = Aes::new(key);
+
+        let data = vec![0x44; 32]; // Two identical blocks
+
+        let encrypted = aes.encrypt_ecb(&data).unwrap();
+
+        // In ECB mode, both blocks should be identical (unlike CBC)
+        let block1 = &encrypted[0..16];
+        let block2 = &encrypted[16..32];
+        assert_eq!(
+            block1, block2,
+            "ECB should produce same ciphertext for identical blocks"
+        );
+    }
+
+    // ===== generate_iv Tests =====
+
+    #[test]
+    fn test_generate_iv() {
+        let iv1 = generate_iv();
+        let iv2 = generate_iv();
+
+        assert_eq!(iv1.len(), 16);
+        assert_eq!(iv2.len(), 16);
+    }
+
+    #[test]
+    fn test_generate_iv_properties() {
+        let ivs: Vec<Vec<u8>> = (0..10).map(|_| generate_iv()).collect();
+
+        // All should be 16 bytes
+        for iv in &ivs {
+            assert_eq!(iv.len(), 16);
         }
+
+        // Check that not all IVs are identical (with counter, they should differ)
+        let first = &ivs[0];
+        let all_same = ivs.iter().all(|iv| iv == first);
+        assert!(
+            !all_same || ivs.len() == 1,
+            "IVs should not all be identical"
+        );
+    }
+
+    // ===== NIST Test Vector =====
+
+    #[test]
+    fn test_aes_256_cbc_nist_vector() {
+        // NIST test vector for AES-256-CBC from SP 800-38A
+        let key = AesKey::new_256(vec![
+            0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d,
+            0x77, 0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3,
+            0x09, 0x14, 0xdf, 0xf4,
+        ])
+        .unwrap();
+        let aes = Aes::new(key);
+
+        let iv = vec![
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+            0x0e, 0x0f,
+        ];
+
+        let plaintext = vec![
+            0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93,
+            0x17, 0x2a,
+        ];
+
+        let expected_ciphertext = vec![
+            0xf5, 0x8c, 0x4c, 0x04, 0xd6, 0xe5, 0xf1, 0xba, 0x77, 0x9e, 0xab, 0xfb, 0x5f, 0x7b,
+            0xfb, 0xd6,
+        ];
+
+        let encrypted = aes.encrypt_cbc(&plaintext, &iv).unwrap();
+
+        // First 16 bytes should match NIST expected ciphertext
+        assert_eq!(
+            &encrypted[..16],
+            expected_ciphertext.as_slice(),
+            "AES-256-CBC encryption should match NIST test vector"
+        );
     }
 }

@@ -35,6 +35,11 @@ tracing = { workspace = true }
 md5 = "0.8"
 sha2 = "0.10"
 
+# AES encryption (production-grade for R5/R6)
+aes = "0.8"
+cbc = "0.1"
+cipher = "0.4"
+
 # Unicode processing
 unicode-normalization = "0.1"
 

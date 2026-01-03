@@ -5,6 +5,7 @@
 use crate::encryption::{generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
 use crate::error::Result;
 use crate::objects::ObjectId;
+use sha2::{Digest, Sha256, Sha512};
 
 /// Padding used in password processing
 const PADDING: [u8; 32] = [
@@ -670,28 +671,21 @@ fn rc4_encrypt(key: &Rc4Key, data: &[u8]) -> Vec<u8> {
 
 // Use the md5 crate for actual MD5 hashing (required for PDF encryption)
 
-/// SHA-256 implementation (simplified for example)
+/// SHA-256 implementation using RustCrypto (production-grade)
+///
+/// Returns a 32-byte hash of the input data according to FIPS 180-4.
+/// Used for R5 password validation and key derivation.
 fn sha256(data: &[u8]) -> Vec<u8> {
-    // In production, use a proper SHA-256 implementation like the `sha2` crate
-    // This is a placeholder that provides 32 bytes of deterministic output
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    Sha256::digest(data).to_vec()
+}
 
-    let mut hasher = DefaultHasher::new();
-    data.hash(&mut hasher);
-    let hash_value = hasher.finish();
-
-    let mut result = Vec::with_capacity(32);
-
-    // Create 32 bytes from the hash value
-    for i in 0..4 {
-        let shifted = hash_value
-            .wrapping_mul((i + 1) as u64)
-            .wrapping_add(i as u64);
-        result.extend_from_slice(&shifted.to_le_bytes());
-    }
-
-    result
+/// SHA-512 implementation using RustCrypto (production-grade)
+///
+/// Returns a 64-byte hash of the input data according to FIPS 180-4.
+/// Used for R6 password validation and key derivation.
+#[allow(dead_code)] // Will be used in R6 implementation
+fn sha512(data: &[u8]) -> Vec<u8> {
+    Sha512::digest(data).to_vec()
 }
 
 #[cfg(test)]
@@ -1182,5 +1176,77 @@ mod tests {
         let encrypted = handler.encrypt_string(data, &key, &obj_id);
         let decrypted = handler.decrypt_string(&encrypted, &key, &obj_id);
         assert_eq!(decrypted.as_slice(), data);
+    }
+
+    // ===== SHA-256/512 NIST Vector Tests (Phase 1.3 - RustCrypto Integration) =====
+
+    #[test]
+    fn test_sha256_nist_empty_string() {
+        // NIST FIPS 180-4 test vector: SHA-256("")
+        let hash = sha256(b"");
+        let expected: [u8; 32] = [
+            0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f,
+            0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b,
+            0x78, 0x52, 0xb8, 0x55,
+        ];
+        assert_eq!(
+            hash.as_slice(),
+            expected.as_slice(),
+            "SHA-256('') must match NIST test vector"
+        );
+    }
+
+    #[test]
+    fn test_sha256_nist_abc() {
+        // NIST FIPS 180-4 test vector: SHA-256("abc")
+        let hash = sha256(b"abc");
+        let expected: [u8; 32] = [
+            0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d, 0xae,
+            0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61,
+            0xf2, 0x00, 0x15, 0xad,
+        ];
+        assert_eq!(
+            hash.as_slice(),
+            expected.as_slice(),
+            "SHA-256('abc') must match NIST test vector"
+        );
+    }
+
+    #[test]
+    fn test_sha512_nist_abc() {
+        // NIST FIPS 180-4 test vector: SHA-512("abc")
+        let hash = sha512(b"abc");
+        let expected: [u8; 64] = [
+            0xdd, 0xaf, 0x35, 0xa1, 0x93, 0x61, 0x7a, 0xba, 0xcc, 0x41, 0x73, 0x49, 0xae, 0x20,
+            0x41, 0x31, 0x12, 0xe6, 0xfa, 0x4e, 0x89, 0xa9, 0x7e, 0xa2, 0x0a, 0x9e, 0xee, 0xe6,
+            0x4b, 0x55, 0xd3, 0x9a, 0x21, 0x92, 0x99, 0x2a, 0x27, 0x4f, 0xc1, 0xa8, 0x36, 0xba,
+            0x3c, 0x23, 0xa3, 0xfe, 0xeb, 0xbd, 0x45, 0x4d, 0x44, 0x23, 0x64, 0x3c, 0xe8, 0x0e,
+            0x2a, 0x9a, 0xc9, 0x4f, 0xa5, 0x4c, 0xa4, 0x9f,
+        ];
+        assert_eq!(
+            hash.as_slice(),
+            expected.as_slice(),
+            "SHA-512('abc') must match NIST test vector"
+        );
+    }
+
+    #[test]
+    fn test_sha512_length() {
+        let hash = sha512(b"test data");
+        assert_eq!(hash.len(), 64, "SHA-512 must produce 64 bytes");
+    }
+
+    #[test]
+    fn test_sha512_deterministic() {
+        let data1 = b"sha512 test data";
+        let data2 = b"sha512 test data";
+        let data3 = b"different data";
+
+        let hash1 = sha512(data1);
+        let hash2 = sha512(data2);
+        let hash3 = sha512(data3);
+
+        assert_eq!(hash1, hash2, "Same input must produce same SHA-512 hash");
+        assert_ne!(hash1, hash3, "Different input must produce different hash");
     }
 }
