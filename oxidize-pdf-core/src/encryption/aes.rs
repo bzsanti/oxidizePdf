@@ -374,6 +374,12 @@ impl Aes {
     /// # Requirements
     /// - Data length must be a multiple of 16 bytes
     /// - IV must be exactly 16 bytes
+    ///
+    /// # Security Note
+    /// The XOR operations in CBC chaining use simple loops. While Rust/LLVM typically
+    /// produces constant-time code for fixed-size array XOR operations, this is not
+    /// formally guaranteed. PDF encryption is designed for offline brute-force attacks
+    /// where timing side-channels are not in the threat model.
     pub fn encrypt_cbc_raw(&self, data: &[u8], iv: &[u8]) -> Result<Vec<u8>, AesError> {
         use aes::cipher::{BlockEncrypt, KeyInit};
 
@@ -458,6 +464,12 @@ impl Aes {
     /// # Requirements
     /// - Data length must be a multiple of 16 bytes
     /// - IV must be exactly 16 bytes
+    ///
+    /// # Security Note
+    /// The XOR operations in CBC chaining use simple loops. While Rust/LLVM typically
+    /// produces constant-time code for fixed-size array XOR operations, this is not
+    /// formally guaranteed. PDF encryption is designed for offline brute-force attacks
+    /// where timing side-channels are not in the threat model.
     pub fn decrypt_cbc_raw(&self, data: &[u8], iv: &[u8]) -> Result<Vec<u8>, AesError> {
         use aes::cipher::{BlockDecrypt, KeyInit};
 

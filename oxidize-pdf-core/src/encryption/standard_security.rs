@@ -532,8 +532,8 @@ impl StandardSecurityHandler {
         }
 
         // Generate cryptographically secure random salts
-        let validation_salt = generate_salt(8);
-        let key_salt = generate_salt(8);
+        let validation_salt = generate_salt(R5_SALT_LENGTH);
+        let key_salt = generate_salt(R5_SALT_LENGTH);
 
         // Compute hash: SHA-256(password + validation_salt)
         let mut data = Vec::new();
@@ -542,8 +542,8 @@ impl StandardSecurityHandler {
 
         let mut hash = sha256(&data);
 
-        // Apply 64 iterations of SHA-256 (PDF spec recommendation)
-        for _ in 0..64 {
+        // Apply R5 iterations of SHA-256 (PDF spec §7.6.4.3.4)
+        for _ in 0..R5_HASH_ITERATIONS {
             hash = sha256(&hash);
         }
 
@@ -588,8 +588,8 @@ impl StandardSecurityHandler {
 
         let mut hash = sha256(&data);
 
-        // Apply same 64 iterations as compute
-        for _ in 0..64 {
+        // Apply same R5 iterations as compute
+        for _ in 0..R5_HASH_ITERATIONS {
             hash = sha256(&hash);
         }
 
@@ -841,10 +841,11 @@ impl StandardSecurityHandler {
                 Ok(computed_owner[..32] == owner_hash[..32])
             }
             SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                // For R5/R6, owner password validation is different
-                // This is a simplified check - full R5/R6 is more complex
-                // For now, return false (not implemented)
-                Ok(false)
+                // R5/R6 owner password validation requires O/OE entry processing
+                // (Algorithms 12/13 in ISO 32000-2) - not yet implemented
+                Err(crate::error::PdfError::EncryptionError(
+                    "R5/R6 owner password validation not yet implemented (Phase 3)".to_string(),
+                ))
             }
         }
     }
@@ -875,10 +876,21 @@ fn sha512(data: &[u8]) -> Vec<u8> {
     Sha512::digest(data).to_vec()
 }
 
-/// Generate cryptographically secure random salt
+/// R5 salt length in bytes (PDF spec §7.6.4.3.4)
+const R5_SALT_LENGTH: usize = 8;
+
+/// R5 SHA-256 iteration count (PDF spec §7.6.4.3.4)
+const R5_HASH_ITERATIONS: usize = 64;
+
+/// Generate cryptographically secure random salt using OS CSPRNG
 ///
-/// Uses the OS CSPRNG via `rand::rngs::OsRng` for security-critical
-/// random bytes as required by PDF encryption salt generation.
+/// Uses `rand::rng()` which provides a thread-local CSPRNG (ChaCha12) seeded
+/// from the OS random number generator. This is suitable for PDF encryption salts.
+///
+/// # Security
+/// - Uses ChaCha12 PRNG seeded from OS entropy (rand 0.9 implementation)
+/// - Provides cryptographic-quality randomness for salt generation
+/// - Each call produces independent random bytes
 fn generate_salt(len: usize) -> Vec<u8> {
     let mut salt = vec![0u8; len];
     rand::rng().fill_bytes(&mut salt);
