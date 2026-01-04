@@ -1262,8 +1262,10 @@ fn sha512(data: &[u8]) -> Vec<u8> {
 /// R5 salt length in bytes (PDF spec §7.6.4.3.4)
 const R5_SALT_LENGTH: usize = 8;
 
-/// R5 SHA-256 iteration count (PDF spec §7.6.4.3.4)
-const R5_HASH_ITERATIONS: usize = 64;
+/// R5 SHA-256 iteration count (ISO 32000-2:2020 Algorithm 8/11)
+/// NOTE: R5 does NOT use iterations - hash is simply SHA-256(password + salt)
+/// The 64 iterations are only for R6 which uses Algorithm 2.B
+const R5_HASH_ITERATIONS: usize = 0;
 
 /// R6 salt length in bytes (PDF spec ISO 32000-2)
 const R6_SALT_LENGTH: usize = 8;
