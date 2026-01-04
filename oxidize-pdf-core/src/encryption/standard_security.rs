@@ -1,4 +1,18 @@
-//! Standard Security Handler implementation according to ISO 32000-1
+//! Standard Security Handler implementation according to ISO 32000-1/32000-2
+//!
+//! # Security Considerations
+//!
+//! This implementation includes several security hardening measures:
+//!
+//! - **Constant-time comparison**: Password validation uses `subtle::ConstantTimeEq`
+//!   to prevent timing side-channel attacks that could leak password information.
+//!
+//! - **Memory zeroization**: Sensitive data (`EncryptionKey`, `UserPassword`,
+//!   `OwnerPassword`) implements `Zeroize` to ensure secrets are cleared from
+//!   memory when dropped, preventing memory dump attacks.
+//!
+//! - **Cryptographically secure RNG**: Salt generation uses `rand::rng()` which
+//!   provides OS-level entropy suitable for cryptographic operations.
 
 #![allow(clippy::needless_range_loop)]
 
@@ -7,6 +21,8 @@ use crate::error::Result;
 use crate::objects::ObjectId;
 use rand::RngCore;
 use sha2::{Digest, Sha256, Sha512};
+use subtle::ConstantTimeEq;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Padding used in password processing
 const PADDING: [u8; 32] = [
@@ -15,15 +31,24 @@ const PADDING: [u8; 32] = [
 ];
 
 /// User password
-#[derive(Debug, Clone)]
+///
+/// # Security
+/// Implements `Zeroize` and `ZeroizeOnDrop` to ensure password is cleared from memory.
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
 pub struct UserPassword(pub String);
 
 /// Owner password
-#[derive(Debug, Clone)]
+///
+/// # Security
+/// Implements `Zeroize` and `ZeroizeOnDrop` to ensure password is cleared from memory.
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
 pub struct OwnerPassword(pub String);
 
 /// Encryption key
-#[derive(Debug, Clone)]
+///
+/// # Security
+/// Implements `Zeroize` and `ZeroizeOnDrop` to ensure key bytes are cleared from memory.
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EncryptionKey {
     /// Key bytes
     pub key: Vec<u8>,
@@ -565,21 +590,26 @@ impl StandardSecurityHandler {
     /// 1. Extract validation_salt from U[32..40]
     /// 2. Compute hash: SHA-256(password + validation_salt)
     /// 3. Apply 64 iterations of SHA-256
-    /// 4. Compare result with U[0..32]
+    /// 4. Compare result with U[0..32] using constant-time comparison
+    ///
+    /// # Security
+    /// Uses constant-time comparison (`subtle::ConstantTimeEq`) to prevent
+    /// timing side-channel attacks that could leak password information.
     pub fn validate_r5_user_password(
         &self,
         password: &UserPassword,
         u_entry: &[u8],
     ) -> Result<bool> {
-        if u_entry.len() != 48 {
+        if u_entry.len() != U_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
-                "R5 U entry must be 48 bytes, got {}",
+                "R5 U entry must be {} bytes, got {}",
+                U_ENTRY_LENGTH,
                 u_entry.len()
             )));
         }
 
-        // Extract validation_salt from U (bytes 32-39)
-        let validation_salt = &u_entry[32..40];
+        // Extract validation_salt from U
+        let validation_salt = &u_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
 
         // Compute hash: SHA-256(password + validation_salt)
         let mut data = Vec::new();
@@ -593,8 +623,10 @@ impl StandardSecurityHandler {
             hash = sha256(&hash);
         }
 
-        // Compare with stored hash (first 32 bytes of U)
-        Ok(hash[..32] == u_entry[..32])
+        // SECURITY: Constant-time comparison prevents timing attacks
+        let stored_hash = &u_entry[..U_HASH_LENGTH];
+        let computed_hash = &hash[..U_HASH_LENGTH];
+        Ok(bool::from(computed_hash.ct_eq(stored_hash)))
     }
 
     /// Compute R5 UE entry (encrypted encryption key)
@@ -612,19 +644,21 @@ impl StandardSecurityHandler {
         u_entry: &[u8],
         encryption_key: &EncryptionKey,
     ) -> Result<Vec<u8>> {
-        if u_entry.len() != 48 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "U entry must be 48 bytes".to_string(),
-            ));
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
         }
-        if encryption_key.len() != 32 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "Encryption key must be 32 bytes for R5".to_string(),
-            ));
+        if encryption_key.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "Encryption key must be {} bytes for R5",
+                UE_ENTRY_LENGTH
+            )));
         }
 
-        // Extract key_salt from U (bytes 40-47)
-        let key_salt = &u_entry[40..48];
+        // Extract key_salt from U
+        let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
         // Compute intermediate key: SHA-256(password + key_salt)
         let mut data = Vec::new();
@@ -661,20 +695,22 @@ impl StandardSecurityHandler {
         u_entry: &[u8],
         ue_entry: &[u8],
     ) -> Result<EncryptionKey> {
-        if ue_entry.len() != 32 {
+        if ue_entry.len() != UE_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
-                "UE entry must be 32 bytes, got {}",
+                "UE entry must be {} bytes, got {}",
+                UE_ENTRY_LENGTH,
                 ue_entry.len()
             )));
         }
-        if u_entry.len() != 48 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "U entry must be 48 bytes".to_string(),
-            ));
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
         }
 
-        // Extract key_salt from U (bytes 40-47)
-        let key_salt = &u_entry[40..48];
+        // Extract key_salt from U
+        let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
         // Compute intermediate key: SHA-256(password + key_salt)
         let mut data = Vec::new();
@@ -757,21 +793,26 @@ impl StandardSecurityHandler {
     /// 1. Extract validation_salt from U[32..40]
     /// 2. Compute hash: SHA-512(password + validation_salt)[0..32]
     /// 3. Apply feedback iterations
-    /// 4. Compare result with U[0..32]
+    /// 4. Compare result with U[0..32] using constant-time comparison
+    ///
+    /// # Security
+    /// Uses constant-time comparison (`subtle::ConstantTimeEq`) to prevent
+    /// timing side-channel attacks that could leak password information.
     pub fn validate_r6_user_password(
         &self,
         password: &UserPassword,
         u_entry: &[u8],
     ) -> Result<bool> {
-        if u_entry.len() != 48 {
+        if u_entry.len() != U_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
-                "R6 U entry must be 48 bytes, got {}",
+                "R6 U entry must be {} bytes, got {}",
+                U_ENTRY_LENGTH,
                 u_entry.len()
             )));
         }
 
-        // Extract validation_salt from U (bytes 32-39)
-        let validation_salt = &u_entry[32..40];
+        // Extract validation_salt from U
+        let validation_salt = &u_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
 
         // Initial hash: SHA-512(password + validation_salt)
         let mut data = Vec::new();
@@ -789,8 +830,10 @@ impl StandardSecurityHandler {
             hash = sha512(&input);
         }
 
-        // Compare first 32 bytes with stored hash
-        Ok(hash[..32] == u_entry[..32])
+        // SECURITY: Constant-time comparison prevents timing attacks
+        let stored_hash = &u_entry[..U_HASH_LENGTH];
+        let computed_hash = &hash[..U_HASH_LENGTH];
+        Ok(bool::from(computed_hash.ct_eq(stored_hash)))
     }
 
     /// Compute R6 UE entry (encrypted encryption key)
@@ -802,19 +845,21 @@ impl StandardSecurityHandler {
         u_entry: &[u8],
         encryption_key: &EncryptionKey,
     ) -> Result<Vec<u8>> {
-        if u_entry.len() != 48 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "U entry must be 48 bytes".to_string(),
-            ));
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
         }
-        if encryption_key.len() != 32 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "Encryption key must be 32 bytes for R6".to_string(),
-            ));
+        if encryption_key.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "Encryption key must be {} bytes for R6",
+                UE_ENTRY_LENGTH
+            )));
         }
 
-        // Extract key_salt from U (bytes 40-47)
-        let key_salt = &u_entry[40..48];
+        // Extract key_salt from U
+        let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
         // R6 uses SHA-512 for intermediate key derivation
         let mut data = Vec::new();
@@ -823,7 +868,7 @@ impl StandardSecurityHandler {
 
         // Use SHA-512, take first 32 bytes
         let hash = sha512(&data);
-        let intermediate_key = hash[..32].to_vec();
+        let intermediate_key = hash[..U_HASH_LENGTH].to_vec();
 
         // Encrypt encryption_key with intermediate_key using AES-256-CBC
         let aes_key = AesKey::new_256(intermediate_key)?;
@@ -846,20 +891,22 @@ impl StandardSecurityHandler {
         u_entry: &[u8],
         ue_entry: &[u8],
     ) -> Result<EncryptionKey> {
-        if ue_entry.len() != 32 {
+        if ue_entry.len() != UE_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
-                "UE entry must be 32 bytes, got {}",
+                "UE entry must be {} bytes, got {}",
+                UE_ENTRY_LENGTH,
                 ue_entry.len()
             )));
         }
-        if u_entry.len() != 48 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "U entry must be 48 bytes".to_string(),
-            ));
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
         }
 
-        // Extract key_salt from U (bytes 40-47)
-        let key_salt = &u_entry[40..48];
+        // Extract key_salt from U
+        let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
         // R6 uses SHA-512 for intermediate key derivation
         let mut data = Vec::new();
@@ -867,7 +914,7 @@ impl StandardSecurityHandler {
         data.extend_from_slice(key_salt);
 
         let hash = sha512(&data);
-        let intermediate_key = hash[..32].to_vec();
+        let intermediate_key = hash[..U_HASH_LENGTH].to_vec();
 
         // Decrypt UE to get encryption key
         let aes_key = AesKey::new_256(intermediate_key)?;
@@ -907,27 +954,28 @@ impl StandardSecurityHandler {
                 "Perms entry only for Revision 6".to_string(),
             ));
         }
-        if encryption_key.len() != 32 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "Encryption key must be 32 bytes for R6 Perms".to_string(),
-            ));
+        if encryption_key.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "Encryption key must be {} bytes for R6 Perms",
+                UE_ENTRY_LENGTH
+            )));
         }
 
         // Construct plaintext: P + 0xFFFFFFFF + "adb" + T/F + padding
-        let mut plaintext = vec![0u8; 16];
+        let mut plaintext = vec![0u8; PERMS_ENTRY_LENGTH];
 
         // Permissions (4 bytes, little-endian)
         let p_bytes = (permissions.bits() as u32).to_le_bytes();
-        plaintext[0..4].copy_from_slice(&p_bytes);
+        plaintext[PERMS_P_START..PERMS_P_END].copy_from_slice(&p_bytes);
 
         // Fixed marker bytes (0xFFFFFFFF)
-        plaintext[4..8].copy_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF]);
+        plaintext[PERMS_MARKER_START..PERMS_MARKER_END].copy_from_slice(&PERMS_MARKER);
 
         // Literal "adb" verification string
-        plaintext[8..11].copy_from_slice(b"adb");
+        plaintext[PERMS_LITERAL_START..PERMS_LITERAL_END].copy_from_slice(PERMS_LITERAL);
 
         // EncryptMetadata flag
-        plaintext[11] = if encrypt_metadata { b'T' } else { b'F' };
+        plaintext[PERMS_ENCRYPT_META_BYTE] = if encrypt_metadata { b'T' } else { b'F' };
 
         // Bytes 12-15 remain 0x00 (padding)
 
@@ -947,22 +995,28 @@ impl StandardSecurityHandler {
     /// Returns Ok(true) if the Perms entry is valid and matches expected permissions.
     /// Returns Ok(false) if decryption succeeds but structure/permissions don't match.
     /// Returns Err if decryption fails.
+    ///
+    /// # Security
+    /// Uses constant-time comparison (`subtle::ConstantTimeEq`) for permissions
+    /// comparison to prevent timing side-channel attacks.
     pub fn validate_r6_perms(
         &self,
         perms_entry: &[u8],
         encryption_key: &EncryptionKey,
         expected_permissions: Permissions,
     ) -> Result<bool> {
-        if perms_entry.len() != 16 {
+        if perms_entry.len() != PERMS_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
-                "Perms entry must be 16 bytes, got {}",
+                "Perms entry must be {} bytes, got {}",
+                PERMS_ENTRY_LENGTH,
                 perms_entry.len()
             )));
         }
-        if encryption_key.len() != 32 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "Encryption key must be 32 bytes".to_string(),
-            ));
+        if encryption_key.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "Encryption key must be {} bytes",
+                UE_ENTRY_LENGTH
+            )));
         }
 
         // Decrypt with AES-256-ECB
@@ -973,21 +1027,20 @@ impl StandardSecurityHandler {
             crate::error::PdfError::EncryptionError(format!("Perms decryption failed: {}", e))
         })?;
 
-        // Verify fixed marker (bytes 4-7 should be 0xFFFFFFFF)
-        if decrypted[4..8] != [0xFF, 0xFF, 0xFF, 0xFF] {
+        // Verify fixed marker
+        if decrypted[PERMS_MARKER_START..PERMS_MARKER_END] != PERMS_MARKER {
             return Ok(false);
         }
 
-        // Verify literal "adb" (bytes 8-10)
-        if &decrypted[8..11] != b"adb" {
+        // Verify literal "adb"
+        if &decrypted[PERMS_LITERAL_START..PERMS_LITERAL_END] != PERMS_LITERAL {
             return Ok(false);
         }
 
-        // Extract and compare permissions (bytes 0-3, little-endian)
-        let perms_value =
-            u32::from_le_bytes([decrypted[0], decrypted[1], decrypted[2], decrypted[3]]);
-
-        Ok(perms_value == expected_permissions.bits() as u32)
+        // SECURITY: Constant-time comparison for permissions
+        let expected_bytes = (expected_permissions.bits() as u32).to_le_bytes();
+        let actual_bytes = &decrypted[PERMS_P_START..PERMS_P_END];
+        Ok(bool::from(expected_bytes.ct_eq(actual_bytes)))
     }
 
     /// Extract EncryptMetadata flag from decrypted Perms entry
@@ -999,7 +1052,7 @@ impl StandardSecurityHandler {
         perms_entry: &[u8],
         encryption_key: &EncryptionKey,
     ) -> Result<Option<bool>> {
-        if perms_entry.len() != 16 || encryption_key.len() != 32 {
+        if perms_entry.len() != PERMS_ENTRY_LENGTH || encryption_key.len() != UE_ENTRY_LENGTH {
             return Ok(None);
         }
 
@@ -1012,12 +1065,14 @@ impl StandardSecurityHandler {
         };
 
         // Verify structure before extracting flag
-        if decrypted[4..8] != [0xFF, 0xFF, 0xFF, 0xFF] || &decrypted[8..11] != b"adb" {
+        if decrypted[PERMS_MARKER_START..PERMS_MARKER_END] != PERMS_MARKER
+            || &decrypted[PERMS_LITERAL_START..PERMS_LITERAL_END] != PERMS_LITERAL
+        {
             return Ok(None);
         }
 
-        // Extract EncryptMetadata flag (byte 11)
-        match decrypted[11] {
+        // Extract EncryptMetadata flag
+        match decrypted[PERMS_ENCRYPT_META_BYTE] {
             b'T' => Ok(Some(true)),
             b'F' => Ok(Some(false)),
             _ => Ok(None), // Invalid flag value
@@ -1215,6 +1270,65 @@ const R6_SALT_LENGTH: usize = 8;
 
 /// R6 SHA-512 iteration count (PDF spec recommends 64-127)
 const R6_HASH_ITERATIONS: usize = 64;
+
+// ============================================================================
+// R5/R6 U Entry Structure Constants (48 bytes total)
+// ============================================================================
+
+/// Length of the hash portion in U entry (SHA-256/SHA-512 truncated to 32 bytes)
+const U_HASH_LENGTH: usize = 32;
+
+/// Start offset of validation salt in U entry
+const U_VALIDATION_SALT_START: usize = 32;
+
+/// End offset of validation salt in U entry
+const U_VALIDATION_SALT_END: usize = 40;
+
+/// Start offset of key salt in U entry
+const U_KEY_SALT_START: usize = 40;
+
+/// End offset of key salt in U entry
+const U_KEY_SALT_END: usize = 48;
+
+/// Total length of U entry for R5/R6
+const U_ENTRY_LENGTH: usize = 48;
+
+/// Length of UE entry (encrypted encryption key)
+const UE_ENTRY_LENGTH: usize = 32;
+
+// ============================================================================
+// R6 Perms Entry Structure Constants (16 bytes total)
+// ============================================================================
+
+/// Length of Perms entry
+const PERMS_ENTRY_LENGTH: usize = 16;
+
+/// Start offset of permissions value in decrypted Perms (little-endian u32)
+const PERMS_P_START: usize = 0;
+
+/// End offset of permissions value in decrypted Perms
+const PERMS_P_END: usize = 4;
+
+/// Start offset of fixed marker (0xFFFFFFFF) in decrypted Perms
+const PERMS_MARKER_START: usize = 4;
+
+/// End offset of fixed marker in decrypted Perms
+const PERMS_MARKER_END: usize = 8;
+
+/// Start offset of "adb" literal in decrypted Perms
+const PERMS_LITERAL_START: usize = 8;
+
+/// End offset of "adb" literal in decrypted Perms
+const PERMS_LITERAL_END: usize = 11;
+
+/// Offset of EncryptMetadata flag byte ('T' or 'F') in decrypted Perms
+const PERMS_ENCRYPT_META_BYTE: usize = 11;
+
+/// Fixed marker value in Perms entry
+const PERMS_MARKER: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
+
+/// Literal verification string in Perms entry
+const PERMS_LITERAL: &[u8; 3] = b"adb";
 
 /// Generate cryptographically secure random salt using OS CSPRNG
 ///

@@ -40,6 +40,10 @@ aes = "0.8"
 cbc = "0.1"
 cipher = "0.4"
 
+# Cryptographic security primitives
+subtle = "2.6"                                # Constant-time comparison (prevents timing attacks)
+zeroize = { version = "1.8", features = ["derive"] }  # Secure memory clearing (prevents memory dumps)
+
 # Unicode processing
 unicode-normalization = "0.1"
 
