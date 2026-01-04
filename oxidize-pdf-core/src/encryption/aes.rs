@@ -365,6 +365,172 @@ impl Aes {
 
         Ok(decrypted)
     }
+
+    /// Encrypt data using AES-CBC mode WITHOUT padding
+    ///
+    /// Used for R5/R6 UE entry encryption where data is already block-aligned (32 bytes).
+    /// Unlike encrypt_cbc, this does not add PKCS#7 padding.
+    ///
+    /// # Requirements
+    /// - Data length must be a multiple of 16 bytes
+    /// - IV must be exactly 16 bytes
+    pub fn encrypt_cbc_raw(&self, data: &[u8], iv: &[u8]) -> Result<Vec<u8>, AesError> {
+        use aes::cipher::{BlockEncrypt, KeyInit};
+
+        if iv.len() != 16 {
+            return Err(AesError::InvalidIvLength {
+                expected: 16,
+                actual: iv.len(),
+            });
+        }
+
+        if data.len() % 16 != 0 {
+            return Err(AesError::EncryptionFailed(
+                "Data length must be multiple of 16 bytes for raw CBC mode".to_string(),
+            ));
+        }
+
+        let mut encrypted = Vec::with_capacity(data.len());
+        let mut prev_block: [u8; 16] = iv.try_into().map_err(|_| AesError::InvalidIvLength {
+            expected: 16,
+            actual: iv.len(),
+        })?;
+
+        match self.key.size() {
+            AesKeySize::Aes128 => {
+                let key_array: [u8; 16] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 16,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes128::new(&key_array.into());
+
+                for chunk in data.chunks(16) {
+                    // XOR with previous ciphertext (or IV for first block)
+                    let mut block: [u8; 16] = [0u8; 16];
+                    for i in 0..16 {
+                        block[i] = chunk[i] ^ prev_block[i];
+                    }
+                    let mut block_ga =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(&block);
+                    cipher.encrypt_block(&mut block_ga);
+                    prev_block.copy_from_slice(&block_ga);
+                    encrypted.extend_from_slice(&block_ga);
+                }
+            }
+            AesKeySize::Aes256 => {
+                let key_array: [u8; 32] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 32,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes256::new(&key_array.into());
+
+                for chunk in data.chunks(16) {
+                    // XOR with previous ciphertext (or IV for first block)
+                    let mut block: [u8; 16] = [0u8; 16];
+                    for i in 0..16 {
+                        block[i] = chunk[i] ^ prev_block[i];
+                    }
+                    let mut block_ga =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(&block);
+                    cipher.encrypt_block(&mut block_ga);
+                    prev_block.copy_from_slice(&block_ga);
+                    encrypted.extend_from_slice(&block_ga);
+                }
+            }
+        }
+
+        Ok(encrypted)
+    }
+
+    /// Decrypt data using AES-CBC mode WITHOUT padding
+    ///
+    /// Used for R5/R6 UE entry decryption where data is already block-aligned (32 bytes).
+    /// Unlike decrypt_cbc, this does not expect or remove PKCS#7 padding.
+    ///
+    /// # Requirements
+    /// - Data length must be a multiple of 16 bytes
+    /// - IV must be exactly 16 bytes
+    pub fn decrypt_cbc_raw(&self, data: &[u8], iv: &[u8]) -> Result<Vec<u8>, AesError> {
+        use aes::cipher::{BlockDecrypt, KeyInit};
+
+        if iv.len() != 16 {
+            return Err(AesError::InvalidIvLength {
+                expected: 16,
+                actual: iv.len(),
+            });
+        }
+
+        if data.len() % 16 != 0 {
+            return Err(AesError::DecryptionFailed(
+                "Data length must be multiple of 16 bytes for raw CBC mode".to_string(),
+            ));
+        }
+
+        let mut decrypted = Vec::with_capacity(data.len());
+        let mut prev_block: [u8; 16] = iv.try_into().map_err(|_| AesError::InvalidIvLength {
+            expected: 16,
+            actual: iv.len(),
+        })?;
+
+        match self.key.size() {
+            AesKeySize::Aes128 => {
+                let key_array: [u8; 16] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 16,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes128::new(&key_array.into());
+
+                for chunk in data.chunks(16) {
+                    let mut block =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+                    cipher.decrypt_block(&mut block);
+                    // XOR with previous ciphertext (or IV for first block)
+                    for i in 0..16 {
+                        block[i] ^= prev_block[i];
+                    }
+                    prev_block.copy_from_slice(chunk);
+                    decrypted.extend_from_slice(&block);
+                }
+            }
+            AesKeySize::Aes256 => {
+                let key_array: [u8; 32] =
+                    self.key
+                        .key()
+                        .try_into()
+                        .map_err(|_| AesError::InvalidKeyLength {
+                            expected: 32,
+                            actual: self.key.len(),
+                        })?;
+                let cipher = Aes256::new(&key_array.into());
+
+                for chunk in data.chunks(16) {
+                    let mut block =
+                        aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+                    cipher.decrypt_block(&mut block);
+                    // XOR with previous ciphertext (or IV for first block)
+                    for i in 0..16 {
+                        block[i] ^= prev_block[i];
+                    }
+                    prev_block.copy_from_slice(chunk);
+                    decrypted.extend_from_slice(&block);
+                }
+            }
+        }
+
+        Ok(decrypted)
+    }
 }
 
 /// Generate random IV for AES encryption

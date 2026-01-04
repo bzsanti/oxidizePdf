@@ -5,6 +5,7 @@
 use crate::encryption::{generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
 use crate::error::Result;
 use crate::objects::ObjectId;
+use rand::RngCore;
 use sha2::{Digest, Sha256, Sha512};
 
 /// Padding used in password processing
@@ -509,6 +510,192 @@ impl StandardSecurityHandler {
         Ok(user_hash.len() >= 32 && computed_hash[..32] == user_hash[..32])
     }
 
+    // ========================================================================
+    // R5/R6 Password Validation (ISO 32000-1 §7.6.4.3.4)
+    // ========================================================================
+
+    /// Compute R5 user password hash (U entry) - Algorithm 8
+    ///
+    /// Returns 48 bytes: hash(32) + validation_salt(8) + key_salt(8)
+    ///
+    /// # Algorithm
+    /// 1. Generate random validation_salt (8 bytes)
+    /// 2. Generate random key_salt (8 bytes)
+    /// 3. Compute hash: SHA-256(password + validation_salt)
+    /// 4. Apply 64 iterations of SHA-256
+    /// 5. Return hash[0..32] + validation_salt + key_salt
+    pub fn compute_r5_user_hash(&self, user_password: &UserPassword) -> Result<Vec<u8>> {
+        if self.revision != SecurityHandlerRevision::R5 {
+            return Err(crate::error::PdfError::EncryptionError(
+                "R5 user hash only for Revision 5".to_string(),
+            ));
+        }
+
+        // Generate cryptographically secure random salts
+        let validation_salt = generate_salt(8);
+        let key_salt = generate_salt(8);
+
+        // Compute hash: SHA-256(password + validation_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(user_password.0.as_bytes());
+        data.extend_from_slice(&validation_salt);
+
+        let mut hash = sha256(&data);
+
+        // Apply 64 iterations of SHA-256 (PDF spec recommendation)
+        for _ in 0..64 {
+            hash = sha256(&hash);
+        }
+
+        // Construct U entry: hash[0..32] + validation_salt + key_salt
+        let mut u_entry = Vec::with_capacity(48);
+        u_entry.extend_from_slice(&hash[..32]);
+        u_entry.extend_from_slice(&validation_salt);
+        u_entry.extend_from_slice(&key_salt);
+
+        debug_assert_eq!(u_entry.len(), 48);
+        Ok(u_entry)
+    }
+
+    /// Validate R5 user password - Algorithm 11
+    ///
+    /// Returns Ok(true) if password is correct, Ok(false) if incorrect.
+    ///
+    /// # Algorithm
+    /// 1. Extract validation_salt from U[32..40]
+    /// 2. Compute hash: SHA-256(password + validation_salt)
+    /// 3. Apply 64 iterations of SHA-256
+    /// 4. Compare result with U[0..32]
+    pub fn validate_r5_user_password(
+        &self,
+        password: &UserPassword,
+        u_entry: &[u8],
+    ) -> Result<bool> {
+        if u_entry.len() != 48 {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "R5 U entry must be 48 bytes, got {}",
+                u_entry.len()
+            )));
+        }
+
+        // Extract validation_salt from U (bytes 32-39)
+        let validation_salt = &u_entry[32..40];
+
+        // Compute hash: SHA-256(password + validation_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(password.0.as_bytes());
+        data.extend_from_slice(validation_salt);
+
+        let mut hash = sha256(&data);
+
+        // Apply same 64 iterations as compute
+        for _ in 0..64 {
+            hash = sha256(&hash);
+        }
+
+        // Compare with stored hash (first 32 bytes of U)
+        Ok(hash[..32] == u_entry[..32])
+    }
+
+    /// Compute R5 UE entry (encrypted encryption key)
+    ///
+    /// The UE entry stores the encryption key encrypted with a key derived
+    /// from the user password.
+    ///
+    /// # Algorithm
+    /// 1. Extract key_salt from U[40..48]
+    /// 2. Compute intermediate key: SHA-256(password + key_salt)
+    /// 3. Encrypt encryption_key with intermediate_key using AES-256-CBC (zero IV)
+    pub fn compute_r5_ue_entry(
+        &self,
+        user_password: &UserPassword,
+        u_entry: &[u8],
+        encryption_key: &EncryptionKey,
+    ) -> Result<Vec<u8>> {
+        if u_entry.len() != 48 {
+            return Err(crate::error::PdfError::EncryptionError(
+                "U entry must be 48 bytes".to_string(),
+            ));
+        }
+        if encryption_key.len() != 32 {
+            return Err(crate::error::PdfError::EncryptionError(
+                "Encryption key must be 32 bytes for R5".to_string(),
+            ));
+        }
+
+        // Extract key_salt from U (bytes 40-47)
+        let key_salt = &u_entry[40..48];
+
+        // Compute intermediate key: SHA-256(password + key_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(user_password.0.as_bytes());
+        data.extend_from_slice(key_salt);
+
+        let intermediate_key = sha256(&data);
+
+        // Encrypt encryption_key with intermediate_key using AES-256-CBC
+        // Zero IV as per PDF spec, no padding since 32 bytes is block-aligned
+        let aes_key = AesKey::new_256(intermediate_key)?;
+        let aes = Aes::new(aes_key);
+        let iv = [0u8; 16];
+
+        let encrypted = aes
+            .encrypt_cbc_raw(encryption_key.as_bytes(), &iv)
+            .map_err(|e| {
+                crate::error::PdfError::EncryptionError(format!("UE encryption failed: {}", e))
+            })?;
+
+        // UE is exactly 32 bytes (no padding, 32 bytes = 2 AES blocks)
+        Ok(encrypted)
+    }
+
+    /// Recover encryption key from R5 UE entry
+    ///
+    /// # Algorithm
+    /// 1. Extract key_salt from U[40..48]
+    /// 2. Compute intermediate key: SHA-256(password + key_salt)
+    /// 3. Decrypt UE with intermediate_key using AES-256-CBC (zero IV)
+    pub fn recover_r5_encryption_key(
+        &self,
+        user_password: &UserPassword,
+        u_entry: &[u8],
+        ue_entry: &[u8],
+    ) -> Result<EncryptionKey> {
+        if ue_entry.len() != 32 {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "UE entry must be 32 bytes, got {}",
+                ue_entry.len()
+            )));
+        }
+        if u_entry.len() != 48 {
+            return Err(crate::error::PdfError::EncryptionError(
+                "U entry must be 48 bytes".to_string(),
+            ));
+        }
+
+        // Extract key_salt from U (bytes 40-47)
+        let key_salt = &u_entry[40..48];
+
+        // Compute intermediate key: SHA-256(password + key_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(user_password.0.as_bytes());
+        data.extend_from_slice(key_salt);
+
+        let intermediate_key = sha256(&data);
+
+        // Decrypt UE to get encryption key
+        // UE is 32 bytes = 2 AES blocks, encrypted with CBC and zero IV
+        let aes_key = AesKey::new_256(intermediate_key)?;
+        let aes = Aes::new(aes_key);
+        let iv = [0u8; 16];
+
+        let decrypted = aes.decrypt_cbc_raw(ue_entry, &iv).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!("UE decryption failed: {}", e))
+        })?;
+
+        Ok(EncryptionKey::new(decrypted))
+    }
+
     /// Compute object-specific encryption key (Algorithm 1, ISO 32000-1 §7.6.2)
     pub fn compute_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         let mut data = Vec::new();
@@ -686,6 +873,16 @@ fn sha256(data: &[u8]) -> Vec<u8> {
 #[allow(dead_code)] // Will be used in R6 implementation
 fn sha512(data: &[u8]) -> Vec<u8> {
     Sha512::digest(data).to_vec()
+}
+
+/// Generate cryptographically secure random salt
+///
+/// Uses the OS CSPRNG via `rand::rngs::OsRng` for security-critical
+/// random bytes as required by PDF encryption salt generation.
+fn generate_salt(len: usize) -> Vec<u8> {
+    let mut salt = vec![0u8; len];
+    rand::rng().fill_bytes(&mut salt);
+    salt
 }
 
 #[cfg(test)]
@@ -1248,5 +1445,263 @@ mod tests {
 
         assert_eq!(hash1, hash2, "Same input must produce same SHA-512 hash");
         assert_ne!(hash1, hash3, "Different input must produce different hash");
+    }
+
+    // ===== Phase 2.1: R5 User Password Tests (Algorithm 8 & 11) =====
+
+    #[test]
+    fn test_r5_user_hash_computation() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("test_password".to_string());
+
+        let u_entry = handler.compute_r5_user_hash(&password).unwrap();
+
+        // U entry must be exactly 48 bytes: hash(32) + validation_salt(8) + key_salt(8)
+        assert_eq!(u_entry.len(), 48, "R5 U entry must be 48 bytes");
+    }
+
+    #[test]
+    fn test_r5_user_password_validation_correct() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("correct_password".to_string());
+
+        // Compute U entry with the password
+        let u_entry = handler.compute_r5_user_hash(&password).unwrap();
+
+        // Validate with same password should succeed
+        let is_valid = handler
+            .validate_r5_user_password(&password, &u_entry)
+            .unwrap();
+        assert!(is_valid, "Correct password must validate");
+    }
+
+    #[test]
+    fn test_r5_user_password_validation_incorrect() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let correct_password = UserPassword("correct_password".to_string());
+        let wrong_password = UserPassword("wrong_password".to_string());
+
+        // Compute U entry with correct password
+        let u_entry = handler.compute_r5_user_hash(&correct_password).unwrap();
+
+        // Validate with wrong password should fail
+        let is_valid = handler
+            .validate_r5_user_password(&wrong_password, &u_entry)
+            .unwrap();
+        assert!(!is_valid, "Wrong password must not validate");
+    }
+
+    #[test]
+    fn test_r5_user_hash_random_salts() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("same_password".to_string());
+
+        // Compute U entry twice - salts should be different
+        let u_entry1 = handler.compute_r5_user_hash(&password).unwrap();
+        let u_entry2 = handler.compute_r5_user_hash(&password).unwrap();
+
+        // Hash portion should be different (due to random salts)
+        assert_ne!(
+            &u_entry1[..32],
+            &u_entry2[..32],
+            "Different random salts should produce different hashes"
+        );
+
+        // Validation salt should be different
+        assert_ne!(
+            &u_entry1[32..40],
+            &u_entry2[32..40],
+            "Validation salts must be random"
+        );
+
+        // But both should validate with the same password
+        assert!(handler
+            .validate_r5_user_password(&password, &u_entry1)
+            .unwrap());
+        assert!(handler
+            .validate_r5_user_password(&password, &u_entry2)
+            .unwrap());
+    }
+
+    #[test]
+    fn test_r5_user_hash_invalid_entry_length() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("test".to_string());
+
+        // Try to validate with wrong length U entry
+        let short_entry = vec![0u8; 32]; // Too short
+        let result = handler.validate_r5_user_password(&password, &short_entry);
+        assert!(result.is_err(), "Short U entry must fail");
+
+        let long_entry = vec![0u8; 64]; // Too long
+        let result = handler.validate_r5_user_password(&password, &long_entry);
+        assert!(result.is_err(), "Long U entry must fail");
+    }
+
+    #[test]
+    fn test_r5_empty_password() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let empty_password = UserPassword("".to_string());
+
+        // Empty password should work (common for user-only encryption)
+        let u_entry = handler.compute_r5_user_hash(&empty_password).unwrap();
+        assert_eq!(u_entry.len(), 48);
+
+        let is_valid = handler
+            .validate_r5_user_password(&empty_password, &u_entry)
+            .unwrap();
+        assert!(is_valid, "Empty password must validate correctly");
+
+        // Non-empty password should fail
+        let non_empty = UserPassword("not_empty".to_string());
+        let is_valid = handler
+            .validate_r5_user_password(&non_empty, &u_entry)
+            .unwrap();
+        assert!(!is_valid, "Non-empty password must not validate");
+    }
+
+    // ===== Phase 2.2: R5 UE Entry Tests (Encryption Key Storage) =====
+
+    #[test]
+    fn test_r5_ue_entry_computation() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("ue_test_password".to_string());
+        let encryption_key = EncryptionKey::new(vec![0xAB; 32]);
+
+        // Compute U entry first
+        let u_entry = handler.compute_r5_user_hash(&password).unwrap();
+
+        // Compute UE entry
+        let ue_entry = handler
+            .compute_r5_ue_entry(&password, &u_entry, &encryption_key)
+            .unwrap();
+
+        // UE entry must be exactly 32 bytes
+        assert_eq!(ue_entry.len(), 32, "R5 UE entry must be 32 bytes");
+
+        // UE should be different from the original key (it's encrypted)
+        assert_ne!(
+            ue_entry.as_slice(),
+            encryption_key.as_bytes(),
+            "UE must be encrypted"
+        );
+    }
+
+    #[test]
+    fn test_r5_encryption_key_recovery() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("recovery_test".to_string());
+        let original_key = EncryptionKey::new(vec![0x42; 32]);
+
+        // Compute U entry
+        let u_entry = handler.compute_r5_user_hash(&password).unwrap();
+
+        // Compute UE entry
+        let ue_entry = handler
+            .compute_r5_ue_entry(&password, &u_entry, &original_key)
+            .unwrap();
+
+        // Recover the key
+        let recovered_key = handler
+            .recover_r5_encryption_key(&password, &u_entry, &ue_entry)
+            .unwrap();
+
+        // Recovered key must match original
+        assert_eq!(
+            recovered_key.as_bytes(),
+            original_key.as_bytes(),
+            "Recovered key must match original"
+        );
+    }
+
+    #[test]
+    fn test_r5_ue_wrong_password_fails() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let correct_password = UserPassword("correct".to_string());
+        let wrong_password = UserPassword("wrong".to_string());
+        let original_key = EncryptionKey::new(vec![0x99; 32]);
+
+        // Compute U and UE with correct password
+        let u_entry = handler.compute_r5_user_hash(&correct_password).unwrap();
+        let ue_entry = handler
+            .compute_r5_ue_entry(&correct_password, &u_entry, &original_key)
+            .unwrap();
+
+        // Try to recover with wrong password
+        let recovered_key = handler
+            .recover_r5_encryption_key(&wrong_password, &u_entry, &ue_entry)
+            .unwrap();
+
+        // Key should be different (wrong decryption)
+        assert_ne!(
+            recovered_key.as_bytes(),
+            original_key.as_bytes(),
+            "Wrong password must produce wrong key"
+        );
+    }
+
+    #[test]
+    fn test_r5_ue_invalid_length() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("test".to_string());
+        let u_entry = vec![0u8; 48]; // Valid U entry length
+
+        // Try to recover with wrong length UE entry
+        let short_ue = vec![0u8; 16]; // Too short
+        let result = handler.recover_r5_encryption_key(&password, &u_entry, &short_ue);
+        assert!(result.is_err(), "Short UE entry must fail");
+
+        let long_ue = vec![0u8; 64]; // Too long
+        let result = handler.recover_r5_encryption_key(&password, &u_entry, &long_ue);
+        assert!(result.is_err(), "Long UE entry must fail");
+    }
+
+    #[test]
+    fn test_r5_ue_invalid_u_length() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("test".to_string());
+        let encryption_key = EncryptionKey::new(vec![0x11; 32]);
+
+        // Try to compute UE with wrong length U entry
+        let short_u = vec![0u8; 32]; // Too short
+        let result = handler.compute_r5_ue_entry(&password, &short_u, &encryption_key);
+        assert!(
+            result.is_err(),
+            "Short U entry must fail for UE computation"
+        );
+    }
+
+    #[test]
+    fn test_r5_full_workflow_u_ue() {
+        let handler = StandardSecurityHandler::aes_256_r5();
+        let password = UserPassword("full_workflow_test".to_string());
+        let encryption_key = EncryptionKey::new((0..32).collect::<Vec<u8>>());
+
+        // Step 1: Compute U entry (password verification data)
+        let u_entry = handler.compute_r5_user_hash(&password).unwrap();
+        assert_eq!(u_entry.len(), 48);
+
+        // Step 2: Verify password validates
+        assert!(handler
+            .validate_r5_user_password(&password, &u_entry)
+            .unwrap());
+
+        // Step 3: Compute UE entry (encrypted key storage)
+        let ue_entry = handler
+            .compute_r5_ue_entry(&password, &u_entry, &encryption_key)
+            .unwrap();
+        assert_eq!(ue_entry.len(), 32);
+
+        // Step 4: Recover key from UE
+        let recovered = handler
+            .recover_r5_encryption_key(&password, &u_entry, &ue_entry)
+            .unwrap();
+
+        // Step 5: Verify recovered key matches original
+        assert_eq!(
+            recovered.as_bytes(),
+            encryption_key.as_bytes(),
+            "Full R5 workflow: recovered key must match original"
+        );
     }
 }
