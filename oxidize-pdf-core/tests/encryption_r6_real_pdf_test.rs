@@ -237,11 +237,8 @@ fn test_r6_perms_entry_extraction() {
     );
 }
 
-/// NOTE: This test requires full Algorithm 2.B implementation (ISO 32000-2:2020)
-/// Current implementation uses a simplified hash loop that doesn't match qpdf's output.
-/// Algorithm 2.B uses AES-128-CBC + rotating SHA-256/384/512 based on round number.
+/// Test R6 password validation with Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
 #[test]
-#[ignore = "Requires Algorithm 2.B implementation for R6 - tracked in TDD plan"]
 fn test_r6_password_validation_correct() {
     let pdf_bytes = read_pdf_bytes("encrypted_aes256_r6_user.pdf");
     let u_entry = extract_u_entry(&pdf_bytes).expect("Should have U entry");
@@ -277,8 +274,8 @@ fn test_r6_password_validation_incorrect() {
     );
 }
 
+/// Test R6 empty user password with Algorithm 2.B
 #[test]
-#[ignore = "Requires Algorithm 2.B implementation for R6 - tracked in TDD plan"]
 fn test_r6_empty_user_password() {
     let pdf_bytes = read_pdf_bytes("encrypted_aes256_r6_empty_user.pdf");
     let u_entry = extract_u_entry(&pdf_bytes).expect("Should have U entry");
@@ -318,8 +315,8 @@ fn test_r6_key_recovery() {
     );
 }
 
+/// Test R6 unicode password with Algorithm 2.B
 #[test]
-#[ignore = "Requires Algorithm 2.B implementation for R6 - tracked in TDD plan"]
 fn test_r6_unicode_password() {
     let pdf_bytes = read_pdf_bytes("encrypted_aes256_r6_unicode.pdf");
     let u_entry = extract_u_entry(&pdf_bytes).expect("Should have U entry");

@@ -20,7 +20,7 @@ use crate::encryption::{generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
 use crate::error::Result;
 use crate::objects::ObjectId;
 use rand::RngCore;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha256, Sha384, Sha512};
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -744,9 +744,8 @@ impl StandardSecurityHandler {
     /// # Algorithm (ISO 32000-2)
     /// 1. Generate random validation_salt (8 bytes)
     /// 2. Generate random key_salt (8 bytes)
-    /// 3. Compute hash: SHA-512(password + validation_salt)[0..32]
-    /// 4. Apply iterations of SHA-512 with feedback
-    /// 5. Return hash[0..32] + validation_salt + key_salt
+    /// 3. Compute hash using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
+    /// 4. Return hash[0..32] + validation_salt + key_salt
     pub fn compute_r6_user_hash(&self, user_password: &UserPassword) -> Result<Vec<u8>> {
         if self.revision != SecurityHandlerRevision::R6 {
             return Err(crate::error::PdfError::EncryptionError(
@@ -758,26 +757,17 @@ impl StandardSecurityHandler {
         let validation_salt = generate_salt(R6_SALT_LENGTH);
         let key_salt = generate_salt(R6_SALT_LENGTH);
 
-        // Initial hash: SHA-512(password + validation_salt)
-        let mut data = Vec::new();
-        data.extend_from_slice(user_password.0.as_bytes());
-        data.extend_from_slice(&validation_salt);
-
-        let mut hash = sha512(&data);
-
-        // R6 uses feedback-based iterations (PDF 2.0 spec)
-        // Each iteration feeds back hash + password + salt
-        for _ in 0..R6_HASH_ITERATIONS {
-            let mut input = Vec::new();
-            input.extend_from_slice(&hash);
-            input.extend_from_slice(user_password.0.as_bytes());
-            input.extend_from_slice(&validation_salt);
-            hash = sha512(&input);
-        }
+        // Compute hash using Algorithm 2.B (ISO 32000-2:2020)
+        // For user password creation, u_entry is empty
+        let hash = compute_hash_r6_algorithm_2b(
+            user_password.0.as_bytes(),
+            &validation_salt,
+            &[], // No U entry for user password creation
+        )?;
 
         // Construct U entry: hash[0..32] + validation_salt + key_salt
         let mut u_entry = Vec::with_capacity(48);
-        u_entry.extend_from_slice(&hash[..32]); // Only first 32 bytes of SHA-512
+        u_entry.extend_from_slice(&hash[..32]);
         u_entry.extend_from_slice(&validation_salt);
         u_entry.extend_from_slice(&key_salt);
 
@@ -785,15 +775,14 @@ impl StandardSecurityHandler {
         Ok(u_entry)
     }
 
-    /// Validate R6 user password using SHA-512
+    /// Validate R6 user password using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
     ///
     /// Returns Ok(true) if password is correct, Ok(false) if incorrect.
     ///
     /// # Algorithm
     /// 1. Extract validation_salt from U[32..40]
-    /// 2. Compute hash: SHA-512(password + validation_salt)[0..32]
-    /// 3. Apply feedback iterations
-    /// 4. Compare result with U[0..32] using constant-time comparison
+    /// 2. Compute hash using Algorithm 2.B with the validation_salt
+    /// 3. Compare result with U[0..32] using constant-time comparison
     ///
     /// # Security
     /// Uses constant-time comparison (`subtle::ConstantTimeEq`) to prevent
@@ -811,24 +800,12 @@ impl StandardSecurityHandler {
             )));
         }
 
-        // Extract validation_salt from U
+        // Extract validation_salt from U[32..40]
         let validation_salt = &u_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
 
-        // Initial hash: SHA-512(password + validation_salt)
-        let mut data = Vec::new();
-        data.extend_from_slice(password.0.as_bytes());
-        data.extend_from_slice(validation_salt);
-
-        let mut hash = sha512(&data);
-
-        // Apply same feedback iterations as compute
-        for _ in 0..R6_HASH_ITERATIONS {
-            let mut input = Vec::new();
-            input.extend_from_slice(&hash);
-            input.extend_from_slice(password.0.as_bytes());
-            input.extend_from_slice(validation_salt);
-            hash = sha512(&input);
-        }
+        // Compute hash using Algorithm 2.B (ISO 32000-2:2020)
+        // For user password validation, u_entry is empty per spec
+        let hash = compute_hash_r6_algorithm_2b(password.0.as_bytes(), validation_salt, &[])?;
 
         // SECURITY: Constant-time comparison prevents timing attacks
         let stored_hash = &u_entry[..U_HASH_LENGTH];
@@ -836,9 +813,12 @@ impl StandardSecurityHandler {
         Ok(bool::from(computed_hash.ct_eq(stored_hash)))
     }
 
-    /// Compute R6 UE entry (encrypted encryption key)
+    /// Compute R6 UE entry (encrypted encryption key) using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
     ///
-    /// For R6, UE computation is similar to R5 but uses SHA-512 for key derivation.
+    /// # Algorithm
+    /// 1. Extract key_salt from U[40..48]
+    /// 2. Compute intermediate key using Algorithm 2.B(password, key_salt, u_entry)
+    /// 3. Encrypt encryption_key using AES-256-CBC with intermediate_key and IV = 0
     pub fn compute_r6_ue_entry(
         &self,
         user_password: &UserPassword,
@@ -858,19 +838,15 @@ impl StandardSecurityHandler {
             )));
         }
 
-        // Extract key_salt from U
+        // Extract key_salt from U[40..48]
         let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // R6 uses SHA-512 for intermediate key derivation
-        let mut data = Vec::new();
-        data.extend_from_slice(user_password.0.as_bytes());
-        data.extend_from_slice(key_salt);
-
-        // Use SHA-512, take first 32 bytes
-        let hash = sha512(&data);
+        // Compute intermediate key using Algorithm 2.B (ISO 32000-2:2020)
+        // For key derivation, we pass the full U entry as the third parameter
+        let hash = compute_hash_r6_algorithm_2b(user_password.0.as_bytes(), key_salt, u_entry)?;
         let intermediate_key = hash[..U_HASH_LENGTH].to_vec();
 
-        // Encrypt encryption_key with intermediate_key using AES-256-CBC
+        // Encrypt encryption_key with intermediate_key using AES-256-CBC, IV = 0
         let aes_key = AesKey::new_256(intermediate_key)?;
         let aes = Aes::new(aes_key);
         let iv = [0u8; 16];
@@ -884,7 +860,12 @@ impl StandardSecurityHandler {
         Ok(encrypted)
     }
 
-    /// Recover encryption key from R6 UE entry
+    /// Recover encryption key from R6 UE entry using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
+    ///
+    /// # Algorithm
+    /// 1. Extract key_salt from U[40..48]
+    /// 2. Compute intermediate key using Algorithm 2.B(password, key_salt, u_entry)
+    /// 3. Decrypt UE using AES-256-CBC with intermediate_key and IV = 0
     pub fn recover_r6_encryption_key(
         &self,
         user_password: &UserPassword,
@@ -905,18 +886,15 @@ impl StandardSecurityHandler {
             )));
         }
 
-        // Extract key_salt from U
+        // Extract key_salt from U[40..48]
         let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // R6 uses SHA-512 for intermediate key derivation
-        let mut data = Vec::new();
-        data.extend_from_slice(user_password.0.as_bytes());
-        data.extend_from_slice(key_salt);
-
-        let hash = sha512(&data);
+        // Compute intermediate key using Algorithm 2.B (ISO 32000-2:2020)
+        // For key derivation, we pass the full U entry as the third parameter
+        let hash = compute_hash_r6_algorithm_2b(user_password.0.as_bytes(), key_salt, u_entry)?;
         let intermediate_key = hash[..U_HASH_LENGTH].to_vec();
 
-        // Decrypt UE to get encryption key
+        // Decrypt UE to get encryption key using AES-256-CBC with IV = 0
         let aes_key = AesKey::new_256(intermediate_key)?;
         let aes = Aes::new(aes_key);
         let iv = [0u8; 16];
@@ -1250,13 +1228,165 @@ fn sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
 }
 
+/// SHA-384 implementation using RustCrypto (production-grade)
+///
+/// Returns a 48-byte hash of the input data according to FIPS 180-4.
+/// Used for R6 Algorithm 2.B hash rotation.
+fn sha384(data: &[u8]) -> Vec<u8> {
+    Sha384::digest(data).to_vec()
+}
+
 /// SHA-512 implementation using RustCrypto (production-grade)
 ///
 /// Returns a 64-byte hash of the input data according to FIPS 180-4.
 /// Used for R6 password validation and key derivation.
-#[allow(dead_code)] // Will be used in R6 implementation
 fn sha512(data: &[u8]) -> Vec<u8> {
     Sha512::digest(data).to_vec()
+}
+
+// ============================================================================
+// Algorithm 2.B - R6 Key Derivation (ISO 32000-2:2020 §7.6.4.3.4)
+// ============================================================================
+
+/// Minimum number of rounds for Algorithm 2.B
+const ALGORITHM_2B_MIN_ROUNDS: usize = 64;
+
+/// Maximum rounds (DoS protection, not in spec but common implementation)
+const ALGORITHM_2B_MAX_ROUNDS: usize = 2048;
+
+/// Compute R6 password hash using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
+///
+/// This is the correct R6 key derivation algorithm used by qpdf, Adobe Acrobat,
+/// and other compliant PDF processors. It uses AES-128-CBC encryption within
+/// the iteration loop and dynamically selects SHA-256/384/512 based on output.
+///
+/// # Algorithm Overview
+/// 1. Initial hash: K = SHA-256(password + salt + U[0..48])
+/// 2. Loop (minimum 64 rounds):
+///    a. Construct input: password(repeated 64x) + K + U[0..48]
+///    b. E = AES-128-CBC-encrypt(input, key=K[0..16], iv=K[16..32])
+///    c. Select hash: SHA-256/384/512 based on E[last_byte] mod 3
+///    d. K_next = hash(E)
+///    e. Check termination: round >= 64 AND E[last_byte] <= (round - 32)
+/// 3. Return K[0..32]
+///
+/// # Parameters
+/// - `password`: User password bytes (UTF-8 encoded)
+/// - `salt`: 8-byte salt (validation_salt or key_salt from U entry)
+/// - `u_entry`: Full 48-byte U entry (or empty slice for initial computation)
+///
+/// # Returns
+/// 32-byte derived key
+///
+/// # Security Notes
+/// - Maximum 2048 rounds to prevent DoS attacks
+/// - Variable iteration count makes brute-force harder
+/// - AES encryption + hash rotation provides strong KDF
+///
+/// # References
+/// - ISO 32000-2:2020 §7.6.4.3.4 "Algorithm 2.B: Computing a hash (R6)"
+pub fn compute_hash_r6_algorithm_2b(
+    password: &[u8],
+    salt: &[u8],
+    u_entry: &[u8],
+) -> Result<Vec<u8>> {
+    // Step 1: Initial hash K = SHA-256(password + salt + U[0..48])
+    let mut input = Vec::with_capacity(password.len() + salt.len() + u_entry.len().min(48));
+    input.extend_from_slice(password);
+    input.extend_from_slice(salt);
+    if !u_entry.is_empty() {
+        input.extend_from_slice(&u_entry[..u_entry.len().min(48)]);
+    }
+
+    let mut k = sha256(&input);
+
+    // Step 2: Iteration loop
+    let mut round: usize = 0;
+    loop {
+        // 2a. Construct input sequence: password + K + U[0..48], repeated
+        // The spec says to create a sequence that will be encrypted
+        let mut k1_unit = Vec::new();
+        k1_unit.extend_from_slice(password);
+        k1_unit.extend_from_slice(&k);
+        if !u_entry.is_empty() {
+            k1_unit.extend_from_slice(&u_entry[..u_entry.len().min(48)]);
+        }
+
+        // Repeat 64 times to create input for AES
+        let mut k1 = Vec::with_capacity(k1_unit.len() * 64);
+        for _ in 0..64 {
+            k1.extend_from_slice(&k1_unit);
+        }
+
+        // Pad to multiple of 16 bytes for AES
+        while k1.len() % 16 != 0 {
+            k1.push(0);
+        }
+
+        // 2b. AES-128-CBC encryption
+        // Key: first 16 bytes of K, IV: next 16 bytes of K
+        if k.len() < 32 {
+            // Extend K if needed (shouldn't happen with proper hashes)
+            while k.len() < 32 {
+                k.push(0);
+            }
+        }
+
+        let aes_key = AesKey::new_128(k[..16].to_vec()).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!(
+                "Algorithm 2.B: Failed to create AES key: {}",
+                e
+            ))
+        })?;
+        let aes = Aes::new(aes_key);
+        let iv = &k[16..32];
+
+        let e = aes.encrypt_cbc_raw(&k1, iv).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!(
+                "Algorithm 2.B: AES encryption failed: {}",
+                e
+            ))
+        })?;
+
+        // 2c. Select hash function based on first 16 bytes of E as BigInteger mod 3
+        // Per iText/Adobe implementation: interpret E[0..16] as unsigned big-endian integer
+        let hash_selector = {
+            // Sum the first 16 bytes to get a value mod 3
+            // This is equivalent to BigInteger(E[0..16]).mod(3) but without needing bigint
+            let sum: u64 = e[..16.min(e.len())].iter().map(|&b| b as u64).sum();
+            (sum % 3) as u8
+        };
+
+        k = match hash_selector {
+            0 => sha256(&e),
+            1 => sha384(&e),
+            2 => sha512(&e),
+            _ => unreachable!("Modulo 3 can only be 0, 1, or 2"),
+        };
+
+        // 2d. Check termination condition
+        // Terminate when: round >= 64 AND E[last] <= (round - 32)
+        let last_byte = *e.last().unwrap_or(&0);
+        round += 1;
+
+        if round >= ALGORITHM_2B_MIN_ROUNDS {
+            // The termination condition from ISO spec:
+            // "the last byte value of the last iteration is less than or equal to
+            // the number of iterations minus 32"
+            if (last_byte as usize) <= round.saturating_sub(32) {
+                break;
+            }
+        }
+
+        // Safety: Prevent infinite loop (DoS protection)
+        if round >= ALGORITHM_2B_MAX_ROUNDS {
+            break;
+        }
+    }
+
+    // Step 3: Return first 32 bytes of final K
+    // K might be > 32 bytes if last hash was SHA-384 or SHA-512
+    Ok(k[..32.min(k.len())].to_vec())
 }
 
 /// R5 salt length in bytes (PDF spec §7.6.4.3.4)
@@ -1269,9 +1399,6 @@ const R5_HASH_ITERATIONS: usize = 0;
 
 /// R6 salt length in bytes (PDF spec ISO 32000-2)
 const R6_SALT_LENGTH: usize = 8;
-
-/// R6 SHA-512 iteration count (PDF spec recommends 64-127)
-const R6_HASH_ITERATIONS: usize = 64;
 
 // ============================================================================
 // R5/R6 U Entry Structure Constants (48 bytes total)
