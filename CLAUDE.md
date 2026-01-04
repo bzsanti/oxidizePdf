@@ -4,32 +4,34 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-03 - AES-256 Phase 1 Complete (RustCrypto) |
+| **Last Session** | 2026-01-04 - Algorithm 2.B R6 Key Derivation Complete |
 | **Branch** | develop_santi |
 | **Version** | v1.6.7 (released) |
-| **Tests** | 5000+ unit + 185 doc tests passing |
+| **Tests** | 5000+ unit + 185 doc tests passing (302+ encryption) |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-01-03) - AES-256 Encryption Phase 1
-- **Phase 1 Complete**: Production-grade RustCrypto integration
-  - 1.1: Added `aes`, `cbc`, `cipher` dependencies to Cargo.toml
-  - 1.2: Created `encryption_dependencies_test.rs` (8 NIST vector tests)
-  - 1.3: Refactored `standard_security.rs` - real SHA-256/512 with sha2 crate
-  - 1.4: Refactored `aes.rs` - replaced ~400 lines manual AES with RustCrypto
-  - 1.5: Verified 43 RC4 tests pass (no regressions)
-- **Files modified**: `aes.rs`, `standard_security.rs`, `Cargo.toml`
-- **New file**: `tests/encryption_dependencies_test.rs`
-- **Tests**: 268 encryption tests pass, 33 AES unit tests, 8 NIST vector tests
-- **TDD Plan**: `.private/TDD_PLAN_AES256_ENCRYPTION.md` covers Phases 2-5
+### Session Summary (2026-01-04) - Algorithm 2.B R6 Key Derivation
+- **Algorithm 2.B Complete**: ISO 32000-2:2020 §7.6.4.3.4 implementation
+  - `compute_hash_r6_algorithm_2b()` public function (~150 lines)
+  - SHA-384 support via sha2::Sha384
+  - AES-128-CBC encryption within iteration loop (64x input repetition)
+  - Dynamic hash selection: SHA-256/384/512 based on `sum(E[0..16]) mod 3`
+  - Variable iterations: min 64 rounds, terminates when `E[last] <= (round-32)`
+  - DoS protection: max 2048 rounds
+- **Integration**: Updated `compute_r6_user_hash()`, `validate_r6_user_password()`, `compute_r6_ue_entry()`, `recover_r6_encryption_key()`
+- **Critical fix**: Hash selection uses first 16 bytes (sum mod 3), not last byte - matching iText/Adobe/qpdf
+- **Tests**: 9 Algorithm 2.B unit tests + 10 real PDF tests (qpdf compatibility verified)
+- **Files**: `standard_security.rs`, `mod.rs`, new `encryption_algorithm_2b_test.rs`
 
-### Previous Session (2026-01-03)
-- **Type0 Security Hardening**: Implemented 2 critical security features
-  - Circular reference detection (HashSet tracking, prevents infinite loops)
-  - Font stream size validation (10MB limit, prevents zip bombs)
-- **Tests added**: 6 new security tests + 47 total Type0 parsing tests
+### Previous Session (2026-01-03) - AES-256 Encryption Phase 1
+- **Phase 1 Complete**: Production-grade RustCrypto integration
+  - Added `aes`, `cbc`, `cipher` dependencies
+  - Refactored `aes.rs` - replaced ~400 lines manual AES with RustCrypto
+  - Real SHA-256/512 with sha2 crate
+- **Tests**: 268 encryption tests pass, 8 NIST vector tests
 
 ### Phase 3.4 Progress (CID/Type0 Fonts)
 | Phase | Tests | Status |
@@ -47,9 +49,11 @@
 | 1.3 | SHA-256/512 refactoring | ✅ COMPLETE |
 | 1.4 | AES refactoring with RustCrypto | ✅ COMPLETE |
 | 1.5 | RC4 regression verification | ✅ COMPLETE |
-| 2.1-2.2 | R5 Password Validation | PENDING |
-| 3.1-3.2 | R6 Extensions (SHA-512, Perms) | PENDING |
-| 4.1-4.3 | Real PDF Testing | PENDING |
+| 2.1 | Algorithm 2.B implementation | ✅ COMPLETE |
+| 2.2 | R6 password validation | ✅ COMPLETE |
+| 2.3 | R6 key recovery (UE decryption) | ✅ COMPLETE |
+| 3.1 | Real PDF testing (qpdf) | ✅ COMPLETE |
+| 4 | R5 support | PENDING |
 | 5 | PdfReader Integration (Optional) | PENDING |
 
 ### Next Session Priority
@@ -57,8 +61,9 @@
 2. ~~Type0 Security Hardening~~ ✅ DONE (circular refs + size limits)
 3. ~~CID/Type0 Fonts (Phase 3.4)~~ ✅ DONE (full embedding working)
 4. ~~AES-256 Phase 1 (RustCrypto)~~ ✅ DONE
-5. AES-256 Phase 2: R5 Password Validation (U/UE entries)
-6. Continue coverage improvement (70% → 80%)
+5. ~~Algorithm 2.B R6 Key Derivation~~ ✅ DONE (qpdf compatible)
+6. AES-256 Phase 4: R5 support (Algorithm 2.A)
+7. Continue coverage improvement (70% → 80%)
 
 ## Sprint Summary
 
@@ -188,7 +193,8 @@ git push origin v1.2.3
 
 | Issue | Impact | Status |
 |-------|--------|--------|
-| Encrypted PDFs (AES-256) | LOW | RC4 works, AES-256 (R5/R6) not yet supported |
+| ~~Encrypted PDFs (AES-256 R6)~~ | ~~LOW~~ | ✅ RESOLVED (Algorithm 2.B complete, qpdf compatible) |
+| Encrypted PDFs (AES-256 R5) | LOW | R6 works, R5 (Algorithm 2.A) pending |
 | ~~CID/Type0 fonts~~ | ~~LOW~~ | ✅ RESOLVED (Phase 3.4 complete - full embedding) |
 | 2 malformed PDFs | VERY LOW | Genuine format violations, not bugs |
 
