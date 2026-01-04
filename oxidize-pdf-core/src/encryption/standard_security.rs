@@ -1254,6 +1254,13 @@ const ALGORITHM_2B_MIN_ROUNDS: usize = 64;
 /// Maximum rounds (DoS protection, not in spec but common implementation)
 const ALGORITHM_2B_MAX_ROUNDS: usize = 2048;
 
+/// Maximum password length (ISO 32000-2 §7.6.3.3.2 recommends 127 bytes)
+/// This prevents DoS via massive allocation: 1MB password × 64 repetitions = 64MB/round
+const ALGORITHM_2B_MAX_PASSWORD_LEN: usize = 127;
+
+/// Number of bytes used for hash function selection (spec: first 16 bytes as BigInteger mod 3)
+const HASH_SELECTOR_BYTES: usize = 16;
+
 /// Compute R6 password hash using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4)
 ///
 /// This is the correct R6 key derivation algorithm used by qpdf, Adobe Acrobat,
@@ -1261,14 +1268,14 @@ const ALGORITHM_2B_MAX_ROUNDS: usize = 2048;
 /// the iteration loop and dynamically selects SHA-256/384/512 based on output.
 ///
 /// # Algorithm Overview
-/// 1. Initial hash: K = SHA-256(password + salt + U[0..48])
+/// 1. Initial hash: K = SHA-256(password + salt + U\[0..48\])
 /// 2. Loop (minimum 64 rounds):
-///    a. Construct input: password(repeated 64x) + K + U[0..48]
-///    b. E = AES-128-CBC-encrypt(input, key=K[0..16], iv=K[16..32])
-///    c. Select hash: SHA-256/384/512 based on E[last_byte] mod 3
-///    d. K_next = hash(E)
-///    e. Check termination: round >= 64 AND E[last_byte] <= (round - 32)
-/// 3. Return K[0..32]
+///    a. Construct k1 = (password + K + U\[0..48\]), repeat 64 times
+///    b. E = AES-128-CBC-encrypt(k1, key=K\[0..16\], iv=K\[16..32\])
+///    c. Select hash: SHA-256/384/512 based on sum(E\[0..16\]) mod 3
+///    d. K = hash(E)
+///    e. Check termination: round >= 64 AND E\[last\] <= (round - 32)
+/// 3. Return K\[0..32\]
 ///
 /// # Parameters
 /// - `password`: User password bytes (UTF-8 encoded)
@@ -1290,6 +1297,15 @@ pub fn compute_hash_r6_algorithm_2b(
     salt: &[u8],
     u_entry: &[u8],
 ) -> Result<Vec<u8>> {
+    // Security: Validate password length to prevent DoS via massive allocations
+    if password.len() > ALGORITHM_2B_MAX_PASSWORD_LEN {
+        return Err(crate::error::PdfError::EncryptionError(format!(
+            "Password too long ({} bytes, max {})",
+            password.len(),
+            ALGORITHM_2B_MAX_PASSWORD_LEN
+        )));
+    }
+
     // Step 1: Initial hash K = SHA-256(password + salt + U[0..48])
     let mut input = Vec::with_capacity(password.len() + salt.len() + u_entry.len().min(48));
     input.extend_from_slice(password);
@@ -1318,7 +1334,8 @@ pub fn compute_hash_r6_algorithm_2b(
             k1.extend_from_slice(&k1_unit);
         }
 
-        // Pad to multiple of 16 bytes for AES
+        // Zero-pad to AES block size (16 bytes) per ISO 32000-2 §7.6.4.3.4
+        // NOTE: This is zero-padding, NOT PKCS#7 - the spec requires raw AES without padding removal
         while k1.len() % 16 != 0 {
             k1.push(0);
         }
@@ -1349,11 +1366,14 @@ pub fn compute_hash_r6_algorithm_2b(
         })?;
 
         // 2c. Select hash function based on first 16 bytes of E as BigInteger mod 3
-        // Per iText/Adobe implementation: interpret E[0..16] as unsigned big-endian integer
+        // Per iText/Adobe implementation: interpret E[0..HASH_SELECTOR_BYTES] as big-endian integer
+        // Mathematical equivalence: sum(bytes) mod 3 == BigInteger(bytes) mod 3
+        // because 256 mod 3 = 1, therefore 256^k mod 3 = 1 for all k
         let hash_selector = {
-            // Sum the first 16 bytes to get a value mod 3
-            // This is equivalent to BigInteger(E[0..16]).mod(3) but without needing bigint
-            let sum: u64 = e[..16.min(e.len())].iter().map(|&b| b as u64).sum();
+            let sum: u64 = e[..HASH_SELECTOR_BYTES.min(e.len())]
+                .iter()
+                .map(|&b| b as u64)
+                .sum();
             (sum % 3) as u8
         };
 
