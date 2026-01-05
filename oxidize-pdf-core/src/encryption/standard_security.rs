@@ -1057,6 +1057,347 @@ impl StandardSecurityHandler {
         }
     }
 
+    // ========================================================================
+    // R5/R6 Owner Password Support (ISO 32000-1 §7.6.4.3.3)
+    // ========================================================================
+
+    /// Compute R5 owner password hash (O entry)
+    ///
+    /// Algorithm 9 (ISO 32000-1): Creates 48-byte O entry
+    /// - Bytes 0-31: SHA-256(owner_password || validation_salt)
+    /// - Bytes 32-39: validation_salt (8 random bytes)
+    /// - Bytes 40-47: key_salt (8 random bytes)
+    pub fn compute_r5_owner_hash(
+        &self,
+        owner_password: &OwnerPassword,
+        _user_password: &UserPassword,
+    ) -> Result<Vec<u8>> {
+        if self.revision != SecurityHandlerRevision::R5 {
+            return Err(crate::error::PdfError::EncryptionError(
+                "R5 owner hash only for Revision 5".to_string(),
+            ));
+        }
+
+        // Generate random salts
+        let validation_salt = generate_salt(R5_SALT_LENGTH);
+        let key_salt = generate_salt(R5_SALT_LENGTH);
+
+        // Compute hash: SHA-256(owner_password || validation_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(owner_password.0.as_bytes());
+        data.extend_from_slice(&validation_salt);
+
+        let hash = sha256(&data);
+
+        // Construct O entry: hash[0..32] + validation_salt + key_salt
+        let mut o_entry = Vec::with_capacity(U_ENTRY_LENGTH);
+        o_entry.extend_from_slice(&hash[..U_HASH_LENGTH]);
+        o_entry.extend_from_slice(&validation_salt);
+        o_entry.extend_from_slice(&key_salt);
+
+        debug_assert_eq!(o_entry.len(), U_ENTRY_LENGTH);
+        Ok(o_entry)
+    }
+
+    /// Validate R5 owner password
+    ///
+    /// Algorithm 12 (ISO 32000-1): Validates owner password against O entry
+    pub fn validate_r5_owner_password(
+        &self,
+        owner_password: &OwnerPassword,
+        o_entry: &[u8],
+    ) -> Result<bool> {
+        if o_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "R5 O entry must be {} bytes, got {}",
+                U_ENTRY_LENGTH,
+                o_entry.len()
+            )));
+        }
+
+        // Extract validation_salt from O (bytes 32-39)
+        let validation_salt = &o_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
+
+        // Compute hash: SHA-256(owner_password || validation_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(owner_password.0.as_bytes());
+        data.extend_from_slice(validation_salt);
+
+        let hash = sha256(&data);
+
+        // SECURITY: Constant-time comparison prevents timing attacks
+        let stored_hash = &o_entry[..U_HASH_LENGTH];
+        Ok(bool::from(hash[..U_HASH_LENGTH].ct_eq(stored_hash)))
+    }
+
+    /// Compute R5 OE entry (encrypted encryption key with owner password)
+    ///
+    /// OE = AES-256-CBC(encryption_key, key=intermediate_key, iv=zeros)
+    /// where intermediate_key = SHA-256(owner_password || key_salt)
+    pub fn compute_r5_oe_entry(
+        &self,
+        owner_password: &OwnerPassword,
+        o_entry: &[u8],
+        encryption_key: &[u8],
+    ) -> Result<Vec<u8>> {
+        if o_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if encryption_key.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "Encryption key must be {} bytes",
+                UE_ENTRY_LENGTH
+            )));
+        }
+
+        // Extract key_salt from O (bytes 40-47)
+        let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
+
+        // Compute intermediate key: SHA-256(owner_password || key_salt)
+        let mut data = Vec::new();
+        data.extend_from_slice(owner_password.0.as_bytes());
+        data.extend_from_slice(key_salt);
+
+        let intermediate_key = sha256(&data);
+
+        // Encrypt encryption_key with intermediate_key using AES-256-CBC
+        let aes = Aes::new(AesKey::new_256(intermediate_key)?);
+        let iv = [0u8; 16];
+
+        let encrypted = aes.encrypt_cbc_raw(encryption_key, &iv).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!("OE encryption failed: {}", e))
+        })?;
+
+        // OE is first 32 bytes of encrypted output
+        Ok(encrypted[..UE_ENTRY_LENGTH].to_vec())
+    }
+
+    /// Recover encryption key from R5 OE entry using owner password
+    pub fn recover_r5_owner_encryption_key(
+        &self,
+        owner_password: &OwnerPassword,
+        o_entry: &[u8],
+        oe_entry: &[u8],
+    ) -> Result<Vec<u8>> {
+        if o_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if oe_entry.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "OE entry must be {} bytes",
+                UE_ENTRY_LENGTH
+            )));
+        }
+
+        // Extract key_salt from O (bytes 40-47)
+        let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
+
+        // Compute intermediate key
+        let mut data = Vec::new();
+        data.extend_from_slice(owner_password.0.as_bytes());
+        data.extend_from_slice(key_salt);
+
+        let intermediate_key = sha256(&data);
+
+        // Decrypt OE to get encryption key
+        let aes = Aes::new(AesKey::new_256(intermediate_key)?);
+        let iv = [0u8; 16];
+
+        let decrypted = aes.decrypt_cbc_raw(oe_entry, &iv).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!("OE decryption failed: {}", e))
+        })?;
+
+        Ok(decrypted)
+    }
+
+    /// Compute R6 owner password hash (O entry)
+    ///
+    /// R6 uses Algorithm 2.B (complex hash) for owner password too
+    pub fn compute_r6_owner_hash(
+        &self,
+        owner_password: &OwnerPassword,
+        u_entry: &[u8],
+    ) -> Result<Vec<u8>> {
+        if self.revision != SecurityHandlerRevision::R6 {
+            return Err(crate::error::PdfError::EncryptionError(
+                "R6 owner hash only for Revision 6".to_string(),
+            ));
+        }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes for R6 O computation",
+                U_ENTRY_LENGTH
+            )));
+        }
+
+        // Generate random salts
+        let validation_salt = generate_salt(R6_SALT_LENGTH);
+        let key_salt = generate_salt(R6_SALT_LENGTH);
+
+        // For R6, use Algorithm 2.B: hash = Alg2B(owner_password || validation_salt || U[0..48])
+        let mut input = Vec::new();
+        input.extend_from_slice(owner_password.0.as_bytes());
+        input.extend_from_slice(&validation_salt);
+        input.extend_from_slice(u_entry);
+
+        let hash = compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+
+        // Construct O entry: hash[0..32] + validation_salt + key_salt
+        let mut o_entry = Vec::with_capacity(U_ENTRY_LENGTH);
+        o_entry.extend_from_slice(&hash[..U_HASH_LENGTH]);
+        o_entry.extend_from_slice(&validation_salt);
+        o_entry.extend_from_slice(&key_salt);
+
+        debug_assert_eq!(o_entry.len(), U_ENTRY_LENGTH);
+        Ok(o_entry)
+    }
+
+    /// Validate R6 owner password
+    ///
+    /// Uses Algorithm 2.B to validate owner password
+    pub fn validate_r6_owner_password(
+        &self,
+        owner_password: &OwnerPassword,
+        o_entry: &[u8],
+        u_entry: &[u8],
+    ) -> Result<bool> {
+        if o_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "R6 O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "R6 U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+
+        // Extract validation_salt from O (bytes 32-39)
+        let validation_salt = &o_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
+
+        // Compute hash using Algorithm 2.B
+        let mut input = Vec::new();
+        input.extend_from_slice(owner_password.0.as_bytes());
+        input.extend_from_slice(validation_salt);
+        input.extend_from_slice(u_entry);
+
+        let hash = compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+
+        // SECURITY: Constant-time comparison prevents timing attacks
+        let stored_hash = &o_entry[..U_HASH_LENGTH];
+        Ok(bool::from(hash[..U_HASH_LENGTH].ct_eq(stored_hash)))
+    }
+
+    /// Compute R6 OE entry (encrypted encryption key with owner password)
+    ///
+    /// Uses Algorithm 2.B to derive intermediate key
+    pub fn compute_r6_oe_entry(
+        &self,
+        owner_password: &OwnerPassword,
+        o_entry: &[u8],
+        u_entry: &[u8],
+        encryption_key: &[u8],
+    ) -> Result<Vec<u8>> {
+        if o_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if encryption_key.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "Encryption key must be {} bytes",
+                UE_ENTRY_LENGTH
+            )));
+        }
+
+        // Extract key_salt from O (bytes 40-47)
+        let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
+
+        // Compute intermediate key using Algorithm 2.B
+        let mut input = Vec::new();
+        input.extend_from_slice(owner_password.0.as_bytes());
+        input.extend_from_slice(key_salt);
+        input.extend_from_slice(u_entry);
+
+        let intermediate_key =
+            compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+
+        // Encrypt encryption_key with intermediate_key using AES-256-CBC
+        let aes = Aes::new(AesKey::new_256(intermediate_key[..32].to_vec())?);
+        let iv = [0u8; 16];
+
+        let encrypted = aes.encrypt_cbc_raw(encryption_key, &iv).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!("OE encryption failed: {}", e))
+        })?;
+
+        Ok(encrypted[..UE_ENTRY_LENGTH].to_vec())
+    }
+
+    /// Recover encryption key from R6 OE entry using owner password
+    pub fn recover_r6_owner_encryption_key(
+        &self,
+        owner_password: &OwnerPassword,
+        o_entry: &[u8],
+        u_entry: &[u8],
+        oe_entry: &[u8],
+    ) -> Result<Vec<u8>> {
+        if o_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if oe_entry.len() != UE_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "OE entry must be {} bytes",
+                UE_ENTRY_LENGTH
+            )));
+        }
+
+        // Extract key_salt from O (bytes 40-47)
+        let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
+
+        // Compute intermediate key using Algorithm 2.B
+        let mut input = Vec::new();
+        input.extend_from_slice(owner_password.0.as_bytes());
+        input.extend_from_slice(key_salt);
+        input.extend_from_slice(u_entry);
+
+        let intermediate_key =
+            compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+
+        // Decrypt OE to get encryption key
+        let aes = Aes::new(AesKey::new_256(intermediate_key[..32].to_vec())?);
+        let iv = [0u8; 16];
+
+        let decrypted = aes.decrypt_cbc_raw(oe_entry, &iv).map_err(|e| {
+            crate::error::PdfError::EncryptionError(format!("OE decryption failed: {}", e))
+        })?;
+
+        Ok(decrypted)
+    }
+
     /// Compute object-specific encryption key (Algorithm 1, ISO 32000-1 §7.6.2)
     pub fn compute_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         let mut data = Vec::new();

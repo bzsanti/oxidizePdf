@@ -507,3 +507,8 @@ path = "examples/tagged_pdf_demo.rs"
 # [[example]]
 # name = "plaintext_benchmark"
 # path = "../benches/plaintext_benchmark.rs"
+
+# Benchmarks
+[[bench]]
+name = "encryption_benchmark"
+harness = false

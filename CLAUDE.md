@@ -4,16 +4,39 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-04 - Algorithm 2.B R6 Key Derivation Complete |
+| **Last Session** | 2026-01-05 - Owner Password + Benchmarks + Cross-Validation |
 | **Branch** | develop_santi |
 | **Version** | v1.6.7 (released) |
-| **Tests** | 5000+ unit + 185 doc tests passing (302+ encryption) |
+| **Tests** | 5000+ unit + 185 doc tests (317+ encryption, 15 owner password) |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-01-04) - Algorithm 2.B R6 Key Derivation
+### Session Summary (2026-01-05) - Owner Password + Performance + Cross-Validation
+- **Owner Password Support Complete**: R5/R6 (15 new tests)
+  - `compute_r5_owner_hash()`, `validate_r5_owner_password()`
+  - `compute_r5_oe_entry()`, `recover_r5_owner_encryption_key()`
+  - `compute_r6_owner_hash()`, `validate_r6_owner_password()`
+  - `compute_r6_oe_entry()`, `recover_r6_owner_encryption_key()`
+- **Performance Benchmarks**: Criterion framework (`encryption_benchmark.rs`)
+  - R5 validation: ~862ns (simple SHA-256)
+  - R6 validation: ~1.78ms (Algorithm 2.B with AES iterations)
+  - RC4 validation: ~30.7µs
+- **Cross-Validation with pypdf**: 6 tests passing (1 ignored for SASLprep)
+  - `encryption_cross_validation_test.rs` validates compatibility
+  - `generate_pypdf_encrypted.py` fixture generator
+
+### Previous Session (2026-01-05 AM) - R5/R6 Encryption Complete
+- **R5 Confirmed Complete**: "Algorithm 2.A" does NOT exist in ISO 32000-1:2008
+  - R5 uses Algorithm 8 (compute U) and Algorithm 11 (validate password)
+  - Simple SHA-256 without complex iterations - already implemented
+  - 9 real PDF tests passing (qpdf compatibility verified)
+- **R6 Complete**: Algorithm 2.B with SHA-256/384/512 + AES iterations
+  - 10 real PDF tests passing (qpdf compatibility verified)
+- **Total encryption tests**: 302+ (including 19 real PDF integration tests)
+
+### Previous Session (2026-01-04) - Algorithm 2.B R6 Key Derivation
 - **Algorithm 2.B Complete**: ISO 32000-2:2020 §7.6.4.3.4 implementation
   - `compute_hash_r6_algorithm_2b()` public function (~150 lines)
   - SHA-384 support via sha2::Sha384
@@ -41,7 +64,7 @@
 | 2.3 Overlay Test | 1 | ✅ COMPLETE |
 | 2.4 Edge Cases | 4 | ✅ COMPLETE |
 
-### Encryption Progress (AES-256 R5/R6)
+### Encryption Progress (AES-256 R5/R6) - ALL COMPLETE ✅
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1.1 | Add RustCrypto dependencies | ✅ COMPLETE |
@@ -52,8 +75,11 @@
 | 2.1 | Algorithm 2.B implementation | ✅ COMPLETE |
 | 2.2 | R6 password validation | ✅ COMPLETE |
 | 2.3 | R6 key recovery (UE decryption) | ✅ COMPLETE |
-| 3.1 | Real PDF testing (qpdf) | ✅ COMPLETE |
-| 4 | R5 support | PENDING |
+| 3.1 | Real PDF testing R6 (qpdf) | ✅ COMPLETE (10 tests) |
+| 3.2 | R5 support (Algorithm 8/11) | ✅ COMPLETE (9 tests) |
+| 4.1 | Owner password R5/R6 | ✅ COMPLETE (15 tests) |
+| 4.2 | Performance benchmarks | ✅ COMPLETE (Criterion) |
+| 4.3 | Cross-validation pypdf | ✅ COMPLETE (6 tests) |
 | 5 | PdfReader Integration (Optional) | PENDING |
 
 ### Next Session Priority
@@ -62,8 +88,11 @@
 3. ~~CID/Type0 Fonts (Phase 3.4)~~ ✅ DONE (full embedding working)
 4. ~~AES-256 Phase 1 (RustCrypto)~~ ✅ DONE
 5. ~~Algorithm 2.B R6 Key Derivation~~ ✅ DONE (qpdf compatible)
-6. AES-256 Phase 4: R5 support (Algorithm 2.A)
-7. Continue coverage improvement (70% → 80%)
+6. ~~AES-256 R5 support~~ ✅ DONE (was already complete, "Algorithm 2.A" doesn't exist)
+7. ~~Owner password support R5/R6~~ ✅ DONE (15 tests)
+8. ~~Performance benchmarks~~ ✅ DONE (R5: 862ns, R6: 1.78ms, RC4: 30µs)
+9. ~~Cross-validation pypdf~~ ✅ DONE (6 tests + 1 ignored SASLprep)
+10. Continue coverage improvement (70% → 80%)
 
 ## Sprint Summary
 
@@ -194,8 +223,9 @@ git push origin v1.2.3
 | Issue | Impact | Status |
 |-------|--------|--------|
 | ~~Encrypted PDFs (AES-256 R6)~~ | ~~LOW~~ | ✅ RESOLVED (Algorithm 2.B complete, qpdf compatible) |
-| Encrypted PDFs (AES-256 R5) | LOW | R6 works, R5 (Algorithm 2.A) pending |
+| ~~Encrypted PDFs (AES-256 R5)~~ | ~~LOW~~ | ✅ RESOLVED ("Algorithm 2.A" doesn't exist - R5 uses Algorithm 8/11, already implemented) |
 | ~~CID/Type0 fonts~~ | ~~LOW~~ | ✅ RESOLVED (Phase 3.4 complete - full embedding) |
+| ~~Owner password R5/R6~~ | ~~LOW~~ | ✅ RESOLVED (15 tests, O/OE entry support) |
 | 2 malformed PDFs | VERY LOW | Genuine format violations, not bugs |
 
 ## Documentation References
