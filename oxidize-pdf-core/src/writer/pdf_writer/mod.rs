@@ -2663,7 +2663,12 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"\n>>")?;
             }
             Object::Stream(dict, data) => {
-                self.write_object_value(&Object::Dictionary(dict.clone()))?;
+                // CRITICAL: Ensure Length in dictionary matches actual data length
+                // This prevents "Bad Length" PDF syntax errors
+                let mut corrected_dict = dict.clone();
+                corrected_dict.set("Length", Object::Integer(data.len() as i64));
+
+                self.write_object_value(&Object::Dictionary(corrected_dict))?;
                 self.write_bytes(b"\nstream\n")?;
                 self.write_bytes(data)?;
                 self.write_bytes(b"\nendstream")?;
