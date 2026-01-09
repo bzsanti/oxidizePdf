@@ -108,10 +108,10 @@ Add oxidize-pdf to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxidize-pdf = "1.1.0"
+oxidize-pdf = "1.6.8"
 
 # For OCR support (optional)
-oxidize-pdf = { version = "1.1.0", features = ["ocr-tesseract"] }
+oxidize-pdf = { version = "1.6.8", features = ["ocr-tesseract"] }
 ```
 
 ### Basic PDF Generation
