@@ -31,7 +31,8 @@ pub use permissions_enforcement::{
 pub use public_key::{PublicKeyEncryptionDict, PublicKeySecurityHandler, Recipient, SubFilter};
 pub use rc4::{Rc4, Rc4Key};
 pub use standard_security::{
-    EncryptionKey, OwnerPassword, SecurityHandlerRevision, StandardSecurityHandler, UserPassword,
+    compute_hash_r6_algorithm_2b, EncryptionKey, OwnerPassword, SecurityHandlerRevision,
+    StandardSecurityHandler, UserPassword,
 };
 
 #[cfg(test)]

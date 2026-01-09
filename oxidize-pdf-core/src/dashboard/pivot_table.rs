@@ -366,3 +366,286 @@ impl PivotTableBuilder {
         PivotTable::new(vec![])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_data() -> Vec<HashMap<String, String>> {
+        vec![
+            {
+                let mut m = HashMap::new();
+                m.insert("category".to_string(), "A".to_string());
+                m.insert("value".to_string(), "10".to_string());
+                m
+            },
+            {
+                let mut m = HashMap::new();
+                m.insert("category".to_string(), "B".to_string());
+                m.insert("value".to_string(), "20".to_string());
+                m
+            },
+        ]
+    }
+
+    // ============ PivotTable Tests ============
+
+    #[test]
+    fn test_pivot_table_new() {
+        let data = sample_data();
+        let pivot = PivotTable::new(data.clone());
+
+        assert_eq!(pivot.data.len(), 2);
+        assert!(pivot.computed_data.is_none());
+    }
+
+    #[test]
+    fn test_pivot_table_new_empty() {
+        let pivot = PivotTable::new(vec![]);
+
+        assert!(pivot.data.is_empty());
+        assert!(pivot.computed_data.is_none());
+    }
+
+    #[test]
+    fn test_pivot_table_with_config() {
+        let pivot = PivotTable::new(sample_data());
+
+        let config = PivotConfig {
+            title: Some("Sales Report".to_string()),
+            row_groups: vec!["category".to_string()],
+            column_groups: vec![],
+            aggregations: vec![AggregateFunction::Sum],
+            value_columns: vec!["value".to_string()],
+            show_totals: true,
+            show_subtotals: true,
+        };
+
+        let pivot = pivot.with_config(config.clone());
+
+        assert_eq!(pivot.pivot_config.title, Some("Sales Report".to_string()));
+        assert!(pivot.pivot_config.show_subtotals);
+        assert!(pivot.computed_data.is_none()); // Reset after config change
+    }
+
+    #[test]
+    fn test_pivot_table_aggregate_by_single() {
+        let pivot = PivotTable::new(sample_data()).aggregate_by(&["sum"]);
+
+        assert!(pivot
+            .pivot_config
+            .aggregations
+            .contains(&AggregateFunction::Sum));
+    }
+
+    #[test]
+    fn test_pivot_table_aggregate_by_multiple() {
+        let pivot = PivotTable::new(sample_data()).aggregate_by(&["sum", "avg", "min", "max"]);
+
+        assert!(pivot
+            .pivot_config
+            .aggregations
+            .contains(&AggregateFunction::Sum));
+        assert!(pivot
+            .pivot_config
+            .aggregations
+            .contains(&AggregateFunction::Average));
+        assert!(pivot
+            .pivot_config
+            .aggregations
+            .contains(&AggregateFunction::Min));
+        assert!(pivot
+            .pivot_config
+            .aggregations
+            .contains(&AggregateFunction::Max));
+    }
+
+    #[test]
+    fn test_pivot_table_aggregate_by_invalid_ignored() {
+        let pivot = PivotTable::new(sample_data()).aggregate_by(&["invalid_func"]);
+
+        // Invalid function should be ignored, only default Count remains
+        assert_eq!(pivot.pivot_config.aggregations.len(), 1);
+        assert!(pivot
+            .pivot_config
+            .aggregations
+            .contains(&AggregateFunction::Count));
+    }
+
+    #[test]
+    fn test_pivot_table_aggregate_by_no_duplicates() {
+        let pivot = PivotTable::new(sample_data())
+            .aggregate_by(&["sum"])
+            .aggregate_by(&["sum"]); // Add same again
+
+        // Count sum occurrences
+        let sum_count = pivot
+            .pivot_config
+            .aggregations
+            .iter()
+            .filter(|a| **a == AggregateFunction::Sum)
+            .count();
+        assert_eq!(sum_count, 1);
+    }
+
+    // ============ PivotConfig Tests ============
+
+    #[test]
+    fn test_pivot_config_default() {
+        let config = PivotConfig::default();
+
+        assert!(config.title.is_none());
+        assert!(config.row_groups.is_empty());
+        assert!(config.column_groups.is_empty());
+        assert_eq!(config.aggregations.len(), 1);
+        assert!(config.aggregations.contains(&AggregateFunction::Count));
+        assert!(config.value_columns.is_empty());
+        assert!(config.show_totals);
+        assert!(!config.show_subtotals);
+    }
+
+    // ============ AggregateFunction Tests ============
+
+    #[test]
+    fn test_aggregate_function_parse_count() {
+        let func: AggregateFunction = "count".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Count);
+
+        let func: AggregateFunction = "COUNT".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Count);
+    }
+
+    #[test]
+    fn test_aggregate_function_parse_sum() {
+        let func: AggregateFunction = "sum".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Sum);
+
+        let func: AggregateFunction = "SUM".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Sum);
+    }
+
+    #[test]
+    fn test_aggregate_function_parse_average() {
+        let func: AggregateFunction = "average".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Average);
+
+        let func: AggregateFunction = "avg".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Average);
+
+        let func: AggregateFunction = "AVG".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Average);
+    }
+
+    #[test]
+    fn test_aggregate_function_parse_min() {
+        let func: AggregateFunction = "min".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Min);
+
+        let func: AggregateFunction = "MIN".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Min);
+    }
+
+    #[test]
+    fn test_aggregate_function_parse_max() {
+        let func: AggregateFunction = "max".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Max);
+
+        let func: AggregateFunction = "MAX".parse().unwrap();
+        assert_eq!(func, AggregateFunction::Max);
+    }
+
+    #[test]
+    fn test_aggregate_function_parse_invalid() {
+        let result: Result<AggregateFunction, _> = "invalid".parse();
+        assert!(result.is_err());
+
+        let result: Result<AggregateFunction, _> = "median".parse();
+        assert!(result.is_err());
+
+        let result: Result<AggregateFunction, _> = "".parse();
+        assert!(result.is_err());
+    }
+
+    // ============ ComputedPivotData Tests ============
+
+    #[test]
+    fn test_computed_pivot_data_structure() {
+        let data = ComputedPivotData {
+            headers: vec!["Category".to_string(), "Sum".to_string()],
+            rows: vec![
+                vec!["A".to_string(), "100".to_string()],
+                vec!["B".to_string(), "200".to_string()],
+                vec!["Total".to_string(), "300".to_string()],
+            ],
+            totals_row: Some(2),
+        };
+
+        assert_eq!(data.headers.len(), 2);
+        assert_eq!(data.rows.len(), 3);
+        assert_eq!(data.totals_row, Some(2));
+    }
+
+    #[test]
+    fn test_computed_pivot_data_no_totals() {
+        let data = ComputedPivotData {
+            headers: vec!["Name".to_string()],
+            rows: vec![vec!["Item".to_string()]],
+            totals_row: None,
+        };
+
+        assert!(data.totals_row.is_none());
+    }
+
+    // ============ PivotTableBuilder Tests ============
+
+    #[test]
+    fn test_pivot_table_builder_new() {
+        let builder = PivotTableBuilder::new();
+        let pivot = builder.build();
+
+        assert!(pivot.data.is_empty());
+    }
+
+    #[test]
+    fn test_pivot_table_builder_chain() {
+        let pivot = PivotTableBuilder::new().build();
+
+        assert_eq!(pivot.component_type(), "PivotTable");
+    }
+
+    // ============ DashboardComponent Trait Tests ============
+
+    #[test]
+    fn test_component_span() {
+        let pivot = PivotTable::new(sample_data());
+
+        // Default span should be 12 (full width)
+        assert_eq!(pivot.get_span().columns, 12);
+    }
+
+    #[test]
+    fn test_component_set_span() {
+        let mut pivot = PivotTable::new(sample_data());
+
+        pivot.set_span(ComponentSpan::new(6));
+        assert_eq!(pivot.get_span().columns, 6);
+    }
+
+    #[test]
+    fn test_component_type() {
+        let pivot = PivotTable::new(sample_data());
+        assert_eq!(pivot.component_type(), "PivotTable");
+    }
+
+    #[test]
+    fn test_complexity_score() {
+        let pivot = PivotTable::new(sample_data());
+        assert_eq!(pivot.complexity_score(), 85);
+    }
+
+    #[test]
+    fn test_preferred_height() {
+        let pivot = PivotTable::new(sample_data());
+        assert_eq!(pivot.preferred_height(500.0), 200.0);
+    }
+}

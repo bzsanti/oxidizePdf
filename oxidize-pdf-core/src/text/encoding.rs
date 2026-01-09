@@ -617,4 +617,318 @@ mod tests {
 
         assert_eq!(decoded, test_chars);
     }
+
+    #[test]
+    fn test_mac_roman_encode_special_characters() {
+        let encoding = TextEncoding::MacRomanEncoding;
+
+        // Test Mac Roman specific mappings
+        let test_cases = [
+            ("Ä", 0x80), // A with diaeresis
+            ("Å", 0x81), // A with ring
+            ("Ç", 0x82), // C with cedilla
+            ("É", 0x83), // E with acute
+            ("Ñ", 0x84), // N with tilde
+            ("Ö", 0x85), // O with diaeresis
+            ("Ü", 0x86), // U with diaeresis
+            ("á", 0x87), // a with acute
+            ("à", 0x88), // a with grave
+            ("â", 0x89), // a with circumflex
+            ("ä", 0x8A), // a with diaeresis
+            ("ã", 0x8B), // a with tilde
+            ("å", 0x8C), // a with ring
+            ("ç", 0x8D), // c with cedilla
+            ("é", 0x8E), // e with acute
+            ("è", 0x8F), // e with grave
+            ("ê", 0x90), // e with circumflex
+            ("ë", 0x91), // e with diaeresis
+            ("í", 0x92), // i with acute
+            ("ì", 0x93), // i with grave
+            ("î", 0x94), // i with circumflex
+            ("ï", 0x95), // i with diaeresis
+            ("ñ", 0x96), // n with tilde
+            ("ó", 0x97), // o with acute
+            ("ò", 0x98), // o with grave
+            ("ô", 0x99), // o with circumflex
+            ("ö", 0x9A), // o with diaeresis
+            ("õ", 0x9B), // o with tilde
+            ("ú", 0x9C), // u with acute
+            ("ù", 0x9D), // u with grave
+            ("û", 0x9E), // u with circumflex
+            ("ü", 0x9F), // u with diaeresis
+        ];
+
+        for (text, expected_byte) in &test_cases {
+            let encoded = encoding.encode(text);
+            assert_eq!(
+                encoded,
+                vec![*expected_byte],
+                "Failed encoding {text} (U+{:04X})",
+                text.chars().next().unwrap() as u32
+            );
+        }
+    }
+
+    #[test]
+    fn test_mac_roman_encode_symbols() {
+        let encoding = TextEncoding::MacRomanEncoding;
+
+        let test_cases = [
+            ("†", 0xA0), // Dagger
+            ("°", 0xA1), // Degree sign
+            ("¢", 0xA2), // Cent sign
+            ("£", 0xA3), // Pound sign
+            ("§", 0xA4), // Section sign
+            ("•", 0xA5), // Bullet
+            ("¶", 0xA6), // Pilcrow sign
+            ("ß", 0xA7), // Sharp s
+            ("®", 0xA8), // Registered sign
+            ("©", 0xA9), // Copyright sign
+            ("™", 0xAA), // Trade mark sign
+            ("´", 0xAB), // Acute accent
+            ("¨", 0xAC), // Diaeresis
+            ("≠", 0xAD), // Not equal to
+            ("Æ", 0xAE), // AE ligature
+            ("Ø", 0xAF), // O with stroke
+        ];
+
+        for (text, expected_byte) in &test_cases {
+            let encoded = encoding.encode(text);
+            assert_eq!(encoded, vec![*expected_byte], "Failed encoding {text}");
+        }
+    }
+
+    #[test]
+    fn test_mac_roman_decode_extended_range() {
+        let encoding = TextEncoding::MacRomanEncoding;
+
+        // Test extended range (0xB0-0xFF)
+        let test_cases: Vec<(u8, char)> = vec![
+            (0xB0, '∞'),        // Infinity
+            (0xB1, '±'),        // Plus-minus
+            (0xB2, '≤'),        // Less-than or equal
+            (0xB3, '≥'),        // Greater-than or equal
+            (0xB4, '¥'),        // Yen sign
+            (0xB5, 'µ'),        // Micro sign
+            (0xB6, '∂'),        // Partial differential
+            (0xB7, '∑'),        // Summation
+            (0xB8, '∏'),        // Product
+            (0xB9, 'π'),        // Pi
+            (0xBA, '∫'),        // Integral
+            (0xBB, 'ª'),        // Feminine ordinal
+            (0xBC, 'º'),        // Masculine ordinal
+            (0xBD, 'Ω'),        // Omega
+            (0xBE, 'æ'),        // ae ligature
+            (0xBF, 'ø'),        // o with stroke
+            (0xC0, '¿'),        // Inverted question mark
+            (0xC1, '¡'),        // Inverted exclamation
+            (0xC2, '¬'),        // Not sign
+            (0xC3, '√'),        // Square root
+            (0xC4, 'ƒ'),        // f with hook
+            (0xC5, '≈'),        // Almost equal
+            (0xC6, '∆'),        // Increment
+            (0xC7, '«'),        // Left double angle quote
+            (0xC8, '»'),        // Right double angle quote
+            (0xC9, '…'),        // Horizontal ellipsis
+            (0xCA, '\u{00A0}'), // No-break space
+            (0xCB, 'À'),        // A with grave
+            (0xCC, 'Ã'),        // A with tilde
+            (0xCD, 'Õ'),        // O with tilde
+            (0xCE, 'Œ'),        // OE ligature
+            (0xCF, 'œ'),        // oe ligature
+        ];
+
+        for (byte, expected_char) in test_cases {
+            let decoded = encoding.decode(&[byte]);
+            assert_eq!(
+                decoded.chars().next().unwrap(),
+                expected_char,
+                "Failed decoding byte 0x{byte:02X}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mac_roman_decode_high_range() {
+        let encoding = TextEncoding::MacRomanEncoding;
+
+        let test_cases: Vec<(u8, char)> = vec![
+            (0xD0, '\u{2013}'), // En dash
+            (0xD1, '\u{2014}'), // Em dash
+            (0xD2, '\u{201C}'), // Left double quote
+            (0xD3, '\u{201D}'), // Right double quote
+            (0xD4, '\u{2018}'), // Left single quote
+            (0xD5, '\u{2019}'), // Right single quote
+            (0xD6, '\u{00F7}'), // Division sign
+            (0xD7, '\u{25CA}'), // Lozenge
+            (0xD8, '\u{00FF}'), // y with diaeresis
+            (0xD9, '\u{0178}'), // Y with diaeresis
+            (0xDA, '\u{2044}'), // Fraction slash
+            (0xDB, '\u{20AC}'), // Euro sign
+            (0xDC, '\u{2039}'), // Single left angle quote
+            (0xDD, '\u{203A}'), // Single right angle quote
+            (0xDE, '\u{FB01}'), // fi ligature
+            (0xDF, '\u{FB02}'), // fl ligature
+            (0xE0, '\u{2021}'), // Double dagger
+            (0xE1, '\u{00B7}'), // Middle dot
+            (0xE2, '\u{201A}'), // Single low quote
+            (0xE3, '\u{201E}'), // Double low quote
+            (0xE4, '\u{2030}'), // Per mille sign
+            (0xE5, '\u{00C2}'), // A with circumflex
+            (0xE6, '\u{00CA}'), // E with circumflex
+            (0xE7, '\u{00C1}'), // A with acute
+            (0xE8, '\u{00CB}'), // E with diaeresis
+            (0xE9, '\u{00C8}'), // E with grave
+            (0xEA, '\u{00CD}'), // I with acute
+            (0xEB, '\u{00CE}'), // I with circumflex
+            (0xEC, '\u{00CF}'), // I with diaeresis
+            (0xED, '\u{00CC}'), // I with grave
+            (0xEE, '\u{00D3}'), // O with acute
+            (0xEF, '\u{00D4}'), // O with circumflex
+        ];
+
+        for (byte, expected_char) in test_cases {
+            let decoded = encoding.decode(&[byte]);
+            assert_eq!(
+                decoded.chars().next().unwrap(),
+                expected_char,
+                "Failed decoding byte 0x{byte:02X}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mac_roman_decode_final_range() {
+        let encoding = TextEncoding::MacRomanEncoding;
+
+        let test_cases: Vec<(u8, char)> = vec![
+            (0xF0, '\u{F8FF}'), // Apple logo
+            (0xF1, 'Ò'),        // O with grave
+            (0xF2, 'Ú'),        // U with acute
+            (0xF3, 'Û'),        // U with circumflex
+            (0xF4, 'Ù'),        // U with grave
+            (0xF5, 'ı'),        // Dotless i
+            (0xF6, 'ˆ'),        // Circumflex modifier
+            (0xF7, '˜'),        // Small tilde
+            (0xF8, '¯'),        // Macron
+            (0xF9, '˘'),        // Breve
+            (0xFA, '˙'),        // Dot above
+            (0xFB, '˚'),        // Ring above
+            (0xFC, '¸'),        // Cedilla
+            (0xFD, '˝'),        // Double acute
+            (0xFE, '˛'),        // Ogonek
+            (0xFF, 'ˇ'),        // Caron
+        ];
+
+        for (byte, expected_char) in test_cases {
+            let decoded = encoding.decode(&[byte]);
+            assert_eq!(
+                decoded.chars().next().unwrap(),
+                expected_char,
+                "Failed decoding byte 0x{byte:02X}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_mac_roman_unmapped_character() {
+        let encoding = TextEncoding::MacRomanEncoding;
+
+        // Use a character that's not in Mac Roman
+        let text = "❤"; // Heart emoji
+        let encoded = encoding.encode(text);
+        assert_eq!(encoded, vec![b'?']);
+    }
+
+    #[test]
+    fn test_win_ansi_encode_all_special_mappings() {
+        let encoding = TextEncoding::WinAnsiEncoding;
+
+        let test_cases = [
+            ("\u{0160}", 0x8A), // S with caron
+            ("\u{0152}", 0x8C), // OE ligature
+            ("\u{017D}", 0x8E), // Z with caron
+            ("\u{0161}", 0x9A), // s with caron
+            ("\u{0153}", 0x9C), // oe ligature
+            ("\u{017E}", 0x9E), // z with caron
+            ("\u{0178}", 0x9F), // Y with diaeresis
+            ("\u{02C6}", 0x88), // Circumflex
+            ("\u{02DC}", 0x98), // Small tilde
+            ("\u{2039}", 0x8B), // Single left angle quote
+            ("\u{203A}", 0x9B), // Single right angle quote
+        ];
+
+        for (text, expected_byte) in &test_cases {
+            let encoded = encoding.encode(text);
+            assert_eq!(
+                encoded,
+                vec![*expected_byte],
+                "Failed encoding {text} (U+{:04X})",
+                text.chars().next().unwrap() as u32
+            );
+        }
+    }
+
+    #[test]
+    fn test_long_text_encoding_roundtrip() {
+        let encodings = [
+            TextEncoding::StandardEncoding,
+            TextEncoding::WinAnsiEncoding,
+            TextEncoding::MacRomanEncoding,
+            TextEncoding::PdfDocEncoding,
+        ];
+
+        let long_text = "The quick brown fox jumps over the lazy dog. 0123456789!@#$%^&*()";
+
+        for encoding in &encodings {
+            let encoded = encoding.encode(long_text);
+            let decoded = encoding.decode(&encoded);
+            assert_eq!(decoded, long_text, "Failed for {encoding:?}");
+        }
+    }
+
+    #[test]
+    fn test_win_ansi_decode_all_special_bytes() {
+        let encoding = TextEncoding::WinAnsiEncoding;
+
+        // Test all defined special bytes
+        let test_cases: Vec<(u8, char)> = vec![
+            (0x80, '\u{20AC}'), // Euro sign
+            (0x82, '\u{201A}'), // Single low quotation mark
+            (0x83, '\u{0192}'), // f with hook
+            (0x84, '\u{201E}'), // Double low quotation mark
+            (0x85, '\u{2026}'), // Horizontal ellipsis
+            (0x86, '\u{2020}'), // Dagger
+            (0x87, '\u{2021}'), // Double dagger
+            (0x88, '\u{02C6}'), // Circumflex accent
+            (0x89, '\u{2030}'), // Per mille sign
+            (0x8A, '\u{0160}'), // S with caron
+            (0x8B, '\u{2039}'), // Single left angle quote
+            (0x8C, '\u{0152}'), // OE ligature
+            (0x8E, '\u{017D}'), // Z with caron
+            (0x91, '\u{2018}'), // Left single quotation mark
+            (0x92, '\u{2019}'), // Right single quotation mark
+            (0x93, '\u{201C}'), // Left double quotation mark
+            (0x94, '\u{201D}'), // Right double quotation mark
+            (0x95, '\u{2022}'), // Bullet
+            (0x96, '\u{2013}'), // En dash
+            (0x97, '\u{2014}'), // Em dash
+            (0x98, '\u{02DC}'), // Small tilde
+            (0x99, '\u{2122}'), // Trade mark sign
+            (0x9A, '\u{0161}'), // s with caron
+            (0x9B, '\u{203A}'), // Single right angle quote
+            (0x9C, '\u{0153}'), // oe ligature
+            (0x9E, '\u{017E}'), // z with caron
+            (0x9F, '\u{0178}'), // Y with diaeresis
+        ];
+
+        for (byte, expected_char) in test_cases {
+            let decoded = encoding.decode(&[byte]);
+            assert_eq!(
+                decoded.chars().next().unwrap(),
+                expected_char,
+                "Failed decoding byte 0x{byte:02X}"
+            );
+        }
+    }
 }

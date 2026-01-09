@@ -335,4 +335,136 @@ mod tests {
         assert!(extracted.contains_key("monetary_amounts"));
         assert!(extracted.contains_key("organizations"));
     }
+
+    #[test]
+    fn test_string_similarity_identical() {
+        let similarity = calculate_string_similarity("hello", "hello");
+        assert_eq!(similarity, 1.0);
+    }
+
+    #[test]
+    fn test_string_similarity_empty() {
+        assert_eq!(calculate_string_similarity("", "test"), 0.0);
+        assert_eq!(calculate_string_similarity("test", ""), 0.0);
+        // Empty strings are equal so similarity is 1.0
+        assert_eq!(calculate_string_similarity("", ""), 1.0);
+    }
+
+    #[test]
+    fn test_string_similarity_partial() {
+        let similarity = calculate_string_similarity("hello", "hella");
+        assert!(similarity > 0.5);
+        assert!(similarity < 1.0);
+    }
+
+    #[test]
+    fn test_string_similarity_different_lengths() {
+        let similarity = calculate_string_similarity("hi", "hello");
+        assert!(similarity < 0.5); // Different lengths, partial match
+    }
+
+    #[test]
+    fn test_target_search_not_found() {
+        let validator = TextValidator::new();
+        let text = "This text does not contain the target.";
+
+        let result = validator.search_for_target(text, "nonexistent phrase");
+        assert!(!result.found);
+        assert!(result.matches.is_empty());
+        assert_eq!(result.confidence, 0.0);
+    }
+
+    #[test]
+    fn test_target_search_multiple_occurrences() {
+        let validator = TextValidator::new();
+        let text = "The date is 2016 and year 2016 was important. Also 2016.";
+
+        let result = validator.search_for_target(text, "2016");
+        assert!(result.found);
+        assert_eq!(result.matches.len(), 3);
+    }
+
+    #[test]
+    fn test_target_search_case_insensitive() {
+        let validator = TextValidator::new();
+        let text = "Hello WORLD and hello world";
+
+        let result = validator.search_for_target(text, "hello");
+        assert!(result.found);
+        assert_eq!(result.matches.len(), 2);
+    }
+
+    #[test]
+    fn test_validate_contract_no_matches() {
+        let validator = TextValidator::new();
+        let text = "just some random text without dates or amounts";
+
+        let result = validator.validate_contract_text(text);
+        assert!(!result.found);
+        assert!(result.matches.is_empty());
+        assert_eq!(result.confidence, 0.0);
+        assert_eq!(result.metadata.get("total_matches").unwrap(), "0");
+    }
+
+    #[test]
+    fn test_match_type_variants() {
+        assert_eq!(MatchType::Date, MatchType::Date);
+        assert_eq!(MatchType::ContractNumber, MatchType::ContractNumber);
+        assert_eq!(MatchType::PartyName, MatchType::PartyName);
+        assert_eq!(MatchType::MonetaryAmount, MatchType::MonetaryAmount);
+        assert_eq!(MatchType::Location, MatchType::Location);
+        assert_eq!(
+            MatchType::Custom("test".to_string()),
+            MatchType::Custom("test".to_string())
+        );
+        assert_ne!(MatchType::Date, MatchType::ContractNumber);
+    }
+
+    #[test]
+    fn test_text_validator_default() {
+        let validator = TextValidator::default();
+        // Verify it can validate text (patterns initialized)
+        let result = validator.validate_contract_text("Signed on 01/01/2020");
+        assert!(result.found);
+    }
+
+    #[test]
+    fn test_monetary_amount_match_type() {
+        let validator = TextValidator::new();
+        let text = "The amount is $50,000.00 payable immediately.";
+
+        let result = validator.validate_contract_text(text);
+        let money_matches: Vec<_> = result
+            .matches
+            .iter()
+            .filter(|m| m.match_type == MatchType::MonetaryAmount)
+            .collect();
+        assert!(!money_matches.is_empty());
+    }
+
+    #[test]
+    fn test_extract_key_info_no_matches() {
+        let validator = TextValidator::new();
+        let text = "Simple text with no special elements";
+
+        let extracted = validator.extract_key_info(text);
+        assert!(!extracted.contains_key("dates"));
+        assert!(!extracted.contains_key("monetary_amounts"));
+        assert!(!extracted.contains_key("organizations"));
+    }
+
+    #[test]
+    fn test_validation_metadata() {
+        let validator = TextValidator::new();
+        let text = "Agreement dated 30 September 2016 for $100,000";
+
+        let result = validator.validate_contract_text(text);
+        assert!(result.metadata.contains_key("total_matches"));
+        assert!(result.metadata.contains_key("text_length"));
+        assert!(result.metadata.contains_key("date_matches"));
+        assert_eq!(
+            result.metadata.get("text_length").unwrap(),
+            &text.len().to_string()
+        );
+    }
 }

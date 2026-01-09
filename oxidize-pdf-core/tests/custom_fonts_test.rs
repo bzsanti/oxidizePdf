@@ -10,8 +10,8 @@ fn test_custom_font_loading_from_file() -> Result<()> {
     let mut doc = Document::new();
 
     // Try to load a custom font (this would need an actual TTF file)
-    // For testing, we'll use a system font if available
-    let font_path = "/System/Library/Fonts/Helvetica.ttc"; // macOS path
+    // For testing, we'll use a system font if available (TTF only, not TTC)
+    let font_path = "/System/Library/Fonts/Apple Braille.ttf"; // macOS TTF path
 
     if std::path::Path::new(font_path).exists() {
         doc.add_font("CustomHelvetica", font_path)?;

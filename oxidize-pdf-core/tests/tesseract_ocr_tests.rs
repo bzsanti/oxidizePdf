@@ -171,6 +171,7 @@ mod tesseract_tests {
 
         let mut successful_tests = 0;
         let mut total_pages_processed = 0;
+        let mut found_contracts = 0;
 
         for (contract_file, expected_text) in &test_contracts {
             let pdf_path = Path::new(&ocr_dir).join(contract_file);
@@ -179,6 +180,7 @@ mod tesseract_tests {
                 println!("⚠️  Contract PDF not found: {}", contract_file);
                 continue;
             }
+            found_contracts += 1;
 
             println!("\n📄 TESTING CONTRACT: {}", contract_file);
             println!("   🎯 Looking for: \"{}\"", expected_text);
@@ -232,7 +234,7 @@ mod tesseract_tests {
                 "   🎉 OCR PIPELINE WORKS! Successfully processed {} contract(s)",
                 successful_tests
             );
-        } else if test_contracts.is_empty() {
+        } else if found_contracts == 0 {
             println!("   ⚠️  No test contracts found - ensure PDFs are in ~/Downloads/ocr/");
         } else {
             println!("   ❌ No contracts could be processed - check PDF parsing");
@@ -240,7 +242,7 @@ mod tesseract_tests {
 
         // The test passes if we can process contracts OR if no contracts are available
         assert!(
-            successful_tests > 0 || test_contracts.is_empty(),
+            successful_tests > 0 || found_contracts == 0,
             "Should successfully process at least one contract or have no contracts to test"
         );
     }

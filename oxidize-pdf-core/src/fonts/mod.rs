@@ -12,6 +12,7 @@ pub mod loader;
 pub mod standard_14;
 pub mod ttf_parser;
 pub mod type0;
+pub mod type0_parsing;
 
 pub use cid_mapper::{analyze_unicode_ranges, CidMapping, UnicodeRanges};
 pub use embedder::{EmbeddingOptions, FontEmbedder, FontEncoding};
@@ -22,6 +23,11 @@ pub use loader::{FontData, FontFormat, FontLoader};
 pub use standard_14::Standard14Font;
 pub use ttf_parser::{GlyphMapping, TtfParser};
 pub use type0::{create_type0_from_font, needs_type0_font, Type0Font};
+pub use type0_parsing::{
+    detect_cidfont_subtype, detect_type0_font, extract_default_width, extract_descendant_fonts_ref,
+    extract_font_descriptor_ref, extract_font_file_ref, extract_tounicode_ref, extract_widths_ref,
+    resolve_type0_hierarchy, CIDFontSubtype, FontFileType, Type0FontInfo, MAX_FONT_STREAM_SIZE,
+};
 
 use crate::Result;
 

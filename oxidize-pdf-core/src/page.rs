@@ -1,5 +1,6 @@
 use crate::annotations::Annotation;
 use crate::error::Result;
+use crate::fonts::type0_parsing::{detect_type0_font, resolve_type0_hierarchy};
 use crate::forms::Widget;
 use crate::graphics::{GraphicsContext, Image};
 use crate::objects::{Array, Dictionary, Object, ObjectReference};
@@ -466,10 +467,13 @@ impl Page {
         }
     }
 
-    /// Resolves embedded font streams from a font dictionary (Phase 3.2)
+    /// Resolves embedded font streams from a font dictionary (Phase 3.2 + Phase 3.4)
     ///
     /// Takes a font dictionary and resolves any FontDescriptor + FontFile references,
     /// embedding the stream data directly so the writer doesn't need to resolve references.
+    ///
+    /// For Type0 (composite) fonts, this also resolves the complete hierarchy:
+    /// Type0 → DescendantFonts → CIDFont → FontDescriptor → FontFile2/FontFile3
     ///
     /// # Returns
     /// Font dictionary with embedded streams (if font has embedded data),
@@ -482,6 +486,63 @@ impl Page {
 
         let mut resolved_dict = font_dict.clone();
 
+        // Phase 3.4: Check if this is a Type0 (composite) font
+        if detect_type0_font(font_dict) {
+            // Create a resolver closure that converts parser objects to unified format
+            let resolver =
+                |id: crate::pdf_objects::ObjectId| -> Option<crate::pdf_objects::Object> {
+                    match document.get_object(id.number(), id.generation()) {
+                        Ok(parser_obj) => Some(Self::convert_parser_object_to_unified(&parser_obj)),
+                        Err(_) => None,
+                    }
+                };
+
+            // Resolve the complete Type0 hierarchy
+            if let Some(info) = resolve_type0_hierarchy(font_dict, resolver) {
+                // Embed the resolved CIDFont as DescendantFonts
+                if let Some(cidfont) = info.cidfont_dict {
+                    let mut resolved_cidfont = cidfont;
+
+                    // Embed FontDescriptor with resolved font stream
+                    if let Some(descriptor) = info.font_descriptor {
+                        let mut resolved_descriptor = descriptor;
+
+                        // Embed the font stream directly in FontDescriptor
+                        if let Some(stream) = info.font_stream {
+                            // Determine which key to use based on font_file_type
+                            let key = match info.font_file_type {
+                                Some(crate::fonts::type0_parsing::FontFileType::TrueType) => {
+                                    "FontFile2"
+                                }
+                                Some(crate::fonts::type0_parsing::FontFileType::CFF) => "FontFile3",
+                                Some(crate::fonts::type0_parsing::FontFileType::Type1) => {
+                                    "FontFile"
+                                }
+                                None => "FontFile2", // Default for CIDFontType2
+                            };
+                            resolved_descriptor.set(key, Object::Stream(stream));
+                        }
+
+                        resolved_cidfont
+                            .set("FontDescriptor", Object::Dictionary(resolved_descriptor));
+                    }
+
+                    // Replace DescendantFonts array with resolved CIDFont
+                    let mut descendants = crate::pdf_objects::Array::new();
+                    descendants.push(Object::Dictionary(resolved_cidfont));
+                    resolved_dict.set("DescendantFonts", Object::Array(descendants));
+                }
+
+                // Embed ToUnicode stream if present
+                if let Some(tounicode) = info.tounicode_stream {
+                    resolved_dict.set("ToUnicode", Object::Stream(tounicode));
+                }
+            }
+
+            return Ok(resolved_dict);
+        }
+
+        // Original Phase 3.2 logic for simple fonts (Type1, TrueType, etc.)
         // Check if font has a FontDescriptor
         if let Some(Object::Reference(descriptor_id)) = font_dict.get("FontDescriptor") {
             // Resolve FontDescriptor from document

@@ -18,6 +18,7 @@ test_*
 !test-pdfs/*.pdf
 !test-suite/fixtures/**/*.pdf
 !test-files/*.pdf
+!oxidize-pdf-core/tests/fixtures/*.pdf
 
 # Examples results - ignore sensitive files
 examples/results/*.jpg
@@ -68,9 +69,9 @@ REVENUE_*.md
 # External test suites
 test-suite/external-suites/
 
-# Local PDF fixtures (symbolic links to private PDFs)
-tests/fixtures/
-tests/fixtures
+# Local PDF fixtures (symbolic links to private PDFs - root level only)
+/tests/fixtures/
+/tests/fixtures
 test-suite/fixtures/valid/GOVPUB-CS1-301ae7b075ad3435b3a7dca00e78e8ff.pdf
 
 # Development and debug scripts

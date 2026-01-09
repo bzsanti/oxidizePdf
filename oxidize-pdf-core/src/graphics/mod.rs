@@ -1146,6 +1146,9 @@ impl GraphicsContext {
         // Begin text object
         self.operations.push_str("BT\n");
 
+        // Apply fill color for text rendering (must be inside BT...ET)
+        self.apply_fill_color();
+
         // Set font if available
         if let Some(font_name) = &self.current_font_name {
             writeln!(
@@ -1206,6 +1209,9 @@ impl GraphicsContext {
         // Begin text object
         self.operations.push_str("BT\n");
 
+        // Apply fill color for text rendering (must be inside BT...ET)
+        self.apply_fill_color();
+
         // Set font - ensure it's a Type0 font for Unicode
         if let Some(font_name) = &self.current_font_name {
             // The font should be converted to Type0 by FontManager if needed
@@ -1263,6 +1269,9 @@ impl GraphicsContext {
         // Begin text object
         self.operations.push_str("BT\n");
 
+        // Apply fill color for text rendering (must be inside BT...ET)
+        self.apply_fill_color();
+
         // Set font if available
         if let Some(font_name) = &self.current_font_name {
             writeln!(
@@ -1316,6 +1325,9 @@ impl GraphicsContext {
 
         // Begin text object
         self.operations.push_str("BT\n");
+
+        // Apply fill color for text rendering (must be inside BT...ET)
+        self.apply_fill_color();
 
         // Set font if available
         if let Some(font_name) = &self.current_font_name {
@@ -1389,6 +1401,9 @@ impl GraphicsContext {
     pub fn draw_text_unicode(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
         // Begin text object
         self.operations.push_str("BT\n");
+
+        // Apply fill color for text rendering (must be inside BT...ET)
+        self.apply_fill_color();
 
         // Set font if available
         if let Some(font_name) = &self.current_font_name {
