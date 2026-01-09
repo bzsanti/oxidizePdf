@@ -362,4 +362,41 @@ mod tests {
         assert!(is_leap_year(2000));
         assert!(!is_leap_year(1900));
     }
+
+    #[test]
+    fn test_validate_invoice_number_letters_only() {
+        // Letters without separators (medium format)
+        assert_eq!(validate_invoice_number("INV2025001"), 0.08);
+        assert_eq!(validate_invoice_number("FAC123"), 0.08);
+    }
+
+    #[test]
+    fn test_validate_invoice_number_special_chars() {
+        // Special chars but no standard separator pattern (no letters, not all numeric)
+        assert_eq!(validate_invoice_number("12#34"), 0.0);
+        assert_eq!(validate_invoice_number("12.34.56"), 0.0);
+        // With letters but containing . (which is not a standard separator)
+        assert_eq!(validate_invoice_number("AB.CD"), 0.08); // Has letters, returns 0.08
+    }
+
+    #[test]
+    fn test_validate_vat_unknown_format() {
+        // Unknown format (not matching any country pattern)
+        assert_eq!(validate_vat_number("XY12345"), 0.0);
+        assert_eq!(validate_vat_number("ABC"), 0.0);
+    }
+
+    #[test]
+    fn test_validate_amount_non_numeric() {
+        // Non-numeric characters in amount
+        assert_eq!(validate_amount("abc"), -0.50);
+        assert_eq!(validate_amount("12.34.56"), -0.50);
+    }
+
+    #[test]
+    fn test_validate_date_year_out_of_range() {
+        // Year outside reasonable range (1900-2100)
+        assert_eq!(validate_date("1899-01-01"), -0.50);
+        assert_eq!(validate_date("2101-01-01"), -0.50);
+    }
 }

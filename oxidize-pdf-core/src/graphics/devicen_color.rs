@@ -523,3 +523,385 @@ impl ColorantDefinition {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_devicen_new() {
+        let colorants = vec!["Cyan".to_string(), "Magenta".to_string()];
+        let transform = TintTransformFunction::Linear(LinearTransform {
+            matrix: vec![vec![1.0, 0.0, 0.0], vec![0.0, 1.0, 0.0]],
+            black_generation: None,
+            undercolor_removal: None,
+        });
+        let space =
+            DeviceNColorSpace::new(colorants.clone(), AlternateColorSpace::DeviceRGB, transform);
+
+        assert_eq!(space.colorant_names, colorants);
+        assert_eq!(space.alternate_space, AlternateColorSpace::DeviceRGB);
+        assert!(space.attributes.is_none());
+    }
+
+    #[test]
+    fn test_cmyk_plus_spots() {
+        let spot_names = vec!["PANTONE 185 C".to_string(), "Gold".to_string()];
+        let space = DeviceNColorSpace::cmyk_plus_spots(spot_names);
+
+        assert_eq!(space.colorant_count(), 6);
+        assert_eq!(space.colorant_name(0), Some("Cyan"));
+        assert_eq!(space.colorant_name(1), Some("Magenta"));
+        assert_eq!(space.colorant_name(2), Some("Yellow"));
+        assert_eq!(space.colorant_name(3), Some("Black"));
+        assert_eq!(space.colorant_name(4), Some("PANTONE 185 C"));
+        assert_eq!(space.colorant_name(5), Some("Gold"));
+        assert_eq!(space.colorant_name(6), None);
+    }
+
+    #[test]
+    fn test_has_process_colors() {
+        let with_cmyk = DeviceNColorSpace::cmyk_plus_spots(vec![]);
+        assert!(with_cmyk.has_process_colors());
+
+        let spot_only = DeviceNColorSpace::new(
+            vec!["PANTONE Red".to_string()],
+            AlternateColorSpace::DeviceCMYK,
+            TintTransformFunction::Linear(LinearTransform {
+                matrix: vec![vec![0.0, 1.0, 0.0, 0.0]],
+                black_generation: None,
+                undercolor_removal: None,
+            }),
+        );
+        assert!(!spot_only.has_process_colors());
+    }
+
+    #[test]
+    fn test_spot_color_names() {
+        let space = DeviceNColorSpace::cmyk_plus_spots(vec![
+            "PANTONE 185 C".to_string(),
+            "Gold".to_string(),
+        ]);
+
+        let spots = space.spot_color_names();
+        assert_eq!(spots.len(), 2);
+        assert!(spots.contains(&"PANTONE 185 C"));
+        assert!(spots.contains(&"Gold"));
+    }
+
+    #[test]
+    fn test_colorant_count() {
+        let space = DeviceNColorSpace::new(
+            vec!["A".to_string(), "B".to_string(), "C".to_string()],
+            AlternateColorSpace::DeviceGray,
+            TintTransformFunction::Linear(LinearTransform {
+                matrix: vec![vec![1.0], vec![1.0], vec![1.0]],
+                black_generation: None,
+                undercolor_removal: None,
+            }),
+        );
+        assert_eq!(space.colorant_count(), 3);
+    }
+
+    #[test]
+    fn test_with_attributes() {
+        let mut colorants = HashMap::new();
+        colorants.insert(
+            "Spot1".to_string(),
+            ColorantDefinition::spot("Spot1", [0.0, 1.0, 0.0, 0.0]),
+        );
+
+        let attributes = DeviceNAttributes {
+            colorants,
+            process: Some("CMYK".to_string()),
+            mix: None,
+            dot_gain: HashMap::new(),
+        };
+
+        let space = DeviceNColorSpace::new(
+            vec!["Cyan".to_string()],
+            AlternateColorSpace::DeviceCMYK,
+            TintTransformFunction::Linear(LinearTransform {
+                matrix: vec![vec![1.0, 0.0, 0.0, 0.0]],
+                black_generation: None,
+                undercolor_removal: None,
+            }),
+        )
+        .with_attributes(attributes);
+
+        assert!(space.attributes.is_some());
+        let attrs = space.attributes.unwrap();
+        assert_eq!(attrs.process, Some("CMYK".to_string()));
+        assert!(attrs.colorants.contains_key("Spot1"));
+    }
+
+    #[test]
+    fn test_convert_to_alternate_rgb() {
+        let transform = TintTransformFunction::Linear(LinearTransform {
+            matrix: vec![
+                vec![1.0, 0.0, 0.0], // Cyan -> Red
+                vec![0.0, 1.0, 0.0], // Magenta -> Green
+            ],
+            black_generation: None,
+            undercolor_removal: None,
+        });
+
+        let space = DeviceNColorSpace::new(
+            vec!["Cyan".to_string(), "Magenta".to_string()],
+            AlternateColorSpace::DeviceRGB,
+            transform,
+        );
+
+        let result = space.convert_to_alternate(&[0.5, 0.3]).unwrap();
+        assert_eq!(result.len(), 3);
+        assert!((result[0] - 0.5).abs() < 0.001);
+        assert!((result[1] - 0.3).abs() < 0.001);
+        assert!((result[2] - 0.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_convert_to_alternate_cmyk() {
+        let space = DeviceNColorSpace::cmyk_plus_spots(vec![]);
+        let result = space.convert_to_alternate(&[0.5, 0.3, 0.2, 0.1]).unwrap();
+
+        assert_eq!(result.len(), 4);
+        assert!((result[0] - 0.5).abs() < 0.001);
+        assert!((result[1] - 0.3).abs() < 0.001);
+        assert!((result[2] - 0.2).abs() < 0.001);
+        assert!((result[3] - 0.1).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_convert_to_alternate_wrong_count() {
+        let space = DeviceNColorSpace::cmyk_plus_spots(vec![]);
+        let result = space.convert_to_alternate(&[0.5, 0.3]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_convert_clamping() {
+        let transform = TintTransformFunction::Linear(LinearTransform {
+            matrix: vec![vec![2.0, 0.0, 0.0]],
+            black_generation: None,
+            undercolor_removal: None,
+        });
+
+        let space = DeviceNColorSpace::new(
+            vec!["Intense".to_string()],
+            AlternateColorSpace::DeviceRGB,
+            transform,
+        );
+
+        let result = space.convert_to_alternate(&[0.8]).unwrap();
+        assert_eq!(result[0], 1.0); // Should be clamped to 1.0
+    }
+
+    #[test]
+    fn test_alternate_color_space_variants() {
+        assert_eq!(
+            AlternateColorSpace::DeviceRGB,
+            AlternateColorSpace::DeviceRGB
+        );
+        assert_eq!(
+            AlternateColorSpace::DeviceCMYK,
+            AlternateColorSpace::DeviceCMYK
+        );
+        assert_eq!(
+            AlternateColorSpace::DeviceGray,
+            AlternateColorSpace::DeviceGray
+        );
+
+        let cie = AlternateColorSpace::CIEBased("sRGB".to_string());
+        assert_eq!(cie, AlternateColorSpace::CIEBased("sRGB".to_string()));
+    }
+
+    #[test]
+    fn test_colorant_type_variants() {
+        assert_eq!(ColorantType::Process, ColorantType::Process);
+        assert_eq!(ColorantType::Spot, ColorantType::Spot);
+        assert_eq!(ColorantType::Special, ColorantType::Special);
+    }
+
+    #[test]
+    fn test_colorant_definition_process() {
+        let cmyk = [1.0, 0.0, 0.0, 0.0]; // Pure Cyan
+        let def = ColorantDefinition::process(cmyk);
+
+        assert_eq!(def.colorant_type, ColorantType::Process);
+        assert_eq!(def.cmyk_equivalent, Some(cmyk));
+        assert!(def.rgb_approximation.is_some());
+
+        let rgb = def.rgb_approximation.unwrap();
+        assert!((rgb[0] - 0.0).abs() < 0.001); // 1 - 1.0 = 0
+        assert!((rgb[1] - 1.0).abs() < 0.001); // 1 - 0.0 = 1
+        assert!((rgb[2] - 1.0).abs() < 0.001); // 1 - 0.0 = 1
+    }
+
+    #[test]
+    fn test_colorant_definition_spot() {
+        let cmyk = [0.0, 1.0, 1.0, 0.0]; // Red-ish
+        let def = ColorantDefinition::spot("PANTONE Red", cmyk);
+
+        assert_eq!(def.colorant_type, ColorantType::Spot);
+        assert_eq!(def.cmyk_equivalent, Some(cmyk));
+        assert!(def.rgb_approximation.is_some());
+    }
+
+    #[test]
+    fn test_colorant_definition_special_effect() {
+        let rgb = [0.8, 0.8, 0.4]; // Gold-ish
+        let def = ColorantDefinition::special_effect(rgb);
+
+        assert_eq!(def.colorant_type, ColorantType::Special);
+        assert_eq!(def.cmyk_equivalent, None);
+        assert_eq!(def.rgb_approximation, Some(rgb));
+        assert_eq!(def.density, Some(0.5));
+    }
+
+    #[test]
+    fn test_linear_transform_struct() {
+        let transform = LinearTransform {
+            matrix: vec![vec![1.0, 0.0], vec![0.0, 1.0]],
+            black_generation: Some(vec![0.1, 0.2]),
+            undercolor_removal: Some(vec![0.05]),
+        };
+
+        assert_eq!(transform.matrix.len(), 2);
+        assert_eq!(transform.black_generation, Some(vec![0.1, 0.2]));
+        assert_eq!(transform.undercolor_removal, Some(vec![0.05]));
+    }
+
+    #[test]
+    fn test_sampled_function_struct() {
+        let sampled = SampledFunction {
+            domain: vec![(0.0, 1.0), (0.0, 1.0)],
+            range: vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
+            size: vec![4, 4],
+            samples: vec![0; 48],
+            bits_per_sample: 8,
+            order: 1,
+        };
+
+        assert_eq!(sampled.domain.len(), 2);
+        assert_eq!(sampled.range.len(), 3);
+        assert_eq!(sampled.bits_per_sample, 8);
+        assert_eq!(sampled.order, 1);
+    }
+
+    #[test]
+    fn test_extract_sample_value_8bit() {
+        let space = DeviceNColorSpace::new(
+            vec!["Test".to_string()],
+            AlternateColorSpace::DeviceGray,
+            TintTransformFunction::Linear(LinearTransform {
+                matrix: vec![vec![1.0]],
+                black_generation: None,
+                undercolor_removal: None,
+            }),
+        );
+
+        let bytes = [128u8];
+        let value = space.extract_sample_value(&bytes, 8);
+        assert_eq!(value, 128.0);
+    }
+
+    #[test]
+    fn test_extract_sample_value_16bit() {
+        let space = DeviceNColorSpace::new(
+            vec!["Test".to_string()],
+            AlternateColorSpace::DeviceGray,
+            TintTransformFunction::Linear(LinearTransform {
+                matrix: vec![vec![1.0]],
+                black_generation: None,
+                undercolor_removal: None,
+            }),
+        );
+
+        let bytes = [0x01, 0x00]; // 256 in big-endian
+        let value = space.extract_sample_value(&bytes, 16);
+        assert_eq!(value, 256.0);
+    }
+
+    #[test]
+    fn test_to_pdf_object() {
+        let space = DeviceNColorSpace::cmyk_plus_spots(vec!["Gold".to_string()]);
+        let obj = space.to_pdf_object();
+
+        if let Object::Array(arr) = obj {
+            assert!(arr.len() >= 4); // At least DeviceN, names, alternate, function
+            if let Object::Name(name) = &arr[0] {
+                assert_eq!(name, "DeviceN");
+            } else {
+                panic!("First element should be Name");
+            }
+        } else {
+            panic!("Should return Array object");
+        }
+    }
+
+    #[test]
+    fn test_devicen_attributes() {
+        let mut colorants = HashMap::new();
+        colorants.insert(
+            "Cyan".to_string(),
+            ColorantDefinition::process([1.0, 0.0, 0.0, 0.0]),
+        );
+
+        let mut dot_gain = HashMap::new();
+        dot_gain.insert("Cyan".to_string(), vec![0.0, 0.1, 0.2]);
+
+        let attrs = DeviceNAttributes {
+            colorants,
+            process: Some("DeviceCMYK".to_string()),
+            mix: Some("DeviceRGB".to_string()),
+            dot_gain,
+        };
+
+        assert!(attrs.colorants.contains_key("Cyan"));
+        assert_eq!(attrs.process, Some("DeviceCMYK".to_string()));
+        assert_eq!(attrs.mix, Some("DeviceRGB".to_string()));
+        assert!(attrs.dot_gain.contains_key("Cyan"));
+    }
+
+    #[test]
+    fn test_linear_approximation_rgb() {
+        let space = DeviceNColorSpace::new(
+            vec!["Test".to_string()],
+            AlternateColorSpace::DeviceRGB,
+            TintTransformFunction::Function(vec![]), // Triggers linear_approximation
+        );
+
+        let result = space.convert_to_alternate(&[0.5]).unwrap();
+        assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn test_linear_approximation_gray() {
+        let space = DeviceNColorSpace::new(
+            vec!["Test".to_string()],
+            AlternateColorSpace::DeviceGray,
+            TintTransformFunction::Function(vec![]),
+        );
+
+        let result = space.convert_to_alternate(&[0.5]).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!((result[0] - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_linear_approximation_cie() {
+        let space = DeviceNColorSpace::new(
+            vec!["Test".to_string()],
+            AlternateColorSpace::CIEBased("Lab".to_string()),
+            TintTransformFunction::Function(vec![]),
+        );
+
+        let result = space.convert_to_alternate(&[0.5]).unwrap();
+        assert_eq!(result.len(), 3);
+        // Default Lab neutral gray
+        assert_eq!(result[0], 50.0);
+        assert_eq!(result[1], 0.0);
+        assert_eq!(result[2], 0.0);
+    }
+}

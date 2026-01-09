@@ -403,3 +403,419 @@ impl HeatMapBuilder {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_heatmap_data() -> HeatMapData {
+        HeatMapData {
+            values: vec![
+                vec![1.0, 2.0, 3.0],
+                vec![4.0, 5.0, 6.0],
+                vec![7.0, 8.0, 9.0],
+            ],
+            row_labels: vec!["Row1".to_string(), "Row2".to_string(), "Row3".to_string()],
+            column_labels: vec!["Col1".to_string(), "Col2".to_string(), "Col3".to_string()],
+        }
+    }
+
+    #[test]
+    fn test_heatmap_new() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data.clone());
+
+        assert_eq!(heatmap.data.values.len(), 3);
+        assert_eq!(heatmap.data.row_labels.len(), 3);
+        assert_eq!(heatmap.data.column_labels.len(), 3);
+    }
+
+    #[test]
+    fn test_heatmap_with_options() {
+        let data = sample_heatmap_data();
+        let options = HeatMapOptions {
+            title: Some("Test HeatMap".to_string()),
+            show_legend: false,
+            show_values: true,
+            cell_padding: 5.0,
+        };
+
+        let heatmap = HeatMap::new(data).with_options(options.clone());
+
+        assert_eq!(heatmap.options.title, Some("Test HeatMap".to_string()));
+        assert!(!heatmap.options.show_legend);
+        assert!(heatmap.options.show_values);
+        assert_eq!(heatmap.options.cell_padding, 5.0);
+    }
+
+    #[test]
+    fn test_heatmap_with_color_scale() {
+        let data = sample_heatmap_data();
+        let color_scale = ColorScale {
+            colors: vec![Color::rgb(0.0, 0.0, 1.0), Color::rgb(1.0, 0.0, 0.0)],
+            min_value: Some(0.0),
+            max_value: Some(10.0),
+        };
+
+        let heatmap = HeatMap::new(data).with_color_scale(color_scale);
+
+        assert_eq!(heatmap.color_scale.colors.len(), 2);
+        assert_eq!(heatmap.color_scale.min_value, Some(0.0));
+        assert_eq!(heatmap.color_scale.max_value, Some(10.0));
+    }
+
+    #[test]
+    fn test_heatmap_options_default() {
+        let options = HeatMapOptions::default();
+
+        assert!(options.title.is_none());
+        assert!(options.show_legend);
+        assert!(!options.show_values);
+        assert_eq!(options.cell_padding, 2.0);
+    }
+
+    #[test]
+    fn test_color_scale_default() {
+        let scale = ColorScale::default();
+
+        assert_eq!(scale.colors.len(), 2);
+        assert!(scale.min_value.is_none());
+        assert!(scale.max_value.is_none());
+    }
+
+    #[test]
+    fn test_heatmap_builder() {
+        let builder = HeatMapBuilder::new();
+        let heatmap = builder.build();
+
+        assert!(heatmap.data.values.is_empty());
+        assert!(heatmap.data.row_labels.is_empty());
+        assert!(heatmap.data.column_labels.is_empty());
+    }
+
+    #[test]
+    fn test_get_value_range_auto() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        let (min, max) = heatmap.get_value_range();
+
+        assert_eq!(min, 1.0);
+        assert_eq!(max, 9.0);
+    }
+
+    #[test]
+    fn test_get_value_range_with_explicit_values() {
+        let data = sample_heatmap_data();
+        let color_scale = ColorScale {
+            colors: vec![Color::white(), Color::rgb(1.0, 0.0, 0.0)],
+            min_value: Some(-10.0),
+            max_value: Some(20.0),
+        };
+        let heatmap = HeatMap::new(data).with_color_scale(color_scale);
+
+        let (min, max) = heatmap.get_value_range();
+
+        assert_eq!(min, -10.0);
+        assert_eq!(max, 20.0);
+    }
+
+    #[test]
+    fn test_interpolate_color_at_minimum() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        let color = heatmap.interpolate_color(0.0, 0.0, 100.0);
+
+        // Should be close to first color in default scale (white)
+        match color {
+            Color::Rgb(r, g, b) => {
+                assert!(r >= 0.9, "Red component should be high for white");
+                assert!(g >= 0.9, "Green component should be high for white");
+                assert!(b >= 0.9, "Blue component should be high for white");
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_interpolate_color_at_maximum() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        let color = heatmap.interpolate_color(100.0, 0.0, 100.0);
+
+        // Should be close to last color in default scale (red)
+        match color {
+            Color::Rgb(r, g, b) => {
+                assert!(r >= 0.9, "Red component should be high for red");
+                assert!(g <= 0.1, "Green component should be low for red");
+                assert!(b <= 0.1, "Blue component should be low for red");
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_interpolate_color_at_midpoint() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        let color = heatmap.interpolate_color(50.0, 0.0, 100.0);
+
+        // Should be interpolated between white and red
+        match color {
+            Color::Rgb(r, g, b) => {
+                assert!(r >= 0.9, "Red component should remain high");
+                assert!(g >= 0.4 && g <= 0.6, "Green should be around 0.5");
+                assert!(b >= 0.4 && b <= 0.6, "Blue should be around 0.5");
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_interpolate_color_same_min_max() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        // When min == max, should return first color
+        let color = heatmap.interpolate_color(5.0, 5.0, 5.0);
+
+        // Should be the first color in the scale
+        assert!(matches!(color, Color::Rgb(_, _, _)));
+    }
+
+    #[test]
+    fn test_interpolate_color_single_color_scale() {
+        let data = sample_heatmap_data();
+        let color_scale = ColorScale {
+            colors: vec![Color::rgb(0.5, 0.5, 0.5)],
+            min_value: None,
+            max_value: None,
+        };
+        let heatmap = HeatMap::new(data).with_color_scale(color_scale);
+
+        let color = heatmap.interpolate_color(50.0, 0.0, 100.0);
+
+        match color {
+            Color::Rgb(r, g, b) => {
+                assert!((r - 0.5).abs() < 0.01);
+                assert!((g - 0.5).abs() < 0.01);
+                assert!((b - 0.5).abs() < 0.01);
+            }
+            _ => panic!("Expected RGB color"),
+        }
+    }
+
+    #[test]
+    fn test_is_dark_color_with_black() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        assert!(heatmap.is_dark_color(&Color::rgb(0.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_white() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        assert!(!heatmap.is_dark_color(&Color::rgb(1.0, 1.0, 1.0)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_red() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        // Pure red has luminance = 0.299, which is < 0.5
+        assert!(heatmap.is_dark_color(&Color::rgb(1.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_gray() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        // Gray(0.3) should be dark
+        assert!(heatmap.is_dark_color(&Color::Gray(0.3)));
+        // Gray(0.7) should be light
+        assert!(!heatmap.is_dark_color(&Color::Gray(0.7)));
+    }
+
+    #[test]
+    fn test_is_dark_color_with_cmyk() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        // CMYK black (0, 0, 0, 1) should be dark
+        assert!(heatmap.is_dark_color(&Color::Cmyk(0.0, 0.0, 0.0, 1.0)));
+        // CMYK white-ish (0, 0, 0, 0) should be light
+        assert!(!heatmap.is_dark_color(&Color::Cmyk(0.0, 0.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn test_heatmap_data_creation() {
+        let data = HeatMapData {
+            values: vec![vec![1.0, 2.0], vec![3.0, 4.0]],
+            row_labels: vec!["A".to_string(), "B".to_string()],
+            column_labels: vec!["X".to_string(), "Y".to_string()],
+        };
+
+        assert_eq!(data.values.len(), 2);
+        assert_eq!(data.values[0].len(), 2);
+        assert_eq!(data.row_labels[0], "A");
+        assert_eq!(data.column_labels[1], "Y");
+    }
+
+    #[test]
+    fn test_component_span() {
+        let data = sample_heatmap_data();
+        let mut heatmap = HeatMap::new(data);
+
+        // Default span
+        let span = heatmap.get_span();
+        assert_eq!(span.columns, 6);
+
+        // Set new span
+        heatmap.set_span(ComponentSpan::new(12));
+        assert_eq!(heatmap.get_span().columns, 12);
+    }
+
+    #[test]
+    fn test_component_type() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        assert_eq!(heatmap.component_type(), "HeatMap");
+    }
+
+    #[test]
+    fn test_complexity_score() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        assert_eq!(heatmap.complexity_score(), 75);
+    }
+
+    #[test]
+    fn test_preferred_height() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        assert_eq!(heatmap.preferred_height(1000.0), 300.0);
+    }
+
+    #[test]
+    fn test_interpolate_color_multi_color_scale() {
+        let data = sample_heatmap_data();
+        let color_scale = ColorScale {
+            colors: vec![
+                Color::rgb(0.0, 0.0, 1.0), // Blue
+                Color::rgb(0.0, 1.0, 0.0), // Green
+                Color::rgb(1.0, 0.0, 0.0), // Red
+            ],
+            min_value: None,
+            max_value: None,
+        };
+        let heatmap = HeatMap::new(data).with_color_scale(color_scale);
+
+        // At 0%, should be blue
+        let color_start = heatmap.interpolate_color(0.0, 0.0, 100.0);
+        match color_start {
+            Color::Rgb(r, g, b) => {
+                assert!(r < 0.1);
+                assert!(g < 0.1);
+                assert!(b > 0.9);
+            }
+            _ => panic!("Expected RGB"),
+        }
+
+        // At 50%, should be green
+        let color_mid = heatmap.interpolate_color(50.0, 0.0, 100.0);
+        match color_mid {
+            Color::Rgb(r, g, b) => {
+                assert!(r < 0.1);
+                assert!(g > 0.9);
+                assert!(b < 0.1);
+            }
+            _ => panic!("Expected RGB"),
+        }
+
+        // At 100%, should be red
+        let color_end = heatmap.interpolate_color(100.0, 0.0, 100.0);
+        match color_end {
+            Color::Rgb(r, g, b) => {
+                assert!(r > 0.9);
+                assert!(g < 0.1);
+                assert!(b < 0.1);
+            }
+            _ => panic!("Expected RGB"),
+        }
+    }
+
+    #[test]
+    fn test_get_value_range_empty_data() {
+        let data = HeatMapData {
+            values: vec![],
+            row_labels: vec![],
+            column_labels: vec![],
+        };
+        let heatmap = HeatMap::new(data);
+
+        let (min, max) = heatmap.get_value_range();
+
+        // With empty data, should return infinity values
+        assert!(min.is_infinite());
+        assert!(max.is_infinite());
+    }
+
+    #[test]
+    fn test_get_value_range_negative_values() {
+        let data = HeatMapData {
+            values: vec![vec![-10.0, -5.0], vec![0.0, 5.0]],
+            row_labels: vec!["A".to_string(), "B".to_string()],
+            column_labels: vec!["X".to_string(), "Y".to_string()],
+        };
+        let heatmap = HeatMap::new(data);
+
+        let (min, max) = heatmap.get_value_range();
+
+        assert_eq!(min, -10.0);
+        assert_eq!(max, 5.0);
+    }
+
+    #[test]
+    fn test_interpolate_color_clamping() {
+        let data = sample_heatmap_data();
+        let heatmap = HeatMap::new(data);
+
+        // Value below min should clamp
+        let color_below = heatmap.interpolate_color(-100.0, 0.0, 100.0);
+        let color_at_min = heatmap.interpolate_color(0.0, 0.0, 100.0);
+
+        // Both should produce similar colors (clamped to min)
+        match (color_below, color_at_min) {
+            (Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) => {
+                assert!((r1 - r2).abs() < 0.01);
+                assert!((g1 - g2).abs() < 0.01);
+                assert!((b1 - b2).abs() < 0.01);
+            }
+            _ => panic!("Expected RGB colors"),
+        }
+
+        // Value above max should clamp
+        let color_above = heatmap.interpolate_color(200.0, 0.0, 100.0);
+        let color_at_max = heatmap.interpolate_color(100.0, 0.0, 100.0);
+
+        match (color_above, color_at_max) {
+            (Color::Rgb(r1, g1, b1), Color::Rgb(r2, g2, b2)) => {
+                assert!((r1 - r2).abs() < 0.01);
+                assert!((g1 - g2).abs() < 0.01);
+                assert!((b1 - b2).abs() < 0.01);
+            }
+            _ => panic!("Expected RGB colors"),
+        }
+    }
+}

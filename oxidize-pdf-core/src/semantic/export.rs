@@ -201,7 +201,7 @@ fn entity_to_schema_org(entity: &Entity, page_num: usize) -> Value {
 }
 
 /// Export format options
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ExportFormat {
     /// JSON format (default)
     Json,
@@ -214,5 +214,285 @@ pub enum ExportFormat {
 impl Default for ExportFormat {
     fn default() -> Self {
         Self::Json
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::semantic::{EntityMetadata, EntityType};
+
+    fn create_test_entity(id: &str, page: usize, entity_type: EntityType) -> Entity {
+        Entity {
+            id: id.to_string(),
+            entity_type,
+            bounds: (0.0, 0.0, 100.0, 50.0),
+            page,
+            metadata: EntityMetadata::new(),
+        }
+    }
+
+    #[test]
+    fn test_entity_map_new() {
+        let map = EntityMap::new();
+
+        assert!(map.document_metadata.is_empty());
+        assert!(map.pages.is_empty());
+        assert!(map.schemas.is_empty());
+    }
+
+    #[test]
+    fn test_entity_map_default() {
+        let map = EntityMap::default();
+
+        assert!(map.document_metadata.is_empty());
+        assert!(map.pages.is_empty());
+        assert!(map.schemas.is_empty());
+    }
+
+    #[test]
+    fn test_add_entity() {
+        let mut map = EntityMap::new();
+        let entity = create_test_entity("e1", 1, EntityType::Text);
+
+        map.add_entity(entity);
+
+        assert!(map.pages.contains_key(&1));
+        assert_eq!(map.pages.get(&1).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_add_multiple_entities_same_page() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+        map.add_entity(create_test_entity("e2", 1, EntityType::Image));
+        map.add_entity(create_test_entity("e3", 1, EntityType::Table));
+
+        assert_eq!(map.pages.get(&1).unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_add_entities_different_pages() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+        map.add_entity(create_test_entity("e2", 2, EntityType::Image));
+        map.add_entity(create_test_entity("e3", 3, EntityType::Table));
+
+        assert_eq!(map.pages.len(), 3);
+        assert!(map.pages.contains_key(&1));
+        assert!(map.pages.contains_key(&2));
+        assert!(map.pages.contains_key(&3));
+    }
+
+    #[test]
+    fn test_entities_on_page() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+        map.add_entity(create_test_entity("e2", 1, EntityType::Image));
+
+        let page_entities = map.entities_on_page(1);
+        assert!(page_entities.is_some());
+        assert_eq!(page_entities.unwrap().len(), 2);
+
+        let missing_page = map.entities_on_page(99);
+        assert!(missing_page.is_none());
+    }
+
+    #[test]
+    fn test_entities_by_type() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+        map.add_entity(create_test_entity("e2", 1, EntityType::Text));
+        map.add_entity(create_test_entity("e3", 2, EntityType::Image));
+        map.add_entity(create_test_entity("e4", 2, EntityType::Text));
+
+        let text_entities = map.entities_by_type(EntityType::Text);
+        assert_eq!(text_entities.len(), 3);
+
+        let image_entities = map.entities_by_type(EntityType::Image);
+        assert_eq!(image_entities.len(), 1);
+
+        let table_entities = map.entities_by_type(EntityType::Table);
+        assert_eq!(table_entities.len(), 0);
+    }
+
+    #[test]
+    fn test_export_format_default() {
+        let format = ExportFormat::default();
+        assert_eq!(format, ExportFormat::Json);
+    }
+
+    #[test]
+    fn test_export_format_variants() {
+        assert_eq!(ExportFormat::Json, ExportFormat::Json);
+        assert_eq!(ExportFormat::JsonLd, ExportFormat::JsonLd);
+        assert_eq!(ExportFormat::Xml, ExportFormat::Xml);
+        assert_ne!(ExportFormat::Json, ExportFormat::JsonLd);
+    }
+
+    #[test]
+    fn test_document_metadata() {
+        let mut map = EntityMap::new();
+        map.document_metadata
+            .insert("title".to_string(), "Test Document".to_string());
+        map.document_metadata
+            .insert("author".to_string(), "Test Author".to_string());
+
+        assert_eq!(
+            map.document_metadata.get("title"),
+            Some(&"Test Document".to_string())
+        );
+        assert_eq!(
+            map.document_metadata.get("author"),
+            Some(&"Test Author".to_string())
+        );
+    }
+
+    #[test]
+    fn test_schemas() {
+        let mut map = EntityMap::new();
+        map.schemas.push("https://schema.org".to_string());
+        map.schemas.push("https://example.com/schema".to_string());
+
+        assert_eq!(map.schemas.len(), 2);
+        assert!(map.schemas.contains(&"https://schema.org".to_string()));
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_to_json() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+
+        let json = map.to_json();
+        assert!(json.is_ok());
+
+        let json_str = json.unwrap();
+        assert!(json_str.contains("pages"));
+        assert!(json_str.contains("e1"));
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_to_json_compact() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+
+        let json = map.to_json_compact();
+        assert!(json.is_ok());
+
+        let json_str = json.unwrap();
+        // Compact JSON should not have newlines
+        assert!(!json_str.contains("\n  ")); // No indented newlines
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_to_json_ld() {
+        let mut map = EntityMap::new();
+        map.add_entity(create_test_entity("e1", 1, EntityType::Text));
+        map.schemas.push("https://schema.org".to_string());
+
+        let json_ld = map.to_json_ld();
+        assert!(json_ld.is_ok());
+
+        let json_str = json_ld.unwrap();
+        assert!(json_str.contains("@context"));
+        assert!(json_str.contains("schema.org"));
+        assert!(json_str.contains("DigitalDocument"));
+        assert!(json_str.contains("hasPart"));
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_entity_type_to_schema_org_financial() {
+        assert_eq!(entity_type_to_schema_org(&EntityType::Invoice), "Invoice");
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::InvoiceNumber),
+            "identifier"
+        );
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::TotalAmount),
+            "totalPrice"
+        );
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::TaxAmount),
+            "taxAmount"
+        );
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::DueDate),
+            "paymentDueDate"
+        );
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_entity_type_to_schema_org_identity() {
+        assert_eq!(entity_type_to_schema_org(&EntityType::PersonName), "Person");
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::OrganizationName),
+            "Organization"
+        );
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::Address),
+            "PostalAddress"
+        );
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::PhoneNumber),
+            "telephone"
+        );
+        assert_eq!(entity_type_to_schema_org(&EntityType::Email), "email");
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_entity_type_to_schema_org_structure() {
+        assert_eq!(entity_type_to_schema_org(&EntityType::Heading), "Heading");
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::Paragraph),
+            "Paragraph"
+        );
+        assert_eq!(entity_type_to_schema_org(&EntityType::Table), "Table");
+        assert_eq!(entity_type_to_schema_org(&EntityType::List), "ItemList");
+        assert_eq!(entity_type_to_schema_org(&EntityType::Image), "ImageObject");
+        assert_eq!(entity_type_to_schema_org(&EntityType::Text), "Text");
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_entity_type_to_schema_org_custom() {
+        assert_eq!(
+            entity_type_to_schema_org(&EntityType::Custom("MyType".to_string())),
+            "Thing"
+        );
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_entity_to_schema_org_basic() {
+        let entity = create_test_entity("test_id", 1, EntityType::Text);
+        let json = entity_to_schema_org(&entity, 1);
+
+        assert_eq!(json["@type"], "Text");
+        assert_eq!(json["@id"], "test_id");
+        assert_eq!(json["pageStart"], 2); // page_num + 1
+    }
+
+    #[cfg(any(feature = "semantic", test))]
+    #[test]
+    fn test_entity_to_schema_org_with_metadata() {
+        let mut entity = create_test_entity("test_id", 0, EntityType::Invoice);
+        entity.metadata = entity.metadata.with_property("total", "1000.00");
+        entity.metadata = entity.metadata.with_confidence(0.95);
+        entity.metadata = entity.metadata.with_schema("https://schema.org/Invoice");
+
+        let json = entity_to_schema_org(&entity, 0);
+
+        assert_eq!(json["@type"], "Invoice");
+        assert_eq!(json["total"], "1000.00");
+        // Use approximate comparison for f32 -> f64 conversion
+        let confidence = json["confidence"].as_f64().unwrap();
+        assert!((confidence - 0.95).abs() < 0.001);
+        assert_eq!(json["conformsTo"], "https://schema.org/Invoice");
     }
 }

@@ -1,0 +1,3642 @@
+{
+  "summary": {
+    "files_scanned": 320,
+    "files_with_matches": 150,
+    "total_matches": 519
+  },
+  "matches": [
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 26,
+      "iso_section": "10",
+      "context": "impl RenderingIntent {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/mod.rs",
+      "line_number": 21,
+      "iso_section": "10",
+      "context": "pub mod section_10_rendering;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_10_rendering/mod.rs",
+      "line_number": 1,
+      "iso_section": "10",
+      "context": "//! ISO Section 10: Rendering Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_10_rendering/mod.rs",
+      "line_number": 3,
+      "iso_section": "10",
+      "context": "//! Tests for PDF rendering features as defined in ISO 32000-1:2008 Section 10",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_10_rendering/mod.rs",
+      "line_number": 5,
+      "iso_section": "10",
+      "context": "pub mod test_rendering_basics;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_10_rendering/test_rendering_basics.rs",
+      "line_number": 4,
+      "iso_section": "10",
+      "context": "//! and rendering model as defined in ISO 32000-1:2008 Section 10",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_10_rendering/test_rendering_basics.rs",
+      "line_number": 1,
+      "iso_section": "10.1",
+      "context": "//! ISO Section 10.1-10.4: Basic Rendering Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/mod.rs",
+      "line_number": 1,
+      "iso_section": "11",
+      "context": "//! ISO Section 11: Interactive Features Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/mod.rs",
+      "line_number": 3,
+      "iso_section": "11",
+      "context": "//! Tests for PDF interactive features as defined in ISO 32000-1:2008 Section 11",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_annotations_structure.rs",
+      "line_number": 1,
+      "iso_section": "11.3",
+      "context": "//! ISO Section 11.3: Annotations Structure Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 385,
+      "iso_section": "11.4",
+      "context": "/// ISO 32000-1:2008 Section 11.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 385,
+      "iso_section": "11.4",
+      "context": "/// ISO 32000-1:2008 Section 11.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 1,
+      "iso_section": "11.4",
+      "context": "//! Transparency Groups implementation for ISO 32000-1:2008 Section 11.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 1,
+      "iso_section": "11.4",
+      "context": "//! Transparency Groups implementation for ISO 32000-1:2008 Section 11.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 9,
+      "iso_section": "11.4",
+      "context": "/// Transparency group attributes according to ISO 32000-1:2008 Section 11.4.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 9,
+      "iso_section": "11.4.5",
+      "context": "/// Transparency group attributes according to ISO 32000-1:2008 Section 11.4.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_annotations.rs",
+      "line_number": 1,
+      "iso_section": "11.5",
+      "context": "//! ISO Section 11.5: Annotation Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_annotations.rs",
+      "line_number": 3,
+      "iso_section": "11.5",
+      "context": "//! Tests for PDF annotation features as defined in ISO 32000-1:2008 Section 11.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_annotations.rs",
+      "line_number": 3,
+      "iso_section": "11.5",
+      "context": "//! Tests for PDF annotation features as defined in ISO 32000-1:2008 Section 11.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/soft_mask.rs",
+      "line_number": 1,
+      "iso_section": "11.6",
+      "context": "//! Soft Mask support for PDF graphics according to ISO 32000-1 Section 11.6",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/soft_mask.rs",
+      "line_number": 1,
+      "iso_section": "11.6",
+      "context": "//! Soft Mask support for PDF graphics according to ISO 32000-1 Section 11.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_forms.rs",
+      "line_number": 1,
+      "iso_section": "11.6",
+      "context": "//! ISO Section 11.6: Interactive Form Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_forms.rs",
+      "line_number": 3,
+      "iso_section": "11.6",
+      "context": "//! Tests for PDF interactive form features as defined in ISO 32000-1:2008 Section 11.6",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/test_forms.rs",
+      "line_number": 3,
+      "iso_section": "11.6",
+      "context": "//! Tests for PDF interactive form features as defined in ISO 32000-1:2008 Section 11.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_12_multimedia/mod.rs",
+      "line_number": 1,
+      "iso_section": "12",
+      "context": "//! ISO Section 12: Multimedia and 3D Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_12_multimedia/mod.rs",
+      "line_number": 3,
+      "iso_section": "12",
+      "context": "//! Tests for PDF multimedia and 3D features as defined in ISO 32000-1:2008 Section 12",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_12_multimedia/test_3d_artwork.rs",
+      "line_number": 3,
+      "iso_section": "12",
+      "context": "//! Tests for PDF 3D artwork features as defined in ISO 32000-1:2008 Section 12",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_12_multimedia/test_multimedia.rs",
+      "line_number": 3,
+      "iso_section": "12",
+      "context": "//! Tests for PDF multimedia features as defined in ISO 32000-1:2008 Section 12",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_12_multimedia/test_multimedia.rs",
+      "line_number": 1,
+      "iso_section": "12.1",
+      "context": "//! ISO Section 12.1-12.6: Multimedia Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/destination.rs",
+      "line_number": 1,
+      "iso_section": "12.3",
+      "context": "//! PDF destinations according to ISO 32000-1 Section 12.3.2",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 1,
+      "iso_section": "12.3",
+      "context": "//! Document outline (bookmarks) according to ISO 32000-1 Section 12.3.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/destination.rs",
+      "line_number": 1,
+      "iso_section": "12.3.2",
+      "context": "//! PDF destinations according to ISO 32000-1 Section 12.3.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/mod.rs",
+      "line_number": 7,
+      "iso_section": "12.3.3",
+      "context": "mod outline;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 1,
+      "iso_section": "12.3.3",
+      "context": "//! Document outline (bookmarks) according to ISO 32000-1 Section 12.3.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 10,
+      "iso_section": "12.3.3",
+      "context": "pub struct OutlineFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 17,
+      "iso_section": "12.3.3",
+      "context": "impl OutlineFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 34,
+      "iso_section": "12.3.3",
+      "context": "pub struct OutlineItem {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 49,
+      "iso_section": "12.3.3",
+      "context": "impl OutlineItem {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 119,
+      "iso_section": "12.3.3",
+      "context": "pub struct OutlineTree {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 124,
+      "iso_section": "12.3.3",
+      "context": "impl Default for OutlineTree {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 130,
+      "iso_section": "12.3.3",
+      "context": "impl OutlineTree {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 153,
+      "iso_section": "12.3.3",
+      "context": "pub struct OutlineBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 160,
+      "iso_section": "12.3.3",
+      "context": "impl Default for OutlineBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/outline.rs",
+      "line_number": 166,
+      "iso_section": "12.3.3",
+      "context": "impl OutlineBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page_labels/mod.rs",
+      "line_number": 1,
+      "iso_section": "12.4",
+      "context": "//! Page labels for custom page numbering according to ISO 32000-1 Section 12.4.2",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/lib.rs",
+      "line_number": 199,
+      "iso_section": "12.4.2",
+      "context": "pub mod page_labels;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page_labels/mod.rs",
+      "line_number": 1,
+      "iso_section": "12.4.2",
+      "context": "//! Page labels for custom page numbering according to ISO 32000-1 Section 12.4.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page_labels/mod.rs",
+      "line_number": 6,
+      "iso_section": "12.4.2",
+      "context": "mod page_label;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page_labels/mod.rs",
+      "line_number": 7,
+      "iso_section": "12.4.2",
+      "context": "mod page_label_tree;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 93,
+      "iso_section": "12.5",
+      "context": "/// Annotation flags according to ISO 32000-1 Section 12.5.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 61,
+      "iso_section": "12.5",
+      "context": "impl AnnotationType {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 95,
+      "iso_section": "12.5",
+      "context": "pub struct AnnotationFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 116,
+      "iso_section": "12.5",
+      "context": "impl AnnotationFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 202,
+      "iso_section": "12.5",
+      "context": "pub struct Annotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 227,
+      "iso_section": "12.5",
+      "context": "impl Annotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 380,
+      "iso_section": "12.5",
+      "context": "pub struct AnnotationManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 387,
+      "iso_section": "12.5",
+      "context": "impl AnnotationManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 426,
+      "iso_section": "12.5",
+      "context": "impl Default for AnnotationManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 11,
+      "iso_section": "12.5",
+      "context": "pub struct FreeTextAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 24,
+      "iso_section": "12.5",
+      "context": "impl FreeTextAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 82,
+      "iso_section": "12.5",
+      "context": "pub struct LineAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 140,
+      "iso_section": "12.5",
+      "context": "impl LineAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 218,
+      "iso_section": "12.5",
+      "context": "pub struct SquareAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 244,
+      "iso_section": "12.5",
+      "context": "impl SquareAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 309,
+      "iso_section": "12.5",
+      "context": "pub struct StampAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 374,
+      "iso_section": "12.5",
+      "context": "impl StampAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 397,
+      "iso_section": "12.5",
+      "context": "pub struct InkAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 404,
+      "iso_section": "12.5",
+      "context": "impl Default for InkAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 410,
+      "iso_section": "12.5",
+      "context": "impl InkAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 473,
+      "iso_section": "12.5",
+      "context": "pub struct HighlightAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 480,
+      "iso_section": "12.5",
+      "context": "impl HighlightAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 504,
+      "iso_section": "12.5",
+      "context": "pub struct CircleAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 513,
+      "iso_section": "12.5",
+      "context": "impl CircleAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 578,
+      "iso_section": "12.5",
+      "context": "pub struct FileAttachmentAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation_type.rs",
+      "line_number": 616,
+      "iso_section": "12.5",
+      "context": "impl FileAttachmentAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 1,
+      "iso_section": "12.5",
+      "context": "//! Geometric annotations (Circle and Square) implementation per ISO 32000-1 §12.5.6.8",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 18,
+      "iso_section": "12.5",
+      "context": "/// Circle annotation (ISO 32000-1 §12.5.6.8)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 33,
+      "iso_section": "12.5",
+      "context": "/// Square annotation (ISO 32000-1 §12.5.6.8)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 20,
+      "iso_section": "12.5",
+      "context": "pub struct CircleAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 35,
+      "iso_section": "12.5",
+      "context": "pub struct SquareAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 84,
+      "iso_section": "12.5",
+      "context": "impl CircleAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/geometric.rs",
+      "line_number": 211,
+      "iso_section": "12.5",
+      "context": "impl SquareAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/link.rs",
+      "line_number": 165,
+      "iso_section": "12.5",
+      "context": "pub struct LinkAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/link.rs",
+      "line_number": 200,
+      "iso_section": "12.5",
+      "context": "impl LinkAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/markup.rs",
+      "line_number": 87,
+      "iso_section": "12.5",
+      "context": "pub struct MarkupAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/markup.rs",
+      "line_number": 100,
+      "iso_section": "12.5",
+      "context": "impl MarkupAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/mod.rs",
+      "line_number": 1,
+      "iso_section": "12.5",
+      "context": "//! Basic PDF annotations support according to ISO 32000-1 Chapter 12.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/mod.rs",
+      "line_number": 6,
+      "iso_section": "12.5",
+      "context": "mod annotation;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/mod.rs",
+      "line_number": 7,
+      "iso_section": "12.5",
+      "context": "mod annotation_type;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 3,
+      "iso_section": "12.5",
+      "context": "//! Implements ISO 32000-1 Section 12.5.6.9 (Polygon annotations) and",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 3,
+      "iso_section": "12.5",
+      "context": "//! Implements ISO 32000-1 Section 12.5.6.9 (Polygon annotations) and",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 14,
+      "iso_section": "12.5",
+      "context": "pub struct PolygonAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 31,
+      "iso_section": "12.5",
+      "context": "pub struct PolylineAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 124,
+      "iso_section": "12.5",
+      "context": "impl Default for PolygonAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 137,
+      "iso_section": "12.5",
+      "context": "impl Default for PolylineAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 152,
+      "iso_section": "12.5",
+      "context": "impl PolygonAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 282,
+      "iso_section": "12.5",
+      "context": "impl PolylineAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/popup.rs",
+      "line_number": 3,
+      "iso_section": "12.5",
+      "context": "//! Implements ISO 32000-1 Section 12.5.6.14 (Popup Annotations)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/popup.rs",
+      "line_number": 3,
+      "iso_section": "12.5",
+      "context": "//! Implements ISO 32000-1 Section 12.5.6.14 (Popup Annotations)",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/popup.rs",
+      "line_number": 14,
+      "iso_section": "12.5",
+      "context": "pub struct PopupAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/popup.rs",
+      "line_number": 38,
+      "iso_section": "12.5",
+      "context": "impl Default for PopupAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/popup.rs",
+      "line_number": 51,
+      "iso_section": "12.5",
+      "context": "impl PopupAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/text.rs",
+      "line_number": 44,
+      "iso_section": "12.5",
+      "context": "pub struct TextAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/text.rs",
+      "line_number": 57,
+      "iso_section": "12.5",
+      "context": "impl TextAnnotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/signature_widget.rs",
+      "line_number": 4,
+      "iso_section": "12.5",
+      "context": "//! according to ISO 32000-1 Section 12.5.6.19 (Widget Annotations) and",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/lib.rs",
+      "line_number": 180,
+      "iso_section": "12.5",
+      "context": "pub mod annotations;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page.rs",
+      "line_number": 894,
+      "iso_section": "12.5",
+      "context": "// The Page struct holds the annotation data, but the writer is responsible",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/parser.rs",
+      "line_number": 61,
+      "iso_section": "12.5",
+      "context": "pub struct Annotation {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_11_interactive/mod.rs",
+      "line_number": 5,
+      "iso_section": "12.5",
+      "context": "pub mod test_annotations;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/annotation.rs",
+      "line_number": 93,
+      "iso_section": "12.5.3",
+      "context": "/// Annotation flags according to ISO 32000-1 Section 12.5.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 4,
+      "iso_section": "12.5.6.10",
+      "context": "//! Section 12.5.6.10 (Polyline annotations)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/popup.rs",
+      "line_number": 3,
+      "iso_section": "12.5.6.14",
+      "context": "//! Implements ISO 32000-1 Section 12.5.6.14 (Popup Annotations)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/signature_widget.rs",
+      "line_number": 4,
+      "iso_section": "12.5.6.19",
+      "context": "//! according to ISO 32000-1 Section 12.5.6.19 (Widget Annotations) and",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/annotations/polygon.rs",
+      "line_number": 3,
+      "iso_section": "12.5.6.9",
+      "context": "//! Implements ISO 32000-1 Section 12.5.6.9 (Polygon annotations) and",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/actions/mod.rs",
+      "line_number": 1,
+      "iso_section": "12.6",
+      "context": "//! PDF actions according to ISO 32000-1 Chapter 12.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/field_actions.rs",
+      "line_number": 1,
+      "iso_section": "12.6",
+      "context": "//! Field action handling for interactive forms according to ISO 32000-1 Section 12.6.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/field_actions.rs",
+      "line_number": 1,
+      "iso_section": "12.6.3",
+      "context": "//! Field action handling for interactive forms according to ISO 32000-1 Section 12.6.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/actions/form_actions.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Form-related actions (Submit-Form, Reset-Form, Import-Data) per ISO 32000-1 §12.7.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/appearance.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Appearance streams for form fields according to ISO 32000-1 Section 12.7.3.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/calculations.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Form field calculations support according to ISO 32000-1 Section 12.7.5.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/choice_widget.rs",
+      "line_number": 3,
+      "iso_section": "12.7",
+      "context": "//! This module implements ISO 32000-1 Section 12.7.4.4 (Choice Fields)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/choice_widget.rs",
+      "line_number": 3,
+      "iso_section": "12.7",
+      "context": "//! This module implements ISO 32000-1 Section 12.7.4.4 (Choice Fields)",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/field_appearance.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Form field appearance streams per ISO 32000-1 §12.7.3.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/field_type.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Form field types according to ISO 32000-1 Section 12.7.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/form_data.rs",
+      "line_number": 13,
+      "iso_section": "12.7",
+      "context": "pub struct AcroForm {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/form_data.rs",
+      "line_number": 30,
+      "iso_section": "12.7",
+      "context": "impl AcroForm {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/form_data.rs",
+      "line_number": 90,
+      "iso_section": "12.7",
+      "context": "impl Default for AcroForm {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/mod.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Basic PDF forms support according to ISO 32000-1 Chapter 12.7",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/signature_field.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Digital signature fields implementation according to ISO 32000-1 Section 12.7.4.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/validation.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! Form field validation system according to ISO 32000-1 Section 12.7.5.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_12_multimedia/test_3d_artwork.rs",
+      "line_number": 1,
+      "iso_section": "12.7",
+      "context": "//! ISO Section 12.7-12.8: 3D Artwork Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/appearance.rs",
+      "line_number": 1,
+      "iso_section": "12.7.3.3",
+      "context": "//! Appearance streams for form fields according to ISO 32000-1 Section 12.7.3.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/field_type.rs",
+      "line_number": 1,
+      "iso_section": "12.7.4",
+      "context": "//! Form field types according to ISO 32000-1 Section 12.7.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/choice_widget.rs",
+      "line_number": 3,
+      "iso_section": "12.7.4.4",
+      "context": "//! This module implements ISO 32000-1 Section 12.7.4.4 (Choice Fields)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/signature_field.rs",
+      "line_number": 1,
+      "iso_section": "12.7.4.5",
+      "context": "//! Digital signature fields implementation according to ISO 32000-1 Section 12.7.4.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/signature_widget.rs",
+      "line_number": 5,
+      "iso_section": "12.7.4.5",
+      "context": "//! Section 12.7.4.5 (Signature Fields).",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/calculations.rs",
+      "line_number": 1,
+      "iso_section": "12.7.5.3",
+      "context": "//! Form field calculations support according to ISO 32000-1 Section 12.7.5.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/forms/validation.rs",
+      "line_number": 1,
+      "iso_section": "12.7.5.3",
+      "context": "//! Form field validation system according to ISO 32000-1 Section 12.7.5.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/mod.rs",
+      "line_number": 1,
+      "iso_section": "14.3",
+      "context": "// Metadata module - ISO 32000-1 Section 14.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/mod.rs",
+      "line_number": 1,
+      "iso_section": "14.3",
+      "context": "// Metadata module - ISO 32000-1 Section 14.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/xmp.rs",
+      "line_number": 4,
+      "iso_section": "14.3",
+      "context": "//! - ISO 32000-1 Section 14.3.2: Metadata Streams",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/xmp.rs",
+      "line_number": 45,
+      "iso_section": "14.3",
+      "context": "//! **ISO 32000-1 §14.3.2 (PDF Metadata)**: ~95% coverage",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/xmp.rs",
+      "line_number": 173,
+      "iso_section": "14.3",
+      "context": "/// Can be embedded in PDF as a metadata stream (ISO 32000-1 §14.3.2).",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 883,
+      "iso_section": "14.3",
+      "context": "// Add XMP Metadata stream (ISO 32000-1 §14.3.2)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/xmp.rs",
+      "line_number": 4,
+      "iso_section": "14.3.2",
+      "context": "//! - ISO 32000-1 Section 14.3.2: Metadata Streams",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/marked_content.rs",
+      "line_number": 1,
+      "iso_section": "14.6",
+      "context": "/// Marked Content operators for Tagged PDF (ISO 32000-1 Section 14.6)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/marked_content.rs",
+      "line_number": 1,
+      "iso_section": "14.6",
+      "context": "/// Marked Content operators for Tagged PDF (ISO 32000-1 Section 14.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/tagged.rs",
+      "line_number": 10,
+      "iso_section": "14.7",
+      "context": "//! - ✅ **Parent references** - ISO 32000-1 §14.7.2 compliant",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 1138,
+      "iso_section": "14.7",
+      "context": "// Parent reference (ISO 32000-1 §14.7.2 - required)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/tagged.rs",
+      "line_number": 1,
+      "iso_section": "14.8",
+      "context": "//! Tagged PDF Support - ISO 32000-1 Section 14.8 (Experimental)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/tagged.rs",
+      "line_number": 1,
+      "iso_section": "14.8",
+      "context": "//! Tagged PDF Support - ISO 32000-1 Section 14.8 (Experimental)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 869,
+      "iso_section": "14.8",
+      "context": "// Add StructTreeRoot if present (Tagged PDF - ISO 32000-1 §14.8)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 1079,
+      "iso_section": "14.8",
+      "context": "/// Writes the structure tree for Tagged PDF (ISO 32000-1 §14.8)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/curated_matrix.rs",
+      "line_number": 219,
+      "iso_section": "7",
+      "context": "/// Get requirements by ISO section prefix (e.g., \"7\" for Section 7)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/mod.rs",
+      "line_number": 359,
+      "iso_section": "7",
+      "context": "report.push_str(\"- Section 7 (Syntax): Document Structure, Objects, File Structure\\n\");",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/mod.rs",
+      "line_number": 1,
+      "iso_section": "7",
+      "context": "//! ISO Section 7: Syntax",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/mod.rs",
+      "line_number": 4,
+      "iso_section": "7",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_file_structure.rs",
+      "line_number": 1,
+      "iso_section": "7.1",
+      "context": "//! ISO Section 7.1-7.4: File Structure Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_file_structure.rs",
+      "line_number": 4,
+      "iso_section": "7.1",
+      "context": "//! and trailer as defined in ISO 32000-1:2008 Sections 7.1-7.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/lexer.rs",
+      "line_number": 3,
+      "iso_section": "7.2",
+      "context": "//! Tokenizes PDF syntax according to ISO 32000-1 Section 7.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/lexer.rs",
+      "line_number": 3,
+      "iso_section": "7.2",
+      "context": "//! Tokenizes PDF syntax according to ISO 32000-1 Section 7.2",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 54,
+      "iso_section": "7.2",
+      "context": "/// PDF files can use CR, LF, or CRLF as line endings (ISO 32000-1 Section 7.2.3).",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 54,
+      "iso_section": "7.2.3",
+      "context": "/// PDF files can use CR, LF, or CRLF as line endings (ISO 32000-1 Section 7.2.3).",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/objects.rs",
+      "line_number": 3,
+      "iso_section": "7.3",
+      "context": "//! This module implements parsing of all PDF object types according to ISO 32000-1 Section 7.3.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/objects.rs",
+      "line_number": 3,
+      "iso_section": "7.3",
+      "context": "//! This module implements parsing of all PDF object types according to ISO 32000-1 Section 7.3.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/objects.rs",
+      "line_number": 3,
+      "iso_section": "7.3",
+      "context": "//! This module implements parsing of all PDF object types according to ISO 32000-1 Section 7.3.",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_objects.rs",
+      "line_number": 1,
+      "iso_section": "7.3",
+      "context": "//! ISO Section 7.3: Objects Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_objects.rs",
+      "line_number": 4,
+      "iso_section": "7.3",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_objects.rs",
+      "line_number": 4,
+      "iso_section": "7.3",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_objects.rs",
+      "line_number": 330,
+      "iso_section": "7.3",
+      "context": ".write(\"ISO 32000-1:2008 Section 7.3.7 Null Objects compliance\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_streams_filters.rs",
+      "line_number": 1,
+      "iso_section": "7.3",
+      "context": "//! ISO Section 7.3: Streams and Filters Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_objects.rs",
+      "line_number": 330,
+      "iso_section": "7.3.7",
+      "context": ".write(\"ISO 32000-1:2008 Section 7.3.7 Null Objects compliance\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/ccitt.rs",
+      "line_number": 1,
+      "iso_section": "7.4",
+      "context": "//! CCITT Fax decode implementation according to ISO 32000-1 Section 7.4.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/dct.rs",
+      "line_number": 3,
+      "iso_section": "7.4",
+      "context": "//! Implements the DCTDecode filter according to ISO 32000-1:2008 Section 7.4.8",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/dct.rs",
+      "line_number": 3,
+      "iso_section": "7.4",
+      "context": "//! Implements the DCTDecode filter according to ISO 32000-1:2008 Section 7.4.8",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/jbig2.rs",
+      "line_number": 1,
+      "iso_section": "7.4",
+      "context": "//! JBIG2 decode implementation according to ISO 32000-1 Section 7.4.7",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/mod.rs",
+      "line_number": 4,
+      "iso_section": "7.4",
+      "context": "//! according to ISO 32000-1:2008 Section 7.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/mod.rs",
+      "line_number": 4,
+      "iso_section": "7.4",
+      "context": "//! according to ISO 32000-1:2008 Section 7.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filters.rs",
+      "line_number": 3,
+      "iso_section": "7.4",
+      "context": "//! Handles decompression and decoding of PDF streams according to ISO 32000-1 Section 7.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filters.rs",
+      "line_number": 3,
+      "iso_section": "7.4",
+      "context": "//! Handles decompression and decoding of PDF streams according to ISO 32000-1 Section 7.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/ccitt.rs",
+      "line_number": 1,
+      "iso_section": "7.4.6",
+      "context": "//! CCITT Fax decode implementation according to ISO 32000-1 Section 7.4.6",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/jbig2.rs",
+      "line_number": 1,
+      "iso_section": "7.4.7",
+      "context": "//! JBIG2 decode implementation according to ISO 32000-1 Section 7.4.7",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/dct.rs",
+      "line_number": 3,
+      "iso_section": "7.4.8",
+      "context": "//! Implements the DCTDecode filter according to ISO 32000-1:2008 Section 7.4.8",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/header.rs",
+      "line_number": 3,
+      "iso_section": "7.5",
+      "context": "//! Parses PDF header and version according to ISO 32000-1 Section 7.5.2",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/trailer.rs",
+      "line_number": 3,
+      "iso_section": "7.5",
+      "context": "//! Parses PDF trailer according to ISO 32000-1 Section 7.5.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 3,
+      "iso_section": "7.5",
+      "context": "//! Parses xref tables according to ISO 32000-1 Section 7.5.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 4,
+      "iso_section": "7.5",
+      "context": "//! ISO 32000-1:2008 Section 7.5.8 (Cross-Reference Streams).",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7/test_catalog.rs",
+      "line_number": 1,
+      "iso_section": "7.5",
+      "context": "//! ISO 32000-1:2008 Section 7.5.2 - Document Catalog Tests",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_document_catalog.rs",
+      "line_number": 4,
+      "iso_section": "7.5",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.5.2",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_file_structure.rs",
+      "line_number": 45,
+      "iso_section": "7.5",
+      "context": "// Verify header format at byte level (ISO 32000-1:2008 Section 7.5.2)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_operations.rs",
+      "line_number": 1,
+      "iso_section": "7.5",
+      "context": "//! ISO Section 7.5: Page Operations Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 4,
+      "iso_section": "7.5",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.5.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 196,
+      "iso_section": "7.5",
+      "context": ".write(\"ISO 32000-1:2008 Section 7.5.3.3 Page Object compliance\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 266,
+      "iso_section": "7.5",
+      "context": ".write(\"ISO 32000-1:2008 Section 7.5.3.4 Kids Array compliance\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/object_streams.rs",
+      "line_number": 1,
+      "iso_section": "7.5",
+      "context": "//! Object Streams implementation (ISO 32000-1 Section 7.5.7)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 22,
+      "iso_section": "7.5",
+      "context": "/// Enable incremental updates mode (ISO 32000-1 §7.5.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 61,
+      "iso_section": "7.5",
+      "context": "/// Create configuration for incremental updates (ISO 32000-1 §7.5.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 96,
+      "iso_section": "7.5",
+      "context": "// Incremental update support (ISO 32000-1 §7.5.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 180,
+      "iso_section": "7.5",
+      "context": "/// Write an incremental update to an existing PDF (ISO 32000-1 §7.5.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 386,
+      "iso_section": "7.5",
+      "context": "/// Replaces pages in an existing PDF using incremental update structure (ISO 32000-1 §7.5.6).",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 433,
+      "iso_section": "7.5",
+      "context": "/// This function implements ISO 32000-1 §7.5.6 incremental updates:",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 433,
+      "iso_section": "7.5",
+      "context": "/// This function implements ISO 32000-1 §7.5.6 incremental updates:",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/mod.rs",
+      "line_number": 2857,
+      "iso_section": "7.5",
+      "context": "// Add /Prev pointer for incremental updates (ISO 32000-1 §7.5.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/tests/form_filling_tests.rs",
+      "line_number": 315,
+      "iso_section": "7.5",
+      "context": "\"/Prev pointer required for ISO 32000-1 §7.5.6 compliance\"",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/pdf_writer/tests/incremental_update_tests.rs",
+      "line_number": 1,
+      "iso_section": "7.5",
+      "context": "// Tests for Incremental Updates Writer (ISO 32000-1 §7.5.6)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/xref_stream_writer.rs",
+      "line_number": 4,
+      "iso_section": "7.5",
+      "context": "//! ISO 32000-1:2008 Section 7.5.8.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/advanced_tables/header_builder.rs",
+      "line_number": 8,
+      "iso_section": "7.5.2",
+      "context": "pub struct HeaderCell {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/advanced_tables/header_builder.rs",
+      "line_number": 23,
+      "iso_section": "7.5.2",
+      "context": "impl HeaderCell {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/advanced_tables/header_builder.rs",
+      "line_number": 69,
+      "iso_section": "7.5.2",
+      "context": "pub struct HeaderBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/advanced_tables/header_builder.rs",
+      "line_number": 78,
+      "iso_section": "7.5.2",
+      "context": "impl HeaderBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/advanced_tables/header_builder.rs",
+      "line_number": 334,
+      "iso_section": "7.5.2",
+      "context": "impl Default for HeaderBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/advanced_tables/mod.rs",
+      "line_number": 35,
+      "iso_section": "7.5.2",
+      "context": "mod header_builder;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/filter_impls/jbig2.rs",
+      "line_number": 35,
+      "iso_section": "7.5.2",
+      "context": "struct Jbig2SegmentHeader {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/header.rs",
+      "line_number": 3,
+      "iso_section": "7.5.2",
+      "context": "//! Parses PDF header and version according to ISO 32000-1 Section 7.5.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/header.rs",
+      "line_number": 36,
+      "iso_section": "7.5.2",
+      "context": "pub struct PdfHeader {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/header.rs",
+      "line_number": 41,
+      "iso_section": "7.5.2",
+      "context": "impl PdfHeader {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 140,
+      "iso_section": "7.5.2",
+      "context": "pub mod header;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/header_footer.rs",
+      "line_number": 21,
+      "iso_section": "7.5.2",
+      "context": "pub struct HeaderFooterOptions {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/header_footer.rs",
+      "line_number": 36,
+      "iso_section": "7.5.2",
+      "context": "impl Default for HeaderFooterOptions {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/header_footer.rs",
+      "line_number": 51,
+      "iso_section": "7.5.2",
+      "context": "pub struct HeaderFooter {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/header_footer.rs",
+      "line_number": 60,
+      "iso_section": "7.5.2",
+      "context": "impl HeaderFooter {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/header_footer.rs",
+      "line_number": 70,
+      "iso_section": "7.5.2",
+      "context": "pub fn new_header(content: impl Into<String>) -> Self {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 9,
+      "iso_section": "7.5.2",
+      "context": "mod header_footer;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/table.rs",
+      "line_number": 54,
+      "iso_section": "7.5.2",
+      "context": "pub struct HeaderStyle {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/ttf_parser.rs",
+      "line_number": 24,
+      "iso_section": "7.5.2",
+      "context": "pub struct TrueTypeHeader {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7/test_catalog.rs",
+      "line_number": 1,
+      "iso_section": "7.5.2",
+      "context": "//! ISO 32000-1:2008 Section 7.5.2 - Document Catalog Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_document_catalog.rs",
+      "line_number": 1,
+      "iso_section": "7.5.2",
+      "context": "//! ISO Section 7.5.2: Document Catalog Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_document_catalog.rs",
+      "line_number": 4,
+      "iso_section": "7.5.2",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.5.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_file_structure.rs",
+      "line_number": 45,
+      "iso_section": "7.5.2",
+      "context": "// Verify header format at byte level (ISO 32000-1:2008 Section 7.5.2)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.5.3",
+      "context": "//! ISO Section 7.5.3: Page Tree Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 4,
+      "iso_section": "7.5.3",
+      "context": "//! as defined in ISO 32000-1:2008 Section 7.5.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 196,
+      "iso_section": "7.5.3.3",
+      "context": ".write(\"ISO 32000-1:2008 Section 7.5.3.3 Page Object compliance\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_page_tree.rs",
+      "line_number": 266,
+      "iso_section": "7.5.3.4",
+      "context": ".write(\"ISO 32000-1:2008 Section 7.5.3.4 Kids Array compliance\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 150,
+      "iso_section": "7.5.4",
+      "context": "pub mod xref;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 151,
+      "iso_section": "7.5.4",
+      "context": "pub mod xref_stream;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 152,
+      "iso_section": "7.5.4",
+      "context": "pub mod xref_types;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/object_stream.rs",
+      "line_number": 136,
+      "iso_section": "7.5.4",
+      "context": "impl XRefEntryType {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 3,
+      "iso_section": "7.5.4",
+      "context": "//! Parses xref tables according to ISO 32000-1 Section 7.5.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 111,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefEntry {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 122,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefEntryExt {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 131,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefTable {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 142,
+      "iso_section": "7.5.4",
+      "context": "impl Default for XRefTable {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 148,
+      "iso_section": "7.5.4",
+      "context": "impl XRefTable {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 1395,
+      "iso_section": "7.5.4",
+      "context": "pub fn iter(&self) -> impl Iterator<Item = (&u32, &XRefEntry)> {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 1431,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefStream {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref.rs",
+      "line_number": 1440,
+      "iso_section": "7.5.4",
+      "context": "impl XRefStream {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 40,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefStream {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 51,
+      "iso_section": "7.5.4",
+      "context": "impl XRefStream {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 250,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefStreamBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 257,
+      "iso_section": "7.5.4",
+      "context": "impl Default for XRefStreamBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 263,
+      "iso_section": "7.5.4",
+      "context": "impl XRefStreamBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_types.rs",
+      "line_number": 22,
+      "iso_section": "7.5.4",
+      "context": "impl XRefEntryType {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_types.rs",
+      "line_number": 59,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefEntryInfo {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_types.rs",
+      "line_number": 74,
+      "iso_section": "7.5.4",
+      "context": "impl XRefEntryInfo {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/recovery/mod.rs",
+      "line_number": 57,
+      "iso_section": "7.5.4",
+      "context": "pub mod xref_recovery;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/recovery/xref_recovery.rs",
+      "line_number": 15,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefRecovery {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/recovery/xref_recovery.rs",
+      "line_number": 37,
+      "iso_section": "7.5.4",
+      "context": "impl XRefRecovery {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/streaming/incremental_parser.rs",
+      "line_number": 35,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefEntry {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/mod.rs",
+      "line_number": 6,
+      "iso_section": "7.5.4",
+      "context": "pub mod test_cross_reference;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/mod.rs",
+      "line_number": 7,
+      "iso_section": "7.5.4",
+      "context": "mod xref_stream_writer;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/xref_stream_writer.rs",
+      "line_number": 53,
+      "iso_section": "7.5.4",
+      "context": "pub struct XRefStreamWriter {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/xref_stream_writer.rs",
+      "line_number": 65,
+      "iso_section": "7.5.4",
+      "context": "impl XRefStreamWriter {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 149,
+      "iso_section": "7.5.5",
+      "context": "pub mod trailer;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/trailer.rs",
+      "line_number": 3,
+      "iso_section": "7.5.5",
+      "context": "//! Parses PDF trailer according to ISO 32000-1 Section 7.5.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/trailer.rs",
+      "line_number": 10,
+      "iso_section": "7.5.5",
+      "context": "pub struct PdfTrailer {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/trailer.rs",
+      "line_number": 19,
+      "iso_section": "7.5.5",
+      "context": "impl PdfTrailer {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/trailer.rs",
+      "line_number": 103,
+      "iso_section": "7.5.5",
+      "context": "pub struct TrailerChain {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/trailer.rs",
+      "line_number": 108,
+      "iso_section": "7.5.5",
+      "context": "impl TrailerChain {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_cross_reference.rs",
+      "line_number": 1,
+      "iso_section": "7.5.5",
+      "context": "//! ISO Section 7.5.5: Cross-Reference Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 142,
+      "iso_section": "7.5.7",
+      "context": "pub mod object_stream;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/mod.rs",
+      "line_number": 4,
+      "iso_section": "7.5.7",
+      "context": "mod object_streams;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/object_streams.rs",
+      "line_number": 1,
+      "iso_section": "7.5.7",
+      "context": "//! Object Streams implementation (ISO 32000-1 Section 7.5.7)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/xref_stream.rs",
+      "line_number": 4,
+      "iso_section": "7.5.8",
+      "context": "//! ISO 32000-1:2008 Section 7.5.8 (Cross-Reference Streams).",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/writer/xref_stream_writer.rs",
+      "line_number": 4,
+      "iso_section": "7.5.8",
+      "context": "//! ISO 32000-1:2008 Section 7.5.8.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/aes.rs",
+      "line_number": 4,
+      "iso_section": "7.6",
+      "context": "//! ISO 32000-1 Section 7.6 (PDF 1.6+ and PDF 2.0).",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/aes.rs",
+      "line_number": 4,
+      "iso_section": "7.6",
+      "context": "//! ISO 32000-1 Section 7.6 (PDF 1.6+ and PDF 2.0).",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/embedded_files.rs",
+      "line_number": 4,
+      "iso_section": "7.6",
+      "context": "//! according to ISO 32000-1:2008 §7.6.5.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/mod.rs",
+      "line_number": 1,
+      "iso_section": "7.6",
+      "context": "//! PDF encryption support according to ISO 32000-1 Chapter 7.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/permissions_enforcement.rs",
+      "line_number": 4,
+      "iso_section": "7.6",
+      "context": "//! callbacks and logging according to ISO 32000-1:2008 §7.6.3.3.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/public_key.rs",
+      "line_number": 3,
+      "iso_section": "7.6",
+      "context": "//! This module implements the Public Key Security Handler according to ISO 32000-1:2008 §7.6.4.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/public_key.rs",
+      "line_number": 3,
+      "iso_section": "7.6",
+      "context": "//! This module implements the Public Key Security Handler according to ISO 32000-1:2008 §7.6.4.",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/encryption_handler.rs",
+      "line_number": 4,
+      "iso_section": "7.6",
+      "context": "//! decryption according to ISO 32000-1 Chapter 7.6.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/encryption/crypt_filters.rs",
+      "line_number": 4,
+      "iso_section": "7.6.5",
+      "context": "//! Section 7.6.5, supporting selective encryption of streams and strings.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.7",
+      "context": "//! Page Tree Implementation according to ISO 32000-1 Section 7.7.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/page_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.7",
+      "context": "//! Page tree structure according to ISO 32000-1 Section 7.7.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/reader.rs",
+      "line_number": 1728,
+      "iso_section": "7.7.2",
+      "context": "// This object 102 is not a catalog, don't reconstruct it",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/mod.rs",
+      "line_number": 7,
+      "iso_section": "7.7.2",
+      "context": "pub mod test_document_catalog;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/page_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.7.3",
+      "context": "//! Page Tree Implementation according to ISO 32000-1 Section 7.7.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/page_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.7.3",
+      "context": "//! Page tree structure according to ISO 32000-1 Section 7.7.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_resources.rs",
+      "line_number": 1,
+      "iso_section": "7.8",
+      "context": "//! ISO Section 7.8: Resources Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_resources.rs",
+      "line_number": 3,
+      "iso_section": "7.8",
+      "context": "//! Tests for PDF resource dictionary structure and content as defined in ISO 32000-1:2008 Sectio...",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_7_syntax/test_resources.rs",
+      "line_number": 3,
+      "iso_section": "7.8",
+      "context": "//! Tests for PDF resource dictionary structure and content as defined in ISO 32000-1:2008 Sectio...",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/name_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.9",
+      "context": "//! Name tree structure according to ISO 32000-1 Section 7.9.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/xmp.rs",
+      "line_number": 144,
+      "iso_section": "7.9.2.2",
+      "context": "/// ISO 16684-1 Section 7.9.2.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/metadata/xmp.rs",
+      "line_number": 293,
+      "iso_section": "7.9.2.2",
+      "context": "/// ISO 16684-1 Section 7.9.2.2",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/mod.rs",
+      "line_number": 6,
+      "iso_section": "7.9.6",
+      "context": "mod name_tree;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/structure/name_tree.rs",
+      "line_number": 1,
+      "iso_section": "7.9.6",
+      "context": "//! Name tree structure according to ISO 32000-1 Section 7.9.6",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/mod.rs",
+      "line_number": 360,
+      "iso_section": "8",
+      "context": "report.push_str(\"- Section 8 (Graphics): Color Spaces, Images, Paths, Graphics State\\n\");",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/mod.rs",
+      "line_number": 1,
+      "iso_section": "8",
+      "context": "//! ISO Section 8: Graphics",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/mod.rs",
+      "line_number": 4,
+      "iso_section": "8",
+      "context": "//! as defined in ISO 32000-1:2008 Section 8.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/form_xobject.rs",
+      "line_number": 3,
+      "iso_section": "8.10",
+      "context": "//! Implements ISO 32000-1 Section 8.10 (Form XObjects)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/form_xobject.rs",
+      "line_number": 3,
+      "iso_section": "8.10",
+      "context": "//! Implements ISO 32000-1 Section 8.10 (Form XObjects)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/form_xobject.rs",
+      "line_number": 3,
+      "iso_section": "8.10",
+      "context": "//! Implements ISO 32000-1 Section 8.10 (Form XObjects)",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 7,
+      "iso_section": "8.10",
+      "context": "pub mod form_xobject;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_coordinate_transformation.rs",
+      "line_number": 1,
+      "iso_section": "8.3",
+      "context": "//! ISO Section 8.3: Coordinate Transformation Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 1,
+      "iso_section": "8.4",
+      "context": "//! Extended Graphics State Dictionary support according to ISO 32000-1 Section 8.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 1,
+      "iso_section": "8.4",
+      "context": "//! Extended Graphics State Dictionary support according to ISO 32000-1 Section 8.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 514,
+      "iso_section": "8.4",
+      "context": "/// Extended Graphics State Dictionary according to ISO 32000-1 Section 8.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 514,
+      "iso_section": "8.4",
+      "context": "/// Extended Graphics State Dictionary according to ISO 32000-1 Section 8.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/mod.rs",
+      "line_number": 10,
+      "iso_section": "8.4",
+      "context": "pub mod test_graphics_state;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/mod.rs",
+      "line_number": 11,
+      "iso_section": "8.4",
+      "context": "pub mod test_graphics_state_advanced;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_graphics_state.rs",
+      "line_number": 1,
+      "iso_section": "8.4",
+      "context": "//! ISO Section 8.4: Graphics State Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_graphics_state.rs",
+      "line_number": 51,
+      "iso_section": "8.4",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.4 Graphics State compliance\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_graphics_state.rs",
+      "line_number": 51,
+      "iso_section": "8.4",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.4 Graphics State compliance\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_graphics_state.rs",
+      "line_number": 159,
+      "iso_section": "8.4",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.4 Line Width compliance verification\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_graphics_state.rs",
+      "line_number": 159,
+      "iso_section": "8.4",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.4 Line Width compliance verification\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_graphics_state_advanced.rs",
+      "line_number": 1,
+      "iso_section": "8.4",
+      "context": "//! ISO Section 8.4: Advanced Graphics State Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/clipping.rs",
+      "line_number": 1,
+      "iso_section": "8.5",
+      "context": "//! Clipping path support according to ISO 32000-1 Section 8.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/clipping.rs",
+      "line_number": 1,
+      "iso_section": "8.5",
+      "context": "//! Clipping path support according to ISO 32000-1 Section 8.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/form_xobject.rs",
+      "line_number": 33,
+      "iso_section": "8.5",
+      "context": "pub struct TransparencyGroup {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/form_xobject.rs",
+      "line_number": 42,
+      "iso_section": "8.5",
+      "context": "impl Default for TransparencyGroup {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 18,
+      "iso_section": "8.5",
+      "context": "pub mod transparency;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 11,
+      "iso_section": "8.5",
+      "context": "pub struct TransparencyGroup {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 32,
+      "iso_section": "8.5",
+      "context": "impl Default for TransparencyGroup {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 44,
+      "iso_section": "8.5",
+      "context": "impl TransparencyGroup {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 123,
+      "iso_section": "8.5",
+      "context": "pub(crate) struct TransparencyGroupState {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 135,
+      "iso_section": "8.5",
+      "context": "impl TransparencyGroupState {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths.rs",
+      "line_number": 1,
+      "iso_section": "8.5",
+      "context": "//! ISO Section 8.5: Path Construction and Painting Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths.rs",
+      "line_number": 53,
+      "iso_section": "8.5",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.5 Path Construction compliance\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths.rs",
+      "line_number": 53,
+      "iso_section": "8.5",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.5 Path Construction compliance\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths.rs",
+      "line_number": 173,
+      "iso_section": "8.5",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.5 Path Painting compliance verification\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths.rs",
+      "line_number": 173,
+      "iso_section": "8.5",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.5 Path Painting compliance verification\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths_advanced.rs",
+      "line_number": 1,
+      "iso_section": "8.5",
+      "context": "//! ISO Section 8.5: Advanced Path Construction and Painting Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_paths_level4.rs",
+      "line_number": 1,
+      "iso_section": "8.5",
+      "context": "//! ISO Section 8.5: Level 4 Path Construction and Painting Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 16,
+      "iso_section": "8.5.4",
+      "context": "pub mod soft_mask;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/calibrated_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6",
+      "context": "//! Calibrated color spaces for PDF graphics according to ISO 32000-1 Section 8.6.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/calibrated_color.rs",
+      "line_number": 8,
+      "iso_section": "8.6",
+      "context": "/// CIE-based CalGray color space (ISO 32000-1 §8.6.5.2)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/calibrated_color.rs",
+      "line_number": 101,
+      "iso_section": "8.6",
+      "context": "/// CIE-based CalRGB color space (ISO 32000-1 §8.6.5.3)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/color_profiles.rs",
+      "line_number": 1,
+      "iso_section": "8.6",
+      "context": "//! ICC Color Profile support for PDF graphics according to ISO 32000-1 Section 8.6.5.5",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/devicen_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6",
+      "context": "//! DeviceN Color Space Implementation (ISO 32000-1 §8.6.6.5)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/indexed_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6",
+      "context": "//! Indexed color space support according to ISO 32000-1 Section 8.6.6.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/lab_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6",
+      "context": "//! CIE Lab color space for PDF graphics according to ISO 32000-1 Section 8.6.5.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/lab_color.rs",
+      "line_number": 12,
+      "iso_section": "8.6",
+      "context": "/// CIE Lab color space (ISO 32000-1 §8.6.5.4)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/separation_color.rs",
+      "line_number": 3,
+      "iso_section": "8.6",
+      "context": "//! Implements ISO 32000-1 Section 8.6.6.4 (Separation Color Spaces)",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/separation_color.rs",
+      "line_number": 3,
+      "iso_section": "8.6",
+      "context": "//! Implements ISO 32000-1 Section 8.6.6.4 (Separation Color Spaces)",
+      "confidence": 0.95
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/transparency.rs",
+      "line_number": 91,
+      "iso_section": "8.6",
+      "context": "pub fn with_color_space(mut self, color_space: impl Into<String>) -> Self {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/mod.rs",
+      "line_number": 6,
+      "iso_section": "8.6",
+      "context": "pub mod test_color_spaces;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_color_spaces.rs",
+      "line_number": 1,
+      "iso_section": "8.6",
+      "context": "//! ISO Section 8.6: Color Spaces Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_color_spaces.rs",
+      "line_number": 4,
+      "iso_section": "8.6",
+      "context": "//! as defined in ISO 32000-1:2008 Section 8.6",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_color_spaces.rs",
+      "line_number": 4,
+      "iso_section": "8.6",
+      "context": "//! as defined in ISO 32000-1:2008 Section 8.6",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_color_spaces.rs",
+      "line_number": 634,
+      "iso_section": "8.6",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.6 Color Space compliance validation\")?;",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_color_spaces.rs",
+      "line_number": 634,
+      "iso_section": "8.6",
+      "context": ".write(\"ISO 32000-1:2008 Section 8.6 Color Space compliance validation\")?;",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/calibrated_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6.5",
+      "context": "//! Calibrated color spaces for PDF graphics according to ISO 32000-1 Section 8.6.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/lab_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6.5.4",
+      "context": "//! CIE Lab color space for PDF graphics according to ISO 32000-1 Section 8.6.5.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/color_profiles.rs",
+      "line_number": 1,
+      "iso_section": "8.6.5.5",
+      "context": "//! ICC Color Profile support for PDF graphics according to ISO 32000-1 Section 8.6.5.5",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/indexed_color.rs",
+      "line_number": 1,
+      "iso_section": "8.6.6.3",
+      "context": "//! Indexed color space support according to ISO 32000-1 Section 8.6.6.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/separation_color.rs",
+      "line_number": 3,
+      "iso_section": "8.6.6.4",
+      "context": "//! Implements ISO 32000-1 Section 8.6.6.4 (Separation Color Spaces)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 11,
+      "iso_section": "8.7",
+      "context": "mod patterns;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 1,
+      "iso_section": "8.7",
+      "context": "//! Pattern support for PDF graphics according to ISO 32000-1 Section 8.7",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 1,
+      "iso_section": "8.7",
+      "context": "//! Pattern support for PDF graphics according to ISO 32000-1 Section 8.7",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 45,
+      "iso_section": "8.7",
+      "context": "pub struct PatternMatrix {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 50,
+      "iso_section": "8.7",
+      "context": "impl PatternMatrix {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 117,
+      "iso_section": "8.7",
+      "context": "pub struct TilingPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 138,
+      "iso_section": "8.7",
+      "context": "impl TilingPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 324,
+      "iso_section": "8.7",
+      "context": "pub struct PatternManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 331,
+      "iso_section": "8.7",
+      "context": "impl Default for PatternManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 337,
+      "iso_section": "8.7",
+      "context": "impl PatternManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/patterns.rs",
+      "line_number": 524,
+      "iso_section": "8.7",
+      "context": "impl PatternGraphicsContext for GraphicsContext {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 1,
+      "iso_section": "8.7",
+      "context": "//! Shading support for PDF graphics according to ISO 32000-1 Section 8.7.4",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 386,
+      "iso_section": "8.7",
+      "context": "pub struct ShadingPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 435,
+      "iso_section": "8.7",
+      "context": "impl ShadingPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 101,
+      "iso_section": "8.7",
+      "context": "pub struct LineDashPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 108,
+      "iso_section": "8.7",
+      "context": "impl LineDashPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/performance/resource_pool.rs",
+      "line_number": 203,
+      "iso_section": "8.7",
+      "context": "pub struct PatternResource {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/performance/resource_pool.rs",
+      "line_number": 218,
+      "iso_section": "8.7",
+      "context": "impl PatternResource {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/invoice/mod.rs",
+      "line_number": 121,
+      "iso_section": "8.7",
+      "context": "pub mod patterns;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/invoice/patterns.rs",
+      "line_number": 12,
+      "iso_section": "8.7",
+      "context": "pub struct FieldPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/invoice/patterns.rs",
+      "line_number": 48,
+      "iso_section": "8.7",
+      "context": "impl FieldPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/invoice/patterns.rs",
+      "line_number": 83,
+      "iso_section": "8.7",
+      "context": "pub struct PatternLibrary {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/invoice/patterns.rs",
+      "line_number": 87,
+      "iso_section": "8.7",
+      "context": "impl PatternLibrary {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/invoice/patterns.rs",
+      "line_number": 759,
+      "iso_section": "8.7",
+      "context": "impl Default for PatternLibrary {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/table_detection.rs",
+      "line_number": 517,
+      "iso_section": "8.7",
+      "context": "struct GridPattern {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_content_parser.rs",
+      "line_number": 1,
+      "iso_section": "8.7",
+      "context": "//! ISO Section 8.7: Content Parser Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_content_streams.rs",
+      "line_number": 1,
+      "iso_section": "8.7",
+      "context": "//! ISO Section 8.7: Content Streams Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/mod.rs",
+      "line_number": 15,
+      "iso_section": "8.7.4",
+      "context": "mod shadings;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 1,
+      "iso_section": "8.7.4",
+      "context": "//! Shading support for PDF graphics according to ISO 32000-1 Section 8.7.4",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 68,
+      "iso_section": "8.7.4",
+      "context": "pub struct AxialShading {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 83,
+      "iso_section": "8.7.4",
+      "context": "impl AxialShading {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 186,
+      "iso_section": "8.7.4",
+      "context": "pub struct RadialShading {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 205,
+      "iso_section": "8.7.4",
+      "context": "impl RadialShading {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 312,
+      "iso_section": "8.7.4",
+      "context": "pub struct FunctionBasedShading {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 323,
+      "iso_section": "8.7.4",
+      "context": "impl FunctionBasedShading {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 406,
+      "iso_section": "8.7.4",
+      "context": "impl ShadingDefinition {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 479,
+      "iso_section": "8.7.4",
+      "context": "pub struct ShadingManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 488,
+      "iso_section": "8.7.4",
+      "context": "impl Default for ShadingManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/shadings.rs",
+      "line_number": 494,
+      "iso_section": "8.7.4",
+      "context": "impl ShadingManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_images.rs",
+      "line_number": 1,
+      "iso_section": "8.9",
+      "context": "//! Tests for PDF Image Objects (ISO Section 8.9)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_images.rs",
+      "line_number": 4,
+      "iso_section": "8.9",
+      "context": "//! and image integration as defined in ISO 32000-1:2008 Section 8.9.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_8_graphics/test_images.rs",
+      "line_number": 4,
+      "iso_section": "8.9",
+      "context": "//! and image integration as defined in ISO 32000-1:2008 Section 8.9.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/mod.rs",
+      "line_number": 361,
+      "iso_section": "9",
+      "context": "report.push_str(\"- Section 9 (Text): Fonts, Text Operators, Character Encoding\\n\\n\");",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_9_text/mod.rs",
+      "line_number": 1,
+      "iso_section": "9",
+      "context": "//! ISO Section 9: Text",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_9_text/mod.rs",
+      "line_number": 4,
+      "iso_section": "9",
+      "context": "//! as defined in ISO 32000-1:2008 Section 9.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 4,
+      "iso_section": "9.10",
+      "context": "//! ISO 32000-1:2008 Section 9.10 (Extraction of Text Content) and Section 9.7.5 (CMaps).",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 4,
+      "iso_section": "9.10",
+      "context": "//! ISO 32000-1:2008 Section 9.10 (Extraction of Text Content) and Section 9.7.5 (CMaps).",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 65,
+      "iso_section": "9.10",
+      "context": "pub struct CMap {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 80,
+      "iso_section": "9.10",
+      "context": "impl Default for CMap {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 86,
+      "iso_section": "9.10",
+      "context": "impl CMap {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 417,
+      "iso_section": "9.10",
+      "context": "pub struct ToUnicodeCMapBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 424,
+      "iso_section": "9.10",
+      "context": "impl ToUnicodeCMapBuilder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/extraction_cmap.rs",
+      "line_number": 66,
+      "iso_section": "9.10",
+      "context": "pub struct CMapTextExtractor<R: Read + Seek> {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype.rs",
+      "line_number": 91,
+      "iso_section": "9.10",
+      "context": "pub struct CmapSubtable {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 1,
+      "iso_section": "9.10",
+      "context": "pub mod cmap;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 4,
+      "iso_section": "9.10",
+      "context": "mod extraction_cmap;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 22,
+      "iso_section": "9.10",
+      "context": "mod cmap_tests;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_9_text/test_text_operators.rs",
+      "line_number": 1,
+      "iso_section": "9.4",
+      "context": "//! ISO Section 9.4: Text Operators Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_9_text/test_text_operators_advanced.rs",
+      "line_number": 1,
+      "iso_section": "9.4",
+      "context": "//! ISO Section 9.4: Advanced Text Operators Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/document.rs",
+      "line_number": 467,
+      "iso_section": "9.5",
+      "context": "pub fn add_font_from_bytes(&mut self, name: impl Into<String>, data: Vec<u8>) -> Result<()> {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/embedder.rs",
+      "line_number": 42,
+      "iso_section": "9.5",
+      "context": "impl FontEncoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/embedder.rs",
+      "line_number": 55,
+      "iso_section": "9.5",
+      "context": "pub struct FontEmbedder<'a> {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_cache.rs",
+      "line_number": 10,
+      "iso_section": "9.5",
+      "context": "pub struct FontCache {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_cache.rs",
+      "line_number": 14,
+      "iso_section": "9.5",
+      "context": "impl FontCache {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_cache.rs",
+      "line_number": 23,
+      "iso_section": "9.5",
+      "context": "pub fn add_font(&self, name: impl Into<String>, font: Font) -> Result<()> {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_cache.rs",
+      "line_number": 80,
+      "iso_section": "9.5",
+      "context": "impl Default for FontCache {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_descriptor.rs",
+      "line_number": 9,
+      "iso_section": "9.5",
+      "context": "pub struct FontFlags: u32 {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_descriptor.rs",
+      "line_number": 33,
+      "iso_section": "9.5",
+      "context": "pub struct FontDescriptor {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_descriptor.rs",
+      "line_number": 56,
+      "iso_section": "9.5",
+      "context": "impl Default for FontDescriptor {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_descriptor.rs",
+      "line_number": 62,
+      "iso_section": "9.5",
+      "context": "impl FontDescriptor {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_descriptor.rs",
+      "line_number": 64,
+      "iso_section": "9.5",
+      "context": "pub fn new(font_name: impl Into<String>) -> Self {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_metrics.rs",
+      "line_number": 7,
+      "iso_section": "9.5",
+      "context": "pub struct FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_metrics.rs",
+      "line_number": 22,
+      "iso_section": "9.5",
+      "context": "impl Default for FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/font_metrics.rs",
+      "line_number": 35,
+      "iso_section": "9.5",
+      "context": "impl FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/loader.rs",
+      "line_number": 15,
+      "iso_section": "9.5",
+      "context": "impl FontFormat {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/loader.rs",
+      "line_number": 37,
+      "iso_section": "9.5",
+      "context": "pub struct FontData {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/loader.rs",
+      "line_number": 45,
+      "iso_section": "9.5",
+      "context": "pub struct FontLoader;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/loader.rs",
+      "line_number": 47,
+      "iso_section": "9.5",
+      "context": "impl FontLoader {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/loader.rs",
+      "line_number": 49,
+      "iso_section": "9.5",
+      "context": "pub fn load_from_file(path: impl AsRef<std::path::Path>) -> Result<FontData> {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/mod.rs",
+      "line_number": 8,
+      "iso_section": "9.5",
+      "context": "pub mod font_cache;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/mod.rs",
+      "line_number": 9,
+      "iso_section": "9.5",
+      "context": "pub mod font_descriptor;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/mod.rs",
+      "line_number": 10,
+      "iso_section": "9.5",
+      "context": "pub mod font_metrics;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/mod.rs",
+      "line_number": 30,
+      "iso_section": "9.5",
+      "context": "pub struct Font {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/mod.rs",
+      "line_number": 45,
+      "iso_section": "9.5",
+      "context": "impl Font {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/standard_14.rs",
+      "line_number": 35,
+      "iso_section": "9.5",
+      "context": "impl Standard14Font {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/type0.rs",
+      "line_number": 15,
+      "iso_section": "9.5",
+      "context": "pub struct Type0Font {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/type0.rs",
+      "line_number": 34,
+      "iso_section": "9.5",
+      "context": "impl Type0Font {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 156,
+      "iso_section": "9.5",
+      "context": "pub struct ExtGStateFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/graphics/state.rs",
+      "line_number": 163,
+      "iso_section": "9.5",
+      "context": "impl ExtGStateFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/lib.rs",
+      "line_number": 189,
+      "iso_section": "9.5",
+      "context": "pub mod fonts;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/performance/resource_pool.rs",
+      "line_number": 50,
+      "iso_section": "9.5",
+      "context": "pub struct FontResource {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/performance/resource_pool.rs",
+      "line_number": 59,
+      "iso_section": "9.5",
+      "context": "impl FontResource {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/extraction_cmap.rs",
+      "line_number": 17,
+      "iso_section": "9.5",
+      "context": "pub struct FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/extraction_cmap.rs",
+      "line_number": 30,
+      "iso_section": "9.5",
+      "context": "impl Default for FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/extraction_cmap.rs",
+      "line_number": 45,
+      "iso_section": "9.5",
+      "context": "pub struct FontInfo {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font.rs",
+      "line_number": 24,
+      "iso_section": "9.5",
+      "context": "impl FontEncoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font.rs",
+      "line_number": 66,
+      "iso_section": "9.5",
+      "context": "pub struct FontWithEncoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font.rs",
+      "line_number": 74,
+      "iso_section": "9.5",
+      "context": "impl FontWithEncoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font.rs",
+      "line_number": 106,
+      "iso_section": "9.5",
+      "context": "impl From<Font> for FontWithEncoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font.rs",
+      "line_number": 151,
+      "iso_section": "9.5",
+      "context": "impl Font {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font.rs",
+      "line_number": 229,
+      "iso_section": "9.5",
+      "context": "impl FontFamily {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_ext.rs",
+      "line_number": 15,
+      "iso_section": "9.5",
+      "context": "impl ExtendedFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_ext.rs",
+      "line_number": 67,
+      "iso_section": "9.5",
+      "context": "pub struct ExtendedFontManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_ext.rs",
+      "line_number": 74,
+      "iso_section": "9.5",
+      "context": "impl Default for ExtendedFontManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_ext.rs",
+      "line_number": 80,
+      "iso_section": "9.5",
+      "context": "impl ExtendedFontManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 54,
+      "iso_section": "9.5",
+      "context": "pub struct FontFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 75,
+      "iso_section": "9.5",
+      "context": "impl FontFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 114,
+      "iso_section": "9.5",
+      "context": "pub struct FontDescriptor {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 151,
+      "iso_section": "9.5",
+      "context": "impl FontDescriptor {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 252,
+      "iso_section": "9.5",
+      "context": "pub struct FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 263,
+      "iso_section": "9.5",
+      "context": "impl FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 290,
+      "iso_section": "9.5",
+      "context": "pub struct CustomFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 322,
+      "iso_section": "9.5",
+      "context": "impl CustomFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 827,
+      "iso_section": "9.5",
+      "context": "pub struct FontManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 834,
+      "iso_section": "9.5",
+      "context": "impl Default for FontManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 840,
+      "iso_section": "9.5",
+      "context": "impl FontManager {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 53,
+      "iso_section": "9.5",
+      "context": "impl CjkFontType {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 182,
+      "iso_section": "9.5",
+      "context": "pub struct FontFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 203,
+      "iso_section": "9.5",
+      "context": "impl FontFlags {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 240,
+      "iso_section": "9.5",
+      "context": "pub struct FontDescriptor {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 271,
+      "iso_section": "9.5",
+      "context": "pub struct FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 294,
+      "iso_section": "9.5",
+      "context": "pub struct FontEmbedder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 303,
+      "iso_section": "9.5",
+      "context": "pub struct EmbeddedFontData {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 346,
+      "iso_section": "9.5",
+      "context": "impl FontEmbedder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 809,
+      "iso_section": "9.5",
+      "context": "impl Default for FontEmbedder {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/standard.rs",
+      "line_number": 15,
+      "iso_section": "9.5",
+      "context": "pub struct StandardFontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/standard.rs",
+      "line_number": 42,
+      "iso_section": "9.5",
+      "context": "impl StandardFontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype.rs",
+      "line_number": 48,
+      "iso_section": "9.5",
+      "context": "pub struct TrueTypeFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype.rs",
+      "line_number": 102,
+      "iso_section": "9.5",
+      "context": "impl TrueTypeFont {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype_subsetter.rs",
+      "line_number": 250,
+      "iso_section": "9.5",
+      "context": "// Now reconstruct the font file",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype_subsetting.rs",
+      "line_number": 45,
+      "iso_section": "9.5",
+      "context": "struct FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/metrics.rs",
+      "line_number": 9,
+      "iso_section": "9.5",
+      "context": "pub struct FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/metrics.rs",
+      "line_number": 14,
+      "iso_section": "9.5",
+      "context": "impl FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/metrics.rs",
+      "line_number": 138,
+      "iso_section": "9.5",
+      "context": "impl FontMetrics {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 6,
+      "iso_section": "9.5",
+      "context": "mod font;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 7,
+      "iso_section": "9.5",
+      "context": "pub mod font_manager;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 8,
+      "iso_section": "9.5",
+      "context": "pub mod fonts;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/ttf_parser.rs",
+      "line_number": 311,
+      "iso_section": "9.5",
+      "context": "pub struct TrueTypeFontInfo {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/ttf_parser.rs",
+      "line_number": 317,
+      "iso_section": "9.5",
+      "context": "impl TrueTypeFontInfo {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_9_text/mod.rs",
+      "line_number": 6,
+      "iso_section": "9.5",
+      "context": "pub mod test_fonts;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/actions/uri_action.rs",
+      "line_number": 110,
+      "iso_section": "9.6",
+      "context": "mod urlencoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/encoding.rs",
+      "line_number": 22,
+      "iso_section": "9.6",
+      "context": "pub struct EncodingResult {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/encoding.rs",
+      "line_number": 50,
+      "iso_section": "9.6",
+      "context": "impl EncodingType {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/encoding.rs",
+      "line_number": 66,
+      "iso_section": "9.6",
+      "context": "pub struct EncodingOptions {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/encoding.rs",
+      "line_number": 77,
+      "iso_section": "9.6",
+      "context": "impl Default for EncodingOptions {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/encoding.rs",
+      "line_number": 119,
+      "iso_section": "9.6",
+      "context": "pub struct EncodingIssue {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/parser/mod.rs",
+      "line_number": 136,
+      "iso_section": "9.6",
+      "context": "pub mod encoding;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/encoding.rs",
+      "line_number": 9,
+      "iso_section": "9.6",
+      "context": "impl TextEncoding {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/font_manager.rs",
+      "line_number": 45,
+      "iso_section": "9.6",
+      "context": "pub struct EncodingDifference {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 173,
+      "iso_section": "9.6",
+      "context": "pub struct EncodingDifference {",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/standard.rs",
+      "line_number": 4,
+      "iso_section": "9.6",
+      "context": "//! as specified in ISO 32000-1:2008 Section 9.6.2.2.",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype_subsetting.rs",
+      "line_number": 1,
+      "iso_section": "9.6",
+      "context": "//! TrueType font subsetting implementation according to ISO 32000-1 Section 9.6.3",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/mod.rs",
+      "line_number": 2,
+      "iso_section": "9.6",
+      "context": "mod encoding;",
+      "confidence": 0.6
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/verification/tests/section_9_text/test_fonts.rs",
+      "line_number": 1,
+      "iso_section": "9.6",
+      "context": "//! ISO Section 9.6-9.7: Font Tests",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/standard.rs",
+      "line_number": 4,
+      "iso_section": "9.6.2.2",
+      "context": "//! as specified in ISO 32000-1:2008 Section 9.6.2.2.",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype_subsetting.rs",
+      "line_number": 1,
+      "iso_section": "9.6.3",
+      "context": "//! TrueType font subsetting implementation according to ISO 32000-1 Section 9.6.3",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/fonts/type0.rs",
+      "line_number": 4,
+      "iso_section": "9.7",
+      "context": "//! Section 9.7 (Composite Fonts). Type0 fonts use CIDs (Character IDs) to support",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/cmap.rs",
+      "line_number": 4,
+      "iso_section": "9.7.5",
+      "context": "//! ISO 32000-1:2008 Section 9.10 (Extraction of Text Content) and Section 9.7.5 (CMaps).",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 1,
+      "iso_section": "9.8",
+      "context": "//! Font embedding for PDF generation according to ISO 32000-1 Section 9.8",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/embedding.rs",
+      "line_number": 1,
+      "iso_section": "9.8",
+      "context": "//! Font embedding for PDF generation according to ISO 32000-1 Section 9.8",
+      "confidence": 0.9
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype.rs",
+      "line_number": 4,
+      "iso_section": "9.8",
+      "context": "//! according to ISO 32000-1:2008 Section 9.8 (Embedded Font Programs)",
+      "confidence": 0.85
+    },
+    {
+      "file_path": "../../oxidize-pdf-core/src/text/fonts/truetype.rs",
+      "line_number": 4,
+      "iso_section": "9.8",
+      "context": "//! according to ISO 32000-1:2008 Section 9.8 (Embedded Font Programs)",
+      "confidence": 0.9
+    }
+  ]
+}

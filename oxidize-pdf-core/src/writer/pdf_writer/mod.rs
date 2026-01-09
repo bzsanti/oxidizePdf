@@ -2429,11 +2429,16 @@ impl PdfWriter<BufWriter<std::fs::File>> {
 }
 
 impl<W: Write> PdfWriter<W> {
-    /// Write embedded font streams as indirect objects (Phase 3.3)
+    /// Write embedded font streams as indirect objects (Phase 3.3 + Phase 3.4)
     ///
     /// Takes a font dictionary that may contain embedded Stream objects
     /// in its FontDescriptor, writes those streams as separate PDF objects,
     /// and returns an updated font dictionary with References instead of Streams.
+    ///
+    /// For Type0 (composite) fonts, also handles:
+    /// - DescendantFonts array with embedded CIDFont dictionaries
+    /// - ToUnicode stream embedded directly in Type0 font
+    /// - CIDFont → FontDescriptor → FontFile2/FontFile3 chain
     ///
     /// # Example
     /// FontDescriptor:
@@ -2445,6 +2450,53 @@ impl<W: Write> PdfWriter<W> {
     ) -> Result<crate::objects::Dictionary> {
         let mut updated_font = font_dict.clone();
 
+        // Phase 3.4: Check for Type0 fonts with embedded DescendantFonts
+        if let Some(Object::Name(subtype)) = font_dict.get("Subtype") {
+            if subtype == "Type0" {
+                // Process DescendantFonts array
+                if let Some(Object::Array(descendants)) = font_dict.get("DescendantFonts") {
+                    let mut updated_descendants = Vec::new();
+
+                    for descendant in descendants {
+                        match descendant {
+                            Object::Dictionary(cidfont) => {
+                                // CIDFont is embedded as Dictionary, process its FontDescriptor
+                                let updated_cidfont =
+                                    self.write_cidfont_embedded_streams(cidfont)?;
+                                // Write CIDFont as a separate object
+                                let cidfont_id = self.allocate_object_id();
+                                self.write_object(cidfont_id, Object::Dictionary(updated_cidfont))?;
+                                // Replace with reference
+                                updated_descendants.push(Object::Reference(cidfont_id));
+                            }
+                            Object::Reference(_) => {
+                                // Already a reference, keep as-is
+                                updated_descendants.push(descendant.clone());
+                            }
+                            _ => {
+                                updated_descendants.push(descendant.clone());
+                            }
+                        }
+                    }
+
+                    updated_font.set("DescendantFonts", Object::Array(updated_descendants));
+                }
+
+                // Process ToUnicode stream if embedded
+                if let Some(Object::Stream(stream_dict, stream_data)) = font_dict.get("ToUnicode") {
+                    let tounicode_id = self.allocate_object_id();
+                    self.write_object(
+                        tounicode_id,
+                        Object::Stream(stream_dict.clone(), stream_data.clone()),
+                    )?;
+                    updated_font.set("ToUnicode", Object::Reference(tounicode_id));
+                }
+
+                return Ok(updated_font);
+            }
+        }
+
+        // Original Phase 3.3 logic for simple fonts (Type1, TrueType, etc.)
         // Check if font has a FontDescriptor
         if let Some(Object::Dictionary(descriptor)) = font_dict.get("FontDescriptor") {
             let mut updated_descriptor = descriptor.clone();
@@ -2469,6 +2521,48 @@ impl<W: Write> PdfWriter<W> {
         }
 
         Ok(updated_font)
+    }
+
+    /// Helper function to process CIDFont embedded streams (Phase 3.4)
+    fn write_cidfont_embedded_streams(
+        &mut self,
+        cidfont: &crate::objects::Dictionary,
+    ) -> Result<crate::objects::Dictionary> {
+        let mut updated_cidfont = cidfont.clone();
+
+        // Process FontDescriptor
+        if let Some(Object::Dictionary(descriptor)) = cidfont.get("FontDescriptor") {
+            let mut updated_descriptor = descriptor.clone();
+            let font_file_keys = ["FontFile", "FontFile2", "FontFile3"];
+
+            // Write embedded font streams
+            for key in &font_file_keys {
+                if let Some(Object::Stream(stream_dict, stream_data)) = descriptor.get(*key) {
+                    let stream_id = self.allocate_object_id();
+                    self.write_object(
+                        stream_id,
+                        Object::Stream(stream_dict.clone(), stream_data.clone()),
+                    )?;
+                    updated_descriptor.set(*key, Object::Reference(stream_id));
+                }
+            }
+
+            // Write FontDescriptor as a separate object
+            let descriptor_id = self.allocate_object_id();
+            self.write_object(descriptor_id, Object::Dictionary(updated_descriptor))?;
+
+            // Update CIDFont to reference the FontDescriptor
+            updated_cidfont.set("FontDescriptor", Object::Reference(descriptor_id));
+        }
+
+        // Process CIDToGIDMap if present and embedded as stream
+        if let Some(Object::Stream(map_dict, map_data)) = cidfont.get("CIDToGIDMap") {
+            let map_id = self.allocate_object_id();
+            self.write_object(map_id, Object::Stream(map_dict.clone(), map_data.clone()))?;
+            updated_cidfont.set("CIDToGIDMap", Object::Reference(map_id));
+        }
+
+        Ok(updated_cidfont)
     }
 
     fn allocate_object_id(&mut self) -> ObjectId {
@@ -2569,7 +2663,12 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"\n>>")?;
             }
             Object::Stream(dict, data) => {
-                self.write_object_value(&Object::Dictionary(dict.clone()))?;
+                // CRITICAL: Ensure Length in dictionary matches actual data length
+                // This prevents "Bad Length" PDF syntax errors
+                let mut corrected_dict = dict.clone();
+                corrected_dict.set("Length", Object::Integer(data.len() as i64));
+
+                self.write_object_value(&Object::Dictionary(corrected_dict))?;
                 self.write_bytes(b"\nstream\n")?;
                 self.write_bytes(data)?;
                 self.write_bytes(b"\nendstream")?;

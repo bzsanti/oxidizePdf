@@ -242,4 +242,112 @@ mod tests {
         assert_eq!(filtered.count(), 2);
         assert_eq!(filtered.sum("amount"), 250.0);
     }
+
+    #[test]
+    fn test_avg_empty_data() {
+        let agg = DataAggregator::new(vec![]);
+        assert_eq!(agg.avg("amount"), 0.0);
+    }
+
+    #[test]
+    fn test_min_max_empty_data() {
+        let agg = DataAggregator::new(vec![]);
+        assert_eq!(agg.min("amount"), None);
+        assert_eq!(agg.max("amount"), None);
+    }
+
+    #[test]
+    fn test_sum_nonexistent_field() {
+        let agg = DataAggregator::new(sample_data());
+        assert_eq!(agg.sum("nonexistent"), 0.0);
+    }
+
+    #[test]
+    fn test_avg_nonexistent_field() {
+        let agg = DataAggregator::new(sample_data());
+        assert_eq!(agg.avg("nonexistent"), 0.0);
+    }
+
+    #[test]
+    fn test_group_by_avg() {
+        let agg = DataAggregator::new(sample_data());
+        let grouped = agg.group_by("region").avg("amount");
+
+        assert_eq!(grouped.len(), 2);
+        assert!(grouped.iter().any(|(k, v)| k == "North" && *v == 125.0));
+        assert!(grouped.iter().any(|(k, v)| k == "South" && *v == 200.0));
+    }
+
+    #[test]
+    fn test_aggregate_with_custom_label() {
+        let agg = DataAggregator::new(sample_data());
+        let grouped = agg
+            .group_by("region")
+            .aggregate("amount", AggregateFunc::Sum, |k| format!("Region: {}", k));
+
+        assert_eq!(grouped.len(), 2);
+        assert!(grouped
+            .iter()
+            .any(|(k, v)| k == "Region: North" && *v == 250.0));
+        assert!(grouped
+            .iter()
+            .any(|(k, v)| k == "Region: South" && *v == 200.0));
+    }
+
+    #[test]
+    fn test_aggregate_with_count() {
+        let agg = DataAggregator::new(sample_data());
+        let grouped = agg
+            .group_by("region")
+            .aggregate("amount", AggregateFunc::Count, |k| k.to_string());
+
+        assert!(grouped.iter().any(|(k, v)| k == "North" && *v == 2.0));
+        assert!(grouped.iter().any(|(k, v)| k == "South" && *v == 1.0));
+    }
+
+    #[test]
+    fn test_aggregate_with_min_max() {
+        let agg = DataAggregator::new(sample_data());
+        let min_grouped = agg
+            .group_by("region")
+            .aggregate("amount", AggregateFunc::Min, |k| k.to_string());
+        let max_grouped = agg
+            .group_by("region")
+            .aggregate("amount", AggregateFunc::Max, |k| k.to_string());
+
+        assert!(min_grouped.iter().any(|(k, v)| k == "North" && *v == 100.0));
+        assert!(max_grouped.iter().any(|(k, v)| k == "North" && *v == 150.0));
+    }
+
+    #[test]
+    fn test_aggregate_func_enum() {
+        assert_eq!(AggregateFunc::Sum, AggregateFunc::Sum);
+        assert_eq!(AggregateFunc::Avg, AggregateFunc::Avg);
+        assert_eq!(AggregateFunc::Count, AggregateFunc::Count);
+        assert_eq!(AggregateFunc::Min, AggregateFunc::Min);
+        assert_eq!(AggregateFunc::Max, AggregateFunc::Max);
+        assert_ne!(AggregateFunc::Sum, AggregateFunc::Avg);
+    }
+
+    #[test]
+    fn test_group_by_missing_field() {
+        let agg = DataAggregator::new(sample_data());
+        let grouped = agg.group_by("nonexistent");
+        // Should result in empty groups
+        assert_eq!(grouped.count().len(), 0);
+    }
+
+    #[test]
+    fn test_filter_all_records() {
+        let agg = DataAggregator::new(sample_data());
+        let filtered = agg.filter(|_| true);
+        assert_eq!(filtered.count(), 3);
+    }
+
+    #[test]
+    fn test_filter_no_records() {
+        let agg = DataAggregator::new(sample_data());
+        let filtered = agg.filter(|_| false);
+        assert_eq!(filtered.count(), 0);
+    }
 }

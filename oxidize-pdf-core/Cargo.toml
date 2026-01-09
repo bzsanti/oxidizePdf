@@ -35,6 +35,15 @@ tracing = { workspace = true }
 md5 = "0.8"
 sha2 = "0.10"
 
+# AES encryption (production-grade for R5/R6)
+aes = "0.8"
+cbc = "0.1"
+cipher = "0.4"
+
+# Cryptographic security primitives
+subtle = "2.6"                                # Constant-time comparison (prevents timing attacks)
+zeroize = { version = "1.8", features = ["derive"] }  # Secure memory clearing (prevents memory dumps)
+
 # Unicode processing
 unicode-normalization = "0.1"
 
@@ -44,8 +53,9 @@ regex = "1.10"
 # XML parsing for XMP metadata
 quick-xml = { workspace = true }
 
-# Random number generation (for examples)
-rand = { version = "0.9", optional = true }
+# Random number generation
+# Required for encryption (salt generation), optional feature enables additional rand-based examples
+rand = "0.9"
 
 # Flags
 bitflags = "2.4"
@@ -304,7 +314,6 @@ path = "examples/test_all_fixtures_extraction.rs"
 [[example]]
 name = "test_error_fixes"
 path = "examples/test_error_fixes.rs"
-required-features = ["rand"]
 
 [[example]]
 name = "transparency"
@@ -498,3 +507,8 @@ path = "examples/tagged_pdf_demo.rs"
 # [[example]]
 # name = "plaintext_benchmark"
 # path = "../benches/plaintext_benchmark.rs"
+
+# Benchmarks
+[[bench]]
+name = "encryption_benchmark"
+harness = false

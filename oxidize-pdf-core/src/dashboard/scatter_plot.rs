@@ -287,3 +287,247 @@ impl ScatterPlotBuilder {
         ScatterPlot::new(vec![])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_scatter_data() -> Vec<ScatterPoint> {
+        vec![
+            ScatterPoint {
+                x: 1.0,
+                y: 2.0,
+                size: None,
+                color: None,
+                label: Some("Point A".to_string()),
+            },
+            ScatterPoint {
+                x: 3.0,
+                y: 4.0,
+                size: Some(5.0),
+                color: Some(Color::rgb(1.0, 0.0, 0.0)),
+                label: None,
+            },
+            ScatterPoint {
+                x: 5.0,
+                y: 6.0,
+                size: None,
+                color: None,
+                label: None,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_scatter_plot_new() {
+        let data = sample_scatter_data();
+        let plot = ScatterPlot::new(data.clone());
+
+        assert_eq!(plot.data.len(), 3);
+        assert_eq!(plot.data[0].x, 1.0);
+        assert_eq!(plot.data[0].y, 2.0);
+    }
+
+    #[test]
+    fn test_scatter_plot_with_options() {
+        let data = sample_scatter_data();
+        let options = ScatterPlotOptions {
+            title: Some("Test Plot".to_string()),
+            x_label: Some("X Axis".to_string()),
+            y_label: Some("Y Axis".to_string()),
+            show_trend_line: true,
+        };
+
+        let plot = ScatterPlot::new(data).with_options(options);
+
+        assert_eq!(plot.options.title, Some("Test Plot".to_string()));
+        assert_eq!(plot.options.x_label, Some("X Axis".to_string()));
+        assert_eq!(plot.options.y_label, Some("Y Axis".to_string()));
+        assert!(plot.options.show_trend_line);
+    }
+
+    #[test]
+    fn test_scatter_plot_options_default() {
+        let options = ScatterPlotOptions::default();
+
+        assert!(options.title.is_none());
+        assert!(options.x_label.is_none());
+        assert!(options.y_label.is_none());
+        assert!(!options.show_trend_line);
+    }
+
+    #[test]
+    fn test_scatter_plot_builder() {
+        let builder = ScatterPlotBuilder::new();
+        let plot = builder.build();
+
+        assert!(plot.data.is_empty());
+    }
+
+    #[test]
+    fn test_scatter_point_creation() {
+        let point = ScatterPoint {
+            x: 10.0,
+            y: 20.0,
+            size: Some(4.0),
+            color: Some(Color::rgb(0.0, 1.0, 0.0)),
+            label: Some("Test".to_string()),
+        };
+
+        assert_eq!(point.x, 10.0);
+        assert_eq!(point.y, 20.0);
+        assert_eq!(point.size, Some(4.0));
+        assert!(point.color.is_some());
+        assert_eq!(point.label, Some("Test".to_string()));
+    }
+
+    #[test]
+    fn test_get_bounds_with_data() {
+        let data = sample_scatter_data();
+        let plot = ScatterPlot::new(data);
+
+        let (min_x, max_x, min_y, max_y) = plot.get_bounds();
+
+        // Original bounds are (1,5) for x and (2,6) for y
+        // With 10% padding: x_range=4, y_range=4, padding=0.4
+        assert!(min_x < 1.0);
+        assert!(max_x > 5.0);
+        assert!(min_y < 2.0);
+        assert!(max_y > 6.0);
+    }
+
+    #[test]
+    fn test_get_bounds_empty_data() {
+        let plot = ScatterPlot::new(vec![]);
+
+        let (min_x, max_x, min_y, max_y) = plot.get_bounds();
+
+        assert_eq!(min_x, 0.0);
+        assert_eq!(max_x, 100.0);
+        assert_eq!(min_y, 0.0);
+        assert_eq!(max_y, 100.0);
+    }
+
+    #[test]
+    fn test_get_bounds_single_point() {
+        let data = vec![ScatterPoint {
+            x: 5.0,
+            y: 5.0,
+            size: None,
+            color: None,
+            label: None,
+        }];
+        let plot = ScatterPlot::new(data);
+
+        let (min_x, max_x, min_y, max_y) = plot.get_bounds();
+
+        // Single point has range 0, so padding is 0
+        assert_eq!(min_x, 5.0);
+        assert_eq!(max_x, 5.0);
+        assert_eq!(min_y, 5.0);
+        assert_eq!(max_y, 5.0);
+    }
+
+    #[test]
+    fn test_map_to_plot_normal() {
+        let plot = ScatterPlot::new(vec![]);
+
+        // Map value 50 from range [0,100] to plot range [0,200]
+        let result = plot.map_to_plot(50.0, 0.0, 100.0, 0.0, 200.0);
+        assert_eq!(result, 100.0);
+
+        // Map value 0 from range [0,100] to plot range [100,200]
+        let result = plot.map_to_plot(0.0, 0.0, 100.0, 100.0, 200.0);
+        assert_eq!(result, 100.0);
+
+        // Map value 100 from range [0,100] to plot range [100,200]
+        let result = plot.map_to_plot(100.0, 0.0, 100.0, 100.0, 200.0);
+        assert_eq!(result, 200.0);
+    }
+
+    #[test]
+    fn test_map_to_plot_same_min_max() {
+        let plot = ScatterPlot::new(vec![]);
+
+        // When min == max, should return midpoint
+        let result = plot.map_to_plot(5.0, 5.0, 5.0, 0.0, 100.0);
+        assert_eq!(result, 50.0);
+    }
+
+    #[test]
+    fn test_component_span() {
+        let data = sample_scatter_data();
+        let mut plot = ScatterPlot::new(data);
+
+        // Default span
+        let span = plot.get_span();
+        assert_eq!(span.columns, 6);
+
+        // Set new span
+        plot.set_span(ComponentSpan::new(12));
+        assert_eq!(plot.get_span().columns, 12);
+    }
+
+    #[test]
+    fn test_component_type() {
+        let plot = ScatterPlot::new(vec![]);
+
+        assert_eq!(plot.component_type(), "ScatterPlot");
+    }
+
+    #[test]
+    fn test_complexity_score() {
+        let plot = ScatterPlot::new(vec![]);
+
+        assert_eq!(plot.complexity_score(), 60);
+    }
+
+    #[test]
+    fn test_preferred_height() {
+        let plot = ScatterPlot::new(vec![]);
+
+        assert_eq!(plot.preferred_height(1000.0), 300.0);
+    }
+
+    #[test]
+    fn test_get_bounds_negative_values() {
+        let data = vec![
+            ScatterPoint {
+                x: -10.0,
+                y: -5.0,
+                size: None,
+                color: None,
+                label: None,
+            },
+            ScatterPoint {
+                x: 10.0,
+                y: 5.0,
+                size: None,
+                color: None,
+                label: None,
+            },
+        ];
+        let plot = ScatterPlot::new(data);
+
+        let (min_x, max_x, min_y, max_y) = plot.get_bounds();
+
+        // Should include negative values with padding
+        assert!(min_x < -10.0);
+        assert!(max_x > 10.0);
+        assert!(min_y < -5.0);
+        assert!(max_y > 5.0);
+    }
+
+    #[test]
+    fn test_map_to_plot_negative_range() {
+        let plot = ScatterPlot::new(vec![]);
+
+        // Map value 0 from range [-100,100] to plot range [0,200]
+        let result = plot.map_to_plot(0.0, -100.0, 100.0, 0.0, 200.0);
+        assert_eq!(result, 100.0);
+
+        // Map value -100 from range [-100,100] to plot range [0,200]
+        let result = plot.map_to_plot(-100.0, -100.0, 100.0, 0.0, 200.0);
+        assert_eq!(result, 0.0);
+    }
+}

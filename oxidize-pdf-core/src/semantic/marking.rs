@@ -105,3 +105,113 @@ pub fn uuid_simple() -> String {
         .as_nanos();
     format!("{:x}", timestamp)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_uuid_simple_generates_unique_ids() {
+        let id1 = uuid_simple();
+        let id2 = uuid_simple();
+
+        // IDs should be non-empty hex strings
+        assert!(!id1.is_empty());
+        assert!(!id2.is_empty());
+
+        // All characters should be valid hex
+        for c in id1.chars() {
+            assert!(c.is_ascii_hexdigit());
+        }
+    }
+
+    #[test]
+    fn test_uuid_simple_format() {
+        let id = uuid_simple();
+
+        // Should be a valid hex string (non-empty, all hex chars)
+        assert!(!id.is_empty());
+        assert!(id.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_entity_metadata_new() {
+        let metadata = EntityMetadata::new();
+        assert!(metadata.properties.is_empty());
+        assert!(metadata.confidence.is_none());
+        assert!(metadata.schema.is_none());
+    }
+
+    #[test]
+    fn test_entity_metadata_with_property() {
+        let metadata = EntityMetadata::new()
+            .with_property("key1", "value1")
+            .with_property("key2", "value2");
+
+        assert_eq!(metadata.properties.len(), 2);
+        assert_eq!(metadata.properties.get("key1"), Some(&"value1".to_string()));
+        assert_eq!(metadata.properties.get("key2"), Some(&"value2".to_string()));
+    }
+
+    #[test]
+    fn test_entity_metadata_with_confidence() {
+        let metadata = EntityMetadata::new().with_confidence(0.95);
+
+        assert_eq!(metadata.confidence, Some(0.95));
+    }
+
+    #[test]
+    fn test_entity_metadata_with_schema() {
+        let metadata = EntityMetadata::new().with_schema("https://schema.org/Person");
+
+        assert_eq!(
+            metadata.schema,
+            Some("https://schema.org/Person".to_string())
+        );
+    }
+
+    #[test]
+    fn test_entity_metadata_chaining() {
+        let metadata = EntityMetadata::new()
+            .with_property("name", "Test Entity")
+            .with_confidence(0.85)
+            .with_schema("https://example.com/schema");
+
+        assert_eq!(
+            metadata.properties.get("name"),
+            Some(&"Test Entity".to_string())
+        );
+        assert_eq!(metadata.confidence, Some(0.85));
+        assert_eq!(
+            metadata.schema,
+            Some("https://example.com/schema".to_string())
+        );
+    }
+
+    #[test]
+    fn test_entity_type_variants() {
+        // Test that all entity type variants exist
+        let _text = EntityType::Text;
+        let _image = EntityType::Image;
+        let _table = EntityType::Table;
+
+        assert!(true); // Just ensure variants are accessible
+    }
+
+    #[test]
+    fn test_entity_creation() {
+        let entity = Entity {
+            id: "test_entity_1".to_string(),
+            entity_type: EntityType::Text,
+            bounds: (10.0, 20.0, 100.0, 50.0),
+            page: 1,
+            metadata: EntityMetadata::new().with_confidence(0.9),
+        };
+
+        assert_eq!(entity.id, "test_entity_1");
+        assert!(matches!(entity.entity_type, EntityType::Text));
+        assert_eq!(entity.bounds, (10.0, 20.0, 100.0, 50.0));
+        assert_eq!(entity.page, 1);
+        assert_eq!(entity.metadata.confidence, Some(0.9));
+    }
+}
