@@ -12,6 +12,10 @@ description = "A pure Rust PDF generation and manipulation library with zero ext
 keywords = ["pdf", "document", "generation", "parser", "graphics"]
 categories = ["graphics", "text-processing", "parsing", "multimedia::images"]
 readme = "../README.md"
+exclude = [
+    "tests/fixtures/*.pdf",
+    "tests/fixtures/*.sh",
+]
 
 [dependencies]
 # Error handling
