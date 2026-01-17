@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
-## [Unreleased] - ReleaseDate
+## [1.6.9] - 2026-01-17
 
 ### Fixed
 - **🔧 Font Subsetting for Large Fonts (Issue #115)** - Fixed subsetting skip logic
