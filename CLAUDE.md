@@ -6,8 +6,8 @@
 |-------|-------|
 | **Last Session** | 2026-01-17 - Fix Issue #115 Font Subsetting |
 | **Branch** | develop_santi |
-| **Version** | v1.6.8 (released to crates.io) |
-| **Tests** | 5005 unit + 185 doc tests passing |
+| **Version** | v1.6.9 (released to crates.io) |
+| **Tests** | 5008 unit + 185 doc tests passing |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
@@ -22,7 +22,7 @@
     - Large fonts always subset, regardless of char count
   - **New Constants**: `SUBSETTING_SIZE_THRESHOLD` (100KB), `SUBSETTING_CHAR_THRESHOLD` (10)
   - **TDD Approach**: 9 new tests covering all edge cases
-- **Tests**: 5005 unit + 185 doc tests (9 new subsetting tests)
+- **Tests**: 5008 unit + 185 doc tests (9 new subsetting tests, +3 from pre-commit)
 - **Files Modified**: `oxidize-pdf-core/src/text/fonts/truetype_subsetter.rs`
 
 ### Session Summary (2026-01-10) - Release v1.6.8
