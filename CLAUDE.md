@@ -4,14 +4,37 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-05 - Owner Password + Benchmarks + Cross-Validation |
+| **Last Session** | 2026-01-17 - Fix Issue #115 Font Subsetting |
 | **Branch** | develop_santi |
-| **Version** | v1.6.7 (released) |
-| **Tests** | 5000+ unit + 185 doc tests (317+ encryption, 15 owner password) |
+| **Version** | v1.6.8 (released to crates.io) |
+| **Tests** | 5005 unit + 185 doc tests passing |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-01-17) - Fix Issue #115 Font Subsetting
+- **Issue #115 Fixed**: Large fonts with few characters now properly subset
+  - **Bug**: 41MB CJK font with 4 chars produced 41MB PDF (no subsetting)
+  - **Root Cause**: `truetype_subsetter.rs` skipped subsetting when `char_count < 10`, ignoring font size
+  - **Fix**: Added `should_skip_subsetting(font_size, char_count)` function
+    - Skip only when font < 100KB AND chars < 10
+    - Large fonts always subset, regardless of char count
+  - **New Constants**: `SUBSETTING_SIZE_THRESHOLD` (100KB), `SUBSETTING_CHAR_THRESHOLD` (10)
+  - **TDD Approach**: 9 new tests covering all edge cases
+- **Tests**: 5005 unit + 185 doc tests (9 new subsetting tests)
+- **Files Modified**: `oxidize-pdf-core/src/text/fonts/truetype_subsetter.rs`
+
+### Session Summary (2026-01-10) - Release v1.6.8
+- **Release v1.6.8**: Published to crates.io
+  - Fixed Cargo.toml version desync (was 1.6.6, now 1.6.8)
+  - Added pypdf encryption test fixtures to git
+  - Excluded test fixtures from crates.io package (8.9MB → under 10MB limit)
+  - Updated README.md dependency versions
+- **Workflow corrections**: Proper gitflow (develop_santi → develop → main → tag)
+- **CI fixes**:
+  - Added `.gitignore` exception for `oxidize-pdf-core/tests/fixtures/*.pdf`
+  - Fixed cross-validation tests that required pypdf fixtures
 
 ### Session Summary (2026-01-05) - Owner Password + Performance + Cross-Validation
 - **Owner Password Support Complete**: R5/R6 (15 new tests)
