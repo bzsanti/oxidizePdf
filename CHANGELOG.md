@@ -8,6 +8,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+- **🔧 Font Subsetting for Large Fonts (Issue #115)** - Fixed subsetting skip logic
+  - **Problem**: Large fonts (e.g., 41MB CJK fonts) with few characters (<10) were being embedded fully instead of subsetted
+  - **Root Cause**: `truetype_subsetter.rs` skipped subsetting based solely on character count (`< 10`), ignoring font size
+  - **Solution**: New `should_skip_subsetting(font_size, char_count)` function considers BOTH factors
+    - Skip only when font < 100KB AND character count < 10
+    - Large fonts (≥100KB) are always subsetted regardless of character count
+  - **Impact**: A 41MB font with 4 characters will now produce a ~10KB subset instead of embedding the full 41MB
+  - **Location**: `oxidize-pdf-core/src/text/fonts/truetype_subsetter.rs`
+
+### Added
+- **🧪 Font Subsetting Tests** - 9 new TDD tests for subsetting logic
+  - `test_issue_115_large_font_few_chars_should_subset` - Critical bug fix test
+  - Edge cases: threshold boundaries, empty char sets, various font/char combinations
+  - Constants validation for reasonable thresholds
+
+## [1.6.8] - 2026-01-10
+
+### Added
+- **🔐 AES-256 Encryption Complete (R5/R6)** - Full PDF 2.0 encryption support
+  - **Algorithm 2.B**: ISO 32000-2:2020 §7.6.4.3.4 implementation for R6 key derivation
+  - **Owner Password Support**: R5/R6 owner password validation and key recovery
+  - **SHA-256/384/512**: Dynamic hash selection based on encryption revision
+  - **AES-128-CBC**: RustCrypto integration replacing manual implementation
+  - **Performance Benchmarks**: Criterion framework (`encryption_benchmark.rs`)
+    - R5 validation: ~862ns (simple SHA-256)
+    - R6 validation: ~1.78ms (Algorithm 2.B with AES iterations)
+    - RC4 validation: ~30.7µs
+  - **Cross-Validation**: pypdf compatibility tests (6 tests + 1 ignored for SASLprep)
+  - **Location**: `oxidize-pdf-core/src/security/`
+
+- **🛡️ Security Hardening**
+  - Timing attack prevention for password validation
+  - Memory safety improvements for encryption keys
+  - Type0 font parsing security hardening
+
+- **🧪 Test Coverage** - Improved from 54% to 70%
+  - 302+ encryption tests (including 19 real PDF integration tests)
+  - Targeted unit tests for previously uncovered code paths
+
+### Fixed
+- **fix(graphics)**: Apply fill color inside text objects correctly
+- **fix(writer)**: Ensure stream Length always matches actual data
+- **fix(release)**: Exclude test fixtures from crates.io package (8.9MB → under 10MB)
+
+### Technical
+- **Tests**: 5,000+ unit + 185 doc tests passing
+- **Dependencies**: Added `aes`, `cbc`, `cipher` for RustCrypto
+- **Breaking Changes**: None
+
+## [1.6.7] - 2025-12-23
+
+### Added
+- **🔐 Encrypted PDF Decryption (RC4)** - Phase 1 Complete
+  - **Phase 1.1**: Password validation for RC4 40-bit and 128-bit
+  - **Phase 1.2**: Object decryption (strings and streams)
+  - **Phase 1.3**: PdfReader integration with automatic decryption
+  - **Phase 1.4**: Real PDF testing with qpdf-generated fixtures
+  - User and owner password support
+  - **Location**: `oxidize-pdf-core/src/security/`
+
+- **📋 ISO Compliance Tooling** - Sprint 4 Complete
+  - **iso-curator CLI**: analyze, classify, consolidate, scan, link, report commands
+  - **CuratedIsoMatrix API**: Programmatic queries for ISO requirements
+  - **ISO_COMPLIANCE_MATRIX_CURATED.toml**: 310 verified requirements (96% reduction from 7,775)
+  - 100% requirements linked to code (66.8% high verification)
+  - **Location**: `dev-tools/iso-curator/`
+
+### Technical
+- **Tests**: 4,978+ unit + 185 doc tests passing
+- **Coverage**: 70%
+- **Breaking Changes**: None
+
+## [1.6.6] - 2025-12-10
+
+### Fixed
+- **🔧 XRef CR-Only Line Endings (Issue #104)** - ISO 32000-1 compliance
+  - **Problem**: PDFs using CR-only line endings (Mac classic format) failed to parse
+  - **Solution**: Handle CR-only line endings per ISO 32000-1 specification
+  - **Impact**: Non-contiguous XRef subsections now parse correctly
+  - **Location**: `oxidize-pdf-core/src/parser/xref.rs`
+
+- **fix(tests)**: Correct AES-128 decryption test padding handling
+
+### Technical
+- **Tests**: 4,703+ passing
+- **Breaking Changes**: None
+
 ## [1.6.5] - 2025-12-07
 
 ### Fixed

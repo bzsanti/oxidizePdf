@@ -11,6 +11,53 @@ use super::truetype::TrueTypeFont;
 use crate::parser::{ParseError, ParseResult};
 use std::collections::{HashMap, HashSet};
 
+// =============================================================================
+// SUBSETTING THRESHOLDS (Issue #115)
+// =============================================================================
+//
+// These constants control when font subsetting is skipped vs performed.
+// The logic is:
+// - If used_chars is empty → skip (nothing to subset)
+// - If font is small AND few characters → skip (overhead not worth it)
+// - Otherwise → perform subsetting
+//
+// IMPORTANT: Large fonts (>100KB) should ALWAYS be subsetted, even with few
+// characters. A 41MB CJK font with 4 characters should produce a ~10KB subset,
+// not a 41MB embedded font.
+
+/// Minimum font size (in bytes) below which subsetting may be skipped
+/// for small character sets. Fonts smaller than this are cheap to embed fully.
+pub const SUBSETTING_SIZE_THRESHOLD: usize = 100_000; // 100KB
+
+/// Minimum number of characters below which subsetting may be skipped
+/// for small fonts. This threshold is ONLY applied when font size is
+/// below SUBSETTING_SIZE_THRESHOLD.
+pub const SUBSETTING_CHAR_THRESHOLD: usize = 10;
+
+/// Determines whether font subsetting should be skipped based on font size
+/// and number of characters used.
+///
+/// Returns `true` if subsetting should be SKIPPED (use full font).
+/// Returns `false` if subsetting should be PERFORMED.
+///
+/// # Logic
+/// - Empty character set → skip (nothing to subset)
+/// - Small font (<100KB) AND few chars (<10) → skip (not worth the overhead)
+/// - Large font (≥100KB) → ALWAYS subset, regardless of char count
+/// - Many chars (≥10) → ALWAYS subset, regardless of font size
+#[inline]
+pub fn should_skip_subsetting(font_size: usize, char_count: usize) -> bool {
+    // Empty character set - nothing to subset
+    if char_count == 0 {
+        return true;
+    }
+
+    // Only skip subsetting if BOTH conditions are true:
+    // 1. Font is small (< 100KB) - cheap to embed fully
+    // 2. Few characters (< 10) - subsetting overhead may exceed benefit
+    font_size < SUBSETTING_SIZE_THRESHOLD && char_count < SUBSETTING_CHAR_THRESHOLD
+}
+
 /// Table record for font directory
 struct TableRecord {
     tag: [u8; 4],
@@ -99,8 +146,10 @@ impl TrueTypeSubsetter {
                 message: "No suitable cmap table found".to_string(),
             })?;
 
-        // If we're not really subsetting (empty or small char set), return original with full mapping
-        if used_chars.is_empty() || used_chars.len() < 10 {
+        // Issue #115 Fix: Use should_skip_subsetting() which considers BOTH font size AND char count
+        // Previously, this skipped subsetting for ANY font with < 10 chars, causing 41MB fonts
+        // to be embedded fully even when only 4 characters were used.
+        if should_skip_subsetting(self.font_data.len(), used_chars.len()) {
             return Ok(SubsetResult {
                 font_data: self.font_data.clone(),
                 glyph_mapping: cmap.mappings.clone(),
@@ -741,5 +790,177 @@ mod tests {
             long_data.extend_from_slice(&offset.to_be_bytes());
         }
         assert_eq!(long_data.len(), long_offsets.len() * 4);
+    }
+
+    // =========================================================================
+    // TDD TESTS FOR ISSUE #115 - Font Subsetting Skip Logic
+    // =========================================================================
+    //
+    // These tests verify the fix for GitHub Issue #115:
+    // "Embedding the font subset encountered an error, or is this feature not supported?"
+    //
+    // Bug: A 41MB CJK font with only 4 characters produced a 41MB PDF because
+    // the subsetting logic incorrectly skipped subsetting when char_count < 10,
+    // regardless of font size.
+    //
+    // Fix: Only skip subsetting when BOTH:
+    // - Font is small (< 100KB)
+    // - Character count is small (< 10)
+
+    /// Test 1: CRITICAL - Large font with few characters MUST be subsetted
+    /// This is the exact bug reported in Issue #115
+    #[test]
+    fn test_issue_115_large_font_few_chars_should_subset() {
+        // Simulates a 41MB CJK font with 4 characters (like "中国人!")
+        let font_size = 41_000_000; // 41MB
+        let char_count = 4;
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // MUST return false - we MUST subset large fonts even with few chars
+        assert!(
+            !should_skip,
+            "Bug #115: Large font ({} bytes) with {} chars should NOT skip subsetting",
+            font_size, char_count
+        );
+    }
+
+    /// Test 2: Regression - Small font with few chars CAN skip subsetting
+    /// This behavior should be preserved (optimization for small fonts)
+    #[test]
+    fn test_small_font_few_chars_can_skip_subsetting() {
+        // A small 50KB font with 5 characters - skipping is acceptable
+        let font_size = 50_000; // 50KB
+        let char_count = 5;
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // Small font + few chars = OK to skip
+        assert!(
+            should_skip,
+            "Small font ({} bytes) with {} chars can skip subsetting",
+            font_size, char_count
+        );
+    }
+
+    /// Test 3: Small font with many characters SHOULD be subsetted
+    #[test]
+    fn test_small_font_many_chars_should_subset() {
+        // A small font but with enough characters to justify subsetting
+        let font_size = 80_000; // 80KB
+        let char_count = 200;
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // Many chars = should subset regardless of font size
+        assert!(
+            !should_skip,
+            "Small font ({} bytes) with {} chars should NOT skip subsetting",
+            font_size, char_count
+        );
+    }
+
+    /// Test 4: Large font with many characters SHOULD be subsetted
+    #[test]
+    fn test_large_font_many_chars_should_subset() {
+        // Large font with many characters - definitely should subset
+        let font_size = 5_000_000; // 5MB
+        let char_count = 500;
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        assert!(
+            !should_skip,
+            "Large font ({} bytes) with {} chars should NOT skip subsetting",
+            font_size, char_count
+        );
+    }
+
+    /// Test 5: Boundary - Font at exact threshold with few chars
+    #[test]
+    fn test_font_at_threshold_boundary() {
+        // Font exactly at 100KB threshold with 5 characters
+        let font_size = SUBSETTING_SIZE_THRESHOLD; // 100KB exactly
+        let char_count = 5;
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // At threshold (>=), should NOT skip
+        assert!(
+            !should_skip,
+            "Font at threshold ({} bytes) with {} chars should NOT skip subsetting",
+            font_size, char_count
+        );
+    }
+
+    /// Test 6: Empty character set always skips (degenerate case)
+    #[test]
+    fn test_empty_chars_returns_full_font() {
+        // No characters to subset - skip regardless of font size
+        let font_size = 200_000; // 200KB
+        let char_count = 0;
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // Empty char set = nothing to do, skip
+        assert!(
+            should_skip,
+            "Empty character set should always skip subsetting"
+        );
+    }
+
+    /// Test 7: Exactly at char threshold with small font
+    #[test]
+    fn test_char_count_at_threshold_small_font() {
+        // Small font with exactly 10 characters (at threshold)
+        let font_size = 50_000; // 50KB
+        let char_count = SUBSETTING_CHAR_THRESHOLD; // 10 chars exactly
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // At char threshold (>=), should NOT skip even for small fonts
+        assert!(
+            !should_skip,
+            "Font with {} chars at threshold should NOT skip subsetting",
+            char_count
+        );
+    }
+
+    /// Test 8: Just below thresholds (edge case)
+    #[test]
+    fn test_just_below_both_thresholds() {
+        // Just below both thresholds
+        let font_size = SUBSETTING_SIZE_THRESHOLD - 1; // 99,999 bytes
+        let char_count = SUBSETTING_CHAR_THRESHOLD - 1; // 9 chars
+
+        let should_skip = should_skip_subsetting(font_size, char_count);
+
+        // Below both thresholds = OK to skip
+        assert!(
+            should_skip,
+            "Font just below thresholds can skip subsetting"
+        );
+    }
+
+    /// Test constants are reasonable
+    #[test]
+    fn test_subsetting_constants_are_reasonable() {
+        // Size threshold should be at least 50KB (typical small font)
+        assert!(
+            SUBSETTING_SIZE_THRESHOLD >= 50_000,
+            "Size threshold too low"
+        );
+
+        // Size threshold should not exceed 1MB (would miss many fonts)
+        assert!(
+            SUBSETTING_SIZE_THRESHOLD <= 1_000_000,
+            "Size threshold too high"
+        );
+
+        // Char threshold should be at least 5 (very minimal documents)
+        assert!(SUBSETTING_CHAR_THRESHOLD >= 5, "Char threshold too low");
+
+        // Char threshold should not exceed 50 (would skip too often)
+        assert!(SUBSETTING_CHAR_THRESHOLD <= 50, "Char threshold too high");
     }
 }

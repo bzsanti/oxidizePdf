@@ -4,14 +4,26 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-10 - Release v1.6.8 |
+| **Last Session** | 2026-01-17 - Fix Issue #115 Font Subsetting |
 | **Branch** | develop_santi |
 | **Version** | v1.6.8 (released to crates.io) |
-| **Tests** | 4996 unit + 185 doc tests passing |
+| **Tests** | 5005 unit + 185 doc tests passing |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-01-17) - Fix Issue #115 Font Subsetting
+- **Issue #115 Fixed**: Large fonts with few characters now properly subset
+  - **Bug**: 41MB CJK font with 4 chars produced 41MB PDF (no subsetting)
+  - **Root Cause**: `truetype_subsetter.rs` skipped subsetting when `char_count < 10`, ignoring font size
+  - **Fix**: Added `should_skip_subsetting(font_size, char_count)` function
+    - Skip only when font < 100KB AND chars < 10
+    - Large fonts always subset, regardless of char count
+  - **New Constants**: `SUBSETTING_SIZE_THRESHOLD` (100KB), `SUBSETTING_CHAR_THRESHOLD` (10)
+  - **TDD Approach**: 9 new tests covering all edge cases
+- **Tests**: 5005 unit + 185 doc tests (9 new subsetting tests)
+- **Files Modified**: `oxidize-pdf-core/src/text/fonts/truetype_subsetter.rs`
 
 ### Session Summary (2026-01-10) - Release v1.6.8
 - **Release v1.6.8**: Published to crates.io
