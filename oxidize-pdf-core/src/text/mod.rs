@@ -25,7 +25,9 @@ mod cmap_tests;
 pub mod tesseract_provider;
 
 pub use encoding::TextEncoding;
-pub use extraction::{ExtractedText, ExtractionOptions, TextExtractor, TextFragment};
+pub use extraction::{
+    sanitize_extracted_text, ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
+};
 pub use flow::{TextAlign, TextFlowContext};
 pub use font::{Font, FontEncoding, FontFamily, FontWithEncoding};
 pub use font_manager::{CustomFont, FontDescriptor, FontFlags, FontManager, FontMetrics, FontType};
