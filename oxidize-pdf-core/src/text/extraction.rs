@@ -747,13 +747,15 @@ impl TextExtractor {
                     if !decoded.trim().is_empty()
                         && !decoded.chars().all(|c| c == '\0' || c.is_ascii_control())
                     {
+                        // Apply sanitization to remove control characters (Issue #116)
+                        let sanitized = sanitize_extracted_text(&decoded);
                         tracing::debug!(
                             "Successfully decoded text using CMap for font {}: {:?} -> \"{}\"",
                             font_name,
                             text,
-                            decoded
+                            sanitized
                         );
-                        return Ok(decoded);
+                        return Ok(sanitized);
                     }
                 }
 
@@ -788,12 +790,14 @@ impl TextExtractor {
         };
 
         let fallback_result = encoding.decode(text);
+        // Apply sanitization to remove control characters (Issue #116)
+        let sanitized = sanitize_extracted_text(&fallback_result);
         tracing::debug!(
             "Fallback encoding decoding: {:?} -> \"{}\"",
             text,
-            fallback_result
+            sanitized
         );
-        Ok(fallback_result)
+        Ok(sanitized)
     }
 }
 
@@ -866,6 +870,99 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 
     // Fallback to simplified calculation if no metrics available
     text.len() as f64 * font_size * 0.5
+}
+
+/// Sanitize extracted text by removing or replacing control characters.
+///
+/// This function addresses Issue #116 where extracted text contains NUL bytes (`\0`)
+/// and ETX characters (`\u{3}`) where spaces should appear.
+///
+/// # Behavior
+///
+/// - Replaces `\0\u{3}` sequences with a single space (common word separator pattern)
+/// - Replaces standalone `\0` (NUL) with space
+/// - Removes other ASCII control characters (0x01-0x1F) except:
+///   - `\t` (0x09) - Tab
+///   - `\n` (0x0A) - Line feed
+///   - `\r` (0x0D) - Carriage return
+/// - Collapses multiple consecutive spaces into a single space
+///
+/// # Examples
+///
+/// ```
+/// use oxidize_pdf::text::extraction::sanitize_extracted_text;
+///
+/// // Issue #116 pattern: NUL+ETX as word separator
+/// let dirty = "a\0\u{3}sergeant\0\u{3}and";
+/// assert_eq!(sanitize_extracted_text(dirty), "a sergeant and");
+///
+/// // Standalone NUL becomes space
+/// let with_nul = "word\0another";
+/// assert_eq!(sanitize_extracted_text(with_nul), "word another");
+///
+/// // Clean text passes through unchanged
+/// let clean = "Normal text";
+/// assert_eq!(sanitize_extracted_text(clean), "Normal text");
+/// ```
+pub fn sanitize_extracted_text(text: &str) -> String {
+    if text.is_empty() {
+        return String::new();
+    }
+
+    // Pre-allocate with same capacity (result will be <= input length)
+    let mut result = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    let mut last_was_space = false;
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            // NUL byte - check if followed by ETX for the \0\u{3} pattern
+            '\0' => {
+                // Peek at next char to detect \0\u{3} sequence
+                if chars.peek() == Some(&'\u{3}') {
+                    chars.next(); // consume the ETX
+                }
+                // In both cases (standalone NUL or NUL+ETX), emit space
+                if !last_was_space {
+                    result.push(' ');
+                    last_was_space = true;
+                }
+            }
+
+            // ETX alone (not preceded by NUL) - remove it
+            '\u{3}' => {
+                // Don't emit anything, just skip
+            }
+
+            // Preserve allowed whitespace
+            '\t' | '\n' | '\r' => {
+                result.push(ch);
+                // Reset space tracking on newlines but not tabs
+                last_was_space = ch == '\t';
+            }
+
+            // Regular space - collapse multiples
+            ' ' => {
+                if !last_was_space {
+                    result.push(' ');
+                    last_was_space = true;
+                }
+            }
+
+            // Other control characters (0x01-0x1F except tab/newline/CR) - remove
+            c if c.is_ascii_control() => {
+                // Skip control characters
+            }
+
+            // Normal characters - keep them
+            _ => {
+                result.push(ch);
+                last_was_space = false;
+            }
+        }
+    }
+
+    result
 }
 
 #[cfg(test)]
