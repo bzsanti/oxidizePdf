@@ -4,14 +4,29 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-17 - Fix Issue #115 Font Subsetting |
+| **Last Session** | 2026-01-28 - Fix Issue #116 Text Sanitization |
 | **Branch** | develop_santi |
 | **Version** | v1.6.9 (released to crates.io) |
-| **Tests** | 5008 unit + 185 doc tests passing |
+| **Tests** | 5022 unit + 186 doc tests passing |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-01-28) - Fix Issue #116 Text Sanitization
+- **Issue #116 Fixed**: Extracted text no longer contains NUL bytes and control characters
+  - **Bug**: Text extraction returned `\0\u{3}` (NUL+ETX) instead of spaces between words
+  - **Root Cause**: `encoding.rs` converted control bytes (0x00-0x1F) directly to chars without filtering
+  - **Fix**: Added `sanitize_extracted_text()` function in `extraction.rs`
+    - Replaces `\0\u{3}` sequences with space (common word separator pattern)
+    - Replaces standalone `\0` with space
+    - Removes other ASCII control chars (except `\t`, `\n`, `\r`)
+    - Collapses multiple consecutive spaces
+  - **Integration**: Applied to both CMap decode and fallback encoding paths
+  - **TDD Approach**: 14 new tests covering all edge cases
+- **Tests**: 5022 unit + 186 doc tests (14 new sanitization tests)
+- **Files Modified**: `oxidize-pdf-core/src/text/extraction.rs`, `oxidize-pdf-core/src/text/mod.rs`
+- **New Test File**: `oxidize-pdf-core/tests/text_sanitization_test.rs`
 
 ### Session Summary (2026-01-17) - Fix Issue #115 Font Subsetting
 - **Issue #115 Fixed**: Large fonts with few characters now properly subset
