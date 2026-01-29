@@ -554,7 +554,7 @@ mod tests {
     #[test]
     fn test_new() {
         let extractor = PlainTextExtractor::new();
-        assert_eq!(extractor.config.space_threshold, 0.2);
+        assert_eq!(extractor.config.space_threshold, 0.3);
     }
 
     #[test]

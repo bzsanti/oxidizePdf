@@ -36,7 +36,7 @@ impl Default for ExtractionOptions {
     fn default() -> Self {
         Self {
             preserve_layout: false,
-            space_threshold: 0.2,
+            space_threshold: 0.3,
             newline_threshold: 10.0,
             sort_by_position: true,
             detect_columns: false,
@@ -993,7 +993,7 @@ mod tests {
     fn test_extraction_options_default() {
         let options = ExtractionOptions::default();
         assert!(!options.preserve_layout);
-        assert_eq!(options.space_threshold, 0.2);
+        assert_eq!(options.space_threshold, 0.3);
         assert_eq!(options.newline_threshold, 10.0);
         assert!(options.sort_by_position);
         assert!(!options.detect_columns);
@@ -1179,7 +1179,7 @@ mod tests {
         let extractor = TextExtractor::new();
         let options = extractor.options;
         assert!(!options.preserve_layout);
-        assert_eq!(options.space_threshold, 0.2);
+        assert_eq!(options.space_threshold, 0.3);
         assert_eq!(options.newline_threshold, 10.0);
         assert!(options.sort_by_position);
         assert!(!options.detect_columns);
