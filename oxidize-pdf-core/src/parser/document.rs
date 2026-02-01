@@ -1017,6 +1017,49 @@ impl<R: Read + Seek> PdfDocument<R> {
         extractor.extract_from_page(self, page_index)
     }
 
+    /// Extract text from a specific page with custom options.
+    ///
+    /// This method combines the functionality of [`extract_text_from_page`] and
+    /// [`extract_text_with_options`], allowing fine control over extraction
+    /// behavior for a single page.
+    ///
+    /// # Arguments
+    ///
+    /// * `page_index` - Zero-based page index
+    /// * `options` - Text extraction configuration
+    ///
+    /// # Returns
+    ///
+    /// Extracted text with optional position information.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    /// # use oxidize_pdf::text::ExtractionOptions;
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let reader = PdfReader::open("document.pdf")?;
+    /// # let document = PdfDocument::new(reader);
+    /// // Use higher space threshold for PDFs with micro-adjustments
+    /// let options = ExtractionOptions {
+    ///     space_threshold: 0.4,
+    ///     ..Default::default()
+    /// };
+    ///
+    /// let page_text = document.extract_text_from_page_with_options(0, options)?;
+    /// println!("Text: {}", page_text.text);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn extract_text_from_page_with_options(
+        &self,
+        page_index: u32,
+        options: crate::text::ExtractionOptions,
+    ) -> ParseResult<crate::text::ExtractedText> {
+        let mut extractor = crate::text::TextExtractor::with_options(options);
+        extractor.extract_from_page(self, page_index)
+    }
+
     /// Extract text with custom extraction options.
     ///
     /// Allows fine control over text extraction behavior including

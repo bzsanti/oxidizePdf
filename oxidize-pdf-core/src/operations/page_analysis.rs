@@ -1851,7 +1851,7 @@ impl PageContentAnalyzer {
     fn analyze_text_content(&self, page_number: usize) -> OperationResult<TextAnalysisResult> {
         let mut extractor = TextExtractor::with_options(ExtractionOptions {
             preserve_layout: true,
-            space_threshold: 0.2,
+            space_threshold: 0.3,
             newline_threshold: 10.0,
             ..Default::default()
         });
