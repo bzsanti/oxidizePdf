@@ -15,7 +15,7 @@
 /// use oxidize_pdf::text::plaintext::PlainTextConfig;
 ///
 /// let config = PlainTextConfig::default();
-/// assert_eq!(config.space_threshold, 0.2);
+/// assert_eq!(config.space_threshold, 0.3);
 /// assert_eq!(config.newline_threshold, 10.0);
 /// assert!(!config.preserve_layout);
 /// ```
@@ -27,9 +27,9 @@ pub struct PlainTextConfig {
     /// (expressed as a multiple of the average character width), a space
     /// character is inserted.
     ///
-    /// - **Lower values** (0.1-0.15): More spaces inserted, good for tightly-spaced text
-    /// - **Default** (0.2): Balanced for most documents
-    /// - **Higher values** (0.3-0.5): Fewer spaces, good for wide-spaced text
+    /// - **Lower values** (0.1-0.2): More spaces inserted, good for tightly-spaced text
+    /// - **Default** (0.3): Balanced for most documents
+    /// - **Higher values** (0.4-0.5): Fewer spaces, good for wide-spaced text
     ///
     /// **Range**: 0.05 to 1.0 (typical)
     pub space_threshold: f64,
@@ -76,7 +76,7 @@ pub struct PlainTextConfig {
 impl Default for PlainTextConfig {
     fn default() -> Self {
         Self {
-            space_threshold: 0.2,
+            space_threshold: 0.3,
             newline_threshold: 10.0,
             preserve_layout: false,
             line_break_mode: LineBreakMode::Auto,
@@ -157,7 +157,7 @@ impl PlainTextConfig {
     /// ```
     pub fn preserve_layout() -> Self {
         Self {
-            space_threshold: 0.2,
+            space_threshold: 0.3,
             newline_threshold: 10.0,
             preserve_layout: true,
             line_break_mode: LineBreakMode::PreserveAll,
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn test_config_default() {
         let config = PlainTextConfig::default();
-        assert_eq!(config.space_threshold, 0.2);
+        assert_eq!(config.space_threshold, 0.3);
         assert_eq!(config.newline_threshold, 10.0);
         assert!(!config.preserve_layout);
         assert_eq!(config.line_break_mode, LineBreakMode::Auto);

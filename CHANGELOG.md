@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [1.6.11] - 2026-02-01
+
+### Added
+- **📄 Per-Page Text Extraction Options** - New `extract_text_from_page_with_options` method
+  - Combines functionality of `extract_text_from_page` and `extract_text_with_options`
+  - Allows custom `ExtractionOptions` (e.g., `space_threshold`) for individual pages
+  - **Use Case**: PDFs with pages requiring different extraction parameters
+  - **Location**: `oxidize-pdf-core/src/parser/document.rs`
+
+### Technical
+- **Tests**: 5,005+ unit + 187 doc tests passing
+- **Breaking Changes**: None
+
+## [1.6.10] - 2026-01-29
+
+### Fixed
+- **🔧 Text Sanitization (Issue #116)** - Extracted text no longer contains NUL bytes
+  - **Problem**: Text extraction returned `\0\u{3}` (NUL+ETX) instead of spaces between words
+  - **Root Cause**: `encoding.rs` converted control bytes (0x00-0x1F) directly to chars without filtering
+  - **Solution**: New `sanitize_extracted_text()` function in `extraction.rs`
+    - Replaces `\0\u{3}` sequences with space (common word separator pattern)
+    - Removes other ASCII control characters (except `\t`, `\n`, `\r`)
+    - Collapses multiple consecutive spaces
+  - **Location**: `oxidize-pdf-core/src/text/extraction.rs`
+
+- **📏 Space Threshold Tuning** - Reduced false spaces in extracted text
+  - **Problem**: Words like "two" extracted as "tw o" due to micro-adjustments in PDFs
+  - **Solution**: Increased default `space_threshold` from 0.2 to 0.3
+  - **Validation**: Analyzed 709 PDFs - 4.8% reduction in total spaces, 16.2% reduction in fragmented words
+  - **Workaround**: Use `extract_text_with_options()` with higher threshold (0.4-0.5) if needed
+
+### Added
+- **🧪 Text Sanitization Tests** - 14 new TDD tests for sanitization logic
+
+### Technical
+- **Tests**: 5,008+ unit + 186 doc tests passing
+- **Breaking Changes**: None
+
 ## [1.6.9] - 2026-01-17
 
 ### Fixed
