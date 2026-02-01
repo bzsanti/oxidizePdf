@@ -274,3 +274,42 @@ startxref
     // Should have fragments for layout
     assert!(page_text.fragments.len() >= 3);
 }
+
+#[test]
+fn test_extract_text_from_page_with_options() {
+    // Create a PDF with text
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    page.text()
+        .set_font(Font::Helvetica, 12.0)
+        .at(100.0, 700.0)
+        .write("Test content for extraction")
+        .unwrap();
+
+    doc.add_page(page);
+
+    // Save to temporary file
+    let temp_dir = TempDir::new().unwrap();
+    let pdf_path = temp_dir.path().join("options_test.pdf");
+    doc.save(&pdf_path).unwrap();
+
+    // Open document
+    let pdf_doc = PdfReader::open_document(&pdf_path).unwrap();
+
+    // Test with custom space_threshold
+    let options = ExtractionOptions {
+        space_threshold: 0.4,
+        preserve_layout: true,
+        ..Default::default()
+    };
+
+    // Use the new convenience method
+    let extracted = pdf_doc
+        .extract_text_from_page_with_options(0, options)
+        .unwrap();
+
+    // Verify extraction worked
+    assert!(extracted.text.contains("Test content for extraction"));
+    assert!(!extracted.fragments.is_empty());
+}
