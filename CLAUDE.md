@@ -4,14 +4,33 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-29 - Issue #116 Follow-up: space_threshold tuning |
+| **Last Session** | 2026-02-01 - Release v1.6.11: Per-page extraction options |
 | **Branch** | develop_santi |
-| **Version** | v1.6.10 |
-| **Tests** | 5008 unit + 186 doc tests passing |
+| **Version** | v1.6.11 |
+| **Tests** | 5005 unit + 187 doc tests passing |
 | **Coverage** | 70.00% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-02-01) - Release v1.6.11: Per-page Extraction Options
+- **New API**: `extract_text_from_page_with_options(page_index, options)` method
+  - Combines `extract_text_from_page` and `extract_text_with_options` functionality
+  - Allows custom `ExtractionOptions` (e.g., `space_threshold`) per individual page
+  - Addresses user request in Issue #116
+- **Files Modified**:
+  - `oxidize-pdf-core/src/parser/document.rs` - new method
+  - `oxidize-pdf-core/tests/text_extraction_test.rs` - new test
+  - `Cargo.toml` - version 1.6.11
+  - `CHANGELOG.md` - entries for v1.6.10 and v1.6.11
+- **Release Process**:
+  - PR #119: develop_santi → develop (merged)
+  - PR #120: develop → main (merged)
+  - Tag v1.6.11 created and pushed
+  - GitHub Release published
+  - crates.io publication successful
+- **Issue #116**: Responded with per-page extraction solution
+- **Commit**: `7f44fd1` - feat(api): add extract_text_from_page_with_options method
 
 ### Session Summary (2026-01-29) - Issue #116 Follow-up: space_threshold Tuning
 - **Issue #116 Follow-up**: User reported unexpected spaces in extracted text ("tw o" instead of "two")
