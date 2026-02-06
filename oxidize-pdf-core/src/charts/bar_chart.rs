@@ -346,6 +346,66 @@ fn default_bar_colors() -> Vec<Color> {
 mod tests {
     use super::*;
 
+    // ==================== BarOrientation Tests ====================
+
+    #[test]
+    fn test_bar_orientation_default() {
+        let orientation: BarOrientation = Default::default();
+        assert_eq!(orientation, BarOrientation::Vertical);
+    }
+
+    #[test]
+    fn test_bar_orientation_variants() {
+        assert_eq!(BarOrientation::Vertical, BarOrientation::Vertical);
+        assert_eq!(BarOrientation::Horizontal, BarOrientation::Horizontal);
+        assert_ne!(BarOrientation::Vertical, BarOrientation::Horizontal);
+    }
+
+    #[test]
+    fn test_bar_orientation_clone() {
+        let orientation = BarOrientation::Horizontal;
+        let cloned = orientation;
+        assert_eq!(orientation, cloned);
+    }
+
+    #[test]
+    fn test_bar_orientation_debug() {
+        let debug_str = format!("{:?}", BarOrientation::Vertical);
+        assert!(debug_str.contains("Vertical"));
+    }
+
+    // ==================== BarChart Tests ====================
+
+    #[test]
+    fn test_bar_chart_new_defaults() {
+        let chart = BarChart::new();
+        assert!(chart.title.is_empty());
+        assert!(chart.data.is_empty());
+        assert_eq!(chart.orientation, BarOrientation::Vertical);
+        assert_eq!(chart.title_font, Font::HelveticaBold);
+        assert_eq!(chart.title_font_size, 16.0);
+        assert_eq!(chart.label_font, Font::Helvetica);
+        assert_eq!(chart.label_font_size, 12.0);
+        assert_eq!(chart.value_font, Font::Helvetica);
+        assert_eq!(chart.value_font_size, 10.0);
+        assert_eq!(chart.legend_position, LegendPosition::None);
+        assert_eq!(chart.background_color, None);
+        assert!(chart.show_values);
+        assert!(chart.show_grid);
+        assert_eq!(chart.bar_spacing, 0.2);
+        assert_eq!(chart.bar_border_color, None);
+        assert_eq!(chart.bar_border_width, 1.0);
+        assert_eq!(chart.min_bar_width, 20.0);
+        assert_eq!(chart.max_bar_width, None);
+    }
+
+    #[test]
+    fn test_bar_chart_default_trait() {
+        let chart: BarChart = Default::default();
+        assert!(chart.title.is_empty());
+        assert!(chart.data.is_empty());
+    }
+
     #[test]
     fn test_bar_chart_creation() {
         let chart = BarChartBuilder::new()
@@ -374,6 +434,61 @@ mod tests {
     }
 
     #[test]
+    fn test_bar_chart_max_value_empty() {
+        let chart = BarChart::new();
+        assert_eq!(chart.max_value(), 0.0);
+    }
+
+    #[test]
+    fn test_bar_chart_min_value_empty() {
+        let chart = BarChart::new();
+        // Empty data returns INFINITY.min(0.0) = 0.0
+        assert_eq!(chart.min_value(), 0.0);
+    }
+
+    #[test]
+    fn test_bar_chart_min_value_all_positive() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![5.0, 10.0, 15.0])
+            .build();
+        // min_value always includes 0 in range
+        assert_eq!(chart.min_value(), 0.0);
+    }
+
+    #[test]
+    fn test_bar_chart_color_for_index() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![10.0, 20.0, 30.0])
+            .build();
+
+        // Should return colors from default palette
+        let color0 = chart.color_for_index(0);
+        let color1 = chart.color_for_index(1);
+        assert_ne!(color0, color1);
+    }
+
+    #[test]
+    fn test_bar_chart_color_for_index_custom() {
+        let chart = BarChartBuilder::new()
+            .add_data(ChartData::new("A", 10.0).color(Color::red()))
+            .add_data(ChartData::new("B", 20.0))
+            .build();
+
+        assert_eq!(chart.color_for_index(0), Color::red());
+        // Second item uses default colors
+        assert_eq!(chart.color_for_index(1), chart.colors[1]);
+    }
+
+    #[test]
+    fn test_bar_chart_color_for_index_wraps() {
+        let chart = BarChart::new();
+        // With default colors (8 colors), index 100 wraps around
+        let color = chart.color_for_index(100);
+        // Should not panic and return a valid color
+        assert!(color.r() >= 0.0 && color.r() <= 1.0);
+    }
+
+    #[test]
     fn test_bar_width_calculation() {
         let chart = BarChartBuilder::new()
             .simple_data(vec![10.0, 20.0, 30.0])
@@ -385,10 +500,368 @@ mod tests {
     }
 
     #[test]
+    fn test_bar_width_calculation_empty_data() {
+        let chart = BarChart::new();
+        let width = chart.calculate_bar_width(400.0);
+        assert_eq!(width, chart.min_bar_width);
+    }
+
+    #[test]
+    fn test_bar_width_calculation_respects_min() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![1.0; 100]) // Many bars
+            .bar_width_range(30.0, None)
+            .build();
+
+        let width = chart.calculate_bar_width(100.0); // Very narrow space
+        assert!(width >= 30.0);
+    }
+
+    #[test]
+    fn test_bar_width_calculation_respects_max() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![1.0, 2.0]) // Few bars
+            .bar_width_range(10.0, Some(50.0))
+            .build();
+
+        let width = chart.calculate_bar_width(1000.0); // Very wide space
+        assert!(width <= 50.0);
+    }
+
+    #[test]
+    fn test_bar_chart_value_range_empty() {
+        let chart = BarChart::new();
+        let (min, max) = chart.value_range();
+        // With empty data: max=0, min=0, range=0, padding=0
+        assert_eq!(min, 0.0);
+        assert_eq!(max, 0.0);
+    }
+
+    #[test]
+    fn test_bar_chart_value_range_single_value() {
+        let chart = BarChartBuilder::new().simple_data(vec![100.0]).build();
+
+        let (min, max) = chart.value_range();
+        assert!(min < 0.0); // Should have padding
+        assert!(max > 100.0); // Should have padding
+    }
+
+    // ==================== BarChartBuilder Tests ====================
+
+    #[test]
+    fn test_bar_chart_builder_default() {
+        let builder: BarChartBuilder = Default::default();
+        let chart = builder.build();
+        assert!(chart.title.is_empty());
+    }
+
+    #[test]
+    fn test_bar_chart_builder_title() {
+        let chart = BarChartBuilder::new().title("My Chart").build();
+        assert_eq!(chart.title, "My Chart");
+    }
+
+    #[test]
+    fn test_bar_chart_builder_title_from_string() {
+        let chart = BarChartBuilder::new()
+            .title(String::from("Dynamic Title"))
+            .build();
+        assert_eq!(chart.title, "Dynamic Title");
+    }
+
+    #[test]
+    fn test_bar_chart_builder_add_data() {
+        let chart = BarChartBuilder::new()
+            .add_data(ChartData::new("A", 10.0))
+            .add_data(ChartData::new("B", 20.0))
+            .build();
+
+        assert_eq!(chart.data.len(), 2);
+        assert_eq!(chart.data[0].label, "A");
+        assert_eq!(chart.data[1].label, "B");
+    }
+
+    #[test]
+    fn test_bar_chart_builder_data_replaces() {
+        let chart = BarChartBuilder::new()
+            .add_data(ChartData::new("Old", 1.0))
+            .data(vec![ChartData::new("New", 2.0)])
+            .build();
+
+        assert_eq!(chart.data.len(), 1);
+        assert_eq!(chart.data[0].label, "New");
+    }
+
+    #[test]
+    fn test_bar_chart_builder_orientation() {
+        let chart = BarChartBuilder::new()
+            .orientation(BarOrientation::Horizontal)
+            .build();
+        assert_eq!(chart.orientation, BarOrientation::Horizontal);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_colors() {
+        let colors = vec![Color::red(), Color::blue()];
+        let chart = BarChartBuilder::new().colors(colors).build();
+
+        assert_eq!(chart.colors.len(), 2);
+        assert_eq!(chart.colors[0], Color::red());
+    }
+
+    #[test]
+    fn test_bar_chart_builder_title_font() {
+        let chart = BarChartBuilder::new()
+            .title_font(Font::TimesBold, 24.0)
+            .build();
+
+        assert_eq!(chart.title_font, Font::TimesBold);
+        assert_eq!(chart.title_font_size, 24.0);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_label_font() {
+        let chart = BarChartBuilder::new()
+            .label_font(Font::Courier, 8.0)
+            .build();
+
+        assert_eq!(chart.label_font, Font::Courier);
+        assert_eq!(chart.label_font_size, 8.0);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_value_font() {
+        let chart = BarChartBuilder::new()
+            .value_font(Font::CourierBold, 14.0)
+            .build();
+
+        assert_eq!(chart.value_font, Font::CourierBold);
+        assert_eq!(chart.value_font_size, 14.0);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_legend_position() {
+        let chart = BarChartBuilder::new()
+            .legend_position(LegendPosition::Bottom)
+            .build();
+        assert_eq!(chart.legend_position, LegendPosition::Bottom);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_background_color() {
+        let chart = BarChartBuilder::new()
+            .background_color(Color::white())
+            .build();
+        assert_eq!(chart.background_color, Some(Color::white()));
+    }
+
+    #[test]
+    fn test_bar_chart_builder_show_values() {
+        let chart = BarChartBuilder::new().show_values(false).build();
+        assert!(!chart.show_values);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_show_grid() {
+        let chart = BarChartBuilder::new().show_grid(false).build();
+        assert!(!chart.show_grid);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_grid_color() {
+        let chart = BarChartBuilder::new().grid_color(Color::blue()).build();
+        assert_eq!(chart.grid_color, Color::blue());
+    }
+
+    #[test]
+    fn test_bar_chart_builder_bar_spacing() {
+        let chart = BarChartBuilder::new().bar_spacing(0.5).build();
+        assert_eq!(chart.bar_spacing, 0.5);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_bar_spacing_negative_clamped() {
+        let chart = BarChartBuilder::new().bar_spacing(-0.5).build();
+        // Negative spacing is clamped to 0
+        assert_eq!(chart.bar_spacing, 0.0);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_bar_border() {
+        let chart = BarChartBuilder::new()
+            .bar_border(Color::black(), 2.0)
+            .build();
+
+        assert_eq!(chart.bar_border_color, Some(Color::black()));
+        assert_eq!(chart.bar_border_width, 2.0);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_bar_width_range() {
+        let chart = BarChartBuilder::new()
+            .bar_width_range(15.0, Some(100.0))
+            .build();
+
+        assert_eq!(chart.min_bar_width, 15.0);
+        assert_eq!(chart.max_bar_width, Some(100.0));
+    }
+
+    #[test]
+    fn test_bar_chart_builder_simple_data_labels() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![1.0, 2.0, 3.0])
+            .build();
+
+        assert_eq!(chart.data[0].label, "Item 1");
+        assert_eq!(chart.data[1].label, "Item 2");
+        assert_eq!(chart.data[2].label, "Item 3");
+    }
+
+    #[test]
+    fn test_bar_chart_builder_labeled_data() {
+        let chart = BarChartBuilder::new()
+            .labeled_data(vec![("Q1", 100.0), ("Q2", 200.0)])
+            .build();
+
+        assert_eq!(chart.data.len(), 2);
+        assert_eq!(chart.data[0].label, "Q1");
+        assert_eq!(chart.data[0].value, 100.0);
+        assert_eq!(chart.data[1].label, "Q2");
+        assert_eq!(chart.data[1].value, 200.0);
+    }
+
+    #[test]
     fn test_financial_style() {
         let chart = BarChartBuilder::new().financial_style().build();
 
-        assert_eq!(chart.show_grid, true);
+        assert!(chart.show_grid);
         assert!(chart.bar_border_color.is_some());
+        assert_eq!(chart.colors.len(), 4);
+    }
+
+    #[test]
+    fn test_minimal_style() {
+        let chart = BarChartBuilder::new().minimal_style().build();
+
+        assert!(!chart.show_grid);
+        assert!(!chart.show_values);
+        assert_eq!(chart.background_color, None);
+        assert_eq!(chart.bar_border_color, None);
+    }
+
+    #[test]
+    fn test_progress_style() {
+        let chart = BarChartBuilder::new()
+            .progress_style(Color::green())
+            .build();
+
+        assert_eq!(chart.orientation, BarOrientation::Horizontal);
+        assert_eq!(chart.colors.len(), 1);
+        assert_eq!(chart.colors[0], Color::green());
+        assert!(!chart.show_grid);
+        assert!(chart.show_values);
+        assert_eq!(chart.legend_position, LegendPosition::None);
+        assert_eq!(chart.bar_spacing, 0.0);
+    }
+
+    #[test]
+    fn test_bar_chart_builder_chained() {
+        let chart = BarChartBuilder::new()
+            .title("Sales Report")
+            .orientation(BarOrientation::Horizontal)
+            .labeled_data(vec![("2023", 1000.0), ("2024", 1500.0)])
+            .financial_style()
+            .show_values(true)
+            .legend_position(LegendPosition::Right)
+            .build();
+
+        assert_eq!(chart.title, "Sales Report");
+        assert_eq!(chart.orientation, BarOrientation::Horizontal);
+        assert_eq!(chart.data.len(), 2);
+        assert!(chart.show_values);
+        assert_eq!(chart.legend_position, LegendPosition::Right);
+    }
+
+    // ==================== default_bar_colors Tests ====================
+
+    #[test]
+    fn test_default_bar_colors_count() {
+        let colors = default_bar_colors();
+        assert_eq!(colors.len(), 8);
+    }
+
+    #[test]
+    fn test_default_bar_colors_valid_rgb() {
+        let colors = default_bar_colors();
+        for color in colors {
+            assert!(color.r() >= 0.0 && color.r() <= 1.0);
+            assert!(color.g() >= 0.0 && color.g() <= 1.0);
+            assert!(color.b() >= 0.0 && color.b() <= 1.0);
+        }
+    }
+
+    #[test]
+    fn test_default_bar_colors_unique() {
+        let colors = default_bar_colors();
+        for i in 0..colors.len() {
+            for j in (i + 1)..colors.len() {
+                assert_ne!(
+                    colors[i], colors[j],
+                    "Colors at {} and {} should be different",
+                    i, j
+                );
+            }
+        }
+    }
+
+    // ==================== Edge Cases ====================
+
+    #[test]
+    fn test_empty_bar_chart() {
+        let chart = BarChartBuilder::new().build();
+        assert!(chart.data.is_empty());
+        assert_eq!(chart.max_value(), 0.0);
+        assert_eq!(chart.min_value(), 0.0);
+    }
+
+    #[test]
+    fn test_single_bar() {
+        let chart = BarChartBuilder::new()
+            .add_data(ChartData::new("Only", 42.0))
+            .build();
+
+        assert_eq!(chart.data.len(), 1);
+        assert_eq!(chart.max_value(), 42.0);
+    }
+
+    #[test]
+    fn test_many_bars() {
+        let mut builder = BarChartBuilder::new();
+        for i in 0..100 {
+            builder = builder.add_data(ChartData::new(format!("Item {}", i), i as f64));
+        }
+        let chart = builder.build();
+
+        assert_eq!(chart.data.len(), 100);
+        assert_eq!(chart.max_value(), 99.0);
+    }
+
+    #[test]
+    fn test_bar_chart_clone() {
+        let chart = BarChartBuilder::new()
+            .title("Original")
+            .simple_data(vec![1.0, 2.0])
+            .build();
+
+        let cloned = chart.clone();
+        assert_eq!(cloned.title, "Original");
+        assert_eq!(cloned.data.len(), 2);
+    }
+
+    #[test]
+    fn test_bar_chart_debug() {
+        let chart = BarChart::new();
+        let debug_str = format!("{:?}", chart);
+        assert!(debug_str.contains("BarChart"));
     }
 }

@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [1.6.12] - 2026-02-06
+
+### Added
+- **🔄 Generic ImageExtractor** (PR #121 by @ho-229) - `ImageExtractor` now accepts any `Read + Seek` source
+  - More flexible API for extracting images from various input sources
+  - **Location**: `oxidize-pdf-core/src/operations/extract_images.rs`
+
+### Improved
+- **🧪 Test Coverage** - Added 234 new unit tests across multiple modules
+  - `charts/chart_builder.rs`: +48 tests (ChartData, Chart, ChartBuilder, LegendPosition)
+  - `charts/bar_chart.rs`: +49 tests (BarChart, BarChartBuilder, BarOrientation)
+  - `charts/dashboard_integration.rs`: +33 tests (Dashboard wrappers)
+  - `page_lists.rs`: +21 tests (ListType, ListStyle)
+  - `page_tables.rs`: +22 tests (TableStyle, Page table integration)
+  - `advanced_tables/header_builder.rs`: +40 tests (HeaderCell, HeaderBuilder)
+  - `parser/stack_safe.rs`: +21 tests (StackSafeContext, guards)
+
+### Technical
+- **Tests**: 5,900+ unit + 187 doc tests passing
+- **Coverage**: Improved from 72.14% baseline
+- **Breaking Changes**: None
+
 ## [1.6.11] - 2026-02-01
 
 ### Added

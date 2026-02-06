@@ -564,3 +564,720 @@ impl AdvancedTable {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // =============================================================================
+    // Column tests
+    // =============================================================================
+
+    #[test]
+    fn test_column_new() {
+        let col = Column::new("Header", 100.0);
+        assert_eq!(col.header, "Header");
+        assert_eq!(col.width, 100.0);
+        assert!(col.default_style.is_none());
+        assert!(!col.auto_resize);
+        assert!(col.min_width.is_none());
+        assert!(col.max_width.is_none());
+    }
+
+    #[test]
+    fn test_column_with_style() {
+        let style = CellStyle::data();
+        let col = Column::new("Header", 100.0).with_style(style.clone());
+        assert!(col.default_style.is_some());
+        // font_size is Option<f64>
+        assert_eq!(col.default_style.unwrap().font_size, style.font_size);
+    }
+
+    #[test]
+    fn test_column_auto_resize() {
+        let col = Column::new("Header", 100.0).auto_resize(Some(50.0), Some(200.0));
+        assert!(col.auto_resize);
+        assert_eq!(col.min_width, Some(50.0));
+        assert_eq!(col.max_width, Some(200.0));
+    }
+
+    #[test]
+    fn test_column_auto_resize_no_limits() {
+        let col = Column::new("Header", 100.0).auto_resize(None, None);
+        assert!(col.auto_resize);
+        assert!(col.min_width.is_none());
+        assert!(col.max_width.is_none());
+    }
+
+    // =============================================================================
+    // CellData tests
+    // =============================================================================
+
+    #[test]
+    fn test_cell_data_new() {
+        let cell = CellData::new("Content");
+        assert_eq!(cell.content, "Content");
+        assert!(cell.style.is_none());
+        assert_eq!(cell.colspan, 1);
+        assert_eq!(cell.rowspan, 1);
+    }
+
+    #[test]
+    fn test_cell_data_with_style() {
+        let style = CellStyle::header();
+        let cell = CellData::new("Content").with_style(style);
+        assert!(cell.style.is_some());
+    }
+
+    #[test]
+    fn test_cell_data_colspan() {
+        let cell = CellData::new("Content").colspan(3);
+        assert_eq!(cell.colspan, 3);
+    }
+
+    #[test]
+    fn test_cell_data_colspan_min_is_one() {
+        // colspan(0) should be clamped to 1
+        let cell = CellData::new("Content").colspan(0);
+        assert_eq!(cell.colspan, 1);
+    }
+
+    #[test]
+    fn test_cell_data_rowspan() {
+        let cell = CellData::new("Content").rowspan(2);
+        assert_eq!(cell.rowspan, 2);
+    }
+
+    #[test]
+    fn test_cell_data_rowspan_min_is_one() {
+        // rowspan(0) should be clamped to 1
+        let cell = CellData::new("Content").rowspan(0);
+        assert_eq!(cell.rowspan, 1);
+    }
+
+    #[test]
+    fn test_cell_data_combined_span() {
+        let cell = CellData::new("Merged").colspan(2).rowspan(3);
+        assert_eq!(cell.colspan, 2);
+        assert_eq!(cell.rowspan, 3);
+    }
+
+    // =============================================================================
+    // RowData tests
+    // =============================================================================
+
+    #[test]
+    fn test_row_data_from_strings() {
+        let row = RowData::from_strings(vec!["A", "B", "C"]);
+        assert_eq!(row.cells.len(), 3);
+        assert_eq!(row.cells[0].content, "A");
+        assert_eq!(row.cells[1].content, "B");
+        assert_eq!(row.cells[2].content, "C");
+        assert!(row.style.is_none());
+        assert!(row.min_height.is_none());
+    }
+
+    #[test]
+    fn test_row_data_from_cells() {
+        let cells = vec![CellData::new("Cell1"), CellData::new("Cell2").colspan(2)];
+        let row = RowData::from_cells(cells);
+        assert_eq!(row.cells.len(), 2);
+        assert_eq!(row.cells[1].colspan, 2);
+    }
+
+    #[test]
+    fn test_row_data_with_style() {
+        let style = CellStyle::header();
+        let row = RowData::from_strings(vec!["A"]).with_style(style);
+        assert!(row.style.is_some());
+    }
+
+    #[test]
+    fn test_row_data_min_height() {
+        let row = RowData::from_strings(vec!["A"]).min_height(50.0);
+        assert_eq!(row.min_height, Some(50.0));
+    }
+
+    // =============================================================================
+    // ZebraConfig tests
+    // =============================================================================
+
+    #[test]
+    fn test_zebra_config_new() {
+        let odd = Color::rgb(0.9, 0.9, 0.9);
+        let even = Color::rgb(1.0, 1.0, 1.0);
+        let config = ZebraConfig::new(Some(odd), Some(even));
+        assert!(config.odd_color.is_some());
+        assert!(config.even_color.is_some());
+        assert!(config.start_with_odd);
+    }
+
+    #[test]
+    fn test_zebra_config_simple() {
+        let color = Color::rgb(0.95, 0.95, 0.95);
+        let config = ZebraConfig::simple(color);
+        assert!(config.odd_color.is_some());
+        assert!(config.even_color.is_none());
+    }
+
+    #[test]
+    fn test_zebra_config_get_color_for_row() {
+        let odd_color = Color::rgb(0.9, 0.9, 0.9);
+        let config = ZebraConfig::simple(odd_color);
+
+        // Row 0 is even (start_with_odd=true means odd rows get color)
+        assert!(config.get_color_for_row(0).is_none()); // even row
+        assert!(config.get_color_for_row(1).is_some()); // odd row
+        assert!(config.get_color_for_row(2).is_none()); // even row
+        assert!(config.get_color_for_row(3).is_some()); // odd row
+    }
+
+    #[test]
+    fn test_zebra_config_alternating() {
+        let odd = Color::rgb(0.9, 0.9, 0.9);
+        let even = Color::rgb(0.95, 0.95, 0.95);
+        let config = ZebraConfig::new(Some(odd), Some(even));
+
+        // Both even and odd rows should have colors
+        assert!(config.get_color_for_row(0).is_some()); // even row
+        assert!(config.get_color_for_row(1).is_some()); // odd row
+    }
+
+    // =============================================================================
+    // AdvancedTableBuilder tests
+    // =============================================================================
+
+    #[test]
+    fn test_builder_new() {
+        let builder = AdvancedTableBuilder::new();
+        let table = builder.add_column("Col1", 100.0).build().unwrap();
+        assert_eq!(table.columns.len(), 1);
+        assert!(table.rows.is_empty());
+    }
+
+    #[test]
+    fn test_builder_default() {
+        let builder = AdvancedTableBuilder::default();
+        assert!(builder.table.columns.is_empty());
+    }
+
+    #[test]
+    fn test_builder_add_column() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 75.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.columns.len(), 2);
+        assert_eq!(table.columns[0].width, 50.0);
+        assert_eq!(table.columns[1].width, 75.0);
+    }
+
+    #[test]
+    fn test_builder_add_styled_column() {
+        let style = CellStyle::header();
+        let table = AdvancedTableBuilder::new()
+            .add_styled_column("Header", 100.0, style)
+            .build()
+            .unwrap();
+        assert!(table.columns[0].default_style.is_some());
+    }
+
+    #[test]
+    fn test_builder_columns_equal_width() {
+        let table = AdvancedTableBuilder::new()
+            .columns_equal_width(vec!["A", "B", "C", "D"], 400.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.columns.len(), 4);
+        assert_eq!(table.columns[0].width, 100.0);
+        assert_eq!(table.total_width, Some(400.0));
+    }
+
+    #[test]
+    fn test_builder_add_row() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Value"])
+            .build()
+            .unwrap();
+        assert_eq!(table.rows.len(), 1);
+        assert_eq!(table.rows[0].cells[0].content, "Value");
+    }
+
+    #[test]
+    fn test_builder_add_row_with_min_height() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row_with_min_height(vec!["Value"], 30.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.rows[0].min_height, Some(30.0));
+    }
+
+    #[test]
+    fn test_builder_add_row_cells() {
+        let cells = vec![CellData::new("Cell1").colspan(2), CellData::new("Cell2")];
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 50.0)
+            .add_column("C", 50.0)
+            .add_row_cells(cells)
+            .build()
+            .unwrap();
+        assert_eq!(table.rows[0].cells[0].colspan, 2);
+    }
+
+    #[test]
+    fn test_builder_add_styled_row() {
+        let style = CellStyle::header();
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_styled_row(vec!["Value"], style)
+            .build()
+            .unwrap();
+        assert!(table.rows[0].style.is_some());
+    }
+
+    #[test]
+    fn test_builder_default_style() {
+        let style = CellStyle::new().font_size(14.0);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .default_style(style.clone())
+            .build()
+            .unwrap();
+        assert_eq!(table.default_style.font_size, Some(14.0));
+    }
+
+    #[test]
+    fn test_builder_data_style() {
+        let style = CellStyle::new().font_size(16.0);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .data_style(style)
+            .build()
+            .unwrap();
+        assert_eq!(table.default_style.font_size, Some(16.0));
+    }
+
+    #[test]
+    fn test_builder_header_style() {
+        let style = CellStyle::new().font_size(18.0);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .header_style(style)
+            .build()
+            .unwrap();
+        assert_eq!(table.header_style.font_size, Some(18.0));
+    }
+
+    #[test]
+    fn test_builder_show_header() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .show_header(false)
+            .build()
+            .unwrap();
+        assert!(!table.show_header);
+    }
+
+    #[test]
+    fn test_builder_title() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .title("My Table")
+            .build()
+            .unwrap();
+        assert_eq!(table.title, Some("My Table".to_string()));
+    }
+
+    #[test]
+    fn test_builder_columns() {
+        let table = AdvancedTableBuilder::new()
+            .columns(vec![("X", 30.0), ("Y", 40.0)])
+            .build()
+            .unwrap();
+        assert_eq!(table.columns.len(), 2);
+        assert_eq!(table.columns[0].header, "X");
+        assert_eq!(table.columns[1].header, "Y");
+    }
+
+    #[test]
+    fn test_builder_position() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .position(100.0, 200.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.x, 100.0);
+        assert_eq!(table.y, 200.0);
+    }
+
+    #[test]
+    fn test_builder_zebra_stripes() {
+        let color = Color::rgb(0.95, 0.95, 0.95);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .zebra_stripes(true, color)
+            .build()
+            .unwrap();
+        assert!(table.zebra_stripes);
+        assert!(table.zebra_striping.is_some());
+    }
+
+    #[test]
+    fn test_builder_zebra_stripes_disabled() {
+        let color = Color::rgb(0.95, 0.95, 0.95);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .zebra_stripes(false, color)
+            .build()
+            .unwrap();
+        assert!(!table.zebra_stripes);
+        assert!(table.zebra_striping.is_none());
+    }
+
+    #[test]
+    fn test_builder_zebra_striping() {
+        let color = Color::rgb(0.9, 0.9, 0.9);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .zebra_striping(color)
+            .build()
+            .unwrap();
+        assert!(table.zebra_striping.is_some());
+    }
+
+    #[test]
+    fn test_builder_zebra_striping_custom() {
+        let config = ZebraConfig::new(
+            Some(Color::rgb(0.9, 0.9, 0.9)),
+            Some(Color::rgb(1.0, 1.0, 1.0)),
+        );
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .zebra_striping_custom(config)
+            .build()
+            .unwrap();
+        assert!(table.zebra_striping.is_some());
+    }
+
+    #[test]
+    fn test_builder_add_row_with_style() {
+        let style = CellStyle::data();
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row_with_style(vec!["Value"], style)
+            .build()
+            .unwrap();
+        assert!(table.rows[0].style.is_some());
+    }
+
+    #[test]
+    fn test_builder_add_row_with_mixed_styles() {
+        let style1 = CellStyle::header();
+        let style2 = CellStyle::data();
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 50.0)
+            .add_row_with_mixed_styles(vec![(style1, "Header"), (style2, "Data")])
+            .build()
+            .unwrap();
+        assert!(table.rows[0].cells[0].style.is_some());
+        assert!(table.rows[0].cells[1].style.is_some());
+    }
+
+    #[test]
+    fn test_builder_table_border() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .table_border(false)
+            .build()
+            .unwrap();
+        assert!(!table.table_border);
+    }
+
+    #[test]
+    fn test_builder_cell_spacing() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .cell_spacing(5.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.cell_spacing, 5.0);
+    }
+
+    #[test]
+    fn test_builder_total_width() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .total_width(500.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.total_width, Some(500.0));
+    }
+
+    #[test]
+    fn test_builder_repeat_headers() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .repeat_headers(true)
+            .build()
+            .unwrap();
+        assert!(table.repeat_headers);
+    }
+
+    #[test]
+    fn test_builder_set_cell_style() {
+        let style = CellStyle::header();
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Value"])
+            .set_cell_style(0, 0, style)
+            .build()
+            .unwrap();
+        assert!(table.cell_styles.contains_key(&(0, 0)));
+    }
+
+    #[test]
+    fn test_builder_add_data() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 50.0)
+            .add_data(vec![vec!["A1", "B1"], vec!["A2", "B2"], vec!["A3", "B3"]])
+            .build()
+            .unwrap();
+        assert_eq!(table.rows.len(), 3);
+    }
+
+    #[test]
+    fn test_builder_financial_table() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .financial_table()
+            .build()
+            .unwrap();
+        // Financial table sets zebra striping
+        assert!(table.zebra_striping.is_some());
+        assert!(table.table_border);
+    }
+
+    #[test]
+    fn test_builder_minimal_table() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .minimal_table()
+            .build()
+            .unwrap();
+        assert!(!table.table_border);
+        assert_eq!(table.cell_spacing, 2.0);
+    }
+
+    #[test]
+    fn test_builder_build_fails_without_columns() {
+        let result = AdvancedTableBuilder::new().build();
+        assert!(result.is_err());
+        match result {
+            Err(TableError::NoColumns) => {}
+            _ => panic!("Expected NoColumns error"),
+        }
+    }
+
+    // =============================================================================
+    // AdvancedTable tests
+    // =============================================================================
+
+    #[test]
+    fn test_table_calculate_width_explicit() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 75.0)
+            .total_width(300.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.calculate_width(), 300.0);
+    }
+
+    #[test]
+    fn test_table_calculate_width_from_columns() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 75.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.calculate_width(), 125.0);
+    }
+
+    #[test]
+    fn test_table_row_count() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["1"])
+            .add_row(vec!["2"])
+            .add_row(vec!["3"])
+            .build()
+            .unwrap();
+        assert_eq!(table.row_count(), 3);
+    }
+
+    #[test]
+    fn test_table_column_count() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 50.0)
+            .build()
+            .unwrap();
+        assert_eq!(table.column_count(), 2);
+    }
+
+    #[test]
+    fn test_table_get_cell_style_specific() {
+        let specific_style = CellStyle::header();
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Value"])
+            .set_cell_style(0, 0, specific_style.clone())
+            .build()
+            .unwrap();
+        let style = table.get_cell_style(0, 0);
+        assert_eq!(style.font_size, specific_style.font_size);
+    }
+
+    #[test]
+    fn test_table_get_cell_style_row() {
+        let row_style = CellStyle::header();
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_styled_row(vec!["Value"], row_style.clone())
+            .build()
+            .unwrap();
+        let style = table.get_cell_style(0, 0);
+        assert_eq!(style.font_size, row_style.font_size);
+    }
+
+    #[test]
+    fn test_table_get_cell_style_column() {
+        let col_style = CellStyle::new().font_size(20.0);
+        let table = AdvancedTableBuilder::new()
+            .add_styled_column("A", 50.0, col_style.clone())
+            .add_row(vec!["Value"])
+            .build()
+            .unwrap();
+        let style = table.get_cell_style(0, 0);
+        assert_eq!(style.font_size, Some(20.0));
+    }
+
+    #[test]
+    fn test_table_get_cell_style_zebra() {
+        let zebra_color = Color::rgb(0.9, 0.9, 0.9);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Row0"])
+            .add_row(vec!["Row1"])
+            .zebra_striping(zebra_color)
+            .build()
+            .unwrap();
+
+        // Zebra applies to odd rows (row 1)
+        let style_row1 = table.get_cell_style(1, 0);
+        assert!(style_row1.background_color.is_some());
+    }
+
+    #[test]
+    fn test_table_get_cell_style_column_with_zebra() {
+        let col_style = CellStyle::new().font_size(20.0);
+        let zebra_color = Color::rgb(0.9, 0.9, 0.9);
+        let table = AdvancedTableBuilder::new()
+            .add_styled_column("A", 50.0, col_style)
+            .add_row(vec!["Row0"])
+            .add_row(vec!["Row1"])
+            .zebra_striping(zebra_color)
+            .build()
+            .unwrap();
+
+        // Row 1 (odd) should have column style with zebra background
+        let style = table.get_cell_style(1, 0);
+        assert_eq!(style.font_size, Some(20.0));
+        assert!(style.background_color.is_some());
+    }
+
+    #[test]
+    fn test_table_validate_success() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 50.0)
+            .add_row(vec!["1", "2"])
+            .add_row(vec!["3", "4"])
+            .build()
+            .unwrap();
+        assert!(table.validate().is_ok());
+    }
+
+    #[test]
+    fn test_table_validate_column_mismatch() {
+        let mut table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_column("B", 50.0)
+            .build()
+            .unwrap();
+
+        // Manually add a row with wrong number of cells
+        table.rows.push(RowData::from_strings(vec!["1", "2", "3"]));
+
+        let result = table.validate();
+        assert!(result.is_err());
+        match result {
+            Err(TableError::ColumnMismatch {
+                row,
+                found,
+                expected,
+            }) => {
+                assert_eq!(row, 0);
+                assert_eq!(found, 3);
+                assert_eq!(expected, 2);
+            }
+            _ => panic!("Expected ColumnMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_table_get_cell_style_default() {
+        let default_style = CellStyle::new().font_size(12.0);
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Value"])
+            .default_style(default_style.clone())
+            .build()
+            .unwrap();
+
+        let style = table.get_cell_style(0, 0);
+        assert_eq!(style.font_size, Some(12.0));
+    }
+
+    #[test]
+    fn test_table_get_cell_style_invalid_row() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Value"])
+            .build()
+            .unwrap();
+
+        // Getting style for non-existent row should return default
+        let style = table.get_cell_style(100, 0);
+        assert_eq!(style.font_size, table.default_style.font_size);
+    }
+
+    #[test]
+    fn test_table_get_cell_style_invalid_column() {
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 50.0)
+            .add_row(vec!["Value"])
+            .build()
+            .unwrap();
+
+        // Getting style for non-existent column should return default
+        let style = table.get_cell_style(0, 100);
+        assert_eq!(style.font_size, table.default_style.font_size);
+    }
+}

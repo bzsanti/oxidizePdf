@@ -644,4 +644,141 @@ mod tests {
         assert_eq!(title_style.alignment, TextAlignment::Center);
         assert_eq!(title_style.weight, FontWeight::Bold);
     }
+
+    #[test]
+    fn test_theme_backgrounds_corporate() {
+        let bg = ThemeBackgrounds::corporate();
+        assert_eq!(bg.primary, Color::white());
+        assert_eq!(bg.secondary, Color::hex("#f8f9fa"));
+        assert_eq!(bg.surface, Color::white());
+        assert_eq!(bg.hover, Color::hex("#f5f5f5"));
+    }
+
+    #[test]
+    fn test_theme_backgrounds_minimal() {
+        let bg = ThemeBackgrounds::minimal();
+        assert_eq!(bg.primary, Color::white());
+        assert_eq!(bg.secondary, Color::hex("#fafafa"));
+        assert_eq!(bg.surface, Color::white());
+        assert_eq!(bg.hover, Color::hex("#f0f0f0"));
+    }
+
+    #[test]
+    fn test_theme_backgrounds_dark() {
+        let bg = ThemeBackgrounds::dark();
+        assert_eq!(bg.primary, Color::hex("#121212"));
+        assert_eq!(bg.secondary, Color::hex("#1e1e1e"));
+        assert_eq!(bg.surface, Color::hex("#2d2d2d"));
+        assert_eq!(bg.hover, Color::hex("#3d3d3d"));
+    }
+
+    #[test]
+    fn test_theme_backgrounds_colorful() {
+        let bg = ThemeBackgrounds::colorful();
+        assert_eq!(bg.primary, Color::hex("#fafafa"));
+        assert_eq!(bg.secondary, Color::hex("#fce4ec"));
+        assert_eq!(bg.surface, Color::white());
+        assert_eq!(bg.hover, Color::hex("#f8bbd9"));
+    }
+
+    #[test]
+    fn test_theme_backgrounds_default() {
+        let bg = ThemeBackgrounds::default();
+        let corporate = ThemeBackgrounds::corporate();
+        assert_eq!(bg.primary, corporate.primary);
+        assert_eq!(bg.secondary, corporate.secondary);
+    }
+
+    #[test]
+    fn test_typography_default() {
+        let typography = Typography::default();
+        let professional = Typography::professional();
+        assert_eq!(typography.title_font, professional.title_font);
+    }
+
+    #[test]
+    fn test_typography_dark() {
+        let typography = Typography::dark();
+        assert_eq!(typography.title_color, Color::white());
+        assert_eq!(typography.heading_color, Color::white());
+        assert_eq!(typography.body_color, Color::white());
+        assert_eq!(typography.caption_color, Color::hex("#b3b3b3"));
+    }
+
+    #[test]
+    fn test_typography_colorful() {
+        let typography = Typography::colorful();
+        assert_eq!(typography.title_color, Color::hex("#880e4f"));
+        assert_eq!(typography.heading_color, Color::hex("#ad1457"));
+        assert_eq!(typography.title_size, 26.0);
+    }
+
+    #[test]
+    fn test_theme_spacing_minimal() {
+        let spacing = ThemeSpacing::minimal();
+        assert_eq!(spacing.xs, 2.0);
+        assert_eq!(spacing.sm, 6.0);
+        assert_eq!(spacing.md, 12.0);
+        assert_eq!(spacing.lg, 20.0);
+        assert_eq!(spacing.xl, 28.0);
+    }
+
+    #[test]
+    fn test_theme_spacing_corporate() {
+        let spacing = ThemeSpacing::corporate();
+        assert_eq!(spacing.xs, 4.0);
+        assert_eq!(spacing.sm, 8.0);
+        assert_eq!(spacing.md, 16.0);
+        assert_eq!(spacing.lg, 24.0);
+        assert_eq!(spacing.xl, 32.0);
+    }
+
+    #[test]
+    fn test_theme_spacing_colorful() {
+        let spacing = ThemeSpacing::colorful();
+        assert_eq!(spacing.xs, 6.0);
+        assert_eq!(spacing.sm, 10.0);
+        assert_eq!(spacing.md, 18.0);
+        assert_eq!(spacing.lg, 28.0);
+        assert_eq!(spacing.xl, 36.0);
+    }
+
+    #[test]
+    fn test_theme_spacing_default() {
+        let spacing = ThemeSpacing::default();
+        let corporate = ThemeSpacing::corporate();
+        assert_eq!(spacing.xs, corporate.xs);
+    }
+
+    #[test]
+    fn test_theme_clone() {
+        let theme = DashboardTheme::corporate();
+        let cloned = theme.clone();
+        assert_eq!(theme.colors.primary, cloned.colors.primary);
+        assert_eq!(theme.typography.title_size, cloned.typography.title_size);
+    }
+
+    #[test]
+    fn test_dashboard_theme_default() {
+        let theme = DashboardTheme::default();
+        let corporate = DashboardTheme::corporate();
+        assert_eq!(theme.colors.primary, corporate.colors.primary);
+    }
+
+    #[test]
+    fn test_typography_minimal() {
+        let typography = Typography::minimal();
+        assert_eq!(typography.title_font, "Helvetica-Light".to_string());
+        assert_eq!(typography.title_size, 28.0);
+        assert_eq!(typography.body_size, 11.0);
+        assert_eq!(typography.line_height, 1.5);
+    }
+
+    #[test]
+    fn test_typography_professional() {
+        let typography = Typography::professional();
+        assert_eq!(typography.title_font, "Helvetica-Bold".to_string());
+        assert_eq!(typography.title_size, 24.0);
+        assert_eq!(typography.line_height, 1.4);
+    }
 }

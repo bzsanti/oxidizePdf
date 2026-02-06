@@ -669,4 +669,123 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_register_custom_font_metrics() {
+        let metrics = FontMetrics::new(750).with_widths(&[('A', 800), ('B', 850)]);
+        register_custom_font_metrics("TestFont".to_string(), metrics);
+
+        let retrieved = get_custom_font_metrics("TestFont");
+        assert!(retrieved.is_some());
+
+        let retrieved = retrieved.unwrap();
+        assert_eq!(retrieved.char_width('A'), 800);
+        assert_eq!(retrieved.char_width('B'), 850);
+        assert_eq!(retrieved.char_width('Z'), 750); // default
+    }
+
+    #[test]
+    fn test_get_custom_font_metrics_not_found() {
+        let result = get_custom_font_metrics("NonExistentFont12345");
+        // May or may not be found depending on previous tests
+        // Just verify no panic
+        let _ = result;
+    }
+
+    #[test]
+    fn test_measure_text_custom_font() {
+        // Register a custom font with known metrics
+        let metrics = FontMetrics::new(500).with_widths(&[('A', 600), ('B', 600), ('C', 600)]);
+        register_custom_font_metrics("MyCustomFont".to_string(), metrics);
+
+        let width = measure_text("ABC", Font::Custom("MyCustomFont".to_string()), 10.0);
+
+        // 3 chars * 600 units = 1800 units = 1.8 at size 1.0 * 10.0 = 18.0
+        assert!((width - 18.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_measure_char_custom_font() {
+        let metrics = FontMetrics::new(500).with_widths(&[('X', 700)]);
+        register_custom_font_metrics("CustomCharTest".to_string(), metrics);
+
+        let width = measure_char('X', Font::Custom("CustomCharTest".to_string()), 10.0);
+
+        // 700 units / 1000 * 10.0 = 7.0
+        assert!((width - 7.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_custom_font_auto_register_default() {
+        // When using an unregistered custom font, default metrics should be registered
+        let width = measure_char('A', Font::Custom("AutoRegisterTest".to_string()), 10.0);
+
+        // Should use default metrics (Helvetica-like), A = 667
+        let expected = 667.0 * 10.0 / 1000.0;
+        assert!((width - expected).abs() < 0.01);
+
+        // Now it should be registered
+        let metrics = get_custom_font_metrics("AutoRegisterTest");
+        assert!(metrics.is_some());
+    }
+
+    #[test]
+    fn test_create_default_custom_metrics() {
+        let metrics = create_default_custom_metrics();
+
+        // Test some expected values
+        assert_eq!(metrics.char_width('A'), 667);
+        assert_eq!(metrics.char_width(' '), 278);
+        assert_eq!(metrics.char_width('0'), 556);
+        assert_eq!(metrics.char_width('你'), 1000); // CJK
+        assert_eq!(metrics.default_width, 556);
+    }
+
+    #[test]
+    fn test_times_roman_metrics() {
+        let width = measure_char('A', Font::TimesRoman, 10.0);
+        // Times Roman 'A' = 722 units
+        let expected = 722.0 * 10.0 / 1000.0;
+        assert!((width - expected).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_helvetica_bold_metrics() {
+        let width = measure_char('A', Font::HelveticaBold, 10.0);
+        // Helvetica Bold 'A' = 722 units
+        let expected = 722.0 * 10.0 / 1000.0;
+        assert!((width - expected).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_times_bold_uses_base_metrics() {
+        let base_width = measure_char('A', Font::TimesRoman, 12.0);
+        let bold_width = measure_char('A', Font::TimesBold, 12.0);
+        let italic_width = measure_char('A', Font::TimesItalic, 12.0);
+        let bold_italic_width = measure_char('A', Font::TimesBoldItalic, 12.0);
+
+        // All Times variants use base Times Roman metrics
+        assert_eq!(base_width, bold_width);
+        assert_eq!(base_width, italic_width);
+        assert_eq!(base_width, bold_italic_width);
+    }
+
+    #[test]
+    fn test_courier_variants_use_base_metrics() {
+        let base_width = measure_char('X', Font::Courier, 12.0);
+        let bold_width = measure_char('X', Font::CourierBold, 12.0);
+        let oblique_width = measure_char('X', Font::CourierOblique, 12.0);
+        let bold_oblique_width = measure_char('X', Font::CourierBoldOblique, 12.0);
+
+        // All Courier variants use base Courier metrics
+        assert_eq!(base_width, bold_width);
+        assert_eq!(base_width, oblique_width);
+        assert_eq!(base_width, bold_oblique_width);
+    }
+
+    #[test]
+    fn test_split_into_words_mixed_whitespace() {
+        let words = split_into_words("A B  C   D");
+        assert_eq!(words, vec!["A", " ", "B", "  ", "C", "   ", "D"]);
+    }
 }

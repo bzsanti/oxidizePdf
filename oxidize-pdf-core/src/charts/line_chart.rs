@@ -379,4 +379,196 @@ mod tests {
         assert!(min_y <= 1.0);
         assert!(max_y >= 3.0);
     }
+
+    #[test]
+    fn test_data_series_line_style() {
+        let series = DataSeries::new("Test", Color::blue()).line_style(3.0);
+        assert_eq!(series.line_width, 3.0);
+    }
+
+    #[test]
+    fn test_data_series_markers() {
+        let series = DataSeries::new("Test", Color::blue()).markers(false, 8.0);
+        assert!(!series.show_markers);
+        assert_eq!(series.marker_size, 8.0);
+    }
+
+    #[test]
+    fn test_data_series_fill_area() {
+        let series = DataSeries::new("Test", Color::blue()).fill_area(Some(Color::green()));
+        assert!(series.fill_area);
+        assert_eq!(series.fill_color, Some(Color::green()));
+
+        let series_no_color = DataSeries::new("Test2", Color::red()).fill_area(None);
+        assert!(series_no_color.fill_area);
+        assert!(series_no_color.fill_color.is_none());
+    }
+
+    #[test]
+    fn test_data_series_empty_ranges() {
+        let series = DataSeries::new("Empty", Color::black());
+        let (min_x, max_x) = series.x_range();
+        let (min_y, max_y) = series.y_range();
+
+        assert_eq!((min_x, max_x), (0.0, 1.0));
+        assert_eq!((min_y, max_y), (0.0, 1.0));
+    }
+
+    #[test]
+    fn test_line_chart_new() {
+        let chart = LineChart::new();
+        assert!(chart.title.is_empty());
+        assert!(chart.series.is_empty());
+        assert!(chart.show_grid);
+        assert_eq!(chart.grid_lines, 5);
+    }
+
+    #[test]
+    fn test_line_chart_default() {
+        let chart = LineChart::default();
+        assert!(chart.title.is_empty());
+    }
+
+    #[test]
+    fn test_line_chart_combined_x_range_empty() {
+        let chart = LineChart::new();
+        let (min_x, max_x) = chart.combined_x_range();
+        assert_eq!((min_x, max_x), (0.0, 1.0));
+    }
+
+    #[test]
+    fn test_line_chart_combined_y_range_empty() {
+        let chart = LineChart::new();
+        let (min_y, max_y) = chart.combined_y_range();
+        assert_eq!((min_y, max_y), (0.0, 1.0));
+    }
+
+    #[test]
+    fn test_line_chart_builder_axis_labels() {
+        let chart = LineChartBuilder::new()
+            .axis_labels("X Axis", "Y Axis")
+            .build();
+
+        assert_eq!(chart.x_axis_label, "X Axis");
+        assert_eq!(chart.y_axis_label, "Y Axis");
+    }
+
+    #[test]
+    fn test_line_chart_builder_title_font() {
+        let chart = LineChartBuilder::new()
+            .title_font(Font::CourierBold, 20.0)
+            .build();
+
+        assert_eq!(chart.title_font, Font::CourierBold);
+        assert_eq!(chart.title_font_size, 20.0);
+    }
+
+    #[test]
+    fn test_line_chart_builder_label_font() {
+        let chart = LineChartBuilder::new()
+            .label_font(Font::TimesBold, 14.0)
+            .build();
+
+        assert_eq!(chart.label_font, Font::TimesBold);
+        assert_eq!(chart.label_font_size, 14.0);
+    }
+
+    #[test]
+    fn test_line_chart_builder_axis_font() {
+        let chart = LineChartBuilder::new()
+            .axis_font(Font::Courier, 8.0)
+            .build();
+
+        assert_eq!(chart.axis_font, Font::Courier);
+        assert_eq!(chart.axis_font_size, 8.0);
+    }
+
+    #[test]
+    fn test_line_chart_builder_legend_position() {
+        let chart = LineChartBuilder::new()
+            .legend_position(LegendPosition::Bottom)
+            .build();
+
+        assert_eq!(chart.legend_position, LegendPosition::Bottom);
+    }
+
+    #[test]
+    fn test_line_chart_builder_background_color() {
+        let chart = LineChartBuilder::new()
+            .background_color(Color::white())
+            .build();
+
+        assert_eq!(chart.background_color, Some(Color::white()));
+    }
+
+    #[test]
+    fn test_line_chart_builder_grid() {
+        let chart = LineChartBuilder::new()
+            .grid(false, Color::gray(0.5), 10)
+            .build();
+
+        assert!(!chart.show_grid);
+        assert_eq!(chart.grid_color, Color::gray(0.5));
+        assert_eq!(chart.grid_lines, 10);
+    }
+
+    #[test]
+    fn test_line_chart_builder_x_range() {
+        let chart = LineChartBuilder::new().x_range(0.0, 100.0).build();
+
+        assert_eq!(chart.x_range, Some((0.0, 100.0)));
+
+        let (min_x, max_x) = chart.combined_x_range();
+        assert_eq!((min_x, max_x), (0.0, 100.0));
+    }
+
+    #[test]
+    fn test_line_chart_builder_y_range() {
+        let chart = LineChartBuilder::new().y_range(-10.0, 50.0).build();
+
+        assert_eq!(chart.y_range, Some((-10.0, 50.0)));
+
+        let (min_y, max_y) = chart.combined_y_range();
+        assert_eq!((min_y, max_y), (-10.0, 50.0));
+    }
+
+    #[test]
+    fn test_line_chart_builder_add_series() {
+        let series = DataSeries::new("Custom", Color::green()).y_data(vec![1.0, 2.0]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+
+        assert_eq!(chart.series.len(), 1);
+        assert_eq!(chart.series[0].name, "Custom");
+    }
+
+    #[test]
+    fn test_line_chart_builder_default() {
+        let builder = LineChartBuilder::default();
+        let chart = builder.build();
+        assert!(chart.title.is_empty());
+    }
+
+    #[test]
+    fn test_data_series_clone() {
+        let series = DataSeries::new("Test", Color::blue())
+            .y_data(vec![1.0, 2.0])
+            .markers(true, 5.0);
+
+        let cloned = series.clone();
+        assert_eq!(series.name, cloned.name);
+        assert_eq!(series.data, cloned.data);
+        assert_eq!(series.marker_size, cloned.marker_size);
+    }
+
+    #[test]
+    fn test_line_chart_clone() {
+        let chart = LineChartBuilder::new()
+            .title("Clone Test")
+            .add_simple_series("S1", vec![1.0], Color::red())
+            .build();
+
+        let cloned = chart.clone();
+        assert_eq!(chart.title, cloned.title);
+        assert_eq!(chart.series.len(), cloned.series.len());
+    }
 }

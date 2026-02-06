@@ -280,6 +280,8 @@ mod tests {
     use crate::charts::{BarChartBuilder, DataSeries, LineChartBuilder, PieChartBuilder};
     use crate::graphics::Color;
 
+    // ==================== DashboardBarChart Tests ====================
+
     #[test]
     fn test_dashboard_bar_chart_creation() {
         let chart = BarChartBuilder::new()
@@ -301,6 +303,93 @@ mod tests {
     }
 
     #[test]
+    fn test_dashboard_bar_chart_chart_accessor() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![1.0, 2.0, 3.0])
+            .build();
+        let dashboard_chart = DashboardBarChart::new(chart);
+
+        assert_eq!(dashboard_chart.chart().data.len(), 3);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_chart_mut() {
+        let chart = BarChartBuilder::new().simple_data(vec![1.0, 2.0]).build();
+        let mut dashboard_chart = DashboardBarChart::new(chart);
+
+        dashboard_chart.chart_mut().show_grid = true;
+        assert!(dashboard_chart.chart().show_grid);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_set_span() {
+        let chart = BarChartBuilder::new().simple_data(vec![10.0]).build();
+        let mut dashboard_chart = DashboardBarChart::new(chart);
+
+        dashboard_chart.set_span(ComponentSpan::new(4));
+        assert_eq!(dashboard_chart.get_span().columns, 4);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_preferred_height() {
+        let chart = BarChartBuilder::new().simple_data(vec![10.0]).build();
+        let dashboard_chart = DashboardBarChart::new(chart);
+
+        assert_eq!(dashboard_chart.preferred_height(500.0), 250.0);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_minimum_width() {
+        let chart = BarChartBuilder::new().simple_data(vec![10.0]).build();
+        let dashboard_chart = DashboardBarChart::new(chart);
+
+        assert_eq!(dashboard_chart.minimum_width(), 200.0);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_estimated_render_time() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![10.0, 20.0, 30.0, 40.0, 50.0])
+            .build();
+        let dashboard_chart = DashboardBarChart::new(chart);
+
+        // 20 base + (5 bars * 2) = 30
+        assert_eq!(dashboard_chart.estimated_render_time_ms(), 30);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_estimated_memory() {
+        let chart = BarChartBuilder::new()
+            .simple_data(vec![10.0, 20.0, 30.0])
+            .build();
+        let dashboard_chart = DashboardBarChart::new(chart);
+
+        // 0.2 base + (3 * 0.01) = 0.23
+        let expected = 0.2 + (3.0 * 0.01);
+        assert!((dashboard_chart.estimated_memory_mb() - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_clone() {
+        let chart = BarChartBuilder::new().simple_data(vec![10.0]).build();
+        let dashboard_chart = DashboardBarChart::new(chart).span(8);
+        let cloned = dashboard_chart.clone();
+
+        assert_eq!(cloned.get_span().columns, 8);
+    }
+
+    #[test]
+    fn test_dashboard_bar_chart_debug() {
+        let chart = BarChartBuilder::new().simple_data(vec![10.0]).build();
+        let dashboard_chart = DashboardBarChart::new(chart);
+
+        let debug_str = format!("{:?}", dashboard_chart);
+        assert!(debug_str.contains("DashboardBarChart"));
+    }
+
+    // ==================== DashboardPieChart Tests ====================
+
+    #[test]
     fn test_dashboard_pie_chart_creation() {
         let chart = PieChartBuilder::new()
             .simple_data(vec![25.0, 35.0, 40.0])
@@ -310,6 +399,111 @@ mod tests {
         assert_eq!(dashboard_chart.component_type(), "PieChart");
         assert!(dashboard_chart.complexity_score() > 30);
     }
+
+    #[test]
+    fn test_dashboard_pie_chart_span() {
+        let chart = PieChartBuilder::new().simple_data(vec![50.0, 50.0]).build();
+        let dashboard_chart = DashboardPieChart::new(chart).span(4);
+
+        assert_eq!(dashboard_chart.get_span().columns, 4);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_chart_accessor() {
+        let chart = PieChartBuilder::new()
+            .simple_data(vec![20.0, 30.0, 50.0])
+            .build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        assert_eq!(dashboard_chart.chart().segments.len(), 3);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_chart_mut() {
+        let chart = PieChartBuilder::new().simple_data(vec![50.0, 50.0]).build();
+        let mut dashboard_chart = DashboardPieChart::new(chart);
+
+        dashboard_chart.chart_mut().show_percentages = true;
+        assert!(dashboard_chart.chart().show_percentages);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_set_span() {
+        let chart = PieChartBuilder::new().simple_data(vec![100.0]).build();
+        let mut dashboard_chart = DashboardPieChart::new(chart);
+
+        dashboard_chart.set_span(ComponentSpan::new(3));
+        assert_eq!(dashboard_chart.get_span().columns, 3);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_preferred_height() {
+        let chart = PieChartBuilder::new().simple_data(vec![50.0, 50.0]).build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        assert_eq!(dashboard_chart.preferred_height(400.0), 250.0);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_minimum_width() {
+        let chart = PieChartBuilder::new().simple_data(vec![100.0]).build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        assert_eq!(dashboard_chart.minimum_width(), 200.0);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_estimated_render_time() {
+        let chart = PieChartBuilder::new()
+            .simple_data(vec![25.0, 25.0, 25.0, 25.0])
+            .build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        // 25 base + (4 segments * 3) = 37
+        assert_eq!(dashboard_chart.estimated_render_time_ms(), 37);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_estimated_memory() {
+        let chart = PieChartBuilder::new().simple_data(vec![50.0, 50.0]).build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        // 0.15 base + (2 * 0.02) = 0.19
+        let expected = 0.15 + (2.0 * 0.02);
+        assert!((dashboard_chart.estimated_memory_mb() - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_complexity_with_percentages() {
+        let chart = PieChartBuilder::new()
+            .simple_data(vec![50.0, 50.0])
+            .show_percentages(true)
+            .build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        // Should include feature_score of 5 for percentages
+        assert!(dashboard_chart.complexity_score() >= 35);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_clone() {
+        let chart = PieChartBuilder::new().simple_data(vec![100.0]).build();
+        let dashboard_chart = DashboardPieChart::new(chart).span(5);
+        let cloned = dashboard_chart.clone();
+
+        assert_eq!(cloned.get_span().columns, 5);
+    }
+
+    #[test]
+    fn test_dashboard_pie_chart_debug() {
+        let chart = PieChartBuilder::new().simple_data(vec![100.0]).build();
+        let dashboard_chart = DashboardPieChart::new(chart);
+
+        let debug_str = format!("{:?}", dashboard_chart);
+        assert!(debug_str.contains("DashboardPieChart"));
+    }
+
+    // ==================== DashboardLineChart Tests ====================
 
     #[test]
     fn test_dashboard_line_chart_creation() {
@@ -329,6 +523,135 @@ mod tests {
     }
 
     #[test]
+    fn test_dashboard_line_chart_span() {
+        let series = DataSeries::new("Series", Color::red()).xy_data(vec![(0.0, 5.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let dashboard_chart = DashboardLineChart::new(chart).span(10);
+
+        assert_eq!(dashboard_chart.get_span().columns, 10);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_chart_accessor() {
+        let series = DataSeries::new("Test", Color::green()).xy_data(vec![(0.0, 1.0), (1.0, 2.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        assert_eq!(dashboard_chart.chart().series.len(), 1);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_chart_mut() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let mut dashboard_chart = DashboardLineChart::new(chart);
+
+        dashboard_chart.chart_mut().show_grid = true;
+        assert!(dashboard_chart.chart().show_grid);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_set_span() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let mut dashboard_chart = DashboardLineChart::new(chart);
+
+        dashboard_chart.set_span(ComponentSpan::new(8));
+        assert_eq!(dashboard_chart.get_span().columns, 8);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_minimum_width() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        assert_eq!(dashboard_chart.minimum_width(), 250.0);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_estimated_render_time() {
+        let series1 =
+            DataSeries::new("S1", Color::blue()).xy_data(vec![(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)]);
+        let series2 = DataSeries::new("S2", Color::red()).xy_data(vec![(0.0, 2.0), (1.0, 1.0)]);
+        let chart = LineChartBuilder::new()
+            .add_series(series1)
+            .add_series(series2)
+            .build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        // 30 base + (5 points * 2) = 40
+        assert_eq!(dashboard_chart.estimated_render_time_ms(), 40);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_estimated_memory() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![
+            (0.0, 1.0),
+            (1.0, 2.0),
+            (2.0, 3.0),
+            (3.0, 4.0),
+        ]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        // 0.25 base + (4 points * 0.01) = 0.29
+        let expected = 0.25 + (4.0 * 0.01);
+        assert!((dashboard_chart.estimated_memory_mb() - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_complexity_with_grid() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let chart = LineChartBuilder::new()
+            .add_series(series)
+            .grid(true, Color::gray(0.8), 10)
+            .build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        // 40 base + 10 series complexity + 10 grid = at least 50
+        assert!(dashboard_chart.complexity_score() >= 50);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_complexity_multiple_series() {
+        let series1 = DataSeries::new("S1", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let series2 = DataSeries::new("S2", Color::red()).xy_data(vec![(0.0, 2.0)]);
+        let series3 = DataSeries::new("S3", Color::green()).xy_data(vec![(0.0, 3.0)]);
+        let chart = LineChartBuilder::new()
+            .add_series(series1)
+            .add_series(series2)
+            .add_series(series3)
+            .build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        // More series = higher complexity
+        assert!(dashboard_chart.complexity_score() >= 40);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_clone() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let dashboard_chart = DashboardLineChart::new(chart).span(7);
+        let cloned = dashboard_chart.clone();
+
+        assert_eq!(cloned.get_span().columns, 7);
+    }
+
+    #[test]
+    fn test_dashboard_line_chart_debug() {
+        let series = DataSeries::new("Test", Color::blue()).xy_data(vec![(0.0, 1.0)]);
+        let chart = LineChartBuilder::new().add_series(series).build();
+        let dashboard_chart = DashboardLineChart::new(chart);
+
+        let debug_str = format!("{:?}", dashboard_chart);
+        assert!(debug_str.contains("DashboardLineChart"));
+    }
+
+    // ==================== Comparison Tests ====================
+
+    #[test]
     fn test_complexity_scores() {
         // Bar chart with many bars should have higher complexity
         let simple_bar = BarChartBuilder::new().simple_data(vec![10.0, 20.0]).build();
@@ -342,5 +665,29 @@ mod tests {
         let complex_dashboard = DashboardBarChart::new(complex_bar);
 
         assert!(complex_dashboard.complexity_score() > simple_dashboard.complexity_score());
+    }
+
+    #[test]
+    fn test_all_chart_types_component_types() {
+        let bar = DashboardBarChart::new(BarChartBuilder::new().simple_data(vec![1.0]).build());
+        let pie = DashboardPieChart::new(PieChartBuilder::new().simple_data(vec![1.0]).build());
+        let series = DataSeries::new("T", Color::black()).xy_data(vec![(0.0, 1.0)]);
+        let line = DashboardLineChart::new(LineChartBuilder::new().add_series(series).build());
+
+        assert_eq!(bar.component_type(), "BarChart");
+        assert_eq!(pie.component_type(), "PieChart");
+        assert_eq!(line.component_type(), "LineChart");
+    }
+
+    #[test]
+    fn test_empty_data_estimated_values() {
+        // Even with minimal data, estimates should be reasonable
+        let bar = DashboardBarChart::new(BarChartBuilder::new().simple_data(vec![]).build());
+        let pie = DashboardPieChart::new(PieChartBuilder::new().simple_data(vec![]).build());
+
+        assert!(bar.estimated_render_time_ms() >= 20); // Base time
+        assert!(pie.estimated_render_time_ms() >= 25); // Base time
+        assert!(bar.estimated_memory_mb() >= 0.2); // Base memory
+        assert!(pie.estimated_memory_mb() >= 0.15); // Base memory
     }
 }
