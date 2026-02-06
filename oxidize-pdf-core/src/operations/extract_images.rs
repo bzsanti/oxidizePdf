@@ -9,7 +9,7 @@ use crate::parser::objects::{PdfName, PdfObject, PdfStream};
 use crate::parser::{PdfDocument, PdfReader};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "external-images")]
@@ -140,16 +140,16 @@ pub struct ExtractedImage {
 }
 
 /// Image extractor
-pub struct ImageExtractor {
-    document: PdfDocument<File>,
+pub struct ImageExtractor<R: Read + Seek> {
+    document: PdfDocument<R>,
     options: ExtractImagesOptions,
     /// Cache for already processed images
     processed_images: HashMap<String, PathBuf>,
 }
 
-impl ImageExtractor {
+impl<R: Read + Seek> ImageExtractor<R> {
     /// Create a new image extractor
-    pub fn new(document: PdfDocument<File>, options: ExtractImagesOptions) -> Self {
+    pub fn new(document: PdfDocument<R>, options: ExtractImagesOptions) -> Self {
         Self {
             document,
             options,
