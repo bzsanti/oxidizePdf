@@ -499,4 +499,152 @@ mod tests {
         assert!(content_area.2 < 800.0); // Width reduced by margins
         assert!(content_area.3 < 600.0); // Height reduced by margins + header + footer
     }
+
+    #[test]
+    fn test_grid_position_with_row_span() {
+        let pos = GridPosition::new(0, 0, 6).with_row_span(2);
+        assert_eq!(pos.row, 0);
+        assert_eq!(pos.column_start, 0);
+        assert_eq!(pos.column_span, 6);
+        assert_eq!(pos.row_span, 2);
+    }
+
+    #[test]
+    fn test_grid_position_column_end() {
+        let pos = GridPosition::new(0, 3, 5);
+        assert_eq!(pos.column_end(), 8);
+    }
+
+    #[test]
+    fn test_grid_position_overlaps_same_row() {
+        let pos1 = GridPosition::new(0, 0, 4);
+        let pos2 = GridPosition::new(0, 2, 4);
+        assert!(pos1.overlaps(&pos2));
+        assert!(pos2.overlaps(&pos1));
+    }
+
+    #[test]
+    fn test_grid_position_overlaps_with_row_span() {
+        let pos1 = GridPosition::new(0, 0, 6).with_row_span(2);
+        let pos2 = GridPosition::new(1, 0, 6);
+        assert!(pos1.overlaps(&pos2));
+    }
+
+    #[test]
+    fn test_grid_position_no_overlap_different_rows() {
+        let pos1 = GridPosition::new(0, 0, 6);
+        let pos2 = GridPosition::new(2, 0, 6);
+        assert!(!pos1.overlaps(&pos2));
+    }
+
+    #[test]
+    fn test_grid_position_equality() {
+        let pos1 = GridPosition::new(1, 2, 3);
+        let pos2 = GridPosition::new(1, 2, 3);
+        let pos3 = GridPosition::new(1, 2, 4);
+        assert_eq!(pos1, pos2);
+        assert_ne!(pos1, pos3);
+    }
+
+    #[test]
+    fn test_layout_state_default() {
+        let state = LayoutState::default();
+        assert_eq!(state.current_row, 0);
+        assert_eq!(state.current_column, 0);
+        assert_eq!(state.total_rows, 0);
+    }
+
+    #[test]
+    fn test_layout_state_clone() {
+        let state = LayoutState {
+            current_row: 2,
+            current_column: 5,
+            total_rows: 3,
+        };
+        let cloned = state.clone();
+        assert_eq!(state.current_row, cloned.current_row);
+        assert_eq!(state.current_column, cloned.current_column);
+        assert_eq!(state.total_rows, cloned.total_rows);
+    }
+
+    #[test]
+    fn test_layout_manager_default() {
+        let manager = LayoutManager::default();
+        assert_eq!(manager.get_current_breakpoint(500.0), "default");
+    }
+
+    #[test]
+    fn test_layout_manager_no_breakpoints() {
+        let manager = LayoutManager::new();
+        assert_eq!(manager.get_current_breakpoint(0.0), "default");
+        assert_eq!(manager.get_current_breakpoint(10000.0), "default");
+    }
+
+    #[test]
+    fn test_layout_stats_debug() {
+        let stats = LayoutStats {
+            total_components: 5,
+            rows_used: 2,
+            column_utilization: 0.8,
+            has_overflow: false,
+        };
+        let debug_str = format!("{:?}", stats);
+        assert!(debug_str.contains("LayoutStats"));
+        assert!(debug_str.contains("5"));
+    }
+
+    #[test]
+    fn test_layout_stats_clone() {
+        let stats = LayoutStats {
+            total_components: 3,
+            rows_used: 1,
+            column_utilization: 0.5,
+            has_overflow: true,
+        };
+        let cloned = stats.clone();
+        assert_eq!(stats.total_components, cloned.total_components);
+        assert_eq!(stats.rows_used, cloned.rows_used);
+        assert_eq!(stats.column_utilization, cloned.column_utilization);
+        assert_eq!(stats.has_overflow, cloned.has_overflow);
+    }
+
+    #[test]
+    fn test_grid_system_clone() {
+        let grid = GridSystem::new(12, 10.0, 15.0);
+        let cloned = grid.clone();
+        assert_eq!(grid.columns, cloned.columns);
+        assert_eq!(grid.column_gutter, cloned.column_gutter);
+        assert_eq!(grid.row_gutter, cloned.row_gutter);
+    }
+
+    #[test]
+    fn test_grid_system_debug() {
+        let grid = GridSystem::new(8, 5.0, 10.0);
+        let debug_str = format!("{:?}", grid);
+        assert!(debug_str.contains("GridSystem"));
+        assert!(debug_str.contains("8"));
+    }
+
+    #[test]
+    fn test_layout_manager_clone() {
+        let mut manager = LayoutManager::new();
+        manager.add_breakpoint("test", 500.0);
+        let cloned = manager.clone();
+        assert_eq!(
+            manager.get_current_breakpoint(600.0),
+            cloned.get_current_breakpoint(600.0)
+        );
+    }
+
+    #[test]
+    fn test_dashboard_layout_clone() {
+        let config = DashboardConfig::default();
+        let layout = DashboardLayout::new(config);
+        let cloned = layout.clone();
+        let page_bounds = (0.0, 0.0, 800.0, 600.0);
+        assert_eq!(
+            layout.calculate_content_area(page_bounds),
+            cloned.calculate_content_area(page_bounds)
+        );
+    }
 }

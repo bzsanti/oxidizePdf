@@ -779,4 +779,768 @@ mod tests {
         assert_eq!(system.events[0].event_type, EventType::ValueChanged);
         assert_eq!(system.events[0].field, "test");
     }
+
+    // ===== New tests for improved coverage =====
+
+    #[test]
+    fn test_default_calculation_settings() {
+        let settings = CalculationSettings::default();
+        assert!(settings.auto_recalculate);
+        assert_eq!(settings.max_depth, 100);
+        assert!(settings.log_events);
+        assert_eq!(settings.decimal_precision, 2);
+    }
+
+    #[test]
+    fn test_form_calculation_system_default() {
+        let system = FormCalculationSystem::default();
+        let summary = system.get_summary();
+        assert_eq!(summary.total_fields, 0);
+        assert_eq!(summary.js_calculations, 0);
+        assert_eq!(summary.formatted_fields, 0);
+        assert_eq!(summary.events_logged, 0);
+    }
+
+    #[test]
+    fn test_with_settings() {
+        let settings = CalculationSettings {
+            auto_recalculate: false,
+            max_depth: 50,
+            log_events: false,
+            decimal_precision: 4,
+        };
+        let system = FormCalculationSystem::with_settings(settings.clone());
+        assert!(!system.settings.auto_recalculate);
+        assert_eq!(system.settings.max_depth, 50);
+    }
+
+    #[test]
+    fn test_simple_calculate_product() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("a", FieldValue::Number(2.0))
+            .unwrap();
+        system
+            .set_field_value("b", FieldValue::Number(3.0))
+            .unwrap();
+        system
+            .set_field_value("c", FieldValue::Number(4.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Product,
+            fields: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        system.add_js_calculation("product", calc).unwrap();
+
+        let result = system.engine.get_field_value("product").unwrap();
+        assert_eq!(result.to_number(), 24.0);
+    }
+
+    #[test]
+    fn test_simple_calculate_average() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("a", FieldValue::Number(10.0))
+            .unwrap();
+        system
+            .set_field_value("b", FieldValue::Number(20.0))
+            .unwrap();
+        system
+            .set_field_value("c", FieldValue::Number(30.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Average,
+            fields: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        system.add_js_calculation("avg", calc).unwrap();
+
+        let result = system.engine.get_field_value("avg").unwrap();
+        assert_eq!(result.to_number(), 20.0);
+    }
+
+    #[test]
+    fn test_simple_calculate_minimum() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("a", FieldValue::Number(10.0))
+            .unwrap();
+        system
+            .set_field_value("b", FieldValue::Number(5.0))
+            .unwrap();
+        system
+            .set_field_value("c", FieldValue::Number(15.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Minimum,
+            fields: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        system.add_js_calculation("min", calc).unwrap();
+
+        let result = system.engine.get_field_value("min").unwrap();
+        assert_eq!(result.to_number(), 5.0);
+    }
+
+    #[test]
+    fn test_simple_calculate_maximum() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("a", FieldValue::Number(10.0))
+            .unwrap();
+        system
+            .set_field_value("b", FieldValue::Number(5.0))
+            .unwrap();
+        system
+            .set_field_value("c", FieldValue::Number(15.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Maximum,
+            fields: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        system.add_js_calculation("max", calc).unwrap();
+
+        let result = system.engine.get_field_value("max").unwrap();
+        assert_eq!(result.to_number(), 15.0);
+    }
+
+    #[test]
+    fn test_simple_calculate_empty_fields() {
+        let mut system = FormCalculationSystem::new();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Sum,
+            fields: vec![],
+        };
+        system.add_js_calculation("empty_sum", calc).unwrap();
+
+        let result = system.engine.get_field_value("empty_sum").unwrap();
+        assert_eq!(result.to_number(), 0.0);
+    }
+
+    #[test]
+    fn test_percent_calculate_percentage_of() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("base", FieldValue::Number(200.0))
+            .unwrap();
+        system
+            .set_field_value("value", FieldValue::Number(50.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::PercentCalculate {
+            base_field: "base".to_string(),
+            percent_field: "value".to_string(),
+            mode: PercentMode::PercentageOf,
+        };
+        system.add_js_calculation("percentage", calc).unwrap();
+
+        let result = system.engine.get_field_value("percentage").unwrap();
+        assert_eq!(result.to_number(), 25.0);
+    }
+
+    #[test]
+    fn test_percent_calculate_percentage_of_zero_base() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("base", FieldValue::Number(0.0))
+            .unwrap();
+        system
+            .set_field_value("value", FieldValue::Number(50.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::PercentCalculate {
+            base_field: "base".to_string(),
+            percent_field: "value".to_string(),
+            mode: PercentMode::PercentageOf,
+        };
+        system.add_js_calculation("percentage", calc).unwrap();
+
+        let result = system.engine.get_field_value("percentage").unwrap();
+        assert_eq!(result.to_number(), 0.0);
+    }
+
+    #[test]
+    fn test_percent_calculate_add_percent() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("base", FieldValue::Number(100.0))
+            .unwrap();
+        system
+            .set_field_value("percent", FieldValue::Number(10.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::PercentCalculate {
+            base_field: "base".to_string(),
+            percent_field: "percent".to_string(),
+            mode: PercentMode::AddPercent,
+        };
+        system.add_js_calculation("with_tax", calc).unwrap();
+
+        let result = system.engine.get_field_value("with_tax").unwrap();
+        assert!((result.to_number() - 110.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_percent_calculate_subtract_percent() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("base", FieldValue::Number(100.0))
+            .unwrap();
+        system
+            .set_field_value("percent", FieldValue::Number(20.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::PercentCalculate {
+            base_field: "base".to_string(),
+            percent_field: "percent".to_string(),
+            mode: PercentMode::SubtractPercent,
+        };
+        system.add_js_calculation("discount", calc).unwrap();
+
+        let result = system.engine.get_field_value("discount").unwrap();
+        assert_eq!(result.to_number(), 80.0);
+    }
+
+    #[test]
+    fn test_range_calculate_min_only() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("value", FieldValue::Number(-10.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::RangeCalculate {
+            field: "value".to_string(),
+            min: Some(0.0),
+            max: None,
+        };
+        system.add_js_calculation("clamped", calc).unwrap();
+
+        let result = system.engine.get_field_value("clamped").unwrap();
+        assert_eq!(result.to_number(), 0.0);
+    }
+
+    #[test]
+    fn test_range_calculate_max_only() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("value", FieldValue::Number(150.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::RangeCalculate {
+            field: "value".to_string(),
+            min: None,
+            max: Some(100.0),
+        };
+        system.add_js_calculation("clamped", calc).unwrap();
+
+        let result = system.engine.get_field_value("clamped").unwrap();
+        assert_eq!(result.to_number(), 100.0);
+    }
+
+    #[test]
+    fn test_range_calculate_no_limits() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("value", FieldValue::Number(999.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::RangeCalculate {
+            field: "value".to_string(),
+            min: None,
+            max: None,
+        };
+        system.add_js_calculation("passthrough", calc).unwrap();
+
+        let result = system.engine.get_field_value("passthrough").unwrap();
+        assert_eq!(result.to_number(), 999.0);
+    }
+
+    #[test]
+    fn test_number_calculate() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("value", FieldValue::Number(123.456789))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::NumberCalculate {
+            field: "value".to_string(),
+            decimals: 2,
+            sep_style: SeparatorStyle::CommaPeriod,
+            currency: Some("$".to_string()),
+        };
+        system.add_js_calculation("formatted", calc).unwrap();
+
+        let result = system.engine.get_field_value("formatted").unwrap();
+        assert!((result.to_number() - 123.46).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_date_calculate() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("start_date", FieldValue::Text("2024-01-01".to_string()))
+            .unwrap();
+        system
+            .set_field_value("days", FieldValue::Number(10.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::DateCalculate {
+            start_date_field: "start_date".to_string(),
+            days_field: Some("days".to_string()),
+            format: "%Y-%m-%d".to_string(),
+        };
+        system.add_js_calculation("end_date", calc).unwrap();
+
+        let result = system.engine.get_field_value("end_date").unwrap();
+        assert_eq!(result.to_string(), "2024-01-11");
+    }
+
+    #[test]
+    fn test_date_calculate_invalid_date() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("start_date", FieldValue::Text("invalid".to_string()))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::DateCalculate {
+            start_date_field: "start_date".to_string(),
+            days_field: None,
+            format: "%Y-%m-%d".to_string(),
+        };
+        system.add_js_calculation("end_date", calc).unwrap();
+
+        let result = system.engine.get_field_value("end_date").unwrap();
+        assert_eq!(result.to_string(), "");
+    }
+
+    #[test]
+    fn test_date_calculate_no_days_field() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("start_date", FieldValue::Text("2024-06-15".to_string()))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::DateCalculate {
+            start_date_field: "start_date".to_string(),
+            days_field: None,
+            format: "%Y-%m-%d".to_string(),
+        };
+        system.add_js_calculation("end_date", calc).unwrap();
+
+        let result = system.engine.get_field_value("end_date").unwrap();
+        assert_eq!(result.to_string(), "2024-06-15");
+    }
+
+    #[test]
+    fn test_custom_script_addition() {
+        let mut system = FormCalculationSystem::new();
+        system
+            .set_field_value("a", FieldValue::Number(10.0))
+            .unwrap();
+        system
+            .set_field_value("b", FieldValue::Number(20.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::Custom {
+            script: "a + b".to_string(),
+            dependencies: vec!["a".to_string(), "b".to_string()],
+        };
+        system.add_js_calculation("custom_result", calc).unwrap();
+
+        let result = system.engine.get_field_value("custom_result").unwrap();
+        assert_eq!(result.to_number(), 30.0);
+    }
+
+    #[test]
+    fn test_custom_script_unsupported() {
+        let mut system = FormCalculationSystem::new();
+
+        let calc = JavaScriptCalculation::Custom {
+            script: "some unsupported script".to_string(),
+            dependencies: vec![],
+        };
+        system.add_js_calculation("unsupported", calc).unwrap();
+
+        let result = system.engine.get_field_value("unsupported").unwrap();
+        // Should return Empty for unsupported scripts
+        assert_eq!(result.to_number(), 0.0);
+    }
+
+    #[test]
+    fn test_self_reference_detection() {
+        let mut system = FormCalculationSystem::new();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Sum,
+            fields: vec!["selfField".to_string()],
+        };
+        let result = system.add_js_calculation("selfField", calc);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_field_format_number() {
+        let mut system = FormCalculationSystem::new();
+
+        system.set_field_format(
+            "price",
+            FieldFormat::Number {
+                decimals: 2,
+                separator: SeparatorStyle::CommaPeriod,
+                negative_style: NegativeStyle::MinusBlack,
+                currency: Some("$".to_string()),
+            },
+        );
+
+        // Set up a calculation that uses the format
+        system
+            .set_field_value("raw_price", FieldValue::Number(123.456))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::NumberCalculate {
+            field: "raw_price".to_string(),
+            decimals: 2,
+            sep_style: SeparatorStyle::CommaPeriod,
+            currency: Some("$".to_string()),
+        };
+        system.add_js_calculation("price", calc).unwrap();
+
+        let summary = system.get_summary();
+        assert_eq!(summary.formatted_fields, 1);
+    }
+
+    #[test]
+    fn test_field_format_percent() {
+        let mut system = FormCalculationSystem::new();
+
+        system.set_field_format("rate", FieldFormat::Percent { decimals: 1 });
+
+        let summary = system.get_summary();
+        assert_eq!(summary.formatted_fields, 1);
+    }
+
+    #[test]
+    fn test_apply_format_number() {
+        let system = FormCalculationSystem::new();
+
+        let format = FieldFormat::Number {
+            decimals: 2,
+            separator: SeparatorStyle::CommaPeriod,
+            negative_style: NegativeStyle::MinusBlack,
+            currency: None,
+        };
+
+        let result = system
+            .apply_format(FieldValue::Number(123.456789), &format)
+            .unwrap();
+        assert!((result.to_number() - 123.46).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_apply_format_percent() {
+        let system = FormCalculationSystem::new();
+
+        let format = FieldFormat::Percent { decimals: 1 };
+
+        let result = system
+            .apply_format(FieldValue::Number(0.5), &format)
+            .unwrap();
+        assert!(result.to_string().contains("50"));
+    }
+
+    #[test]
+    fn test_get_recent_events() {
+        let mut system = FormCalculationSystem::new();
+
+        for i in 0..10 {
+            system
+                .set_field_value(format!("field{}", i), FieldValue::Number(i as f64))
+                .unwrap();
+        }
+
+        let recent = system.get_recent_events(5);
+        assert_eq!(recent.len(), 5);
+    }
+
+    #[test]
+    fn test_get_recent_events_more_than_available() {
+        let mut system = FormCalculationSystem::new();
+
+        system
+            .set_field_value("field1", FieldValue::Number(1.0))
+            .unwrap();
+        system
+            .set_field_value("field2", FieldValue::Number(2.0))
+            .unwrap();
+
+        let recent = system.get_recent_events(100);
+        assert_eq!(recent.len(), 2);
+    }
+
+    #[test]
+    fn test_clear_events() {
+        let mut system = FormCalculationSystem::new();
+
+        system
+            .set_field_value("field1", FieldValue::Number(1.0))
+            .unwrap();
+        assert!(!system.events.is_empty());
+
+        system.clear_events();
+        assert!(system.events.is_empty());
+    }
+
+    #[test]
+    fn test_to_pdf_dict() {
+        let mut system = FormCalculationSystem::new();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Sum,
+            fields: vec!["a".to_string(), "b".to_string()],
+        };
+        system.add_js_calculation("total", calc).unwrap();
+
+        let dict = system.to_pdf_dict();
+        assert!(dict.get("CO").is_some());
+    }
+
+    #[test]
+    fn test_to_pdf_dict_empty() {
+        let system = FormCalculationSystem::new();
+        let dict = system.to_pdf_dict();
+        assert!(dict.get("CO").is_none());
+    }
+
+    #[test]
+    fn test_calculation_system_summary_display() {
+        let summary = CalculationSystemSummary {
+            total_fields: 10,
+            js_calculations: 5,
+            formatted_fields: 3,
+            events_logged: 20,
+        };
+
+        let display = format!("{}", summary);
+        assert!(display.contains("Total fields: 10"));
+        assert!(display.contains("JavaScript calculations: 5"));
+        assert!(display.contains("Formatted fields: 3"));
+        assert!(display.contains("Events logged: 20"));
+    }
+
+    #[test]
+    fn test_auto_recalculate_disabled() {
+        let settings = CalculationSettings {
+            auto_recalculate: false,
+            ..Default::default()
+        };
+        let mut system = FormCalculationSystem::with_settings(settings);
+
+        system
+            .set_field_value("a", FieldValue::Number(10.0))
+            .unwrap();
+        system
+            .set_field_value("b", FieldValue::Number(20.0))
+            .unwrap();
+
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Sum,
+            fields: vec!["a".to_string(), "b".to_string()],
+        };
+        system.add_js_calculation("sum", calc).unwrap();
+
+        // Now change a field - sum should NOT auto-update since auto_recalculate is false
+        system
+            .set_field_value("a", FieldValue::Number(50.0))
+            .unwrap();
+
+        // Manual check - the sum was calculated at add time, but not recalculated
+        let result = system.engine.get_field_value("sum").unwrap();
+        assert_eq!(result.to_number(), 30.0); // Still 10 + 20 from initial calculation
+    }
+
+    #[test]
+    fn test_log_events_disabled() {
+        let settings = CalculationSettings {
+            log_events: false,
+            ..Default::default()
+        };
+        let mut system = FormCalculationSystem::with_settings(settings);
+
+        system
+            .set_field_value("field1", FieldValue::Number(1.0))
+            .unwrap();
+        system
+            .set_field_value("field2", FieldValue::Number(2.0))
+            .unwrap();
+
+        assert!(system.events.is_empty());
+    }
+
+    #[test]
+    fn test_separator_style_variants() {
+        assert_eq!(SeparatorStyle::CommaPeriod, SeparatorStyle::CommaPeriod);
+        assert_eq!(SeparatorStyle::PeriodComma, SeparatorStyle::PeriodComma);
+        assert_eq!(SeparatorStyle::SpacePeriod, SeparatorStyle::SpacePeriod);
+        assert_eq!(
+            SeparatorStyle::ApostrophePeriod,
+            SeparatorStyle::ApostrophePeriod
+        );
+        assert_eq!(SeparatorStyle::None, SeparatorStyle::None);
+    }
+
+    #[test]
+    fn test_negative_style_variants() {
+        assert_eq!(NegativeStyle::MinusBlack, NegativeStyle::MinusBlack);
+        assert_eq!(NegativeStyle::RedParentheses, NegativeStyle::RedParentheses);
+        assert_eq!(
+            NegativeStyle::BlackParentheses,
+            NegativeStyle::BlackParentheses
+        );
+        assert_eq!(NegativeStyle::MinusRed, NegativeStyle::MinusRed);
+    }
+
+    #[test]
+    fn test_special_format_variants() {
+        assert_eq!(SpecialFormat::ZipCode, SpecialFormat::ZipCode);
+        assert_eq!(SpecialFormat::ZipCodePlus4, SpecialFormat::ZipCodePlus4);
+        assert_eq!(SpecialFormat::PhoneNumber, SpecialFormat::PhoneNumber);
+        assert_eq!(SpecialFormat::SSN, SpecialFormat::SSN);
+    }
+
+    #[test]
+    fn test_simple_operation_variants() {
+        assert_eq!(SimpleOperation::Sum, SimpleOperation::Sum);
+        assert_eq!(SimpleOperation::Product, SimpleOperation::Product);
+        assert_eq!(SimpleOperation::Average, SimpleOperation::Average);
+        assert_eq!(SimpleOperation::Minimum, SimpleOperation::Minimum);
+        assert_eq!(SimpleOperation::Maximum, SimpleOperation::Maximum);
+    }
+
+    #[test]
+    fn test_percent_mode_variants() {
+        assert_eq!(PercentMode::PercentOf, PercentMode::PercentOf);
+        assert_eq!(PercentMode::PercentageOf, PercentMode::PercentageOf);
+        assert_eq!(PercentMode::AddPercent, PercentMode::AddPercent);
+        assert_eq!(PercentMode::SubtractPercent, PercentMode::SubtractPercent);
+    }
+
+    #[test]
+    fn test_event_type_variants() {
+        assert_eq!(EventType::ValueChanged, EventType::ValueChanged);
+        assert_eq!(
+            EventType::CalculationTriggered,
+            EventType::CalculationTriggered
+        );
+        assert_eq!(EventType::ValidationFailed, EventType::ValidationFailed);
+        assert_eq!(EventType::FormatApplied, EventType::FormatApplied);
+        assert_eq!(EventType::DependencyUpdated, EventType::DependencyUpdated);
+    }
+
+    #[test]
+    fn test_recalculate_dependent_fields() {
+        let mut system = FormCalculationSystem::new();
+
+        // Set up initial values
+        system
+            .set_field_value("base", FieldValue::Number(100.0))
+            .unwrap();
+
+        // Add a calculation that depends on base
+        let calc = JavaScriptCalculation::SimpleCalculate {
+            operation: SimpleOperation::Sum,
+            fields: vec!["base".to_string()],
+        };
+        system.add_js_calculation("derived", calc).unwrap();
+
+        // Verify initial calculation
+        let initial = system.engine.get_field_value("derived").unwrap();
+        assert_eq!(initial.to_number(), 100.0);
+
+        // Change base - derived should auto-update
+        system
+            .set_field_value("base", FieldValue::Number(200.0))
+            .unwrap();
+
+        let updated = system.engine.get_field_value("derived").unwrap();
+        assert_eq!(updated.to_number(), 200.0);
+    }
+
+    #[test]
+    fn test_field_format_date() {
+        let mut system = FormCalculationSystem::new();
+
+        system.set_field_format(
+            "date_field",
+            FieldFormat::Date {
+                format: "%Y-%m-%d".to_string(),
+            },
+        );
+
+        let summary = system.get_summary();
+        assert_eq!(summary.formatted_fields, 1);
+    }
+
+    #[test]
+    fn test_field_format_time() {
+        let mut system = FormCalculationSystem::new();
+
+        system.set_field_format(
+            "time_field",
+            FieldFormat::Time {
+                format: "%H:%M:%S".to_string(),
+            },
+        );
+
+        let summary = system.get_summary();
+        assert_eq!(summary.formatted_fields, 1);
+    }
+
+    #[test]
+    fn test_field_format_special() {
+        let mut system = FormCalculationSystem::new();
+
+        system.set_field_format(
+            "ssn_field",
+            FieldFormat::Special {
+                format_type: SpecialFormat::SSN,
+            },
+        );
+
+        let summary = system.get_summary();
+        assert_eq!(summary.formatted_fields, 1);
+    }
+
+    #[test]
+    fn test_field_format_custom() {
+        let mut system = FormCalculationSystem::new();
+
+        system.set_field_format(
+            "custom_field",
+            FieldFormat::Custom {
+                format_string: "###-###".to_string(),
+            },
+        );
+
+        let summary = system.get_summary();
+        assert_eq!(summary.formatted_fields, 1);
+    }
+
+    #[test]
+    fn test_apply_format_passthrough() {
+        let system = FormCalculationSystem::new();
+
+        // Date format should pass through the value unchanged in current implementation
+        let format = FieldFormat::Date {
+            format: "%Y-%m-%d".to_string(),
+        };
+
+        let result = system
+            .apply_format(FieldValue::Text("2024-01-01".to_string()), &format)
+            .unwrap();
+        assert_eq!(result.to_string(), "2024-01-01");
+    }
 }

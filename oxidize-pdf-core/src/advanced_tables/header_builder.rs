@@ -341,6 +341,123 @@ impl Default for HeaderBuilder {
 mod tests {
     use super::*;
 
+    // ==================== HeaderCell Tests ====================
+
+    #[test]
+    fn test_header_cell_new() {
+        let cell = HeaderCell::new("Test Header");
+        assert_eq!(cell.text, "Test Header");
+        assert_eq!(cell.colspan, 1);
+        assert_eq!(cell.rowspan, 1);
+        assert!(cell.style.is_none());
+        assert_eq!(cell.start_col, 0);
+        assert_eq!(cell.row_level, 0);
+    }
+
+    #[test]
+    fn test_header_cell_new_from_string() {
+        let cell = HeaderCell::new(String::from("From String"));
+        assert_eq!(cell.text, "From String");
+    }
+
+    #[test]
+    fn test_header_cell_colspan() {
+        let cell = HeaderCell::new("Wide").colspan(3);
+        assert_eq!(cell.colspan, 3);
+    }
+
+    #[test]
+    fn test_header_cell_colspan_minimum() {
+        // colspan(0) should become 1 due to max(1)
+        let cell = HeaderCell::new("Test").colspan(0);
+        assert_eq!(cell.colspan, 1);
+    }
+
+    #[test]
+    fn test_header_cell_rowspan() {
+        let cell = HeaderCell::new("Tall").rowspan(2);
+        assert_eq!(cell.rowspan, 2);
+    }
+
+    #[test]
+    fn test_header_cell_rowspan_minimum() {
+        // rowspan(0) should become 1 due to max(1)
+        let cell = HeaderCell::new("Test").rowspan(0);
+        assert_eq!(cell.rowspan, 1);
+    }
+
+    #[test]
+    fn test_header_cell_style() {
+        let style = CellStyle::header();
+        let cell = HeaderCell::new("Styled").style(style.clone());
+        assert!(cell.style.is_some());
+    }
+
+    #[test]
+    fn test_header_cell_start_col() {
+        let cell = HeaderCell::new("Offset").start_col(5);
+        assert_eq!(cell.start_col, 5);
+    }
+
+    #[test]
+    fn test_header_cell_row_level() {
+        let cell = HeaderCell::new("Level 2").row_level(2);
+        assert_eq!(cell.row_level, 2);
+    }
+
+    #[test]
+    fn test_header_cell_builder_chain() {
+        let cell = HeaderCell::new("Complex")
+            .colspan(3)
+            .rowspan(2)
+            .start_col(1)
+            .row_level(1);
+
+        assert_eq!(cell.text, "Complex");
+        assert_eq!(cell.colspan, 3);
+        assert_eq!(cell.rowspan, 2);
+        assert_eq!(cell.start_col, 1);
+        assert_eq!(cell.row_level, 1);
+    }
+
+    #[test]
+    fn test_header_cell_clone() {
+        let original = HeaderCell::new("Original").colspan(2);
+        let cloned = original.clone();
+
+        assert_eq!(cloned.text, original.text);
+        assert_eq!(cloned.colspan, original.colspan);
+    }
+
+    #[test]
+    fn test_header_cell_debug() {
+        let cell = HeaderCell::new("Debug Test");
+        let debug_str = format!("{:?}", cell);
+        assert!(debug_str.contains("HeaderCell"));
+        assert!(debug_str.contains("Debug Test"));
+    }
+
+    // ==================== HeaderBuilder Tests ====================
+
+    #[test]
+    fn test_header_builder_new() {
+        let builder = HeaderBuilder::new(5);
+        assert_eq!(builder.total_columns, 5);
+        assert!(builder.levels.is_empty());
+    }
+
+    #[test]
+    fn test_header_builder_auto() {
+        let builder = HeaderBuilder::auto();
+        assert_eq!(builder.total_columns, 0);
+    }
+
+    #[test]
+    fn test_header_builder_default() {
+        let builder = HeaderBuilder::default();
+        assert_eq!(builder.total_columns, 1);
+    }
+
     #[test]
     fn test_simple_header() {
         let header = HeaderBuilder::new(3).add_simple_row(vec!["Name", "Age", "Department"]);
@@ -350,6 +467,50 @@ mod tests {
         assert_eq!(header.levels[0][0].text, "Name");
         assert_eq!(header.levels[0][1].text, "Age");
         assert_eq!(header.levels[0][2].text, "Department");
+    }
+
+    #[test]
+    fn test_add_level() {
+        let header = HeaderBuilder::auto().add_level(vec![("A", 1), ("B", 2), ("C", 1)]);
+
+        assert_eq!(header.total_columns, 4); // auto-calculated: 1+2+1
+        assert_eq!(header.levels[0].len(), 3);
+        assert_eq!(header.levels[0][0].start_col, 0);
+        assert_eq!(header.levels[0][1].start_col, 1);
+        assert_eq!(header.levels[0][1].colspan, 2);
+        assert_eq!(header.levels[0][2].start_col, 3);
+    }
+
+    #[test]
+    fn test_add_level_with_preset_columns() {
+        let header = HeaderBuilder::new(10).add_level(vec![("A", 2), ("B", 3)]);
+
+        // total_columns should NOT change when preset
+        assert_eq!(header.total_columns, 10);
+    }
+
+    #[test]
+    fn test_default_style() {
+        let custom_style = CellStyle::default();
+        let builder = HeaderBuilder::new(3).default_style(custom_style);
+        // Style is stored
+        assert!(
+            builder.default_style.background_color.is_none()
+                || builder.default_style.background_color.is_some()
+        );
+    }
+
+    #[test]
+    fn test_add_custom_row() {
+        let cells = vec![
+            HeaderCell::new("Custom1").colspan(2),
+            HeaderCell::new("Custom2"),
+        ];
+        let header = HeaderBuilder::new(3).add_custom_row(cells);
+
+        assert_eq!(header.row_count(), 1);
+        assert_eq!(header.levels[0][0].text, "Custom1");
+        assert_eq!(header.levels[0][0].row_level, 0);
     }
 
     #[test]
@@ -363,6 +524,73 @@ mod tests {
     }
 
     #[test]
+    fn test_add_group_single() {
+        let header = HeaderBuilder::new(3).add_group("Group", vec!["A", "B", "C"]);
+
+        // Should have 2 levels: group header and sub-headers
+        assert_eq!(header.row_count(), 2);
+        assert_eq!(header.levels[0][0].text, "Group");
+        assert_eq!(header.levels[0][0].colspan, 3);
+        assert_eq!(header.levels[1].len(), 3);
+    }
+
+    #[test]
+    fn test_add_complex_header() {
+        let header = HeaderBuilder::new(4).add_complex_header("Complex", 1, 2, 2);
+
+        assert_eq!(header.levels[0][0].text, "Complex");
+        assert_eq!(header.levels[0][0].start_col, 1);
+        assert_eq!(header.levels[0][0].colspan, 2);
+        assert_eq!(header.levels[0][0].rowspan, 2);
+    }
+
+    #[test]
+    fn test_add_complex_header_on_empty() {
+        let header = HeaderBuilder::new(3).add_complex_header("First", 0, 1, 1);
+        assert_eq!(header.levels.len(), 1);
+        assert_eq!(header.levels[0][0].text, "First");
+    }
+
+    #[test]
+    fn test_row_count() {
+        let header = HeaderBuilder::new(3)
+            .add_simple_row(vec!["A", "B", "C"])
+            .add_simple_row(vec!["D", "E", "F"]);
+
+        assert_eq!(header.row_count(), 2);
+    }
+
+    #[test]
+    fn test_row_count_empty() {
+        let header = HeaderBuilder::new(3);
+        assert_eq!(header.row_count(), 0);
+    }
+
+    #[test]
+    fn test_calculate_height_single_row() {
+        let header = HeaderBuilder::new(3).add_simple_row(vec!["A", "B", "C"]);
+
+        // 1 row * 20 points + 0 padding
+        assert_eq!(header.calculate_height(), 20.0);
+    }
+
+    #[test]
+    fn test_calculate_height_multiple_rows() {
+        let header = HeaderBuilder::new(3)
+            .add_simple_row(vec!["A", "B", "C"])
+            .add_simple_row(vec!["D", "E", "F"]);
+
+        // 2 rows * 20 points + (2-1) * 5 padding = 40 + 5 = 45
+        assert_eq!(header.calculate_height(), 45.0);
+    }
+
+    #[test]
+    fn test_calculate_height_empty() {
+        let header = HeaderBuilder::new(3);
+        assert_eq!(header.calculate_height(), 0.0);
+    }
+
+    #[test]
     fn test_header_validation() {
         let header = HeaderBuilder::new(2).add_complex_header("Too Wide", 0, 3, 1); // Spans 3 columns but table only has 2
 
@@ -370,9 +598,144 @@ mod tests {
     }
 
     #[test]
+    fn test_validation_out_of_bounds_error() {
+        let header = HeaderBuilder::new(2).add_complex_header("Wide", 0, 5, 1);
+        let result = header.validate();
+        assert!(result.is_err());
+        if let Err(TableError::HeaderOutOfBounds {
+            level,
+            start,
+            span,
+            total,
+        }) = result
+        {
+            assert_eq!(level, 0);
+            assert_eq!(start, 0);
+            assert_eq!(span, 5);
+            assert_eq!(total, 2);
+        }
+    }
+
+    #[test]
+    fn test_validation_overlap_error() {
+        let cells = vec![
+            HeaderCell::new("A").start_col(0).colspan(2),
+            HeaderCell::new("B").start_col(1).colspan(1), // Overlaps with A
+        ];
+        let header = HeaderBuilder::new(3).add_custom_row(cells);
+        let result = header.validate();
+        assert!(result.is_err());
+        if let Err(TableError::HeaderOverlap { level, column }) = result {
+            assert_eq!(level, 0);
+            assert_eq!(column, 1);
+        }
+    }
+
+    #[test]
+    fn test_validation_valid_non_overlapping() {
+        let cells = vec![
+            HeaderCell::new("A").start_col(0).colspan(2),
+            HeaderCell::new("B").start_col(2).colspan(1),
+        ];
+        let header = HeaderBuilder::new(3).add_custom_row(cells);
+        assert!(header.validate().is_ok());
+    }
+
+    #[test]
+    fn test_get_cells_at_position_found() {
+        let header = HeaderBuilder::new(3).add_level(vec![("Wide", 2), ("Narrow", 1)]);
+
+        let cells = header.get_cells_at_position(0, 0);
+        assert_eq!(cells.len(), 1);
+        assert_eq!(cells[0].text, "Wide");
+
+        let cells = header.get_cells_at_position(0, 1);
+        assert_eq!(cells.len(), 1);
+        assert_eq!(cells[0].text, "Wide"); // Still in "Wide"'s span
+
+        let cells = header.get_cells_at_position(0, 2);
+        assert_eq!(cells.len(), 1);
+        assert_eq!(cells[0].text, "Narrow");
+    }
+
+    #[test]
+    fn test_get_cells_at_position_invalid_level() {
+        let header = HeaderBuilder::new(3).add_simple_row(vec!["A", "B", "C"]);
+
+        let cells = header.get_cells_at_position(5, 0); // Level 5 doesn't exist
+        assert!(cells.is_empty());
+    }
+
+    #[test]
+    fn test_get_cells_at_position_empty_builder() {
+        let header = HeaderBuilder::new(3);
+        let cells = header.get_cells_at_position(0, 0);
+        assert!(cells.is_empty());
+    }
+
+    #[test]
     fn test_financial_header() {
         let header = HeaderBuilder::financial_report();
         assert!(header.validate().is_ok());
         assert_eq!(header.total_columns, 6);
+    }
+
+    #[test]
+    fn test_product_comparison() {
+        let header = HeaderBuilder::product_comparison(vec!["Product A", "Product B", "Product C"]);
+
+        assert_eq!(header.total_columns, 4); // 1 feature col + 3 products
+    }
+
+    #[test]
+    fn test_product_comparison_single_product() {
+        let header = HeaderBuilder::product_comparison(vec!["Only Product"]);
+        assert_eq!(header.total_columns, 2);
+    }
+
+    #[test]
+    fn test_header_builder_clone() {
+        let original = HeaderBuilder::new(5).add_simple_row(vec!["A", "B"]);
+        let cloned = original.clone();
+
+        assert_eq!(cloned.total_columns, original.total_columns);
+        assert_eq!(cloned.levels.len(), original.levels.len());
+    }
+
+    #[test]
+    fn test_header_builder_debug() {
+        let builder = HeaderBuilder::new(3);
+        let debug_str = format!("{:?}", builder);
+        assert!(debug_str.contains("HeaderBuilder"));
+    }
+
+    #[test]
+    fn test_multiple_levels_integration() {
+        let header = HeaderBuilder::new(6)
+            .add_level(vec![("Sales Data", 3), ("Expenses", 3)])
+            .add_level(vec![
+                ("Q1", 1),
+                ("Q2", 1),
+                ("Q3", 1),
+                ("Q1", 1),
+                ("Q2", 1),
+                ("Q3", 1),
+            ]);
+
+        assert_eq!(header.row_count(), 2);
+        assert!(header.validate().is_ok());
+    }
+
+    #[test]
+    fn test_calculate_next_start_col_empty() {
+        let builder = HeaderBuilder::new(5);
+        assert_eq!(builder.calculate_next_start_col(), 0);
+    }
+
+    #[test]
+    fn test_calculate_next_start_col_after_cells() {
+        let header = HeaderBuilder::new(10).add_level(vec![("A", 2), ("B", 3)]);
+        // After A(0-1) and B(2-4), next start should be 5
+        assert_eq!(header.calculate_next_start_col(), 5);
     }
 }

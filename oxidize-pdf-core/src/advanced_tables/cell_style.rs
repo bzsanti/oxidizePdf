@@ -432,4 +432,285 @@ mod tests {
         assert_eq!(padding.pad_horizontally(100.0), 90.0);
         assert_eq!(padding.pad_horizontally(50.0), 40.0);
     }
+
+    #[test]
+    fn test_border_style_default() {
+        let style = BorderStyle::default();
+        assert_eq!(style, BorderStyle::Solid);
+    }
+
+    #[test]
+    fn test_cell_alignment_default() {
+        let alignment = CellAlignment::default();
+        assert_eq!(alignment, CellAlignment::Left);
+    }
+
+    #[test]
+    fn test_padding_uniform() {
+        let padding = Padding::uniform(10.0);
+        assert_eq!(padding.top, 10.0);
+        assert_eq!(padding.right, 10.0);
+        assert_eq!(padding.bottom, 10.0);
+        assert_eq!(padding.left, 10.0);
+    }
+
+    #[test]
+    fn test_padding_symmetric() {
+        let padding = Padding::symmetric(5.0, 10.0);
+        assert_eq!(padding.top, 10.0);
+        assert_eq!(padding.right, 5.0);
+        assert_eq!(padding.bottom, 10.0);
+        assert_eq!(padding.left, 5.0);
+    }
+
+    #[test]
+    fn test_padding_individual() {
+        let padding = Padding::individual(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(padding.top, 1.0);
+        assert_eq!(padding.right, 2.0);
+        assert_eq!(padding.bottom, 3.0);
+        assert_eq!(padding.left, 4.0);
+    }
+
+    #[test]
+    fn test_padding_totals() {
+        let padding = Padding::new(5.0, 10.0, 15.0, 20.0);
+        assert_eq!(padding.horizontal_total(), 30.0);
+        assert_eq!(padding.vertical_total(), 20.0);
+    }
+
+    #[test]
+    fn test_padding_default() {
+        let padding = Padding::default();
+        assert_eq!(padding.top, 4.0);
+        assert_eq!(padding.horizontal_total(), 8.0);
+    }
+
+    #[test]
+    fn test_border_edge_new() {
+        let edge = BorderEdge::new(BorderStyle::Dashed, 2.0, Color::red());
+        assert_eq!(edge.style, BorderStyle::Dashed);
+        assert_eq!(edge.width, 2.0);
+    }
+
+    #[test]
+    fn test_border_edge_solid() {
+        let edge = BorderEdge::solid(1.5);
+        assert_eq!(edge.style, BorderStyle::Solid);
+        assert_eq!(edge.width, 1.5);
+    }
+
+    #[test]
+    fn test_border_edge_dashed() {
+        let edge = BorderEdge::dashed(1.0, Color::blue());
+        assert_eq!(edge.style, BorderStyle::Dashed);
+    }
+
+    #[test]
+    fn test_border_edge_dotted() {
+        let edge = BorderEdge::dotted(0.5, Color::green());
+        assert_eq!(edge.style, BorderStyle::Dotted);
+    }
+
+    #[test]
+    fn test_border_edge_none() {
+        let edge = BorderEdge::none();
+        assert_eq!(edge.style, BorderStyle::None);
+        assert_eq!(edge.width, 0.0);
+    }
+
+    #[test]
+    fn test_border_edge_default() {
+        let edge = BorderEdge::default();
+        assert_eq!(edge.style, BorderStyle::Solid);
+        assert_eq!(edge.width, 1.0);
+    }
+
+    #[test]
+    fn test_border_configuration_new() {
+        let config = BorderConfiguration::new();
+        assert_eq!(config.top.style, BorderStyle::Solid);
+        assert_eq!(config.right.style, BorderStyle::Solid);
+        assert_eq!(config.bottom.style, BorderStyle::Solid);
+        assert_eq!(config.left.style, BorderStyle::Solid);
+    }
+
+    #[test]
+    fn test_border_configuration_uniform() {
+        let edge = BorderEdge::dashed(2.0, Color::red());
+        let config = BorderConfiguration::uniform(edge);
+        assert_eq!(config.top.style, BorderStyle::Dashed);
+        assert_eq!(config.right.width, 2.0);
+        assert_eq!(config.bottom.style, BorderStyle::Dashed);
+    }
+
+    #[test]
+    fn test_border_configuration_edges() {
+        let config = BorderConfiguration::edges(true, false, true, false);
+        assert_eq!(config.top.style, BorderStyle::Solid);
+        assert_eq!(config.right.style, BorderStyle::None);
+        assert_eq!(config.bottom.style, BorderStyle::Solid);
+        assert_eq!(config.left.style, BorderStyle::None);
+    }
+
+    #[test]
+    fn test_border_configuration_none() {
+        let config = BorderConfiguration::none();
+        assert_eq!(config.top.style, BorderStyle::None);
+        assert_eq!(config.right.style, BorderStyle::None);
+        assert_eq!(config.bottom.style, BorderStyle::None);
+        assert_eq!(config.left.style, BorderStyle::None);
+    }
+
+    #[test]
+    fn test_border_configuration_default() {
+        let config = BorderConfiguration::default();
+        assert_eq!(config.top.style, BorderStyle::Solid);
+    }
+
+    #[test]
+    fn test_cell_style_new() {
+        let style = CellStyle::new();
+        assert!(style.background_color.is_none());
+        assert!(style.text_color.is_some());
+        assert_eq!(style.font_size, Some(12.0));
+        assert!(style.text_wrap);
+    }
+
+    #[test]
+    fn test_cell_style_background_color() {
+        let style = CellStyle::new().background_color(Color::yellow());
+        assert!(style.background_color.is_some());
+    }
+
+    #[test]
+    fn test_cell_style_text_color() {
+        let style = CellStyle::new().text_color(Color::blue());
+        assert!(style.text_color.is_some());
+    }
+
+    #[test]
+    fn test_cell_style_font() {
+        let style = CellStyle::new().font(Font::CourierBold);
+        assert_eq!(style.font, Some(Font::CourierBold));
+    }
+
+    #[test]
+    fn test_cell_style_font_size() {
+        let style = CellStyle::new().font_size(18.0);
+        assert_eq!(style.font_size, Some(18.0));
+    }
+
+    #[test]
+    fn test_cell_style_padding() {
+        let style = CellStyle::new().padding(Padding::uniform(20.0));
+        assert_eq!(style.padding.top, 20.0);
+    }
+
+    #[test]
+    fn test_cell_style_alignment() {
+        let style = CellStyle::new().alignment(CellAlignment::Center);
+        assert_eq!(style.alignment, CellAlignment::Center);
+    }
+
+    #[test]
+    fn test_cell_style_border_config() {
+        let config = BorderConfiguration::none();
+        let style = CellStyle::new().border_config(config);
+        assert_eq!(style.border.top.style, BorderStyle::None);
+    }
+
+    #[test]
+    fn test_cell_style_border() {
+        let style = CellStyle::new().border(BorderStyle::Dashed, 2.0, Color::red());
+        assert_eq!(style.border_style, BorderStyle::Dashed);
+        assert_eq!(style.border.top.width, 2.0);
+    }
+
+    #[test]
+    fn test_cell_style_text_wrap() {
+        let style = CellStyle::new().text_wrap(false);
+        assert!(!style.text_wrap);
+    }
+
+    #[test]
+    fn test_cell_style_min_height() {
+        let style = CellStyle::new().min_height(50.0);
+        assert_eq!(style.min_height, Some(50.0));
+    }
+
+    #[test]
+    fn test_cell_style_max_height() {
+        let style = CellStyle::new().max_height(100.0);
+        assert_eq!(style.max_height, Some(100.0));
+    }
+
+    #[test]
+    fn test_cell_style_header() {
+        let style = CellStyle::header();
+        assert_eq!(style.font, Some(Font::HelveticaBold));
+        assert_eq!(style.font_size, Some(14.0));
+        assert_eq!(style.alignment, CellAlignment::Center);
+        assert!(style.background_color.is_some());
+    }
+
+    #[test]
+    fn test_cell_style_data() {
+        let style = CellStyle::data();
+        assert_eq!(style.font, Some(Font::Helvetica));
+        assert_eq!(style.font_size, Some(12.0));
+        assert_eq!(style.alignment, CellAlignment::Left);
+    }
+
+    #[test]
+    fn test_cell_style_numeric() {
+        let style = CellStyle::numeric();
+        assert_eq!(style.font, Some(Font::Courier));
+        assert_eq!(style.font_size, Some(11.0));
+        assert_eq!(style.alignment, CellAlignment::Right);
+    }
+
+    #[test]
+    fn test_cell_style_alternating() {
+        let style = CellStyle::alternating();
+        assert!(style.background_color.is_some());
+        assert_eq!(style.alignment, CellAlignment::Left);
+    }
+
+    #[test]
+    fn test_cell_style_default() {
+        let style = CellStyle::default();
+        assert_eq!(style.font_size, Some(12.0));
+    }
+
+    #[test]
+    fn test_border_style_variants() {
+        let styles = vec![
+            BorderStyle::None,
+            BorderStyle::Solid,
+            BorderStyle::Dashed,
+            BorderStyle::Dotted,
+            BorderStyle::Double,
+        ];
+
+        for style in styles {
+            let cloned = style;
+            assert_eq!(style, cloned);
+        }
+    }
+
+    #[test]
+    fn test_cell_alignment_variants() {
+        let alignments = vec![
+            CellAlignment::Left,
+            CellAlignment::Center,
+            CellAlignment::Right,
+            CellAlignment::Justify,
+        ];
+
+        for alignment in alignments {
+            let cloned = alignment;
+            assert_eq!(alignment, cloned);
+        }
+    }
 }

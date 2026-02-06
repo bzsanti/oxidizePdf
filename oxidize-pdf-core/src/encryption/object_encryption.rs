@@ -731,4 +731,604 @@ mod tests {
         let normal_obj = Object::String("Not an encryption dict".to_string());
         assert!(!doc_encryption.is_encryption_dict_object(&normal_obj));
     }
+
+    #[test]
+    fn test_with_embedded_files_constructor() {
+        let handler = Box::new(StandardSecurityHandler::rc4_128bit());
+        let filter_manager =
+            CryptFilterManager::new(handler, "StdCF".to_string(), "StdCF".to_string());
+
+        let encryption_key = EncryptionKey::new(vec![0u8; 16]);
+
+        let encryptor = ObjectEncryptor::with_embedded_files(
+            Arc::new(filter_manager),
+            encryption_key,
+            true,
+            Some("StdCF".to_string()),
+        );
+
+        // Verify embedded file handler was created
+        assert!(encryptor.embedded_file_handler.is_some());
+    }
+
+    #[test]
+    fn test_with_embedded_files_no_filter() {
+        let handler = Box::new(StandardSecurityHandler::rc4_128bit());
+        let filter_manager =
+            CryptFilterManager::new(handler, "StdCF".to_string(), "StdCF".to_string());
+
+        let encryption_key = EncryptionKey::new(vec![0u8; 16]);
+
+        let encryptor = ObjectEncryptor::with_embedded_files(
+            Arc::new(filter_manager),
+            encryption_key,
+            false,
+            None,
+        );
+
+        // Handler should still be created even without explicit filter
+        assert!(encryptor.embedded_file_handler.is_some());
+    }
+
+    #[test]
+    fn test_decrypt_string_object() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        // First encrypt a string
+        let mut obj = Object::String("Test string for decryption".to_string());
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Then decrypt it
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Verify it's a valid string after round-trip
+        if let Object::String(s) = &obj {
+            assert!(!s.is_empty());
+        } else {
+            panic!("Expected String object");
+        }
+    }
+
+    #[test]
+    fn test_decrypt_array_object() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        let mut obj = Object::Array(vec![
+            Object::String("Test 1".to_string()),
+            Object::Integer(123),
+            Object::String("Test 2".to_string()),
+        ]);
+
+        // Encrypt
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Decrypt
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Verify structure is preserved
+        if let Object::Array(array) = &obj {
+            assert_eq!(array.len(), 3);
+            assert_eq!(array[1], Object::Integer(123));
+        } else {
+            panic!("Expected Array object");
+        }
+    }
+
+    #[test]
+    fn test_decrypt_dictionary_object() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        let mut dict = Dictionary::new();
+        dict.set("Title", Object::String("Test Title".to_string()));
+        dict.set("Count", Object::Integer(42));
+        dict.set("Length", Object::Integer(100)); // Should be skipped
+
+        let mut obj = Object::Dictionary(dict);
+
+        // Encrypt
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Decrypt
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Verify skipped keys are unchanged
+        if let Object::Dictionary(dict) = &obj {
+            assert_eq!(dict.get("Count"), Some(&Object::Integer(42)));
+            assert_eq!(dict.get("Length"), Some(&Object::Integer(100)));
+        } else {
+            panic!("Expected Dictionary object");
+        }
+    }
+
+    #[test]
+    fn test_decrypt_reference_not_changed() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        let mut obj = Object::Reference(ObjectId::new(10, 0));
+        let original = obj.clone();
+
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Reference should remain unchanged
+        assert_eq!(obj, original);
+    }
+
+    #[test]
+    fn test_decrypt_other_types_not_changed() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Test Integer
+        let mut obj = Object::Integer(42);
+        let original = obj.clone();
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Real
+        let mut obj = Object::Real(3.14);
+        let original = obj.clone();
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Boolean
+        let mut obj = Object::Boolean(true);
+        let original = obj.clone();
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Null
+        let mut obj = Object::Null;
+        let original = obj.clone();
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Name
+        let mut obj = Object::Name("TestName".to_string());
+        let original = obj.clone();
+        encryptor.decrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+    }
+
+    #[test]
+    fn test_encrypt_other_types_not_changed() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Test Integer
+        let mut obj = Object::Integer(999);
+        let original = obj.clone();
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Real
+        let mut obj = Object::Real(2.718);
+        let original = obj.clone();
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Boolean
+        let mut obj = Object::Boolean(false);
+        let original = obj.clone();
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Null
+        let mut obj = Object::Null;
+        let original = obj.clone();
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+
+        // Test Name
+        let mut obj = Object::Name("AnotherName".to_string());
+        let original = obj.clone();
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+        assert_eq!(obj, original);
+    }
+
+    #[test]
+    fn test_should_encrypt_stream_with_array_filter_containing_crypt() {
+        let encryptor = create_test_encryptor();
+
+        let mut dict = Dictionary::new();
+        dict.set(
+            "Filter",
+            Object::Array(vec![
+                Object::Name("FlateDecode".to_string()),
+                Object::Name("Crypt".to_string()),
+            ]),
+        );
+
+        let stream = Stream::with_dictionary(dict, vec![1, 2, 3]);
+
+        // Should return false because Crypt is in the filter array
+        assert!(!encryptor.should_encrypt_stream(&stream));
+    }
+
+    #[test]
+    fn test_should_encrypt_stream_with_array_filter_without_crypt() {
+        let encryptor = create_test_encryptor();
+
+        let mut dict = Dictionary::new();
+        dict.set(
+            "Filter",
+            Object::Array(vec![
+                Object::Name("FlateDecode".to_string()),
+                Object::Name("ASCII85Decode".to_string()),
+            ]),
+        );
+
+        let stream = Stream::with_dictionary(dict, vec![1, 2, 3]);
+
+        // Should return true because no Crypt filter
+        assert!(encryptor.should_encrypt_stream(&stream));
+    }
+
+    #[test]
+    fn test_should_encrypt_stream_with_non_name_filter() {
+        let encryptor = create_test_encryptor();
+
+        let mut dict = Dictionary::new();
+        // Invalid filter type (Integer instead of Name or Array)
+        dict.set("Filter", Object::Integer(123));
+
+        let stream = Stream::with_dictionary(dict, vec![1, 2, 3]);
+
+        // Should return true because no valid Crypt filter found
+        assert!(encryptor.should_encrypt_stream(&stream));
+    }
+
+    #[test]
+    fn test_should_encrypt_string_always_true() {
+        let encryptor = create_test_encryptor();
+
+        assert!(encryptor.should_encrypt_string("any string"));
+        assert!(encryptor.should_encrypt_string(""));
+        assert!(encryptor.should_encrypt_string("special chars: !@#$%"));
+    }
+
+    #[test]
+    fn test_encrypt_objects_skips_encryption_dict() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        // Add the crypt filter that will be needed
+        encryption_dict.cf = Some(vec![crate::encryption::CryptFilter {
+            name: "StdCF".to_string(),
+            method: crate::encryption::CryptFilterMethod::V2,
+            length: Some(16),
+        }]);
+
+        let doc_encryption =
+            DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id")).unwrap();
+
+        // Create an encryption dictionary object
+        let mut encrypt_dict = Dictionary::new();
+        encrypt_dict.set("Filter", Object::Name("Standard".to_string()));
+        encrypt_dict.set("V", Object::Integer(4));
+
+        let mut objects = vec![
+            (
+                ObjectId::new(1, 0),
+                Object::Dictionary(encrypt_dict.clone()),
+            ),
+            (
+                ObjectId::new(2, 0),
+                Object::String("Normal string".to_string()),
+            ),
+        ];
+
+        let original_encrypt_dict = objects[0].1.clone();
+
+        doc_encryption.encrypt_objects(&mut objects).unwrap();
+
+        // Encryption dict should be unchanged
+        assert_eq!(objects[0].1, original_encrypt_dict);
+
+        // Normal string should be encrypted (different from original)
+        assert_ne!(objects[1].1, Object::String("Normal string".to_string()));
+    }
+
+    #[test]
+    fn test_decrypt_objects_skips_encryption_dict() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        // Add the crypt filter that will be needed
+        encryption_dict.cf = Some(vec![crate::encryption::CryptFilter {
+            name: "StdCF".to_string(),
+            method: crate::encryption::CryptFilterMethod::V2,
+            length: Some(16),
+        }]);
+
+        let doc_encryption =
+            DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id")).unwrap();
+
+        // Create an encryption dictionary object
+        let mut encrypt_dict = Dictionary::new();
+        encrypt_dict.set("Filter", Object::Name("Standard".to_string()));
+        encrypt_dict.set("V", Object::Integer(4));
+
+        let mut objects = vec![
+            (
+                ObjectId::new(1, 0),
+                Object::Dictionary(encrypt_dict.clone()),
+            ),
+            (
+                ObjectId::new(2, 0),
+                Object::String("encrypted content".to_string()),
+            ),
+        ];
+
+        let original_encrypt_dict = objects[0].1.clone();
+
+        doc_encryption.decrypt_objects(&mut objects).unwrap();
+
+        // Encryption dict should be unchanged
+        assert_eq!(objects[0].1, original_encrypt_dict);
+    }
+
+    #[test]
+    fn test_document_encryption_unsupported_revision() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+        encryption_dict.r = 99; // Unsupported revision
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+
+        assert!(result.is_err());
+        if let Err(PdfError::EncryptionError(msg)) = result {
+            assert!(msg.contains("Unsupported encryption revision"));
+        }
+    }
+
+    #[test]
+    fn test_document_encryption_r2() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+        encryption_dict.r = 2;
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_document_encryption_r4() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+        encryption_dict.r = 4;
+        encryption_dict.length = Some(16);
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_document_encryption_r5() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+        encryption_dict.r = 5;
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_document_encryption_r6() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+        encryption_dict.r = 6;
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_is_encryption_dict_object_not_dict() {
+        let encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        let doc_encryption =
+            DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id")).unwrap();
+
+        // Non-dictionary objects should return false
+        assert!(!doc_encryption.is_encryption_dict_object(&Object::Integer(42)));
+        assert!(!doc_encryption.is_encryption_dict_object(&Object::Null));
+        assert!(!doc_encryption.is_encryption_dict_object(&Object::Array(vec![Object::Integer(1)])));
+    }
+
+    #[test]
+    fn test_is_encryption_dict_object_dict_without_filter() {
+        let encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        let doc_encryption =
+            DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id")).unwrap();
+
+        // Dictionary without Filter key should return false
+        let mut dict = Dictionary::new();
+        dict.set("Type", Object::Name("Catalog".to_string()));
+        let obj = Object::Dictionary(dict);
+
+        assert!(!doc_encryption.is_encryption_dict_object(&obj));
+    }
+
+    #[test]
+    fn test_is_encryption_dict_object_dict_with_different_filter() {
+        let encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        let doc_encryption =
+            DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id")).unwrap();
+
+        // Dictionary with non-Standard Filter should return false
+        let mut dict = Dictionary::new();
+        dict.set("Filter", Object::Name("FlateDecode".to_string()));
+        let obj = Object::Dictionary(dict);
+
+        assert!(!doc_encryption.is_encryption_dict_object(&obj));
+    }
+
+    #[test]
+    fn test_nested_array_encryption() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        // Create nested arrays with strings
+        let mut obj = Object::Array(vec![
+            Object::Array(vec![
+                Object::String("Nested 1".to_string()),
+                Object::String("Nested 2".to_string()),
+            ]),
+            Object::String("Outer".to_string()),
+        ]);
+
+        let original = obj.clone();
+
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Should be different (strings encrypted)
+        assert_ne!(obj, original);
+
+        // Verify structure preserved
+        if let Object::Array(outer) = &obj {
+            assert_eq!(outer.len(), 2);
+            if let Object::Array(inner) = &outer[0] {
+                assert_eq!(inner.len(), 2);
+            } else {
+                panic!("Expected nested array");
+            }
+        }
+    }
+
+    #[test]
+    fn test_nested_dictionary_encryption() {
+        let encryptor = create_test_encryptor();
+        let obj_id = ObjectId::new(1, 0);
+
+        let mut inner_dict = Dictionary::new();
+        inner_dict.set("InnerTitle", Object::String("Inner value".to_string()));
+
+        let mut outer_dict = Dictionary::new();
+        outer_dict.set("OuterTitle", Object::String("Outer value".to_string()));
+        outer_dict.set("Nested", Object::Dictionary(inner_dict));
+
+        let mut obj = Object::Dictionary(outer_dict);
+        let original = obj.clone();
+
+        encryptor.encrypt_object(&mut obj, &obj_id).unwrap();
+
+        // Should be different (strings encrypted)
+        assert_ne!(obj, original);
+
+        // Verify structure preserved
+        if let Object::Dictionary(dict) = &obj {
+            assert!(dict.contains_key("OuterTitle"));
+            assert!(dict.contains_key("Nested"));
+            if let Some(Object::Dictionary(nested)) = dict.get("Nested") {
+                assert!(nested.contains_key("InnerTitle"));
+            } else {
+                panic!("Expected nested dictionary");
+            }
+        }
+    }
+
+    #[test]
+    fn test_document_encryption_with_crypt_filters() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        // Add crypt filters
+        encryption_dict.cf = Some(vec![crate::encryption::CryptFilter {
+            name: "StdCF".to_string(),
+            method: crate::encryption::CryptFilterMethod::V2,
+            length: Some(16),
+        }]);
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_document_encryption_with_custom_stm_str_filters() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        encryption_dict.stm_f = Some(crate::encryption::StreamFilter::Identity);
+        encryption_dict.str_f = Some(crate::encryption::StringFilter::Identity);
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_document_encryption_with_custom_filter_names() {
+        let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
+            vec![0u8; 32],
+            vec![1u8; 32],
+            Permissions::all(),
+            None,
+        );
+
+        encryption_dict.stm_f = Some(crate::encryption::StreamFilter::Custom(
+            "CustomStm".to_string(),
+        ));
+        encryption_dict.str_f = Some(crate::encryption::StringFilter::Custom(
+            "CustomStr".to_string(),
+        ));
+
+        let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
+        assert!(result.is_ok());
+    }
 }
