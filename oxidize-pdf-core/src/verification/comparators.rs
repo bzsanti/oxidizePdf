@@ -438,6 +438,7 @@ pub fn extract_pdf_differences(generated: &[u8], reference: &[u8]) -> Result<Vec
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::verification::parser::{Annotation, GraphicsState, PageTree, TextObject};
 
     fn create_test_pdf(version: &str, catalog_type: &str) -> Vec<u8> {
         format!(
@@ -500,5 +501,499 @@ mod tests {
 
         let score = calculate_similarity_score(&differences);
         assert_eq!(score, 0.7); // 1.0 - 0.3 (critical penalty)
+    }
+
+    // New tests for complete coverage
+
+    #[test]
+    fn test_calculate_similarity_score_empty() {
+        let differences: Vec<PdfDifference> = vec![];
+        let score = calculate_similarity_score(&differences);
+        assert_eq!(score, 1.0);
+    }
+
+    #[test]
+    fn test_calculate_similarity_score_important() {
+        let differences = vec![PdfDifference {
+            location: "test".to_string(),
+            expected: "a".to_string(),
+            actual: "b".to_string(),
+            severity: DifferenceSeverity::Important,
+        }];
+
+        let score = calculate_similarity_score(&differences);
+        assert!((score - 0.9).abs() < 0.001); // 1.0 - 0.1
+    }
+
+    #[test]
+    fn test_calculate_similarity_score_minor() {
+        let differences = vec![PdfDifference {
+            location: "test".to_string(),
+            expected: "a".to_string(),
+            actual: "b".to_string(),
+            severity: DifferenceSeverity::Minor,
+        }];
+
+        let score = calculate_similarity_score(&differences);
+        assert!((score - 0.95).abs() < 0.001); // 1.0 - 0.05
+    }
+
+    #[test]
+    fn test_calculate_similarity_score_cosmetic() {
+        let differences = vec![PdfDifference {
+            location: "test".to_string(),
+            expected: "a".to_string(),
+            actual: "b".to_string(),
+            severity: DifferenceSeverity::Cosmetic,
+        }];
+
+        let score = calculate_similarity_score(&differences);
+        assert!((score - 0.99).abs() < 0.001); // 1.0 - 0.01
+    }
+
+    #[test]
+    fn test_calculate_similarity_score_multiple() {
+        let differences = vec![
+            PdfDifference {
+                location: "test1".to_string(),
+                expected: "a".to_string(),
+                actual: "b".to_string(),
+                severity: DifferenceSeverity::Critical, // -0.3
+            },
+            PdfDifference {
+                location: "test2".to_string(),
+                expected: "c".to_string(),
+                actual: "d".to_string(),
+                severity: DifferenceSeverity::Important, // -0.1
+            },
+        ];
+
+        let score = calculate_similarity_score(&differences);
+        assert!((score - 0.6).abs() < 0.001); // 1.0 - 0.4
+    }
+
+    #[test]
+    fn test_calculate_similarity_score_max_penalty() {
+        // Multiple critical differences that exceed 1.0 penalty
+        let differences = vec![
+            PdfDifference {
+                location: "test1".to_string(),
+                expected: "a".to_string(),
+                actual: "b".to_string(),
+                severity: DifferenceSeverity::Critical,
+            },
+            PdfDifference {
+                location: "test2".to_string(),
+                expected: "a".to_string(),
+                actual: "b".to_string(),
+                severity: DifferenceSeverity::Critical,
+            },
+            PdfDifference {
+                location: "test3".to_string(),
+                expected: "a".to_string(),
+                actual: "b".to_string(),
+                severity: DifferenceSeverity::Critical,
+            },
+            PdfDifference {
+                location: "test4".to_string(),
+                expected: "a".to_string(),
+                actual: "b".to_string(),
+                severity: DifferenceSeverity::Critical,
+            },
+        ];
+
+        let score = calculate_similarity_score(&differences);
+        assert_eq!(score, 0.0); // Should clamp to 0.0
+    }
+
+    #[test]
+    fn test_difference_severity_equality() {
+        assert_eq!(DifferenceSeverity::Critical, DifferenceSeverity::Critical);
+        assert_eq!(DifferenceSeverity::Important, DifferenceSeverity::Important);
+        assert_eq!(DifferenceSeverity::Minor, DifferenceSeverity::Minor);
+        assert_eq!(DifferenceSeverity::Cosmetic, DifferenceSeverity::Cosmetic);
+        assert_ne!(DifferenceSeverity::Critical, DifferenceSeverity::Minor);
+    }
+
+    #[test]
+    fn test_pdf_difference_clone() {
+        let diff = PdfDifference {
+            location: "test".to_string(),
+            expected: "a".to_string(),
+            actual: "b".to_string(),
+            severity: DifferenceSeverity::Critical,
+        };
+        let cloned = diff.clone();
+        assert_eq!(diff.location, cloned.location);
+        assert_eq!(diff.expected, cloned.expected);
+        assert_eq!(diff.actual, cloned.actual);
+    }
+
+    #[test]
+    fn test_comparison_result_clone() {
+        let result = ComparisonResult {
+            structurally_equivalent: true,
+            content_equivalent: false,
+            differences: vec![],
+            similarity_score: 0.95,
+        };
+        let cloned = result.clone();
+        assert_eq!(
+            result.structurally_equivalent,
+            cloned.structurally_equivalent
+        );
+        assert_eq!(result.content_equivalent, cloned.content_equivalent);
+        assert_eq!(result.similarity_score, cloned.similarity_score);
+    }
+
+    #[test]
+    fn test_compare_fonts_missing_reference() {
+        let generated = vec!["Font1".to_string(), "Font2".to_string()];
+        let reference = vec!["Font1".to_string(), "Font3".to_string()];
+
+        let differences = compare_fonts(&generated, &reference);
+
+        // Should have Font3 missing from generated
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Font3") && d.actual == "missing" }));
+
+        // Should have Font2 extra in generated
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Font2") && d.expected == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_fonts_empty() {
+        let generated: Vec<String> = vec![];
+        let reference: Vec<String> = vec![];
+
+        let differences = compare_fonts(&generated, &reference);
+        assert!(differences.is_empty());
+    }
+
+    #[test]
+    fn test_compare_fonts_identical() {
+        let generated = vec!["Font1".to_string(), "Font2".to_string()];
+        let reference = vec!["Font1".to_string(), "Font2".to_string()];
+
+        let differences = compare_fonts(&generated, &reference);
+        assert!(differences.is_empty());
+    }
+
+    #[test]
+    fn test_compare_annotations_different_count() {
+        let generated: Vec<Annotation> = vec![];
+        let reference = vec![Annotation {
+            subtype: "Link".to_string(),
+            rect: None,
+            contents: None,
+        }];
+
+        let differences = compare_annotations(&generated, &reference);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Annotations/Count") }));
+    }
+
+    #[test]
+    fn test_compare_annotations_same_count() {
+        let generated = vec![Annotation {
+            subtype: "Link".to_string(),
+            rect: None,
+            contents: None,
+        }];
+        let reference = vec![Annotation {
+            subtype: "Text".to_string(),
+            rect: None,
+            contents: None,
+        }];
+
+        let differences = compare_annotations(&generated, &reference);
+        assert!(differences.is_empty()); // Only counts are compared
+    }
+
+    #[test]
+    fn test_compare_text_objects_different_content() {
+        let generated = vec![TextObject {
+            text_content: "Hello".to_string(),
+            font: Some("Helvetica".to_string()),
+            font_size: Some(12.0),
+        }];
+        let reference = vec![TextObject {
+            text_content: "World".to_string(),
+            font: Some("Helvetica".to_string()),
+            font_size: Some(12.0),
+        }];
+
+        let differences = compare_text_objects(&generated, &reference);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Text Object") && d.location.contains("Content") }));
+    }
+
+    #[test]
+    fn test_compare_text_objects_different_count() {
+        let generated: Vec<TextObject> = vec![];
+        let reference = vec![TextObject {
+            text_content: "Test".to_string(),
+            font: Some("Helvetica".to_string()),
+            font_size: Some(12.0),
+        }];
+
+        let differences = compare_text_objects(&generated, &reference);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Text Objects/Count") }));
+    }
+
+    #[test]
+    fn test_compare_graphics_states_different_count() {
+        let generated: Vec<GraphicsState> = vec![];
+        let reference = vec![GraphicsState {
+            line_width: Some(1.0),
+            line_cap: None,
+            line_join: None,
+            fill_color: None,
+            stroke_color: None,
+        }];
+
+        let differences = compare_graphics_states(&generated, &reference);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Graphics States/Count") }));
+    }
+
+    #[test]
+    fn test_compare_graphics_states_different_line_width() {
+        let generated = vec![GraphicsState {
+            line_width: Some(2.0),
+            line_cap: None,
+            line_join: None,
+            fill_color: None,
+            stroke_color: None,
+        }];
+        let reference = vec![GraphicsState {
+            line_width: Some(1.0),
+            line_cap: None,
+            line_join: None,
+            fill_color: None,
+            stroke_color: None,
+        }];
+
+        let differences = compare_graphics_states(&generated, &reference);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("LineWidth") }));
+    }
+
+    #[test]
+    fn test_compare_catalogs_both_present_with_diff() {
+        let mut gen_catalog = HashMap::new();
+        gen_catalog.insert("Type".to_string(), "Catalog".to_string());
+        gen_catalog.insert("Pages".to_string(), "1 0 R".to_string());
+
+        let mut ref_catalog = HashMap::new();
+        ref_catalog.insert("Type".to_string(), "Catalog".to_string());
+        ref_catalog.insert("Pages".to_string(), "2 0 R".to_string()); // Different
+
+        let differences = compare_catalogs(&Some(gen_catalog), &Some(ref_catalog));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Catalog/Pages") }));
+    }
+
+    #[test]
+    fn test_compare_catalogs_generated_missing_key() {
+        let mut gen_catalog = HashMap::new();
+        gen_catalog.insert("Type".to_string(), "Catalog".to_string());
+        // Missing "Pages" key
+
+        let mut ref_catalog = HashMap::new();
+        ref_catalog.insert("Type".to_string(), "Catalog".to_string());
+        ref_catalog.insert("Pages".to_string(), "1 0 R".to_string());
+
+        let differences = compare_catalogs(&Some(gen_catalog), &Some(ref_catalog));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Catalog/Pages") && d.actual == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_catalogs_reference_missing_key() {
+        let mut gen_catalog = HashMap::new();
+        gen_catalog.insert("Type".to_string(), "Catalog".to_string());
+        gen_catalog.insert("Pages".to_string(), "1 0 R".to_string());
+
+        let mut ref_catalog = HashMap::new();
+        ref_catalog.insert("Type".to_string(), "Catalog".to_string());
+        // Missing "Pages" key
+
+        let differences = compare_catalogs(&Some(gen_catalog), &Some(ref_catalog));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Catalog/Pages") && d.expected == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_catalogs_generated_none() {
+        let ref_catalog = HashMap::new();
+        let differences = compare_catalogs(&None, &Some(ref_catalog));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Document Catalog") && d.actual == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_catalogs_reference_none() {
+        let gen_catalog = HashMap::new();
+        let differences = compare_catalogs(&Some(gen_catalog), &None);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Document Catalog") && d.expected == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_catalogs_both_none() {
+        let differences = compare_catalogs(&None, &None);
+
+        assert!(differences.iter().any(|d| {
+            d.location.contains("Document Catalog") && d.severity == DifferenceSeverity::Critical
+        }));
+    }
+
+    #[test]
+    fn test_compare_page_trees_different_count() {
+        let gen_tree = PageTree {
+            page_count: 5,
+            root_type: "Pages".to_string(),
+            kids_arrays: vec![],
+        };
+        let ref_tree = PageTree {
+            page_count: 3,
+            root_type: "Pages".to_string(),
+            kids_arrays: vec![],
+        };
+
+        let differences = compare_page_trees(&Some(gen_tree), &Some(ref_tree));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Page Tree/Count") }));
+    }
+
+    #[test]
+    fn test_compare_page_trees_different_type() {
+        let gen_tree = PageTree {
+            page_count: 1,
+            root_type: "Page".to_string(),
+            kids_arrays: vec![],
+        };
+        let ref_tree = PageTree {
+            page_count: 1,
+            root_type: "Pages".to_string(),
+            kids_arrays: vec![],
+        };
+
+        let differences = compare_page_trees(&Some(gen_tree), &Some(ref_tree));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Page Tree/Type") }));
+    }
+
+    #[test]
+    fn test_compare_page_trees_generated_none() {
+        let ref_tree = PageTree {
+            page_count: 1,
+            root_type: "Pages".to_string(),
+            kids_arrays: vec![],
+        };
+
+        let differences = compare_page_trees(&None, &Some(ref_tree));
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Page Tree") && d.actual == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_page_trees_reference_none() {
+        let gen_tree = PageTree {
+            page_count: 1,
+            root_type: "Pages".to_string(),
+            kids_arrays: vec![],
+        };
+
+        let differences = compare_page_trees(&Some(gen_tree), &None);
+
+        assert!(differences
+            .iter()
+            .any(|d| { d.location.contains("Page Tree") && d.expected == "missing" }));
+    }
+
+    #[test]
+    fn test_compare_page_trees_both_none() {
+        let differences = compare_page_trees(&None, &None);
+        assert!(differences.is_empty()); // Both missing is ok for minimal PDFs
+    }
+
+    #[test]
+    fn test_pdfs_structurally_equivalent_true() {
+        let pdf1 = create_test_pdf("1.4", "Catalog");
+        let pdf2 = create_test_pdf("1.4", "Catalog");
+
+        assert!(pdfs_structurally_equivalent(&pdf1, &pdf2));
+    }
+
+    #[test]
+    fn test_pdfs_structurally_equivalent_invalid_pdf() {
+        let pdf1 = b"not a pdf".to_vec();
+        let pdf2 = b"also not a pdf".to_vec();
+
+        // Should return false on parse error
+        assert!(!pdfs_structurally_equivalent(&pdf1, &pdf2));
+    }
+
+    #[test]
+    fn test_extract_pdf_differences() {
+        let pdf1 = create_test_pdf("1.4", "Catalog");
+        let pdf2 = create_test_pdf("1.7", "Catalog");
+
+        let differences = extract_pdf_differences(&pdf1, &pdf2).unwrap();
+        assert!(!differences.is_empty());
+    }
+
+    #[test]
+    fn test_extract_pdf_differences_identical() {
+        let pdf1 = create_test_pdf("1.4", "Catalog");
+        let pdf2 = create_test_pdf("1.4", "Catalog");
+
+        let differences = extract_pdf_differences(&pdf1, &pdf2).unwrap();
+        assert!(differences.is_empty());
+    }
+
+    #[test]
+    fn test_major_version_difference() {
+        let pdf1 = create_test_pdf("1.4", "Catalog");
+        let pdf2 = create_test_pdf("2.0", "Catalog"); // Major version change
+
+        let result = compare_pdfs(&pdf1, &pdf2).unwrap();
+
+        // Should have Important severity for major version change
+        assert!(result.differences.iter().any(|d| {
+            d.location == "PDF Version" && d.severity == DifferenceSeverity::Important
+        }));
     }
 }

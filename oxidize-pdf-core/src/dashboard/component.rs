@@ -406,4 +406,189 @@ mod tests {
         assert_eq!(config.alignment, ComponentAlignment::Center);
         assert!(config.classes.contains(&"highlight".to_string()));
     }
+
+    #[test]
+    fn test_component_position_top_left() {
+        let pos = ComponentPosition::new(100.0, 200.0, 300.0, 400.0);
+        let top_left = pos.top_left();
+        assert_eq!(top_left.x, 100.0);
+        assert_eq!(top_left.y, 600.0); // y + height
+    }
+
+    #[test]
+    fn test_component_position_bottom_right() {
+        let pos = ComponentPosition::new(100.0, 200.0, 300.0, 400.0);
+        let bottom_right = pos.bottom_right();
+        assert_eq!(bottom_right.x, 400.0); // x + width
+        assert_eq!(bottom_right.y, 200.0);
+    }
+
+    #[test]
+    fn test_component_position_with_padding() {
+        let pos = ComponentPosition::new(100.0, 200.0, 300.0, 400.0);
+        let padded = pos.with_padding(10.0);
+
+        assert_eq!(padded.x, 110.0);
+        assert_eq!(padded.y, 210.0);
+        assert_eq!(padded.width, 280.0); // 300 - 2*10
+        assert_eq!(padded.height, 380.0); // 400 - 2*10
+    }
+
+    #[test]
+    fn test_component_position_contains() {
+        let pos = ComponentPosition::new(100.0, 200.0, 300.0, 400.0);
+
+        // Point inside
+        assert!(pos.contains(Point::new(200.0, 300.0)));
+
+        // Point on edges
+        assert!(pos.contains(Point::new(100.0, 200.0))); // bottom-left
+        assert!(pos.contains(Point::new(400.0, 600.0))); // top-right
+
+        // Point outside
+        assert!(!pos.contains(Point::new(50.0, 300.0))); // left
+        assert!(!pos.contains(Point::new(500.0, 300.0))); // right
+        assert!(!pos.contains(Point::new(200.0, 100.0))); // below
+        assert!(!pos.contains(Point::new(200.0, 700.0))); // above
+    }
+
+    #[test]
+    fn test_component_position_aspect_ratio_zero_height() {
+        let pos = ComponentPosition::new(100.0, 200.0, 300.0, 0.0);
+        assert_eq!(pos.aspect_ratio(), 1.0); // Default when height is 0
+    }
+
+    #[test]
+    fn test_component_span_with_rows() {
+        let span = ComponentSpan::with_rows(6, 2);
+        assert_eq!(span.columns, 6);
+        assert_eq!(span.rows, Some(2));
+
+        // Test clamping
+        let span_clamped = ComponentSpan::with_rows(15, 0);
+        assert_eq!(span_clamped.columns, 12);
+        assert_eq!(span_clamped.rows, Some(1));
+    }
+
+    #[test]
+    fn test_component_span_is_quarter_width() {
+        let span = ComponentSpan::new(3);
+        assert!(span.is_quarter_width());
+        assert!(!span.is_half_width());
+        assert!(!span.is_full_width());
+    }
+
+    #[test]
+    fn test_component_span_from_u8() {
+        let span: ComponentSpan = 4u8.into();
+        assert_eq!(span.columns, 4);
+        assert!(span.rows.is_none());
+    }
+
+    #[test]
+    fn test_component_alignment_debug() {
+        let alignments = vec![
+            ComponentAlignment::Start,
+            ComponentAlignment::Center,
+            ComponentAlignment::End,
+            ComponentAlignment::Stretch,
+        ];
+
+        for alignment in alignments {
+            let debug_str = format!("{:?}", alignment);
+            assert!(!debug_str.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_component_alignment_default() {
+        let default = ComponentAlignment::default();
+        assert_eq!(default, ComponentAlignment::Stretch);
+    }
+
+    #[test]
+    fn test_component_margin_new() {
+        let margin = ComponentMargin::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(margin.top, 1.0);
+        assert_eq!(margin.right, 2.0);
+        assert_eq!(margin.bottom, 3.0);
+        assert_eq!(margin.left, 4.0);
+    }
+
+    #[test]
+    fn test_component_margin_default() {
+        let default = ComponentMargin::default();
+        assert_eq!(default.top, 8.0);
+        assert_eq!(default.right, 8.0);
+        assert_eq!(default.bottom, 8.0);
+        assert_eq!(default.left, 8.0);
+    }
+
+    #[test]
+    fn test_component_config_default() {
+        let default = ComponentConfig::default();
+        assert_eq!(default.span.columns, 12);
+        assert_eq!(default.alignment, ComponentAlignment::Stretch);
+        assert!(default.visible);
+        assert!(default.classes.is_empty());
+        assert!(default.id.is_none());
+    }
+
+    #[test]
+    fn test_component_config_with_margin() {
+        let config =
+            ComponentConfig::new(ComponentSpan::new(6)).with_margin(ComponentMargin::uniform(16.0));
+
+        assert_eq!(config.margin.top, 16.0);
+        assert_eq!(config.margin.horizontal(), 32.0);
+    }
+
+    #[test]
+    fn test_component_config_with_visibility() {
+        let config = ComponentConfig::new(ComponentSpan::new(6)).with_visibility(false);
+
+        assert!(!config.visible);
+    }
+
+    #[test]
+    fn test_component_config_clone() {
+        let config = ComponentConfig::new(ComponentSpan::new(6))
+            .with_id("test".to_string())
+            .with_class("class1".to_string());
+
+        let cloned = config.clone();
+        assert_eq!(config.span, cloned.span);
+        assert_eq!(config.id, cloned.id);
+        assert_eq!(config.classes.len(), cloned.classes.len());
+    }
+
+    #[test]
+    fn test_component_position_clone_copy() {
+        let pos = ComponentPosition::new(10.0, 20.0, 30.0, 40.0);
+        let cloned = pos.clone();
+        let copied = pos;
+
+        assert_eq!(pos.x, cloned.x);
+        assert_eq!(pos.y, copied.y);
+    }
+
+    #[test]
+    fn test_component_span_equality() {
+        let span1 = ComponentSpan::new(6);
+        let span2 = ComponentSpan::new(6);
+        let span3 = ComponentSpan::new(8);
+
+        assert_eq!(span1, span2);
+        assert_ne!(span1, span3);
+    }
+
+    #[test]
+    fn test_component_margin_clone_copy() {
+        let margin = ComponentMargin::new(1.0, 2.0, 3.0, 4.0);
+        let cloned = margin.clone();
+        let copied = margin;
+
+        assert_eq!(margin.top, cloned.top);
+        assert_eq!(margin.left, copied.left);
+    }
 }

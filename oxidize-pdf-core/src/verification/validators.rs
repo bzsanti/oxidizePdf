@@ -259,6 +259,7 @@ use std::collections::HashMap;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     fn create_minimal_pdf() -> Vec<u8> {
         // Create a minimal valid PDF for testing
@@ -288,10 +289,10 @@ endobj
 
 xref
 0 4
-0000000000 65535 f 
-0000000010 00000 n 
-0000000079 00000 n 
-0000000173 00000 n 
+0000000000 65535 f
+0000000010 00000 n
+0000000079 00000 n
+0000000173 00000 n
 trailer
 <<
 /Size 4
@@ -301,6 +302,16 @@ startxref
 256
 %%EOF"#;
         pdf_content.as_bytes().to_vec()
+    }
+
+    fn create_invalid_pdf() -> Vec<u8> {
+        // Create an invalid PDF (corrupted structure)
+        b"not a valid pdf at all".to_vec()
+    }
+
+    fn create_truncated_pdf() -> Vec<u8> {
+        // Create a truncated PDF missing the trailer
+        b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\n".to_vec()
     }
 
     #[test]
@@ -313,12 +324,33 @@ startxref
     }
 
     #[test]
+    fn test_check_available_validators_returns_vec() {
+        let available = check_available_validators();
+        // Verify returns a Vec<String>
+        for validator in &available {
+            assert!(!validator.is_empty());
+        }
+    }
+
+    #[test]
     fn test_get_install_instructions() {
         let instructions = get_install_instructions();
         assert!(instructions.contains_key("qpdf"));
         assert!(instructions.contains_key("verapdf"));
         assert!(instructions.contains_key("pdftk"));
         assert!(instructions["qpdf"].contains("brew install qpdf"));
+    }
+
+    #[test]
+    fn test_get_install_instructions_verapdf_content() {
+        let instructions = get_install_instructions();
+        assert!(instructions["verapdf"].contains("https://verapdf.org/"));
+    }
+
+    #[test]
+    fn test_get_install_instructions_pdftk_content() {
+        let instructions = get_install_instructions();
+        assert!(instructions["pdftk"].contains("pdftk-java"));
     }
 
     #[test]
@@ -343,6 +375,238 @@ startxref
                     e
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_validate_external_result_structure() {
+        let pdf_bytes = create_minimal_pdf();
+        let result = validate_external(&pdf_bytes);
+
+        // The function should always return Ok, even if validators fail
+        assert!(result.is_ok());
+
+        let validation_result = result.unwrap();
+        // Error messages should always be populated (at least for missing tools)
+        // This exercises the Ok path of validate_external
+        let _ = validation_result.error_messages.len();
+    }
+
+    #[test]
+    fn test_validate_with_qpdf_valid_pdf() {
+        // Create a temporary file with valid PDF
+        let pdf_bytes = create_minimal_pdf();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&pdf_bytes).unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        match validate_with_qpdf(path) {
+            Ok(passed) => {
+                // qpdf is available and validated successfully
+                assert!(passed);
+            }
+            Err(e) => {
+                // qpdf not installed - verify error message
+                let err_str = e.to_string();
+                assert!(
+                    err_str.contains("not found") || err_str.contains("validation failed"),
+                    "Unexpected error: {}",
+                    err_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_with_qpdf_invalid_pdf() {
+        // Create a temporary file with invalid PDF
+        let pdf_bytes = create_invalid_pdf();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&pdf_bytes).unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        match validate_with_qpdf(path) {
+            Ok(_) => {
+                // qpdf might still "pass" on some invalid PDFs
+            }
+            Err(e) => {
+                // Expected: qpdf rejects invalid PDF or qpdf not installed
+                let err_str = e.to_string();
+                assert!(
+                    err_str.contains("validation failed") || err_str.contains("not found"),
+                    "Unexpected error: {}",
+                    err_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_with_qpdf_truncated_pdf() {
+        // Create a temporary file with truncated PDF
+        let pdf_bytes = create_truncated_pdf();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&pdf_bytes).unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        match validate_with_qpdf(path) {
+            Ok(_) => {
+                // Truncated PDFs might pass basic validation
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                assert!(
+                    err_str.contains("validation failed") || err_str.contains("not found"),
+                    "Unexpected error: {}",
+                    err_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_with_qpdf_nonexistent_file() {
+        let result = validate_with_qpdf("/nonexistent/path/to/file.pdf");
+
+        // Should return an error
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        // Either qpdf not found or file not found error
+        assert!(
+            err_str.contains("not found") || err_str.contains("failed"),
+            "Unexpected error: {}",
+            err_str
+        );
+    }
+
+    #[test]
+    fn test_validate_with_verapdf_not_available() {
+        // veraPDF is typically not installed on most systems
+        let pdf_bytes = create_minimal_pdf();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&pdf_bytes).unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        match validate_with_verapdf(path) {
+            Ok(passed) => {
+                // veraPDF is available - verify it returns a boolean
+                let _ = passed;
+            }
+            Err(e) => {
+                // Expected: veraPDF not installed
+                let err_str = e.to_string();
+                assert!(
+                    err_str.contains("not found") || err_str.contains("validation failed"),
+                    "Unexpected error: {}",
+                    err_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_with_adobe_preflight_not_available() {
+        // Adobe Preflight is almost never available
+        let pdf_bytes = create_minimal_pdf();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&pdf_bytes).unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        let result = validate_with_adobe_preflight(path);
+
+        // Adobe Preflight is almost never installed
+        // It should return an error
+        match result {
+            Ok(_) => {
+                // Rare case: Adobe Acrobat is installed
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                assert!(
+                    err_str.contains("not available") || err_str.contains("failed"),
+                    "Unexpected error: {}",
+                    err_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_with_pdftk_not_available() {
+        // pdftk may or may not be installed
+        let pdf_bytes = create_minimal_pdf();
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(&pdf_bytes).unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        match validate_with_pdftk(path) {
+            Ok(passed) => {
+                // pdftk is available - it checks for InfoKey and NumberOfPages
+                // A minimal PDF might not have both
+                let _ = passed;
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                assert!(
+                    err_str.contains("not found") || err_str.contains("validation failed"),
+                    "Unexpected error: {}",
+                    err_str
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_validate_with_pdftk_nonexistent_file() {
+        let result = validate_with_pdftk("/nonexistent/path/to/file.pdf");
+
+        // Should return an error
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_external_empty_pdf() {
+        let pdf_bytes = Vec::new();
+        let result = validate_external(&pdf_bytes);
+
+        // Should return Ok with error messages about failed validations
+        assert!(result.is_ok());
+        let validation_result = result.unwrap();
+        // At least Adobe Preflight should be in error messages (always unavailable)
+        assert!(!validation_result.error_messages.is_empty());
+    }
+
+    #[test]
+    fn test_external_validation_result_fields() {
+        let pdf_bytes = create_minimal_pdf();
+        let result = validate_external(&pdf_bytes).unwrap();
+
+        // Test that all fields are accessible
+        let _ = result.qpdf_passed;
+        let _ = result.verapdf_passed;
+        let _ = result.adobe_preflight_passed;
+        let _ = result.error_messages.len();
+    }
+
+    #[test]
+    fn test_install_instructions_completeness() {
+        let instructions = get_install_instructions();
+
+        // Should have exactly 3 validators
+        assert_eq!(instructions.len(), 3);
+
+        // Each should have non-empty instructions
+        for (name, instruction) in &instructions {
+            assert!(!name.is_empty());
+            assert!(!instruction.is_empty());
+            // Each should have at least one installation method
+            assert!(
+                instruction.contains("brew")
+                    || instruction.contains("apt")
+                    || instruction.contains("Download"),
+                "Instructions for {} don't contain installation method",
+                name
+            );
         }
     }
 }

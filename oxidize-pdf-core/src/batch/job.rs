@@ -465,4 +465,122 @@ mod tests {
             assert!(!debug_str.is_empty());
         }
     }
+
+    #[test]
+    fn test_batch_job_debug_split() {
+        let job = BatchJob::Split {
+            input: PathBuf::from("input.pdf"),
+            output_pattern: "page_%d.pdf".to_string(),
+            pages_per_file: 2,
+        };
+
+        let debug_str = format!("{:?}", job);
+        assert!(debug_str.contains("Split"));
+        assert!(debug_str.contains("input.pdf"));
+        assert!(debug_str.contains("page_%d.pdf"));
+        assert!(debug_str.contains("pages_per_file: 2"));
+    }
+
+    #[test]
+    fn test_batch_job_debug_merge() {
+        let job = BatchJob::Merge {
+            inputs: vec![PathBuf::from("a.pdf"), PathBuf::from("b.pdf")],
+            output: PathBuf::from("merged.pdf"),
+        };
+
+        let debug_str = format!("{:?}", job);
+        assert!(debug_str.contains("Merge"));
+        assert!(debug_str.contains("a.pdf"));
+        assert!(debug_str.contains("b.pdf"));
+        assert!(debug_str.contains("merged.pdf"));
+    }
+
+    #[test]
+    fn test_batch_job_debug_rotate() {
+        let job = BatchJob::Rotate {
+            input: PathBuf::from("doc.pdf"),
+            output: PathBuf::from("rotated.pdf"),
+            rotation: 90,
+            pages: Some(vec![1, 2, 3]),
+        };
+
+        let debug_str = format!("{:?}", job);
+        assert!(debug_str.contains("Rotate"));
+        assert!(debug_str.contains("rotation: 90"));
+        assert!(debug_str.contains("pages: Some"));
+    }
+
+    #[test]
+    fn test_batch_job_debug_extract() {
+        let job = BatchJob::Extract {
+            input: PathBuf::from("source.pdf"),
+            output: PathBuf::from("extracted.pdf"),
+            pages: vec![0, 5, 10],
+        };
+
+        let debug_str = format!("{:?}", job);
+        assert!(debug_str.contains("Extract"));
+        assert!(debug_str.contains("source.pdf"));
+        assert!(debug_str.contains("pages: [0, 5, 10]"));
+    }
+
+    #[test]
+    fn test_batch_job_debug_compress() {
+        let job = BatchJob::Compress {
+            input: PathBuf::from("large.pdf"),
+            output: PathBuf::from("small.pdf"),
+            quality: 75,
+        };
+
+        let debug_str = format!("{:?}", job);
+        assert!(debug_str.contains("Compress"));
+        assert!(debug_str.contains("quality: 75"));
+    }
+
+    #[test]
+    fn test_batch_job_debug_custom() {
+        let job = BatchJob::Custom {
+            name: "MyCustomOp".to_string(),
+            operation: Box::new(|| Ok(())),
+        };
+
+        let debug_str = format!("{:?}", job);
+        assert!(debug_str.contains("Custom"));
+        assert!(debug_str.contains("MyCustomOp"));
+    }
+
+    #[test]
+    fn test_job_status_clone() {
+        let status1 = JobStatus::Failed("Error message".to_string());
+        let status2 = status1.clone();
+        assert_eq!(status1, status2);
+
+        let running = JobStatus::Running.clone();
+        assert_eq!(running, JobStatus::Running);
+    }
+
+    #[test]
+    fn test_job_type_display_all_variants() {
+        assert_eq!(format!("{}", JobType::Split), "Split");
+        assert_eq!(format!("{}", JobType::Merge), "Merge");
+        assert_eq!(format!("{}", JobType::Rotate), "Rotate");
+        assert_eq!(format!("{}", JobType::Extract), "Extract");
+        assert_eq!(format!("{}", JobType::Compress), "Compress");
+        assert_eq!(format!("{}", JobType::Custom("MyOp".to_string())), "MyOp");
+    }
+
+    #[test]
+    fn test_batch_job_large_merge() {
+        let inputs: Vec<PathBuf> = (0..100)
+            .map(|i| PathBuf::from(format!("file_{}.pdf", i)))
+            .collect();
+
+        let job = BatchJob::Merge {
+            inputs,
+            output: PathBuf::from("huge_merge.pdf"),
+        };
+
+        assert_eq!(job.input_files().len(), 100);
+        assert_eq!(job.estimate_complexity(), 2000); // 100 * 20
+    }
 }

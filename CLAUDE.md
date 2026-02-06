@@ -4,14 +4,74 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-01-29 - Issue #116 Follow-up: space_threshold tuning |
+| **Last Session** | 2026-02-06 - Coverage improvement: +118 tests |
 | **Branch** | develop_santi |
-| **Version** | v1.6.10 |
-| **Tests** | 5008 unit + 186 doc tests passing |
-| **Coverage** | 70.00% |
+| **Version** | v1.6.11 |
+| **Tests** | 5,591 unit + 187 doc tests passing |
+| **Coverage** | ~72.5% (estimated) |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-02-06) - Coverage Improvement: +118 Tests
+- **Tests added**: 118 new unit tests
+  - `charts/chart_builder.rs`: +48 tests (4 -> 52)
+    - LegendPosition, ChartType enums
+    - ChartData, Chart, ChartBuilder comprehensive coverage
+    - default_colors(), edge cases
+  - `charts/bar_chart.rs`: +49 tests (4 -> 53)
+    - BarOrientation enum
+    - BarChart, BarChartBuilder comprehensive coverage
+    - calculate_bar_width, color_for_index, value_range
+    - financial_style, minimal_style, progress_style
+  - `page_lists.rs`: +21 tests (6 -> 27)
+    - ListType, ListStyle comprehensive coverage
+    - All style constructors (minimal, professional, document, presentation, checklist)
+    - Error handling for type mismatches
+- **Total unit tests**: 5,473 -> 5,591 (+118)
+- **All tests passing**: 5,591 unit + 187 doc = 5,778 total
+- **Clippy**: No warnings
+
+### Session Summary (2026-02-05) - Coverage Improvement: 71.70% -> 72.14%
+- **Coverage improvement**: 71.70% -> 72.14% (+0.44 percentage points)
+- **Lines covered**: 28,736 -> 28,910 (+174 lines)
+- **Tests added**: ~120 new unit tests (session 2)
+  - `forms/calculation_system.rs`: 51 tests (calculation operations, settings, events)
+  - `encryption/object_encryption.rs`: 25 tests (encrypt/decrypt objects, streams, dicts)
+  - `text/invoice/error.rs`: 13 tests (all error variants)
+  - `templates/error.rs`: 16 tests (all error variants + regex conversion)
+  - `advanced_tables/error.rs`: 20 tests (all error variants)
+- **Modules tested**: FormCalculationSystem, ObjectEncryptor, DocumentEncryption, ExtractionError, TemplateError, TableError
+- **Total tests this sprint**: 1,515 new tests (5,209 -> 6,724)
+
+### Session Summary (2026-02-04) - Coverage Improvement: 70% -> 71.70%
+- **Coverage improvement**: 70.00% -> 71.70% (+1.70 percentage points)
+- **Lines covered**: 28,290 -> 28,736 (+446 lines)
+- **Tests added**: 166 new unit tests
+  - `advanced_tables/table_builder.rs`: 64 tests
+  - `pdf_objects/mod.rs`: 62 tests
+  - `charts/pie_chart.rs`: 40 tests
+- **Modules tested**: Column, CellData, RowData, ZebraConfig, AdvancedTableBuilder, AdvancedTable, Name, BinaryString, ObjectId, Array, Dictionary, Stream, Object, PieSegment, PieChart, PieChartBuilder
+- **Key lesson**: Always run `cargo tarpaulin` without `--skip-clean` to get accurate measurements after adding new tests
+
+### Session Summary (2026-02-01) - Release v1.6.11: Per-page Extraction Options
+- **New API**: `extract_text_from_page_with_options(page_index, options)` method
+  - Combines `extract_text_from_page` and `extract_text_with_options` functionality
+  - Allows custom `ExtractionOptions` (e.g., `space_threshold`) per individual page
+  - Addresses user request in Issue #116
+- **Files Modified**:
+  - `oxidize-pdf-core/src/parser/document.rs` - new method
+  - `oxidize-pdf-core/tests/text_extraction_test.rs` - new test
+  - `Cargo.toml` - version 1.6.11
+  - `CHANGELOG.md` - entries for v1.6.10 and v1.6.11
+- **Release Process**:
+  - PR #119: develop_santi → develop (merged)
+  - PR #120: develop → main (merged)
+  - Tag v1.6.11 created and pushed
+  - GitHub Release published
+  - crates.io publication successful
+- **Issue #116**: Responded with per-page extraction solution
+- **Commit**: `7f44fd1` - feat(api): add extract_text_from_page_with_options method
 
 ### Session Summary (2026-01-29) - Issue #116 Follow-up: space_threshold Tuning
 - **Issue #116 Follow-up**: User reported unexpected spaces in extracted text ("tw o" instead of "two")

@@ -507,12 +507,46 @@ impl From<(u32, u16)> for Object {
 mod tests {
     use super::*;
 
+    // =============================================================================
+    // Name tests
+    // =============================================================================
+
     #[test]
     fn test_name() {
         let name = Name::new("Type");
         assert_eq!(name.as_str(), "Type");
         assert_eq!(format!("{}", name), "/Type");
     }
+
+    #[test]
+    fn test_name_into_string() {
+        let name = Name::new("Type");
+        let s = name.into_string();
+        assert_eq!(s, "Type");
+    }
+
+    #[test]
+    fn test_name_from_string() {
+        let name: Name = String::from("Test").into();
+        assert_eq!(name.as_str(), "Test");
+    }
+
+    #[test]
+    fn test_name_as_ref() {
+        let name = Name::new("Type");
+        let s: &str = name.as_ref();
+        assert_eq!(s, "Type");
+    }
+
+    #[test]
+    fn test_name_from_str() {
+        let name: Name = "Type".into();
+        assert_eq!(name.as_str(), "Type");
+    }
+
+    // =============================================================================
+    // BinaryString tests
+    // =============================================================================
 
     #[test]
     fn test_binary_string() {
@@ -525,12 +559,65 @@ mod tests {
     }
 
     #[test]
+    fn test_binary_string_from_str_method() {
+        let s = BinaryString::from_str("Hello");
+        assert_eq!(s.as_bytes(), b"Hello");
+    }
+
+    #[test]
+    fn test_binary_string_into_bytes() {
+        let s = BinaryString::new(vec![1, 2, 3]);
+        let bytes = s.into_bytes();
+        assert_eq!(bytes, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_binary_string_from_vec() {
+        let s: BinaryString = vec![65, 66, 67].into();
+        assert_eq!(s.as_bytes(), &[65, 66, 67]);
+    }
+
+    #[test]
+    fn test_binary_string_from_slice() {
+        let data: &[u8] = &[1, 2, 3];
+        let s: BinaryString = data.into();
+        assert_eq!(s.as_bytes(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn test_binary_string_from_string() {
+        let s: BinaryString = String::from("Test").into();
+        assert_eq!(s.as_bytes(), b"Test");
+    }
+
+    #[test]
+    fn test_binary_string_try_to_string_valid_utf8() {
+        let s = BinaryString::from_str("Valid UTF-8");
+        assert_eq!(s.try_to_string(), Some("Valid UTF-8".to_string()));
+    }
+
+    // =============================================================================
+    // ObjectId tests
+    // =============================================================================
+
+    #[test]
     fn test_object_id() {
         let id = ObjectId::new(10, 0);
         assert_eq!(id.number(), 10);
         assert_eq!(id.generation(), 0);
         assert_eq!(format!("{}", id), "10 0 R");
     }
+
+    #[test]
+    fn test_object_id_from_tuple() {
+        let id: ObjectId = (42u32, 1u16).into();
+        assert_eq!(id.number(), 42);
+        assert_eq!(id.generation(), 1);
+    }
+
+    // =============================================================================
+    // Array tests
+    // =============================================================================
 
     #[test]
     fn test_array() {
@@ -544,6 +631,78 @@ mod tests {
     }
 
     #[test]
+    fn test_array_with_capacity() {
+        let arr = Array::with_capacity(100);
+        assert!(arr.is_empty());
+        assert_eq!(arr.len(), 0);
+    }
+
+    #[test]
+    fn test_array_is_empty() {
+        let arr = Array::new();
+        assert!(arr.is_empty());
+    }
+
+    #[test]
+    fn test_array_iter() {
+        let mut arr = Array::new();
+        arr.push(Object::Integer(1));
+        arr.push(Object::Integer(2));
+
+        let sum: i64 = arr.iter().filter_map(|o| o.as_integer()).sum();
+        assert_eq!(sum, 3);
+    }
+
+    #[test]
+    fn test_array_as_slice() {
+        let mut arr = Array::new();
+        arr.push(Object::Integer(1));
+
+        let slice = arr.as_slice();
+        assert_eq!(slice.len(), 1);
+    }
+
+    #[test]
+    fn test_array_into_vec() {
+        let mut arr = Array::new();
+        arr.push(Object::Integer(42));
+
+        let vec = arr.into_vec();
+        assert_eq!(vec.len(), 1);
+    }
+
+    #[test]
+    fn test_array_default() {
+        let arr: Array = Default::default();
+        assert!(arr.is_empty());
+    }
+
+    #[test]
+    fn test_array_from_vec() {
+        let vec = vec![Object::Integer(1), Object::Integer(2)];
+        let arr = Array::from(vec);
+        assert_eq!(arr.len(), 2);
+    }
+
+    #[test]
+    fn test_array_from_iterator() {
+        let arr: Array = vec![Object::Integer(1), Object::Integer(2)]
+            .into_iter()
+            .collect();
+        assert_eq!(arr.len(), 2);
+    }
+
+    #[test]
+    fn test_array_get_out_of_bounds() {
+        let arr = Array::new();
+        assert!(arr.get(0).is_none());
+    }
+
+    // =============================================================================
+    // Dictionary tests
+    // =============================================================================
+
+    #[test]
     fn test_dictionary() {
         let mut dict = Dictionary::new();
         dict.set("Type", Name::new("Page"));
@@ -552,6 +711,142 @@ mod tests {
         assert_eq!(dict.get_type(), Some("Page"));
         assert_eq!(dict.get("Count"), Some(&Object::Integer(5)));
     }
+
+    #[test]
+    fn test_dictionary_with_capacity() {
+        let dict = Dictionary::with_capacity(100);
+        assert!(dict.is_empty());
+    }
+
+    #[test]
+    fn test_dictionary_get_mut() {
+        let mut dict = Dictionary::new();
+        dict.set("Count", 5);
+
+        if let Some(obj) = dict.get_mut("Count") {
+            *obj = Object::Integer(10);
+        }
+        assert_eq!(dict.get("Count"), Some(&Object::Integer(10)));
+    }
+
+    #[test]
+    fn test_dictionary_remove() {
+        let mut dict = Dictionary::new();
+        dict.set("Key", 1);
+
+        let removed = dict.remove("Key");
+        assert_eq!(removed, Some(Object::Integer(1)));
+        assert!(dict.is_empty());
+    }
+
+    #[test]
+    fn test_dictionary_remove_nonexistent() {
+        let mut dict = Dictionary::new();
+        assert!(dict.remove("NonExistent").is_none());
+    }
+
+    #[test]
+    fn test_dictionary_contains_key() {
+        let mut dict = Dictionary::new();
+        dict.set("Key", 1);
+
+        assert!(dict.contains_key("Key"));
+        assert!(!dict.contains_key("Other"));
+    }
+
+    #[test]
+    fn test_dictionary_clear() {
+        let mut dict = Dictionary::new();
+        dict.set("A", 1);
+        dict.set("B", 2);
+
+        dict.clear();
+        assert!(dict.is_empty());
+    }
+
+    #[test]
+    fn test_dictionary_keys() {
+        let mut dict = Dictionary::new();
+        dict.set("A", 1);
+        dict.set("B", 2);
+
+        let keys: Vec<&str> = dict.keys().map(|n| n.as_str()).collect();
+        assert!(keys.contains(&"A"));
+        assert!(keys.contains(&"B"));
+    }
+
+    #[test]
+    fn test_dictionary_values() {
+        let mut dict = Dictionary::new();
+        dict.set("A", 1);
+        dict.set("B", 2);
+
+        let count = dict.values().count();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_dictionary_iter() {
+        let mut dict = Dictionary::new();
+        dict.set("A", 1);
+
+        for (name, _obj) in dict.iter() {
+            assert_eq!(name.as_str(), "A");
+        }
+    }
+
+    #[test]
+    fn test_dictionary_get_dict() {
+        let mut inner = Dictionary::new();
+        inner.set("Inner", 1);
+
+        let mut outer = Dictionary::new();
+        outer.set("Nested", Object::Dictionary(inner));
+
+        let nested = outer.get_dict("Nested");
+        assert!(nested.is_some());
+        assert_eq!(nested.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_dictionary_get_dict_not_dict() {
+        let mut dict = Dictionary::new();
+        dict.set("Key", 42);
+
+        assert!(dict.get_dict("Key").is_none());
+    }
+
+    #[test]
+    fn test_dictionary_get_type_not_name() {
+        let mut dict = Dictionary::new();
+        dict.set("Type", 42);
+
+        assert!(dict.get_type().is_none());
+    }
+
+    #[test]
+    fn test_dictionary_default() {
+        let dict: Dictionary = Default::default();
+        assert!(dict.is_empty());
+    }
+
+    // =============================================================================
+    // Stream tests
+    // =============================================================================
+
+    #[test]
+    fn test_stream_new() {
+        let dict = Dictionary::new();
+        let data = vec![1, 2, 3, 4, 5];
+        let stream = Stream::new(dict, data.clone());
+
+        assert!(stream.dict.is_empty());
+        assert_eq!(stream.data, data);
+    }
+
+    // =============================================================================
+    // Object tests
+    // =============================================================================
 
     #[test]
     fn test_object_conversions() {
@@ -567,5 +862,159 @@ mod tests {
         } else {
             panic!("Expected String");
         }
+    }
+
+    #[test]
+    fn test_object_is_null() {
+        assert!(Object::Null.is_null());
+        assert!(!Object::Integer(0).is_null());
+    }
+
+    #[test]
+    fn test_object_as_bool() {
+        assert_eq!(Object::Boolean(true).as_bool(), Some(true));
+        assert_eq!(Object::Boolean(false).as_bool(), Some(false));
+        assert_eq!(Object::Integer(1).as_bool(), None);
+    }
+
+    #[test]
+    fn test_object_as_integer() {
+        assert_eq!(Object::Integer(42).as_integer(), Some(42));
+        assert_eq!(Object::Real(3.14).as_integer(), None);
+    }
+
+    #[test]
+    fn test_object_as_real() {
+        assert_eq!(Object::Real(3.14).as_real(), Some(3.14));
+        // Integer can be converted to real
+        assert_eq!(Object::Integer(42).as_real(), Some(42.0));
+        assert_eq!(Object::Boolean(true).as_real(), None);
+    }
+
+    #[test]
+    fn test_object_as_string() {
+        let s = BinaryString::from("test");
+        let obj = Object::String(s.clone());
+        assert!(obj.as_string().is_some());
+        assert_eq!(Object::Integer(1).as_string(), None);
+    }
+
+    #[test]
+    fn test_object_as_name() {
+        let name = Name::new("Type");
+        let obj = Object::Name(name);
+        assert!(obj.as_name().is_some());
+        assert_eq!(Object::Integer(1).as_name(), None);
+    }
+
+    #[test]
+    fn test_object_as_array() {
+        let arr = Array::new();
+        let obj = Object::Array(arr);
+        assert!(obj.as_array().is_some());
+        assert_eq!(Object::Integer(1).as_array(), None);
+    }
+
+    #[test]
+    fn test_object_as_dict() {
+        let dict = Dictionary::new();
+        let obj = Object::Dictionary(dict);
+        assert!(obj.as_dict().is_some());
+        assert_eq!(Object::Integer(1).as_dict(), None);
+    }
+
+    #[test]
+    fn test_object_as_stream() {
+        let stream = Stream::new(Dictionary::new(), vec![]);
+        let obj = Object::Stream(stream);
+        assert!(obj.as_stream().is_some());
+        assert_eq!(Object::Integer(1).as_stream(), None);
+    }
+
+    #[test]
+    fn test_object_as_reference() {
+        let id = ObjectId::new(1, 0);
+        let obj = Object::Reference(id);
+        assert_eq!(obj.as_reference(), Some(id));
+        assert_eq!(Object::Integer(1).as_reference(), None);
+    }
+
+    #[test]
+    fn test_object_from_i64() {
+        let obj: Object = 42i64.into();
+        assert_eq!(obj.as_integer(), Some(42));
+    }
+
+    #[test]
+    fn test_object_from_f32() {
+        let obj: Object = 3.14f32.into();
+        assert!(obj.as_real().is_some());
+    }
+
+    #[test]
+    fn test_object_from_f64() {
+        let obj: Object = 3.14f64.into();
+        assert_eq!(obj.as_real(), Some(3.14));
+    }
+
+    #[test]
+    fn test_object_from_string() {
+        let obj: Object = String::from("test").into();
+        assert!(obj.as_string().is_some());
+    }
+
+    #[test]
+    fn test_object_from_binary_string() {
+        let bs = BinaryString::from("test");
+        let obj: Object = bs.into();
+        assert!(obj.as_string().is_some());
+    }
+
+    #[test]
+    fn test_object_from_name() {
+        let name = Name::new("Type");
+        let obj: Object = name.into();
+        assert!(obj.as_name().is_some());
+    }
+
+    #[test]
+    fn test_object_from_array() {
+        let arr = Array::new();
+        let obj: Object = arr.into();
+        assert!(obj.as_array().is_some());
+    }
+
+    #[test]
+    fn test_object_from_vec() {
+        let vec = vec![Object::Integer(1)];
+        let obj: Object = vec.into();
+        assert!(obj.as_array().is_some());
+    }
+
+    #[test]
+    fn test_object_from_dictionary() {
+        let dict = Dictionary::new();
+        let obj: Object = dict.into();
+        assert!(obj.as_dict().is_some());
+    }
+
+    #[test]
+    fn test_object_from_stream() {
+        let stream = Stream::new(Dictionary::new(), vec![]);
+        let obj: Object = stream.into();
+        assert!(obj.as_stream().is_some());
+    }
+
+    #[test]
+    fn test_object_from_object_id() {
+        let id = ObjectId::new(1, 0);
+        let obj: Object = id.into();
+        assert!(obj.as_reference().is_some());
+    }
+
+    #[test]
+    fn test_object_from_tuple() {
+        let obj: Object = (1u32, 0u16).into();
+        assert!(obj.as_reference().is_some());
     }
 }
