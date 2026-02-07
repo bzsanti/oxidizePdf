@@ -686,10 +686,8 @@ impl PdfObject {
             }
 
             if is_dct_decode {
-                // TODO: CRITICAL - JPEG extraction still produces corrupt images
-                // Current issue: "17 extraneous bytes before marker 0xc4"
-                // This fix resolves stream length issues but JPEG structure remains corrupted
-                // See: docs/JPEG_EXTRACTION_STATUS.md for current status
+                // Note: JPEG cleaning is handled by extract_clean_jpeg() in dct.rs
+                // See: docs/JPEG_EXTRACTION_STATUS.md for details
                 tracing::debug!(
                     "DCTDecode stream: read {} bytes (full stream based on endstream marker)",
                     data.len()
