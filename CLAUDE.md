@@ -4,14 +4,38 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-06 - Coverage improvement: +118 tests |
+| **Last Session** | 2026-02-09 - Fix Issue #124 |
 | **Branch** | develop_santi |
-| **Version** | v1.6.11 |
-| **Tests** | 5,591 unit + 187 doc tests passing |
-| **Coverage** | ~72.5% (estimated) |
+| **Version** | v1.6.13 |
+| **Tests** | 5,711 unit + 187 doc tests passing |
+| **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-02-09) - Fix Issue #124
+- **Fix #124**: `PdfReader::new()` now enables `lenient_streams` by default
+  - PDFs with indirect `/Length` references now work correctly
+  - Consistent behavior with `PdfReader::open()`
+  - 4 new TDD tests for indirect Length references
+- **Version**: 1.6.13 prepared for release
+
+### Session Summary (2026-02-07) - Release v1.6.12
+- **Release v1.6.12**: Published to crates.io
+  - Generic `ImageExtractor` over `Read + Seek` (PR #121 by @ho-229)
+  - +234 new unit tests across multiple modules
+- **Tests added this session**: 119 new tests
+  - `charts/dashboard_integration.rs`: +33 tests
+  - `page_tables.rs`: +22 tests
+  - `advanced_tables/header_builder.rs`: +40 tests
+  - `parser/stack_safe.rs`: +21 tests
+- **Release workflow**:
+  - Synced develop_santi with main (PR #121)
+  - PR #122: develop_santi → develop (merged)
+  - PR #123: develop → main (merged)
+  - Tag v1.6.12 created, Release workflow triggered
+- **Total unit tests**: 5,591 -> 5,710 (+119)
+- **All tests passing**: 5,710 unit + 187 doc = 5,897 total
 
 ### Session Summary (2026-02-06) - Coverage Improvement: +118 Tests
 - **Tests added**: 118 new unit tests

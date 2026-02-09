@@ -1,15 +1,14 @@
 use crate::error::Result;
 use crate::fonts::{Font as CustomFont, FontCache};
 use crate::forms::{AcroForm, FormManager};
-use crate::objects::{Object, ObjectId};
 use crate::page::Page;
 use crate::page_labels::PageLabelTree;
 use crate::semantic::{BoundingBox, EntityType, RelationType, SemanticEntity};
-use crate::structure::{NamedDestinations, OutlineTree, PageTree, StructTree};
-use crate::text::{FontEncoding, FontWithEncoding};
+use crate::structure::{NamedDestinations, OutlineTree, StructTree};
+use crate::text::FontEncoding;
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 mod encryption;
@@ -33,16 +32,10 @@ pub use encryption::{DocumentEncryption, EncryptionStrength};
 /// ```
 pub struct Document {
     pub(crate) pages: Vec<Page>,
-    #[allow(dead_code)]
-    pub(crate) objects: HashMap<ObjectId, Object>,
-    #[allow(dead_code)]
-    pub(crate) next_object_id: u32,
     pub(crate) metadata: DocumentMetadata,
     pub(crate) encryption: Option<DocumentEncryption>,
     pub(crate) outline: Option<OutlineTree>,
     pub(crate) named_destinations: Option<NamedDestinations>,
-    #[allow(dead_code)]
-    pub(crate) page_tree: Option<PageTree>,
     pub(crate) page_labels: Option<PageLabelTree>,
     /// Default font encoding to use for fonts when no encoding is specified
     pub(crate) default_font_encoding: Option<FontEncoding>,
@@ -56,9 +49,6 @@ pub struct Document {
     pub(crate) use_xref_streams: bool,
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
-    /// Map from font name to embedded font object ID
-    #[allow(dead_code)]
-    pub(crate) embedded_fonts: HashMap<String, ObjectId>,
     /// Characters used in the document (for font subsetting)
     pub(crate) used_characters: HashSet<char>,
     /// Action to execute when the document is opened
@@ -127,13 +117,10 @@ impl Document {
     pub fn new() -> Self {
         Self {
             pages: Vec::new(),
-            objects: HashMap::new(),
-            next_object_id: 1,
             metadata: DocumentMetadata::default(),
             encryption: None,
             outline: None,
             named_destinations: None,
-            page_tree: None,
             page_labels: None,
             default_font_encoding: None,
             acro_form: None,
@@ -141,7 +128,6 @@ impl Document {
             compress: true,          // Enable compression by default
             use_xref_streams: false, // Disabled by default for compatibility
             custom_fonts: FontCache::new(),
-            embedded_fonts: HashMap::new(),
             used_characters: HashSet::new(),
             open_action: None,
             viewer_preferences: None,
@@ -409,29 +395,6 @@ impl Document {
         self.default_font_encoding
     }
 
-    /// Gets all fonts used in the document with their encodings.
-    ///
-    /// This scans all pages and collects the unique fonts used, applying
-    /// the default encoding where no explicit encoding is specified.
-    #[allow(dead_code)]
-    pub(crate) fn get_fonts_with_encodings(&self) -> Vec<FontWithEncoding> {
-        let mut fonts_used = HashSet::new();
-
-        // Collect fonts from all pages
-        for page in &self.pages {
-            // Get fonts from text content
-            for font in page.get_used_fonts() {
-                let font_with_encoding = match self.default_font_encoding {
-                    Some(default_encoding) => FontWithEncoding::new(font, Some(default_encoding)),
-                    None => FontWithEncoding::without_encoding(font),
-                };
-                fonts_used.insert(font_with_encoding);
-            }
-        }
-
-        fonts_used.into_iter().collect()
-    }
-
     /// Add a custom font from a file path
     ///
     /// # Example
@@ -476,7 +439,6 @@ impl Document {
     }
 
     /// Get a custom font by name
-    #[allow(dead_code)]
     pub(crate) fn get_custom_font(&self, name: &str) -> Option<Arc<CustomFont>> {
         self.custom_fonts.get_font(name)
     }
@@ -622,20 +584,6 @@ impl Document {
         let mut writer = PdfWriter::new_with_writer(buffer);
         writer.write_document(self)?;
         Ok(())
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn allocate_object_id(&mut self) -> ObjectId {
-        let id = ObjectId::new(self.next_object_id, 0);
-        self.next_object_id += 1;
-        id
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn add_object(&mut self, obj: Object) -> ObjectId {
-        let id = self.allocate_object_id();
-        self.objects.insert(id, obj);
-        id
     }
 
     /// Enables or disables compression for PDF streams.
@@ -1133,8 +1081,6 @@ mod tests {
     fn test_document_new() {
         let doc = Document::new();
         assert!(doc.pages.is_empty());
-        assert!(doc.objects.is_empty());
-        assert_eq!(doc.next_object_id, 1);
         assert!(doc.metadata.title.is_none());
         assert!(doc.metadata.author.is_none());
         assert!(doc.metadata.subject.is_none());
@@ -1152,7 +1098,6 @@ mod tests {
     fn test_document_default() {
         let doc = Document::default();
         assert!(doc.pages.is_empty());
-        assert_eq!(doc.next_object_id, 1);
     }
 
     #[test]
@@ -1220,34 +1165,6 @@ mod tests {
             .as_ref()
             .unwrap()
             .starts_with("oxidize_pdf"));
-    }
-
-    #[test]
-    fn test_allocate_object_id() {
-        let mut doc = Document::new();
-
-        let id1 = doc.allocate_object_id();
-        assert_eq!(id1.number(), 1);
-        assert_eq!(id1.generation(), 0);
-        assert_eq!(doc.next_object_id, 2);
-
-        let id2 = doc.allocate_object_id();
-        assert_eq!(id2.number(), 2);
-        assert_eq!(id2.generation(), 0);
-        assert_eq!(doc.next_object_id, 3);
-    }
-
-    #[test]
-    fn test_add_object() {
-        let mut doc = Document::new();
-        assert!(doc.objects.is_empty());
-
-        let obj = Object::Boolean(true);
-        let id = doc.add_object(obj);
-
-        assert_eq!(id.number(), 1);
-        assert_eq!(doc.objects.len(), 1);
-        assert!(doc.objects.contains_key(&id));
     }
 
     #[test]
@@ -1460,34 +1377,6 @@ mod tests {
             // Test writing to invalid path
             let result = doc.save("/invalid/path/test.pdf");
             assert!(result.is_err());
-        }
-
-        #[test]
-        fn test_document_object_management() {
-            let mut doc = Document::new();
-
-            // Add objects and verify they're managed properly
-            let obj1 = Object::Boolean(true);
-            let obj2 = Object::Integer(42);
-            let obj3 = Object::Real(std::f64::consts::PI);
-
-            let id1 = doc.add_object(obj1.clone());
-            let id2 = doc.add_object(obj2.clone());
-            let id3 = doc.add_object(obj3.clone());
-
-            assert_eq!(id1.number(), 1);
-            assert_eq!(id2.number(), 2);
-            assert_eq!(id3.number(), 3);
-
-            assert_eq!(doc.objects.len(), 3);
-            assert!(doc.objects.contains_key(&id1));
-            assert!(doc.objects.contains_key(&id2));
-            assert!(doc.objects.contains_key(&id3));
-
-            // Verify objects are correct
-            assert_eq!(doc.objects.get(&id1), Some(&obj1));
-            assert_eq!(doc.objects.get(&id2), Some(&obj2));
-            assert_eq!(doc.objects.get(&id3), Some(&obj3));
         }
 
         #[test]

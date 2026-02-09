@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [1.6.13] - 2026-02-09
+
+### Fixed
+- **🔧 Indirect Stream Length Support (Issue #124)** - `PdfReader::new()` now handles PDFs with indirect `/Length` references
+  - **Problem**: PDFs using `/Length 154 0 R` (indirect reference) failed with "requires lenient mode" error
+  - **Root Cause**: `PdfReader::new()` used strict options while `PdfReader::open()` used lenient options
+  - **Solution**: `PdfReader::new()` now enables `lenient_streams` by default for consistency
+  - **Location**: `oxidize-pdf-core/src/parser/reader.rs`
+
+### Technical
+- **Tests**: 5,708 unit + 187 doc tests passing (+4 new tests for indirect Length)
+- **Breaking Changes**: None (behavior is now more permissive, not less)
+
 ## [1.6.12] - 2026-02-06
 
 ### Added

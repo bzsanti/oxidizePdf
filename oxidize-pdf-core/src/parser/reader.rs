@@ -289,8 +289,17 @@ impl PdfReader<File> {
 
 impl<R: Read + Seek> PdfReader<R> {
     /// Create a new PDF reader from a reader
+    ///
+    /// Uses default parsing options with `lenient_streams` enabled for
+    /// compatibility with real-world PDFs that use indirect references for
+    /// stream lengths. Use `new_with_options` with `ParseOptions::strict()`
+    /// if you need fully strict validation.
     pub fn new(reader: R) -> ParseResult<Self> {
-        Self::new_with_options(reader, super::ParseOptions::default())
+        // Enable lenient_streams by default to handle indirect Length references
+        // This is consistent with PdfReader::open() behavior
+        let mut options = super::ParseOptions::default();
+        options.lenient_streams = true;
+        Self::new_with_options(reader, options)
     }
 
     /// Create a new PDF reader with custom parsing options
