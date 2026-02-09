@@ -4,7 +4,7 @@ use crate::fonts::type0_parsing::{detect_type0_font, resolve_type0_hierarchy};
 use crate::forms::Widget;
 use crate::graphics::{GraphicsContext, Image};
 use crate::objects::{Array, Dictionary, Object, ObjectReference};
-use crate::text::{Font, HeaderFooter, Table, TextContext, TextFlowContext};
+use crate::text::{HeaderFooter, Table, TextContext, TextFlowContext};
 use std::collections::{HashMap, HashSet};
 
 /// Page margins in points (1/72 inch).
@@ -648,7 +648,6 @@ impl Page {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn images(&self) -> &HashMap<String, Image> {
         &self.images
     }
@@ -697,7 +696,6 @@ impl Page {
     }
 
     /// Get ExtGState resources from the graphics context
-    #[allow(dead_code)]
     pub fn get_extgstate_resources(
         &self,
     ) -> Option<&std::collections::HashMap<String, crate::graphics::ExtGState>> {
@@ -815,7 +813,6 @@ impl Page {
         self.content = content;
     }
 
-    #[allow(dead_code)]
     pub(crate) fn generate_content(&mut self) -> Result<Vec<u8>> {
         // Generate content with no page info (used for simple pages without headers/footers)
         self.generate_content_with_page_info(None, None, None)
@@ -981,29 +978,6 @@ impl Page {
                 Some(g_chars)
             }
         }
-    }
-
-    /// Gets all fonts used in this page.
-    ///
-    /// This method scans the page content to identify which fonts are being used.
-    /// For now, it returns a simple set based on the current text context font,
-    /// but in a full implementation it would parse all text operations.
-    #[allow(dead_code)]
-    pub(crate) fn get_used_fonts(&self) -> Vec<Font> {
-        let mut fonts = HashSet::new();
-
-        // Add the current font from text context
-        fonts.insert(self.text_context.current_font().clone());
-
-        // Note: Currently returns fonts from text context.
-        // Future enhancement: Parse content streams for complete font analysis
-
-        // Add some commonly used fonts as a baseline
-        fonts.insert(Font::Helvetica);
-        fonts.insert(Font::TimesRoman);
-        fonts.insert(Font::Courier);
-
-        fonts.into_iter().collect()
     }
 
     // ==================== Tagged PDF / Marked Content Support ====================
