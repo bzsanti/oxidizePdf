@@ -4,16 +4,35 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-10 - PDF/A Validation Implementation |
+| **Last Session** | 2026-02-10 - Owner Password R5/R6 via Generic Method |
 | **Branch** | develop_santi |
 | **Version** | v1.6.13 |
-| **Tests** | 5,781 unit + 15 integration + 187 doc tests passing |
+| **Tests** | 5,787 unit + 15 integration + 187 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-02-10) - PDF/A Validation + Integration Tests
+### Session Summary (2026-02-10 PM) - Owner Password R5/R6 via Generic Method
+- **TDD Implementation**: Connected `validate_owner_password` generic method to R5/R6 functions
+  - Updated method signature: added `u_entry: Option<&[u8]>` parameter
+  - R5 delegates to `validate_r5_owner_password` (SHA-256 simple hash)
+  - R6 delegates to `validate_r6_owner_password` (Algorithm 2.B with U entry)
+  - R2-R4 ignores new parameter (backward compatible)
+- **New Tests** (TDD approach):
+  - `test_validate_owner_password_r5_correct`: R5 correct password via generic method
+  - `test_validate_owner_password_r5_incorrect`: R5 wrong password returns false
+  - `test_validate_owner_password_r6_correct`: R6 correct password with U entry
+  - `test_validate_owner_password_r6_incorrect`: R6 wrong password returns false
+  - `test_validate_owner_password_r6_missing_u_entry`: R6 error when U entry missing
+  - `test_validate_owner_password_r6_invalid_u_entry_length`: R6 error for invalid U length
+- **Encryption Tests**: 321+ tests passing (no regressions)
+- **Files Modified**:
+  - `src/encryption/standard_security.rs`: Updated `validate_owner_password` signature and implementation
+  - `tests/encryption_password_test.rs`: +6 new tests (16 → 22 total)
+- **Total unit tests**: 5,781 -> 5,787 (+6)
+
+### Session Summary (2026-02-10 AM) - PDF/A Validation + Integration Tests
 - **PDF/A Module Expansion**: `src/pdfa/` now has 70 tests (+8 from previous session)
 - **New Validation Checks**:
   - `check_transparency`: ExtGState (CA/ca/SMask/BM), XObject transparency groups, Image SMask
