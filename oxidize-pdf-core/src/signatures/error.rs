@@ -55,6 +55,34 @@ pub enum SignatureError {
         /// The algorithm that is not supported
         algorithm: String,
     },
+
+    /// ByteRange exceeds document size
+    ByteRangeExceedsDocument {
+        /// The byte range that's out of bounds
+        offset: u64,
+        /// The requested length
+        length: u64,
+        /// The document size
+        document_size: u64,
+    },
+
+    /// Hash verification failed
+    HashVerificationFailed {
+        /// Description of the failure
+        details: String,
+    },
+
+    /// Signature verification failed
+    SignatureVerificationFailed {
+        /// Description of the failure
+        details: String,
+    },
+
+    /// Certificate extraction failed
+    CertificateExtractionFailed {
+        /// Description of the failure
+        details: String,
+    },
 }
 
 impl fmt::Display for SignatureError {
@@ -86,6 +114,26 @@ impl fmt::Display for SignatureError {
             }
             Self::UnsupportedAlgorithm { algorithm } => {
                 write!(f, "Unsupported algorithm: {}", algorithm)
+            }
+            Self::ByteRangeExceedsDocument {
+                offset,
+                length,
+                document_size,
+            } => {
+                write!(
+                    f,
+                    "ByteRange exceeds document: offset {} + length {} > document size {}",
+                    offset, length, document_size
+                )
+            }
+            Self::HashVerificationFailed { details } => {
+                write!(f, "Hash verification failed: {}", details)
+            }
+            Self::SignatureVerificationFailed { details } => {
+                write!(f, "Signature verification failed: {}", details)
+            }
+            Self::CertificateExtractionFailed { details } => {
+                write!(f, "Certificate extraction failed: {}", details)
             }
         }
     }
@@ -168,6 +216,20 @@ mod tests {
             SignatureError::UnsupportedAlgorithm {
                 algorithm: "MD5".to_string(),
             },
+            SignatureError::ByteRangeExceedsDocument {
+                offset: 1000,
+                length: 500,
+                document_size: 800,
+            },
+            SignatureError::HashVerificationFailed {
+                details: "hash mismatch".to_string(),
+            },
+            SignatureError::SignatureVerificationFailed {
+                details: "invalid signature".to_string(),
+            },
+            SignatureError::CertificateExtractionFailed {
+                details: "no certificate".to_string(),
+            },
         ];
 
         for err in errors {
@@ -192,5 +254,46 @@ mod tests {
         };
         assert!(err.to_string().contains("algorithm"));
         assert!(err.to_string().contains("MD5"));
+    }
+
+    #[test]
+    fn test_byterange_exceeds_document_error_display() {
+        let err = SignatureError::ByteRangeExceedsDocument {
+            offset: 1000,
+            length: 500,
+            document_size: 800,
+        };
+        let display = err.to_string();
+        assert!(display.contains("1000"));
+        assert!(display.contains("500"));
+        assert!(display.contains("800"));
+        assert!(display.contains("exceeds"));
+    }
+
+    #[test]
+    fn test_hash_verification_failed_error_display() {
+        let err = SignatureError::HashVerificationFailed {
+            details: "hash mismatch".to_string(),
+        };
+        assert!(err.to_string().contains("Hash verification failed"));
+        assert!(err.to_string().contains("hash mismatch"));
+    }
+
+    #[test]
+    fn test_signature_verification_failed_error_display() {
+        let err = SignatureError::SignatureVerificationFailed {
+            details: "invalid RSA signature".to_string(),
+        };
+        assert!(err.to_string().contains("Signature verification failed"));
+        assert!(err.to_string().contains("invalid RSA signature"));
+    }
+
+    #[test]
+    fn test_certificate_extraction_failed_error_display() {
+        let err = SignatureError::CertificateExtractionFailed {
+            details: "no certificate found".to_string(),
+        };
+        assert!(err.to_string().contains("Certificate extraction failed"));
+        assert!(err.to_string().contains("no certificate found"));
     }
 }

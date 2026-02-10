@@ -30,9 +30,14 @@ mod cms;
 mod detection;
 mod error;
 mod types;
+mod verification;
 
 // Public exports
 pub use cms::{parse_pkcs7_signature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
 pub use types::{ByteRange, SignatureField};
+pub use verification::{
+    compute_pdf_hash, has_incremental_update, hashes_match, verify_signature,
+    HashVerificationResult, SignatureVerificationResult,
+};
