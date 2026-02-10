@@ -787,14 +787,12 @@ impl PdfAValidator {
             if let Some((obj_num, gen_num)) = xo_value.as_reference() {
                 if let Ok(obj) = reader.get_object(obj_num, gen_num) {
                     if let Some(stream) = obj.as_stream() {
-                        self.check_stream_for_lzw(&stream.dict, obj_num, errors);
+                        self.check_stream_for_lzw(&stream.dict, obj_num, page_idx, errors);
                     }
                 }
             }
         }
 
-        // Suppress unused variable warning
-        let _ = page_idx;
         Ok(())
     }
 
@@ -803,14 +801,14 @@ impl PdfAValidator {
         &self,
         reader: &mut PdfReader<R>,
         contents: &crate::parser::objects::PdfObject,
-        _page_idx: u32,
+        page_idx: u32,
         errors: &mut Vec<ValidationError>,
     ) -> Result<(), PdfAError> {
         // Contents can be a reference or an array of references
         if let Some((obj_num, gen_num)) = contents.as_reference() {
             if let Ok(obj) = reader.get_object(obj_num, gen_num) {
                 if let Some(stream) = obj.as_stream() {
-                    self.check_stream_for_lzw(&stream.dict, obj_num, errors);
+                    self.check_stream_for_lzw(&stream.dict, obj_num, page_idx, errors);
                 }
             }
         } else if let Some(arr) = contents.as_array() {
@@ -818,7 +816,7 @@ impl PdfAValidator {
                 if let Some((obj_num, gen_num)) = item.as_reference() {
                     if let Ok(obj) = reader.get_object(obj_num, gen_num) {
                         if let Some(stream) = obj.as_stream() {
-                            self.check_stream_for_lzw(&stream.dict, obj_num, errors);
+                            self.check_stream_for_lzw(&stream.dict, obj_num, page_idx, errors);
                         }
                     }
                 }
@@ -833,6 +831,7 @@ impl PdfAValidator {
         &self,
         dict: &crate::parser::objects::PdfDictionary,
         obj_num: u32,
+        page_idx: u32,
         errors: &mut Vec<ValidationError>,
     ) {
         if let Some(filter) = dict.get("Filter") {
@@ -840,7 +839,7 @@ impl PdfAValidator {
             if let Some(name) = filter.as_name() {
                 if name.0 == "LZWDecode" {
                     errors.push(ValidationError::LzwCompressionForbidden {
-                        object_id: format!("{} 0", obj_num),
+                        object_id: format!("page {}, object {} 0", page_idx + 1, obj_num),
                     });
                 }
             } else if let Some(arr) = filter.as_array() {
@@ -848,7 +847,12 @@ impl PdfAValidator {
                     if let Some(name) = f.as_name() {
                         if name.0 == "LZWDecode" {
                             errors.push(ValidationError::LzwCompressionForbidden {
-                                object_id: format!("{} 0 (filter {})", obj_num, idx),
+                                object_id: format!(
+                                    "page {}, object {} 0 (filter {})",
+                                    page_idx + 1,
+                                    obj_num,
+                                    idx
+                                ),
                             });
                         }
                     }
@@ -1556,12 +1560,12 @@ mod tests {
         );
 
         let mut errors = Vec::new();
-        validator.check_stream_for_lzw(&dict, 10, &mut errors);
+        validator.check_stream_for_lzw(&dict, 10, 0, &mut errors);
 
         assert_eq!(errors.len(), 1);
         assert!(matches!(
             &errors[0],
-            ValidationError::LzwCompressionForbidden { object_id } if object_id == "10 0"
+            ValidationError::LzwCompressionForbidden { object_id } if object_id == "page 1, object 10 0"
         ));
     }
 
@@ -1578,12 +1582,12 @@ mod tests {
         dict.insert("Filter".to_string(), PdfObject::Array(filters));
 
         let mut errors = Vec::new();
-        validator.check_stream_for_lzw(&dict, 20, &mut errors);
+        validator.check_stream_for_lzw(&dict, 20, 2, &mut errors);
 
         assert_eq!(errors.len(), 1);
         assert!(matches!(
             &errors[0],
-            ValidationError::LzwCompressionForbidden { object_id } if object_id.contains("20 0")
+            ValidationError::LzwCompressionForbidden { object_id } if object_id.contains("page 3") && object_id.contains("object 20 0")
         ));
     }
 
@@ -1599,7 +1603,7 @@ mod tests {
         );
 
         let mut errors = Vec::new();
-        validator.check_stream_for_lzw(&dict, 30, &mut errors);
+        validator.check_stream_for_lzw(&dict, 30, 0, &mut errors);
 
         assert_eq!(errors.len(), 0);
     }
@@ -1612,7 +1616,7 @@ mod tests {
         let dict = PdfDictionary::new();
 
         let mut errors = Vec::new();
-        validator.check_stream_for_lzw(&dict, 40, &mut errors);
+        validator.check_stream_for_lzw(&dict, 40, 0, &mut errors);
 
         assert_eq!(errors.len(), 0);
     }
