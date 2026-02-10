@@ -216,6 +216,7 @@ pub mod viewer_preferences;
 pub mod writer;
 
 pub mod semantic;
+pub mod signatures;
 
 // Dashboard and reporting modules
 pub mod dashboard;
