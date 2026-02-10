@@ -26,11 +26,13 @@
 //! }
 //! ```
 
+mod cms;
 mod detection;
 mod error;
 mod types;
 
 // Public exports
+pub use cms::{parse_pkcs7_signature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};
 pub use types::{ByteRange, SignatureField};

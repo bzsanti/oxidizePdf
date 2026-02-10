@@ -43,6 +43,18 @@ pub enum SignatureError {
         /// The underlying error message
         message: String,
     },
+
+    /// CMS/PKCS#7 structure parsing failed
+    CmsParsingFailed {
+        /// Description of the parsing failure
+        details: String,
+    },
+
+    /// Unsupported cryptographic algorithm
+    UnsupportedAlgorithm {
+        /// The algorithm that is not supported
+        algorithm: String,
+    },
 }
 
 impl fmt::Display for SignatureError {
@@ -68,6 +80,12 @@ impl fmt::Display for SignatureError {
             }
             Self::ParseError { message } => {
                 write!(f, "PDF parsing error: {}", message)
+            }
+            Self::CmsParsingFailed { details } => {
+                write!(f, "CMS/PKCS#7 parsing failed: {}", details)
+            }
+            Self::UnsupportedAlgorithm { algorithm } => {
+                write!(f, "Unsupported algorithm: {}", algorithm)
             }
         }
     }
@@ -144,11 +162,35 @@ mod tests {
             SignatureError::ParseError {
                 message: "unexpected EOF".to_string(),
             },
+            SignatureError::CmsParsingFailed {
+                details: "invalid DER".to_string(),
+            },
+            SignatureError::UnsupportedAlgorithm {
+                algorithm: "MD5".to_string(),
+            },
         ];
 
         for err in errors {
             let display = err.to_string();
             assert!(!display.is_empty(), "Error display should not be empty");
         }
+    }
+
+    #[test]
+    fn test_cms_parsing_failed_error_display() {
+        let err = SignatureError::CmsParsingFailed {
+            details: "invalid ContentInfo".to_string(),
+        };
+        assert!(err.to_string().contains("CMS"));
+        assert!(err.to_string().contains("invalid ContentInfo"));
+    }
+
+    #[test]
+    fn test_unsupported_algorithm_error_display() {
+        let err = SignatureError::UnsupportedAlgorithm {
+            algorithm: "MD5".to_string(),
+        };
+        assert!(err.to_string().contains("algorithm"));
+        assert!(err.to_string().contains("MD5"));
     }
 }

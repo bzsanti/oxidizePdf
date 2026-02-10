@@ -48,6 +48,17 @@ cipher = "0.4"
 subtle = "2.6"                                # Constant-time comparison (prevents timing attacks)
 zeroize = { version = "1.8", features = ["derive"] }  # Secure memory clearing (prevents memory dumps)
 
+# Digital Signature support (PKCS#7/CMS, X.509)
+cms = { version = "0.2", optional = true }           # PKCS#7/CMS parsing (RustCrypto)
+x509-cert = { version = "0.2", optional = true }     # X.509 certificate parsing (RustCrypto)
+const-oid = { version = "0.9", optional = true }     # OID constants
+der = { version = "0.7", optional = true }           # DER encoding/decoding
+spki = { version = "0.7", optional = true }          # SubjectPublicKeyInfo parsing
+rsa = { version = "0.9", optional = true }           # RSA signature verification
+ecdsa = { version = "0.16", optional = true }        # ECDSA signature verification
+p256 = { version = "0.13", optional = true }         # NIST P-256 curve
+p384 = { version = "0.13", optional = true }         # NIST P-384 curve
+
 # Unicode processing
 unicode-normalization = "0.1"
 
@@ -427,6 +438,19 @@ performance = ["dep:rayon", "compression"]
 
 # Test features
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
+
+# Digital signature verification features
+signatures = [
+    "dep:cms",
+    "dep:x509-cert",
+    "dep:const-oid",
+    "dep:der",
+    "dep:spki",
+    "dep:rsa",
+    "dep:ecdsa",
+    "dep:p256",
+    "dep:p384",
+]
 
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]
