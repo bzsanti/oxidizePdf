@@ -7,13 +7,13 @@
 | **Last Session** | 2026-02-10 - PDF/A Validation Implementation |
 | **Branch** | develop_santi |
 | **Version** | v1.6.13 |
-| **Tests** | 5,778 unit + 187 doc tests passing |
+| **Tests** | 5,781 unit + 15 integration + 187 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-02-10) - PDF/A Validation Implementation
+### Session Summary (2026-02-10) - PDF/A Validation + Integration Tests
 - **PDF/A Module Expansion**: `src/pdfa/` now has 70 tests (+8 from previous session)
 - **New Validation Checks**:
   - `check_transparency`: ExtGState (CA/ca/SMask/BM), XObject transparency groups, Image SMask
@@ -25,7 +25,14 @@
   - `check_color_spaces`: Device-dependent color space detection
   - `has_output_intent`: OutputIntent presence check for device color space allowance
 - **Helper Methods**: `get_page_dict`, `get_resources_dict`, `get_font_descriptor`, `is_device_dependent_colorspace`
-- **Total unit tests**: 5,770 -> 5,778 (+8 tests)
+- **Integration Tests**: `tests/pdfa_integration_test.rs` with 15 tests using synthetic PDFs
+  - Minimal PDF validation against PDF/A-1b
+  - PDF/A-2b version compatibility (allows PDF 1.7)
+  - Level strictness comparison (1b vs 2b)
+  - All 8 PDF/A levels validate without panic
+  - XMP metadata parsing roundtrip
+- **Total unit tests**: 5,770 -> 5,781 (+11 tests)
+- **Integration tests**: 15 new PDF/A tests
 - **Clippy**: Zero warnings
 
 ### Session Summary (2026-02-09) - PDF/A Compliance Module
