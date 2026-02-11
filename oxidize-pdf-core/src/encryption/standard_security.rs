@@ -19,7 +19,7 @@
 use crate::encryption::{generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
 use crate::error::Result;
 use crate::objects::ObjectId;
-use rand::RngCore;
+use rand::Rng;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};

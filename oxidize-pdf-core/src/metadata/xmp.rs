@@ -513,7 +513,7 @@ impl XmpMetadata {
 
         let mut metadata = XmpMetadata::new();
         let mut reader = Reader::from_str(xml);
-        reader.trim_text(true);
+        reader.config_mut().trim_text(true);
 
         let mut buf = Vec::new();
         let mut current_ns: Option<XmpNamespace> = None;
@@ -596,7 +596,7 @@ impl XmpMetadata {
                 }
 
                 Ok(Event::Text(e)) => {
-                    let text = e.unescape().unwrap_or_default().to_string();
+                    let text = String::from_utf8_lossy(e.as_ref()).to_string();
                     if !text.trim().is_empty() {
                         if current_struct.is_some() {
                             struct_field_value.push_str(text.trim());

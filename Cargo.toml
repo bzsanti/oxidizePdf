@@ -57,18 +57,18 @@ image = { version = "0.25.6", default-features = false, features = ["png", "jpeg
 tempfile = "3.0"
 pretty_assertions = "1.0"
 proptest = "1.5"
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 insta = "1.38"
 
 # Utilities
-rand = "0.9"
+rand = "0.10"
 hex = "0.4"
 regex = "1.11"
 
 # Pro dependencies
 base64 = "0.21"
 uuid = { version = "1.0", features = ["v4"] }
-quick-xml = { version = "0.31", features = ["serialize"] }
+quick-xml = { version = "0.39", features = ["serialize"] }
 reqwest = { version = "0.11", features = ["json"] }
 
 [profile.release]
