@@ -83,6 +83,12 @@ pub enum SignatureError {
         /// Description of the failure
         details: String,
     },
+
+    /// Certificate validation failed
+    CertificateValidationFailed {
+        /// Description of the validation failure
+        details: String,
+    },
 }
 
 impl fmt::Display for SignatureError {
@@ -134,6 +140,9 @@ impl fmt::Display for SignatureError {
             }
             Self::CertificateExtractionFailed { details } => {
                 write!(f, "Certificate extraction failed: {}", details)
+            }
+            Self::CertificateValidationFailed { details } => {
+                write!(f, "Certificate validation failed: {}", details)
             }
         }
     }
@@ -230,6 +239,9 @@ mod tests {
             SignatureError::CertificateExtractionFailed {
                 details: "no certificate".to_string(),
             },
+            SignatureError::CertificateValidationFailed {
+                details: "certificate expired".to_string(),
+            },
         ];
 
         for err in errors {
@@ -295,5 +307,14 @@ mod tests {
         };
         assert!(err.to_string().contains("Certificate extraction failed"));
         assert!(err.to_string().contains("no certificate found"));
+    }
+
+    #[test]
+    fn test_certificate_validation_failed_error_display() {
+        let err = SignatureError::CertificateValidationFailed {
+            details: "certificate expired".to_string(),
+        };
+        assert!(err.to_string().contains("Certificate validation failed"));
+        assert!(err.to_string().contains("certificate expired"));
     }
 }

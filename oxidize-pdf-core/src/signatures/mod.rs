@@ -26,6 +26,7 @@
 //! }
 //! ```
 
+mod certificate;
 mod cms;
 mod detection;
 mod error;
@@ -33,6 +34,9 @@ mod types;
 mod verification;
 
 // Public exports
+#[cfg(feature = "signatures")]
+pub use certificate::validate_certificate_at_time;
+pub use certificate::{validate_certificate, CertificateValidationResult, TrustStore};
 pub use cms::{parse_pkcs7_signature, DigestAlgorithm, ParsedSignature, SignatureAlgorithm};
 pub use detection::detect_signature_fields;
 pub use error::{SignatureError, SignatureResult};

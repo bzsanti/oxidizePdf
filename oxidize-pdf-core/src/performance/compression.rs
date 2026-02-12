@@ -755,7 +755,7 @@ impl ContentTypeStats {
 pub struct CompressionTestResult {
     pub original_size: usize,
     pub compression_time: Duration,
-    pub result: Result<CompressionSuccess, String>,
+    pub result: std::result::Result<CompressionSuccess, String>,
 }
 
 #[derive(Debug)]
