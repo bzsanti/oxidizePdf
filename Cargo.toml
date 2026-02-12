@@ -56,7 +56,7 @@ image = { version = "0.25.6", default-features = false, features = ["png", "jpeg
 # Testing
 tempfile = "3.0"
 pretty_assertions = "1.0"
-proptest = "1.5"
+proptest = "1.9"
 criterion = { version = "0.8", features = ["html_reports"] }
 insta = "1.38"
 

@@ -82,7 +82,7 @@ rayon = { version = "1.8", optional = true }
 # (regex dependency moved to text processing section above)
 
 # TOML parsing for ISO compliance matrix
-toml = "0.9"
+toml = "0.9.11"
 
 # Temporary files for external validation
 tempfile = "3.8"
@@ -106,7 +106,7 @@ rusty-tesseract = { version = "1.1.10", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
-proptest = "1.7"
+proptest = { workspace = true }
 tempfile = "3.8"
 serde_json = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
