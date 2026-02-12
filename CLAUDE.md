@@ -4,16 +4,38 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-12 - Dependency Updates (In Progress) |
+| **Last Session** | 2026-02-12 - Certificate Validation Module (Phase 4) |
 | **Branch** | develop_santi |
 | **Version** | v1.6.13 |
-| **Tests** | 5,811 unit + 15 integration + 187 doc tests passing |
+| **Tests** | 5,859 unit + 15 integration + 187 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-02-12) - Dependency Updates COMPLETE
+### Session Summary (2026-02-12 PM) - Certificate Validation Module (Phase 4)
+- **New Module**: `src/signatures/certificate.rs` - Phase 4 of Digital Signatures TDD plan
+- **Features Implemented**:
+  - `TrustStore` struct with Mozilla CA bundle via webpki-roots
+  - `CertificateValidationResult` with subject, issuer, validity, trust, and key usage
+  - `validate_certificate()` and `validate_certificate_at_time()` functions
+  - Certificate validity period checking
+  - Basic trust chain validation (self-signed vs CA-issued detection)
+  - Key usage extension checking for digital signature capability
+- **API**:
+  - `validate_certificate(cert_der: &[u8], trust_store: &TrustStore) -> SignatureResult<CertificateValidationResult>`
+  - `validate_certificate_at_time(cert_der, trust_store, validation_time)` (feature-gated)
+  - `TrustStore::mozilla_roots()`, `TrustStore::empty()`
+  - `CertificateValidationResult::is_valid()`, `has_warnings()`
+- **New Error Variant**: `SignatureError::CertificateValidationFailed`
+- **Dependencies Added**:
+  - `webpki-roots = "1.0"` (Mozilla CA bundle)
+  - `time = "0.3"` (date/time handling)
+- **Tests**: +14 new unit tests (5,847 -> 5,859)
+- **Bug Fix**: Pre-existing `Result` type conflict in `compression.rs` (all-features build)
+- **Commit**: `ca3cf7f` - feat(signatures): add certificate validation module (Phase 4)
+
+### Session Summary (2026-02-12 AM) - Dependency Updates COMPLETE
 - **Objetivo**: Actualizar dependencias obsoletas según lib.rs
 - **Cambios realizados**:
   - `rand`: 0.9 → 0.10 (API fix: `RngCore` → `Rng`)
