@@ -4,16 +4,34 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-13 - Public Signature API (Phase 5) |
+| **Last Session** | 2026-02-13 PM - Phase 6: Test Fixtures & BER Support |
 | **Branch** | develop_santi |
 | **Version** | v1.6.13 |
-| **Tests** | 5,968 unit + 15 integration + 187 doc tests passing |
+| **Tests** | 5,870 unit + 29 integration + 187 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-02-13) - Public Signature API (Phase 5)
+### Session Summary (2026-02-13 PM) - Phase 6: Test Fixtures & BER Support
+- **BER-to-DER Conversion**: Added `ber_to_der()` function in `cms.rs`
+  - Handles indefinite-length BER encoding (0x80 length byte)
+  - Recursively converts nested BER structures to strict DER
+  - Required for real-world PDF signatures (pdfsig uses BER)
+- **Test Fixtures**: Created signed PDF fixtures using pdfsig/NSS
+  - `signed_pkcs7_selfsigned.pdf` - Basic PKCS#7 detached signature
+  - `signed_multiple.pdf` - Two signatures from different signers
+  - `signed_short_validity.pdf` - 1-day validity certificate
+  - `signed_then_modified.pdf` - PDF modified after signing
+  - `unsigned.pdf` - Base PDF without signature
+  - Certificate files: `test_cert.pem`, `second_cert.pem`, etc.
+- **Integration Tests**: 14 new tests in `signature_integration_test.rs`
+  - Signature detection, hash verification, signer info extraction
+  - Multi-signature handling, modification detection
+  - Certificate validation with custom trust stores
+- **Commits**: `24e798c` (Phase 5 API), `607999f` (Phase 6 fixtures)
+
+### Session Summary (2026-02-13 AM) - Public Signature API (Phase 5)
 - **GitHub Topics**: Added 18 topics for improved discoverability
   - `pdf`, `rust`, `pdf-parser`, `pdf-library`, `text-extraction`, `pdf-reader`
   - `document-processing`, `rust-library`, `pdf-generation`, `data-extraction`
@@ -25,7 +43,7 @@
     - `signatures()` - detect all signature fields in PDF
     - `verify_signatures()` - full validation with Mozilla CA bundle
     - `verify_signatures_with_trust_store(trust_store)` - custom CA validation
-- **Tests**: +12 new unit tests for FullSignatureValidationResult (5,859 -> 5,968)
+- **Tests**: +12 new unit tests for FullSignatureValidationResult (5,859 -> 5,870)
 - **Bug Fixes**:
   - Fixed `CompressionTestResult` test in `compression.rs` (pre-existing)
   - Fixed imports in `high_performance_demo.rs` example (pre-existing)

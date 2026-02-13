@@ -6,6 +6,11 @@
 //! # Features
 //!
 //! Requires the `signatures` feature to be enabled.
+//!
+//! # BER Support
+//!
+//! PDF signatures may use BER (indefinite-length) encoding. This module
+//! automatically converts BER to DER before parsing.
 
 #[cfg(feature = "signatures")]
 use cms::content_info::ContentInfo;
@@ -17,6 +22,215 @@ use der::{Decode, Encode};
 use x509_cert::Certificate;
 
 use super::error::{SignatureError, SignatureResult};
+
+/// Convert BER-encoded data to DER by resolving indefinite-length encodings
+///
+/// BER allows indefinite-length encoding where a SEQUENCE or other constructed
+/// type has length byte 0x80 and is terminated by 0x00 0x00. DER requires
+/// definite-length encoding. This function recursively converts all indefinite
+/// lengths to definite lengths.
+#[cfg(feature = "signatures")]
+fn ber_to_der(input: &[u8]) -> SignatureResult<Vec<u8>> {
+    if input.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Check if this is already DER (no indefinite length markers)
+    if !contains_indefinite_length(input) {
+        return Ok(input.to_vec());
+    }
+
+    // Parse and convert recursively
+    convert_element(input).map(|(output, _)| output)
+}
+
+/// Check if the data contains any indefinite-length encoding (0x80 length byte)
+#[cfg(feature = "signatures")]
+fn contains_indefinite_length(data: &[u8]) -> bool {
+    // Quick scan: indefinite length is 0x80 as the second byte of a tag
+    // But we need to be careful - 0x80 can also appear in content
+    // So we just check if the pattern exists (rough heuristic)
+    if data.len() < 2 {
+        return false;
+    }
+
+    // The signature starts with 30 80 (SEQUENCE with indefinite length)
+    data.len() >= 2 && data[1] == 0x80
+}
+
+/// Parse and convert a single BER element to DER
+/// Returns (converted_bytes, bytes_consumed)
+#[cfg(feature = "signatures")]
+fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
+    if input.is_empty() {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "Empty input in BER conversion".to_string(),
+        });
+    }
+
+    let tag = input[0];
+    if input.len() < 2 {
+        return Err(SignatureError::CmsParsingFailed {
+            details: "BER element too short".to_string(),
+        });
+    }
+
+    let length_byte = input[1];
+
+    // Check for indefinite length
+    if length_byte == 0x80 {
+        // Indefinite length - must find end-of-contents (0x00 0x00)
+        let is_constructed = (tag & 0x20) != 0;
+        if !is_constructed {
+            return Err(SignatureError::CmsParsingFailed {
+                details: "Indefinite length on primitive type".to_string(),
+            });
+        }
+
+        // Find the matching end-of-contents by parsing nested elements
+        let content_start = 2;
+        let (content, content_len) = parse_indefinite_content(&input[content_start..])?;
+
+        // Build DER output with definite length
+        let mut output = vec![tag];
+        encode_der_length(&mut output, content.len());
+        output.extend(content);
+
+        // Total consumed: tag + 0x80 + content + 0x00 0x00
+        let consumed = 2 + content_len + 2;
+        Ok((output, consumed))
+    } else if length_byte < 0x80 {
+        // Short form length
+        let length = length_byte as usize;
+        let total = 2 + length;
+        if input.len() < total {
+            return Err(SignatureError::CmsParsingFailed {
+                details: "BER element truncated (short form)".to_string(),
+            });
+        }
+
+        // Check if this is a constructed type that needs recursive conversion
+        let is_constructed = (tag & 0x20) != 0;
+        if is_constructed && length > 0 {
+            let content = &input[2..2 + length];
+            let converted_content = convert_constructed_content(content)?;
+
+            let mut output = vec![tag];
+            encode_der_length(&mut output, converted_content.len());
+            output.extend(converted_content);
+            Ok((output, total))
+        } else {
+            // Primitive or empty - copy as-is
+            Ok((input[..total].to_vec(), total))
+        }
+    } else {
+        // Long form length
+        let num_octets = (length_byte & 0x7F) as usize;
+        if num_octets == 0 || num_octets > 4 {
+            return Err(SignatureError::CmsParsingFailed {
+                details: format!("Invalid BER length octets: {}", num_octets),
+            });
+        }
+        if input.len() < 2 + num_octets {
+            return Err(SignatureError::CmsParsingFailed {
+                details: "BER element truncated (long form length)".to_string(),
+            });
+        }
+
+        let mut length: usize = 0;
+        for i in 0..num_octets {
+            length = (length << 8) | (input[2 + i] as usize);
+        }
+
+        let content_start = 2 + num_octets;
+        let total = content_start + length;
+        if input.len() < total {
+            return Err(SignatureError::CmsParsingFailed {
+                details: "BER element truncated (content)".to_string(),
+            });
+        }
+
+        // Check if this is a constructed type that needs recursive conversion
+        let is_constructed = (tag & 0x20) != 0;
+        if is_constructed && length > 0 {
+            let content = &input[content_start..total];
+            let converted_content = convert_constructed_content(content)?;
+
+            let mut output = vec![tag];
+            encode_der_length(&mut output, converted_content.len());
+            output.extend(converted_content);
+            Ok((output, total))
+        } else {
+            // Primitive - copy as-is
+            Ok((input[..total].to_vec(), total))
+        }
+    }
+}
+
+/// Parse content with indefinite length until we find end-of-contents
+/// Returns (converted_content, bytes_consumed_excluding_eoc)
+#[cfg(feature = "signatures")]
+fn parse_indefinite_content(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
+    let mut output = Vec::new();
+    let mut pos = 0;
+
+    while pos < input.len() {
+        // Check for end-of-contents (0x00 0x00)
+        if input.len() >= pos + 2 && input[pos] == 0x00 && input[pos + 1] == 0x00 {
+            return Ok((output, pos));
+        }
+
+        // Parse next element
+        let (element, consumed) = convert_element(&input[pos..])?;
+        output.extend(element);
+        pos += consumed;
+    }
+
+    Err(SignatureError::CmsParsingFailed {
+        details: "End-of-contents not found in indefinite-length encoding".to_string(),
+    })
+}
+
+/// Convert all elements in a constructed type's content
+#[cfg(feature = "signatures")]
+fn convert_constructed_content(input: &[u8]) -> SignatureResult<Vec<u8>> {
+    let mut output = Vec::new();
+    let mut pos = 0;
+
+    while pos < input.len() {
+        let (element, consumed) = convert_element(&input[pos..])?;
+        output.extend(element);
+        pos += consumed;
+    }
+
+    Ok(output)
+}
+
+/// Encode a length in DER format
+#[cfg(feature = "signatures")]
+fn encode_der_length(output: &mut Vec<u8>, length: usize) {
+    if length < 128 {
+        output.push(length as u8);
+    } else if length < 256 {
+        output.push(0x81);
+        output.push(length as u8);
+    } else if length < 65536 {
+        output.push(0x82);
+        output.push((length >> 8) as u8);
+        output.push(length as u8);
+    } else if length < 16777216 {
+        output.push(0x83);
+        output.push((length >> 16) as u8);
+        output.push((length >> 8) as u8);
+        output.push(length as u8);
+    } else {
+        output.push(0x84);
+        output.push((length >> 24) as u8);
+        output.push((length >> 16) as u8);
+        output.push((length >> 8) as u8);
+        output.push(length as u8);
+    }
+}
 
 /// Digest algorithm used for signature hash computation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,9 +379,12 @@ impl ParsedSignature {
 pub fn parse_pkcs7_signature(contents: &[u8]) -> SignatureResult<ParsedSignature> {
     use const_oid::ObjectIdentifier;
 
+    // Convert BER to DER if necessary (PDF signatures may use BER encoding)
+    let der_contents = ber_to_der(contents)?;
+
     // Parse ContentInfo (top-level CMS structure)
     let content_info =
-        ContentInfo::from_der(contents).map_err(|e| SignatureError::CmsParsingFailed {
+        ContentInfo::from_der(&der_contents).map_err(|e| SignatureError::CmsParsingFailed {
             details: format!("Failed to parse ContentInfo: {}", e),
         })?;
 
