@@ -203,6 +203,7 @@ pub mod page_transitions;
 pub mod page_tree;
 pub mod parser;
 pub mod pdf_objects;
+pub mod pdfa;
 #[cfg(feature = "performance")]
 pub mod performance;
 pub mod recovery;
@@ -215,6 +216,7 @@ pub mod viewer_preferences;
 pub mod writer;
 
 pub mod semantic;
+pub mod signatures;
 
 // Dashboard and reporting modules
 pub mod dashboard;
@@ -366,6 +368,13 @@ pub use verification::validators::{
 pub use verification::{
     extract_pdf_differences, pdfs_structurally_equivalent, verify_iso_requirement,
     ExternalValidationResult, IsoRequirement, VerificationLevel, VerificationResult,
+};
+
+// Re-export PDF/A compliance types
+pub use pdfa::{
+    PdfAConformance, PdfAError, PdfALevel, PdfAResult, PdfAValidator,
+    ValidationError as PdfAValidationError, ValidationResult as PdfAValidationResult,
+    ValidationWarning as PdfAValidationWarning, XmpMetadata, XmpPdfAIdentifier,
 };
 
 /// Current version of oxidize-pdf

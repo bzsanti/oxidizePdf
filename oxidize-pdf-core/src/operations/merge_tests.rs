@@ -90,7 +90,6 @@ mod tests {
     fn test_pdf_merger_new() {
         let merger = PdfMerger::new(MergeOptions::default());
         assert_eq!(merger.inputs.len(), 0);
-        assert!(merger.object_mappings.is_empty());
     }
 
     #[test]
@@ -368,45 +367,6 @@ mod tests {
     }
 
     #[test]
-    fn test_object_number_allocation() {
-        let mut merger = PdfMerger::new(MergeOptions::default());
-
-        // Test internal object allocation
-        let num1 = merger.allocate_object_number();
-        let num2 = merger.allocate_object_number();
-        let num3 = merger.allocate_object_number();
-
-        assert_eq!(num1, 1);
-        assert_eq!(num2, 2);
-        assert_eq!(num3, 3);
-    }
-
-    #[test]
-    fn test_object_number_mapping() {
-        let mut merger = PdfMerger::new(MergeOptions::default());
-
-        // Initialize mappings for two documents
-        merger
-            .object_mappings
-            .push(std::collections::HashMap::new());
-        merger
-            .object_mappings
-            .push(std::collections::HashMap::new());
-
-        // Map object from first document
-        let new_num1 = merger.map_object_number(0, 10);
-        assert_eq!(new_num1, 1);
-
-        // Mapping same object again should return same number
-        let new_num1_again = merger.map_object_number(0, 10);
-        assert_eq!(new_num1_again, 1);
-
-        // Map object from second document
-        let new_num2 = merger.map_object_number(1, 10);
-        assert_eq!(new_num2, 2); // Different from first document's mapping
-    }
-
-    #[test]
     fn test_merge_options_variants() {
         // Test all MergeOptions variants
         let default_options = MergeOptions::default();
@@ -587,5 +547,86 @@ mod tests {
         let metadata_mode = MetadataMode::FromFirst;
         let cloned_mode = metadata_mode;
         assert!(matches!(cloned_mode, MetadataMode::FromFirst));
+    }
+
+    /// Regression test for Issue #128: merged PDFs should preserve content
+    /// Previously, merge was lossy - it reconstructed pages from operators
+    /// instead of copying raw content streams, resulting in blank or corrupted output.
+    #[test]
+    fn test_merge_preserves_content_issue_128() {
+        use crate::parser::{PdfDocument, PdfReader};
+        use crate::text::Font;
+
+        let temp_dir = TempDir::new().unwrap();
+        let pdf_a_path = temp_dir.path().join("pdf_a.pdf");
+        let pdf_b_path = temp_dir.path().join("pdf_b.pdf");
+        let merged_path = temp_dir.path().join("merged.pdf");
+
+        // Create PDF A with specific text content
+        let mut doc_a = Document::new();
+        let mut page_a = Page::new(612.0, 792.0);
+        page_a
+            .text()
+            .set_font(Font::Helvetica, 24.0)
+            .at(100.0, 700.0)
+            .write("Content from PDF A")
+            .unwrap();
+        doc_a.add_page(page_a);
+        doc_a.save(&pdf_a_path).unwrap();
+
+        // Create PDF B with different text content
+        let mut doc_b = Document::new();
+        let mut page_b = Page::new(612.0, 792.0);
+        page_b
+            .text()
+            .set_font(Font::Helvetica, 24.0)
+            .at(100.0, 700.0)
+            .write("Content from PDF B")
+            .unwrap();
+        doc_b.add_page(page_b);
+        doc_b.save(&pdf_b_path).unwrap();
+
+        // Merge the PDFs
+        let inputs = vec![MergeInput::new(&pdf_a_path), MergeInput::new(&pdf_b_path)];
+        merge_pdfs(inputs, &merged_path, MergeOptions::default()).unwrap();
+
+        // Verify merged PDF exists and has reasonable size
+        let merged_size = fs::metadata(&merged_path).unwrap().len();
+        assert!(
+            merged_size > 1000,
+            "Merged PDF should have substantial content"
+        );
+
+        // Verify merged PDF has 2 pages with preserved content
+        let reader = PdfReader::open(&merged_path).unwrap();
+        let document = PdfDocument::new(reader);
+        let page_count = document.page_count().unwrap();
+        assert_eq!(page_count, 2, "Merged PDF should have 2 pages");
+
+        // Extract text from each page to verify content was preserved
+        let text_page1 = document.extract_text_from_page(0).unwrap();
+        let text_page2 = document.extract_text_from_page(1).unwrap();
+
+        // Verify text content is preserved (not blank or placeholder)
+        assert!(
+            text_page1.text.contains("PDF A") || text_page1.text.contains("Content"),
+            "Page 1 should contain original text, got: '{}'",
+            text_page1.text.trim()
+        );
+        assert!(
+            text_page2.text.contains("PDF B") || text_page2.text.contains("Content"),
+            "Page 2 should contain original text, got: '{}'",
+            text_page2.text.trim()
+        );
+
+        // Verify no placeholder text from old lossy implementation
+        assert!(
+            !text_page1.text.contains("[Page from document"),
+            "Should not contain placeholder text"
+        );
+        assert!(
+            !text_page2.text.contains("[Page from document"),
+            "Should not contain placeholder text"
+        );
     }
 }

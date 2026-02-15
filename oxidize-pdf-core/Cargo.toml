@@ -48,6 +48,19 @@ cipher = "0.4"
 subtle = "2.6"                                # Constant-time comparison (prevents timing attacks)
 zeroize = { version = "1.8", features = ["derive"] }  # Secure memory clearing (prevents memory dumps)
 
+# Digital Signature support (PKCS#7/CMS, X.509)
+cms = { version = "0.2", optional = true }           # PKCS#7/CMS parsing (RustCrypto)
+x509-cert = { version = "0.2", optional = true }     # X.509 certificate parsing (RustCrypto)
+const-oid = { version = "0.9", optional = true }     # OID constants
+der = { version = "0.7", optional = true }           # DER encoding/decoding
+spki = { version = "0.7", optional = true }          # SubjectPublicKeyInfo parsing
+rsa = { version = "0.9", optional = true }           # RSA signature verification
+ecdsa = { version = "0.16", optional = true }        # ECDSA signature verification
+p256 = { version = "0.13", optional = true }         # NIST P-256 curve
+p384 = { version = "0.13", optional = true }         # NIST P-384 curve
+webpki-roots = { version = "1.0", optional = true }  # Mozilla CA bundle for certificate validation
+time = { version = "0.3", optional = true }          # Date/time for certificate validity checks
+
 # Unicode processing
 unicode-normalization = "0.1"
 
@@ -59,7 +72,7 @@ quick-xml = { workspace = true }
 
 # Random number generation
 # Required for encryption (salt generation), optional feature enables additional rand-based examples
-rand = "0.9"
+rand = "0.10"
 
 # Flags
 bitflags = "2.4"
@@ -71,7 +84,7 @@ rayon = { version = "1.8", optional = true }
 # (regex dependency moved to text processing section above)
 
 # TOML parsing for ISO compliance matrix
-toml = "0.9"
+toml = "0.9.11"
 
 # Temporary files for external validation
 tempfile = "3.8"
@@ -94,12 +107,12 @@ rusty-tesseract = { version = "1.1.10", optional = true }
 # leptonica-plumbing = { version = "1.0", optional = true }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-proptest = "1.7"
+criterion = { version = "0.8", features = ["html_reports"] }
+proptest = { workspace = true }
 tempfile = "3.8"
 serde_json = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
-indicatif = "0.17"
+indicatif = "0.18"
 tracing-subscriber = { workspace = true }
 
 [[example]]
@@ -427,6 +440,21 @@ performance = ["dep:rayon", "compression"]
 
 # Test features
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
+
+# Digital signature verification features
+signatures = [
+    "dep:cms",
+    "dep:x509-cert",
+    "dep:const-oid",
+    "dep:der",
+    "dep:spki",
+    "dep:rsa",
+    "dep:ecdsa",
+    "dep:p256",
+    "dep:p384",
+    "dep:webpki-roots",
+    "dep:time",
+]
 
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]

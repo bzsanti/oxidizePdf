@@ -286,12 +286,14 @@ fn test_validate_owner_password_correct() {
     let owner_hash = handler.compute_owner_hash(&owner_pwd, &user_pwd);
 
     // When: Validating with correct owner password
+    // u_entry is None for R2-R4 (not needed)
     let result = handler.validate_owner_password(
         &owner_pwd,
         &owner_hash,
         &user_pwd,
         permissions,
         Some(file_id),
+        None, // u_entry not needed for R2-R4
     );
 
     // Then: Should return Ok(true)
@@ -319,12 +321,14 @@ fn test_validate_owner_password_incorrect() {
     let owner_hash = handler.compute_owner_hash(&correct_owner, &user_pwd);
 
     // When: Validating with wrong owner password
+    // u_entry is None for R2-R4 (not needed)
     let result = handler.validate_owner_password(
         &wrong_owner,
         &owner_hash,
         &user_pwd,
         permissions,
         Some(file_id),
+        None, // u_entry not needed for R2-R4
     );
 
     // Then: Should return Ok(false) - NOT an error
@@ -440,4 +444,231 @@ fn test_password_structs_are_cloneable() {
 
     assert_eq!(user.0, user_clone.0);
     assert_eq!(owner.0, owner_clone.0);
+}
+
+// ===== R5 Owner Password Validation Tests (via generic method) =====
+
+#[test]
+fn test_validate_owner_password_r5_correct() {
+    // Given: R5 handler with correct owner password
+    let handler = StandardSecurityHandler::aes_256_r5();
+    let owner_pwd = OwnerPassword("r5_owner_secret".to_string());
+
+    // Dummy user password (not used for R5 owner validation, but required by API)
+    let user_pwd = UserPassword("".to_string());
+
+    // Compute O entry using internal R5 function
+    // O entry structure: hash[32] + validation_salt[8] + key_salt[8] = 48 bytes
+    let o_entry = handler
+        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .expect("R5 owner hash computation should succeed");
+    let permissions = Permissions::new();
+
+    // When: Validating with correct owner password via generic method
+    let result = handler.validate_owner_password(
+        &owner_pwd,
+        &o_entry,
+        &user_pwd,
+        permissions,
+        None,
+        None, // u_entry not needed for R5
+    );
+
+    // Then: Should return Ok(true)
+    assert!(
+        result.is_ok(),
+        "R5 owner password validation should not error: {:?}",
+        result.err()
+    );
+    assert!(
+        result.unwrap(),
+        "Correct R5 owner password should validate successfully"
+    );
+}
+
+#[test]
+fn test_validate_owner_password_r5_incorrect() {
+    // Given: R5 handler with wrong owner password
+    let handler = StandardSecurityHandler::aes_256_r5();
+    let correct_owner = OwnerPassword("correct_r5_owner".to_string());
+    let wrong_owner = OwnerPassword("wrong_r5_owner".to_string());
+
+    // Dummy user password (not used for R5 owner validation)
+    let user_pwd = UserPassword("".to_string());
+
+    // Compute O entry with correct password
+    let o_entry = handler
+        .compute_r5_owner_hash(&correct_owner, &user_pwd)
+        .expect("R5 owner hash computation should succeed");
+    let permissions = Permissions::new();
+
+    // When: Validating with wrong owner password via generic method
+    let result = handler.validate_owner_password(
+        &wrong_owner,
+        &o_entry,
+        &user_pwd,
+        permissions,
+        None,
+        None, // u_entry not needed for R5
+    );
+
+    // Then: Should return Ok(false)
+    assert!(
+        result.is_ok(),
+        "R5 owner password validation should not error for wrong password"
+    );
+    assert!(
+        !result.unwrap(),
+        "Wrong R5 owner password should not validate successfully"
+    );
+}
+
+// ===== R6 Owner Password Validation Tests (via generic method) =====
+
+#[test]
+fn test_validate_owner_password_r6_correct() {
+    // Given: R6 handler with correct owner password
+    let handler = StandardSecurityHandler::aes_256_r6();
+    let owner_pwd = OwnerPassword("r6_owner_secret".to_string());
+    let user_pwd = UserPassword("r6_user".to_string());
+
+    // First compute U entry (needed for R6 O computation)
+    let u_entry = handler
+        .compute_r6_user_hash(&user_pwd)
+        .expect("R6 user hash computation should succeed");
+
+    // Compute O entry using internal R6 function
+    let o_entry = handler
+        .compute_r6_owner_hash(&owner_pwd, &u_entry)
+        .expect("R6 owner hash computation should succeed");
+
+    let permissions = Permissions::new();
+
+    // When: Validating with correct owner password via generic method
+    let result = handler.validate_owner_password(
+        &owner_pwd,
+        &o_entry,
+        &user_pwd,
+        permissions,
+        None,
+        Some(&u_entry), // u_entry required for R6
+    );
+
+    // Then: Should return Ok(true)
+    assert!(
+        result.is_ok(),
+        "R6 owner password validation should not error: {:?}",
+        result.err()
+    );
+    assert!(
+        result.unwrap(),
+        "Correct R6 owner password should validate successfully"
+    );
+}
+
+#[test]
+fn test_validate_owner_password_r6_incorrect() {
+    // Given: R6 handler with wrong owner password
+    let handler = StandardSecurityHandler::aes_256_r6();
+    let correct_owner = OwnerPassword("correct_r6_owner".to_string());
+    let wrong_owner = OwnerPassword("wrong_r6_owner".to_string());
+    let user_pwd = UserPassword("r6_user".to_string());
+
+    // Compute U entry first
+    let u_entry = handler
+        .compute_r6_user_hash(&user_pwd)
+        .expect("R6 user hash computation should succeed");
+
+    // Compute O entry with correct password
+    let o_entry = handler
+        .compute_r6_owner_hash(&correct_owner, &u_entry)
+        .expect("R6 owner hash computation should succeed");
+
+    let permissions = Permissions::new();
+
+    // When: Validating with wrong owner password via generic method
+    let result = handler.validate_owner_password(
+        &wrong_owner,
+        &o_entry,
+        &user_pwd,
+        permissions,
+        None,
+        Some(&u_entry),
+    );
+
+    // Then: Should return Ok(false)
+    assert!(
+        result.is_ok(),
+        "R6 owner password validation should not error for wrong password"
+    );
+    assert!(
+        !result.unwrap(),
+        "Wrong R6 owner password should not validate successfully"
+    );
+}
+
+#[test]
+fn test_validate_owner_password_r6_missing_u_entry() {
+    // Given: R6 handler but no U entry provided
+    let handler = StandardSecurityHandler::aes_256_r6();
+    let owner_pwd = OwnerPassword("r6_owner".to_string());
+    let user_pwd = UserPassword("r6_user".to_string());
+
+    // Use dummy O entry (48 bytes)
+    let o_entry = vec![0u8; 48];
+    let permissions = Permissions::new();
+
+    // When: Validating without U entry (None)
+    let result = handler.validate_owner_password(
+        &owner_pwd,
+        &o_entry,
+        &user_pwd,
+        permissions,
+        None,
+        None, // Missing u_entry!
+    );
+
+    // Then: Should return Err (R6 requires U entry)
+    assert!(result.is_err(), "R6 should error when U entry is missing");
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("U entry"),
+        "Error should mention U entry: {}",
+        err_msg
+    );
+}
+
+#[test]
+fn test_validate_owner_password_r6_invalid_u_entry_length() {
+    // Given: R6 handler with invalid U entry length
+    let handler = StandardSecurityHandler::aes_256_r6();
+    let owner_pwd = OwnerPassword("r6_owner".to_string());
+    let user_pwd = UserPassword("r6_user".to_string());
+
+    // Use dummy O entry (48 bytes) and invalid U entry (wrong length)
+    let o_entry = vec![0u8; 48];
+    let invalid_u_entry = vec![0u8; 32]; // Should be 48 bytes
+    let permissions = Permissions::new();
+
+    // When: Validating with invalid U entry length
+    let result = handler.validate_owner_password(
+        &owner_pwd,
+        &o_entry,
+        &user_pwd,
+        permissions,
+        None,
+        Some(&invalid_u_entry),
+    );
+
+    // Then: Should return Err (invalid U entry length)
+    assert!(
+        result.is_err(),
+        "R6 should error when U entry has invalid length"
+    );
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("48 bytes"),
+        "Error should mention expected length: {}",
+        err_msg
+    );
 }

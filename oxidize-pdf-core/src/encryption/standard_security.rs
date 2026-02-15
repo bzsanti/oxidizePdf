@@ -19,7 +19,7 @@
 use crate::encryption::{generate_iv, Aes, AesKey, Permissions, Rc4, Rc4Key};
 use crate::error::Result;
 use crate::objects::ObjectId;
-use rand::RngCore;
+use rand::Rng;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -1476,6 +1476,14 @@ impl StandardSecurityHandler {
     ///
     /// Note: For owner password validation, we first decrypt the user password
     /// from the owner hash, then validate that user password.
+    ///
+    /// # Parameters
+    /// - `owner_password`: The owner password to validate
+    /// - `owner_hash`: The O entry from the encryption dictionary
+    /// - `_user_password`: Unused for R2-R4 (recovered from owner_hash), ignored for R5/R6
+    /// - `_permissions`: Unused for R5/R6 (not part of validation)
+    /// - `_file_id`: Unused for R5/R6 (not part of validation)
+    /// - `u_entry`: Required for R6 (U entry needed for Algorithm 2.B), ignored for R2-R5
     pub fn validate_owner_password(
         &self,
         owner_password: &OwnerPassword,
@@ -1483,6 +1491,7 @@ impl StandardSecurityHandler {
         _user_password: &UserPassword, // Will be recovered from owner_hash
         _permissions: Permissions,
         _file_id: Option<&[u8]>,
+        u_entry: Option<&[u8]>,
     ) -> Result<bool> {
         match self.revision {
             SecurityHandlerRevision::R2
@@ -1542,12 +1551,19 @@ impl StandardSecurityHandler {
                 // Compare with stored owner hash
                 Ok(computed_owner[..32] == owner_hash[..32])
             }
-            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                // R5/R6 owner password validation requires O/OE entry processing
-                // (Algorithms 12/13 in ISO 32000-2) - not yet implemented
-                Err(crate::error::PdfError::EncryptionError(
-                    "R5/R6 owner password validation not yet implemented (Phase 3)".to_string(),
-                ))
+            SecurityHandlerRevision::R5 => {
+                // R5 uses simple SHA-256 validation (Algorithm 12)
+                // owner_hash is the O entry (48 bytes)
+                self.validate_r5_owner_password(owner_password, owner_hash)
+            }
+            SecurityHandlerRevision::R6 => {
+                // R6 uses Algorithm 2.B which requires U entry
+                let u = u_entry.ok_or_else(|| {
+                    crate::error::PdfError::EncryptionError(
+                        "R6 owner password validation requires U entry".to_string(),
+                    )
+                })?;
+                self.validate_r6_owner_password(owner_password, owner_hash, u)
             }
         }
     }
