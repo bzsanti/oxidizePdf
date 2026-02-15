@@ -17,19 +17,24 @@
 //! Run with: `cargo run --example high_performance_demo --features performance`
 
 #[cfg(feature = "performance")]
+use oxidize_pdf::performance::parallel_generation::PageSpec;
+#[cfg(feature = "performance")]
+use oxidize_pdf::performance::resource_pool::ImageFormat;
+#[cfg(feature = "performance")]
+use oxidize_pdf::performance::streaming_writer::{
+    ContentStream, PageResources, StreamingPageContent,
+};
+#[cfg(feature = "performance")]
 use oxidize_pdf::performance::{
-    ContentStream, ContentType, FontResource, HighPerformanceDocument, ImageFormat, ImageResource,
-    IntelligentCompressor, MemoryPool, Operation, PageResources, PageSpec,
-    ParallelGenerationOptions, ParallelPageGenerator, PerformanceMonitor, PerformanceOptions,
-    PerformancePage, ResourcePool, StreamingOptions, StreamingPageContent, StreamingPdfWriter,
+    ContentType, FontResource, HighPerformanceDocument, ImageResource, IntelligentCompressor,
+    MemoryPool, Operation, ParallelGenerationOptions, ParallelPageGenerator, PerformanceMonitor,
+    PerformanceOptions, PerformancePage, ResourcePool, StreamingOptions, StreamingPdfWriter,
 };
 
 #[cfg(feature = "performance")]
 use oxidize_pdf::graphics::Color;
 #[cfg(feature = "performance")]
 use oxidize_pdf::text::Font;
-#[cfg(feature = "performance")]
-use std::sync::Arc;
 #[cfg(feature = "performance")]
 use std::time::Instant;
 
@@ -452,7 +457,7 @@ fn demo_high_performance_document(
         .with_parallel_generation(true)
         .with_resource_deduplication(true)
         .with_streaming_writer(true)
-        .with_memory_pooling(true);
+        .with_memory_pool_size(64 * 1024 * 1024); // 64MB memory pool
 
     let mut doc = HighPerformanceDocument::new(options)?;
 
@@ -612,14 +617,18 @@ fn generate_sample_image(size: usize) -> Vec<u8> {
 #[cfg(feature = "performance")]
 fn generate_text_content(size: usize) -> Vec<u8> {
     let text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ";
-    text.repeat(size / text.len() + 1)[..size].to_vec()
+    text.repeat(size / text.len() + 1)[..size]
+        .as_bytes()
+        .to_vec()
 }
 
 #[cfg(feature = "performance")]
 fn generate_pdf_commands(size: usize) -> Vec<u8> {
     let commands =
         "BT /F1 12 Tf 100 700 Td (Hello World) Tj ET\nq 1 0 0 1 100 600 cm 50 0 m 150 0 l S Q\n";
-    commands.repeat(size / commands.len() + 1)[..size].to_vec()
+    commands.repeat(size / commands.len() + 1)[..size]
+        .as_bytes()
+        .to_vec()
 }
 
 #[cfg(feature = "performance")]

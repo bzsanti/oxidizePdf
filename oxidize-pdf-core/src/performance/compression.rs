@@ -755,7 +755,7 @@ impl ContentTypeStats {
 pub struct CompressionTestResult {
     pub original_size: usize,
     pub compression_time: Duration,
-    pub result: Result<CompressionSuccess, String>,
+    pub result: std::result::Result<CompressionSuccess, String>,
 }
 
 #[derive(Debug)]
@@ -907,9 +907,11 @@ mod tests {
 
         let result = compressor.test_compression(test_data, ContentType::Text);
 
-        assert!(result.success);
+        assert!(result.result.is_ok());
         assert_eq!(result.original_size, test_data.len());
-        assert!(result.compression_ratio <= 1.0);
+        if let Ok(success) = &result.result {
+            assert!(success.compression_ratio <= 1.0);
+        }
         assert!(result.compression_time > Duration::ZERO);
     }
 

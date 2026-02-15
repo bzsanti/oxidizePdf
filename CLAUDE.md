@@ -4,21 +4,165 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-09 - Fix Issue #124 |
+| **Last Session** | 2026-02-13 PM - Phase 6: Test Fixtures & BER Support |
 | **Branch** | develop_santi |
-| **Version** | v1.6.13 |
-| **Tests** | 5,711 unit + 187 doc tests passing |
+| **Version** | v1.7.0 |
+| **Tests** | 5,870 unit + 29 integration + 187 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
 
-### Session Summary (2026-02-09) - Fix Issue #124
-- **Fix #124**: `PdfReader::new()` now enables `lenient_streams` by default
-  - PDFs with indirect `/Length` references now work correctly
-  - Consistent behavior with `PdfReader::open()`
-  - 4 new TDD tests for indirect Length references
-- **Version**: 1.6.13 prepared for release
+### Session Summary (2026-02-13 PM) - Phase 6: Test Fixtures & BER Support
+- **BER-to-DER Conversion**: Added `ber_to_der()` function in `cms.rs`
+  - Handles indefinite-length BER encoding (0x80 length byte)
+  - Recursively converts nested BER structures to strict DER
+  - Required for real-world PDF signatures (pdfsig uses BER)
+- **Test Fixtures**: Created signed PDF fixtures using pdfsig/NSS
+  - `signed_pkcs7_selfsigned.pdf` - Basic PKCS#7 detached signature
+  - `signed_multiple.pdf` - Two signatures from different signers
+  - `signed_short_validity.pdf` - 1-day validity certificate
+  - `signed_then_modified.pdf` - PDF modified after signing
+  - `unsigned.pdf` - Base PDF without signature
+  - Certificate files: `test_cert.pem`, `second_cert.pem`, etc.
+- **Integration Tests**: 14 new tests in `signature_integration_test.rs`
+  - Signature detection, hash verification, signer info extraction
+  - Multi-signature handling, modification detection
+  - Certificate validation with custom trust stores
+- **Commits**: `24e798c` (Phase 5 API), `607999f` (Phase 6 fixtures)
+
+### Session Summary (2026-02-13 AM) - Public Signature API (Phase 5)
+- **GitHub Topics**: Added 18 topics for improved discoverability
+  - `pdf`, `rust`, `pdf-parser`, `pdf-library`, `text-extraction`, `pdf-reader`
+  - `document-processing`, `rust-library`, `pdf-generation`, `data-extraction`
+  - `encryption`, `digital-signatures`, `ocr`, `pdf-manipulation`, `invoice`
+  - `table-extraction`, `pdfa`, `crates-io`
+- **Phase 5 Implementation**: Public API Integration for Digital Signatures
+  - New struct `FullSignatureValidationResult` combining all verification results
+  - New methods on `PdfReader`:
+    - `signatures()` - detect all signature fields in PDF
+    - `verify_signatures()` - full validation with Mozilla CA bundle
+    - `verify_signatures_with_trust_store(trust_store)` - custom CA validation
+- **Tests**: +12 new unit tests for FullSignatureValidationResult (5,859 -> 5,870)
+- **Bug Fixes**:
+  - Fixed `CompressionTestResult` test in `compression.rs` (pre-existing)
+  - Fixed imports in `high_performance_demo.rs` example (pre-existing)
+- **Clippy**: Zero warnings
+
+### Session Summary (2026-02-12 PM) - Certificate Validation Module (Phase 4)
+- **New Module**: `src/signatures/certificate.rs` - Phase 4 of Digital Signatures TDD plan
+- **Features Implemented**:
+  - `TrustStore` struct with Mozilla CA bundle via webpki-roots
+  - `CertificateValidationResult` with subject, issuer, validity, trust, and key usage
+  - `validate_certificate()` and `validate_certificate_at_time()` functions
+  - Certificate validity period checking
+  - Basic trust chain validation (self-signed vs CA-issued detection)
+  - Key usage extension checking for digital signature capability
+- **API**:
+  - `validate_certificate(cert_der: &[u8], trust_store: &TrustStore) -> SignatureResult<CertificateValidationResult>`
+  - `validate_certificate_at_time(cert_der, trust_store, validation_time)` (feature-gated)
+  - `TrustStore::mozilla_roots()`, `TrustStore::empty()`
+  - `CertificateValidationResult::is_valid()`, `has_warnings()`
+- **New Error Variant**: `SignatureError::CertificateValidationFailed`
+- **Dependencies Added**:
+  - `webpki-roots = "1.0"` (Mozilla CA bundle)
+  - `time = "0.3"` (date/time handling)
+- **Tests**: +14 new unit tests (5,847 -> 5,859)
+- **Bug Fix**: Pre-existing `Result` type conflict in `compression.rs` (all-features build)
+- **Commit**: `ca3cf7f` - feat(signatures): add certificate validation module (Phase 4)
+
+### Session Summary (2026-02-12 AM) - Dependency Updates COMPLETE
+- **Objetivo**: Actualizar dependencias obsoletas según lib.rs
+- **Cambios realizados**:
+  - `rand`: 0.9 → 0.10 (API fix: `RngCore` → `Rng`)
+  - `quick-xml`: 0.31 → 0.39 (API fix: `trim_text()` → `config_mut().trim_text()`, `unescape()` removed)
+  - `criterion`: 0.5 → 0.8
+  - `indicatif`: 0.17 → 0.18
+- **Archivos modificados**:
+  - `Cargo.toml` (workspace)
+  - `oxidize-pdf-core/Cargo.toml`
+  - `oxidize-pdf-core/src/encryption/standard_security.rs` (rand API)
+  - `oxidize-pdf-core/src/metadata/xmp.rs` (quick-xml API)
+- **Tests**: 5,847 passing
+- **Estado**: COMPLETE - listo para release v1.6.14
+
+### Session Summary (2026-02-10 EVE) - Digital Signatures Detection Module
+- **New Module**: `src/signatures/` - Phase 1 of Digital Signatures TDD plan
+  - `mod.rs`: Module exports and documentation
+  - `error.rs`: SignatureError enum (7 variants: MissingField, InvalidByteRange, etc.)
+  - `types.rs`: ByteRange and SignatureField structs with validation
+  - `detection.rs`: `detect_signature_fields()` function for AcroForm traversal
+- **Features Implemented**:
+  - Detect signature fields via AcroForm/Fields recursive traversal
+  - Parse ByteRange arrays with validation (even elements, min 4, non-negative)
+  - Extract signature metadata (filter, sub_filter, reason, location, etc.)
+  - Support for PAdES (`is_pades()`) and PKCS#7 detached (`is_pkcs7_detached()`) signatures
+- **API**:
+  - `detect_signature_fields<R: Read + Seek>(reader: &mut PdfReader<R>) -> SignatureResult<Vec<SignatureField>>`
+  - `ByteRange::from_array()`, `ByteRange::validate()`, `ByteRange::total_bytes()`
+  - `SignatureField::new()`, `SignatureField::is_pades()`, `SignatureField::is_pkcs7_detached()`
+- **Tests**: +30 new unit tests
+  - 6 detection tests (is_signature_field, extract_contents)
+  - 6 error tests (display, clone, std::error trait)
+  - 18 types tests (ByteRange parsing/validation, SignatureField methods)
+- **Total unit tests**: 5,781 -> 5,811 (+30)
+- **Clippy**: Zero warnings
+- **Files Created**: 4 new files (884 lines total)
+
+### Session Summary (2026-02-10 PM) - Owner Password R5/R6 via Generic Method
+- **TDD Implementation**: Connected `validate_owner_password` generic method to R5/R6 functions
+  - Updated method signature: added `u_entry: Option<&[u8]>` parameter
+  - R5 delegates to `validate_r5_owner_password` (SHA-256 simple hash)
+  - R6 delegates to `validate_r6_owner_password` (Algorithm 2.B with U entry)
+  - R2-R4 ignores new parameter (backward compatible)
+- **New Tests** (TDD approach):
+  - `test_validate_owner_password_r5_correct`: R5 correct password via generic method
+  - `test_validate_owner_password_r5_incorrect`: R5 wrong password returns false
+  - `test_validate_owner_password_r6_correct`: R6 correct password with U entry
+  - `test_validate_owner_password_r6_incorrect`: R6 wrong password returns false
+  - `test_validate_owner_password_r6_missing_u_entry`: R6 error when U entry missing
+  - `test_validate_owner_password_r6_invalid_u_entry_length`: R6 error for invalid U length
+- **Encryption Tests**: 321+ tests passing (no regressions)
+- **Files Modified**:
+  - `src/encryption/standard_security.rs`: Updated `validate_owner_password` signature and implementation
+  - `tests/encryption_password_test.rs`: +6 new tests (16 → 22 total)
+- **Total unit tests**: 5,781 -> 5,787 (+6)
+
+### Session Summary (2026-02-10 AM) - PDF/A Validation + Integration Tests
+- **PDF/A Module Expansion**: `src/pdfa/` now has 70 tests (+8 from previous session)
+- **New Validation Checks**:
+  - `check_transparency`: ExtGState (CA/ca/SMask/BM), XObject transparency groups, Image SMask
+  - `check_lzw_compression`: Page resources and content streams for LZWDecode filter
+  - `check_embedded_files`: Names/EmbeddedFiles detection (forbidden in PDF/A-1/2)
+  - `check_fonts`: Font embedding verification (FontFile/FontFile2/FontFile3)
+  - `check_single_font`: Type1/TrueType/Type3/Type0 font compliance
+  - `check_type0_font`: CID font descriptor and ToUnicode/Identity encoding
+  - `check_color_spaces`: Device-dependent color space detection
+  - `has_output_intent`: OutputIntent presence check for device color space allowance
+- **Helper Methods**: `get_page_dict`, `get_resources_dict`, `get_font_descriptor`, `is_device_dependent_colorspace`
+- **Integration Tests**: `tests/pdfa_integration_test.rs` with 15 tests using synthetic PDFs
+  - Minimal PDF validation against PDF/A-1b
+  - PDF/A-2b version compatibility (allows PDF 1.7)
+  - Level strictness comparison (1b vs 2b)
+  - All 8 PDF/A levels validate without panic
+  - XMP metadata parsing roundtrip
+- **Total unit tests**: 5,770 -> 5,781 (+11 tests)
+- **Integration tests**: 15 new PDF/A tests
+- **Clippy**: Zero warnings
+
+### Session Summary (2026-02-09) - PDF/A Compliance Module
+- **New Module**: `src/pdfa/` - PDF/A validation foundation (62 tests)
+  - `types.rs`: PdfALevel enum (A1a/b, A2a/b/u, A3a/b/u), PdfAConformance (A/B/U), ValidationResult
+  - `error.rs`: ValidationError (16 variants), PdfAError, PdfAResult
+  - `xmp.rs`: XmpMetadata parsing/generation, XmpPdfAIdentifier
+  - `validator.rs`: PdfAValidator with encryption, version, XMP, JavaScript checks
+- **Tests**: Quality tests (not smoke tests) verifying:
+  - Error message formatting with specific content assertions
+  - PDF/A rules (transparency, LZW, embedded files per level)
+  - XMP roundtrip serialization
+  - JavaScript detection in actions
+- **Total unit tests**: 5,711 -> 5,770 (+59 pdfa tests)
+- **Previous fix**: Issue #124 - `lenient_streams` enabled by default
 
 ### Session Summary (2026-02-07) - Release v1.6.12
 - **Release v1.6.12**: Published to crates.io

@@ -9,7 +9,7 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-version = "1.6.13"
+version = "1.7.0"
 edition = "2021"
 rust-version = "1.77"  # MSRV - Required by thiserror 2.0
 authors = ["Santiago Fernández Muñoz"]
@@ -56,19 +56,19 @@ image = { version = "0.25.6", default-features = false, features = ["png", "jpeg
 # Testing
 tempfile = "3.0"
 pretty_assertions = "1.0"
-proptest = "1.5"
-criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.9"
+criterion = { version = "0.8", features = ["html_reports"] }
 insta = "1.38"
 
 # Utilities
-rand = "0.9"
+rand = "0.10"
 hex = "0.4"
 regex = "1.11"
 
 # Pro dependencies
 base64 = "0.21"
 uuid = { version = "1.0", features = ["v4"] }
-quick-xml = { version = "0.31", features = ["serialize"] }
+quick-xml = { version = "0.39", features = ["serialize"] }
 reqwest = { version = "0.11", features = ["json"] }
 
 [profile.release]

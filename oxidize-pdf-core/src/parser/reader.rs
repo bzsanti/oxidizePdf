@@ -2814,6 +2814,204 @@ impl<R: Read + Seek> PdfReader<R> {
             unreachable!("Just inserted dictionary")
         }
     }
+
+    // =========================================================================
+    // Digital Signatures API
+    // =========================================================================
+
+    /// Detect all signature fields in the PDF
+    ///
+    /// Returns a list of signature fields found in the document's AcroForm.
+    /// This method only detects signatures; use `verify_signatures()` for
+    /// complete validation.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::parser::PdfReader;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut reader = PdfReader::open("signed.pdf")?;
+    /// let signatures = reader.signatures()?;
+    ///
+    /// println!("Found {} signature(s)", signatures.len());
+    /// for sig in &signatures {
+    ///     println!("  Filter: {}", sig.filter);
+    ///     if sig.is_pades() {
+    ///         println!("  Type: PAdES");
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn signatures(&mut self) -> ParseResult<Vec<crate::signatures::SignatureField>> {
+        crate::signatures::detect_signature_fields(self).map_err(|e| ParseError::SyntaxError {
+            position: 0,
+            message: format!("Failed to detect signatures: {}", e),
+        })
+    }
+
+    /// Verify all signatures in the PDF using Mozilla's CA bundle
+    ///
+    /// This is a convenience method that uses the default trust store
+    /// (Mozilla CA bundle). For custom trust stores, use
+    /// `verify_signatures_with_trust_store()`.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `FullSignatureValidationResult` for each signature found.
+    /// Each result includes:
+    /// - Hash verification status
+    /// - Cryptographic signature verification status
+    /// - Certificate validation status
+    /// - Detection of modifications after signing
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::parser::PdfReader;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut reader = PdfReader::open("signed.pdf")?;
+    /// let results = reader.verify_signatures()?;
+    ///
+    /// for result in &results {
+    ///     if result.is_valid() {
+    ///         println!("Valid signature from: {}", result.signer_name());
+    ///     } else {
+    ///         println!("Invalid: {:?}", result.validation_errors());
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn verify_signatures(
+        &mut self,
+    ) -> ParseResult<Vec<crate::signatures::FullSignatureValidationResult>> {
+        self.verify_signatures_with_trust_store(crate::signatures::TrustStore::default())
+    }
+
+    /// Verify all signatures in the PDF with a custom trust store
+    ///
+    /// Use this method when you need to validate certificates against a
+    /// custom CA bundle instead of the Mozilla CA bundle.
+    ///
+    /// # Arguments
+    ///
+    /// * `trust_store` - The trust store containing root certificates
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use oxidize_pdf::parser::PdfReader;
+    /// use oxidize_pdf::signatures::TrustStore;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut reader = PdfReader::open("signed.pdf")?;
+    ///
+    /// // Use empty trust store (no trusted CAs)
+    /// let trust_store = TrustStore::empty();
+    /// let results = reader.verify_signatures_with_trust_store(trust_store)?;
+    ///
+    /// for result in &results {
+    ///     if !result.is_valid() {
+    ///         // Expected: certificates won't be trusted
+    ///         println!("Not trusted: {}", result.signer_name());
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn verify_signatures_with_trust_store(
+        &mut self,
+        trust_store: crate::signatures::TrustStore,
+    ) -> ParseResult<Vec<crate::signatures::FullSignatureValidationResult>> {
+        use crate::signatures::{
+            has_incremental_update, parse_pkcs7_signature, validate_certificate, verify_signature,
+            FullSignatureValidationResult,
+        };
+
+        // First, read the entire PDF bytes (needed for hash computation)
+        let original_pos = self.reader.stream_position().unwrap_or(0);
+        self.reader.seek(SeekFrom::Start(0))?;
+
+        let mut pdf_bytes = Vec::new();
+        self.reader.read_to_end(&mut pdf_bytes)?;
+
+        // Restore original position
+        self.reader.seek(SeekFrom::Start(original_pos)).ok();
+
+        // Detect all signature fields
+        let signature_fields = self.signatures()?;
+
+        let mut results = Vec::new();
+
+        for field in signature_fields {
+            let mut result = FullSignatureValidationResult {
+                field: field.clone(),
+                signer_name: None,
+                signing_time: None,
+                hash_valid: false,
+                signature_valid: false,
+                certificate_result: None,
+                has_modifications_after_signing: false,
+                errors: Vec::new(),
+                warnings: Vec::new(),
+            };
+
+            // Check for incremental updates
+            result.has_modifications_after_signing =
+                has_incremental_update(&pdf_bytes, &field.byte_range);
+
+            // Parse the PKCS#7/CMS signature
+            let parsed_sig = match parse_pkcs7_signature(&field.contents) {
+                Ok(sig) => sig,
+                Err(e) => {
+                    result
+                        .errors
+                        .push(format!("Failed to parse signature: {}", e));
+                    results.push(result);
+                    continue;
+                }
+            };
+
+            // Extract signer name and signing time
+            result.signing_time = parsed_sig.signing_time.clone();
+            result.signer_name = parsed_sig.signer_common_name().ok();
+
+            // Verify the cryptographic signature
+            match verify_signature(&pdf_bytes, &parsed_sig, &field.byte_range) {
+                Ok(verification) => {
+                    result.hash_valid = verification.hash_valid;
+                    result.signature_valid = verification.signature_valid;
+                    if let Some(details) = verification.details {
+                        result.warnings.push(details);
+                    }
+                }
+                Err(e) => {
+                    result
+                        .errors
+                        .push(format!("Signature verification failed: {}", e));
+                }
+            }
+
+            // Validate the certificate
+            match validate_certificate(&parsed_sig.signer_certificate_der, &trust_store) {
+                Ok(cert_result) => {
+                    result.certificate_result = Some(cert_result);
+                }
+                Err(e) => {
+                    result
+                        .warnings
+                        .push(format!("Certificate validation failed: {}", e));
+                }
+            }
+
+            results.push(result);
+        }
+
+        Ok(results)
+    }
 }
 
 /// Document metadata
