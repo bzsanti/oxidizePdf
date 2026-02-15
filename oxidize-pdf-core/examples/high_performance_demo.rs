@@ -16,8 +16,11 @@
 //!
 //! Run with: `cargo run --example high_performance_demo --features performance`
 
+#[cfg(feature = "performance")]
 use oxidize_pdf::performance::parallel_generation::PageSpec;
+#[cfg(feature = "performance")]
 use oxidize_pdf::performance::resource_pool::ImageFormat;
+#[cfg(feature = "performance")]
 use oxidize_pdf::performance::streaming_writer::{
     ContentStream, PageResources, StreamingPageContent,
 };
