@@ -6,7 +6,7 @@
 |-------|-------|
 | **Last Session** | 2026-02-13 PM - Phase 6: Test Fixtures & BER Support |
 | **Branch** | develop_santi |
-| **Version** | v1.6.13 |
+| **Version** | v1.7.0 |
 | **Tests** | 5,870 unit + 29 integration + 187 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |

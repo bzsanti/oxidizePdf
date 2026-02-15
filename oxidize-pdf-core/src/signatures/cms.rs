@@ -23,12 +23,32 @@ use x509_cert::Certificate;
 
 use super::error::{SignatureError, SignatureResult};
 
+// =============================================================================
+// BER Security Limits (DoS Protection)
+// =============================================================================
+
+/// Maximum nesting depth for BER structures.
+/// Prevents stack overflow from deeply nested malicious input.
+#[cfg(feature = "signatures")]
+const MAX_BER_DEPTH: usize = 100;
+
+/// Maximum output size for BER-to-DER conversion (10 MB).
+/// Prevents memory exhaustion from malicious BER expansion.
+#[cfg(feature = "signatures")]
+const MAX_BER_OUTPUT_SIZE: usize = 10 * 1024 * 1024;
+
 /// Convert BER-encoded data to DER by resolving indefinite-length encodings
 ///
 /// BER allows indefinite-length encoding where a SEQUENCE or other constructed
 /// type has length byte 0x80 and is terminated by 0x00 0x00. DER requires
 /// definite-length encoding. This function recursively converts all indefinite
 /// lengths to definite lengths.
+///
+/// # Security
+///
+/// This function includes DoS protection:
+/// - Maximum nesting depth of 100 levels
+/// - Maximum output size of 10 MB
 #[cfg(feature = "signatures")]
 fn ber_to_der(input: &[u8]) -> SignatureResult<Vec<u8>> {
     if input.is_empty() {
@@ -40,28 +60,61 @@ fn ber_to_der(input: &[u8]) -> SignatureResult<Vec<u8>> {
         return Ok(input.to_vec());
     }
 
-    // Parse and convert recursively
-    convert_element(input).map(|(output, _)| output)
+    // Calculate size budget: min of 100x expansion or absolute max
+    let size_budget = std::cmp::min(input.len().saturating_mul(100), MAX_BER_OUTPUT_SIZE);
+
+    // Parse and convert recursively with depth=0 and size budget
+    convert_element(input, 0, size_budget).map(|(output, _)| output)
 }
 
-/// Check if the data contains any indefinite-length encoding (0x80 length byte)
+/// Check if the data starts with indefinite-length BER encoding
+///
+/// Indefinite length (0x80) is only valid for constructed types (bit 6 set).
+/// This function verifies both conditions to avoid false positives when
+/// 0x80 appears as a regular length value in primitive types.
 #[cfg(feature = "signatures")]
 fn contains_indefinite_length(data: &[u8]) -> bool {
-    // Quick scan: indefinite length is 0x80 as the second byte of a tag
-    // But we need to be careful - 0x80 can also appear in content
-    // So we just check if the pattern exists (rough heuristic)
     if data.len() < 2 {
         return false;
     }
 
-    // The signature starts with 30 80 (SEQUENCE with indefinite length)
-    data.len() >= 2 && data[1] == 0x80
+    let tag = data[0];
+    let length_byte = data[1];
+
+    // Indefinite length (0x80) is only valid for constructed types
+    // Bit 6 (0x20) indicates constructed encoding
+    let is_constructed = (tag & 0x20) != 0;
+
+    is_constructed && length_byte == 0x80
 }
 
 /// Parse and convert a single BER element to DER
-/// Returns (converted_bytes, bytes_consumed)
+///
+/// # Arguments
+///
+/// * `input` - The BER-encoded bytes to convert
+/// * `depth` - Current nesting depth (for DoS protection)
+/// * `size_budget` - Remaining bytes allowed in output (for DoS protection)
+///
+/// # Returns
+///
+/// (converted_bytes, bytes_consumed) or error if limits exceeded
 #[cfg(feature = "signatures")]
-fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
+fn convert_element(
+    input: &[u8],
+    depth: usize,
+    size_budget: usize,
+) -> SignatureResult<(Vec<u8>, usize)> {
+    // Fix #1: Check recursion depth limit
+    if depth > MAX_BER_DEPTH {
+        return Err(SignatureError::CmsParsingFailed {
+            details: format!(
+                "BER nesting too deep: {} levels (max {})",
+                depth, MAX_BER_DEPTH
+            ),
+        });
+    }
+
     if input.is_empty() {
         return Err(SignatureError::CmsParsingFailed {
             details: "Empty input in BER conversion".to_string(),
@@ -89,7 +142,20 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
 
         // Find the matching end-of-contents by parsing nested elements
         let content_start = 2;
-        let (content, content_len) = parse_indefinite_content(&input[content_start..])?;
+        let (content, content_len) =
+            parse_indefinite_content(&input[content_start..], depth + 1, size_budget)?;
+
+        // Fix #2: Check output size limit
+        let output_size = 1 + 5 + content.len(); // tag + max_length_bytes + content
+        if output_size > size_budget {
+            return Err(SignatureError::CmsParsingFailed {
+                details: format!(
+                    "BER output exceeds size limit: {} bytes (max {} MB)",
+                    output_size,
+                    MAX_BER_OUTPUT_SIZE / 1024 / 1024
+                ),
+            });
+        }
 
         // Build DER output with definite length
         let mut output = vec![tag];
@@ -105,7 +171,11 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
         let total = 2 + length;
         if input.len() < total {
             return Err(SignatureError::CmsParsingFailed {
-                details: "BER element truncated (short form)".to_string(),
+                details: format!(
+                    "BER element truncated (short form): need {} bytes, got {}",
+                    total,
+                    input.len()
+                ),
             });
         }
 
@@ -113,7 +183,19 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
         let is_constructed = (tag & 0x20) != 0;
         if is_constructed && length > 0 {
             let content = &input[2..2 + length];
-            let converted_content = convert_constructed_content(content)?;
+            let converted_content = convert_constructed_content(content, depth + 1, size_budget)?;
+
+            // Fix #2: Check output size limit
+            let output_size = 1 + 5 + converted_content.len();
+            if output_size > size_budget {
+                return Err(SignatureError::CmsParsingFailed {
+                    details: format!(
+                        "BER output exceeds size limit: {} bytes (max {} MB)",
+                        output_size,
+                        MAX_BER_OUTPUT_SIZE / 1024 / 1024
+                    ),
+                });
+            }
 
             let mut output = vec![tag];
             encode_der_length(&mut output, converted_content.len());
@@ -126,17 +208,32 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
     } else {
         // Long form length
         let num_octets = (length_byte & 0x7F) as usize;
-        if num_octets == 0 || num_octets > 4 {
+
+        // Fix #3: Validate length bytes BEFORE reading them
+        if num_octets == 0 {
             return Err(SignatureError::CmsParsingFailed {
-                details: format!("Invalid BER length octets: {}", num_octets),
+                details: "Invalid BER length: zero octets in long form".to_string(),
+            });
+        }
+        if num_octets > 4 {
+            return Err(SignatureError::CmsParsingFailed {
+                details: format!(
+                    "BER length too large: {} octets (max 4, would exceed 4GB)",
+                    num_octets
+                ),
             });
         }
         if input.len() < 2 + num_octets {
             return Err(SignatureError::CmsParsingFailed {
-                details: "BER element truncated (long form length)".to_string(),
+                details: format!(
+                    "BER truncated reading length: need {} bytes, got {}",
+                    2 + num_octets,
+                    input.len()
+                ),
             });
         }
 
+        // Now safe to read length bytes
         let mut length: usize = 0;
         for i in 0..num_octets {
             length = (length << 8) | (input[2 + i] as usize);
@@ -146,7 +243,11 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
         let total = content_start + length;
         if input.len() < total {
             return Err(SignatureError::CmsParsingFailed {
-                details: "BER element truncated (content)".to_string(),
+                details: format!(
+                    "BER element truncated: declared {} bytes content, got {}",
+                    length,
+                    input.len().saturating_sub(content_start)
+                ),
             });
         }
 
@@ -154,7 +255,19 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
         let is_constructed = (tag & 0x20) != 0;
         if is_constructed && length > 0 {
             let content = &input[content_start..total];
-            let converted_content = convert_constructed_content(content)?;
+            let converted_content = convert_constructed_content(content, depth + 1, size_budget)?;
+
+            // Fix #2: Check output size limit
+            let output_size = 1 + 5 + converted_content.len();
+            if output_size > size_budget {
+                return Err(SignatureError::CmsParsingFailed {
+                    details: format!(
+                        "BER output exceeds size limit: {} bytes (max {} MB)",
+                        output_size,
+                        MAX_BER_OUTPUT_SIZE / 1024 / 1024
+                    ),
+                });
+            }
 
             let mut output = vec![tag];
             encode_der_length(&mut output, converted_content.len());
@@ -168,9 +281,22 @@ fn convert_element(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
 }
 
 /// Parse content with indefinite length until we find end-of-contents
-/// Returns (converted_content, bytes_consumed_excluding_eoc)
+///
+/// # Arguments
+///
+/// * `input` - The content bytes (after the 0x80 length marker)
+/// * `depth` - Current nesting depth
+/// * `size_budget` - Remaining bytes allowed in output
+///
+/// # Returns
+///
+/// (converted_content, bytes_consumed_excluding_eoc)
 #[cfg(feature = "signatures")]
-fn parse_indefinite_content(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
+fn parse_indefinite_content(
+    input: &[u8],
+    depth: usize,
+    size_budget: usize,
+) -> SignatureResult<(Vec<u8>, usize)> {
     let mut output = Vec::new();
     let mut pos = 0;
 
@@ -180,8 +306,19 @@ fn parse_indefinite_content(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
             return Ok((output, pos));
         }
 
-        // Parse next element
-        let (element, consumed) = convert_element(&input[pos..])?;
+        // Check remaining budget before parsing next element
+        let remaining_budget = size_budget.saturating_sub(output.len());
+        if remaining_budget == 0 {
+            return Err(SignatureError::CmsParsingFailed {
+                details: format!(
+                    "BER output exceeds size limit during indefinite content parsing (max {} MB)",
+                    MAX_BER_OUTPUT_SIZE / 1024 / 1024
+                ),
+            });
+        }
+
+        // Parse next element with depth and budget propagation
+        let (element, consumed) = convert_element(&input[pos..], depth, remaining_budget)?;
         output.extend(element);
         pos += consumed;
     }
@@ -192,13 +329,34 @@ fn parse_indefinite_content(input: &[u8]) -> SignatureResult<(Vec<u8>, usize)> {
 }
 
 /// Convert all elements in a constructed type's content
+///
+/// # Arguments
+///
+/// * `input` - The content bytes of a constructed type
+/// * `depth` - Current nesting depth
+/// * `size_budget` - Remaining bytes allowed in output
 #[cfg(feature = "signatures")]
-fn convert_constructed_content(input: &[u8]) -> SignatureResult<Vec<u8>> {
+fn convert_constructed_content(
+    input: &[u8],
+    depth: usize,
+    size_budget: usize,
+) -> SignatureResult<Vec<u8>> {
     let mut output = Vec::new();
     let mut pos = 0;
 
     while pos < input.len() {
-        let (element, consumed) = convert_element(&input[pos..])?;
+        // Check remaining budget before parsing next element
+        let remaining_budget = size_budget.saturating_sub(output.len());
+        if remaining_budget == 0 {
+            return Err(SignatureError::CmsParsingFailed {
+                details: format!(
+                    "BER output exceeds size limit during constructed content parsing (max {} MB)",
+                    MAX_BER_OUTPUT_SIZE / 1024 / 1024
+                ),
+            });
+        }
+
+        let (element, consumed) = convert_element(&input[pos..], depth, remaining_budget)?;
         output.extend(element);
         pos += consumed;
     }
@@ -720,5 +878,235 @@ mod tests {
         let cloned = sig.clone();
         assert_eq!(sig.digest_algorithm, cloned.digest_algorithm);
         assert_eq!(sig.signature_value, cloned.signature_value);
+    }
+
+    // ==========================================================================
+    // Security tests for BER-to-DER conversion (DoS protection)
+    // ==========================================================================
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_depth_limit_protection() {
+        // Fix #1: Create deeply nested BER structure (>MAX_BER_DEPTH levels)
+        // Each level: 0x30 0x80 (SEQUENCE indefinite) ... 0x00 0x00 (EOC)
+        let depth = MAX_BER_DEPTH + 50; // 150 levels, exceeds limit of 100
+
+        let mut ber = Vec::new();
+        // Open 150 nested SEQUENCEs with indefinite length
+        for _ in 0..depth {
+            ber.push(0x30); // SEQUENCE tag (constructed)
+            ber.push(0x80); // Indefinite length
+        }
+        // Add a primitive element at the deepest level
+        ber.extend_from_slice(&[0x02, 0x01, 0x00]); // INTEGER 0
+                                                    // Close all levels with end-of-contents
+        for _ in 0..depth {
+            ber.push(0x00);
+            ber.push(0x00);
+        }
+
+        let result = ber_to_der(&ber);
+        assert!(result.is_err(), "Should reject deeply nested BER");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("nesting too deep") || err_msg.contains("depth"),
+            "Error should mention depth limit, got: {}",
+            err_msg
+        );
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_size_limit_protection() {
+        // Fix #2: Create BER with indefinite length containing huge nested content
+        // The size limit is checked during BER-to-DER conversion when indefinite length is used
+        //
+        // Note: ber_to_der only processes data with indefinite length markers.
+        // For regular DER with definite lengths, it passes through unchanged.
+        // The size check happens during recursive conversion.
+
+        // Create a valid BER with indefinite length, but simulate the budget check
+        // by directly testing convert_element with a tiny budget
+        let ber = vec![
+            0x30, 0x80, // SEQUENCE indefinite length
+            0x04, 0x82, 0x00, 0x10, // OCTET STRING with 16 bytes
+        ];
+        // Add 16 bytes of content
+        let mut full_ber = ber;
+        full_ber.extend(vec![0x41; 16]);
+        full_ber.extend_from_slice(&[0x00, 0x00]); // End of contents
+
+        // With a tiny size budget of 5, this should fail
+        let result = convert_element(&full_ber, 0, 5);
+        assert!(
+            result.is_err(),
+            "Should reject BER when output exceeds size budget"
+        );
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("exceeds") || err_msg.contains("limit"),
+            "Error should mention size limit, got: {}",
+            err_msg
+        );
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_buffer_overread_protection() {
+        // Fix #3: Create truncated BER inside indefinite content
+        // This tests that convert_element properly validates lengths before reading
+
+        // Outer SEQUENCE with indefinite length, containing truncated inner element
+        let truncated_ber = vec![
+            0x30, 0x80, // SEQUENCE indefinite
+            0x30, 0x85, // Inner SEQUENCE with long form (5 bytes for length - invalid)
+            0x01,
+            0x02, // Only 2 length bytes provided
+                  // Missing: 3 more length bytes, then content, then EOC
+        ];
+
+        let result = ber_to_der(&truncated_ber);
+        assert!(
+            result.is_err(),
+            "Should reject BER with invalid/truncated length"
+        );
+
+        let err_msg = result.unwrap_err().to_string();
+        // Should fail with "too large" (5 octets > 4 max) or truncation error
+        assert!(
+            err_msg.contains("too large")
+                || err_msg.contains("truncated")
+                || err_msg.contains("octets"),
+            "Error should mention length issue, got: {}",
+            err_msg
+        );
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_length_zero_octets() {
+        // Fix #3: Long form with 0 octets (0x80 without being indefinite)
+        // This is actually indefinite length for constructed types, but
+        // for primitive types it's invalid
+        let invalid = vec![0x02, 0x80]; // INTEGER with indefinite length (invalid)
+
+        let result = ber_to_der(&invalid);
+        // Either passes as DER (since primitive 0x80 = 128 byte length)
+        // or fails as truncated - both are acceptable
+        // The key is it shouldn't panic or buffer overread
+        let _ = result; // Just ensure no panic
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_contains_indefinite_length_primitive_false_positive() {
+        // Fix #4: Primitive type with 0x80 as length (128 bytes) - NOT indefinite
+        // OCTET STRING with 128 bytes of content
+        let primitive = vec![0x04, 0x80]; // OCTET STRING, length 128 (short form max)
+        assert!(
+            !contains_indefinite_length(&primitive),
+            "Should not detect indefinite length on primitive type"
+        );
+
+        // INTEGER with 128-byte length
+        let integer = vec![0x02, 0x80];
+        assert!(
+            !contains_indefinite_length(&integer),
+            "Should not detect indefinite length on INTEGER"
+        );
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_contains_indefinite_length_constructed_true() {
+        // Fix #4: Constructed type with indefinite length - SHOULD detect
+        let sequence = vec![0x30, 0x80]; // SEQUENCE indefinite
+        assert!(
+            contains_indefinite_length(&sequence),
+            "Should detect indefinite length on SEQUENCE"
+        );
+
+        let set = vec![0x31, 0x80]; // SET indefinite
+        assert!(
+            contains_indefinite_length(&set),
+            "Should detect indefinite length on SET"
+        );
+
+        // Context-specific constructed [0] with indefinite length
+        let context = vec![0xA0, 0x80]; // [0] EXPLICIT/constructed
+        assert!(
+            contains_indefinite_length(&context),
+            "Should detect indefinite length on context-specific constructed"
+        );
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_valid_conversion() {
+        // Ensure valid BER still converts correctly
+        // Simple SEQUENCE with INTEGER inside, using indefinite length
+        let ber = vec![
+            0x30, 0x80, // SEQUENCE indefinite length
+            0x02, 0x01, 0x42, // INTEGER = 66
+            0x00, 0x00, // End of contents
+        ];
+
+        let result = ber_to_der(&ber);
+        assert!(result.is_ok(), "Valid BER should convert successfully");
+
+        let der = result.unwrap();
+        // DER should have definite length
+        assert_eq!(der[0], 0x30, "Should be SEQUENCE");
+        assert_eq!(der[1], 0x03, "Length should be 3 (definite)");
+        assert_eq!(&der[2..5], &[0x02, 0x01, 0x42], "Content preserved");
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_already_der() {
+        // DER input should pass through unchanged
+        let der = vec![
+            0x30, 0x03, // SEQUENCE, length 3
+            0x02, 0x01, 0x42, // INTEGER = 66
+        ];
+
+        let result = ber_to_der(&der);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), der, "DER should pass through unchanged");
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_empty_input() {
+        let result = ber_to_der(&[]);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[cfg(feature = "signatures")]
+    #[test]
+    fn test_ber_to_der_moderate_nesting_ok() {
+        // Nesting within limits should work (e.g., 10 levels)
+        let depth = 10;
+
+        let mut ber = Vec::new();
+        for _ in 0..depth {
+            ber.push(0x30);
+            ber.push(0x80);
+        }
+        ber.extend_from_slice(&[0x02, 0x01, 0x00]); // INTEGER 0
+        for _ in 0..depth {
+            ber.push(0x00);
+            ber.push(0x00);
+        }
+
+        let result = ber_to_der(&ber);
+        assert!(
+            result.is_ok(),
+            "Moderate nesting ({} levels) should work",
+            depth
+        );
     }
 }
