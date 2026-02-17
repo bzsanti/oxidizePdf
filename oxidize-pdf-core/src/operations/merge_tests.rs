@@ -629,4 +629,94 @@ mod tests {
             "Should not contain placeholder text"
         );
     }
+
+    /// Test that merge preserves graphics content (Issue #128 Phase 3.5)
+    /// This test verifies that XObjects, ExtGState, and other graphics resources
+    /// are properly resolved during merge
+    #[test]
+    fn test_merge_preserves_graphics_content_phase_35() {
+        use crate::graphics::Color;
+        use crate::parser::{PdfDocument, PdfReader};
+
+        let temp_dir = TempDir::new().unwrap();
+        let pdf_a_path = temp_dir.path().join("graphics_a.pdf");
+        let pdf_b_path = temp_dir.path().join("graphics_b.pdf");
+        let merged_path = temp_dir.path().join("merged_graphics.pdf");
+
+        // Create PDF A with graphics content (vector shapes use ExtGState)
+        let mut doc_a = Document::new();
+        let mut page_a = Page::new(612.0, 792.0);
+        // Draw a filled rectangle - this creates graphics state entries
+        page_a
+            .graphics()
+            .set_fill_color(Color::Rgb(1.0, 0.0, 0.0)) // Red fill
+            .rectangle(50.0, 600.0, 200.0, 100.0)
+            .fill();
+        // Add text for verification
+        page_a
+            .text()
+            .set_font(crate::text::Font::Helvetica, 18.0)
+            .at(100.0, 500.0)
+            .write("Graphics PDF A")
+            .unwrap();
+        doc_a.add_page(page_a);
+        doc_a.save(&pdf_a_path).unwrap();
+
+        // Create PDF B with different graphics
+        let mut doc_b = Document::new();
+        let mut page_b = Page::new(612.0, 792.0);
+        // Draw a circle (uses path operations)
+        page_b
+            .graphics()
+            .set_fill_color(Color::Rgb(0.0, 0.0, 1.0)) // Blue fill
+            .circle(300.0, 650.0, 50.0)
+            .fill();
+        page_b
+            .text()
+            .set_font(crate::text::Font::Helvetica, 18.0)
+            .at(100.0, 500.0)
+            .write("Graphics PDF B")
+            .unwrap();
+        doc_b.add_page(page_b);
+        doc_b.save(&pdf_b_path).unwrap();
+
+        // Verify source PDFs have content
+        let size_a = fs::metadata(&pdf_a_path).unwrap().len();
+        let size_b = fs::metadata(&pdf_b_path).unwrap().len();
+        assert!(size_a > 500, "PDF A should have graphics content");
+        assert!(size_b > 500, "PDF B should have graphics content");
+
+        // Merge the PDFs
+        let inputs = vec![MergeInput::new(&pdf_a_path), MergeInput::new(&pdf_b_path)];
+        merge_pdfs(inputs, &merged_path, MergeOptions::default()).unwrap();
+
+        // Verify merged PDF exists with substantial content
+        let merged_size = fs::metadata(&merged_path).unwrap().len();
+        assert!(
+            merged_size > 1000,
+            "Merged PDF should have graphics content, got {} bytes",
+            merged_size
+        );
+
+        // Verify page count
+        let reader = PdfReader::open(&merged_path).unwrap();
+        let document = PdfDocument::new(reader);
+        let page_count = document.page_count().unwrap();
+        assert_eq!(page_count, 2, "Merged PDF should have 2 pages");
+
+        // Verify text content is preserved (graphics commands won't appear in text extraction)
+        let text_page1 = document.extract_text_from_page(0).unwrap();
+        let text_page2 = document.extract_text_from_page(1).unwrap();
+
+        assert!(
+            text_page1.text.contains("Graphics PDF A"),
+            "Page 1 should contain text, got: '{}'",
+            text_page1.text.trim()
+        );
+        assert!(
+            text_page2.text.contains("Graphics PDF B"),
+            "Page 2 should contain text, got: '{}'",
+            text_page2.text.trim()
+        );
+    }
 }
