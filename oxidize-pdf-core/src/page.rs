@@ -304,6 +304,151 @@ impl Page {
                 );
             }
 
+            // Phase 3.5: Resolve XObject streams (images, forms)
+            // XObjects are critical for PDF content - unresolved references cause blank PDFs
+            if let Some(crate::pdf_objects::Object::Dictionary(xobjects)) =
+                unified_resources.get("XObject")
+            {
+                let xobjects_clone = xobjects.clone();
+                let mut resolved_xobjects = crate::pdf_objects::Dictionary::new();
+
+                for (xobj_name, xobj_obj) in xobjects_clone.iter() {
+                    let resolved = match xobj_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            // Resolve reference to get actual XObject stream
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    Self::convert_parser_object_to_unified(&resolved_obj)
+                                }
+                                Err(_) => {
+                                    // Resolution failed, keep reference
+                                    xobj_obj.clone()
+                                }
+                            }
+                        }
+                        _ => xobj_obj.clone(),
+                    };
+                    resolved_xobjects.set(xobj_name.clone(), resolved);
+                }
+
+                unified_resources.set(
+                    "XObject",
+                    crate::pdf_objects::Object::Dictionary(resolved_xobjects),
+                );
+            }
+
+            // Phase 3.5: Resolve ExtGState (graphics state parameters)
+            if let Some(crate::pdf_objects::Object::Dictionary(extgstates)) =
+                unified_resources.get("ExtGState")
+            {
+                let extgstates_clone = extgstates.clone();
+                let mut resolved_extgstates = crate::pdf_objects::Dictionary::new();
+
+                for (gs_name, gs_obj) in extgstates_clone.iter() {
+                    let resolved = match gs_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    Self::convert_parser_object_to_unified(&resolved_obj)
+                                }
+                                Err(_) => gs_obj.clone(),
+                            }
+                        }
+                        _ => gs_obj.clone(),
+                    };
+                    resolved_extgstates.set(gs_name.clone(), resolved);
+                }
+
+                unified_resources.set(
+                    "ExtGState",
+                    crate::pdf_objects::Object::Dictionary(resolved_extgstates),
+                );
+            }
+
+            // Phase 3.5: Resolve ColorSpace references
+            if let Some(crate::pdf_objects::Object::Dictionary(colorspaces)) =
+                unified_resources.get("ColorSpace")
+            {
+                let colorspaces_clone = colorspaces.clone();
+                let mut resolved_colorspaces = crate::pdf_objects::Dictionary::new();
+
+                for (cs_name, cs_obj) in colorspaces_clone.iter() {
+                    let resolved = match cs_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    Self::convert_parser_object_to_unified(&resolved_obj)
+                                }
+                                Err(_) => cs_obj.clone(),
+                            }
+                        }
+                        _ => cs_obj.clone(),
+                    };
+                    resolved_colorspaces.set(cs_name.clone(), resolved);
+                }
+
+                unified_resources.set(
+                    "ColorSpace",
+                    crate::pdf_objects::Object::Dictionary(resolved_colorspaces),
+                );
+            }
+
+            // Phase 3.5: Resolve Pattern references
+            if let Some(crate::pdf_objects::Object::Dictionary(patterns)) =
+                unified_resources.get("Pattern")
+            {
+                let patterns_clone = patterns.clone();
+                let mut resolved_patterns = crate::pdf_objects::Dictionary::new();
+
+                for (pat_name, pat_obj) in patterns_clone.iter() {
+                    let resolved = match pat_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    Self::convert_parser_object_to_unified(&resolved_obj)
+                                }
+                                Err(_) => pat_obj.clone(),
+                            }
+                        }
+                        _ => pat_obj.clone(),
+                    };
+                    resolved_patterns.set(pat_name.clone(), resolved);
+                }
+
+                unified_resources.set(
+                    "Pattern",
+                    crate::pdf_objects::Object::Dictionary(resolved_patterns),
+                );
+            }
+
+            // Phase 3.5: Resolve Shading references
+            if let Some(crate::pdf_objects::Object::Dictionary(shadings)) =
+                unified_resources.get("Shading")
+            {
+                let shadings_clone = shadings.clone();
+                let mut resolved_shadings = crate::pdf_objects::Dictionary::new();
+
+                for (sh_name, sh_obj) in shadings_clone.iter() {
+                    let resolved = match sh_obj {
+                        crate::pdf_objects::Object::Reference(id) => {
+                            match document.get_object(id.number(), id.generation()) {
+                                Ok(resolved_obj) => {
+                                    Self::convert_parser_object_to_unified(&resolved_obj)
+                                }
+                                Err(_) => sh_obj.clone(),
+                            }
+                        }
+                        _ => sh_obj.clone(),
+                    };
+                    resolved_shadings.set(sh_name.clone(), resolved);
+                }
+
+                unified_resources.set(
+                    "Shading",
+                    crate::pdf_objects::Object::Dictionary(resolved_shadings),
+                );
+            }
+
             page.preserved_resources = Some(unified_resources);
         }
 

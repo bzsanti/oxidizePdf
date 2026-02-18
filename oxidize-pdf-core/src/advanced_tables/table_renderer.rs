@@ -397,6 +397,111 @@ impl TableRenderer {
         }
     }
 
+    /// Wrap text into multiple lines that fit within the given width
+    fn wrap_text_to_lines(
+        &self,
+        text: &str,
+        max_width: f64,
+        font: &Font,
+        font_size: f64,
+    ) -> Vec<String> {
+        let mut lines = Vec::new();
+
+        // Split by existing newlines first
+        for paragraph in text.split('\n') {
+            if paragraph.is_empty() {
+                lines.push(String::new());
+                continue;
+            }
+
+            // If paragraph fits, add it directly
+            let paragraph_width = measure_text(paragraph, font.clone(), font_size);
+            if paragraph_width <= max_width {
+                lines.push(paragraph.to_string());
+                continue;
+            }
+
+            // Word-wrap the paragraph
+            let words: Vec<&str> = paragraph.split_whitespace().collect();
+            if words.is_empty() {
+                continue;
+            }
+
+            let mut current_line = String::new();
+            let space_width = measure_text(" ", font.clone(), font_size);
+
+            for word in words {
+                let word_width = measure_text(word, font.clone(), font_size);
+
+                if current_line.is_empty() {
+                    // First word on the line
+                    if word_width <= max_width {
+                        current_line = word.to_string();
+                    } else {
+                        // Word is too long, need to break it
+                        let chars: Vec<char> = word.chars().collect();
+                        let mut char_line = String::new();
+                        for c in chars {
+                            let test_line = format!("{}{}", char_line, c);
+                            if measure_text(&test_line, font.clone(), font_size) <= max_width {
+                                char_line = test_line;
+                            } else {
+                                if !char_line.is_empty() {
+                                    lines.push(char_line);
+                                }
+                                char_line = c.to_string();
+                            }
+                        }
+                        current_line = char_line;
+                    }
+                } else {
+                    // Test adding word to current line
+                    let test_width = measure_text(&current_line, font.clone(), font_size)
+                        + space_width
+                        + word_width;
+
+                    if test_width <= max_width {
+                        current_line.push(' ');
+                        current_line.push_str(word);
+                    } else {
+                        // Start new line
+                        lines.push(current_line);
+                        if word_width <= max_width {
+                            current_line = word.to_string();
+                        } else {
+                            // Word is too long, break it
+                            let chars: Vec<char> = word.chars().collect();
+                            let mut char_line = String::new();
+                            for c in chars {
+                                let test_line = format!("{}{}", char_line, c);
+                                if measure_text(&test_line, font.clone(), font_size) <= max_width {
+                                    char_line = test_line;
+                                } else {
+                                    if !char_line.is_empty() {
+                                        lines.push(char_line);
+                                    }
+                                    char_line = c.to_string();
+                                }
+                            }
+                            current_line = char_line;
+                        }
+                    }
+                }
+            }
+
+            // Add remaining text
+            if !current_line.is_empty() {
+                lines.push(current_line);
+            }
+        }
+
+        if lines.is_empty() {
+            lines.push(String::new());
+        }
+
+        lines
+    }
+
     /// Render text within a cell
     #[allow(clippy::too_many_arguments)]
     fn render_cell_text(
@@ -416,41 +521,97 @@ impl TableRenderer {
         // Calculate available width for text (considering padding)
         let available_width = width - style.padding.left - style.padding.right;
 
-        // Truncate text if it doesn't fit within the cell
-        let display_text = if available_width > 0.0 {
-            self.truncate_text_to_width(content, available_width, &font, font_size)
+        if available_width <= 0.0 {
+            return Ok(());
+        }
+
+        // Check if text wrapping is enabled
+        if style.text_wrap {
+            // Wrap text into multiple lines
+            let lines = self.wrap_text_to_lines(content, available_width, &font, font_size);
+
+            if lines.is_empty() || (lines.len() == 1 && lines[0].is_empty()) {
+                return Ok(());
+            }
+
+            // Calculate line height (typically 1.2x font size)
+            let line_height = font_size * 1.2;
+            let total_text_height = lines.len() as f64 * line_height;
+
+            // Calculate available height (considering padding)
+            let available_height = height - style.padding.top - style.padding.bottom;
+
+            // Calculate starting Y position (top of text block, vertically centered)
+            // In PDF coordinate system, Y increases upward
+            let text_block_top =
+                y + height - style.padding.top - (available_height - total_text_height) / 2.0;
+
+            // Render each line
+            for (line_idx, line) in lines.iter().enumerate() {
+                if line.is_empty() {
+                    continue;
+                }
+
+                // Calculate X position based on alignment
+                let text_x = match style.alignment {
+                    CellAlignment::Left => x + style.padding.left,
+                    CellAlignment::Center => {
+                        let line_width = measure_text(line, font.clone(), font_size);
+                        x + style.padding.left + (available_width - line_width) / 2.0
+                    }
+                    CellAlignment::Right => {
+                        let line_width = measure_text(line, font.clone(), font_size);
+                        x + width - style.padding.right - line_width
+                    }
+                    CellAlignment::Justify => x + style.padding.left,
+                };
+
+                // Y position for this line (descending from top)
+                let text_y = text_block_top - (line_idx as f64 + 0.8) * line_height;
+
+                // Only render if within cell bounds
+                if text_y >= y + style.padding.bottom {
+                    page.text()
+                        .set_font(font.clone(), font_size)
+                        .set_fill_color(text_color)
+                        .at(text_x, text_y)
+                        .write(line)?;
+                }
+            }
         } else {
-            String::new()
-        };
+            // Original truncation behavior
+            let display_text =
+                self.truncate_text_to_width(content, available_width, &font, font_size);
 
-        // Calculate text position based on alignment and padding
-        let text_x = match style.alignment {
-            CellAlignment::Left => x + style.padding.left,
-            CellAlignment::Center => {
-                // For center alignment, we need to calculate based on actual text width
-                let text_width = measure_text(&display_text, font.clone(), font_size);
-                x + style.padding.left + (available_width - text_width) / 2.0
+            // Calculate text position based on alignment and padding
+            let text_x = match style.alignment {
+                CellAlignment::Left => x + style.padding.left,
+                CellAlignment::Center => {
+                    // For center alignment, we need to calculate based on actual text width
+                    let text_width = measure_text(&display_text, font.clone(), font_size);
+                    x + style.padding.left + (available_width - text_width) / 2.0
+                }
+                CellAlignment::Right => {
+                    let text_width = measure_text(&display_text, font.clone(), font_size);
+                    x + width - style.padding.right - text_width
+                }
+                CellAlignment::Justify => x + style.padding.left,
+            };
+
+            // Vertically center with padding applied
+            let text_y = style
+                .padding
+                .pad_vertically(&page.coordinate_system(), y + height / 2.0);
+
+            // Only render text if we have something to display
+            if !display_text.is_empty() {
+                let text_obj = page
+                    .text()
+                    .set_font(font, font_size)
+                    .set_fill_color(text_color);
+
+                text_obj.at(text_x, text_y).write(&display_text)?;
             }
-            CellAlignment::Right => {
-                let text_width = measure_text(&display_text, font.clone(), font_size);
-                x + width - style.padding.right - text_width
-            }
-            CellAlignment::Justify => x + style.padding.left,
-        };
-
-        // Vertically center with padding applied
-        let text_y = style
-            .padding
-            .pad_vertically(&page.coordinate_system(), y + height / 2.0);
-
-        // Only render text if we have something to display
-        if !display_text.is_empty() {
-            let text_obj = page
-                .text()
-                .set_font(font, font_size)
-                .set_fill_color(text_color);
-
-            text_obj.at(text_x, text_y).write(&display_text)?;
         }
 
         Ok(())
@@ -663,5 +824,116 @@ mod tests {
         // Verify width constraint
         let result_width = measure_text(&result, font, font_size);
         assert!(result_width <= max_width);
+    }
+
+    // ================== wrap_text_to_lines tests (Issue #131) ==================
+
+    #[test]
+    fn test_wrap_text_to_lines_no_wrap_needed() {
+        let renderer = TableRenderer::new();
+        let text = "Short text";
+        let max_width = 200.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], "Short text");
+    }
+
+    #[test]
+    fn test_wrap_text_to_lines_simple_wrap() {
+        let renderer = TableRenderer::new();
+        let text = "This is a longer text that should wrap to multiple lines";
+        let max_width = 80.0; // Narrow width to force wrapping
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        assert!(lines.len() > 1, "Text should wrap to multiple lines");
+
+        // Verify all lines fit within max_width
+        for line in &lines {
+            let line_width = measure_text(line, font.clone(), font_size);
+            assert!(
+                line_width <= max_width + 1.0, // Small tolerance for floating point
+                "Line '{}' exceeds max_width (width: {}, max: {})",
+                line,
+                line_width,
+                max_width
+            );
+        }
+    }
+
+    #[test]
+    fn test_wrap_text_to_lines_preserves_newlines() {
+        let renderer = TableRenderer::new();
+        let text = "Line one\nLine two\nLine three";
+        let max_width = 200.0; // Wide enough for any single line
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[0], "Line one");
+        assert_eq!(lines[1], "Line two");
+        assert_eq!(lines[2], "Line three");
+    }
+
+    #[test]
+    fn test_wrap_text_to_lines_empty_input() {
+        let renderer = TableRenderer::new();
+        let text = "";
+        let max_width = 100.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], "");
+    }
+
+    #[test]
+    fn test_wrap_text_to_lines_single_word_too_long() {
+        let renderer = TableRenderer::new();
+        let text = "Supercalifragilisticexpialidocious";
+        let max_width = 50.0; // Too narrow for the word
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        // Word should be broken across lines
+        assert!(lines.len() >= 1, "Should produce at least one line");
+
+        // When we join all lines, we should get the original word
+        let joined: String = lines.join("");
+        assert_eq!(joined, text);
+    }
+
+    #[test]
+    fn test_wrap_text_to_lines_multiple_spaces() {
+        let renderer = TableRenderer::new();
+        let text = "Word   with   spaces";
+        let max_width = 200.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        assert_eq!(lines.len(), 1);
+        // The implementation treats each space-separated segment as a word
+        assert!(!lines[0].is_empty());
+    }
+
+    #[test]
+    fn test_wrap_text_to_lines_unicode() {
+        let renderer = TableRenderer::new();
+        let text = "日本語テキスト with English words";
+        let max_width = 100.0;
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+
+        let lines = renderer.wrap_text_to_lines(text, max_width, &font, font_size);
+        // Should handle unicode without panic
+        assert!(!lines.is_empty());
     }
 }

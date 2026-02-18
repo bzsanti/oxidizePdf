@@ -4,14 +4,71 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-13 PM - Phase 6: Test Fixtures & BER Support |
+| **Last Session** | 2026-02-18 - Issue #127 Fixed, v1.7.1 Prepared |
 | **Branch** | develop_santi |
-| **Version** | v1.7.0 |
-| **Tests** | 5,870 unit + 29 integration + 187 doc tests passing |
+| **Version** | v1.7.1 (pending release) |
+| **Tests** | 5,877 unit + 29 integration + 190 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-02-18) - Issue #127 Fixed, v1.7.1 Prepared
+- **Issue #127 Fixed**: OTF/CFF font rendering artifacts in Firefox/pdf.js
+  - **Problem**: OpenType CFF fonts (like Proxima Nova) displayed unicode artifacts in Firefox/Librewolf on Linux
+  - **Root Cause**: `CIDToGIDMap` was incorrectly generated for `CIDFontType0` (CFF) fonts
+  - **ISO Reference**: Per ISO 32000-1:2008 §9.7.4.2, CFF fonts should NOT have `CIDToGIDMap`
+  - **Solution**: Only generate `CIDToGIDMap` for `CIDFontType2` (TrueType) fonts
+  - **File Modified**: `oxidize-pdf-core/src/writer/pdf_writer/mod.rs`
+- **Tests**: 5,877 unit tests passing
+- **Clippy**: Zero warnings
+- **Version**: Updated to v1.7.1
+- **CHANGELOG**: Updated with fix details
+- **Commits**:
+  - `5b5f4db` - fix(fonts): remove CIDToGIDMap from CFF fonts per ISO 32000-1 §9.7.4.2
+  - `d549257` - chore(release): prepare v1.7.1
+- **Status**: Awaiting CI green before PR merge and release
+
+### Session Summary (2026-02-17) - Issues #128/#131 Fixed, #127 Evaluated
+- **Issue #128 Phase 3.5 Fixed**: Full resource resolution in `page.rs`
+  - User banana59 reported v1.7.0 still produces blank PDFs in some cases
+  - Root cause: XObject, ExtGState, ColorSpace, Pattern, Shading remained as unresolved refs
+  - ~120 lines added to `from_parsed_with_content()` resolving all resource types
+  - New test: `test_merge_preserves_graphics_content_phase_35`
+- **Issue #131 Fixed**: `text_wrap(true)` now wraps instead of truncating
+  - Bug: `CellStyle::text_wrap()` was defined but NEVER used in `render_cell_text()`
+  - Solution: Added `wrap_text_to_lines()` function (~95 lines) for word wrapping
+  - Modified `render_cell_text()` to check `style.text_wrap` and render multi-line
+  - Added 7 new tests for wrap functionality
+- **Issue #127 Evaluated**: Firefox Linux font artifacts
+  - Specific to pdf.js (Firefox PDF viewer) on Arch Linux
+  - Same PDFs render correctly in Chromium
+  - Need sample PDF from user to debug further
+- **Tests**: 5,874 unit tests passing (+5 new from Issue #131)
+- **Clippy**: Zero warnings
+- **Files Modified**:
+  - `oxidize-pdf-core/src/page.rs`: Phase 3.5 resource resolution
+  - `oxidize-pdf-core/src/advanced_tables/table_renderer.rs`: text_wrap implementation
+  - `oxidize-pdf-core/src/operations/merge_tests.rs`: new graphics merge test
+
+### Session Summary (2026-02-16) - Release v1.7.0
+- **Release v1.7.0**: Published to crates.io via GitHub Actions
+  - Digital Signatures API (Phase 5-6 complete)
+  - PDF/A Validation module
+  - BER-to-DER security hardening
+  - Issue #128 fix (merge_pdfs blank PDF)
+- **Issue #128 Fixed**: `merge_pdfs()` now preserves original content
+  - Root cause: old implementation reconstructed pages (lossy)
+  - Solution: use `Page::from_parsed_with_content()` to copy raw streams
+  - Removed ~200 lines of dead code
+- **CI Fix**: Added feature guards to examples
+  - `high_performance_demo.rs`: guard performance imports with `cfg(feature)`
+  - `signature_integration_test.rs`: require signatures feature
+- **PR Workflow**:
+  - PR #129: develop_santi → develop (merged)
+  - PR #130: develop → main (merged)
+  - Tag v1.7.0 created and pushed
+- **Commits**: `51187c5` (CI fix), `8d24767` (merge), `b15585a` (release merge)
 
 ### Session Summary (2026-02-13 PM) - Phase 6: Test Fixtures & BER Support
 - **BER-to-DER Conversion**: Added `ber_to_der()` function in `cms.rs`
