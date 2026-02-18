@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact**: CFF/OpenType fonts (like Proxima Nova, Source Sans) now render correctly in pdf.js
   - **Location**: `oxidize-pdf-core/src/writer/pdf_writer/mod.rs`
 
+- **🔧 PDF Merge Full Resource Resolution (Issue #128 Phase 3.5)** - XObject, ExtGState, ColorSpace, Pattern, Shading resources now preserved
+- **🔧 Text Wrap in Tables (Issue #131)** - `text_wrap(true)` now wraps text instead of truncating
+
 ### Technical
 - **Tests**: 5,877 unit tests passing
 - **Breaking Changes**: None
