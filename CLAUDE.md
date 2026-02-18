@@ -4,14 +4,30 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-17 - Issues #128/#131 Fixed, #127 Evaluated |
+| **Last Session** | 2026-02-18 - Issue #127 Fixed, v1.7.1 Prepared |
 | **Branch** | develop_santi |
-| **Version** | v1.7.0 (released) → v1.7.1-dev |
-| **Tests** | 5,874 unit + 29 integration + 190 doc tests passing |
+| **Version** | v1.7.1 (pending release) |
+| **Tests** | 5,877 unit + 29 integration + 190 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-02-18) - Issue #127 Fixed, v1.7.1 Prepared
+- **Issue #127 Fixed**: OTF/CFF font rendering artifacts in Firefox/pdf.js
+  - **Problem**: OpenType CFF fonts (like Proxima Nova) displayed unicode artifacts in Firefox/Librewolf on Linux
+  - **Root Cause**: `CIDToGIDMap` was incorrectly generated for `CIDFontType0` (CFF) fonts
+  - **ISO Reference**: Per ISO 32000-1:2008 §9.7.4.2, CFF fonts should NOT have `CIDToGIDMap`
+  - **Solution**: Only generate `CIDToGIDMap` for `CIDFontType2` (TrueType) fonts
+  - **File Modified**: `oxidize-pdf-core/src/writer/pdf_writer/mod.rs`
+- **Tests**: 5,877 unit tests passing
+- **Clippy**: Zero warnings
+- **Version**: Updated to v1.7.1
+- **CHANGELOG**: Updated with fix details
+- **Commits**:
+  - `5b5f4db` - fix(fonts): remove CIDToGIDMap from CFF fonts per ISO 32000-1 §9.7.4.2
+  - `d549257` - chore(release): prepare v1.7.1
+- **Status**: Awaiting CI green before PR merge and release
 
 ### Session Summary (2026-02-17) - Issues #128/#131 Fixed, #127 Evaluated
 - **Issue #128 Phase 3.5 Fixed**: Full resource resolution in `page.rs`
