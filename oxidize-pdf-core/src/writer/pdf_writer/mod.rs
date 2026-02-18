@@ -1474,21 +1474,26 @@ impl<W: Write> PdfWriter<W> {
         );
         cid_font.set("W", Object::Array(w_array));
 
-        // CIDToGIDMap - Generate proper mapping from CID (Unicode) to GlyphID
-        // This is critical for Type0 fonts to work correctly
-        // If we subsetted the font, use the new glyph mapping
-        let cid_to_gid_map = self.generate_cid_to_gid_map(font, subset_glyph_mapping.as_ref())?;
-        if !cid_to_gid_map.is_empty() {
-            // Write the CIDToGIDMap as a stream
-            let cid_to_gid_map_id = self.allocate_object_id();
-            let mut map_dict = Dictionary::new();
-            map_dict.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
-            let map_stream = Object::Stream(map_dict, cid_to_gid_map);
-            self.write_object(cid_to_gid_map_id, map_stream)?;
-            cid_font.set("CIDToGIDMap", Object::Reference(cid_to_gid_map_id));
-        } else {
-            cid_font.set("CIDToGIDMap", Object::Name("Identity".to_string()));
+        // CIDToGIDMap - Only required for CIDFontType2 (TrueType)
+        // For CIDFontType0 (CFF/OpenType), CIDToGIDMap should NOT be present per ISO 32000-1:2008 §9.7.4.2
+        // CFF fonts use CIDs directly as glyph identifiers, so no mapping is needed
+        if cid_font_subtype == "CIDFontType2" {
+            // TrueType fonts need CIDToGIDMap to map CIDs (Unicode code points) to Glyph IDs
+            let cid_to_gid_map =
+                self.generate_cid_to_gid_map(font, subset_glyph_mapping.as_ref())?;
+            if !cid_to_gid_map.is_empty() {
+                // Write the CIDToGIDMap as a stream
+                let cid_to_gid_map_id = self.allocate_object_id();
+                let mut map_dict = Dictionary::new();
+                map_dict.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
+                let map_stream = Object::Stream(map_dict, cid_to_gid_map);
+                self.write_object(cid_to_gid_map_id, map_stream)?;
+                cid_font.set("CIDToGIDMap", Object::Reference(cid_to_gid_map_id));
+            } else {
+                cid_font.set("CIDToGIDMap", Object::Name("Identity".to_string()));
+            }
         }
+        // Note: For CIDFontType0 (CFF), we intentionally omit CIDToGIDMap
 
         self.write_object(descendant_font_id, Object::Dictionary(cid_font))?;
 
