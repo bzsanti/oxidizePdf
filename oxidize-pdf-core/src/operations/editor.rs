@@ -22,6 +22,11 @@ use crate::parser::{PdfDocument, PdfReader};
 use crate::writer::{PdfWriter, WriterConfig};
 use crate::{Document, Page};
 
+use super::content_injection::{
+    CircleInjectionSpec, ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec,
+    TextInjectionSpec,
+};
+
 /// Error type for PDF modification operations
 #[derive(Debug, thiserror::Error)]
 pub enum ModificationError {
@@ -112,6 +117,18 @@ pub struct PdfEditor {
     original_bytes: Vec<u8>,
     /// Editor options
     options: PdfEditorOptions,
+
+    // Pending content injections (applied on save)
+    /// Pending text injections: (page_index, spec)
+    pub(crate) pending_text_injections: Vec<(usize, TextInjectionSpec)>,
+    /// Pending image injections: (page_index, image_data, spec, format)
+    pub(crate) pending_image_injections: Vec<(usize, Vec<u8>, ImageInjectionSpec, ImageFormat)>,
+    /// Pending line injections: (page_index, spec)
+    pub(crate) pending_line_injections: Vec<(usize, LineInjectionSpec)>,
+    /// Pending rect injections: (page_index, spec)
+    pub(crate) pending_rect_injections: Vec<(usize, RectInjectionSpec)>,
+    /// Pending circle injections: (page_index, spec)
+    pub(crate) pending_circle_injections: Vec<(usize, CircleInjectionSpec)>,
 }
 
 impl std::fmt::Debug for PdfEditor {
@@ -166,6 +183,11 @@ impl PdfEditor {
             document,
             original_bytes: bytes,
             options,
+            pending_text_injections: Vec::new(),
+            pending_image_injections: Vec::new(),
+            pending_line_injections: Vec::new(),
+            pending_rect_injections: Vec::new(),
+            pending_circle_injections: Vec::new(),
         })
     }
 
