@@ -1,8 +1,9 @@
 //! PDF operations module
 //!
 //! This module provides high-level operations for manipulating PDF documents
-//! such as splitting, merging, rotating pages, and reordering.
+//! such as splitting, merging, rotating pages, reordering, and editing.
 
+pub mod editor;
 pub mod extract_images;
 pub mod merge;
 pub mod page_analysis;
@@ -29,6 +30,8 @@ pub use reorder::{
 };
 pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions, RotationAngle};
 pub use split::{split_into_pages, split_pdf, PdfSplitter, SplitMode, SplitOptions};
+
+pub use editor::{ModificationError, ModificationResult, PdfEditor, PdfEditorOptions};
 
 use crate::error::PdfError;
 
