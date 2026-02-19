@@ -476,17 +476,56 @@ cargo fmt --all --check         # Verify formatting
 cargo run --example <name>      # Run examples
 ```
 
-### Git Workflow
-1. Work on `develop_santi` branch
-2. Create PR to `main` when ready
-3. Tag releases trigger automatic pipeline
+### Git Workflow (Feature Branch)
+
+**Branch Structure:**
+```
+main ← develop ← feature/issue-XXX-description
+                ← fix/issue-XXX-description
+                ← chore/description
+```
+
+**Branch Naming Convention:**
+| Prefix | Use Case | Example |
+|--------|----------|---------|
+| `feature/` | New functionality | `feature/issue-140-pdf-signing` |
+| `fix/` | Bug fixes | `fix/issue-127-cff-fonts` |
+| `chore/` | Maintenance, deps, docs | `chore/update-dependencies` |
+
+**Development Workflow:**
+```bash
+# 1. Start from updated develop
+git checkout develop && git pull origin develop
+
+# 2. Create feature branch
+git checkout -b fix/issue-XXX-description
+
+# 3. Work, commit, push
+git add -A && git commit -m "fix: description"
+git push -u origin fix/issue-XXX-description
+
+# 4. Create PR → develop
+gh pr create --base develop
+
+# 5. After merge, delete branch
+git checkout develop && git pull
+git branch -d fix/issue-XXX-description
+```
+
+**PR Flow:**
+1. `feature/fix branch` → `develop` (feature PR)
+2. `develop` → `main` (release PR)
+3. Tag on `main` triggers release
 
 ### Release Process
 ```bash
 # NEVER use cargo-release locally!
+# 1. Merge develop → main via PR
+# 2. Create and push tag
+git checkout main && git pull
 git tag v1.2.3
 git push origin v1.2.3
-# GitHub Actions handles everything else
+# GitHub Actions handles crates.io + GitHub Release
 ```
 
 ## Test Organization (STRICT)
