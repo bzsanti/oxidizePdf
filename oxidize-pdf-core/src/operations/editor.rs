@@ -26,6 +26,7 @@ use super::content_injection::{
     CircleInjectionSpec, ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec,
     TextInjectionSpec,
 };
+use super::watermark::WatermarkSpec;
 
 /// Error type for PDF modification operations
 #[derive(Debug, thiserror::Error)]
@@ -129,6 +130,8 @@ pub struct PdfEditor {
     pub(crate) pending_rect_injections: Vec<(usize, RectInjectionSpec)>,
     /// Pending circle injections: (page_index, spec)
     pub(crate) pending_circle_injections: Vec<(usize, CircleInjectionSpec)>,
+    /// Pending watermarks: (page_indices, spec)
+    pub(crate) pending_watermarks: Vec<(Vec<usize>, WatermarkSpec)>,
 }
 
 impl std::fmt::Debug for PdfEditor {
@@ -188,6 +191,7 @@ impl PdfEditor {
             pending_line_injections: Vec::new(),
             pending_rect_injections: Vec::new(),
             pending_circle_injections: Vec::new(),
+            pending_watermarks: Vec::new(),
         })
     }
 

@@ -13,6 +13,7 @@ pub mod pdf_ocr_converter;
 pub mod reorder;
 pub mod rotate;
 pub mod split;
+pub mod watermark;
 
 pub use extract_images::{
     extract_images_from_pages, extract_images_from_pdf, ExtractImagesOptions, ExtractedImage,
@@ -37,6 +38,10 @@ pub use content_injection::{
     ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec, TextInjectionSpec,
 };
 pub use editor::{ModificationError, ModificationResult, PdfEditor, PdfEditorOptions};
+pub use watermark::{
+    PageRange as WatermarkPageRange, WatermarkContent, WatermarkError, WatermarkLayer,
+    WatermarkPosition, WatermarkResult, WatermarkSpec, Watermarker,
+};
 
 use crate::error::PdfError;
 
