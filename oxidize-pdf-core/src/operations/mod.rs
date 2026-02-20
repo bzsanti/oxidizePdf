@@ -6,6 +6,7 @@
 pub mod content_injection;
 pub mod editor;
 pub mod extract_images;
+pub mod form_filler;
 pub mod merge;
 pub mod page_analysis;
 pub mod page_extraction;
@@ -38,6 +39,9 @@ pub use content_injection::{
     ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec, TextInjectionSpec,
 };
 pub use editor::{ModificationError, ModificationResult, PdfEditor, PdfEditorOptions};
+pub use form_filler::{
+    FormFieldInfo, FormFieldType, FormFiller, FormFillerError, FormFillerOptions, FormFillerResult,
+};
 pub use watermark::{
     PageRange as WatermarkPageRange, WatermarkContent, WatermarkError, WatermarkLayer,
     WatermarkPosition, WatermarkResult, WatermarkSpec, Watermarker,

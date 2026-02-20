@@ -26,6 +26,7 @@ use super::content_injection::{
     CircleInjectionSpec, ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec,
     TextInjectionSpec,
 };
+use super::form_filler::FormFieldInfo;
 use super::watermark::WatermarkSpec;
 
 /// Error type for PDF modification operations
@@ -132,6 +133,14 @@ pub struct PdfEditor {
     pub(crate) pending_circle_injections: Vec<(usize, CircleInjectionSpec)>,
     /// Pending watermarks: (page_indices, spec)
     pub(crate) pending_watermarks: Vec<(Vec<usize>, WatermarkSpec)>,
+
+    // Form filling state
+    /// Detected form fields from existing PDF
+    pub(crate) pending_form_fields: Vec<FormFieldInfo>,
+    /// Pending form field updates: (field_name, new_value)
+    pub(crate) pending_form_updates: Vec<(String, String)>,
+    /// Whether the form should be flattened on save
+    pub(crate) form_flattened: bool,
 }
 
 impl std::fmt::Debug for PdfEditor {
@@ -192,6 +201,9 @@ impl PdfEditor {
             pending_rect_injections: Vec::new(),
             pending_circle_injections: Vec::new(),
             pending_watermarks: Vec::new(),
+            pending_form_fields: Vec::new(),
+            pending_form_updates: Vec::new(),
+            form_flattened: false,
         })
     }
 
@@ -296,6 +308,24 @@ impl PdfEditor {
     /// Get the editor options
     pub fn options(&self) -> &PdfEditorOptions {
         &self.options
+    }
+
+    // Form filling methods for testing
+
+    /// Add a form field for testing purposes
+    #[doc(hidden)]
+    pub fn add_test_form_field(&mut self, field: super::form_filler::FormFieldInfo) {
+        self.pending_form_fields.push(field);
+    }
+
+    /// Check if the form is marked for flattening
+    pub fn is_form_flattened(&self) -> bool {
+        self.form_flattened
+    }
+
+    /// Get the number of pending form updates
+    pub fn pending_form_update_count(&self) -> usize {
+        self.pending_form_updates.len()
     }
 }
 
