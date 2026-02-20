@@ -3,6 +3,7 @@
 //! This module provides high-level operations for manipulating PDF documents
 //! such as splitting, merging, rotating pages, reordering, and editing.
 
+pub mod annotation_injector;
 pub mod content_injection;
 pub mod editor;
 pub mod extract_images;
@@ -35,6 +36,12 @@ pub use reorder::{
 pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions, RotationAngle};
 pub use split::{split_into_pages, split_pdf, PdfSplitter, SplitMode, SplitOptions};
 
+pub use annotation_injector::{
+    AnnotationColor, AnnotationIcon, AnnotationInjector, AnnotationInjectorError,
+    AnnotationInjectorResult, AnnotationRect, HighlightAnnotationSpec, LinkAction,
+    LinkAnnotationSpec, LinkHighlightMode, PendingAnnotation, StampAnnotationSpec, StampName,
+    TextAnnotationSpec,
+};
 pub use content_injection::{
     CircleInjectionSpec, ContentInjectionError, ContentInjectionResult, ContentInjector,
     ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec, TextInjectionSpec,

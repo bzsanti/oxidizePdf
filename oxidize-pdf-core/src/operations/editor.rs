@@ -22,6 +22,7 @@ use crate::parser::{PdfDocument, PdfReader};
 use crate::writer::{PdfWriter, WriterConfig};
 use crate::{Document, Page};
 
+use super::annotation_injector::PendingAnnotation;
 use super::content_injection::{
     CircleInjectionSpec, ImageFormat, ImageInjectionSpec, LineInjectionSpec, RectInjectionSpec,
     TextInjectionSpec,
@@ -150,6 +151,10 @@ pub struct PdfEditor {
     pub(crate) pending_resizes: Vec<(usize, f64, f64, bool)>,
     /// Pending page deletions (page indices)
     pub(crate) pending_deletions: Vec<usize>,
+
+    // Annotation injection state
+    /// Pending annotations: (page_index, annotation)
+    pub(crate) pending_annotations: Vec<(usize, PendingAnnotation)>,
 }
 
 impl std::fmt::Debug for PdfEditor {
@@ -216,6 +221,7 @@ impl PdfEditor {
             pending_crop_boxes: Vec::new(),
             pending_resizes: Vec::new(),
             pending_deletions: Vec::new(),
+            pending_annotations: Vec::new(),
         })
     }
 
@@ -355,6 +361,11 @@ impl PdfEditor {
     /// Get the number of pending page deletions
     pub fn pending_deletion_count(&self) -> usize {
         self.pending_deletions.len()
+    }
+
+    /// Get the number of pending annotations
+    pub fn pending_annotation_count(&self) -> usize {
+        self.pending_annotations.len()
     }
 }
 
