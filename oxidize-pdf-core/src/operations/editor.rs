@@ -27,6 +27,7 @@ use super::content_injection::{
     TextInjectionSpec,
 };
 use super::form_filler::FormFieldInfo;
+use super::page_manipulator::CropBox;
 use super::watermark::WatermarkSpec;
 
 /// Error type for PDF modification operations
@@ -141,6 +142,14 @@ pub struct PdfEditor {
     pub(crate) pending_form_updates: Vec<(String, String)>,
     /// Whether the form should be flattened on save
     pub(crate) form_flattened: bool,
+
+    // Page manipulation state
+    /// Pending crop box updates: (page_index, crop_box)
+    pub(crate) pending_crop_boxes: Vec<(usize, CropBox)>,
+    /// Pending resize updates: (page_index, new_width, new_height, scale_content)
+    pub(crate) pending_resizes: Vec<(usize, f64, f64, bool)>,
+    /// Pending page deletions (page indices)
+    pub(crate) pending_deletions: Vec<usize>,
 }
 
 impl std::fmt::Debug for PdfEditor {
@@ -204,6 +213,9 @@ impl PdfEditor {
             pending_form_fields: Vec::new(),
             pending_form_updates: Vec::new(),
             form_flattened: false,
+            pending_crop_boxes: Vec::new(),
+            pending_resizes: Vec::new(),
+            pending_deletions: Vec::new(),
         })
     }
 
@@ -326,6 +338,23 @@ impl PdfEditor {
     /// Get the number of pending form updates
     pub fn pending_form_update_count(&self) -> usize {
         self.pending_form_updates.len()
+    }
+
+    // Page manipulation helper methods for testing
+
+    /// Get the number of pending crop box updates
+    pub fn pending_crop_count(&self) -> usize {
+        self.pending_crop_boxes.len()
+    }
+
+    /// Get the number of pending resize operations
+    pub fn pending_resize_count(&self) -> usize {
+        self.pending_resizes.len()
+    }
+
+    /// Get the number of pending page deletions
+    pub fn pending_deletion_count(&self) -> usize {
+        self.pending_deletions.len()
     }
 }
 

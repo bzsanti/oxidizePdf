@@ -10,6 +10,7 @@ pub mod form_filler;
 pub mod merge;
 pub mod page_analysis;
 pub mod page_extraction;
+pub mod page_manipulator;
 pub mod pdf_ocr_converter;
 pub mod reorder;
 pub mod rotate;
@@ -41,6 +42,10 @@ pub use content_injection::{
 pub use editor::{ModificationError, ModificationResult, PdfEditor, PdfEditorOptions};
 pub use form_filler::{
     FormFieldInfo, FormFieldType, FormFiller, FormFillerError, FormFillerOptions, FormFillerResult,
+};
+pub use page_manipulator::{
+    CropBox, PageManipulator, PageManipulatorError, PageManipulatorResult, ResizeMode,
+    ResizeOptions,
 };
 pub use watermark::{
     PageRange as WatermarkPageRange, WatermarkContent, WatermarkError, WatermarkLayer,
