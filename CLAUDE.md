@@ -4,14 +4,45 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-20 - FormFiller API (TDD Phase 3-4) |
+| **Last Session** | 2026-02-20 - AnnotationInjector API (TDD Phase 5-6 COMPLETE) |
 | **Branch** | feature/pdf-editor |
 | **Version** | v1.7.1 |
-| **Tests** | 5,980 unit + 56 integration + 190 doc tests passing |
+| **Tests** | 6,044 unit + 88 integration + 190 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-02-20 PM) - PageManipulator & AnnotationInjector APIs (TDD Phase 5-6 COMPLETE)
+- **TDD Plan**: Completed 6-phase plan for PDF modification capabilities
+- **Phase 5 Complete**: `PageManipulator` API
+  - `CropBox` struct with `from_margins()`, `from_margins_lbrt()` for logical page cropping
+  - `ResizeMode` enum: Scale(factor), ToSize(w, h), ToA4, ToLetter
+  - `ResizeOptions` struct with `preserve_aspect_ratio` flag
+  - `PageManipulator` static methods: `crop_page()`, `resize_page()`, `delete_page()`, `delete_pages()`
+  - `PageManipulatorError` enum: InvalidCropBox, CannotDeleteLastPage, PageIndexOutOfBounds, ModificationFailed
+  - ISO reference: CropBox per ISO 32000-1 §14.11.2
+  - 31 unit tests + 18 integration tests
+- **Phase 6 Complete**: `AnnotationInjector` API
+  - `AnnotationIcon` enum: Note, Comment, Key, Help, NewParagraph, Paragraph, Insert
+  - `AnnotationRect` struct with validation and `to_pdf_array()`
+  - `AnnotationColor` struct with RGB presets (yellow, red, green, blue)
+  - `TextAnnotationSpec` for sticky notes with icon, color, open state
+  - `HighlightAnnotationSpec` for text highlights with quad points
+  - `LinkAnnotationSpec` for URL and internal page links with highlight modes
+  - `LinkAction` enum: Uri, GoToPage, GoToNamed
+  - `LinkHighlightMode` enum: None, Invert, Outline, Push
+  - `StampName` enum: 14 standard stamps per ISO 32000-1 (Approved, Draft, Confidential, etc.)
+  - `StampAnnotationSpec` for stamp annotations with contents
+  - `PendingAnnotation` enum for deferred annotation application
+  - `AnnotationInjector` static methods: `add_text_note()`, `add_highlight()`, `add_link_url()`, `add_link_page()`, `add_stamp()`
+  - `AnnotationInjectorError` enum: PageIndexOutOfBounds, InvalidRect, InvalidContent, InvalidLinkTarget, AnnotationFailed
+  - 37 unit tests + 14 integration tests
+- **Commits**:
+  - `fb4e1e8` - feat(operations): add PageManipulator API for page manipulation (Phase 5)
+  - `2b7ed2e` - feat(operations): add AnnotationInjector API for PDF annotations (Phase 6)
+- **Branch**: `feature/pdf-editor` pushed to origin
+- **6-Phase TDD Plan COMPLETE**: All PDF modification capabilities implemented
 
 ### Session Summary (2026-02-20) - Watermarking & FormFiller APIs (TDD Phase 3-4)
 - **TDD Plan**: Continuing 6-phase plan for PDF modification capabilities
@@ -41,7 +72,6 @@
   - `70ea804` - feat(operations): add Watermarking API for PDF modification (Phase 3)
   - `7768581` - feat(operations): add FormFiller API for form field manipulation (Phase 4)
 - **Branch**: `feature/pdf-editor` pushed to origin
-- **Next**: Phases 5-6 (Page Manipulation, Annotation Injection)
 
 ### Session Summary (2026-02-19) - PDF Modification TDD (Phases 1-2)
 - **TDD Plan**: Implementing 6-phase plan for PDF modification capabilities
