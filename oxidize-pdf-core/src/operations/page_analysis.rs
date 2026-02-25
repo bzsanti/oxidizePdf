@@ -1454,6 +1454,10 @@ impl PageContentAnalyzer {
                                 bits_per_component,
                             )?
                         }
+                        "JBIG2Decode" => {
+                            // JBIG2 is a bilevel (1-bit) format like CCITT fax
+                            self.convert_ccitt_to_png_for_ocr(&decoded_data, width, height)?
+                        }
                         _ => {
                             return Err(OperationError::ParseError(format!(
                                 "Unsupported image filter: {}",
@@ -1502,6 +1506,10 @@ impl PageContentAnalyzer {
                                     color_space,
                                     bits_per_component,
                                 )?,
+                                "JBIG2Decode" => {
+                                    // JBIG2 is a bilevel (1-bit) format like CCITT fax
+                                    self.convert_ccitt_to_png_for_ocr(&decoded_data, width, height)?
+                                }
                                 _ => {
                                     return Err(OperationError::ParseError(format!(
                                         "Unsupported image filter in array: {}",
@@ -2331,6 +2339,66 @@ mod tests {
             PageType::Mixed
         };
         assert_eq!(page_type, PageType::Mixed);
+    }
+
+    /// Verify that JBIG2Decode-filtered image streams no longer crash the OCR path.
+    ///
+    /// Regression test for the "Unsupported image filter: JBIG2Decode" error.
+    #[test]
+    fn test_jbig2decode_filter_no_longer_errors_in_ocr_path() {
+        use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
+        use crate::{Document, Page};
+        use std::collections::HashMap;
+        use tempfile::TempDir;
+
+        // Create a minimal PDF so we can instantiate PageContentAnalyzer
+        let temp_dir = TempDir::new().unwrap();
+        let pdf_path = temp_dir.path().join("test.pdf");
+        let mut doc = Document::new();
+        doc.add_page(Page::a4());
+        doc.save(&pdf_path).unwrap();
+
+        let analyzer = PageContentAnalyzer::from_file(&pdf_path).unwrap();
+
+        // Build a minimal PdfStream that claims to use JBIG2Decode.
+        // The data doesn't need to be valid JBIG2 — the decoder is lenient.
+        let mut dict_map: HashMap<PdfName, PdfObject> = HashMap::new();
+        dict_map.insert(
+            PdfName("Width".to_string()),
+            PdfObject::Integer(4),
+        );
+        dict_map.insert(
+            PdfName("Height".to_string()),
+            PdfObject::Integer(4),
+        );
+        dict_map.insert(
+            PdfName("BitsPerComponent".to_string()),
+            PdfObject::Integer(1),
+        );
+        dict_map.insert(
+            PdfName("Filter".to_string()),
+            PdfObject::Name(PdfName("JBIG2Decode".to_string())),
+        );
+        // Provide enough bytes: the JBIG2 decoder needs at least 9 bytes
+        // to attempt embedded-stream parsing without an early error.
+        let stream_data = vec![0u8; 16];
+
+        let stream = PdfStream {
+            dict: PdfDictionary(dict_map),
+            data: stream_data,
+        };
+
+        let result = analyzer.extract_image_stream_for_ocr(&stream);
+
+        // The result may be Ok or Err (the decoder is incomplete), but it must
+        // NOT be the "Unsupported image filter: JBIG2Decode" hard error.
+        if let Err(err) = &result {
+            let msg = err.to_string();
+            assert!(
+                !msg.contains("Unsupported image filter: JBIG2Decode"),
+                "JBIG2Decode should no longer produce 'Unsupported image filter' error, got: {msg}"
+            );
+        }
     }
 }
 
