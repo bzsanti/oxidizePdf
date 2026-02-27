@@ -6,6 +6,7 @@
 pub mod ccitt;
 pub mod dct;
 pub mod jbig2;
+pub mod mq_coder;
 
 pub use ccitt::decode_ccitt;
 pub use dct::{decode_dct, parse_jpeg_info, JpegColorSpace, JpegInfo};
