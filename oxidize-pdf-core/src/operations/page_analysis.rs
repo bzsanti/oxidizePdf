@@ -2363,14 +2363,8 @@ mod tests {
         // Build a minimal PdfStream that claims to use JBIG2Decode.
         // The data doesn't need to be valid JBIG2 — the decoder is lenient.
         let mut dict_map: HashMap<PdfName, PdfObject> = HashMap::new();
-        dict_map.insert(
-            PdfName("Width".to_string()),
-            PdfObject::Integer(4),
-        );
-        dict_map.insert(
-            PdfName("Height".to_string()),
-            PdfObject::Integer(4),
-        );
+        dict_map.insert(PdfName("Width".to_string()), PdfObject::Integer(4));
+        dict_map.insert(PdfName("Height".to_string()), PdfObject::Integer(4));
         dict_map.insert(
             PdfName("BitsPerComponent".to_string()),
             PdfObject::Integer(1),
