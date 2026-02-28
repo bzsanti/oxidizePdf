@@ -271,7 +271,7 @@ impl GridSystem {
                 let available_width = column_width * span.columns as f64;
                 component.preferred_height(available_width)
             })
-            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| a.total_cmp(b))
             .unwrap_or(default_height)
     }
 }

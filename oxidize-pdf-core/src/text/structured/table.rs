@@ -83,10 +83,7 @@ fn cluster_columns(x_positions: &[f64], tolerance: f64) -> Vec<Column> {
     }
 
     let mut sorted = x_positions.to_vec();
-    sorted.sort_by(|a, b| {
-        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    sorted.sort_by(|a: &f64, b: &f64| a.total_cmp(b));
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
 
@@ -122,10 +119,7 @@ fn cluster_rows(y_positions: &[f64], tolerance: f64) -> Vec<f64> {
     }
 
     let mut sorted = y_positions.to_vec();
-    sorted.sort_by(|a, b| {
-        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal)
-    }); // Sort descending (top to bottom)
+    sorted.sort_by(|a: &f64, b: &f64| b.total_cmp(a)); // Sort descending (top to bottom)
 
     let mut clusters: Vec<Vec<f64>> = vec![vec![sorted[0]]];
 
@@ -185,10 +179,7 @@ fn find_cell_for_fragment(
         .min_by(|(_, &y1), (_, &y2)| {
             let dist1 = (fragment.y - y1).abs();
             let dist2 = (fragment.y - y2).abs();
-            // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-            dist1
-                .partial_cmp(&dist2)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            dist1.total_cmp(&dist2)
         })
         .map(|(idx, &y)| {
             if (fragment.y - y).abs() <= config.row_alignment_tolerance * 2.0 {
@@ -206,10 +197,7 @@ fn find_cell_for_fragment(
         .min_by(|(_, col1), (_, col2)| {
             let dist1 = (fragment.x - col1.x_position).abs();
             let dist2 = (fragment.x - col2.x_position).abs();
-            // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-            dist1
-                .partial_cmp(&dist2)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            dist1.total_cmp(&dist2)
         })
         .map(|(idx, col)| {
             if (fragment.x - col.x_position).abs() <= config.column_alignment_tolerance * 2.0 {

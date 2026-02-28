@@ -134,11 +134,7 @@ impl TextStreamer {
 
         if self.options.sort_by_position {
             // Sort by Y position (top to bottom), then X (left to right)
-            chunks.sort_by(|a, b| {
-                b.y.partial_cmp(&a.y)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .then(a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
-            });
+            chunks.sort_by(|a, b| b.y.total_cmp(&a.y).then(a.x.total_cmp(&b.x)));
         }
 
         chunks

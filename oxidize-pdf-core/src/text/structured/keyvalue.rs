@@ -131,12 +131,7 @@ fn group_by_y_position(fragments: &[TextFragment], tolerance: f64) -> Vec<Vec<Te
     }
 
     let mut sorted = fragments.to_vec();
-    sorted.sort_by(|a, b| {
-        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        b.y.partial_cmp(&a.y)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
-    });
+    sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then_with(|| a.x.total_cmp(&b.x)));
 
     let mut lines: Vec<Vec<TextFragment>> = vec![vec![sorted[0].clone()]];
 
