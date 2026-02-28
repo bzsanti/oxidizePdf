@@ -550,7 +550,7 @@ impl CalculationEngine {
                     .filter_map(|f| self.field_values.get(f))
                     .map(|v| v.to_number())
                     .filter(|n| !n.is_nan()) // Skip NaN values
-                    .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                    .min_by(|a, b| a.total_cmp(b))
                     .unwrap_or(0.0);
                 Ok(FieldValue::Number(min))
             }
@@ -560,7 +560,7 @@ impl CalculationEngine {
                     .filter_map(|f| self.field_values.get(f))
                     .map(|v| v.to_number())
                     .filter(|n| !n.is_nan()) // Skip NaN values
-                    .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                    .max_by(|a, b| a.total_cmp(b))
                     .unwrap_or(0.0);
                 Ok(FieldValue::Number(max))
             }

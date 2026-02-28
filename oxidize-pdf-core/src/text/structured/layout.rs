@@ -44,10 +44,7 @@ fn detect_column_boundaries(fragments: &[TextFragment], min_gap: f64) -> Vec<Col
     // Collect all X ranges (start and end of each fragment)
     let mut x_ranges: Vec<(f64, f64)> = fragments.iter().map(|f| (f.x, f.x + f.width)).collect();
 
-    x_ranges.sort_by(|a, b| {
-        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    x_ranges.sort_by(|a, b| a.0.total_cmp(&b.0));
 
     let mut boundaries = Vec::new();
 
@@ -92,12 +89,7 @@ fn assign_to_columns(
         .map(|(idx, frags)| {
             // Sort fragments in reading order (top to bottom, left to right)
             let mut sorted = frags.clone();
-            sorted.sort_by(|a, b| {
-                // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-                b.y.partial_cmp(&a.y)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .then_with(|| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
-            });
+            sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then_with(|| a.x.total_cmp(&b.x)));
 
             // Concatenate text
             let text = sorted
@@ -127,12 +119,7 @@ fn find_column_index(x: f64, boundaries: &[ColumnBoundary]) -> usize {
 /// Creates a single column section from all fragments.
 fn create_single_column_section(fragments: &[TextFragment]) -> ColumnSection {
     let mut sorted = fragments.to_vec();
-    sorted.sort_by(|a, b| {
-        // Use unwrap_or for f64 comparison (NaN sorts as Equal)
-        b.y.partial_cmp(&a.y)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal))
-    });
+    sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then_with(|| a.x.total_cmp(&b.x)));
 
     let text = sorted
         .iter()

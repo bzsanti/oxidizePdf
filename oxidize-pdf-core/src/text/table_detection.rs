@@ -291,11 +291,8 @@ impl TableDetector {
         }
 
         // Sort by confidence (highest first)
-        tables.sort_by(|a, b| {
-            b.confidence
-                .partial_cmp(&a.confidence)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        // Use total_cmp for IEEE 754 total ordering (NaN-safe, no panic)
+        tables.sort_by(|a, b| b.confidence.total_cmp(&a.confidence));
 
         Ok(tables)
     }
@@ -378,13 +375,13 @@ impl TableDetector {
             })
             .collect();
 
-        // Sort positions (return error if NaN/Infinity found)
-        positions.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        // Validate no NaN or Infinity values
+        // Validate no NaN or Infinity values BEFORE sorting
         if positions.iter().any(|p| !p.is_finite()) {
             return Err(TableDetectionError::InvalidCoordinate);
         }
+
+        // Sort positions (safe: all values are finite after validation)
+        positions.sort_by(|a, b| a.total_cmp(b));
 
         // Cluster by tolerance - group nearby positions
         let mut clusters: Vec<Vec<f64>> = vec![vec![positions[0]]];

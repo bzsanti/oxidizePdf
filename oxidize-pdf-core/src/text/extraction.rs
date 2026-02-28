@@ -498,17 +498,29 @@ impl TextExtractor {
 
     /// Sort text fragments by position and merge them appropriately
     fn sort_and_merge_fragments(&self, fragments: &mut [TextFragment]) {
-        // Sort fragments by Y position (top to bottom) then X position (left to right)
+        // Sort fragments by Y position (top to bottom) then X position (left to right).
+        //
+        // We quantize Y into bands of `newline_threshold` width so that fragments
+        // on the "same line" get identical Y keys. This ensures the comparator is
+        // a strict total order (transitive), which Rust's sort algorithm requires.
+        // Without quantization, threshold-based "same line" detection breaks
+        // transitivity: A≈B and B≈C does NOT imply A≈C.
+        let threshold = self.options.newline_threshold;
         fragments.sort_by(|a, b| {
-            // First compare Y position (with threshold for same line)
-            let y_diff = (b.y - a.y).abs();
-            if y_diff < self.options.newline_threshold {
-                // Same line, sort by X position
-                a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal)
+            // Quantize Y to nearest band (PDF Y increases upward, so negate first)
+            let band_a = if threshold > 0.0 {
+                (-a.y / threshold).round()
             } else {
-                // Different lines, sort by Y (inverted because PDF Y increases upward)
-                b.y.partial_cmp(&a.y).unwrap_or(std::cmp::Ordering::Equal)
-            }
+                -a.y
+            };
+            let band_b = if threshold > 0.0 {
+                (-b.y / threshold).round()
+            } else {
+                -b.y
+            };
+
+            // Compare by Y band (top to bottom), then by X within same band
+            band_a.total_cmp(&band_b).then_with(|| a.x.total_cmp(&b.x))
         });
 
         // Detect columns if requested
@@ -557,7 +569,7 @@ impl TextExtractor {
                 }
             }
         }
-        column_boundaries.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        column_boundaries.sort_by(|a, b| a.total_cmp(b));
 
         // Re-sort fragments by column then Y position
         if column_boundaries.len() > 1 {
@@ -578,7 +590,7 @@ impl TextExtractor {
                     col_a.cmp(&col_b)
                 } else {
                     // Same column, sort by Y position
-                    b.y.partial_cmp(&a.y).unwrap_or(std::cmp::Ordering::Equal)
+                    b.y.total_cmp(&a.y)
                 }
             });
         }

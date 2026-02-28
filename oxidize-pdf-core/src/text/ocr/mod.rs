@@ -496,11 +496,7 @@ impl OcrPostProcessor {
         }
 
         // Sort by confidence and limit results
-        suggestions.sort_by(|a, b| {
-            b.correction_confidence
-                .partial_cmp(&a.correction_confidence)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        suggestions.sort_by(|a, b| b.correction_confidence.total_cmp(&a.correction_confidence));
         suggestions.truncate(5); // Limit to top 5 suggestions
 
         suggestions
@@ -733,11 +729,7 @@ impl OcrTextFragment {
             .as_ref()
             .map(|words| {
                 let mut sorted_words: Vec<_> = words.iter().collect();
-                sorted_words.sort_by(|a, b| {
-                    a.confidence
-                        .partial_cmp(&b.confidence)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
+                sorted_words.sort_by(|a, b| a.confidence.total_cmp(&b.confidence));
                 sorted_words
             })
             .unwrap_or_default()
