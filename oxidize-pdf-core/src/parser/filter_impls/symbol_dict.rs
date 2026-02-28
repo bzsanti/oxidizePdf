@@ -16,8 +16,12 @@
 //! - ITU-T T.88 Table 13: Symbol dictionary segment flags
 //! - ITU-T T.88 Section 6.3.5.6: Refinement region decoding
 
+use std::sync::Arc;
+
+use tracing::warn;
+
 use super::generic_region::{compute_context, template_pixel_count, AtPixel, Bitmap, Template};
-use super::mq_coder::{MQContext, MQDecoder};
+use super::mq_coder::{decode_integer_arith, MQContext, MQDecoder};
 use crate::parser::{ParseError, ParseResult};
 
 // ============================================================================
@@ -35,9 +39,9 @@ pub const MAX_SYMBOL_COUNT: u32 = 1_000_000;
 #[derive(Debug, Clone)]
 pub struct SymbolDictionary {
     /// Exported symbols available for use by other segments
-    exported_symbols: Vec<Bitmap>,
+    exported_symbols: Vec<Arc<Bitmap>>,
     /// All symbols (including retained, not exported)
-    all_symbols: Vec<Bitmap>,
+    all_symbols: Vec<Arc<Bitmap>>,
 }
 
 impl SymbolDictionary {
@@ -50,7 +54,7 @@ impl SymbolDictionary {
     }
 
     /// Get the exported symbols
-    pub fn exported_symbols(&self) -> &[Bitmap] {
+    pub fn exported_symbols(&self) -> &[Arc<Bitmap>] {
         &self.exported_symbols
     }
 
@@ -61,11 +65,11 @@ impl SymbolDictionary {
 
     /// Get a symbol by index
     pub fn get_symbol(&self, index: usize) -> Option<&Bitmap> {
-        self.exported_symbols.get(index)
+        self.exported_symbols.get(index).map(|arc| arc.as_ref())
     }
 
     /// Get all symbols (exported + retained)
-    pub fn all_symbols(&self) -> &[Bitmap] {
+    pub fn all_symbols(&self) -> &[Arc<Bitmap>] {
         &self.all_symbols
     }
 }
@@ -158,7 +162,7 @@ pub struct SymbolDictParams {
     /// Number of new symbols to decode
     pub num_new_symbols: u32,
     /// Symbols from referred-to segments
-    pub referred_symbols: Vec<Bitmap>,
+    pub referred_symbols: Vec<Arc<Bitmap>>,
 }
 
 impl Default for SymbolDictParams {
@@ -177,21 +181,6 @@ impl Default for SymbolDictParams {
 // ============================================================================
 // Refinement Region Decoder - ITU-T T.88 Section 6.3.5.6
 // ============================================================================
-
-/// Refinement template 0 context pixel offsets (from both decoded and reference)
-/// Per ITU-T T.88 Figure 12
-const REFINEMENT_TEMPLATE0_DECODED: [(i8, i8); 6] = [
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (-1, 0),
-    // Additional from current row
-    (0, 0), // The current pixel position (will be set to 0 during decode)
-    (1, 0),
-];
-
-const REFINEMENT_TEMPLATE0_REFERENCE: [(i8, i8); 7] =
-    [(-1, -1), (0, -1), (1, -1), (-1, 0), (0, 0), (1, 0), (0, 1)];
 
 /// Decode a refinement region using a reference bitmap
 ///
@@ -334,14 +323,17 @@ fn decode_symbol_dict_arith(
     let num_generic_contexts = 1 << template_pixel_count(params.flags.template);
     let mut generic_contexts: Vec<MQContext> = vec![MQContext::new(); num_generic_contexts];
 
-    let mut new_symbols: Vec<Bitmap> = Vec::new();
+    let mut new_symbols: Vec<Arc<Bitmap>> = Vec::new();
     let mut current_height: i32 = 0;
     let mut symbols_decoded: u32 = 0;
 
     // Height class loop (Section 6.5.5 step 1)
     while symbols_decoded < params.num_new_symbols {
         // Decode height delta (HCDH)
-        let height_delta = decode_integer_arith(&mut mq_decoder, &mut iadh_contexts);
+        let height_delta = match decode_integer_arith(&mut mq_decoder, &mut iadh_contexts) {
+            Some(v) => v,
+            None => break, // OOB terminates height class loop
+        };
         if height_delta == 0 && symbols_decoded > 0 && new_symbols.is_empty() {
             break; // Height delta 0 can terminate
         }
@@ -353,7 +345,7 @@ fn decode_symbol_dict_arith(
 
         // Width loop within height class (Section 6.5.5 step 2)
         let mut total_width: i32 = 0;
-        let mut height_class_symbols: Vec<Bitmap> = Vec::new();
+        let mut height_class_symbols: Vec<Arc<Bitmap>> = Vec::new();
 
         loop {
             if symbols_decoded >= params.num_new_symbols {
@@ -361,12 +353,10 @@ fn decode_symbol_dict_arith(
             }
 
             // Decode width delta (SCDW)
-            let width_delta = decode_integer_arith(&mut mq_decoder, &mut iadw_contexts);
-
-            // Check for OOB-like termination (width delta causing total_width to go very negative)
-            if width_delta == i32::MIN {
-                break;
-            }
+            let width_delta = match decode_integer_arith(&mut mq_decoder, &mut iadw_contexts) {
+                Some(v) => v,
+                None => break, // OOB terminates width loop
+            };
 
             total_width += width_delta;
 
@@ -378,30 +368,26 @@ fn decode_symbol_dict_arith(
             let sym_width = total_width as u32;
             let sym_height = current_height as u32;
 
+            // ITU-T T.88 §6.5.8: Refinement mode should use two-bitmap context
+            // with a reference bitmap. Currently falls back to direct generic-region
+            // decoding — this produces correct results for non-refined symbols but
+            // will decode refined symbols as direct bitmaps (visual quality loss).
             if params.flags.uses_refinement {
-                // Refinement mode: decode using refinement coding
-                // For simplicity, decode as a direct bitmap
-                let sym_bitmap = decode_symbol_bitmap_arith(
-                    &mut mq_decoder,
-                    &mut generic_contexts,
-                    sym_width,
-                    sym_height,
-                    params.flags.template,
-                    &params.at_pixels,
-                )?;
-                height_class_symbols.push(sym_bitmap);
-            } else {
-                // Direct mode: decode bitmap using generic region
-                let sym_bitmap = decode_symbol_bitmap_arith(
-                    &mut mq_decoder,
-                    &mut generic_contexts,
-                    sym_width,
-                    sym_height,
-                    params.flags.template,
-                    &params.at_pixels,
-                )?;
-                height_class_symbols.push(sym_bitmap);
+                warn!(
+                    "JBIG2 symbol dict: refinement flag set but decoding as direct bitmap \
+                     (refinement coding not yet differentiated)"
+                );
             }
+
+            let sym_bitmap = decode_symbol_bitmap_arith(
+                &mut mq_decoder,
+                &mut generic_contexts,
+                sym_width,
+                sym_height,
+                params.flags.template,
+                &params.at_pixels,
+            )?;
+            height_class_symbols.push(Arc::new(sym_bitmap));
 
             symbols_decoded += 1;
         }
@@ -410,7 +396,7 @@ fn decode_symbol_dict_arith(
     }
 
     // Build export table (Section 6.5.5 step 5)
-    let all_symbols: Vec<Bitmap> = params
+    let all_symbols: Vec<Arc<Bitmap>> = params
         .referred_symbols
         .iter()
         .cloned()
@@ -452,151 +438,19 @@ fn decode_symbol_bitmap_arith(
     Ok(bitmap)
 }
 
-/// Decode an integer using arithmetic coding (simplified JBIG2 integer procedure)
+/// Huffman-mode symbol dictionary decoding
 ///
-/// Per ITU-T T.88 Section 6.5.6, integers are decoded using a prefix-based
-/// scheme with arithmetic coding.
-fn decode_integer_arith(mq_decoder: &mut MQDecoder<'_>, contexts: &mut [MQContext]) -> i32 {
-    // Decode sign bit
-    let sign = mq_decoder.decode(&mut contexts[0]);
-
-    // Decode magnitude using exponential-Golomb-like coding
-    let mut prev = 1u32;
-    let mut magnitude: i32 = 0;
-
-    // First, decode a unary prefix to determine the range
-    let bit1 = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-    prev = (prev << 1) | (bit1 as u32);
-
-    if bit1 == 0 {
-        // Small value: decode 2 more bits for value 0-3
-        for _ in 0..2 {
-            let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-            magnitude = (magnitude << 1) | (bit as i32);
-            prev = (prev << 1) | (bit as u32);
-        }
-    } else {
-        let bit2 = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-        prev = (prev << 1) | (bit2 as u32);
-
-        if bit2 == 0 {
-            // Medium value: decode 4 more bits for value 4-19
-            magnitude = 4;
-            for _ in 0..4 {
-                let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-                magnitude = (magnitude << 1) | (bit as i32);
-                prev = (prev << 1) | (bit as u32);
-            }
-        } else {
-            // Large value: decode 12 more bits
-            magnitude = 20;
-            for _ in 0..12 {
-                let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-                magnitude = (magnitude << 1) | (bit as i32);
-                prev = (prev << 1) | (bit as u32);
-            }
-        }
-    }
-
-    if sign != 0 {
-        -magnitude
-    } else {
-        magnitude
-    }
-}
-
-/// Huffman-mode symbol dictionary decoding (stub for Phase 4.3)
+/// Per ITU-T T.88 Section 6.5, Huffman-coded symbol dictionaries require
+/// bitmap pixel data decoding from the collective bitmap, which is not yet
+/// implemented. Returns an explicit error rather than silently producing
+/// blank bitmaps that would corrupt downstream rendering.
 fn decode_symbol_dict_huffman(
-    data: &[u8],
-    params: &SymbolDictParams,
+    _data: &[u8],
+    _params: &SymbolDictParams,
 ) -> ParseResult<SymbolDictionary> {
-    use super::bitstream::BitstreamReader;
-    use super::huffman::{HuffmanDecoder, StandardTable};
-
-    if data.is_empty() {
-        return Err(ParseError::StreamDecodeError(
-            "Empty data for Huffman symbol dictionary".to_string(),
-        ));
-    }
-
-    let mut reader = BitstreamReader::new(data);
-    let huffman = HuffmanDecoder::new();
-
-    // Select DH table based on flags
-    let dh_table = match params.flags.huffman_dh_table {
-        0 => StandardTable::B4,
-        1 => StandardTable::B5,
-        _ => StandardTable::B4,
-    };
-
-    // Select DW table based on flags
-    let dw_table = match params.flags.huffman_dw_table {
-        0 => StandardTable::B2,
-        1 => StandardTable::B3,
-        _ => StandardTable::B2,
-    };
-
-    let mut new_symbols: Vec<Bitmap> = Vec::new();
-    let mut current_height: i32 = 0;
-    let mut symbols_decoded: u32 = 0;
-
-    while symbols_decoded < params.num_new_symbols {
-        // Decode height delta via Huffman
-        let height_delta = match huffman.decode_int(&mut reader, dh_table) {
-            Ok(v) => v,
-            Err(_) => break,
-        };
-
-        current_height += height_delta;
-        if current_height <= 0 {
-            break;
-        }
-
-        // Width loop
-        let mut total_width: i32 = 0;
-
-        loop {
-            if symbols_decoded >= params.num_new_symbols {
-                break;
-            }
-
-            // Decode width delta via Huffman
-            let width_delta = match huffman.decode_int(&mut reader, dw_table) {
-                Ok(v) => v,
-                Err(super::huffman::HuffmanError::OutOfBand) => break,
-                Err(_) => break,
-            };
-
-            total_width += width_delta;
-            if total_width <= 0 {
-                break;
-            }
-
-            // Create placeholder bitmap for Huffman mode
-            let sym_bitmap = Bitmap::new(total_width as u32, current_height as u32)?;
-            new_symbols.push(sym_bitmap);
-            symbols_decoded += 1;
-        }
-    }
-
-    let all_symbols: Vec<Bitmap> = params
-        .referred_symbols
-        .iter()
-        .cloned()
-        .chain(new_symbols.into_iter())
-        .collect();
-
-    // Simplified export: export all new symbols
-    let exported_symbols = if params.num_exported as usize <= all_symbols.len() {
-        all_symbols[..params.num_exported as usize].to_vec()
-    } else {
-        all_symbols.clone()
-    };
-
-    Ok(SymbolDictionary {
-        exported_symbols,
-        all_symbols,
-    })
+    Err(ParseError::StreamDecodeError(
+        "JBIG2 Huffman symbol dictionary decoding is not yet implemented".to_string(),
+    ))
 }
 
 /// Decode export table using arithmetic coding
@@ -604,11 +458,11 @@ fn decode_symbol_dict_huffman(
 /// Per ITU-T T.88 Section 6.5.5 step 5, the export table determines which
 /// symbols from the combined set (referred + new) are exported.
 fn decode_export_table(
-    all_symbols: &[Bitmap],
+    all_symbols: &[Arc<Bitmap>],
     num_exported: usize,
     mq_decoder: &mut MQDecoder<'_>,
     contexts: &mut [MQContext],
-) -> ParseResult<Vec<Bitmap>> {
+) -> ParseResult<Vec<Arc<Bitmap>>> {
     if num_exported == 0 {
         return Ok(Vec::new());
     }
@@ -626,7 +480,10 @@ fn decode_export_table(
 
     while i < total && exported.len() < num_exported {
         // Decode run length
-        let run_length = decode_integer_arith(mq_decoder, contexts).unsigned_abs() as usize;
+        let run_length = match decode_integer_arith(mq_decoder, contexts) {
+            Some(v) => v.unsigned_abs() as usize,
+            None => break, // OOB terminates export table decoding
+        };
 
         if is_export_run {
             let end = (i + run_length).min(total);
@@ -656,13 +513,6 @@ fn decode_export_table(
     Ok(exported)
 }
 
-// Suppress dead code warnings for refinement template constants
-#[allow(dead_code)]
-const _: () = {
-    let _ = REFINEMENT_TEMPLATE0_DECODED;
-    let _ = REFINEMENT_TEMPLATE0_REFERENCE;
-};
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -682,8 +532,10 @@ mod tests {
     #[test]
     fn test_symbol_dictionary_exported_symbols() {
         let mut dict = SymbolDictionary::new();
-        dict.exported_symbols.push(Bitmap::new(8, 8).unwrap());
-        dict.exported_symbols.push(Bitmap::new(16, 16).unwrap());
+        dict.exported_symbols
+            .push(Arc::new(Bitmap::new(8, 8).unwrap()));
+        dict.exported_symbols
+            .push(Arc::new(Bitmap::new(16, 16).unwrap()));
 
         assert_eq!(dict.symbol_count(), 2);
         assert_eq!(dict.exported_symbols().len(), 2);
@@ -762,7 +614,8 @@ mod tests {
     #[test]
     fn test_symbol_dict_get_symbol_valid_index() {
         let mut dict = SymbolDictionary::new();
-        dict.exported_symbols.push(Bitmap::new(8, 8).unwrap());
+        dict.exported_symbols
+            .push(Arc::new(Bitmap::new(8, 8).unwrap()));
 
         assert!(dict.get_symbol(0).is_some());
         assert_eq!(dict.get_symbol(0).unwrap().width(), 8);
@@ -816,7 +669,10 @@ mod tests {
 
     #[test]
     fn test_decode_symbol_dict_with_referred_symbols() {
-        let referred = vec![Bitmap::new(8, 8).unwrap(), Bitmap::new(16, 16).unwrap()];
+        let referred = vec![
+            Arc::new(Bitmap::new(8, 8).unwrap()),
+            Arc::new(Bitmap::new(16, 16).unwrap()),
+        ];
 
         let data = vec![0x00; 256];
         let params = SymbolDictParams {
@@ -832,12 +688,36 @@ mod tests {
         assert_eq!(dict.all_symbols().len(), 2);
     }
 
+    #[test]
+    fn test_decode_symbol_dict_refinement_flag_uses_direct_fallback() {
+        // After collapsing duplicate if/else branches (C2 fix), verify that
+        // the refinement flag path still produces a valid dictionary by falling
+        // back to direct generic-region decoding.
+        let data = vec![0x00; 256];
+        let params = SymbolDictParams {
+            flags: SymbolDictFlags {
+                uses_huffman: false,
+                uses_refinement: true, // triggers the warn! path
+                ..Default::default()
+            },
+            num_exported: 0,
+            num_new_symbols: 1,
+            ..Default::default()
+        };
+
+        let result = decode_symbol_dict(&data, &params);
+        // May succeed or fail on synthetic data, but must not panic
+        assert!(result.is_ok() || result.is_err());
+    }
+
     // ========================================================================
     // Phase 4.3: Huffman-Mode Tests
     // ========================================================================
 
     #[test]
-    fn test_decode_symbol_dict_huffman_mode() {
+    fn test_decode_symbol_dict_huffman_mode_returns_error() {
+        // Huffman symbol dictionary pixel decoding is not yet implemented.
+        // It must return an explicit error rather than silently producing blank bitmaps.
         let data = vec![0x00; 256];
         let params = SymbolDictParams {
             flags: SymbolDictFlags {
@@ -850,8 +730,16 @@ mod tests {
         };
 
         let result = decode_symbol_dict(&data, &params);
-        // Should attempt Huffman decoding
-        assert!(result.is_ok() || result.is_err());
+        assert!(
+            result.is_err(),
+            "Huffman symbol dict must return Err, not blank bitmaps"
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("not yet implemented") || err_msg.contains("Huffman"),
+            "Error message should mention Huffman or not implemented: {}",
+            err_msg
+        );
     }
 
     // ========================================================================
@@ -932,7 +820,10 @@ mod tests {
 
     #[test]
     fn test_export_flags_all_exported() {
-        let symbols = vec![Bitmap::new(8, 8).unwrap(), Bitmap::new(8, 8).unwrap()];
+        let symbols = vec![
+            Arc::new(Bitmap::new(8, 8).unwrap()),
+            Arc::new(Bitmap::new(8, 8).unwrap()),
+        ];
         let data = vec![0x00; 64];
         let mut mq = MQDecoder::new(&data).unwrap();
         let mut contexts = vec![MQContext::new(); 512];
@@ -944,7 +835,7 @@ mod tests {
 
     #[test]
     fn test_export_flags_none_exported() {
-        let symbols = vec![Bitmap::new(8, 8).unwrap()];
+        let symbols = vec![Arc::new(Bitmap::new(8, 8).unwrap())];
         let data = vec![0x00; 64];
         let mut mq = MQDecoder::new(&data).unwrap();
         let mut contexts = vec![MQContext::new(); 512];

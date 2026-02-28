@@ -212,6 +212,14 @@ impl Bitmap {
         self.data.clone()
     }
 
+    /// Consume the bitmap and return its packed bytes (zero-copy)
+    ///
+    /// Moves the internal packed-bit data out without cloning.
+    /// Prefer this over [`to_packed_bytes`] when the bitmap is no longer needed.
+    pub fn into_packed_bytes(self) -> Vec<u8> {
+        self.data
+    }
+
     /// Get a reference to the raw packed data
     pub fn data(&self) -> &[u8] {
         &self.data
@@ -279,32 +287,75 @@ impl Bitmap {
         let src_x_start = ((-x_offset).max(0)) as u32;
         let src_y_start = ((-y_offset).max(0)) as u32;
 
+        let pixel_width = dst_x_end - dst_x_start;
+
+        // Fast path: byte-aligned source and destination with full-byte width
+        // This processes 8 pixels per iteration instead of 1
+        let byte_aligned = (dst_x_start % 8 == 0) && (src_x_start % 8 == 0);
+
         for dy in 0..(dst_y_end - dst_y_start) {
             let dst_y = dst_y_start + dy;
             let src_y = src_y_start + dy;
 
-            for dx in 0..(dst_x_end - dst_x_start) {
-                let dst_x = dst_x_start + dx;
-                let src_x = src_x_start + dx;
+            if byte_aligned {
+                let dst_row_offset = (dst_y as usize) * self.stride + (dst_x_start as usize / 8);
+                let src_row_offset = (src_y as usize) * other.stride + (src_x_start as usize / 8);
+                let full_bytes = (pixel_width / 8) as usize;
 
-                let src_pixel = other.get_pixel(src_x, src_y);
-                let dst_pixel = self.get_pixel(dst_x, dst_y);
+                // Process full bytes
+                for b in 0..full_bytes {
+                    let src_byte = other.data[src_row_offset + b];
+                    let dst_byte = self.data[dst_row_offset + b];
+                    self.data[dst_row_offset + b] = match op {
+                        CombinationOperator::Or => dst_byte | src_byte,
+                        CombinationOperator::And => dst_byte & src_byte,
+                        CombinationOperator::Xor => dst_byte ^ src_byte,
+                        CombinationOperator::Xnor => !(dst_byte ^ src_byte),
+                        CombinationOperator::Replace => src_byte,
+                    };
+                }
 
-                let result = match op {
-                    CombinationOperator::Or => dst_pixel | src_pixel,
-                    CombinationOperator::And => dst_pixel & src_pixel,
-                    CombinationOperator::Xor => dst_pixel ^ src_pixel,
-                    CombinationOperator::Xnor => {
-                        if (dst_pixel ^ src_pixel) != 0 {
-                            0
-                        } else {
-                            1
+                // Process remaining bits (< 8) in the last partial byte
+                let remaining_bits = pixel_width % 8;
+                if remaining_bits > 0 {
+                    let mask = 0xFF_u8 << (8 - remaining_bits);
+                    let src_byte = other.data[src_row_offset + full_bytes];
+                    let dst_byte = self.data[dst_row_offset + full_bytes];
+                    let combined = match op {
+                        CombinationOperator::Or => dst_byte | src_byte,
+                        CombinationOperator::And => dst_byte & src_byte,
+                        CombinationOperator::Xor => dst_byte ^ src_byte,
+                        CombinationOperator::Xnor => !(dst_byte ^ src_byte),
+                        CombinationOperator::Replace => src_byte,
+                    };
+                    // Only update the bits within the overlap region
+                    self.data[dst_row_offset + full_bytes] = (combined & mask) | (dst_byte & !mask);
+                }
+            } else {
+                // Slow path: pixel-by-pixel for non-aligned operations
+                for dx in 0..pixel_width {
+                    let dst_x = dst_x_start + dx;
+                    let src_x = src_x_start + dx;
+
+                    let src_pixel = other.get_pixel(src_x, src_y);
+                    let dst_pixel = self.get_pixel(dst_x, dst_y);
+
+                    let result = match op {
+                        CombinationOperator::Or => dst_pixel | src_pixel,
+                        CombinationOperator::And => dst_pixel & src_pixel,
+                        CombinationOperator::Xor => dst_pixel ^ src_pixel,
+                        CombinationOperator::Xnor => {
+                            if (dst_pixel ^ src_pixel) != 0 {
+                                0
+                            } else {
+                                1
+                            }
                         }
-                    }
-                    CombinationOperator::Replace => src_pixel,
-                };
+                        CombinationOperator::Replace => src_pixel,
+                    };
 
-                self.set_pixel(dst_x, dst_y, result);
+                    self.set_pixel(dst_x, dst_y, result);
+                }
             }
         }
     }
@@ -379,72 +430,6 @@ impl Default for GenericRegionParams {
 // ============================================================================
 // Template pixel offset tables per ITU-T T.88 Figures 3-6
 // ============================================================================
-
-/// Template 0 reference pixel offsets (16 pixels)
-/// Per ITU-T T.88 Figure 3 (relative to current pixel at row y, column x)
-/// The AT pixel replaces the last entry when specified.
-const TEMPLATE0_OFFSETS: [(i8, i8); 16] = [
-    (-1, -2),
-    (0, -2),
-    (1, -2),
-    (2, -2), // Row y-2: columns x-1..x+2
-    (-2, -1),
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (2, -1), // Row y-1: columns x-2..x+2
-    (-4, 0),
-    (-3, 0),
-    (-2, 0),
-    (-1, 0), // Row y: columns x-4..x-1
-    // AT pixel positions (default offsets, can be overridden)
-    (2, -2),  // AT1 default (will be overridden by at_pixels[0])
-    (-3, -1), // AT2 default (will be overridden by at_pixels[1])
-    (2, -1),  // AT3 default (will be overridden by at_pixels[2])
-];
-
-/// Template 1 reference pixel offsets (13 pixels)
-/// Per ITU-T T.88 Figure 4
-const TEMPLATE1_OFFSETS: [(i8, i8); 13] = [
-    (-1, -2),
-    (0, -2),
-    (1, -2),
-    (2, -2), // Row y-2
-    (-2, -1),
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (2, -1), // Row y-1
-    (-3, 0),
-    (-2, 0),
-    (-1, 0), // Row y
-    (3, -1), // AT1 default
-];
-
-/// Template 2 reference pixel offsets (10 pixels)
-/// Per ITU-T T.88 Figure 5
-const TEMPLATE2_OFFSETS: [(i8, i8); 10] = [
-    (-1, -2),
-    (0, -2),
-    (1, -2), // Row y-2
-    (-2, -1),
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (2, -1), // Row y-1
-    (-2, 0),
-    (-1, 0), // Row y
-];
-
-/// Template 3 reference pixel offsets (5 pixels)
-/// Per ITU-T T.88 Figure 6
-const TEMPLATE3_OFFSETS: [(i8, i8); 5] = [
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (2, -1), // Row y-1
-    (-1, 0), // Row y
-];
 
 /// Number of reference pixels (and context bit width) for each template
 pub fn template_pixel_count(template: Template) -> usize {
@@ -652,6 +637,97 @@ pub fn decode_generic_region_arith(
     }
 
     Ok(bitmap)
+}
+
+/// Decode a generic region using arithmetic coding, returning bytes consumed.
+///
+/// Same as [`decode_generic_region_arith`] but also returns the number of bytes
+/// consumed from `data`, enabling callers to advance past the decoded data
+/// (e.g., halftone bit-plane sequences).
+pub fn decode_generic_region_arith_with_consumed(
+    data: &[u8],
+    params: &GenericRegionParams,
+) -> ParseResult<(Bitmap, usize)> {
+    use super::mq_coder::{MQContext, MQDecoder};
+
+    if data.is_empty() {
+        return Err(ParseError::StreamDecodeError(
+            "Empty data for generic region decode".to_string(),
+        ));
+    }
+    if data.len() < 2 {
+        return Err(ParseError::StreamDecodeError(
+            "Generic region data too short for MQ decoder".to_string(),
+        ));
+    }
+
+    let mut bitmap = Bitmap::new_with_default(params.width, params.height, params.default_pixel)?;
+    let num_contexts = 1 << template_pixel_count(params.template);
+    let mut contexts: Vec<MQContext> = vec![MQContext::new(); num_contexts];
+    let mut mq_decoder = MQDecoder::new(data)?;
+
+    let mut tpgd_context = MQContext::new();
+    let mut line_is_typical = false;
+
+    for y in 0..params.height {
+        if params.is_tpgd {
+            let tpgd_bit = mq_decoder.decode(&mut tpgd_context);
+            if tpgd_bit != 0 {
+                line_is_typical = !line_is_typical;
+            }
+            if line_is_typical && y > 0 {
+                bitmap.copy_row(y, y - 1);
+                continue;
+            }
+        }
+
+        for x in 0..params.width {
+            let context_value = compute_context(&bitmap, x, y, params.template, &params.at_pixels);
+            let pixel = mq_decoder.decode(&mut contexts[context_value as usize]);
+            bitmap.set_pixel(x, y, pixel);
+        }
+    }
+
+    let consumed = mq_decoder.position();
+    Ok((bitmap, consumed))
+}
+
+/// Decode a generic region using MMR coding, returning bytes consumed.
+///
+/// Same as [`decode_generic_region_mmr`] but also returns the number of bytes
+/// consumed from `data`.
+pub fn decode_generic_region_mmr_with_consumed(
+    data: &[u8],
+    params: &GenericRegionParams,
+) -> ParseResult<(Bitmap, usize)> {
+    use super::bitstream::BitstreamReader;
+
+    if data.is_empty() {
+        return Err(ParseError::StreamDecodeError(
+            "Empty data for MMR generic region decode".to_string(),
+        ));
+    }
+
+    let width = params.width as usize;
+    let mut bitmap = Bitmap::new_with_default(params.width, params.height, params.default_pixel)?;
+    let mut reader = BitstreamReader::new(data);
+
+    let mut reference_line = vec![0u8; width];
+    let mut current_line = vec![0u8; width];
+
+    for y in 0..params.height {
+        mmr_decode_row(&mut reader, &reference_line, &mut current_line, width)?;
+        for (x, &pixel) in current_line.iter().enumerate() {
+            bitmap.set_pixel(x as u32, y, pixel);
+        }
+        std::mem::swap(&mut reference_line, &mut current_line);
+        current_line.iter_mut().for_each(|p| *p = 0);
+    }
+
+    // Byte-align and report consumed bytes
+    reader.align_to_byte();
+    let consumed = reader.byte_position();
+    Ok((bitmap, consumed))
 }
 
 /// Decode a generic region using MMR coding (CCITT Group 4)
@@ -929,23 +1005,25 @@ fn mmr_read_run_length(
 ///
 /// Simplified implementation using common CCITT white code patterns.
 fn mmr_read_white_code(reader: &mut super::bitstream::BitstreamReader<'_>) -> ParseResult<usize> {
-    // Read up to 12 bits to match white codes
+    // Read up to 13 bits to match white codes (shared makeup codes need 13 bits)
     let mut code: u32 = 0;
 
-    for bits_read in 0..12u8 {
+    for bits_read in 0..13u8 {
         let bit = reader.read_bit().map_err(|e| {
             ParseError::StreamDecodeError(format!("MMR white code read error: {}", e))
         })? as u32;
         code = (code << 1) | bit;
 
-        // Check against known white termination codes
+        // Check against known white codes (termination + makeup + shared makeup)
         if let Some(run_len) = match_white_code(code, bits_read + 1) {
             return Ok(run_len);
         }
     }
 
-    // Fallback: return 0 for unrecognized code
-    Ok(0)
+    Err(ParseError::StreamDecodeError(format!(
+        "Unrecognized MMR white code: {:#06x} (13 bits)",
+        code
+    )))
 }
 
 /// Read a black run-length code from the bitstream
@@ -963,7 +1041,10 @@ fn mmr_read_black_code(reader: &mut super::bitstream::BitstreamReader<'_>) -> Pa
         }
     }
 
-    Ok(0)
+    Err(ParseError::StreamDecodeError(format!(
+        "Unrecognized MMR black code: {:#06x} (13 bits)",
+        code
+    )))
 }
 
 /// Match a white run-length code (ITU-T T.4 Table 2)
@@ -1033,7 +1114,7 @@ fn match_white_code(code: u32, len: u8) -> Option<usize> {
         (0b00110010, 8) => Some(61),
         (0b00110011, 8) => Some(62),
         (0b00110100, 8) => Some(63),
-        // Makeup codes
+        // Makeup codes (white-specific)
         (0b11011, 5) => Some(64),
         (0b10010, 5) => Some(128),
         (0b010111, 6) => Some(192),
@@ -1044,6 +1125,37 @@ fn match_white_code(code: u32, len: u8) -> Option<usize> {
         (0b01100101, 8) => Some(512),
         (0b01101000, 8) => Some(576),
         (0b01100111, 8) => Some(640),
+        // Shared makeup codes 704-2560 (ITU-T T.4 Table 1, common to white and black)
+        (0b00000001000, 11) => Some(704),
+        (0b00000001100, 11) => Some(768),
+        (0b00000001101, 11) => Some(832),
+        (0b000000010010, 12) => Some(896),
+        (0b000000010011, 12) => Some(960),
+        (0b000000010100, 12) => Some(1024),
+        (0b000000010101, 12) => Some(1088),
+        (0b000000010110, 12) => Some(1152),
+        (0b000000010111, 12) => Some(1216),
+        (0b000000011100, 12) => Some(1280),
+        (0b000000011101, 12) => Some(1344),
+        (0b000000011110, 12) => Some(1408),
+        (0b000000011111, 12) => Some(1472),
+        (0b0000000100100, 13) => Some(1536),
+        (0b0000000100101, 13) => Some(1600),
+        (0b0000000100110, 13) => Some(1664),
+        (0b0000000100111, 13) => Some(1728),
+        (0b0000000101000, 13) => Some(1792),
+        (0b0000000101001, 13) => Some(1856),
+        (0b0000000101010, 13) => Some(1920),
+        (0b0000000101011, 13) => Some(1984),
+        (0b0000000101100, 13) => Some(2048),
+        (0b0000000101101, 13) => Some(2112),
+        (0b0000000101110, 13) => Some(2176),
+        (0b0000000101111, 13) => Some(2240),
+        (0b0000000110000, 13) => Some(2304),
+        (0b0000000110001, 13) => Some(2368),
+        (0b0000000110010, 13) => Some(2432),
+        (0b0000000110011, 13) => Some(2496),
+        (0b0000000110100, 13) => Some(2560),
         _ => None,
     }
 }
@@ -1115,7 +1227,7 @@ fn match_black_code(code: u32, len: u8) -> Option<usize> {
         (0b000001011010, 12) => Some(61),
         (0b000001100110, 12) => Some(62),
         (0b000001100111, 12) => Some(63),
-        // Makeup codes
+        // Makeup codes (black-specific)
         (0b0000001111, 10) => Some(64),
         (0b000011001000, 12) => Some(128),
         (0b000011001001, 12) => Some(192),
@@ -1126,19 +1238,40 @@ fn match_black_code(code: u32, len: u8) -> Option<usize> {
         (0b0000001101100, 13) => Some(512),
         (0b0000001101101, 13) => Some(576),
         (0b0000001001010, 13) => Some(640),
+        // Shared makeup codes 704-2560 (ITU-T T.4 Table 1, common to white and black)
+        (0b00000001000, 11) => Some(704),
+        (0b00000001100, 11) => Some(768),
+        (0b00000001101, 11) => Some(832),
+        (0b000000010010, 12) => Some(896),
+        (0b000000010011, 12) => Some(960),
+        (0b000000010100, 12) => Some(1024),
+        (0b000000010101, 12) => Some(1088),
+        (0b000000010110, 12) => Some(1152),
+        (0b000000010111, 12) => Some(1216),
+        (0b000000011100, 12) => Some(1280),
+        (0b000000011101, 12) => Some(1344),
+        (0b000000011110, 12) => Some(1408),
+        (0b000000011111, 12) => Some(1472),
+        (0b0000000100100, 13) => Some(1536),
+        (0b0000000100101, 13) => Some(1600),
+        (0b0000000100110, 13) => Some(1664),
+        (0b0000000100111, 13) => Some(1728),
+        (0b0000000101000, 13) => Some(1792),
+        (0b0000000101001, 13) => Some(1856),
+        (0b0000000101010, 13) => Some(1920),
+        (0b0000000101011, 13) => Some(1984),
+        (0b0000000101100, 13) => Some(2048),
+        (0b0000000101101, 13) => Some(2112),
+        (0b0000000101110, 13) => Some(2176),
+        (0b0000000101111, 13) => Some(2240),
+        (0b0000000110000, 13) => Some(2304),
+        (0b0000000110001, 13) => Some(2368),
+        (0b0000000110010, 13) => Some(2432),
+        (0b0000000110011, 13) => Some(2496),
+        (0b0000000110100, 13) => Some(2560),
         _ => None,
     }
 }
-
-// Suppress dead code warnings for template offset constants - they serve as
-// specification documentation and will be used by future optimizations.
-#[allow(dead_code)]
-const _: () = {
-    let _ = TEMPLATE0_OFFSETS;
-    let _ = TEMPLATE1_OFFSETS;
-    let _ = TEMPLATE2_OFFSETS;
-    let _ = TEMPLATE3_OFFSETS;
-};
 
 #[cfg(test)]
 mod tests {
@@ -1242,6 +1375,61 @@ mod tests {
         assert_eq!(bytes.len(), 2);
         assert_eq!(bytes[0], 0xAA);
         assert_eq!(bytes[1], 0x55);
+    }
+
+    #[test]
+    fn test_bitmap_into_packed_bytes_zero_copy() {
+        let mut bm = Bitmap::new(8, 2).unwrap();
+        for x in (0..8).step_by(2) {
+            bm.set_pixel(x, 0, 1);
+        }
+        for x in (1..8).step_by(2) {
+            bm.set_pixel(x, 1, 1);
+        }
+
+        // into_packed_bytes consumes the bitmap — result must match to_packed_bytes
+        let expected = bm.to_packed_bytes();
+        let moved = bm.into_packed_bytes();
+        assert_eq!(moved, expected);
+    }
+
+    #[test]
+    fn test_decode_arith_with_consumed_returns_bytes_used() {
+        // Create valid MQ-coded data (min 2 bytes for INITDEC)
+        let data = vec![0x00; 64];
+        let params = GenericRegionParams {
+            width: 4,
+            height: 2,
+            template: Template::Template0,
+            ..Default::default()
+        };
+
+        let result = decode_generic_region_arith_with_consumed(&data, &params);
+        assert!(result.is_ok());
+        let (bitmap, consumed) = result.unwrap();
+        assert_eq!(bitmap.width(), 4);
+        assert_eq!(bitmap.height(), 2);
+        assert!(consumed > 0, "Must report bytes consumed");
+        assert!(consumed <= data.len(), "Cannot consume more than input");
+    }
+
+    #[test]
+    fn test_decode_mmr_with_consumed_returns_bytes_used() {
+        // Create data with enough bits for MMR decoding
+        let data = vec![0x00; 64];
+        let params = GenericRegionParams {
+            width: 4,
+            height: 2,
+            is_mmr: true,
+            ..Default::default()
+        };
+
+        let result = decode_generic_region_mmr_with_consumed(&data, &params);
+        // MMR decode may error on synthetic data, but if it succeeds, consumed > 0
+        if let Ok((bitmap, consumed)) = result {
+            assert_eq!(bitmap.width(), 4);
+            assert!(consumed <= data.len());
+        }
     }
 
     #[test]
@@ -1873,6 +2061,177 @@ mod tests {
         assert_eq!(bm.row_bytes(2).len(), 0);
     }
 
+    // ========================================================================
+    // MMR Code Table Tests (makeup codes 704-2560 + error handling)
+    // ========================================================================
+
+    #[test]
+    fn test_match_white_code_shared_makeup_704() {
+        // Shared makeup code for 704: 00000001000 (11 bits)
+        assert_eq!(match_white_code(0b00000001000, 11), Some(704));
+    }
+
+    #[test]
+    fn test_match_white_code_shared_makeup_2560() {
+        // Shared makeup code for 2560: 0000000110100 (13 bits)
+        assert_eq!(match_white_code(0b0000000110100, 13), Some(2560));
+    }
+
+    #[test]
+    fn test_match_white_code_shared_makeup_1024() {
+        // Shared makeup code for 1024: 000000010100 (12 bits)
+        assert_eq!(match_white_code(0b000000010100, 12), Some(1024));
+    }
+
+    #[test]
+    fn test_match_black_code_shared_makeup_704() {
+        assert_eq!(match_black_code(0b00000001000, 11), Some(704));
+    }
+
+    #[test]
+    fn test_match_black_code_shared_makeup_2560() {
+        assert_eq!(match_black_code(0b0000000110100, 13), Some(2560));
+    }
+
+    #[test]
+    fn test_match_black_code_shared_makeup_1792() {
+        // Shared makeup code for 1792: 0000000101000 (13 bits)
+        assert_eq!(match_black_code(0b0000000101000, 13), Some(1792));
+    }
+
+    #[test]
+    fn test_mmr_white_code_unrecognized_returns_error() {
+        use super::super::bitstream::BitstreamReader;
+        // 13 bits of all zeros (0b0000000000000) doesn't match any white code
+        let data = [0x00, 0x00];
+        let mut reader = BitstreamReader::new(&data);
+        let result = mmr_read_white_code(&mut reader);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Unrecognized MMR white code"),
+            "Error should mention unrecognized white code, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_mmr_black_code_unrecognized_returns_error() {
+        use super::super::bitstream::BitstreamReader;
+        // 13 bits of all zeros (0b0000000000000) doesn't match any black code
+        let data = [0x00, 0x00];
+        let mut reader = BitstreamReader::new(&data);
+        let result = mmr_read_black_code(&mut reader);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Unrecognized MMR black code"),
+            "Error should mention unrecognized black code, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_match_white_code_all_shared_makeup_present() {
+        // Verify all shared makeup codes 704-2560 are present in white table
+        let expected = [
+            704, 768, 832, 896, 960, 1024, 1088, 1152, 1216, 1280, 1344, 1408, 1472, 1536, 1600,
+            1664, 1728, 1792, 1856, 1920, 1984, 2048, 2112, 2176, 2240, 2304, 2368, 2432, 2496,
+            2560,
+        ];
+        let codes: [(u32, u8); 30] = [
+            (0b00000001000, 11),
+            (0b00000001100, 11),
+            (0b00000001101, 11),
+            (0b000000010010, 12),
+            (0b000000010011, 12),
+            (0b000000010100, 12),
+            (0b000000010101, 12),
+            (0b000000010110, 12),
+            (0b000000010111, 12),
+            (0b000000011100, 12),
+            (0b000000011101, 12),
+            (0b000000011110, 12),
+            (0b000000011111, 12),
+            (0b0000000100100, 13),
+            (0b0000000100101, 13),
+            (0b0000000100110, 13),
+            (0b0000000100111, 13),
+            (0b0000000101000, 13),
+            (0b0000000101001, 13),
+            (0b0000000101010, 13),
+            (0b0000000101011, 13),
+            (0b0000000101100, 13),
+            (0b0000000101101, 13),
+            (0b0000000101110, 13),
+            (0b0000000101111, 13),
+            (0b0000000110000, 13),
+            (0b0000000110001, 13),
+            (0b0000000110010, 13),
+            (0b0000000110011, 13),
+            (0b0000000110100, 13),
+        ];
+
+        for (i, &(code, len)) in codes.iter().enumerate() {
+            assert_eq!(
+                match_white_code(code, len),
+                Some(expected[i]),
+                "White shared makeup code for {} failed",
+                expected[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_match_black_code_all_shared_makeup_present() {
+        let expected = [
+            704, 768, 832, 896, 960, 1024, 1088, 1152, 1216, 1280, 1344, 1408, 1472, 1536, 1600,
+            1664, 1728, 1792, 1856, 1920, 1984, 2048, 2112, 2176, 2240, 2304, 2368, 2432, 2496,
+            2560,
+        ];
+        let codes: [(u32, u8); 30] = [
+            (0b00000001000, 11),
+            (0b00000001100, 11),
+            (0b00000001101, 11),
+            (0b000000010010, 12),
+            (0b000000010011, 12),
+            (0b000000010100, 12),
+            (0b000000010101, 12),
+            (0b000000010110, 12),
+            (0b000000010111, 12),
+            (0b000000011100, 12),
+            (0b000000011101, 12),
+            (0b000000011110, 12),
+            (0b000000011111, 12),
+            (0b0000000100100, 13),
+            (0b0000000100101, 13),
+            (0b0000000100110, 13),
+            (0b0000000100111, 13),
+            (0b0000000101000, 13),
+            (0b0000000101001, 13),
+            (0b0000000101010, 13),
+            (0b0000000101011, 13),
+            (0b0000000101100, 13),
+            (0b0000000101101, 13),
+            (0b0000000101110, 13),
+            (0b0000000101111, 13),
+            (0b0000000110000, 13),
+            (0b0000000110001, 13),
+            (0b0000000110010, 13),
+            (0b0000000110011, 13),
+            (0b0000000110100, 13),
+        ];
+
+        for (i, &(code, len)) in codes.iter().enumerate() {
+            assert_eq!(
+                match_black_code(code, len),
+                Some(expected[i]),
+                "Black shared makeup code for {} failed",
+                expected[i]
+            );
+        }
+    }
+
     #[test]
     fn test_bitmap_combine_negative_offset() {
         let mut dst = Bitmap::new(8, 8).unwrap();
@@ -1923,5 +2282,155 @@ mod tests {
         let params = GenericRegionParams::default();
         let debug_str = format!("{:?}", params);
         assert!(debug_str.contains("GenericRegionParams"));
+    }
+
+    // ========================================================================
+    // Byte-aligned combine optimization tests
+    // ========================================================================
+
+    #[test]
+    fn test_combine_byte_aligned_or() {
+        // 16 pixels wide = 2 bytes per row, byte-aligned at offset 0
+        let mut dst = Bitmap::new(16, 2).unwrap();
+        let mut src = Bitmap::new(16, 2).unwrap();
+        // Set src to 0xAA55 pattern per row
+        src.data_mut()[0] = 0xAA;
+        src.data_mut()[1] = 0x55;
+        src.data_mut()[2] = 0xAA;
+        src.data_mut()[3] = 0x55;
+        // Set dst to 0x55AA pattern per row
+        dst.data_mut()[0] = 0x55;
+        dst.data_mut()[1] = 0xAA;
+        dst.data_mut()[2] = 0x55;
+        dst.data_mut()[3] = 0xAA;
+
+        dst.combine(&src, CombinationOperator::Or, 0, 0);
+
+        // OR of 0xAA|0x55 = 0xFF, 0x55|0xAA = 0xFF
+        assert_eq!(dst.data()[0], 0xFF);
+        assert_eq!(dst.data()[1], 0xFF);
+        assert_eq!(dst.data()[2], 0xFF);
+        assert_eq!(dst.data()[3], 0xFF);
+    }
+
+    #[test]
+    fn test_combine_byte_aligned_and() {
+        let mut dst = Bitmap::new(16, 1).unwrap();
+        let mut src = Bitmap::new(16, 1).unwrap();
+        src.data_mut()[0] = 0xAA;
+        src.data_mut()[1] = 0x55;
+        dst.data_mut()[0] = 0xFF;
+        dst.data_mut()[1] = 0xFF;
+
+        dst.combine(&src, CombinationOperator::And, 0, 0);
+
+        assert_eq!(dst.data()[0], 0xAA);
+        assert_eq!(dst.data()[1], 0x55);
+    }
+
+    #[test]
+    fn test_combine_byte_aligned_replace() {
+        let mut dst = Bitmap::new(24, 1).unwrap();
+        let mut src = Bitmap::new(24, 1).unwrap();
+        dst.data_mut()[0] = 0xFF;
+        dst.data_mut()[1] = 0xFF;
+        dst.data_mut()[2] = 0xFF;
+        src.data_mut()[0] = 0x12;
+        src.data_mut()[1] = 0x34;
+        src.data_mut()[2] = 0x56;
+
+        dst.combine(&src, CombinationOperator::Replace, 0, 0);
+
+        assert_eq!(dst.data()[0], 0x12);
+        assert_eq!(dst.data()[1], 0x34);
+        assert_eq!(dst.data()[2], 0x56);
+    }
+
+    #[test]
+    fn test_combine_byte_aligned_xnor() {
+        let mut dst = Bitmap::new(8, 1).unwrap();
+        let mut src = Bitmap::new(8, 1).unwrap();
+        dst.data_mut()[0] = 0xAA;
+        src.data_mut()[0] = 0xAA;
+
+        dst.combine(&src, CombinationOperator::Xnor, 0, 0);
+
+        // XNOR of identical = all 1s
+        assert_eq!(dst.data()[0], 0xFF);
+    }
+
+    #[test]
+    fn test_combine_byte_aligned_partial_last_byte() {
+        // 12 pixels wide = 1 full byte + 4 remaining bits
+        let mut dst = Bitmap::new(12, 1).unwrap();
+        let mut src = Bitmap::new(12, 1).unwrap();
+        dst.data_mut()[0] = 0x00;
+        dst.data_mut()[1] = 0x00;
+        src.data_mut()[0] = 0xFF;
+        src.data_mut()[1] = 0xF0; // only top 4 bits matter
+
+        dst.combine(&src, CombinationOperator::Or, 0, 0);
+
+        assert_eq!(dst.data()[0], 0xFF);
+        // Only top 4 bits should be set (the remaining 4 bits of width 12)
+        assert_eq!(dst.data()[1] & 0xF0, 0xF0);
+        // Bottom 4 bits should remain untouched
+        assert_eq!(dst.data()[1] & 0x0F, 0x00);
+    }
+
+    #[test]
+    fn test_combine_nonaligned_still_works() {
+        // Non-byte-aligned offset uses pixel-by-pixel path
+        let mut dst = Bitmap::new(16, 1).unwrap();
+        let src = Bitmap::new_with_default(4, 1, 1).unwrap();
+
+        dst.combine(&src, CombinationOperator::Or, 3, 0);
+
+        // Pixels 3,4,5,6 should be set
+        assert_eq!(dst.get_pixel(2, 0), 0);
+        assert_eq!(dst.get_pixel(3, 0), 1);
+        assert_eq!(dst.get_pixel(4, 0), 1);
+        assert_eq!(dst.get_pixel(5, 0), 1);
+        assert_eq!(dst.get_pixel(6, 0), 1);
+        assert_eq!(dst.get_pixel(7, 0), 0);
+    }
+
+    #[test]
+    fn test_combine_byte_aligned_consistency() {
+        // Verify byte-aligned path produces same result as pixel path
+        // by comparing a byte-aligned combine with a manually pixel-verified one
+        let mut dst_fast = Bitmap::new(32, 4).unwrap();
+        let mut dst_pixel = Bitmap::new(32, 4).unwrap();
+        let mut src = Bitmap::new(16, 2).unwrap();
+
+        // Set a checkerboard pattern in src
+        src.data_mut()[0] = 0xAA;
+        src.data_mut()[1] = 0x55;
+        src.data_mut()[2] = 0x55;
+        src.data_mut()[3] = 0xAA;
+
+        // Set some initial data in both destinations
+        for b in dst_fast.data_mut().iter_mut() {
+            *b = 0x0F;
+        }
+        for b in dst_pixel.data_mut().iter_mut() {
+            *b = 0x0F;
+        }
+
+        // Byte-aligned combine at offset (8, 1) -- both 8%8==0 and 0%8==0
+        dst_fast.combine(&src, CombinationOperator::Xor, 8, 1);
+
+        // Manual pixel-by-pixel combine for verification
+        for sy in 0..2u32 {
+            for sx in 0..16u32 {
+                let sp = src.get_pixel(sx, sy);
+                let dx = sx + 8;
+                let dy = sy + 1;
+                let dp = dst_pixel.get_pixel(dx, dy);
+                dst_pixel.set_pixel(dx, dy, dp ^ sp);
+            }
+        }
+
+        assert_eq!(dst_fast.data(), dst_pixel.data());
     }
 }

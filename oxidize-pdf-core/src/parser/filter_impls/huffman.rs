@@ -9,7 +9,12 @@
 //! - User-defined tables can be specified in the bitstream
 //! - Values are decoded using prefix-free codes
 
+use std::sync::OnceLock;
+
 use super::bitstream::BitstreamReader;
+
+/// Maximum code length to prevent infinite loops in bit-by-bit decoding
+const MAX_HUFFMAN_CODE_LEN: u8 = 32;
 
 /// Error type for Huffman decoding
 #[derive(Debug, Clone, PartialEq)]
@@ -83,35 +88,35 @@ impl HuffmanEntry {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum StandardTable {
-    /// Table B.1 - Generic integers
+    /// Table B.1 - Unsigned integers (HTOOB = 0)
     B1 = 1,
-    /// Table B.2 - Generic integers
+    /// Table B.2 - Unsigned integers with OOB (HTOOB = 1)
     B2 = 2,
-    /// Table B.3 - Generic integers
+    /// Table B.3 - Signed integers
     B3 = 3,
-    /// Table B.4 - Generic integers
+    /// Table B.4 - Height class delta (symbol dictionaries)
     B4 = 4,
-    /// Table B.5 - Generic integers
+    /// Table B.5 - Width delta (symbol dictionaries)
     B5 = 5,
-    /// Table B.6 - Height class delta
+    /// Table B.6 - BMSIZE (bitmap size)
     B6 = 6,
-    /// Table B.7 - Height class delta
+    /// Table B.7 - AGGINSTCOUNT (aggregate instance count)
     B7 = 7,
-    /// Table B.8 - Width delta
+    /// Table B.8 - EXRUNLENGTH (export run length)
     B8 = 8,
-    /// Table B.9 - Width delta
+    /// Table B.9 - SYMBINSTCOUNT (symbol instance count)
     B9 = 9,
-    /// Table B.10 - Symbol size difference
+    /// Table B.10 - RDWIDTH (reference delta width)
     B10 = 10,
-    /// Table B.11 - Symbol position difference
+    /// Table B.11 - RDHEIGHT (reference delta height)
     B11 = 11,
-    /// Table B.12 - Symbol RD (reference delta)
+    /// Table B.12 - RDXY (reference delta X/Y)
     B12 = 12,
-    /// Table B.13 - Symbol RD (reference delta)
+    /// Table B.13 - BMSIZE alternative
     B13 = 13,
-    /// Table B.14 - Generic region aggregate
+    /// Table B.14 - Symbol refinement X delta
     B14 = 14,
-    /// Table B.15 - Generic region aggregate
+    /// Table B.15 - Symbol refinement Y delta
     B15 = 15,
 }
 
@@ -180,15 +185,43 @@ impl CompiledHuffmanTable {
     }
 }
 
+/// Pre-compiled standard Huffman tables (initialized once, shared globally)
+static COMPILED_STANDARD_TABLES: OnceLock<[CompiledHuffmanTable; 15]> = OnceLock::new();
+
+/// Get pre-compiled standard Huffman tables
+///
+/// Initializes all 15 standard tables on first call, then returns
+/// a reference for all subsequent calls. This avoids recompiling
+/// tables on every decode operation.
+fn compiled_standard_tables() -> &'static [CompiledHuffmanTable; 15] {
+    COMPILED_STANDARD_TABLES.get_or_init(|| {
+        let decoder = HuffmanDecoder::new();
+        [
+            CompiledHuffmanTable::new(&decoder.table_b1()),
+            CompiledHuffmanTable::new(&decoder.table_b2()),
+            CompiledHuffmanTable::new(&decoder.table_b3()),
+            CompiledHuffmanTable::new(&decoder.table_b4()),
+            CompiledHuffmanTable::new(&decoder.table_b5()),
+            CompiledHuffmanTable::new(&decoder.table_b6()),
+            CompiledHuffmanTable::new(&decoder.table_b7()),
+            CompiledHuffmanTable::new(&decoder.table_b8()),
+            CompiledHuffmanTable::new(&decoder.table_b9()),
+            CompiledHuffmanTable::new(&decoder.table_b10()),
+            CompiledHuffmanTable::new(&decoder.table_b11()),
+            CompiledHuffmanTable::new(&decoder.table_b12()),
+            CompiledHuffmanTable::new(&decoder.table_b13()),
+            CompiledHuffmanTable::new(&decoder.table_b14()),
+            CompiledHuffmanTable::new(&decoder.table_b15()),
+        ]
+    })
+}
+
 /// Huffman decoder for JBIG2
 ///
 /// Decodes integer values from a bitstream using predefined
 /// or user-defined Huffman tables.
 #[derive(Debug)]
-pub struct HuffmanDecoder {
-    /// Maximum code length to prevent infinite loops
-    max_code_len: u8,
-}
+pub struct HuffmanDecoder;
 
 impl Default for HuffmanDecoder {
     fn default() -> Self {
@@ -199,7 +232,7 @@ impl Default for HuffmanDecoder {
 impl HuffmanDecoder {
     /// Create a new Huffman decoder
     pub fn new() -> Self {
-        Self { max_code_len: 32 }
+        Self
     }
 
     /// Decode a single integer value using a standard table
@@ -215,8 +248,9 @@ impl HuffmanDecoder {
         reader: &mut BitstreamReader<'_>,
         table: StandardTable,
     ) -> HuffmanResult<i32> {
-        let entries = self.get_standard_table(table);
-        self.decode_with_entries(reader, &entries)
+        let tables = compiled_standard_tables();
+        let idx = (table as u8 - 1) as usize;
+        self.decode_with_compiled_table(reader, &tables[idx])
     }
 
     /// Decode using a custom table (list of entries)
@@ -233,6 +267,9 @@ impl HuffmanDecoder {
     }
 
     /// Decode using a pre-compiled table (more efficient for repeated use)
+    ///
+    /// Entries in `CompiledHuffmanTable` are sorted by `(code_len, code)`,
+    /// enabling O(log n) lookup via binary search instead of O(n) linear scan.
     pub fn decode_with_compiled_table(
         &self,
         reader: &mut BitstreamReader<'_>,
@@ -240,10 +277,11 @@ impl HuffmanDecoder {
     ) -> HuffmanResult<i32> {
         let mut code: u32 = 0;
         let mut code_len: u8 = 0;
+        let entries = table.entries();
 
         // Build code bit by bit until we find a match
         loop {
-            if code_len >= self.max_code_len {
+            if code_len >= MAX_HUFFMAN_CODE_LEN {
                 return Err(HuffmanError::CodeTooLong);
             }
 
@@ -251,32 +289,48 @@ impl HuffmanDecoder {
             code = (code << 1) | (bit as u32);
             code_len += 1;
 
-            // Try to match against entries with this prefix length and code
-            for &(entry_code, entry_len, ref entry) in table.entries() {
-                if entry_len == code_len && entry_code == code {
-                    // Found matching entry
-                    if entry.is_oob {
-                        return Err(HuffmanError::OutOfBand);
-                    }
+            // Binary search for (code_len, code) in sorted entries
+            let key = (code_len, code);
+            if let Ok(idx) = entries.binary_search_by_key(&key, |&(c, l, _)| (l, c)) {
+                let entry = &entries[idx].2;
+                if entry.is_oob {
+                    return Err(HuffmanError::OutOfBand);
+                }
 
-                    // Read additional range bits
-                    if entry.range_len > 0 {
-                        let extra = reader
-                            .read_bits(entry.range_len)
-                            .map_err(|_| HuffmanError::InvalidCode)?;
-                        return Ok(entry.range_low + extra as i32);
-                    } else {
-                        return Ok(entry.range_low);
-                    }
+                // Read additional range bits
+                if entry.range_len > 0 {
+                    let extra = reader
+                        .read_bits(entry.range_len)
+                        .map_err(|_| HuffmanError::InvalidCode)?;
+                    return Ok(entry.range_low + extra as i32);
+                } else {
+                    return Ok(entry.range_low);
                 }
             }
         }
     }
 
-    /// Get the entries for a standard table
+    /// Get a pre-compiled standard table (zero-allocation after first call)
+    ///
+    /// Returns a reference to the compiled Huffman table from the global
+    /// `OnceLock` cache. Prefer this over [`get_standard_table`] which
+    /// allocates a new `Vec<HuffmanEntry>` on every call.
+    pub fn get_compiled_standard_table(
+        &self,
+        table: StandardTable,
+    ) -> &'static CompiledHuffmanTable {
+        let tables = compiled_standard_tables();
+        let idx = (table as u8 - 1) as usize;
+        &tables[idx]
+    }
+
+    /// Get the raw entries for a standard table
     ///
     /// Returns the Huffman entries for the specified standard table
     /// per ITU-T T.88 Annex B.
+    ///
+    /// **Note**: This allocates a new `Vec` on every call. Prefer
+    /// [`get_compiled_standard_table`] for production use.
     pub fn get_standard_table(&self, table: StandardTable) -> Vec<HuffmanEntry> {
         match table {
             StandardTable::B1 => self.table_b1(),
@@ -569,6 +623,10 @@ impl HuffmanDecoder {
 ///
 /// Given a list of entries with prefix lengths, compute the actual
 /// binary prefix codes for decoding.
+///
+/// **Deprecated**: Use `CompiledHuffmanTable::new()` instead, which provides
+/// the same functionality in a more structured form.
+#[deprecated(note = "Use CompiledHuffmanTable::new() instead")]
 pub fn build_prefix_codes(entries: &[HuffmanEntry]) -> Vec<(u32, HuffmanEntry)> {
     let mut result = Vec::new();
 
@@ -722,14 +780,16 @@ mod tests {
 
     #[test]
     fn test_huffman_decoder_new() {
-        let decoder = HuffmanDecoder::new();
-        assert_eq!(decoder.max_code_len, 32);
+        let _decoder = HuffmanDecoder::new();
+        // Unit struct - verify MAX_HUFFMAN_CODE_LEN constant
+        assert_eq!(MAX_HUFFMAN_CODE_LEN, 32);
     }
 
     #[test]
     fn test_huffman_decoder_default() {
-        let decoder = HuffmanDecoder::default();
-        assert_eq!(decoder.max_code_len, 32);
+        let _decoder = HuffmanDecoder::default();
+        // Unit struct - verify it can be created via Default
+        assert_eq!(MAX_HUFFMAN_CODE_LEN, 32);
     }
 
     #[test]
@@ -749,6 +809,27 @@ mod tests {
             let entries = decoder.get_standard_table(table);
             assert!(!entries.is_empty(), "Table B.{} should have entries", i);
         }
+    }
+
+    #[test]
+    fn test_get_compiled_standard_table_returns_same_reference() {
+        let decoder = HuffmanDecoder::new();
+
+        // Verify all 15 compiled tables are accessible and non-empty
+        for i in 1..=15 {
+            let table = StandardTable::from_u8(i).unwrap();
+            let compiled = decoder.get_compiled_standard_table(table);
+            assert!(
+                !compiled.entries().is_empty(),
+                "Compiled table B.{} should have entries",
+                i
+            );
+        }
+
+        // Verify two calls return the same pointer (zero-allocation guarantee)
+        let t1 = decoder.get_compiled_standard_table(StandardTable::B1);
+        let t2 = decoder.get_compiled_standard_table(StandardTable::B1);
+        assert!(std::ptr::eq(t1, t2), "Must return same static reference");
     }
 
     #[test]
@@ -847,13 +928,13 @@ mod tests {
 
     #[test]
     fn test_decode_code_too_long() {
-        // Empty table - no codes will match
+        // Empty table - no codes will match, will exhaust MAX_HUFFMAN_CODE_LEN bits
         let entries = vec![];
 
-        let mut decoder = HuffmanDecoder::new();
-        decoder.max_code_len = 8; // Limit for faster test
+        let decoder = HuffmanDecoder::new();
 
-        let data = [0xFF, 0xFF];
+        // Need enough data for MAX_HUFFMAN_CODE_LEN (32) bits = 4 bytes
+        let data = [0xFF; 5];
         let mut reader = BitstreamReader::new(&data);
         let result = decoder.decode_with_entries(&mut reader, &entries);
 
@@ -865,6 +946,7 @@ mod tests {
     // ========================================================================
 
     #[test]
+    #[allow(deprecated)]
     fn test_build_prefix_codes_simple() {
         let entries = vec![
             HuffmanEntry::new(1, 0, 0), // 0
@@ -880,6 +962,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_build_prefix_codes_empty() {
         let entries: Vec<HuffmanEntry> = vec![];
         let codes = build_prefix_codes(&entries);
@@ -887,6 +970,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_build_prefix_codes_single() {
         let entries = vec![HuffmanEntry::new(3, 0, 42)];
 
@@ -986,5 +1070,59 @@ mod tests {
         let b6 = decoder.get_standard_table(StandardTable::B6);
         let has_negative = b6.iter().any(|e| e.range_low < 0);
         assert!(has_negative, "Table B.6 should support negative values");
+    }
+
+    // ========================================================================
+    // Pre-compiled Tables Tests
+    // ========================================================================
+
+    #[test]
+    fn test_compiled_standard_tables_initialized() {
+        let tables = compiled_standard_tables();
+        assert_eq!(tables.len(), 15);
+        for (i, table) in tables.iter().enumerate() {
+            assert!(
+                !table.entries().is_empty(),
+                "Pre-compiled table B.{} should have entries",
+                i + 1
+            );
+        }
+    }
+
+    #[test]
+    fn test_compiled_tables_match_dynamic() {
+        let decoder = HuffmanDecoder::new();
+        let tables = compiled_standard_tables();
+
+        for i in 1..=15u8 {
+            let std_table = StandardTable::from_u8(i).unwrap();
+            let dynamic = CompiledHuffmanTable::new(&decoder.get_standard_table(std_table));
+            let precompiled = &tables[(i - 1) as usize];
+
+            assert_eq!(
+                dynamic.entries().len(),
+                precompiled.entries().len(),
+                "Table B.{} entry count mismatch",
+                i
+            );
+
+            for (d, p) in dynamic.entries().iter().zip(precompiled.entries().iter()) {
+                assert_eq!(d.0, p.0, "Table B.{} code mismatch", i);
+                assert_eq!(d.1, p.1, "Table B.{} code_len mismatch", i);
+            }
+        }
+    }
+
+    #[test]
+    fn test_decode_int_uses_precompiled() {
+        // Verify decode_int works with precompiled tables
+        let decoder = HuffmanDecoder::new();
+
+        // Table B.1: code "0" (1 bit) + 4 range bits -> 0-15
+        // Data: 0b0_0101_000 = 0x28 -> prefix "0", range bits "0101" = 5
+        let data = [0x28];
+        let mut reader = BitstreamReader::new(&data);
+        let result = decoder.decode_int(&mut reader, StandardTable::B1);
+        assert_eq!(result.unwrap(), 5);
     }
 }

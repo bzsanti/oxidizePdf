@@ -539,7 +539,10 @@ impl<'a> MQDecoder<'a> {
     #[inline]
     fn lps_exchange(&mut self, context: &mut MQContext, qe: u32) -> u8 {
         // Remove interval from C
-        self.c -= (self.a as u32) << 16;
+        // ITU-T T.88 invariant: chigh >= self.a when in LPS path, so this
+        // subtraction should never underflow. Use saturating_sub for robustness
+        // against malformed streams (avoids panic in debug builds).
+        self.c = self.c.saturating_sub((self.a as u32) << 16);
 
         if self.a < qe {
             // Conditional exchange: actually in MPS region
@@ -559,16 +562,38 @@ impl<'a> MQDecoder<'a> {
     /// Decode an integer using IAID procedure (for symbol IDs)
     ///
     /// Decodes a value in range [0, 2^codewidth - 1] using separate contexts
-    /// for each bit position.
-    pub fn decode_iaid(&mut self, contexts: &mut [MQContext], codewidth: u8) -> u32 {
+    /// for each bit position. Per ITU-T T.88 Section 6.4.7, the context array
+    /// must have at least 2^codewidth entries.
+    ///
+    /// Returns `Err` if codewidth exceeds 24 (practical limit: 16M symbols)
+    /// or if the context array is too small for the given codewidth.
+    pub fn decode_iaid(&mut self, contexts: &mut [MQContext], codewidth: u8) -> ParseResult<u32> {
+        // ITU-T T.88 practical limit: codewidth > 24 would need 16M+ contexts
+        if codewidth > 24 {
+            return Err(ParseError::StreamDecodeError(format!(
+                "IAID codewidth {codewidth} exceeds maximum 24"
+            )));
+        }
+
+        if codewidth == 0 {
+            return Ok(0);
+        }
+
         let mut prev = 1u32;
 
         for _ in 0..codewidth {
-            let bit = self.decode(&mut contexts[prev as usize]);
+            let idx = prev as usize;
+            if idx >= contexts.len() {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "IAID context index {idx} out of bounds (contexts len={})",
+                    contexts.len()
+                )));
+            }
+            let bit = self.decode(&mut contexts[idx]);
             prev = (prev << 1) | (bit as u32);
         }
 
-        prev - (1 << codewidth)
+        Ok(prev - (1 << codewidth))
     }
 
     /// Get current position in data stream
@@ -580,6 +605,75 @@ impl<'a> MQDecoder<'a> {
     pub fn remaining(&self) -> usize {
         self.data.len().saturating_sub(self.position)
     }
+}
+
+/// Decode an integer using arithmetic coding per ITU-T T.88 Section 6.5.6
+///
+/// Uses a prefix-based scheme with three magnitude ranges:
+/// - Prefix `0`: 2-bit magnitude (values 0-3)
+/// - Prefix `10`: 4-bit magnitude + offset 4 (values 4-19)
+/// - Prefix `11`: 12-bit magnitude + offset 20 (values 20-4115)
+///
+/// Returns `None` if the decoded value would be out of representable range,
+/// or `Some(value)` with the signed integer result.
+///
+/// The sign bit is decoded first (0 = positive, 1 = negative).
+/// Decode a single integer using arithmetic coding (IAID-style prefix coding).
+///
+/// Returns `Some(value)` for a successfully decoded integer.
+/// Returns `None` for an out-of-band (OOB) signal, which indicates end of
+/// the current decoding run (e.g., end of height class in symbol dictionaries).
+///
+/// **Note**: The current implementation does not emit OOB — it always returns
+/// `Some(value)`. The `Option` return type is retained for future OOB support
+/// per ITU-T T.88 §6.2.6 Table 2. Callers should handle `None` as "stop iterating".
+pub fn decode_integer_arith(
+    mq_decoder: &mut MQDecoder<'_>,
+    contexts: &mut [MQContext],
+) -> Option<i32> {
+    // Decode sign bit
+    let sign = mq_decoder.decode(&mut contexts[0]);
+
+    // Decode magnitude using prefix-based coding
+    let mut prev = 1u32;
+    let mut magnitude: i32 = 0;
+
+    // First prefix bit determines the range
+    let bit1 = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
+    prev = (prev << 1) | (bit1 as u32);
+
+    if bit1 == 0 {
+        // Small value: decode 2 more bits for value 0-3
+        for _ in 0..2 {
+            let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
+            magnitude = (magnitude << 1) | (bit as i32);
+            prev = (prev << 1) | (bit as u32);
+        }
+    } else {
+        let bit2 = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
+        prev = (prev << 1) | (bit2 as u32);
+
+        if bit2 == 0 {
+            // Medium value: decode 4 more bits for value 4-19
+            magnitude = 4;
+            for _ in 0..4 {
+                let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
+                magnitude = (magnitude << 1) | (bit as i32);
+                prev = (prev << 1) | (bit as u32);
+            }
+        } else {
+            // Large value: decode 12 more bits for value 20-4115
+            magnitude = 20;
+            for _ in 0..12 {
+                let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
+                magnitude = (magnitude << 1) | (bit as i32);
+                prev = (prev << 1) | (bit as u32);
+            }
+        }
+    }
+
+    let value = if sign != 0 { -magnitude } else { magnitude };
+    Some(value)
 }
 
 #[cfg(test)]
@@ -772,9 +866,41 @@ mod tests {
         // IAID with 4-bit codewidth needs 16 contexts (2^4)
         let mut contexts = vec![MQContext::new(); 16];
 
-        // Should decode without panic
-        let value = decoder.decode_iaid(&mut contexts, 4);
+        let value = decoder.decode_iaid(&mut contexts, 4).unwrap();
         assert!(value < 16); // Must be in valid range
+    }
+
+    #[test]
+    fn test_mq_decode_iaid_codewidth_zero() {
+        let data = vec![0x00; 8];
+        let mut decoder = MQDecoder::new(&data).unwrap();
+        let mut contexts = vec![MQContext::new(); 4];
+
+        let value = decoder.decode_iaid(&mut contexts, 0).unwrap();
+        assert_eq!(value, 0);
+    }
+
+    #[test]
+    fn test_mq_decode_iaid_codewidth_too_large() {
+        let data = vec![0x00; 8];
+        let mut decoder = MQDecoder::new(&data).unwrap();
+        let mut contexts = vec![MQContext::new(); 4];
+
+        let result = decoder.decode_iaid(&mut contexts, 25);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("exceeds maximum"));
+    }
+
+    #[test]
+    fn test_mq_decode_iaid_context_too_small() {
+        let data = vec![0x00; 32];
+        let mut decoder = MQDecoder::new(&data).unwrap();
+        // codewidth=4 needs up to context index 15, but only 4 contexts provided
+        let mut contexts = vec![MQContext::new(); 4];
+
+        let result = decoder.decode_iaid(&mut contexts, 4);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of bounds"));
     }
 
     #[test]
@@ -831,5 +957,75 @@ mod tests {
         let debug_str = format!("{:?}", ctx);
         assert!(debug_str.contains("MQContext"));
         assert!(debug_str.contains("state_index: 0"));
+    }
+
+    // ==================== decode_integer_arith Tests ====================
+
+    #[test]
+    fn test_decode_integer_arith_returns_some() {
+        let data = vec![0x00; 64];
+        let mut decoder = MQDecoder::new(&data).unwrap();
+        let mut contexts = vec![MQContext::new(); 512];
+
+        let result = decode_integer_arith(&mut decoder, &mut contexts);
+        assert!(
+            result.is_some(),
+            "decode_integer_arith must return Some for valid data"
+        );
+    }
+
+    #[test]
+    fn test_decode_integer_arith_zero_is_not_none() {
+        // Ensure Some(0) is distinguishable from None (the old i32::MIN sentinel)
+        let data = vec![0x00; 64];
+        let mut decoder = MQDecoder::new(&data).unwrap();
+        let mut contexts = vec![MQContext::new(); 512];
+
+        let result = decode_integer_arith(&mut decoder, &mut contexts);
+        assert!(result.is_some());
+        // The value depends on the MQ stream, but it must not be None
+    }
+
+    #[test]
+    fn test_decode_integer_arith_multiple_calls_stable() {
+        let data = vec![
+            0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
+            0xFF, 0x00,
+        ];
+        let mut decoder = MQDecoder::new(&data).unwrap();
+        let mut contexts = vec![MQContext::new(); 512];
+
+        // Decode several integers — none should be None
+        for _ in 0..3 {
+            let result = decode_integer_arith(&mut decoder, &mut contexts);
+            assert!(result.is_some());
+        }
+    }
+
+    #[test]
+    fn test_lps_exchange_no_panic_on_malformed_data() {
+        // Malformed data patterns that could trigger underflow in lps_exchange
+        // if not using saturating_sub. The decoder must not panic.
+        let patterns: &[&[u8]] = &[
+            &[0x00; 32],
+            &[0xFF; 32],
+            &[
+                0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
+            ],
+            &[
+                0x01, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
+            ],
+        ];
+
+        for (i, pattern) in patterns.iter().enumerate() {
+            let mut decoder = MQDecoder::new(pattern).unwrap();
+            let mut contexts = vec![MQContext::new(); 512];
+            // Must not panic regardless of internal state
+            for _ in 0..20 {
+                let _ = decoder.decode(&mut contexts[0]);
+            }
+            // Verify decoder is still functional after stress
+            let _ = decoder.decode(&mut contexts[i.min(511)]);
+        }
     }
 }

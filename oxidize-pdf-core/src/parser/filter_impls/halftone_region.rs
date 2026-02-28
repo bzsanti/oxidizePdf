@@ -14,8 +14,9 @@
 //! - ITU-T T.88 Section 7.4.6: Halftone Region Segment
 
 use super::generic_region::{
-    decode_generic_region_arith, decode_generic_region_mmr, AtPixel, Bitmap, CombinationOperator,
-    GenericRegionParams, Template,
+    decode_generic_region_arith, decode_generic_region_arith_with_consumed,
+    decode_generic_region_mmr, decode_generic_region_mmr_with_consumed, AtPixel, Bitmap,
+    CombinationOperator, GenericRegionParams, Template,
 };
 use crate::parser::{ParseError, ParseResult};
 
@@ -348,16 +349,17 @@ pub fn decode_halftone_region(data: &[u8], params: &HalftoneRegionParams) -> Par
     };
 
     let mut planes: Vec<Bitmap> = Vec::new();
-    let remaining_data = data;
+    let mut offset = 0;
 
     for _ in 0..num_planes {
-        let plane = if params.flags.uses_mmr {
-            decode_generic_region_mmr(remaining_data, &plane_params)?
+        let remaining = &data[offset.min(data.len())..];
+        let (plane, consumed) = if params.flags.uses_mmr {
+            decode_generic_region_mmr_with_consumed(remaining, &plane_params)?
         } else {
-            decode_generic_region_arith(remaining_data, &plane_params)?
+            decode_generic_region_arith_with_consumed(remaining, &plane_params)?
         };
         planes.push(plane);
-        // For simplicity, use all data for each plane (in real impl, need to track position)
+        offset += consumed.max(1); // Advance at least 1 byte to prevent infinite loop
     }
 
     // Build output bitmap
@@ -379,11 +381,15 @@ pub fn decode_halftone_region(data: &[u8], params: &HalftoneRegionParams) -> Par
 
             let pattern_idx = gray_value as usize;
             if let Some(pattern) = params.patterns.get_pattern(pattern_idx) {
-                // Compute grid position
+                // Grid position per ITU-T T.88 §6.6.5.2:
+                //   x(m,n) = HGX + m·HRX + n·HRY
+                //   y(m,n) = HGY + m·HRY - n·HRX
+                // where m = gx (column), n = gy (row), HRX = vx, HRY = vy
+                // Values are in 1/256 fixed-point, hence /256.
                 let x =
-                    params.flags.grid_offset_x + (gx as i32 * vx) / 256 - (gy as i32 * vy) / 256;
+                    params.flags.grid_offset_x + (gx as i32 * vx) / 256 + (gy as i32 * vy) / 256;
                 let y =
-                    params.flags.grid_offset_y + (gy as i32 * vx) / 256 + (gx as i32 * vy) / 256;
+                    params.flags.grid_offset_y + (gx as i32 * vy) / 256 - (gy as i32 * vx) / 256;
 
                 bitmap.combine(pattern, params.flags.combination_operator, x, y);
             }
@@ -639,5 +645,72 @@ mod tests {
 
         let flags = HalftoneRegionFlags::from_bytes(&data).unwrap();
         assert!(flags.enable_skip);
+    }
+
+    // ========================================================================
+    // Pin tests: Grid formula per ITU-T T.88 §6.6.5.2
+    // ========================================================================
+
+    /// Verify grid placement formula: axis-aligned case (HRY=0)
+    /// x(m,n) = HGX + m·HRX/256
+    /// y(m,n) = HGY - n·HRX/256
+    #[test]
+    fn test_grid_formula_axis_aligned() {
+        // HRX = 256 (1 pixel step), HRY = 0 (no rotation)
+        // gx=2, gy=3, offsets = (10, 20)
+        let vx: i32 = 256; // HRX
+        let vy: i32 = 0; // HRY
+        let offset_x: i32 = 10;
+        let offset_y: i32 = 20;
+        let gx: i32 = 2;
+        let gy: i32 = 3;
+
+        let x = offset_x + (gx * vx) / 256 + (gy * vy) / 256;
+        let y = offset_y + (gx * vy) / 256 - (gy * vx) / 256;
+
+        assert_eq!(x, 12); // 10 + 2*1 + 3*0 = 12
+        assert_eq!(y, 17); // 20 + 2*0 - 3*1 = 17
+    }
+
+    /// Verify grid placement formula: 90° rotation case (HRX=0, HRY=256)
+    #[test]
+    fn test_grid_formula_rotated_90() {
+        let vx: i32 = 0; // HRX
+        let vy: i32 = 256; // HRY
+        let offset_x: i32 = 0;
+        let offset_y: i32 = 0;
+        let gx: i32 = 1;
+        let gy: i32 = 0;
+
+        let x = offset_x + (gx * vx) / 256 + (gy * vy) / 256;
+        let y = offset_y + (gx * vy) / 256 - (gy * vx) / 256;
+
+        // Column step is purely vertical: x=0, y=1
+        assert_eq!(x, 0);
+        assert_eq!(y, 1);
+    }
+
+    /// Verify diagonal grid placement (HRX=HRY=181 ≈ 256/√2 ≈ 45°)
+    #[test]
+    fn test_grid_formula_diagonal() {
+        let vx: i32 = 181; // HRX ≈ cos(45°)*256
+        let vy: i32 = 181; // HRY ≈ sin(45°)*256
+        let offset_x: i32 = 0;
+        let offset_y: i32 = 0;
+
+        // Cell (1,0): one column step
+        let x = offset_x + (1 * vx) / 256 + (0 * vy) / 256;
+        let y = offset_y + (1 * vy) / 256 - (0 * vx) / 256;
+        // Truncated to 0 due to integer division (181/256 = 0)
+        // At fixed-point: x ≈ 0.707, y ≈ 0.707 → truncated to (0, 0)
+        assert_eq!(x, 0);
+        assert_eq!(y, 0);
+
+        // Cell (2,0): two column steps
+        let x = offset_x + (2 * vx) / 256 + (0 * vy) / 256;
+        let y = offset_y + (2 * vy) / 256 - (0 * vx) / 256;
+        // 362/256 = 1 (integer truncation)
+        assert_eq!(x, 1);
+        assert_eq!(y, 1);
     }
 }

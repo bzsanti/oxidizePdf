@@ -16,8 +16,10 @@
 //! - ITU-T T.88 Table 9: Text region segment flags
 //! - ITU-T T.88 Section 6.4.5-6: Symbol placement procedures
 
+use std::sync::Arc;
+
 use super::generic_region::{AtPixel, Bitmap, CombinationOperator};
-use super::mq_coder::{MQContext, MQDecoder};
+use super::mq_coder::{decode_integer_arith, MQContext, MQDecoder};
 use crate::parser::{ParseError, ParseResult};
 
 // ============================================================================
@@ -138,7 +140,7 @@ pub struct TextRegionParams {
     /// IAID codewidth (ceil(log2(num_symbols)))
     pub symbol_id_codewidth: u8,
     /// Available symbols from symbol dictionaries
-    pub available_symbols: Vec<Bitmap>,
+    pub available_symbols: Vec<Arc<Bitmap>>,
     /// AT pixels for refinement
     pub at_pixels: Vec<AtPixel>,
     /// Huffman table selections (only if uses_huffman)
@@ -223,11 +225,10 @@ fn decode_text_region_arith(data: &[u8], params: &TextRegionParams) -> ParseResu
     let iaid_size = 1usize << params.symbol_id_codewidth;
     let mut iaid_contexts = vec![MQContext::new(); iaid_size.max(2)];
 
-    // Refinement contexts (if used)
-    let mut _iardw_contexts = vec![MQContext::new(); 512]; // Refinement DW
-    let mut _iardh_contexts = vec![MQContext::new(); 512]; // Refinement DH
-    let mut _iardx_contexts = vec![MQContext::new(); 512]; // Refinement DX
-    let mut _iardy_contexts = vec![MQContext::new(); 512]; // Refinement DY
+    // Refinement contexts — allocated lazily only when refinement is actually used.
+    // When uses_refinement is true, these will hold IARDW/IARDH/IARDX/IARDY contexts
+    // per ITU-T T.88 §6.4.11. Currently refinement decoding in text regions is not
+    // differentiated (see symbol_dict.rs), so we skip allocation entirely.
 
     let strip_size = 1i32 << params.flags.log_strip_size;
 
@@ -239,11 +240,18 @@ fn decode_text_region_arith(data: &[u8], params: &TextRegionParams) -> ParseResu
     // Symbol placement loop (Section 6.4.5)
     while instances_decoded < params.num_instances {
         // Decode delta T (STRIPT)
-        let dt = decode_integer_arith(&mut mq_decoder, &mut iadt_contexts);
+        let dt = match decode_integer_arith(&mut mq_decoder, &mut iadt_contexts) {
+            Some(v) => v,
+            None => break,
+        };
         stript += dt * strip_size;
 
         // Decode first S position
-        first_s += decode_integer_arith(&mut mq_decoder, &mut iafs_contexts);
+        let fs = match decode_integer_arith(&mut mq_decoder, &mut iafs_contexts) {
+            Some(v) => v,
+            None => break,
+        };
+        first_s += fs;
         let mut cur_s = first_s;
 
         // Instance loop within strip
@@ -254,7 +262,7 @@ fn decode_text_region_arith(data: &[u8], params: &TextRegionParams) -> ParseResu
 
             // Decode instance T offset within strip
             let curt = if strip_size > 1 {
-                decode_integer_arith(&mut mq_decoder, &mut iait_contexts)
+                decode_integer_arith(&mut mq_decoder, &mut iait_contexts).unwrap_or(0)
             } else {
                 0
             };
@@ -263,7 +271,7 @@ fn decode_text_region_arith(data: &[u8], params: &TextRegionParams) -> ParseResu
 
             // Decode symbol ID
             let symbol_id = if params.symbol_id_codewidth > 0 {
-                mq_decoder.decode_iaid(&mut iaid_contexts, params.symbol_id_codewidth) as usize
+                mq_decoder.decode_iaid(&mut iaid_contexts, params.symbol_id_codewidth)? as usize
             } else {
                 0
             };
@@ -290,10 +298,10 @@ fn decode_text_region_arith(data: &[u8], params: &TextRegionParams) -> ParseResu
             }
 
             // Decode delta S for next symbol
-            let ds = decode_integer_arith(&mut mq_decoder, &mut iads_contexts);
-            if ds == i32::MIN {
-                break; // OOB terminates strip
-            }
+            let ds = match decode_integer_arith(&mut mq_decoder, &mut iads_contexts) {
+                Some(v) => v,
+                None => break, // OOB terminates strip
+            };
 
             cur_s += ds;
 
@@ -450,49 +458,6 @@ fn compute_placement(
     }
 }
 
-/// Decode an integer using arithmetic coding (same as symbol_dict)
-fn decode_integer_arith(mq_decoder: &mut MQDecoder<'_>, contexts: &mut [MQContext]) -> i32 {
-    let sign = mq_decoder.decode(&mut contexts[0]);
-    let mut prev = 1u32;
-    let mut magnitude: i32 = 0;
-
-    let bit1 = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-    prev = (prev << 1) | (bit1 as u32);
-
-    if bit1 == 0 {
-        for _ in 0..2 {
-            let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-            magnitude = (magnitude << 1) | (bit as i32);
-            prev = (prev << 1) | (bit as u32);
-        }
-    } else {
-        let bit2 = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-        prev = (prev << 1) | (bit2 as u32);
-
-        if bit2 == 0 {
-            magnitude = 4;
-            for _ in 0..4 {
-                let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-                magnitude = (magnitude << 1) | (bit as i32);
-                prev = (prev << 1) | (bit as u32);
-            }
-        } else {
-            magnitude = 20;
-            for _ in 0..12 {
-                let bit = mq_decoder.decode(&mut contexts[prev.min(511) as usize]);
-                magnitude = (magnitude << 1) | (bit as i32);
-                prev = (prev << 1) | (bit as u32);
-            }
-        }
-    }
-
-    if sign != 0 {
-        -magnitude
-    } else {
-        magnitude
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -570,7 +535,7 @@ mod tests {
             height: 16,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![symbol],
+            available_symbols: vec![Arc::new(symbol)],
             ..Default::default()
         };
 
@@ -624,7 +589,7 @@ mod tests {
             height: 16,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![Bitmap::new(4, 4).unwrap()],
+            available_symbols: vec![Arc::new(Bitmap::new(4, 4).unwrap())],
             ..Default::default()
         };
 
@@ -644,7 +609,7 @@ mod tests {
             height: 16,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![Bitmap::new(4, 4).unwrap()],
+            available_symbols: vec![Arc::new(Bitmap::new(4, 4).unwrap())],
             ..Default::default()
         };
 
@@ -664,7 +629,7 @@ mod tests {
             height: 8,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![Bitmap::new_with_default(4, 4, 1).unwrap()],
+            available_symbols: vec![Arc::new(Bitmap::new_with_default(4, 4, 1).unwrap())],
             ..Default::default()
         };
 
@@ -684,7 +649,7 @@ mod tests {
             height: 8,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![Bitmap::new(4, 4).unwrap()],
+            available_symbols: vec![Arc::new(Bitmap::new(4, 4).unwrap())],
             ..Default::default()
         };
 
@@ -708,7 +673,7 @@ mod tests {
             height: 8,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![Bitmap::new(4, 4).unwrap()],
+            available_symbols: vec![Arc::new(Bitmap::new(4, 4).unwrap())],
             huffman_tables: Some(TextRegionHuffmanTables::default()),
             ..Default::default()
         };
@@ -733,7 +698,7 @@ mod tests {
             height: 8,
             num_instances: 1,
             symbol_id_codewidth: 1,
-            available_symbols: vec![Bitmap::new(4, 4).unwrap()],
+            available_symbols: vec![Arc::new(Bitmap::new(4, 4).unwrap())],
             ..Default::default()
         };
 

@@ -24,6 +24,7 @@
 //! - ITU-T T.88 (02/2000): JBIG2 standard
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::parser::objects::PdfDictionary;
 use crate::parser::{ParseError, ParseResult};
@@ -67,17 +68,27 @@ pub struct Jbig2DecodeParams {
 }
 
 impl Jbig2DecodeParams {
-    /// Parse JBIG2 decode parameters from PDF dictionary
-    pub fn from_dict(dict: &PdfDictionary) -> Self {
-        let mut params = Jbig2DecodeParams::default();
+    /// Parse JBIG2 decode parameters from a PDF dictionary
+    ///
+    /// Note: JBIG2Globals data must be resolved externally (it's an indirect
+    /// stream reference that requires the PDF object resolver). Use
+    /// `with_globals` to attach the resolved bytes.
+    pub fn from_dict(_dict: &PdfDictionary) -> Self {
+        // Currently the only DecodeParms key for JBIG2 is JBIG2Globals,
+        // which must be resolved externally and passed via with_globals().
+        Jbig2DecodeParams::default()
+    }
 
-        // JBIG2Globals - contains global data stream
-        // The actual global data bytes should be resolved and passed separately
-        if dict.contains_key("JBIG2Globals") {
-            params.jbig2_globals = Some(Vec::new());
+    /// Create params with resolved JBIG2Globals stream data
+    ///
+    /// Per ISO 32000-1 Section 7.4.7, JBIG2Globals is a stream object
+    /// containing global segments shared across all JBIG2 streams in the PDF.
+    /// The caller must resolve the indirect reference and decode the stream
+    /// before passing the bytes here.
+    pub fn with_globals(globals_data: Vec<u8>) -> Self {
+        Self {
+            jbig2_globals: Some(globals_data),
         }
-
-        params
     }
 }
 
@@ -108,7 +119,13 @@ pub struct Jbig2SegmentHeader {
 // Decoded Segment Store
 // ============================================================================
 
-/// A decoded segment result stored for future reference by other segments
+/// A decoded segment result stored for future reference by other segments.
+///
+/// All variants are actively used: each segment type is inserted into `Jbig2Decoder::segments`
+/// during decoding and later retrieved via `collect_symbol_dicts` / `collect_pattern_dicts`.
+/// Some variants (GenericRegion, TextRegion, HalftoneRegion, PageInfo) are stored for
+/// page composition but only accessed through the page buffer pipeline — the compiler
+/// cannot see this usage statically, hence the allow.
 #[allow(dead_code)]
 enum DecodedSegment {
     /// Decoded symbol dictionary
@@ -173,6 +190,9 @@ impl Jbig2Decoder {
 
     /// Parse global segments from JBIG2Globals stream
     fn parse_globals(&mut self) -> ParseResult<()> {
+        // Clone required: globals_data is sliced into segment_data which is passed
+        // to self.process_segment(&mut self). Without the clone, the immutable borrow
+        // of self.params.jbig2_globals would conflict with the mutable borrow of self.
         let globals_data = match &self.params.jbig2_globals {
             Some(data) if !data.is_empty() => data.clone(),
             _ => return Ok(()),
@@ -186,7 +206,14 @@ impl Jbig2Decoder {
                     let data_end = if header.data_length == 0xFFFFFFFF {
                         globals_data.len()
                     } else {
-                        data_start + header.data_length as usize
+                        data_start
+                            .checked_add(header.data_length as usize)
+                            .ok_or_else(|| {
+                                ParseError::StreamDecodeError(
+                                    "JBIG2 segment data length causes arithmetic overflow"
+                                        .to_string(),
+                                )
+                            })?
                     };
 
                     if data_end > globals_data.len() {
@@ -260,7 +287,10 @@ impl Jbig2Decoder {
                 // Indeterminate length - consume rest of data
                 data.len()
             } else {
-                data_start + header.data_length as usize
+                match data_start.checked_add(header.data_length as usize) {
+                    Some(end) => end,
+                    None => break, // Overflow: skip malformed segment
+                }
             };
 
             if data_end > data.len() {
@@ -268,8 +298,14 @@ impl Jbig2Decoder {
             }
 
             let segment_data = &data[data_start..data_end];
-            // Process the segment; ignore errors for individual segments (graceful degradation)
-            let _ = self.process_segment(&header, segment_data);
+            // Process the segment; log errors but continue (graceful degradation)
+            if let Err(e) = self.process_segment(&header, segment_data) {
+                tracing::warn!(
+                    segment_number = header.segment_number,
+                    segment_type = header.segment_type,
+                    "JBIG2 segment processing failed: {e}"
+                );
+            }
 
             *pos = data_end;
         }
@@ -761,7 +797,7 @@ impl Jbig2Decoder {
     // ========================================================================
 
     /// Collect all symbols from referred-to symbol dictionary segments
-    fn collect_referred_symbols(&self, referred_to: &[u32]) -> Vec<Bitmap> {
+    fn collect_referred_symbols(&self, referred_to: &[u32]) -> Vec<Arc<Bitmap>> {
         let mut symbols = Vec::new();
         for &seg_num in referred_to {
             if let Some(DecodedSegment::SymbolDictionary(dict)) = self.segments.get(&seg_num) {
@@ -932,11 +968,14 @@ mod tests {
     }
 
     #[test]
-    fn test_jbig2_decode_params_from_dict() {
+    fn test_jbig2_decode_params_from_dict_no_globals() {
+        // from_dict no longer detects JBIG2Globals key — globals must be
+        // resolved externally and passed via with_globals()
         let mut dict = PdfDictionary::new();
         dict.insert("JBIG2Globals".to_string(), PdfObject::Reference(10, 0));
         let params = Jbig2DecodeParams::from_dict(&dict);
-        assert!(params.jbig2_globals.is_some());
+        // The dict key is ignored — caller must resolve and use with_globals
+        assert!(params.jbig2_globals.is_none());
     }
 
     #[test]
@@ -944,6 +983,20 @@ mod tests {
         let dict = PdfDictionary::new();
         let params = Jbig2DecodeParams::from_dict(&dict);
         assert!(params.jbig2_globals.is_none());
+    }
+
+    #[test]
+    fn test_jbig2_decode_params_with_globals() {
+        let globals = vec![0x97, 0x4A, 0x42, 0x32]; // sample bytes
+        let params = Jbig2DecodeParams::with_globals(globals.clone());
+        assert_eq!(params.jbig2_globals, Some(globals));
+    }
+
+    #[test]
+    fn test_jbig2_decode_params_with_globals_empty_is_valid() {
+        // Empty globals data is valid (no global segments)
+        let params = Jbig2DecodeParams::with_globals(vec![]);
+        assert_eq!(params.jbig2_globals, Some(vec![]));
     }
 
     #[test]
@@ -1335,6 +1388,51 @@ mod tests {
         });
         // This shouldn't panic even with garbage globals data
         let _ = decoder.parse_globals();
+    }
+
+    #[test]
+    fn test_checked_add_overflow_in_parse_globals() {
+        // Craft a globals stream with a segment header whose data_length
+        // is near u32::MAX, so data_start + data_length overflows usize on 32-bit.
+        // On 64-bit it won't overflow but will exceed globals_data.len() → break.
+        // Either way: no panic.
+        let header = make_segment_header(0, 0, 0, 0xFFFFFFFE, &[]);
+        let mut globals = header;
+        globals.extend_from_slice(&[0xAA; 4]); // tiny data, length claims near-max
+
+        let mut decoder = Jbig2Decoder::new(Jbig2DecodeParams {
+            jbig2_globals: Some(globals),
+        });
+        // Must not panic — returns error or Ok depending on platform word size
+        let _ = decoder.parse_globals();
+    }
+
+    #[test]
+    fn test_checked_add_overflow_in_decode_segments() {
+        // Build a stream: page info (valid) + malformed segment with near-max length.
+        // decode_segments should break gracefully without panic.
+        let mut stream = Vec::new();
+
+        // Page info segment (required for page buffer)
+        let ph = make_segment_header(0, segment_types::PAGE_INFORMATION, 1, 20, &[]);
+        stream.extend_from_slice(&ph);
+        let mut pd = Vec::new();
+        pd.extend_from_slice(&4u32.to_be_bytes()); // width
+        pd.extend_from_slice(&4u32.to_be_bytes()); // height
+        pd.extend_from_slice(&7200u32.to_be_bytes()); // x-res
+        pd.extend_from_slice(&7200u32.to_be_bytes()); // y-res
+        pd.extend_from_slice(&0u16.to_be_bytes()); // flags
+        pd.extend_from_slice(&0u16.to_be_bytes()); // striping
+        stream.extend_from_slice(&pd);
+
+        // Malformed segment with data_length = 0xFFFFFFFE (near-max u32)
+        let bad_seg = make_segment_header(1, 6, 1, 0xFFFFFFFE, &[]);
+        stream.extend_from_slice(&bad_seg);
+        stream.extend_from_slice(&[0x00; 8]); // tiny actual data
+
+        // Must not panic. Overflow causes graceful break.
+        let result = decode_jbig2(&stream, None);
+        assert!(result.is_ok());
     }
 
     // ========================================================================

@@ -272,11 +272,18 @@ impl PageBuffer {
         }
     }
 
-    /// Finalize the page and return packed bytes
+    /// Finalize the page and return packed bytes (cloning)
     ///
     /// For striped pages, trims the bitmap to the actual rendered height.
     pub fn finalize(&self) -> Vec<u8> {
         self.bitmap.to_packed_bytes()
+    }
+
+    /// Consume the page buffer and return packed bytes (zero-copy)
+    ///
+    /// Prefer this over [`finalize`] when the page buffer is no longer needed.
+    pub fn into_finalize(self) -> Vec<u8> {
+        self.bitmap.into_packed_bytes()
     }
 
     /// Get the current rendered height of the page
@@ -493,6 +500,19 @@ mod tests {
 
         let bytes = buffer.finalize();
         assert_eq!(bytes.len(), 2); // 8 pixels = 1 byte per row, 2 rows
+    }
+
+    #[test]
+    fn test_page_buffer_into_finalize_zero_copy() {
+        let data = make_page_info_bytes(8, 2, 7200, 7200, 0, 0);
+        let info = PageInfo::from_bytes(&data).unwrap();
+        let buffer1 = PageBuffer::new(info.clone()).unwrap();
+        let buffer2 = PageBuffer::new(info).unwrap();
+
+        // Both methods must produce identical output
+        let cloned = buffer1.finalize();
+        let moved = buffer2.into_finalize();
+        assert_eq!(cloned, moved);
     }
 
     // ========================================================================
