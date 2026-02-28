@@ -694,11 +694,7 @@ impl CompressionStats {
     pub fn best_compression_type(&self) -> Option<(ContentType, f64)> {
         self.by_content_type
             .iter()
-            .min_by(|(_, a), (_, b)| {
-                a.compression_ratio()
-                    .partial_cmp(&b.compression_ratio())
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            .min_by(|(_, a), (_, b)| a.compression_ratio().total_cmp(&b.compression_ratio()))
             .map(|(&content_type, stats)| (content_type, stats.compression_ratio()))
     }
 

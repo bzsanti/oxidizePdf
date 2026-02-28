@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [1.8.0] - 2026-02-28
+
+### Added
+- **🖼️ JBIG2 Decoder (Issue #135)** - Full pure-Rust JBIG2 image decoder per ITU-T T.88
+  - **MQ Arithmetic Coder** (`mq_coder.rs`) - Complete QE probability table (47 states), INITDEC/BYTEIN/RENORMD procedures, IAID decoding
+  - **Bitstream Reader** (`bitstream.rs`) - MSB-first bit reading, peek/skip/align operations
+  - **Huffman Tables** (`huffman.rs`) - All 15 standard tables (B.1-B.15) per Annex B, OOB marker support, binary search decode
+  - **Generic Region** (`generic_region.rs`) - Templates 0-3 with adaptive pixels, arithmetic (MQ) and MMR decoding, TPGD optimization
+  - **Symbol Dictionary** (`symbol_dict.rs`) - Height-class delta iteration, export table, refinement coding
+  - **Text Region** (`text_region.rs`) - S/T coordinate placement, strip-based layout, 4 reference corners
+  - **Halftone Region** (`halftone_region.rs`) - Pattern dictionary, gray-scale bit-plane decoding, grid placement
+  - **Page Buffer** (`page_buffer.rs`) - PageInfo parsing, stripe handling, region composition
+  - **Integration** (`jbig2.rs`) - Full segment router, referred-to resolution, JBIG2Globals (PDF), page composition
+  - **Robustness** - DoS limits (max 256MB bitmap), malformed data recovery, overflow protection
+  - ~6,100 lines of implementation, 376 tests across 9 modules
+
+### Fixed
+- **🔧 Float Sort Panic (Rust 1.81+)** - Replaced all `partial_cmp().unwrap_or()` patterns with `f64::total_cmp()`
+  - **Problem**: Rust's sort algorithm now enforces strict total ordering and panics on non-transitive comparators
+  - **Root Cause**: `partial_cmp` returns `None` for NaN, and threshold-based "same line" detection broke transitivity
+  - **Solution**: Quantized Y coordinates into bands for text fragment sorting; replaced all 23 `partial_cmp` usages with `total_cmp` (IEEE 754 total ordering)
+  - **Affected modules**: text extraction, table detection, structured text, streaming, dashboard, forms, OCR, encoding
+
+### Technical
+- **Quality improvements** to JBIG2 decoder: `saturating_sub`/`checked_add` overflow protection, binary search Huffman decode, zero-copy `into_packed_bytes`/`into_finalize`, halftone grid formula correction per ITU-T T.88 §6.6.5.2
+- **Tests**: 6,184 unit + 88 integration + 190 doc tests passing
+- **Clippy**: Zero warnings
+- **Breaking Changes**: None
+
 ## [1.7.1] - 2026-02-18
 
 ### Fixed
