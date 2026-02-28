@@ -4,14 +4,30 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-02-27 - JBIG2 Full Decoder Pipeline (Phases 1-9 Complete) |
-| **Branch** | feature/issue-135-jbig2-decoder |
-| **Version** | v1.7.1 |
-| **Tests** | 6,147 unit + 88 integration + 190 doc tests passing |
+| **Last Session** | 2026-03-01 - Release v1.8.0 (JBIG2 + Sort Safety) |
+| **Branch** | main |
+| **Version** | v1.8.0 |
+| **Tests** | 6,184 unit + 88 integration + 190 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-03-01) - Release v1.8.0
+- **Release v1.8.0**: Tag pushed, GitHub Actions release workflow triggered
+  - PR #136: feature/issue-135-jbig2-decoder → develop (CI green, merged)
+  - PR #137: develop → main (CI green, merged)
+  - Tag v1.8.0 created and pushed
+- **Float Sort Panic Fix** (Rust 1.81+):
+  - Root cause: `TextExtractor::sort_and_merge_fragments` threshold-based comparator broke transitivity
+  - Fix: Quantized Y into bands + replaced all 23 `partial_cmp` with `f64::total_cmp()` across 11 files
+  - Affected: text extraction, table detection, structured text, streaming, dashboard, forms, OCR, encoding
+- **JBIG2 Quality Improvements** (12 phases): overflow protection, binary search Huffman, zero-copy ops, halftone grid fix
+- **Issues Closed**: #127 (CFF fonts), #128 (blank merge), #131 (text wrap), #135 (JBIG2 auto-closed by PR)
+- **Tests**: 6,184 unit + 88 integration + 190 doc = 6,462 total, 0 failures
+- **Commits**:
+  - `b85e8fa` - fix: replace all partial_cmp with total_cmp for Rust 1.81+ sort safety
+  - `391f3dc` - Merge PR #137 (release v1.8.0)
 
 ### Session Summary (2026-02-27 EVE) - JBIG2 Phases 3-9 Complete
 - **All Phases Complete**: Full JBIG2 decoder pipeline implemented
