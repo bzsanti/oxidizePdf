@@ -69,6 +69,20 @@ REVENUE_*.md
 # External test suites
 test-suite/external-suites/
 
+# Test corpus PDFs (downloaded, not committed)
+test-corpus/t1-spec/verapdf/
+test-corpus/t1-spec/pdfjs/
+test-corpus/t2-realworld/govdocs-subset0/
+test-corpus/t2-realworld/govdocs-subset1/
+test-corpus/t3-stress/issue-tracker/
+test-corpus/t4-ai-target/papers/
+test-corpus/t4-ai-target/ground-truth/
+test-corpus/t5-quality/omnidocbench/
+test-corpus/t5-quality/annotations/
+test-corpus/t6-adversarial/malformed/
+test-corpus/t6-adversarial/malicious/
+test-corpus/results/
+
 # Local PDF fixtures (symbolic links to private PDFs - root level only)
 /tests/fixtures/
 /tests/fixtures
