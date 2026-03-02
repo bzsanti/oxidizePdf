@@ -1,7 +1,6 @@
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::{PdfDocument, PdfReader};
-#[cfg(feature = "rand")]
-use rand::Rng;
+use rand::RngExt;
 use std::fs::{self, File};
 use std::io::Write;
 use std::panic::{self, AssertUnwindSafe};
@@ -47,10 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut detailed_results = Vec::new();
     let overall_start = Instant::now();
 
-    #[cfg(feature = "rand")]
     let mut rng = rand::rng();
-    #[cfg(not(feature = "rand"))]
-    let mut rng = ();
 
     // Known problematic PDFs that cause parser panics
     const PROBLEMATIC_PDFS: &[&str] = &[
@@ -193,11 +189,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(feature = "rand")]
 fn process_single_pdf(
     pdf_path: &Path,
     options: &ExtractionOptions,
-    rng: &mut impl Rng,
+    rng: &mut impl RngExt,
 ) -> PdfResult {
     let mut result = PdfResult {
         filename: pdf_path.file_name().unwrap().to_string_lossy().to_string(),
@@ -242,7 +237,7 @@ fn process_single_pdf(
 
     // Generate random page numbers (1-indexed)
     while pages_to_try.len() < max_attempts {
-        let page_num = rng.gen_range(1..=page_count);
+        let page_num = rng.random_range(1..=page_count);
         if !pages_to_try.contains(&page_num) {
             pages_to_try.push(page_num);
         }
@@ -322,86 +317,6 @@ fn process_single_pdf(
         result.status = PdfStatus::AllPagesGarbled; // Mixed but no real text found
     }
 
-    result
-}
-
-#[cfg(not(feature = "rand"))]
-fn process_single_pdf(pdf_path: &Path, options: &ExtractionOptions, _rng: &mut ()) -> PdfResult {
-    let mut result = PdfResult {
-        filename: pdf_path.file_name().unwrap().to_string_lossy().to_string(),
-        status: PdfStatus::FailedToOpen,
-        pages_tried: 0,
-        chars_extracted: 0,
-        text_preview: String::new(),
-        processing_time: Duration::default(),
-        error_message: None,
-    };
-
-    let start_time = Instant::now();
-
-    // Try to open the PDF
-    match PdfReader::open(pdf_path) {
-        Ok(reader) => {
-            let document = PdfDocument::new(reader);
-            match document.page_count() {
-                Ok(page_count) => {
-                    if page_count == 0 {
-                        result.status = PdfStatus::AllPagesEmpty;
-                        result.processing_time = start_time.elapsed();
-                        return result;
-                    }
-
-                    // For non-rand version, just try page 0
-                    let pages_to_try = vec![0];
-                    let mut all_empty = true;
-                    let mut all_garbled = true;
-
-                    for &page_index in &pages_to_try {
-                        result.pages_tried += 1;
-                        let mut extractor = TextExtractor::with_options(options.clone());
-                        match extractor.extract_from_page(&document, page_index) {
-                            Ok(extracted_text) => {
-                                let content = extracted_text.text.trim();
-                                if !content.is_empty() {
-                                    all_empty = false;
-                                    let validation = validate_text_quality(content);
-                                    if validation.is_real_text {
-                                        result.chars_extracted = content.len();
-                                        result.text_preview =
-                                            content[..100.min(content.len())].to_string();
-                                        result.status = PdfStatus::Success;
-                                        result.processing_time = start_time.elapsed();
-                                        return result;
-                                    } else if validation.readability_score > 0.5 {
-                                        all_garbled = false;
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                result.error_message = Some(e.to_string());
-                            }
-                        }
-                    }
-
-                    if all_empty {
-                        result.status = PdfStatus::AllPagesEmpty;
-                    } else if all_garbled {
-                        result.status = PdfStatus::AllPagesGarbled;
-                    } else {
-                        result.status = PdfStatus::AllPagesGarbled;
-                    }
-                }
-                Err(e) => {
-                    result.error_message = Some(e.to_string());
-                }
-            }
-        }
-        Err(e) => {
-            result.error_message = Some(e.to_string());
-        }
-    }
-
-    result.processing_time = start_time.elapsed();
     result
 }
 

@@ -1,9 +1,7 @@
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 use oxidize_pdf::{PdfDocument, PdfReader};
-#[cfg(feature = "rand")]
 use rand::seq::SliceRandom;
-#[cfg(feature = "rand")]
-use rand::Rng;
+use rand::RngExt;
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -39,11 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Randomly select 10 PDFs
-    #[cfg(feature = "rand")]
-    {
-        let mut rng = rand::rng();
-        pdf_files.shuffle(&mut rng);
-    }
+    let mut rng = rand::rng();
+    pdf_files.shuffle(&mut rng);
     let selected_pdfs = pdf_files.into_iter().take(10).collect::<Vec<_>>();
 
     let options = ExtractionOptions::default();
@@ -76,29 +71,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // - If >3 pages: random page excluding first and last
                         // - If ≤3 pages: any random page
                         let selected_page = {
-                            #[cfg(feature = "rand")]
-                            {
-                                if page_count > 3 {
-                                    // Exclude first (page 1) and last (page page_count)
-                                    // So we can select from page 2 to page_count-1 (inclusive)
-                                    let min_page = 2;
-                                    let max_page = page_count - 1;
-                                    let mut rng = rand::rng();
-                                    rng.gen_range(min_page..=max_page)
-                                } else {
-                                    // Any page from 1 to page_count
-                                    let mut rng = rand::rng();
-                                    rng.gen_range(1..=page_count)
-                                }
-                            }
-                            #[cfg(not(feature = "rand"))]
-                            {
-                                // Without rand, just use page 0 (first page)
-                                if page_count > 0 {
-                                    0
-                                } else {
-                                    0
-                                }
+                            let mut rng = rand::rng();
+                            if page_count > 3 {
+                                // Exclude first (page 1) and last (page page_count)
+                                // So we can select from page 2 to page_count-1 (inclusive)
+                                let min_page = 2;
+                                let max_page = page_count - 1;
+                                rng.random_range(min_page..=max_page)
+                            } else {
+                                // Any page from 1 to page_count
+                                rng.random_range(1..=page_count)
                             }
                         };
 

@@ -4,14 +4,40 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-03-01 - Release v1.8.0 (JBIG2 + Sort Safety) |
-| **Branch** | main |
+| **Last Session** | 2026-03-02 - Corpus 7K infrastructure + bug diagnosis |
+| **Branch** | feature/corpus-7k-test-infrastructure |
 | **Version** | v1.8.0 |
-| **Tests** | 6,184 unit + 88 integration + 190 doc tests passing |
+| **Tests** | 6,194 unit + 88 integration + 190 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+
+### Session Summary (2026-03-02) - Corpus 7K Infrastructure + Bug Diagnosis
+- **Branch**: `feature/corpus-7k-test-infrastructure` (synced with origin)
+- **Warning fixes**: rand 0.10 API (`RngExt` trait), unused `ParseError` import
+- **ROADMAP_MASTER.md**: Full update from v1.6.7 → v1.8.0 state
+- **T0 Regression**: 21 passed, 0 failed (13 PDFs, 100% parse rate)
+- **T1 Spec Compliance**: Downloaded 3,554 PDFs (2,654 veraPDF + 900 pdf.js)
+  - Subprocess probe: 2,648 OK, 4 parse errors, **2 timeouts** (infinite hang)
+  - Test runner SIGKILL: abandoned timeout threads accumulate memory → OOM
+- **Bug discovered**: `extract_text()` infinite loop on 2 specific PDFs
+  - `isartor-6-2-3-3-t04-fail-c.pdf` (5KB, 1 page) — hangs in text extraction
+  - `isartor-6-1-12-t01-fail-a.pdf` (4MB, 10,000 pages) — hangs in text extraction
+  - Both parse fine with `PdfReader::open()`, hang only on `extract_text()`
+  - Copied to fixtures as `hang_5kb_1page.pdf` and `hang_4mb_10kpages.pdf`
+- **Pending fixes (next session)**:
+  1. Diagnose exact infinite loop location in text extractor (stack trace needed)
+  2. Fix library: add recursion depth limit / timeout to extract_text pipeline
+  3. Fix test runner: use subprocesses instead of threads for timeout safety
+  4. Re-run T1 to validate full corpus pass
+- **Files modified**:
+  - `examples/test_random_fixtures_extraction.rs` — rand 0.10 API fix
+  - `examples/test_all_fixtures_extraction.rs` — rand 0.10 API fix
+  - `tests/parser_objects_coverage.rs` — unused import fix
+  - `examples/corpus_probe.rs` — new diagnostic tool
+  - `.private/ROADMAP_MASTER.md` — full state update
+- **Tests**: 6,194 unit + 190 doc = 0 failures, 0 clippy warnings
 
 ### Session Summary (2026-03-01) - Release v1.8.0
 - **Release v1.8.0**: Tag pushed, GitHub Actions release workflow triggered
