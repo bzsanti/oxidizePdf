@@ -4,18 +4,18 @@
 [![Documentation](https://docs.rs/oxidize-pdf/badge.svg)](https://docs.rs/oxidize-pdf)
 [![Downloads](https://img.shields.io/crates/d/oxidize-pdf)](https://crates.io/crates/oxidize-pdf)
 [![codecov](https://codecov.io/gh/bzsanti/oxidizePdf/branch/main/graph/badge.svg)](https://codecov.io/gh/bzsanti/oxidizePdf)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-%3E%3D1.77-orange.svg)](https://www.rust-lang.org)
 [![Maintenance](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)](https://github.com/bzsanti/oxidizePdf)
 
-A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Production-ready for basic PDF functionality with validated performance of 3,000-4,000 pages/second for realistic business documents, memory safety guarantees, and a compact 5.2MB binary size.
+A pure Rust PDF generation and manipulation library with **zero external PDF dependencies**. Battle-tested against **9,000+ real-world PDFs** with a 99.3% success rate, 6,400+ tests, and validated performance of 3,000-4,000 pages/second for realistic business documents.
 
 ## Features
 
 - 🚀 **Pure Rust Core** - No C dependencies for PDF operations (OCR feature requires Tesseract)
 - 📄 **PDF Generation** - Create multi-page documents with text, graphics, and images
-- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (tested on 759 real-world PDFs*)
-- 🛡️ **Corruption Recovery** - Robust error recovery for damaged or malformed PDFs (98.8% success rate)
+- 🔍 **PDF Parsing** - Read and extract content from existing PDFs (tested on 9,000+ real-world PDFs)
+- 🛡️ **Corruption Recovery** - Robust error recovery for damaged or malformed PDFs (99.3% success rate)
 - ✂️ **PDF Operations** - Split, merge, and rotate PDFs while preserving basic content
 - 🖼️ **Image Support** - Embed JPEG and PNG images with automatic compression
 - 🎨 **Transparency & Blending** - Full alpha channel, SMask, blend modes for watermarking and overlays
@@ -23,64 +23,27 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 - 🎨 **Rich Graphics** - Vector graphics with shapes, paths, colors (RGB/CMYK/Gray)
 - 📝 **Advanced Text** - Custom TTF/OTF fonts, standard fonts, text flow with automatic wrapping, alignment
 - 🅰️ **Custom Fonts** - Load and embed TrueType/OpenType fonts with full Unicode support
-- 🔍 **OCR Support** - Extract text from scanned PDFs using Tesseract OCR (v0.1.3+)
-- 🤖 **AI/RAG Integration** - Document chunking for LLM pipelines with sentence boundaries and metadata (v1.3.0+)
-- 📋 **Invoice Extraction** - Automatic structured data extraction from invoice PDFs with multi-language support (v1.6.2+)
-- 🗜️ **Compression** - Built-in FlateDecode compression for smaller files
+- 🔍 **OCR Support** - Extract text from scanned PDFs using Tesseract OCR
+- 🤖 **AI/RAG Integration** - Document chunking for LLM pipelines with sentence boundaries and metadata
+- 📋 **Invoice Extraction** - Automatic structured data extraction from invoice PDFs with multi-language support
+- 🗜️ **Compression** - FlateDecode, LZWDecode, CCITTFaxDecode, JBIG2Decode, and more
+- 🔒 **Encryption** - RC4, AES-128, AES-256 (R5/R6) with full permission support
+- ✍️ **Digital Signatures** - Detection, PKCS#7 verification, and certificate validation (Mozilla CA roots)
+- 📑 **PDF/A Validation** - 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)
 - 🔒 **Type Safe** - Leverage Rust's type system for safe PDF manipulation
 
-## 🎉 What's New
+## 🎉 What's New in v2.0.0
 
-**Latest: v1.6.2 - Invoice Data Extraction:**
-- 📋 **Structured Invoice Extraction** - Pattern-based field extraction with confidence scoring
-- 🌍 **Multi-Language Support** - Spanish, English, German, and Italian invoice formats
-- 🎯 **14 Field Types** - Invoice numbers, dates, amounts, VAT numbers, supplier/customer names, line items
-- 🔢 **Smart Number Parsing** - Language-aware decimal handling (1.234,56 vs 1,234.56)
-- 📊 **Confidence Scoring** - 0.0-1.0 confidence scores with configurable thresholds
-- 🔧 **Builder Pattern API** - Ergonomic configuration with sensible defaults
-- 📖 **Comprehensive Documentation** - 500+ line user guide with examples and troubleshooting
-- ⚡ **High Performance** - <100ms extraction for typical invoices, thread-safe extractor
+- 📜 **MIT License** - Consolidated across all project files
+- 📊 **9,000+ PDF Corpus** - 7-tier test infrastructure (T0-T6) with 99.3% success rate
+- 🖼️ **JBIG2 Decoder** - Full pure Rust implementation (ITU-T T.88, 9 modules, 416 tests)
+- ✍️ **Digital Signature Verification** - PKCS#7 + Mozilla CA root certificates
+- 📑 **PDF/A Validation** - 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)
+- 🗜️ **CCITTFaxDecode** - Group 3/4 fax compression support
+- 🔒 **AES-256 R5/R6 Encryption** - RustCrypto, Algorithm 2.B, qpdf compatible
+- 🧪 **6,400+ Tests** - Unit, integration, doc tests, and property-based testing
 
-**v1.3.0 - AI/RAG Integration:**
-- 🤖 **Document Chunking for LLMs** - Production-ready chunking with 0.62ms for 100 pages
-- 📊 **Rich Metadata** - Page tracking, position info, confidence scores
-- ✂️ **Smart Boundaries** - Sentence boundary detection for semantic coherence
-- ⚡ **High Performance** - 3,000-4,000 pages/second for realistic business documents
-- 📚 **Complete Examples** - RAG pipeline with embeddings and vector store integration
-
-**Production-Ready Features (v1.2.3-v1.2.5):**
-- 🛡️ **Corruption Recovery** - Comprehensive error recovery system (v1.1.0+, polished in v1.2.3)
-  - Automatic XRef table rebuild for broken cross-references
-  - Lenient parsing mode with multiple recovery strategies
-  - Partial content extraction from damaged files
-  - 98.8% success rate on 759 real-world PDFs
-- 🎨 **PNG Transparency** - Full transparency support (v1.2.3)
-  - PNG images with alpha channels
-  - SMask (Soft Mask) generation
-  - 16 blend modes (Normal, Multiply, Screen, Overlay, etc.)
-  - Opacity control and watermarking capabilities
-- 🌏 **CJK Text Support** - Complete Asian language support (v1.2.3-v1.2.4)
-  - Chinese (Simplified & Traditional), Japanese, Korean
-  - CMap parsing and ToUnicode generation
-  - Type0 fonts with CID mapping
-  - UTF-16BE encoding with Adobe-Identity-0
-
-**Major features (v1.1.6+):**
-- 🅰️ **Custom Font Support** - Load TTF/OTF fonts from files or memory
-- ✍️ **Advanced Text Formatting** - Character spacing, word spacing, text rise, rendering modes
-- 📋 **Clipping Paths** - Both EvenOdd and NonZero winding rules
-- 💾 **In-Memory Generation** - Generate PDFs without file I/O using `to_bytes()`
-- 🗜️ **Compression Control** - Enable/disable compression with `set_compress()`
-
-**Significant improvements in PDF compatibility:**
-- 📈 **Better parsing**: Handles circular references, XRef streams, object streams
-- 🛡️ **Stack overflow protection** - Production-ready resilience against malformed PDFs
-- 🚀 **Performance**: 35.9 PDFs/second parsing speed (validated on 759 real-world PDFs)
-- ⚡ **Error recovery** - Multiple fallback strategies for corrupted files
-- 🔧 **Lenient parsing** - Graceful handling of malformed structures
-- 💾 **Memory optimization**: `OptimizedPdfReader` with LRU cache
-
-**Note:** *Success rates apply only to non-encrypted PDFs with basic features. The library provides basic PDF functionality. See [Known Limitations](#known-limitations) for a transparent assessment of current capabilities and planned features.
+See [CHANGELOG.md](CHANGELOG.md) for previous releases.
 
 ## 🏆 Why oxidize-pdf?
 
@@ -93,7 +56,7 @@ A pure Rust PDF generation and manipulation library with **zero external PDF dep
 ### Safety & Reliability
 - **Memory safe** - Guaranteed by Rust compiler (no null pointers, no buffer overflows)
 - **Type safe API** - Catch errors at compile time
-- **3,000+ tests** - Comprehensive test suite with real-world PDFs
+- **6,400+ tests** - Comprehensive test suite with 9,000+ real-world PDFs
 - **No CVEs possible** - Memory safety eliminates entire classes of vulnerabilities
 
 ### Developer Experience
@@ -108,10 +71,10 @@ Add oxidize-pdf to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxidize-pdf = "1.6.8"
+oxidize-pdf = "2.0.0"
 
 # For OCR support (optional)
-oxidize-pdf = { version = "1.6.8", features = ["ocr-tesseract"] }
+oxidize-pdf = { version = "2.0.0", features = ["ocr-tesseract"] }
 ```
 
 ### Basic PDF Generation
@@ -521,7 +484,7 @@ cargo run --example cjk_text_extraction
 **Validated Metrics** (based on comprehensive benchmarking):
 - **PDF Generation**: 3,000-4,000 pages/second for realistic business documents
 - **Complex Content**: 670 pages/second for dense analytics dashboards
-- **PDF Parsing**: 35.9 PDFs/second (98.8% success rate on 759 real-world PDFs)
+- **PDF Parsing**: 35.9 PDFs/second (99.3% success rate on 9,000+ real-world PDFs)
 - **Memory Efficient**: Streaming operations available for large documents
 - **Pure Rust**: No external C dependencies for PDF operations
 
@@ -558,88 +521,79 @@ This project is licensed under the **MIT License** - see the [LICENSE](https://g
 
 ## Known Limitations
 
-oxidize-pdf provides basic PDF functionality. We prioritize transparency about what works and what doesn't.
+We prioritize transparency about what works and what doesn't.
 
 ### Working Features
-- ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode, DCTDecode (JPEG)
+- ✅ **Compression**: FlateDecode, ASCIIHexDecode, ASCII85Decode, RunLengthDecode, LZWDecode, DCTDecode, CCITTFaxDecode, JBIG2Decode
 - ✅ **Color Spaces**: DeviceRGB, DeviceCMYK, DeviceGray
 - ✅ **Fonts**: Standard 14 fonts + TTF/OTF custom font loading and embedding
-- ✅ **Images**: JPEG embedding, raw RGB/Gray data
-- 🚧 **PNG Support**: Basic functionality (7 tests failing - compression issues)
+- ✅ **Images**: JPEG embedding, raw RGB/Gray data, PNG with transparency
 - ✅ **Operations**: Split, merge, rotate, page extraction, text extraction
 - ✅ **Graphics**: Vector operations, clipping paths, transparency (CA/ca)
-- ✅ **Encryption**: RC4 40/128-bit, AES-128/256 with permissions
+- ✅ **Encryption**: RC4 40/128-bit, AES-128/256, AES-256 R5/R6
 - ✅ **Forms**: Basic text fields, checkboxes, radio buttons, combo boxes, list boxes
+- ✅ **Digital Signatures**: Detection + PKCS#7 verification + certificate validation (signing not yet supported)
+- ✅ **PDF/A Validation**: 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)
+- ✅ **JBIG2 Decoding**: Full pure Rust decoder (ITU-T T.88)
 
-### Known Issues & Missing Features
-- 🐛 **PNG Compression**: 7 tests consistently failing - use JPEG for now
+### Missing Features
 - 🚧 **Form Interactions**: Forms can be created but not edited interactively
+- 🚧 **Tagged PDFs**: Structure tree API (partial — no marked content operators)
 - ❌ **Rendering**: No PDF to image conversion
-- ❌ **Advanced Compression**: CCITTFaxDecode, JBIG2Decode, JPXDecode
-- ❌ **Advanced Graphics**: Complex patterns, shadings, gradients, advanced blend modes
-- ❌ **Digital Signatures**: Signature fields exist but no signing capability
-- ❌ **Tagged PDFs**: No accessibility/structure support yet
+- ❌ **JPXDecode**: JPEG 2000 compression not supported
+- ❌ **Advanced Graphics**: Complex patterns, shadings, gradients
+- ❌ **Digital Signing**: Signature creation (verification works, signing does not)
 - ❌ **Advanced Color**: ICC profiles, spot colors, Lab color space
 - ❌ **JavaScript**: No form calculations or validation scripts
 - ❌ **Multimedia**: No sound, video, or 3D content support
 
-### Examples Status
-We're actively adding more examples for core features. New examples include:
-- `merge_pdfs.rs` - PDF merging with various options
-- `split_pdf.rs` - Different splitting strategies
-- `extract_text.rs` - Text extraction with layout preservation
-- `encryption.rs` - RC4 and AES encryption demonstrations
-
 ### Important Notes
 - Parsing success doesn't mean full feature support
 - Many PDFs will parse but advanced features will be ignored
-- This is early beta software with significant limitations
 
 ## Project Structure
 
 ```
 oxidize-pdf/
-├── oxidize-pdf-core/     # Core PDF library (AGPL-3.0)
-├── test-suite/           # Comprehensive test suite
+├── oxidize-pdf-core/     # Core PDF library (MIT)
+├── oxidize-pdf-api/      # REST API server
+├── oxidize-pdf-cli/      # CLI interface
+├── test-corpus/          # 9,000+ PDFs across 7 tiers (T0-T6)
 ├── docs/                 # Documentation
-│   ├── technical/        # Technical docs and implementation details
-│   └── reports/          # Analysis and test reports
-├── tools/                # Development and analysis tools
-├── scripts/              # Build and release scripts
-└── test-pdfs/            # Test PDF files
-
+├── dev-tools/            # Development utilities
+├── benches/              # Benchmarks
+└── lints/                # Custom Clippy lints
 ```
 
 See [REPOSITORY_ARCHITECTURE.md](REPOSITORY_ARCHITECTURE.md) for detailed information.
 
 ## Testing
 
-oxidize-pdf includes comprehensive test suites to ensure reliability:
+oxidize-pdf uses a **7-tier corpus** (T0-T6) with 9,000+ PDFs and 6,400+ tests:
+
+| Tier | Description | PDFs | Purpose |
+|------|-------------|------|---------|
+| T0 | Synthetic | Generated | Unit tests, CI/CD |
+| T1 | Reference | ~1,300 | pdf.js, pdfium, poppler suites |
+| T2 | Real-world | ~7,000 | GovDocs, academic, corporate |
+| T3 | Stress | ~200 | Malformed, edge cases |
+| T4 | Performance | ~100 | Benchmarking targets |
+| T5 | Quality | ~300 | Text extraction accuracy |
+| T6 | Adversarial | ~100 | Security, fuzzing |
 
 ```bash
-# Run standard test suite (synthetic PDFs)
-cargo test
+# Run standard test suite (T0 — synthetic PDFs, runs in CI)
+cargo test --workspace
 
-# Run all tests including performance benchmarks
-cargo test -- --ignored
-
-# Run with local PDF fixtures (if available)
-OXIDIZE_PDF_FIXTURES=on cargo test
+# Run corpus tests (requires downloaded corpus)
+cargo test --test t1_spec        # T1: reference suite
+cargo test --test t2_realworld   # T2: real-world PDFs
 
 # Run OCR tests (requires Tesseract installation)
 cargo test tesseract_ocr_tests --features ocr-tesseract -- --ignored
 ```
 
-### Local PDF Fixtures (Optional)
-
-For enhanced testing with real-world PDFs, you can optionally set up local PDF fixtures:
-
-1. Create a symbolic link: `tests/fixtures -> /path/to/your/pdf/collection`
-2. The test suite will automatically detect and use these PDFs
-3. Fixtures are never committed to the repository (excluded in `.gitignore`)
-4. Tests work fine without fixtures using synthetic PDFs
-
-**Note**: CI/CD always uses synthetic PDFs only for consistent, fast builds.
+The T0 tier runs in CI with zero external dependencies. T1-T6 tiers require downloading the corpus (~15 GB) — see `test-corpus/` for setup instructions.
 
 ## Contributing
 

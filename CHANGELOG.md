@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.0.0] - 2026-03-03
+
+### Changed
+- **License**: AGPL-3.0 → MIT. After seeing the community grow around oxidize-pdf, I've decided to switch to MIT to make adoption easier for everyone. The AGPL was the right choice early on, but at this stage removing licensing friction will benefit the ecosystem more. I'll continue actively developing the library. Contributions welcome.
+- **Version**: Major version bump to v2.0.0
+
+### Added
+- Text extraction thresholds for T1 (98%), T3 (90%), T5 (99%), T6 (85%) corpus tiers
+- 7-tier test corpus infrastructure (T0-T6) with 9,000+ PDFs
+- README rewrite reflecting current feature set (JBIG2, digital signatures, PDF/A, CCITTFax)
+
+### Removed
+- `docs/LICENSING_STRATEGY_ANALYSIS.md` (obsolete)
+
 ## [1.8.0] - 2026-02-28
 
 ### Added
