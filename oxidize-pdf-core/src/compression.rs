@@ -13,6 +13,9 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     encoder.finish().map_err(PdfError::Io)
 }
 
+/// Maximum decompressed size limit (256 MB) to prevent decompression bombs.
+const MAX_DECOMPRESSED_SIZE: usize = 256 * 1024 * 1024;
+
 /// Decompress data using Flate/Zlib decompression
 pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
     use flate2::read::ZlibDecoder;
@@ -20,9 +23,27 @@ pub fn decompress(data: &[u8]) -> Result<Vec<u8>> {
 
     let mut decoder = ZlibDecoder::new(data);
     let mut decompressed = Vec::new();
-    decoder
-        .read_to_end(&mut decompressed)
-        .map_err(PdfError::Io)?;
+    let mut buffer = [0u8; 16384];
+
+    loop {
+        match decoder.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => {
+                if decompressed.len() + n > MAX_DECOMPRESSED_SIZE {
+                    return Err(PdfError::Io(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!(
+                            "Decompressed size exceeds {} MB limit",
+                            MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                        ),
+                    )));
+                }
+                decompressed.extend_from_slice(&buffer[..n]);
+            }
+            Err(e) => return Err(PdfError::Io(e)),
+        }
+    }
+
     Ok(decompressed)
 }
 

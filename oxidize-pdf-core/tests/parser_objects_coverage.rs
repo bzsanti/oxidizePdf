@@ -10,7 +10,8 @@
 
 use oxidize_pdf::parser::lexer::Lexer;
 use oxidize_pdf::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject, PdfString};
-use oxidize_pdf::parser::{ParseError, ParseOptions};
+#[allow(unused_imports)]
+use oxidize_pdf::parser::ParseOptions;
 use std::io::Cursor;
 
 // ============================================================================

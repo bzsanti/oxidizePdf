@@ -539,9 +539,27 @@ impl IntelligentCompressor {
         use flate2::read::ZlibDecoder;
         use std::io::Read;
 
+        const MAX_DECOMPRESSED: usize = 256 * 1024 * 1024;
+
         let mut decoder = ZlibDecoder::new(data);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed)?;
+        let mut buffer = [0u8; 16384];
+
+        loop {
+            match decoder.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if decompressed.len() + n > MAX_DECOMPRESSED {
+                        return Err(crate::error::PdfError::CompressionError(format!(
+                            "Decompressed size exceeds {} MB limit",
+                            MAX_DECOMPRESSED / (1024 * 1024)
+                        )));
+                    }
+                    decompressed.extend_from_slice(&buffer[..n]);
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
 
         Ok(decompressed)
     }

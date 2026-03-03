@@ -27,6 +27,10 @@ pub struct EncryptionInfo {
     pub p: i32,
     /// Length entry (key length in bits)
     pub length: Option<i32>,
+    /// UE entry (encrypted user key, R5/R6 only)
+    pub ue: Option<Vec<u8>>,
+    /// OE entry (encrypted owner key, R5/R6 only)
+    pub oe: Option<Vec<u8>>,
 }
 
 /// PDF Encryption Handler
@@ -127,6 +131,18 @@ impl EncryptionHandler {
             .and_then(|obj| obj.as_integer())
             .map(|i| i as i32);
 
+        // Get UE entry (R5/R6 only — encrypted user key)
+        let ue = dict
+            .get("UE")
+            .and_then(|obj| obj.as_string())
+            .map(|s| s.as_bytes().to_vec());
+
+        // Get OE entry (R5/R6 only — encrypted owner key)
+        let oe = dict
+            .get("OE")
+            .and_then(|obj| obj.as_string())
+            .map(|s| s.as_bytes().to_vec());
+
         Ok(EncryptionInfo {
             filter: filter.to_string(),
             v,
@@ -135,6 +151,8 @@ impl EncryptionHandler {
             u,
             p,
             length,
+            ue,
+            oe,
         })
     }
 
@@ -147,41 +165,20 @@ impl EncryptionHandler {
     pub fn unlock_with_user_password(&mut self, password: &str) -> ParseResult<bool> {
         let user_password = UserPassword(password.to_string());
 
-        // Compute what the U entry should be for this password
-        let permissions = Permissions::from_bits(self.encryption_info.p as u32);
-
-        // Debug: show inputs
-        #[cfg(debug_assertions)]
-        {
-            eprintln!("[DEBUG unlock] password len: {}", password.len());
-            eprintln!(
-                "[DEBUG unlock] O[0..8]: {:02x?}",
-                &self.encryption_info.o[..8.min(self.encryption_info.o.len())]
-            );
-            eprintln!(
-                "[DEBUG unlock] U[0..8]: {:02x?}",
-                &self.encryption_info.u[..8.min(self.encryption_info.u.len())]
-            );
-            eprintln!(
-                "[DEBUG unlock] P: {} (0x{:08X})",
-                self.encryption_info.p, self.encryption_info.p as u32
-            );
-            eprintln!("[DEBUG unlock] R: {}", self.encryption_info.r);
-            if let Some(ref fid) = self.file_id {
-                eprintln!(
-                    "[DEBUG unlock] file_id len: {}, first bytes: {:02x?}",
-                    fid.len(),
-                    &fid[..8.min(fid.len())]
-                );
-            } else {
-                eprintln!("[DEBUG unlock] file_id: None");
-            }
+        match self.encryption_info.r {
+            5 | 6 => self.unlock_user_r5_r6(&user_password),
+            _ => self.unlock_user_r2_r4(&user_password),
         }
+    }
+
+    /// R2-R4 user password unlock (MD5/RC4 based)
+    fn unlock_user_r2_r4(&mut self, user_password: &UserPassword) -> ParseResult<bool> {
+        let permissions = Permissions::from_bits(self.encryption_info.p as u32);
 
         let computed_u = self
             .security_handler
             .compute_user_hash(
-                &user_password,
+                user_password,
                 &self.encryption_info.o,
                 permissions,
                 self.file_id.as_deref(),
@@ -194,25 +191,19 @@ impl EncryptionHandler {
         // Compare with stored U entry (first 16 bytes for R3+)
         let comparison_length = if self.encryption_info.r >= 3 { 16 } else { 32 };
 
-        #[cfg(debug_assertions)]
+        if computed_u.len() < comparison_length || self.encryption_info.u.len() < comparison_length
         {
-            eprintln!("[DEBUG unlock] computed_u[0..8]: {:02x?}", &computed_u[..8]);
-            eprintln!(
-                "[DEBUG unlock] stored_u[0..8]: {:02x?}",
-                &self.encryption_info.u[..8.min(self.encryption_info.u.len())]
-            );
-            eprintln!("[DEBUG unlock] comparison_length: {}", comparison_length);
+            return Ok(false);
         }
 
         let matches =
             computed_u[..comparison_length] == self.encryption_info.u[..comparison_length];
 
         if matches {
-            // Compute and store encryption key
             let key = self
                 .security_handler
                 .compute_encryption_key(
-                    &user_password,
+                    user_password,
                     &self.encryption_info.o,
                     permissions,
                     self.file_id.as_deref(),
@@ -225,6 +216,61 @@ impl EncryptionHandler {
         }
 
         Ok(matches)
+    }
+
+    /// R5/R6 user password unlock (SHA-256/AES-256 based per ISO 32000-2)
+    fn unlock_user_r5_r6(&mut self, user_password: &UserPassword) -> ParseResult<bool> {
+        let u_entry = &self.encryption_info.u;
+
+        // Validate using the proper R5/R6 algorithm
+        let is_valid = if self.encryption_info.r == 5 {
+            self.security_handler
+                .validate_r5_user_password(user_password, u_entry)
+        } else {
+            self.security_handler
+                .validate_r6_user_password(user_password, u_entry)
+        }
+        .map_err(|e| ParseError::SyntaxError {
+            position: 0,
+            message: format!(
+                "Failed to validate R{} user password: {e}",
+                self.encryption_info.r
+            ),
+        })?;
+
+        if is_valid {
+            // Recover encryption key from UE entry
+            let ue_entry =
+                self.encryption_info
+                    .ue
+                    .as_deref()
+                    .ok_or_else(|| ParseError::SyntaxError {
+                        position: 0,
+                        message: format!(
+                            "R{} encryption requires UE entry but it is missing",
+                            self.encryption_info.r
+                        ),
+                    })?;
+
+            let key = if self.encryption_info.r == 5 {
+                self.security_handler
+                    .recover_r5_encryption_key(user_password, u_entry, ue_entry)
+            } else {
+                self.security_handler
+                    .recover_r6_encryption_key(user_password, u_entry, ue_entry)
+            }
+            .map_err(|e| ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Failed to recover R{} encryption key: {e}",
+                    self.encryption_info.r
+                ),
+            })?;
+
+            self.encryption_key = Some(key);
+        }
+
+        Ok(is_valid)
     }
 
     /// Try to unlock PDF with owner password

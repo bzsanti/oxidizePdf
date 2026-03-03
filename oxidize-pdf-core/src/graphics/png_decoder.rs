@@ -296,18 +296,40 @@ impl<'a> PngDecoder<'a> {
     }
 
     fn decompress_idat(&self) -> Result<Vec<u8>> {
+        /// Maximum decompressed PNG data size (256 MB)
+        const MAX_PNG_DECOMPRESSED: usize = 256 * 1024 * 1024;
+
         // Concatenate all IDAT chunks
         let mut compressed = Vec::new();
         for chunk in &self.idat_chunks {
             compressed.extend_from_slice(chunk);
         }
 
-        // Decompress using zlib
+        // Decompress using zlib with size limit
         let mut decoder = ZlibDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
-        decoder
-            .read_to_end(&mut decompressed)
-            .map_err(|e| PdfError::InvalidImage(format!("PNG decompression failed: {}", e)))?;
+        let mut buffer = [0u8; 16384];
+
+        loop {
+            match decoder.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if decompressed.len() + n > MAX_PNG_DECOMPRESSED {
+                        return Err(PdfError::InvalidImage(format!(
+                            "PNG decompressed size exceeds {} MB limit",
+                            MAX_PNG_DECOMPRESSED / (1024 * 1024)
+                        )));
+                    }
+                    decompressed.extend_from_slice(&buffer[..n]);
+                }
+                Err(e) => {
+                    return Err(PdfError::InvalidImage(format!(
+                        "PNG decompression failed: {}",
+                        e
+                    )));
+                }
+            }
+        }
 
         Ok(decompressed)
     }

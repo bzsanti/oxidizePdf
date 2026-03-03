@@ -319,19 +319,21 @@ impl<R: Read> Lexer<R> {
                     b')' => b')',
                     b'\\' => b'\\',
                     b'0'..=b'7' => {
-                        // Octal escape sequence
-                        let mut value = ch - b'0';
+                        // Octal escape sequence.
+                        // Use u16 to avoid overflow panic on malformed octal (e.g. \777).
+                        // Per ISO 32000-1:2008 §7.3.4.2: "high-order overflow shall be ignored".
+                        let mut value = u16::from(ch - b'0');
                         for _ in 0..2 {
                             if let Some(next) = self.peek_char()? {
                                 if matches!(next, b'0'..=b'7') {
                                     self.consume_char()?;
-                                    value = value * 8 + (next - b'0');
+                                    value = value * 8 + u16::from(next - b'0');
                                 } else {
                                     break;
                                 }
                             }
                         }
-                        value
+                        value as u8
                     }
                     _ => ch, // Unknown escape, use literal
                 };
@@ -1854,6 +1856,71 @@ mod tests {
         let warnings = lexer.warnings();
         if !warnings.is_empty() {
             tracing::debug!("Encoding warnings: {warnings:?}");
+        }
+    }
+
+    /// Helper to create a lexer without encoding recovery for raw byte tests
+    fn lexer_no_encoding(data: &[u8]) -> Lexer<Cursor<&[u8]>> {
+        let mut opts = ParseOptions::default();
+        opts.lenient_encoding = false;
+        Lexer::new_with_options(Cursor::new(data), opts)
+    }
+
+    #[test]
+    fn test_lexer_octal_escape_overflow_777_raw() {
+        // \777 = octal 777 = 511 decimal, overflows u8.
+        // Per ISO 32000-1:2008 §7.3.4.2: "high-order overflow shall be ignored"
+        // 511 as u8 = 255 (0x1FF truncated to 0xFF)
+        let mut lexer = lexer_no_encoding(b"(\\777)");
+        match lexer.next_token().unwrap() {
+            Token::String(bytes) => assert_eq!(bytes, vec![0xFF]),
+            other => panic!("Expected String token, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_lexer_octal_escape_overflow_400_raw() {
+        // \400 = 256 decimal, just overflows u8 → 0
+        let mut lexer = lexer_no_encoding(b"(\\400)");
+        match lexer.next_token().unwrap() {
+            Token::String(bytes) => assert_eq!(bytes, vec![0x00]),
+            other => panic!("Expected String token, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_lexer_octal_escape_max_valid_377_raw() {
+        // \377 = 255, max valid octal for u8
+        let mut lexer = lexer_no_encoding(b"(\\377)");
+        match lexer.next_token().unwrap() {
+            Token::String(bytes) => assert_eq!(bytes, vec![0xFF]),
+            other => panic!("Expected String token, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_lexer_octal_escape_overflow_mixed_raw() {
+        // Mix of overflow octal and normal text
+        let mut lexer = lexer_no_encoding(b"(A\\777B\\101C)");
+        match lexer.next_token().unwrap() {
+            Token::String(bytes) => {
+                assert_eq!(bytes, vec![b'A', 0xFF, b'B', b'A', b'C']);
+            }
+            other => panic!("Expected String token, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_lexer_octal_escape_overflow_no_panic_with_encoding() {
+        // With default encoding recovery, overflow octals must not panic
+        let mut lexer = Lexer::new(Cursor::new(b"(\\777\\400\\577)" as &[u8]));
+        match lexer.next_token().unwrap() {
+            Token::String(bytes) => {
+                // Encoding recovery may transform high bytes to UTF-8,
+                // but the key assertion is: no panic on overflow
+                assert!(!bytes.is_empty());
+            }
+            other => panic!("Expected String token, got {other:?}"),
         }
     }
 }

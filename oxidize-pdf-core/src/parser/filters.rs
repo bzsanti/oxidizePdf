@@ -1,6 +1,12 @@
 //! PDF Stream Filters
 //!
 //! Handles decompression and decoding of PDF streams according to ISO 32000-1 Section 7.4
+//!
+//! ## Decompression Bomb Protection
+//!
+//! All decompression functions enforce `MAX_DECOMPRESSED_SIZE` to prevent
+//! decompression bombs (a 10KB compressed stream expanding to gigabytes).
+//! This is a security-critical limit per OWASP guidelines.
 
 use super::objects::{PdfDictionary, PdfObject};
 use super::{ParseError, ParseOptions, ParseResult};
@@ -8,6 +14,76 @@ use super::{ParseError, ParseOptions, ParseResult};
 #[cfg(feature = "compression")]
 use flate2::read::ZlibDecoder;
 use std::io::Read;
+
+// ─── Decompression Limits ──────────────────────────────────────────────────
+
+/// Maximum allowed size of decompressed stream data (256 MB).
+///
+/// Prevents decompression bombs where a small compressed payload expands
+/// to gigabytes of output. A single PDF page rarely exceeds a few MB of
+/// decompressed content; 256 MB is generous enough for legitimate documents
+/// (e.g., large maps, engineering drawings) while protecting against attacks.
+const MAX_DECOMPRESSED_SIZE: usize = 256 * 1024 * 1024;
+
+/// Maximum compression ratio allowed (input:output).
+///
+/// If `output_size / input_size > MAX_COMPRESSION_RATIO`, the stream is
+/// considered a potential decompression bomb. Normal PDF streams rarely
+/// exceed 1:100; we allow up to 1:1000 for edge cases.
+const MAX_COMPRESSION_RATIO: usize = 1000;
+
+/// Read from a decoder into a Vec with a size limit.
+///
+/// Returns `Err` if the decompressed output exceeds `max_bytes`.
+/// This is the central guard against decompression bombs.
+fn read_to_end_limited<R: Read>(reader: &mut R, max_bytes: usize) -> std::io::Result<Vec<u8>> {
+    let mut result = Vec::new();
+    let mut buffer = [0u8; 16384];
+
+    loop {
+        match reader.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => {
+                if result.len() + n > max_bytes {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!(
+                            "Decompressed size exceeds limit of {} bytes ({} MB). \
+                             Possible decompression bomb.",
+                            max_bytes,
+                            max_bytes / (1024 * 1024)
+                        ),
+                    ));
+                }
+                result.extend_from_slice(&buffer[..n]);
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    Ok(result)
+}
+
+/// Check compression ratio and reject suspicious streams.
+///
+/// Called after successful decompression to catch bombs that stay
+/// just under the absolute size limit but have absurd ratios.
+fn check_compression_ratio(input_size: usize, output_size: usize) -> Result<(), std::io::Error> {
+    if input_size > 0 && output_size / input_size > MAX_COMPRESSION_RATIO {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!(
+                "Suspicious compression ratio {}:1 (input={}B, output={}B). \
+                 Max allowed ratio is {}:1.",
+                output_size / input_size,
+                input_size,
+                output_size,
+                MAX_COMPRESSION_RATIO
+            ),
+        ));
+    }
+    Ok(())
+}
 
 // Import decode functionality from the filter_impls module
 use super::filter_impls::ccitt::decode_ccitt;
@@ -218,8 +294,8 @@ fn decode_flate(data: &[u8]) -> ParseResult<Vec<u8>> {
 #[cfg(feature = "compression")]
 fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     let mut decoder = ZlibDecoder::new(data);
-    let mut result = Vec::new();
-    decoder.read_to_end(&mut result)?;
+    let result = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
+    check_compression_ratio(data.len(), result.len())?;
     Ok(result)
 }
 
@@ -227,8 +303,8 @@ fn try_standard_zlib_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
 fn try_raw_deflate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     use flate2::read::DeflateDecoder;
     let mut decoder = DeflateDecoder::new(data);
-    let mut result = Vec::new();
-    decoder.read_to_end(&mut result)?;
+    let result = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
+    check_compression_ratio(data.len(), result.len())?;
     Ok(result)
 }
 
@@ -236,8 +312,8 @@ fn try_raw_deflate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
 fn try_gzip_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     use flate2::read::GzDecoder;
     let mut decoder = GzDecoder::new(data);
-    let mut result = Vec::new();
-    decoder.read_to_end(&mut result)?;
+    let result = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
+    check_compression_ratio(data.len(), result.len())?;
     Ok(result)
 }
 
@@ -254,10 +330,22 @@ fn try_partial_flate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
     loop {
         match decoder.read(&mut buffer) {
             Ok(0) => break, // EOF
-            Ok(n) => result.extend_from_slice(&buffer[..n]),
+            Ok(n) => {
+                if result.len() + n > MAX_DECOMPRESSED_SIZE {
+                    return Err(std::io::Error::new(
+                        ErrorKind::Other,
+                        format!(
+                            "Partial decompression exceeds {} MB limit",
+                            MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                        ),
+                    ));
+                }
+                result.extend_from_slice(&buffer[..n]);
+            }
             Err(e) if e.kind() == ErrorKind::UnexpectedEof => {
                 // Partial data is better than nothing
                 if !result.is_empty() {
+                    check_compression_ratio(data.len(), result.len())?;
                     return Ok(result);
                 }
                 return Err(e);
@@ -272,6 +360,7 @@ fn try_partial_flate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
             "No data decoded",
         ))
     } else {
+        check_compression_ratio(data.len(), result.len())?;
         Ok(result)
     }
 }
@@ -280,10 +369,10 @@ fn try_partial_flate_decode(data: &[u8]) -> Result<Vec<u8>, std::io::Error> {
 fn try_flate_decode_with_predictor(data: &[u8], predictor: u8) -> Result<Vec<u8>, std::io::Error> {
     use flate2::read::ZlibDecoder;
 
-    // First try standard decode
+    // First try standard decode with size limit
     let mut decoder = ZlibDecoder::new(data);
-    let mut raw_data = Vec::new();
-    decoder.read_to_end(&mut raw_data)?;
+    let raw_data = read_to_end_limited(&mut decoder, MAX_DECOMPRESSED_SIZE)?;
+    check_compression_ratio(data.len(), raw_data.len())?;
 
     // Apply predictor post-processing if predictor > 1
     if predictor >= 10 && predictor <= 15 {
@@ -1260,6 +1349,122 @@ mod tests {
         let result = apply_filter_with_params(&data, Filter::RunLengthDecode, None).unwrap();
         assert_eq!(result, b"AAABC");
     }
+
+    // ─── Decompression Bomb Protection Tests ──────────────────────────────
+
+    #[test]
+    fn test_read_to_end_limited_within_limit() {
+        let data = vec![42u8; 1000];
+        let mut cursor = std::io::Cursor::new(&data);
+        let result = read_to_end_limited(&mut cursor, 2000).unwrap();
+        assert_eq!(result.len(), 1000);
+    }
+
+    #[test]
+    fn test_read_to_end_limited_at_exact_limit() {
+        let data = vec![42u8; 1000];
+        let mut cursor = std::io::Cursor::new(&data);
+        let result = read_to_end_limited(&mut cursor, 1000).unwrap();
+        assert_eq!(result.len(), 1000);
+    }
+
+    #[test]
+    fn test_read_to_end_limited_exceeds_limit() {
+        let data = vec![42u8; 2000];
+        let mut cursor = std::io::Cursor::new(&data);
+        let result = read_to_end_limited(&mut cursor, 1000);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("exceeds limit"),
+            "Expected decompression limit error, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_check_compression_ratio_normal() {
+        // 10x ratio is fine
+        assert!(check_compression_ratio(100, 1000).is_ok());
+    }
+
+    #[test]
+    fn test_check_compression_ratio_high() {
+        // 1001x ratio exceeds MAX_COMPRESSION_RATIO (1000)
+        assert!(check_compression_ratio(1, 1001).is_err());
+    }
+
+    #[test]
+    fn test_check_compression_ratio_zero_input() {
+        // Zero input size should not cause division by zero
+        assert!(check_compression_ratio(0, 1000).is_ok());
+    }
+
+    #[cfg(feature = "compression")]
+    #[test]
+    fn test_flate_normal_data_succeeds() {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        // Normal data: 100KB of realistic content (not highly repetitive)
+        // This should succeed — well within both size and ratio limits
+        let mut original = Vec::with_capacity(100_000);
+        for i in 0..100_000u32 {
+            original.push((i % 256) as u8);
+        }
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&original).unwrap();
+        let compressed = encoder.finish().unwrap();
+
+        let result = try_standard_zlib_decode(&compressed);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 100_000);
+    }
+
+    #[cfg(feature = "compression")]
+    #[test]
+    fn test_flate_high_ratio_rejected() {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        // Create highly compressible data: 2MB of zeros → ~2KB compressed
+        // Ratio ~1000:1 — should be rejected by the ratio check
+        let original = vec![0u8; 2 * 1024 * 1024];
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
+        encoder.write_all(&original).unwrap();
+        let compressed = encoder.finish().unwrap();
+
+        let result = try_standard_zlib_decode(&compressed);
+        assert!(result.is_err(), "High compression ratio should be rejected");
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("compression ratio")
+                || err.to_string().contains("exceeds limit"),
+            "Expected compression ratio error, got: {}",
+            err
+        );
+    }
+
+    #[cfg(feature = "compression")]
+    #[test]
+    fn test_flate_compression_ratio_check() {
+        // Verify that a tiny input producing large output gets caught by ratio check
+        // 10 bytes input → 10_010 bytes output = 1001:1 ratio (exceeds 1000:1 limit)
+        let result = check_compression_ratio(10, 10_010);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Suspicious compression ratio"));
+    }
+
+    #[test]
+    fn test_read_to_end_limited_empty_input() {
+        let data: Vec<u8> = Vec::new();
+        let mut cursor = std::io::Cursor::new(&data);
+        let result = read_to_end_limited(&mut cursor, 1000).unwrap();
+        assert!(result.is_empty());
+    }
 }
 
 /// Apply a single filter to data with parameters (enhanced version)
@@ -1616,6 +1821,14 @@ fn decode_lzw(data: &[u8], params: Option<&PdfDictionary>) -> ParseResult<Vec<u8
             // Output the string
             result.extend_from_slice(&string);
 
+            // Decompression bomb check
+            if result.len() > MAX_DECOMPRESSED_SIZE {
+                return Err(ParseError::StreamDecodeError(format!(
+                    "LZW decompressed size exceeds {} MB limit",
+                    MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+                )));
+            }
+
             // Add new entry to dictionary
             if dictionary.len() < 4096 {
                 let mut new_entry = dictionary[prev as usize].clone();
@@ -1741,6 +1954,14 @@ fn decode_run_length(data: &[u8]) -> ParseResult<Vec<u8>> {
                 result.push(repeat_byte);
             }
             i += 1;
+        }
+
+        // Decompression bomb check
+        if result.len() > MAX_DECOMPRESSED_SIZE {
+            return Err(ParseError::StreamDecodeError(format!(
+                "RunLength decompressed size exceeds {} MB limit",
+                MAX_DECOMPRESSED_SIZE / (1024 * 1024)
+            )));
         }
     }
 

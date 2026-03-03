@@ -1276,13 +1276,7 @@ impl<W: Write> PdfWriter<W> {
 
         // Add PDF signature (anti-spoofing and licensing)
         // This is written AFTER user-configurable metadata so it cannot be overridden
-        let edition = if cfg!(feature = "pro") {
-            super::Edition::Pro
-        } else if cfg!(feature = "enterprise") {
-            super::Edition::Enterprise
-        } else {
-            super::Edition::Community
-        };
+        let edition = super::Edition::OpenSource;
 
         let signature = super::PdfSignature::new(document, edition);
         signature.write_to_info_dict(&mut info_dict);

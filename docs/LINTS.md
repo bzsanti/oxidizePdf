@@ -453,4 +453,4 @@ A: Fix the issues the lint identifies. If you believe it's a false positive, dis
 
 ## License
 
-Same as oxidize-pdf project (AGPL-3.0).
+Same as oxidize-pdf project (MIT).
