@@ -22,6 +22,8 @@ use std::time::Instant;
 /// T5 corpus subdirectories (relative to corpus root)
 const T5_SUBDIR: &str = "t5-quality";
 const T5_ANNOTATIONS_REL: &str = "t5-quality/annotations";
+/// Minimum text extraction success rate (text_extracted / parsed)
+const TEXT_EXTRACTION_THRESHOLD: f64 = 0.99;
 
 // ─── T5 Types ───────────────────────────────────────────────────────────────
 
@@ -184,7 +186,61 @@ fn t5_quality_by_document_type() {
     }
 }
 
-/// T5.3: Text extraction with ground truth comparison
+/// T5.3: Text extraction coverage on quality corpus
+///
+/// Ensures that text extraction succeeds on at least 99% of parsed PDFs.
+/// Current rate: ~99.9%. Threshold: 99% (high-quality corpus).
+#[test]
+fn t5_text_extraction_coverage() {
+    let dir = corpus_support::corpus_root().join(T5_SUBDIR);
+    if !dir.exists() || find_pdfs(&dir).is_empty() {
+        eprintln!("T5 quality corpus not available — skipping text extraction coverage.");
+        return;
+    }
+
+    let pdfs = find_pdfs(&dir);
+    let start = Instant::now();
+    let mut results = Vec::new();
+
+    for pdf_path in &pdfs {
+        let result =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| quality_test_pdf(pdf_path)));
+
+        match result {
+            Ok(r) => results.push(r),
+            Err(_) => {
+                results.push(TestResult {
+                    path: pdf_path.display().to_string(),
+                    panicked: true,
+                    error_message: Some("PANIC".to_string()),
+                    ..Default::default()
+                });
+            }
+        }
+    }
+
+    let duration = start.elapsed();
+    let report = CorpusReport::generate("t5-text-coverage", &results, duration);
+
+    if report.parsed > 0 {
+        let text_rate = report.text_extracted as f64 / report.parsed as f64;
+        eprintln!(
+            "T5 text extraction: {}/{} parsed PDFs ({:.1}%)",
+            report.text_extracted,
+            report.parsed,
+            text_rate * 100.0
+        );
+
+        assert!(
+            text_rate >= TEXT_EXTRACTION_THRESHOLD,
+            "T5 text extraction rate {:.1}% below {:.1}% threshold",
+            text_rate * 100.0,
+            TEXT_EXTRACTION_THRESHOLD * 100.0
+        );
+    }
+}
+
+/// T5.4: Text extraction with ground truth comparison
 ///
 /// If annotations with ground truth text exist, compute accuracy scores.
 #[test]

@@ -9,11 +9,14 @@
 //! - Parse success rate ≥ 95% (real-world docs are messy)
 //! - Graceful failure rate ≥ 80%
 //! - ZERO panics (absolute)
-//! - Text extraction ≥ 90%
+//! - Text extraction ≥ 90% (text-based PDFs only, via manifest)
 
 mod corpus_support;
 
-use corpus_support::{find_pdfs, run_corpus_test_streaming, TestResult};
+use corpus_support::{
+    find_pdfs, partition_pdfs_by_manifest, run_corpus_test_streaming,
+    run_corpus_test_streaming_with_pdfs, TestResult,
+};
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use std::path::Path;
 use std::time::Instant;
@@ -25,8 +28,10 @@ const T2_SUBDIR: &str = "t2-realworld";
 const PARSE_RATE_THRESHOLD: f64 = 0.95;
 /// Graceful failure threshold (80% of failures must be graceful)
 const GRACEFUL_FAILURE_THRESHOLD: f64 = 0.80;
-/// Text extraction success threshold
+/// Text extraction success threshold (for text-based PDFs only)
 const TEXT_EXTRACTION_THRESHOLD: f64 = 0.90;
+/// Parse rate threshold for scanned-only PDFs
+const SCANNED_PARSE_RATE_THRESHOLD: f64 = 0.95;
 
 /// Real-world test function: parse, extract text, collect metadata
 fn realworld_test_pdf(path: &Path) -> TestResult {
@@ -80,9 +85,26 @@ fn realworld_test_pdf(path: &Path) -> TestResult {
     }
 }
 
+/// Helper: resolve T2 directory and find all PDFs, returning None if unavailable
+fn t2_pdfs() -> Option<(std::path::PathBuf, Vec<std::path::PathBuf>)> {
+    let dir = corpus_support::corpus_root().join(T2_SUBDIR);
+    if !dir.exists() {
+        eprintln!("T2 real-world corpus not available — skipping. Run download.sh to fetch.");
+        return None;
+    }
+    let pdfs = find_pdfs(&dir);
+    if pdfs.is_empty() {
+        eprintln!("T2 real-world corpus not available — skipping. Run download.sh to fetch.");
+        return None;
+    }
+    Some((dir, pdfs))
+}
+
 // ─── T2 Tests ───────────────────────────────────────────────────────────────
 
 /// T2.1: GovDocs robustness — parse rate, graceful failures, zero panics
+///
+/// Runs on ALL PDFs (text-based + scanned + broken). This is the core stability test.
 #[test]
 fn t2_govdocs_robustness() {
     let dir = corpus_support::corpus_root().join(T2_SUBDIR);
@@ -126,21 +148,38 @@ fn t2_govdocs_robustness() {
     }
 }
 
-/// T2.2: Text extraction coverage on real-world docs
+/// T2.2: Text extraction coverage on text-based PDFs (manifest-filtered)
+///
+/// Only runs on PDFs classified as "text-based" by the manifest.
+/// Scanned/image-only PDFs are excluded since they cannot produce text without OCR.
+/// Threshold: 90%.
 #[test]
-fn t2_text_extraction_coverage() {
-    let dir = corpus_support::corpus_root().join(T2_SUBDIR);
-    if !dir.exists() || find_pdfs(&dir).is_empty() {
-        eprintln!("T2 corpus not available — skipping.");
+fn t2_text_extraction_text_based() {
+    let Some((dir, all_pdfs)) = t2_pdfs() else {
+        return;
+    };
+
+    let manifest_path = dir.join("manifest.json");
+    let (text_pdfs, scanned_pdfs) = partition_pdfs_by_manifest(&all_pdfs, &manifest_path);
+
+    eprintln!(
+        "T2.2: Testing {} text-based PDFs (excluded {} scanned-only)",
+        text_pdfs.len(),
+        scanned_pdfs.len()
+    );
+
+    if text_pdfs.is_empty() {
+        eprintln!("T2.2: No text-based PDFs found — skipping.");
         return;
     }
 
-    let report = run_corpus_test_streaming(&dir, "t2-text", realworld_test_pdf);
+    let report =
+        run_corpus_test_streaming_with_pdfs(&text_pdfs, "t2-text-based", realworld_test_pdf);
 
     if report.parsed > 0 {
         let text_rate = report.text_extracted as f64 / report.parsed as f64;
         eprintln!(
-            "T2 text extraction: {}/{} ({:.1}%)",
+            "T2 text extraction (text-based only): {}/{} ({:.1}%)",
             report.text_extracted,
             report.parsed,
             text_rate * 100.0
@@ -148,9 +187,61 @@ fn t2_text_extraction_coverage() {
 
         assert!(
             text_rate >= TEXT_EXTRACTION_THRESHOLD,
-            "T2 text extraction rate {:.1}% below {:.1}% threshold",
+            "T2 text extraction rate {:.1}% below {:.1}% threshold (text-based PDFs only)",
             text_rate * 100.0,
             TEXT_EXTRACTION_THRESHOLD * 100.0
+        );
+    }
+}
+
+/// T2.2b: Scanned-only PDF stability
+///
+/// Runs on PDFs classified as "scanned-only" by the manifest (image-only, no text layer).
+/// These PDFs are physically impossible to extract text from without OCR.
+/// Verifies: zero panics, parse rate ≥ 95%, informational text stats (no threshold).
+#[test]
+fn t2_scanned_only_stability() {
+    let Some((dir, all_pdfs)) = t2_pdfs() else {
+        return;
+    };
+
+    let manifest_path = dir.join("manifest.json");
+    let (_, scanned_pdfs) = partition_pdfs_by_manifest(&all_pdfs, &manifest_path);
+
+    if scanned_pdfs.is_empty() {
+        eprintln!("T2.2b: No scanned-only PDFs in manifest — skipping.");
+        return;
+    }
+
+    eprintln!("T2.2b: Testing {} scanned-only PDFs", scanned_pdfs.len());
+
+    let report =
+        run_corpus_test_streaming_with_pdfs(&scanned_pdfs, "t2-scanned", realworld_test_pdf);
+    report.print_summary();
+
+    // ABSOLUTE: Zero panics
+    assert!(
+        report.panics == 0,
+        "T2.2b CRITICAL: {} panics on scanned PDFs — ZERO panics allowed",
+        report.panics
+    );
+
+    // Parse rate ≥ 95% (scanned PDFs should still parse fine, just no text)
+    assert!(
+        report.pass_rate >= SCANNED_PARSE_RATE_THRESHOLD,
+        "T2.2b scanned parse rate {:.1}% below {:.1}% threshold",
+        report.pass_rate * 100.0,
+        SCANNED_PARSE_RATE_THRESHOLD * 100.0
+    );
+
+    // Informational: how many scanned PDFs extract *some* text (no threshold)
+    if report.parsed > 0 {
+        let text_rate = report.text_extracted as f64 / report.parsed as f64;
+        eprintln!(
+            "T2.2b scanned text extraction (informational): {}/{} ({:.1}%)",
+            report.text_extracted,
+            report.parsed,
+            text_rate * 100.0
         );
     }
 }

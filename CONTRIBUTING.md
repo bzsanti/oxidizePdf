@@ -644,7 +644,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 ## License
 
-By contributing to oxidizePdf, you agree that your contributions will be licensed under the same license as the project (**GNU Affero General Public License v3.0 (AGPL-3.0)**).
+By contributing to oxidizePdf, you agree that your contributions will be licensed under the same license as the project (**MIT License**).
 
 ## Recognition
 

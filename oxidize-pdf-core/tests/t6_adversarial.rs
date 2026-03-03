@@ -27,6 +27,8 @@ const T6_MALICIOUS_REL: &str = "t6-adversarial/malicious";
 
 /// Per-file timeout in seconds
 const TIMEOUT_SECS: u64 = 60;
+/// Minimum text extraction success rate (text_extracted / parsed)
+const TEXT_EXTRACTION_THRESHOLD: f64 = 0.85;
 
 /// Adversarial test function: parse and attempt text extraction.
 /// We don't care if it fails — we care that it doesn't panic, hang, or OOM.
@@ -205,7 +207,42 @@ fn t6_malicious_no_exploitation() {
     );
 }
 
-/// T6.4: Error quality — all errors from adversarial files must have proper context
+/// T6.4: Text extraction coverage on adversarial corpus
+///
+/// Ensures that text extraction succeeds on at least 85% of parsed PDFs.
+/// Current rate: ~89.5%. Threshold: 85% (deliberately broken PDFs).
+#[test]
+fn t6_text_extraction_coverage() {
+    let dir = corpus_support::corpus_root().join(T6_SUBDIR);
+    if !dir.exists() || find_pdfs(&dir).is_empty() {
+        eprintln!("T6 adversarial corpus not available — skipping text extraction coverage.");
+        return;
+    }
+
+    let (results, duration) =
+        run_corpus_test_with_timeout(&dir, TIMEOUT_SECS, adversarial_test_pdf);
+
+    let report = CorpusReport::generate("t6-text-coverage", &results, duration);
+
+    if report.parsed > 0 {
+        let text_rate = report.text_extracted as f64 / report.parsed as f64;
+        eprintln!(
+            "T6 text extraction: {}/{} parsed PDFs ({:.1}%)",
+            report.text_extracted,
+            report.parsed,
+            text_rate * 100.0
+        );
+
+        assert!(
+            text_rate >= TEXT_EXTRACTION_THRESHOLD,
+            "T6 text extraction rate {:.1}% below {:.1}% threshold",
+            text_rate * 100.0,
+            TEXT_EXTRACTION_THRESHOLD * 100.0
+        );
+    }
+}
+
+/// T6.5: Error quality — all errors from adversarial files must have proper context
 #[test]
 fn t6_error_quality() {
     let dir = corpus_support::corpus_root().join(T6_SUBDIR);

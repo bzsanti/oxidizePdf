@@ -23,6 +23,8 @@ const T3_SUBDIR: &str = "t3-stress";
 
 /// Per-file timeout in seconds
 const TIMEOUT_SECS: u64 = 60;
+/// Minimum text extraction success rate (text_extracted / parsed)
+const TEXT_EXTRACTION_THRESHOLD: f64 = 0.90;
 
 /// Stress test function: parse and probe as deep as possible
 fn stress_test_pdf(path: &Path) -> TestResult {
@@ -183,7 +185,41 @@ fn t3_error_recovery_rate() {
     }
 }
 
-/// T3.3: Error context quality — all errors must have meaningful messages
+/// T3.3: Text extraction coverage on stress corpus
+///
+/// Ensures that text extraction succeeds on at least 90% of parsed PDFs.
+/// Current rate: ~93%. Threshold: 90% (wide margin for legitimate edge cases).
+#[test]
+fn t3_text_extraction_coverage() {
+    let dir = corpus_support::corpus_root().join(T3_SUBDIR);
+    if !dir.exists() || find_pdfs(&dir).is_empty() {
+        eprintln!("T3 corpus not available — skipping text extraction coverage.");
+        return;
+    }
+
+    let (results, duration) = run_corpus_test_with_timeout(&dir, TIMEOUT_SECS, stress_test_pdf);
+
+    let report = CorpusReport::generate("t3-text-coverage", &results, duration);
+
+    if report.parsed > 0 {
+        let text_rate = report.text_extracted as f64 / report.parsed as f64;
+        eprintln!(
+            "T3 text extraction: {}/{} parsed PDFs ({:.1}%)",
+            report.text_extracted,
+            report.parsed,
+            text_rate * 100.0
+        );
+
+        assert!(
+            text_rate >= TEXT_EXTRACTION_THRESHOLD,
+            "T3 text extraction rate {:.1}% below {:.1}% threshold",
+            text_rate * 100.0,
+            TEXT_EXTRACTION_THRESHOLD * 100.0
+        );
+    }
+}
+
+/// T3.4: Error context quality — all errors must have meaningful messages
 #[test]
 fn t3_error_context_quality() {
     let dir = corpus_support::corpus_root().join(T3_SUBDIR);

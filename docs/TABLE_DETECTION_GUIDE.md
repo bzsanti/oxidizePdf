@@ -595,4 +595,4 @@ https://github.com/BelowZero/oxidize-pdf/issues
 
 **Version**: 1.6.3
 **Last Updated**: 2025-10-22
-**License**: AGPL-3.0
+**License**: MIT

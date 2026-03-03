@@ -24,6 +24,8 @@ const T1_VERAPDF_SUBDIR: &str = "t1-spec/verapdf";
 const T1_PDFJS_SUBDIR: &str = "t1-spec/pdfjs";
 /// Minimum pass rate for spec compliance
 const SPEC_PASS_RATE_THRESHOLD: f64 = 0.995;
+/// Minimum text extraction success rate (text_extracted / parsed)
+const TEXT_EXTRACTION_THRESHOLD: f64 = 0.98;
 
 /// Standard test function for spec compliance: parse, extract text, read metadata
 fn spec_test_pdf(path: &Path) -> TestResult {
@@ -155,7 +157,62 @@ fn t1_pdfjs_corpus() {
     );
 }
 
-/// T1.3: Combined spec compliance report with version tracking
+/// T1.3: Text extraction coverage across all T1 sub-corpora
+///
+/// Ensures that text extraction succeeds on at least 98% of parsed PDFs.
+/// Current rate: ~98.8%. Threshold: 98%.
+#[test]
+fn t1_text_extraction_coverage() {
+    let verapdf_dir = corpus_support::corpus_root().join(T1_VERAPDF_SUBDIR);
+    let pdfjs_dir = corpus_support::corpus_root().join(T1_PDFJS_SUBDIR);
+
+    let verapdf_available = verapdf_dir.exists() && !find_pdfs(&verapdf_dir).is_empty();
+    let pdfjs_available = pdfjs_dir.exists() && !find_pdfs(&pdfjs_dir).is_empty();
+
+    if !verapdf_available && !pdfjs_available {
+        eprintln!("T1 no corpora available — skipping text extraction coverage.");
+        return;
+    }
+
+    let mut reports = Vec::new();
+
+    if verapdf_available {
+        reports.push(run_corpus_test_streaming(
+            &verapdf_dir,
+            "t1-verapdf-text",
+            spec_test_pdf,
+        ));
+    }
+
+    if pdfjs_available {
+        reports.push(run_corpus_test_streaming(
+            &pdfjs_dir,
+            "t1-pdfjs-text",
+            spec_test_pdf,
+        ));
+    }
+
+    let combined = CorpusReport::merge("t1-text-coverage", &reports);
+
+    if combined.parsed > 0 {
+        let text_rate = combined.text_extracted as f64 / combined.parsed as f64;
+        eprintln!(
+            "T1 text extraction: {}/{} parsed PDFs ({:.1}%)",
+            combined.text_extracted,
+            combined.parsed,
+            text_rate * 100.0
+        );
+
+        assert!(
+            text_rate >= TEXT_EXTRACTION_THRESHOLD,
+            "T1 text extraction rate {:.1}% below {:.1}% threshold",
+            text_rate * 100.0,
+            TEXT_EXTRACTION_THRESHOLD * 100.0
+        );
+    }
+}
+
+/// T1.4: Combined spec compliance report with version tracking
 ///
 /// Aggregates veraPDF + pdf.js results and generates a detailed compliance report.
 #[test]

@@ -796,6 +796,205 @@ where
     }
 }
 
+/// Run a corpus test on an explicit list of PDF paths (instead of discovering from a directory).
+///
+/// This is useful when the caller has already filtered the PDFs (e.g., via a manifest).
+/// Behaves identically to `run_corpus_test_streaming` but skips discovery.
+pub fn run_corpus_test_streaming_with_pdfs<F>(
+    pdfs: &[PathBuf],
+    tier: &str,
+    test_fn: F,
+) -> CorpusReport
+where
+    F: Fn(&Path) -> TestResult + Send + Sync + 'static,
+{
+    let start = Instant::now();
+
+    let mut total = 0usize;
+    let mut parsed = 0usize;
+    let mut panics = 0usize;
+    let mut timeouts = 0usize;
+    let mut text_extracted_count = 0usize;
+    let mut graceful_failures = 0usize;
+
+    let mut by_pdf_version: HashMap<String, VersionStats> = HashMap::new();
+    let mut by_generator: HashMap<String, GeneratorStats> = HashMap::new();
+    let mut parse_times: Vec<f64> = Vec::with_capacity(pdfs.len());
+    let mut failures: Vec<FailureEntry> = Vec::new();
+
+    let total_pdfs = pdfs.len();
+    let test_fn = std::sync::Arc::new(test_fn);
+    let timeout = Duration::from_secs(DEFAULT_PER_FILE_TIMEOUT_SECS);
+
+    for (i, pdf_path) in pdfs.iter().enumerate() {
+        let r = run_single_pdf_with_timeout(pdf_path, &test_fn, timeout);
+
+        total += 1;
+        if r.parsed {
+            parsed += 1;
+            parse_times.push(r.parse_time_ms as f64);
+        }
+        if r.panicked {
+            panics += 1;
+        }
+        if r.timed_out {
+            timeouts += 1;
+        }
+        if r.text_extracted {
+            text_extracted_count += 1;
+        }
+        if !r.parsed && !r.panicked && !r.timed_out {
+            graceful_failures += 1;
+        }
+
+        let version = r
+            .pdf_version
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string());
+        let v_entry = by_pdf_version.entry(version).or_default();
+        v_entry.total += 1;
+        if r.parsed {
+            v_entry.passed += 1;
+        }
+
+        let gen = r.generator.clone().unwrap_or_else(|| "unknown".to_string());
+        let g_entry = by_generator.entry(gen).or_default();
+        g_entry.total += 1;
+        if r.parsed {
+            g_entry.passed += 1;
+        }
+
+        if !r.parsed || r.panicked || r.timed_out {
+            failures.push(FailureEntry {
+                path: r.path.clone(),
+                panicked: r.panicked,
+                timed_out: r.timed_out,
+                error_message: r.error_message.clone().unwrap_or_default(),
+                error_kind: r.error_kind.clone().unwrap_or_default(),
+            });
+        }
+
+        if (i + 1) % PROGRESS_INTERVAL == 0 || i + 1 == total_pdfs {
+            let elapsed = start.elapsed().as_secs();
+            let rate = if elapsed > 0 {
+                (i + 1) as f64 / elapsed as f64
+            } else {
+                0.0
+            };
+            eprintln!(
+                "  [{}/{}] parsed={} panics={} timeouts={} failures={} ({:.1} files/s)",
+                i + 1,
+                total_pdfs,
+                parsed,
+                panics,
+                timeouts,
+                failures.len(),
+                rate,
+            );
+        }
+    }
+
+    let total_duration = start.elapsed();
+
+    parse_times.sort_by(|a, b| a.total_cmp(b));
+    let parse_time_p50_ms = percentile(&parse_times, 50.0);
+    let parse_time_p95_ms = percentile(&parse_times, 95.0);
+    let parse_time_p99_ms = percentile(&parse_times, 99.0);
+
+    let pass_rate = if total > 0 {
+        parsed as f64 / total as f64
+    } else {
+        0.0
+    };
+
+    CorpusReport {
+        tier: tier.to_string(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        total,
+        parsed,
+        panics,
+        timeouts,
+        text_extracted: text_extracted_count,
+        graceful_failures,
+        pass_rate,
+        total_duration_ms: total_duration.as_millis() as u64,
+        by_pdf_version,
+        by_generator,
+        parse_time_p50_ms,
+        parse_time_p95_ms,
+        parse_time_p99_ms,
+        failures,
+    }
+}
+
+/// Partition PDFs into (text-based, scanned-only) using a classification manifest.
+///
+/// Reads `manifest_path` and matches entries against `all_pdfs` by filename.
+/// PDFs classified as "text-based" go into the first vec, "scanned-only" into the second.
+/// PDFs not found in the manifest (or if the manifest doesn't exist) are treated as text-based
+/// (conservative fallback: they'll be tested with the stricter threshold).
+pub fn partition_pdfs_by_manifest(
+    all_pdfs: &[PathBuf],
+    manifest_path: &Path,
+) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    // Minimal manifest structures — we only need classification + path
+    #[derive(Deserialize)]
+    struct MiniEntry {
+        path: String,
+        #[serde(default)]
+        has_text: bool,
+        #[serde(default)]
+        has_ocr_content: bool,
+    }
+
+    #[derive(Deserialize)]
+    struct MiniManifest {
+        entries: Vec<MiniEntry>,
+    }
+
+    let manifest: Option<MiniManifest> = fs::read_to_string(manifest_path)
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok());
+
+    let Some(manifest) = manifest else {
+        eprintln!(
+            "  [manifest] No manifest at {} — treating all PDFs as text-based",
+            manifest_path.display()
+        );
+        return (all_pdfs.to_vec(), Vec::new());
+    };
+
+    // Build a lookup by filename (the manifest stores relative paths like "govdocs-subset0/000009.pdf")
+    let scanned_set: std::collections::HashSet<String> = manifest
+        .entries
+        .iter()
+        .filter(|e| e.has_ocr_content && !e.has_text)
+        .map(|e| e.path.clone())
+        .collect();
+
+    let mut text_based = Vec::new();
+    let mut scanned_only = Vec::new();
+
+    for pdf in all_pdfs {
+        // Try to match by the relative path within the tier directory
+        let matched = scanned_set.iter().any(|rel| pdf.ends_with(rel));
+        if matched {
+            scanned_only.push(pdf.clone());
+        } else {
+            text_based.push(pdf.clone());
+        }
+    }
+
+    eprintln!(
+        "  [manifest] Partitioned {} PDFs: {} text-based, {} scanned-only",
+        all_pdfs.len(),
+        text_based.len(),
+        scanned_only.len()
+    );
+
+    (text_based, scanned_only)
+}
+
 /// Execute a single PDF test in a dedicated thread with timeout and panic safety.
 ///
 /// Returns a `TestResult` in all cases:

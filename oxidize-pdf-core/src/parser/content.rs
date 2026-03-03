@@ -604,13 +604,15 @@ impl<'a> ContentTokenizer<'a> {
     }
 
     fn read_octal_escape(&mut self) -> ParseResult<u8> {
-        let mut value = 0u8;
+        // Use u16 to avoid overflow panic on malformed octal sequences (e.g. \777).
+        // Per ISO 32000-1:2008 §7.3.4.2: "high-order overflow shall be ignored".
+        let mut value = 0u16;
         let mut count = 0;
 
         while count < 3 && self.position < self.input.len() {
             match self.input[self.position] {
                 b'0'..=b'7' => {
-                    value = value * 8 + (self.input[self.position] - b'0');
+                    value = value * 8 + u16::from(self.input[self.position] - b'0');
                     self.position += 1;
                     count += 1;
                 }
@@ -618,7 +620,7 @@ impl<'a> ContentTokenizer<'a> {
             }
         }
 
-        Ok(value)
+        Ok(value as u8)
     }
 
     fn read_hex_string(&mut self) -> ParseResult<Option<Token>> {
@@ -3052,6 +3054,67 @@ mod tests {
             assert!(!data.is_empty(), "Image data should not be empty");
         } else {
             panic!("Expected InlineImage operation, got {:?}", ops[0]);
+        }
+    }
+
+    #[test]
+    fn test_octal_escape_overflow_777() {
+        // \777 = octal 777 = 511 decimal, overflows u8.
+        // Per ISO 32000-1:2008 §7.3.4.2: "high-order overflow shall be ignored"
+        // 511 as u8 = 255 (0x1FF truncated to 0xFF)
+        let mut tokenizer = ContentTokenizer::new(b"(\\777)");
+        let token = tokenizer.next_token().unwrap().unwrap();
+        match token {
+            Token::String(data) => assert_eq!(data, vec![0xFF]),
+            _ => panic!("Expected string token"),
+        }
+    }
+
+    #[test]
+    fn test_octal_escape_overflow_400() {
+        // \400 = octal 400 = 256 decimal, just overflows u8.
+        // 256 as u8 = 0
+        let mut tokenizer = ContentTokenizer::new(b"(\\400)");
+        let token = tokenizer.next_token().unwrap().unwrap();
+        match token {
+            Token::String(data) => assert_eq!(data, vec![0x00]),
+            _ => panic!("Expected string token"),
+        }
+    }
+
+    #[test]
+    fn test_octal_escape_overflow_577() {
+        // \577 = octal 577 = 383 decimal.
+        // 383 as u8 = 127 (0x17F truncated to 0x7F)
+        let mut tokenizer = ContentTokenizer::new(b"(\\577)");
+        let token = tokenizer.next_token().unwrap().unwrap();
+        match token {
+            Token::String(data) => assert_eq!(data, vec![0x7F]),
+            _ => panic!("Expected string token"),
+        }
+    }
+
+    #[test]
+    fn test_octal_escape_max_valid_377() {
+        // \377 = 255, max valid octal for u8 - should still work correctly
+        let mut tokenizer = ContentTokenizer::new(b"(\\377)");
+        let token = tokenizer.next_token().unwrap().unwrap();
+        match token {
+            Token::String(data) => assert_eq!(data, vec![0xFF]),
+            _ => panic!("Expected string token"),
+        }
+    }
+
+    #[test]
+    fn test_octal_escape_overflow_mixed_with_valid() {
+        // Mix of overflow octal and normal text
+        let mut tokenizer = ContentTokenizer::new(b"(A\\777B\\101C)");
+        let token = tokenizer.next_token().unwrap().unwrap();
+        match token {
+            Token::String(data) => {
+                assert_eq!(data, vec![b'A', 0xFF, b'B', b'A', b'C']);
+            }
+            _ => panic!("Expected string token"),
         }
     }
 }
