@@ -283,7 +283,13 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// # }
     /// ```
     pub fn page_count(&self) -> ParseResult<u32> {
-        self.reader.borrow_mut().page_count()
+        self.ensure_page_tree()?;
+        if let Some(pt) = self.page_tree.borrow().as_ref() {
+            Ok(pt.page_count())
+        } else {
+            // Fallback: should never reach here since ensure_page_tree() just ran
+            self.reader.borrow_mut().page_count()
+        }
     }
 
     /// Get document metadata including title, author, creation date, etc.
@@ -328,12 +334,18 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(metadata)
     }
 
-    /// Initialize the page tree if not already done
+    /// Initialize the page tree if not already done.
+    ///
+    /// Builds a flat index of all leaf Page references by walking the tree once.
+    /// This provides O(1) page access and detects cycles and absurd /Count values.
     fn ensure_page_tree(&self) -> ParseResult<()> {
         if self.page_tree.borrow().is_none() {
-            let page_count = self.page_count()?;
             let pages_dict = self.load_pages_dict()?;
-            let page_tree = PageTree::new_with_pages_dict(page_count, pages_dict);
+            let page_refs = {
+                let mut reader = self.reader.borrow_mut();
+                PageTree::flatten_page_tree(&mut *reader, &pages_dict)?
+            };
+            let page_tree = PageTree::new_with_flat_index(pages_dict, page_refs);
             self.page_tree.borrow_mut().replace(page_tree);
         }
         Ok(())
@@ -389,15 +401,41 @@ impl<R: Read + Seek> PdfDocument<R> {
     pub fn get_page(&self, index: u32) -> ParseResult<ParsedPage> {
         self.ensure_page_tree()?;
 
-        // First check if page is already loaded
+        // First check if page is already cached
         if let Some(page_tree) = self.page_tree.borrow().as_ref() {
             if let Some(page) = page_tree.get_cached_page(index) {
                 return Ok(page.clone());
             }
         }
 
-        // Load the page (reference stack will handle circular detection automatically)
-        let page = self.load_page_at_index(index)?;
+        // Try flat index O(1) lookup first
+        let (page_ref, has_flat_index) = {
+            let pt_borrow = self.page_tree.borrow();
+            let pt = pt_borrow.as_ref();
+            let ref_val = pt.and_then(|pt| pt.get_page_ref(index));
+            let has_index = pt.map_or(false, |pt| pt.page_count() > 0 || ref_val.is_some());
+            (ref_val, has_index)
+        };
+
+        let page = if let Some(page_ref) = page_ref {
+            self.load_page_by_ref(page_ref)?
+        } else if has_flat_index {
+            // Flat index exists but page not found — index is out of range
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Page index {} out of range (document has {} pages)",
+                    index,
+                    self.page_tree
+                        .borrow()
+                        .as_ref()
+                        .map_or(0, |pt| pt.page_count())
+                ),
+            });
+        } else {
+            // No flat index available — fallback to tree traversal
+            self.load_page_at_index(index)?
+        };
 
         // Cache it
         if let Some(page_tree) = self.page_tree.borrow_mut().as_mut() {
@@ -407,7 +445,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(page)
     }
 
-    /// Load a specific page by index
+    /// Load a specific page by index (legacy tree traversal fallback)
     fn load_page_at_index(&self, index: u32) -> ParseResult<ParsedPage> {
         // Get the pages root
         let pages_dict = self.load_pages_dict()?;
@@ -416,6 +454,61 @@ impl<R: Read + Seek> PdfDocument<R> {
         let page_info = self.find_page_in_tree(&pages_dict, index, 0, None)?;
 
         Ok(page_info)
+    }
+
+    /// Load a page directly by its object reference (O(1) via flat index).
+    fn load_page_by_ref(&self, page_ref: (u32, u16)) -> ParseResult<ParsedPage> {
+        let obj = self.get_object(page_ref.0, page_ref.1)?;
+        let dict = obj.as_dict().ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: format!(
+                "Page object {} {} R is not a dictionary",
+                page_ref.0, page_ref.1
+            ),
+        })?;
+
+        let inherited = self.collect_inherited_attributes(dict);
+        self.create_parsed_page(page_ref, dict, Some(&inherited))
+    }
+
+    /// Walk up the /Parent chain to collect inheritable attributes (Resources, MediaBox, CropBox, Rotate).
+    /// Uses cycle detection to prevent infinite loops in malformed PDFs.
+    fn collect_inherited_attributes(&self, page_dict: &PdfDictionary) -> PdfDictionary {
+        let mut inherited = PdfDictionary::new();
+        let inheritable_keys = ["Resources", "MediaBox", "CropBox", "Rotate"];
+
+        // Collect from the page's own parent chain
+        let mut current_parent_ref = page_dict.get("Parent").and_then(|p| p.as_reference());
+        let mut visited: std::collections::HashSet<(u32, u16)> = std::collections::HashSet::new();
+
+        while let Some(parent_ref) = current_parent_ref {
+            if !visited.insert(parent_ref) {
+                break; // Cycle detected
+            }
+
+            match self.get_object(parent_ref.0, parent_ref.1) {
+                Ok(obj) => {
+                    if let Some(parent_dict) = obj.as_dict() {
+                        for key in &inheritable_keys {
+                            // Only inherit if the page itself doesn't have it
+                            // and we haven't already found it in a closer ancestor
+                            if !page_dict.contains_key(key) && !inherited.contains_key(key) {
+                                if let Some(val) = parent_dict.get(key) {
+                                    inherited.insert((*key).to_string(), val.clone());
+                                }
+                            }
+                        }
+                        current_parent_ref =
+                            parent_dict.get("Parent").and_then(|p| p.as_reference());
+                    } else {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+
+        inherited
     }
 
     /// Find a page in the page tree (iterative implementation for stack safety)

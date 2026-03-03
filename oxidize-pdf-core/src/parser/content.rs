@@ -377,22 +377,39 @@ pub(super) enum Token {
     ArrayEnd,
     DictStart,
     DictEnd,
+    /// Raw binary data between ID and EI in an inline image.
+    /// The tokenizer captures this as opaque bytes to prevent
+    /// binary image data from being mis-parsed as operators.
+    InlineImageData(Vec<u8>),
 }
 
 /// Content stream tokenizer
 pub struct ContentTokenizer<'a> {
     input: &'a [u8],
     position: usize,
+    /// Set after returning an "ID" operator token.
+    /// The next call to next_token() will read raw inline image bytes.
+    in_inline_image: bool,
 }
 
 impl<'a> ContentTokenizer<'a> {
     /// Create a new tokenizer for the given input
     pub fn new(input: &'a [u8]) -> Self {
-        Self { input, position: 0 }
+        Self {
+            input,
+            position: 0,
+            in_inline_image: false,
+        }
     }
 
     /// Get the next token from the stream
     pub(super) fn next_token(&mut self) -> ParseResult<Option<Token>> {
+        // If we just returned an "ID" token, read raw inline image binary data
+        if self.in_inline_image {
+            self.in_inline_image = false;
+            return self.read_inline_image_data();
+        }
+
         self.skip_whitespace();
 
         if self.position >= self.input.len() {
@@ -440,14 +457,26 @@ impl<'a> ContentTokenizer<'a> {
             // Names
             b'/' => self.read_name(),
 
-            // Skip semicolons (corrupted content recovery)
-            b';' => {
+            // Skip unhandled delimiters (corrupted content / binary data recovery)
+            // These bytes are delimiters in read_operator() but have no valid meaning
+            // at the top level of a content stream. Skipping them prevents infinite loops
+            // where read_operator() would return an empty operator without advancing.
+            b';' | b')' | b'{' | b'}' => {
                 self.position += 1;
                 self.next_token() // Recursively get next valid token
             }
 
             // Operators or other tokens
-            _ => self.read_operator(),
+            _ => {
+                let token = self.read_operator()?;
+                // After "ID" operator, switch to raw binary mode for inline image data
+                if let Some(Token::Operator(ref op)) = token {
+                    if op == "ID" {
+                        self.in_inline_image = true;
+                    }
+                }
+                Ok(token)
+            }
         }
     }
 
@@ -721,6 +750,70 @@ impl<'a> ContentTokenizer<'a> {
         })?;
 
         Ok(Some(Token::Operator(op.to_string())))
+    }
+
+    /// Read raw binary data for an inline image (between ID and EI).
+    ///
+    /// Per PDF spec §4.8.6, after the ID operator and a single whitespace byte,
+    /// all subsequent bytes are raw image data until the EI marker is found.
+    /// The EI marker is: whitespace + 'E' + 'I' + (whitespace, delimiter, or EOF).
+    fn read_inline_image_data(&mut self) -> ParseResult<Option<Token>> {
+        // Skip single whitespace byte after ID (per PDF spec §4.8.6)
+        if self.position < self.input.len() {
+            let ch = self.input[self.position];
+            if ch == b' ' || ch == b'\n' || ch == b'\r' || ch == b'\t' {
+                self.position += 1;
+                // Handle \r\n as single whitespace
+                if ch == b'\r'
+                    && self.position < self.input.len()
+                    && self.input[self.position] == b'\n'
+                {
+                    self.position += 1;
+                }
+            }
+        }
+
+        let start = self.position;
+
+        // Scan for EI marker: preceded by whitespace + 'E' + 'I' + (whitespace/delimiter/EOF)
+        while self.position + 1 < self.input.len() {
+            let preceded_by_whitespace = self.position == start
+                || matches!(
+                    self.input[self.position - 1],
+                    b' ' | b'\t' | b'\r' | b'\n' | b'\x0C'
+                );
+
+            if preceded_by_whitespace
+                && self.input[self.position] == b'E'
+                && self.input[self.position + 1] == b'I'
+            {
+                let after_ei = self.position + 2;
+                let followed_by_boundary = after_ei >= self.input.len()
+                    || matches!(
+                        self.input[after_ei],
+                        b' ' | b'\t' | b'\r' | b'\n' | b'\x0C' | b'/' | b'<' | b'(' | b'[' | b'%'
+                    );
+
+                if followed_by_boundary {
+                    // Trim trailing whitespace that preceded EI from the data
+                    let mut end = self.position;
+                    if end > start
+                        && matches!(self.input[end - 1], b' ' | b'\t' | b'\r' | b'\n' | b'\x0C')
+                    {
+                        end -= 1;
+                    }
+                    let data = self.input[start..end].to_vec();
+                    self.position = after_ei; // Skip past "EI"
+                    return Ok(Some(Token::InlineImageData(data)));
+                }
+            }
+            self.position += 1;
+        }
+
+        // No EI found — return remaining bytes as best-effort recovery
+        let data = self.input[start..].to_vec();
+        self.position = self.input.len();
+        Ok(Some(Token::InlineImageData(data)))
     }
 }
 
@@ -1393,15 +1486,28 @@ impl ContentParser {
             }
         }
 
-        // Now we should be at the image data
-        // Collect bytes until we find EI
+        // Get inline image data from dedicated InlineImageData token
+        // (the tokenizer reads raw bytes between ID whitespace and EI)
+        let data = if self.position < self.tokens.len() {
+            if let Token::InlineImageData(bytes) = &self.tokens[self.position] {
+                let d = bytes.clone();
+                self.position += 1;
+                d
+            } else {
+                // Fallback: collect tokens until EI (for backwards compat with edge cases)
+                self.collect_inline_image_data_from_tokens()?
+            }
+        } else {
+            Vec::new()
+        };
+
+        Ok(ContentOperation::InlineImage { params, data })
+    }
+
+    /// Fallback data collection when InlineImageData token is not present.
+    /// This handles edge cases where the tokenizer couldn't detect the ID/EI boundary.
+    fn collect_inline_image_data_from_tokens(&mut self) -> ParseResult<Vec<u8>> {
         let mut data = Vec::new();
-
-        // For inline images, we need to read raw bytes until EI
-        // This is tricky because EI could appear in the image data
-        // We need to look for EI followed by a whitespace or operator
-
-        // Simplified approach: collect all tokens until we find EI operator
         while self.position < self.tokens.len() {
             if let Token::Operator(op) = &self.tokens[self.position] {
                 if op == "EI" {
@@ -1409,21 +1515,18 @@ impl ContentParser {
                     break;
                 }
             }
-
-            // Convert token to bytes (simplified - real implementation would need raw byte access)
             match &self.tokens[self.position] {
-                Token::String(bytes) => data.extend_from_slice(bytes),
-                Token::HexString(bytes) => data.extend_from_slice(bytes),
+                Token::String(bytes) | Token::HexString(bytes) => {
+                    data.extend_from_slice(bytes);
+                }
                 Token::Integer(n) => data.extend_from_slice(n.to_string().as_bytes()),
                 Token::Number(n) => data.extend_from_slice(n.to_string().as_bytes()),
-                Token::Name(s) => data.extend_from_slice(s.as_bytes()),
-                Token::Operator(s) if s != "EI" => data.extend_from_slice(s.as_bytes()),
+                Token::Name(s) | Token::Operator(s) => data.extend_from_slice(s.as_bytes()),
                 _ => {}
             }
             self.position += 1;
         }
-
-        Ok(ContentOperation::InlineImage { params, data })
+        Ok(data)
     }
 }
 
@@ -2813,6 +2916,142 @@ mod tests {
             let result = ContentParser::parse_content(content);
             // Should handle gracefully (error or skip)
             assert!(result.is_ok() || result.is_err());
+        }
+    }
+
+    // --- Tests for infinite loop fix (curly braces, stray parens, inline images) ---
+
+    #[test]
+    fn test_tokenizer_handles_curly_braces() {
+        // Curly braces { } are not valid PDF content operators but appear in
+        // binary inline image data. The tokenizer must skip them without hanging.
+        let input = b"q { } Q";
+        let mut tokenizer = ContentTokenizer::new(input);
+
+        let mut tokens = Vec::new();
+        while let Some(token) = tokenizer.next_token().unwrap() {
+            tokens.push(token);
+        }
+
+        // Should produce tokens for q and Q, skipping { and }
+        assert!(tokens.contains(&Token::Operator("q".to_string())));
+        assert!(tokens.contains(&Token::Operator("Q".to_string())));
+    }
+
+    #[test]
+    fn test_tokenizer_handles_closing_paren() {
+        // A stray ) outside a string literal should be skipped, not cause a hang
+        let input = b"q ) Q";
+        let mut tokenizer = ContentTokenizer::new(input);
+
+        let mut tokens = Vec::new();
+        while let Some(token) = tokenizer.next_token().unwrap() {
+            tokens.push(token);
+        }
+
+        assert!(tokens.contains(&Token::Operator("q".to_string())));
+        assert!(tokens.contains(&Token::Operator("Q".to_string())));
+    }
+
+    #[test]
+    fn test_inline_image_binary_with_curly_braces() {
+        // Inline image binary data containing { and } bytes must be handled
+        // correctly — the tokenizer should capture them as raw image data
+        let content = b"BI /W 2 /H 2 /BPC 8 /CS /G ID \x7B\x7D\x00\xFF EI Q";
+        let result = ContentParser::parse_content(content);
+        assert!(
+            result.is_ok(),
+            "Parsing inline image with curly braces failed: {:?}",
+            result.err()
+        );
+
+        let ops = result.unwrap();
+        // Should have InlineImage + RestoreGraphicsState
+        let has_inline = ops
+            .iter()
+            .any(|op| matches!(op, ContentOperation::InlineImage { .. }));
+        let has_q = ops
+            .iter()
+            .any(|op| matches!(op, ContentOperation::RestoreGraphicsState));
+        assert!(has_inline, "Expected InlineImage operation");
+        assert!(has_q, "Expected RestoreGraphicsState after EI");
+    }
+
+    #[test]
+    fn test_inline_image_binary_with_all_byte_values() {
+        // Inline image with bytes 0x00-0xFF to ensure no byte causes a hang
+        let mut content = Vec::new();
+        content.extend_from_slice(b"BI /W 16 /H 16 /BPC 8 /CS /G ID ");
+        // Add all 256 byte values as image data
+        for b in 0u8..=255 {
+            content.push(b);
+        }
+        content.extend_from_slice(b" EI Q");
+
+        let result = ContentParser::parse_content(&content);
+        assert!(
+            result.is_ok(),
+            "Parsing inline image with all byte values failed: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn test_inline_image_ei_detection() {
+        // EI must be preceded by whitespace to be recognized as end marker
+        // "EI" within binary data (not preceded by whitespace) should NOT end the image
+        let content = b"BI /W 2 /H 1 /BPC 8 /CS /G ID \x45\x49\x00\n EI Q";
+        //                                               ^E  ^I  (within data)  ^real EI
+        let result = ContentParser::parse_content(content);
+        assert!(result.is_ok(), "EI detection failed: {:?}", result.err());
+
+        let ops = result.unwrap();
+        let has_inline = ops
+            .iter()
+            .any(|op| matches!(op, ContentOperation::InlineImage { .. }));
+        assert!(has_inline, "Expected InlineImage operation");
+    }
+
+    #[test]
+    fn test_tokenizer_no_infinite_loop_on_consecutive_delimiters() {
+        // Multiple consecutive unhandled delimiters must not cause a hang
+        let input = b"q {{{}}})))) Q";
+        let mut tokenizer = ContentTokenizer::new(input);
+
+        let mut tokens = Vec::new();
+        while let Some(token) = tokenizer.next_token().unwrap() {
+            tokens.push(token);
+            if tokens.len() > 100 {
+                panic!("Tokenizer produced too many tokens — possible infinite loop");
+            }
+        }
+
+        assert!(tokens.contains(&Token::Operator("q".to_string())));
+        assert!(tokens.contains(&Token::Operator("Q".to_string())));
+    }
+
+    #[test]
+    fn test_content_parser_inline_image_produces_correct_operation() {
+        // Full parse of a simple inline image should produce correct params
+        let content = b"BI /W 4 /H 4 /BPC 8 /CS /G ID \x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F EI";
+        let result = ContentParser::parse_content(content);
+        assert!(result.is_ok(), "Parse failed: {:?}", result.err());
+
+        let ops = result.unwrap();
+        assert_eq!(
+            ops.len(),
+            1,
+            "Expected exactly 1 operation, got {}",
+            ops.len()
+        );
+
+        if let ContentOperation::InlineImage { params, data } = &ops[0] {
+            assert_eq!(params.get("Width"), Some(&Object::Integer(4)));
+            assert_eq!(params.get("Height"), Some(&Object::Integer(4)));
+            assert_eq!(params.get("BitsPerComponent"), Some(&Object::Integer(8)));
+            assert!(!data.is_empty(), "Image data should not be empty");
+        } else {
+            panic!("Expected InlineImage operation, got {:?}", ops[0]);
         }
     }
 }

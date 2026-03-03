@@ -40,7 +40,7 @@ use super::document::PdfDocument;
 use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfStream};
 use super::reader::PdfReader;
 use super::{ParseError, ParseResult};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Seek};
 
 /// Represents a single page in the PDF with all its properties and resources.
@@ -114,6 +114,10 @@ pub struct ParsedPage {
     pub annotations: Option<PdfArray>,
 }
 
+/// Maximum number of pages to allow in a flat index.
+/// Prevents OOM from malicious /Count values (e.g., 9,999,999,999).
+const MAX_PAGES: usize = 100_000;
+
 /// Page tree navigator
 pub struct PageTree {
     /// Total number of pages
@@ -123,6 +127,9 @@ pub struct PageTree {
     /// Root pages dictionary (for navigation)
     #[allow(dead_code)]
     pages_dict: Option<PdfDictionary>,
+    /// Flat index of page object references, built once during initialization.
+    /// Each entry is (obj_num, gen_num) for a leaf Page node.
+    page_refs: Vec<(u32, u16)>,
 }
 
 impl PageTree {
@@ -132,6 +139,7 @@ impl PageTree {
             page_count,
             pages: HashMap::new(),
             pages_dict: None,
+            page_refs: Vec::new(),
         }
     }
 
@@ -141,6 +149,19 @@ impl PageTree {
             page_count,
             pages: HashMap::new(),
             pages_dict: Some(pages_dict),
+            page_refs: Vec::new(),
+        }
+    }
+
+    /// Create a new page tree navigator with a pre-built flat index.
+    /// The page_count is derived from the actual number of leaf pages found.
+    pub fn new_with_flat_index(pages_dict: PdfDictionary, page_refs: Vec<(u32, u16)>) -> Self {
+        let page_count = page_refs.len() as u32;
+        Self {
+            page_count,
+            pages: HashMap::new(),
+            pages_dict: Some(pages_dict),
+            page_refs,
         }
     }
 
@@ -162,6 +183,117 @@ impl PageTree {
     /// Get the total page count
     pub fn page_count(&self) -> u32 {
         self.page_count
+    }
+
+    /// Get a page object reference from the flat index by page index (0-based).
+    pub fn get_page_ref(&self, index: u32) -> Option<(u32, u16)> {
+        self.page_refs.get(index as usize).copied()
+    }
+
+    /// Flatten the page tree into a `Vec<(u32, u16)>` of leaf Page object references.
+    ///
+    /// This walks the tree iteratively using an explicit stack, with:
+    /// - **Cycle detection**: `HashSet<(u32, u16)>` prevents infinite loops from circular refs
+    /// - **Page cap**: Stops at `MAX_PAGES` to prevent OOM from absurd `/Count` values
+    /// - **Type inference**: Handles missing `/Type` keys by checking for `/Kids`, `/Contents`, `/MediaBox`
+    pub fn flatten_page_tree<R: Read + Seek>(
+        reader: &mut PdfReader<R>,
+        pages_dict: &PdfDictionary,
+    ) -> ParseResult<Vec<(u32, u16)>> {
+        let mut page_refs: Vec<(u32, u16)> = Vec::new();
+        let mut visited: HashSet<(u32, u16)> = HashSet::new();
+
+        // Work stack: each entry is an object reference to process
+        let mut stack: Vec<(u32, u16)> = Vec::new();
+
+        // Seed from root Kids array
+        if let Some(kids) = pages_dict.get("Kids").and_then(|k| k.as_array()) {
+            // Push in reverse so first kid is processed first (LIFO stack)
+            for kid_obj in kids.0.iter().rev() {
+                if let Some(kid_ref) = kid_obj.as_reference() {
+                    stack.push(kid_ref);
+                }
+            }
+        }
+
+        while let Some(obj_ref) = stack.pop() {
+            if page_refs.len() >= MAX_PAGES {
+                tracing::warn!("Page tree exceeds {} leaves, truncating", MAX_PAGES);
+                break;
+            }
+
+            // Cycle detection
+            if !visited.insert(obj_ref) {
+                tracing::warn!(
+                    "Cycle detected at {} {} R in page tree, skipping",
+                    obj_ref.0,
+                    obj_ref.1
+                );
+                continue;
+            }
+
+            // Resolve the object
+            let obj = match reader.get_object(obj_ref.0, obj_ref.1) {
+                Ok(o) => o,
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to resolve page tree node {} {} R: {}",
+                        obj_ref.0,
+                        obj_ref.1,
+                        e
+                    );
+                    continue;
+                }
+            };
+
+            let dict = match obj.as_dict() {
+                Some(d) => d,
+                None => {
+                    // Check if it's a stream with a dict (some PDFs embed page data in streams)
+                    if let Some(stream) = obj.as_stream() {
+                        &stream.dict
+                    } else {
+                        continue; // Skip non-dict/non-stream nodes
+                    }
+                }
+            };
+
+            // Determine node type
+            let node_type = dict.get_type().or_else(|| {
+                if dict.contains_key("Kids") {
+                    Some("Pages")
+                } else if dict.contains_key("Contents") || dict.contains_key("MediaBox") {
+                    Some("Page")
+                } else {
+                    None
+                }
+            });
+
+            match node_type {
+                Some("Page") => {
+                    page_refs.push(obj_ref);
+                }
+                Some("Pages") => {
+                    if let Some(kids) = dict.get("Kids").and_then(|k| k.as_array()) {
+                        // Push in reverse for correct order
+                        for kid_obj in kids.0.iter().rev() {
+                            if let Some(kid_ref) = kid_obj.as_reference() {
+                                stack.push(kid_ref);
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    // Unknown type — treat as Page if it has page-like attributes
+                    if dict.contains_key("MediaBox") || dict.contains_key("Contents") {
+                        page_refs.push(obj_ref);
+                    }
+                    // Otherwise silently skip
+                }
+            }
+        }
+
+        Ok(page_refs)
     }
 
     /// Load a specific page by traversing the page tree

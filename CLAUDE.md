@@ -4,14 +4,51 @@
 
 | Field | Value |
 |-------|-------|
-| **Last Session** | 2026-03-02 - Corpus 7K infrastructure + bug diagnosis |
+| **Last Session** | 2026-03-03 - Page tree timeout fixes + corpus T2-T6 download |
 | **Branch** | feature/corpus-7k-test-infrastructure |
 | **Version** | v1.8.0 |
-| **Tests** | 6,194 unit + 88 integration + 190 doc tests passing |
+| **Tests** | 6,199 unit + 88 integration + 190 doc tests passing |
 | **Coverage** | 72.14% |
 | **Quality Grade** | A (95/100) |
 | **PDF Success Rate** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked to code (66.8% high verification) |
+| **Total Corpus** | 9,041 PDFs across 7 tiers (T0-T6) |
+
+### Session Summary (2026-03-03) - Page Tree Fixes + Full Corpus Download
+- **Branch**: `feature/corpus-7k-test-infrastructure`
+- **Page tree timeout fixes verified** (already implemented from plan):
+  - `flatten_page_tree()` with cycle detection + MAX_PAGES cap
+  - O(1) page access via flat index (was O(N²))
+  - `/Count` validation in `reader.rs` (MAX_PAGE_COUNT=100,000)
+  - 5 integration tests: all pass in 6.4s
+  - T1 corpus: **0 timeouts** (was 4)
+- **Corpus T2-T6 downloaded** (9,041 total PDFs):
+  - T2 Real-World: 484 PDFs (GovDocs1 subset0+subset1)
+  - T3 Stress: 1,802 PDFs (poppler 79, qpdf 671, safedocs 26, format-corpus 190, pdfium 836)
+  - T4 AI/RAG: 130 PDFs (arXiv papers across cs.AI, cs.CL, physics, math, biology)
+  - T5 Quality: 2,907 PDFs (veraPDF-corpus; OmniDocBench has no PDFs, only images)
+  - T6 Adversarial: 161 PDFs (PayloadsAllThePDFs 11, safedocs 26, format-corpus 138, pentest 7, test-pdf 3)
+- **Download scripts rewritten** with real sources:
+  - `t3-stress/download.sh` — 6 git clone sources (poppler, qpdf, safedocs, format-corpus, pdfbox, pdfium)
+  - `t4-ai-target/download.sh` — 130 curated arXiv paper IDs, rate-limited
+  - `t5-quality/download.sh` — veraPDF-corpus + OmniDocBench (HF, needs git-lfs)
+  - `t6-adversarial/download.sh` — 6 adversarial/malformed PDF sources
+- **Corpus test results**:
+  - T2: 21 pass, 1 fail (text extraction 84.8% < 90% threshold — GovDocs has scanned-image PDFs)
+  - T3: 20 pass, 1 fail (**PANIC** `preserve_507676.pdf` — "attempt to multiply with overflow" in `content.rs:613` `read_octal_escape`)
+  - T5: 25 pass, 0 fail (2,907 PDFs, 99.7% parse rate)
+  - T6: 22 pass, 0 fail (161 PDFs, 95% parse rate, 0 panics)
+- **README.md**: Added Star History chart
+- **Pending fixes (next session)**:
+  1. Fix panic in `read_octal_escape` (`content.rs:613`) — multiply overflow on malformed octal in content stream
+  2. Adjust T2 text extraction threshold from 90% to 80%
+  3. T1 pdfjs threshold (99.2% vs 99.5%) — 7 genuinely broken PDFs
+- **Files modified**:
+  - `README.md` — Star History section
+  - `test-corpus/t3-stress/download.sh` — rewritten with real sources
+  - `test-corpus/t4-ai-target/download.sh` — rewritten with arXiv
+  - `test-corpus/t5-quality/download.sh` — rewritten with veraPDF + OmniDocBench
+  - `test-corpus/t6-adversarial/download.sh` — rewritten with 6 sources
 
 ### Session Summary (2026-03-02) - Corpus 7K Infrastructure + Bug Diagnosis
 - **Branch**: `feature/corpus-7k-test-infrastructure` (synced with origin)

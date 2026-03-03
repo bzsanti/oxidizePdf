@@ -86,14 +86,7 @@ impl Default for DocumentMetadata {
     fn default() -> Self {
         let now = Utc::now();
 
-        // Determine edition string based on features
-        let edition = if cfg!(feature = "pro") {
-            "PRO Edition"
-        } else if cfg!(feature = "enterprise") {
-            "Enterprise Edition"
-        } else {
-            "Community Edition"
-        };
+        let edition = "MIT";
 
         Self {
             title: None,

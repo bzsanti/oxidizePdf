@@ -1,4 +1,4 @@
-//! Semantic marking for AI-Ready PDFs (Community Edition)
+//! Semantic marking for AI-Ready PDFs
 //!
 //! This module provides basic functionality to mark PDF regions with semantic meaning,
 //! making PDFs more accessible to AI/ML processing pipelines.

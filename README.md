@@ -554,33 +554,7 @@ cargo run --example tesseract_ocr_demo --features ocr-tesseract
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
-
-### Why AGPL-3.0?
-
-AGPL-3.0 ensures that oxidize-pdf remains free and open source while protecting against proprietary use in SaaS without contribution back to the community. This license:
-- ✅ Allows free use, modification, and distribution
-- ✅ Requires sharing modifications if you provide the software as a service
-- ✅ Ensures improvements benefit the entire community
-- ✅ Supports sustainable open source development
-
-### Commercial Products & Licensing
-
-**oxidize-pdf-core** is free and open source (AGPL-3.0). For commercial products and services:
-
-**Commercial Products:**
-- **oxidize-pdf-pro**: Enhanced library with advanced features
-- **oxidize-pdf-api**: REST API server for PDF operations
-- **oxidize-pdf-cli**: Command-line interface with enterprise capabilities
-
-**Commercial License Benefits:**
-- ✅ Commercial-friendly terms (no AGPL obligations)
-- ✅ Advanced features (cloud OCR, batch processing, digital signatures)
-- ✅ Priority support and SLAs
-- ✅ Custom feature development
-- ✅ Access to commercial products (API, CLI, PRO library)
-
-For commercial licensing inquiries, please open an issue on the GitHub repository.
+This project is licensed under the **MIT License** - see the [LICENSE](https://github.com/bzsanti/oxidizePdf/blob/main/LICENSE) file for details.
 
 ## Known Limitations
 
@@ -635,11 +609,6 @@ oxidize-pdf/
 └── test-pdfs/            # Test PDF files
 
 ```
-
-**Commercial Products** (available separately under commercial license):
-- **oxidize-pdf-api**: REST API server for PDF operations
-- **oxidize-pdf-cli**: Command-line interface with advanced features
-- **oxidize-pdf-pro**: Enhanced library with additional capabilities
 
 See [REPOSITORY_ARCHITECTURE.md](REPOSITORY_ARCHITECTURE.md) for detailed information.
 
@@ -705,6 +674,10 @@ We prioritize features based on community feedback and real-world usage. Have a 
 - 📖 [Documentation](https://docs.rs/oxidize-pdf)
 - 🐛 [Issue Tracker](https://github.com/bzsanti/oxidizePdf/issues)
 - 💬 [Discussions](https://github.com/bzsanti/oxidizePdf/discussions)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=bzsanti/oxidizePdf&type=date&legend=top-left)](https://www.star-history.com/#bzsanti/oxidizePdf&type=date&legend=top-left)
 
 ## Acknowledgments
 

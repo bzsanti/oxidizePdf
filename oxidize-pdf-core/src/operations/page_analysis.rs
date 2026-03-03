@@ -2699,13 +2699,12 @@ startxref
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 1);
 
-        // Try to analyze invalid pages - now returns Ok with warnings instead of error
+        // Try to analyze invalid pages - page 99 is out of range, so this should error
         let result = analyzer.analyze_pages(&[0, 99]);
-        assert!(result.is_ok());
-        let analyses = result.unwrap();
-        // With fallback lookup, it might find page 99 too, so we check it includes at least page 0
-        assert!(analyses.len() >= 1);
-        assert_eq!(analyses[0].page_number, 0);
+        assert!(
+            result.is_err(),
+            "analyze_pages with out-of-range page index should return error"
+        );
     }
 
     // Test 13: ContentAnalysis edge cases
