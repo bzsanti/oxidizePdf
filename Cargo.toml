@@ -5,6 +5,7 @@ members = [
 exclude = [
     "lints",  # Dylint lints workspace (requires nightly)
     "dev-tools/iso-curator",  # ISO matrix curation tool (standalone)
+    "dev-tools/pipeline-profiler",  # Pipeline profiler (standalone)
 ]
 resolver = "2"
 
