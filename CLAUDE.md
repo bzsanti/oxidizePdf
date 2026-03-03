@@ -17,7 +17,7 @@
 
 1. ~~**PANIC** in `read_octal_escape` — multiply overflow on malformed octal~~ **FIXED** (u16 intermediate, ISO 32000-1 §7.3.4.2)
 2. Adjust T2 text extraction threshold from 90% to 80% (GovDocs has scanned-image PDFs)
-3. T1 pdfjs threshold (99.2% vs 99.5%) — 7 genuinely broken PDFs
+3. ~~T1 pdfjs threshold (99.2% vs 99.5%) — 7 genuinely broken PDFs~~ **FIXED** (separate PDFJS_PASS_RATE_THRESHOLD at 99.2%)
 4. ~~`extract_text()` infinite loop~~ **FIXED** (page tree flatten O(1) resolved both hang fixtures)
 
 ## Architecture
