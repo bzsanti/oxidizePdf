@@ -16,23 +16,15 @@ use sha2::{Digest, Sha256};
 /// Edition of oxidize-pdf used to generate the PDF
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Edition {
-    /// Community edition (AGPL-3.0 license)
-    Community,
-    /// PRO edition (Commercial license)
-    #[allow(dead_code)]
-    Pro,
-    /// Enterprise edition (Commercial license with advanced features)
-    #[allow(dead_code)]
-    Enterprise,
+    /// Open source edition (MIT license)
+    OpenSource,
 }
 
 impl Edition {
     /// Get the edition as a string
     pub fn as_str(&self) -> &'static str {
         match self {
-            Edition::Community => "Community",
-            Edition::Pro => "PRO",
-            Edition::Enterprise => "Enterprise",
+            Edition::OpenSource => "OpenSource",
         }
     }
 }
@@ -174,13 +166,11 @@ impl PdfSignature {
             Object::String(format!("{:04x}", self.features_fingerprint)),
         );
 
-        // Edition marker (only for PRO/Enterprise builds)
-        if self.edition != Edition::Community {
-            info_dict.set(
-                "oxidize-pdf-edition",
-                Object::String(self.edition.as_str().to_string()),
-            );
-        }
+        // Edition marker
+        info_dict.set(
+            "oxidize-pdf-edition",
+            Object::String(self.edition.as_str().to_string()),
+        );
     }
 
     /// Get the build hash
@@ -211,26 +201,14 @@ mod tests {
 
     #[test]
     fn test_edition_as_str() {
-        assert_eq!(Edition::Community.as_str(), "Community");
-        assert_eq!(Edition::Pro.as_str(), "PRO");
-        assert_eq!(Edition::Enterprise.as_str(), "Enterprise");
+        assert_eq!(Edition::OpenSource.as_str(), "OpenSource");
     }
 
     #[test]
     fn test_build_hash_format() {
-        let hash = PdfSignature::generate_build_hash(Edition::Community);
+        let hash = PdfSignature::generate_build_hash(Edition::OpenSource);
         assert!(hash.starts_with("oxpdf-"));
         assert_eq!(hash.len(), 22); // "oxpdf-" + 16 hex chars
-    }
-
-    #[test]
-    fn test_build_hash_uniqueness() {
-        let hash1 = PdfSignature::generate_build_hash(Edition::Community);
-        let hash2 = PdfSignature::generate_build_hash(Edition::Pro);
-        assert_ne!(
-            hash1, hash2,
-            "Different editions should have different hashes"
-        );
     }
 
     #[test]
@@ -265,18 +243,18 @@ mod tests {
     #[test]
     fn test_pdf_signature_creation() {
         let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::Community);
+        let signature = PdfSignature::new(&doc, Edition::OpenSource);
 
         assert_eq!(signature.version, env!("CARGO_PKG_VERSION"));
-        assert_eq!(signature.edition, Edition::Community);
+        assert_eq!(signature.edition, Edition::OpenSource);
         assert!(signature.build_hash.starts_with("oxpdf-"));
         assert!(signature.features_fingerprint > 0); // At least compression should be set
     }
 
     #[test]
-    fn test_write_to_info_dict_community() {
+    fn test_write_to_info_dict() {
         let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::Community);
+        let signature = PdfSignature::new(&doc, Edition::OpenSource);
         let mut dict = Dictionary::new();
 
         signature.write_to_info_dict(&mut dict);
@@ -286,33 +264,12 @@ mod tests {
 
         // Should have features fingerprint
         assert!(dict.get("oxidize-pdf-features").is_some());
-
-        // Should NOT have edition marker for Community
-        assert!(dict.get("oxidize-pdf-edition").is_none());
-    }
-
-    #[test]
-    fn test_write_to_info_dict_pro() {
-        let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::Pro);
-        let mut dict = Dictionary::new();
-
-        signature.write_to_info_dict(&mut dict);
-
-        // Should have edition marker for PRO
-        let edition = dict.get("oxidize-pdf-edition");
-        assert!(edition.is_some());
-        if let Some(Object::String(ed)) = edition {
-            assert_eq!(ed, "PRO");
-        } else {
-            panic!("Edition should be a string");
-        }
     }
 
     #[test]
     fn test_features_fingerprint_format() {
         let doc = Document::new();
-        let signature = PdfSignature::new(&doc, Edition::Community);
+        let signature = PdfSignature::new(&doc, Edition::OpenSource);
         let mut dict = Dictionary::new();
 
         signature.write_to_info_dict(&mut dict);

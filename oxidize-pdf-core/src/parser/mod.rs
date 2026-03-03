@@ -446,8 +446,10 @@ pub enum ParseError {
     #[error("Stream decode error: {0}")]
     StreamDecodeError(String),
 
-    /// PDF encryption is not currently supported
-    #[error("PDF is encrypted. Decryption is not currently supported in the community edition")]
+    /// PDF is encrypted and could not be automatically decrypted
+    #[error(
+        "PDF is encrypted and could not be decrypted (unsupported encryption or password required)"
+    )]
     EncryptionNotSupported,
 
     /// Wrong password provided for encrypted PDF

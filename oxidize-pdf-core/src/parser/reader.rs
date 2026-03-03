@@ -383,7 +383,9 @@ impl<R: Read + Seek> PdfReader<R> {
                     });
 
                     match EncryptionHandler::new(encrypt_dict, file_id) {
-                        Ok(handler) => {
+                        Ok(mut handler) => {
+                            // Auto-unlock with empty password (common for permission-restricted PDFs)
+                            let _ = handler.try_empty_password();
                             // Move the reader back out
                             buf_reader = temp_reader.reader;
                             Some(handler)
@@ -1105,21 +1107,32 @@ impl<R: Read + Seek> PdfReader<R> {
 
     /// Get the number of pages
     pub fn page_count(&mut self) -> ParseResult<u32> {
+        /// Maximum page count accepted from the /Count entry.
+        /// PDFs claiming more pages than this are likely malformed or malicious.
+        const MAX_PAGE_COUNT: u32 = 100_000;
+
         // Try standard method first
         match self.pages() {
             Ok(pages) => {
                 // Try to get Count first
                 if let Some(count_obj) = pages.get("Count") {
                     if let Some(count) = count_obj.as_integer() {
-                        return Ok(count as u32);
+                        let count = count as u32;
+                        if count <= MAX_PAGE_COUNT {
+                            return Ok(count);
+                        }
+                        tracing::warn!(
+                            "PDF /Count {} exceeds limit {}, falling back to Kids array length",
+                            count,
+                            MAX_PAGE_COUNT
+                        );
+                        // Fall through to Kids counting
                     }
                 }
 
-                // If Count is missing or invalid, try to count manually by traversing Kids
+                // If Count is missing, invalid, or exceeds limit, try to count manually
                 if let Some(kids_obj) = pages.get("Kids") {
                     if let Some(kids_array) = kids_obj.as_array() {
-                        // Simple recursive approach: assume each kid in top-level array is a page
-                        // This is a simplified version that handles most common cases without complex borrowing
                         return Ok(kids_array.0.len() as u32);
                     }
                 }

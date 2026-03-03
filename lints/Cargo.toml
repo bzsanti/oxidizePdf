@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Custom lints for oxidize-pdf to enforce idiomatic Rust patterns"
 authors = ["oxidize-pdf contributors"]
-license = "MIT OR Apache-2.0"
+license.workspace = true
 
 [lib]
 crate-type = ["cdylib"]

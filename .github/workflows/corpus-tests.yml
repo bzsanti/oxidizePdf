@@ -1,0 +1,178 @@
+name: Corpus Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 3 * * *'      # Nightly at 03:00 UTC (T2 + T3)
+    - cron: '0 5 * * 0'      # Weekly on Sunday at 05:00 UTC (T4 + T5 + T6)
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # T0 + T1: Every commit (< 8 minutes total)
+  # ═══════════════════════════════════════════════════════════════
+  tier-commit:
+    name: "T0 + T1: Regression & Spec Compliance"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-corpus-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Cache T1 corpus
+        uses: actions/cache@v4
+        with:
+          path: test-corpus/t1-spec
+          key: corpus-t1-v1
+
+      - name: Download T1 corpus (if not cached)
+        run: |
+          if [ ! -d "test-corpus/t1-spec/verapdf" ] || [ -z "$(find test-corpus/t1-spec -name '*.pdf' 2>/dev/null | head -1)" ]; then
+            bash test-corpus/t1-spec/download.sh || echo "T1 download skipped (sources may be unavailable)"
+          fi
+
+      - name: Run T0 — Regression
+        run: cargo test --test t0_regression -- --nocapture
+
+      - name: Run T1 — Spec Compliance
+        run: cargo test --test t1_spec -- --nocapture
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-commit-${{ github.sha }}
+          path: test-corpus/results/
+          if-no-files-found: ignore
+
+  # ═══════════════════════════════════════════════════════════════
+  # T2 + T3: Nightly (< 35 minutes total)
+  # ═══════════════════════════════════════════════════════════════
+  tier-nightly:
+    name: "T2 + T3: Real-World & Stress"
+    if: github.event_name == 'schedule' && github.event.schedule == '0 3 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-corpus-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Cache T2 corpus
+        uses: actions/cache@v4
+        with:
+          path: test-corpus/t2-realworld
+          key: corpus-t2-v1
+
+      - name: Cache T3 corpus
+        uses: actions/cache@v4
+        with:
+          path: test-corpus/t3-stress
+          key: corpus-t3-v1
+
+      - name: Download T2 corpus
+        run: bash test-corpus/t2-realworld/download.sh || echo "T2 download skipped"
+
+      - name: Download T3 corpus
+        run: bash test-corpus/t3-stress/download.sh || echo "T3 download skipped"
+
+      - name: Run T2 — Real-World
+        run: cargo test --test t2_realworld -- --nocapture
+
+      - name: Run T3 — Stress
+        run: cargo test --test t3_stress -- --nocapture
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-nightly-${{ github.run_id }}
+          path: test-corpus/results/
+          if-no-files-found: ignore
+
+  # ═══════════════════════════════════════════════════════════════
+  # T4 + T5 + T6: Weekly (< 90 minutes total)
+  # ═══════════════════════════════════════════════════════════════
+  tier-weekly:
+    name: "T4 + T5 + T6: AI/RAG, Quality & Adversarial"
+    if: github.event_name == 'schedule' && github.event.schedule == '0 5 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-corpus-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Cache weekly corpora
+        uses: actions/cache@v4
+        with:
+          path: |
+            test-corpus/t4-ai-target
+            test-corpus/t5-quality
+            test-corpus/t6-adversarial
+          key: corpus-weekly-v1
+
+      - name: Download T4 corpus
+        run: bash test-corpus/t4-ai-target/download.sh || echo "T4 download skipped"
+
+      - name: Download T5 corpus
+        run: bash test-corpus/t5-quality/download.sh || echo "T5 download skipped"
+
+      - name: Download T6 corpus
+        run: bash test-corpus/t6-adversarial/download.sh || echo "T6 download skipped"
+
+      - name: Run T4 — AI/RAG Target
+        run: cargo test --test t4_ai_target -- --nocapture
+
+      - name: Run T5 — Quality Benchmark
+        run: cargo test --test t5_quality -- --nocapture
+
+      - name: Run T6 — Adversarial
+        run: cargo test --test t6_adversarial -- --nocapture
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-weekly-${{ github.run_id }}
+          path: test-corpus/results/
+          if-no-files-found: ignore

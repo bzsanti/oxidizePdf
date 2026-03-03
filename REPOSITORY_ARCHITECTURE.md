@@ -8,8 +8,8 @@ OxidizePDF follows a dual-repository architecture to separate open-source commun
 
 ### 1. Public Repository (This Repository)
 - **Name**: `oxidize-pdf`
-- **License**: GPL v3
-- **URL**: https://github.com/YourOrg/oxidize-pdf
+- **License**: MIT
+- **URL**: https://github.com/BelowZero/oxidize-pdf
 - **Contents**:
   - Core PDF generation and manipulation
   - Basic semantic tagging
@@ -67,7 +67,7 @@ All PRO features plus:
 1. Fork the public repository
 2. Create feature branches
 3. Submit pull requests
-4. All contributions are GPL v3
+4. All contributions are MIT licensed
 
 ### For PRO Development
 1. Access to private repository required
@@ -110,7 +110,7 @@ PRO and Enterprise editions include license validation:
 
 Previously, PRO features were in the public repository behind feature flags. This has been changed to:
 1. Protect commercial intellectual property
-2. Prevent GPL contamination of commercial code
+2. Separate commercial and open-source code
 3. Simplify license management
 4. Enable different release cycles
 

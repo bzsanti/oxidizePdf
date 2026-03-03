@@ -84,11 +84,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // PDF-specific metadata
-    custom_xmp.set_text(
-        XmpNamespace::Pdf,
-        "Producer",
-        "oxidize-pdf Community Edition",
-    );
+    custom_xmp.set_text(XmpNamespace::Pdf, "Producer", "oxidize-pdf");
     custom_xmp.set_text(XmpNamespace::Pdf, "PDFVersion", "1.5");
 
     // XMP Rights Management
