@@ -5,8 +5,8 @@
 | Field | Value |
 |-------|-------|
 | **Version** | v2.0.0 |
-| **Branch** | feature/corpus-7k-test-infrastructure |
-| **Tests** | 6,199 unit + 88 integration + 190 doc tests |
+| **License** | MIT |
+| **Tests** | 6,212 unit + 88 integration + 190 doc tests |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |
@@ -104,6 +104,24 @@ git push origin v1.2.3
 - **Float sorting**: `f64::total_cmp()` everywhere (Rust 1.81+ panic fix)
 - **Text sanitization**: NUL byte removal + `space_threshold` 0.3 default
 - **Font subsetting**: Skip only when font < 100KB AND chars < 10
+- **Font cache**: Two-tier (persistent by obj ref + per-page by name). PdfReader requires Mutex (used in Arc<RwLock<>> by LazyDocument)
+- **Debug writes**: Gated behind `verbose-debug` feature (zero overhead in production)
+
+## Performance Baseline (v2.0.0)
+
+Benchmark on Cold_Email_Hacks.pdf (930KB):
+
+| Stage | Time |
+|-------|------|
+| file_loading | 738 µs |
+| page_tree | 1,488 µs |
+| stream_decompression | 10 µs |
+| content_parsing | 15 µs |
+| text_extract_page(0) | 546 µs |
+| text_extract_full | 85.6 ms |
+
+**Bottleneck**: text_extraction dominates. Decompression/parsing are trivial.
+Criterion baseline saved as `v2.0.0-profiling`.
 
 ## GitHub Issues
 
