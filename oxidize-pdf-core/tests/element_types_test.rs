@@ -129,7 +129,57 @@ fn test_element_metadata_with_font() {
 }
 
 #[test]
-fn test_element_ordering_by_position() {
+fn test_element_equality_by_content_not_position() {
+    // Two paragraphs with same text but different positions should be equal
+    let a = Element::Paragraph(ElementData {
+        text: "Same text".to_string(),
+        metadata: ElementMetadata {
+            page: 0,
+            bbox: ElementBBox::new(10.0, 700.0, 100.0, 12.0),
+            ..Default::default()
+        },
+    });
+    let b = Element::Paragraph(ElementData {
+        text: "Same text".to_string(),
+        metadata: ElementMetadata {
+            page: 1,
+            bbox: ElementBBox::new(50.0, 300.0, 200.0, 20.0),
+            ..Default::default()
+        },
+    });
+
+    assert_eq!(
+        a, b,
+        "Elements with same variant+text should be equal regardless of position"
+    );
+}
+
+#[test]
+fn test_element_inequality_different_text_same_position() {
+    let meta = ElementMetadata {
+        page: 0,
+        bbox: ElementBBox::new(10.0, 700.0, 100.0, 12.0),
+        ..Default::default()
+    };
+    let a = Element::Paragraph(ElementData {
+        text: "Alpha".to_string(),
+        metadata: meta.clone(),
+    });
+    let b = Element::Paragraph(ElementData {
+        text: "Beta".to_string(),
+        metadata: meta,
+    });
+
+    assert_ne!(
+        a, b,
+        "Elements with different text should not be equal even at same position"
+    );
+}
+
+#[test]
+fn test_element_sort_by_reading_order() {
+    use oxidize_pdf::pipeline::element_reading_order;
+
     let make = |page: u32, y: f64| {
         Element::Paragraph(ElementData {
             text: format!("p{}y{}", page, y),
@@ -143,12 +193,60 @@ fn test_element_ordering_by_position() {
 
     let mut elements = vec![make(2, 500.0), make(1, 300.0), make(1, 700.0)];
 
-    elements.sort();
+    elements.sort_by(element_reading_order);
 
     // Page 1 first, then within page: higher Y first (reading order top-to-bottom in PDF coords)
     assert_eq!(elements[0].text(), "p1y700");
     assert_eq!(elements[1].text(), "p1y300");
     assert_eq!(elements[2].text(), "p2y500");
+}
+
+#[test]
+fn test_element_display_text_table() {
+    use oxidize_pdf::pipeline::TableElementData;
+
+    let table = Element::Table(TableElementData {
+        rows: vec![
+            vec!["Name".to_string(), "Age".to_string()],
+            vec!["Alice".to_string(), "30".to_string()],
+        ],
+        metadata: ElementMetadata::default(),
+    });
+
+    let display = table.display_text();
+    assert!(display.contains("Name"));
+    assert!(display.contains("Age"));
+    assert!(display.contains("Alice"));
+    assert!(display.contains("30"));
+    assert!(
+        display.contains(" | "),
+        "Table display_text should use pipe separators"
+    );
+}
+
+#[test]
+fn test_element_display_text_key_value() {
+    use oxidize_pdf::pipeline::KeyValueElementData;
+
+    let kv = Element::KeyValue(KeyValueElementData {
+        key: "Status".to_string(),
+        value: "Active".to_string(),
+        metadata: ElementMetadata::default(),
+    });
+
+    let display = kv.display_text();
+    assert_eq!(display, "Status: Active");
+}
+
+#[test]
+fn test_element_display_text_paragraph() {
+    let para = Element::Paragraph(ElementData {
+        text: "Hello world".to_string(),
+        metadata: ElementMetadata::default(),
+    });
+
+    // For simple text elements, display_text() == text()
+    assert_eq!(para.display_text(), para.text());
 }
 
 #[test]

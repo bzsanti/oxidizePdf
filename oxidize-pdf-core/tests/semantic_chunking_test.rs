@@ -182,3 +182,45 @@ fn test_semantic_chunk_text_concatenation() {
     assert!(text.contains("Title"));
     assert!(text.contains("Body."));
 }
+
+#[test]
+fn test_semantic_chunk_overlap_tokens() {
+    // Create 3 elements that will each go into their own chunk when max_tokens is small
+    let elements = vec![
+        para(&"alpha ".repeat(10), 0, 750.0), // ~10 tokens
+        para(&"beta ".repeat(10), 0, 700.0),  // ~10 tokens
+        para(&"gamma ".repeat(10), 0, 650.0), // ~10 tokens
+    ];
+
+    let chunks_no_overlap =
+        SemanticChunker::new(SemanticChunkConfig::new(12).with_overlap(0)).chunk(&elements);
+
+    let chunks_with_overlap =
+        SemanticChunker::new(SemanticChunkConfig::new(12).with_overlap(5)).chunk(&elements);
+
+    // With overlap, the last elements of chunk N should appear at the start of chunk N+1
+    assert!(
+        chunks_no_overlap.len() >= 2,
+        "Need at least 2 chunks to test overlap, got {}",
+        chunks_no_overlap.len()
+    );
+    assert!(
+        chunks_with_overlap.len() >= 2,
+        "Need at least 2 chunks with overlap, got {}",
+        chunks_with_overlap.len()
+    );
+
+    // Verify overlap: chunk[1] should contain elements from the end of chunk[0]
+    if chunks_with_overlap.len() >= 2 {
+        let chunk0_elements = chunks_with_overlap[0].elements();
+        let chunk1_elements = chunks_with_overlap[1].elements();
+
+        // The last element of chunk 0 should also appear in chunk 1
+        let last_of_0 = chunk0_elements.last().unwrap();
+        let has_overlap = chunk1_elements.iter().any(|e| e.text() == last_of_0.text());
+        assert!(
+            has_overlap,
+            "Chunk 1 should contain overlapping elements from chunk 0"
+        );
+    }
+}

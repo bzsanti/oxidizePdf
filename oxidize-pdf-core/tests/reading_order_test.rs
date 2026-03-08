@@ -145,3 +145,41 @@ fn test_xycut_newspaper_three_columns() {
     // Left-to-right columns, top-to-bottom within each
     assert_eq!(texts, vec!["C1", "C1b", "C2", "C2b", "C3", "C3b"]);
 }
+
+#[test]
+fn test_simple_reading_order_transitivity() {
+    // Three fragments where a≈b and b≈c but a≉c under threshold-based comparison.
+    // With threshold 5.0:
+    //   A(y=100) ≈ B(y=104) → same line (diff=4 < 5)
+    //   B(y=104) ≈ C(y=108) → same line (diff=4 < 5)
+    //   A(y=100) vs C(y=108) → different line (diff=8 > 5) — INTRANSITIVE!
+    // Band quantization should assign all three to the same band or separate them consistently.
+    let mut fragments = vec![
+        frag("C", 300.0, 108.0),
+        frag("A", 100.0, 100.0),
+        frag("B", 200.0, 104.0),
+    ];
+
+    // This must not panic and must produce a deterministic order
+    SimpleReadingOrder::new(5.0).order(&mut fragments);
+
+    // With band quantization (band_size = threshold), all three snap to same band
+    // so they should be sorted left-to-right
+    assert_eq!(fragments[0].text, "A");
+    assert_eq!(fragments[1].text, "B");
+    assert_eq!(fragments[2].text, "C");
+}
+
+#[test]
+fn test_simple_reading_order_band_separation() {
+    // Fragments clearly on different lines should stay separate
+    let mut fragments = vec![
+        frag("line2", 50.0, 100.0),
+        frag("line1", 50.0, 200.0), // 100pt gap — definitely different line
+    ];
+
+    SimpleReadingOrder::new(5.0).order(&mut fragments);
+
+    assert_eq!(fragments[0].text, "line1"); // higher Y first
+    assert_eq!(fragments[1].text, "line2");
+}

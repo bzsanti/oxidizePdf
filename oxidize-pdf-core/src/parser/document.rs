@@ -1379,12 +1379,16 @@ impl<R: Read + Seek> PdfDocument<R> {
 
         let mut all_elements = Vec::new();
         for (page_idx, page_text) in pages.iter().enumerate() {
+            let page_idx_u32 = u32::try_from(page_idx).map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: format!("Page index {} exceeds u32 range", page_idx),
+            })?;
             let page_height = self
-                .get_page(page_idx as u32)
+                .get_page(page_idx_u32)
                 .map(|p| p.height())
                 .unwrap_or(842.0);
             let elements =
-                partitioner.partition_fragments(&page_text.fragments, page_idx as u32, page_height);
+                partitioner.partition_fragments(&page_text.fragments, page_idx_u32, page_height);
             all_elements.extend(elements);
         }
 

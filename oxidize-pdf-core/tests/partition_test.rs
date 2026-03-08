@@ -186,6 +186,61 @@ fn test_partition_detects_key_value() {
     assert_eq!(kvs.len(), 2);
 }
 
+#[test]
+fn test_partition_prose_with_colon_not_kv() {
+    // Prose sentences containing colons should NOT be detected as key-value
+    let fragments = vec![
+        frag(
+            "The document states: all users must comply.",
+            50.0,
+            700.0,
+            12.0,
+            false,
+        ),
+        frag(
+            "As noted in the report: several issues were found.",
+            50.0,
+            680.0,
+            12.0,
+            false,
+        ),
+    ];
+
+    let elements = oxidize_pdf::pipeline::Partitioner::new(PartitionConfig::default())
+        .partition_fragments(&fragments, 0, 842.0);
+
+    let kvs: Vec<_> = elements
+        .iter()
+        .filter(|e| matches!(e, Element::KeyValue(_)))
+        .collect();
+
+    assert!(
+        kvs.is_empty(),
+        "Prose with colons should not be detected as KV pairs, got {} KV elements",
+        kvs.len()
+    );
+}
+
+#[test]
+fn test_partition_real_kv_still_detected() {
+    // Short keys with colons should still be detected
+    let fragments = vec![
+        frag("Name: John", 50.0, 700.0, 12.0, false),
+        frag("ID: 12345", 50.0, 680.0, 12.0, false),
+        frag("Status: Active", 50.0, 660.0, 12.0, false),
+    ];
+
+    let elements = oxidize_pdf::pipeline::Partitioner::new(PartitionConfig::default())
+        .partition_fragments(&fragments, 0, 842.0);
+
+    let kvs: Vec<_> = elements
+        .iter()
+        .filter(|e| matches!(e, Element::KeyValue(_)))
+        .collect();
+
+    assert_eq!(kvs.len(), 3, "Short-key KV pairs should still be detected");
+}
+
 // --- Step 3.6: ListItem detection ---
 
 #[test]

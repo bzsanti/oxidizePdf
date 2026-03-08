@@ -46,6 +46,27 @@ impl Element {
         }
     }
 
+    /// Returns a human-readable text representation of this element.
+    ///
+    /// Unlike [`text()`](Self::text) which returns raw content (empty for tables,
+    /// value-only for KV pairs), this method produces a complete display form:
+    /// - Tables: pipe-separated rows
+    /// - Key-Value: "key: value"
+    /// - All others: same as `text()`
+    pub fn display_text(&self) -> String {
+        match self {
+            Self::Table(t) => t
+                .rows
+                .iter()
+                .map(|row| row.join(" | "))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Self::Image(img) => img.alt_text.clone().unwrap_or_default(),
+            Self::KeyValue(kv) => format!("{}: {}", kv.key, kv.value),
+            _ => self.text().to_string(),
+        }
+    }
+
     /// Returns the page number (0-indexed) where this element appears.
     pub fn page(&self) -> u32 {
         self.metadata().page
@@ -96,36 +117,48 @@ impl Element {
     }
 }
 
-/// Natural ordering: page ASC, then Y DESC (top-to-bottom in PDF coordinates),
-/// then X ASC (left-to-right).
-impl Ord for Element {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let page_cmp = self.page().cmp(&other.page());
-        if page_cmp != Ordering::Equal {
-            return page_cmp;
-        }
-        // Higher Y = higher on page in PDF coords → should come first
-        let y_cmp = other.bbox().y.total_cmp(&self.bbox().y);
-        if y_cmp != Ordering::Equal {
-            return y_cmp;
-        }
-        self.bbox().x.total_cmp(&other.bbox().x)
+/// Comparator for sorting elements in natural reading order:
+/// page ASC, then Y DESC (top-to-bottom in PDF coordinates), then X ASC (left-to-right).
+///
+/// Use with `elements.sort_by(element_reading_order)` instead of `elements.sort()`.
+pub fn element_reading_order(a: &Element, b: &Element) -> Ordering {
+    let page_cmp = a.page().cmp(&b.page());
+    if page_cmp != Ordering::Equal {
+        return page_cmp;
     }
-}
-
-impl PartialOrd for Element {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+    // Higher Y = higher on page in PDF coords → should come first
+    let y_cmp = b.bbox().y.total_cmp(&a.bbox().y);
+    if y_cmp != Ordering::Equal {
+        return y_cmp;
     }
+    a.bbox().x.total_cmp(&b.bbox().x)
 }
 
 impl PartialEq for Element {
     fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
+        std::mem::discriminant(self) == std::mem::discriminant(other) && self.content_eq(other)
     }
 }
 
 impl Eq for Element {}
+
+impl Element {
+    /// Content-based equality: compares text/data content, ignoring metadata (position, font, etc.).
+    fn content_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Title(a), Self::Title(b))
+            | (Self::Paragraph(a), Self::Paragraph(b))
+            | (Self::Header(a), Self::Header(b))
+            | (Self::Footer(a), Self::Footer(b))
+            | (Self::ListItem(a), Self::ListItem(b))
+            | (Self::CodeBlock(a), Self::CodeBlock(b)) => a.text == b.text,
+            (Self::Table(a), Self::Table(b)) => a.rows == b.rows,
+            (Self::Image(a), Self::Image(b)) => a.alt_text == b.alt_text,
+            (Self::KeyValue(a), Self::KeyValue(b)) => a.key == b.key && a.value == b.value,
+            _ => false,
+        }
+    }
+}
 
 /// Shared data for text-based element variants.
 #[derive(Debug, Clone)]

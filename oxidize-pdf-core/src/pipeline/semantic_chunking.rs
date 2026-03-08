@@ -54,7 +54,7 @@ impl SemanticChunk {
     pub fn text(&self) -> String {
         self.elements
             .iter()
-            .map(|e| element_text(e))
+            .map(|e| e.display_text())
             .collect::<Vec<_>>()
             .join("\n")
     }
@@ -116,11 +116,12 @@ impl SemanticChunker {
                     && current_tokens + elem_tokens > self.config.max_tokens
                     && self.config.respect_element_boundaries
                 {
-                    chunks.push(SemanticChunk {
-                        elements: std::mem::take(&mut current_elements),
-                        oversized: false,
-                    });
-                    current_tokens = 0;
+                    self.flush_chunk(
+                        &mut chunks,
+                        &mut current_elements,
+                        &mut current_tokens,
+                        false,
+                    );
                 }
 
                 // If element alone exceeds max_tokens, it gets its own oversized chunk
@@ -145,21 +146,24 @@ impl SemanticChunker {
             } else if elem_tokens <= self.config.max_tokens {
                 // Doesn't fit but element itself is within limit — start new chunk
                 if !current_elements.is_empty() {
-                    chunks.push(SemanticChunk {
-                        elements: std::mem::take(&mut current_elements),
-                        oversized: false,
-                    });
+                    self.flush_chunk(
+                        &mut chunks,
+                        &mut current_elements,
+                        &mut current_tokens,
+                        false,
+                    );
                 }
                 current_elements.push(element.clone());
                 current_tokens = elem_tokens;
             } else {
                 // Element exceeds max_tokens — split by sentences
                 if !current_elements.is_empty() {
-                    chunks.push(SemanticChunk {
-                        elements: std::mem::take(&mut current_elements),
-                        oversized: false,
-                    });
-                    current_tokens = 0;
+                    self.flush_chunk(
+                        &mut chunks,
+                        &mut current_elements,
+                        &mut current_tokens,
+                        false,
+                    );
                 }
 
                 let sentences = split_sentences(element.text());
@@ -201,6 +205,43 @@ impl SemanticChunker {
 
         chunks
     }
+
+    /// Flush current elements into a chunk and apply overlap if configured.
+    fn flush_chunk(
+        &self,
+        chunks: &mut Vec<SemanticChunk>,
+        current_elements: &mut Vec<Element>,
+        current_tokens: &mut usize,
+        oversized: bool,
+    ) {
+        let flushed = std::mem::take(current_elements);
+        chunks.push(SemanticChunk {
+            elements: flushed.clone(),
+            oversized,
+        });
+
+        // Apply overlap: carry trailing elements from flushed chunk into the next
+        if self.config.overlap_tokens > 0 {
+            let mut overlap_tokens = 0usize;
+            let mut overlap_elements = Vec::new();
+
+            // Walk backwards through flushed elements to collect overlap
+            for elem in flushed.iter().rev() {
+                let t = element_token_count(elem);
+                if overlap_tokens + t > self.config.overlap_tokens && !overlap_elements.is_empty() {
+                    break;
+                }
+                overlap_elements.push(elem.clone());
+                overlap_tokens += t;
+            }
+
+            overlap_elements.reverse();
+            *current_elements = overlap_elements;
+            *current_tokens = overlap_tokens;
+        } else {
+            *current_tokens = 0;
+        }
+    }
 }
 
 /// Whether an element can be split across chunks.
@@ -213,25 +254,7 @@ fn is_splittable(element: &Element) -> bool {
 
 /// Approximate token count for an element.
 fn element_token_count(element: &Element) -> usize {
-    let text = element_text(element);
-    estimate_tokens(&text)
-}
-
-/// Get text representation for token counting.
-fn element_text(element: &Element) -> String {
-    match element {
-        Element::Table(t) => {
-            // Represent table as rows for token counting
-            t.rows
-                .iter()
-                .map(|row| row.join(" | "))
-                .collect::<Vec<_>>()
-                .join("\n")
-        }
-        Element::Image(img) => img.alt_text.clone().unwrap_or_default(),
-        Element::KeyValue(kv) => format!("{}: {}", kv.key, kv.value),
-        _ => element.text().to_string(),
-    }
+    estimate_tokens(&element.display_text())
 }
 
 /// Simple token estimator: word count (split by whitespace).

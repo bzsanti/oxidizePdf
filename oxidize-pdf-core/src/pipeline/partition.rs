@@ -193,9 +193,13 @@ impl Partitioner {
                     let key = (*s * 2.0).round() as i64;
                     *freq.entry(key).or_insert(0usize) += 1;
                 }
+                // When frequencies are tied, prefer the smaller font size
+                // (body text is typically smaller than headings)
                 let mode_key = freq
                     .into_iter()
-                    .max_by_key(|(_, count)| *count)
+                    .max_by(|(key_a, count_a), (key_b, count_b)| {
+                        count_a.cmp(count_b).then(key_b.cmp(key_a))
+                    })
                     .map(|(key, _)| key)
                     .unwrap_or(24);
                 mode_key as f64 / 2.0
@@ -220,8 +224,17 @@ impl Partitioner {
             if let Some(colon_pos) = text.find(':') {
                 let key = text[..colon_pos].trim();
                 let value = text[colon_pos + 1..].trim();
-                // Heuristic: key should be short (< 40 chars), non-empty, and value non-empty
-                if !key.is_empty() && !value.is_empty() && key.len() < 40 && !key.contains('.') {
+                // Heuristic: key must be a short label (max 4 words, < 40 chars),
+                // non-empty with non-empty value, no periods, and no prose-like prefixes
+                // that indicate a sentence structure rather than a KV pair.
+                let key_word_count = key.split_whitespace().count();
+                if !key.is_empty()
+                    && !value.is_empty()
+                    && key.len() < 40
+                    && key_word_count <= 4
+                    && !key.contains('.')
+                    && !is_prose_prefix(key)
+                {
                     elements.push(Element::KeyValue(KeyValueElementData {
                         key: key.to_string(),
                         value: value.to_string(),
@@ -257,9 +270,90 @@ impl Partitioner {
         }
 
         // Sort by reading order: Y descending within page (top-to-bottom)
-        elements.sort();
+        elements.sort_by(super::element::element_reading_order);
         elements
     }
+}
+
+/// Check if text before a colon looks like a prose phrase rather than a label.
+/// Prose prefixes contain verbs or conjunctions that indicate sentence structure.
+fn is_prose_prefix(key: &str) -> bool {
+    let lower = key.to_lowercase();
+    let words: Vec<&str> = lower.split_whitespace().collect();
+
+    // Common prose patterns: "As noted in the report", "The document states", etc.
+    const PROSE_INDICATORS: &[&str] = &[
+        "as",
+        "the",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "is",
+        "was",
+        "were",
+        "has",
+        "have",
+        "had",
+        "will",
+        "would",
+        "should",
+        "could",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "do",
+        "does",
+        "did",
+        "being",
+        "been",
+        "are",
+        "for",
+        "with",
+        "from",
+        "into",
+        "about",
+        "after",
+        "before",
+        "during",
+        "between",
+        "through",
+        "however",
+        "therefore",
+        "furthermore",
+        "moreover",
+        "although",
+        "because",
+        "since",
+        "while",
+        "when",
+        "where",
+        "which",
+        "who",
+        "whom",
+        "whose",
+        "according",
+    ];
+
+    // If the first word is a common prose starter, it's likely a sentence, not a label
+    if let Some(first) = words.first() {
+        if PROSE_INDICATORS.contains(first) {
+            return true;
+        }
+    }
+
+    // If any word (beyond first) is a verb/conjunction, likely prose
+    if words.len() > 2 {
+        for word in &words[1..] {
+            if PROSE_INDICATORS.contains(word) {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 /// Check if text looks like a list item (bullet or numbered).

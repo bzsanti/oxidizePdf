@@ -30,17 +30,50 @@ impl Default for SimpleReadingOrder {
 
 impl ReadingOrder for SimpleReadingOrder {
     fn order(&self, fragments: &mut [TextFragment]) {
+        if fragments.is_empty() {
+            return;
+        }
+
+        // Pre-pass: assign each fragment to a line ID using greedy clustering.
+        // Sort by Y descending first to process top-to-bottom.
+        let mut indexed: Vec<(usize, f64, f64)> = fragments
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (i, f.y, f.x))
+            .collect();
+        indexed.sort_by(|a, b| b.1.total_cmp(&a.1));
+
         let threshold = self.line_threshold;
-        fragments.sort_by(|a, b| {
-            // Higher Y = top of page → should come first
-            let y_cmp = b.y.total_cmp(&a.y);
-            if (a.y - b.y).abs() <= threshold {
-                // Same line: left-to-right
-                a.x.total_cmp(&b.x)
+        let mut line_ids = vec![0u32; fragments.len()];
+        let mut line_id = 0u32;
+        let mut prev_y = indexed[0].1;
+
+        for &(idx, y, _) in &indexed {
+            // Compare against previous fragment's Y (chain-based grouping).
+            // Since fragments are sorted by Y descending, consecutive fragments
+            // within threshold form a line. This is transitive because line_id
+            // is a discrete integer assigned once.
+            if (prev_y - y).abs() > threshold {
+                line_id += 1;
+            }
+            line_ids[idx] = line_id;
+            prev_y = y;
+        }
+
+        // Sort by line_id ASC (top-to-bottom), then X ASC (left-to-right).
+        // This is transitive because line_id is a discrete value.
+        let mut order: Vec<usize> = (0..fragments.len()).collect();
+        order.sort_by(|&a, &b| {
+            let line_cmp = line_ids[a].cmp(&line_ids[b]);
+            if line_cmp != std::cmp::Ordering::Equal {
+                line_cmp
             } else {
-                y_cmp
+                fragments[a].x.total_cmp(&fragments[b].x)
             }
         });
+
+        let reordered: Vec<TextFragment> = order.iter().map(|&i| fragments[i].clone()).collect();
+        fragments.clone_from_slice(&reordered);
     }
 }
 

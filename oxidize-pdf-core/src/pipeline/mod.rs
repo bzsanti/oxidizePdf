@@ -4,8 +4,9 @@ pub mod reading_order;
 pub mod semantic_chunking;
 
 pub use element::{
-    Element, ElementBBox, ElementData, ElementMetadata, ImageElementData, KeyValueElementData,
-    TableElementData,
+    element_reading_order, Element, ElementBBox, ElementData, ElementMetadata, ImageElementData,
+    KeyValueElementData, TableElementData,
 };
 pub use partition::{PartitionConfig, Partitioner};
+pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 pub use semantic_chunking::{SemanticChunk, SemanticChunkConfig, SemanticChunker};
