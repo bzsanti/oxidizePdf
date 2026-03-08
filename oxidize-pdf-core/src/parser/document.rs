@@ -1353,6 +1353,40 @@ impl<R: Read + Seek> PdfDocument<R> {
             .chunk_text_with_pages(&page_texts)
             .map_err(|e| crate::error::PdfError::InvalidStructure(e.to_string()))
     }
+
+    /// Partition the document into typed elements using default configuration.
+    ///
+    /// Extracts text with layout preservation, then classifies fragments into
+    /// [`Element`](crate::pipeline::Element) variants (Title, Paragraph, Table, etc.).
+    pub fn partition(&self) -> ParseResult<Vec<crate::pipeline::Element>> {
+        self.partition_with(crate::pipeline::PartitionConfig::default())
+    }
+
+    /// Partition the document into typed elements with custom configuration.
+    pub fn partition_with(
+        &self,
+        config: crate::pipeline::PartitionConfig,
+    ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        let options = crate::text::ExtractionOptions {
+            preserve_layout: true,
+            ..Default::default()
+        };
+        let pages = self.extract_text_with_options(options)?;
+        let partitioner = crate::pipeline::Partitioner::new(config);
+
+        let mut all_elements = Vec::new();
+        for (page_idx, page_text) in pages.iter().enumerate() {
+            let page_height = self
+                .get_page(page_idx as u32)
+                .map(|p| p.height())
+                .unwrap_or(842.0);
+            let elements =
+                partitioner.partition_fragments(&page_text.fragments, page_idx as u32, page_height);
+            all_elements.extend(elements);
+        }
+
+        Ok(all_elements)
+    }
 }
 
 impl PdfDocument<File> {
