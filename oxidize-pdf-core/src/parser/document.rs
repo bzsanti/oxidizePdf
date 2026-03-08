@@ -1306,6 +1306,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     ///
     /// Delegates to [`crate::ai::export_to_markdown`]. Includes YAML frontmatter
     /// with document metadata followed by extracted text content.
+    #[allow(deprecated)]
     pub fn to_markdown(&self) -> crate::error::Result<String> {
         crate::ai::export_to_markdown(self)
     }
@@ -1313,6 +1314,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// Export the document to a contextual text format for LLM consumption.
     ///
     /// Delegates to [`crate::ai::export_to_contextual`].
+    #[allow(deprecated)]
     pub fn to_contextual(&self) -> crate::error::Result<String> {
         crate::ai::export_to_contextual(self)
     }
@@ -1321,6 +1323,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     ///
     /// Requires the `semantic` feature. Delegates to [`crate::ai::export_to_json`].
     #[cfg(feature = "semantic")]
+    #[allow(deprecated)]
     pub fn to_json(&self) -> crate::error::Result<String> {
         crate::ai::export_to_json(self)
     }

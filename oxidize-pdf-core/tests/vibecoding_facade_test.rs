@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 
 fn fixture(name: &str) -> String {
