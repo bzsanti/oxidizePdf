@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Version** | v2.0.0 |
-| **Branch** | feature/corpus-7k-test-infrastructure |
+| **Branch** | develop |
 | **Tests** | 6,199 unit + 88 integration + 190 doc tests |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
