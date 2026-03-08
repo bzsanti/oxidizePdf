@@ -248,15 +248,14 @@ impl<R: Read + Seek> PdfReader<R> {
 impl PdfReader<File> {
     /// Open a PDF file from a path
     pub fn open<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
-        use std::io::Write;
-        let mut debug_file = std::fs::File::create("/tmp/pdf_open_debug.log").ok();
-        if let Some(ref mut f) = debug_file {
-            writeln!(f, "Opening file: {:?}", path.as_ref()).ok();
+        #[cfg(feature = "verbose-debug")]
+        {
+            use std::io::Write;
+            if let Ok(mut f) = std::fs::File::create("/tmp/pdf_open_debug.log") {
+                writeln!(f, "Opening file: {:?}", path.as_ref()).ok();
+            }
         }
         let file = File::open(path)?;
-        if let Some(ref mut f) = debug_file {
-            writeln!(f, "File opened successfully").ok();
-        }
         // Use lenient options by default for maximum compatibility
         let options = super::ParseOptions::lenient();
         Self::new_with_options(file, options)
@@ -317,24 +316,14 @@ impl<R: Read + Seek> PdfReader<R> {
         }
 
         // Parse header
-        use std::io::Write;
-        let mut debug_file = std::fs::File::create("/tmp/pdf_debug.log").ok();
-        if let Some(ref mut f) = debug_file {
-            writeln!(f, "Parsing PDF header...").ok();
-        }
         let header = PdfHeader::parse(&mut buf_reader)?;
-        if let Some(ref mut f) = debug_file {
-            writeln!(f, "Header parsed: version {}", header.version).ok();
-        }
+        #[cfg(feature = "verbose-debug")]
+        tracing::debug!("Header parsed: version {}", header.version);
 
         // Parse xref table
-        if let Some(ref mut f) = debug_file {
-            writeln!(f, "Parsing XRef table...").ok();
-        }
         let xref = XRefTable::parse_with_options(&mut buf_reader, &options)?;
-        if let Some(ref mut f) = debug_file {
-            writeln!(f, "XRef table parsed with {} entries", xref.len()).ok();
-        }
+        #[cfg(feature = "verbose-debug")]
+        tracing::debug!("XRef table parsed with {} entries", xref.len());
 
         // Get trailer
         let trailer_dict = xref.trailer().ok_or(ParseError::InvalidTrailer)?.clone();

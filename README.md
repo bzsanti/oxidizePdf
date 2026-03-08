@@ -612,7 +612,7 @@ oxidize-pdf is under active development. Our focus areas include:
 ### Upcoming Areas
 - **Extended Format Support**: Additional image formats and encodings
 - **Advanced Text Processing**: Improved text extraction and layout analysis
-- **Enterprise Features**: Features designed for production use at scale
+- **Performance Optimization**: Pipeline profiling and targeted bottleneck elimination
 - **Developer Experience**: Better APIs, documentation, and tooling
 
 ### Long-term Vision

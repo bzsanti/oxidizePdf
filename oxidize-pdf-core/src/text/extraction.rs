@@ -169,8 +169,11 @@ pub fn parse_font_style(font_name: &str) -> (bool, bool) {
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
-    /// Font cache for the current extraction
+    /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
+    /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
+    /// object across pages. Most multi-page PDFs reuse the same font objects.
+    font_object_cache: HashMap<(u32, u16), FontInfo>,
 }
 
 impl TextExtractor {
@@ -179,6 +182,7 @@ impl TextExtractor {
         Self {
             options: ExtractionOptions::default(),
             font_cache: HashMap::new(),
+            font_object_cache: HashMap::new(),
         }
     }
 
@@ -187,6 +191,7 @@ impl TextExtractor {
         Self {
             options,
             font_cache: HashMap::new(),
+            font_object_cache: HashMap::new(),
         }
     }
 
@@ -673,12 +678,16 @@ impl TextExtractor {
     }
 
     /// Extract font resources from page
+    ///
+    /// Clears the per-page name cache (font names are page-local in PDF), but
+    /// reuses previously parsed font objects via `font_object_cache` to avoid
+    /// re-parsing the same font object across multiple pages.
     fn extract_font_resources<R: Read + Seek>(
         &mut self,
         page: &ParsedPage,
         document: &PdfDocument<R>,
     ) -> ParseResult<()> {
-        // Clear previous font cache
+        // Clear per-page name mapping (font names like /F1 are page-local)
         self.font_cache.clear();
 
         // Try to get resources manually from page dictionary first
@@ -687,28 +696,9 @@ impl TextExtractor {
             if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1)
             {
                 if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                    // Extract each font
                     for (font_name, font_obj) in font_dict.0.iter() {
                         if let Some(font_ref) = font_obj.as_reference() {
-                            if let Ok(PdfObject::Dictionary(font_dict)) =
-                                document.get_object(font_ref.0, font_ref.1)
-                            {
-                                // Create a CMap extractor to use its font extraction logic
-                                let mut cmap_extractor: CMapTextExtractor<R> =
-                                    CMapTextExtractor::new();
-
-                                if let Ok(font_info) =
-                                    cmap_extractor.extract_font_info(&font_dict, document)
-                                {
-                                    let has_to_unicode = font_info.to_unicode.is_some();
-                                    self.font_cache.insert(font_name.0.clone(), font_info);
-                                    tracing::debug!(
-                                        "Cached font: {} (ToUnicode: {})",
-                                        font_name.0,
-                                        has_to_unicode
-                                    );
-                                }
-                            }
+                            self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
                         }
                     }
                 }
@@ -718,29 +708,54 @@ impl TextExtractor {
             if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
                 for (font_name, font_obj) in font_dict.0.iter() {
                     if let Some(font_ref) = font_obj.as_reference() {
-                        if let Ok(PdfObject::Dictionary(font_dict)) =
-                            document.get_object(font_ref.0, font_ref.1)
-                        {
-                            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
-
-                            if let Ok(font_info) =
-                                cmap_extractor.extract_font_info(&font_dict, document)
-                            {
-                                let has_to_unicode = font_info.to_unicode.is_some();
-                                self.font_cache.insert(font_name.0.clone(), font_info);
-                                tracing::debug!(
-                                    "Cached font: {} (ToUnicode: {})",
-                                    font_name.0,
-                                    has_to_unicode
-                                );
-                            }
-                        }
+                        self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
                     }
                 }
             }
         }
 
         Ok(())
+    }
+
+    /// Cache a font, reusing the persistent object cache when possible.
+    fn cache_font_by_ref<R: Read + Seek>(
+        &mut self,
+        font_name: &str,
+        font_ref: (u32, u16),
+        document: &PdfDocument<R>,
+    ) {
+        // Check persistent object cache first — avoids re-parsing across pages
+        if let Some(cached) = self.font_object_cache.get(&font_ref) {
+            self.font_cache
+                .insert(font_name.to_string(), cached.clone());
+            tracing::debug!(
+                "Reused cached font object ({}, {}): {} (ToUnicode: {})",
+                font_ref.0,
+                font_ref.1,
+                font_name,
+                cached.to_unicode.is_some()
+            );
+            return;
+        }
+
+        // Parse font object
+        if let Ok(PdfObject::Dictionary(font_dict)) = document.get_object(font_ref.0, font_ref.1) {
+            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+            if let Ok(font_info) = cmap_extractor.extract_font_info(&font_dict, document) {
+                let has_to_unicode = font_info.to_unicode.is_some();
+                // Store in persistent cache
+                self.font_object_cache.insert(font_ref, font_info.clone());
+                // Store in per-page name cache
+                self.font_cache.insert(font_name.to_string(), font_info);
+                tracing::debug!(
+                    "Parsed and cached font ({}, {}): {} (ToUnicode: {})",
+                    font_ref.0,
+                    font_ref.1,
+                    font_name,
+                    has_to_unicode
+                );
+            }
+        }
     }
 
     /// Decode text using the current font encoding and ToUnicode mapping
