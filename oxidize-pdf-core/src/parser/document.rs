@@ -57,7 +57,9 @@ use super::reader::PdfReader;
 use super::{ParseError, ParseOptions, ParseResult};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{Read, Seek};
+use std::path::Path;
 use std::rc::Rc;
 
 /// Resource manager for efficient PDF object caching.
@@ -1296,6 +1298,80 @@ impl<R: Read + Seek> PdfDocument<R> {
         }
 
         Ok(all_annotations)
+    }
+
+    // --- VibeCoding Facade Methods ---
+
+    /// Export the document to LLM-optimized Markdown format.
+    ///
+    /// Delegates to [`crate::ai::export_to_markdown`]. Includes YAML frontmatter
+    /// with document metadata followed by extracted text content.
+    pub fn to_markdown(&self) -> crate::error::Result<String> {
+        crate::ai::export_to_markdown(self)
+    }
+
+    /// Export the document to a contextual text format for LLM consumption.
+    ///
+    /// Delegates to [`crate::ai::export_to_contextual`].
+    pub fn to_contextual(&self) -> crate::error::Result<String> {
+        crate::ai::export_to_contextual(self)
+    }
+
+    /// Export the document to structured JSON format.
+    ///
+    /// Requires the `semantic` feature. Delegates to [`crate::ai::export_to_json`].
+    #[cfg(feature = "semantic")]
+    pub fn to_json(&self) -> crate::error::Result<String> {
+        crate::ai::export_to_json(self)
+    }
+
+    /// Split the document text into chunks of approximately `target_tokens` size.
+    ///
+    /// Uses a default overlap of 10% of the target token count.
+    pub fn chunk(
+        &self,
+        target_tokens: usize,
+    ) -> crate::error::Result<Vec<crate::ai::DocumentChunk>> {
+        let overlap = target_tokens / 10;
+        self.chunk_with(target_tokens, overlap)
+    }
+
+    /// Split the document text into chunks with explicit size and overlap control.
+    pub fn chunk_with(
+        &self,
+        target_tokens: usize,
+        overlap: usize,
+    ) -> crate::error::Result<Vec<crate::ai::DocumentChunk>> {
+        let chunker = crate::ai::DocumentChunker::new(target_tokens, overlap);
+        let extracted = self.extract_text()?;
+        let page_texts: Vec<(usize, String)> = extracted
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (i + 1, t.text.clone()))
+            .collect();
+        chunker
+            .chunk_text_with_pages(&page_texts)
+            .map_err(|e| crate::error::PdfError::InvalidStructure(e.to_string()))
+    }
+}
+
+impl PdfDocument<File> {
+    /// Open a PDF file by path — the simplest way to start working with a PDF.
+    ///
+    /// This is a convenience method that combines `PdfReader::open()` and
+    /// `PdfDocument::new()` into a single call.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    ///
+    /// let doc = PdfDocument::open("report.pdf").unwrap();
+    /// let text = doc.extract_text().unwrap();
+    /// let markdown = doc.to_markdown().unwrap();
+    /// ```
+    pub fn open<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
+        PdfReader::open_document(path)
     }
 }
 
