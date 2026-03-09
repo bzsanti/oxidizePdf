@@ -1,5 +1,7 @@
 use oxidize_pdf::pipeline::hybrid_chunking::{HybridChunkConfig, HybridChunker};
-use oxidize_pdf::pipeline::{Element, ElementBBox, ElementData, ElementMetadata, TableElementData};
+use oxidize_pdf::pipeline::{
+    Element, ElementBBox, ElementData, ElementMetadata, MergePolicy, TableElementData,
+};
 
 fn meta_with_heading(page: u32, y: f64, heading: Option<&str>) -> ElementMetadata {
     ElementMetadata {
@@ -32,6 +34,7 @@ fn test_hybrid_chunk_config_defaults() {
     assert_eq!(cfg.overlap_tokens, 50);
     assert!(cfg.merge_adjacent);
     assert!(cfg.propagate_headings);
+    assert_eq!(cfg.merge_policy, MergePolicy::AnyInlineContent);
 }
 
 // Cycle 6.2
@@ -53,6 +56,7 @@ fn test_heading_context_propagated_to_chunks() {
         overlap_tokens: 0,
         merge_adjacent: false,
         propagate_headings: true,
+        merge_policy: MergePolicy::SameTypeOnly,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -74,6 +78,7 @@ fn test_no_heading_before_first_title() {
         overlap_tokens: 0,
         merge_adjacent: false,
         propagate_headings: true,
+        merge_policy: MergePolicy::SameTypeOnly,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -97,6 +102,7 @@ fn test_heading_context_changes_on_new_title() {
         overlap_tokens: 0,
         merge_adjacent: false,
         propagate_headings: true,
+        merge_policy: MergePolicy::SameTypeOnly,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -126,6 +132,7 @@ fn test_merge_adjacent_paragraphs_within_budget() {
         overlap_tokens: 0,
         merge_adjacent: true,
         propagate_headings: false,
+        merge_policy: MergePolicy::AnyInlineContent,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -149,6 +156,7 @@ fn test_no_merge_different_element_types() {
         overlap_tokens: 0,
         merge_adjacent: true,
         propagate_headings: false,
+        merge_policy: MergePolicy::AnyInlineContent,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -176,6 +184,7 @@ fn test_merge_disabled_one_chunk_per_element() {
         overlap_tokens: 0,
         merge_adjacent: false,
         propagate_headings: false,
+        merge_policy: MergePolicy::AnyInlineContent,
     });
     assert_eq!(chunker.chunk(&elements).len(), 3);
 }
@@ -205,6 +214,7 @@ fn test_oversized_table_gets_own_oversized_chunk() {
         overlap_tokens: 0,
         merge_adjacent: false,
         propagate_headings: false,
+        merge_policy: MergePolicy::AnyInlineContent,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -235,6 +245,7 @@ fn test_overlap_chunks_preserve_heading_context() {
         overlap_tokens: 5,
         merge_adjacent: false,
         propagate_headings: true,
+        merge_policy: MergePolicy::AnyInlineContent,
     });
     let chunks = chunker.chunk(&elements);
 
@@ -270,7 +281,8 @@ fn test_chunk_text_does_not_include_heading_context() {
     assert_eq!(chunks[0].heading_context.as_deref(), Some("My Section"));
 }
 
-// Cycle 6.10
+// Cycle 6.10 — Updated to use MergePolicy::SameTypeOnly (legacy behavior)
+// Documents that with SameTypeOnly policy, ListItem and Paragraph do NOT merge.
 #[test]
 fn test_list_items_merge_with_list_items_not_paragraphs() {
     let elements = vec![
@@ -290,6 +302,7 @@ fn test_list_items_merge_with_list_items_not_paragraphs() {
         overlap_tokens: 0,
         merge_adjacent: true,
         propagate_headings: false,
+        merge_policy: MergePolicy::SameTypeOnly,
     });
     let chunks = chunker.chunk(&elements);
 

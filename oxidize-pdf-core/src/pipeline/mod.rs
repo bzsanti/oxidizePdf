@@ -1,5 +1,6 @@
 pub mod element;
 pub mod export;
+pub mod graph;
 pub mod hybrid_chunking;
 pub mod partition;
 pub mod profile;
@@ -11,7 +12,8 @@ pub use element::{
     KeyValueElementData, TableElementData,
 };
 pub use export::{ElementMarkdownExporter, ExportConfig};
-pub use hybrid_chunking::{HybridChunk, HybridChunkConfig, HybridChunker};
+pub use graph::ElementGraph;
+pub use hybrid_chunking::{HybridChunk, HybridChunkConfig, HybridChunker, MergePolicy};
 pub use partition::{PartitionConfig, Partitioner, ReadingOrderStrategy};
 pub use profile::ExtractionProfile;
 pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};

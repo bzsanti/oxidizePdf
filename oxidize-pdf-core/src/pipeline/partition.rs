@@ -34,6 +34,11 @@ pub struct PartitionConfig {
     pub footer_zone: f64,
     /// Reading order strategy applied to fragments before classification.
     pub reading_order: ReadingOrderStrategy,
+    /// Minimum confidence score required for a detected table to be accepted.
+    /// Tables whose confidence is below this value are discarded and their
+    /// fragments fall through to the prose classification steps.
+    /// Range: `[0.0, 1.0]`. Default: `0.5`.
+    pub min_table_confidence: f64,
 }
 
 impl Default for PartitionConfig {
@@ -45,6 +50,7 @@ impl Default for PartitionConfig {
             header_zone: 0.05,
             footer_zone: 0.05,
             reading_order: ReadingOrderStrategy::Simple,
+            min_table_confidence: 0.5,
         }
     }
 }
@@ -76,6 +82,16 @@ impl PartitionConfig {
     /// Set the reading order strategy applied before fragment classification.
     pub fn with_reading_order(mut self, strategy: ReadingOrderStrategy) -> Self {
         self.reading_order = strategy;
+        self
+    }
+
+    /// Set the minimum confidence threshold for table detection.
+    ///
+    /// Tables whose `confidence` score is below `threshold` are discarded and
+    /// their fragments flow through to the prose classification steps.
+    /// Use `0.0` to accept every detection; `1.0` to reject all.
+    pub fn with_min_table_confidence(mut self, threshold: f64) -> Self {
+        self.min_table_confidence = threshold;
         self
     }
 }
@@ -169,6 +185,14 @@ impl Partitioner {
         }
 
         // 2. Table detection via StructuredDataDetector
+        //
+        // Improvements over the naive single-batch approach:
+        // a) Fragment space is split into Y-separated regions so that two tables
+        //    on the same page are detected independently rather than fused.
+        // b) List-like regions (short left column + wide right column) are skipped
+        //    before calling the detector, so numbered lists are not misclassified.
+        // c) Detected tables whose confidence is below `min_table_confidence` are
+        //    discarded and their fragments fall through to prose classification.
         if self.config.detect_tables {
             let unclaimed_frags: Vec<&TextFragment> = fragments
                 .iter()
@@ -177,13 +201,25 @@ impl Partitioner {
                 .map(|(_, f)| f)
                 .collect();
 
-            if unclaimed_frags.len() >= 4 {
-                let detector =
-                    crate::text::structured::StructuredDataDetector::new(Default::default());
-                let unclaimed_owned: Vec<TextFragment> =
-                    unclaimed_frags.iter().map(|f| (*f).clone()).collect();
-                if let Ok(result) = detector.detect(&unclaimed_owned) {
+            let detector = crate::text::structured::StructuredDataDetector::new(Default::default());
+
+            let regions = segment_into_table_regions(&unclaimed_frags, 2.0);
+
+            for region in &regions {
+                // Skip regions that look like numbered/bulleted lists.
+                if region_looks_like_list(region) {
+                    continue;
+                }
+
+                let region_owned: Vec<TextFragment> = region.iter().map(|f| (*f).clone()).collect();
+
+                if let Ok(result) = detector.detect(&region_owned) {
                     for table in &result.tables {
+                        // Apply minimum confidence filter.
+                        if table.confidence < self.config.min_table_confidence {
+                            continue;
+                        }
+
                         let rows: Vec<Vec<String>> = table
                             .rows
                             .iter()
@@ -207,7 +243,7 @@ impl Partitioner {
                             },
                         }));
 
-                        // Claim fragments that fall within table bounding box
+                        // Claim fragments that fall within this table's bounding box.
                         for (i, f) in fragments.iter().enumerate() {
                             if !claimed[i]
                                 && f.x >= table.bounding_box.x - 1.0
@@ -463,6 +499,129 @@ fn is_list_item(text: &str) -> bool {
         }
     }
     false
+}
+
+/// Splits unclaimed fragments into Y-separated table candidate regions.
+///
+/// Algorithm:
+/// 1. Sort fragments by Y descending (top-to-bottom in PDF coordinates, where
+///    higher Y values are closer to the top of the page).
+/// 2. Compute the median line height across all fragments.
+/// 3. Start a new region when the Y-gap between consecutive fragments exceeds
+///    `median_line_height * gap_multiplier`.
+/// 4. Return only regions with at least 4 fragments (minimum for meaningful
+///    table detection).
+fn segment_into_table_regions<'a>(
+    fragments: &[&'a TextFragment],
+    gap_multiplier: f64,
+) -> Vec<Vec<&'a TextFragment>> {
+    if fragments.is_empty() {
+        return Vec::new();
+    }
+
+    // Sort a copy by Y descending (higher Y = higher on page in PDF coords).
+    let mut sorted: Vec<&TextFragment> = fragments.to_vec();
+    sorted.sort_by(|a, b| b.y.total_cmp(&a.y));
+
+    // Compute median line height.
+    let mut heights: Vec<f64> = sorted
+        .iter()
+        .map(|f| f.height)
+        .filter(|h| *h > 0.0)
+        .collect();
+    let median_height = if heights.is_empty() {
+        12.0
+    } else {
+        heights.sort_by(f64::total_cmp);
+        let mid = heights.len() / 2;
+        if heights.len() % 2 == 0 {
+            (heights[mid - 1] + heights[mid]) / 2.0
+        } else {
+            heights[mid]
+        }
+    };
+
+    let gap_threshold = median_height * gap_multiplier;
+
+    // Build regions by splitting on large Y gaps.
+    let mut regions: Vec<Vec<&TextFragment>> = Vec::new();
+    let mut current_region: Vec<&TextFragment> = Vec::new();
+
+    for frag in &sorted {
+        if let Some(prev) = current_region.last() {
+            // In PDF coordinates Y increases upward. After descending sort,
+            // `prev.y` >= `frag.y`. The gap between the bottom of `prev`
+            // (prev.y) and the top of `frag` (frag.y + frag.height) gives the
+            // vertical whitespace. We compare the difference in Y positions
+            // directly because fragment Y marks the baseline / bottom-left corner.
+            let gap = prev.y - (frag.y + frag.height);
+            if gap > gap_threshold {
+                if current_region.len() >= 4 {
+                    regions.push(current_region);
+                }
+                current_region = Vec::new();
+            }
+        }
+        current_region.push(frag);
+    }
+
+    if current_region.len() >= 4 {
+        regions.push(current_region);
+    }
+
+    regions
+}
+
+/// Returns `true` when a table candidate region looks like a numbered or
+/// bulleted list rather than a genuine data table.
+///
+/// Heuristic: if there are exactly 2 X-position clusters and the left cluster
+/// contains fragments with an average length of at most 3 characters, the
+/// region is treated as a list (e.g., "1.", "2.", "-", "•", "a)").
+fn region_looks_like_list(fragments: &[&TextFragment]) -> bool {
+    if fragments.is_empty() {
+        return false;
+    }
+
+    // Cluster X positions with a 15pt tolerance (wide enough for minor jitter).
+    let tolerance = 15.0;
+    let mut x_clusters: Vec<f64> = Vec::new();
+    for frag in fragments {
+        let x = frag.x;
+        let found = x_clusters.iter().any(|&cx| (cx - x).abs() <= tolerance);
+        if !found {
+            x_clusters.push(x);
+        }
+    }
+
+    // Only trigger on exactly 2-column layouts.
+    if x_clusters.len() != 2 {
+        return false;
+    }
+
+    // Sort clusters: left cluster first.
+    x_clusters.sort_by(f64::total_cmp);
+    let left_x = x_clusters[0];
+
+    // Measure average text length for fragments in the left column.
+    let left_frags: Vec<&TextFragment> = fragments
+        .iter()
+        .filter(|f| (f.x - left_x).abs() <= tolerance)
+        .copied()
+        .collect();
+
+    if left_frags.is_empty() {
+        return false;
+    }
+
+    let avg_left_len = left_frags
+        .iter()
+        .map(|f| f.text.trim().chars().count())
+        .sum::<usize>() as f64
+        / left_frags.len() as f64;
+
+    // A left column averaging <= 3 chars is a bullet/number column.
+    avg_left_len <= 3.0
 }
 
 fn meta_from_fragment(f: &TextFragment, page: u32) -> ElementMetadata {
