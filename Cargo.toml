@@ -5,11 +5,12 @@ members = [
 exclude = [
     "lints",  # Dylint lints workspace (requires nightly)
     "dev-tools/iso-curator",  # ISO matrix curation tool (standalone)
+    "dev-tools/pipeline-profiler",  # Pipeline profiler (standalone)
 ]
 resolver = "2"
 
 [workspace.package]
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 rust-version = "1.77"  # MSRV - Required by thiserror 2.0
 authors = ["Santiago Fernández Muñoz"]

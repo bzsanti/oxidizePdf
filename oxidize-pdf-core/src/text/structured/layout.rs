@@ -171,6 +171,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            space_decisions: Vec::new(),
         }
     }
 

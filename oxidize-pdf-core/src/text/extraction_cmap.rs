@@ -595,6 +595,83 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 }
 
+/// Decode text using font information — free function (no allocations).
+///
+/// Tries ToUnicode CMap first, then descendant fonts (for Type0),
+/// then falls back to encoding-based decoding.
+pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
+    // First try ToUnicode CMap if available
+    if let Some(ref to_unicode) = font_info.to_unicode {
+        return decode_with_cmap(text_bytes, to_unicode);
+    }
+
+    // For Type0 fonts, use descendant font
+    if font_info.font_type == "Type0" {
+        if let Some(ref descendant) = font_info.descendant_font {
+            return decode_text_with_font(text_bytes, descendant);
+        }
+    }
+
+    // Fall back to encoding-based decoding
+    decode_with_encoding(text_bytes, font_info)
+}
+
+/// Decode text using a CMap — free function (no allocations).
+fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
+    let mut result = String::new();
+    let mut i = 0;
+
+    while i < text_bytes.len() {
+        let mut decoded = false;
+
+        for len in 1..=4.min(text_bytes.len() - i) {
+            let code = &text_bytes[i..i + len];
+
+            if let Some(mapped) = cmap.map(code) {
+                if let Some(unicode_str) = cmap.to_unicode(&mapped) {
+                    result.push_str(&unicode_str);
+                    i += len;
+                    decoded = true;
+                    break;
+                }
+            }
+        }
+
+        if !decoded {
+            i += 1;
+        }
+    }
+
+    Ok(result)
+}
+
+/// Decode text using encoding differences and base encoding — free function.
+fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
+    let mut result = String::new();
+
+    for &byte in text_bytes {
+        if let Some(ref differences) = font_info.differences {
+            if let Some(char_name) = differences.get(&byte) {
+                if let Some(unicode_char) = glyph_name_to_unicode(char_name) {
+                    result.push(unicode_char);
+                    continue;
+                }
+            }
+        }
+
+        let ch = match font_info.encoding.as_deref() {
+            Some("WinAnsiEncoding") => decode_winansi(byte),
+            Some("MacRomanEncoding") => decode_macroman(byte),
+            Some("StandardEncoding") => decode_standard(byte),
+            _ => byte as char,
+        };
+
+        result.push(ch);
+    }
+
+    Ok(result)
+}
+
 /// Convert glyph name to Unicode character
 #[allow(dead_code)]
 fn glyph_name_to_unicode(name: &str) -> Option<char> {

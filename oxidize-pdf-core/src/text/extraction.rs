@@ -30,6 +30,9 @@ pub struct ExtractionOptions {
     pub column_threshold: f64,
     /// Merge hyphenated words at line ends
     pub merge_hyphenated: bool,
+    /// Track space insertion decisions in each TextFragment (default: false).
+    /// When false: zero overhead. When true: populates `TextFragment::space_decisions`.
+    pub track_space_decisions: bool,
 }
 
 impl Default for ExtractionOptions {
@@ -42,6 +45,7 @@ impl Default for ExtractionOptions {
             detect_columns: false,
             column_threshold: 50.0,
             merge_hyphenated: true,
+            track_space_decisions: false,
         }
     }
 }
@@ -53,6 +57,22 @@ pub struct ExtractedText {
     pub text: String,
     /// Text fragments with position information (if preserve_layout is true)
     pub fragments: Vec<TextFragment>,
+}
+
+/// Metadata about a space insertion decision during text extraction.
+/// Only populated when [`ExtractionOptions::track_space_decisions`] is `true`.
+#[derive(Debug, Clone)]
+pub struct SpaceDecision {
+    /// Character offset in the extracted text.
+    pub offset: usize,
+    /// Actual horizontal gap (dx) in text space units.
+    pub dx: f64,
+    /// The threshold used at this point.
+    pub threshold: f64,
+    /// Confidence: `|dx - threshold| / threshold`, clamped to [0.0, 1.0].
+    pub confidence: f64,
+    /// Whether a space was inserted.
+    pub inserted: bool,
 }
 
 /// A fragment of text with position information
@@ -78,6 +98,8 @@ pub struct TextFragment {
     pub is_italic: bool,
     /// Fill color of the text (from graphics state)
     pub color: Option<Color>,
+    /// Space insertion decisions (empty unless `track_space_decisions` is true).
+    pub space_decisions: Vec<SpaceDecision>,
 }
 
 /// Text extraction state
@@ -169,8 +191,11 @@ pub fn parse_font_style(font_name: &str) -> (bool, bool) {
 /// Text extractor for PDF pages with CMap support
 pub struct TextExtractor {
     options: ExtractionOptions,
-    /// Font cache for the current extraction
+    /// Font cache for the current page (name-keyed, rebuilt per page since names are page-local)
     font_cache: HashMap<String, FontInfo>,
+    /// Persistent font cache keyed by PDF object reference — avoids re-parsing the same font
+    /// object across pages. Most multi-page PDFs reuse the same font objects.
+    font_object_cache: HashMap<(u32, u16), FontInfo>,
 }
 
 impl TextExtractor {
@@ -179,6 +204,7 @@ impl TextExtractor {
         Self {
             options: ExtractionOptions::default(),
             font_cache: HashMap::new(),
+            font_object_cache: HashMap::new(),
         }
     }
 
@@ -187,6 +213,7 @@ impl TextExtractor {
         Self {
             options,
             font_cache: HashMap::new(),
+            font_object_cache: HashMap::new(),
         }
     }
 
@@ -216,10 +243,16 @@ impl TextExtractor {
         let page = document.get_page(page_index)?;
 
         // Extract font resources first
-        self.extract_font_resources(&page, document)?;
+        {
+            let _span = tracing::info_span!("font_resources").entered();
+            self.extract_font_resources(&page, document)?;
+        }
 
         // Get content streams
-        let streams = page.content_streams_with_document(document)?;
+        let streams = {
+            let _span = tracing::info_span!("stream_decompress").entered();
+            page.content_streams_with_document(document)?
+        };
 
         let mut extracted_text = String::new();
         let mut fragments = Vec::new();
@@ -230,7 +263,10 @@ impl TextExtractor {
 
         // Process each content stream
         for (stream_idx, stream_data) in streams.iter().enumerate() {
-            let operations = match ContentParser::parse_content(stream_data) {
+            let operations = match {
+                let _span = tracing::info_span!("content_parse").entered();
+                ContentParser::parse_content(stream_data)
+            } {
                 Ok(ops) => ops,
                 Err(e) => {
                     // Enhanced diagnostic logging for content stream parsing failures
@@ -257,6 +293,7 @@ impl TextExtractor {
                 }
             };
 
+            let _ops_span = tracing::info_span!("text_ops_loop").entered();
             for op in operations {
                 match op {
                     ContentOperation::BeginText => {
@@ -327,6 +364,10 @@ impl TextExtractor {
                                 .as_ref()
                                 .and_then(|name| self.font_cache.get(name));
 
+                            // Calculate width once and reuse
+                            let text_width =
+                                calculate_text_width(&decoded, state.font_size, font_info);
+
                             if self.options.preserve_layout {
                                 // Detect bold/italic from font name
                                 let (is_bold, is_italic) = state
@@ -339,27 +380,22 @@ impl TextExtractor {
                                     text: decoded.clone(),
                                     x,
                                     y,
-                                    width: calculate_text_width(
-                                        &decoded,
-                                        state.font_size,
-                                        font_info,
-                                    ),
+                                    width: text_width,
                                     height: state.font_size,
                                     font_size: state.font_size,
                                     font_name: state.font_name.clone(),
                                     is_bold,
                                     is_italic,
                                     color: state.fill_color,
+                                    space_decisions: Vec::new(),
                                 });
                             }
 
                             // Update position for next text
-                            last_x = x + calculate_text_width(&decoded, state.font_size, font_info);
+                            last_x = x + text_width;
                             last_y = y;
 
                             // Update text matrix for next show operation
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
                             let tx = text_width * state.horizontal_scale / 100.0;
                             state.text_matrix =
                                 multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
@@ -474,20 +510,24 @@ impl TextExtractor {
             }
         }
 
-        // Sort and process fragments if requested
-        if self.options.sort_by_position && !fragments.is_empty() {
-            self.sort_and_merge_fragments(&mut fragments);
-        }
+        {
+            let _span = tracing::info_span!("layout_finalize").entered();
 
-        // Merge close fragments to eliminate spacing artifacts
-        // This is crucial for table detection and structured data extraction
-        if self.options.preserve_layout && !fragments.is_empty() {
-            fragments = self.merge_close_fragments(&fragments);
-        }
+            // Sort and process fragments if requested
+            if self.options.sort_by_position && !fragments.is_empty() {
+                self.sort_and_merge_fragments(&mut fragments);
+            }
 
-        // Reconstruct text from sorted fragments if layout is preserved
-        if self.options.preserve_layout && !fragments.is_empty() {
-            extracted_text = self.reconstruct_text_from_fragments(&fragments);
+            // Merge close fragments to eliminate spacing artifacts
+            // This is crucial for table detection and structured data extraction
+            if self.options.preserve_layout && !fragments.is_empty() {
+                fragments = self.merge_close_fragments(&fragments);
+            }
+
+            // Reconstruct text from sorted fragments if layout is preserved
+            if self.options.preserve_layout && !fragments.is_empty() {
+                extracted_text = self.reconstruct_text_from_fragments(&fragments);
+            }
         }
 
         Ok(ExtractedText {
@@ -673,12 +713,16 @@ impl TextExtractor {
     }
 
     /// Extract font resources from page
+    ///
+    /// Clears the per-page name cache (font names are page-local in PDF), but
+    /// reuses previously parsed font objects via `font_object_cache` to avoid
+    /// re-parsing the same font object across multiple pages.
     fn extract_font_resources<R: Read + Seek>(
         &mut self,
         page: &ParsedPage,
         document: &PdfDocument<R>,
     ) -> ParseResult<()> {
-        // Clear previous font cache
+        // Clear per-page name mapping (font names like /F1 are page-local)
         self.font_cache.clear();
 
         // Try to get resources manually from page dictionary first
@@ -687,28 +731,9 @@ impl TextExtractor {
             if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1)
             {
                 if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                    // Extract each font
                     for (font_name, font_obj) in font_dict.0.iter() {
                         if let Some(font_ref) = font_obj.as_reference() {
-                            if let Ok(PdfObject::Dictionary(font_dict)) =
-                                document.get_object(font_ref.0, font_ref.1)
-                            {
-                                // Create a CMap extractor to use its font extraction logic
-                                let mut cmap_extractor: CMapTextExtractor<R> =
-                                    CMapTextExtractor::new();
-
-                                if let Ok(font_info) =
-                                    cmap_extractor.extract_font_info(&font_dict, document)
-                                {
-                                    let has_to_unicode = font_info.to_unicode.is_some();
-                                    self.font_cache.insert(font_name.0.clone(), font_info);
-                                    tracing::debug!(
-                                        "Cached font: {} (ToUnicode: {})",
-                                        font_name.0,
-                                        has_to_unicode
-                                    );
-                                }
-                            }
+                            self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
                         }
                     }
                 }
@@ -718,29 +743,54 @@ impl TextExtractor {
             if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
                 for (font_name, font_obj) in font_dict.0.iter() {
                     if let Some(font_ref) = font_obj.as_reference() {
-                        if let Ok(PdfObject::Dictionary(font_dict)) =
-                            document.get_object(font_ref.0, font_ref.1)
-                        {
-                            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
-
-                            if let Ok(font_info) =
-                                cmap_extractor.extract_font_info(&font_dict, document)
-                            {
-                                let has_to_unicode = font_info.to_unicode.is_some();
-                                self.font_cache.insert(font_name.0.clone(), font_info);
-                                tracing::debug!(
-                                    "Cached font: {} (ToUnicode: {})",
-                                    font_name.0,
-                                    has_to_unicode
-                                );
-                            }
-                        }
+                        self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
                     }
                 }
             }
         }
 
         Ok(())
+    }
+
+    /// Cache a font, reusing the persistent object cache when possible.
+    fn cache_font_by_ref<R: Read + Seek>(
+        &mut self,
+        font_name: &str,
+        font_ref: (u32, u16),
+        document: &PdfDocument<R>,
+    ) {
+        // Check persistent object cache first — avoids re-parsing across pages
+        if let Some(cached) = self.font_object_cache.get(&font_ref) {
+            self.font_cache
+                .insert(font_name.to_string(), cached.clone());
+            tracing::debug!(
+                "Reused cached font object ({}, {}): {} (ToUnicode: {})",
+                font_ref.0,
+                font_ref.1,
+                font_name,
+                cached.to_unicode.is_some()
+            );
+            return;
+        }
+
+        // Parse font object
+        if let Ok(PdfObject::Dictionary(font_dict)) = document.get_object(font_ref.0, font_ref.1) {
+            let mut cmap_extractor: CMapTextExtractor<R> = CMapTextExtractor::new();
+            if let Ok(font_info) = cmap_extractor.extract_font_info(&font_dict, document) {
+                let has_to_unicode = font_info.to_unicode.is_some();
+                // Store in persistent cache
+                self.font_object_cache.insert(font_ref, font_info.clone());
+                // Store in per-page name cache
+                self.font_cache.insert(font_name.to_string(), font_info);
+                tracing::debug!(
+                    "Parsed and cached font ({}, {}): {} (ToUnicode: {})",
+                    font_ref.0,
+                    font_ref.1,
+                    font_name,
+                    has_to_unicode
+                );
+            }
+        }
     }
 
     /// Decode text using the current font encoding and ToUnicode mapping
@@ -750,11 +800,10 @@ impl TextExtractor {
         // First, try to use cached font information with ToUnicode CMap
         if let Some(ref font_name) = state.font_name {
             if let Some(font_info) = self.font_cache.get(font_name) {
-                // Create a temporary CMapTextExtractor to use its decoding logic
-                let cmap_extractor: CMapTextExtractor<std::fs::File> = CMapTextExtractor::new();
-
-                // Try CMap-based decoding first
-                if let Ok(decoded) = cmap_extractor.decode_text_with_font(text, font_info) {
+                // Try CMap-based decoding first (free function — no allocation)
+                if let Ok(decoded) =
+                    crate::text::extraction_cmap::decode_text_with_font(text, font_info)
+                {
                     // Only accept if we got meaningful text (not all null bytes or garbage)
                     if !decoded.trim().is_empty()
                         && !decoded.chars().all(|c| c == '\0' || c.is_ascii_control())
@@ -848,9 +897,9 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
             let missing_width = font.metrics.missing_width.unwrap_or(500.0);
 
             let mut total_width = 0.0;
-            let chars: Vec<char> = text.chars().collect();
+            let mut chars = text.chars().peekable();
 
-            for (i, &ch) in chars.iter().enumerate() {
+            while let Some(ch) = chars.next() {
                 let char_code = ch as u32;
 
                 // Get width from Widths array or use missing_width
@@ -866,8 +915,8 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 
                 // Apply kerning if available (for character pairs)
                 if let Some(ref kerning) = font.metrics.kerning {
-                    if i + 1 < chars.len() {
-                        let next_char = chars[i + 1] as u32;
+                    if let Some(&next_ch) = chars.peek() {
+                        let next_char = next_ch as u32;
                         if let Some(&kern_value) = kerning.get(&(char_code, next_char)) {
                             // Kerning is in FUnits (1/1000), convert to user space
                             total_width += kern_value / 1000.0 * font_size;
@@ -1023,6 +1072,7 @@ mod tests {
             detect_columns: true,
             column_threshold: 75.0,
             merge_hyphenated: false,
+            track_space_decisions: false,
         };
         assert!(options.preserve_layout);
         assert_eq!(options.space_threshold, 0.5);
@@ -1100,6 +1150,7 @@ mod tests {
             is_bold: false,
             is_italic: false,
             color: None,
+            space_decisions: Vec::new(),
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -1123,6 +1174,7 @@ mod tests {
                 is_bold: false,
                 is_italic: false,
                 color: None,
+                space_decisions: Vec::new(),
             },
             TextFragment {
                 text: "World".to_string(),
@@ -1135,6 +1187,7 @@ mod tests {
                 is_bold: false,
                 is_italic: false,
                 color: None,
+                space_decisions: Vec::new(),
             },
         ];
 
@@ -1209,6 +1262,7 @@ mod tests {
             detect_columns: true,
             column_threshold: 60.0,
             merge_hyphenated: false,
+            track_space_decisions: false,
         };
         let extractor = TextExtractor::with_options(options.clone());
         assert_eq!(extractor.options.preserve_layout, options.preserve_layout);

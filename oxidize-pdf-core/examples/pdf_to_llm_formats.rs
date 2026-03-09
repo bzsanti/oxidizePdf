@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! PDF to LLM Formats - Complete Integration Example
 //!
 //! This example demonstrates the complete pipeline from loading a PDF

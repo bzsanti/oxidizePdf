@@ -283,6 +283,7 @@ impl InvoiceExtractor {
             is_bold: false,
             is_italic: false,
             color: None,
+            space_decisions: Vec::new(),
         };
 
         // Use the standard extract method

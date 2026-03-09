@@ -9,14 +9,12 @@
 //! - Auto-decryption of objects after unlock
 
 use oxidize_pdf::parser::{ParseError, PdfReader};
-use std::path::Path;
 
 // ===== Helper Functions =====
 
 /// Get path to a known good unencrypted PDF for testing
-fn get_test_pdf_path() -> &'static Path {
-    // Use an existing PDF from examples/results
-    Path::new("examples/results/ai_ready_invoice.pdf")
+fn get_test_pdf_path() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/Cold_Email_Hacks.pdf")
 }
 
 // ===== Test 1: Unencrypted PDF - is_encrypted returns false =====

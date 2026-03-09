@@ -541,3 +541,11 @@ path = "examples/tagged_pdf_demo.rs"
 [[bench]]
 name = "encryption_benchmark"
 harness = false
+
+[[bench]]
+name = "pipeline_benchmark"
+harness = false
+
+[[bench]]
+name = "pipeline_granular_benchmark"
+harness = false
