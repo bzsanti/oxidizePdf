@@ -96,6 +96,16 @@ pub struct PdfWriter<W: Write> {
     // Incremental update support (ISO 32000-1 §7.5.6)
     prev_xref_offset: Option<u64>,
     base_pdf_size: Option<u64>,
+    // Encryption support
+    encrypt_obj_id: Option<ObjectId>,
+    file_id: Option<Vec<u8>>,
+    encryption_state: Option<WriterEncryptionState>,
+    pending_encrypt_dict: Option<Dictionary>,
+}
+
+/// Holds the encryption key and encryptor for encrypting objects during write
+struct WriterEncryptionState {
+    encryptor: crate::encryption::ObjectEncryptor,
 }
 
 impl<W: Write> PdfWriter<W> {
@@ -122,6 +132,10 @@ impl<W: Write> PdfWriter<W> {
             compressed_object_map: HashMap::new(),
             prev_xref_offset: None,
             base_pdf_size: None,
+            encrypt_obj_id: None,
+            file_id: None,
+            encryption_state: None,
+            pending_encrypt_dict: None,
         }
     }
 
@@ -138,6 +152,12 @@ impl<W: Write> PdfWriter<W> {
         self.pages_id = Some(self.allocate_object_id());
         self.info_id = Some(self.allocate_object_id());
 
+        // Initialize encryption state BEFORE writing objects
+        // (objects need to be encrypted as they are written)
+        if let Some(ref encryption) = document.encryption {
+            self.init_encryption(encryption)?;
+        }
+
         // Write custom fonts first (so pages can reference them)
         let font_refs = self.write_fonts(document)?;
 
@@ -152,6 +172,9 @@ impl<W: Write> PdfWriter<W> {
 
         // Write document info
         self.write_info(document)?;
+
+        // Write /Encrypt dict AFTER all objects (it must NOT be encrypted itself)
+        self.write_encryption_dict()?;
 
         // Flush buffered objects as object streams (if enabled)
         if self.config.use_object_streams {
@@ -2423,6 +2446,10 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             compressed_object_map: HashMap::new(),
             prev_xref_offset: None,
             base_pdf_size: None,
+            encrypt_obj_id: None,
+            file_id: None,
+            encryption_state: None,
+            pending_encrypt_dict: None,
         })
     }
 }
@@ -2600,6 +2627,15 @@ impl<W: Write> PdfWriter<W> {
     fn write_object(&mut self, id: ObjectId, object: Object) -> Result<()> {
         use crate::writer::ObjectStreamWriter;
 
+        // Encrypt the object if encryption is active
+        let object = if let Some(ref enc_state) = self.encryption_state {
+            let mut obj = object;
+            enc_state.encryptor.encrypt_object(&mut obj, &id)?;
+            obj
+        } else {
+            object
+        };
+
         // If object streams enabled and object is compressible, buffer it
         if self.config.use_object_streams && ObjectStreamWriter::can_compress(&object) {
             let mut buffer = Vec::new();
@@ -2636,6 +2672,14 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"(")?;
                 self.write_bytes(s.as_bytes())?;
                 self.write_bytes(b")")?;
+            }
+            Object::ByteString(bytes) => {
+                // Write as PDF hex string <AABB...> for byte-perfect binary data
+                self.write_bytes(b"<")?;
+                for byte in bytes {
+                    self.write_bytes(format!("{byte:02X}").as_bytes())?;
+                }
+                self.write_bytes(b">")?;
             }
             Object::Name(n) => {
                 self.write_bytes(b"/")?;
@@ -2696,6 +2740,13 @@ impl<W: Write> PdfWriter<W> {
                 buffer.push(b'(');
                 buffer.extend_from_slice(s.as_bytes());
                 buffer.push(b')');
+            }
+            Object::ByteString(bytes) => {
+                buffer.push(b'<');
+                for byte in bytes {
+                    buffer.extend_from_slice(format!("{byte:02X}").as_bytes());
+                }
+                buffer.push(b'>');
             }
             Object::Name(n) => {
                 buffer.push(b'/');
@@ -2936,6 +2987,81 @@ impl<W: Write> PdfWriter<W> {
         Ok(())
     }
 
+    /// Write the encryption dictionary as an indirect object and store
+    /// the object ID and file ID for the trailer.
+    /// Initialize encryption state: generates file ID, creates encryption dict,
+    /// computes encryption key, and builds the ObjectEncryptor.
+    /// The /Encrypt dict object is written later (after all other objects) since it
+    /// must NOT be encrypted itself (ISO 32000-1 §7.6.1).
+    fn init_encryption(&mut self, encryption: &crate::document::DocumentEncryption) -> Result<()> {
+        use crate::encryption::{
+            CryptFilterManager, CryptFilterMethod, FunctionalCryptFilter, ObjectEncryptor,
+        };
+        use std::sync::Arc;
+
+        // Generate file ID (16 random bytes, required by ISO 32000-1 §7.5.5)
+        let mut fid = vec![0u8; 16];
+        use rand::Rng;
+        rand::rng().fill_bytes(&mut fid);
+
+        let enc_dict = encryption
+            .create_encryption_dict(Some(&fid))
+            .map_err(|e| PdfError::EncryptionError(format!("encryption dict: {}", e)))?;
+
+        // Compute encryption key
+        let enc_key = encryption
+            .get_encryption_key(&enc_dict, Some(&fid))
+            .map_err(|e| PdfError::EncryptionError(format!("encryption key: {}", e)))?;
+
+        // Build CryptFilterManager based on encryption strength
+        let handler = encryption.handler();
+        let (method, key_len) = match encryption.strength {
+            crate::document::EncryptionStrength::Rc4_40bit => (CryptFilterMethod::V2, Some(5)),
+            crate::document::EncryptionStrength::Rc4_128bit => (CryptFilterMethod::V2, Some(16)),
+            crate::document::EncryptionStrength::Aes128 => (CryptFilterMethod::AESV2, Some(16)),
+            crate::document::EncryptionStrength::Aes256 => (CryptFilterMethod::AESV3, Some(32)),
+        };
+
+        let std_filter = FunctionalCryptFilter {
+            name: "StdCF".to_string(),
+            method,
+            length: key_len,
+            auth_event: crate::encryption::AuthEvent::DocOpen,
+            recipients: None,
+        };
+
+        let mut filter_manager =
+            CryptFilterManager::new(Box::new(handler), "StdCF".to_string(), "StdCF".to_string());
+        filter_manager.add_filter(std_filter);
+
+        let encryptor =
+            ObjectEncryptor::new(Arc::new(filter_manager), enc_key, enc_dict.encrypt_metadata);
+
+        // Reserve ID for /Encrypt dict (will be written at the end)
+        let encrypt_id = self.allocate_object_id();
+        self.encrypt_obj_id = Some(encrypt_id);
+        self.file_id = Some(fid);
+        self.encryption_state = Some(WriterEncryptionState { encryptor });
+
+        // Store the dict to write later
+        self.pending_encrypt_dict = Some(enc_dict.to_dict());
+
+        Ok(())
+    }
+
+    /// Write the /Encrypt dictionary object (must NOT be encrypted per ISO 32000-1 §7.6.1)
+    fn write_encryption_dict(&mut self) -> Result<()> {
+        if let (Some(encrypt_id), Some(dict)) =
+            (self.encrypt_obj_id, self.pending_encrypt_dict.take())
+        {
+            // Temporarily disable encryption so the /Encrypt dict is not encrypted
+            let enc_state = self.encryption_state.take();
+            self.write_object(encrypt_id, Object::Dictionary(dict))?;
+            self.encryption_state = enc_state;
+        }
+        Ok(())
+    }
+
     fn write_trailer(&mut self, xref_position: u64) -> Result<()> {
         let catalog_id = self.get_catalog_id()?;
         let info_id = self.get_info_id()?;
@@ -2955,6 +3081,20 @@ impl<W: Write> PdfWriter<W> {
         // Add /Prev pointer for incremental updates (ISO 32000-1 §7.5.6)
         if let Some(prev_xref) = self.prev_xref_offset {
             trailer.set("Prev", Object::Integer(prev_xref as i64));
+        }
+
+        // Add /Encrypt reference and /ID array for encrypted documents
+        if let Some(encrypt_id) = self.encrypt_obj_id {
+            trailer.set("Encrypt", Object::Reference(encrypt_id));
+        }
+        if let Some(ref fid) = self.file_id {
+            trailer.set(
+                "ID",
+                Object::Array(vec![
+                    Object::ByteString(fid.clone()),
+                    Object::ByteString(fid.clone()),
+                ]),
+            );
         }
 
         self.write_bytes(b"trailer\n")?;

@@ -307,6 +307,9 @@ mod encryption_dict_tests {
             str_f: Some(StringFilter::StdCF),
             cf: None,
             ef: None,
+            ue: None,
+            oe: None,
+            perms: None,
         };
 
         let dict = enc_dict.to_dict();

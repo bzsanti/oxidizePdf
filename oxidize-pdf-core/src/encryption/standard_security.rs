@@ -116,6 +116,14 @@ impl StandardSecurityHandler {
         }
     }
 
+    /// Create handler for AES-128 encryption (Revision 4)
+    pub fn aes_128_r4() -> Self {
+        Self {
+            revision: SecurityHandlerRevision::R4,
+            key_length: 16,
+        }
+    }
+
     /// Create handler for AES-256 encryption (Revision 5)
     pub fn aes_256_r5() -> Self {
         Self {

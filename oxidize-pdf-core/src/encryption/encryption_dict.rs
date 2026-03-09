@@ -130,6 +130,12 @@ pub struct EncryptionDictionary {
     pub encrypt_metadata: bool,
     /// Document ID (first element)
     pub id: Option<Vec<u8>>,
+    /// UE entry: encrypted file encryption key (user password, R5/R6 only)
+    pub ue: Option<Vec<u8>>,
+    /// OE entry: encrypted file encryption key (owner password, R5/R6 only)
+    pub oe: Option<Vec<u8>>,
+    /// Perms entry: encrypted permissions verification (R6 only)
+    pub perms: Option<Vec<u8>>,
 }
 
 impl EncryptionDictionary {
@@ -155,6 +161,9 @@ impl EncryptionDictionary {
             p: permissions,
             encrypt_metadata: true,
             id,
+            ue: None,
+            oe: None,
+            perms: None,
         }
     }
 
@@ -180,7 +189,79 @@ impl EncryptionDictionary {
             p: permissions,
             encrypt_metadata: true,
             id,
+            ue: None,
+            oe: None,
+            perms: None,
         }
+    }
+
+    /// Create AES-128 encryption dictionary (V=4, R=4, AESV2 crypt filter)
+    ///
+    /// Per ISO 32000-1 §7.6.1 Table 20: V=4 uses crypt filters to specify
+    /// the encryption method per stream/string. R=4 is used for AES-128.
+    pub fn aes_128(
+        owner_hash: Vec<u8>,
+        user_hash: Vec<u8>,
+        permissions: Permissions,
+        id: Option<Vec<u8>>,
+    ) -> Self {
+        Self {
+            filter: "Standard".to_string(),
+            sub_filter: None,
+            v: 4,
+            length: Some(16), // 128 bits = 16 bytes
+            cf: Some(vec![CryptFilter::standard(CryptFilterMethod::AESV2)]),
+            stm_f: Some(StreamFilter::StdCF),
+            str_f: Some(StringFilter::StdCF),
+            ef: None,
+            r: 4,
+            o: owner_hash,
+            u: user_hash,
+            p: permissions,
+            encrypt_metadata: true,
+            id,
+            ue: None,
+            oe: None,
+            perms: None,
+        }
+    }
+
+    /// Create AES-256 encryption dictionary (V=5, R=5, AESV3 crypt filter)
+    ///
+    /// Per ISO 32000-2 §7.6.1: V=5 uses 256-bit AES encryption with
+    /// crypt filters. R=5 uses the original AES-256 key derivation.
+    pub fn aes_256(
+        owner_hash: Vec<u8>,
+        user_hash: Vec<u8>,
+        permissions: Permissions,
+        id: Option<Vec<u8>>,
+    ) -> Self {
+        Self {
+            filter: "Standard".to_string(),
+            sub_filter: None,
+            v: 5,
+            length: Some(32), // 256 bits = 32 bytes
+            cf: Some(vec![CryptFilter::standard(CryptFilterMethod::AESV3)]),
+            stm_f: Some(StreamFilter::StdCF),
+            str_f: Some(StringFilter::StdCF),
+            ef: None,
+            r: 5,
+            o: owner_hash,
+            u: user_hash,
+            p: permissions,
+            encrypt_metadata: true,
+            id,
+            ue: None,
+            oe: None,
+            perms: None,
+        }
+    }
+
+    /// Set R5/R6 additional entries (UE, OE) on the encryption dictionary.
+    pub fn with_r5_entries(mut self, ue: Vec<u8>, oe: Vec<u8>) -> Self {
+        self.ue = Some(ue);
+        self.oe = Some(oe);
+        self
     }
 
     /// Convert to PDF dictionary
@@ -200,14 +281,8 @@ impl EncryptionDictionary {
         }
 
         dict.set("R", Object::Integer(self.r as i64));
-        dict.set(
-            "O",
-            Object::String(String::from_utf8_lossy(&self.o).to_string()),
-        );
-        dict.set(
-            "U",
-            Object::String(String::from_utf8_lossy(&self.u).to_string()),
-        );
+        dict.set("O", Object::ByteString(self.o.clone()));
+        dict.set("U", Object::ByteString(self.u.clone()));
         dict.set("P", Object::Integer(self.p.bits() as i32 as i64));
 
         if !self.encrypt_metadata && self.v >= 4 {
@@ -239,6 +314,20 @@ impl EncryptionDictionary {
                 StringFilter::StdCF => dict.set("StrF", Object::Name("StdCF".to_string())),
                 StringFilter::Custom(name) => dict.set("StrF", Object::Name(name.clone())),
             }
+        }
+
+        // Add R5/R6 entries
+        if let Some(ref ue) = self.ue {
+            dict.set("UE", Object::ByteString(ue.clone()));
+        }
+        if let Some(ref oe) = self.oe {
+            dict.set("OE", Object::ByteString(oe.clone()));
+        }
+        if let Some(ref perms) = self.perms {
+            dict.set(
+                "Perms",
+                Object::String(String::from_utf8_lossy(perms).to_string()),
+            );
         }
 
         dict
