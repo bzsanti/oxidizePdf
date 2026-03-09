@@ -43,7 +43,7 @@ fn test_track_space_decisions_is_false_by_default() {
 #[test]
 fn test_space_decisions_not_populated_when_not_tracking() {
     let fixture = format!(
-        "{}/examples/results/hello_world.pdf",
+        "{}/tests/fixtures/Cold_Email_Hacks.pdf",
         env!("CARGO_MANIFEST_DIR")
     );
     let doc = oxidize_pdf::parser::PdfDocument::open(&fixture).unwrap();

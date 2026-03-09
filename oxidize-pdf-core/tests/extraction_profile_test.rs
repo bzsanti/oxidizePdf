@@ -62,7 +62,7 @@ fn test_presentation_profile_has_lower_title_ratio() {
 #[test]
 fn test_partition_with_profile_standard_backwards_compatible() {
     let fixture = format!(
-        "{}/examples/results/hello_world.pdf",
+        "{}/tests/fixtures/Cold_Email_Hacks.pdf",
         env!("CARGO_MANIFEST_DIR")
     );
     let doc = oxidize_pdf::parser::PdfDocument::open(&fixture).unwrap();

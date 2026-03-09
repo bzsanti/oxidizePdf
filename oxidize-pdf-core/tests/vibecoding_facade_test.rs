@@ -2,14 +2,14 @@
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 
 fn fixture(name: &str) -> String {
-    format!("{}/examples/results/{}", env!("CARGO_MANIFEST_DIR"), name)
+    format!("{}/tests/fixtures/{}", env!("CARGO_MANIFEST_DIR"), name)
 }
 
 // --- Step 2.1: PdfDocument::open() ---
 
 #[test]
 fn test_pdfdocument_open_file() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf"));
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf"));
     assert!(doc.is_ok(), "Failed to open PDF: {:?}", doc.err());
     let doc = doc.unwrap();
     assert!(doc.page_count().unwrap() > 0);
@@ -23,7 +23,7 @@ fn test_pdfdocument_open_nonexistent() {
 
 #[test]
 fn test_pdfdocument_open_matches_two_step() {
-    let path = fixture("hello_world.pdf");
+    let path = fixture("Cold_Email_Hacks.pdf");
 
     // Old pattern
     let reader = PdfReader::open(&path).unwrap();
@@ -46,7 +46,7 @@ fn test_pdfdocument_open_matches_two_step() {
 
 #[test]
 fn test_to_markdown_produces_output() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let result = doc.to_markdown();
     assert!(result.is_ok(), "to_markdown failed: {:?}", result.err());
     let md = result.unwrap();
@@ -56,7 +56,7 @@ fn test_to_markdown_produces_output() {
 
 #[test]
 fn test_to_markdown_matches_free_function() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let from_method = doc.to_markdown().unwrap();
     let from_free = oxidize_pdf::ai::export_to_markdown(&doc).unwrap();
     assert_eq!(from_method, from_free);
@@ -64,7 +64,7 @@ fn test_to_markdown_matches_free_function() {
 
 #[test]
 fn test_to_contextual_produces_output() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let result = doc.to_contextual();
     assert!(result.is_ok(), "to_contextual failed: {:?}", result.err());
     let ctx = result.unwrap();
@@ -73,7 +73,7 @@ fn test_to_contextual_produces_output() {
 
 #[test]
 fn test_to_contextual_matches_free_function() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let from_method = doc.to_contextual().unwrap();
     let from_free = oxidize_pdf::ai::export_to_contextual(&doc).unwrap();
     assert_eq!(from_method, from_free);
@@ -82,7 +82,7 @@ fn test_to_contextual_matches_free_function() {
 #[cfg(feature = "semantic")]
 #[test]
 fn test_to_json_produces_output() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let result = doc.to_json();
     assert!(result.is_ok(), "to_json failed: {:?}", result.err());
     let json = result.unwrap();
@@ -93,7 +93,7 @@ fn test_to_json_produces_output() {
 #[cfg(feature = "semantic")]
 #[test]
 fn test_to_json_matches_free_function() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let from_method = doc.to_json().unwrap();
     let from_free = oxidize_pdf::ai::export_to_json(&doc).unwrap();
     assert_eq!(from_method, from_free);
@@ -103,7 +103,7 @@ fn test_to_json_matches_free_function() {
 
 #[test]
 fn test_chunk_basic() {
-    let doc = PdfDocument::open(fixture("hello_world.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let chunks = doc.chunk(512);
     assert!(chunks.is_ok(), "chunk failed: {:?}", chunks.err());
     let chunks = chunks.unwrap();
@@ -115,7 +115,7 @@ fn test_chunk_basic() {
 
 #[test]
 fn test_chunk_small_size_produces_more_chunks() {
-    let doc = PdfDocument::open(fixture("ai_ready_contract.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let small_chunks = doc.chunk(50).unwrap();
     let large_chunks = doc.chunk(512).unwrap();
     assert!(
@@ -128,7 +128,7 @@ fn test_chunk_small_size_produces_more_chunks() {
 
 #[test]
 fn test_chunk_with_overlap() {
-    let doc = PdfDocument::open(fixture("ai_ready_contract.pdf")).unwrap();
+    let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let chunks = doc.chunk_with(100, 20).unwrap();
     assert!(!chunks.is_empty());
 }
