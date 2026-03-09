@@ -13,7 +13,7 @@ pub use element::{
 };
 pub use export::{ElementMarkdownExporter, ExportConfig};
 pub use graph::ElementGraph;
-pub use hybrid_chunking::{HybridChunk, HybridChunkConfig, HybridChunker};
+pub use hybrid_chunking::{HybridChunk, HybridChunkConfig, HybridChunker, MergePolicy};
 pub use partition::{PartitionConfig, Partitioner, ReadingOrderStrategy};
 pub use profile::ExtractionProfile;
 pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};

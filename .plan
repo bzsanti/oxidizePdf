@@ -1,556 +1,594 @@
-# Plan TDD: Element Relationships (parent heading → full navigation)
+# Plan TDD: HybridChunker v2 — Docling Gold Standard
 
 ## Contexto
 
-El sistema de tipos de elementos (Phases 1–7 del plan anterior) está completo y mergeado en
-`feature/element-type-system`. Los 8 tests de Phase 5 pasan en verde. La base actual:
+El HybridChunker actual (`oxidize-pdf-core/src/pipeline/hybrid_chunking.rs`) tiene
+implementacion funcional pero incompleta frente al patron Docling. El objetivo es hacer
+que sea el gold standard de chunking para RAG en Rust: merge inteligente, split en
+sentence boundaries, overlap real, y merge agnositico de tipos.
 
-- `ElementMetadata.parent_heading: Option<String>` — texto del título padre.
-- `Partitioner` asigna `parent_heading` en un pase post-clasificación.
-- `HybridChunker` ya consume `parent_heading` para propagar contexto de heading a chunks.
-- `SemanticChunker` no usa relaciones (opera solo sobre tokens).
+El `ElementGraph` ya existe y esta integrado (`chunk_with_graph` funciona). Los tests
+de Fase 6 y 3 del plan anterior pasan en verde. Esta iteracion refina la calidad del
+chunking, no la arquitectura.
 
 **Stack detectado**: Rust 2021 edition, workspace multi-crate (`oxidize-pdf-core`).
-**Convenciones**: TDD con tests en `oxidize-pdf-core/tests/` (archivos separados), clippy -D warnings,
-`#[cfg(feature = "semantic")]` para features opcionales, `pub use` re-exports en `pipeline/mod.rs`.
-**Afecta hot path**: No. El partitioner se llama una vez por documento, no en insert/search/request loops.
+**Convenciones**: TDD con tests en `oxidize-pdf-core/tests/` (archivos separados por
+feature), clippy -D warnings, sin lifetimes en tipos publicos, `pub use` re-exports
+en `pipeline/mod.rs`.
+**Afecta hot path**: No. El chunker se llama una vez por documento (post-partition),
+no en loops de insert/search/request. No se requieren benchmarks de throughput.
 
 ---
 
-## Decisiones de Arquitectura (tomadas)
+## Gaps detectados vs patron Docling
 
-**Problema clave**: Rust no permite que `Element` almacene `&Element` (referencias a siblings/parent)
-sin lifetimes invasivos que romperían la API pública (`Vec<Element>` owned).
-
-**Solución elegida**: `ElementGraph` — una estructura separada que contiene los índices de relaciones
-(no referencias). Opera sobre un slice `&[Element]` sin ownership y sin lifetimes en el tipo.
-
-```rust
-pub struct ElementGraph {
-    parent: Vec<Option<usize>>,    // parent_idx[i] = índice del padre de elements[i]
-    children: Vec<Vec<usize>>,     // children[i] = índices de hijos de elements[i]
-    next: Vec<Option<usize>>,      // next[i] = índice del elemento siguiente
-    prev: Vec<Option<usize>>,      // prev[i] = índice del elemento anterior
-}
-```
-
-El grafo se construye desde `Vec<Element>` una sola vez mediante `ElementGraph::build(&elements)`.
-Consultas: `graph.parent_of(i)`, `graph.children_of(i)`, `graph.next_of(i)`, `graph.prev_of(i)`.
-La API de `Vec<Element>` pública NO cambia (backward compatible).
-
-**Por qué no `DocumentElements` con referencias**: Lifetimes en el tipo contenedor infectarían
-todas las firmas del API público. No vale la pena.
-
-**Por qué no arbol de arenas (typed-arena)**: Overhead innecesario para el caso de uso (acceso
-por índice es suficiente, no necesitamos punteros).
-
-**Lo que HybridChunker y SemanticChunker realmente necesitan**:
-- HybridChunker: ya tiene lo que necesita (`parent_heading` en metadata). No requiere el grafo.
-- SemanticChunker: podría beneficiarse de saber "todos los hijos de este heading" para hacer
-  chunks por sección, pero no es el objetivo de este plan.
-- El grafo es principalmente para navegación (iteración por sección, small-to-big retrieval).
+| Gap | Impacto RAG | Estado actual |
+|-----|-------------|---------------|
+| **Merge solo une mismo tipo** (`same_merge_group` restringe a Paragraph+Paragraph y ListItem+ListItem) | Alto — pierde fusion entre parrafos y list items bajo el mismo heading | `same_merge_group()` solo permite Paragraph+Paragraph y ListItem+ListItem |
+| **Sin sentence splitting** en elementos oversized | Alto — una tabla enorme queda como chunk atomico irrecuperable | `is_oversized = true` pero el texto no se parte |
+| **Overlap lleva elementos enteros** pero no verifica que las frases tengan sentido en el chunk siguiente | Medio — contexto de overlap puede cortarse a mitad de frase | `flush_buffer` copia elementos completos |
+| **`chunk_with_graph` no aplica merge/split** dentro de las secciones de forma consistente | Medio — sub-chunks de secciones grandes heredan la logica de `chunk()` que es tipo-restrictiva | Delega a `chunk()` que usa `same_merge_group` |
+| **`HybridChunk::text()` no expone heading_context** como parte del texto de busqueda cuando el usuario lo quiere | Bajo — para RAG el heading es parte del contexto de retrieval | `heading_context` existe pero `text()` no lo incluye |
 
 ---
 
-## Plan de Ejecución
+## Decisiones de Implementacion
 
-### Fase 1: ElementGraph — Estructura de datos de relaciones
+1. **Merge agnositico de tipo**: Reemplazar `same_merge_group()` con una politica configurable.
+   Default: fusionar cualquier elemento que no sea Title, Table, Image, o CodeBlock
+   (tipos que deben ir solos por semantica). Exponer como `HybridChunkConfig::merge_policy`.
 
-#### Ciclo 1.1 — ElementGraph básico (RED → GREEN)
+2. **Sentence splitting**: Cuando un elemento supera `max_tokens`, partir el texto en
+   sentences usando `.` `!` `?` como delimitadores. Cada fragmento de sentence se convierte
+   en un `HybridChunk` con el mismo `heading_context`. Implementar como funcion privada
+   `split_by_sentences(text, max_tokens) -> Vec<String>`.
 
-**Archivo de tests**: `oxidize-pdf-core/tests/element_graph_test.rs` (nuevo)
+3. **`full_text()` vs `text()`**: Anadir metodo `full_text()` que antepone el heading context
+   al texto del chunk (util para RAG embedding). `text()` permanece sin cambios (backward compat).
 
-Test a escribir:
-```rust
-#[test]
-fn test_graph_build_empty() {
-    let graph = ElementGraph::build(&[]);
-    assert_eq!(graph.len(), 0);
-}
-
-#[test]
-fn test_graph_build_single_element() {
-    let elements = vec![make_title("Only Title")];
-    let graph = ElementGraph::build(&elements);
-    assert_eq!(graph.len(), 1);
-    assert!(graph.parent_of(0).is_none());
-    assert!(graph.children_of(0).is_empty());
-    assert!(graph.next_of(0).is_none());
-    assert!(graph.prev_of(0).is_none());
-}
-```
-
-Código mínimo a añadir — archivo nuevo:
-`oxidize-pdf-core/src/pipeline/graph.rs`
-
-```rust
-pub struct ElementGraph {
-    parent: Vec<Option<usize>>,
-    children: Vec<Vec<usize>>,
-    next: Vec<Option<usize>>,
-    prev: Vec<Option<usize>>,
-}
-
-impl ElementGraph {
-    pub fn build(elements: &[Element]) -> Self { ... }
-    pub fn len(&self) -> usize { self.parent.len() }
-    pub fn is_empty(&self) -> bool { self.len() == 0 }
-    pub fn parent_of(&self, idx: usize) -> Option<usize> { self.parent[idx] }
-    pub fn children_of(&self, idx: usize) -> &[usize] { &self.children[idx] }
-    pub fn next_of(&self, idx: usize) -> Option<usize> { self.next[idx] }
-    pub fn prev_of(&self, idx: usize) -> Option<usize> { self.prev[idx] }
-}
-```
-
-Re-export en `pipeline/mod.rs`:
-```rust
-pub use graph::ElementGraph;
-```
-
-Estimación: 20 min.
-Output: `ElementGraph::build` compila y tests pasan.
+4. **No cambiar la firma de `chunk()` ni `chunk_with_graph()`**: Backward compatible.
 
 ---
 
-#### Ciclo 1.2 — Relaciones next/prev (sibling navigation)
+## Plan de Ejecucion
 
-Test a escribir en `element_graph_test.rs`:
+### Fase 1: Merge agnositico de tipo (el gap mas impactante)
+
+#### Ciclo 1.1 — RED: Test de merge entre Paragraph y ListItem (falla hoy)
+
+**Archivo de tests**: `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs` (nuevo)
+
 ```rust
 #[test]
-fn test_graph_next_prev_chain() {
+fn test_merge_paragraph_and_list_item_under_same_heading() {
+    // Hoy falla: same_merge_group no permite Paragraph+ListItem
     let elements = vec![
-        make_paragraph("First"),
-        make_paragraph("Second"),
-        make_paragraph("Third"),
+        para_with_heading("Introduction text here.", 0, 700.0, Some("Section")),
+        list_item_with_heading("- First bullet point.", 0, 680.0, Some("Section")),
+        list_item_with_heading("- Second bullet point.", 0, 660.0, Some("Section")),
     ];
-    let graph = ElementGraph::build(&elements);
-    assert_eq!(graph.next_of(0), Some(1));
-    assert_eq!(graph.next_of(1), Some(2));
-    assert!(graph.next_of(2).is_none());
-    assert!(graph.prev_of(0).is_none());
-    assert_eq!(graph.prev_of(1), Some(0));
-    assert_eq!(graph.prev_of(2), Some(1));
-}
-```
-
-Implementación: llenar `next[i] = Some(i+1)` y `prev[i] = Some(i-1)` en `build()`.
-Estimación: 10 min.
-
----
-
-#### Ciclo 1.3 — Relaciones parent/child basadas en parent_heading
-
-Un elemento es "hijo" de un Title si su `parent_heading` coincide con el texto del Title,
-y el Title aparece antes en el slice.
-
-Test a escribir en `element_graph_test.rs`:
-```rust
-#[test]
-fn test_graph_parent_child_simple() {
-    // Simula lo que produce Partitioner: title tiene parent_heading = su propio texto,
-    // paragraphs tienen parent_heading = texto del título anterior.
-    let elements = vec![
-        make_title_with_heading("Introduction", "Introduction"),
-        make_para_with_heading("Para 1", "Introduction"),
-        make_para_with_heading("Para 2", "Introduction"),
-    ];
-    let graph = ElementGraph::build(&elements);
-
-    // El título es padre de los dos párrafos
-    assert_eq!(graph.children_of(0), &[1, 2]);
-    assert_eq!(graph.parent_of(1), Some(0));
-    assert_eq!(graph.parent_of(2), Some(0));
-    // El título en sí no tiene padre
-    assert!(graph.parent_of(0).is_none());
-}
-
-#[test]
-fn test_graph_parent_switches_on_new_title() {
-    let elements = vec![
-        make_title_with_heading("Chapter 1", "Chapter 1"),
-        make_para_with_heading("Para A", "Chapter 1"),
-        make_title_with_heading("Chapter 2", "Chapter 2"),
-        make_para_with_heading("Para B", "Chapter 2"),
-    ];
-    let graph = ElementGraph::build(&elements);
-
-    assert_eq!(graph.children_of(0), &[1]);    // Ch1 -> [Para A]
-    assert_eq!(graph.children_of(2), &[3]);    // Ch2 -> [Para B]
-    assert_eq!(graph.parent_of(1), Some(0));   // Para A -> Ch1
-    assert_eq!(graph.parent_of(3), Some(2));   // Para B -> Ch2
-}
-
-#[test]
-fn test_graph_no_parent_heading_means_no_parent() {
-    let elements = vec![
-        make_para_with_heading("Preamble", ""),  // parent_heading = None
-        make_title_with_heading("Intro", "Intro"),
-        make_para_with_heading("Body", "Intro"),
-    ];
-    let graph = ElementGraph::build(&elements);
-
-    assert!(graph.parent_of(0).is_none());  // Preamble no tiene padre
-    assert_eq!(graph.parent_of(2), Some(1));
-}
-```
-
-Implementación en `ElementGraph::build`:
-1. Construir mapa `heading_text -> index` para todos los `Element::Title`.
-2. Para cada elemento con `parent_heading = Some(text)`:
-   - Buscar el título más reciente con ese texto.
-   - Asignar `parent[i] = Some(title_idx)`.
-   - Añadir `i` a `children[title_idx]`.
-
-Estimación: 25 min.
-
----
-
-#### Ciclo 1.4 — Iteración por sección
-
-Test a escribir en `element_graph_test.rs`:
-```rust
-#[test]
-fn test_graph_section_elements() {
-    let elements = vec![
-        make_title_with_heading("Ch1", "Ch1"),
-        make_para_with_heading("P1", "Ch1"),
-        make_para_with_heading("P2", "Ch1"),
-        make_title_with_heading("Ch2", "Ch2"),
-        make_para_with_heading("P3", "Ch2"),
-    ];
-    let graph = ElementGraph::build(&elements);
-
-    // elements_in_section(idx) devuelve los índices de hijos de ese título
-    let ch1_section = graph.elements_in_section(0);
-    assert_eq!(ch1_section, vec![1, 2]);
-
-    let ch2_section = graph.elements_in_section(3);
-    assert_eq!(ch2_section, vec![4]);
-}
-
-#[test]
-fn test_graph_top_level_sections() {
-    let elements = vec![
-        make_para_with_heading("Preamble", ""),
-        make_title_with_heading("Ch1", "Ch1"),
-        make_para_with_heading("P1", "Ch1"),
-        make_title_with_heading("Ch2", "Ch2"),
-    ];
-    let graph = ElementGraph::build(&elements);
-
-    // top_level_sections() devuelve índices de los Title sin padre
-    let sections = graph.top_level_sections();
-    assert_eq!(sections, vec![1, 3]);
-}
-```
-
-Añadir métodos en `ElementGraph`:
-```rust
-pub fn elements_in_section(&self, title_idx: usize) -> Vec<usize> {
-    self.children_of(title_idx).to_vec()
-}
-pub fn top_level_sections(&self) -> Vec<usize> {
-    // índices de Title elements con parent = None
-}
-```
-
-Estimación: 15 min.
-
----
-
-#### Ciclo 1.5 — Índice fuera de rango (robustez)
-
-Test a escribir en `element_graph_test.rs`:
-```rust
-#[test]
-#[should_panic]
-fn test_graph_out_of_bounds_panics() {
-    let graph = ElementGraph::build(&[make_title("T")]);
-    let _ = graph.parent_of(99);  // debe panic con bounds check
-}
-```
-
-Esta es la especificación: acceso fuera de bounds usa indexación normal de Vec (panic).
-No se añade código — el test documenta el contrato.
-Estimación: 5 min.
-
----
-
-### Fase 2: Integración con PdfDocument y pipeline público
-
-#### Ciclo 2.1 — Método `PdfDocument::partition_graph()`
-
-**Archivo de tests**: `oxidize-pdf-core/tests/element_graph_integration_test.rs` (nuevo)
-
-Test a escribir:
-```rust
-#[test]
-fn test_partition_graph_from_fragments() {
-    // Usar Partitioner directamente (sin PDF real)
-    let fragments = vec![
-        frag("Chapter One", 50.0, 750.0, 24.0),
-        frag("First paragraph text.", 50.0, 700.0, 12.0),
-        frag("Second paragraph text.", 50.0, 680.0, 12.0),
-    ];
-    let elements = Partitioner::new(PartitionConfig::default())
-        .partition_fragments(&fragments, 0, 842.0);
-
-    let graph = ElementGraph::build(&elements);
-
-    // Encontrar el título
-    let title_idx = elements.iter().position(|e| matches!(e, Element::Title(_))).unwrap();
-    // El título debe tener 2 hijos
-    assert_eq!(graph.children_of(title_idx).len(), 2);
-}
-```
-
-Implementación: `ElementGraph::build` ya existe de Fase 1. Este ciclo solo añade el test de
-integración con `Partitioner` real para verificar que el pipeline funciona de extremo a extremo.
-
-Estimación: 15 min.
-
----
-
-#### Ciclo 2.2 — Feature-gated: `partition_graph()` en `PdfDocument`
-
-Test a escribir en `element_graph_integration_test.rs`:
-```rust
-#[test]
-fn test_pdfdocument_partition_graph_with_fixture() {
-    let fixture = format!(
-        "{}/tests/fixtures/Cold_Email_Hacks.pdf",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    if !std::path::Path::new(&fixture).exists() {
-        eprintln!("Skipping: fixture not available");
-        return;
-    }
-    let doc = oxidize_pdf::parser::PdfDocument::open(&fixture).unwrap();
-    let elements = doc.partition().unwrap();
-    let graph = ElementGraph::build(&elements);
-
-    assert_eq!(graph.len(), elements.len());
-
-    // Verificar que algunas relaciones existen
-    let has_titles = elements.iter().any(|e| matches!(e, Element::Title(_)));
-    if has_titles {
-        let titles_with_children: Vec<_> = elements
-            .iter()
-            .enumerate()
-            .filter(|(i, e)| matches!(e, Element::Title(_)) && !graph.children_of(*i).is_empty())
-            .collect();
-        assert!(!titles_with_children.is_empty(),
-            "Al menos un titulo debe tener hijos en el grafo");
-    }
-}
-```
-
-Implementación: Añadir a `PdfDocument` en `parser/document.rs`:
-```rust
-pub fn partition_graph(
-    &self,
-    config: PartitionConfig,
-) -> ParseResult<(Vec<Element>, ElementGraph)> {
-    let elements = self.partition_with(config)?;
-    let graph = ElementGraph::build(&elements);
-    Ok((elements, graph))
-}
-```
-
-Re-export `ElementGraph` en `oxidize-pdf-core/src/lib.rs` vía `pipeline::ElementGraph`.
-Estimación: 20 min.
-
----
-
-### Fase 3: Mejora del HybridChunker con información del grafo (opcional pero de alto valor)
-
-El `HybridChunker` actual usa `parent_heading` de `ElementMetadata` para propagar contexto.
-Con el grafo disponible, podemos hacer chunking por sección completa (todos los hijos de un
-título en el mismo chunk cuando caben en el budget).
-
-#### Ciclo 3.1 — `HybridChunker::chunk_with_graph()`
-
-**Archivo de tests**: `oxidize-pdf-core/tests/hybrid_chunking_graph_test.rs` (nuevo)
-
-Test a escribir:
-```rust
-#[test]
-fn test_hybrid_chunk_with_graph_keeps_section_together() {
-    // Sección pequeña: título + 2 párrafos cortos que caben en 512 tokens
-    let elements = vec![
-        make_title_with_heading("Short Section", "Short Section"),
-        make_para_with_heading("Para one text.", "Short Section"),
-        make_para_with_heading("Para two text.", "Short Section"),
-    ];
-    let graph = ElementGraph::build(&elements);
-    let chunker = HybridChunker::default();
-    let chunks = chunker.chunk_with_graph(&elements, &graph);
-
-    // Todos los elementos de la sección deben estar en el mismo chunk
-    assert_eq!(chunks.len(), 1);
-    assert_eq!(chunks[0].elements().len(), 3);
-    assert_eq!(chunks[0].heading_context.as_deref(), Some("Short Section"));
-}
-
-#[test]
-fn test_hybrid_chunk_with_graph_splits_large_section() {
-    // Sección grande: título + muchos párrafos que no caben juntos
-    let mut elements = vec![
-        make_title_with_heading("Big Section", "Big Section"),
-    ];
-    for i in 0..20 {
-        elements.push(make_para_with_heading(
-            &format!("This is paragraph {} with enough words to consume tokens.", i),
-            "Big Section",
-        ));
-    }
-    let graph = ElementGraph::build(&elements);
     let chunker = HybridChunker::new(HybridChunkConfig {
-        max_tokens: 30,
+        max_tokens: 512,
+        overlap_tokens: 0,
+        merge_adjacent: true,
+        propagate_headings: false,
+    });
+    let chunks = chunker.chunk(&elements);
+
+    // Con merge agnositico de tipo, deben fusionarse en 1 chunk
+    assert_eq!(chunks.len(), 1,
+        "Paragraph + ListItems bajo mismo heading deben fusionarse, got {} chunks", chunks.len());
+}
+```
+
+Accion: Escribir el test. Verificar que falla (chunk.len() == 3 hoy).
+Archivo: `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs`
+Output: Test en RED comprobado.
+Estimacion: 10 min.
+
+---
+
+#### Ciclo 1.2 — GREEN: Implementar merge policy configurable
+
+Modificar `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs`:
+
+1. Anadir variant al config:
+
+```rust
+/// Policy for which adjacent element types can be merged.
+#[derive(Debug, Clone, PartialEq)]
+pub enum MergePolicy {
+    /// Only merge Paragraph+Paragraph and ListItem+ListItem (legacy behavior).
+    SameTypeOnly,
+    /// Merge any adjacent non-structural elements (Paragraph, ListItem, KeyValue).
+    /// Titles, Tables, Images, and CodeBlocks always start a new chunk.
+    AnyInlineContent,
+}
+
+pub struct HybridChunkConfig {
+    pub max_tokens: usize,
+    pub overlap_tokens: usize,
+    pub merge_adjacent: bool,
+    pub propagate_headings: bool,
+    /// Default: MergePolicy::AnyInlineContent (Docling pattern).
+    pub merge_policy: MergePolicy,
+}
+```
+
+2. Reemplazar `same_merge_group(a, b)` con logica basada en `merge_policy`:
+
+```rust
+fn can_merge_elements(a: &Element, b: &Element, policy: &MergePolicy) -> bool {
+    match policy {
+        MergePolicy::SameTypeOnly => matches!(
+            (a, b),
+            (Element::Paragraph(_), Element::Paragraph(_))
+                | (Element::ListItem(_), Element::ListItem(_))
+        ),
+        MergePolicy::AnyInlineContent => {
+            is_inline_element(a) && is_inline_element(b)
+        }
+    }
+}
+
+fn is_inline_element(e: &Element) -> bool {
+    matches!(e,
+        Element::Paragraph(_) | Element::ListItem(_) | Element::KeyValue(_)
+    )
+}
+```
+
+3. Actualizar `Default` para `HybridChunkConfig` para usar `MergePolicy::AnyInlineContent`.
+
+4. Actualizar el test existente `test_no_merge_different_element_types` en
+   `hybrid_chunking_test.rs` — ese test espera que Title+Paragraph NO se mergeen,
+   lo cual sigue siendo correcto con `AnyInlineContent` porque Title no es inline.
+   El test `test_list_items_merge_with_list_items_not_paragraphs` espera que
+   ListItem y Paragraph NO se mergeen — ese test **deberara actualizarse** para
+   reflejar la nueva politica o marcarse como `SameTypeOnly`.
+
+Archivo: `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs`
+Output: Ciclo 1.1 test en GREEN. Cargo clippy limpio.
+Estimacion: 25 min.
+
+---
+
+#### Ciclo 1.3 — Tests complementarios del merge policy
+
+Anadir en `hybrid_chunking_v2_test.rs`:
+
+```rust
+#[test]
+fn test_same_type_only_policy_preserves_legacy_behavior() {
+    // Con SameTypeOnly, Paragraph+ListItem no se mergean
+    let elements = vec![
+        para_with_heading("Intro.", 0, 700.0, None),
+        list_item_with_heading("- Item.", 0, 680.0, None),
+    ];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 512,
+        merge_adjacent: true,
+        merge_policy: MergePolicy::SameTypeOnly,
         ..Default::default()
     });
-    let chunks = chunker.chunk_with_graph(&elements, &graph);
+    let chunks = chunker.chunk(&elements);
+    assert_eq!(chunks.len(), 2);
+}
 
-    // Debe haber más de 1 chunk, pero todos deben tener heading_context = "Big Section"
-    assert!(chunks.len() > 1);
-    for chunk in &chunks {
-        assert_eq!(chunk.heading_context.as_deref(), Some("Big Section"));
-    }
+#[test]
+fn test_title_never_merges_with_adjacent_paragraph() {
+    let elements = vec![
+        title_elem("Chapter", 0, 750.0),
+        para_with_heading("Content.", 0, 700.0, Some("Chapter")),
+    ];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 512,
+        merge_adjacent: true,
+        merge_policy: MergePolicy::AnyInlineContent,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+    // Title debe ser chunk separado siempre
+    assert!(chunks.iter().any(|c| c.elements().iter().any(|e| matches!(e, Element::Title(_)))));
+    assert!(chunks.len() >= 2);
+}
+
+#[test]
+fn test_table_never_merges_with_adjacent_paragraph() {
+    let table = make_small_table();  // helper que crea Table con 3 rows
+    let elements = vec![
+        para_with_heading("Before table.", 0, 750.0, None),
+        table,
+        para_with_heading("After table.", 0, 200.0, None),
+    ];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 512,
+        merge_adjacent: true,
+        merge_policy: MergePolicy::AnyInlineContent,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+    // Table debe ir sola
+    let table_chunks: Vec<_> = chunks.iter()
+        .filter(|c| c.elements().iter().any(|e| matches!(e, Element::Table(_))))
+        .collect();
+    assert_eq!(table_chunks.len(), 1);
+    assert_eq!(table_chunks[0].elements().len(), 1);
 }
 ```
 
-Implementación — añadir en `hybrid_chunking.rs`:
-```rust
-impl HybridChunker {
-    pub fn chunk_with_graph(
-        &self,
-        elements: &[Element],
-        graph: &ElementGraph,
-    ) -> Vec<HybridChunk> {
-        // Estrategia: iterar top_level_sections() del grafo.
-        // Para cada sección, intentar poner todo en un chunk.
-        // Si no cabe, delegar a chunk() para esa subsección.
-        // Elementos sin sección (preamble) se procesan con chunk() normal.
-    }
-}
-```
-
-Estimación: 30 min.
+Archivo: `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs`
+Output: 3 tests adicionales en GREEN.
+Estimacion: 15 min.
 
 ---
 
-### Fase 4: Tests de integración end-to-end
+### Fase 2: Sentence splitting para elementos oversized
 
-**Archivo**: `oxidize-pdf-core/tests/element_relationships_advanced_test.rs` (nuevo)
+#### Ciclo 2.1 — RED: Test de split de parrafo gigante en sentences
 
-#### Ciclo 4.1 — Navegación completa de un documento artificial
+Anadir en `hybrid_chunking_v2_test.rs`:
 
 ```rust
 #[test]
-fn test_full_navigation_three_sections() {
+fn test_oversized_paragraph_splits_at_sentence_boundary() {
+    // Un parrafo con muchas oraciones que supera max_tokens
+    let long_text = "First sentence here. Second sentence follows. \
+                     Third sentence is also present. Fourth sentence added. \
+                     Fifth sentence completes the paragraph. Sixth one too.";
+    let elements = vec![
+        para_with_heading(long_text, 0, 700.0, Some("Section A")),
+    ];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 10,  // muy pequeno para forzar split
+        overlap_tokens: 0,
+        merge_adjacent: false,
+        propagate_headings: true,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+
+    // Debe haber mas de 1 chunk
+    assert!(chunks.len() > 1,
+        "Parrafo oversized debe partirse en sentences, got {} chunk(s)", chunks.len());
+
+    // Ningun chunk debe estar marcado como oversized si pudo partirse
+    // (solo los no-partibles como tablas quedan oversized)
+    // Los chunks de texto partidos NO deben marcarse oversized
+    let text_oversized = chunks.iter().filter(|c| c.is_oversized()).count();
+    assert_eq!(text_oversized, 0,
+        "Chunks de texto partido no deben estar marcados oversized");
+
+    // Cada chunk debe heredar el heading context
+    for chunk in &chunks {
+        assert_eq!(chunk.heading_context.as_deref(), Some("Section A"));
+    }
+}
+```
+
+Accion: Escribir el test. Verificar que falla (hoy produce 1 chunk oversized=true).
+Output: Test en RED comprobado.
+Estimacion: 10 min.
+
+---
+
+#### Ciclo 2.2 — GREEN: Implementar `split_by_sentences()`
+
+Anadir en `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs`:
+
+Funcion privada (no expuesta en API publica):
+
+```rust
+/// Split text at sentence boundaries (`.`, `!`, `?`) into chunks of at most
+/// `max_tokens` words. Returns the text fragments; never returns empty.
+fn split_by_sentences(text: &str, max_tokens: usize) -> Vec<String> {
+    // 1. Tokenizar en sentences (split por '. ', '! ', '? ')
+    // 2. Acumular sentences hasta llegar a max_tokens
+    // 3. Si una sola sentence supera max_tokens, incluirla completa (no se puede partir mas)
+    // 4. Devolver Vec<String> con al menos 1 elemento
+}
+```
+
+Modificar el bloque "Handle oversized element" en `chunk()`:
+
+```rust
+// Handle oversized element
+if elem_tokens > self.config.max_tokens && buffer.is_empty() {
+    // Intentar sentence-split si es texto
+    if is_splittable_element(element) {
+        let text = element.display_text();
+        let fragments = split_by_sentences(&text, self.config.max_tokens);
+        for fragment in fragments {
+            chunks.push(HybridChunk {
+                elements: vec![make_text_fragment_element(element, &fragment)],
+                heading_context: elem_heading.clone(),
+                oversized: false,
+            });
+        }
+    } else {
+        // Tabla, imagen, codigo: chunk atomico oversized
+        chunks.push(HybridChunk {
+            elements: vec![element.clone()],
+            heading_context: elem_heading,
+            oversized: true,
+        });
+    }
+    continue;
+}
+```
+
+Funcion auxiliar `is_splittable_element`:
+
+```rust
+fn is_splittable_element(e: &Element) -> bool {
+    matches!(e, Element::Paragraph(_) | Element::ListItem(_))
+}
+```
+
+Nota importante: `make_text_fragment_element` crea un `Element::Paragraph` nuevo con el
+texto fragmentado y la misma metadata del elemento original (page, bbox, parent_heading).
+Esto preserva la provenance sin inventar un tipo nuevo.
+
+Archivo: `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs`
+Output: Ciclo 2.1 test en GREEN. Cargo clippy limpio.
+Estimacion: 30 min.
+
+---
+
+#### Ciclo 2.3 — Tests complementarios de sentence split
+
+Anadir en `hybrid_chunking_v2_test.rs`:
+
+```rust
+#[test]
+fn test_table_oversized_remains_atomic_not_split() {
+    // Tablas no deben partirse aunque superen max_tokens
+    let big_rows: Vec<Vec<String>> = (0..100)
+        .map(|i| vec![format!("key_{}", i), format!("value_{}", i)])
+        .collect();
+    let elements = vec![Element::Table(TableElementData {
+        rows: big_rows,
+        metadata: ElementMetadata { page: 0, ..Default::default() },
+    })];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 20,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+
+    assert_eq!(chunks.len(), 1);
+    assert!(chunks[0].is_oversized());
+}
+
+#[test]
+fn test_single_very_long_sentence_stays_in_one_chunk() {
+    // Una sola oracion larguisima sin puntuacion interna: no se puede partir
+    let long_sentence = "word ".repeat(200).trim().to_string();
+    let elements = vec![para_with_heading(&long_sentence, 0, 700.0, None)];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 50,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+    // No se puede partir sin sentence boundaries, va en un solo chunk
+    assert_eq!(chunks.len(), 1);
+}
+
+#[test]
+fn test_sentence_split_preserves_parent_heading_metadata() {
+    let text = "Sentence one. Sentence two. Sentence three. Sentence four.";
+    let elements = vec![para_with_heading(text, 0, 700.0, Some("My Heading"))];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 4,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+
+    for chunk in &chunks {
+        assert_eq!(chunk.heading_context.as_deref(), Some("My Heading"));
+    }
+}
+```
+
+Archivo: `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs`
+Output: 3 tests adicionales en GREEN.
+Estimacion: 15 min.
+
+---
+
+### Fase 3: `full_text()` para RAG embedding
+
+#### Ciclo 3.1 — RED + GREEN: Metodo `full_text()` en HybridChunk
+
+Anadir en `hybrid_chunking_v2_test.rs`:
+
+```rust
+#[test]
+fn test_full_text_prepends_heading_context() {
+    let elements = vec![para_with_heading("Content of section.", 0, 700.0, Some("Introduction"))];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        propagate_headings: true,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk(&elements);
+    assert!(!chunks.is_empty());
+
+    let full = chunks[0].full_text();
+    assert!(full.starts_with("Introduction"),
+        "full_text debe comenzar con el heading context");
+    assert!(full.contains("Content of section."));
+}
+
+#[test]
+fn test_full_text_equals_text_when_no_heading() {
+    let elements = vec![para_with_heading("Just content.", 0, 700.0, None)];
+    let chunker = HybridChunker::default();
+    let chunks = chunker.chunk(&elements);
+    assert!(!chunks.is_empty());
+    assert_eq!(chunks[0].full_text(), chunks[0].text());
+}
+```
+
+Implementacion en `HybridChunk`:
+
+```rust
+/// Text optimized for RAG embedding: heading context prepended (if any) + chunk content.
+/// Use this for embedding generation. Use `text()` for display.
+pub fn full_text(&self) -> String {
+    match &self.heading_context {
+        Some(heading) => format!("{}\n\n{}", heading, self.text()),
+        None => self.text(),
+    }
+}
+```
+
+Archivo de impl: `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs`
+Archivo de tests: `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs`
+Output: 2 tests en GREEN. `full_text()` disponible en API publica.
+Estimacion: 15 min.
+
+---
+
+### Fase 4: Actualizar tests existentes afectados por MergePolicy
+
+El cambio de default a `AnyInlineContent` afecta un test existente:
+
+#### Ciclo 4.1 — Revisar y actualizar `hybrid_chunking_test.rs`
+
+El test `test_list_items_merge_with_list_items_not_paragraphs` (Ciclo 6.10) verifica
+que ListItem+Paragraph NO se mergeen. Con la nueva politica default `AnyInlineContent`,
+ese comportamiento cambia. Opciones:
+
+- Opcion A: Actualizar el test para reflejar la nueva politica (ListItem+Paragraph PUEDEN mergearse).
+- Opcion B: El test pasa `merge_policy: MergePolicy::SameTypeOnly` explicitamente para mantener el comportamiento legacy.
+
+Accion concreta: Actualizar el test para usar `SameTypeOnly` explicitamente — asi documenta
+el comportamiento legacy sin romperse con la nueva politica default:
+
+```rust
+// Ciclo 6.10 — ACTUALIZADO para reflejar MergePolicy::SameTypeOnly
+fn test_list_items_merge_with_list_items_not_paragraphs() {
+    // Con politica SameTypeOnly (legacy), ListItem no se mergea con Paragraph
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 512,
+        overlap_tokens: 0,
+        merge_adjacent: true,
+        propagate_headings: false,
+        merge_policy: MergePolicy::SameTypeOnly,  // <-- anadir este campo
+    });
+    // ... resto del test igual
+}
+```
+
+Archivo: `oxidize-pdf-core/tests/hybrid_chunking_test.rs`
+Output: Tests existentes siguen en GREEN con la nueva politica.
+Estimacion: 15 min.
+
+---
+
+### Fase 5: Verificacion final de integracion
+
+#### Ciclo 5.1 — Test end-to-end: pipeline completo con fixture real
+
+Anadir en `hybrid_chunking_v2_test.rs`:
+
+```rust
+#[test]
+fn test_hybrid_chunker_v2_end_to_end_with_partition() {
+    // Test que usa Partitioner + HybridChunker juntos
+    // Verifica que el pipeline completo produce chunks validos con las nuevas features
+    use oxidize_pdf::pipeline::{ElementGraph, Partitioner, PartitionConfig};
+
     let fragments = vec![
-        frag("Preamble text here.", 50.0, 800.0, 12.0),
-        frag("Chapter One", 50.0, 750.0, 24.0),
-        frag("Content of chapter one.", 50.0, 700.0, 12.0),
-        frag("More content of chapter one.", 50.0, 680.0, 12.0),
-        frag("Chapter Two", 50.0, 630.0, 24.0),
-        frag("Content of chapter two.", 50.0, 580.0, 12.0),
-        frag("Chapter Three", 50.0, 530.0, 24.0),
+        frag("Abstract", 50.0, 800.0, 20.0),
+        frag("This paper presents a novel approach.", 50.0, 760.0, 12.0),
+        frag("Background and motivation are described below.", 50.0, 740.0, 12.0),
+        frag("Introduction", 50.0, 700.0, 20.0),
+        frag("The problem statement. This is a detailed description.", 50.0, 660.0, 12.0),
+        frag("- First key contribution of this work.", 50.0, 640.0, 12.0),
+        frag("- Second key contribution also important.", 50.0, 620.0, 12.0),
     ];
     let elements = Partitioner::new(PartitionConfig::default())
         .partition_fragments(&fragments, 0, 842.0);
+
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 20,
+        overlap_tokens: 5,
+        merge_adjacent: true,
+        propagate_headings: true,
+        merge_policy: MergePolicy::AnyInlineContent,
+    });
+
     let graph = ElementGraph::build(&elements);
+    let chunks = chunker.chunk_with_graph(&elements, &graph);
 
-    let sections = graph.top_level_sections();
-    // Debe haber exactamente 3 secciones
-    assert_eq!(sections.len(), 3);
+    assert!(!chunks.is_empty());
+    // Todos los chunks de seccion Introduction deben tener heading_context
+    let intro_chunks: Vec<_> = chunks.iter()
+        .filter(|c| c.heading_context.as_deref() == Some("Introduction"))
+        .collect();
+    assert!(!intro_chunks.is_empty());
 
-    let ch1_idx = sections[0];
-    let ch1_children = graph.elements_in_section(ch1_idx);
-    assert_eq!(ch1_children.len(), 2);  // 2 párrafos en Chapter One
-
-    let ch3_idx = sections[2];
-    let ch3_children = graph.elements_in_section(ch3_idx);
-    assert_eq!(ch3_children.len(), 0);  // Chapter Three no tiene hijos
-
-    // Navegación next/prev entre secciones
-    assert_eq!(graph.next_of(ch1_idx), Some(ch1_idx + 1));  // siguiente elemento
+    // full_text debe incluir el heading
+    for chunk in &intro_chunks {
+        assert!(chunk.full_text().contains("Introduction"));
+    }
 }
 ```
 
-#### Ciclo 4.2 — Verificar que la API pública de Vec<Element> no cambia
-
-```rust
-#[test]
-fn test_partition_api_unchanged() {
-    // Este test verifica backward compatibility:
-    // partition() sigue devolviendo Vec<Element> sin cambios.
-    let fragments = vec![
-        frag("Title", 50.0, 750.0, 24.0),
-        frag("Body.", 50.0, 700.0, 12.0),
-    ];
-    let elements: Vec<oxidize_pdf::pipeline::Element> =
-        Partitioner::new(PartitionConfig::default())
-            .partition_fragments(&fragments, 0, 842.0);
-
-    // La API original funciona sin graph
-    assert!(!elements.is_empty());
-    assert_eq!(
-        elements[0].metadata().parent_heading.as_deref(),
-        Some("Title")
-    );
-}
-```
-
-Estimación: 15 min.
+Archivo: `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs`
+Output: Test end-to-end en GREEN. `cargo test --workspace` limpio.
+Estimacion: 20 min.
 
 ---
 
 ## Archivos a crear
 
-| Archivo | Propósito |
+| Archivo | Proposito |
 |---------|-----------|
-| `oxidize-pdf-core/src/pipeline/graph.rs` | `ElementGraph` struct + `build()` + métodos de navegación |
-| `oxidize-pdf-core/tests/element_graph_test.rs` | Tests unitarios de ElementGraph (Ciclos 1.1–1.5) |
-| `oxidize-pdf-core/tests/element_graph_integration_test.rs` | Tests de integración con Partitioner y PdfDocument (Ciclos 2.1–2.2) |
-| `oxidize-pdf-core/tests/hybrid_chunking_graph_test.rs` | Tests de HybridChunker con grafo (Ciclo 3.1) |
-| `oxidize-pdf-core/tests/element_relationships_advanced_test.rs` | Tests end-to-end (Ciclos 4.1–4.2) |
+| `oxidize-pdf-core/tests/hybrid_chunking_v2_test.rs` | Todos los tests nuevos de esta iteracion (Fases 1-5) |
 
 ## Archivos a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `oxidize-pdf-core/src/pipeline/mod.rs` | `pub mod graph;` + `pub use graph::ElementGraph;` |
-| `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs` | Añadir `chunk_with_graph()` method |
-| `oxidize-pdf-core/src/parser/document.rs` | Añadir `partition_graph()` method |
-| `oxidize-pdf-core/src/lib.rs` | Re-export `ElementGraph` en el espacio público si es necesario |
+| `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs` | `MergePolicy` enum, `merge_policy` en config, `can_merge_elements()`, `split_by_sentences()`, `is_splittable_element()`, `full_text()` en HybridChunk |
+| `oxidize-pdf-core/tests/hybrid_chunking_test.rs` | Actualizar Ciclo 6.10 para usar `MergePolicy::SameTypeOnly` explicito |
+| `oxidize-pdf-core/src/pipeline/mod.rs` | Re-export `MergePolicy` junto con los tipos existentes |
 
-## Estimación Total
+---
+
+## Estimacion Total
 
 | Fase | Ciclos | Tiempo |
 |------|--------|--------|
-| Fase 1: ElementGraph | 5 ciclos | ~75 min |
-| Fase 2: Integración API | 2 ciclos | ~35 min |
-| Fase 3: HybridChunker | 1 ciclo | ~30 min |
-| Fase 4: End-to-end | 2 ciclos | ~15 min |
-| **Total** | **10 ciclos** | **~2.5 horas** |
+| Fase 1: Merge policy | 3 ciclos | ~50 min |
+| Fase 2: Sentence split | 3 ciclos | ~55 min |
+| Fase 3: full_text() | 1 ciclo | ~15 min |
+| Fase 4: Tests legacy | 1 ciclo | ~15 min |
+| Fase 5: End-to-end | 1 ciclo | ~20 min |
+| **Total** | **9 ciclos** | **~2.5 horas** |
 
-Tests nuevos estimados: ~20 tests.
+Tests nuevos estimados: ~15 tests en `hybrid_chunking_v2_test.rs`.
 
-## Criterios de Éxito
+---
 
-- [ ] `ElementGraph::build(&elements)` compila sin warnings clippy
-- [ ] Navegación parent/child/next/prev funciona en todos los tests
-- [ ] `partition_graph()` en PdfDocument devuelve `(Vec<Element>, ElementGraph)` correctamente
-- [ ] `chunk_with_graph()` mantiene contexto de heading en todos los chunks de una sección
-- [ ] `cargo test --workspace` pasa al 100%
-- [ ] `cargo clippy -- -D warnings` pasa sin warnings
-- [ ] La API `Vec<Element>` original no cambia (backward compatible)
-- [ ] Los 8 tests originales de `element_relationships_test.rs` siguen en verde
+## Criterios de Exito
 
-## Orden de ejecución recomendado
+- [ ] `cargo test --workspace` pasa al 100% (incluyendo tests existentes de Ciclos 6.x y 3.x)
+- [ ] `cargo clippy -- -D warnings` sin warnings
+- [ ] `MergePolicy::AnyInlineContent` es el default — Paragraph+ListItem se mergean
+- [ ] Parrafos oversized se parten en sentence boundaries — no quedan como `is_oversized=true`
+- [ ] Tablas oversized siguen siendo atomicas con `is_oversized=true`
+- [ ] `full_text()` disponible en `HybridChunk` y re-exportado via `pipeline`
+- [ ] El test `test_list_items_merge_with_list_items_not_paragraphs` sigue en verde
+  (actualizado para usar `SameTypeOnly` explicito)
+- [ ] `chunk_with_graph()` beneficia de la nueva politica de merge sin cambios de firma
 
-1. Ciclo 1.1 → 1.2 → 1.3 → 1.4 → 1.5 (secuencial: cada uno depende del anterior)
-2. Ciclos 2.1 → 2.2 (secuencial: 2.2 depende de 2.1)
-3. Ciclo 3.1 (independiente: puede hacerse en cualquier momento después de Ciclo 1.3)
-4. Ciclos 4.1 → 4.2 (al final, cuando todo lo anterior está verde)
+## Orden de ejecucion recomendado
+
+1. Ciclo 1.1 → 1.2 → 1.3 (secuencial: 1.2 depende del RED de 1.1)
+2. Ciclo 2.1 → 2.2 → 2.3 (secuencial: 2.2 depende del RED de 2.1)
+3. Ciclo 3.1 (independiente: no depende de Fases 1-2)
+4. Ciclo 4.1 (despues de 1.2 para saber el impacto en tests existentes)
+5. Ciclo 5.1 (al final, cuando todo lo anterior esta verde)
