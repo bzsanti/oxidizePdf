@@ -5,8 +5,9 @@
 //! - R5 (AES-256): SHA-256, simple hash
 //! - R6 (AES-256): Algorithm 2.B with SHA-256/384/512 + AES iterations
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use oxidize_pdf::encryption::{Permissions, StandardSecurityHandler, UserPassword};
+use std::hint::black_box;
 
 /// Benchmark R5 password validation (SHA-256 simple)
 fn bench_r5_password_validation(c: &mut Criterion) {

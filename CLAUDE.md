@@ -6,7 +6,7 @@
 |-------|-------|
 | **Version** | v2.0.0 |
 | **License** | MIT |
-| **Tests** | 6,212 unit + 88 integration + 190 doc tests |
+| **Tests** | 6,278 unit + 88 integration + 191 doc tests |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |

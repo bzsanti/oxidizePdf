@@ -57,7 +57,9 @@ use super::reader::PdfReader;
 use super::{ParseError, ParseOptions, ParseResult};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{Read, Seek};
+use std::path::Path;
 use std::rc::Rc;
 
 /// Resource manager for efficient PDF object caching.
@@ -1296,6 +1298,154 @@ impl<R: Read + Seek> PdfDocument<R> {
         }
 
         Ok(all_annotations)
+    }
+
+    // --- VibeCoding Facade Methods ---
+
+    /// Export the document to LLM-optimized Markdown format.
+    ///
+    /// Delegates to [`crate::ai::export_to_markdown`]. Includes YAML frontmatter
+    /// with document metadata followed by extracted text content.
+    #[allow(deprecated)]
+    pub fn to_markdown(&self) -> crate::error::Result<String> {
+        crate::ai::export_to_markdown(self)
+    }
+
+    /// Export the document to element-aware Markdown format.
+    ///
+    /// Unlike [`to_markdown`](Self::to_markdown), this method classifies elements
+    /// by type and maps each to its canonical Markdown representation.
+    pub fn to_element_markdown(&self) -> ParseResult<String> {
+        let elements = self.partition()?;
+        let exporter = crate::pipeline::export::ElementMarkdownExporter::default();
+        Ok(exporter.export(&elements))
+    }
+
+    /// Export the document to a contextual text format for LLM consumption.
+    ///
+    /// Delegates to [`crate::ai::export_to_contextual`].
+    #[allow(deprecated)]
+    pub fn to_contextual(&self) -> crate::error::Result<String> {
+        crate::ai::export_to_contextual(self)
+    }
+
+    /// Export the document to structured JSON format.
+    ///
+    /// Requires the `semantic` feature. Delegates to [`crate::ai::export_to_json`].
+    #[cfg(feature = "semantic")]
+    #[allow(deprecated)]
+    pub fn to_json(&self) -> crate::error::Result<String> {
+        crate::ai::export_to_json(self)
+    }
+
+    /// Split the document text into chunks of approximately `target_tokens` size.
+    ///
+    /// Uses a default overlap of 10% of the target token count.
+    pub fn chunk(
+        &self,
+        target_tokens: usize,
+    ) -> crate::error::Result<Vec<crate::ai::DocumentChunk>> {
+        let overlap = target_tokens / 10;
+        self.chunk_with(target_tokens, overlap)
+    }
+
+    /// Split the document text into chunks with explicit size and overlap control.
+    pub fn chunk_with(
+        &self,
+        target_tokens: usize,
+        overlap: usize,
+    ) -> crate::error::Result<Vec<crate::ai::DocumentChunk>> {
+        let chunker = crate::ai::DocumentChunker::new(target_tokens, overlap);
+        let extracted = self.extract_text()?;
+        let page_texts: Vec<(usize, String)> = extracted
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (i + 1, t.text.clone()))
+            .collect();
+        chunker
+            .chunk_text_with_pages(&page_texts)
+            .map_err(|e| crate::error::PdfError::InvalidStructure(e.to_string()))
+    }
+
+    /// Partition the document into typed elements using default configuration.
+    ///
+    /// Extracts text with layout preservation, then classifies fragments into
+    /// [`Element`](crate::pipeline::Element) variants (Title, Paragraph, Table, etc.).
+    pub fn partition(&self) -> ParseResult<Vec<crate::pipeline::Element>> {
+        self.partition_with(crate::pipeline::PartitionConfig::default())
+    }
+
+    /// Partition the document into typed elements with custom configuration.
+    pub fn partition_with(
+        &self,
+        config: crate::pipeline::PartitionConfig,
+    ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        let options = crate::text::ExtractionOptions {
+            preserve_layout: true,
+            ..Default::default()
+        };
+        self.do_partition_pages(options, config)
+    }
+
+    /// Partition the document using a pre-configured extraction profile.
+    pub fn partition_with_profile(
+        &self,
+        profile: crate::pipeline::ExtractionProfile,
+    ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        let profile_cfg = profile.config();
+        let options = crate::text::ExtractionOptions {
+            preserve_layout: true,
+            space_threshold: profile_cfg.extraction.space_threshold,
+            detect_columns: profile_cfg.extraction.detect_columns,
+            ..crate::text::ExtractionOptions::default()
+        };
+        self.do_partition_pages(options, profile_cfg.partition)
+    }
+
+    fn do_partition_pages(
+        &self,
+        options: crate::text::ExtractionOptions,
+        config: crate::pipeline::PartitionConfig,
+    ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        let pages = self.extract_text_with_options(options)?;
+        let partitioner = crate::pipeline::Partitioner::new(config);
+
+        let mut all_elements = Vec::new();
+        for (page_idx, page_text) in pages.iter().enumerate() {
+            let page_idx_u32 = u32::try_from(page_idx).map_err(|_| ParseError::SyntaxError {
+                position: 0,
+                message: format!("Page index {} exceeds u32 range", page_idx),
+            })?;
+            let page_height = self
+                .get_page(page_idx_u32)
+                .map(|p| p.height())
+                .unwrap_or(842.0);
+            let elements =
+                partitioner.partition_fragments(&page_text.fragments, page_idx_u32, page_height);
+            all_elements.extend(elements);
+        }
+
+        Ok(all_elements)
+    }
+}
+
+impl PdfDocument<File> {
+    /// Open a PDF file by path — the simplest way to start working with a PDF.
+    ///
+    /// This is a convenience method that combines `PdfReader::open()` and
+    /// `PdfDocument::new()` into a single call.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    ///
+    /// let doc = PdfDocument::open("report.pdf").unwrap();
+    /// let text = doc.extract_text().unwrap();
+    /// let markdown = doc.to_markdown().unwrap();
+    /// ```
+    pub fn open<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
+        PdfReader::open_document(path)
     }
 }
 

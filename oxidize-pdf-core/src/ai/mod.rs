@@ -67,6 +67,7 @@ use std::io::{Read, Seek};
 /// # Ok(())
 /// # }
 /// ```
+#[deprecated(since = "2.1.0", note = "Use PdfDocument::to_markdown() instead")]
 pub fn export_to_markdown<R: Read + Seek>(
     document: &crate::parser::PdfDocument<R>,
 ) -> Result<String> {
@@ -128,6 +129,7 @@ pub fn export_to_markdown<R: Read + Seek>(
 /// # Ok(())
 /// # }
 /// ```
+#[deprecated(since = "2.1.0", note = "Use PdfDocument::to_contextual() instead")]
 pub fn export_to_contextual<R: Read + Seek>(
     document: &crate::parser::PdfDocument<R>,
 ) -> Result<String> {
@@ -185,6 +187,7 @@ pub fn export_to_contextual<R: Read + Seek>(
 /// # }
 /// ```
 #[cfg(feature = "semantic")]
+#[deprecated(since = "2.1.0", note = "Use PdfDocument::to_json() instead")]
 pub fn export_to_json<R: Read + Seek>(document: &crate::parser::PdfDocument<R>) -> Result<String> {
     // Extract text from all pages
     let extracted = document.extract_text()?;
@@ -232,6 +235,7 @@ pub fn export_to_json<R: Read + Seek>(document: &crate::parser::PdfDocument<R>) 
 /// # }
 /// ```
 #[cfg(feature = "semantic")]
+#[deprecated(since = "2.1.0", note = "Use PdfDocument::chunk() instead")]
 pub fn export_to_chunks<R: Read + Seek>(
     document: &crate::parser::PdfDocument<R>,
     chunk_size: usize,

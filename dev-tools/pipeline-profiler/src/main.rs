@@ -8,6 +8,9 @@
 //! 5. t_content_parse — ContentParser::parse_content()
 //! 6. t_text_extract — extract_text_from_page(0) (full pipeline)
 //!
+//! With `--verbose`, also captures internal tracing spans from text extraction:
+//!   font_resources, stream_decompress, content_parse, text_ops_loop, layout_finalize
+//!
 //! Usage:
 //!   pipeline-profiler --corpus-dir <path> --top 20 --output results.json
 //!   pipeline-profiler --file single.pdf --verbose
@@ -16,9 +19,14 @@ use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use oxidize_pdf::parser::{ContentParser, ParseOptions, PdfDocument, PdfReader};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[derive(Parser)]
 #[command(
@@ -42,7 +50,7 @@ struct Cli {
     #[arg(long)]
     output: Option<PathBuf>,
 
-    /// Verbose per-stage output for single file mode
+    /// Verbose per-stage output for single file mode (includes tracing sub-stages)
     #[arg(long)]
     verbose: bool,
 }
@@ -90,7 +98,118 @@ struct ProfileReport {
     top_slowest: Vec<PdfTiming>,
 }
 
-fn profile_pdf(path: &std::path::Path, verbose: bool) -> PdfTiming {
+// ---------------------------------------------------------------------------
+// Span timing layer — captures enter/exit durations for named tracing spans
+// ---------------------------------------------------------------------------
+
+/// Accumulated timing data for a named span, keyed by span name.
+type SpanTimings = Arc<Mutex<HashMap<String, u64>>>;
+
+/// Per-span data stored in the registry extensions.
+struct SpanTiming {
+    entered_at: Option<Instant>,
+}
+
+/// Custom tracing layer that accumulates span durations by name.
+struct TimingLayer {
+    timings: SpanTimings,
+}
+
+impl<S> tracing_subscriber::Layer<S> for TimingLayer
+where
+    S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+{
+    fn on_new_span(
+        &self,
+        _attrs: &tracing::span::Attributes<'_>,
+        id: &tracing::span::Id,
+        ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        if let Some(span) = ctx.span(id) {
+            let mut extensions = span.extensions_mut();
+            extensions.insert(SpanTiming { entered_at: None });
+        }
+    }
+
+    fn on_enter(&self, id: &tracing::span::Id, ctx: tracing_subscriber::layer::Context<'_, S>) {
+        if let Some(span) = ctx.span(id) {
+            let mut extensions = span.extensions_mut();
+            if let Some(timing) = extensions.get_mut::<SpanTiming>() {
+                timing.entered_at = Some(Instant::now());
+            }
+        }
+    }
+
+    fn on_exit(&self, id: &tracing::span::Id, ctx: tracing_subscriber::layer::Context<'_, S>) {
+        if let Some(span) = ctx.span(id) {
+            let name = span.name().to_string();
+            let mut extensions = span.extensions_mut();
+            if let Some(timing) = extensions.get_mut::<SpanTiming>() {
+                if let Some(entered_at) = timing.entered_at.take() {
+                    let elapsed_us = entered_at.elapsed().as_micros() as u64;
+                    let mut map = self.timings.lock().unwrap();
+                    *map.entry(name).or_insert(0) += elapsed_us;
+                }
+            }
+        }
+    }
+}
+
+/// Initialize a tracing subscriber with the timing layer and return the shared timings map.
+fn init_timing_subscriber() -> SpanTimings {
+    let timings: SpanTimings = Arc::new(Mutex::new(HashMap::new()));
+    let layer = TimingLayer {
+        timings: timings.clone(),
+    };
+    tracing_subscriber::registry().with(layer).init();
+    timings
+}
+
+/// Reset accumulated span timings (call before each profiling run).
+fn reset_timings(timings: &SpanTimings) {
+    timings.lock().unwrap().clear();
+}
+
+/// Print sub-stage breakdown from accumulated span timings.
+fn print_substage_breakdown(timings: &SpanTimings, text_extract_us: u64) {
+    let map = timings.lock().unwrap();
+
+    // Ordered list of expected sub-stages
+    let sub_stages = [
+        "font_resources",
+        "stream_decompress",
+        "content_parse",
+        "text_ops_loop",
+        "layout_finalize",
+    ];
+
+    let mut found_any = false;
+    for (i, name) in sub_stages.iter().enumerate() {
+        if let Some(&us) = map.get(*name) {
+            found_any = true;
+            let connector = if i == sub_stages.len() - 1 {
+                "\u{2514}\u{2500}"
+            } else {
+                "\u{251c}\u{2500}"
+            };
+            let pct = if text_extract_us > 0 {
+                (us as f64 / text_extract_us as f64) * 100.0
+            } else {
+                0.0
+            };
+            println!(
+                "    {} {:<20} {:>8} us  ({:>5.1}%)",
+                connector, name, us, pct
+            );
+        }
+    }
+
+    if !found_any {
+        println!("    (no sub-stage spans captured)");
+    }
+}
+
+fn profile_pdf(path: &std::path::Path, verbose: bool, timings: Option<&SpanTimings>) -> PdfTiming {
     let file_name = path
         .file_name()
         .unwrap_or_default()
@@ -116,6 +235,11 @@ fn profile_pdf(path: &std::path::Path, verbose: bool) -> PdfTiming {
             };
         }
     };
+
+    // Reset span timings before profiling
+    if let Some(t) = timings {
+        reset_timings(t);
+    }
 
     let total_start = Instant::now();
 
@@ -232,6 +356,10 @@ fn profile_pdf(path: &std::path::Path, verbose: bool) -> PdfTiming {
     let t_content_parse = t4.elapsed();
 
     // Stage 6: Full text extraction from page 0 (separate measurement, end-to-end)
+    // Reset span timings so we only capture sub-stages from text extraction
+    if let Some(t) = timings {
+        reset_timings(t);
+    }
     let t5 = Instant::now();
     let _text = doc.extract_text_from_page(0);
     let t_text_extract = t5.elapsed();
@@ -274,6 +402,9 @@ fn profile_pdf(path: &std::path::Path, verbose: bool) -> PdfTiming {
         println!("  decompress:    {:>8} us", timing.t_decompress_us);
         println!("  content_parse: {:>8} us", timing.t_content_parse_us);
         println!("  text_extract:  {:>8} us", timing.t_text_extract_us);
+        if let Some(t) = timings {
+            print_substage_breakdown(t, timing.t_text_extract_us);
+        }
         println!("  TOTAL:         {:>8} us", timing.total_us);
         println!("  dominant:      {}", timing.dominant_stage);
     }
@@ -411,10 +542,17 @@ fn main() {
         std::process::exit(1);
     }
 
+    // Initialize tracing subscriber with timing layer when verbose
+    let span_timings = if cli.verbose {
+        Some(init_timing_subscriber())
+    } else {
+        None
+    };
+
     if let Some(ref file_path) = cli.file {
         // Single file mode
         println!("Profiling: {}", file_path.display());
-        let timing = profile_pdf(file_path, cli.verbose);
+        let timing = profile_pdf(file_path, cli.verbose, span_timings.as_ref());
         if let Some(ref err) = timing.error {
             eprintln!("Error: {err}");
         }
@@ -467,7 +605,7 @@ fn main() {
     let timings: Vec<PdfTiming> = pdf_files
         .iter()
         .map(|path| {
-            let timing = profile_pdf(path, false);
+            let timing = profile_pdf(path, false, None);
             pb.inc(1);
             timing
         })
