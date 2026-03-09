@@ -1,696 +1,556 @@
-# Plan TDD: Pipeline Architecture + VibeCoding API para oxidize-pdf
+# Plan TDD: Element Relationships (parent heading → full navigation)
 
-## Overview
+## Contexto
 
-Typed Element system, VibeCoding facade en PdfDocument, reading order pluggable, y semantic chunking. Cada fase es independientemente mergeable via feature branch desde develop.
+El sistema de tipos de elementos (Phases 1–7 del plan anterior) está completo y mergeado en
+`feature/element-type-system`. Los 8 tests de Phase 5 pasan en verde. La base actual:
 
-**Insight clave**: `PdfDocument<R>` ya tiene `extract_text()`, `extract_text_with_options()`, y `metadata()`. El modulo `ai::` tiene funciones libres que delegan a exporters. `StructuredDataDetector` ya detecta tablas, KV pairs, y multi-columna. `semantic::EntityType` ya tiene Heading, Paragraph, Table, Header, Footer, List, Image.
+- `ElementMetadata.parent_heading: Option<String>` — texto del título padre.
+- `Partitioner` asigna `parent_heading` en un pase post-clasificación.
+- `HybridChunker` ya consume `parent_heading` para propagar contexto de heading a chunks.
+- `SemanticChunker` no usa relaciones (opera solo sobre tokens).
 
-**Gap critico**: No hay deteccion de header/footer desde PDFs parseados. `header_footer.rs` es para generacion, no extraccion. Se implementa en Phase 3.
-
----
-
-## Phase 1: Element Type System
-**Branch**: `feature/element-type-system`
-**Dependency**: None
-**Risk**: Low (pure data types)
-
-### Step 1.1 -- Element enum y ElementMetadata
-
-**Test file**: `oxidize-pdf-core/tests/element_types_test.rs`
-
-```
-TEST: test_element_title_creation
-- Create Element::Title con text "Introduction", page 1, bbox
-- Assert variant es Title
-- Assert text(), page(), bbox() accessors funcionan
-
-TEST: test_element_paragraph_creation
-- Create Element::Paragraph con multi-line text
-- Assert text contiene contenido esperado
-
-TEST: test_element_table_creation
-- Create Element::Table con rows/columns data
-- Assert row_count(), column_count() funcionan
-- Assert cell access funciona
-
-TEST: test_element_variants_exhaustive
-- Crear uno de cada: Title, Paragraph, Table, Header, Footer, ListItem, Image, CodeBlock, KeyValue
-- Assert cada uno tiene discriminante correcto via matches!()
-
-TEST: test_element_metadata_defaults
-- Create Element con metadata default
-- Assert page=0, confidence=1.0, bbox es zero-rect
-- Assert font_info es None
-
-TEST: test_element_metadata_with_font
-- Create Element::Title con font metadata (bold, size 24)
-- Assert font info accesible
-
-TEST: test_element_ordering_by_position
-- Crear 3 elements con diferentes page/y positions
-- Sort por orden natural (page ASC, y DESC para reading order)
-- Assert orden correcto
-
-TEST: test_element_debug_display
-- Create Element::Title
-- Assert Debug output contiene "Title"
-
-TEST: test_element_clone
-- Create Element, clone, comparar igualdad
-
-TEST: test_element_bbox_accessors
-- Create Element con bbox (10, 20, 100, 50)
-- Assert x(), y(), width(), height(), right(), top()
-```
-
-**Implementation file**: `oxidize-pdf-core/src/pipeline/element.rs`
-
-Nuevo modulo `pipeline` en `oxidize-pdf-core/src/pipeline/mod.rs`:
-```rust
-pub mod element;
-pub use element::{Element, ElementBBox, ElementMetadata};
-```
-
-Element enum:
-```rust
-pub enum Element {
-    Title(ElementData),
-    Paragraph(ElementData),
-    Table(TableElementData),
-    Header(ElementData),
-    Footer(ElementData),
-    ListItem(ElementData),
-    Image(ImageElementData),
-    CodeBlock(ElementData),
-    KeyValue(KeyValueElementData),
-}
-```
-
-ElementData:
-```rust
-pub struct ElementData {
-    pub text: String,
-    pub metadata: ElementMetadata,
-}
-
-pub struct ElementMetadata {
-    pub page: u32,
-    pub bbox: ElementBBox,
-    pub confidence: f64,
-    pub font_name: Option<String>,
-    pub font_size: Option<f64>,
-    pub is_bold: bool,
-    pub is_italic: bool,
-}
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/mod.rs`
-- CREATE: `oxidize-pdf-core/src/pipeline/element.rs`
-- MODIFY: `oxidize-pdf-core/src/lib.rs` (add `pub mod pipeline;`)
-- CREATE: `oxidize-pdf-core/tests/element_types_test.rs`
-
-### Step 1.2 -- Element serialization (requires `semantic` feature)
-
-```
-TEST: test_element_serialize_json (cfg semantic)
-- Create Element::Title, serialize a JSON
-- Assert JSON contiene "type": "title", "text": "...", "page": 1
-
-TEST: test_element_deserialize_json (cfg semantic)
-- JSON string -> Element::Paragraph
-- Assert roundtrip equality
-
-TEST: test_elements_vec_serialize (cfg semantic)
-- Vec<Element> con 3 elements -> JSON array
-- Assert length 3
-```
-
-**Implementation**: `#[derive(Serialize, Deserialize)]` con `#[cfg(feature = "semantic")]`. Usar `#[serde(tag = "type", rename_all = "snake_case")]`.
+**Stack detectado**: Rust 2021 edition, workspace multi-crate (`oxidize-pdf-core`).
+**Convenciones**: TDD con tests en `oxidize-pdf-core/tests/` (archivos separados), clippy -D warnings,
+`#[cfg(feature = "semantic")]` para features opcionales, `pub use` re-exports en `pipeline/mod.rs`.
+**Afecta hot path**: No. El partitioner se llama una vez por documento, no en insert/search/request loops.
 
 ---
 
-## Phase 2: VibeCoding Facade
-**Branch**: `feature/vibecoding-facade`
-**Dependency**: None (delega a infraestructura existente, NO necesita Phase 1)
-**Risk**: Low (thin wrappers)
+## Decisiones de Arquitectura (tomadas)
 
-### Step 2.1 -- `PdfDocument::open()` static method
+**Problema clave**: Rust no permite que `Element` almacene `&Element` (referencias a siblings/parent)
+sin lifetimes invasivos que romperían la API pública (`Vec<Element>` owned).
 
-**Test file**: `oxidize-pdf-core/tests/vibecoding_facade_test.rs`
+**Solución elegida**: `ElementGraph` — una estructura separada que contiene los índices de relaciones
+(no referencias). Opera sobre un slice `&[Element]` sin ownership y sin lifetimes en el tipo.
 
-```
-TEST: test_pdfdocument_open_file
-- PdfDocument::open("oxidize-pdf-core/examples/results/hello_world.pdf")
-- Assert Ok
-- Assert page_count() > 0
-
-TEST: test_pdfdocument_open_nonexistent
-- PdfDocument::open("nonexistent.pdf")
-- Assert Err
-
-TEST: test_pdfdocument_open_matches_two_step
-- Abrir mismo PDF con patron viejo: PdfReader::open() + PdfDocument::new()
-- Abrir con patron nuevo: PdfDocument::open()
-- Assert page_count identico
-- Assert extract_text produce output identico
-```
-
-**Implementation** en `oxidize-pdf-core/src/parser/document.rs`:
 ```rust
-impl PdfDocument<std::fs::File> {
-    pub fn open<P: AsRef<std::path::Path>>(path: P) -> ParseResult<Self> {
-        PdfReader::open_document(path)
+pub struct ElementGraph {
+    parent: Vec<Option<usize>>,    // parent_idx[i] = índice del padre de elements[i]
+    children: Vec<Vec<usize>>,     // children[i] = índices de hijos de elements[i]
+    next: Vec<Option<usize>>,      // next[i] = índice del elemento siguiente
+    prev: Vec<Option<usize>>,      // prev[i] = índice del elemento anterior
+}
+```
+
+El grafo se construye desde `Vec<Element>` una sola vez mediante `ElementGraph::build(&elements)`.
+Consultas: `graph.parent_of(i)`, `graph.children_of(i)`, `graph.next_of(i)`, `graph.prev_of(i)`.
+La API de `Vec<Element>` pública NO cambia (backward compatible).
+
+**Por qué no `DocumentElements` con referencias**: Lifetimes en el tipo contenedor infectarían
+todas las firmas del API público. No vale la pena.
+
+**Por qué no arbol de arenas (typed-arena)**: Overhead innecesario para el caso de uso (acceso
+por índice es suficiente, no necesitamos punteros).
+
+**Lo que HybridChunker y SemanticChunker realmente necesitan**:
+- HybridChunker: ya tiene lo que necesita (`parent_heading` en metadata). No requiere el grafo.
+- SemanticChunker: podría beneficiarse de saber "todos los hijos de este heading" para hacer
+  chunks por sección, pero no es el objetivo de este plan.
+- El grafo es principalmente para navegación (iteración por sección, small-to-big retrieval).
+
+---
+
+## Plan de Ejecución
+
+### Fase 1: ElementGraph — Estructura de datos de relaciones
+
+#### Ciclo 1.1 — ElementGraph básico (RED → GREEN)
+
+**Archivo de tests**: `oxidize-pdf-core/tests/element_graph_test.rs` (nuevo)
+
+Test a escribir:
+```rust
+#[test]
+fn test_graph_build_empty() {
+    let graph = ElementGraph::build(&[]);
+    assert_eq!(graph.len(), 0);
+}
+
+#[test]
+fn test_graph_build_single_element() {
+    let elements = vec![make_title("Only Title")];
+    let graph = ElementGraph::build(&elements);
+    assert_eq!(graph.len(), 1);
+    assert!(graph.parent_of(0).is_none());
+    assert!(graph.children_of(0).is_empty());
+    assert!(graph.next_of(0).is_none());
+    assert!(graph.prev_of(0).is_none());
+}
+```
+
+Código mínimo a añadir — archivo nuevo:
+`oxidize-pdf-core/src/pipeline/graph.rs`
+
+```rust
+pub struct ElementGraph {
+    parent: Vec<Option<usize>>,
+    children: Vec<Vec<usize>>,
+    next: Vec<Option<usize>>,
+    prev: Vec<Option<usize>>,
+}
+
+impl ElementGraph {
+    pub fn build(elements: &[Element]) -> Self { ... }
+    pub fn len(&self) -> usize { self.parent.len() }
+    pub fn is_empty(&self) -> bool { self.len() == 0 }
+    pub fn parent_of(&self, idx: usize) -> Option<usize> { self.parent[idx] }
+    pub fn children_of(&self, idx: usize) -> &[usize] { &self.children[idx] }
+    pub fn next_of(&self, idx: usize) -> Option<usize> { self.next[idx] }
+    pub fn prev_of(&self, idx: usize) -> Option<usize> { self.prev[idx] }
+}
+```
+
+Re-export en `pipeline/mod.rs`:
+```rust
+pub use graph::ElementGraph;
+```
+
+Estimación: 20 min.
+Output: `ElementGraph::build` compila y tests pasan.
+
+---
+
+#### Ciclo 1.2 — Relaciones next/prev (sibling navigation)
+
+Test a escribir en `element_graph_test.rs`:
+```rust
+#[test]
+fn test_graph_next_prev_chain() {
+    let elements = vec![
+        make_paragraph("First"),
+        make_paragraph("Second"),
+        make_paragraph("Third"),
+    ];
+    let graph = ElementGraph::build(&elements);
+    assert_eq!(graph.next_of(0), Some(1));
+    assert_eq!(graph.next_of(1), Some(2));
+    assert!(graph.next_of(2).is_none());
+    assert!(graph.prev_of(0).is_none());
+    assert_eq!(graph.prev_of(1), Some(0));
+    assert_eq!(graph.prev_of(2), Some(1));
+}
+```
+
+Implementación: llenar `next[i] = Some(i+1)` y `prev[i] = Some(i-1)` en `build()`.
+Estimación: 10 min.
+
+---
+
+#### Ciclo 1.3 — Relaciones parent/child basadas en parent_heading
+
+Un elemento es "hijo" de un Title si su `parent_heading` coincide con el texto del Title,
+y el Title aparece antes en el slice.
+
+Test a escribir en `element_graph_test.rs`:
+```rust
+#[test]
+fn test_graph_parent_child_simple() {
+    // Simula lo que produce Partitioner: title tiene parent_heading = su propio texto,
+    // paragraphs tienen parent_heading = texto del título anterior.
+    let elements = vec![
+        make_title_with_heading("Introduction", "Introduction"),
+        make_para_with_heading("Para 1", "Introduction"),
+        make_para_with_heading("Para 2", "Introduction"),
+    ];
+    let graph = ElementGraph::build(&elements);
+
+    // El título es padre de los dos párrafos
+    assert_eq!(graph.children_of(0), &[1, 2]);
+    assert_eq!(graph.parent_of(1), Some(0));
+    assert_eq!(graph.parent_of(2), Some(0));
+    // El título en sí no tiene padre
+    assert!(graph.parent_of(0).is_none());
+}
+
+#[test]
+fn test_graph_parent_switches_on_new_title() {
+    let elements = vec![
+        make_title_with_heading("Chapter 1", "Chapter 1"),
+        make_para_with_heading("Para A", "Chapter 1"),
+        make_title_with_heading("Chapter 2", "Chapter 2"),
+        make_para_with_heading("Para B", "Chapter 2"),
+    ];
+    let graph = ElementGraph::build(&elements);
+
+    assert_eq!(graph.children_of(0), &[1]);    // Ch1 -> [Para A]
+    assert_eq!(graph.children_of(2), &[3]);    // Ch2 -> [Para B]
+    assert_eq!(graph.parent_of(1), Some(0));   // Para A -> Ch1
+    assert_eq!(graph.parent_of(3), Some(2));   // Para B -> Ch2
+}
+
+#[test]
+fn test_graph_no_parent_heading_means_no_parent() {
+    let elements = vec![
+        make_para_with_heading("Preamble", ""),  // parent_heading = None
+        make_title_with_heading("Intro", "Intro"),
+        make_para_with_heading("Body", "Intro"),
+    ];
+    let graph = ElementGraph::build(&elements);
+
+    assert!(graph.parent_of(0).is_none());  // Preamble no tiene padre
+    assert_eq!(graph.parent_of(2), Some(1));
+}
+```
+
+Implementación en `ElementGraph::build`:
+1. Construir mapa `heading_text -> index` para todos los `Element::Title`.
+2. Para cada elemento con `parent_heading = Some(text)`:
+   - Buscar el título más reciente con ese texto.
+   - Asignar `parent[i] = Some(title_idx)`.
+   - Añadir `i` a `children[title_idx]`.
+
+Estimación: 25 min.
+
+---
+
+#### Ciclo 1.4 — Iteración por sección
+
+Test a escribir en `element_graph_test.rs`:
+```rust
+#[test]
+fn test_graph_section_elements() {
+    let elements = vec![
+        make_title_with_heading("Ch1", "Ch1"),
+        make_para_with_heading("P1", "Ch1"),
+        make_para_with_heading("P2", "Ch1"),
+        make_title_with_heading("Ch2", "Ch2"),
+        make_para_with_heading("P3", "Ch2"),
+    ];
+    let graph = ElementGraph::build(&elements);
+
+    // elements_in_section(idx) devuelve los índices de hijos de ese título
+    let ch1_section = graph.elements_in_section(0);
+    assert_eq!(ch1_section, vec![1, 2]);
+
+    let ch2_section = graph.elements_in_section(3);
+    assert_eq!(ch2_section, vec![4]);
+}
+
+#[test]
+fn test_graph_top_level_sections() {
+    let elements = vec![
+        make_para_with_heading("Preamble", ""),
+        make_title_with_heading("Ch1", "Ch1"),
+        make_para_with_heading("P1", "Ch1"),
+        make_title_with_heading("Ch2", "Ch2"),
+    ];
+    let graph = ElementGraph::build(&elements);
+
+    // top_level_sections() devuelve índices de los Title sin padre
+    let sections = graph.top_level_sections();
+    assert_eq!(sections, vec![1, 3]);
+}
+```
+
+Añadir métodos en `ElementGraph`:
+```rust
+pub fn elements_in_section(&self, title_idx: usize) -> Vec<usize> {
+    self.children_of(title_idx).to_vec()
+}
+pub fn top_level_sections(&self) -> Vec<usize> {
+    // índices de Title elements con parent = None
+}
+```
+
+Estimación: 15 min.
+
+---
+
+#### Ciclo 1.5 — Índice fuera de rango (robustez)
+
+Test a escribir en `element_graph_test.rs`:
+```rust
+#[test]
+#[should_panic]
+fn test_graph_out_of_bounds_panics() {
+    let graph = ElementGraph::build(&[make_title("T")]);
+    let _ = graph.parent_of(99);  // debe panic con bounds check
+}
+```
+
+Esta es la especificación: acceso fuera de bounds usa indexación normal de Vec (panic).
+No se añade código — el test documenta el contrato.
+Estimación: 5 min.
+
+---
+
+### Fase 2: Integración con PdfDocument y pipeline público
+
+#### Ciclo 2.1 — Método `PdfDocument::partition_graph()`
+
+**Archivo de tests**: `oxidize-pdf-core/tests/element_graph_integration_test.rs` (nuevo)
+
+Test a escribir:
+```rust
+#[test]
+fn test_partition_graph_from_fragments() {
+    // Usar Partitioner directamente (sin PDF real)
+    let fragments = vec![
+        frag("Chapter One", 50.0, 750.0, 24.0),
+        frag("First paragraph text.", 50.0, 700.0, 12.0),
+        frag("Second paragraph text.", 50.0, 680.0, 12.0),
+    ];
+    let elements = Partitioner::new(PartitionConfig::default())
+        .partition_fragments(&fragments, 0, 842.0);
+
+    let graph = ElementGraph::build(&elements);
+
+    // Encontrar el título
+    let title_idx = elements.iter().position(|e| matches!(e, Element::Title(_))).unwrap();
+    // El título debe tener 2 hijos
+    assert_eq!(graph.children_of(title_idx).len(), 2);
+}
+```
+
+Implementación: `ElementGraph::build` ya existe de Fase 1. Este ciclo solo añade el test de
+integración con `Partitioner` real para verificar que el pipeline funciona de extremo a extremo.
+
+Estimación: 15 min.
+
+---
+
+#### Ciclo 2.2 — Feature-gated: `partition_graph()` en `PdfDocument`
+
+Test a escribir en `element_graph_integration_test.rs`:
+```rust
+#[test]
+fn test_pdfdocument_partition_graph_with_fixture() {
+    let fixture = format!(
+        "{}/tests/fixtures/Cold_Email_Hacks.pdf",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    if !std::path::Path::new(&fixture).exists() {
+        eprintln!("Skipping: fixture not available");
+        return;
+    }
+    let doc = oxidize_pdf::parser::PdfDocument::open(&fixture).unwrap();
+    let elements = doc.partition().unwrap();
+    let graph = ElementGraph::build(&elements);
+
+    assert_eq!(graph.len(), elements.len());
+
+    // Verificar que algunas relaciones existen
+    let has_titles = elements.iter().any(|e| matches!(e, Element::Title(_)));
+    if has_titles {
+        let titles_with_children: Vec<_> = elements
+            .iter()
+            .enumerate()
+            .filter(|(i, e)| matches!(e, Element::Title(_)) && !graph.children_of(*i).is_empty())
+            .collect();
+        assert!(!titles_with_children.is_empty(),
+            "Al menos un titulo debe tener hijos en el grafo");
     }
 }
 ```
 
-### Step 2.2 -- `to_markdown()`, `to_json()`, `to_contextual()`
-
-```
-TEST: test_to_markdown_produces_output
-- doc = PdfDocument::open(fixture)
-- result = doc.to_markdown()
-- Assert Ok, contiene "---" (YAML frontmatter), contiene texto de pagina
-
-TEST: test_to_markdown_matches_free_function
-- Compare doc.to_markdown() con ai::export_to_markdown(&doc)
-- Assert output identico
-
-TEST: test_to_contextual_produces_output
-- doc.to_contextual()
-- Assert contiene "Document:" header
-
-TEST: test_to_contextual_matches_free_function
-- Compare doc.to_contextual() con ai::export_to_contextual(&doc)
-
-TEST: test_to_json_produces_output (cfg semantic)
-- doc.to_json()
-- Assert JSON valido, contiene "pages" key
-
-TEST: test_to_json_matches_free_function (cfg semantic)
-- Compare doc.to_json() con ai::export_to_json(&doc)
-```
-
-**Implementation**: Metodos en `PdfDocument<R>` que delegan a `crate::ai::export_to_markdown(self)`, etc.
-
-### Step 2.3 -- `chunk()` convenience method
-
-```
-TEST: test_chunk_basic
-- chunks = doc.chunk(512)
-- Assert Ok, non-empty, cada chunk tiene content
-
-TEST: test_chunk_small_size
-- chunks con chunk(10) tiene mas chunks que chunk(512)
-
-TEST: test_chunk_respects_size
-- chunks = doc.chunk(50)
-- Assert todos los chunks tienen tokens <= 60 (tolerancia)
-
-TEST: test_chunk_with_overlap
-- chunks = doc.chunk_with(ChunkConfig { size: 100, overlap: 20 })
-- Assert overlap entre chunks consecutivos
-```
-
-**Implementation**:
+Implementación: Añadir a `PdfDocument` en `parser/document.rs`:
 ```rust
-pub fn chunk(&self, target_tokens: usize) -> ParseResult<Vec<DocumentChunk>> {
-    let chunker = DocumentChunker::new(target_tokens, target_tokens / 10);
-    let extracted = self.extract_text()?;
-    let page_texts: Vec<(usize, String)> = extracted.iter().enumerate()
-        .map(|(i, t)| (i + 1, t.text.clone())).collect();
-    chunker.chunk_text_with_pages(&page_texts).map_err(...)
+pub fn partition_graph(
+    &self,
+    config: PartitionConfig,
+) -> ParseResult<(Vec<Element>, ElementGraph)> {
+    let elements = self.partition_with(config)?;
+    let graph = ElementGraph::build(&elements);
+    Ok((elements, graph))
 }
 ```
 
-**Files**:
-- MODIFY: `oxidize-pdf-core/src/parser/document.rs` (add open, to_markdown, to_contextual, to_json, chunk, chunk_with)
-- CREATE: `oxidize-pdf-core/tests/vibecoding_facade_test.rs`
+Re-export `ElementGraph` en `oxidize-pdf-core/src/lib.rs` vía `pipeline::ElementGraph`.
+Estimación: 20 min.
 
 ---
 
-## Phase 3: Partition
-**Branch**: `feature/partition-elements`
-**Dependency**: Phase 1
-**Risk**: Medium (nueva logica de clasificacion)
+### Fase 3: Mejora del HybridChunker con información del grafo (opcional pero de alto valor)
 
-### Step 3.1 -- PartitionConfig
+El `HybridChunker` actual usa `parent_heading` de `ElementMetadata` para propagar contexto.
+Con el grafo disponible, podemos hacer chunking por sección completa (todos los hijos de un
+título en el mismo chunk cuando caben en el budget).
 
-**Test file**: `oxidize-pdf-core/tests/partition_test.rs`
+#### Ciclo 3.1 — `HybridChunker::chunk_with_graph()`
 
-```
-TEST: test_partition_config_defaults
-- cfg = PartitionConfig::default()
-- Assert detect_tables = true, detect_headers_footers = true
-- Assert title_min_font_ratio = 1.3
+**Archivo de tests**: `oxidize-pdf-core/tests/hybrid_chunking_graph_test.rs` (nuevo)
 
-TEST: test_partition_config_builder
-- cfg = PartitionConfig::new().with_title_min_font_ratio(1.5).without_tables()
-- Assert valores aplicados
-```
+Test a escribir:
+```rust
+#[test]
+fn test_hybrid_chunk_with_graph_keeps_section_together() {
+    // Sección pequeña: título + 2 párrafos cortos que caben en 512 tokens
+    let elements = vec![
+        make_title_with_heading("Short Section", "Short Section"),
+        make_para_with_heading("Para one text.", "Short Section"),
+        make_para_with_heading("Para two text.", "Short Section"),
+    ];
+    let graph = ElementGraph::build(&elements);
+    let chunker = HybridChunker::default();
+    let chunks = chunker.chunk_with_graph(&elements, &graph);
 
-**Implementation file**: `oxidize-pdf-core/src/pipeline/partition.rs`
+    // Todos los elementos de la sección deben estar en el mismo chunk
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].elements().len(), 3);
+    assert_eq!(chunks[0].heading_context.as_deref(), Some("Short Section"));
+}
 
-### Step 3.2 -- Title detection (font size heuristic)
+#[test]
+fn test_hybrid_chunk_with_graph_splits_large_section() {
+    // Sección grande: título + muchos párrafos que no caben juntos
+    let mut elements = vec![
+        make_title_with_heading("Big Section", "Big Section"),
+    ];
+    for i in 0..20 {
+        elements.push(make_para_with_heading(
+            &format!("This is paragraph {} with enough words to consume tokens.", i),
+            "Big Section",
+        ));
+    }
+    let graph = ElementGraph::build(&elements);
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 30,
+        ..Default::default()
+    });
+    let chunks = chunker.chunk_with_graph(&elements, &graph);
 
-```
-TEST: test_partition_detects_title_by_font_size
-- TextFragments: uno a 24pt bold ("Introduction"), resto a 12pt
-- Assert primer Element es Title con text "Introduction"
-
-TEST: test_partition_no_title_when_uniform_size
-- Todos fragments a 12pt
-- Assert no Title elements (todo Paragraph)
-
-TEST: test_partition_multiple_titles
-- Fragments con 2 bloques a 24pt separados por texto a 12pt
-- Assert 2 Title elements
-```
-
-### Step 3.3 -- Header/Footer detection (position heuristic)
-
-```
-TEST: test_partition_detects_header
-- Fragment a y > 95% de page height, font pequeno, texto repetido
-- Assert Element::Header
-
-TEST: test_partition_detects_footer
-- Fragment a y < 5% de page height, contiene "Page X"
-- Assert Element::Footer
-
-TEST: test_partition_header_footer_excluded_from_body
-- Pagina con header, body, footer
-- Partition: Header + Paragraphs + Footer
-- Assert body text no incluye header/footer text
-```
-
-### Step 3.4 -- Table detection (delegacion a StructuredDataDetector)
-
-```
-TEST: test_partition_detects_tables
-- TextFragments formando grid 3x3
-- Assert Element::Table con 3 rows, 3 columns
-
-TEST: test_partition_table_contains_data
-- Table con cells "A", "B", "C" / "1", "2", "3"
-- Assert cell text accesible desde Element::Table
+    // Debe haber más de 1 chunk, pero todos deben tener heading_context = "Big Section"
+    assert!(chunks.len() > 1);
+    for chunk in &chunks {
+        assert_eq!(chunk.heading_context.as_deref(), Some("Big Section"));
+    }
+}
 ```
 
-### Step 3.5 -- KeyValue detection
-
-```
-TEST: test_partition_detects_key_value
-- Fragments: "Name: John Doe", "Date: 2024-01-01"
-- Assert Element::KeyValue para cada uno
-
-TEST: test_partition_key_value_has_key_and_value
-- Assert key() = "Name", value() = "John Doe"
-```
-
-### Step 3.6 -- ListItem detection
-
-```
-TEST: test_partition_detects_bullet_list
-- Fragments: "- Item 1", "- Item 2", "- Item 3"
-- Assert Element::ListItem para cada uno
-
-TEST: test_partition_detects_numbered_list
-- Fragments: "1. First", "2. Second"
-- Assert Element::ListItem para cada uno
+Implementación — añadir en `hybrid_chunking.rs`:
+```rust
+impl HybridChunker {
+    pub fn chunk_with_graph(
+        &self,
+        elements: &[Element],
+        graph: &ElementGraph,
+    ) -> Vec<HybridChunk> {
+        // Estrategia: iterar top_level_sections() del grafo.
+        // Para cada sección, intentar poner todo en un chunk.
+        // Si no cabe, delegar a chunk() para esa subsección.
+        // Elementos sin sección (preamble) se procesan con chunk() normal.
+    }
+}
 ```
 
-### Step 3.7 -- PdfDocument::partition()
-
-```
-TEST: test_pdfdocument_partition
-- doc = PdfDocument::open(fixture con tablas y headers)
-- elements = doc.partition()
-- Assert non-empty, al menos un Paragraph
-
-TEST: test_pdfdocument_partition_with_config
-- elements = doc.partition_with(PartitionConfig::new().without_tables())
-- Assert no Table elements
-
-TEST: test_partition_preserves_page_numbers
-- Multi-page doc
-- Assert elements tienen page numbers correctos
-
-TEST: test_partition_reading_order
-- Elements en reading order (pagina por pagina, top to bottom)
-```
-
-**Implementation**:
-- `pipeline::partition::Partitioner` con `partition(fragments, config) -> Vec<Element>`
-- Internamente: 1) Detectar headers/footers por posicion, 2) Detectar tablas via StructuredDataDetector, 3) Detectar KV pairs, 4) Detectar titulos por font-size ratio, 5) Detectar listas por prefijos bullet/number, 6) Resto = Paragraph
-- `PdfDocument::partition()` y `partition_with(config)` delegan a Partitioner
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/partition.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/mod.rs`
-- MODIFY: `oxidize-pdf-core/src/parser/document.rs` (add partition(), partition_with())
-- CREATE: `oxidize-pdf-core/tests/partition_test.rs`
+Estimación: 30 min.
 
 ---
 
-## Phase 4: Reading Order
-**Branch**: `feature/reading-order`
-**Dependency**: Phase 1
-**Risk**: Medium (XY-Cut algorithm)
+### Fase 4: Tests de integración end-to-end
 
-### Step 4.1 -- ReadingOrderStrategy trait
+**Archivo**: `oxidize-pdf-core/tests/element_relationships_advanced_test.rs` (nuevo)
 
-**Test file**: `oxidize-pdf-core/tests/reading_order_test.rs`
-
-```
-TEST: test_simple_reading_order_top_to_bottom
-- Fragments dispersos verticalmente
-- SimpleReadingOrder ordena por page, Y desc, X asc
-- Assert orden correcto
-
-TEST: test_simple_reading_order_left_to_right_same_line
-- Fragments en misma linea (Y dentro de threshold)
-- Assert ordenados izquierda a derecha
-```
-
-**Implementation file**: `oxidize-pdf-core/src/pipeline/reading_order.rs`
+#### Ciclo 4.1 — Navegación completa de un documento artificial
 
 ```rust
-pub trait ReadingOrderStrategy {
-    fn order(&self, fragments: &mut [TextFragment]);
+#[test]
+fn test_full_navigation_three_sections() {
+    let fragments = vec![
+        frag("Preamble text here.", 50.0, 800.0, 12.0),
+        frag("Chapter One", 50.0, 750.0, 24.0),
+        frag("Content of chapter one.", 50.0, 700.0, 12.0),
+        frag("More content of chapter one.", 50.0, 680.0, 12.0),
+        frag("Chapter Two", 50.0, 630.0, 24.0),
+        frag("Content of chapter two.", 50.0, 580.0, 12.0),
+        frag("Chapter Three", 50.0, 530.0, 24.0),
+    ];
+    let elements = Partitioner::new(PartitionConfig::default())
+        .partition_fragments(&fragments, 0, 842.0);
+    let graph = ElementGraph::build(&elements);
+
+    let sections = graph.top_level_sections();
+    // Debe haber exactamente 3 secciones
+    assert_eq!(sections.len(), 3);
+
+    let ch1_idx = sections[0];
+    let ch1_children = graph.elements_in_section(ch1_idx);
+    assert_eq!(ch1_children.len(), 2);  // 2 párrafos en Chapter One
+
+    let ch3_idx = sections[2];
+    let ch3_children = graph.elements_in_section(ch3_idx);
+    assert_eq!(ch3_children.len(), 0);  // Chapter Three no tiene hijos
+
+    // Navegación next/prev entre secciones
+    assert_eq!(graph.next_of(ch1_idx), Some(ch1_idx + 1));  // siguiente elemento
 }
+```
 
-pub struct SimpleReadingOrder {
-    pub line_threshold: f64,
+#### Ciclo 4.2 — Verificar que la API pública de Vec<Element> no cambia
+
+```rust
+#[test]
+fn test_partition_api_unchanged() {
+    // Este test verifica backward compatibility:
+    // partition() sigue devolviendo Vec<Element> sin cambios.
+    let fragments = vec![
+        frag("Title", 50.0, 750.0, 24.0),
+        frag("Body.", 50.0, 700.0, 12.0),
+    ];
+    let elements: Vec<oxidize_pdf::pipeline::Element> =
+        Partitioner::new(PartitionConfig::default())
+            .partition_fragments(&fragments, 0, 842.0);
+
+    // La API original funciona sin graph
+    assert!(!elements.is_empty());
+    assert_eq!(
+        elements[0].metadata().parent_heading.as_deref(),
+        Some("Title")
+    );
 }
 ```
 
-### Step 4.2 -- XY-Cut algorithm
-
-```
-TEST: test_xycut_single_column
-- Fragments en una sola columna
-- XYCut produce mismo orden que Simple
-
-TEST: test_xycut_two_columns
-- Columna izquierda: (x~100, y: 700, 680, 660)
-- Columna derecha: (x~300, y: 700, 680, 660)
-- XYCut ordena: toda columna izquierda primero, luego toda derecha
-- Simple intercalaria por Y
-
-TEST: test_xycut_newspaper_three_columns
-- Layout 3 columnas
-- Assert izquierda-a-derecha, top-to-bottom dentro de cada columna
-
-TEST: test_xycut_mixed_single_and_double
-- Mitad superior: columna unica (titulo)
-- Mitad inferior: dos columnas
-- Assert titulo primero, luego columna izquierda, luego derecha
-
-TEST: test_xycut_empty
-- Empty fragments -> empty result
-
-TEST: test_xycut_single_fragment
-- Un fragment -> un element
-```
-
-**Implementation**: XY-Cut recursivo:
-1. Encontrar mayor gap horizontal de whitespace -> si significativo, dividir top/bottom
-2. Encontrar mayor gap vertical de whitespace -> si significativo, dividir left/right
-3. Recurrir en cada sub-region
-4. Leaf regions se ordenan Y desc, X asc
-
-### Step 4.3 -- Integracion con partition
-
-```
-TEST: test_partition_with_reading_order
-- Doc con PDF de dos columnas
-- partition_with(config.with_reading_order(ReadingOrder::XYCut))
-- Assert elements ordenados columna-por-columna
-
-TEST: test_partition_default_uses_simple
-- doc.partition() usa SimpleReadingOrder por defecto
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/reading_order.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/mod.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/partition.rs` (usa ReadingOrderStrategy)
-- CREATE: `oxidize-pdf-core/tests/reading_order_test.rs`
+Estimación: 15 min.
 
 ---
 
-## Phase 5: Semantic Chunking
-**Branch**: `feature/semantic-chunking`
-**Dependency**: Phase 1 + Phase 3
-**Risk**: Medium
+## Archivos a crear
 
-### Step 5.1 -- SemanticChunker config
+| Archivo | Propósito |
+|---------|-----------|
+| `oxidize-pdf-core/src/pipeline/graph.rs` | `ElementGraph` struct + `build()` + métodos de navegación |
+| `oxidize-pdf-core/tests/element_graph_test.rs` | Tests unitarios de ElementGraph (Ciclos 1.1–1.5) |
+| `oxidize-pdf-core/tests/element_graph_integration_test.rs` | Tests de integración con Partitioner y PdfDocument (Ciclos 2.1–2.2) |
+| `oxidize-pdf-core/tests/hybrid_chunking_graph_test.rs` | Tests de HybridChunker con grafo (Ciclo 3.1) |
+| `oxidize-pdf-core/tests/element_relationships_advanced_test.rs` | Tests end-to-end (Ciclos 4.1–4.2) |
 
-**Test file**: `oxidize-pdf-core/tests/semantic_chunking_test.rs`
+## Archivos a modificar
 
-```
-TEST: test_semantic_chunk_config_defaults
-- cfg = SemanticChunkConfig::default()
-- Assert max_tokens = 512, overlap_tokens = 50
-- Assert respect_element_boundaries = true
+| Archivo | Cambio |
+|---------|--------|
+| `oxidize-pdf-core/src/pipeline/mod.rs` | `pub mod graph;` + `pub use graph::ElementGraph;` |
+| `oxidize-pdf-core/src/pipeline/hybrid_chunking.rs` | Añadir `chunk_with_graph()` method |
+| `oxidize-pdf-core/src/parser/document.rs` | Añadir `partition_graph()` method |
+| `oxidize-pdf-core/src/lib.rs` | Re-export `ElementGraph` en el espacio público si es necesario |
 
-TEST: test_semantic_chunk_config_builder
-- cfg = SemanticChunkConfig::new(1024).with_overlap(100)
-- Assert valores
-```
+## Estimación Total
 
-**Implementation file**: `oxidize-pdf-core/src/pipeline/semantic_chunking.rs`
+| Fase | Ciclos | Tiempo |
+|------|--------|--------|
+| Fase 1: ElementGraph | 5 ciclos | ~75 min |
+| Fase 2: Integración API | 2 ciclos | ~35 min |
+| Fase 3: HybridChunker | 1 ciclo | ~30 min |
+| Fase 4: End-to-end | 2 ciclos | ~15 min |
+| **Total** | **10 ciclos** | **~2.5 horas** |
 
-### Step 5.2 -- Chunking respeta Element boundaries
+Tests nuevos estimados: ~20 tests.
 
-```
-TEST: test_semantic_chunk_title_not_split
-- Elements: [Title("Intro"), Paragraph("long text...500 words")]
-- chunk_size = 100
-- Assert Title esta enteramente en primer chunk
+## Criterios de Éxito
 
-TEST: test_semantic_chunk_table_stays_whole
-- Elements: [Paragraph("text"), Table(small 3x3), Paragraph("more")]
-- Assert Table en exactamente un chunk
+- [ ] `ElementGraph::build(&elements)` compila sin warnings clippy
+- [ ] Navegación parent/child/next/prev funciona en todos los tests
+- [ ] `partition_graph()` en PdfDocument devuelve `(Vec<Element>, ElementGraph)` correctamente
+- [ ] `chunk_with_graph()` mantiene contexto de heading en todos los chunks de una sección
+- [ ] `cargo test --workspace` pasa al 100%
+- [ ] `cargo clippy -- -D warnings` pasa sin warnings
+- [ ] La API `Vec<Element>` original no cambia (backward compatible)
+- [ ] Los 8 tests originales de `element_relationships_test.rs` siguen en verde
 
-TEST: test_semantic_chunk_large_table_allowed_to_overflow
-- Elements: [Table(100 rows)]
-- Assert Table tiene su propio chunk aunque > max_tokens
-- Assert chunk marcado como oversized
+## Orden de ejecución recomendado
 
-TEST: test_semantic_chunk_paragraph_split_at_sentence
-- Elements: [Paragraph("Sentence one. Sentence two. ...muchas sentences")]
-- Assert chunks parten en sentence boundaries
-
-TEST: test_semantic_chunk_preserves_metadata
-- Cada chunk tiene page_numbers, element_types
-- Assert chunk de Title+Paragraph tiene ambos tipos listados
-```
-
-### Step 5.3 -- SemanticChunk output
-
-```
-TEST: test_semantic_chunk_has_elements
-- chunks = chunker.chunk(elements)
-- Assert cada SemanticChunk tiene .elements() -> &[Element]
-- Assert .text() concatena element texts
-- Assert .token_estimate() > 0
-
-TEST: test_semantic_chunk_overlap
-- Dos chunks consecutivos
-- Assert ultimo element de chunk N aparece como primero de chunk N+1
-  (cuando overlap > 0 y element es Paragraph)
-```
-
-### Step 5.4 -- Integracion con PdfDocument
-
-```
-TEST: test_pdfdocument_semantic_chunk
-- doc.partition() -> elements
-- SemanticChunker::new(config).chunk(&elements)
-- Assert chunks validos
-
-TEST: test_pdfdocument_chunk_vs_semantic_chunk
-- old = doc.chunk(512) -- whitespace-based
-- new = SemanticChunker::default().chunk(&doc.partition()?)
-- Assert new chunks respetan mejor element boundaries
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/semantic_chunking.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/mod.rs`
-- CREATE: `oxidize-pdf-core/tests/semantic_chunking_test.rs`
-
----
-
-## Phase 6: Deprecations
-**Branch**: `feature/deprecate-ai-free-functions`
-**Dependency**: Phase 2
-**Risk**: Low
-
-**Test file**: `oxidize-pdf-core/tests/deprecation_parity_test.rs`
-
-```
-TEST: test_to_markdown_parity
-- old = ai::export_to_markdown(&doc)?
-- new = doc.to_markdown()?
-- Assert old == new
-
-TEST: test_to_contextual_parity
-- old = ai::export_to_contextual(&doc)?
-- new = doc.to_contextual()?
-- Assert old == new
-
-TEST: test_to_json_parity (cfg semantic)
-- old = ai::export_to_json(&doc)?
-- new = doc.to_json()?
-- Assert old == new
-
-TEST: test_to_chunks_parity (cfg semantic)
-- old = ai::export_to_chunks(&doc, 512, 50)?
-- new = doc.chunk(512)?
-- Assert mismo numero de chunks (aproximado por diferencia en overlap defaults)
-```
-
-**Implementation**: `#[deprecated(since = "2.1.0", note = "Use PdfDocument::to_markdown() instead")]` en:
-- `ai::export_to_markdown`
-- `ai::export_to_contextual`
-- `ai::export_to_json`
-- `ai::export_to_chunks`
-
-Tests usan `#[allow(deprecated)]` para suprimir warnings.
-
-**Files**:
-- MODIFY: `oxidize-pdf-core/src/ai/mod.rs`
-- CREATE: `oxidize-pdf-core/tests/deprecation_parity_test.rs`
-
----
-
-## Phase 7: Integration
-**Branch**: `feature/pipeline-integration`
-**Dependency**: ALL phases
-**Risk**: Low (conectar piezas existentes)
-
-**Test file**: `oxidize-pdf-core/tests/pipeline_integration_test.rs`
-
-```
-TEST: test_full_pipeline_hello_world
-- doc = PdfDocument::open("examples/results/hello_world.pdf")
-- elements = doc.partition()?
-- Assert al menos 1 element
-- markdown = doc.to_markdown()?
-- Assert non-empty
-
-TEST: test_full_pipeline_with_tables
-- doc con PDF que tiene tablas
-- elements = doc.partition()?
-- Assert al menos 1 Table element
-- chunks = SemanticChunker::new(config).chunk(&elements)?
-- Assert table no se parte
-
-TEST: test_full_pipeline_multi_page
-- doc multi-pagina
-- elements = doc.partition()?
-- Assert elements span multiple pages
-- Assert page numbers monotonically non-decreasing
-
-TEST: test_pipeline_roundtrip_text_preservation
-- text_original = doc.extract_text()?
-- elements = doc.partition()?
-- text_from_elements = concatenar todos los element texts
-- Assert text_from_elements contiene todas las words de text_original
-  (modulo whitespace normalization)
-
-TEST: test_pipeline_xycut_two_column_pdf
-- doc con layout 2 columnas conocido
-- elements = doc.partition_with(config.with_reading_order(ReadingOrder::XYCut))?
-- Assert contenido columna A viene antes de columna B
-
-TEST: test_pipeline_chunk_to_markdown
-- elements = doc.partition()?
-- chunks = SemanticChunker::default().chunk(&elements)?
-- Para cada chunk: assert Markdown export es valido
-```
-
-### VibeCoding "golden path" tests
-
-```
-TEST: test_vibecoding_three_lines
-- doc = PdfDocument::open("report.pdf")?;
-- let markdown = doc.to_markdown()?;
-- let chunks = doc.chunk(512)?;
-// Verificar que esto es TODO el codigo necesario
-
-TEST: test_vibecoding_partition_and_chunk
-- doc = PdfDocument::open("report.pdf")?;
-- let elements = doc.partition()?;
-- let chunks = SemanticChunker::default().chunk(&elements)?;
-// Verificar que funciona con zero configuration
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/tests/pipeline_integration_test.rs`
-
----
-
-## Dependency Graph
-
-```
-develop
-  |-- feature/element-type-system (Phase 1) --+
-  |-- feature/vibecoding-facade (Phase 2)     | (independiente de Phase 1)
-  |                                           |
-  |-- feature/partition-elements (Phase 3) ---+ (depende de Phase 1)
-  |                                           |
-  |-- feature/reading-order (Phase 4) --------+ (depende de Phase 1)
-  |                                           |
-  |-- feature/semantic-chunking (Phase 5) ----+ (depende de Phase 1 + Phase 3)
-  |                                           |
-  |-- feature/deprecate-ai-free-functions (6) + (depende de Phase 2)
-  |                                           |
-  +-- feature/pipeline-integration (Phase 7) -+ (depende de TODAS)
-```
-
-**Paralelizable**: Phase 1 y Phase 2 en paralelo. Phase 3 y Phase 4 en paralelo tras merge de Phase 1.
-
-## Estimacion de Tests
-
-| Phase | Tests nuevos | Acumulado |
-|-------|-------------|-----------|
-| 1 | ~13 | 6,212 |
-| 2 | ~12 | 6,224 |
-| 3 | ~14 | 6,238 |
-| 4 | ~10 | 6,248 |
-| 5 | ~10 | 6,258 |
-| 6 | ~4 | 6,262 |
-| 7 | ~8 | 6,270 |
-| **Total** | **~71** | **~6,270** |
-
-## Archivos Nuevos
-
-| Phase | File | Proposito |
-|-------|------|---------|
-| 1 | `src/pipeline/mod.rs` | Pipeline module root |
-| 1 | `src/pipeline/element.rs` | Element enum + metadata types |
-| 1 | `tests/element_types_test.rs` | Element type system tests |
-| 2 | `tests/vibecoding_facade_test.rs` | VibeCoding facade tests |
-| 3 | `src/pipeline/partition.rs` | Partitioner + PartitionConfig |
-| 3 | `tests/partition_test.rs` | Partition tests |
-| 4 | `src/pipeline/reading_order.rs` | ReadingOrderStrategy trait + Simple + XYCut |
-| 4 | `tests/reading_order_test.rs` | Reading order tests |
-| 5 | `src/pipeline/semantic_chunking.rs` | SemanticChunker + SemanticChunkConfig |
-| 5 | `tests/semantic_chunking_test.rs` | Semantic chunking tests |
-| 6 | `tests/deprecation_parity_test.rs` | Deprecation parity tests |
-| 7 | `tests/pipeline_integration_test.rs` | End-to-end integration tests |
-
-## Archivos Modificados
-
-| Phase | File | Cambio |
-|-------|------|--------|
-| 1 | `src/lib.rs` | Add `pub mod pipeline;` + re-exports |
-| 2 | `src/parser/document.rs` | Add open(), to_markdown(), to_contextual(), to_json(), chunk(), chunk_with() |
-| 3 | `src/parser/document.rs` | Add partition(), partition_with() |
-| 4 | `src/pipeline/partition.rs` | Usar ReadingOrderStrategy |
-| 6 | `src/ai/mod.rs` | Add #[deprecated] attributes |
+1. Ciclo 1.1 → 1.2 → 1.3 → 1.4 → 1.5 (secuencial: cada uno depende del anterior)
+2. Ciclos 2.1 → 2.2 (secuencial: 2.2 depende de 2.1)
+3. Ciclo 3.1 (independiente: puede hacerse en cualquier momento después de Ciclo 1.3)
+4. Ciclos 4.1 → 4.2 (al final, cuando todo lo anterior está verde)

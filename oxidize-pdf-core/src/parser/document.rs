@@ -1427,6 +1427,39 @@ impl<R: Read + Seek> PdfDocument<R> {
 
         Ok(all_elements)
     }
+
+    /// Partition the document into typed elements and build a relationship graph.
+    ///
+    /// Returns a tuple of `(elements, graph)` where the graph captures parent/child
+    /// and next/prev relationships between elements by index.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::PartitionConfig;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let (elements, graph) = doc.partition_graph(PartitionConfig::default())?;
+    ///
+    /// for title_idx in graph.top_level_sections() {
+    ///     println!("Section: {}", elements[title_idx].text());
+    ///     for child_idx in graph.elements_in_section(title_idx) {
+    ///         println!("  {}", elements[child_idx].text());
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn partition_graph(
+        &self,
+        config: crate::pipeline::PartitionConfig,
+    ) -> ParseResult<(Vec<crate::pipeline::Element>, crate::pipeline::ElementGraph)> {
+        let elements = self.partition_with(config)?;
+        let graph = crate::pipeline::ElementGraph::build(&elements);
+        Ok((elements, graph))
+    }
 }
 
 impl PdfDocument<File> {

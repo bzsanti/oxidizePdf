@@ -1,3 +1,4 @@
+use crate::pipeline::graph::ElementGraph;
 use crate::pipeline::Element;
 
 /// Configuration for hybrid chunking.
@@ -149,6 +150,77 @@ impl HybridChunker {
                 heading_context: buffer_heading,
                 oversized: false,
             });
+        }
+
+        chunks
+    }
+
+    /// Chunk a list of elements using the relationship graph to keep sections together.
+    ///
+    /// This method uses graph structure to group elements by section (all children of
+    /// a title element), then attempts to pack each section into a single chunk.  If
+    /// a section exceeds `max_tokens`, it delegates to [`chunk`](Self::chunk) for that
+    /// section's elements, ensuring all resulting sub-chunks still carry the section's
+    /// heading context.
+    ///
+    /// Elements that have no parent section (preamble elements before any title) are
+    /// chunked with the standard `chunk()` strategy.
+    pub fn chunk_with_graph(&self, elements: &[Element], graph: &ElementGraph) -> Vec<HybridChunk> {
+        if elements.is_empty() {
+            return Vec::new();
+        }
+
+        let mut chunks: Vec<HybridChunk> = Vec::new();
+
+        // Collect preamble: indices with no parent AND not a title.
+        let top_sections = graph.top_level_sections();
+
+        // Determine the index of the first title so we know the preamble boundary.
+        let first_title_idx = top_sections.first().copied().unwrap_or(elements.len());
+
+        // ── Preamble (elements before the first title section) ────────────────
+        if first_title_idx > 0 {
+            let preamble: Vec<Element> = elements[..first_title_idx].to_vec();
+            chunks.extend(self.chunk(&preamble));
+        }
+
+        // ── Process each top-level section ────────────────────────────────────
+        for &title_idx in &top_sections {
+            let title_heading = elements[title_idx]
+                .metadata()
+                .parent_heading
+                .clone()
+                .or_else(|| Some(elements[title_idx].text().to_string()));
+
+            let child_indices = graph.elements_in_section(title_idx);
+
+            // Gather section elements: title + all children.
+            let mut section_elements: Vec<Element> = Vec::with_capacity(1 + child_indices.len());
+            section_elements.push(elements[title_idx].clone());
+            for &ci in &child_indices {
+                section_elements.push(elements[ci].clone());
+            }
+
+            let section_tokens: usize = section_elements
+                .iter()
+                .map(|e| estimate_tokens(&e.display_text()))
+                .sum();
+
+            if section_tokens <= self.config.max_tokens {
+                // Entire section fits in one chunk.
+                chunks.push(HybridChunk {
+                    elements: section_elements,
+                    heading_context: title_heading,
+                    oversized: false,
+                });
+            } else {
+                // Section is too large — split with standard chunker, then fix heading.
+                let mut sub_chunks = self.chunk(&section_elements);
+                for sub in &mut sub_chunks {
+                    sub.heading_context = title_heading.clone();
+                }
+                chunks.extend(sub_chunks);
+            }
         }
 
         chunks
