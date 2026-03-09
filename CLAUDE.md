@@ -4,9 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | v2.0.0 |
+| **Version** | v2.1.0 |
 | **License** | MIT |
-| **Tests** | 6,278 unit + 88 integration + 191 doc tests |
+| **Tests** | 6,209 unit + 88 integration + 192 doc tests |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |
@@ -106,6 +106,9 @@ git push origin v1.2.3
 - **Font subsetting**: Skip only when font < 100KB AND chars < 10
 - **Font cache**: Two-tier (persistent by obj ref + per-page by name). PdfReader requires Mutex (used in Arc<RwLock<>> by LazyDocument)
 - **Debug writes**: Gated behind `verbose-debug` feature (zero overhead in production)
+- **ElementGraph**: Index-based (`Vec<Option<usize>>`) parent/child/next/prev navigation — avoids lifetime issues
+- **HybridChunker v2**: Agnostic merge policy, sentence splitting for oversized elements, `full_text()` with heading context for RAG
+- **Table detection**: Region segmentation (multiple tables/page), confidence threshold, anti-list heuristic
 
 ## Performance Baseline (v2.0.0)
 
