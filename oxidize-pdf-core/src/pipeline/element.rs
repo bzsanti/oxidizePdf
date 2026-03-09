@@ -92,6 +92,26 @@ impl Element {
         }
     }
 
+    /// Returns a mutable reference to the metadata of this element.
+    pub fn metadata_mut(&mut self) -> &mut ElementMetadata {
+        match self {
+            Self::Title(d)
+            | Self::Paragraph(d)
+            | Self::Header(d)
+            | Self::Footer(d)
+            | Self::ListItem(d)
+            | Self::CodeBlock(d) => &mut d.metadata,
+            Self::Table(t) => &mut t.metadata,
+            Self::Image(img) => &mut img.metadata,
+            Self::KeyValue(kv) => &mut kv.metadata,
+        }
+    }
+
+    /// Set the parent heading for this element.
+    pub fn set_parent_heading(&mut self, heading: Option<String>) {
+        self.metadata_mut().parent_heading = heading;
+    }
+
     /// Returns the number of rows if this is a Table element.
     pub fn row_count(&self) -> Option<usize> {
         match self {
@@ -212,6 +232,8 @@ pub struct ElementMetadata {
     pub is_bold: bool,
     /// Whether the text is italic.
     pub is_italic: bool,
+    /// The text of the nearest preceding Title element, if any.
+    pub parent_heading: Option<String>,
 }
 
 impl Default for ElementMetadata {
@@ -224,6 +246,7 @@ impl Default for ElementMetadata {
             font_size: None,
             is_bold: false,
             is_italic: false,
+            parent_heading: None,
         }
     }
 }

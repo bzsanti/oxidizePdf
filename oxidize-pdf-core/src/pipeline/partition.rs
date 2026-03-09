@@ -1,7 +1,20 @@
+use crate::pipeline::reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 use crate::pipeline::{
     Element, ElementBBox, ElementData, ElementMetadata, KeyValueElementData, TableElementData,
 };
 use crate::text::extraction::TextFragment;
+
+/// Strategy for ordering text fragments before classification.
+#[derive(Debug, Clone, Default)]
+pub enum ReadingOrderStrategy {
+    /// Simple top-to-bottom, left-to-right (default, line-threshold 5.0).
+    #[default]
+    Simple,
+    /// XY-Cut recursive algorithm. Handles multi-column layouts correctly.
+    XYCut { min_gap: f64 },
+    /// No reordering — preserve input order as-is.
+    None,
+}
 
 /// Configuration for the document partitioner.
 #[derive(Debug, Clone)]
@@ -19,6 +32,8 @@ pub struct PartitionConfig {
     /// Y-position threshold for footer detection (fraction of page height from bottom).
     /// Fragments below `page_height * footer_zone` are footer candidates.
     pub footer_zone: f64,
+    /// Reading order strategy applied to fragments before classification.
+    pub reading_order: ReadingOrderStrategy,
 }
 
 impl Default for PartitionConfig {
@@ -29,6 +44,7 @@ impl Default for PartitionConfig {
             title_min_font_ratio: 1.3,
             header_zone: 0.05,
             footer_zone: 0.05,
+            reading_order: ReadingOrderStrategy::Simple,
         }
     }
 }
@@ -54,6 +70,12 @@ impl PartitionConfig {
     /// Disable header/footer detection.
     pub fn without_headers_footers(mut self) -> Self {
         self.detect_headers_footers = false;
+        self
+    }
+
+    /// Set the reading order strategy applied before fragment classification.
+    pub fn with_reading_order(mut self, strategy: ReadingOrderStrategy) -> Self {
+        self.reading_order = strategy;
         self
     }
 }
@@ -91,6 +113,22 @@ impl Partitioner {
             return Vec::new();
         }
 
+        // Apply reading order strategy to fragments BEFORE classification
+        let fragments: std::borrow::Cow<[TextFragment]> = match &self.config.reading_order {
+            ReadingOrderStrategy::Simple => {
+                let mut ordered = fragments.to_vec();
+                SimpleReadingOrder::default().order(&mut ordered);
+                std::borrow::Cow::Owned(ordered)
+            }
+            ReadingOrderStrategy::XYCut { min_gap } => {
+                let mut ordered = fragments.to_vec();
+                XYCutReadingOrder::new(*min_gap).order(&mut ordered);
+                std::borrow::Cow::Owned(ordered)
+            }
+            ReadingOrderStrategy::None => std::borrow::Cow::Borrowed(fragments),
+        };
+        let fragments = fragments.as_ref();
+
         // Track which fragments have been claimed
         let mut claimed = vec![false; fragments.len()];
         let mut elements = Vec::new();
@@ -105,15 +143,25 @@ impl Partitioner {
                     continue;
                 }
                 if f.y >= header_threshold {
+                    let zone_size = page_height * self.config.header_zone;
+                    let distance = f.y - header_threshold;
+                    let header_confidence = compute_zone_confidence(distance, zone_size);
+                    let mut meta = meta_from_fragment(f, page);
+                    meta.confidence = header_confidence;
                     elements.push(Element::Header(ElementData {
                         text: f.text.clone(),
-                        metadata: meta_from_fragment(f, page),
+                        metadata: meta,
                     }));
                     claimed[i] = true;
                 } else if f.y + f.height <= footer_threshold {
+                    let zone_size = page_height * self.config.footer_zone;
+                    let distance = footer_threshold - (f.y + f.height);
+                    let footer_confidence = compute_zone_confidence(distance, zone_size);
+                    let mut meta = meta_from_fragment(f, page);
+                    meta.confidence = footer_confidence;
                     elements.push(Element::Footer(ElementData {
                         text: f.text.clone(),
-                        metadata: meta_from_fragment(f, page),
+                        metadata: meta,
                     }));
                     claimed[i] = true;
                 }
@@ -235,6 +283,9 @@ impl Partitioner {
                     && !key.contains('.')
                     && !is_prose_prefix(key)
                 {
+                    let kv_confidence = compute_kv_confidence(key);
+                    let mut meta = meta;
+                    meta.confidence = kv_confidence;
                     elements.push(Element::KeyValue(KeyValueElementData {
                         key: key.to_string(),
                         value: value.to_string(),
@@ -246,6 +297,11 @@ impl Partitioner {
 
             // 4. Title detection by font size
             if f.font_size >= title_threshold && f.font_size > body_font_size {
+                let ratio = f.font_size / body_font_size;
+                let title_confidence =
+                    compute_title_confidence(ratio, self.config.title_min_font_ratio);
+                let mut meta = meta;
+                meta.confidence = title_confidence;
                 elements.push(Element::Title(ElementData {
                     text: text.to_string(),
                     metadata: meta,
@@ -269,8 +325,24 @@ impl Partitioner {
             }));
         }
 
-        // Sort by reading order: Y descending within page (top-to-bottom)
-        elements.sort_by(super::element::element_reading_order);
+        // Post-classification sort: within-page order was established by pre-sort.
+        // Only sort by page to maintain multi-page document order.
+        match &self.config.reading_order {
+            ReadingOrderStrategy::None => {}
+            _ => {
+                elements.sort_by_key(|e| e.page());
+            }
+        }
+
+        // Post-classification relationship pass: assign parent_heading
+        let mut current_heading: Option<String> = None;
+        for element in &mut elements {
+            if matches!(element, Element::Title(_)) {
+                current_heading = Some(element.text().to_string());
+            }
+            element.set_parent_heading(current_heading.clone());
+        }
+
         elements
     }
 }
@@ -402,5 +474,37 @@ fn meta_from_fragment(f: &TextFragment, page: u32) -> ElementMetadata {
         font_size: Some(f.font_size),
         is_bold: f.is_bold,
         is_italic: f.is_italic,
+        parent_heading: None,
     }
+}
+
+// --- Confidence computation functions ---
+
+/// Title confidence: maps `[min_ratio, 2*min_ratio]` → `[0.5, 1.0]`.
+/// At exactly `min_ratio` → 0.5. At `2*min_ratio` or above → 1.0.
+fn compute_title_confidence(actual_ratio: f64, min_ratio: f64) -> f64 {
+    if min_ratio <= 0.0 {
+        return 1.0;
+    }
+    (0.5 + 0.5 * (actual_ratio - min_ratio) / min_ratio).clamp(0.5, 1.0)
+}
+
+/// Header/footer zone confidence: `clamp(distance / zone_size, 0.5, 1.0)`
+fn compute_zone_confidence(distance: f64, zone_size: f64) -> f64 {
+    if zone_size <= 0.0 {
+        return 0.5;
+    }
+    (distance / zone_size).clamp(0.5, 1.0)
+}
+
+/// KV confidence: penalizes long keys and multi-word keys.
+fn compute_kv_confidence(key: &str) -> f64 {
+    let len_penalty = key.len() as f64 / 40.0;
+    let word_count = key.split_whitespace().count();
+    let word_penalty = if word_count > 2 {
+        0.1 * (word_count - 2) as f64
+    } else {
+        0.0
+    };
+    (1.0 - len_penalty - word_penalty).clamp(0.5, 1.0)
 }

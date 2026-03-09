@@ -108,8 +108,6 @@ pub struct PlainTextExtractor {
     config: PlainTextConfig,
     /// Font cache for decoding text
     font_cache: HashMap<String, FontInfo>,
-    /// Cached CMap extractor for text decoding (reused across ShowText operations)
-    cmap_extractor: CMapTextExtractor<std::fs::File>,
 }
 
 impl Default for PlainTextExtractor {
@@ -132,7 +130,6 @@ impl PlainTextExtractor {
         Self {
             config: PlainTextConfig::default(),
             font_cache: HashMap::new(),
-            cmap_extractor: CMapTextExtractor::new(),
         }
     }
 
@@ -150,7 +147,6 @@ impl PlainTextExtractor {
         Self {
             config,
             font_cache: HashMap::new(),
-            cmap_extractor: CMapTextExtractor::new(),
         }
     }
 
@@ -371,12 +367,11 @@ impl PlainTextExtractor {
         text_bytes: &[u8],
         state: &TextState,
     ) -> ParseResult<String> {
-        // Try CMap-based decoding first (using cached extractor)
+        // Try CMap-based decoding first (free function — no allocation)
         if let Some(ref font_name) = state.font_name {
             if let Some(font_info) = self.font_cache.get(font_name) {
-                if let Ok(decoded) = self
-                    .cmap_extractor
-                    .decode_text_with_font(text_bytes, font_info)
+                if let Ok(decoded) =
+                    crate::text::extraction_cmap::decode_text_with_font(text_bytes, font_info)
                 {
                     return Ok(decoded);
                 }

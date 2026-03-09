@@ -13,6 +13,7 @@ fn frag(text: &str, x: f64, y: f64, font_size: f64, bold: bool) -> TextFragment 
         is_bold: bold,
         is_italic: false,
         color: None,
+        space_decisions: Vec::new(),
     }
 }
 

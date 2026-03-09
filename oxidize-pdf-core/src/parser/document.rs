@@ -1311,6 +1311,16 @@ impl<R: Read + Seek> PdfDocument<R> {
         crate::ai::export_to_markdown(self)
     }
 
+    /// Export the document to element-aware Markdown format.
+    ///
+    /// Unlike [`to_markdown`](Self::to_markdown), this method classifies elements
+    /// by type and maps each to its canonical Markdown representation.
+    pub fn to_element_markdown(&self) -> ParseResult<String> {
+        let elements = self.partition()?;
+        let exporter = crate::pipeline::export::ElementMarkdownExporter::default();
+        Ok(exporter.export(&elements))
+    }
+
     /// Export the document to a contextual text format for LLM consumption.
     ///
     /// Delegates to [`crate::ai::export_to_contextual`].
@@ -1374,6 +1384,29 @@ impl<R: Read + Seek> PdfDocument<R> {
             preserve_layout: true,
             ..Default::default()
         };
+        self.do_partition_pages(options, config)
+    }
+
+    /// Partition the document using a pre-configured extraction profile.
+    pub fn partition_with_profile(
+        &self,
+        profile: crate::pipeline::ExtractionProfile,
+    ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        let profile_cfg = profile.config();
+        let options = crate::text::ExtractionOptions {
+            preserve_layout: true,
+            space_threshold: profile_cfg.extraction.space_threshold,
+            detect_columns: profile_cfg.extraction.detect_columns,
+            ..crate::text::ExtractionOptions::default()
+        };
+        self.do_partition_pages(options, profile_cfg.partition)
+    }
+
+    fn do_partition_pages(
+        &self,
+        options: crate::text::ExtractionOptions,
+        config: crate::pipeline::PartitionConfig,
+    ) -> ParseResult<Vec<crate::pipeline::Element>> {
         let pages = self.extract_text_with_options(options)?;
         let partitioner = crate::pipeline::Partitioner::new(config);
 
