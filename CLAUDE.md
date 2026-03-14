@@ -4,9 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | v2.1.0 |
+| **Version** | v2.2.0 |
 | **License** | MIT |
-| **Tests** | 6,217 unit + 1,572 integration + 192 doc tests |
+| **Tests** | 6,220 unit + 1,572 integration + 192 doc tests |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |
