@@ -1362,7 +1362,27 @@ impl<R: Read + Seek> PdfDocument<R> {
         self.rag_chunks_with(crate::pipeline::HybridChunkConfig::default())
     }
 
-    /// Extract and chunk the document with a custom [`HybridChunkConfig`](crate::pipeline::HybridChunkConfig).
+    /// Extract and chunk the document with a custom chunking configuration.
+    ///
+    /// Use this when the default 512-token limit is too large or too small for your
+    /// vector store or embedding model. All other metadata (pages, bounding boxes,
+    /// element types, heading context) is identical to [`rag_chunks()`](Self::rag_chunks).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    /// use oxidize_pdf::pipeline::HybridChunkConfig;
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let config = HybridChunkConfig {
+    ///     max_tokens: 256,
+    ///     ..HybridChunkConfig::default()
+    /// };
+    /// let chunks = doc.rag_chunks_with(config)?;
+    /// println!("Got {} chunks at 256-token limit", chunks.len());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn rag_chunks_with(
         &self,
         config: crate::pipeline::HybridChunkConfig,
@@ -1385,10 +1405,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     #[cfg(feature = "semantic")]
     pub fn rag_chunks_json(&self) -> ParseResult<String> {
         let chunks = self.rag_chunks()?;
-        serde_json::to_string(&chunks).map_err(|e| ParseError::SyntaxError {
-            position: 0,
-            message: e.to_string(),
-        })
+        serde_json::to_string(&chunks).map_err(|e| ParseError::SerializationError(e.to_string()))
     }
 
     /// Split the document text into chunks of approximately `target_tokens` size.
