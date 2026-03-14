@@ -13,6 +13,7 @@ fn fixture_path(name: &str) -> std::path::PathBuf {
 fn test_rag_chunks_returns_vec() {
     let path = fixture_path("simple.pdf");
     if !path.exists() {
+        eprintln!("[WARN] fixture missing, skipping test: {}", path.display());
         return;
     }
     let reader = PdfReader::open(&path).expect("must open PDF");
@@ -38,6 +39,7 @@ fn test_rag_chunks_returns_vec() {
 fn test_rag_chunks_with_custom_config() {
     let path = fixture_path("simple.pdf");
     if !path.exists() {
+        eprintln!("[WARN] fixture missing, skipping test: {}", path.display());
         return;
     }
     let reader = PdfReader::open(&path).expect("must open PDF");
@@ -62,6 +64,7 @@ fn test_rag_chunks_with_custom_config() {
 fn test_rag_chunks_json_returns_valid_json() {
     let path = fixture_path("simple.pdf");
     if !path.exists() {
+        eprintln!("[WARN] fixture missing, skipping test: {}", path.display());
         return;
     }
     let reader = PdfReader::open(&path).expect("must open PDF");
@@ -78,6 +81,7 @@ fn test_rag_chunks_json_returns_valid_json() {
 fn test_deprecated_chunk_methods_still_work() {
     let path = fixture_path("simple.pdf");
     if !path.exists() {
+        eprintln!("[WARN] fixture missing, skipping test: {}", path.display());
         return;
     }
     let reader = PdfReader::open(&path).expect("must open");

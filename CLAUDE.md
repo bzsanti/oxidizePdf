@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | v2.3.0 |
+| **Version** | v2.3.1 |
 | **License** | MIT |
 | **Tests** | 6,220 unit + 1,572 integration + 192 doc tests |
 | **Coverage** | 72.14% |

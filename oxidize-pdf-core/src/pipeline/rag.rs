@@ -23,7 +23,7 @@ pub struct RagChunk {
     pub text: String,
     /// Text with heading context prepended — use this for embedding generation.
     pub full_text: String,
-    /// Page numbers where this chunk's elements appear (deduplicated, ordered).
+    /// Page numbers where this chunk's elements appear (deduplicated, sorted numerically).
     pub page_numbers: Vec<u32>,
     /// Bounding boxes of each element in the chunk.
     pub bounding_boxes: Vec<ElementBBox>,
@@ -32,6 +32,12 @@ pub struct RagChunk {
     /// Heading context inherited from the nearest parent heading.
     pub heading_context: Option<String>,
     /// Approximate token count (word-count proxy).
+    ///
+    /// Computed as the number of whitespace-separated words. LLM subword
+    /// tokenizers (BPE/WordPiece) typically produce 1.3–1.7x more tokens
+    /// than the raw word count. Size your chunk budget accordingly: a
+    /// `max_tokens: 512` setting corresponds to roughly 300–390 actual
+    /// subword tokens for typical English prose.
     pub token_estimate: usize,
     /// Whether the chunk exceeds the configured `max_tokens`.
     pub is_oversized: bool,
@@ -43,7 +49,10 @@ impl RagChunk {
         let elements = chunk.elements();
         let page_numbers = collect_pages(elements);
         let bounding_boxes = elements.iter().map(|e| *e.bbox()).collect();
-        let element_types = elements.iter().map(element_type_name).collect();
+        let element_types: Vec<String> = elements
+            .iter()
+            .map(|e| element_type_name(e).to_string())
+            .collect();
 
         Self {
             chunk_index,
@@ -65,7 +74,7 @@ impl RagChunk {
     }
 }
 
-/// Collect unique page numbers from elements, preserving first-occurrence order.
+/// Collect unique page numbers from elements, deduplicated and sorted numerically.
 fn collect_pages(elements: &[Element]) -> Vec<u32> {
     let mut seen = HashSet::new();
     let mut pages = Vec::new();
@@ -75,11 +84,12 @@ fn collect_pages(elements: &[Element]) -> Vec<u32> {
             pages.push(p);
         }
     }
+    pages.sort_unstable();
     pages
 }
 
 /// Map an `Element` variant to its snake_case type name.
-fn element_type_name(element: &Element) -> String {
+fn element_type_name(element: &Element) -> &'static str {
     match element {
         Element::Title(_) => "title",
         Element::Paragraph(_) => "paragraph",
@@ -91,5 +101,4 @@ fn element_type_name(element: &Element) -> String {
         Element::CodeBlock(_) => "code_block",
         Element::KeyValue(_) => "key_value",
     }
-    .to_string()
 }
