@@ -116,6 +116,14 @@ impl StandardSecurityHandler {
         }
     }
 
+    /// Create handler for AES-128 encryption (Revision 4)
+    pub fn aes_128_r4() -> Self {
+        Self {
+            revision: SecurityHandlerRevision::R4,
+            key_length: 16,
+        }
+    }
+
     /// Create handler for AES-256 encryption (Revision 5)
     pub fn aes_256_r5() -> Self {
         Self {
@@ -342,12 +350,14 @@ impl StandardSecurityHandler {
     /// Encrypt a string
     pub fn encrypt_string(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         match self.revision {
-            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                // For AES, use encrypt_aes and handle the Result
+            SecurityHandlerRevision::R4
+            | SecurityHandlerRevision::R5
+            | SecurityHandlerRevision::R6 => {
+                // AES path for R4 (AES-128) and R5/R6 (AES-256)
                 self.encrypt_aes(data, key, obj_id).unwrap_or_default()
             }
             _ => {
-                // For RC4
+                // RC4 for R2/R3
                 let obj_key = self.compute_object_key(key, obj_id);
                 let rc4_key = Rc4Key::from_slice(&obj_key);
                 rc4_encrypt(&rc4_key, data)
@@ -358,8 +368,10 @@ impl StandardSecurityHandler {
     /// Decrypt a string
     pub fn decrypt_string(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         match self.revision {
-            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                // For AES, use decrypt_aes and handle the Result
+            SecurityHandlerRevision::R4
+            | SecurityHandlerRevision::R5
+            | SecurityHandlerRevision::R6 => {
+                // AES path for R4 (AES-128) and R5/R6 (AES-256)
                 self.decrypt_aes(data, key, obj_id).unwrap_or_default()
             }
             _ => {
@@ -371,43 +383,53 @@ impl StandardSecurityHandler {
 
     /// Encrypt a stream
     pub fn encrypt_stream(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
-        // For both RC4 and AES, stream encryption is the same as string encryption
         self.encrypt_string(data, key, obj_id)
     }
 
     /// Decrypt a stream
     pub fn decrypt_stream(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
         match self.revision {
-            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                // For AES, use decrypt_aes and handle the Result
+            SecurityHandlerRevision::R4
+            | SecurityHandlerRevision::R5
+            | SecurityHandlerRevision::R6 => {
+                // AES path for R4 (AES-128) and R5/R6 (AES-256)
                 self.decrypt_aes(data, key, obj_id).unwrap_or_default()
             }
             _ => {
-                // For RC4, decrypt is same as encrypt
+                // RC4 is symmetric
                 self.decrypt_string(data, key, obj_id)
             }
         }
     }
 
-    /// Encrypt data using AES (for Rev 5/6)
+    /// Encrypt data using AES.
+    ///
+    /// - **R4**: AES-128-CBC with MD5-based per-object key (ISO 32000-1 §7.6.2 Algorithm 1 + "sAlT")
+    /// - **R5/R6**: AES-256-CBC with SHA-256 key derivation
     pub fn encrypt_aes(
         &self,
         data: &[u8],
         key: &EncryptionKey,
         obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        if self.revision < SecurityHandlerRevision::R5 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "AES encryption only supported for Rev 5+".to_string(),
-            ));
-        }
-
-        let obj_key = self.compute_aes_object_key(key, obj_id)?;
-        let aes_key = AesKey::new_256(obj_key)?;
-        let aes = Aes::new(aes_key);
+        let aes = match self.revision {
+            SecurityHandlerRevision::R4 => {
+                let obj_key = self.compute_r4_aes_object_key(key, obj_id);
+                Aes::new(AesKey::new_128(obj_key)?)
+            }
+            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
+                let obj_key = self.compute_aes_object_key(key, obj_id)?;
+                Aes::new(AesKey::new_256(obj_key)?)
+            }
+            _ => {
+                return Err(crate::error::PdfError::EncryptionError(
+                    "AES encryption requires Rev 4+ (use RC4 for Rev 2/3)".to_string(),
+                ));
+            }
+        };
 
         let iv = generate_iv();
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(16 + data.len() + 16);
         result.extend_from_slice(&iv);
 
         let encrypted = aes.encrypt_cbc(data, &iv).map_err(|e| {
@@ -418,19 +440,16 @@ impl StandardSecurityHandler {
         Ok(result)
     }
 
-    /// Decrypt data using AES (for Rev 5/6)
+    /// Decrypt data using AES.
+    ///
+    /// - **R4**: AES-128-CBC with MD5-based per-object key
+    /// - **R5/R6**: AES-256-CBC with SHA-256 key derivation
     pub fn decrypt_aes(
         &self,
         data: &[u8],
         key: &EncryptionKey,
         obj_id: &ObjectId,
     ) -> Result<Vec<u8>> {
-        if self.revision < SecurityHandlerRevision::R5 {
-            return Err(crate::error::PdfError::EncryptionError(
-                "AES decryption only supported for Rev 5+".to_string(),
-            ));
-        }
-
         if data.len() < 16 {
             return Err(crate::error::PdfError::EncryptionError(
                 "AES encrypted data must be at least 16 bytes (IV)".to_string(),
@@ -440,31 +459,56 @@ impl StandardSecurityHandler {
         let iv = &data[0..16];
         let encrypted_data = &data[16..];
 
-        let obj_key = self.compute_aes_object_key(key, obj_id)?;
-        let aes_key = AesKey::new_256(obj_key)?;
-        let aes = Aes::new(aes_key);
+        let aes = match self.revision {
+            SecurityHandlerRevision::R4 => {
+                let obj_key = self.compute_r4_aes_object_key(key, obj_id);
+                Aes::new(AesKey::new_128(obj_key)?)
+            }
+            SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
+                let obj_key = self.compute_aes_object_key(key, obj_id)?;
+                Aes::new(AesKey::new_256(obj_key)?)
+            }
+            _ => {
+                return Err(crate::error::PdfError::EncryptionError(
+                    "AES decryption requires Rev 4+ (use RC4 for Rev 2/3)".to_string(),
+                ));
+            }
+        };
 
         aes.decrypt_cbc(encrypted_data, iv).map_err(|e| {
             crate::error::PdfError::EncryptionError(format!("AES decryption failed: {e}"))
         })
     }
 
-    /// Compute AES object-specific encryption key for Rev 5/6
+    /// Compute AES-128 per-object key for R4 (ISO 32000-1 §7.6.2 Algorithm 1 with "sAlT").
+    ///
+    /// key = MD5(file_key || obj_num[0..3] || gen_num[0..2] || "sAlT")[0..min(key_len+5, 16)]
+    /// For AES-128 (key_len=16), min(16+5, 16) = 16, so always 16 bytes.
+    fn compute_r4_aes_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+        let mut data = Vec::new();
+        data.extend_from_slice(&key.key);
+        data.extend_from_slice(&obj_id.number().to_le_bytes()[..3]);
+        data.extend_from_slice(&obj_id.generation().to_le_bytes()[..2]);
+        data.extend_from_slice(b"sAlT");
+
+        let hash = md5::compute(&data);
+        let key_len = (key.len() + 5).min(16);
+        hash[..key_len].to_vec()
+    }
+
+    /// Compute AES-256 object-specific encryption key for Rev 5/6 (SHA-256 based).
     fn compute_aes_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Result<Vec<u8>> {
         if self.revision < SecurityHandlerRevision::R5 {
             return Err(crate::error::PdfError::EncryptionError(
-                "AES object key computation only for Rev 5+".to_string(),
+                "SHA-256 AES key derivation only for Rev 5+".to_string(),
             ));
         }
 
-        // For Rev 5/6, use SHA-256 for key derivation
         let mut data = Vec::new();
         data.extend_from_slice(&key.key);
         data.extend_from_slice(&obj_id.number().to_le_bytes());
         data.extend_from_slice(&obj_id.generation().to_le_bytes());
-
-        // Add salt for AES
-        data.extend_from_slice(b"sAlT"); // Standard salt for AES
+        data.extend_from_slice(b"sAlT");
 
         Ok(sha256(&data))
     }
@@ -2934,5 +2978,114 @@ mod tests {
             .extract_r6_encrypt_metadata(&perms, &recovered_key)
             .unwrap();
         assert_eq!(encrypt_meta, Some(true), "EncryptMetadata must be true");
+    }
+
+    // ===== AES-128 R4 Tests =====
+
+    #[test]
+    fn test_r4_aes_object_key_is_16_bytes() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0xAB; 16]);
+        let obj_id = ObjectId::new(7, 0);
+
+        let obj_key = handler.compute_r4_aes_object_key(&key, &obj_id);
+        assert_eq!(obj_key.len(), 16);
+    }
+
+    #[test]
+    fn test_r4_aes_object_key_includes_salt() {
+        // R4 AES key differs from RC4 key because of "sAlT" suffix
+        let handler_r4 = StandardSecurityHandler::aes_128_r4();
+        let handler_rc4 = StandardSecurityHandler::rc4_128bit();
+        let key = EncryptionKey::new(vec![0xCD; 16]);
+        let obj_id = ObjectId::new(3, 0);
+
+        let aes_key = handler_r4.compute_r4_aes_object_key(&key, &obj_id);
+        let rc4_key = handler_rc4.compute_object_key(&key, &obj_id);
+
+        assert_ne!(
+            aes_key, rc4_key,
+            "AES R4 key must differ from RC4 key due to sAlT"
+        );
+    }
+
+    #[test]
+    fn test_r4_aes_object_key_deterministic() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x42; 16]);
+        let obj_id = ObjectId::new(5, 2);
+
+        let key1 = handler.compute_r4_aes_object_key(&key, &obj_id);
+        let key2 = handler.compute_r4_aes_object_key(&key, &obj_id);
+        assert_eq!(key1, key2);
+    }
+
+    #[test]
+    fn test_r4_encrypt_decrypt_roundtrip() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x55; 16]);
+        let obj_id = ObjectId::new(1, 0);
+        let plaintext = b"Hello AES-128 R4 encryption!";
+
+        let encrypted = handler.encrypt_aes(plaintext, &key, &obj_id).unwrap();
+        assert_ne!(&encrypted[16..], plaintext.as_slice()); // ciphertext != plaintext
+        assert!(encrypted.len() > 16); // IV + ciphertext
+
+        let decrypted = handler.decrypt_aes(&encrypted, &key, &obj_id).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_r4_encrypt_output_has_iv_prefix() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x77; 16]);
+        let obj_id = ObjectId::new(2, 0);
+        let data = b"test";
+
+        let encrypted = handler.encrypt_aes(data, &key, &obj_id).unwrap();
+        // Output = 16-byte IV + AES-CBC ciphertext (multiple of 16)
+        assert!(encrypted.len() >= 32); // 16 IV + at least 16 ciphertext
+        assert_eq!((encrypted.len() - 16) % 16, 0);
+    }
+
+    #[test]
+    fn test_r4_decrypt_rejects_short_data() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x99; 16]);
+        let obj_id = ObjectId::new(1, 0);
+
+        let short = vec![0u8; 10];
+        assert!(handler.decrypt_aes(&short, &key, &obj_id).is_err());
+    }
+
+    #[test]
+    fn test_r4_inherent_encrypt_string_uses_aes() {
+        // Verify that the inherent encrypt_string routes R4 through AES, not RC4
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x33; 16]);
+        let obj_id = ObjectId::new(1, 0);
+        let data = b"R4 string encryption";
+
+        let encrypted = handler.encrypt_string(data, &key, &obj_id);
+        // AES output = IV(16) + ciphertext(≥16), so always > input for small inputs
+        assert!(encrypted.len() >= 32);
+
+        // Decrypt via inherent method must also work
+        let decrypted = handler.decrypt_string(&encrypted, &key, &obj_id);
+        assert_eq!(decrypted, data);
+    }
+
+    #[test]
+    fn test_r4_inherent_stream_uses_aes() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x44; 16]);
+        let obj_id = ObjectId::new(3, 0);
+        let data = b"R4 stream content";
+
+        let encrypted = handler.encrypt_stream(data, &key, &obj_id);
+        assert!(encrypted.len() >= 32);
+
+        let decrypted = handler.decrypt_stream(&encrypted, &key, &obj_id);
+        assert_eq!(decrypted, data);
     }
 }
