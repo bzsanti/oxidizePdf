@@ -143,7 +143,7 @@ impl HybridChunk {
 ///
 /// for chunk in &chunks {
 ///     println!("~{} tokens: {}", chunk.token_estimate(),
-///         &chunk.full_text()[..50.min(chunk.full_text().len())]);
+///         chunk.full_text().chars().take(50).collect::<String>());
 /// }
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -340,13 +340,7 @@ impl HybridChunker {
         let flushed = std::mem::take(buffer);
         let heading = buffer_heading.take();
 
-        chunks.push(HybridChunk {
-            elements: flushed.clone(),
-            heading_context: heading,
-            oversized: false,
-        });
-
-        // Apply overlap: carry trailing elements from flushed chunk into the next
+        // Compute overlap BEFORE moving flushed into the chunk (avoids clone)
         if self.config.overlap_tokens > 0 {
             let mut overlap_tokens = 0usize;
             let mut overlap_elements = Vec::new();
@@ -363,13 +357,18 @@ impl HybridChunker {
             overlap_elements.reverse();
             *buffer = overlap_elements;
             *buffer_tokens = overlap_tokens;
-            // Preserve heading from overlap elements
             if let Some(first) = buffer.first() {
                 *buffer_heading = first.metadata().parent_heading.clone();
             }
         } else {
             *buffer_tokens = 0;
         }
+
+        chunks.push(HybridChunk {
+            elements: flushed,
+            heading_context: heading,
+            oversized: false,
+        });
     }
 }
 
@@ -457,19 +456,18 @@ fn split_by_sentences(text: &str, max_tokens: usize) -> Vec<String> {
 fn split_into_sentences(text: &str) -> Vec<String> {
     let mut sentences = Vec::new();
     let mut current = String::new();
-    let chars: Vec<char> = text.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
+    let mut iter = text.chars().peekable();
 
-    while i < len {
-        let ch = chars[i];
+    while let Some(ch) = iter.next() {
         current.push(ch);
 
-        if matches!(ch, '.' | '!' | '?') && i + 1 < len && chars[i + 1] == ' ' {
-            sentences.push(current.trim().to_string());
-            current = String::new();
-            i += 2; // skip the space after delimiter
-            continue;
+        if matches!(ch, '.' | '!' | '?') {
+            if iter.peek() == Some(&' ') {
+                iter.next(); // skip the space after delimiter
+                sentences.push(current.trim().to_string());
+                current = String::new();
+                continue;
+            }
         } else if ch == '\n' {
             let trimmed = current.trim().to_string();
             if !trimmed.is_empty() {
@@ -477,8 +475,6 @@ fn split_into_sentences(text: &str) -> Vec<String> {
             }
             current = String::new();
         }
-
-        i += 1;
     }
 
     let remaining = current.trim().to_string();

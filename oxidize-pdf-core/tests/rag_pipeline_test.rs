@@ -57,6 +57,16 @@ fn test_rag_chunks_with_custom_config() {
         chunks.len() >= default_chunks.len(),
         "smaller max_tokens must produce >= chunks"
     );
+    // No chunk should wildly exceed the token limit (2x tolerance for oversized)
+    for chunk in &chunks {
+        if !chunk.is_oversized {
+            assert!(
+                chunk.token_estimate <= 64,
+                "non-oversized chunk must respect ~2x token limit, got {}",
+                chunk.token_estimate
+            );
+        }
+    }
 }
 
 #[cfg(feature = "semantic")]
@@ -146,5 +156,38 @@ fn test_rag_chunks_with_profile_accepts_all_variants() {
             doc.rag_chunks_with_profile(profile).is_ok(),
             "must not fail for any profile"
         );
+    }
+}
+
+// ── rag_chunks_with_profile_config ─────────────────────────────────────────
+
+#[test]
+fn test_rag_chunks_with_profile_config_combines_both() {
+    use oxidize_pdf::pipeline::{ExtractionProfile, HybridChunkConfig};
+    let path = fixture_path("Cold_Email_Hacks.pdf");
+    if !path.exists() {
+        eprintln!("[WARN] fixture missing, skipping: {}", path.display());
+        return;
+    }
+    let reader = PdfReader::open(&path).expect("must open PDF");
+    let doc = PdfDocument::new(reader);
+
+    let config = HybridChunkConfig {
+        max_tokens: 128,
+        ..Default::default()
+    };
+    let chunks = doc
+        .rag_chunks_with_profile_config(ExtractionProfile::Rag, config)
+        .expect("must succeed");
+
+    assert!(!chunks.is_empty());
+    for chunk in &chunks {
+        if !chunk.is_oversized {
+            assert!(
+                chunk.token_estimate <= 256,
+                "non-oversized chunk must respect ~2x token limit, got {}",
+                chunk.token_estimate
+            );
+        }
     }
 }
