@@ -13,7 +13,34 @@ use serde::{Deserialize, Serialize};
 /// heading context for retrieval, and structural metadata (pages, bounding boxes,
 /// element types) for citation and filtering.
 ///
-/// Construct via [`RagChunk::from_hybrid_chunk`] or [`PdfDocument::rag_chunks()`].
+/// Construct via [`PdfDocument::rag_chunks()`](crate::parser::PdfDocument::rag_chunks)
+/// or [`PdfDocument::rag_chunks_with_profile()`](crate::parser::PdfDocument::rag_chunks_with_profile).
+///
+/// # Field guide
+///
+/// - `text`: raw chunk text for display or keyword search
+/// - `full_text`: heading context + text — **use this for embedding generation**
+/// - `token_estimate`: word-count proxy (multiply by ~1.5 for subword tokens)
+/// - `is_oversized`: true when a single element exceeds `max_tokens`
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use oxidize_pdf::parser::PdfDocument;
+/// use oxidize_pdf::pipeline::ExtractionProfile;
+///
+/// let doc = PdfDocument::open("paper.pdf")?;
+/// let chunks = doc.rag_chunks_with_profile(ExtractionProfile::Rag)?;
+///
+/// for chunk in &chunks {
+///     println!(
+///         "[chunk {}] pages={:?} tokens~{} types={:?}",
+///         chunk.chunk_index, chunk.page_numbers,
+///         chunk.token_estimate, chunk.element_types,
+///     );
+/// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
 pub struct RagChunk {

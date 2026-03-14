@@ -83,6 +83,7 @@ fn test_all_profiles_produce_valid_config() {
         ExtractionProfile::Government,
         ExtractionProfile::Dense,
         ExtractionProfile::Presentation,
+        ExtractionProfile::Rag,
     ];
     for profile in &profiles {
         let cfg = profile.config();
@@ -92,4 +93,44 @@ fn test_all_profiles_produce_valid_config() {
         assert!(cfg.partition.header_zone > 0.0);
         assert!(cfg.partition.footer_zone > 0.0);
     }
+}
+
+// ── ExtractionProfile::Rag ─────────────────────────────────────────────────
+
+#[test]
+fn test_rag_profile_column_detection_off_xycut_handles_layout() {
+    let cfg = ExtractionProfile::Rag.config();
+    // Column detection disabled (known overflow bug with some PDFs).
+    // XYCut reading order handles multi-column layout ordering instead.
+    assert!(!cfg.extraction.detect_columns);
+}
+
+#[test]
+fn test_rag_profile_uses_xycut_reading_order() {
+    use oxidize_pdf::pipeline::ReadingOrderStrategy;
+    let cfg = ExtractionProfile::Rag.config();
+    assert!(matches!(
+        cfg.partition.reading_order,
+        ReadingOrderStrategy::XYCut { .. }
+    ));
+}
+
+#[test]
+fn test_rag_profile_space_threshold_is_default() {
+    let cfg = ExtractionProfile::Rag.config();
+    assert!(
+        (cfg.extraction.space_threshold - 0.3).abs() < f64::EPSILON,
+        "got {}",
+        cfg.extraction.space_threshold
+    );
+}
+
+#[test]
+fn test_rag_profile_has_elevated_table_confidence() {
+    let cfg = ExtractionProfile::Rag.config();
+    assert!(
+        cfg.partition.min_table_confidence > 0.5,
+        "got {}",
+        cfg.partition.min_table_confidence
+    );
 }
