@@ -1,696 +1,183 @@
-# Plan TDD: Pipeline Architecture + VibeCoding API para oxidize-pdf
-
-## Overview
-
-Typed Element system, VibeCoding facade en PdfDocument, reading order pluggable, y semantic chunking. Cada fase es independientemente mergeable via feature branch desde develop.
-
-**Insight clave**: `PdfDocument<R>` ya tiene `extract_text()`, `extract_text_with_options()`, y `metadata()`. El modulo `ai::` tiene funciones libres que delegan a exporters. `StructuredDataDetector` ya detecta tablas, KV pairs, y multi-columna. `semantic::EntityType` ya tiene Heading, Paragraph, Table, Header, Footer, List, Image.
-
-**Gap critico**: No hay deteccion de header/footer desde PDFs parseados. `header_footer.rs` es para generacion, no extraccion. Se implementa en Phase 3.
-
----
-
-## Phase 1: Element Type System
-**Branch**: `feature/element-type-system`
-**Dependency**: None
-**Risk**: Low (pure data types)
-
-### Step 1.1 -- Element enum y ElementMetadata
-
-**Test file**: `oxidize-pdf-core/tests/element_types_test.rs`
-
-```
-TEST: test_element_title_creation
-- Create Element::Title con text "Introduction", page 1, bbox
-- Assert variant es Title
-- Assert text(), page(), bbox() accessors funcionan
-
-TEST: test_element_paragraph_creation
-- Create Element::Paragraph con multi-line text
-- Assert text contiene contenido esperado
-
-TEST: test_element_table_creation
-- Create Element::Table con rows/columns data
-- Assert row_count(), column_count() funcionan
-- Assert cell access funciona
-
-TEST: test_element_variants_exhaustive
-- Crear uno de cada: Title, Paragraph, Table, Header, Footer, ListItem, Image, CodeBlock, KeyValue
-- Assert cada uno tiene discriminante correcto via matches!()
-
-TEST: test_element_metadata_defaults
-- Create Element con metadata default
-- Assert page=0, confidence=1.0, bbox es zero-rect
-- Assert font_info es None
-
-TEST: test_element_metadata_with_font
-- Create Element::Title con font metadata (bold, size 24)
-- Assert font info accesible
-
-TEST: test_element_ordering_by_position
-- Crear 3 elements con diferentes page/y positions
-- Sort por orden natural (page ASC, y DESC para reading order)
-- Assert orden correcto
-
-TEST: test_element_debug_display
-- Create Element::Title
-- Assert Debug output contiene "Title"
-
-TEST: test_element_clone
-- Create Element, clone, comparar igualdad
-
-TEST: test_element_bbox_accessors
-- Create Element con bbox (10, 20, 100, 50)
-- Assert x(), y(), width(), height(), right(), top()
-```
-
-**Implementation file**: `oxidize-pdf-core/src/pipeline/element.rs`
-
-Nuevo modulo `pipeline` en `oxidize-pdf-core/src/pipeline/mod.rs`:
-```rust
-pub mod element;
-pub use element::{Element, ElementBBox, ElementMetadata};
-```
-
-Element enum:
-```rust
-pub enum Element {
-    Title(ElementData),
-    Paragraph(ElementData),
-    Table(TableElementData),
-    Header(ElementData),
-    Footer(ElementData),
-    ListItem(ElementData),
-    Image(ImageElementData),
-    CodeBlock(ElementData),
-    KeyValue(KeyValueElementData),
-}
-```
-
-ElementData:
-```rust
-pub struct ElementData {
-    pub text: String,
-    pub metadata: ElementMetadata,
-}
-
-pub struct ElementMetadata {
-    pub page: u32,
-    pub bbox: ElementBBox,
-    pub confidence: f64,
-    pub font_name: Option<String>,
-    pub font_size: Option<f64>,
-    pub is_bold: bool,
-    pub is_italic: bool,
-}
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/mod.rs`
-- CREATE: `oxidize-pdf-core/src/pipeline/element.rs`
-- MODIFY: `oxidize-pdf-core/src/lib.rs` (add `pub mod pipeline;`)
-- CREATE: `oxidize-pdf-core/tests/element_types_test.rs`
-
-### Step 1.2 -- Element serialization (requires `semantic` feature)
-
-```
-TEST: test_element_serialize_json (cfg semantic)
-- Create Element::Title, serialize a JSON
-- Assert JSON contiene "type": "title", "text": "...", "page": 1
-
-TEST: test_element_deserialize_json (cfg semantic)
-- JSON string -> Element::Paragraph
-- Assert roundtrip equality
-
-TEST: test_elements_vec_serialize (cfg semantic)
-- Vec<Element> con 3 elements -> JSON array
-- Assert length 3
-```
-
-**Implementation**: `#[derive(Serialize, Deserialize)]` con `#[cfg(feature = "semantic")]`. Usar `#[serde(tag = "type", rename_all = "snake_case")]`.
-
----
-
-## Phase 2: VibeCoding Facade
-**Branch**: `feature/vibecoding-facade`
-**Dependency**: None (delega a infraestructura existente, NO necesita Phase 1)
-**Risk**: Low (thin wrappers)
-
-### Step 2.1 -- `PdfDocument::open()` static method
-
-**Test file**: `oxidize-pdf-core/tests/vibecoding_facade_test.rs`
-
-```
-TEST: test_pdfdocument_open_file
-- PdfDocument::open("oxidize-pdf-core/examples/results/hello_world.pdf")
-- Assert Ok
-- Assert page_count() > 0
-
-TEST: test_pdfdocument_open_nonexistent
-- PdfDocument::open("nonexistent.pdf")
-- Assert Err
-
-TEST: test_pdfdocument_open_matches_two_step
-- Abrir mismo PDF con patron viejo: PdfReader::open() + PdfDocument::new()
-- Abrir con patron nuevo: PdfDocument::open()
-- Assert page_count identico
-- Assert extract_text produce output identico
-```
-
-**Implementation** en `oxidize-pdf-core/src/parser/document.rs`:
-```rust
-impl PdfDocument<std::fs::File> {
-    pub fn open<P: AsRef<std::path::Path>>(path: P) -> ParseResult<Self> {
-        PdfReader::open_document(path)
-    }
-}
-```
-
-### Step 2.2 -- `to_markdown()`, `to_json()`, `to_contextual()`
-
-```
-TEST: test_to_markdown_produces_output
-- doc = PdfDocument::open(fixture)
-- result = doc.to_markdown()
-- Assert Ok, contiene "---" (YAML frontmatter), contiene texto de pagina
-
-TEST: test_to_markdown_matches_free_function
-- Compare doc.to_markdown() con ai::export_to_markdown(&doc)
-- Assert output identico
-
-TEST: test_to_contextual_produces_output
-- doc.to_contextual()
-- Assert contiene "Document:" header
-
-TEST: test_to_contextual_matches_free_function
-- Compare doc.to_contextual() con ai::export_to_contextual(&doc)
-
-TEST: test_to_json_produces_output (cfg semantic)
-- doc.to_json()
-- Assert JSON valido, contiene "pages" key
-
-TEST: test_to_json_matches_free_function (cfg semantic)
-- Compare doc.to_json() con ai::export_to_json(&doc)
-```
-
-**Implementation**: Metodos en `PdfDocument<R>` que delegan a `crate::ai::export_to_markdown(self)`, etc.
-
-### Step 2.3 -- `chunk()` convenience method
-
-```
-TEST: test_chunk_basic
-- chunks = doc.chunk(512)
-- Assert Ok, non-empty, cada chunk tiene content
-
-TEST: test_chunk_small_size
-- chunks con chunk(10) tiene mas chunks que chunk(512)
-
-TEST: test_chunk_respects_size
-- chunks = doc.chunk(50)
-- Assert todos los chunks tienen tokens <= 60 (tolerancia)
-
-TEST: test_chunk_with_overlap
-- chunks = doc.chunk_with(ChunkConfig { size: 100, overlap: 20 })
-- Assert overlap entre chunks consecutivos
-```
-
-**Implementation**:
-```rust
-pub fn chunk(&self, target_tokens: usize) -> ParseResult<Vec<DocumentChunk>> {
-    let chunker = DocumentChunker::new(target_tokens, target_tokens / 10);
-    let extracted = self.extract_text()?;
-    let page_texts: Vec<(usize, String)> = extracted.iter().enumerate()
-        .map(|(i, t)| (i + 1, t.text.clone())).collect();
-    chunker.chunk_text_with_pages(&page_texts).map_err(...)
-}
-```
-
-**Files**:
-- MODIFY: `oxidize-pdf-core/src/parser/document.rs` (add open, to_markdown, to_contextual, to_json, chunk, chunk_with)
-- CREATE: `oxidize-pdf-core/tests/vibecoding_facade_test.rs`
-
----
-
-## Phase 3: Partition
-**Branch**: `feature/partition-elements`
-**Dependency**: Phase 1
-**Risk**: Medium (nueva logica de clasificacion)
-
-### Step 3.1 -- PartitionConfig
-
-**Test file**: `oxidize-pdf-core/tests/partition_test.rs`
-
-```
-TEST: test_partition_config_defaults
-- cfg = PartitionConfig::default()
-- Assert detect_tables = true, detect_headers_footers = true
-- Assert title_min_font_ratio = 1.3
-
-TEST: test_partition_config_builder
-- cfg = PartitionConfig::new().with_title_min_font_ratio(1.5).without_tables()
-- Assert valores aplicados
-```
-
-**Implementation file**: `oxidize-pdf-core/src/pipeline/partition.rs`
-
-### Step 3.2 -- Title detection (font size heuristic)
-
-```
-TEST: test_partition_detects_title_by_font_size
-- TextFragments: uno a 24pt bold ("Introduction"), resto a 12pt
-- Assert primer Element es Title con text "Introduction"
-
-TEST: test_partition_no_title_when_uniform_size
-- Todos fragments a 12pt
-- Assert no Title elements (todo Paragraph)
-
-TEST: test_partition_multiple_titles
-- Fragments con 2 bloques a 24pt separados por texto a 12pt
-- Assert 2 Title elements
-```
-
-### Step 3.3 -- Header/Footer detection (position heuristic)
-
-```
-TEST: test_partition_detects_header
-- Fragment a y > 95% de page height, font pequeno, texto repetido
-- Assert Element::Header
-
-TEST: test_partition_detects_footer
-- Fragment a y < 5% de page height, contiene "Page X"
-- Assert Element::Footer
-
-TEST: test_partition_header_footer_excluded_from_body
-- Pagina con header, body, footer
-- Partition: Header + Paragraphs + Footer
-- Assert body text no incluye header/footer text
-```
-
-### Step 3.4 -- Table detection (delegacion a StructuredDataDetector)
-
-```
-TEST: test_partition_detects_tables
-- TextFragments formando grid 3x3
-- Assert Element::Table con 3 rows, 3 columns
-
-TEST: test_partition_table_contains_data
-- Table con cells "A", "B", "C" / "1", "2", "3"
-- Assert cell text accesible desde Element::Table
-```
-
-### Step 3.5 -- KeyValue detection
-
-```
-TEST: test_partition_detects_key_value
-- Fragments: "Name: John Doe", "Date: 2024-01-01"
-- Assert Element::KeyValue para cada uno
-
-TEST: test_partition_key_value_has_key_and_value
-- Assert key() = "Name", value() = "John Doe"
-```
-
-### Step 3.6 -- ListItem detection
-
-```
-TEST: test_partition_detects_bullet_list
-- Fragments: "- Item 1", "- Item 2", "- Item 3"
-- Assert Element::ListItem para cada uno
-
-TEST: test_partition_detects_numbered_list
-- Fragments: "1. First", "2. Second"
-- Assert Element::ListItem para cada uno
-```
-
-### Step 3.7 -- PdfDocument::partition()
-
-```
-TEST: test_pdfdocument_partition
-- doc = PdfDocument::open(fixture con tablas y headers)
-- elements = doc.partition()
-- Assert non-empty, al menos un Paragraph
-
-TEST: test_pdfdocument_partition_with_config
-- elements = doc.partition_with(PartitionConfig::new().without_tables())
-- Assert no Table elements
-
-TEST: test_partition_preserves_page_numbers
-- Multi-page doc
-- Assert elements tienen page numbers correctos
-
-TEST: test_partition_reading_order
-- Elements en reading order (pagina por pagina, top to bottom)
-```
-
-**Implementation**:
-- `pipeline::partition::Partitioner` con `partition(fragments, config) -> Vec<Element>`
-- Internamente: 1) Detectar headers/footers por posicion, 2) Detectar tablas via StructuredDataDetector, 3) Detectar KV pairs, 4) Detectar titulos por font-size ratio, 5) Detectar listas por prefijos bullet/number, 6) Resto = Paragraph
-- `PdfDocument::partition()` y `partition_with(config)` delegan a Partitioner
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/partition.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/mod.rs`
-- MODIFY: `oxidize-pdf-core/src/parser/document.rs` (add partition(), partition_with())
-- CREATE: `oxidize-pdf-core/tests/partition_test.rs`
-
----
-
-## Phase 4: Reading Order
-**Branch**: `feature/reading-order`
-**Dependency**: Phase 1
-**Risk**: Medium (XY-Cut algorithm)
-
-### Step 4.1 -- ReadingOrderStrategy trait
-
-**Test file**: `oxidize-pdf-core/tests/reading_order_test.rs`
-
-```
-TEST: test_simple_reading_order_top_to_bottom
-- Fragments dispersos verticalmente
-- SimpleReadingOrder ordena por page, Y desc, X asc
-- Assert orden correcto
-
-TEST: test_simple_reading_order_left_to_right_same_line
-- Fragments en misma linea (Y dentro de threshold)
-- Assert ordenados izquierda a derecha
-```
-
-**Implementation file**: `oxidize-pdf-core/src/pipeline/reading_order.rs`
-
-```rust
-pub trait ReadingOrderStrategy {
-    fn order(&self, fragments: &mut [TextFragment]);
-}
-
-pub struct SimpleReadingOrder {
-    pub line_threshold: f64,
-}
-```
-
-### Step 4.2 -- XY-Cut algorithm
-
-```
-TEST: test_xycut_single_column
-- Fragments en una sola columna
-- XYCut produce mismo orden que Simple
-
-TEST: test_xycut_two_columns
-- Columna izquierda: (x~100, y: 700, 680, 660)
-- Columna derecha: (x~300, y: 700, 680, 660)
-- XYCut ordena: toda columna izquierda primero, luego toda derecha
-- Simple intercalaria por Y
-
-TEST: test_xycut_newspaper_three_columns
-- Layout 3 columnas
-- Assert izquierda-a-derecha, top-to-bottom dentro de cada columna
-
-TEST: test_xycut_mixed_single_and_double
-- Mitad superior: columna unica (titulo)
-- Mitad inferior: dos columnas
-- Assert titulo primero, luego columna izquierda, luego derecha
-
-TEST: test_xycut_empty
-- Empty fragments -> empty result
-
-TEST: test_xycut_single_fragment
-- Un fragment -> un element
-```
-
-**Implementation**: XY-Cut recursivo:
-1. Encontrar mayor gap horizontal de whitespace -> si significativo, dividir top/bottom
-2. Encontrar mayor gap vertical de whitespace -> si significativo, dividir left/right
-3. Recurrir en cada sub-region
-4. Leaf regions se ordenan Y desc, X asc
-
-### Step 4.3 -- Integracion con partition
-
-```
-TEST: test_partition_with_reading_order
-- Doc con PDF de dos columnas
-- partition_with(config.with_reading_order(ReadingOrder::XYCut))
-- Assert elements ordenados columna-por-columna
-
-TEST: test_partition_default_uses_simple
-- doc.partition() usa SimpleReadingOrder por defecto
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/reading_order.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/mod.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/partition.rs` (usa ReadingOrderStrategy)
-- CREATE: `oxidize-pdf-core/tests/reading_order_test.rs`
-
----
-
-## Phase 5: Semantic Chunking
-**Branch**: `feature/semantic-chunking`
-**Dependency**: Phase 1 + Phase 3
-**Risk**: Medium
-
-### Step 5.1 -- SemanticChunker config
-
-**Test file**: `oxidize-pdf-core/tests/semantic_chunking_test.rs`
-
-```
-TEST: test_semantic_chunk_config_defaults
-- cfg = SemanticChunkConfig::default()
-- Assert max_tokens = 512, overlap_tokens = 50
-- Assert respect_element_boundaries = true
-
-TEST: test_semantic_chunk_config_builder
-- cfg = SemanticChunkConfig::new(1024).with_overlap(100)
-- Assert valores
-```
-
-**Implementation file**: `oxidize-pdf-core/src/pipeline/semantic_chunking.rs`
-
-### Step 5.2 -- Chunking respeta Element boundaries
-
-```
-TEST: test_semantic_chunk_title_not_split
-- Elements: [Title("Intro"), Paragraph("long text...500 words")]
-- chunk_size = 100
-- Assert Title esta enteramente en primer chunk
-
-TEST: test_semantic_chunk_table_stays_whole
-- Elements: [Paragraph("text"), Table(small 3x3), Paragraph("more")]
-- Assert Table en exactamente un chunk
-
-TEST: test_semantic_chunk_large_table_allowed_to_overflow
-- Elements: [Table(100 rows)]
-- Assert Table tiene su propio chunk aunque > max_tokens
-- Assert chunk marcado como oversized
-
-TEST: test_semantic_chunk_paragraph_split_at_sentence
-- Elements: [Paragraph("Sentence one. Sentence two. ...muchas sentences")]
-- Assert chunks parten en sentence boundaries
-
-TEST: test_semantic_chunk_preserves_metadata
-- Cada chunk tiene page_numbers, element_types
-- Assert chunk de Title+Paragraph tiene ambos tipos listados
-```
-
-### Step 5.3 -- SemanticChunk output
-
-```
-TEST: test_semantic_chunk_has_elements
-- chunks = chunker.chunk(elements)
-- Assert cada SemanticChunk tiene .elements() -> &[Element]
-- Assert .text() concatena element texts
-- Assert .token_estimate() > 0
-
-TEST: test_semantic_chunk_overlap
-- Dos chunks consecutivos
-- Assert ultimo element de chunk N aparece como primero de chunk N+1
-  (cuando overlap > 0 y element es Paragraph)
-```
-
-### Step 5.4 -- Integracion con PdfDocument
-
-```
-TEST: test_pdfdocument_semantic_chunk
-- doc.partition() -> elements
-- SemanticChunker::new(config).chunk(&elements)
-- Assert chunks validos
-
-TEST: test_pdfdocument_chunk_vs_semantic_chunk
-- old = doc.chunk(512) -- whitespace-based
-- new = SemanticChunker::default().chunk(&doc.partition()?)
-- Assert new chunks respetan mejor element boundaries
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/src/pipeline/semantic_chunking.rs`
-- MODIFY: `oxidize-pdf-core/src/pipeline/mod.rs`
-- CREATE: `oxidize-pdf-core/tests/semantic_chunking_test.rs`
-
----
-
-## Phase 6: Deprecations
-**Branch**: `feature/deprecate-ai-free-functions`
-**Dependency**: Phase 2
-**Risk**: Low
-
-**Test file**: `oxidize-pdf-core/tests/deprecation_parity_test.rs`
-
-```
-TEST: test_to_markdown_parity
-- old = ai::export_to_markdown(&doc)?
-- new = doc.to_markdown()?
-- Assert old == new
-
-TEST: test_to_contextual_parity
-- old = ai::export_to_contextual(&doc)?
-- new = doc.to_contextual()?
-- Assert old == new
-
-TEST: test_to_json_parity (cfg semantic)
-- old = ai::export_to_json(&doc)?
-- new = doc.to_json()?
-- Assert old == new
-
-TEST: test_to_chunks_parity (cfg semantic)
-- old = ai::export_to_chunks(&doc, 512, 50)?
-- new = doc.chunk(512)?
-- Assert mismo numero de chunks (aproximado por diferencia en overlap defaults)
-```
-
-**Implementation**: `#[deprecated(since = "2.1.0", note = "Use PdfDocument::to_markdown() instead")]` en:
-- `ai::export_to_markdown`
-- `ai::export_to_contextual`
-- `ai::export_to_json`
-- `ai::export_to_chunks`
-
-Tests usan `#[allow(deprecated)]` para suprimir warnings.
-
-**Files**:
-- MODIFY: `oxidize-pdf-core/src/ai/mod.rs`
-- CREATE: `oxidize-pdf-core/tests/deprecation_parity_test.rs`
-
----
-
-## Phase 7: Integration
-**Branch**: `feature/pipeline-integration`
-**Dependency**: ALL phases
-**Risk**: Low (conectar piezas existentes)
-
-**Test file**: `oxidize-pdf-core/tests/pipeline_integration_test.rs`
-
-```
-TEST: test_full_pipeline_hello_world
-- doc = PdfDocument::open("examples/results/hello_world.pdf")
-- elements = doc.partition()?
-- Assert al menos 1 element
-- markdown = doc.to_markdown()?
-- Assert non-empty
-
-TEST: test_full_pipeline_with_tables
-- doc con PDF que tiene tablas
-- elements = doc.partition()?
-- Assert al menos 1 Table element
-- chunks = SemanticChunker::new(config).chunk(&elements)?
-- Assert table no se parte
-
-TEST: test_full_pipeline_multi_page
-- doc multi-pagina
-- elements = doc.partition()?
-- Assert elements span multiple pages
-- Assert page numbers monotonically non-decreasing
-
-TEST: test_pipeline_roundtrip_text_preservation
-- text_original = doc.extract_text()?
-- elements = doc.partition()?
-- text_from_elements = concatenar todos los element texts
-- Assert text_from_elements contiene todas las words de text_original
-  (modulo whitespace normalization)
-
-TEST: test_pipeline_xycut_two_column_pdf
-- doc con layout 2 columnas conocido
-- elements = doc.partition_with(config.with_reading_order(ReadingOrder::XYCut))?
-- Assert contenido columna A viene antes de columna B
-
-TEST: test_pipeline_chunk_to_markdown
-- elements = doc.partition()?
-- chunks = SemanticChunker::default().chunk(&elements)?
-- Para cada chunk: assert Markdown export es valido
-```
-
-### VibeCoding "golden path" tests
-
-```
-TEST: test_vibecoding_three_lines
-- doc = PdfDocument::open("report.pdf")?;
-- let markdown = doc.to_markdown()?;
-- let chunks = doc.chunk(512)?;
-// Verificar que esto es TODO el codigo necesario
-
-TEST: test_vibecoding_partition_and_chunk
-- doc = PdfDocument::open("report.pdf")?;
-- let elements = doc.partition()?;
-- let chunks = SemanticChunker::default().chunk(&elements)?;
-// Verificar que funciona con zero configuration
-```
-
-**Files**:
-- CREATE: `oxidize-pdf-core/tests/pipeline_integration_test.rs`
-
----
-
-## Dependency Graph
-
-```
-develop
-  |-- feature/element-type-system (Phase 1) --+
-  |-- feature/vibecoding-facade (Phase 2)     | (independiente de Phase 1)
-  |                                           |
-  |-- feature/partition-elements (Phase 3) ---+ (depende de Phase 1)
-  |                                           |
-  |-- feature/reading-order (Phase 4) --------+ (depende de Phase 1)
-  |                                           |
-  |-- feature/semantic-chunking (Phase 5) ----+ (depende de Phase 1 + Phase 3)
-  |                                           |
-  |-- feature/deprecate-ai-free-functions (6) + (depende de Phase 2)
-  |                                           |
-  +-- feature/pipeline-integration (Phase 7) -+ (depende de TODAS)
-```
-
-**Paralelizable**: Phase 1 y Phase 2 en paralelo. Phase 3 y Phase 4 en paralelo tras merge de Phase 1.
-
-## Estimacion de Tests
-
-| Phase | Tests nuevos | Acumulado |
-|-------|-------------|-----------|
-| 1 | ~13 | 6,212 |
-| 2 | ~12 | 6,224 |
-| 3 | ~14 | 6,238 |
-| 4 | ~10 | 6,248 |
-| 5 | ~10 | 6,258 |
-| 6 | ~4 | 6,262 |
-| 7 | ~8 | 6,270 |
-| **Total** | **~71** | **~6,270** |
-
-## Archivos Nuevos
-
-| Phase | File | Proposito |
-|-------|------|---------|
-| 1 | `src/pipeline/mod.rs` | Pipeline module root |
-| 1 | `src/pipeline/element.rs` | Element enum + metadata types |
-| 1 | `tests/element_types_test.rs` | Element type system tests |
-| 2 | `tests/vibecoding_facade_test.rs` | VibeCoding facade tests |
-| 3 | `src/pipeline/partition.rs` | Partitioner + PartitionConfig |
-| 3 | `tests/partition_test.rs` | Partition tests |
-| 4 | `src/pipeline/reading_order.rs` | ReadingOrderStrategy trait + Simple + XYCut |
-| 4 | `tests/reading_order_test.rs` | Reading order tests |
-| 5 | `src/pipeline/semantic_chunking.rs` | SemanticChunker + SemanticChunkConfig |
-| 5 | `tests/semantic_chunking_test.rs` | Semantic chunking tests |
-| 6 | `tests/deprecation_parity_test.rs` | Deprecation parity tests |
-| 7 | `tests/pipeline_integration_test.rs` | End-to-end integration tests |
-
-## Archivos Modificados
-
-| Phase | File | Cambio |
-|-------|------|--------|
-| 1 | `src/lib.rs` | Add `pub mod pipeline;` + re-exports |
-| 2 | `src/parser/document.rs` | Add open(), to_markdown(), to_contextual(), to_json(), chunk(), chunk_with() |
-| 3 | `src/parser/document.rs` | Add partition(), partition_with() |
-| 4 | `src/pipeline/partition.rs` | Usar ReadingOrderStrategy |
-| 6 | `src/ai/mod.rs` | Add #[deprecated] attributes |
+# Plan: Mejora de Deteccion de Tablas en el Partitioner
+
+## Contexto
+
+El Partitioner (`oxidize-pdf-core/src/pipeline/partition.rs`) usa `StructuredDataDetector`
+para detectar tablas antes de clasificar el resto de fragmentos. El detector delegado
+(`text/structured/table.rs`) implementa un algoritmo de clustering por posicion X/Y: agrupa
+fragmentos con coordenadas cercanas, forma filas y columnas, y construye un `Table` si hay al
+menos 2 filas x 2 columnas.
+
+El problema no es que el detector sea incorrecto para casos perfectos. Es que su modelo asume
+que todos los fragmentos del batch pertenecen a una sola tabla. No puede detectar varias tablas
+en la misma pagina, no tiene umbral de confianza en el Partitioner (cualquier resultado se
+convierte en `Element::Table`), no distingue listas numeradas de dos columnas de tablas reales,
+y el Partitioner no segmenta el espacio de fragmentos en regiones tabulares antes de llamar
+al detector — pasa un bloque unico con todo lo que no fue reclamado por header/footer.
+
+**Stack detectado**: Rust 2021 edition, workspace multi-crate (`oxidize-pdf-core`).
+**Convenciones**: TDD con tests en `oxidize-pdf-core/tests/` (archivos separados por feature),
+  clippy -D warnings, f64::total_cmp() para sorts, confianza en rango [0.0, 1.0], sin unwraps
+  en produccion, re-exports via `pipeline/mod.rs`.
+**Afecta hot path**: No. La deteccion de tablas es una pasada de clasificacion sobre fragmentos
+  ya extraidos. No afecta ni el parser ni el text extractor. No se requieren benchmarks de
+  rendimiento.
+
+## Diagnostico: Limitaciones Concretas
+
+### Limitacion 1 — Batch unico, tabla unica
+`detect_tables()` recibe todos los fragmentos no reclamados como un solo batch. Cuando hay dos
+tablas en la misma pagina separadas por espacio en blanco, el detector las funde en una sola
+estructura incorrecta.
+
+### Limitacion 2 — Sin umbral de confianza en el Partitioner
+Si los fragmentos no forman una tabla real, el detector igual puede devolver una tabla con
+confianza baja. El Partitioner no filtra por confianza: cualquier resultado se convierte en
+`Element::Table` sin importar la calidad de la deteccion.
+
+### Limitacion 3 — Listas de columna no son tablas
+Una lista numerada como "1. Item text" tiene dos columnas aparentes (numero + texto, muchas
+filas). El detector la detecta como tabla valida porque cumple los umbrales minimos. No hay
+heuristica para distinguirla de una tabla real.
+
+### Limitacion 4 — Tolerancias fijas no adaptativas
+`column_alignment_tolerance = 10.0` y `row_alignment_tolerance = 5.0` son constantes en
+`StructuredDataConfig::default()`. No se adaptan al tamano de fuente ni al espaciado del
+documento — lo que genera falsos positivos en documentos con texto grande y falsos negativos
+en documentos con texto denso.
+
+## Decisiones Previas Necesarias
+
+Ninguna decision arquitectonica bloqueante. Los tipos `Element::Table`, `TableElementData`,
+`PartitionConfig`, y `StructuredDataDetector` ya existen y son estables. El plan mejora
+la logica interna del Partitioner sin cambiar la API publica visible.
+
+## Plan de Ejecucion
+
+### Fase 1: Tests RED — escribir ANTES de implementar
+
+#### Ciclo 1 — Tabla basica con umbral de confianza (20 min)
+
+- [ ] Archivo: `oxidize-pdf-core/tests/partition_table_detection_test.rs` (crear)
+- [ ] Accion: Agregar helper `table_frag(text, x, y)` y los siguientes tests:
+  - `test_grid_3x3_produces_one_table` — 9 fragmentos en cuadricula perfecta 3x3 → exactamente 1 `Element::Table`
+  - `test_detected_table_has_acceptable_confidence` — tabla detectada tiene `confidence >= 0.5`
+  - `test_random_prose_fragments_not_detected_as_table` — 5 fragmentos de prosa sin alineacion columnar → 0 tablas
+- [ ] Output: 3 tests en RED (compilar, verificar fallo, no implementar aun)
+
+#### Ciclo 2 — Umbral configurable de confianza (15 min)
+
+- [ ] Archivo: `oxidize-pdf-core/tests/partition_table_detection_test.rs`
+- [ ] Tests:
+  - `test_low_confidence_table_rejected_at_default_threshold` — fragmentos semi-alineados que producen confidence < 0.5 no generan `Element::Table`
+  - `test_partition_config_min_table_confidence_builder` — `PartitionConfig::new().with_min_table_confidence(0.7)` persiste el valor
+- [ ] Output: 2 tests adicionales en RED
+
+#### Ciclo 3 — Dos tablas separadas en la misma pagina (20 min)
+
+- [ ] Archivo: `oxidize-pdf-core/tests/partition_table_detection_test.rs`
+- [ ] Tests:
+  - `test_two_tables_separated_by_gap_detected_independently` — dos cuadrillas 2x2 separadas por 150pt de Y-gap producen 2 `Element::Table` con bboxes disjuntos
+  - `test_table_bbox_does_not_contain_prose_between_tables` — fragmento de texto entre dos tablas no queda dentro del bbox de ninguna
+- [ ] Output: 2 tests adicionales en RED
+
+#### Ciclo 4 — Listas numeradas no son tablas (15 min)
+
+- [ ] Archivo: `oxidize-pdf-core/tests/partition_table_detection_test.rs`
+- [ ] Tests:
+  - `test_single_column_list_not_table` — lista "- item" alineada en una sola columna no produce tabla
+  - `test_two_column_numbered_list_not_table` — lista con columna de numeracion (1-10 chars) + columna de texto produce 0 tablas y si `ListItem`s
+- [ ] Output: 2 tests adicionales en RED
+
+### Fase 2: Implementacion en el Partitioner
+
+#### Ciclo 5 — `PartitionConfig`: campo `min_table_confidence` y builder (15 min)
+
+- [ ] Archivo: `oxidize-pdf-core/src/pipeline/partition.rs`
+- [ ] Accion:
+  - Agregar campo `pub min_table_confidence: f64` a `PartitionConfig` (default: `0.5`)
+  - Agregar metodo builder `pub fn with_min_table_confidence(mut self, threshold: f64) -> Self`
+- [ ] Output: Ciclo 2 (`test_partition_config_min_table_confidence_builder`) pasa en GREEN.
+  `cargo clippy -- -D warnings` limpio.
+
+#### Ciclo 6 — Segmentacion de regiones tabulares (30 min)
+
+- [ ] Archivo: `oxidize-pdf-core/src/pipeline/partition.rs`
+- [ ] Accion: Agregar funcion privada:
+  ```
+  fn segment_into_table_regions<'a>(
+      fragments: &'a [TextFragment],
+      gap_multiplier: f64,     // e.g., 2.0
+  ) -> Vec<Vec<&'a TextFragment>>
+  ```
+  Algoritmo:
+  1. Ordenar fragmentos por Y descendente (top-to-bottom).
+  2. Calcular `median_line_height` de todos los fragmentos (mediana de `f.height`).
+  3. Iterar: si el gap entre el Y inferior del ultimo fragmento de la region actual y el Y
+     superior del fragmento siguiente supera `median_line_height * gap_multiplier`, iniciar
+     nueva region.
+  4. Devolver solo regiones con >= 4 fragmentos (min para que el detector tenga sentido).
+- [ ] Output: funcion existe, compila, no rompe nada.
+
+#### Ciclo 7 — Umbral de confianza y multi-tabla en la logica de deteccion (25 min)
+
+- [ ] Archivo: `oxidize-pdf-core/src/pipeline/partition.rs`
+- [ ] Accion: Modificar la seccion "2. Table detection" para:
+  1. Llamar a `segment_into_table_regions()` en lugar de pasar todos los fragmentos no
+     reclamados al detector como un bloque unico.
+  2. Para cada region, llamar al detector de forma independiente.
+  3. Solo agregar tabla si `table.confidence >= self.config.min_table_confidence`.
+  4. Reclamar fragmentos correspondientes a cada tabla aceptada.
+- [ ] Output: Ciclos 1, 2 (parcial), y 3 pasan en GREEN.
+
+#### Ciclo 8 — Heuristica anti-lista (20 min)
+
+- [ ] Archivo: `oxidize-pdf-core/src/pipeline/partition.rs`
+- [ ] Accion: Agregar funcion privada:
+  ```
+  fn region_looks_like_list(fragments: &[&TextFragment]) -> bool
+  ```
+  Logica:
+  - Si hay exactamente 2 clusters de columna: verificar si la columna izquierda tiene
+    en promedio <= 3 caracteres por fragmento (tipico de "1.", "2.", "-", "•", "a)").
+  - Si esa condicion se cumple, retornar `true` — la region es una lista numerada.
+  - Usar esta funcion como guard ANTES de llamar al detector: si `region_looks_like_list`,
+    no llamar al detector para esa region (los fragmentos quedaran como `ListItem`s en pasos posteriores).
+- [ ] Output: Ciclo 4 pasa en GREEN. Todos los tests del archivo en GREEN.
+  `cargo test --workspace` y `cargo clippy -- -D warnings` limpios.
+
+### Fase 3: Verificacion final
+
+- [ ] Ejecutar `cargo test --workspace` — 0 fallos
+- [ ] Ejecutar `cargo clippy -- -D warnings` — 0 warnings
+- [ ] Ejecutar `cargo fmt --all --check` — formato correcto
+- [ ] Verificar que `partition_test.rs` existente sigue en verde (sin regresion en tests previos)
+
+## Archivos Involucrados
+
+- `oxidize-pdf-core/src/pipeline/partition.rs` — modificar (logica de deteccion + PartitionConfig)
+- `oxidize-pdf-core/tests/partition_table_detection_test.rs` — crear (todos los tests nuevos)
+- `oxidize-pdf-core/src/text/structured/table.rs` — NO modificar
+- `oxidize-pdf-core/tests/partition_test.rs` — NO modificar (debe seguir pasando sin cambios)
+
+## Estimacion Total
+
+| Fase | Ciclos | Tiempo estimado |
+|------|--------|-----------------|
+| Fase 1: Tests RED | 4 ciclos | ~70 min |
+| Fase 2: Implementacion | 4 ciclos | ~90 min |
+| Fase 3: Verificacion | — | ~10 min |
+| **Total** | **8 ciclos** | **~2.8 horas** |
+
+Tests nuevos estimados: ~9-12 tests en `partition_table_detection_test.rs`.
+
+## Criterios de Exito
+
+- [ ] >= 9 tests nuevos en `oxidize-pdf-core/tests/partition_table_detection_test.rs`, todos verdes
+- [ ] Dos tablas separadas en la misma pagina producen 2 `Element::Table` con bboxes disjuntos
+- [ ] Fragmentos sin estructura tabular no producen `Element::Table`
+- [ ] Listas numeradas de dos columnas (numero + texto) no se detectan como tablas
+- [ ] `min_table_confidence` es configurable via `PartitionConfig::with_min_table_confidence()`
+- [ ] Tests existentes en `partition_test.rs` pasan sin modificaciones
+- [ ] `cargo clippy -- -D warnings` limpio
+- [ ] Sin regresion en el pipeline completo (el hot path de extraccion de texto no es tocado)
