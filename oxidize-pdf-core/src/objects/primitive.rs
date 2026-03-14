@@ -34,6 +34,10 @@ pub enum Object {
     Integer(i64),
     Real(f64),
     String(String),
+    /// Binary string — arbitrary bytes written as PDF hex string `<AABB...>`
+    /// Used for encryption hashes (/U, /O, /UE, /OE) and file IDs where
+    /// byte-perfect fidelity is required (ISO 32000-1 §7.3.4.3).
+    ByteString(Vec<u8>),
     Name(String),
     Array(Vec<Object>),
     Dictionary(Dictionary),
@@ -71,6 +75,13 @@ impl Object {
     pub fn as_string(&self) -> Option<&str> {
         match self {
             Object::String(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn as_byte_string(&self) -> Option<&[u8]> {
+        match self {
+            Object::ByteString(b) => Some(b),
             _ => None,
         }
     }

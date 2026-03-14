@@ -206,6 +206,7 @@ pub mod pdf_objects;
 pub mod pdfa;
 #[cfg(feature = "performance")]
 pub mod performance;
+pub mod pipeline;
 pub mod recovery;
 pub mod streaming;
 pub mod structure;

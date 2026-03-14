@@ -4,9 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | v2.0.0 |
+| **Version** | v2.1.0 |
 | **License** | MIT |
-| **Tests** | 6,212 unit + 88 integration + 190 doc tests |
+| **Tests** | 6,217 unit + 1,572 integration + 192 doc tests |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |
@@ -15,10 +15,7 @@
 
 ## Pending Fixes
 
-1. ~~**PANIC** in `read_octal_escape` — multiply overflow on malformed octal~~ **FIXED** (u16 intermediate, ISO 32000-1 §7.3.4.2)
-2. Adjust T2 text extraction threshold from 90% to 80% (GovDocs has scanned-image PDFs)
-3. ~~T1 pdfjs threshold (99.2% vs 99.5%) — 7 genuinely broken PDFs~~ **FIXED** (separate PDFJS_PASS_RATE_THRESHOLD at 99.2%)
-4. ~~`extract_text()` infinite loop~~ **FIXED** (page tree flatten O(1) resolved both hang fixtures)
+1. Adjust T2 text extraction threshold from 90% to 80% (GovDocs has scanned-image PDFs)
 
 ## Architecture
 
@@ -97,7 +94,7 @@ git push origin v1.2.3
 
 ## Key Technical Decisions
 
-- **AES-256 R5/R6 encryption**: Complete (RustCrypto, Algorithm 2.B, qpdf compatible)
+- **AES encryption on write**: RC4-40/128, AES-128 (R4), AES-256 (R5/R6) — full round-trip verified (RustCrypto, Algorithm 2.B, qpdf compatible)
 - **JBIG2 decoder**: Full pure Rust implementation (376 tests, 9 modules, ITU-T T.88)
 - **Digital signatures**: Detection + PKCS#7 verification + certificate validation (Mozilla CA)
 - **PDF/A validation**: Levels 1a/b, 2a/b/u, 3a/b/u with XMP metadata
@@ -106,6 +103,9 @@ git push origin v1.2.3
 - **Font subsetting**: Skip only when font < 100KB AND chars < 10
 - **Font cache**: Two-tier (persistent by obj ref + per-page by name). PdfReader requires Mutex (used in Arc<RwLock<>> by LazyDocument)
 - **Debug writes**: Gated behind `verbose-debug` feature (zero overhead in production)
+- **ElementGraph**: Index-based (`Vec<Option<usize>>`) parent/child/next/prev navigation — avoids lifetime issues
+- **HybridChunker v2**: Agnostic merge policy, sentence splitting for oversized elements, `full_text()` with heading context for RAG
+- **Table detection**: Region segmentation (multiple tables/page), confidence threshold, anti-list heuristic
 
 ## Performance Baseline (v2.0.0)
 
@@ -125,7 +125,7 @@ Criterion baseline saved as `v2.0.0-profiling`.
 
 ## GitHub Issues
 
-**Open**: #54 — ISO 32000-1:2008 Compliance Tracking (310 requirements, ~58% implemented)
+No open issues.
 
 ## Documentation
 

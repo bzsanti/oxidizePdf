@@ -75,7 +75,17 @@ impl ObjectEncryptor {
                     &self.encryption_key,
                 )?;
 
-                *s = String::from_utf8_lossy(&encrypted).to_string();
+                // Encrypted data is binary — store as ByteString for hex output
+                *object = Object::ByteString(encrypted);
+            }
+            Object::ByteString(bytes) => {
+                let encrypted = self.filter_manager.encrypt_string(
+                    bytes,
+                    obj_id,
+                    None,
+                    &self.encryption_key,
+                )?;
+                *bytes = encrypted;
             }
             Object::Stream(dict, data) => {
                 // Create a temporary Stream object
@@ -121,6 +131,16 @@ impl ObjectEncryptor {
                 )?;
 
                 *s = String::from_utf8_lossy(&decrypted).to_string();
+            }
+            Object::ByteString(bytes) => {
+                let decrypted = self.filter_manager.decrypt_string(
+                    bytes,
+                    obj_id,
+                    None,
+                    &self.encryption_key,
+                )?;
+                // Decrypted binary data may be valid UTF-8 text — restore as String
+                *object = Object::String(String::from_utf8_lossy(&decrypted).to_string());
             }
             Object::Stream(dict, data) => {
                 // Create a temporary Stream object

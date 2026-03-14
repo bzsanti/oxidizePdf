@@ -27,6 +27,10 @@ pub enum EncryptionStrength {
     Rc4_40bit,
     /// RC4 128-bit encryption
     Rc4_128bit,
+    /// AES 128-bit encryption (V=4, R=4, AESV2 crypt filter)
+    Aes128,
+    /// AES 256-bit encryption (V=5, R=5, AESV3 crypt filter)
+    Aes256,
 }
 
 impl DocumentEncryption {
@@ -63,6 +67,8 @@ impl DocumentEncryption {
         match self.strength {
             EncryptionStrength::Rc4_40bit => StandardSecurityHandler::rc4_40bit(),
             EncryptionStrength::Rc4_128bit => StandardSecurityHandler::rc4_128bit(),
+            EncryptionStrength::Aes128 => StandardSecurityHandler::aes_128_r4(),
+            EncryptionStrength::Aes256 => StandardSecurityHandler::aes_256_r5(),
         }
     }
 
@@ -70,7 +76,12 @@ impl DocumentEncryption {
     pub fn create_encryption_dict(&self, file_id: Option<&[u8]>) -> Result<EncryptionDictionary> {
         let handler = self.handler();
 
-        // Compute password hashes
+        // AES-256 (R5) uses a completely different key derivation — handle separately
+        if matches!(self.strength, EncryptionStrength::Aes256) {
+            return self.create_aes256_encryption_dict(&handler, file_id);
+        }
+
+        // RC4 and AES-128 use the legacy MD5-based key derivation
         let owner_hash = handler.compute_owner_hash(&self.owner_password, &self.user_password);
         let user_hash = handler.compute_user_hash(
             &self.user_password,
@@ -79,7 +90,6 @@ impl DocumentEncryption {
             file_id,
         )?;
 
-        // Create encryption dictionary
         let enc_dict = match self.strength {
             EncryptionStrength::Rc4_40bit => EncryptionDictionary::rc4_40bit(
                 owner_hash,
@@ -93,9 +103,45 @@ impl DocumentEncryption {
                 self.permissions,
                 file_id.map(|id| id.to_vec()),
             ),
+            EncryptionStrength::Aes128 => EncryptionDictionary::aes_128(
+                owner_hash,
+                user_hash,
+                self.permissions,
+                file_id.map(|id| id.to_vec()),
+            ),
+            EncryptionStrength::Aes256 => unreachable!("handled above"),
         };
 
         Ok(enc_dict)
+    }
+
+    /// Create AES-256 (R5) encryption dictionary with SHA-256 key derivation.
+    fn create_aes256_encryption_dict(
+        &self,
+        handler: &StandardSecurityHandler,
+        file_id: Option<&[u8]>,
+    ) -> Result<EncryptionDictionary> {
+        let u_entry = handler.compute_r5_user_hash(&self.user_password)?;
+        let o_entry = handler.compute_r5_owner_hash(&self.owner_password, &self.user_password)?;
+
+        // Generate a random 32-byte file encryption key
+        let mut encryption_key = vec![0u8; 32];
+        use rand::Rng;
+        rand::rng().fill_bytes(&mut encryption_key);
+        let enc_key_obj = EncryptionKey::new(encryption_key.clone());
+
+        // Compute UE and OE entries (encrypted copies of the encryption key)
+        let ue_entry = handler.compute_r5_ue_entry(&self.user_password, &u_entry, &enc_key_obj)?;
+        let oe_entry =
+            handler.compute_r5_oe_entry(&self.owner_password, &o_entry, &encryption_key)?;
+
+        Ok(EncryptionDictionary::aes_256(
+            o_entry,
+            u_entry,
+            self.permissions,
+            file_id.map(|id| id.to_vec()),
+        )
+        .with_r5_entries(ue_entry, oe_entry))
     }
 
     /// Get encryption key
