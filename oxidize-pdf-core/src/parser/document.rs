@@ -1338,9 +1338,67 @@ impl<R: Read + Seek> PdfDocument<R> {
         crate::ai::export_to_json(self)
     }
 
+    /// Extract and chunk the document into RAG-ready chunks with full metadata.
+    ///
+    /// Uses default [`HybridChunkConfig`](crate::pipeline::HybridChunkConfig)
+    /// (512 tokens, `AnyInlineContent` merge policy). Returns serializable
+    /// [`RagChunk`](crate::pipeline::RagChunk)s with page numbers, bounding boxes,
+    /// element types, and heading context — everything a vector store needs.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let chunks = doc.rag_chunks()?;
+    /// for chunk in &chunks {
+    ///     println!("Chunk {}: pages {:?}, ~{} tokens",
+    ///         chunk.chunk_index, chunk.page_numbers, chunk.token_estimate);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks(&self) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        self.rag_chunks_with(crate::pipeline::HybridChunkConfig::default())
+    }
+
+    /// Extract and chunk the document with a custom [`HybridChunkConfig`](crate::pipeline::HybridChunkConfig).
+    pub fn rag_chunks_with(
+        &self,
+        config: crate::pipeline::HybridChunkConfig,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        let elements = self.partition()?;
+        let chunker = crate::pipeline::HybridChunker::new(config);
+        let hybrid_chunks = chunker.chunk(&elements);
+        let rag_chunks = hybrid_chunks
+            .iter()
+            .enumerate()
+            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
+            .collect();
+        Ok(rag_chunks)
+    }
+
+    /// Extract chunks as a JSON string ready for vector store ingestion.
+    ///
+    /// Requires the `semantic` feature. Serializes [`Vec<RagChunk>`](crate::pipeline::RagChunk)
+    /// as a JSON array.
+    #[cfg(feature = "semantic")]
+    pub fn rag_chunks_json(&self) -> ParseResult<String> {
+        let chunks = self.rag_chunks()?;
+        serde_json::to_string(&chunks).map_err(|e| ParseError::SyntaxError {
+            position: 0,
+            message: e.to_string(),
+        })
+    }
+
     /// Split the document text into chunks of approximately `target_tokens` size.
     ///
     /// Uses a default overlap of 10% of the target token count.
+    #[deprecated(
+        since = "2.2.0",
+        note = "Use rag_chunks() for structure-aware RAG chunking"
+    )]
+    #[allow(deprecated)]
     pub fn chunk(
         &self,
         target_tokens: usize,
@@ -1350,6 +1408,10 @@ impl<R: Read + Seek> PdfDocument<R> {
     }
 
     /// Split the document text into chunks with explicit size and overlap control.
+    #[deprecated(
+        since = "2.2.0",
+        note = "Use rag_chunks_with() for structure-aware RAG chunking"
+    )]
     pub fn chunk_with(
         &self,
         target_tokens: usize,

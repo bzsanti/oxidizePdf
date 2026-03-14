@@ -4,6 +4,7 @@ pub mod graph;
 pub mod hybrid_chunking;
 pub mod partition;
 pub mod profile;
+pub mod rag;
 pub mod reading_order;
 pub mod semantic_chunking;
 
@@ -16,5 +17,6 @@ pub use graph::ElementGraph;
 pub use hybrid_chunking::{HybridChunk, HybridChunkConfig, HybridChunker, MergePolicy};
 pub use partition::{PartitionConfig, Partitioner, ReadingOrderStrategy};
 pub use profile::ExtractionProfile;
+pub use rag::RagChunk;
 pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 pub use semantic_chunking::{SemanticChunk, SemanticChunkConfig, SemanticChunker};
