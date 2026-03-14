@@ -477,6 +477,10 @@ pub enum ParseError {
     /// Unexpected character in PDF content
     #[error("Unexpected character: {character}")]
     UnexpectedCharacter { character: String },
+
+    /// Serialization error (e.g. JSON serialization of RAG chunks)
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 }
 
 impl From<ParseError> for OxidizePdfError {

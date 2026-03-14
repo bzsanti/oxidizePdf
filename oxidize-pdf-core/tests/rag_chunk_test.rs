@@ -285,3 +285,125 @@ fn test_rag_chunks_json_serializes_vec_as_array() {
     assert!(json.ends_with(']'));
     assert!(json.contains("\"chunk_index\""));
 }
+
+// ── page_numbers sorted numerically ──
+
+#[test]
+fn test_rag_chunk_page_numbers_are_sorted() {
+    let elements = vec![
+        make_para("Third page.", 3, 50.0, 700.0),
+        make_para("First page.", 1, 50.0, 700.0),
+        make_para("Second page.", 2, 50.0, 700.0),
+    ];
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 512,
+        overlap_tokens: 0,
+        merge_adjacent: true,
+        merge_policy: MergePolicy::AnyInlineContent,
+        propagate_headings: false,
+    });
+    let hybrid_chunks = chunker.chunk(&elements);
+    let rag = RagChunk::from_hybrid_chunk(0, &hybrid_chunks[0]);
+
+    assert_eq!(
+        rag.page_numbers,
+        vec![1u32, 2u32, 3u32],
+        "page_numbers must be deduplicated and sorted numerically"
+    );
+}
+
+// ── element_type_name covers all variants ──
+
+#[test]
+fn test_element_type_names_for_all_variants() {
+    use oxidize_pdf::pipeline::{ImageElementData, KeyValueElementData, TableElementData};
+
+    fn single_chunk(element: Element) -> RagChunk {
+        let chunker = HybridChunker::new(HybridChunkConfig {
+            max_tokens: 512,
+            overlap_tokens: 0,
+            merge_adjacent: false,
+            propagate_headings: false,
+            merge_policy: MergePolicy::AnyInlineContent,
+        });
+        let chunks = chunker.chunk(&[element]);
+        RagChunk::from_hybrid_chunk(0, &chunks[0])
+    }
+
+    let md = ElementMetadata::default();
+
+    let cases: Vec<(&str, Element)> = vec![
+        (
+            "title",
+            Element::Title(ElementData {
+                text: "T".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "paragraph",
+            Element::Paragraph(ElementData {
+                text: "P".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "header",
+            Element::Header(ElementData {
+                text: "H".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "footer",
+            Element::Footer(ElementData {
+                text: "F".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "list_item",
+            Element::ListItem(ElementData {
+                text: "L".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "code_block",
+            Element::CodeBlock(ElementData {
+                text: "C".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "image",
+            Element::Image(ImageElementData {
+                alt_text: Some("img".into()),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "key_value",
+            Element::KeyValue(KeyValueElementData {
+                key: "k".into(),
+                value: "v".into(),
+                metadata: md.clone(),
+            }),
+        ),
+        (
+            "table",
+            Element::Table(TableElementData {
+                rows: vec![vec!["a".into()]],
+                metadata: md.clone(),
+            }),
+        ),
+    ];
+
+    for (expected_name, element) in cases {
+        let chunk = single_chunk(element);
+        assert_eq!(
+            chunk.element_types[0], expected_name,
+            "element_type for variant {expected_name}"
+        );
+    }
+}

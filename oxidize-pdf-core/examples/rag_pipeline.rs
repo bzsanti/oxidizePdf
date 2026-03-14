@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  Elements: {}", chunk.element_types.join(", "));
         println!("  Tokens:   ~{}", chunk.token_estimate);
         if chunk.is_oversized {
-            println!("  ⚠ oversized chunk");
+            println!("  [!] oversized chunk");
         }
         let preview: String = chunk.text.chars().take(80).collect();
         println!("  Preview:  {}", preview);
