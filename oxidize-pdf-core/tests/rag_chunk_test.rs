@@ -312,7 +312,7 @@ fn test_rag_chunk_page_numbers_are_sorted() {
     );
 }
 
-// ── element_type_name covers all variants ──
+// ── Element::type_name() covers all variants ──
 
 #[test]
 fn test_element_type_names_for_all_variants() {

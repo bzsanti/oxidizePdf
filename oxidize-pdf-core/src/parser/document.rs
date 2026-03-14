@@ -1431,10 +1431,43 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(rag_chunks)
     }
 
+    /// Combine a pre-configured extraction profile with a custom chunking config.
+    ///
+    /// Use this when you need both profile-tuned partitioning (e.g. `Rag` with
+    /// XYCut reading order) and a non-default chunk size.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::{ExtractionProfile, HybridChunkConfig};
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let config = HybridChunkConfig { max_tokens: 256, ..Default::default() };
+    /// let chunks = doc.rag_chunks_with_profile_config(ExtractionProfile::Rag, config)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks_with_profile_config(
+        &self,
+        profile: crate::pipeline::ExtractionProfile,
+        config: crate::pipeline::HybridChunkConfig,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        let elements = self.partition_with_profile(profile)?;
+        let chunker = crate::pipeline::HybridChunker::new(config);
+        let hybrid_chunks = chunker.chunk(&elements);
+        Ok(hybrid_chunks
+            .iter()
+            .enumerate()
+            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
+            .collect())
+    }
+
     /// Extract chunks as a JSON string ready for vector store ingestion.
     ///
-    /// Requires the `semantic` feature. Serializes [`Vec<RagChunk>`](crate::pipeline::RagChunk)
-    /// as a JSON array.
+    /// # Feature flags
+    ///
+    /// Requires the `semantic` feature: `oxidize-pdf = { features = ["semantic"] }`.
+    /// Without it this method is not compiled.
     #[cfg(feature = "semantic")]
     pub fn rag_chunks_json(&self) -> ParseResult<String> {
         let chunks = self.rag_chunks()?;

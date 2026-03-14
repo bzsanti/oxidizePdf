@@ -15,6 +15,7 @@ fn test_all_profiles_are_constructible() {
     let _ = ExtractionProfile::Government;
     let _ = ExtractionProfile::Dense;
     let _ = ExtractionProfile::Presentation;
+    let _ = ExtractionProfile::Rag;
 }
 
 // Cycle 4.2
