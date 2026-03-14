@@ -1398,6 +1398,39 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(rag_chunks)
     }
 
+    /// Extract and chunk the document using a pre-configured extraction profile.
+    ///
+    /// Combines [`partition_with_profile`](Self::partition_with_profile) with
+    /// [`HybridChunker`](crate::pipeline::HybridChunker) using default chunking
+    /// settings. Use [`rag_chunks_with`](Self::rag_chunks_with) when you need
+    /// to tune `max_tokens` or `overlap_tokens`.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::ExtractionProfile;
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let chunks = doc.rag_chunks_with_profile(ExtractionProfile::Rag)?;
+    /// println!("Got {} RAG chunks", chunks.len());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks_with_profile(
+        &self,
+        profile: crate::pipeline::ExtractionProfile,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        let elements = self.partition_with_profile(profile)?;
+        let chunker = crate::pipeline::HybridChunker::default();
+        let hybrid_chunks = chunker.chunk(&elements);
+        let rag_chunks = hybrid_chunks
+            .iter()
+            .enumerate()
+            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
+            .collect();
+        Ok(rag_chunks)
+    }
+
     /// Extract chunks as a JSON string ready for vector store ingestion.
     ///
     /// Requires the `semantic` feature. Serializes [`Vec<RagChunk>`](crate::pipeline::RagChunk)

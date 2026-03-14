@@ -4,21 +4,32 @@ use std::collections::HashMap;
 /// Index-based graph of relationships between document elements.
 ///
 /// Built from a `&[Element]` slice, the graph stores parent/child and next/prev
-/// relationships as indices into the original slice.  No ownership is taken and
-/// no lifetimes are introduced in the type — the graph is a standalone value that
-/// can be stored, cloned, or sent across threads independently of the elements.
+/// relationships as indices into the original slice. No ownership is taken and
+/// no lifetimes are introduced — the graph is a standalone value that can be
+/// stored, cloned, or sent across threads independently of the elements.
 ///
-/// # Building
+/// # Example
 ///
-/// ```rust,ignore
-/// let elements = doc.partition()?;
-/// let graph = ElementGraph::build(&elements);
+/// ```rust,no_run
+/// use oxidize_pdf::parser::PdfDocument;
+/// use oxidize_pdf::pipeline::ElementGraph;
+///
+/// let doc = PdfDocument::open("document.pdf")?;
+/// let (elements, graph) = doc.partition_graph(Default::default())?;
+///
+/// for title_idx in graph.top_level_sections() {
+///     println!("Section: {}", elements[title_idx].text());
+///     for &child_idx in graph.children_of(title_idx) {
+///         println!("  {}", elements[child_idx].text());
+///     }
+/// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 ///
 /// # Parent / child semantics
 ///
 /// An element at index `i` is a child of the nearest preceding `Title` element
-/// whose text matches `elements[i].metadata().parent_heading`.  A `Title` element
+/// whose text matches `elements[i].metadata().parent_heading`. A `Title` element
 /// whose own `parent_heading` equals its own text is treated as a root (no parent)
 /// unless a *different* preceding title has the same text.
 pub struct ElementGraph {
