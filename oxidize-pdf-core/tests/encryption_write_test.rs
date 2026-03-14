@@ -331,3 +331,60 @@ fn test_encryption_with_different_permissions() {
     assert!(content.contains("/Encrypt"), "must have /Encrypt");
     assert!(content.contains("/P "), "must have /P permission entry");
 }
+
+// ── Fase 6: AES-128 (R4) round-trip — currently broken ──────────────────
+
+#[test]
+fn test_aes128_round_trip_write_read() {
+    let mut doc = Document::new();
+    doc.add_page(Page::a4());
+    doc.set_encryption(DocumentEncryption::new(
+        "user",
+        "owner",
+        Permissions::all(),
+        EncryptionStrength::Aes128,
+    ));
+
+    let mut buf = Vec::new();
+    PdfWriter::new_with_writer(&mut buf)
+        .write_document(&mut doc)
+        .unwrap();
+
+    let mut reader =
+        PdfReader::new(Cursor::new(buf)).expect("AES-128 encrypted PDF must be parseable");
+    assert!(
+        reader.is_encrypted(),
+        "reader must detect AES-128 encryption"
+    );
+    reader
+        .unlock("user")
+        .expect("must unlock AES-128 encrypted PDF with correct user password");
+}
+
+#[test]
+fn test_aes128_content_is_encrypted() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    page.text()
+        .at(100.0, 700.0)
+        .write("SECRET_AES128_MARKER")
+        .unwrap();
+    doc.add_page(page);
+    doc.set_encryption(DocumentEncryption::new(
+        "user",
+        "owner",
+        Permissions::all(),
+        EncryptionStrength::Aes128,
+    ));
+
+    let mut buf = Vec::new();
+    PdfWriter::new_with_writer(&mut buf)
+        .write_document(&mut doc)
+        .unwrap();
+
+    let content = String::from_utf8_lossy(&buf);
+    assert!(
+        !content.contains("SECRET_AES128_MARKER"),
+        "AES-128 encrypted PDF must not contain plaintext content — objects are not being encrypted"
+    );
+}
