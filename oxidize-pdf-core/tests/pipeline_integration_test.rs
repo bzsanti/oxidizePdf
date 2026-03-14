@@ -109,6 +109,7 @@ fn test_vibecoding_three_lines() {
     // The "golden path" — minimal code to process a PDF
     let doc = PdfDocument::open(fixture("Cold_Email_Hacks.pdf")).unwrap();
     let markdown = doc.to_markdown().unwrap();
+    #[allow(deprecated)]
     let chunks = doc.chunk(512).unwrap();
 
     assert!(!markdown.is_empty());

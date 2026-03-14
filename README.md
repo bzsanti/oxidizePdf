@@ -111,47 +111,49 @@ fn main() -> Result<()> {
 }
 ```
 
-### AI/RAG Document Chunking (v1.3.0+)
+### RAG Pipeline (v2.2.0+)
+
+Structure-aware chunking with full metadata for vector store ingestion. Each `RagChunk`
+carries page numbers, bounding boxes, element types, heading context, and token estimates.
 
 ```rust
-use oxidize_pdf::ai::DocumentChunker;
-use oxidize_pdf::parser::{PdfReader, PdfDocument};
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::Result;
 
 fn main() -> Result<()> {
-    // Load and parse PDF
-    let reader = PdfReader::open("document.pdf")?;
-    let pdf_doc = PdfDocument::new(reader);
-    let text_pages = pdf_doc.extract_text()?;
+    let doc = PdfDocument::open("document.pdf")?;
 
-    // Prepare page texts with page numbers
-    let page_texts: Vec<(usize, String)> = text_pages
-        .iter()
-        .enumerate()
-        .map(|(idx, page)| (idx + 1, page.text.clone()))
-        .collect();
+    // One-liner: default config (512 tokens, structure-aware merging)
+    let chunks = doc.rag_chunks()?;
 
-    // Create chunker: 512 tokens per chunk, 50 tokens overlap
-    let chunker = DocumentChunker::new(512, 50);
-    let chunks = chunker.chunk_text_with_pages(&page_texts)?;
+    for chunk in &chunks {
+        println!("Chunk {}: pages {:?}, ~{} tokens",
+            chunk.chunk_index, chunk.page_numbers, chunk.token_estimate);
 
-    // Process chunks for RAG pipeline
-    for chunk in chunks {
-        println!("Chunk {}: {} tokens", chunk.id, chunk.tokens);
-        println!("  Pages: {:?}", chunk.page_numbers);
-        println!("  Position: chars {}-{}",
-            chunk.metadata.position.start_char,
-            chunk.metadata.position.end_char);
-        println!("  Sentence boundary: {}",
-            chunk.metadata.sentence_boundary_respected);
-
-        // Send to embedding API, store in vector DB, etc.
-        // let embedding = openai.embed(&chunk.content)?;
-        // vector_db.insert(chunk.id, embedding, chunk.content)?;
+        // chunk.full_text — heading context + content (use for embeddings)
+        // chunk.text      — content only (use for display)
+        // chunk.element_types — ["title", "paragraph", "table", ...]
+        // chunk.bounding_boxes — spatial position on page
     }
 
     Ok(())
 }
+```
+
+Custom configuration and JSON output:
+
+```rust
+use oxidize_pdf::pipeline::HybridChunkConfig;
+
+// Smaller chunks for more precise retrieval
+let config = HybridChunkConfig {
+    max_tokens: 256,
+    ..HybridChunkConfig::default()
+};
+let chunks = doc.rag_chunks_with(config)?;
+
+// JSON output ready for vector store ingestion (requires `semantic` feature)
+// let json = doc.rag_chunks_json()?;
 ```
 
 ### Invoice Data Extraction (v1.6.2+)
