@@ -1,7 +1,25 @@
+use crate::pipeline::partition::ReadingOrderStrategy;
 use crate::pipeline::PartitionConfig;
 use crate::text::extraction::ExtractionOptions;
 
 /// Pre-configured extraction profiles for different document types.
+///
+/// Each variant produces a [`ProfileConfig`] with tuned extraction and
+/// partition settings. Pass directly to
+/// [`PdfDocument::partition_with_profile`](crate::parser::PdfDocument::partition_with_profile)
+/// or [`PdfDocument::rag_chunks_with_profile`](crate::parser::PdfDocument::rag_chunks_with_profile).
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use oxidize_pdf::parser::PdfDocument;
+/// use oxidize_pdf::pipeline::ExtractionProfile;
+///
+/// let doc = PdfDocument::open("paper.pdf")?;
+/// let chunks = doc.rag_chunks_with_profile(ExtractionProfile::Rag)?;
+/// println!("{} chunks", chunks.len());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone, Default)]
 pub enum ExtractionProfile {
     /// General documents. Matches current defaults.
@@ -17,6 +35,12 @@ pub enum ExtractionProfile {
     Dense,
     /// Presentations and slides with large fonts.
     Presentation,
+    /// Optimized for RAG chunking and vector store ingestion.
+    ///
+    /// Uses XY-Cut reading order for correct multi-column layout ordering
+    /// and a slightly elevated table-confidence threshold (0.65) to reduce
+    /// false table chunks that fragment prose.
+    Rag,
 }
 
 /// Combined extraction configuration produced by a profile.
@@ -105,6 +129,21 @@ impl ExtractionProfile {
                     title_min_font_ratio: 1.2,
                     header_zone: 0.10,
                     footer_zone: 0.10,
+                    ..PartitionConfig::default()
+                },
+            },
+            ExtractionProfile::Rag => ProfileConfig {
+                extraction: ExtractionOptions {
+                    space_threshold: 0.3,
+                    detect_columns: false,
+                    ..ExtractionOptions::default()
+                },
+                partition: PartitionConfig {
+                    title_min_font_ratio: 1.3,
+                    header_zone: 0.05,
+                    footer_zone: 0.05,
+                    reading_order: ReadingOrderStrategy::XYCut { min_gap: 20.0 },
+                    min_table_confidence: 0.65,
                     ..PartitionConfig::default()
                 },
             },

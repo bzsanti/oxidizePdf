@@ -2,6 +2,26 @@ use crate::pipeline::graph::ElementGraph;
 use crate::pipeline::{Element, ElementData, ElementMetadata};
 
 /// Policy for which adjacent element types can be merged into a single chunk.
+///
+/// - `SameTypeOnly`: strict boundaries — only paragraphs merge with paragraphs,
+///   list items with list items. Produces more, smaller chunks. Use for legal text
+///   or documents where semantic type boundaries matter.
+///
+/// - `AnyInlineContent` (default): merges any inline content (paragraphs, list items,
+///   key-values) into a single chunk up to `max_tokens`. Reduces fragmentation.
+///   Use for general RAG workloads.
+///
+/// # Example
+///
+/// ```rust
+/// use oxidize_pdf::pipeline::{HybridChunkConfig, MergePolicy};
+///
+/// let strict = HybridChunkConfig {
+///     merge_policy: MergePolicy::SameTypeOnly,
+///     ..HybridChunkConfig::default()
+/// };
+/// assert_eq!(strict.merge_policy, MergePolicy::SameTypeOnly);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MergePolicy {
     /// Only merge Paragraph+Paragraph and ListItem+ListItem (legacy behavior).
@@ -12,6 +32,21 @@ pub enum MergePolicy {
 }
 
 /// Configuration for hybrid chunking.
+///
+/// # Example
+///
+/// ```rust
+/// use oxidize_pdf::pipeline::{HybridChunkConfig, MergePolicy};
+///
+/// let config = HybridChunkConfig {
+///     max_tokens: 256,
+///     overlap_tokens: 30,
+///     merge_adjacent: true,
+///     propagate_headings: true,
+///     merge_policy: MergePolicy::AnyInlineContent,
+/// };
+/// assert_eq!(config.max_tokens, 256);
+/// ```
 #[derive(Debug, Clone)]
 pub struct HybridChunkConfig {
     /// Maximum tokens per chunk (approximate — uses word count as proxy).
@@ -83,6 +118,35 @@ impl HybridChunk {
 }
 
 /// Hybrid chunker that merges adjacent elements and propagates heading context.
+///
+/// Groups adjacent inline elements (paragraphs, list items, key-values) into
+/// chunks bounded by `max_tokens`. Structural elements (titles, tables, images,
+/// code blocks) always start a new chunk. Heading context from the nearest
+/// parent title is attached to each chunk for RAG embedding via
+/// [`HybridChunk::full_text()`].
+///
+/// For most use cases, prefer [`PdfDocument::rag_chunks()`](crate::parser::PdfDocument::rag_chunks)
+/// which wraps this chunker and returns serializable [`RagChunk`](crate::pipeline::RagChunk)s.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use oxidize_pdf::pipeline::{HybridChunker, HybridChunkConfig};
+/// use oxidize_pdf::parser::PdfDocument;
+///
+/// let doc = PdfDocument::open("document.pdf")?;
+/// let elements = doc.partition()?;
+///
+/// let config = HybridChunkConfig { max_tokens: 256, ..Default::default() };
+/// let chunker = HybridChunker::new(config);
+/// let chunks = chunker.chunk(&elements);
+///
+/// for chunk in &chunks {
+///     println!("~{} tokens: {}", chunk.token_estimate(),
+///         chunk.full_text().chars().take(50).collect::<String>());
+/// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 pub struct HybridChunker {
     config: HybridChunkConfig,
 }
@@ -276,13 +340,7 @@ impl HybridChunker {
         let flushed = std::mem::take(buffer);
         let heading = buffer_heading.take();
 
-        chunks.push(HybridChunk {
-            elements: flushed.clone(),
-            heading_context: heading,
-            oversized: false,
-        });
-
-        // Apply overlap: carry trailing elements from flushed chunk into the next
+        // Compute overlap BEFORE moving flushed into the chunk (avoids clone)
         if self.config.overlap_tokens > 0 {
             let mut overlap_tokens = 0usize;
             let mut overlap_elements = Vec::new();
@@ -299,13 +357,18 @@ impl HybridChunker {
             overlap_elements.reverse();
             *buffer = overlap_elements;
             *buffer_tokens = overlap_tokens;
-            // Preserve heading from overlap elements
             if let Some(first) = buffer.first() {
                 *buffer_heading = first.metadata().parent_heading.clone();
             }
         } else {
             *buffer_tokens = 0;
         }
+
+        chunks.push(HybridChunk {
+            elements: flushed,
+            heading_context: heading,
+            oversized: false,
+        });
     }
 }
 
@@ -393,19 +456,18 @@ fn split_by_sentences(text: &str, max_tokens: usize) -> Vec<String> {
 fn split_into_sentences(text: &str) -> Vec<String> {
     let mut sentences = Vec::new();
     let mut current = String::new();
-    let chars: Vec<char> = text.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
+    let mut iter = text.chars().peekable();
 
-    while i < len {
-        let ch = chars[i];
+    while let Some(ch) = iter.next() {
         current.push(ch);
 
-        if matches!(ch, '.' | '!' | '?') && i + 1 < len && chars[i + 1] == ' ' {
-            sentences.push(current.trim().to_string());
-            current = String::new();
-            i += 2; // skip the space after delimiter
-            continue;
+        if matches!(ch, '.' | '!' | '?') {
+            if iter.peek() == Some(&' ') {
+                iter.next(); // skip the space after delimiter
+                sentences.push(current.trim().to_string());
+                current = String::new();
+                continue;
+            }
         } else if ch == '\n' {
             let trimmed = current.trim().to_string();
             if !trimmed.is_empty() {
@@ -413,8 +475,6 @@ fn split_into_sentences(text: &str) -> Vec<String> {
             }
             current = String::new();
         }
-
-        i += 1;
     }
 
     let remaining = current.trim().to_string();

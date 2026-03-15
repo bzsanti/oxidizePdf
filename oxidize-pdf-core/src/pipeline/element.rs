@@ -107,6 +107,25 @@ impl Element {
         }
     }
 
+    /// Returns the snake_case type name of this element variant.
+    ///
+    /// Useful for logging, serialization, and metadata tagging.
+    /// Returns one of: `"title"`, `"paragraph"`, `"table"`, `"header"`,
+    /// `"footer"`, `"list_item"`, `"image"`, `"code_block"`, `"key_value"`.
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Self::Title(_) => "title",
+            Self::Paragraph(_) => "paragraph",
+            Self::Table(_) => "table",
+            Self::Header(_) => "header",
+            Self::Footer(_) => "footer",
+            Self::ListItem(_) => "list_item",
+            Self::Image(_) => "image",
+            Self::CodeBlock(_) => "code_block",
+            Self::KeyValue(_) => "key_value",
+        }
+    }
+
     /// Set the parent heading for this element.
     pub fn set_parent_heading(&mut self, heading: Option<String>) {
         self.metadata_mut().parent_heading = heading;

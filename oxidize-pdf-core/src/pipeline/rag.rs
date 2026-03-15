@@ -13,7 +13,34 @@ use serde::{Deserialize, Serialize};
 /// heading context for retrieval, and structural metadata (pages, bounding boxes,
 /// element types) for citation and filtering.
 ///
-/// Construct via [`RagChunk::from_hybrid_chunk`] or [`PdfDocument::rag_chunks()`].
+/// Construct via [`PdfDocument::rag_chunks()`](crate::parser::PdfDocument::rag_chunks)
+/// or [`PdfDocument::rag_chunks_with_profile()`](crate::parser::PdfDocument::rag_chunks_with_profile).
+///
+/// # Field guide
+///
+/// - `text`: raw chunk text for display or keyword search
+/// - `full_text`: heading context + text — **use this for embedding generation**
+/// - `token_estimate`: word-count proxy (multiply by ~1.5 for subword tokens)
+/// - `is_oversized`: true when a single element exceeds `max_tokens`
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use oxidize_pdf::parser::PdfDocument;
+/// use oxidize_pdf::pipeline::ExtractionProfile;
+///
+/// let doc = PdfDocument::open("paper.pdf")?;
+/// let chunks = doc.rag_chunks_with_profile(ExtractionProfile::Rag)?;
+///
+/// for chunk in &chunks {
+///     println!(
+///         "[chunk {}] pages={:?} tokens~{} types={:?}",
+///         chunk.chunk_index, chunk.page_numbers,
+///         chunk.token_estimate, chunk.element_types,
+///     );
+/// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
 pub struct RagChunk {
@@ -49,10 +76,8 @@ impl RagChunk {
         let elements = chunk.elements();
         let page_numbers = collect_pages(elements);
         let bounding_boxes = elements.iter().map(|e| *e.bbox()).collect();
-        let element_types: Vec<String> = elements
-            .iter()
-            .map(|e| element_type_name(e).to_string())
-            .collect();
+        let element_types: Vec<String> =
+            elements.iter().map(|e| e.type_name().to_string()).collect();
 
         Self {
             chunk_index,
@@ -76,6 +101,15 @@ impl RagChunk {
 
 /// Collect unique page numbers from elements, deduplicated and sorted numerically.
 fn collect_pages(elements: &[Element]) -> Vec<u32> {
+    if elements.is_empty() {
+        return Vec::new();
+    }
+    // Fast path: all elements on the same page (most common case)
+    let first_page = elements[0].page();
+    if elements.iter().all(|e| e.page() == first_page) {
+        return vec![first_page];
+    }
+    // General path: deduplicate and sort
     let mut seen = HashSet::new();
     let mut pages = Vec::new();
     for e in elements {
@@ -86,19 +120,4 @@ fn collect_pages(elements: &[Element]) -> Vec<u32> {
     }
     pages.sort_unstable();
     pages
-}
-
-/// Map an `Element` variant to its snake_case type name.
-fn element_type_name(element: &Element) -> &'static str {
-    match element {
-        Element::Title(_) => "title",
-        Element::Paragraph(_) => "paragraph",
-        Element::Table(_) => "table",
-        Element::Header(_) => "header",
-        Element::Footer(_) => "footer",
-        Element::ListItem(_) => "list_item",
-        Element::Image(_) => "image",
-        Element::CodeBlock(_) => "code_block",
-        Element::KeyValue(_) => "key_value",
-    }
 }

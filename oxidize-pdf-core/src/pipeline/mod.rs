@@ -16,7 +16,7 @@ pub use export::{ElementMarkdownExporter, ExportConfig};
 pub use graph::ElementGraph;
 pub use hybrid_chunking::{HybridChunk, HybridChunkConfig, HybridChunker, MergePolicy};
 pub use partition::{PartitionConfig, Partitioner, ReadingOrderStrategy};
-pub use profile::ExtractionProfile;
+pub use profile::{ExtractionProfile, ProfileConfig};
 pub use rag::RagChunk;
 pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 pub use semantic_chunking::{SemanticChunk, SemanticChunkConfig, SemanticChunker};
