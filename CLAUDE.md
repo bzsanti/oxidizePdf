@@ -4,18 +4,19 @@
 
 | Field | Value |
 |-------|-------|
-| **Version** | v2.3.2 (develop has unreleased changes) |
+| **Version** | v2.3.2 (released to crates.io via tag) |
 | **License** | MIT |
-| **Tests** | 6,220 unit + 1,588 integration + 202 doc tests (8,008 total) |
+| **Tests** | 6,240 unit + 1,603 integration + 202 doc tests (8,045 total) |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |
 | **ISO Requirements** | 310 curated, 100% linked (66.8% high verification) |
-| **Corpus** | 9,041 PDFs across 7 tiers (T0-T6) |
+| **Corpus** | 9,371 PDFs across 7 tiers (T0-T6) |
 
 ## Pending Fixes
 
 1. Adjust T2 text extraction threshold from 90% to 80% (GovDocs has scanned-image PDFs)
+2. SMask references not remapped when externalizing preserved XObjects (#156)
 
 ## Architecture
 
