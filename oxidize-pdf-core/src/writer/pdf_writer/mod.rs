@@ -2238,8 +2238,11 @@ impl<W: Write> PdfWriter<W> {
 
         resources.set("Font", Object::Dictionary(font_dict));
 
-        // Add images as XObjects
-        if !page.images().is_empty() {
+        // Add images and Form XObjects as XObjects
+        let has_images = !page.images().is_empty();
+        let has_forms = !page.form_xobjects().is_empty();
+
+        if has_images || has_forms {
             let mut xobject_dict = Dictionary::new();
 
             for (name, image) in page.images() {
@@ -2271,6 +2274,16 @@ impl<W: Write> PdfWriter<W> {
 
                 // Add reference to XObject dictionary
                 xobject_dict.set(name, Object::Reference(image_id));
+            }
+
+            // Write Form XObjects (used for overlay/watermark operations)
+            for (name, form) in page.form_xobjects() {
+                let form_id = self.allocate_object_id();
+                let stream = form.to_stream()?;
+                let stream_obj =
+                    Object::Stream(stream.dictionary().clone(), stream.data().to_vec());
+                self.write_object(form_id, stream_obj)?;
+                xobject_dict.set(name, Object::Reference(form_id));
             }
 
             resources.set("XObject", Object::Dictionary(xobject_dict));

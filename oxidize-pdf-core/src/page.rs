@@ -65,6 +65,7 @@ pub struct Page {
     graphics_context: GraphicsContext,
     text_context: TextContext,
     images: HashMap<String, Image>,
+    form_xobjects: HashMap<String, crate::graphics::FormXObject>,
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
     annotations: Vec<Annotation>,
@@ -92,6 +93,7 @@ impl Page {
             graphics_context: GraphicsContext::new(),
             text_context: TextContext::new(),
             images: HashMap::new(),
+            form_xobjects: HashMap::new(),
             header: None,
             footer: None,
             annotations: Vec::new(),
@@ -795,6 +797,27 @@ impl Page {
 
     pub(crate) fn images(&self) -> &HashMap<String, Image> {
         &self.images
+    }
+
+    /// Adds a Form XObject resource to this page.
+    /// Used by overlay operations to embed external page content.
+    pub(crate) fn add_form_xobject(
+        &mut self,
+        name: impl Into<String>,
+        form: crate::graphics::FormXObject,
+    ) {
+        self.form_xobjects.insert(name.into(), form);
+    }
+
+    /// Returns all Form XObjects registered on this page.
+    pub(crate) fn form_xobjects(&self) -> &HashMap<String, crate::graphics::FormXObject> {
+        &self.form_xobjects
+    }
+
+    /// Appends raw PDF operators to the content stream.
+    /// Content appended here renders AFTER the existing page content (on top).
+    pub(crate) fn append_raw_content(&mut self, data: &[u8]) {
+        self.content.extend_from_slice(data);
     }
 
     /// Add a table to the page.
