@@ -2372,6 +2372,37 @@ impl<W: Write> PdfWriter<W> {
                 preserved_writer_dict.set("Font", Object::Dictionary(fonts_with_refs));
             }
 
+            // Write preserved XObject streams as indirect objects
+            // XObjects resolved in from_parsed_with_content may contain inline Stream data.
+            // Per ISO 32000-1 §7.3.8, streams MUST be indirect objects.
+            if let Some(Object::Dictionary(xobjects)) = preserved_writer_dict.get("XObject") {
+                let mut xobjects_with_refs = crate::objects::Dictionary::new();
+                tracing::debug!(
+                    "Externalizing {} preserved XObject entries as indirect objects",
+                    xobjects.len()
+                );
+
+                for (xobj_name, xobj_obj) in xobjects.iter() {
+                    match xobj_obj {
+                        Object::Stream(dict, data) => {
+                            let obj_id = self.allocate_object_id();
+                            self.write_object(obj_id, Object::Stream(dict.clone(), data.clone()))?;
+                            xobjects_with_refs.set(xobj_name, Object::Reference(obj_id));
+                        }
+                        Object::Dictionary(dict) => {
+                            // Dictionary XObjects may contain nested streams (e.g., SMask)
+                            let externalized = self.externalize_streams_in_dict(dict)?;
+                            xobjects_with_refs.set(xobj_name, Object::Dictionary(externalized));
+                        }
+                        _ => {
+                            xobjects_with_refs.set(xobj_name, xobj_obj.clone());
+                        }
+                    }
+                }
+
+                preserved_writer_dict.set("XObject", Object::Dictionary(xobjects_with_refs));
+            }
+
             // Merge each resource category (Font, XObject, ColorSpace, etc.)
             for (key, value) in preserved_writer_dict.iter() {
                 // If the resource category already exists, merge dictionaries
@@ -2483,6 +2514,29 @@ impl<W: Write> PdfWriter<W> {
     /// FontDescriptor:
     ///   FontFile2: Stream(dict, font_data)  → Write stream as obj 50
     ///   FontFile2: Reference(50, 0)          → Updated reference
+    /// Walks a dictionary and writes any inline Stream values as indirect objects,
+    /// replacing them with References. Required because PDF streams must be indirect
+    /// objects (ISO 32000-1 §7.3.8).
+    fn externalize_streams_in_dict(
+        &mut self,
+        dict: &crate::objects::Dictionary,
+    ) -> Result<crate::objects::Dictionary> {
+        let mut result = crate::objects::Dictionary::new();
+        for (key, value) in dict.iter() {
+            match value {
+                Object::Stream(d, data) => {
+                    let obj_id = self.allocate_object_id();
+                    self.write_object(obj_id, Object::Stream(d.clone(), data.clone()))?;
+                    result.set(key, Object::Reference(obj_id));
+                }
+                _ => {
+                    result.set(key, value.clone());
+                }
+            }
+        }
+        Ok(result)
+    }
+
     fn write_embedded_font_streams(
         &mut self,
         font_dict: &crate::objects::Dictionary,

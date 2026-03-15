@@ -165,6 +165,36 @@ impl Image {
         })
     }
 
+    /// Load an image from a file, detecting format by extension.
+    ///
+    /// Supported extensions: `.jpg`, `.jpeg`, `.png`, `.tif`, `.tiff` (case-insensitive).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::Image;
+    ///
+    /// let img = Image::from_file("photo.jpg").unwrap();
+    /// let img = Image::from_file("logo.png").unwrap();
+    /// ```
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase())
+            .unwrap_or_default();
+
+        match ext.as_str() {
+            "jpg" | "jpeg" => Self::from_jpeg_file(path),
+            "png" => Self::from_png_file(path),
+            "tif" | "tiff" => Self::from_tiff_file(path),
+            _ => Err(crate::PdfError::InvalidFormat(format!(
+                "Unsupported image format: .{ext}. Supported: jpg, jpeg, png, tif, tiff"
+            ))),
+        }
+    }
+
     /// Get image width in pixels
     pub fn width(&self) -> u32 {
         self.width
@@ -1358,6 +1388,57 @@ mod tests {
             assert_eq!(image.height(), 96);
             assert_eq!(image.format(), ImageFormat::Tiff);
             assert_eq!(image.data(), tiff_data);
+        }
+
+        #[test]
+        fn test_image_from_file_jpeg() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("test.jpg");
+
+            let jpeg_data = vec![
+                0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x32, 0x00, 0x64, 0x03, 0x01, 0x11,
+                0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0xFF, 0xD9,
+            ];
+            fs::write(&file_path, &jpeg_data).unwrap();
+
+            let image = Image::from_file(&file_path).unwrap();
+            assert_eq!(image.format(), ImageFormat::Jpeg);
+            assert_eq!(image.width(), 100);
+        }
+
+        #[test]
+        fn test_image_from_file_uppercase_extension() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("test.JPEG");
+
+            let jpeg_data = vec![
+                0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x32, 0x00, 0x64, 0x03, 0x01, 0x11,
+                0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01, 0xFF, 0xD9,
+            ];
+            fs::write(&file_path, &jpeg_data).unwrap();
+
+            let image = Image::from_file(&file_path).unwrap();
+            assert_eq!(image.format(), ImageFormat::Jpeg);
+        }
+
+        #[test]
+        fn test_image_from_file_unsupported_extension() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("test.bmp");
+            fs::write(&file_path, b"dummy").unwrap();
+
+            let result = Image::from_file(&file_path);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_image_from_file_no_extension() {
+            let temp_dir = TempDir::new().unwrap();
+            let file_path = temp_dir.path().join("noext");
+            fs::write(&file_path, b"dummy").unwrap();
+
+            let result = Image::from_file(&file_path);
+            assert!(result.is_err());
         }
 
         #[test]

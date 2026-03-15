@@ -295,9 +295,10 @@ pub use parser::{
 
 // Re-export operations
 pub use operations::{
-    extract_images_from_pages, extract_images_from_pdf, merge_pdfs, overlay_pdf, rotate_pdf_pages,
-    split_pdf, ExtractImagesOptions, ExtractedImage, ImageExtractor, OverlayOptions,
-    OverlayPosition,
+    extract_images_from_pages, extract_images_from_pdf, merge_pdfs, move_pdf_page, overlay_pdf,
+    reorder_pdf_pages, reverse_pdf_pages, rotate_pdf_pages, split_pdf, swap_pdf_pages,
+    ExtractImagesOptions, ExtractedImage, ImageExtractor, OverlayOptions, OverlayPosition,
+    ReorderOptions,
 };
 
 // Re-export dashboard types
