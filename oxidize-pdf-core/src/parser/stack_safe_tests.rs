@@ -148,6 +148,7 @@ mod tests {
         assert!(child_context.completed_refs.contains(&(1, 0)));
 
         // Child inherits the start time (by design for timeout consistency)
+        #[cfg(not(target_arch = "wasm32"))]
         assert_eq!(child_context.start_time, parent_context.start_time);
     }
 
@@ -222,6 +223,7 @@ mod tests {
         assert_eq!(context.max_depth, 1000);
         assert!(context.active_stack.is_empty());
         assert!(context.completed_refs.is_empty());
+        #[cfg(not(target_arch = "wasm32"))]
         assert_eq!(context.timeout, Duration::from_secs(120)); // Updated to match PARSING_TIMEOUT_SECS
     }
 
@@ -233,6 +235,7 @@ mod tests {
         assert_eq!(context.max_depth, 500);
         assert!(context.active_stack.is_empty());
         assert!(context.completed_refs.is_empty());
+        #[cfg(not(target_arch = "wasm32"))]
         assert_eq!(context.timeout, Duration::from_secs(10));
     }
 
