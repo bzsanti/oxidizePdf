@@ -115,20 +115,30 @@ pub(crate) fn compute_ctm(
 /// Converts a parser `PdfDictionary` directly to a writer `objects::Dictionary`.
 ///
 /// Used to pass overlay page resources into the Form XObject's resource dictionary.
-fn convert_parser_dict_to_objects_dict(
+/// References are resolved against `doc` (the source/overlay document) so that
+/// the resulting writer objects contain inline data rather than dangling IDs
+/// from the source PDF. See issue #156.
+fn convert_parser_dict_to_objects_dict<R: Read + Seek>(
     parser_dict: &crate::parser::objects::PdfDictionary,
+    doc: &PdfDocument<R>,
 ) -> crate::objects::Dictionary {
     let mut result = crate::objects::Dictionary::new();
     for (key, value) in &parser_dict.0 {
-        let converted = convert_parser_obj_to_objects_obj(value);
+        let converted = convert_parser_obj_to_objects_obj(value, doc);
         result.set(key.as_str(), converted);
     }
     result
 }
 
 /// Converts a single parser `PdfObject` to a writer `objects::Object`.
-fn convert_parser_obj_to_objects_obj(
+///
+/// `PdfObject::Reference` values are resolved against `doc` (the source document)
+/// and recursively converted, so the returned writer object tree contains only
+/// inline data — no references to foreign object IDs. This prevents dangling
+/// references when the writer assigns new IDs in the destination PDF (issue #156).
+fn convert_parser_obj_to_objects_obj<R: Read + Seek>(
     obj: &crate::parser::objects::PdfObject,
+    doc: &PdfDocument<R>,
 ) -> crate::objects::Object {
     use crate::objects::Object as WObj;
     use crate::parser::objects::PdfObject as PObj;
@@ -144,16 +154,32 @@ fn convert_parser_obj_to_objects_obj(
             let items: Vec<WObj> = arr
                 .0
                 .iter()
-                .map(convert_parser_obj_to_objects_obj)
+                .map(|item| convert_parser_obj_to_objects_obj(item, doc))
                 .collect();
             WObj::Array(items)
         }
-        PObj::Dictionary(dict) => WObj::Dictionary(convert_parser_dict_to_objects_dict(dict)),
+        PObj::Dictionary(dict) => WObj::Dictionary(convert_parser_dict_to_objects_dict(dict, doc)),
         PObj::Stream(stream) => {
-            let dict = convert_parser_dict_to_objects_dict(&stream.dict);
+            let dict = convert_parser_dict_to_objects_dict(&stream.dict, doc);
             WObj::Stream(dict, stream.data.clone())
         }
-        PObj::Reference(num, gen) => WObj::Reference(crate::objects::ObjectId::new(*num, *gen)),
+        PObj::Reference(num, gen) => {
+            // Resolve the reference against the SOURCE document so we get the
+            // actual object data instead of a raw ID that belongs to the overlay
+            // PDF. The writer will later externalize any inline streams with
+            // fresh IDs valid in the destination PDF.
+            match doc.get_object(*num, *gen as u16) {
+                Ok(resolved) => convert_parser_obj_to_objects_obj(&resolved, doc),
+                Err(_) => {
+                    tracing::warn!(
+                        "Could not resolve reference {} {} R from overlay; replacing with Null",
+                        num,
+                        gen
+                    );
+                    WObj::Null
+                }
+            }
+        }
     }
 }
 
@@ -279,7 +305,7 @@ impl<R: Read + Seek> PdfOverlay<R> {
 
         // Preserve overlay page resources in the Form XObject so fonts, images, etc. are available
         if let Some(resources) = parsed_overlay.get_resources() {
-            let writer_dict = convert_parser_dict_to_objects_dict(resources);
+            let writer_dict = convert_parser_dict_to_objects_dict(resources, &self.overlay_doc);
             form = form.with_resources(writer_dict);
         }
 
@@ -553,5 +579,47 @@ mod tests {
             OverlayPosition::Custom(1.0, 2.0)
         );
         assert_ne!(OverlayPosition::Center, OverlayPosition::TopLeft);
+    }
+
+    /// Issue #156: unresolvable references must degrade to Null, not panic.
+    #[test]
+    fn test_unresolvable_reference_degrades_to_null() {
+        use crate::objects::Object as WObj;
+        use crate::parser::objects::{PdfDictionary, PdfName, PdfObject as PObj};
+
+        // Build a PdfDictionary containing a reference to a non-existent object.
+        let mut dict = PdfDictionary::new();
+        dict.0
+            .insert(PdfName::new("SMask".to_string()), PObj::Reference(99999, 0));
+        dict.0
+            .insert(PdfName::new("Width".to_string()), PObj::Integer(100));
+
+        // Create a minimal in-memory PDF to use as the document for resolution.
+        let mut doc_builder = crate::Document::new();
+        let page = crate::Page::a4();
+        doc_builder.add_page(page);
+        let pdf_bytes = doc_builder.to_bytes().unwrap();
+
+        let reader = crate::parser::PdfReader::new(std::io::Cursor::new(pdf_bytes)).unwrap();
+        let pdf_doc = crate::parser::PdfDocument::new(reader);
+
+        let result = convert_parser_dict_to_objects_dict(&dict, &pdf_doc);
+
+        // The unresolvable reference (99999 0 R) should become Null.
+        let smask_key = "SMask";
+        let smask_val = result.get(smask_key);
+        assert!(
+            matches!(smask_val, Some(WObj::Null)),
+            "Unresolvable reference should become Null, got: {:?}",
+            smask_val
+        );
+
+        // Other values should convert normally.
+        let width_val = result.get("Width");
+        assert!(
+            matches!(width_val, Some(WObj::Integer(100))),
+            "Normal integer should convert, got: {:?}",
+            width_val
+        );
     }
 }

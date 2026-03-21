@@ -57,6 +57,8 @@ pub struct FontInfo {
     pub descendant_font: Option<Box<FontInfo>>,
     /// For CIDFonts: CIDToGIDMap
     pub cid_to_gid_map: Option<Vec<u16>>,
+    /// For CIDFonts: CIDSystemInfo Ordering (e.g., "CNS1", "GB1", "Japan1", "Korea1")
+    pub cid_ordering: Option<String>,
     /// Font metrics (widths, kerning)
     pub metrics: FontMetrics,
 }
@@ -109,8 +111,25 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics::default(),
         };
+
+        // Extract CIDSystemInfo Ordering (for CIDFont dictionaries)
+        if let Some(cid_sys_info) = font_dict.get("CIDSystemInfo") {
+            if let PdfObject::Dictionary(cid_dict) = cid_sys_info {
+                if let Some(ordering) = cid_dict.get("Ordering") {
+                    if let PdfObject::String(s) = ordering {
+                        // PdfString is Vec<u8>, convert to String
+                        if let Ok(ordering_str) = String::from_utf8(s.0.clone()) {
+                            font_info.cid_ordering = Some(ordering_str);
+                        }
+                    } else if let PdfObject::Name(n) = ordering {
+                        font_info.cid_ordering = Some(n.0.clone());
+                    }
+                }
+            }
+        }
 
         // Extract encoding
         if let Some(encoding_obj) = font_dict.get("Encoding") {
@@ -597,23 +616,73 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
 
 /// Decode text using font information — free function (no allocations).
 ///
-/// Tries ToUnicode CMap first, then descendant fonts (for Type0),
-/// then falls back to encoding-based decoding.
+/// Tries ToUnicode CMap first, then CID→Unicode tables for CJK fonts,
+/// then descendant fonts (for Type0), then falls back to encoding-based decoding.
 pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
     // First try ToUnicode CMap if available
     if let Some(ref to_unicode) = font_info.to_unicode {
         return decode_with_cmap(text_bytes, to_unicode);
     }
 
-    // For Type0 fonts, use descendant font
+    // For Type0 fonts, try CID→Unicode tables before falling back
     if font_info.font_type == "Type0" {
         if let Some(ref descendant) = font_info.descendant_font {
+            // Try descendant's ToUnicode first
+            if descendant.to_unicode.is_some() {
+                return decode_text_with_font(text_bytes, descendant);
+            }
+
+            // Try CID→Unicode mapping using CIDSystemInfo Ordering
+            // This handles fonts with Identity-H encoding and no ToUnicode CMap
+            let ordering = descendant
+                .cid_ordering
+                .as_deref()
+                .or(font_info.cid_ordering.as_deref());
+            if let Some(ordering) = ordering {
+                if let Some(collection) =
+                    crate::text::cid_to_unicode::CidCollection::from_ordering(ordering)
+                {
+                    let result = decode_with_cid_table(text_bytes, &collection);
+                    if !result.is_empty()
+                        && !result.chars().all(|c| c == '\0' || c.is_ascii_control())
+                    {
+                        return Ok(result);
+                    }
+                }
+            }
+
+            // Fall through to descendant's encoding-based decoding
             return decode_text_with_font(text_bytes, descendant);
         }
     }
 
     // Fall back to encoding-based decoding
     decode_with_encoding(text_bytes, font_info)
+}
+
+/// Decode text using CID→Unicode lookup tables (Adobe CMap Resources).
+///
+/// Interprets text_bytes as pairs of big-endian u16 CIDs and maps each
+/// to its Unicode code point using the specified CID collection.
+fn decode_with_cid_table(
+    text_bytes: &[u8],
+    collection: &crate::text::cid_to_unicode::CidCollection,
+) -> String {
+    let mut result = String::new();
+    let mut i = 0;
+
+    while i + 1 < text_bytes.len() {
+        let cid = u16::from_be_bytes([text_bytes[i], text_bytes[i + 1]]);
+        if let Some(ch) = collection.cid_to_unicode(cid) {
+            result.push(ch);
+        } else if cid > 0 {
+            // Unknown CID — emit replacement character rather than losing position
+            result.push('\u{FFFD}');
+        }
+        i += 2;
+    }
+
+    result
 }
 
 /// Decode text using a CMap — free function (no allocations).
@@ -842,6 +911,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics::default(),
         };
 

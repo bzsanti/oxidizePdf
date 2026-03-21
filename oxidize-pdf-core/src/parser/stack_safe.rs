@@ -25,8 +25,10 @@ pub struct StackSafeContext {
     /// Referencias completamente procesadas (no son ciclos)
     pub completed_refs: HashSet<(u32, u16)>,
     /// Start time for timeout tracking
+    #[cfg(not(target_arch = "wasm32"))]
     pub start_time: std::time::Instant,
     /// Timeout duration
+    #[cfg(not(target_arch = "wasm32"))]
     pub timeout: std::time::Duration,
 }
 
@@ -44,19 +46,28 @@ impl StackSafeContext {
             max_depth: MAX_RECURSION_DEPTH,
             active_stack: Vec::new(),
             completed_refs: HashSet::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             start_time: std::time::Instant::now(),
+            #[cfg(not(target_arch = "wasm32"))]
             timeout: std::time::Duration::from_secs(PARSING_TIMEOUT_SECS),
         }
     }
 
     /// Create a new context with custom limits
+    ///
+    /// On `wasm32-unknown-unknown`, the `timeout_secs` parameter is ignored
+    /// because `std::time::Instant` is not available. Only the recursion
+    /// depth limit is enforced.
+    #[allow(unused_variables)]
     pub fn with_limits(max_depth: usize, timeout_secs: u64) -> Self {
         Self {
             depth: 0,
             max_depth,
             active_stack: Vec::new(),
             completed_refs: HashSet::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             start_time: std::time::Instant::now(),
+            #[cfg(not(target_arch = "wasm32"))]
             timeout: std::time::Duration::from_secs(timeout_secs),
         }
     }
@@ -110,12 +121,18 @@ impl StackSafeContext {
     }
 
     /// Check if parsing has timed out
+    ///
+    /// On `wasm32-unknown-unknown` this is a no-op — only the recursion depth
+    /// limit protects against runaway parsing.
     pub fn check_timeout(&self) -> ParseResult<()> {
-        if self.start_time.elapsed() > self.timeout {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: format!("Parsing timeout exceeded: {}s", self.timeout.as_secs()),
-            });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if self.start_time.elapsed() > self.timeout {
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: format!("Parsing timeout exceeded: {}s", self.timeout.as_secs()),
+                });
+            }
         }
         Ok(())
     }
@@ -127,7 +144,9 @@ impl StackSafeContext {
             max_depth: self.max_depth,
             active_stack: self.active_stack.clone(),
             completed_refs: self.completed_refs.clone(),
+            #[cfg(not(target_arch = "wasm32"))]
             start_time: self.start_time,
+            #[cfg(not(target_arch = "wasm32"))]
             timeout: self.timeout,
         }
     }
@@ -198,6 +217,7 @@ mod tests {
         let context = StackSafeContext::with_limits(50, 30);
         assert_eq!(context.depth, 0);
         assert_eq!(context.max_depth, 50);
+        #[cfg(not(target_arch = "wasm32"))]
         assert_eq!(context.timeout.as_secs(), 30);
     }
 
