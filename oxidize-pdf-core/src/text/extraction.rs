@@ -1306,6 +1306,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: None,
                 last_char: None,
@@ -1346,6 +1347,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
                 last_char: Some(126),
@@ -1397,6 +1399,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(65), // 'A'
                 last_char: Some(90),  // 'Z'
@@ -1436,6 +1439,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
                 last_char: Some(126),
@@ -1470,6 +1474,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
                 last_char: Some(126),
@@ -1503,6 +1508,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
                 last_char: Some(126),
@@ -1535,6 +1541,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(65), // 'A'
                 last_char: Some(65),  // 'A'
@@ -1572,6 +1579,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(105), // 'i'
                 last_char: Some(107),  // covers i, j, k
@@ -1591,6 +1599,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(105),
                 last_char: Some(107),
@@ -1640,6 +1649,7 @@ mod tests {
             differences: None,
             descendant_font: None,
             cid_to_gid_map: None,
+            cid_ordering: None,
             metrics: FontMetrics {
                 first_char: Some(32),
                 last_char: Some(126),

@@ -1,3 +1,4 @@
+pub mod cid_to_unicode;
 pub mod cmap;
 mod encoding;
 pub mod extraction;
