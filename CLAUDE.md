@@ -6,7 +6,7 @@
 |-------|-------|
 | **Version** | v2.3.2 (develop has unreleased changes) |
 | **License** | MIT |
-| **Tests** | 6,220 unit + 1,588 integration + 202 doc tests (8,008 total) |
+| **Tests** | 6,220 unit + 1,591 integration + 202 doc tests (8,049 total) |
 | **Coverage** | 72.14% |
 | **Quality** | A (95/100) |
 | **PDF Success** | 99.3% (275/277 failure corpus) |
@@ -16,6 +16,7 @@
 ## Pending Fixes
 
 1. Adjust T2 text extraction threshold from 90% to 80% (GovDocs has scanned-image PDFs)
+2. WASM compat: `stack_safe.rs` timeout fields gated with `#[cfg(not(target_arch = "wasm32"))]` (in fix/issue-156-smask-remap, pending merge)
 
 ## Architecture
 
