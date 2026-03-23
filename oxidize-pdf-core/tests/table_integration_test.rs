@@ -1,6 +1,7 @@
 //! Integration tests for table functionality
 
 use oxidize_pdf::text::{HeaderStyle, Table, TableCell, TableOptions, TextAlign};
+use oxidize_pdf::writer::WriterConfig;
 use oxidize_pdf::{Color, Document, Font, Page, Result};
 use std::fs;
 use tempfile::TempDir;
@@ -382,5 +383,87 @@ fn test_table_with_custom_fonts() -> Result<()> {
     doc.save(&file_path)?;
 
     assert!(file_path.exists());
+    Ok(())
+}
+
+/// Issue #160: CJK font not displayed correctly in Table
+/// Verifies that Table with Font::Custom uses hex-encoded CID strings
+/// instead of literal PDF strings, which is required for Type0/CJK fonts.
+#[test]
+fn test_table_with_custom_font_uses_hex_encoding() -> Result<()> {
+    let mut doc = Document::new();
+    doc.set_title("CJK Table Font Test - Issue #160");
+
+    let mut page = Page::a4();
+
+    let mut table = Table::new(vec![200.0, 200.0]);
+    table.set_position(50.0, 700.0);
+
+    let mut options = TableOptions::default();
+    options.font = Font::Custom("NotoSansCJK".to_string());
+    options.font_size = 12.0;
+    table.set_options(options);
+
+    // Add row with CJK text: 你好 (U+4F60 U+597D)
+    table.add_row(vec!["你好".to_string(), "世界".to_string()])?;
+
+    page.add_table(&table)?;
+    doc.add_page(page);
+
+    // Disable stream compression so we can inspect raw content stream
+    let config = WriterConfig {
+        compress_streams: false,
+        ..WriterConfig::default()
+    };
+    let pdf_bytes = doc.to_bytes_with_config(config)?;
+    let pdf_content = String::from_utf8_lossy(&pdf_bytes);
+
+    // The content stream must contain hex-encoded CIDs with Tj operator
+    // 你=U+4F60, 好=U+597D → <4F60597D> Tj
+    // 世=U+4E16, 界=U+754C → <4E16754C> Tj
+    assert!(
+        pdf_content.contains("<4F60597D> Tj"),
+        "PDF should contain hex-encoded CJK text '你好' as <4F60597D> Tj operator"
+    );
+    assert!(
+        pdf_content.contains("<4E16754C> Tj"),
+        "PDF should contain hex-encoded CJK text '世界' as <4E16754C> Tj operator"
+    );
+
+    // Must NOT contain literal CJK characters in PDF string syntax
+    assert!(
+        !pdf_content.contains("(你好)"),
+        "PDF must not contain literal CJK in parenthesized string"
+    );
+
+    Ok(())
+}
+
+/// Regression test: standard font tables must use literal encoding, not hex.
+#[test]
+fn test_table_with_standard_font_uses_literal_encoding() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    let mut table = Table::new(vec![200.0]);
+    table.set_position(50.0, 700.0);
+    // Default font is Helvetica (standard)
+    table.add_row(vec!["Hello World".to_string()])?;
+
+    page.add_table(&table)?;
+    doc.add_page(page);
+
+    let config = WriterConfig {
+        compress_streams: false,
+        ..WriterConfig::default()
+    };
+    let pdf_bytes = doc.to_bytes_with_config(config)?;
+    let pdf_content = String::from_utf8_lossy(&pdf_bytes);
+
+    assert!(
+        pdf_content.contains("(Hello World) Tj"),
+        "Standard font table must use literal string encoding"
+    );
+
     Ok(())
 }
