@@ -1,5 +1,5 @@
 # ROADMAP MASTER - oxidize-pdf
-**Ultima actualizacion**: 2026-03-21 (v2.3.3 released — CJK CID→Unicode fix, SMask remap fix)
+**Ultima actualizacion**: 2026-03-23 (fix/issue-160 — CJK font encoding in Table writer)
 **Horizonte**: Sin deadline — roadmap es orientativo, no vinculante
 **Owner**: bzsanti
 **Repositorio**: https://github.com/bzsanti/oxidizePdf
@@ -10,8 +10,8 @@
 
 ### Posicion en Roadmap
 - **Version**: v2.3.3 released (crates.io 2026-03-21, GitHub release via Actions)
-- **Sprint Actual**: Bug fixes — CJK text extraction, SMask remap
-- **Tests**: 6,241 unit + 1,608 integration + 208 doc tests passing (8,057 total)
+- **Sprint Actual**: Bug fixes — CJK table font encoding (#160)
+- **Tests**: 8,070 passing (unit + integration + doc)
 - **Coverage**: 72.14%
 - **Quality Grade**: A (95/100)
 - **PDF Success Rate**: 99.3% (275/277 failure corpus)
@@ -20,7 +20,7 @@
 - **Downloads**: ~10K+ total (estimado)
 - **Stars**: 20+
 - **Test coverage**: 72.14% (objetivo: 80%)
-- **Tests**: 8,057 passing (6,241 unit + 1,608 integration + 208 doc)
+- **Tests**: 8,070 passing
 - **Licencia**: MIT (cambiada desde AGPL-3.0 — monetizacion ya no es objetivo)
 - **ISO compliance**: 310 requisitos curados, 100% linked to code (66.8% alta verificacion)
 
@@ -97,8 +97,9 @@
 ## ISSUES GITHUB
 
 ### Abiertos
-- No hay issues abiertos
+- **#160** - CJK font NOT displayed correctly in Table (fix en rama `fix/issue-160-cjk-table-font`, pendiente PR+merge)
 - Feature branches activas:
+  - `fix/issue-160-cjk-table-font` — fix encoding CJK en GraphicsContext::show_text
   - `feature/pdf-editor` — nueva feature de edicion (AnnotationInjector, PageManipulator)
 
 ### Cerrados (2026)
