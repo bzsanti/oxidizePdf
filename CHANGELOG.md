@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.3.4] - 2026-03-26
+
+### Fixed
+- **CJK font not displayed correctly in Table** (#160) — CJK glyphs now render with correct fonts in table cells
+- **Table cell text alignment** (#162) — Text is now correctly centered/aligned within table cells
+- **CellData accessibility** (#163) — CellData fields are now publicly accessible for downstream consumers
+
+## [2.3.3] - 2026-03-21
+
+### Fixed
+- **CID-keyed fonts with CMaps for CJK text extraction** (#157) — Proper CMap lookup for CID-keyed fonts, enabling correct CJK text extraction
+- **SMask references during overlay** (#156) — Resolve SMask (soft mask) references from source PDF when applying overlays/watermarks
+
+## [2.3.2] - 2026-03-15
+
+### Added
+- **`ExtractionProfile::Rag`** — Dedicated RAG extraction profile with `rag_chunks_with_profile` for optimized chunking
+- **OPS-005: Overlay/watermark PDF operation** — Apply PDF pages as overlays or watermarks on existing documents
+- **`Image::from_file`** — Load images directly from file paths, XObject stream externalization, reordered exports
+
+### Fixed
+- **RAG quality review round 2** — 10 findings resolved (error semantics, allocations, docs)
+
+## [2.3.1] - 2026-03-14
+
+### Fixed
+- **RAG quality review** — Improved error semantics, reduced allocations, better docs and page ordering in RAG pipeline
+
+## [2.3.0] - 2026-03-14
+
+### Added
+- **RagChunk API** — One-liner RAG pipeline with full metadata: `PdfDocument::rag_chunks()` extracts semantically chunked content ready for embedding
+
+## [2.2.0] - 2026-03-14
+
+### Added
+- **Encryption on write** — Full write-side encryption support for RC4-40, RC4-128, AES-128 (R4), AES-256 (R5/R6) with per-object key derivation
+- **ElementGraph** — Index-based element relationships (parent/child/next/prev) — no lifetimes, Send+Sync
+- **HybridChunker v2** — Agnostic merge policy, sentence splitting for oversized chunks, `full_text()` with heading context
+- **Improved table detection** — Region segmentation (multiple tables/page), `min_table_confidence`, anti-list heuristic
+
+## [2.1.0] - 2026-03-09
+
+### Added
+- **Pipeline Architecture v2** — Complete 7-phase document intelligence pipeline with 66 TDD tests
+  - Phase 1: Element type system (Title, Header, Footer, NarrativeText, Table, ListItem, KeyValue, Image)
+  - Phase 2: VibeCoding convenience API on `PdfDocument`
+  - Phase 3: Partition fragments into typed elements with confidence scores
+  - Phase 4: Reading order strategies (Simple + XY-Cut)
+  - Phase 5: Semantic chunking with element boundaries
+  - Phase 6: Deprecate `ai::` free functions in favor of `PdfDocument` methods
+  - Phase 7: Integration tests and VibeCoding golden paths
+- **Pipeline profiling infrastructure** and performance baseline
+
 ## [2.0.0] - 2026-03-03
 
 ### Changed
