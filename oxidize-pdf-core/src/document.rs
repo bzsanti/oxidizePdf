@@ -5,6 +5,8 @@ use crate::page::Page;
 use crate::page_labels::PageLabelTree;
 use crate::semantic::{BoundingBox, EntityType, RelationType, SemanticEntity};
 use crate::structure::{NamedDestinations, OutlineTree, StructTree};
+// Alias to avoid collision with crate::fonts::FontMetrics (PDF font objects)
+use crate::text::metrics::{register_custom_font_metrics, FontMetrics as TextMeasurementMetrics};
 use crate::text::FontEncoding;
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
@@ -424,10 +426,29 @@ impl Document {
         let name = name.into();
         let font = CustomFont::from_bytes(&name, data)?;
 
-        // TODO: Implement automatic font metrics registration
-        // This needs to be properly integrated with the font metrics system
+        // Extract glyph widths before moving font into the cache
+        // Convert from font units to 1/1000 em units used by text::metrics
+        let units_per_em = font.metrics.units_per_em as f64;
+        let char_width_map: std::collections::HashMap<char, u16> = font
+            .glyph_mapping
+            .char_widths_iter()
+            .map(|(ch, width_font_units)| {
+                let width_1000 = ((width_font_units as f64 * 1000.0) / units_per_em).round() as u16;
+                (ch, width_1000)
+            })
+            .collect();
 
-        self.custom_fonts.add_font(name, font)?;
+        // Add to font cache first — if this fails, no metrics are registered (consistent state)
+        self.custom_fonts.add_font(name.clone(), font)?;
+
+        // Register text measurement metrics only after successful cache insertion
+        if !char_width_map.is_empty() {
+            let sum: u32 = char_width_map.values().map(|&w| w as u32).sum();
+            let default_width = (sum / char_width_map.len() as u32) as u16;
+            let text_metrics = TextMeasurementMetrics::from_char_map(char_width_map, default_width);
+            register_custom_font_metrics(name, text_metrics);
+        }
+
         Ok(())
     }
 
