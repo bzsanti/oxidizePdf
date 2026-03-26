@@ -52,6 +52,19 @@ impl GlyphMapping {
         self.char_to_glyph(ch)
             .and_then(|glyph| self.get_glyph_width(glyph))
     }
+
+    /// Iterate over all mapped characters with their widths in font units.
+    /// Yields `(char, width_in_font_units)` for each character that has both
+    /// a cmap mapping and a glyph width entry.
+    pub fn char_widths_iter(&self) -> impl Iterator<Item = (char, u16)> + '_ {
+        self.char_to_glyph
+            .iter()
+            .filter_map(move |(&code_point, &glyph_id)| {
+                let ch = char::from_u32(code_point)?;
+                let width = self.glyph_widths.get(&glyph_id).copied()?;
+                Some((ch, width))
+            })
+    }
 }
 
 /// TTF table record
@@ -599,5 +612,36 @@ mod tests {
         assert_eq!(mapping.glyph_to_char(65), Some('A'));
         assert_eq!(mapping.glyph_to_char(66), Some('B'));
         assert_eq!(mapping.glyph_to_char(67), None);
+    }
+
+    #[test]
+    fn test_char_widths_iter_yields_all_mapped_chars() {
+        let mut m = GlyphMapping::default();
+        m.add_mapping('A', 1);
+        m.set_glyph_width(1, 700);
+        m.add_mapping('B', 2);
+        m.set_glyph_width(2, 600);
+
+        let mut pairs: Vec<(char, u16)> = m.char_widths_iter().collect();
+        pairs.sort_by_key(|&(ch, _)| ch);
+        assert_eq!(pairs, vec![('A', 700), ('B', 600)]);
+    }
+
+    #[test]
+    fn test_char_widths_iter_skips_chars_without_width() {
+        let mut m = GlyphMapping::default();
+        m.add_mapping('C', 3); // mapped but no width set
+        m.add_mapping('D', 4);
+        m.set_glyph_width(4, 500); // only D has width
+
+        let pairs: Vec<(char, u16)> = m.char_widths_iter().collect();
+        assert_eq!(pairs.len(), 1);
+        assert_eq!(pairs[0], ('D', 500));
+    }
+
+    #[test]
+    fn test_char_widths_iter_empty_on_empty_mapping() {
+        let m = GlyphMapping::default();
+        assert_eq!(m.char_widths_iter().count(), 0);
     }
 }

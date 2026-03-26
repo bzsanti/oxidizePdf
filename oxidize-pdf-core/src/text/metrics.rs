@@ -1,5 +1,4 @@
 use crate::text::Font;
-use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -12,18 +11,26 @@ pub struct FontMetrics {
 }
 
 impl FontMetrics {
-    fn new(default_width: u16) -> Self {
+    pub fn new(default_width: u16) -> Self {
         Self {
             widths: HashMap::new(),
             default_width,
         }
     }
 
-    fn with_widths(mut self, widths: &[(char, u16)]) -> Self {
+    pub fn with_widths(mut self, widths: &[(char, u16)]) -> Self {
         for &(ch, width) in widths {
             self.widths.insert(ch, width);
         }
         self
+    }
+
+    /// Create metrics from a pre-built character width map
+    pub fn from_char_map(widths: HashMap<char, u16>, default_width: u16) -> Self {
+        Self {
+            widths,
+            default_width,
+        }
     }
 
     pub fn char_width(&self, ch: char) -> u16 {
@@ -32,7 +39,7 @@ impl FontMetrics {
 }
 
 // Dynamic registry for custom font metrics
-lazy_static! {
+lazy_static::lazy_static! {
     static ref CUSTOM_FONT_METRICS: RwLock<HashMap<String, FontMetrics>> =
         RwLock::new(HashMap::new());
 }
@@ -135,15 +142,6 @@ lazy_static::lazy_static! {
     };
 }
 
-impl FontMetrics {
-    fn clone(&self) -> Self {
-        Self {
-            widths: self.widths.clone(),
-            default_width: self.default_width,
-        }
-    }
-}
-
 /// Measure the width of a text string in a given font and size
 pub fn measure_text(text: &str, font: Font, font_size: f64) -> f64 {
     if font.is_symbolic() {
@@ -202,8 +200,18 @@ pub fn split_into_words(text: &str) -> Vec<&str> {
 
 /// Register metrics for a custom font
 pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
-    if let Ok(mut custom_metrics) = CUSTOM_FONT_METRICS.write() {
-        custom_metrics.insert(font_name, metrics);
+    match CUSTOM_FONT_METRICS.write() {
+        Ok(mut custom_metrics) => {
+            custom_metrics.insert(font_name, metrics);
+        }
+        Err(e) => {
+            tracing::warn!(
+                "Font metrics registry lock is poisoned; \
+                 could not register metrics for font '{}': {}",
+                font_name,
+                e
+            );
+        }
     }
 }
 
@@ -247,11 +255,18 @@ fn get_font_metrics(font: &Font) -> FontMetrics {
     }
 }
 
-/// Create default metrics for a custom font (fallback when no specific metrics available)
-pub fn create_default_custom_metrics() -> FontMetrics {
-    // Use Helvetica-like metrics as a reasonable default for unknown custom fonts
-    // This prevents panics while providing functional text measurement
-    FontMetrics::new(556).with_widths(&[
+/// Create default metrics for a custom font (fallback when no specific metrics available).
+/// Result is cached via `lazy_static` — the expensive CJK range insertion (~6,500 entries)
+/// only happens once. Subsequent calls return a clone.
+pub(crate) fn create_default_custom_metrics() -> FontMetrics {
+    lazy_static::lazy_static! {
+        static ref DEFAULT_CUSTOM_METRICS: FontMetrics = build_default_custom_metrics();
+    }
+    DEFAULT_CUSTOM_METRICS.clone()
+}
+
+fn build_default_custom_metrics() -> FontMetrics {
+    let mut metrics = FontMetrics::new(556).with_widths(&[
         (' ', 278),
         ('!', 278),
         ('"', 355),
@@ -347,16 +362,27 @@ pub fn create_default_custom_metrics() -> FontMetrics {
         ('|', 260),
         ('}', 334),
         ('~', 584),
-        // Add basic CJK character support with reasonable estimates
-        ('你', 1000),
-        ('好', 1000),
-        ('世', 1000),
-        ('界', 1000),
-        ('中', 1000),
-        ('文', 1000),
-        ('测', 1000),
-        ('试', 1000),
-    ])
+    ]);
+
+    // CJK characters are full-width (1000 units). Insert defaults for common ranges
+    // so that even without registered font metrics, CJK text measurement is reasonable.
+    let cjk_ranges: &[(u32, u32)] = &[
+        (0x3000, 0x303F), // CJK Symbols and Punctuation
+        (0x3040, 0x309F), // Hiragana
+        (0x30A0, 0x30FF), // Katakana
+        (0x4E00, 0x9FFF), // CJK Unified Ideographs
+        (0xF900, 0xFAFF), // CJK Compatibility Ideographs
+        (0xFF00, 0xFFEF), // Halfwidth and Fullwidth Forms
+    ];
+    for &(start, end) in cjk_ranges {
+        for code_point in start..=end {
+            if let Some(ch) = char::from_u32(code_point) {
+                metrics.widths.insert(ch, 1000);
+            }
+        }
+    }
+
+    metrics
 }
 
 #[cfg(test)]
@@ -739,6 +765,23 @@ mod tests {
         assert_eq!(metrics.char_width('0'), 556);
         assert_eq!(metrics.char_width('你'), 1000); // CJK
         assert_eq!(metrics.default_width, 556);
+    }
+
+    #[test]
+    fn test_create_default_custom_metrics_is_cached() {
+        // With lazy_static caching, repeated calls should be fast (clone only).
+        // Without caching, each call does ~6,500 HashMap inserts.
+        use std::time::Instant;
+        let start = Instant::now();
+        for _ in 0..1000 {
+            let _ = create_default_custom_metrics();
+        }
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed.as_millis() < 50,
+            "1000 calls took {}ms; expected < 50ms with caching",
+            elapsed.as_millis()
+        );
     }
 
     #[test]
