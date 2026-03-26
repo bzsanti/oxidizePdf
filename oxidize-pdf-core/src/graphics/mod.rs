@@ -80,16 +80,34 @@ pub struct GraphicsContext {
     clipping_region: ClippingRegion,
     // Font management
     font_manager: Option<Arc<FontManager>>,
-    // State stack for save/restore
-    state_stack: Vec<(Color, Color)>,
+    // State stack for save/restore (fill_color, stroke_color, font_name, font_size, is_custom_font)
+    state_stack: Vec<(Color, Color, Option<String>, f64, bool)>,
     current_font_name: Option<String>,
     current_font_size: f64,
+    // Whether the current font is a custom (Type0/CID) font requiring Unicode encoding
+    is_custom_font: bool,
     // Character tracking for font subsetting
     used_characters: HashSet<char>,
     // Glyph mapping for Unicode fonts (Unicode code point -> Glyph ID)
     glyph_mapping: Option<HashMap<u32, u16>>,
     // Transparency group stack for nested groups
     transparency_stack: Vec<TransparencyGroupState>,
+}
+
+/// Encode a Unicode character as a CID hex value for Type0/Identity-H fonts.
+/// BMP characters (U+0000..U+FFFF) are written as 4-hex-digit values.
+/// Supplementary plane characters (U+10000..U+10FFFF) are written as UTF-16BE surrogate pairs.
+fn encode_char_as_cid(ch: char, buf: &mut String) {
+    let code = ch as u32;
+    if code <= 0xFFFF {
+        write!(buf, "{:04X}", code).expect("Writing to string should never fail");
+    } else {
+        // UTF-16BE surrogate pair for supplementary planes
+        let adjusted = code - 0x10000;
+        let high = ((adjusted >> 10) & 0x3FF) + 0xD800;
+        let low = (adjusted & 0x3FF) + 0xDC00;
+        write!(buf, "{:04X}{:04X}", high, low).expect("Writing to string should never fail");
+    }
 }
 
 impl Default for GraphicsContext {
@@ -124,6 +142,7 @@ impl GraphicsContext {
             state_stack: Vec::new(),
             current_font_name: None,
             current_font_size: 12.0,
+            is_custom_font: false,
             used_characters: HashSet::new(),
             glyph_mapping: None,
             transparency_stack: Vec::new(),
@@ -364,19 +383,27 @@ impl GraphicsContext {
     pub fn save_state(&mut self) -> &mut Self {
         self.operations.push_str("q\n");
         self.save_clipping_state();
-        // Save color state
-        self.state_stack
-            .push((self.current_color, self.stroke_color));
+        // Save color + font state
+        self.state_stack.push((
+            self.current_color,
+            self.stroke_color,
+            self.current_font_name.clone(),
+            self.current_font_size,
+            self.is_custom_font,
+        ));
         self
     }
 
     pub fn restore_state(&mut self) -> &mut Self {
         self.operations.push_str("Q\n");
         self.restore_clipping_state();
-        // Restore color state
-        if let Some((fill, stroke)) = self.state_stack.pop() {
+        // Restore color + font state
+        if let Some((fill, stroke, font_name, font_size, is_custom)) = self.state_stack.pop() {
             self.current_color = fill;
             self.stroke_color = stroke;
+            self.current_font_name = font_name;
+            self.current_font_size = font_size;
+            self.is_custom_font = is_custom;
         }
         self
     }
@@ -681,15 +708,17 @@ impl GraphicsContext {
         writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size)
             .expect("Writing to string should never fail");
 
-        // Track font name and size for Unicode detection and proper font handling
+        // Track font name, size, and type for Unicode detection and proper font handling
         match &font {
             Font::Custom(name) => {
                 self.current_font_name = Some(name.clone());
                 self.current_font_size = size;
+                self.is_custom_font = true;
             }
             _ => {
                 self.current_font_name = Some(font.pdf_name());
                 self.current_font_size = size;
+                self.is_custom_font = false;
             }
         }
 
@@ -704,21 +733,38 @@ impl GraphicsContext {
     }
 
     /// Show text
+    ///
+    /// For custom (Type0/CID) fonts, text is encoded as Unicode code points (CIDs).
+    /// BMP characters (U+0000..U+FFFF) are written as 4-hex-digit values.
+    /// Supplementary plane characters (U+10000..U+10FFFF) use UTF-16BE surrogate pairs.
+    /// For standard fonts, text is encoded as literal PDF strings.
     pub fn show_text(&mut self, text: &str) -> Result<&mut Self> {
-        // Escape special characters in PDF string
-        self.operations.push('(');
-        for ch in text.chars() {
-            match ch {
-                '(' => self.operations.push_str("\\("),
-                ')' => self.operations.push_str("\\)"),
-                '\\' => self.operations.push_str("\\\\"),
-                '\n' => self.operations.push_str("\\n"),
-                '\r' => self.operations.push_str("\\r"),
-                '\t' => self.operations.push_str("\\t"),
-                _ => self.operations.push(ch),
+        // Track used characters for font subsetting
+        self.used_characters.extend(text.chars());
+
+        if self.is_custom_font {
+            // For custom fonts (CJK/Type0), encode as hex string with Unicode code points as CIDs
+            self.operations.push('<');
+            for ch in text.chars() {
+                encode_char_as_cid(ch, &mut self.operations);
             }
+            self.operations.push_str("> Tj\n");
+        } else {
+            // For standard fonts, escape special characters in PDF literal string
+            self.operations.push('(');
+            for ch in text.chars() {
+                match ch {
+                    '(' => self.operations.push_str("\\("),
+                    ')' => self.operations.push_str("\\)"),
+                    '\\' => self.operations.push_str("\\\\"),
+                    '\n' => self.operations.push_str("\\n"),
+                    '\r' => self.operations.push_str("\\r"),
+                    '\t' => self.operations.push_str("\\t"),
+                    _ => self.operations.push(ch),
+                }
+            }
+            self.operations.push_str(") Tj\n");
         }
-        self.operations.push_str(") Tj\n");
         Ok(self)
     }
 
@@ -1072,8 +1118,13 @@ impl GraphicsContext {
 
     /// Set the current font to a custom font
     pub fn set_custom_font(&mut self, font_name: &str, size: f64) -> &mut Self {
+        // Emit Tf operator to the content stream (consistent with set_font)
+        writeln!(&mut self.operations, "/{} {} Tf", font_name, size)
+            .expect("Writing to string should never fail");
+
         self.current_font_name = Some(font_name.to_string());
         self.current_font_size = size;
+        self.is_custom_font = true;
 
         // Try to get the glyph mapping from the font manager
         if let Some(ref font_manager) = self.font_manager {
@@ -1096,34 +1147,9 @@ impl GraphicsContext {
         // Track used characters for font subsetting
         self.used_characters.extend(text.chars());
 
-        // Check if we're using a custom font (which will be Type0/Unicode)
-        // Custom fonts are those that are not the standard PDF fonts (Helvetica, Times, etc.)
-        let using_custom_font = if let Some(ref font_name) = self.current_font_name {
-            // If font name doesn't start with standard PDF font names, it's custom
-            !matches!(
-                font_name.as_str(),
-                "Helvetica"
-                    | "Times"
-                    | "Courier"
-                    | "Symbol"
-                    | "ZapfDingbats"
-                    | "Helvetica-Bold"
-                    | "Helvetica-Oblique"
-                    | "Helvetica-BoldOblique"
-                    | "Times-Roman"
-                    | "Times-Bold"
-                    | "Times-Italic"
-                    | "Times-BoldItalic"
-                    | "Courier-Bold"
-                    | "Courier-Oblique"
-                    | "Courier-BoldOblique"
-            )
-        } else {
-            false
-        };
-
-        // Detect if text needs Unicode encoding
-        let needs_unicode = text.chars().any(|c| c as u32 > 255) || using_custom_font;
+        // Detect if text needs Unicode encoding: custom fonts always use hex,
+        // and text with non-Latin-1 characters also needs Unicode encoding
+        let needs_unicode = self.is_custom_font || text.chars().any(|c| c as u32 > 255);
 
         // Use appropriate encoding based on content and font type
         if needs_unicode {
@@ -1234,26 +1260,11 @@ impl GraphicsContext {
         writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
             .expect("Writing to string should never fail");
 
-        // IMPORTANT: For Type0 fonts with Identity-H encoding, we write CIDs (Character IDs),
-        // NOT GlyphIDs. The CIDToGIDMap in the font handles the CID -> GlyphID conversion.
-        // In our case, we use Unicode code points as CIDs.
+        // For Type0 fonts with Identity-H encoding, write Unicode code points as CIDs.
+        // The CIDToGIDMap in the font handles the CID → GlyphID conversion.
         self.operations.push('<');
-
         for ch in text.chars() {
-            let code = ch as u32;
-
-            // For Type0 fonts with Identity-H encoding, write the Unicode code point as CID
-            // The CIDToGIDMap will handle the conversion to the actual glyph ID
-            if code <= 0xFFFF {
-                // Write the Unicode code point as a 2-byte hex value (CID)
-                write!(&mut self.operations, "{:04X}", code)
-                    .expect("Writing to string should never fail");
-            } else {
-                // Characters outside BMP - use replacement character
-                // Most PDF viewers don't handle supplementary planes well
-                write!(&mut self.operations, "FFFD").expect("Writing to string should never fail");
-                // Unicode replacement character
-            }
+            encode_char_as_cid(ch, &mut self.operations);
         }
         self.operations.push_str("> Tj\n");
 
@@ -1355,25 +1366,7 @@ impl GraphicsContext {
             // Use 2-byte hex encoding for CIDs with identity mapping
             self.operations.push('<');
             for ch in text.chars() {
-                let code = ch as u32;
-
-                // Handle all Unicode characters
-                if code <= 0xFFFF {
-                    // Direct identity mapping for BMP characters
-                    write!(&mut self.operations, "{:04X}", code)
-                        .expect("Writing to string should never fail");
-                } else if code <= 0x10FFFF {
-                    // For characters outside BMP - use surrogate pairs
-                    let code = code - 0x10000;
-                    let high = ((code >> 10) & 0x3FF) + 0xD800;
-                    let low = (code & 0x3FF) + 0xDC00;
-                    write!(&mut self.operations, "{:04X}{:04X}", high, low)
-                        .expect("Writing to string should never fail");
-                } else {
-                    // Invalid Unicode - use replacement character
-                    write!(&mut self.operations, "FFFD")
-                        .expect("Writing to string should never fail");
-                }
+                encode_char_as_cid(ch, &mut self.operations);
             }
             self.operations.push_str("> Tj\n");
         } else {
@@ -2809,6 +2802,97 @@ mod tests {
         ctx.set_custom_font("CustomFont", 14.0);
         assert_eq!(ctx.current_font_name, Some("CustomFont".to_string()));
         assert_eq!(ctx.current_font_size, 14.0);
+        assert!(ctx.is_custom_font);
+    }
+
+    #[test]
+    fn test_show_text_standard_font_uses_literal_string() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+        assert!(!ctx.is_custom_font);
+
+        ctx.begin_text();
+        ctx.set_text_position(10.0, 20.0);
+        ctx.show_text("Hello World").unwrap();
+        ctx.end_text();
+
+        let ops = ctx.operations();
+        assert!(ops.contains("(Hello World) Tj"));
+        assert!(!ops.contains("<"));
+    }
+
+    #[test]
+    fn test_show_text_custom_font_uses_hex_encoding() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Custom("NotoSansCJK".to_string()), 12.0);
+        assert!(ctx.is_custom_font);
+
+        ctx.begin_text();
+        ctx.set_text_position(10.0, 20.0);
+        // CJK characters: 你好 (U+4F60 U+597D)
+        ctx.show_text("你好").unwrap();
+        ctx.end_text();
+
+        let ops = ctx.operations();
+        // Must be hex-encoded, not literal
+        assert!(
+            ops.contains("<4F60597D> Tj"),
+            "Expected hex encoding for CJK text, got: {}",
+            ops
+        );
+        assert!(!ops.contains("(你好)"));
+    }
+
+    #[test]
+    fn test_show_text_custom_font_ascii_still_hex() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Custom("MyFont".to_string()), 10.0);
+
+        ctx.begin_text();
+        ctx.set_text_position(0.0, 0.0);
+        // Even ASCII text should be hex-encoded when using custom font
+        ctx.show_text("AB").unwrap();
+        ctx.end_text();
+
+        let ops = ctx.operations();
+        // A=0x0041, B=0x0042
+        assert!(
+            ops.contains("<00410042> Tj"),
+            "Expected hex encoding for ASCII in custom font, got: {}",
+            ops
+        );
+    }
+
+    #[test]
+    fn test_show_text_tracks_used_characters() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Custom("CJKFont".to_string()), 12.0);
+
+        ctx.begin_text();
+        ctx.show_text("你好A").unwrap();
+        ctx.end_text();
+
+        assert!(ctx.used_characters.contains(&'你'));
+        assert!(ctx.used_characters.contains(&'好'));
+        assert!(ctx.used_characters.contains(&'A'));
+    }
+
+    #[test]
+    fn test_is_custom_font_toggles_correctly() {
+        let mut ctx = GraphicsContext::new();
+        assert!(!ctx.is_custom_font);
+
+        ctx.set_font(Font::Custom("CJK".to_string()), 12.0);
+        assert!(ctx.is_custom_font);
+
+        ctx.set_font(Font::Helvetica, 12.0);
+        assert!(!ctx.is_custom_font);
+
+        ctx.set_custom_font("AnotherCJK", 14.0);
+        assert!(ctx.is_custom_font);
+
+        ctx.set_font(Font::CourierBold, 10.0);
+        assert!(!ctx.is_custom_font);
     }
 
     #[test]
@@ -3325,5 +3409,130 @@ mod tests {
         assert!(output.contains("cm\n")); // transformations
         assert!(output.contains("BT\n")); // text begin
         assert!(output.contains("ET\n")); // text end
+    }
+
+    // ====== PHASE 5: set_custom_font emits Tf operator ======
+
+    #[test]
+    fn test_set_custom_font_emits_tf_operator() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_custom_font("NotoSansCJK", 14.0);
+
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("/NotoSansCJK 14 Tf"),
+            "set_custom_font should emit Tf operator, got: {}",
+            ops
+        );
+    }
+
+    // ====== PHASE 3: unified custom font detection in draw_text ======
+
+    #[test]
+    fn test_draw_text_uses_is_custom_font_flag() {
+        let mut ctx = GraphicsContext::new();
+        // Name matches a standard font, but set via set_custom_font → flag is true
+        ctx.set_custom_font("Helvetica", 12.0);
+        ctx.clear(); // clear the Tf operator from set_custom_font
+
+        ctx.draw_text("A", 10.0, 20.0).unwrap();
+        let ops = ctx.operations();
+        // Must use hex encoding because is_custom_font=true
+        assert!(
+            ops.contains("<0041> Tj"),
+            "draw_text with is_custom_font=true should use hex, got: {}",
+            ops
+        );
+    }
+
+    #[test]
+    fn test_draw_text_standard_font_uses_literal() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Helvetica, 12.0);
+        ctx.clear();
+
+        ctx.draw_text("Hello", 10.0, 20.0).unwrap();
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("(Hello) Tj"),
+            "draw_text with standard font should use literal, got: {}",
+            ops
+        );
+    }
+
+    // ====== PHASE 2: surrogate pairs for SMP characters ======
+
+    #[test]
+    fn test_show_text_smp_character_uses_surrogate_pairs() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Custom("Emoji".to_string()), 12.0);
+
+        ctx.begin_text();
+        ctx.set_text_position(0.0, 0.0);
+        // U+1F600 (GRINNING FACE) → surrogate pair: D83D DE00
+        ctx.show_text("\u{1F600}").unwrap();
+        ctx.end_text();
+
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("<D83DDE00> Tj"),
+            "SMP character should use UTF-16BE surrogate pair, got: {}",
+            ops
+        );
+        assert!(
+            !ops.contains("FFFD"),
+            "SMP character must NOT be replaced with FFFD"
+        );
+    }
+
+    // ====== PHASE 1: save/restore font state ======
+
+    #[test]
+    fn test_save_restore_preserves_font_state() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Custom("CJK".to_string()), 12.0);
+        assert!(ctx.is_custom_font);
+        assert_eq!(ctx.current_font_name, Some("CJK".to_string()));
+        assert_eq!(ctx.current_font_size, 12.0);
+
+        ctx.save_state();
+        ctx.set_font(Font::Helvetica, 10.0);
+        assert!(!ctx.is_custom_font);
+        assert_eq!(ctx.current_font_name, Some("Helvetica".to_string()));
+
+        ctx.restore_state();
+        assert!(
+            ctx.is_custom_font,
+            "is_custom_font must be restored after restore_state"
+        );
+        assert_eq!(ctx.current_font_name, Some("CJK".to_string()));
+        assert_eq!(ctx.current_font_size, 12.0);
+    }
+
+    #[test]
+    fn test_save_restore_mixed_font_encoding() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_font(Font::Custom("CJK".to_string()), 12.0);
+
+        // Simulate table cell pattern: save → change font → text → restore → text
+        ctx.save_state();
+        ctx.set_font(Font::Helvetica, 10.0);
+        ctx.begin_text();
+        ctx.show_text("Hello").unwrap();
+        ctx.end_text();
+        ctx.restore_state();
+
+        // After restore, CJK font should be active again
+        ctx.begin_text();
+        ctx.show_text("你好").unwrap();
+        ctx.end_text();
+
+        let ops = ctx.operations();
+        // After restore, text must be hex-encoded (custom font restored)
+        assert!(
+            ops.contains("<4F60597D> Tj"),
+            "After restore_state, CJK text should use hex encoding, got: {}",
+            ops
+        );
     }
 }

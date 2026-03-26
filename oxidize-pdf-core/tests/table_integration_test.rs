@@ -1,6 +1,11 @@
 //! Integration tests for table functionality
 
+use oxidize_pdf::advanced_tables::{CellData, RowData};
+use oxidize_pdf::text::metrics::{
+    get_custom_font_metrics, measure_text, register_custom_font_metrics, FontMetrics,
+};
 use oxidize_pdf::text::{HeaderStyle, Table, TableCell, TableOptions, TextAlign};
+use oxidize_pdf::writer::WriterConfig;
 use oxidize_pdf::{Color, Document, Font, Page, Result};
 use std::fs;
 use tempfile::TempDir;
@@ -383,4 +388,229 @@ fn test_table_with_custom_fonts() -> Result<()> {
 
     assert!(file_path.exists());
     Ok(())
+}
+
+/// Issue #160: CJK font not displayed correctly in Table
+/// Verifies that Table with Font::Custom uses hex-encoded CID strings
+/// instead of literal PDF strings, which is required for Type0/CJK fonts.
+#[test]
+fn test_table_with_custom_font_uses_hex_encoding() -> Result<()> {
+    let mut doc = Document::new();
+    doc.set_title("CJK Table Font Test - Issue #160");
+
+    let mut page = Page::a4();
+
+    let mut table = Table::new(vec![200.0, 200.0]);
+    table.set_position(50.0, 700.0);
+
+    let mut options = TableOptions::default();
+    options.font = Font::Custom("NotoSansCJK".to_string());
+    options.font_size = 12.0;
+    table.set_options(options);
+
+    // Add row with CJK text: 你好 (U+4F60 U+597D)
+    table.add_row(vec!["你好".to_string(), "世界".to_string()])?;
+
+    page.add_table(&table)?;
+    doc.add_page(page);
+
+    // Disable stream compression so we can inspect raw content stream
+    let config = WriterConfig {
+        compress_streams: false,
+        ..WriterConfig::default()
+    };
+    let pdf_bytes = doc.to_bytes_with_config(config)?;
+    let pdf_content = String::from_utf8_lossy(&pdf_bytes);
+
+    // The content stream must contain hex-encoded CIDs with Tj operator
+    // 你=U+4F60, 好=U+597D → <4F60597D> Tj
+    // 世=U+4E16, 界=U+754C → <4E16754C> Tj
+    assert!(
+        pdf_content.contains("<4F60597D> Tj"),
+        "PDF should contain hex-encoded CJK text '你好' as <4F60597D> Tj operator"
+    );
+    assert!(
+        pdf_content.contains("<4E16754C> Tj"),
+        "PDF should contain hex-encoded CJK text '世界' as <4E16754C> Tj operator"
+    );
+
+    // Must NOT contain literal CJK characters in PDF string syntax
+    assert!(
+        !pdf_content.contains("(你好)"),
+        "PDF must not contain literal CJK in parenthesized string"
+    );
+
+    Ok(())
+}
+
+/// Regression test: standard font tables must use literal encoding, not hex.
+#[test]
+fn test_table_with_standard_font_uses_literal_encoding() -> Result<()> {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    let mut table = Table::new(vec![200.0]);
+    table.set_position(50.0, 700.0);
+    // Default font is Helvetica (standard)
+    table.add_row(vec!["Hello World".to_string()])?;
+
+    page.add_table(&table)?;
+    doc.add_page(page);
+
+    let config = WriterConfig {
+        compress_streams: false,
+        ..WriterConfig::default()
+    };
+    let pdf_bytes = doc.to_bytes_with_config(config)?;
+    let pdf_content = String::from_utf8_lossy(&pdf_bytes);
+
+    assert!(
+        pdf_content.contains("(Hello World) Tj"),
+        "Standard font table must use literal string encoding"
+    );
+
+    Ok(())
+}
+
+/// Issue #162: CJK text not aligned center in table cell.
+/// When custom font metrics are registered, measure_text should use actual widths
+/// instead of Helvetica-like fallbacks, producing correct centering.
+#[test]
+fn test_measure_text_uses_registered_custom_font_metrics() {
+    // Register a custom font with known CJK widths
+    let mut widths = std::collections::HashMap::new();
+    // CJK chars should be full-width (1000 units)
+    for ch in "测试中文长文本居中对齐".chars() {
+        widths.insert(ch, 1000u16);
+    }
+    // ASCII chars half-width
+    widths.insert(' ', 500);
+    for ch in 'a'..='z' {
+        widths.insert(ch, 500);
+    }
+    let metrics = FontMetrics::from_char_map(widths, 500);
+    register_custom_font_metrics("TestCJKFont162".to_string(), metrics);
+
+    let font = Font::Custom("TestCJKFont162".to_string());
+
+    // Measure CJK text: 11 chars × 1000 units × (10.5 / 1000) = 115.5
+    let cjk_text = "测试中文长文本居中对齐";
+    let cjk_width = measure_text(cjk_text, font.clone(), 10.5);
+    let expected_cjk_width = 11.0 * 10.5; // 11 CJK chars × full-width
+    assert!(
+        (cjk_width - expected_cjk_width).abs() < 0.01,
+        "CJK text width should be {expected_cjk_width}, got {cjk_width}"
+    );
+
+    // Measure ASCII text: 4 chars × 500 units × (10.5 / 1000) = 21.0
+    let ascii_width = measure_text("test", font, 10.5);
+    let expected_ascii_width = 4.0 * 500.0 * 10.5 / 1000.0;
+    assert!(
+        (ascii_width - expected_ascii_width).abs() < 0.01,
+        "ASCII text width should be {expected_ascii_width}, got {ascii_width}"
+    );
+
+    // CJK text should be wider than ASCII text of same length
+    assert!(
+        cjk_width > ascii_width,
+        "CJK text ({cjk_width}) should be wider than ASCII text ({ascii_width})"
+    );
+}
+
+/// Issue #162: Default custom font metrics should treat CJK chars as full-width (1000).
+#[test]
+fn test_default_custom_metrics_cjk_width() {
+    // Use an unregistered font name to trigger default metrics creation
+    let font = Font::Custom("UnregisteredFontForCJKTest".to_string());
+
+    // CJK character '中' (U+4E2D) should use 1000 width, not 556 (Helvetica default)
+    let cjk_width = measure_text("中", font.clone(), 10.0);
+    let expected = 1000.0 * 10.0 / 1000.0; // 10.0
+    assert!(
+        (cjk_width - expected).abs() < 0.01,
+        "CJK char '中' should measure {expected}, got {cjk_width}"
+    );
+
+    // ASCII 'A' should still use Helvetica-like width (667)
+    let ascii_width = measure_text("A", font, 10.0);
+    let expected_ascii = 667.0 * 10.0 / 1000.0; // 6.67
+    assert!(
+        (ascii_width - expected_ascii).abs() < 0.01,
+        "ASCII 'A' should measure {expected_ascii}, got {ascii_width}"
+    );
+}
+
+/// Issue #163: CellData and RowData must be accessible from public API.
+#[test]
+fn test_celldata_accessible_and_span_works() {
+    // Verify CellData can be constructed and used
+    let cell = CellData::new("Hello").colspan(3).rowspan(2);
+
+    assert_eq!(cell.content, "Hello");
+    assert_eq!(cell.colspan, 3);
+    assert_eq!(cell.rowspan, 2);
+
+    // colspan(0) should clamp to 1 (minimum, not maximum)
+    let cell_zero = CellData::new("Zero span").colspan(0);
+    assert_eq!(cell_zero.colspan, 1, "colspan(0) should clamp to minimum 1");
+
+    // rowspan(0) should clamp to 1
+    let cell_zero_row = CellData::new("Zero row span").rowspan(0);
+    assert_eq!(
+        cell_zero_row.rowspan, 1,
+        "rowspan(0) should clamp to minimum 1"
+    );
+}
+
+/// Issue #163: RowData must be accessible and constructable from CellData.
+#[test]
+fn test_rowdata_from_cells() {
+    let cells = vec![
+        CellData::new("Cell 1").colspan(2),
+        CellData::new("Cell 2"),
+        CellData::new("Cell 3").rowspan(3),
+    ];
+
+    let row = RowData::from_cells(cells);
+    assert_eq!(row.cells.len(), 3);
+    assert_eq!(row.cells[0].colspan, 2);
+    assert_eq!(row.cells[1].colspan, 1); // default
+    assert_eq!(row.cells[2].rowspan, 3);
+}
+
+/// Quality item #4: default_width should be computed as average, not hardcoded 500.
+#[test]
+fn test_from_char_map_default_width_is_average() {
+    let mut widths = std::collections::HashMap::new();
+    widths.insert('A', 700u16);
+    widths.insert('B', 600u16);
+    widths.insert('C', 500u16);
+    // Average = (700 + 600 + 500) / 3 = 600
+    let avg: u16 = 600;
+    let metrics = FontMetrics::from_char_map(widths, avg);
+    // Unknown char 'Z' should use the average as default
+    assert_eq!(
+        metrics.char_width('Z'),
+        600,
+        "default_width should reflect the font's average width, not a hardcoded value"
+    );
+}
+
+/// Quality item #1: add_font_from_bytes must not leave metrics registered on failure.
+#[test]
+fn test_add_font_from_bytes_no_metrics_on_failure() {
+    let font_name = "FailTestFont_unique_162_163";
+    assert!(
+        get_custom_font_metrics(font_name).is_none(),
+        "metrics must not exist before the call"
+    );
+
+    let mut doc = Document::new();
+    // Invalid font data — parsing will fail
+    let result = doc.add_font_from_bytes(font_name, vec![0u8; 16]);
+    assert!(result.is_err(), "invalid font data should produce an error");
+    assert!(
+        get_custom_font_metrics(font_name).is_none(),
+        "metrics must NOT be registered when add_font_from_bytes fails"
+    );
 }
