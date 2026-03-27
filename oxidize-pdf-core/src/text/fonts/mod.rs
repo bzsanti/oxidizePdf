@@ -1,5 +1,6 @@
 //! Font subsystem modules
 
+pub mod cff_subsetter;
 pub mod embedding;
 pub mod standard;
 pub mod truetype;
