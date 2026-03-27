@@ -194,6 +194,31 @@ impl TrueTypeSubsetter {
             subset_ratio * 100.0
         );
 
+        // CFF/OpenType fonts require a different subsetting approach
+        if self.font.is_cff {
+            match crate::text::fonts::cff_subsetter::subset_cff_font(&self.font_data, used_chars) {
+                Ok(result) => {
+                    tracing::debug!(
+                        "  CFF subsetting: {} -> {} bytes ({:.1}% reduction)",
+                        self.font_data.len(),
+                        result.font_data.len(),
+                        (1.0 - result.font_data.len() as f32 / self.font_data.len() as f32) * 100.0
+                    );
+                    return Ok(SubsetResult {
+                        font_data: result.font_data,
+                        glyph_mapping: result.glyph_mapping,
+                    });
+                }
+                Err(e) => {
+                    tracing::debug!("  CFF subsetting failed: {:?}, using full font", e);
+                    return Ok(SubsetResult {
+                        font_data: self.font_data.clone(),
+                        glyph_mapping: cmap.mappings.clone(),
+                    });
+                }
+            }
+        }
+
         // Create glyph remapping: old_glyph_id -> new_glyph_id
         let mut glyph_map: HashMap<u16, u16> = HashMap::new();
         let mut sorted_glyphs: Vec<u16> = needed_glyphs.iter().copied().collect();
