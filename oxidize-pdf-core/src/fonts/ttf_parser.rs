@@ -473,6 +473,7 @@ impl<'a> TtfParser<'a> {
         match format {
             0 => self.parse_cmap_format_0(cmap_data, offset, mapping),
             4 => self.parse_cmap_format_4(cmap_data, offset, mapping),
+            12 => self.parse_cmap_format_12(cmap_data, offset, mapping),
             _ => {
                 // Unsupported format, create basic ASCII mapping
                 for ch in 0x20..=0x7E {
@@ -568,6 +569,81 @@ impl<'a> TtfParser<'a> {
                     }
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    /// Parse cmap format 12: Segmented coverage (full Unicode range)
+    ///
+    /// Format 12 supports the complete Unicode range including supplementary planes.
+    /// Structure:
+    ///   offset+0:  format (u16 = 12)
+    ///   offset+2:  reserved (u16)
+    ///   offset+4:  length (u32)
+    ///   offset+8:  language (u32)
+    ///   offset+12: numGroups (u32)
+    ///   offset+16: groups[numGroups] — each 12 bytes: startCharCode, endCharCode, startGlyphID (u32 each)
+    fn parse_cmap_format_12(
+        &self,
+        cmap_data: &[u8],
+        offset: usize,
+        mapping: &mut GlyphMapping,
+    ) -> Result<()> {
+        if offset + 16 > cmap_data.len() {
+            return Err(PdfError::FontError(
+                "Format 12 cmap subtable header too small".into(),
+            ));
+        }
+
+        let num_groups = u32::from_be_bytes([
+            cmap_data[offset + 12],
+            cmap_data[offset + 13],
+            cmap_data[offset + 14],
+            cmap_data[offset + 15],
+        ]);
+
+        let mut group_offset = offset + 16;
+        for _ in 0..num_groups {
+            if group_offset + 12 > cmap_data.len() {
+                break;
+            }
+
+            let start_char_code = u32::from_be_bytes([
+                cmap_data[group_offset],
+                cmap_data[group_offset + 1],
+                cmap_data[group_offset + 2],
+                cmap_data[group_offset + 3],
+            ]);
+            let end_char_code = u32::from_be_bytes([
+                cmap_data[group_offset + 4],
+                cmap_data[group_offset + 5],
+                cmap_data[group_offset + 6],
+                cmap_data[group_offset + 7],
+            ]);
+            let start_glyph_id = u32::from_be_bytes([
+                cmap_data[group_offset + 8],
+                cmap_data[group_offset + 9],
+                cmap_data[group_offset + 10],
+                cmap_data[group_offset + 11],
+            ]);
+
+            for i in 0..=(end_char_code.saturating_sub(start_char_code)) {
+                let char_code = start_char_code + i;
+                let glyph_id_u32 = start_glyph_id + i;
+
+                // Skip .notdef (GID 0) and GIDs beyond u16 range
+                if glyph_id_u32 == 0 || glyph_id_u32 > 0xFFFF {
+                    continue;
+                }
+                let glyph_id = glyph_id_u32 as u16;
+
+                if let Some(ch) = char::from_u32(char_code) {
+                    mapping.add_mapping(ch, glyph_id);
+                }
+            }
+
+            group_offset += 12;
         }
 
         Ok(())

@@ -19,6 +19,7 @@ test_*
 !test-suite/fixtures/**/*.pdf
 !test-files/*.pdf
 !oxidize-pdf-core/tests/fixtures/*.pdf
+!oxidize-pdf-core/tests/fixtures/**/*.pdf
 
 # Examples results - ignore sensitive files
 examples/results/*.jpg
