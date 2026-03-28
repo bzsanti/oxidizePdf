@@ -547,3 +547,90 @@ fn test_build_cff_index_single_item() {
     assert_eq!(index[4], 4); // offset[1] = 1 + 3
     assert_eq!(&index[5..], b"XYZ");
 }
+
+// =============================================================================
+// Real CID-keyed font subsetting tests (Issue #165)
+// =============================================================================
+
+#[test]
+fn test_cid_font_subsetting_reduces_file_size() {
+    // Issue #165: SourceHanSansSC is a CID-keyed CFF font (16MB).
+    // Subsetting to 4 characters should dramatically reduce size.
+    let font_data = std::fs::read("../test-pdfs/SourceHanSansSC-Regular.otf")
+        .expect("SourceHanSansSC-Regular.otf fixture required for CID font test");
+
+    let used_chars: HashSet<char> = "你好世界".chars().collect();
+
+    let result =
+        subset_font(font_data.clone(), &used_chars).expect("CID font subsetting should not error");
+
+    let original_size = font_data.len();
+    let subset_size = result.font_data.len();
+
+    assert!(
+        subset_size < original_size / 10,
+        "Subset ({subset_size} bytes) should be <10% of original ({original_size} bytes). \
+         If equal, subsetting is not working for CID-keyed fonts."
+    );
+}
+
+#[test]
+fn test_cid_font_subsetting_produces_valid_pdf() {
+    // End-to-end: load CID font → create PDF → verify file size is reasonable
+    use oxidize_pdf::{Document, Font, Page};
+
+    let font_data = std::fs::read("../test-pdfs/SourceHanSansSC-Regular.otf")
+        .expect("SourceHanSansSC-Regular.otf fixture required");
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceHanSC", font_data)
+        .expect("Font loading should succeed");
+
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceHanSC".to_string()), 10.5)
+        .at(30.0, 535.0)
+        .write("你好世界")
+        .expect("Writing CJK text should succeed");
+    doc.add_page(page);
+
+    let bytes = doc.to_bytes().expect("PDF generation should succeed");
+
+    // A PDF with 4 CJK characters should be far less than the full 16MB font
+    assert!(
+        bytes.len() < 2_000_000,
+        "PDF with 4 CJK chars should be <2MB, got {} bytes ({:.1}MB). \
+         Full font is likely embedded without subsetting.",
+        bytes.len(),
+        bytes.len() as f64 / 1_048_576.0
+    );
+}
+
+#[test]
+fn test_non_cid_cff_font_subsetting_with_real_fixture() {
+    // Verify subsetting also works for non-CID OTF/CFF fonts with real fixture
+    let font_path = "../test-pdfs/SourceSans3-Regular.otf";
+    if !std::path::Path::new(font_path).exists() {
+        // Skip if fixture doesn't exist
+        return;
+    }
+
+    let font_data = std::fs::read(font_path).unwrap();
+    let used_chars: HashSet<char> = "Hello".chars().collect();
+
+    let result = subset_font(font_data.clone(), &used_chars)
+        .expect("Non-CID CFF font subsetting should succeed");
+
+    let original_size = font_data.len();
+    let subset_size = result.font_data.len();
+
+    // Non-CID subsetting keeps CharStrings for used glyphs + other OTF tables verbatim.
+    // The OTF file contains many tables (cmap, hmtx, etc.) that are not subsetted,
+    // so the total reduction depends on how much of the file is CFF vs other tables.
+    // SourceSans3: ~162KB CFF + ~172KB other tables = ~334KB total.
+    // After subsetting, CFF drops dramatically; other tables stay. Expect <75% total.
+    assert!(
+        subset_size < (original_size * 3 / 4),
+        "Non-CID CFF subset ({subset_size}) should be <75% of original ({original_size})"
+    );
+}

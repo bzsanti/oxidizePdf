@@ -69,6 +69,8 @@ pub struct TableRow {
     cells: Vec<TableCell>,
     /// Whether this is a header row
     is_header: bool,
+    /// Optional per-row height (overrides global row_height)
+    row_height: Option<f64>,
 }
 
 /// Represents a cell in the table
@@ -196,9 +198,18 @@ impl Table {
         self.rows.push(TableRow {
             cells: row_cells,
             is_header: true,
+            row_height: None,
         });
 
         Ok(self)
+    }
+
+    /// Set the height of the last added row
+    pub fn set_last_row_height(&mut self, height: f64) -> &mut Self {
+        if let Some(row) = self.rows.last_mut() {
+            row.row_height = Some(height);
+        }
+        self
     }
 
     /// Add a data row
@@ -233,6 +244,7 @@ impl Table {
         self.rows.push(TableRow {
             cells: row_cells,
             is_header: false,
+            row_height: None,
         });
 
         Ok(self)
@@ -251,18 +263,39 @@ impl Table {
         self.rows.push(TableRow {
             cells,
             is_header: false,
+            row_height: None,
         });
 
         Ok(self)
     }
 
     /// Calculate the height of a row
-    fn calculate_row_height(&self, _row: &TableRow) -> f64 {
+    fn calculate_row_height(&self, row: &TableRow) -> f64 {
+        // Priority: per-row height > global options height > auto
+        if let Some(h) = row.row_height {
+            return h;
+        }
         if self.options.row_height > 0.0 {
-            self.options.row_height
-        } else {
-            // Auto height: font size + padding
+            return self.options.row_height;
+        }
+
+        // Auto height: consider multi-line content
+        let line_height = self.options.font_size * 1.2;
+        let max_lines = row
+            .cells
+            .iter()
+            .map(|cell| cell.content.split('\n').count())
+            .max()
+            .unwrap_or(1);
+
+        if max_lines <= 1 {
+            // Single line: font size + padding
             self.options.font_size + (self.options.cell_padding * 2.0)
+        } else {
+            // Multi-line: first line height + additional lines + padding
+            self.options.font_size
+                + ((max_lines - 1) as f64 * line_height)
+                + (self.options.cell_padding * 2.0)
         }
     }
 
@@ -285,10 +318,16 @@ impl Table {
         let mut current_y = start_y;
 
         // Draw table background if specified
+        // Table grows downward from start_y, so bottom-left is at start_y - height
         if let Some(bg_color) = self.options.background_color {
             graphics.save_state();
             graphics.set_fill_color(bg_color);
-            graphics.rectangle(start_x, start_y, self.get_width(), self.get_height());
+            graphics.rectangle(
+                start_x,
+                start_y - self.get_height(),
+                self.get_width(),
+                self.get_height(),
+            );
             graphics.fill();
             graphics.restore_state();
         }
@@ -313,12 +352,15 @@ impl Table {
                     }
                 }
 
+                // Cell rectangle bottom-left Y (table grows downward)
+                let cell_rect_y = current_y - row_height;
+
                 // Draw cell background
                 // First priority: cell-specific background
                 if let Some(cell_bg) = cell.background_color {
                     graphics.save_state();
                     graphics.set_fill_color(cell_bg);
-                    graphics.rectangle(current_x, current_y, cell_width, row_height);
+                    graphics.rectangle(current_x, cell_rect_y, cell_width, row_height);
                     graphics.fill();
                     graphics.restore_state();
                 }
@@ -327,7 +369,7 @@ impl Table {
                     if let Some(style) = header_style {
                         graphics.save_state();
                         graphics.set_fill_color(style.background_color);
-                        graphics.rectangle(current_x, current_y, cell_width, row_height);
+                        graphics.rectangle(current_x, cell_rect_y, cell_width, row_height);
                         graphics.fill();
                         graphics.restore_state();
                     }
@@ -342,7 +384,7 @@ impl Table {
                         };
                         graphics.save_state();
                         graphics.set_fill_color(color);
-                        graphics.rectangle(current_x, current_y, cell_width, row_height);
+                        graphics.rectangle(current_x, cell_rect_y, cell_width, row_height);
                         graphics.fill();
                         graphics.restore_state();
                     }
@@ -389,7 +431,7 @@ impl Table {
                     // Draw borders based on grid style
                     match self.options.grid_style {
                         GridStyle::Full | GridStyle::Outline => {
-                            graphics.rectangle(current_x, current_y, cell_width, row_height);
+                            graphics.rectangle(current_x, cell_rect_y, cell_width, row_height);
                             graphics.stroke();
                         }
                         GridStyle::Horizontal => {
@@ -397,17 +439,17 @@ impl Table {
                             graphics.move_to(current_x, current_y);
                             graphics.line_to(current_x + cell_width, current_y);
                             // Bottom border
-                            graphics.move_to(current_x, current_y + row_height);
-                            graphics.line_to(current_x + cell_width, current_y + row_height);
+                            graphics.move_to(current_x, cell_rect_y);
+                            graphics.line_to(current_x + cell_width, cell_rect_y);
                             graphics.stroke();
                         }
                         GridStyle::Vertical => {
                             // Left border
                             graphics.move_to(current_x, current_y);
-                            graphics.line_to(current_x, current_y + row_height);
+                            graphics.line_to(current_x, cell_rect_y);
                             // Right border
                             graphics.move_to(current_x + cell_width, current_y);
-                            graphics.line_to(current_x + cell_width, current_y + row_height);
+                            graphics.line_to(current_x + cell_width, cell_rect_y);
                             graphics.stroke();
                         }
                         GridStyle::None => {}
@@ -417,9 +459,9 @@ impl Table {
                 }
 
                 // Draw cell text
+                // Text baseline: near top of cell, offset by padding and font size
                 let text_x = current_x + self.options.cell_padding;
-                let text_y =
-                    current_y + row_height - self.options.cell_padding - self.options.font_size;
+                let text_y = current_y - self.options.cell_padding - self.options.font_size;
                 let text_width = cell_width - (2.0 * self.options.cell_padding);
 
                 graphics.save_state();
@@ -445,79 +487,52 @@ impl Table {
                     graphics.set_fill_color(self.options.text_color);
                 }
 
-                // Draw text with alignment
-                match cell.align {
-                    TextAlign::Left => {
-                        graphics.begin_text();
-                        graphics.set_text_position(text_x, text_y);
-                        graphics.show_text(&cell.content)?;
-                        graphics.end_text();
-                    }
-                    TextAlign::Center => {
-                        // Determine which font to use based on header style
-                        let font_to_measure = if use_header_style {
-                            if let Some(style) = header_style {
-                                if style.bold {
-                                    match style.font {
-                                        Font::Helvetica => Font::HelveticaBold,
-                                        Font::TimesRoman => Font::TimesBold,
-                                        Font::Courier => Font::CourierBold,
-                                        _ => style.font.clone(),
-                                    }
-                                } else {
-                                    style.font.clone()
-                                }
-                            } else {
-                                self.options.font.clone()
+                // Split content by newlines for multi-line support
+                let lines: Vec<&str> = cell.content.split('\n').collect();
+                let line_height = self.options.font_size * 1.2;
+
+                // Determine font for measurement (needed for Center/Right alignment)
+                let font_to_measure = if use_header_style {
+                    if let Some(style) = header_style {
+                        if style.bold {
+                            match style.font {
+                                Font::Helvetica => Font::HelveticaBold,
+                                Font::TimesRoman => Font::TimesBold,
+                                Font::Courier => Font::CourierBold,
+                                _ => style.font.clone(),
                             }
                         } else {
-                            self.options.font.clone()
-                        };
+                            style.font.clone()
+                        }
+                    } else {
+                        self.options.font.clone()
+                    }
+                } else {
+                    self.options.font.clone()
+                };
 
-                        let text_width_measured =
-                            measure_text(&cell.content, font_to_measure, self.options.font_size);
-                        let centered_x = text_x + (text_width - text_width_measured) / 2.0;
-                        graphics.begin_text();
-                        graphics.set_text_position(centered_x, text_y);
-                        graphics.show_text(&cell.content)?;
-                        graphics.end_text();
-                    }
-                    TextAlign::Right => {
-                        // Determine which font to use based on header style
-                        let font_to_measure = if use_header_style {
-                            if let Some(style) = header_style {
-                                if style.bold {
-                                    match style.font {
-                                        Font::Helvetica => Font::HelveticaBold,
-                                        Font::TimesRoman => Font::TimesBold,
-                                        Font::Courier => Font::CourierBold,
-                                        _ => style.font.clone(),
-                                    }
-                                } else {
-                                    style.font.clone()
-                                }
-                            } else {
-                                self.options.font.clone()
-                            }
-                        } else {
-                            self.options.font.clone()
-                        };
+                // Draw each line with alignment
+                for (line_idx, line) in lines.iter().enumerate() {
+                    let line_y = text_y - (line_idx as f64 * line_height);
 
-                        let text_width_measured =
-                            measure_text(&cell.content, font_to_measure, self.options.font_size);
-                        let right_x = text_x + text_width - text_width_measured;
-                        graphics.begin_text();
-                        graphics.set_text_position(right_x, text_y);
-                        graphics.show_text(&cell.content)?;
-                        graphics.end_text();
-                    }
-                    TextAlign::Justified => {
-                        // For simple tables, treat justified as left-aligned
-                        graphics.begin_text();
-                        graphics.set_text_position(text_x, text_y);
-                        graphics.show_text(&cell.content)?;
-                        graphics.end_text();
-                    }
+                    let line_x = match cell.align {
+                        TextAlign::Center => {
+                            let measured =
+                                measure_text(line, font_to_measure.clone(), self.options.font_size);
+                            text_x + (text_width - measured) / 2.0
+                        }
+                        TextAlign::Right => {
+                            let measured =
+                                measure_text(line, font_to_measure.clone(), self.options.font_size);
+                            text_x + text_width - measured
+                        }
+                        TextAlign::Left | TextAlign::Justified => text_x,
+                    };
+
+                    graphics.begin_text();
+                    graphics.set_text_position(line_x, line_y);
+                    graphics.show_text(line)?;
+                    graphics.end_text();
                 }
 
                 graphics.restore_state();
@@ -526,7 +541,7 @@ impl Table {
                 col_index += cell.colspan;
             }
 
-            current_y += row_height;
+            current_y -= row_height;
         }
 
         Ok(())
@@ -540,6 +555,7 @@ impl TableRow {
         Self {
             cells,
             is_header: false,
+            row_height: None,
         }
     }
 
@@ -549,7 +565,14 @@ impl TableRow {
         Self {
             cells,
             is_header: true,
+            row_height: None,
         }
+    }
+
+    /// Set the height for this specific row (overrides global row_height)
+    pub fn set_row_height(&mut self, height: f64) -> &mut Self {
+        self.row_height = Some(height);
+        self
     }
 }
 

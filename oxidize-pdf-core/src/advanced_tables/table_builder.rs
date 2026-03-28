@@ -547,17 +547,40 @@ impl AdvancedTable {
         style
     }
 
-    /// Validate table structure (e.g., consistent column counts)
+    /// Validate table structure (e.g., consistent column counts with colspan/rowspan)
     pub fn validate(&self) -> Result<(), TableError> {
         let expected_cols = self.columns.len();
+        // Track the last row each column is occupied through (exclusive upper bound)
+        let mut rowspan_end: Vec<usize> = vec![0; expected_cols];
 
         for (row_idx, row) in self.rows.iter().enumerate() {
-            if row.cells.len() != expected_cols {
+            // Count columns occupied by rowspan from previous rows
+            let occupied_by_rowspan: usize =
+                rowspan_end.iter().filter(|&&end| end > row_idx).count();
+
+            // Sum of cell colspans + occupied columns must equal total columns
+            let total_colspan: usize = row.cells.iter().map(|c| c.colspan).sum();
+            if total_colspan + occupied_by_rowspan != expected_cols {
                 return Err(TableError::ColumnMismatch {
                     row: row_idx,
-                    found: row.cells.len(),
+                    found: total_colspan + occupied_by_rowspan,
                     expected: expected_cols,
                 });
+            }
+
+            // Record new rowspans from this row's cells
+            let mut actual_col = 0;
+            for cell in &row.cells {
+                // Skip columns occupied by rowspan
+                while actual_col < expected_cols && rowspan_end[actual_col] > row_idx {
+                    actual_col += 1;
+                }
+                if cell.rowspan > 1 {
+                    for c in actual_col..(actual_col + cell.colspan).min(expected_cols) {
+                        rowspan_end[c] = row_idx + cell.rowspan;
+                    }
+                }
+                actual_col += cell.colspan;
             }
         }
 

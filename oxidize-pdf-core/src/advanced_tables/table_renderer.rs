@@ -175,6 +175,43 @@ impl TableRenderer {
         Ok(start_y - header_height)
     }
 
+    /// Calculate the minimum height needed for a row's content
+    fn calculate_content_row_height(
+        &self,
+        table: &AdvancedTable,
+        row: &RowData,
+        row_idx: usize,
+    ) -> f64 {
+        let mut max_height = self.default_row_height;
+
+        let mut actual_col = 0usize;
+        for cell in row.cells.iter() {
+            let style = self.resolve_cell_style(table, row, cell, row_idx, actual_col);
+            let font = style.font.clone().unwrap_or(Font::Helvetica);
+            let font_size = style.font_size.unwrap_or(12.0);
+            // Sum column widths for colspan
+            let col_width: f64 = (actual_col..actual_col + cell.colspan)
+                .filter_map(|c| table.columns.get(c).map(|col| col.width))
+                .sum();
+            let available_width = col_width - style.padding.left - style.padding.right;
+
+            if available_width > 0.0 && style.text_wrap {
+                let lines =
+                    self.wrap_text_to_lines(&cell.content, available_width, &font, font_size);
+                let line_height = font_size * 1.2;
+                let needed =
+                    (lines.len() as f64 * line_height) + style.padding.top + style.padding.bottom;
+                if needed > max_height {
+                    max_height = needed;
+                }
+            }
+
+            actual_col += cell.colspan;
+        }
+
+        max_height
+    }
+
     /// Render table data rows
     fn render_rows(
         &self,
@@ -185,16 +222,38 @@ impl TableRenderer {
     ) -> Result<f64, PdfError> {
         let mut current_y = start_y;
         let column_positions = self.calculate_column_positions(table, x);
+        let num_cols = table.columns.len();
+        // Track the last row index each column is occupied through (exclusive upper bound).
+        // rowspan_end[c] > row_idx means column c is occupied by a rowspan from a previous row.
+        let mut rowspan_end: Vec<usize> = vec![0; num_cols];
 
         for (row_idx, row) in table.rows.iter().enumerate() {
-            let row_height = row.min_height.unwrap_or(self.default_row_height);
+            // Calculate row height: explicit min_height, or auto-fit content
+            let base_height = row.min_height.unwrap_or(self.default_row_height);
+            let row_height = if self.auto_height {
+                let content_height = self.calculate_content_row_height(table, row, row_idx);
+                base_height.max(content_height)
+            } else {
+                base_height
+            };
 
-            for (col_idx, cell) in row.cells.iter().enumerate() {
-                let cell_x = column_positions[col_idx];
-                let cell_width = self.calculate_span_width(table, col_idx, cell.colspan);
+            // Track actual column position (accounts for colspan and rowspan)
+            let mut actual_col = 0usize;
+            for cell in row.cells.iter() {
+                // Skip columns occupied by rowspan from previous rows
+                while actual_col < num_cols && rowspan_end[actual_col] > row_idx {
+                    actual_col += 1;
+                }
+
+                if actual_col >= column_positions.len() {
+                    break;
+                }
+
+                let cell_x = column_positions[actual_col];
+                let cell_width = self.calculate_span_width(table, actual_col, cell.colspan);
                 let cell_height = row_height * cell.rowspan as f64;
 
-                let style = self.resolve_cell_style(table, row, cell, row_idx, col_idx);
+                let style = self.resolve_cell_style(table, row, cell, row_idx, actual_col);
 
                 self.render_cell(
                     page,
@@ -205,6 +264,15 @@ impl TableRenderer {
                     cell_height,
                     &style,
                 )?;
+
+                // Record rowspan: this cell occupies columns through row_idx + rowspan - 1
+                if cell.rowspan > 1 {
+                    for c in actual_col..(actual_col + cell.colspan).min(num_cols) {
+                        rowspan_end[c] = row_idx + cell.rowspan;
+                    }
+                }
+
+                actual_col += cell.colspan;
             }
 
             current_y -= row_height;
