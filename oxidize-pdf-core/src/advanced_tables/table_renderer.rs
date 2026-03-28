@@ -46,18 +46,21 @@ impl TableRenderer {
             }
         }
 
-        // Calculate rows height
+        // Calculate rows height, tracking rows absorbed by rowspan
+        let mut rows_to_skip: usize = 0;
         for row in &table.rows {
             let row_height = row.min_height.unwrap_or(self.default_row_height);
 
-            // Account for row spans if needed
-            let max_rowspan = row.cells.iter().map(|cell| cell.rowspan).max().unwrap_or(1);
+            if rows_to_skip > 0 {
+                // This row is absorbed by a rowspan from a previous row
+                rows_to_skip -= 1;
+                continue;
+            }
 
+            let max_rowspan = row.cells.iter().map(|cell| cell.rowspan).max().unwrap_or(1);
             if max_rowspan > 1 {
-                // For multi-row spanning cells, the height is distributed
-                // This is a simplified calculation - full implementation would
-                // need to track overlapping spans
                 total_height += row_height * max_rowspan as f64;
+                rows_to_skip = max_rowspan - 1;
             } else {
                 total_height += row_height;
             }
@@ -186,7 +189,7 @@ impl TableRenderer {
 
         let mut actual_col = 0usize;
         for cell in row.cells.iter() {
-            let style = self.resolve_cell_style(table, row, cell, row_idx, actual_col);
+            let style = self.resolve_cell_style(table, cell, row_idx, actual_col);
             let font = style.font.clone().unwrap_or(Font::Helvetica);
             let font_size = style.font_size.unwrap_or(12.0);
             // Sum column widths for colspan
@@ -253,7 +256,7 @@ impl TableRenderer {
                 let cell_width = self.calculate_span_width(table, actual_col, cell.colspan);
                 let cell_height = row_height * cell.rowspan as f64;
 
-                let style = self.resolve_cell_style(table, row, cell, row_idx, actual_col);
+                let style = self.resolve_cell_style(table, cell, row_idx, actual_col);
 
                 self.render_cell(
                     page,
@@ -718,7 +721,6 @@ impl TableRenderer {
     fn resolve_cell_style(
         &self,
         table: &AdvancedTable,
-        _row: &RowData,
         cell: &CellData,
         row_idx: usize,
         col_idx: usize,

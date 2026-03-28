@@ -333,6 +333,7 @@ impl Table {
         }
 
         // Draw each row
+        let mut data_row_index: usize = 0; // Counts only non-header rows (for zebra stripes)
         for (row_index, row) in self.rows.iter().enumerate() {
             let row_height = self.calculate_row_height(row);
             let mut current_x = start_x;
@@ -377,7 +378,7 @@ impl Table {
                 // Third priority: alternating row colors
                 else if let Some((even_color, odd_color)) = self.options.alternating_row_colors {
                     if !row.is_header {
-                        let color = if row_index % 2 == 0 {
+                        let color = if data_row_index % 2 == 0 {
                             even_color
                         } else {
                             odd_color
@@ -541,6 +542,9 @@ impl Table {
                 col_index += cell.colspan;
             }
 
+            if !row.is_header {
+                data_row_index += 1;
+            }
             current_y -= row_height;
         }
 

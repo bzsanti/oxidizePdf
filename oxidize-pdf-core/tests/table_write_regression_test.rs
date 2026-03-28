@@ -26,17 +26,27 @@ fn render_table_to_bytes(table: &Table) -> Result<Vec<u8>> {
     doc.to_bytes_with_config(config)
 }
 
-/// Helper: extract all `x y Td` text position operators from PDF bytes
+/// Helper: extract all text position operators from PDF bytes.
+/// Matches both `x y Td` and `a b c d x y Tm` (extracts x,y from the last two args of Tm).
 fn extract_text_positions(pdf_bytes: &[u8]) -> Vec<(f64, f64)> {
     let content = String::from_utf8_lossy(pdf_bytes);
-    let re = Regex::new(r"(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+Td").unwrap();
-    re.captures_iter(&content)
-        .map(|cap| {
-            let x: f64 = cap[1].parse().unwrap();
-            let y: f64 = cap[2].parse().unwrap();
-            (x, y)
-        })
-        .collect()
+    let mut positions = Vec::new();
+
+    // Td: x y Td
+    let re_td = Regex::new(r"(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+Td").unwrap();
+    for cap in re_td.captures_iter(&content) {
+        positions.push((cap[1].parse().unwrap(), cap[2].parse().unwrap()));
+    }
+
+    // Tm: a b c d e f Tm — e=x, f=y (last two numeric args before Tm)
+    let re_tm =
+        Regex::new(r"[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+Tm")
+            .unwrap();
+    for cap in re_tm.captures_iter(&content) {
+        positions.push((cap[1].parse().unwrap(), cap[2].parse().unwrap()));
+    }
+
+    positions
 }
 
 /// Helper: extract all `x y w h re` rectangle operators from PDF bytes
@@ -475,6 +485,28 @@ fn test_cjk_center_alignment_in_table() -> Result<()> {
     assert!(
         test_x > 80.0 && test_x < 200.0,
         "Centered 'Test' (x={test_x}) should be roughly centered in 200pt cell starting at x=50"
+    );
+
+    Ok(())
+}
+
+// =============================================================================
+// Guard: extract_text_positions must not silently return empty
+// =============================================================================
+
+#[test]
+fn test_extract_text_positions_is_non_empty() -> Result<()> {
+    // Guard against silent test pass if PDF operator format changes.
+    let mut table = Table::new(vec![200.0]);
+    table.set_position(50.0, 700.0);
+    table.add_row(vec!["Guard".to_string()])?;
+
+    let pdf_bytes = render_table_to_bytes(&table)?;
+    let positions = extract_text_positions(&pdf_bytes);
+
+    assert!(
+        !positions.is_empty(),
+        "extract_text_positions returned empty — regex may not match the PDF operator format"
     );
 
     Ok(())

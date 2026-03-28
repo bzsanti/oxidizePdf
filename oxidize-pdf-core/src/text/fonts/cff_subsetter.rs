@@ -122,10 +122,18 @@ pub fn subset_cff_font(
                 "CFF table subsetting failed: {:?}; falling back to full font",
                 e
             );
-            // Fallback: return full font with complete mapping
+            // Fallback: return full font with mapping filtered to used_chars only
+            // (consistent with the success path which only maps used_chars)
+            let filtered_mapping: HashMap<u32, u16> = used_chars
+                .iter()
+                .filter_map(|ch| {
+                    let cp = *ch as u32;
+                    unicode_to_gid.get(&cp).map(|&gid| (cp, gid))
+                })
+                .collect();
             return Ok(CffSubsetResult {
                 font_data: font_data.to_vec(),
-                glyph_mapping: unicode_to_gid,
+                glyph_mapping: filtered_mapping,
             });
         }
     };
@@ -275,7 +283,6 @@ impl OtfFile {
                 &original[src_start..src_end]
             };
 
-            // TODO: recalculate head checkSumAdjustment per OTF spec §5.2.8
             // Recompute checksum for this table
             let checksum = if &entry.tag == replaced_tag {
                 otf_checksum(new_data)
@@ -293,6 +300,35 @@ impl OtfFile {
 
             // Table data
             out[offset..offset + table_data.len()].copy_from_slice(table_data);
+        }
+
+        // Set head.checkSumAdjustment per OTF spec §5.2.8:
+        //   1. Zero the checkSumAdjustment field (bytes 8-11 of the head table).
+        //   2. Calculate checksum of the entire font file.
+        //   3. Set checkSumAdjustment = 0xB1B0AFBA - total_checksum.
+        let head_tag = b"head";
+        if let Some((head_idx, _)) = self
+            .tables
+            .iter()
+            .enumerate()
+            .find(|(_, e)| &e.tag == head_tag)
+        {
+            let head_offset = offsets[head_idx] as usize;
+            // head table must be at least 12 bytes for checkSumAdjustment at offset 8
+            if head_offset + 12 <= out.len() {
+                // Step 1: zero checkSumAdjustment before computing file checksum
+                out[head_offset + 8..head_offset + 12].copy_from_slice(&[0u8; 4]);
+                // Step 2: compute file checksum
+                let total_checksum = otf_checksum(&out);
+                // Step 3: write adjustment
+                let adjustment = 0xB1B0_AFBAu32.wrapping_sub(total_checksum);
+                out[head_offset + 8..head_offset + 12].copy_from_slice(&adjustment.to_be_bytes());
+                // Update head table checksum in the directory entry to reflect the new content
+                let head_len = self.tables[head_idx].length as usize;
+                let new_head_checksum = otf_checksum(&out[head_offset..head_offset + head_len]);
+                let dir_base = 12 + head_idx * 16;
+                out[dir_base + 4..dir_base + 8].copy_from_slice(&new_head_checksum.to_be_bytes());
+            }
         }
 
         Ok(out)
@@ -1271,8 +1307,15 @@ fn subset_cid_cff_table(
                     let start = priv_off as usize;
                     let end = (start + priv_size as usize).min(cff.len());
                     let pb = cff[start..end].to_vec();
-                    // Check for Local Subr INDEX after Private DICT
-                    let ls = if end < cff.len() {
+                    // Locate Local Subr INDEX: first try op 19 from Private DICT (CFF spec),
+                    // then fall back to heuristic (parse INDEX immediately after Private DICT).
+                    let ls = if let Some(subrs_rel) = parse_local_subrs_offset(&pb) {
+                        let subrs_abs = start + subrs_rel;
+                        match parse_cff_index(cff, subrs_abs) {
+                            Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
+                            _ => vec![],
+                        }
+                    } else if end < cff.len() {
                         match parse_cff_index(cff, end) {
                             Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
                             _ => vec![],
@@ -1595,11 +1638,20 @@ fn subset_cff_table(
             (vec![], 0)
         };
 
-    // Also copy Local Subr INDEX that follows Private DICT (if any)
+    // Also copy Local Subr INDEX that follows Private DICT (if any).
+    // First try op 19 (Subrs) from the Private DICT per CFF spec; fall back to
+    // the heuristic of parsing an INDEX immediately after the Private DICT bytes.
     let local_subr_bytes = if !private_bytes.is_empty() && private_orig_offset > 0 {
-        let priv_end = private_orig_offset as usize + private_bytes.len();
-        if priv_end < cff.len() {
-            // Try to parse a Local Subr INDEX immediately after Private DICT
+        let priv_start = private_orig_offset as usize;
+        let priv_end = priv_start + private_bytes.len();
+        if let Some(subrs_rel) = parse_local_subrs_offset(&private_bytes) {
+            let subrs_abs = priv_start + subrs_rel;
+            match parse_cff_index(cff, subrs_abs) {
+                Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
+                _ => vec![],
+            }
+        } else if priv_end < cff.len() {
+            // Heuristic: INDEX immediately after Private DICT
             match parse_cff_index(cff, priv_end) {
                 Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
                 _ => vec![],
@@ -1747,30 +1799,178 @@ fn build_subset_charset(
     charset
 }
 
-/// Read a Charset format 0 from the CFF table.
+/// Parse the Private DICT bytes and return the value of operator 19 (Subrs),
+/// which is a relative offset from the start of the Private DICT to the Local Subr INDEX.
+/// CFF DICT operand encoding (CFF spec §4):
+///   32-246:   single byte, value = b0 - 139
+///   247-250:  two bytes positive, value = (b0-247)*256 + b1 + 108
+///   251-254:  two bytes negative, value = -(b0-251)*256 - b1 - 108
+///   28:       two-byte integer (big-endian signed)
+///   29:       four-byte integer (big-endian signed)
+fn parse_local_subrs_offset(private_dict: &[u8]) -> Option<usize> {
+    let mut pos = 0;
+    let mut operand_stack: Vec<i32> = Vec::new();
+
+    while pos < private_dict.len() {
+        let b0 = private_dict[pos];
+        match b0 {
+            32..=246 => {
+                operand_stack.push(b0 as i32 - 139);
+                pos += 1;
+            }
+            247..=250 => {
+                if pos + 1 >= private_dict.len() {
+                    break;
+                }
+                let b1 = private_dict[pos + 1] as i32;
+                let value = (b0 as i32 - 247) * 256 + b1 + 108;
+                operand_stack.push(value);
+                pos += 2;
+            }
+            251..=254 => {
+                if pos + 1 >= private_dict.len() {
+                    break;
+                }
+                let b1 = private_dict[pos + 1] as i32;
+                let value = -(b0 as i32 - 251) * 256 - b1 - 108;
+                operand_stack.push(value);
+                pos += 2;
+            }
+            28 => {
+                if pos + 2 >= private_dict.len() {
+                    break;
+                }
+                let value =
+                    i16::from_be_bytes([private_dict[pos + 1], private_dict[pos + 2]]) as i32;
+                operand_stack.push(value);
+                pos += 3;
+            }
+            29 => {
+                if pos + 4 >= private_dict.len() {
+                    break;
+                }
+                let value = i32::from_be_bytes([
+                    private_dict[pos + 1],
+                    private_dict[pos + 2],
+                    private_dict[pos + 3],
+                    private_dict[pos + 4],
+                ]);
+                operand_stack.push(value);
+                pos += 5;
+            }
+            30 => {
+                // Real number — skip until terminator nibble 0xF
+                pos += 1;
+                while pos < private_dict.len() {
+                    let byte = private_dict[pos];
+                    pos += 1;
+                    if (byte & 0xF0) == 0xF0 || (byte & 0x0F) == 0x0F {
+                        break;
+                    }
+                }
+            }
+            12 => {
+                // Two-byte operator — skip both bytes and clear stack
+                operand_stack.clear();
+                pos += 2;
+            }
+            19 => {
+                // Operator 19 = Subrs — the last operand is the offset
+                let result = operand_stack.last().copied().and_then(|v| {
+                    if v > 0 {
+                        Some(v as usize)
+                    } else {
+                        None
+                    }
+                });
+                return result;
+            }
+            0..=21 => {
+                // Any other single-byte operator — clear stack
+                operand_stack.clear();
+                pos += 1;
+            }
+            _ => {
+                // Unknown byte — skip
+                pos += 1;
+            }
+        }
+    }
+    None
+}
+
+/// Read a CFF Charset table from the CFF table.
+/// Supports format 0, 1, and 2.
 /// Returns a Vec where index i gives the SID for GID (i+1).
 fn read_charset_format0(cff: &[u8], offset: usize, num_glyphs: usize) -> Vec<u16> {
     if offset >= cff.len() {
         return vec![];
     }
-    if cff[offset] != 0 {
-        tracing::debug!(
-            "CFF charset format {} not supported; SIDs will be approximated",
-            cff[offset]
-        );
-        return vec![];
-    }
-    let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
-    let mut pos = offset + 1;
-    for _ in 1..num_glyphs {
-        if pos + 2 > cff.len() {
-            break;
+    let format = cff[offset];
+    match format {
+        0 => {
+            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
+            let mut pos = offset + 1;
+            for _ in 1..num_glyphs {
+                if pos + 2 > cff.len() {
+                    break;
+                }
+                let sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
+                sids.push(sid);
+                pos += 2;
+            }
+            sids
         }
-        let sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
-        sids.push(sid);
-        pos += 2;
+        1 => {
+            // Format 1: pairs of [SID: u16, nLeft: u8]
+            // Each pair covers nLeft+1 consecutive SIDs starting from SID.
+            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
+            let mut pos = offset + 1;
+            while sids.len() < num_glyphs.saturating_sub(1) {
+                if pos + 3 > cff.len() {
+                    break;
+                }
+                let first_sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
+                let n_left = cff[pos + 2] as u16;
+                pos += 3;
+                for i in 0..=n_left {
+                    if sids.len() >= num_glyphs.saturating_sub(1) {
+                        break;
+                    }
+                    sids.push(first_sid.wrapping_add(i));
+                }
+            }
+            sids
+        }
+        2 => {
+            // Format 2: pairs of [SID: u16, nLeft: u16]
+            // Same as format 1 but nLeft is u16 instead of u8.
+            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
+            let mut pos = offset + 1;
+            while sids.len() < num_glyphs.saturating_sub(1) {
+                if pos + 4 > cff.len() {
+                    break;
+                }
+                let first_sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
+                let n_left = u16::from_be_bytes([cff[pos + 2], cff[pos + 3]]);
+                pos += 4;
+                for i in 0..=n_left {
+                    if sids.len() >= num_glyphs.saturating_sub(1) {
+                        break;
+                    }
+                    sids.push(first_sid.wrapping_add(i));
+                }
+            }
+            sids
+        }
+        _ => {
+            tracing::debug!(
+                "CFF charset format {} not supported; SIDs will be approximated",
+                format
+            );
+            vec![]
+        }
     }
-    sids
 }
 
 // =============================================================================
