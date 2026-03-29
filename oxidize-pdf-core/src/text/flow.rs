@@ -67,8 +67,18 @@ impl TextFlowContext {
         self.page_width - self.margins.left - self.margins.right
     }
 
+    /// Returns the width available for text starting at the current cursor_x position.
+    ///
+    /// Unlike `content_width()` which always uses `margins.left` as the origin,
+    /// `available_width()` accounts for the actual cursor position so that text
+    /// placed via `.at(x, y)` does not overflow the right margin.
+    pub fn available_width(&self) -> f64 {
+        (self.page_width - self.margins.right - self.cursor_x).max(0.0)
+    }
+
     pub fn write_wrapped(&mut self, text: &str) -> Result<&mut Self> {
-        let content_width = self.content_width();
+        let start_x = self.cursor_x;
+        let available_width = self.available_width();
 
         // Split text into words
         let words = split_into_words(text);
@@ -76,12 +86,12 @@ impl TextFlowContext {
         let mut current_line: Vec<&str> = Vec::new();
         let mut current_width = 0.0;
 
-        // Build lines based on width constraints
+        // Build lines based on available width (respects cursor_x offset)
         for word in words {
             let word_width = measure_text(word, &self.current_font, self.font_size);
 
             // Check if we need to start a new line
-            if !current_line.is_empty() && current_width + word_width > content_width {
+            if !current_line.is_empty() && current_width + word_width > available_width {
                 lines.push(current_line);
                 current_line = vec![word];
                 current_width = word_width;
@@ -100,19 +110,15 @@ impl TextFlowContext {
             let line_text = line.join("");
             let line_width = measure_text(&line_text, &self.current_font, self.font_size);
 
-            // Calculate x position based on alignment
+            // Calculate x position based on alignment.
+            // start_x is the column where this block of text begins (set via .at()).
+            // Left/Justified start at start_x; Center is relative to start_x;
+            // Right stays anchored to the right margin.
             let x = match self.alignment {
-                TextAlign::Left => self.margins.left,
+                TextAlign::Left => start_x,
                 TextAlign::Right => self.page_width - self.margins.right - line_width,
-                TextAlign::Center => self.margins.left + (content_width - line_width) / 2.0,
-                TextAlign::Justified => {
-                    if i < lines.len() - 1 && line.len() > 1 {
-                        // We'll handle justification below
-                        self.margins.left
-                    } else {
-                        self.margins.left
-                    }
-                }
+                TextAlign::Center => start_x + (available_width - line_width) / 2.0,
+                TextAlign::Justified => start_x,
             };
 
             // Begin text object
@@ -136,7 +142,7 @@ impl TextFlowContext {
                 // Calculate extra space to distribute
                 let spaces_count = line.iter().filter(|w| w.trim().is_empty()).count();
                 if spaces_count > 0 {
-                    let extra_space = content_width - line_width;
+                    let extra_space = available_width - line_width;
                     let space_adjustment = extra_space / spaces_count as f64;
 
                     // Set word spacing
@@ -889,5 +895,87 @@ mod tests {
             context.cursor_y,
             300.0 - context.font_size * context.line_height
         );
+    }
+
+    // --- Issue #167: available_width respects cursor_x ---
+
+    #[test]
+    fn test_available_width_respects_cursor_x() {
+        // Page: 400pt wide, 50pt margins each side → content_width = 300pt
+        let margins = create_test_margins(); // left=50, right=50
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
+
+        // Default: cursor_x == margins.left == 50, available_width == 300
+        assert_eq!(context.available_width(), 300.0);
+
+        // After .at(200, 500): cursor_x = 200, available_width = 400 - 50 - 200 = 150
+        context.at(200.0, 500.0);
+        assert_eq!(context.available_width(), 150.0);
+    }
+
+    #[test]
+    fn test_available_width_clamps_to_zero() {
+        // cursor_x past the right margin → available_width = 0 (not negative)
+        let margins = create_test_margins(); // right = 50
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
+
+        // cursor_x = 380, right margin = 50 → would be 400-50-380 = -30 → clamp to 0
+        context.at(380.0, 500.0);
+        assert_eq!(context.available_width(), 0.0);
+    }
+
+    #[test]
+    fn test_write_wrapped_at_x_limits_available_width() {
+        // Page 400pt, margins 50pt each → content_width = 300pt
+        // Place cursor at x=250: available_width = 400-50-250 = 100pt
+        // Use text wider than 100pt but narrower than 300pt → must wrap at x=250
+        let margins = create_test_margins();
+        let mut context = TextFlowContext::new(400.0, 600.0, margins);
+
+        context.set_font(Font::Helvetica, 12.0);
+        // "Hello World Hello World" at 12pt Helvetica exceeds 100pt easily
+        context.at(250.0, 500.0);
+        context.write_wrapped("Hello World Hello World").unwrap();
+
+        let ops = context.operations();
+        // Multiple BT blocks → wrapping occurred
+        let bt_count = ops.matches("BT\n").count();
+        assert!(
+            bt_count > 1,
+            "Expected wrapping (multiple lines), got {bt_count} BT blocks. ops:\n{ops}"
+        );
+    }
+
+    #[test]
+    fn test_write_wrapped_respects_cursor_x_offset() {
+        // Cursor at x=300, page 600pt wide, margins 50pt each → available_width = 250pt
+        let margins = Margins {
+            left: 50.0,
+            right: 50.0,
+            top: 50.0,
+            bottom: 50.0,
+        };
+        let mut context = TextFlowContext::new(600.0, 800.0, margins);
+
+        context.set_font(Font::Helvetica, 12.0);
+        context.at(300.0, 700.0);
+        context
+            .write_wrapped("Hello World Foo Bar Baz Qux")
+            .unwrap();
+
+        let ops = context.operations();
+        // Every Td x-coordinate should be >= 300.0
+        for line in ops.lines() {
+            if line.ends_with(" Td") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 3 {
+                    let x: f64 = parts[0].parse().expect("Td x should be a number");
+                    assert!(
+                        x >= 300.0 - 1e-6,
+                        "Expected Td x >= 300.0 but got {x}. ops:\n{ops}"
+                    );
+                }
+            }
+        }
     }
 }
