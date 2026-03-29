@@ -249,11 +249,7 @@ impl ChartRenderer {
 
         // Draw title
         if !chart.title.is_empty() {
-            let title_width = measure_text(
-                &chart.title,
-                chart.title_font.clone(),
-                chart.title_font_size,
-            );
+            let title_width = measure_text(&chart.title, &chart.title_font, chart.title_font_size);
             page.text()
                 .set_font(chart.title_font.clone(), chart.title_font_size)
                 .set_fill_color(Color::black())
@@ -345,11 +341,7 @@ impl ChartRenderer {
 
         // Draw title if present
         if !chart.title.is_empty() {
-            let title_width = measure_text(
-                &chart.title,
-                chart.title_font.clone(),
-                chart.title_font_size,
-            );
+            let title_width = measure_text(&chart.title, &chart.title_font, chart.title_font_size);
             page.text()
                 .set_font(chart.title_font.clone(), chart.title_font_size)
                 .set_fill_color(Color::black())
@@ -439,11 +431,7 @@ impl ChartRenderer {
 
         // Draw title
         if !chart.title.is_empty() {
-            let title_width = measure_text(
-                &chart.title,
-                chart.title_font.clone(),
-                chart.title_font_size,
-            );
+            let title_width = measure_text(&chart.title, &chart.title_font, chart.title_font_size);
             page.text()
                 .set_font(chart.title_font.clone(), chart.title_font_size)
                 .set_fill_color(Color::black())
@@ -456,11 +444,8 @@ impl ChartRenderer {
 
         // Draw axis labels if present
         if !chart.x_axis_label.is_empty() {
-            let x_label_width = measure_text(
-                &chart.x_axis_label,
-                chart.axis_font.clone(),
-                chart.axis_font_size,
-            );
+            let x_label_width =
+                measure_text(&chart.x_axis_label, &chart.axis_font, chart.axis_font_size);
             page.text()
                 .set_font(chart.axis_font.clone(), chart.axis_font_size)
                 .set_fill_color(Color::black())
@@ -557,7 +542,7 @@ impl ChartRenderer {
                 };
 
                 let value_width =
-                    measure_text(&value_text, chart.value_font.clone(), chart.value_font_size);
+                    measure_text(&value_text, &chart.value_font, chart.value_font_size);
                 page.text()
                     .set_font(chart.value_font.clone(), chart.value_font_size)
                     .set_fill_color(Color::black())
@@ -569,8 +554,7 @@ impl ChartRenderer {
             let (label_x, label_y) =
                 self.transform_label_position(bar_x + bar_width / 2.0, bar_y_original, area);
 
-            let label_width =
-                measure_text(&data.label, chart.label_font.clone(), chart.label_font_size);
+            let label_width = measure_text(&data.label, &chart.label_font, chart.label_font_size);
             page.text()
                 .set_font(chart.label_font.clone(), chart.label_font_size)
                 .set_fill_color(Color::black())
@@ -649,8 +633,7 @@ impl ChartRenderer {
             }
 
             // Draw label - for horizontal bars, labels go to the left
-            let label_width =
-                measure_text(&data.label, chart.label_font.clone(), chart.label_font_size);
+            let label_width = measure_text(&data.label, &chart.label_font, chart.label_font_size);
             let label_x = final_bar_x - 10.0 - label_width; // Right-align to the left of the bar
             let label_y = final_bar_y + final_bar_height / 2.0;
 

@@ -66,8 +66,9 @@ fn test_table_with_zebra_stripes() {
         .build()
         .unwrap();
 
-    assert!(table.zebra_stripes);
-    assert_eq!(table.zebra_color, Some(Color::gray(0.9)));
+    assert!(table.zebra_striping.is_some());
+    let zebra = table.zebra_striping.as_ref().unwrap();
+    assert_eq!(zebra.odd_color, Some(Color::gray(0.9)));
     assert_eq!(table.rows.len(), 3);
 }
 

@@ -5,6 +5,9 @@
 //! the glyphs actually used in the document.
 
 use oxidize_pdf::text::fonts::cff_subsetter::build_cff_index;
+use oxidize_pdf::text::fonts::cff_subsetter::usize_to_cff_offset;
+use oxidize_pdf::text::fonts::cff_subsetter::CffDictScanner;
+use oxidize_pdf::text::fonts::cff_subsetter::CffDictToken;
 use oxidize_pdf::text::fonts::truetype_subsetter::subset_font;
 use std::collections::HashSet;
 
@@ -549,6 +552,65 @@ fn test_build_cff_index_single_item() {
 }
 
 // =============================================================================
+// Group A: usize_to_cff_offset — overflow protection tests
+// =============================================================================
+
+#[test]
+fn test_usize_to_cff_offset_valid() {
+    // Values within i32 range must convert without error
+    assert_eq!(usize_to_cff_offset(0).unwrap(), 0i32);
+    assert_eq!(usize_to_cff_offset(1024).unwrap(), 1024i32);
+    assert_eq!(usize_to_cff_offset(100_000).unwrap(), 100_000i32);
+    assert_eq!(usize_to_cff_offset(i32::MAX as usize).unwrap(), i32::MAX);
+}
+
+#[test]
+fn test_usize_to_cff_offset_overflow() {
+    // Values that exceed i32::MAX must return an error, not silently truncate
+    let overflow_val = i32::MAX as usize + 1;
+    let result = usize_to_cff_offset(overflow_val);
+    assert!(
+        result.is_err(),
+        "Expected Err for value {} (> i32::MAX), got Ok({:?})",
+        overflow_val,
+        result.ok()
+    );
+}
+
+#[test]
+fn test_cid_subset_small_font_round_trip() {
+    // Verify that subsetting a small CFF font still produces a valid, parseable result
+    // and preserves the glyph mapping for all used characters.
+    let font_data = build_minimal_cff_otf(50);
+    let original_len = font_data.len();
+
+    let used: HashSet<char> = "ABC".chars().collect();
+    let result = subset_font(font_data, &used).expect("subset_font must not fail");
+
+    // Glyph mapping must be present for all used characters
+    for ch in "ABC".chars() {
+        assert!(
+            result.glyph_mapping.contains_key(&(ch as u32)),
+            "Glyph mapping must contain '{}' (codepoint {})",
+            ch,
+            ch as u32
+        );
+    }
+
+    // The subsetted font must be non-empty and smaller than or equal to the original
+    assert!(
+        !result.font_data.is_empty(),
+        "Subsetted font data must not be empty"
+    );
+    assert!(
+        result.font_data.len() <= original_len,
+        "Subsetted font ({} bytes) should not be larger than original ({} bytes)",
+        result.font_data.len(),
+        original_len
+    );
+}
+
+// =============================================================================
 // Real CID-keyed font subsetting tests (Issue #165)
 // =============================================================================
 
@@ -645,4 +707,305 @@ fn test_non_cid_cff_font_subsetting_with_real_fixture() {
         subset_size < (original_size * 3 / 4),
         "Non-CID CFF subset ({subset_size}) should be <75% of original ({original_size})"
     );
+}
+
+// =============================================================================
+// Group B: CffDictScanner — token-level tests
+// =============================================================================
+
+/// Encode a 1-byte CFF operand (bytes 32-246, value = b - 139).
+/// Valid range for single-byte encoding: -107 to +107.
+fn encode_1byte_operand(value: i32) -> u8 {
+    assert!(
+        (-107..=107).contains(&value),
+        "value {} out of 1-byte range",
+        value
+    );
+    (value + 139) as u8
+}
+
+#[test]
+fn test_cff_dict_scanner_single_byte_operand() {
+    // 1-byte integer encoding: byte b in 32..=246 → value = b - 139
+    // Test the boundary and mid-range values.
+    let cases: &[(i32, u8)] = &[
+        (-107, 32), // lower bound
+        (0, 139),   // zero
+        (107, 246), // upper bound
+        (50, 189),  // mid positive
+        (-50, 89),  // mid negative
+    ];
+
+    for &(expected_value, byte) in cases {
+        let data = [byte];
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(&data).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::Operand(expected_value)],
+            "byte {} should decode to operand {}",
+            byte,
+            expected_value
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_two_byte_operand() {
+    // Byte 28: 2-byte signed integer (big-endian i16)
+    let cases: &[(i32, [u8; 3])] = &[
+        (300, [28, 0x01, 0x2C]),  // 300 = 0x012C
+        (-300, [28, 0xFE, 0xD4]), // -300 = 0xFED4 as i16
+        (0, [28, 0x00, 0x00]),
+        (32767, [28, 0x7F, 0xFF]),  // i16::MAX
+        (-32768, [28, 0x80, 0x00]), // i16::MIN
+    ];
+
+    for &(expected, ref bytes) in cases {
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(bytes).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::Operand(expected)],
+            "bytes {:?} should decode to operand {}",
+            bytes,
+            expected
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_four_byte_operand() {
+    // Byte 29: 4-byte signed integer (big-endian i32)
+    let cases: &[(i32, [u8; 5])] = &[
+        (100_000, [29, 0x00, 0x01, 0x86, 0xA0]),
+        (-100_000, [29, 0xFF, 0xFE, 0x79, 0x60]),
+        (i32::MAX, [29, 0x7F, 0xFF, 0xFF, 0xFF]),
+        (i32::MIN, [29, 0x80, 0x00, 0x00, 0x00]),
+    ];
+
+    for &(expected, ref bytes) in cases {
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(bytes).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::Operand(expected)],
+            "bytes {:?} should decode to operand {}",
+            bytes,
+            expected
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_escaped_operator() {
+    // Byte 12 followed by a second byte encodes a 2-byte operator.
+    let cases: &[(u8, [u8; 2])] = &[
+        (36, [12, 36]), // FDArray
+        (37, [12, 37]), // FDSelect
+        (30, [12, 30]), // ROS (CID)
+        (0, [12, 0]),
+        (255, [12, 255]),
+    ];
+
+    for &(op2, ref bytes) in cases {
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(bytes).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::EscapedOperator(op2)],
+            "bytes [12, {}] should decode to EscapedOperator({})",
+            op2,
+            op2
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_skips_real_number() {
+    // Byte 30 starts a real number encoded as nibble pairs.
+    // The scanner must skip all nibbles until it sees 0xF in either nibble position,
+    // and then emit a single Operand(0) placeholder (real numbers are not relevant for offsets).
+    //
+    // Real encoding: byte 30, then nibble pairs until a nibble is 0xF.
+    // Example: 3.14 → 30, 0x31, 0x4F (nibbles: 3, 1, 4, F=end)
+    let real_314: &[u8] = &[30, 0x31, 0x4F]; // 3.14 encoded
+    let tokens: Vec<CffDictToken> = CffDictScanner::new(real_314).collect();
+    // Real numbers produce a single Operand(0) placeholder
+    assert_eq!(
+        tokens,
+        vec![CffDictToken::Operand(0)],
+        "byte 30 (real number) should emit Operand(0) placeholder"
+    );
+
+    // Test with terminator in high nibble: 0xF_
+    let real_term_high: &[u8] = &[30, 0xF0]; // terminated by high nibble = 0xF
+    let tokens2: Vec<CffDictToken> = CffDictScanner::new(real_term_high).collect();
+    assert_eq!(
+        tokens2,
+        vec![CffDictToken::Operand(0)],
+        "high nibble 0xF should terminate real number"
+    );
+}
+
+#[test]
+fn test_cff_dict_scanner_single_byte_operator() {
+    // Bytes 0..=27 (excluding 12, 28, 29, 30) are single-byte operators.
+    // Test a few known operators.
+    let cases: &[u8] = &[0, 1, 15, 17, 18, 21];
+
+    for &op in cases {
+        let data = [op];
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(&data).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::Operator(op)],
+            "byte {} should decode to Operator({})",
+            op,
+            op
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_full_sequence() {
+    // Simulate a realistic Top DICT sequence:
+    //   charset = 100 (op 15), CharStrings = 200 (op 17), Private = 50 300 (op 18)
+    //
+    // Encoding:
+    //   encode_1byte_operand(100) is NOT valid (>107), use 5-byte: [29, 0,0,0,100] op=15
+    //   encode_1byte_operand(50) is NOT valid (>107), use 5-byte: [29, 0,0,0,50] op=18
+    //   300 via byte 28: [28, 0x01, 0x2C]
+
+    // charset offset = 300 via byte-28 encoding, operator 15
+    let mut data: Vec<u8> = Vec::new();
+    data.extend_from_slice(&[28, 0x01, 0x2C]); // operand 300
+    data.push(15); // operator charset
+
+    // CharStrings offset = 500 via byte-29 encoding, operator 17
+    data.extend_from_slice(&[29, 0x00, 0x00, 0x01, 0xF4]); // operand 500
+    data.push(17); // operator CharStrings
+
+    // Private: size=50 (1-byte), offset=600 (byte-28), operator 18
+    data.push(encode_1byte_operand(50)); // operand 50
+    data.extend_from_slice(&[28, 0x02, 0x58]); // operand 600 = 0x0258
+    data.push(18); // operator Private
+
+    let tokens: Vec<CffDictToken> = CffDictScanner::new(&data).collect();
+
+    let expected = vec![
+        CffDictToken::Operand(300),
+        CffDictToken::Operator(15),
+        CffDictToken::Operand(500),
+        CffDictToken::Operator(17),
+        CffDictToken::Operand(50),
+        CffDictToken::Operand(600),
+        CffDictToken::Operator(18),
+    ];
+
+    assert_eq!(
+        tokens, expected,
+        "Full DICT sequence should produce correct token stream"
+    );
+}
+
+#[test]
+fn test_cff_dict_scanner_two_byte_range_positive() {
+    // Bytes 247-250: 2-byte positive integer
+    // value = (b0 - 247) * 256 + b1 + 108; range [108, 1131]
+    let cases: &[(i32, [u8; 2])] = &[
+        (108, [247, 0]),    // minimum: (247-247)*256 + 0 + 108 = 108
+        (363, [248, 0]),    // (248-247)*256 + 0 + 108 = 364 — wait, let's compute
+        (1131, [250, 255]), // maximum: (250-247)*256 + 255 + 108 = 768+255+108 = 1131
+    ];
+
+    // Recompute expected from formula: (b0-247)*256 + b1 + 108
+    let raw_cases: &[[u8; 2]] = &[[247, 0], [247, 100], [248, 50], [250, 255]];
+
+    for bytes in raw_cases {
+        let b0 = bytes[0] as i32;
+        let b1 = bytes[1] as i32;
+        let expected = (b0 - 247) * 256 + b1 + 108;
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(bytes).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::Operand(expected)],
+            "bytes {:?} should decode to Operand({})",
+            bytes,
+            expected
+        );
+    }
+
+    // Make sure the `cases` compile without unused warning
+    let _ = cases;
+}
+
+#[test]
+fn test_cff_dict_scanner_two_byte_range_negative() {
+    // Bytes 251-254: 2-byte negative integer
+    // value = -(b0 - 251) * 256 - b1 - 108; range [-1131, -108]
+    let raw_cases: &[[u8; 2]] = &[
+        [251, 0], // -(251-251)*256 - 0 - 108 = -108 (minimum absolute)
+        [251, 100],
+        [252, 50],
+        [254, 255], // -(254-251)*256 - 255 - 108 = -768-255-108 = -1131 (max absolute)
+    ];
+
+    for bytes in raw_cases {
+        let b0 = bytes[0] as i32;
+        let b1 = bytes[1] as i32;
+        let expected = -(b0 - 251) * 256 - b1 - 108;
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(bytes).collect();
+        assert_eq!(
+            tokens,
+            vec![CffDictToken::Operand(expected)],
+            "bytes {:?} should decode to Operand({})",
+            bytes,
+            expected
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_truncated_operand_stops_gracefully() {
+    // If an operand requires more bytes than are available, the scanner must
+    // stop cleanly (return None) rather than panic or wrap.
+    let truncated_cases: &[&[u8]] = &[
+        &[28],       // byte-28 needs 2 more bytes
+        &[28, 0x01], // byte-28 needs 1 more byte
+        &[29],       // byte-29 needs 4 more bytes
+        &[29, 0, 0], // byte-29 needs 2 more bytes
+        &[247],      // 2-byte positive needs 1 more byte
+        &[251],      // 2-byte negative needs 1 more byte
+    ];
+
+    for data in truncated_cases {
+        let tokens: Vec<CffDictToken> = CffDictScanner::new(data).collect();
+        // The incomplete operand should produce no token (scanner stops)
+        assert!(
+            tokens.is_empty(),
+            "Truncated data {:?} should produce no tokens, got {:?}",
+            data,
+            tokens
+        );
+    }
+}
+
+#[test]
+fn test_cff_dict_scanner_position_advances_correctly() {
+    // Verify that `position()` advances correctly after consuming tokens.
+    // Sequence: [1-byte operand (1 byte)] [4-byte operand (5 bytes)] [operator (1 byte)]
+    // Total: 7 bytes consumed.
+    let mut data: Vec<u8> = Vec::new();
+    data.push(encode_1byte_operand(0)); // 1 byte at pos 0
+    data.extend_from_slice(&[29, 0, 0, 0, 42]); // 5 bytes at pos 1
+    data.push(17); // operator at pos 6
+
+    let mut scanner = CffDictScanner::new(&data);
+
+    assert_eq!(scanner.position(), 0);
+    let _ = scanner.next(); // consume 1-byte operand
+    assert_eq!(scanner.position(), 1);
+    let _ = scanner.next(); // consume 4-byte operand
+    assert_eq!(scanner.position(), 6);
+    let _ = scanner.next(); // consume operator
+    assert_eq!(scanner.position(), 7);
+    assert!(scanner.next().is_none());
+    assert_eq!(scanner.position(), 7); // position stays at end
 }

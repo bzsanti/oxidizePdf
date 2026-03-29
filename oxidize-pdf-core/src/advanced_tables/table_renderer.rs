@@ -415,14 +415,14 @@ impl TableRenderer {
         font_size: f64,
     ) -> String {
         // If text already fits, return as-is
-        let full_width = measure_text(text, font.clone(), font_size);
+        let full_width = measure_text(text, font, font_size);
         if full_width <= max_width {
             return text.to_string();
         }
 
         // If even ellipsis doesn't fit, return empty string
         let ellipsis = "...";
-        let ellipsis_width = measure_text(ellipsis, font.clone(), font_size);
+        let ellipsis_width = measure_text(ellipsis, font, font_size);
         if ellipsis_width > max_width {
             return String::new();
         }
@@ -432,43 +432,34 @@ impl TableRenderer {
             return ellipsis.to_string();
         }
 
-        // Binary search to find the maximum text that fits with ellipsis
+        // Linear scan: iterate character by character until width is exceeded.
+        // For typical cell text (<100 chars) this is simpler and avoids allocating a Vec<char>.
         let available_width = max_width - ellipsis_width;
-        let chars: Vec<char> = text.chars().collect();
+        let mut last_fit_end = 0usize;
+        let mut width_so_far = 0.0f64;
 
-        let mut left = 0;
-        let mut right = chars.len();
-        let mut best_length = 0;
-
-        while left <= right {
-            let mid = (left + right) / 2;
-            if mid == 0 {
+        for (byte_pos, ch) in text.char_indices() {
+            let ch_len = ch.len_utf8();
+            let ch_str = &text[byte_pos..byte_pos + ch_len];
+            let ch_width = measure_text(ch_str, font, font_size);
+            if width_so_far + ch_width > available_width {
                 break;
             }
-
-            let substring: String = chars[..mid].iter().collect();
-            let substring_width = measure_text(&substring, font.clone(), font_size);
-
-            if substring_width <= available_width {
-                best_length = mid;
-                left = mid + 1;
-            } else {
-                if mid == 0 {
-                    break;
-                }
-                right = mid - 1;
-            }
+            width_so_far += ch_width;
+            last_fit_end = byte_pos + ch_len;
         }
 
-        if best_length == 0 {
+        if last_fit_end == 0 {
             ellipsis.to_string()
         } else {
-            let truncated: String = chars[..best_length].iter().collect();
-            format!("{}{}", truncated, ellipsis)
+            format!("{}{}", &text[..last_fit_end], ellipsis)
         }
     }
 
-    /// Wrap text into multiple lines that fit within the given width
+    /// Wrap text into multiple lines that fit within the given width.
+    ///
+    /// Uses incremental width tracking to avoid remeasuring the full current line on
+    /// every word — a significant saving in the hot path for tables with many cells.
     fn wrap_text_to_lines(
         &self,
         text: &str,
@@ -485,8 +476,8 @@ impl TableRenderer {
                 continue;
             }
 
-            // If paragraph fits, add it directly
-            let paragraph_width = measure_text(paragraph, font.clone(), font_size);
+            // If paragraph fits, add it directly (single measure check)
+            let paragraph_width = measure_text(paragraph, font, font_size);
             if paragraph_width <= max_width {
                 lines.push(paragraph.to_string());
                 continue;
@@ -499,62 +490,72 @@ impl TableRenderer {
             }
 
             let mut current_line = String::new();
-            let space_width = measure_text(" ", font.clone(), font_size);
+            let mut current_line_width = 0.0f64;
+            let space_width = measure_text(" ", font, font_size);
 
             for word in words {
-                let word_width = measure_text(word, font.clone(), font_size);
+                let word_width = measure_text(word, font, font_size);
 
                 if current_line.is_empty() {
                     // First word on the line
                     if word_width <= max_width {
                         current_line = word.to_string();
+                        current_line_width = word_width;
                     } else {
-                        // Word is too long, need to break it
+                        // Word is too long — break it character by character
                         let chars: Vec<char> = word.chars().collect();
                         let mut char_line = String::new();
+                        let mut char_line_width = 0.0f64;
                         for c in chars {
-                            let test_line = format!("{}{}", char_line, c);
-                            if measure_text(&test_line, font.clone(), font_size) <= max_width {
-                                char_line = test_line;
+                            let char_width = measure_text(&c.to_string(), font, font_size);
+                            if char_line_width + char_width <= max_width {
+                                char_line.push(c);
+                                char_line_width += char_width;
                             } else {
                                 if !char_line.is_empty() {
                                     lines.push(char_line);
                                 }
                                 char_line = c.to_string();
+                                char_line_width = char_width;
                             }
                         }
                         current_line = char_line;
+                        current_line_width = char_line_width;
                     }
                 } else {
-                    // Test adding word to current line
-                    let test_width = measure_text(&current_line, font.clone(), font_size)
-                        + space_width
-                        + word_width;
+                    // Test adding word to current line using incremental width
+                    let test_width = current_line_width + space_width + word_width;
 
                     if test_width <= max_width {
                         current_line.push(' ');
                         current_line.push_str(word);
+                        current_line_width = test_width;
                     } else {
                         // Start new line
                         lines.push(current_line);
                         if word_width <= max_width {
                             current_line = word.to_string();
+                            current_line_width = word_width;
                         } else {
-                            // Word is too long, break it
+                            // Word is too long — break it character by character
                             let chars: Vec<char> = word.chars().collect();
                             let mut char_line = String::new();
+                            let mut char_line_width = 0.0f64;
                             for c in chars {
-                                let test_line = format!("{}{}", char_line, c);
-                                if measure_text(&test_line, font.clone(), font_size) <= max_width {
-                                    char_line = test_line;
+                                let char_width = measure_text(&c.to_string(), font, font_size);
+                                if char_line_width + char_width <= max_width {
+                                    char_line.push(c);
+                                    char_line_width += char_width;
                                 } else {
                                     if !char_line.is_empty() {
                                         lines.push(char_line);
                                     }
                                     char_line = c.to_string();
+                                    char_line_width = char_width;
                                 }
                             }
                             current_line = char_line;
+                            current_line_width = char_line_width;
                         }
                     }
                 }
@@ -627,11 +628,11 @@ impl TableRenderer {
                 let text_x = match style.alignment {
                     CellAlignment::Left => x + style.padding.left,
                     CellAlignment::Center => {
-                        let line_width = measure_text(line, font.clone(), font_size);
+                        let line_width = measure_text(line, &font, font_size);
                         x + style.padding.left + (available_width - line_width) / 2.0
                     }
                     CellAlignment::Right => {
-                        let line_width = measure_text(line, font.clone(), font_size);
+                        let line_width = measure_text(line, &font, font_size);
                         x + width - style.padding.right - line_width
                     }
                     CellAlignment::Justify => x + style.padding.left,
@@ -659,11 +660,11 @@ impl TableRenderer {
                 CellAlignment::Left => x + style.padding.left,
                 CellAlignment::Center => {
                     // For center alignment, we need to calculate based on actual text width
-                    let text_width = measure_text(&display_text, font.clone(), font_size);
+                    let text_width = measure_text(&display_text, &font, font_size);
                     x + style.padding.left + (available_width - text_width) / 2.0
                 }
                 CellAlignment::Right => {
-                    let text_width = measure_text(&display_text, font.clone(), font_size);
+                    let text_width = measure_text(&display_text, &font, font_size);
                     x + width - style.padding.right - text_width
                 }
                 CellAlignment::Justify => x + style.padding.left,
@@ -794,7 +795,7 @@ mod tests {
         assert!(result.len() < text.len());
 
         // Verify the truncated text fits within the width
-        let truncated_width = measure_text(&result, font, font_size);
+        let truncated_width = measure_text(&result, &font, font_size);
         assert!(truncated_width <= max_width);
     }
 
@@ -818,7 +819,7 @@ mod tests {
         let font_size = 12.0;
 
         // Calculate width that exactly fits ellipsis
-        let ellipsis_width = measure_text("...", font.clone(), font_size);
+        let ellipsis_width = measure_text("...", &font, font_size);
 
         let result = renderer.truncate_text_to_width(text, ellipsis_width, &font, font_size);
         assert_eq!(result, "...");
@@ -892,8 +893,57 @@ mod tests {
         }
 
         // Verify width constraint
-        let result_width = measure_text(&result, font, font_size);
+        let result_width = measure_text(&result, &font, font_size);
         assert!(result_width <= max_width);
+    }
+
+    // ================== truncate_text_to_width linear scan tests ==================
+
+    #[test]
+    fn test_truncate_linear_short_text_fits() {
+        let renderer = TableRenderer::new();
+        let text = "Hi";
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+        // A wide width means text fits unchanged
+        let result = renderer.truncate_text_to_width(text, 500.0, &font, font_size);
+        assert_eq!(result, "Hi");
+    }
+
+    #[test]
+    fn test_truncate_linear_overflow_adds_ellipsis() {
+        let renderer = TableRenderer::new();
+        let text = "This is a long sentence that will not fit";
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+        let result = renderer.truncate_text_to_width(text, 40.0, &font, font_size);
+        assert!(
+            result.ends_with("..."),
+            "Expected ellipsis suffix, got: {result}"
+        );
+        assert!(result.len() < text.len());
+        let result_width = measure_text(&result, &font, font_size);
+        assert!(result_width <= 40.0, "Truncated text exceeds max_width");
+    }
+
+    #[test]
+    fn test_truncate_linear_unicode() {
+        let renderer = TableRenderer::new();
+        // Multi-byte UTF-8 characters: each Japanese kanji is 3 bytes
+        let text = "日本語テスト文字列";
+        let font = Font::Helvetica;
+        let font_size = 12.0;
+        let result = renderer.truncate_text_to_width(text, 50.0, &font, font_size);
+        // Result must be valid UTF-8 (no partial char splits)
+        assert!(std::str::from_utf8(result.as_bytes()).is_ok());
+        if result != text {
+            assert!(
+                result.ends_with("..."),
+                "Truncated unicode should end with ellipsis"
+            );
+        }
+        let result_width = measure_text(&result, &font, font_size);
+        assert!(result_width <= 50.0);
     }
 
     // ================== wrap_text_to_lines tests (Issue #131) ==================
@@ -924,7 +974,7 @@ mod tests {
 
         // Verify all lines fit within max_width
         for line in &lines {
-            let line_width = measure_text(line, font.clone(), font_size);
+            let line_width = measure_text(line, &font, font_size);
             assert!(
                 line_width <= max_width + 1.0, // Small tolerance for floating point
                 "Line '{}' exceeds max_width (width: {}, max: {})",

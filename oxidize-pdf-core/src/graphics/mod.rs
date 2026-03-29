@@ -58,6 +58,17 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::sync::Arc;
 
+/// Saved graphics state for save/restore operations.
+/// Using `Arc<str>` for `font_name` makes `Clone` O(1) — only increments the reference count.
+#[derive(Clone)]
+struct GraphicsState {
+    fill_color: Color,
+    stroke_color: Color,
+    font_name: Option<Arc<str>>,
+    font_size: f64,
+    is_custom_font: bool,
+}
+
 #[derive(Clone)]
 pub struct GraphicsContext {
     operations: String,
@@ -80,9 +91,9 @@ pub struct GraphicsContext {
     clipping_region: ClippingRegion,
     // Font management
     font_manager: Option<Arc<FontManager>>,
-    // State stack for save/restore (fill_color, stroke_color, font_name, font_size, is_custom_font)
-    state_stack: Vec<(Color, Color, Option<String>, f64, bool)>,
-    current_font_name: Option<String>,
+    // State stack for save/restore
+    state_stack: Vec<GraphicsState>,
+    current_font_name: Option<Arc<str>>,
     current_font_size: f64,
     // Whether the current font is a custom (Type0/CID) font requiring Unicode encoding
     is_custom_font: bool,
@@ -384,13 +395,13 @@ impl GraphicsContext {
         self.operations.push_str("q\n");
         self.save_clipping_state();
         // Save color + font state
-        self.state_stack.push((
-            self.current_color,
-            self.stroke_color,
-            self.current_font_name.clone(),
-            self.current_font_size,
-            self.is_custom_font,
-        ));
+        self.state_stack.push(GraphicsState {
+            fill_color: self.current_color,
+            stroke_color: self.stroke_color,
+            font_name: self.current_font_name.clone(),
+            font_size: self.current_font_size,
+            is_custom_font: self.is_custom_font,
+        });
         self
     }
 
@@ -398,12 +409,12 @@ impl GraphicsContext {
         self.operations.push_str("Q\n");
         self.restore_clipping_state();
         // Restore color + font state
-        if let Some((fill, stroke, font_name, font_size, is_custom)) = self.state_stack.pop() {
-            self.current_color = fill;
-            self.stroke_color = stroke;
-            self.current_font_name = font_name;
-            self.current_font_size = font_size;
-            self.is_custom_font = is_custom;
+        if let Some(state) = self.state_stack.pop() {
+            self.current_color = state.fill_color;
+            self.stroke_color = state.stroke_color;
+            self.current_font_name = state.font_name;
+            self.current_font_size = state.font_size;
+            self.is_custom_font = state.is_custom_font;
         }
         self
     }
@@ -711,12 +722,12 @@ impl GraphicsContext {
         // Track font name, size, and type for Unicode detection and proper font handling
         match &font {
             Font::Custom(name) => {
-                self.current_font_name = Some(name.clone());
+                self.current_font_name = Some(Arc::from(name.as_str()));
                 self.current_font_size = size;
                 self.is_custom_font = true;
             }
             _ => {
-                self.current_font_name = Some(font.pdf_name());
+                self.current_font_name = Some(Arc::from(font.pdf_name().as_str()));
                 self.current_font_size = size;
                 self.is_custom_font = false;
             }
@@ -1122,7 +1133,7 @@ impl GraphicsContext {
         writeln!(&mut self.operations, "/{} {} Tf", font_name, size)
             .expect("Writing to string should never fail");
 
-        self.current_font_name = Some(font_name.to_string());
+        self.current_font_name = Some(Arc::from(font_name));
         self.current_font_size = size;
         self.is_custom_font = true;
 
@@ -2800,7 +2811,7 @@ mod tests {
     fn test_set_custom_font() {
         let mut ctx = GraphicsContext::new();
         ctx.set_custom_font("CustomFont", 14.0);
-        assert_eq!(ctx.current_font_name, Some("CustomFont".to_string()));
+        assert_eq!(ctx.current_font_name.as_deref(), Some("CustomFont"));
         assert_eq!(ctx.current_font_size, 14.0);
         assert!(ctx.is_custom_font);
     }
@@ -3492,20 +3503,20 @@ mod tests {
         let mut ctx = GraphicsContext::new();
         ctx.set_font(Font::Custom("CJK".to_string()), 12.0);
         assert!(ctx.is_custom_font);
-        assert_eq!(ctx.current_font_name, Some("CJK".to_string()));
+        assert_eq!(ctx.current_font_name.as_deref(), Some("CJK"));
         assert_eq!(ctx.current_font_size, 12.0);
 
         ctx.save_state();
         ctx.set_font(Font::Helvetica, 10.0);
         assert!(!ctx.is_custom_font);
-        assert_eq!(ctx.current_font_name, Some("Helvetica".to_string()));
+        assert_eq!(ctx.current_font_name.as_deref(), Some("Helvetica"));
 
         ctx.restore_state();
         assert!(
             ctx.is_custom_font,
             "is_custom_font must be restored after restore_state"
         );
-        assert_eq!(ctx.current_font_name, Some("CJK".to_string()));
+        assert_eq!(ctx.current_font_name.as_deref(), Some("CJK"));
         assert_eq!(ctx.current_font_size, 12.0);
     }
 
@@ -3534,5 +3545,43 @@ mod tests {
             "After restore_state, CJK text should use hex encoding, got: {}",
             ops
         );
+    }
+
+    #[test]
+    fn test_graphics_state_arc_str_save_restore() {
+        // Verifies that save/restore correctly round-trips font names stored as Arc<str>,
+        // and that the clone is O(1) (no String allocation per save).
+        let mut ctx = GraphicsContext::new();
+
+        // Set initial font
+        ctx.set_font(Font::Custom("TestFont".to_string()), 14.0);
+        assert_eq!(ctx.current_font_name.as_deref(), Some("TestFont"));
+        assert!(ctx.is_custom_font);
+
+        // Save state, change font
+        ctx.save_state();
+        ctx.set_font(Font::Custom("Other".to_string()), 10.0);
+        assert_eq!(ctx.current_font_name.as_deref(), Some("Other"));
+
+        // Restore: font must revert to "TestFont"
+        ctx.restore_state();
+        assert_eq!(
+            ctx.current_font_name.as_deref(),
+            Some("TestFont"),
+            "Font name must be restored to TestFont after restore_state"
+        );
+        assert_eq!(ctx.current_font_size, 14.0);
+        assert!(
+            ctx.is_custom_font,
+            "is_custom_font must be restored to true"
+        );
+
+        // Verify the Arc<str> is actually shared (same pointer after clone)
+        if let Some(ref arc) = ctx.current_font_name {
+            let cloned = arc.clone();
+            assert_eq!(arc.as_ref(), cloned.as_ref());
+            // Arc::ptr_eq confirms O(1) clone (same backing allocation)
+            assert!(Arc::ptr_eq(arc, &cloned));
+        }
     }
 }

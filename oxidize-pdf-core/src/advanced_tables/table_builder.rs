@@ -162,10 +162,6 @@ pub struct AdvancedTable {
     pub header_style: CellStyle,
     /// Zebra striping configuration
     pub zebra_striping: Option<ZebraConfig>,
-    /// Zebra stripe color
-    pub zebra_color: Option<Color>,
-    /// Zebra stripes enabled
-    pub zebra_stripes: bool,
     /// Table-wide border style
     pub table_border: bool,
     /// Spacing between cells
@@ -235,8 +231,6 @@ impl AdvancedTableBuilder {
                 default_style: CellStyle::data(),
                 header_style: CellStyle::header(),
                 zebra_striping: None,
-                zebra_color: None,
-                zebra_stripes: false,
                 table_border: true,
                 cell_spacing: 0.0,
                 total_width: None,
@@ -367,8 +361,6 @@ impl AdvancedTableBuilder {
 
     /// Enable zebra stripes
     pub fn zebra_stripes(mut self, enabled: bool, color: Color) -> Self {
-        self.table.zebra_stripes = enabled;
-        self.table.zebra_color = Some(color);
         if enabled {
             self.table.zebra_striping = Some(ZebraConfig::simple(color));
         } else {
@@ -545,6 +537,35 @@ impl AdvancedTable {
         }
 
         style
+    }
+
+    /// Get a reference to the style for a specific cell, considering row/column defaults.
+    ///
+    /// Returns a reference for the common cases (cell-specific, row, or column style).
+    /// When zebra striping would modify the style, falls back to the base column or default style
+    /// without applying the zebra background. Use [`get_cell_style`] when zebra colors are needed.
+    pub fn get_cell_style_ref(&self, row: usize, col: usize) -> &CellStyle {
+        // Priority: specific cell style > row style > column style > default
+
+        if let Some(cell_style) = self.cell_styles.get(&(row, col)) {
+            return cell_style;
+        }
+
+        if let Some(row_data) = self.rows.get(row) {
+            if let Some(row_style) = &row_data.style {
+                return row_style;
+            }
+        }
+
+        if let Some(column) = self.columns.get(col) {
+            if let Some(column_style) = &column.default_style {
+                // Return the base column style without zebra mutation.
+                // Callers needing zebra background should use `get_cell_style`.
+                return column_style;
+            }
+        }
+
+        &self.default_style
     }
 
     /// Validate table structure (e.g., consistent column counts with colspan/rowspan)
@@ -945,8 +966,10 @@ mod tests {
             .zebra_stripes(true, color)
             .build()
             .unwrap();
-        assert!(table.zebra_stripes);
         assert!(table.zebra_striping.is_some());
+        // Verify the ZebraConfig was set with the correct color
+        let zebra = table.zebra_striping.as_ref().unwrap();
+        assert_eq!(zebra.odd_color, Some(color));
     }
 
     #[test]
@@ -957,7 +980,6 @@ mod tests {
             .zebra_stripes(false, color)
             .build()
             .unwrap();
-        assert!(!table.zebra_stripes);
         assert!(table.zebra_striping.is_none());
     }
 
@@ -1302,5 +1324,46 @@ mod tests {
         // Getting style for non-existent column should return default
         let style = table.get_cell_style(0, 100);
         assert_eq!(style.font_size, table.default_style.font_size);
+    }
+
+    #[test]
+    fn test_get_cell_style_ref_returns_correct_style() {
+        use crate::graphics::Color;
+
+        // Case 1: cell-specific style returned by reference
+        let cell_style = CellStyle::new().font_size(18.0).text_color(Color::red());
+        let table = AdvancedTableBuilder::new()
+            .add_column("A", 100.0)
+            .add_row(vec!["Value"])
+            .set_cell_style(0, 0, cell_style.clone())
+            .build()
+            .unwrap();
+
+        let style_ref = table.get_cell_style_ref(0, 0);
+        assert!(
+            (style_ref.font_size.unwrap_or(12.0) - 18.0).abs() < f64::EPSILON,
+            "Cell-specific style should have font_size 18.0"
+        );
+
+        // Case 2: returns default_style when no cell/row/column style is set
+        let table_default = AdvancedTableBuilder::new()
+            .add_column("A", 100.0)
+            .add_row(vec!["Value"])
+            .build()
+            .unwrap();
+
+        let style_ref_default = table_default.get_cell_style_ref(0, 0);
+        assert_eq!(
+            style_ref_default.font_size, table_default.default_style.font_size,
+            "Should fall back to default_style when no overrides are set"
+        );
+
+        // Case 3: reference is the same font_size as what get_cell_style returns for the non-zebra path
+        let style_owned = table.get_cell_style(0, 0);
+        let style_ref2 = table.get_cell_style_ref(0, 0);
+        assert_eq!(
+            style_owned.font_size, style_ref2.font_size,
+            "get_cell_style and get_cell_style_ref should agree when no zebra striping"
+        );
     }
 }

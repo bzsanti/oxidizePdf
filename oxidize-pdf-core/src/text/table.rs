@@ -519,12 +519,12 @@ impl Table {
                     let line_x = match cell.align {
                         TextAlign::Center => {
                             let measured =
-                                measure_text(line, font_to_measure.clone(), self.options.font_size);
+                                measure_text(line, &font_to_measure, self.options.font_size);
                             text_x + (text_width - measured) / 2.0
                         }
                         TextAlign::Right => {
                             let measured =
-                                measure_text(line, font_to_measure.clone(), self.options.font_size);
+                                measure_text(line, &font_to_measure, self.options.font_size);
                             text_x + text_width - measured
                         }
                         TextAlign::Left | TextAlign::Justified => text_x,

@@ -440,6 +440,7 @@ performance = ["dep:rayon", "compression"]
 
 # Test features
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
+multilingual-fixtures = []  # Enable tests that require UDHR multilingual fixture PDFs
 
 # Digital signature verification features
 signatures = [
