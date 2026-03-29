@@ -14,7 +14,7 @@ const FIXTURES_DIR: &str = "tests/fixtures/multilingual";
 fn assert_pdf_parseable(filename: &str, lang: &str) {
     let path = Path::new(FIXTURES_DIR).join(filename);
     if !path.exists() {
-        eprintln!("SKIP: fixture {} not found", path.display());
+        eprintln!("[SKIP] Fixture not found: {}", path.display());
         return;
     }
 
@@ -30,26 +30,31 @@ fn assert_pdf_parseable(filename: &str, lang: &str) {
 // =============================================================================
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_chinese_pdf_parseable() {
     assert_pdf_parseable("udhr_chinese.pdf", "Chinese");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_japanese_pdf_parseable() {
     assert_pdf_parseable("udhr_japanese.pdf", "Japanese");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_korean_pdf_parseable() {
     assert_pdf_parseable("udhr_korean.pdf", "Korean");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_arabic_pdf_parseable() {
     assert_pdf_parseable("udhr_arabic.pdf", "Arabic");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_hebrew_pdf_parseable() {
     assert_pdf_parseable("udhr_hebrew.pdf", "Hebrew");
 }
@@ -66,7 +71,7 @@ fn test_hebrew_pdf_parseable() {
 fn assert_pdf_extracts_non_ascii(filename: &str, min_chars: usize, lang: &str) {
     let path = Path::new(FIXTURES_DIR).join(filename);
     if !path.exists() {
-        eprintln!("SKIP: fixture {} not found", path.display());
+        eprintln!("[SKIP] Fixture not found: {}", path.display());
         return;
     }
 
@@ -103,26 +108,31 @@ fn assert_pdf_extracts_non_ascii(filename: &str, min_chars: usize, lang: &str) {
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_chinese_text_extraction() {
     assert_pdf_extracts_non_ascii("udhr_chinese.pdf", 5000, "Chinese");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_japanese_text_extraction() {
     assert_pdf_extracts_non_ascii("udhr_japanese.pdf", 3000, "Japanese");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_korean_text_extraction() {
     assert_pdf_extracts_non_ascii("udhr_korean.pdf", 3000, "Korean");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_arabic_text_extraction() {
     assert_pdf_extracts_non_ascii("udhr_arabic.pdf", 5000, "Arabic");
 }
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_hebrew_text_extraction() {
     // Note: The Hebrew UDHR fixture is PDF 1.2 (1996) which uses legacy font
     // encoding without Unicode CMaps. Text extraction produces mapped code points
@@ -130,7 +140,7 @@ fn test_hebrew_text_extraction() {
     // produces substantial content without panicking.
     let path = Path::new(FIXTURES_DIR).join("udhr_hebrew.pdf");
     if !path.exists() {
-        eprintln!("SKIP: fixture not found");
+        eprintln!("[SKIP] Fixture not found: {}", path.display());
         return;
     }
     let doc = PdfReader::open_document(&path).unwrap();
@@ -154,6 +164,7 @@ fn test_hebrew_text_extraction() {
 // =============================================================================
 
 #[test]
+#[cfg_attr(not(feature = "multilingual-fixtures"), ignore)]
 fn test_full_document_extraction_no_panic() {
     let fixtures = [
         ("udhr_chinese.pdf", "Chinese"),
@@ -166,7 +177,7 @@ fn test_full_document_extraction_no_panic() {
     for (filename, lang) in &fixtures {
         let path = Path::new(FIXTURES_DIR).join(filename);
         if !path.exists() {
-            eprintln!("SKIP: {}", filename);
+            eprintln!("[SKIP] Fixture not found: {}", path.display());
             continue;
         }
 

@@ -143,13 +143,13 @@ lazy_static::lazy_static! {
 }
 
 /// Measure the width of a text string in a given font and size
-pub fn measure_text(text: &str, font: Font, font_size: f64) -> f64 {
+pub fn measure_text(text: &str, font: &Font, font_size: f64) -> f64 {
     if font.is_symbolic() {
         // Symbol and ZapfDingbats need special handling
         return text.len() as f64 * font_size * 0.6;
     }
 
-    let metrics = get_font_metrics(&font);
+    let metrics = get_font_metrics(font);
 
     let width_units: u32 = text.chars().map(|ch| metrics.char_width(ch) as u32).sum();
 
@@ -420,7 +420,7 @@ mod tests {
     #[test]
     fn test_measure_text_helvetica() {
         let text = "Hello";
-        let width = measure_text(text, Font::Helvetica, 12.0);
+        let width = measure_text(text, &Font::Helvetica, 12.0);
 
         // Helvetica "H" = 722, "e" = 556, "l" = 222, "l" = 222, "o" = 556
         // Total = 2278 units = 2.278 at size 1.0, * 12.0 = 27.336
@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn test_measure_text_courier() {
         let text = "ABC";
-        let width = measure_text(text, Font::Courier, 10.0);
+        let width = measure_text(text, &Font::Courier, 10.0);
 
         // Courier is monospace: all chars = 600 units
         // 3 chars * 600 = 1800 units = 1.8 at size 1.0, * 10.0 = 18.0
@@ -440,8 +440,8 @@ mod tests {
     #[test]
     fn test_measure_text_symbolic_fonts() {
         let text = "ABC";
-        let symbol_width = measure_text(text, Font::Symbol, 12.0);
-        let zapf_width = measure_text(text, Font::ZapfDingbats, 12.0);
+        let symbol_width = measure_text(text, &Font::Symbol, 12.0);
+        let zapf_width = measure_text(text, &Font::ZapfDingbats, 12.0);
 
         // Symbolic fonts use approximation: len * font_size * 0.6
         let expected = 3.0 * 12.0 * 0.6; // = 21.6
@@ -551,7 +551,7 @@ mod tests {
 
         for font in &fonts {
             // Should not panic - all fonts should have metrics
-            let _width = measure_text("A", font.clone(), 12.0);
+            let _width = measure_text("A", font, 12.0);
         }
     }
 
@@ -634,7 +634,7 @@ mod tests {
 
     #[test]
     fn test_measure_text_empty_string() {
-        let width = measure_text("", Font::Helvetica, 12.0);
+        let width = measure_text("", &Font::Helvetica, 12.0);
         assert_eq!(width, 0.0);
     }
 
@@ -643,7 +643,7 @@ mod tests {
         let text = "Hello";
 
         // Measuring whole text should equal sum of individual characters
-        let total_width = measure_text(text, Font::Helvetica, 12.0);
+        let total_width = measure_text(text, &Font::Helvetica, 12.0);
         let individual_sum: f64 = text
             .chars()
             .map(|ch| measure_char(ch, Font::Helvetica, 12.0))
@@ -724,7 +724,7 @@ mod tests {
         let metrics = FontMetrics::new(500).with_widths(&[('A', 600), ('B', 600), ('C', 600)]);
         register_custom_font_metrics("MyCustomFont".to_string(), metrics);
 
-        let width = measure_text("ABC", Font::Custom("MyCustomFont".to_string()), 10.0);
+        let width = measure_text("ABC", &Font::Custom("MyCustomFont".to_string()), 10.0);
 
         // 3 chars * 600 units = 1800 units = 1.8 at size 1.0 * 10.0 = 18.0
         assert!((width - 18.0).abs() < 0.01);

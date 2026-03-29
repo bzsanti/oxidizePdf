@@ -7,9 +7,9 @@ fn test_text_measurement() {
     // Test measuring text with different fonts
     let text = "Hello, World!";
 
-    let helvetica_width = measure_text(text, Font::Helvetica, 12.0);
-    let times_width = measure_text(text, Font::TimesRoman, 12.0);
-    let courier_width = measure_text(text, Font::Courier, 12.0);
+    let helvetica_width = measure_text(text, &Font::Helvetica, 12.0);
+    let times_width = measure_text(text, &Font::TimesRoman, 12.0);
+    let courier_width = measure_text(text, &Font::Courier, 12.0);
 
     // Helvetica and Times should have different widths
     assert_ne!(helvetica_width, times_width);
@@ -18,8 +18,8 @@ fn test_text_measurement() {
     assert_ne!(courier_width, helvetica_width);
 
     // Test that font size affects width
-    let width_12pt = measure_text(text, Font::Helvetica, 12.0);
-    let width_24pt = measure_text(text, Font::Helvetica, 24.0);
+    let width_12pt = measure_text(text, &Font::Helvetica, 12.0);
+    let width_24pt = measure_text(text, &Font::Helvetica, 24.0);
     assert_eq!(width_24pt, width_12pt * 2.0);
 }
 

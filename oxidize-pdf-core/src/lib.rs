@@ -636,7 +636,7 @@ mod tests {
         // Test text measurement (with mock font)
         let font = Font::Helvetica;
         let size = 12.0;
-        let width = measure_text(text, font, size);
+        let width = measure_text(text, &font, size);
         assert!(width > 0.0);
     }
 

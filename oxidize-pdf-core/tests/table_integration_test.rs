@@ -495,7 +495,7 @@ fn test_measure_text_uses_registered_custom_font_metrics() {
 
     // Measure CJK text: 11 chars × 1000 units × (10.5 / 1000) = 115.5
     let cjk_text = "测试中文长文本居中对齐";
-    let cjk_width = measure_text(cjk_text, font.clone(), 10.5);
+    let cjk_width = measure_text(cjk_text, &font, 10.5);
     let expected_cjk_width = 11.0 * 10.5; // 11 CJK chars × full-width
     assert!(
         (cjk_width - expected_cjk_width).abs() < 0.01,
@@ -503,7 +503,7 @@ fn test_measure_text_uses_registered_custom_font_metrics() {
     );
 
     // Measure ASCII text: 4 chars × 500 units × (10.5 / 1000) = 21.0
-    let ascii_width = measure_text("test", font, 10.5);
+    let ascii_width = measure_text("test", &font, 10.5);
     let expected_ascii_width = 4.0 * 500.0 * 10.5 / 1000.0;
     assert!(
         (ascii_width - expected_ascii_width).abs() < 0.01,
@@ -524,7 +524,7 @@ fn test_default_custom_metrics_cjk_width() {
     let font = Font::Custom("UnregisteredFontForCJKTest".to_string());
 
     // CJK character '中' (U+4E2D) should use 1000 width, not 556 (Helvetica default)
-    let cjk_width = measure_text("中", font.clone(), 10.0);
+    let cjk_width = measure_text("中", &font, 10.0);
     let expected = 1000.0 * 10.0 / 1000.0; // 10.0
     assert!(
         (cjk_width - expected).abs() < 0.01,
@@ -532,7 +532,7 @@ fn test_default_custom_metrics_cjk_width() {
     );
 
     // ASCII 'A' should still use Helvetica-like width (667)
-    let ascii_width = measure_text("A", font, 10.0);
+    let ascii_width = measure_text("A", &font, 10.0);
     let expected_ascii = 667.0 * 10.0 / 1000.0; // 6.67
     assert!(
         (ascii_width - expected_ascii).abs() < 0.01,
