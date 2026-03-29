@@ -4,6 +4,7 @@
 //! embedding them in PDF documents, and using them for text rendering.
 
 pub mod cid_mapper;
+pub mod cmap_utils;
 pub mod embedder;
 pub mod font_cache;
 pub mod font_descriptor;
