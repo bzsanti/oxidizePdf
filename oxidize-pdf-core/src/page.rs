@@ -1073,7 +1073,7 @@ impl Page {
         // Calculate text width for alignment
         let text_width = measure_text(
             &content,
-            header_footer.options().font.clone(),
+            &header_footer.options().font,
             header_footer.options().font_size,
         );
 

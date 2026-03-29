@@ -4,6 +4,7 @@ use crate::error::PdfError;
 use crate::Result;
 use std::collections::HashMap;
 
+use super::cmap_utils::parse_cmap_format_12_filtered;
 use super::{FontDescriptor, FontFlags, FontMetrics};
 
 /// Character to glyph index mapping
@@ -535,7 +536,7 @@ impl<'a> TtfParser<'a> {
         let end_codes_offset = offset + 14;
         let start_codes_offset = end_codes_offset + seg_count as usize * 2 + 2; // +2 for reserved pad
         let id_delta_offset = start_codes_offset + seg_count as usize * 2;
-        let _id_range_offset_offset = id_delta_offset + seg_count as usize * 2;
+        let id_range_offset_start = id_delta_offset + seg_count as usize * 2;
 
         for i in 0..seg_count {
             let i = i as usize;
@@ -543,6 +544,7 @@ impl<'a> TtfParser<'a> {
             if start_codes_offset + i * 2 + 1 >= cmap_data.len()
                 || end_codes_offset + i * 2 + 1 >= cmap_data.len()
                 || id_delta_offset + i * 2 + 1 >= cmap_data.len()
+                || id_range_offset_start + i * 2 + 1 >= cmap_data.len()
             {
                 break;
             }
@@ -559,12 +561,36 @@ impl<'a> TtfParser<'a> {
                 cmap_data[id_delta_offset + i * 2],
                 cmap_data[id_delta_offset + i * 2 + 1],
             ]);
+            let id_range_offset = u16::from_be_bytes([
+                cmap_data[id_range_offset_start + i * 2],
+                cmap_data[id_range_offset_start + i * 2 + 1],
+            ]) as usize;
 
-            // Simple mapping using id_delta (skip complex id_range_offset for now)
             for code in start_code..=end_code {
-                if let Some(ch) = char::from_u32(code as u32) {
-                    let glyph_id = (code as i32 + id_delta as i32) as u16;
-                    if glyph_id != 0 {
+                let glyph_id = if id_range_offset == 0 {
+                    // Direct mapping: apply id_delta to the character code.
+                    ((code as i32 + id_delta as i32) & 0xFFFF) as u16
+                } else {
+                    // Indirect lookup via glyphIdArray (OpenType spec §cmap Format 4).
+                    // id_range_offset is a byte offset measured from the position of
+                    // the id_range_offset entry itself.
+                    let range_offset_pos = id_range_offset_start + i * 2;
+                    let glyph_idx =
+                        range_offset_pos + id_range_offset + (code - start_code) as usize * 2;
+                    if glyph_idx + 1 >= cmap_data.len() {
+                        continue;
+                    }
+                    let raw_gid =
+                        u16::from_be_bytes([cmap_data[glyph_idx], cmap_data[glyph_idx + 1]]);
+                    if raw_gid == 0 {
+                        0
+                    } else {
+                        ((raw_gid as i32 + id_delta as i32) & 0xFFFF) as u16
+                    }
+                };
+
+                if glyph_id != 0 {
+                    if let Some(ch) = char::from_u32(code as u32) {
                         mapping.add_mapping(ch, glyph_id);
                     }
                 }
@@ -576,76 +602,20 @@ impl<'a> TtfParser<'a> {
 
     /// Parse cmap format 12: Segmented coverage (full Unicode range)
     ///
-    /// Format 12 supports the complete Unicode range including supplementary planes.
-    /// Structure:
-    ///   offset+0:  format (u16 = 12)
-    ///   offset+2:  reserved (u16)
-    ///   offset+4:  length (u32)
-    ///   offset+8:  language (u32)
-    ///   offset+12: numGroups (u32)
-    ///   offset+16: groups[numGroups] — each 12 bytes: startCharCode, endCharCode, startGlyphID (u32 each)
+    /// Delegates to the shared [`parse_cmap_format_12_filtered`] implementation
+    /// (no filter — all codepoints are included) and populates `mapping`.
     fn parse_cmap_format_12(
         &self,
         cmap_data: &[u8],
         offset: usize,
         mapping: &mut GlyphMapping,
     ) -> Result<()> {
-        if offset + 16 > cmap_data.len() {
-            return Err(PdfError::FontError(
-                "Format 12 cmap subtable header too small".into(),
-            ));
-        }
-
-        let num_groups = u32::from_be_bytes([
-            cmap_data[offset + 12],
-            cmap_data[offset + 13],
-            cmap_data[offset + 14],
-            cmap_data[offset + 15],
-        ]);
-
-        let mut group_offset = offset + 16;
-        for _ in 0..num_groups {
-            if group_offset + 12 > cmap_data.len() {
-                break;
+        let code_to_gid = parse_cmap_format_12_filtered(cmap_data, offset, None)?;
+        for (char_code, glyph_id) in code_to_gid {
+            if let Some(ch) = char::from_u32(char_code) {
+                mapping.add_mapping(ch, glyph_id);
             }
-
-            let start_char_code = u32::from_be_bytes([
-                cmap_data[group_offset],
-                cmap_data[group_offset + 1],
-                cmap_data[group_offset + 2],
-                cmap_data[group_offset + 3],
-            ]);
-            let end_char_code = u32::from_be_bytes([
-                cmap_data[group_offset + 4],
-                cmap_data[group_offset + 5],
-                cmap_data[group_offset + 6],
-                cmap_data[group_offset + 7],
-            ]);
-            let start_glyph_id = u32::from_be_bytes([
-                cmap_data[group_offset + 8],
-                cmap_data[group_offset + 9],
-                cmap_data[group_offset + 10],
-                cmap_data[group_offset + 11],
-            ]);
-
-            for i in 0..=(end_char_code.saturating_sub(start_char_code)) {
-                let char_code = start_char_code + i;
-                let glyph_id_u32 = start_glyph_id + i;
-
-                // Skip .notdef (GID 0) and GIDs beyond u16 range
-                if glyph_id_u32 == 0 || glyph_id_u32 > 0xFFFF {
-                    continue;
-                }
-                let glyph_id = glyph_id_u32 as u16;
-
-                if let Some(ch) = char::from_u32(char_code) {
-                    mapping.add_mapping(ch, glyph_id);
-                }
-            }
-
-            group_offset += 12;
         }
-
         Ok(())
     }
 

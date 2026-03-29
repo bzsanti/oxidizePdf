@@ -28,8 +28,154 @@
 //! - Top DICT: rebuilt with updated offsets
 //! - CIDFonts (FDArray/FDSelect): fall back to returning the full font
 
+use crate::fonts::cmap_utils::parse_cmap_format_12_filtered;
 use crate::parser::{ParseError, ParseResult};
 use std::collections::{HashMap, HashSet};
+
+// =============================================================================
+// CFF DICT token scanner
+// =============================================================================
+
+/// A token produced by scanning a CFF DICT byte sequence.
+///
+/// CFF DICTs consist of interleaved operands and operators per CFF spec §4.
+/// The scanner yields one token per call to `next()`.
+#[derive(Debug, PartialEq, Clone)]
+pub enum CffDictToken {
+    /// Integer operand value decoded from the CFF encoding.
+    /// Real numbers (byte 30) emit `Operand(0)` as a placeholder since they
+    /// are not used for any offset calculation.
+    Operand(i32),
+    /// Single-byte operator (bytes 0..=27 except 12, 28, 29, 30).
+    Operator(u8),
+    /// Two-byte escaped operator: first byte was 12, second byte is stored here.
+    EscapedOperator(u8),
+}
+
+/// Iterator over CFF DICT tokens.
+///
+/// Implements the full CFF integer/real operand encoding per CFF spec §4:
+///
+/// | Byte range | Encoding                                      |
+/// |-----------|-----------------------------------------------|
+/// | 32–246    | 1-byte integer: `value = b − 139`            |
+/// | 247–250   | 2-byte positive: `(b0−247)×256 + b1 + 108`  |
+/// | 251–254   | 2-byte negative: `−(b0−251)×256 − b1 − 108` |
+/// | 28        | 2-byte signed big-endian i16                  |
+/// | 29        | 4-byte signed big-endian i32                  |
+/// | 30        | Real number (nibble pairs until 0xF): `Operand(0)` |
+/// | 12        | Escaped operator; reads one more byte         |
+/// | 0–27 (excl. 12, 28, 29, 30) | Single-byte operator    |
+pub struct CffDictScanner<'a> {
+    data: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> CffDictScanner<'a> {
+    /// Create a new scanner over the given CFF DICT data.
+    pub fn new(data: &'a [u8]) -> Self {
+        Self { data, pos: 0 }
+    }
+
+    /// Current byte position within the data slice.
+    pub fn position(&self) -> usize {
+        self.pos
+    }
+}
+
+impl<'a> Iterator for CffDictScanner<'a> {
+    type Item = CffDictToken;
+
+    fn next(&mut self) -> Option<CffDictToken> {
+        loop {
+            if self.pos >= self.data.len() {
+                return None;
+            }
+            let b = self.data[self.pos];
+
+            match b {
+                28 => {
+                    // 2-byte signed integer (big-endian i16)
+                    if self.pos + 2 >= self.data.len() {
+                        return None; // truncated — stop cleanly
+                    }
+                    let v = i16::from_be_bytes([self.data[self.pos + 1], self.data[self.pos + 2]])
+                        as i32;
+                    self.pos += 3;
+                    return Some(CffDictToken::Operand(v));
+                }
+                29 => {
+                    // 4-byte signed integer (big-endian i32)
+                    if self.pos + 4 >= self.data.len() {
+                        return None; // truncated — stop cleanly
+                    }
+                    let v = i32::from_be_bytes([
+                        self.data[self.pos + 1],
+                        self.data[self.pos + 2],
+                        self.data[self.pos + 3],
+                        self.data[self.pos + 4],
+                    ]);
+                    self.pos += 5;
+                    return Some(CffDictToken::Operand(v));
+                }
+                30 => {
+                    // Real number — skip nibble pairs until 0xF terminator
+                    // Emit Operand(0) as a placeholder (real values not used for offsets).
+                    self.pos += 1;
+                    while self.pos < self.data.len() {
+                        let nibble_byte = self.data[self.pos];
+                        self.pos += 1;
+                        if nibble_byte & 0x0F == 0x0F || nibble_byte >> 4 == 0x0F {
+                            break;
+                        }
+                    }
+                    return Some(CffDictToken::Operand(0));
+                }
+                32..=246 => {
+                    // 1-byte integer: value = b − 139
+                    let v = b as i32 - 139;
+                    self.pos += 1;
+                    return Some(CffDictToken::Operand(v));
+                }
+                247..=250 => {
+                    // 2-byte positive integer
+                    if self.pos + 1 >= self.data.len() {
+                        return None; // truncated — stop cleanly
+                    }
+                    let w = self.data[self.pos + 1] as i32;
+                    let v = (b as i32 - 247) * 256 + w + 108;
+                    self.pos += 2;
+                    return Some(CffDictToken::Operand(v));
+                }
+                251..=254 => {
+                    // 2-byte negative integer
+                    if self.pos + 1 >= self.data.len() {
+                        return None; // truncated — stop cleanly
+                    }
+                    let w = self.data[self.pos + 1] as i32;
+                    let v = -(b as i32 - 251) * 256 - w - 108;
+                    self.pos += 2;
+                    return Some(CffDictToken::Operand(v));
+                }
+                12 => {
+                    // Escaped operator: read next byte
+                    self.pos += 1;
+                    if self.pos >= self.data.len() {
+                        return None;
+                    }
+                    let op2 = self.data[self.pos];
+                    self.pos += 1;
+                    return Some(CffDictToken::EscapedOperator(op2));
+                }
+                _ => {
+                    // Single-byte operator (bytes 0–27 excluding 12, 28, 29, 30)
+                    self.pos += 1;
+                    return Some(CffDictToken::Operator(b));
+                }
+            }
+        }
+    }
+}
 
 // =============================================================================
 // Public API
@@ -78,7 +224,10 @@ pub fn subset_cff_font(
         });
     }
     let cmap_data = &font_data[cmap_start..cmap_end];
-    let unicode_to_gid = parse_cmap(cmap_data)?;
+    // Build a u32 codepoint filter so that parse_cmap (Format 12 path) skips
+    // the 70 000+ CJK entries that are not needed.
+    let codepoint_filter: HashSet<u32> = used_chars.iter().map(|c| *c as u32).collect();
+    let unicode_to_gid = parse_cmap(cmap_data, Some(&codepoint_filter))?;
 
     // Determine needed GIDs
     let mut needed_gids: Vec<u16> = vec![0]; // .notdef always included
@@ -122,10 +271,18 @@ pub fn subset_cff_font(
                 "CFF table subsetting failed: {:?}; falling back to full font",
                 e
             );
-            // Fallback: return full font with complete mapping
+            // Fallback: return full font with mapping filtered to used_chars only
+            // (consistent with the success path which only maps used_chars)
+            let filtered_mapping: HashMap<u32, u16> = used_chars
+                .iter()
+                .filter_map(|ch| {
+                    let cp = *ch as u32;
+                    unicode_to_gid.get(&cp).map(|&gid| (cp, gid))
+                })
+                .collect();
             return Ok(CffSubsetResult {
                 font_data: font_data.to_vec(),
-                glyph_mapping: unicode_to_gid,
+                glyph_mapping: filtered_mapping,
             });
         }
     };
@@ -275,7 +432,6 @@ impl OtfFile {
                 &original[src_start..src_end]
             };
 
-            // TODO: recalculate head checkSumAdjustment per OTF spec §5.2.8
             // Recompute checksum for this table
             let checksum = if &entry.tag == replaced_tag {
                 otf_checksum(new_data)
@@ -293,6 +449,35 @@ impl OtfFile {
 
             // Table data
             out[offset..offset + table_data.len()].copy_from_slice(table_data);
+        }
+
+        // Set head.checkSumAdjustment per OTF spec §5.2.8:
+        //   1. Zero the checkSumAdjustment field (bytes 8-11 of the head table).
+        //   2. Calculate checksum of the entire font file.
+        //   3. Set checkSumAdjustment = 0xB1B0AFBA - total_checksum.
+        let head_tag = b"head";
+        if let Some((head_idx, _)) = self
+            .tables
+            .iter()
+            .enumerate()
+            .find(|(_, e)| &e.tag == head_tag)
+        {
+            let head_offset = offsets[head_idx] as usize;
+            // head table must be at least 12 bytes for checkSumAdjustment at offset 8
+            if head_offset + 12 <= out.len() {
+                // Step 1: zero checkSumAdjustment before computing file checksum
+                out[head_offset + 8..head_offset + 12].copy_from_slice(&[0u8; 4]);
+                // Step 2: compute file checksum
+                let total_checksum = otf_checksum(&out);
+                // Step 3: write adjustment
+                let adjustment = 0xB1B0_AFBAu32.wrapping_sub(total_checksum);
+                out[head_offset + 8..head_offset + 12].copy_from_slice(&adjustment.to_be_bytes());
+                // Update head table checksum in the directory entry to reflect the new content
+                let head_len = self.tables[head_idx].length as usize;
+                let new_head_checksum = otf_checksum(&out[head_offset..head_offset + head_len]);
+                let dir_base = 12 + head_idx * 16;
+                out[dir_base + 4..dir_base + 8].copy_from_slice(&new_head_checksum.to_be_bytes());
+            }
         }
 
         Ok(out)
@@ -440,6 +625,20 @@ fn read_offset(data: &[u8], pos: usize, off_size: usize) -> ParseResult<u32> {
     Ok(val)
 }
 
+/// Convert a `usize` byte offset to `i32` for CFF DICT encoding.
+///
+/// CFF stores offsets as signed 32-bit integers in Top DICT and FD DICT.
+/// A silent `as i32` cast would wrap silently on files > 2 GiB; this function
+/// returns an explicit error instead.
+///
+/// Exposed for testing; call via `?` at every offset conversion site.
+pub fn usize_to_cff_offset(val: usize) -> ParseResult<i32> {
+    i32::try_from(val).map_err(|_| ParseError::SyntaxError {
+        position: 0,
+        message: format!("CFF offset {} exceeds i32 range", val),
+    })
+}
+
 /// Build a CFF INDEX from a list of byte slices.
 /// Build a CFF INDEX structure from a list of data items.
 /// Exposed for testing; prefer using the subsetter API directly.
@@ -516,116 +715,57 @@ struct TopDictOffsets {
 /// Parse a Top DICT byte sequence, extracting relevant offset operators.
 fn parse_top_dict(data: &[u8]) -> TopDictOffsets {
     let mut offsets = TopDictOffsets::default();
-    let mut pos = 0;
     let mut operand_stack: Vec<i32> = Vec::new();
 
-    while pos < data.len() {
-        let b = data[pos];
-
-        if b == 28 {
-            // 2-byte integer (signed)
-            if pos + 2 < data.len() {
-                let v = i16::from_be_bytes([data[pos + 1], data[pos + 2]]) as i32;
+    for token in CffDictScanner::new(data) {
+        match token {
+            CffDictToken::Operand(v) => {
                 operand_stack.push(v);
-                pos += 3;
-            } else {
-                break;
             }
-        } else if b == 29 {
-            // 4-byte integer (signed)
-            if pos + 4 < data.len() {
-                let v = i32::from_be_bytes([
-                    data[pos + 1],
-                    data[pos + 2],
-                    data[pos + 3],
-                    data[pos + 4],
-                ]);
-                operand_stack.push(v);
-                pos += 5;
-            } else {
-                break;
-            }
-        } else if b == 30 {
-            // Real number — skip (not relevant for offsets)
-            pos += 1;
-            while pos < data.len() {
-                let nibble_byte = data[pos];
-                pos += 1;
-                if nibble_byte & 0x0F == 0x0F || nibble_byte >> 4 == 0x0F {
-                    break;
-                }
-            }
-        } else if (32..=246).contains(&b) {
-            // 1-byte integer: value = b - 139
-            operand_stack.push(b as i32 - 139);
-            pos += 1;
-        } else if (247..=250).contains(&b) {
-            if pos + 1 < data.len() {
-                let w = data[pos + 1] as i32;
-                operand_stack.push((b as i32 - 247) * 256 + w + 108);
-                pos += 2;
-            } else {
-                break;
-            }
-        } else if (251..=254).contains(&b) {
-            if pos + 1 < data.len() {
-                let w = data[pos + 1] as i32;
-                operand_stack.push(-(b as i32 - 251) * 256 - w - 108);
-                pos += 2;
-            } else {
-                break;
-            }
-        } else if b == 12 {
-            // Escape operator
-            pos += 1;
-            if pos >= data.len() {
-                break;
-            }
-            let op2 = data[pos];
-            pos += 1;
-            match op2 {
-                36 => {
-                    // FDArray
-                    if let Some(&v) = operand_stack.last() {
-                        offsets.fd_array_offset = Some(v);
+            CffDictToken::EscapedOperator(op2) => {
+                match op2 {
+                    36 => {
+                        // FDArray
+                        if let Some(&v) = operand_stack.last() {
+                            offsets.fd_array_offset = Some(v);
+                        }
                     }
-                }
-                37 => {
-                    // FDSelect
-                    if let Some(&v) = operand_stack.last() {
-                        offsets.fd_select_offset = Some(v);
+                    37 => {
+                        // FDSelect
+                        if let Some(&v) = operand_stack.last() {
+                            offsets.fd_select_offset = Some(v);
+                        }
                     }
+                    _ => {}
                 }
-                _ => {}
+                operand_stack.clear();
             }
-            operand_stack.clear();
-        } else {
-            // Single-byte operator
-            pos += 1;
-            match b {
-                15 => {
-                    // charset
-                    if let Some(&v) = operand_stack.last() {
-                        offsets.charset_offset = Some(v);
+            CffDictToken::Operator(b) => {
+                match b {
+                    15 => {
+                        // charset
+                        if let Some(&v) = operand_stack.last() {
+                            offsets.charset_offset = Some(v);
+                        }
                     }
-                }
-                17 => {
-                    // CharStrings
-                    if let Some(&v) = operand_stack.last() {
-                        offsets.charstrings_offset = Some(v);
+                    17 => {
+                        // CharStrings
+                        if let Some(&v) = operand_stack.last() {
+                            offsets.charstrings_offset = Some(v);
+                        }
                     }
-                }
-                18 => {
-                    // Private DICT: two operands (size, offset)
-                    if operand_stack.len() >= 2 {
-                        let offset = operand_stack[operand_stack.len() - 1];
-                        let size = operand_stack[operand_stack.len() - 2];
-                        offsets.private_dict = Some((size, offset));
+                    18 => {
+                        // Private DICT: two operands (size, offset)
+                        if operand_stack.len() >= 2 {
+                            let offset = operand_stack[operand_stack.len() - 1];
+                            let size = operand_stack[operand_stack.len() - 2];
+                            offsets.private_dict = Some((size, offset));
+                        }
                     }
+                    _ => {}
                 }
-                _ => {}
+                operand_stack.clear();
             }
-            operand_stack.clear();
         }
     }
 
@@ -644,6 +784,124 @@ fn encode_cff_int_5byte(value: i32) -> [u8; 5] {
     [29, bytes[0], bytes[1], bytes[2], bytes[3]]
 }
 
+/// Rebuild a CID Top DICT, replacing charset (15), CharStrings (17),
+/// FDArray (12 36), and FDSelect (12 37) with new offsets.
+/// All other operators (ROS 12 30, etc.) are preserved verbatim.
+fn rebuild_cid_top_dict(
+    original: &[u8],
+    charset_offset: i32,
+    charstrings_offset: i32,
+    fd_array_offset: i32,
+    fd_select_offset: i32,
+) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut scanner = CffDictScanner::new(original);
+    let mut operand_start = 0usize;
+
+    loop {
+        let token = match scanner.next() {
+            Some(t) => t,
+            None => break,
+        };
+
+        match token {
+            CffDictToken::Operand(_) => {
+                // Continue accumulating operand bytes; operand_start tracks
+                // the byte offset of the first operand in this group.
+            }
+            CffDictToken::EscapedOperator(op2) => {
+                match op2 {
+                    36 => {
+                        // FDArray — replace operand with new offset
+                        out.extend_from_slice(&encode_cff_int_5byte(fd_array_offset));
+                        out.push(12);
+                        out.push(36);
+                    }
+                    37 => {
+                        // FDSelect — replace operand with new offset
+                        out.extend_from_slice(&encode_cff_int_5byte(fd_select_offset));
+                        out.push(12);
+                        out.push(37);
+                    }
+                    _ => {
+                        // Preserve verbatim: operands + escape + op2
+                        out.extend_from_slice(&original[operand_start..scanner.position()]);
+                    }
+                }
+                operand_start = scanner.position();
+            }
+            CffDictToken::Operator(b) => {
+                match b {
+                    15 => {
+                        // charset — replace operand with new offset
+                        out.extend_from_slice(&encode_cff_int_5byte(charset_offset));
+                        out.push(15);
+                    }
+                    17 => {
+                        // CharStrings — replace operand with new offset
+                        out.extend_from_slice(&encode_cff_int_5byte(charstrings_offset));
+                        out.push(17);
+                    }
+                    18 => {
+                        // Private — CID fonts have Private in each FD, not Top DICT.
+                        // Drop this operator entirely if encountered.
+                    }
+                    _ => {
+                        // Preserve verbatim: operands + operator
+                        out.extend_from_slice(&original[operand_start..scanner.position()]);
+                    }
+                }
+                operand_start = scanner.position();
+            }
+        }
+    }
+
+    out
+}
+
+/// Rebuild a Font DICT (FD) in FDArray, replacing the Private DICT
+/// size and offset (operator 18) with the new values.
+fn rebuild_fd_dict(original: &[u8], private_size: i32, private_offset: i32) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut scanner = CffDictScanner::new(original);
+    let mut operand_start = 0usize;
+
+    loop {
+        let token = match scanner.next() {
+            Some(t) => t,
+            None => break,
+        };
+
+        match token {
+            CffDictToken::Operand(_) => {
+                // Continue accumulating operand bytes.
+            }
+            CffDictToken::EscapedOperator(_) => {
+                // All escaped operators in FD dict are preserved verbatim.
+                out.extend_from_slice(&original[operand_start..scanner.position()]);
+                operand_start = scanner.position();
+            }
+            CffDictToken::Operator(b) => {
+                match b {
+                    18 => {
+                        // Private: replace with new size and offset
+                        out.extend_from_slice(&encode_cff_int_5byte(private_size));
+                        out.extend_from_slice(&encode_cff_int_5byte(private_offset));
+                        out.push(18);
+                    }
+                    _ => {
+                        // Preserve verbatim: operands + operator
+                        out.extend_from_slice(&original[operand_start..scanner.position()]);
+                    }
+                }
+                operand_start = scanner.position();
+            }
+        }
+    }
+
+    out
+}
+
 /// Rebuild a Top DICT byte sequence, preserving all original operators/operands
 /// except for charset (op 15), CharStrings (op 17), and Private (op 18), which
 /// are replaced with the new offsets.
@@ -659,94 +917,535 @@ fn rebuild_top_dict(
     has_private: bool,
 ) -> Vec<u8> {
     let mut out = Vec::new();
-    let mut pos = 0;
+    let mut scanner = CffDictScanner::new(original);
+    let mut operand_start = 0usize;
 
-    // We re-scan and copy everything, replacing the three layout operators.
-    // Operand bytes are buffered until we see the operator that consumes them.
-    let mut operand_buf: Vec<u8> = Vec::new();
+    loop {
+        let token = match scanner.next() {
+            Some(t) => t,
+            None => break,
+        };
 
-    while pos < original.len() {
-        let b = original[pos];
-
-        // Operand bytes: accumulate into buffer
-        if b == 28 {
-            if pos + 2 < original.len() {
-                operand_buf.extend_from_slice(&original[pos..pos + 3]);
-                pos += 3;
-            } else {
-                break;
+        match token {
+            CffDictToken::Operand(_) => {
+                // Continue accumulating operand bytes.
             }
-        } else if b == 29 {
-            if pos + 4 < original.len() {
-                operand_buf.extend_from_slice(&original[pos..pos + 5]);
-                pos += 5;
-            } else {
-                break;
+            CffDictToken::EscapedOperator(_) => {
+                // All escaped operators in Top DICT are preserved verbatim.
+                out.extend_from_slice(&original[operand_start..scanner.position()]);
+                operand_start = scanner.position();
             }
-        } else if b == 30 {
-            // Real: copy until 0xF nibble
-            let real_start = pos;
-            pos += 1;
-            while pos < original.len() {
-                let byte = original[pos];
-                pos += 1;
-                if byte & 0x0F == 0x0F || byte >> 4 == 0x0F {
-                    break;
-                }
-            }
-            operand_buf.extend_from_slice(&original[real_start..pos]);
-        } else if (32..=246).contains(&b) || (247..=250).contains(&b) || (251..=254).contains(&b) {
-            let operand_len = if (247..=254).contains(&b) { 2 } else { 1 };
-            if pos + operand_len <= original.len() {
-                operand_buf.extend_from_slice(&original[pos..pos + operand_len]);
-                pos += operand_len;
-            } else {
-                break;
-            }
-        } else if b == 12 {
-            // Escape operator: copy operand_buf + escape + next byte verbatim
-            pos += 1;
-            if pos < original.len() {
-                out.extend_from_slice(&operand_buf);
-                out.push(12);
-                out.push(original[pos]);
-                pos += 1;
-            }
-            operand_buf.clear();
-        } else {
-            // Single-byte operator
-            pos += 1;
-            match b {
-                15 => {
-                    // charset — replace operand with new offset
-                    out.extend_from_slice(&encode_cff_int_5byte(charset_offset));
-                    out.push(15);
-                }
-                17 => {
-                    // CharStrings — replace operand with new offset
-                    out.extend_from_slice(&encode_cff_int_5byte(charstrings_offset));
-                    out.push(17);
-                }
-                18 => {
-                    // Private — replace both operands with new size and offset
-                    if has_private {
-                        out.extend_from_slice(&encode_cff_int_5byte(private_size));
-                        out.extend_from_slice(&encode_cff_int_5byte(private_offset));
-                        out.push(18);
+            CffDictToken::Operator(b) => {
+                match b {
+                    15 => {
+                        // charset — replace operand with new offset
+                        out.extend_from_slice(&encode_cff_int_5byte(charset_offset));
+                        out.push(15);
                     }
-                    // If no private, drop the operator entirely
+                    17 => {
+                        // CharStrings — replace operand with new offset
+                        out.extend_from_slice(&encode_cff_int_5byte(charstrings_offset));
+                        out.push(17);
+                    }
+                    18 => {
+                        // Private — replace both operands with new size and offset
+                        if has_private {
+                            out.extend_from_slice(&encode_cff_int_5byte(private_size));
+                            out.extend_from_slice(&encode_cff_int_5byte(private_offset));
+                            out.push(18);
+                        }
+                        // If no private, drop the operator entirely
+                    }
+                    _ => {
+                        // Preserve other operators verbatim
+                        out.extend_from_slice(&original[operand_start..scanner.position()]);
+                    }
                 }
-                _ => {
-                    // Preserve other operators verbatim
-                    out.extend_from_slice(&operand_buf);
-                    out.push(b);
-                }
+                operand_start = scanner.position();
             }
-            operand_buf.clear();
         }
     }
 
     out
+}
+
+// =============================================================================
+// FDSelect and FDArray parsing
+// =============================================================================
+
+/// Parse FDSelect table, returning a Vec where index is GID and value is FD index.
+/// Supports Format 0 (one byte per glyph) and Format 3 (ranges).
+fn parse_fd_select(cff: &[u8], offset: usize, num_glyphs: usize) -> ParseResult<Vec<u8>> {
+    if offset >= cff.len() {
+        return Err(ParseError::SyntaxError {
+            position: offset,
+            message: "FDSelect offset out of range".to_string(),
+        });
+    }
+
+    let format = cff[offset];
+    match format {
+        0 => {
+            // Format 0: one byte per glyph
+            if offset + 1 + num_glyphs > cff.len() {
+                return Err(ParseError::SyntaxError {
+                    position: offset,
+                    message: "FDSelect Format 0 truncated".to_string(),
+                });
+            }
+            Ok(cff[offset + 1..offset + 1 + num_glyphs].to_vec())
+        }
+        3 => {
+            // Format 3: nRanges ranges + sentinel
+            if offset + 3 > cff.len() {
+                return Err(ParseError::SyntaxError {
+                    position: offset,
+                    message: "FDSelect Format 3 header truncated".to_string(),
+                });
+            }
+            let n_ranges = read_u16(cff, offset + 1)? as usize;
+            // ranges: nRanges * 3 bytes (u16 first, u8 fd) + sentinel u16
+            let ranges_end = offset + 3 + n_ranges * 3 + 2;
+            if ranges_end > cff.len() {
+                return Err(ParseError::SyntaxError {
+                    position: offset,
+                    message: "FDSelect Format 3 ranges truncated".to_string(),
+                });
+            }
+
+            let mut result = vec![0u8; num_glyphs];
+
+            for i in 0..n_ranges {
+                let range_base = offset + 3 + i * 3;
+                let first_gid = read_u16(cff, range_base)? as usize;
+                let fd_idx = cff[range_base + 2];
+
+                // Next range's first_gid is the end of this range
+                let end_gid = if i + 1 < n_ranges {
+                    read_u16(cff, offset + 3 + (i + 1) * 3)? as usize
+                } else {
+                    // Sentinel
+                    read_u16(cff, offset + 3 + n_ranges * 3)? as usize
+                };
+
+                let end_gid = end_gid.min(num_glyphs);
+                for gid in first_gid..end_gid {
+                    if gid < result.len() {
+                        result[gid] = fd_idx;
+                    }
+                }
+            }
+
+            Ok(result)
+        }
+        _ => Err(ParseError::SyntaxError {
+            position: offset,
+            message: format!("FDSelect format {} not supported", format),
+        }),
+    }
+}
+
+/// Parse a Font DICT (from FDArray) to extract the Private DICT offset and size.
+/// Returns (private_size, private_offset), both as i32.
+fn parse_fd_private(fd_dict: &[u8]) -> Option<(i32, i32)> {
+    let mut operand_stack: Vec<i32> = Vec::new();
+
+    for token in CffDictScanner::new(fd_dict) {
+        match token {
+            CffDictToken::Operand(v) => {
+                operand_stack.push(v);
+            }
+            CffDictToken::EscapedOperator(_) => {
+                operand_stack.clear();
+            }
+            CffDictToken::Operator(b) => {
+                if b == 18 && operand_stack.len() >= 2 {
+                    // Private: size, offset
+                    let offset = operand_stack[operand_stack.len() - 1];
+                    let size = operand_stack[operand_stack.len() - 2];
+                    return Some((size, offset));
+                }
+                operand_stack.clear();
+            }
+        }
+    }
+
+    None
+}
+
+// =============================================================================
+// CID-keyed CFF subsetting
+// =============================================================================
+
+/// Per-FD data collected during CID-keyed font subsetting.
+///
+/// Each entry holds the raw bytes for one Font DICT (from the FDArray),
+/// its corresponding Private DICT, and the Local Subr INDEX (if present).
+/// All three are copied verbatim — only Private DICT offsets inside the FD
+/// dict are updated when rebuilding the FDArray.
+struct FdData {
+    /// Original FD dict bytes (will be rebuilt with updated Private offset).
+    fd_dict_bytes: Vec<u8>,
+    /// Private DICT bytes, copied verbatim from the original CFF table.
+    private_bytes: Vec<u8>,
+    /// Local Subr INDEX bytes, copied verbatim; empty if the FD has none.
+    local_subr_bytes: Vec<u8>,
+}
+
+/// Subset a CID-keyed CFF table.
+/// This handles fonts with FDArray and FDSelect operators.
+fn subset_cid_cff_table(
+    cff: &[u8],
+    needed_gids: &[u16],
+    gid_remap: &HashMap<u16, u16>,
+    top_dict_bytes: &[u8],
+    top_dict_offsets: &TopDictOffsets,
+    name_index: &CffIndex,
+    _top_dict_index: &CffIndex,
+    string_index: &CffIndex,
+    global_subr_index: &CffIndex,
+) -> ParseResult<Vec<u8>> {
+    let hdr_size = cff[2] as usize;
+    let header_bytes = &cff[0..hdr_size];
+
+    let fd_array_off = top_dict_offsets
+        .fd_array_offset
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: 0,
+            message: "CIDFont missing FDArray offset".to_string(),
+        })?;
+
+    let fd_select_off =
+        top_dict_offsets
+            .fd_select_offset
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "CIDFont missing FDSelect offset".to_string(),
+            })?;
+
+    let charstrings_off =
+        top_dict_offsets
+            .charstrings_offset
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: "CIDFont missing CharStrings offset".to_string(),
+            })?;
+
+    // Parse CharStrings INDEX
+    if charstrings_off <= 0 || charstrings_off as usize >= cff.len() {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!("CharStrings offset out of range: {}", charstrings_off),
+        });
+    }
+    let charstrings_index = parse_cff_index(cff, charstrings_off as usize)?;
+    let total_glyphs = charstrings_index.count();
+
+    tracing::debug!(
+        "CID CFF subsetting: {} total glyphs, {} needed",
+        total_glyphs,
+        needed_gids.len()
+    );
+
+    // Validate needed_gids
+    for &gid in needed_gids {
+        if gid as usize >= total_glyphs {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "GID {} out of range (font has {} glyphs)",
+                    gid, total_glyphs
+                ),
+            });
+        }
+    }
+
+    // Parse FDSelect — maps GID → FD index
+    if fd_select_off <= 0 || fd_select_off as usize >= cff.len() {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!("FDSelect offset out of range: {}", fd_select_off),
+        });
+    }
+    let fd_select = parse_fd_select(cff, fd_select_off as usize, total_glyphs)?;
+
+    // Parse FDArray INDEX
+    if fd_array_off <= 0 || fd_array_off as usize >= cff.len() {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!("FDArray offset out of range: {}", fd_array_off),
+        });
+    }
+    let fd_array_index = parse_cff_index(cff, fd_array_off as usize)?;
+    let num_fds = fd_array_index.count();
+
+    tracing::debug!("CID CFF: {} FDs in FDArray", num_fds);
+
+    // Determine which FDs are needed for the subset
+    let mut needed_fd_set: std::collections::BTreeSet<u8> = std::collections::BTreeSet::new();
+    for &gid in needed_gids {
+        let fd = if (gid as usize) < fd_select.len() {
+            fd_select[gid as usize]
+        } else {
+            0
+        };
+        needed_fd_set.insert(fd);
+    }
+    let needed_fds: Vec<u8> = needed_fd_set.into_iter().collect();
+
+    tracing::debug!("CID CFF: needed FDs: {:?}", needed_fds);
+
+    // Build old FD index → new FD index mapping
+    let fd_remap: HashMap<u8, u8> = needed_fds
+        .iter()
+        .enumerate()
+        .map(|(new_fd, &old_fd)| (old_fd, new_fd as u8))
+        .collect();
+
+    // Extract CharStrings in new-GID order (same as non-CID path)
+    let sorted_old_gids: Vec<u16> = {
+        let mut pairs: Vec<(u16, u16)> = needed_gids
+            .iter()
+            .filter_map(|&old_gid| gid_remap.get(&old_gid).map(|&new_gid| (new_gid, old_gid)))
+            .collect();
+        pairs.sort_by_key(|&(new, _)| new);
+        let mut gids: Vec<u16> = pairs.iter().map(|&(_, old)| old).collect();
+        // Ensure .notdef is first
+        if gids.first().copied() != Some(0) {
+            gids.retain(|&g| g != 0);
+            gids.insert(0, 0);
+        }
+        gids
+    };
+
+    let new_charstrings: Vec<&[u8]> = sorted_old_gids
+        .iter()
+        .map(|&old_gid| {
+            charstrings_index
+                .get_item(old_gid as usize, cff)
+                .unwrap_or(&[0x0E])
+        })
+        .collect();
+    let new_charstrings_index = build_cff_index(&new_charstrings);
+
+    // Build new FDSelect (Format 0: one byte per new GID)
+    let mut new_fd_select: Vec<u8> = Vec::new();
+    new_fd_select.push(0); // format 0
+    for &old_gid in &sorted_old_gids {
+        let old_fd = if (old_gid as usize) < fd_select.len() {
+            fd_select[old_gid as usize]
+        } else {
+            0
+        };
+        let new_fd = fd_remap.get(&old_fd).copied().unwrap_or(0);
+        new_fd_select.push(new_fd);
+    }
+
+    // Build new CID Charset (format 0: format byte + CID for each new GID >= 1)
+    // For CID fonts, charset entries are CIDs (same as original GIDs for standard CID-keyed fonts)
+    // We use old GID as CID since CID-keyed fonts typically map GID=CID
+    let mut new_charset: Vec<u8> = Vec::new();
+    new_charset.push(0); // format 0
+    for (new_gid_idx, &old_gid) in sorted_old_gids.iter().enumerate() {
+        if new_gid_idx == 0 {
+            continue; // GID 0 = .notdef, not listed
+        }
+        // Use old GID as CID (standard for CID-keyed fonts)
+        new_charset.extend_from_slice(&old_gid.to_be_bytes());
+    }
+
+    // Extract each needed FD dict and its Private DICT
+    // Each FD contains: FontName (op 12 38) + Private (op 18)
+    // We need to rebuild FDArray with updated Private DICT offsets
+    let mut fd_data_list: Vec<FdData> = Vec::new();
+    for &old_fd in &needed_fds {
+        let fd_dict = fd_array_index
+            .get_item(old_fd as usize, cff)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!("FD {} not found in FDArray", old_fd),
+            })?;
+
+        let (private_bytes, local_subr_bytes) =
+            if let Some((priv_size, priv_off)) = parse_fd_private(fd_dict) {
+                if priv_off > 0 && priv_size > 0 {
+                    let start = priv_off as usize;
+                    let end = (start + priv_size as usize).min(cff.len());
+                    let pb = cff[start..end].to_vec();
+                    // Locate Local Subr INDEX: first try op 19 from Private DICT (CFF spec),
+                    // then fall back to heuristic (parse INDEX immediately after Private DICT).
+                    let ls = if let Some(subrs_rel) = parse_local_subrs_offset(&pb) {
+                        let subrs_abs = start + subrs_rel;
+                        match parse_cff_index(cff, subrs_abs) {
+                            Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
+                            _ => vec![],
+                        }
+                    } else if end < cff.len() {
+                        match parse_cff_index(cff, end) {
+                            Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
+                            _ => vec![],
+                        }
+                    } else {
+                        vec![]
+                    };
+                    (pb, ls)
+                } else {
+                    (vec![], vec![])
+                }
+            } else {
+                (vec![], vec![])
+            };
+
+        fd_data_list.push(FdData {
+            fd_dict_bytes: fd_dict.to_vec(),
+            private_bytes,
+            local_subr_bytes,
+        });
+    }
+
+    // --- Two-pass offset assembly ---
+    // Layout:
+    //   [0] Header
+    //   [1] Name INDEX
+    //   [2] Top DICT INDEX (rebuilt)
+    //   [3] String INDEX
+    //   [4] Global Subr INDEX
+    //   [5] Charset
+    //   [6] FDSelect
+    //   [7] CharStrings INDEX
+    //   [8] FDArray INDEX (with rebuilt FD dicts)
+    //   [9..] Private DICTs (one per needed FD)
+
+    let name_bytes = name_index.raw_bytes(cff);
+    let string_bytes = string_index.raw_bytes(cff);
+    let global_subr_bytes = global_subr_index.raw_bytes(cff);
+
+    let placeholder_offset = 100_000i32;
+
+    // Pass 1: build placeholder Top DICT INDEX to determine its size
+    let placeholder_top_dict = rebuild_cid_top_dict(
+        top_dict_bytes,
+        placeholder_offset,
+        placeholder_offset,
+        placeholder_offset,
+        placeholder_offset,
+    );
+    let placeholder_top_dict_ref: &[u8] = &placeholder_top_dict;
+    let placeholder_top_dict_index = build_cff_index(&[placeholder_top_dict_ref]);
+
+    // Pass 1: build placeholder FDArray to determine its size
+    // Each FD dict gets Private at placeholder offset — compute per-FD sizes
+    let placeholder_fd_dicts: Vec<Vec<u8>> = fd_data_list
+        .iter()
+        .map(|fd| {
+            let private_size = usize_to_cff_offset(fd.private_bytes.len())?;
+            Ok(rebuild_fd_dict(
+                &fd.fd_dict_bytes,
+                private_size,
+                placeholder_offset,
+            ))
+        })
+        .collect::<ParseResult<Vec<_>>>()?;
+    let placeholder_fd_refs: Vec<&[u8]> =
+        placeholder_fd_dicts.iter().map(|v| v.as_slice()).collect();
+    let placeholder_fd_array_index = build_cff_index(&placeholder_fd_refs);
+
+    // Compute actual offsets
+    let after_header = header_bytes.len();
+    let after_name = after_header + name_bytes.len();
+    let after_top_dict = after_name + placeholder_top_dict_index.len();
+    let after_string = after_top_dict + string_bytes.len();
+    let after_global_subr = after_string + global_subr_bytes.len();
+
+    let new_charset_offset = usize_to_cff_offset(after_global_subr)?;
+    let new_fd_select_offset = usize_to_cff_offset(after_global_subr + new_charset.len())?;
+    let new_charstrings_offset =
+        usize_to_cff_offset(new_fd_select_offset as usize + new_fd_select.len())?;
+    let new_fd_array_offset =
+        usize_to_cff_offset(new_charstrings_offset as usize + new_charstrings_index.len())?;
+
+    // After FDArray comes the Private DICTs
+    // Compute Private DICT offsets relative to start of CFF
+    let after_fd_array = new_fd_array_offset as usize + placeholder_fd_array_index.len();
+    let mut private_offsets: Vec<i32> = Vec::new();
+    let mut cursor = after_fd_array;
+    for fd in &fd_data_list {
+        private_offsets.push(usize_to_cff_offset(cursor)?);
+        cursor += fd.private_bytes.len() + fd.local_subr_bytes.len();
+    }
+
+    // Pass 2: build real FD dicts with correct private offsets
+    let real_fd_dicts: Vec<Vec<u8>> = fd_data_list
+        .iter()
+        .zip(private_offsets.iter())
+        .map(|(fd, &priv_off)| {
+            let private_size = usize_to_cff_offset(fd.private_bytes.len())?;
+            Ok(rebuild_fd_dict(&fd.fd_dict_bytes, private_size, priv_off))
+        })
+        .collect::<ParseResult<Vec<_>>>()?;
+    let real_fd_refs: Vec<&[u8]> = real_fd_dicts.iter().map(|v| v.as_slice()).collect();
+    let real_fd_array_index = build_cff_index(&real_fd_refs);
+
+    // Verify FDArray size is stable between passes
+    if real_fd_array_index.len() != placeholder_fd_array_index.len() {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!(
+                "FDArray size changed between passes ({} vs {})",
+                real_fd_array_index.len(),
+                placeholder_fd_array_index.len()
+            ),
+        });
+    }
+
+    // Pass 2: build real Top DICT
+    let real_top_dict = rebuild_cid_top_dict(
+        top_dict_bytes,
+        new_charset_offset,
+        new_charstrings_offset,
+        new_fd_array_offset,
+        new_fd_select_offset,
+    );
+    let real_top_dict_ref: &[u8] = &real_top_dict;
+    let real_top_dict_index = build_cff_index(&[real_top_dict_ref]);
+
+    // Verify Top DICT size is stable
+    if real_top_dict_index.len() != placeholder_top_dict_index.len() {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!(
+                "CID Top DICT size changed between passes ({} vs {})",
+                real_top_dict_index.len(),
+                placeholder_top_dict_index.len()
+            ),
+        });
+    }
+
+    // Assemble new CFF
+    let mut new_cff: Vec<u8> = Vec::new();
+    new_cff.extend_from_slice(header_bytes);
+    new_cff.extend_from_slice(name_bytes);
+    new_cff.extend_from_slice(&real_top_dict_index);
+    new_cff.extend_from_slice(string_bytes);
+    new_cff.extend_from_slice(global_subr_bytes);
+    new_cff.extend_from_slice(&new_charset);
+    new_cff.extend_from_slice(&new_fd_select);
+    new_cff.extend_from_slice(&new_charstrings_index);
+    new_cff.extend_from_slice(&real_fd_array_index);
+    for fd in &fd_data_list {
+        new_cff.extend_from_slice(&fd.private_bytes);
+        new_cff.extend_from_slice(&fd.local_subr_bytes);
+    }
+
+    tracing::debug!(
+        "CID CFF subset: {} bytes → {} bytes ({} glyphs, {} FDs)",
+        cff.len(),
+        new_cff.len(),
+        sorted_old_gids.len(),
+        needed_fds.len()
+    );
+
+    Ok(new_cff)
 }
 
 // =============================================================================
@@ -808,19 +1507,26 @@ fn subset_cff_table(
 
     let top_dict_offsets = parse_top_dict(top_dict_bytes);
 
-    // CIDFont detection: fall back to full font
-    if top_dict_offsets.fd_array_offset.is_some() || top_dict_offsets.fd_select_offset.is_some() {
-        return Err(ParseError::SyntaxError {
-            position: 0,
-            message: "CIDFont detected — falling back to full font".to_string(),
-        });
-    }
-
-    // Parse String INDEX
+    // Parse String INDEX and Global Subr INDEX (needed for both CID and non-CID paths)
     let string_index = parse_cff_index(cff, top_dict_index.end_offset())?;
 
     // Parse Global Subr INDEX
     let global_subr_index = parse_cff_index(cff, string_index.end_offset())?;
+
+    // CID-keyed font: delegate to dedicated CID subsetting path
+    if top_dict_offsets.fd_array_offset.is_some() || top_dict_offsets.fd_select_offset.is_some() {
+        return subset_cid_cff_table(
+            cff,
+            needed_gids,
+            gid_remap,
+            top_dict_bytes,
+            &top_dict_offsets,
+            &name_index,
+            &top_dict_index,
+            &string_index,
+            &global_subr_index,
+        );
+    }
 
     // Locate CharStrings INDEX using offset from Top DICT
     let charstrings_offset =
@@ -900,11 +1606,20 @@ fn subset_cff_table(
             (vec![], 0)
         };
 
-    // Also copy Local Subr INDEX that follows Private DICT (if any)
+    // Also copy Local Subr INDEX that follows Private DICT (if any).
+    // First try op 19 (Subrs) from the Private DICT per CFF spec; fall back to
+    // the heuristic of parsing an INDEX immediately after the Private DICT bytes.
     let local_subr_bytes = if !private_bytes.is_empty() && private_orig_offset > 0 {
-        let priv_end = private_orig_offset as usize + private_bytes.len();
-        if priv_end < cff.len() {
-            // Try to parse a Local Subr INDEX immediately after Private DICT
+        let priv_start = private_orig_offset as usize;
+        let priv_end = priv_start + private_bytes.len();
+        if let Some(subrs_rel) = parse_local_subrs_offset(&private_bytes) {
+            let subrs_abs = priv_start + subrs_rel;
+            match parse_cff_index(cff, subrs_abs) {
+                Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
+                _ => vec![],
+            }
+        } else if priv_end < cff.len() {
+            // Heuristic: INDEX immediately after Private DICT
             match parse_cff_index(cff, priv_end) {
                 Ok(idx) if idx.count() > 0 => idx.raw_bytes(cff).to_vec(),
                 _ => vec![],
@@ -939,11 +1654,12 @@ fn subset_cff_table(
     let placeholder_offset = 100_000i32;
     let has_private = !private_bytes.is_empty();
 
+    let private_size = usize_to_cff_offset(private_bytes.len())?;
     let placeholder_top_dict = rebuild_top_dict(
         top_dict_bytes,
         placeholder_offset,
         placeholder_offset,
-        private_bytes.len() as i32,
+        private_size,
         placeholder_offset,
         has_private,
     );
@@ -957,11 +1673,11 @@ fn subset_cff_table(
     let after_string = after_top_dict_index + string_bytes.len();
     let after_global_subr = after_string + global_subr_bytes.len();
 
-    let new_charset_offset = after_global_subr as i32;
-    let new_charstrings_offset = (after_global_subr + new_charset.len()) as i32;
+    let new_charset_offset = usize_to_cff_offset(after_global_subr)?;
+    let new_charstrings_offset = usize_to_cff_offset(after_global_subr + new_charset.len())?;
 
     let new_private_offset = if has_private {
-        (new_charstrings_offset as usize + new_charstrings_index.len()) as i32
+        usize_to_cff_offset(new_charstrings_offset as usize + new_charstrings_index.len())?
     } else {
         0
     };
@@ -971,7 +1687,7 @@ fn subset_cff_table(
         top_dict_bytes,
         new_charset_offset,
         new_charstrings_offset,
-        private_bytes.len() as i32,
+        private_size,
         new_private_offset,
         has_private,
     );
@@ -1052,30 +1768,109 @@ fn build_subset_charset(
     charset
 }
 
-/// Read a Charset format 0 from the CFF table.
+/// Parse the Private DICT bytes and return the value of operator 19 (Subrs),
+/// which is a relative offset from the start of the Private DICT to the Local Subr INDEX.
+fn parse_local_subrs_offset(private_dict: &[u8]) -> Option<usize> {
+    let mut operand_stack: Vec<i32> = Vec::new();
+
+    for token in CffDictScanner::new(private_dict) {
+        match token {
+            CffDictToken::Operand(v) => {
+                operand_stack.push(v);
+            }
+            CffDictToken::EscapedOperator(_) => {
+                operand_stack.clear();
+            }
+            CffDictToken::Operator(b) => {
+                if b == 19 {
+                    // Operator 19 = Subrs — the last operand is the relative offset
+                    return operand_stack.last().copied().and_then(|v| {
+                        if v > 0 {
+                            Some(v as usize)
+                        } else {
+                            None
+                        }
+                    });
+                }
+                operand_stack.clear();
+            }
+        }
+    }
+    None
+}
+
+/// Read a CFF Charset table from the CFF table.
+/// Supports format 0, 1, and 2.
 /// Returns a Vec where index i gives the SID for GID (i+1).
 fn read_charset_format0(cff: &[u8], offset: usize, num_glyphs: usize) -> Vec<u16> {
     if offset >= cff.len() {
         return vec![];
     }
-    if cff[offset] != 0 {
-        tracing::debug!(
-            "CFF charset format {} not supported; SIDs will be approximated",
-            cff[offset]
-        );
-        return vec![];
-    }
-    let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
-    let mut pos = offset + 1;
-    for _ in 1..num_glyphs {
-        if pos + 2 > cff.len() {
-            break;
+    let format = cff[offset];
+    match format {
+        0 => {
+            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
+            let mut pos = offset + 1;
+            for _ in 1..num_glyphs {
+                if pos + 2 > cff.len() {
+                    break;
+                }
+                let sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
+                sids.push(sid);
+                pos += 2;
+            }
+            sids
         }
-        let sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
-        sids.push(sid);
-        pos += 2;
+        1 => {
+            // Format 1: pairs of [SID: u16, nLeft: u8]
+            // Each pair covers nLeft+1 consecutive SIDs starting from SID.
+            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
+            let mut pos = offset + 1;
+            while sids.len() < num_glyphs.saturating_sub(1) {
+                if pos + 3 > cff.len() {
+                    break;
+                }
+                let first_sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
+                let n_left = cff[pos + 2] as u16;
+                pos += 3;
+                for i in 0..=n_left {
+                    if sids.len() >= num_glyphs.saturating_sub(1) {
+                        break;
+                    }
+                    sids.push(first_sid.wrapping_add(i));
+                }
+            }
+            sids
+        }
+        2 => {
+            // Format 2: pairs of [SID: u16, nLeft: u16]
+            // Same as format 1 but nLeft is u16 instead of u8.
+            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
+            let mut pos = offset + 1;
+            while sids.len() < num_glyphs.saturating_sub(1) {
+                if pos + 4 > cff.len() {
+                    break;
+                }
+                let first_sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
+                let n_left = u16::from_be_bytes([cff[pos + 2], cff[pos + 3]]);
+                pos += 4;
+                for i in 0..=n_left {
+                    if sids.len() >= num_glyphs.saturating_sub(1) {
+                        break;
+                    }
+                    sids.push(first_sid.wrapping_add(i));
+                }
+            }
+            sids
+        }
+        _ => {
+            tracing::debug!(
+                "CFF charset format {} not supported; SIDs will be approximated",
+                format
+            );
+            vec![]
+        }
     }
-    sids
 }
 
 // =============================================================================
@@ -1084,7 +1879,14 @@ fn read_charset_format0(cff: &[u8], offset: usize, num_glyphs: usize) -> Vec<u16
 
 /// Parse a cmap table to produce a unicode → GID mapping.
 /// Supports Format 4 (most common for Latin/CJK) and Format 12 (full Unicode).
-fn parse_cmap(cmap: &[u8]) -> ParseResult<HashMap<u32, u16>> {
+///
+/// `used_codepoints` is an optional filter: when `Some(filter)`, Format 12
+/// parsing only inserts codepoints present in the filter, which avoids
+/// allocating 70 000+ entries when only a handful of CJK characters are needed.
+fn parse_cmap(
+    cmap: &[u8],
+    used_codepoints: Option<&HashSet<u32>>,
+) -> ParseResult<HashMap<u32, u16>> {
     if cmap.len() < 4 {
         return Err(ParseError::SyntaxError {
             position: 0,
@@ -1137,7 +1939,12 @@ fn parse_cmap(cmap: &[u8]) -> ParseResult<HashMap<u32, u16>> {
     let format = read_u16(cmap, subtable_offset)?;
     match format {
         4 => parse_cmap_format_4(cmap, subtable_offset),
-        12 => parse_cmap_format_12(cmap, subtable_offset),
+        12 => parse_cmap_format_12_filtered(cmap, subtable_offset, used_codepoints).map_err(|e| {
+            ParseError::SyntaxError {
+                position: subtable_offset,
+                message: e.to_string(),
+            }
+        }),
         _ => {
             // Unsupported format — return empty mapping rather than hard-failing
             Ok(HashMap::new())
@@ -1206,46 +2013,6 @@ fn parse_cmap_format_4(cmap: &[u8], offset: usize) -> ParseResult<HashMap<u32, u
             };
             if gid != 0 {
                 map.insert(code, gid);
-            }
-        }
-    }
-
-    Ok(map)
-}
-
-/// Parse cmap Format 12 subtable (full Unicode).
-fn parse_cmap_format_12(cmap: &[u8], offset: usize) -> ParseResult<HashMap<u32, u16>> {
-    // Format 12 header: format(u16) + reserved(u16) + length(u32) + language(u32) + numGroups(u32)
-    if offset + 16 > cmap.len() {
-        return Err(ParseError::SyntaxError {
-            position: offset,
-            message: "cmap Format 12 header truncated".to_string(),
-        });
-    }
-
-    let num_groups = read_u32(cmap, offset + 12)? as usize;
-    let groups_start = offset + 16;
-    if groups_start + num_groups * 12 > cmap.len() {
-        return Err(ParseError::SyntaxError {
-            position: groups_start,
-            message: "cmap Format 12 groups truncated".to_string(),
-        });
-    }
-
-    let mut map = HashMap::new();
-    for i in 0..num_groups {
-        let base = groups_start + i * 12;
-        let start_char = read_u32(cmap, base)?;
-        let end_char = read_u32(cmap, base + 4)?;
-        let start_glyph = read_u32(cmap, base + 8)?;
-        if end_char < start_char {
-            continue;
-        }
-        for j in 0..=(end_char - start_char) {
-            let code = start_char + j;
-            let gid = start_glyph + j;
-            if gid <= 0xFFFF && gid != 0 {
-                map.insert(code, gid as u16);
             }
         }
     }

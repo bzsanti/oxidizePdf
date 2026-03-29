@@ -1,8 +1,7 @@
-//! Tests for cmap Format 12 support in TtfParser
+//! Tests for cmap Format 4 and Format 12 support in TtfParser
 //!
-//! These tests verify that TtfParser correctly parses cmap Format 12
-//! (Segmented coverage) subtables, which are required for fonts that
-//! list Format 12 before Format 4 in their cmap table.
+//! These tests verify that TtfParser correctly parses cmap Format 4
+//! (segment mapping) and Format 12 (segmented coverage) subtables.
 
 use oxidize_pdf::fonts::TtfParser;
 
@@ -162,6 +161,270 @@ fn build_cmap_format12_font(groups: &[(u32, u32, u32)]) -> Vec<u8> {
     }
 
     font
+}
+
+/// Segment descriptor for building a cmap Format 4 subtable.
+///
+/// - `start_code`/`end_code`: Unicode range this segment covers.
+/// - `id_delta`: signed addend when `id_range_offset == 0`.
+/// - `glyph_ids`: when non-empty, the segment uses `id_range_offset != 0`
+///   and these values populate the glyphIdArray for codes
+///   `start_code..=end_code` in order.
+struct Format4Segment {
+    start_code: u16,
+    end_code: u16,
+    id_delta: i16,
+    /// When non-empty the segment uses indirect lookup. Length must equal
+    /// `end_code - start_code + 1`.
+    glyph_ids: Vec<u16>,
+}
+
+/// Build a minimal TTF font with a cmap Format 4 subtable.
+///
+/// Segments are given in order; a terminal segment (0xFFFF→0xFFFF, delta=1,
+/// no indirect) is appended automatically.
+///
+/// `max_gid` controls the size of the hmtx table.
+fn build_cmap_format4_font(segments: &[Format4Segment], max_gid: u16) -> Vec<u8> {
+    let num_glyphs = if max_gid == 0 { 1 } else { max_gid + 1 };
+
+    // --- head table (54 bytes) ---
+    let mut head = vec![0u8; 54];
+    head[0] = 0x00;
+    head[1] = 0x01; // version 1.0
+    let units_per_em: u16 = 1000;
+    head[18] = (units_per_em >> 8) as u8;
+    head[19] = (units_per_em & 0xFF) as u8;
+    head[50] = 0x00;
+    head[51] = 0x01; // indexToLocFormat = 1
+
+    // --- hhea table (36 bytes) ---
+    let mut hhea = vec![0u8; 36];
+    hhea[0] = 0x00;
+    hhea[1] = 0x01;
+    let ascent: i16 = 800;
+    hhea[4] = (ascent >> 8) as u8;
+    hhea[5] = (ascent & 0xFF) as u8;
+    let descent: i16 = -200;
+    hhea[6] = (descent >> 8) as u8;
+    hhea[7] = (descent & 0xFF) as u8;
+    hhea[34] = (num_glyphs >> 8) as u8;
+    hhea[35] = (num_glyphs & 0xFF) as u8;
+
+    // --- hmtx table ---
+    let mut hmtx = Vec::with_capacity(num_glyphs as usize * 4);
+    for _ in 0..num_glyphs {
+        hmtx.extend_from_slice(&600u16.to_be_bytes());
+        hmtx.extend_from_slice(&0i16.to_be_bytes());
+    }
+
+    // --- name table ---
+    let font_name = b"TestFont";
+    let mut name_table = Vec::new();
+    name_table.extend_from_slice(&0u16.to_be_bytes()); // format
+    name_table.extend_from_slice(&1u16.to_be_bytes()); // count
+    name_table.extend_from_slice(&18u16.to_be_bytes()); // stringOffset
+    name_table.extend_from_slice(&1u16.to_be_bytes()); // platformID (Mac)
+    name_table.extend_from_slice(&0u16.to_be_bytes()); // encodingID
+    name_table.extend_from_slice(&0u16.to_be_bytes()); // languageID
+    name_table.extend_from_slice(&6u16.to_be_bytes()); // nameID (PostScript)
+    name_table.extend_from_slice(&(font_name.len() as u16).to_be_bytes());
+    name_table.extend_from_slice(&0u16.to_be_bytes()); // string offset
+    name_table.extend_from_slice(font_name);
+
+    // --- cmap Format 4 subtable ---
+    //
+    // Full segment count includes the terminal segment.
+    let seg_count = segments.len() + 1; // +1 for terminal 0xFFFF segment
+
+    // Collect endCodes, startCodes, idDeltas
+    let mut end_codes: Vec<u16> = segments.iter().map(|s| s.end_code).collect();
+    end_codes.push(0xFFFF); // terminal
+    let mut start_codes: Vec<u16> = segments.iter().map(|s| s.start_code).collect();
+    start_codes.push(0xFFFF); // terminal
+    let mut id_deltas: Vec<i16> = segments.iter().map(|s| s.id_delta).collect();
+    id_deltas.push(1i16); // terminal delta (unused but required)
+
+    // Build glyphIdArray: concatenate all indirect segments' glyph_ids
+    let mut glyph_id_array: Vec<u16> = Vec::new();
+    // Compute the glyphIdArray start offset relative to the subtable start.
+    // Layout: 14 (header) + seg_count*2 (endCodes) + 2 (pad) + seg_count*2 (startCodes)
+    //       + seg_count*2 (idDeltas) + seg_count*2 (idRangeOffsets)
+    let id_range_offset_array_offset = 14 + seg_count * 2 + 2 + seg_count * 2 + seg_count * 2;
+    let glyph_id_array_offset = id_range_offset_array_offset + seg_count * 2;
+
+    // For each segment, compute id_range_offset:
+    //   0 if the segment uses id_delta directly,
+    //   otherwise the byte distance from the position of this segment's
+    //   id_range_offset entry to the start of its glyphIdArray block.
+    let mut id_range_offsets: Vec<u16> = Vec::new();
+    let mut glyph_id_cursor = 0usize; // next available slot in glyph_id_array (in entries)
+
+    for (i, seg) in segments.iter().enumerate() {
+        if seg.glyph_ids.is_empty() {
+            id_range_offsets.push(0);
+        } else {
+            // Position of id_range_offset[i] within the subtable (byte offset from subtable start)
+            let range_offset_pos = id_range_offset_array_offset + i * 2;
+            // Position of the first glyphIdArray entry for this segment
+            let first_glyph_pos = glyph_id_array_offset + glyph_id_cursor * 2;
+            // id_range_offset is the difference between first_glyph_pos and range_offset_pos
+            let id_range_off = (first_glyph_pos - range_offset_pos) as u16;
+            id_range_offsets.push(id_range_off);
+            glyph_id_array.extend_from_slice(&seg.glyph_ids);
+            glyph_id_cursor += seg.glyph_ids.len();
+        }
+    }
+    // Terminal segment always uses id_delta (id_range_offset = 0)
+    id_range_offsets.push(0u16);
+
+    // Total subtable length
+    let subtable_len = glyph_id_array_offset + glyph_id_array.len() * 2;
+
+    let mut cmap_subtable: Vec<u8> = Vec::new();
+    cmap_subtable.extend_from_slice(&4u16.to_be_bytes()); // format
+    cmap_subtable.extend_from_slice(&(subtable_len as u16).to_be_bytes()); // length
+    cmap_subtable.extend_from_slice(&0u16.to_be_bytes()); // language
+    cmap_subtable.extend_from_slice(&((seg_count * 2) as u16).to_be_bytes()); // segCountX2
+    cmap_subtable.extend_from_slice(&0u16.to_be_bytes()); // searchRange
+    cmap_subtable.extend_from_slice(&0u16.to_be_bytes()); // entrySelector
+    cmap_subtable.extend_from_slice(&0u16.to_be_bytes()); // rangeShift
+
+    for &ec in &end_codes {
+        cmap_subtable.extend_from_slice(&ec.to_be_bytes());
+    }
+    cmap_subtable.extend_from_slice(&0u16.to_be_bytes()); // reservedPad
+    for &sc in &start_codes {
+        cmap_subtable.extend_from_slice(&sc.to_be_bytes());
+    }
+    for &d in &id_deltas {
+        cmap_subtable.extend_from_slice(&(d as u16).to_be_bytes());
+    }
+    for &ro in &id_range_offsets {
+        cmap_subtable.extend_from_slice(&ro.to_be_bytes());
+    }
+    for &gid in &glyph_id_array {
+        cmap_subtable.extend_from_slice(&gid.to_be_bytes());
+    }
+
+    // cmap table wrapper: header + 1 encoding record + subtable
+    let mut cmap = Vec::new();
+    cmap.extend_from_slice(&0u16.to_be_bytes()); // version
+    cmap.extend_from_slice(&1u16.to_be_bytes()); // numTables
+                                                 // Encoding record: platform 3 (Windows), encoding 1 (Unicode BMP)
+    cmap.extend_from_slice(&3u16.to_be_bytes()); // platformID
+    cmap.extend_from_slice(&1u16.to_be_bytes()); // encodingID
+                                                 // offset to subtable = 4 (header) + 8 (1 record) = 12
+    cmap.extend_from_slice(&12u32.to_be_bytes());
+    cmap.extend_from_slice(&cmap_subtable);
+
+    // --- Assemble TTF ---
+    let num_tables: u16 = 5;
+    let tables: Vec<(&[u8; 4], &[u8])> = vec![
+        (b"cmap", &cmap),
+        (b"head", &head),
+        (b"hhea", &hhea),
+        (b"hmtx", &hmtx),
+        (b"name", &name_table),
+    ];
+
+    let header_size = 12 + num_tables as usize * 16;
+    let mut font = Vec::new();
+
+    font.extend_from_slice(&0x00010000u32.to_be_bytes()); // sfVersion
+    font.extend_from_slice(&num_tables.to_be_bytes());
+    font.extend_from_slice(&0u16.to_be_bytes()); // searchRange
+    font.extend_from_slice(&0u16.to_be_bytes()); // entrySelector
+    font.extend_from_slice(&0u16.to_be_bytes()); // rangeShift
+
+    let mut current_offset = header_size;
+    let mut table_entries: Vec<(u32, u32)> = Vec::new();
+    for (_, data) in &tables {
+        while current_offset % 4 != 0 {
+            current_offset += 1;
+        }
+        table_entries.push((current_offset as u32, data.len() as u32));
+        current_offset += data.len();
+    }
+
+    for (i, (tag, _)) in tables.iter().enumerate() {
+        font.extend_from_slice(*tag);
+        font.extend_from_slice(&0u32.to_be_bytes()); // checksum
+        font.extend_from_slice(&table_entries[i].0.to_be_bytes());
+        font.extend_from_slice(&table_entries[i].1.to_be_bytes());
+    }
+
+    for (i, (_, data)) in tables.iter().enumerate() {
+        while font.len() < table_entries[i].0 as usize {
+            font.push(0);
+        }
+        font.extend_from_slice(data);
+    }
+
+    font
+}
+
+/// Verify that a Format 4 cmap with `id_range_offset == 0` uses id_delta directly.
+///
+/// Segment: A..=C (0x41..=0x43), id_delta=4, id_range_offset=0
+/// Expected: 'A'→GID 69 (0x41+4=0x45=69), 'B'→70, 'C'→71
+#[test]
+fn test_cmap_format4_id_range_offset_zero() {
+    let segments = [Format4Segment {
+        start_code: 0x41,
+        end_code: 0x43,
+        id_delta: 4,
+        glyph_ids: vec![],
+    }];
+    let font_data = build_cmap_format4_font(&segments, 80);
+    let parser = TtfParser::new(&font_data).unwrap();
+    let mapping = parser.extract_glyph_mapping().unwrap();
+
+    assert_eq!(mapping.char_to_glyph('A'), Some(0x41 + 4)); // GID 69
+    assert_eq!(mapping.char_to_glyph('B'), Some(0x42 + 4)); // GID 70
+    assert_eq!(mapping.char_to_glyph('C'), Some(0x43 + 4)); // GID 71
+    assert_eq!(mapping.char_to_glyph('D'), None);
+}
+
+/// Verify that a Format 4 cmap with `id_range_offset != 0` uses glyphIdArray lookup.
+///
+/// Segment: A (0x41), id_delta=0, id_range_offset pointing to [5] in glyphIdArray.
+/// Expected: 'A'→GID 5
+#[test]
+fn test_cmap_format4_id_range_offset_nonzero() {
+    let segments = [Format4Segment {
+        start_code: 0x41,
+        end_code: 0x41,
+        id_delta: 0,
+        glyph_ids: vec![5],
+    }];
+    let font_data = build_cmap_format4_font(&segments, 10);
+    let parser = TtfParser::new(&font_data).unwrap();
+    let mapping = parser.extract_glyph_mapping().unwrap();
+
+    assert_eq!(mapping.char_to_glyph('A'), Some(5));
+    assert_eq!(mapping.char_to_glyph('B'), None);
+}
+
+/// Verify that id_delta is applied on top of the GID looked up from glyphIdArray.
+///
+/// Segment: A..=B (0x41..=0x42), id_delta=10, glyph_ids=[3, 7]
+/// Expected: 'A'→GID (3+10)=13, 'B'→GID (7+10)=17
+#[test]
+fn test_cmap_format4_id_range_offset_with_delta() {
+    let segments = [Format4Segment {
+        start_code: 0x41,
+        end_code: 0x42,
+        id_delta: 10,
+        glyph_ids: vec![3, 7],
+    }];
+    let font_data = build_cmap_format4_font(&segments, 30);
+    let parser = TtfParser::new(&font_data).unwrap();
+    let mapping = parser.extract_glyph_mapping().unwrap();
+
+    assert_eq!(mapping.char_to_glyph('A'), Some(13)); // 3 + 10
+    assert_eq!(mapping.char_to_glyph('B'), Some(17)); // 7 + 10
+    assert_eq!(mapping.char_to_glyph('C'), None);
 }
 
 #[test]
