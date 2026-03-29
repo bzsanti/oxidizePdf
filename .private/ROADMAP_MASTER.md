@@ -1,5 +1,5 @@
 # ROADMAP MASTER - oxidize-pdf
-**Ultima actualizacion**: 2026-03-23 (fix/issue-160 — CJK font encoding in Table writer)
+**Ultima actualizacion**: 2026-03-29 (quality review + bug fixes #167, #174)
 **Horizonte**: Sin deadline — roadmap es orientativo, no vinculante
 **Owner**: bzsanti
 **Repositorio**: https://github.com/bzsanti/oxidizePdf
@@ -9,9 +9,9 @@
 ## ESTADO ACTUAL
 
 ### Posicion en Roadmap
-- **Version**: v2.3.3 released (crates.io 2026-03-21, GitHub release via Actions)
-- **Sprint Actual**: Bug fixes — CJK table font encoding (#160)
-- **Tests**: 8,070 passing (unit + integration + doc)
+- **Version**: v2.4.1 released (tag v2.4.1 en main)
+- **Sprint Actual**: Bug fixes — TextFlow width (#167), PNG rendering (#174)
+- **Tests**: 6,261 passing (lib), clippy limpio
 - **Coverage**: 72.14%
 - **Quality Grade**: A (95/100)
 - **PDF Success Rate**: 99.3% (275/277 failure corpus)
@@ -30,6 +30,9 @@
 
 | Version | Fecha | Highlights |
 |---------|-------|------------|
+| v2.4.1 | 2026-03-29 | 14 quality fixes (CFF scanner, overflow protection, measure_text &Font, cmap consolidation, PNG fix, TextFlow width), table system overhaul, CID font subsetting |
+| v2.4.0 | 2026-03-27 | CFF font subsetting, cmap Format 12, multilingual corpus tests |
+| v2.3.4 | 2026-03-25 | Table improvements (#162, #163), CJK table font fix (#160) |
 | v2.3.3 | 2026-03-21 | CJK CID→Unicode tables (79K entries, 4 collections), SMask remap fix (#156, #157) |
 | v2.3.2 | 2026-03-15 | Overlay/watermark (OPS-005), Image::from_file, reorder exports, XObject stream fix |
 | v2.3.0 | 2026-03-14 | RagChunk API — one-liner RAG pipeline with serializable metadata |
