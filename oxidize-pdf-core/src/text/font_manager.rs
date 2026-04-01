@@ -5,7 +5,7 @@
 
 use crate::error::{PdfError, Result};
 use crate::objects::{Dictionary, Object};
-use crate::text::fonts::truetype::TrueTypeFont;
+use crate::text::fonts::truetype::{CmapSubtable, TrueTypeFont};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
@@ -352,12 +352,7 @@ impl CustomFont {
         // Create metrics with proper Unicode support (including CJK)
         let mut char_widths = std::collections::HashMap::new();
         if let Ok(cmap_tables) = ttf.parse_cmap() {
-            if let Some(cmap) = cmap_tables
-                .iter()
-                .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode BMP
-                .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0)) // Unicode
-                .or_else(|| cmap_tables.first())
-            {
+            if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                 // Get widths for common Unicode ranges including CJK
                 let ranges = [
                     (0x0020, 0x007F), // Basic Latin
@@ -507,12 +502,7 @@ impl CustomFont {
             if let Ok(cmap_tables) = ttf.parse_cmap() {
                 // Prefer Windows Unicode mapping (platform 3, encoding 1)
                 // or fallback to Unicode mapping (platform 0)
-                let cmap = cmap_tables
-                    .iter()
-                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0));
-
-                if let Some(cmap) = cmap {
+                if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                     return Some(cmap.mappings.clone());
                 }
             }
@@ -540,12 +530,8 @@ impl CustomFont {
 
                     // Update metrics from the font
                     if let Ok(cmap_tables) = ttf.parse_cmap() {
-                        // Find best cmap table
-                        if let Some(cmap) = cmap_tables
-                            .iter()
-                            .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                            .or_else(|| cmap_tables.first())
-                        {
+                        // Find best cmap table (prefer Format 12 for CJK)
+                        if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                             // Update character widths
                             let mut widths = Vec::new();
                             for char_code in self.metrics.first_char..=self.metrics.last_char {
@@ -631,11 +617,7 @@ impl CustomFont {
         // Create metrics
         let mut widths = Vec::new();
         if let Ok(cmap_tables) = ttf.parse_cmap() {
-            if let Some(cmap) = cmap_tables
-                .iter()
-                .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                .or_else(|| cmap_tables.first())
-            {
+            if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                 for char_code in 32u8..=255 {
                     if let Some(&glyph_id) = cmap.mappings.get(&(char_code as u32)) {
                         if let Ok((advance_width, _)) = ttf.get_glyph_metrics(glyph_id) {
@@ -685,11 +667,7 @@ impl CustomFont {
     pub fn mark_characters_used(&mut self, text: &str) {
         if let Some(ref ttf) = self.truetype_font {
             if let Ok(cmap_tables) = ttf.parse_cmap() {
-                if let Some(cmap) = cmap_tables
-                    .iter()
-                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                    .or_else(|| cmap_tables.first())
-                {
+                if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                     for ch in text.chars() {
                         if let Some(&glyph_id) = cmap.mappings.get(&(ch as u32)) {
                             self.used_glyphs.insert(glyph_id);

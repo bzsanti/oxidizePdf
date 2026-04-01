@@ -4,7 +4,7 @@
 //! and ensuring correct Unicode support in PDF Type0 fonts.
 
 use crate::error::Result;
-use crate::text::fonts::truetype::TrueTypeFont;
+use crate::text::fonts::truetype::{CmapSubtable, TrueTypeFont};
 use std::collections::HashMap;
 
 /// Represents a mapping between Unicode, CID, and GID
@@ -48,17 +48,12 @@ impl CidMapping {
         // Parse the font's cmap table to get Unicode to GID mappings
         let cmap_tables = font.parse_cmap()?;
 
-        // Find the best cmap table (prefer platform 3, encoding 1 for Windows Unicode)
-        let cmap = cmap_tables
-            .iter()
-            .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-            .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-            .or_else(|| cmap_tables.first())
-            .ok_or_else(|| {
-                crate::error::PdfError::InvalidStructure(
-                    "No suitable cmap table found in font".to_string(),
-                )
-            })?;
+        // Find the best cmap table (prefer Format 12 for CJK)
+        let cmap = CmapSubtable::select_best_or_first(&cmap_tables).ok_or_else(|| {
+            crate::error::PdfError::InvalidStructure(
+                "No suitable cmap table found in font".to_string(),
+            )
+        })?;
 
         // Collect all unique characters from the text
         let mut chars: Vec<char> = text.chars().collect();

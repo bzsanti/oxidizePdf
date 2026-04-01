@@ -99,6 +99,47 @@ pub struct CmapSubtable {
     pub mappings: HashMap<u32, u16>,
 }
 
+impl CmapSubtable {
+    /// Select the best cmap subtable from a list, preferring full Unicode (Format 12)
+    /// over BMP-only (Format 4) over generic Unicode platform.
+    ///
+    /// Priority: (platform=3, encoding=10) > (platform=3, encoding=1) > (platform=0, any)
+    ///
+    /// This is critical for CJK fonts which may only have Format 12 subtables.
+    pub fn select_best(subtables: &[CmapSubtable]) -> Option<&CmapSubtable> {
+        subtables
+            .iter()
+            .filter(|t| matches!((t.platform_id, t.encoding_id), (3, 10) | (3, 1) | (0, _)))
+            .max_by_key(|t| match (t.platform_id, t.encoding_id) {
+                (3, 10) => 3u8,
+                (3, 1) => 2u8,
+                (0, _) => 1u8,
+                _ => 0u8,
+            })
+    }
+
+    /// Select the best cmap subtable, falling back to the first available subtable
+    /// if none of the preferred platforms/encodings are present.
+    pub fn select_best_or_first(subtables: &[CmapSubtable]) -> Option<&CmapSubtable> {
+        Self::select_best(subtables).or_else(|| subtables.first())
+    }
+}
+
+#[cfg(test)]
+impl TrueTypeFont {
+    /// Create an empty font for unit tests that only need the struct (not font data).
+    pub fn empty_for_test() -> Self {
+        Self {
+            data: Vec::new(),
+            tables: HashMap::new(),
+            num_glyphs: 0,
+            units_per_em: 1000,
+            loca_format: 0,
+            is_cff: false,
+        }
+    }
+}
+
 impl TrueTypeFont {
     /// Get a table by its tag
     pub fn get_table(&self, tag: &[u8]) -> ParseResult<&TableEntry> {
@@ -1153,16 +1194,13 @@ impl TrueTypeFont {
         // Parse existing cmap
         let subtables = self.parse_cmap()?;
 
-        // Find best subtable to use as base
-        let base_subtable = subtables
-            .iter()
-            .find(|s| s.platform_id == 3 && s.encoding_id == 1) // Windows Unicode
-            .or_else(|| subtables.iter().find(|s| s.platform_id == 0)) // Unicode
-            .or_else(|| subtables.first())
-            .ok_or_else(|| ParseError::SyntaxError {
+        // Find best subtable to use as base (prefer Format 12 for CJK)
+        let base_subtable = CmapSubtable::select_best_or_first(&subtables).ok_or_else(|| {
+            ParseError::SyntaxError {
                 position: 0,
                 message: "No suitable cmap subtable found".to_string(),
-            })?;
+            }
+        })?;
 
         // Create new mappings with remapped glyph indices
         let mut new_mappings = HashMap::new();
