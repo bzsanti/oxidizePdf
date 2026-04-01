@@ -3,13 +3,40 @@
 //! This module implements font subsetting to reduce file size by including
 //! only the glyphs actually used in the document.
 
-// Temporarily disable Clippy warnings for this module as subsetting is disabled
-#![allow(clippy::all)]
 #![allow(dead_code)]
 
-use super::truetype::TrueTypeFont;
+use super::truetype::{CmapSubtable, TrueTypeFont};
 use crate::parser::{ParseError, ParseResult};
 use std::collections::{HashMap, HashSet};
+
+// =============================================================================
+// COMPOSITE GLYPH FLAGS (OpenType spec §5.3.3 — Glyph Headers)
+// =============================================================================
+
+/// Component glyph arguments are 16-bit (words) instead of 8-bit (bytes)
+const COMPOSITE_ARG_1_AND_2_ARE_WORDS: u16 = 0x0001;
+/// There are more components after this one
+const COMPOSITE_MORE_COMPONENTS: u16 = 0x0020;
+/// Component has a simple scale (F2Dot14)
+const COMPOSITE_WE_HAVE_A_SCALE: u16 = 0x0008;
+/// Component has separate X and Y scales (two F2Dot14s)
+const COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE: u16 = 0x0040;
+/// Component has a 2x2 transformation matrix (four F2Dot14s)
+const COMPOSITE_WE_HAVE_A_TWO_BY_TWO: u16 = 0x0080;
+/// Instructions follow after all components (OpenType spec §5.3.3 flag 0x0100).
+/// Not used in current parsing — instructions appear after all component records,
+/// not between them, so the component loop terminates correctly without this flag.
+const COMPOSITE_WE_HAVE_INSTRUCTIONS: u16 = 0x0100;
+
+/// Maximum byte offset representable in loca short format (u16 * 2).
+/// If the glyf table exceeds this, loca must use long format (u32 entries).
+const LOCA_SHORT_FORMAT_MAX_OFFSET: u32 = 0x1_FFFE;
+
+/// When the subset uses more than this fraction of the font's total glyphs,
+/// subsetting is skipped because the overhead of rebuilding the font outweighs
+/// the size savings. Could be exposed as a field on a `SubsetOptions` struct
+/// in a future release.
+const SUBSETTING_RATIO_THRESHOLD: f32 = 0.5;
 
 // =============================================================================
 // SUBSETTING THRESHOLDS (Issue #115)
@@ -117,6 +144,121 @@ pub struct SubsetResult {
     pub glyph_mapping: HashMap<u32, u16>,
 }
 
+/// Extract component glyph IDs from a composite glyph's raw data.
+///
+/// Per OpenType spec §5.3.3, a composite glyph has `numberOfContours < 0`
+/// (first 2 bytes as i16). Its body contains a sequence of component records,
+/// each with flags (u16) and a glyphIndex (u16), followed by variable-size
+/// arguments and optional transformation data.
+///
+/// Returns an empty vec for simple glyphs or data too short to parse.
+pub fn extract_composite_components(glyph_data: &[u8]) -> Vec<u16> {
+    if glyph_data.len() < 12 {
+        // Glyph header is 10 bytes; need at least 4 more for one component
+        return Vec::new();
+    }
+
+    let num_contours = i16::from_be_bytes([glyph_data[0], glyph_data[1]]);
+    if num_contours >= 0 {
+        // Simple glyph — no components
+        return Vec::new();
+    }
+
+    let mut components = Vec::new();
+    let mut cursor = 10; // Skip glyph header (numberOfContours + xMin/yMin/xMax/yMax)
+
+    loop {
+        if cursor + 4 > glyph_data.len() {
+            break;
+        }
+
+        let flags = u16::from_be_bytes([glyph_data[cursor], glyph_data[cursor + 1]]);
+        let glyph_index = u16::from_be_bytes([glyph_data[cursor + 2], glyph_data[cursor + 3]]);
+        components.push(glyph_index);
+
+        // Advance past flags (2) + glyphIndex (2)
+        cursor += 4;
+
+        // Advance past arguments (offsets or point numbers)
+        if flags & COMPOSITE_ARG_1_AND_2_ARE_WORDS != 0 {
+            cursor += 4; // Two i16/u16 args
+        } else {
+            cursor += 2; // Two i8/u8 args
+        }
+
+        // Advance past transformation data
+        if flags & COMPOSITE_WE_HAVE_A_TWO_BY_TWO != 0 {
+            cursor += 8; // Four F2Dot14 values
+        } else if flags & COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE != 0 {
+            cursor += 4; // Two F2Dot14 values
+        } else if flags & COMPOSITE_WE_HAVE_A_SCALE != 0 {
+            cursor += 2; // One F2Dot14 value
+        }
+
+        if flags & COMPOSITE_MORE_COMPONENTS == 0 {
+            break;
+        }
+    }
+
+    components
+}
+
+/// Rewrite component glyph IDs in a composite glyph's data from old GIDs to new GIDs.
+///
+/// For simple glyphs (numberOfContours >= 0), returns data unchanged.
+/// For composite glyphs, walks the component list and replaces each GlyphIndex
+/// using the provided mapping.
+fn remap_composite_glyph(glyph_data: &[u8], glyph_map: &HashMap<u16, u16>) -> Vec<u8> {
+    if glyph_data.len() < 12 {
+        return glyph_data.to_vec();
+    }
+
+    let num_contours = i16::from_be_bytes([glyph_data[0], glyph_data[1]]);
+    if num_contours >= 0 {
+        return glyph_data.to_vec();
+    }
+
+    let mut result = glyph_data.to_vec();
+    let mut cursor = 10;
+
+    loop {
+        if cursor + 4 > result.len() {
+            break;
+        }
+
+        let flags = u16::from_be_bytes([result[cursor], result[cursor + 1]]);
+        let old_gid = u16::from_be_bytes([result[cursor + 2], result[cursor + 3]]);
+        // .notdef (GID 0) fallback is correct: expand_composite_glyphs() ensures
+        // all component GIDs are in needed_glyphs before remapping. An unmapped GID
+        // here indicates font corruption; .notdef is safer than panicking.
+        let new_gid = glyph_map.get(&old_gid).copied().unwrap_or(0);
+        result[cursor + 2] = (new_gid >> 8) as u8;
+        result[cursor + 3] = (new_gid & 0xFF) as u8;
+
+        cursor += 4;
+
+        if flags & COMPOSITE_ARG_1_AND_2_ARE_WORDS != 0 {
+            cursor += 4;
+        } else {
+            cursor += 2;
+        }
+
+        if flags & COMPOSITE_WE_HAVE_A_TWO_BY_TWO != 0 {
+            cursor += 8;
+        } else if flags & COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE != 0 {
+            cursor += 4;
+        } else if flags & COMPOSITE_WE_HAVE_A_SCALE != 0 {
+            cursor += 2;
+        }
+
+        if flags & COMPOSITE_MORE_COMPONENTS == 0 {
+            break;
+        }
+    }
+
+    result
+}
+
 /// TrueType font subsetter
 pub struct TrueTypeSubsetter {
     /// Original font data
@@ -127,6 +269,9 @@ pub struct TrueTypeSubsetter {
 
 impl TrueTypeSubsetter {
     /// Create a new subsetter from font data
+    // TODO(perf): TrueTypeFont::parse takes Vec<u8> by value, requiring a full
+    // clone of font_data here (10-50MB for CJK fonts). Fixing this requires
+    // changing parse() to accept &[u8] or Arc<Vec<u8>>.
     pub fn new(font_data: Vec<u8>) -> ParseResult<Self> {
         let font = TrueTypeFont::parse(font_data.clone())?;
         Ok(Self { font_data, font })
@@ -137,14 +282,12 @@ impl TrueTypeSubsetter {
     pub fn subset(&self, used_chars: &HashSet<char>) -> ParseResult<SubsetResult> {
         // Get the cmap table to find which glyphs we need
         let cmap_tables = self.font.parse_cmap()?;
-        let cmap = cmap_tables
-            .iter()
-            .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-            .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-            .ok_or_else(|| ParseError::SyntaxError {
+        let cmap = CmapSubtable::select_best_or_first(&cmap_tables).ok_or_else(|| {
+            ParseError::SyntaxError {
                 position: 0,
                 message: "No suitable cmap table found".to_string(),
-            })?;
+            }
+        })?;
 
         // Issue #115 Fix: Use should_skip_subsetting() which considers BOTH font size AND char count
         // Previously, this skipped subsetting for ANY font with < 10 chars, causing 41MB fonts
@@ -167,6 +310,9 @@ impl TrueTypeSubsetter {
             }
         }
 
+        // Expand composite glyphs: add component GIDs recursively
+        self.expand_composite_glyphs(&mut needed_glyphs);
+
         tracing::debug!("Font subsetting analysis:");
         tracing::debug!("  Total glyphs in font: {}", self.font.num_glyphs);
         tracing::debug!("  Glyphs needed: {}", needed_glyphs.len());
@@ -174,7 +320,7 @@ impl TrueTypeSubsetter {
 
         // Always subset if we're using less than 10% of glyphs in a large font
         let subset_ratio = needed_glyphs.len() as f32 / self.font.num_glyphs as f32;
-        if subset_ratio > 0.5 || self.font_data.len() < 100_000 {
+        if subset_ratio > SUBSETTING_RATIO_THRESHOLD || self.font_data.len() < 100_000 {
             tracing::debug!(
                 "  Keeping full font (using {:.1}% of glyphs)",
                 subset_ratio * 100.0
@@ -240,7 +386,7 @@ impl TrueTypeSubsetter {
         }
 
         // Build the actual subset font
-        match self.build_subset_font(&needed_glyphs, &glyph_map, &new_cmap) {
+        match self.build_subset_font(&glyph_map, &new_cmap) {
             Ok(subset_font_data) => {
                 tracing::debug!(
                     "  Successfully subsetted: {} -> {} bytes ({:.1}% reduction)",
@@ -265,21 +411,30 @@ impl TrueTypeSubsetter {
         }
     }
 
+    /// Expand composite glyphs by adding all component GIDs to needed_glyphs.
+    /// Uses a worklist for iterative (not recursive) traversal to handle
+    /// composites that reference other composites.
+    fn expand_composite_glyphs(&self, needed_glyphs: &mut HashSet<u16>) {
+        let mut worklist: Vec<u16> = needed_glyphs.iter().copied().collect();
+        while let Some(gid) = worklist.pop() {
+            if let Ok(data) = self.font.get_glyph_data(gid) {
+                for component_gid in extract_composite_components(&data) {
+                    if needed_glyphs.insert(component_gid) {
+                        worklist.push(component_gid);
+                    }
+                }
+            }
+        }
+    }
+
     /// Build the subset font file
     fn build_subset_font(
         &self,
-        needed_glyphs: &HashSet<u16>,
         glyph_map: &HashMap<u16, u16>,
         new_cmap: &HashMap<u32, u16>,
     ) -> ParseResult<Vec<u8>> {
-        // If we need most glyphs, just return original
-        if needed_glyphs.len() > self.font.num_glyphs as usize / 2 {
-            return Ok(self.font_data.clone());
-        }
-
         // Build new glyf table with only needed glyphs
         let mut new_glyf = Vec::new();
-        let mut new_loca = Vec::new();
         let mut current_offset = 0u32;
 
         // Create inverse map: new_glyph_id -> old_glyph_id
@@ -288,38 +443,45 @@ impl TrueTypeSubsetter {
             inverse_map.insert(new_id, old_id);
         }
 
-        // Build new glyf and loca in the order of new glyph IDs
+        // Collect per-glyph offsets first, then decide loca format
+        let mut glyph_offsets: Vec<u32> = Vec::with_capacity(glyph_map.len() + 1);
+
         for new_glyph_id in 0..glyph_map.len() as u16 {
-            // Add offset to loca
-            if self.font.loca_format == 0 {
-                // Short format
-                new_loca.extend_from_slice(&((current_offset / 2) as u16).to_be_bytes());
-            } else {
-                // Long format
-                new_loca.extend_from_slice(&current_offset.to_be_bytes());
-            }
+            glyph_offsets.push(current_offset);
 
-            // Get the original glyph ID for this new ID
             let old_glyph_id = inverse_map.get(&new_glyph_id).copied().unwrap_or(0);
-
-            // Get and add glyph data
             let glyph_data = self.font.get_glyph_data(old_glyph_id)?;
-            new_glyf.extend_from_slice(&glyph_data);
-            current_offset += glyph_data.len() as u32;
+            let remapped = remap_composite_glyph(&glyph_data, glyph_map);
+            new_glyf.extend_from_slice(&remapped);
+            current_offset += remapped.len() as u32;
         }
+        // Final loca entry (points past last glyph)
+        glyph_offsets.push(current_offset);
 
-        // Add final loca entry
-        if self.font.loca_format == 0 {
-            new_loca.extend_from_slice(&((current_offset / 2) as u16).to_be_bytes());
-        } else {
-            new_loca.extend_from_slice(&current_offset.to_be_bytes());
+        // Determine loca format: use short if original was short AND offsets fit,
+        // otherwise upgrade to long format to prevent silent truncation.
+        let loca_format =
+            if self.font.loca_format == 0 && current_offset <= LOCA_SHORT_FORMAT_MAX_OFFSET {
+                0u16
+            } else {
+                1u16
+            };
+
+        // Build loca table with the chosen format
+        let mut new_loca = Vec::new();
+        for &offset in &glyph_offsets {
+            if loca_format == 0 {
+                new_loca.extend_from_slice(&((offset / 2) as u16).to_be_bytes());
+            } else {
+                new_loca.extend_from_slice(&offset.to_be_bytes());
+            }
         }
 
         // Build new cmap subtable (format 4 for BMP characters)
-        let new_cmap_data = self.build_cmap_format4(new_cmap)?;
+        let new_cmap_data = self.build_cmap_table(new_cmap)?;
 
         // Build new hmtx table
-        let new_hmtx = self.build_hmtx(glyph_map)?;
+        let new_hmtx = self.build_hmtx(glyph_map, &inverse_map)?;
 
         // Now reconstruct the font file
         self.build_font_file(
@@ -328,6 +490,7 @@ impl TrueTypeSubsetter {
             new_cmap_data,
             new_hmtx,
             glyph_map.len() as u16,
+            loca_format,
         )
     }
 
@@ -355,7 +518,9 @@ impl TrueTypeSubsetter {
         let mut segments = Vec::new();
         let mut sorted_chars: Vec<u32> = mappings
             .keys()
-            .filter(|&&ch| ch <= 0xFFFF) // Format 4 only supports BMP
+            // Format 4 only supports BMP (U+0000–U+FFFF). SMP characters are
+            // handled by build_cmap_table, which dispatches to build_cmap_format12.
+            .filter(|&&ch| ch <= 0xFFFF)
             .copied()
             .collect();
         sorted_chars.sort();
@@ -442,8 +607,95 @@ impl TrueTypeSubsetter {
         Ok(data)
     }
 
+    /// Build a cmap table, choosing Format 4 or Format 12 based on the mappings.
+    /// Format 4 is used for BMP-only characters (smaller, more compatible).
+    /// Format 12 is used when any codepoint exceeds U+FFFF (SMP support).
+    fn build_cmap_table(&self, mappings: &HashMap<u32, u16>) -> ParseResult<Vec<u8>> {
+        let has_smp = mappings.keys().any(|&cp| cp > 0xFFFF);
+        if has_smp {
+            self.build_cmap_format12(mappings)
+        } else {
+            self.build_cmap_format4(mappings)
+        }
+    }
+
+    /// Build a cmap Format 12 subtable (Segmented coverage, full 32-bit Unicode).
+    ///
+    /// Format 12 uses groups of `(startCharCode, endCharCode, startGlyphID)` where
+    /// consecutive codepoints with consecutive glyph IDs are merged into a single group.
+    fn build_cmap_format12(&self, mappings: &HashMap<u32, u16>) -> ParseResult<Vec<u8>> {
+        let mut data = Vec::new();
+
+        // cmap header
+        data.extend_from_slice(&0u16.to_be_bytes()); // version
+        data.extend_from_slice(&1u16.to_be_bytes()); // numTables
+
+        // Encoding record: Windows, Unicode full repertoire
+        data.extend_from_slice(&3u16.to_be_bytes()); // platformID
+        data.extend_from_slice(&10u16.to_be_bytes()); // encodingID (full Unicode)
+        data.extend_from_slice(&12u32.to_be_bytes()); // offset to subtable
+
+        // Format 12 subtable
+        let subtable_start = data.len();
+        // Format field is Fixed 16.16: 12.0 = 0x000C0000
+        data.extend_from_slice(&12u16.to_be_bytes()); // format (high word)
+        data.extend_from_slice(&0u16.to_be_bytes()); // format (low word, reserved)
+        let length_pos = data.len();
+        data.extend_from_slice(&0u32.to_be_bytes()); // length (placeholder)
+        data.extend_from_slice(&0u32.to_be_bytes()); // language
+        let num_groups_pos = data.len();
+        data.extend_from_slice(&0u32.to_be_bytes()); // numGroups (placeholder)
+
+        // Sort codepoints and build groups
+        let mut sorted_chars: Vec<(u32, u16)> =
+            mappings.iter().map(|(&cp, &gid)| (cp, gid)).collect();
+        sorted_chars.sort_by_key(|&(cp, _)| cp);
+
+        let mut num_groups = 0u32;
+        if !sorted_chars.is_empty() {
+            let mut group_start_cp = sorted_chars[0].0;
+            let mut group_end_cp = group_start_cp;
+            let mut group_start_gid = sorted_chars[0].1;
+
+            for i in 1..sorted_chars.len() {
+                let (cp, gid) = sorted_chars[i];
+                let expected_gid = group_start_gid.wrapping_add((cp - group_start_cp) as u16);
+
+                if cp == group_end_cp + 1 && gid == expected_gid {
+                    group_end_cp = cp;
+                } else {
+                    // Emit current group
+                    data.extend_from_slice(&group_start_cp.to_be_bytes());
+                    data.extend_from_slice(&group_end_cp.to_be_bytes());
+                    data.extend_from_slice(&(group_start_gid as u32).to_be_bytes());
+                    num_groups += 1;
+
+                    group_start_cp = cp;
+                    group_end_cp = cp;
+                    group_start_gid = gid;
+                }
+            }
+            // Emit final group
+            data.extend_from_slice(&group_start_cp.to_be_bytes());
+            data.extend_from_slice(&group_end_cp.to_be_bytes());
+            data.extend_from_slice(&(group_start_gid as u32).to_be_bytes());
+            num_groups += 1;
+        }
+
+        // Patch length and numGroups
+        let subtable_length = (data.len() - subtable_start) as u32;
+        data[length_pos..length_pos + 4].copy_from_slice(&subtable_length.to_be_bytes());
+        data[num_groups_pos..num_groups_pos + 4].copy_from_slice(&num_groups.to_be_bytes());
+
+        Ok(data)
+    }
+
     /// Build hmtx table
-    fn build_hmtx(&self, glyph_map: &HashMap<u16, u16>) -> ParseResult<Vec<u8>> {
+    fn build_hmtx(
+        &self,
+        glyph_map: &HashMap<u16, u16>,
+        inverse_map: &HashMap<u16, u16>,
+    ) -> ParseResult<Vec<u8>> {
         let mut data = Vec::new();
 
         // Get original widths from the font
@@ -452,12 +704,6 @@ impl TrueTypeSubsetter {
             char_to_glyph.insert(old_glyph as u32, old_glyph);
         }
         let widths = self.font.get_glyph_widths(&char_to_glyph)?;
-
-        // Create inverse map: new_glyph_id -> old_glyph_id
-        let mut inverse_map: HashMap<u16, u16> = HashMap::new();
-        for (&old_id, &new_id) in glyph_map {
-            inverse_map.insert(new_id, old_id);
-        }
 
         // For each new glyph ID in order, add its width
         for new_glyph_id in 0..glyph_map.len() as u16 {
@@ -481,6 +727,7 @@ impl TrueTypeSubsetter {
         cmap: Vec<u8>,
         hmtx: Vec<u8>,
         num_glyphs: u16,
+        loca_format: u16,
     ) -> ParseResult<Vec<u8>> {
         let mut font_data = Vec::new();
         let mut table_records = Vec::new();
@@ -504,10 +751,7 @@ impl TrueTypeSubsetter {
         // Add tables in specific order
         tables_to_write.push((b"cmap", cmap));
         tables_to_write.push((b"glyf", glyf));
-        tables_to_write.push((
-            b"head",
-            self.update_head_table(head_table, self.font.loca_format)?,
-        ));
+        tables_to_write.push((b"head", self.update_head_table(head_table, loca_format)?));
         tables_to_write.push((b"hhea", hhea_table));
         tables_to_write.push((b"hmtx", hmtx));
         tables_to_write.push((b"loca", loca));
@@ -537,9 +781,10 @@ impl TrueTypeSubsetter {
         let table_dir_size = 12 + num_tables as usize * 16;
         let mut current_offset = table_dir_size;
 
-        // First pass: calculate offsets and checksums
+        // First pass: calculate offsets and checksums.
+        // IMPORTANT: alignment padding must be applied BEFORE recording the offset,
+        // matching the second pass (data writing) which also pads before each table.
         for (tag, data) in &tables_to_write {
-            // Align to 4-byte boundary
             while current_offset % 4 != 0 {
                 current_offset += 1;
             }
@@ -987,5 +1232,404 @@ mod tests {
 
         // Char threshold should not exceed 50 (would skip too often)
         assert!(SUBSETTING_CHAR_THRESHOLD <= 50, "Char threshold too high");
+    }
+
+    // =========================================================================
+    // COMPOSITE GLYPH TESTS (Issue #176)
+    // =========================================================================
+
+    /// Build a minimal composite glyph data block.
+    /// `numberOfContours = -1`, followed by a standard 8-byte bounding box (zeros),
+    /// then component records.
+    fn build_composite_glyph(components: &[(u16, bool)]) -> Vec<u8> {
+        let mut data = Vec::new();
+        // numberOfContours = -1 (composite)
+        data.extend_from_slice(&(-1i16).to_be_bytes());
+        // xMin, yMin, xMax, yMax (all zero)
+        data.extend_from_slice(&[0u8; 8]);
+
+        for (i, &(glyph_id, has_scale)) in components.iter().enumerate() {
+            let is_last = i == components.len() - 1;
+            let mut flags: u16 = 0;
+            if !is_last {
+                flags |= COMPOSITE_MORE_COMPONENTS;
+            }
+            // Use byte args (not word args) for simplicity
+            if has_scale {
+                flags |= COMPOSITE_WE_HAVE_A_SCALE;
+            }
+            data.extend_from_slice(&flags.to_be_bytes());
+            data.extend_from_slice(&glyph_id.to_be_bytes());
+            // Arguments: two i8 offsets (dx=0, dy=0)
+            data.push(0);
+            data.push(0);
+            if has_scale {
+                // F2Dot14 scale = 1.0 = 0x4000
+                data.extend_from_slice(&0x4000u16.to_be_bytes());
+            }
+        }
+        data
+    }
+
+    /// Build a simple glyph data block (numberOfContours = 1, minimal).
+    fn build_simple_glyph() -> Vec<u8> {
+        let mut data = Vec::new();
+        // numberOfContours = 1
+        data.extend_from_slice(&1i16.to_be_bytes());
+        // xMin, yMin, xMax, yMax
+        data.extend_from_slice(&0i16.to_be_bytes());
+        data.extend_from_slice(&0i16.to_be_bytes());
+        data.extend_from_slice(&100i16.to_be_bytes());
+        data.extend_from_slice(&100i16.to_be_bytes());
+        // endPtsOfContours[0] = 3 (a square: 4 points, indices 0-3)
+        data.extend_from_slice(&3u16.to_be_bytes());
+        // instructionLength = 0
+        data.extend_from_slice(&0u16.to_be_bytes());
+        // flags: 4 points, all on-curve (flag = 0x01)
+        data.extend_from_slice(&[0x01, 0x01, 0x01, 0x01]);
+        // x-coordinates (relative): 0, 100, 0, -100
+        data.push(0);
+        data.push(100);
+        data.push(0);
+        data.push(100); // stored as u8 since flag doesn't indicate i16
+                        // y-coordinates (relative): 0, 0, 100, -100 (same pattern)
+        data.push(0);
+        data.push(0);
+        data.push(100);
+        data.push(100);
+        data
+    }
+
+    #[test]
+    fn test_extract_composite_components_returns_component_gids() {
+        // Composite glyph referencing GID 1 (stem) and GID 2 (dot)
+        let data = build_composite_glyph(&[(1, false), (2, false)]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![1, 2]);
+    }
+
+    #[test]
+    fn test_extract_composite_components_with_scale() {
+        // Composite with scale transformation on first component
+        let data = build_composite_glyph(&[(5, true), (7, false)]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![5, 7]);
+    }
+
+    #[test]
+    fn test_extract_composite_components_single_component() {
+        let data = build_composite_glyph(&[(42, false)]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![42]);
+    }
+
+    #[test]
+    fn test_extract_composite_returns_empty_for_simple_glyph() {
+        let data = build_simple_glyph();
+        let components = extract_composite_components(&data);
+        assert!(components.is_empty());
+    }
+
+    #[test]
+    fn test_extract_composite_returns_empty_for_short_data() {
+        let components = extract_composite_components(&[0xFF, 0xFF]);
+        assert!(components.is_empty());
+    }
+
+    #[test]
+    fn test_remap_composite_glyph_rewrites_component_gids() {
+        let data = build_composite_glyph(&[(1, false), (2, false)]);
+
+        let mut glyph_map = HashMap::new();
+        glyph_map.insert(1u16, 10u16);
+        glyph_map.insert(2u16, 20u16);
+
+        let remapped = remap_composite_glyph(&data, &glyph_map);
+        let components = extract_composite_components(&remapped);
+        assert_eq!(components, vec![10, 20]);
+    }
+
+    #[test]
+    fn test_remap_composite_glyph_leaves_simple_glyph_unchanged() {
+        let data = build_simple_glyph();
+        let glyph_map = HashMap::new();
+        let remapped = remap_composite_glyph(&data, &glyph_map);
+        assert_eq!(remapped, data);
+    }
+
+    #[test]
+    fn test_remap_composite_unmapped_gid_falls_back_to_notdef() {
+        let data = build_composite_glyph(&[(99, false)]);
+        let glyph_map = HashMap::new(); // No mappings → falls back to 0 (.notdef)
+        let remapped = remap_composite_glyph(&data, &glyph_map);
+        let components = extract_composite_components(&remapped);
+        assert_eq!(components, vec![0]);
+    }
+
+    // =========================================================================
+    // LOCA FORMAT OVERFLOW TESTS
+    // =========================================================================
+
+    #[test]
+    fn test_loca_short_format_max_offset_constant() {
+        assert_eq!(LOCA_SHORT_FORMAT_MAX_OFFSET, 0x1_FFFE);
+        assert_eq!(LOCA_SHORT_FORMAT_MAX_OFFSET, 131070);
+    }
+
+    #[test]
+    fn test_we_have_instructions_constant_has_correct_value() {
+        assert_eq!(COMPOSITE_WE_HAVE_INSTRUCTIONS, 0x0100);
+    }
+
+    // =========================================================================
+    // COMPOSITE GLYPH TRANSFORMATION BRANCH TESTS (Item 6)
+    // =========================================================================
+
+    /// Build a composite glyph with explicit flags for each component.
+    /// Each tuple is (glyph_id, extra_flags). The function always sets
+    /// MORE_COMPONENTS for all but the last component.
+    fn build_composite_glyph_with_flags(components: &[(u16, u16)]) -> Vec<u8> {
+        let mut data = Vec::new();
+        data.extend_from_slice(&(-1i16).to_be_bytes()); // composite
+        data.extend_from_slice(&[0u8; 8]); // bounding box
+
+        for (i, &(glyph_id, extra_flags)) in components.iter().enumerate() {
+            let is_last = i == components.len() - 1;
+            let mut flags = extra_flags;
+            if !is_last {
+                flags |= COMPOSITE_MORE_COMPONENTS;
+            }
+            data.extend_from_slice(&flags.to_be_bytes());
+            data.extend_from_slice(&glyph_id.to_be_bytes());
+
+            // Arguments depend on ARG_1_AND_2_ARE_WORDS
+            if flags & COMPOSITE_ARG_1_AND_2_ARE_WORDS != 0 {
+                data.extend_from_slice(&0i16.to_be_bytes()); // dx
+                data.extend_from_slice(&0i16.to_be_bytes()); // dy
+            } else {
+                data.push(0); // dx i8
+                data.push(0); // dy i8
+            }
+
+            // Transformation data
+            if flags & COMPOSITE_WE_HAVE_A_TWO_BY_TWO != 0 {
+                // 4 x F2Dot14 = 8 bytes (identity matrix)
+                data.extend_from_slice(&0x4000u16.to_be_bytes()); // m00 = 1.0
+                data.extend_from_slice(&0x0000u16.to_be_bytes()); // m01 = 0.0
+                data.extend_from_slice(&0x0000u16.to_be_bytes()); // m10 = 0.0
+                data.extend_from_slice(&0x4000u16.to_be_bytes()); // m11 = 1.0
+            } else if flags & COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE != 0 {
+                // 2 x F2Dot14 = 4 bytes
+                data.extend_from_slice(&0x4000u16.to_be_bytes()); // xScale = 1.0
+                data.extend_from_slice(&0x4000u16.to_be_bytes()); // yScale = 1.0
+            } else if flags & COMPOSITE_WE_HAVE_A_SCALE != 0 {
+                // 1 x F2Dot14 = 2 bytes
+                data.extend_from_slice(&0x4000u16.to_be_bytes()); // scale = 1.0
+            }
+        }
+        data
+    }
+
+    #[test]
+    fn test_extract_composite_with_x_and_y_scale() {
+        let data =
+            build_composite_glyph_with_flags(&[(10, COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE), (20, 0)]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![10, 20]);
+    }
+
+    #[test]
+    fn test_extract_composite_with_two_by_two() {
+        let data =
+            build_composite_glyph_with_flags(&[(30, COMPOSITE_WE_HAVE_A_TWO_BY_TWO), (40, 0)]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![30, 40]);
+    }
+
+    #[test]
+    fn test_extract_composite_with_word_args() {
+        let data =
+            build_composite_glyph_with_flags(&[(50, COMPOSITE_ARG_1_AND_2_ARE_WORDS), (60, 0)]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![50, 60]);
+    }
+
+    #[test]
+    fn test_extract_composite_with_all_flags_combined() {
+        let data = build_composite_glyph_with_flags(&[
+            (
+                70,
+                COMPOSITE_ARG_1_AND_2_ARE_WORDS | COMPOSITE_WE_HAVE_A_TWO_BY_TWO,
+            ),
+            (80, COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE),
+        ]);
+        let components = extract_composite_components(&data);
+        assert_eq!(components, vec![70, 80]);
+    }
+
+    #[test]
+    fn test_expand_composite_glyphs_transitive() {
+        // GID 3 is composite → GID 2, GID 2 is composite → GID 1, GID 1 is simple.
+        // Starting with {GID 3}, expand must yield {GID 1, GID 2, GID 3}.
+        let glyph1 = build_simple_glyph();
+        let glyph2 = build_composite_glyph(&[(1, false)]);
+        let glyph3 = build_composite_glyph(&[(2, false)]);
+
+        // Verify direct components
+        assert_eq!(extract_composite_components(&glyph3), vec![2]);
+        assert_eq!(extract_composite_components(&glyph2), vec![1]);
+        assert!(extract_composite_components(&glyph1).is_empty());
+
+        // Simulate worklist expansion (same algorithm as expand_composite_glyphs)
+        let glyph_data: HashMap<u16, Vec<u8>> = [(1u16, glyph1), (2u16, glyph2), (3u16, glyph3)]
+            .into_iter()
+            .collect();
+
+        let mut needed: HashSet<u16> = [3u16].into_iter().collect();
+        let mut worklist: Vec<u16> = needed.iter().copied().collect();
+        while let Some(gid) = worklist.pop() {
+            if let Some(data) = glyph_data.get(&gid) {
+                for comp in extract_composite_components(data) {
+                    if needed.insert(comp) {
+                        worklist.push(comp);
+                    }
+                }
+            }
+        }
+
+        assert!(needed.contains(&1), "GID 1 must be included (transitive)");
+        assert!(needed.contains(&2), "GID 2 must be included (direct)");
+        assert!(needed.contains(&3), "GID 3 must be included (original)");
+        assert_eq!(needed.len(), 3);
+    }
+
+    // =========================================================================
+    // CMAP FORMAT 12 TESTS
+    // =========================================================================
+
+    /// Helper: parse cmap header from raw bytes and return (numTables, first encoding record)
+    fn parse_cmap_header(data: &[u8]) -> (u16, u16, u16, u32) {
+        let num_tables = u16::from_be_bytes([data[2], data[3]]);
+        let platform_id = u16::from_be_bytes([data[4], data[5]]);
+        let encoding_id = u16::from_be_bytes([data[6], data[7]]);
+        let offset = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
+        (num_tables, platform_id, encoding_id, offset)
+    }
+
+    #[test]
+    fn test_bmp_only_produces_format4() {
+        let subsetter = TrueTypeSubsetter {
+            font_data: vec![],
+            font: TrueTypeFont::empty_for_test(),
+        };
+        let mut mappings = HashMap::new();
+        mappings.insert(0x0041u32, 1u16); // 'A'
+        mappings.insert(0x0042u32, 2u16); // 'B'
+
+        let data = subsetter.build_cmap_table(&mappings).unwrap();
+        let (num_tables, platform_id, encoding_id, _offset) = parse_cmap_header(&data);
+        assert_eq!(num_tables, 1);
+        assert_eq!(platform_id, 3);
+        assert_eq!(encoding_id, 1, "BMP-only should use encoding 1 (Format 4)");
+        // Format field at subtable start (offset 12)
+        let format = u16::from_be_bytes([data[12], data[13]]);
+        assert_eq!(format, 4);
+    }
+
+    #[test]
+    fn test_smp_produces_format12() {
+        let subsetter = TrueTypeSubsetter {
+            font_data: vec![],
+            font: TrueTypeFont::empty_for_test(),
+        };
+        let mut mappings = HashMap::new();
+        mappings.insert(0x0041u32, 1u16); // 'A'
+        mappings.insert(0x1F600u32, 3u16); // 😀
+
+        let data = subsetter.build_cmap_table(&mappings).unwrap();
+        let (num_tables, platform_id, encoding_id, _offset) = parse_cmap_header(&data);
+        assert_eq!(num_tables, 1);
+        assert_eq!(platform_id, 3);
+        assert_eq!(
+            encoding_id, 10,
+            "SMP chars should use encoding 10 (Format 12)"
+        );
+        // Format field: Fixed 16.16, high word = 12
+        let format_hi = u16::from_be_bytes([data[12], data[13]]);
+        assert_eq!(format_hi, 12);
+    }
+
+    #[test]
+    fn test_format12_byte_layout_roundtrip() {
+        let subsetter = TrueTypeSubsetter {
+            font_data: vec![],
+            font: TrueTypeFont::empty_for_test(),
+        };
+        let mut mappings = HashMap::new();
+        mappings.insert(0x1F600u32, 1u16);
+        mappings.insert(0x1F601u32, 2u16);
+        mappings.insert(0x1F602u32, 3u16);
+
+        let data = subsetter.build_cmap_format12(&mappings).unwrap();
+
+        // Header: version(2) + numTables(2) + encoding record(8) = 12 bytes
+        assert_eq!(data.len() >= 12, true);
+        // Subtable starts at offset 12
+        let subtable = &data[12..];
+
+        // format = 12 (Fixed 16.16: high u16 = 12, low u16 = 0)
+        let format_hi = u16::from_be_bytes([subtable[0], subtable[1]]);
+        assert_eq!(format_hi, 12);
+        // length
+        let length = u32::from_be_bytes([subtable[4], subtable[5], subtable[6], subtable[7]]);
+        assert_eq!(length as usize, subtable.len());
+        // language = 0
+        let language = u32::from_be_bytes([subtable[8], subtable[9], subtable[10], subtable[11]]);
+        assert_eq!(language, 0);
+        // numGroups = 1 (contiguous range)
+        let num_groups =
+            u32::from_be_bytes([subtable[12], subtable[13], subtable[14], subtable[15]]);
+        assert_eq!(num_groups, 1);
+        // Group record: startCharCode, endCharCode, startGlyphID
+        let start_cp = u32::from_be_bytes([subtable[16], subtable[17], subtable[18], subtable[19]]);
+        let end_cp = u32::from_be_bytes([subtable[20], subtable[21], subtable[22], subtable[23]]);
+        let start_gid =
+            u32::from_be_bytes([subtable[24], subtable[25], subtable[26], subtable[27]]);
+        assert_eq!(start_cp, 0x1F600);
+        assert_eq!(end_cp, 0x1F602);
+        assert_eq!(start_gid, 1);
+    }
+
+    #[test]
+    fn test_format12_noncontiguous_produces_multiple_groups() {
+        let subsetter = TrueTypeSubsetter {
+            font_data: vec![],
+            font: TrueTypeFont::empty_for_test(),
+        };
+        let mut mappings = HashMap::new();
+        mappings.insert(0x1F600u32, 1u16);
+        mappings.insert(0x1F700u32, 2u16); // gap from 0x1F600
+
+        let data = subsetter.build_cmap_format12(&mappings).unwrap();
+        let subtable = &data[12..];
+        let num_groups =
+            u32::from_be_bytes([subtable[12], subtable[13], subtable[14], subtable[15]]);
+        assert_eq!(
+            num_groups, 2,
+            "Non-contiguous codepoints should produce 2 groups"
+        );
+    }
+
+    #[test]
+    fn test_format4_empty_mapping() {
+        let subsetter = TrueTypeSubsetter {
+            font_data: vec![],
+            font: TrueTypeFont::empty_for_test(),
+        };
+        let mappings = HashMap::new();
+        let data = subsetter.build_cmap_table(&mappings).unwrap();
+        // Should produce Format 4 (no SMP chars) with terminal segment only
+        let format = u16::from_be_bytes([data[12], data[13]]);
+        assert_eq!(format, 4);
     }
 }

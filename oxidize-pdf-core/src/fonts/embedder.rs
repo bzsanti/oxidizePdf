@@ -133,16 +133,12 @@ impl<'a> FontEmbedder<'a> {
         dict.set("Type", Object::Name("Font".into()));
 
         let font_name = self.font.postscript_name();
-        let cid_font_subtype =
-            if CjkFontType::should_use_cidfonttype2_for_preview_compatibility(font_name) {
-                tracing::debug!(
-                    "Using CIDFontType2 for CJK font {} (Preview.app compatibility)",
-                    font_name
-                );
-                "CIDFontType2" // Force CIDFontType2 for CJK fonts to fix Preview.app rendering
-            } else {
-                "CIDFontType2" // Default for this embedder
-            };
+        let is_cff = matches!(self.font.format, super::FontFormat::OpenType);
+        let cid_font_subtype = if CjkFontType::should_use_cidfonttype2(is_cff) {
+            "CIDFontType2" // TrueType fonts
+        } else {
+            "CIDFontType0" // CFF/OpenType fonts
+        };
 
         dict.set("Subtype", Object::Name(cid_font_subtype.into()));
         dict.set("BaseFont", Object::Name(font_name.into()));

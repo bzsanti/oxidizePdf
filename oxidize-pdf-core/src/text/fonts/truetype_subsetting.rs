@@ -241,16 +241,24 @@ impl TrueTypeSubsetter {
         let _version = read_u16(&mut cursor)?;
         let num_tables = read_u16(&mut cursor)?;
 
-        // Find Unicode cmap (platform 3, encoding 1 or platform 0)
+        // Find Unicode cmap: prefer (3,10) Format 12 > (3,1) Format 4 > (0,_) Unicode
         let mut unicode_offset = None;
+        let mut best_priority = 0u8;
         for _ in 0..num_tables {
             let platform_id = read_u16(&mut cursor)?;
             let encoding_id = read_u16(&mut cursor)?;
             let offset = read_u32(&mut cursor)?;
 
-            if (platform_id == 3 && encoding_id == 1) || platform_id == 0 {
+            // Prefer (3,10) Format 12 > (3,1) Format 4 > (0,_) Unicode
+            let priority = match (platform_id, encoding_id) {
+                (3, 10) => 3u8,
+                (3, 1) => 2u8,
+                (0, _) => 1u8,
+                _ => 0u8,
+            };
+            if priority > best_priority {
+                best_priority = priority;
                 unicode_offset = Some(offset);
-                break;
             }
         }
 

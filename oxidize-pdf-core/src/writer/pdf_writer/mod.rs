@@ -2,6 +2,7 @@ use crate::document::Document;
 use crate::error::{PdfError, Result};
 use crate::objects::{Dictionary, Object, ObjectId};
 use crate::text::fonts::embedding::CjkFontType;
+use crate::text::fonts::truetype::CmapSubtable;
 use crate::writer::{ObjectStreamConfig, ObjectStreamWriter, XRefStreamWriter};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -1448,16 +1449,13 @@ impl<W: Write> PdfWriter<W> {
         // Write CIDFont (descendant font)
         let mut cid_font = Dictionary::new();
         cid_font.set("Type", Object::Name("Font".to_string()));
-        // Use appropriate CIDFont subtype based on font format
-        let cid_font_subtype =
-            if CjkFontType::should_use_cidfonttype2_for_preview_compatibility(font_name) {
-                "CIDFontType2" // Force CIDFontType2 for CJK fonts to fix Preview.app rendering
-            } else {
-                match font.format {
-                    crate::fonts::FontFormat::OpenType => "CIDFontType0", // CFF/OpenType fonts
-                    crate::fonts::FontFormat::TrueType => "CIDFontType2", // TrueType fonts
-                }
-            };
+        // Use ISO 32000-1 §9.7.4 correct CIDFont subtype based on font format
+        let is_cff = matches!(font.format, crate::fonts::FontFormat::OpenType);
+        let cid_font_subtype = if CjkFontType::should_use_cidfonttype2(is_cff) {
+            "CIDFontType2" // TrueType fonts
+        } else {
+            "CIDFontType0" // CFF/OpenType fonts
+        };
         cid_font.set("Subtype", Object::Name(cid_font_subtype.to_string()));
         cid_font.set("BaseFont", Object::Name(font_name.to_string()));
 
@@ -1544,11 +1542,7 @@ impl<W: Write> PdfWriter<W> {
         // Try to calculate from actual font metrics
         if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
             if let Ok(cmap_tables) = tt_font.parse_cmap() {
-                if let Some(cmap) = cmap_tables
-                    .iter()
-                    .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-                {
+                if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                     if let Ok(widths) = tt_font.get_glyph_widths(&cmap.mappings) {
                         // NOTE: get_glyph_widths already returns widths in PDF units (1000 per em)
 
@@ -1597,11 +1591,7 @@ impl<W: Write> PdfWriter<W> {
             let char_to_glyph = {
                 // Parse cmap to get original mappings
                 if let Ok(cmap_tables) = tt_font.parse_cmap() {
-                    if let Some(cmap) = cmap_tables
-                        .iter()
-                        .find(|t| t.platform_id == 3 && t.encoding_id == 1)
-                        .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-                    {
+                    if let Some(cmap) = CmapSubtable::select_best_or_first(&cmap_tables) {
                         // If we have subset_mapping, filter to only include used characters
                         if let Some(subset_map) = subset_mapping {
                             let mut filtered = HashMap::new();
@@ -1747,14 +1737,10 @@ impl<W: Write> PdfWriter<W> {
             let tt_font = TrueTypeFont::parse(font.data.clone())?;
             let cmap_tables = tt_font.parse_cmap()?;
 
-            // Find the best cmap table (Unicode)
-            let cmap = cmap_tables
-                .iter()
-                .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode
-                .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0)) // Unicode
-                .ok_or_else(|| {
-                    crate::error::PdfError::FontError("No Unicode cmap table found".to_string())
-                })?;
+            // Find the best cmap table (prefer Format 12 for CJK)
+            let cmap = CmapSubtable::select_best_or_first(&cmap_tables).ok_or_else(|| {
+                crate::error::PdfError::FontError("No Unicode cmap table found".to_string())
+            })?;
 
             cmap.mappings.clone()
         };
@@ -1836,13 +1822,8 @@ impl<W: Write> PdfWriter<W> {
 
         if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
             if let Ok(cmap_tables) = tt_font.parse_cmap() {
-                // Find the best cmap table (Unicode)
-                if let Some(cmap_table) = cmap_tables
-                    .iter()
-                    .find(|t| t.platform_id == 3 && t.encoding_id == 1) // Windows Unicode
-                    .or_else(|| cmap_tables.iter().find(|t| t.platform_id == 0))
-                // Unicode
-                {
+                // Find the best cmap table (prefer Format 12 for CJK)
+                if let Some(cmap_table) = CmapSubtable::select_best_or_first(&cmap_tables) {
                     // For Identity-H encoding, we use Unicode code points as CIDs
                     // So the ToUnicode CMap should map CID (=Unicode) → Unicode
                     for (&unicode, &glyph_id) in &cmap_table.mappings {
