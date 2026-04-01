@@ -133,38 +133,23 @@ impl CjkFontType {
         None
     }
 
-    /// Determine if we should use CIDFontType2 for this font to ensure Preview.app compatibility
+    /// Determine if a CID font should use CIDFontType2 subtype.
     ///
-    /// # macOS Preview.app Workaround
+    /// Per ISO 32000-1 §9.7.4:
+    /// - CIDFontType0: CFF/OpenType fonts (PostScript outlines)
+    /// - CIDFontType2: TrueType fonts (TrueType outlines)
     ///
-    /// macOS Preview.app has a documented bug where it fails to render CIDFontType0 (CFF/PostScript)
-    /// fonts correctly, even when they are properly embedded. However, it renders CIDFontType2
-    /// (TrueType) fonts correctly regardless of the actual font format.
-    ///
-    /// According to Stack Overflow discussions, "embedding the same font as a CIDFontType2 font
-    /// instead of CIDFontType0 makes Preview show the desired result" while maintaining
-    /// compatibility with other PDF viewers.
-    ///
-    /// For CJK fonts, this workaround is particularly important because:
-    /// 1. CJK fonts are commonly in OpenType CFF format (like Source Han Sans)
-    /// 2. Preview.app is widely used on macOS for PDF viewing
-    /// 3. The alternative is to tell users to install system fonts or use different viewers
-    ///
-    /// # Technical Details
-    ///
-    /// This function returns `true` for CJK fonts regardless of their actual format, causing
-    /// the PDF writer to use CIDFontType2 instead of the technically correct CIDFontType0.
-    /// Non-CJK fonts continue to use the format-appropriate CIDFont type.
+    /// Using the wrong subtype causes PDF viewers to fail to render glyphs.
+    /// A CFF font declared as CIDFontType2 is structurally invalid.
     ///
     /// # Arguments
-    /// * `font_name` - The PostScript name of the font
+    /// * `is_cff` - Whether the font has CFF outlines (OpenType/CFF)
     ///
     /// # Returns
-    /// * `true` if this font should use CIDFontType2 (either because it's CJK or actually TrueType)
-    /// * `false` if this font should use format-appropriate CIDFont type
-    pub fn should_use_cidfonttype2_for_preview_compatibility(font_name: &str) -> bool {
-        // Always use CIDFontType2 for CJK fonts (Preview.app compatibility workaround)
-        Self::detect_from_name(font_name).is_some()
+    /// * `true` for TrueType fonts → CIDFontType2
+    /// * `false` for CFF/OpenType fonts → CIDFontType0
+    pub fn should_use_cidfonttype2(is_cff: bool) -> bool {
+        !is_cff
     }
 }
 
@@ -1075,5 +1060,27 @@ mod tests {
         if let Some(Object::Array(bbox)) = desc_dict.get("FontBBox") {
             assert_eq!(bbox.len(), 4);
         }
+    }
+
+    // =========================================================================
+    // CIDFontType selection tests (Issue #165)
+    // =========================================================================
+
+    #[test]
+    fn test_cff_font_uses_cidfonttype0() {
+        // CFF/OpenType fonts MUST use CIDFontType0 per ISO 32000-1 §9.7.4
+        assert!(
+            !CjkFontType::should_use_cidfonttype2(true),
+            "CFF → CIDFontType0"
+        );
+    }
+
+    #[test]
+    fn test_truetype_font_uses_cidfonttype2() {
+        // TrueType fonts MUST use CIDFontType2 per ISO 32000-1 §9.7.4
+        assert!(
+            CjkFontType::should_use_cidfonttype2(false),
+            "TrueType → CIDFontType2"
+        );
     }
 }

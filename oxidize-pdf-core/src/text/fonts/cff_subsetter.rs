@@ -263,8 +263,17 @@ pub fn subset_cff_font(
         }
     }
 
+    // Build old_gid→unicode mapping for CID charset (Identity-H requires CID = Unicode codepoint)
+    let mut old_gid_to_unicode: HashMap<u16, u32> = HashMap::new();
+    for ch in used_chars {
+        let codepoint = *ch as u32;
+        if let Some(&gid) = unicode_to_gid.get(&codepoint) {
+            old_gid_to_unicode.entry(gid).or_insert(codepoint);
+        }
+    }
+
     // Subset the CFF table
-    let new_cff = match subset_cff_table(cff_data, &needed_gids, &gid_remap) {
+    let new_cff = match subset_cff_table(cff_data, &needed_gids, &gid_remap, &old_gid_to_unicode) {
         Ok(data) => data,
         Err(e) => {
             tracing::debug!(
@@ -1098,6 +1107,7 @@ fn subset_cid_cff_table(
     cff: &[u8],
     needed_gids: &[u16],
     gid_remap: &HashMap<u16, u16>,
+    old_gid_to_unicode: &HashMap<u16, u32>,
     top_dict_bytes: &[u8],
     top_dict_offsets: &TopDictOffsets,
     name_index: &CffIndex,
@@ -1242,16 +1252,35 @@ fn subset_cid_cff_table(
     }
 
     // Build new CID Charset (format 0: format byte + CID for each new GID >= 1)
-    // For CID fonts, charset entries are CIDs (same as original GIDs for standard CID-keyed fonts)
-    // We use old GID as CID since CID-keyed fonts typically map GID=CID
+    // With Identity-H encoding, the content stream sends Unicode codepoints as CIDs.
+    // The charset must map each new GID to its Unicode codepoint so that
+    // CID (= Unicode codepoint) resolves to the correct GID in the subset font.
     let mut new_charset: Vec<u8> = Vec::new();
     new_charset.push(0); // format 0
     for (new_gid_idx, &old_gid) in sorted_old_gids.iter().enumerate() {
         if new_gid_idx == 0 {
             continue; // GID 0 = .notdef, not listed
         }
-        // Use old GID as CID (standard for CID-keyed fonts)
-        new_charset.extend_from_slice(&old_gid.to_be_bytes());
+        // Use Unicode codepoint as CID for Identity-H compatibility.
+        // CFF CIDs are 16-bit (CFF spec §7), so SMP codepoints (>= U+10000)
+        // cannot be used directly. Fall back to old_gid which preserves the
+        // glyph identity within the subset even though copy/search won't work
+        // for that specific character.
+        let cid = old_gid_to_unicode
+            .get(&old_gid)
+            .copied()
+            .unwrap_or(old_gid as u32);
+        let cid16 = if cid > 0xFFFF {
+            tracing::debug!(
+                "CFF subsetter: U+{:X} exceeds 16-bit CID range for GID {}, using GID as CID",
+                cid,
+                old_gid
+            );
+            old_gid
+        } else {
+            cid as u16
+        };
+        new_charset.extend_from_slice(&cid16.to_be_bytes());
     }
 
     // Extract each needed FD dict and its Private DICT
@@ -1456,10 +1485,12 @@ fn subset_cid_cff_table(
 ///
 /// `needed_gids` must be sorted and include GID 0 (.notdef).
 /// `gid_remap` maps old GID → new GID.
+/// `old_gid_to_unicode` maps old GID → Unicode codepoint (for CID charset with Identity-H).
 fn subset_cff_table(
     cff: &[u8],
     needed_gids: &[u16],
     gid_remap: &HashMap<u16, u16>,
+    old_gid_to_unicode: &HashMap<u16, u32>,
 ) -> ParseResult<Vec<u8>> {
     if cff.len() < 4 {
         return Err(ParseError::SyntaxError {
@@ -1519,6 +1550,7 @@ fn subset_cff_table(
             cff,
             needed_gids,
             gid_remap,
+            old_gid_to_unicode,
             top_dict_bytes,
             &top_dict_offsets,
             &name_index,
