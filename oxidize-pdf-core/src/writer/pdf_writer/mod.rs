@@ -2407,18 +2407,18 @@ impl<W: Write> PdfWriter<W> {
 
         page_dict.set("Resources", Object::Dictionary(resources));
 
-        // Handle form widget annotations
-        if let Some(Object::Array(annots)) = page_dict.get("Annots") {
-            let mut new_annots = Vec::new();
+        // Collect all annotation references for the /Annots array
+        let mut annot_refs: Vec<Object> = Vec::new();
 
+        // 1. Process widget annotations already in page_dict (legacy form field path)
+        if let Some(Object::Array(annots)) = page_dict.get("Annots") {
             for annot in annots {
                 if let Object::Dictionary(ref annot_dict) = annot {
                     if let Some(Object::Name(subtype)) = annot_dict.get("Subtype") {
                         if subtype == "Widget" {
-                            // Process widget annotation
                             let widget_id = self.allocate_object_id();
                             self.write_object(widget_id, annot.clone())?;
-                            new_annots.push(Object::Reference(widget_id));
+                            annot_refs.push(Object::Reference(widget_id));
 
                             // Track widget for form fields
                             if let Some(Object::Name(_ft)) = annot_dict.get("FT") {
@@ -2435,12 +2435,37 @@ impl<W: Write> PdfWriter<W> {
                         }
                     }
                 }
-                new_annots.push(annot.clone());
+                annot_refs.push(annot.clone());
             }
+        }
 
-            if !new_annots.is_empty() {
-                page_dict.set("Annots", Object::Array(new_annots));
+        // 2. Write annotations from Page.annotations() (programmatic annotations)
+        //    Handles highlights, text notes, stamps, links, etc. added via
+        //    page.add_annotation(). Each is written as an indirect object.
+        for annotation in page.annotations() {
+            let annot_id = self.allocate_object_id();
+            let annot_dict = annotation.to_dict();
+            self.write_object(annot_id, Object::Dictionary(annot_dict))?;
+            annot_refs.push(Object::Reference(annot_id));
+
+            // Track widget annotations for AcroForm if they come through this path
+            if annotation.annotation_type == crate::annotations::AnnotationType::Widget {
+                if let Some(Object::String(field_name)) = annotation.properties.get("T") {
+                    self.field_widget_map
+                        .entry(field_name.clone())
+                        .or_default()
+                        .push(annot_id);
+                    self.field_id_map.insert(field_name.clone(), annot_id);
+                    self.form_field_ids.push(annot_id);
+                }
             }
+        }
+
+        // Set or remove /Annots based on whether we have any
+        if !annot_refs.is_empty() {
+            page_dict.set("Annots", Object::Array(annot_refs));
+        } else {
+            page_dict.remove("Annots");
         }
 
         self.write_object(page_id, Object::Dictionary(page_dict))?;

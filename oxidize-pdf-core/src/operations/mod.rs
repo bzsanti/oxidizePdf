@@ -3,6 +3,7 @@
 //! This module provides high-level operations for manipulating PDF documents
 //! such as splitting, merging, rotating pages, and reordering.
 
+pub mod chunk_page_mapper;
 pub mod extract_images;
 pub mod merge;
 pub mod overlay;
@@ -11,8 +12,11 @@ pub mod page_extraction;
 pub mod pdf_ocr_converter;
 pub mod reorder;
 pub mod rotate;
+pub mod semantic_redactor;
+pub mod source_highlighter;
 pub mod split;
 
+pub use chunk_page_mapper::ChunkPageMapper;
 pub use extract_images::{
     extract_images_from_pages, extract_images_from_pdf, ExtractImagesOptions, ExtractedImage,
     ImageExtractor,
@@ -30,6 +34,14 @@ pub use reorder::{
     ReorderOptions,
 };
 pub use rotate::{rotate_all_pages, rotate_pdf_pages, PageRotator, RotateOptions, RotationAngle};
+pub use semantic_redactor::{
+    RedactionConfig, RedactionEntry, RedactionReport, RedactionStyle, SemanticRedactor,
+    SemanticRedactorError, SemanticRedactorResult,
+};
+pub use source_highlighter::{
+    fragment_to_highlight_rect, HighlightStyle, IndexedFragment, SourceHighlighter,
+    SourceHighlighterError, SourceHighlighterResult, TextPositionIndex,
+};
 pub use split::{split_into_pages, split_pdf, PdfSplitter, SplitMode, SplitOptions};
 
 use crate::error::PdfError;
