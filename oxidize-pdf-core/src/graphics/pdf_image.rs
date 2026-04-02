@@ -129,8 +129,8 @@ impl Image {
         };
 
         Ok(Image {
-            data,                     // Store original PNG data, not decoded data
-            format: ImageFormat::Png, // Format represents original PNG format
+            data: decoded.image_data, // Store decoded pixel data, not the PNG container
+            format: ImageFormat::Png,
             width: decoded.width,
             height: decoded.height,
             color_space,
@@ -350,25 +350,47 @@ impl Image {
             Object::Integer(self.bits_per_component as i64),
         );
 
-        // Filter based on image format
+        // Build stream data based on image format
         match self.format {
             ImageFormat::Jpeg => {
                 dict.set("Filter", Object::Name("DCTDecode".to_string()));
+                dict.set("Length", Object::Integer(self.data.len() as i64));
+                Object::Stream(dict, self.data.clone())
             }
             ImageFormat::Png => {
+                use flate2::write::ZlibEncoder;
+                use flate2::Compression;
+                use std::io::Write as IoWrite;
+                // self.data holds decoded pixel bytes — compress them for the PDF stream
                 dict.set("Filter", Object::Name("FlateDecode".to_string()));
+                let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                encoder
+                    .write_all(&self.data)
+                    .expect("zlib compression failed");
+                let compressed = encoder.finish().expect("zlib finish failed");
+                dict.set("Length", Object::Integer(compressed.len() as i64));
+                Object::Stream(dict, compressed)
             }
             ImageFormat::Tiff => {
-                // TIFF can use various filters, but commonly LZW or FlateDecode
+                use flate2::write::ZlibEncoder;
+                use flate2::Compression;
+                use std::io::Write as IoWrite;
+                // TIFF can use various filters; use FlateDecode for compatibility
                 dict.set("Filter", Object::Name("FlateDecode".to_string()));
+                let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+                encoder
+                    .write_all(&self.data)
+                    .expect("zlib compression failed");
+                let compressed = encoder.finish().expect("zlib finish failed");
+                dict.set("Length", Object::Integer(compressed.len() as i64));
+                Object::Stream(dict, compressed)
             }
             ImageFormat::Raw => {
-                // No filter for raw RGB/Gray data - may need FlateDecode for compression
+                // No filter for raw RGB/Gray data
+                dict.set("Length", Object::Integer(self.data.len() as i64));
+                Object::Stream(dict, self.data.clone())
             }
         }
-
-        // Create stream with image data
-        Object::Stream(dict, self.data.clone())
     }
 
     /// Convert to PDF XObject with SMask for transparency
@@ -1237,12 +1259,14 @@ mod tests {
                 0xAE, 0x42, 0x60, 0x82, // CRC
             ]);
 
-            let image = Image::from_png_data(png_data.clone()).unwrap();
+            let image = Image::from_png_data(png_data).unwrap();
 
             assert_eq!(image.width(), 1);
             assert_eq!(image.height(), 1);
             assert_eq!(image.format(), ImageFormat::Png);
-            assert_eq!(image.data(), png_data);
+            // from_png_data decodes the PNG — data() returns raw pixel bytes, not the PNG container.
+            // This 1x1 black RGB pixel decodes to [0, 0, 0].
+            assert_eq!(image.data(), &[0u8, 0, 0]);
         }
 
         #[test]
@@ -1357,7 +1381,9 @@ mod tests {
             assert_eq!(image.width(), 1);
             assert_eq!(image.height(), 1);
             assert_eq!(image.format(), ImageFormat::Png);
-            assert_eq!(image.data(), png_data);
+            // from_png_file decodes the PNG — data() returns raw pixel bytes, not the PNG container.
+            // This 1x1 black RGB pixel decodes to [0, 0, 0].
+            assert_eq!(image.data(), &[0u8, 0, 0]);
         }
 
         #[test]
@@ -1539,7 +1565,14 @@ mod tests {
                     dict.get("Filter").unwrap(),
                     &Object::Name("FlateDecode".to_string())
                 );
-                assert_eq!(data, png_data);
+                // Stream data is zlib-compressed decoded pixel bytes — not the PNG container.
+                // Decompress and verify the 1x1 black RGB pixel decodes to [0, 0, 0].
+                use flate2::read::ZlibDecoder;
+                use std::io::Read as IoRead;
+                let mut decoder = ZlibDecoder::new(data.as_slice());
+                let mut decompressed = Vec::new();
+                decoder.read_to_end(&mut decompressed).unwrap();
+                assert_eq!(decompressed, vec![0u8, 0, 0]);
             } else {
                 panic!("Expected Stream object");
             }
@@ -1584,7 +1617,13 @@ mod tests {
                     dict.get("Filter").unwrap(),
                     &Object::Name("FlateDecode".to_string())
                 );
-                assert_eq!(data, tiff_data);
+                // Stream data is zlib-compressed TIFF data. Decompress and verify round-trip.
+                use flate2::read::ZlibDecoder;
+                use std::io::Read as IoRead;
+                let mut decoder = ZlibDecoder::new(data.as_slice());
+                let mut decompressed = Vec::new();
+                decoder.read_to_end(&mut decompressed).unwrap();
+                assert_eq!(decompressed, tiff_data);
             } else {
                 panic!("Expected Stream object");
             }
@@ -2174,7 +2213,10 @@ mod tests {
                     assert_eq!(image.width(), 200);
                     assert_eq!(image.height(), 100);
                 }
-                assert_eq!(image.data(), data);
+                // For PNG, image.data() holds decoded pixel bytes, not the PNG container
+                if expected_format != ImageFormat::Png {
+                    assert_eq!(image.data(), data);
+                }
 
                 // Verify PDF object conversion
                 let pdf_obj = image.to_pdf_object();
@@ -2204,10 +2246,158 @@ mod tests {
                         &Object::Name(expected_filter.to_string())
                     );
                     assert_eq!(dict.get("BitsPerComponent").unwrap(), &Object::Integer(8));
-                    assert_eq!(stream_data, data);
+                    // JPEG: stream is the raw data. PNG/TIFF: stream is FlateDecode-compressed.
+                    if expected_format == ImageFormat::Jpeg {
+                        assert_eq!(stream_data, data);
+                    } else {
+                        // Verify stream does not contain a PNG container header
+                        assert!(
+                            !stream_data.starts_with(b"\x89PNG"),
+                            "PDF stream must not contain a PNG container"
+                        );
+                        assert!(!stream_data.is_empty());
+                    }
                 } else {
                     panic!("Expected Stream object for format {expected_format:?}");
                 }
+            }
+        }
+
+        /// Build a minimal, spec-correct PNG from raw pixel data.
+        ///
+        /// `color_type` 2 = RGB (3 channels), 0 = Grayscale (1 channel).
+        /// `pixels` must be `width * height * channels` bytes in row-major order.
+        fn build_png_with_pixels(
+            width: u32,
+            height: u32,
+            color_type: u8,
+            pixels: &[u8],
+        ) -> Vec<u8> {
+            use flate2::write::ZlibEncoder;
+            use flate2::Compression;
+            use std::io::Write;
+
+            let channels: usize = if color_type == 2 { 3 } else { 1 };
+
+            // Scanlines: filter byte (0x00 = None) + pixel bytes per row
+            let mut raw_data: Vec<u8> = Vec::new();
+            for y in 0..height as usize {
+                raw_data.push(0x00);
+                let start = y * width as usize * channels;
+                raw_data.extend_from_slice(&pixels[start..start + width as usize * channels]);
+            }
+
+            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(&raw_data).unwrap();
+            let compressed = encoder.finish().unwrap();
+
+            fn crc32(data: &[u8]) -> u32 {
+                let mut crc: u32 = 0xFFFF_FFFF;
+                for &byte in data {
+                    let mut val = (crc ^ u32::from(byte)) & 0xFF;
+                    for _ in 0..8 {
+                        if val & 1 != 0 {
+                            val = (val >> 1) ^ 0xEDB8_8320;
+                        } else {
+                            val >>= 1;
+                        }
+                    }
+                    crc = (crc >> 8) ^ val;
+                }
+                crc ^ 0xFFFF_FFFF
+            }
+
+            fn write_chunk(out: &mut Vec<u8>, chunk_type: &[u8; 4], chunk_data: &[u8]) {
+                out.extend_from_slice(&(chunk_data.len() as u32).to_be_bytes());
+                out.extend_from_slice(chunk_type);
+                out.extend_from_slice(chunk_data);
+                let mut crc_input = chunk_type.to_vec();
+                crc_input.extend_from_slice(chunk_data);
+                out.extend_from_slice(&crc32(&crc_input).to_be_bytes());
+            }
+
+            let mut png: Vec<u8> = Vec::new();
+            png.extend_from_slice(b"\x89PNG\r\n\x1a\n");
+
+            let mut ihdr = Vec::new();
+            ihdr.extend_from_slice(&width.to_be_bytes());
+            ihdr.extend_from_slice(&height.to_be_bytes());
+            ihdr.push(8); // bit depth
+            ihdr.push(color_type);
+            ihdr.push(0); // compression
+            ihdr.push(0); // filter
+            ihdr.push(0); // interlace
+            write_chunk(&mut png, b"IHDR", &ihdr);
+
+            write_chunk(&mut png, b"IDAT", &compressed);
+            write_chunk(&mut png, b"IEND", &[]);
+
+            png
+        }
+
+        #[test]
+        fn test_png_to_pdf_object_stream_not_png_container() {
+            // Build a 2x2 RGB PNG with uniform pixel values
+            let pixels = vec![
+                200u8, 100, 50, 200, 100, 50, // row 0
+                200u8, 100, 50, 200, 100, 50, // row 1
+            ];
+            let png_data = build_png_with_pixels(2, 2, 2, &pixels);
+            let image = Image::from_png_data(png_data).unwrap();
+
+            let pdf_obj = image.to_pdf_object();
+            if let Object::Stream(dict, stream_data) = pdf_obj {
+                // Stream must NOT be a PNG container
+                assert!(
+                    !stream_data.starts_with(b"\x89PNG"),
+                    "PDF stream must not contain a PNG container — got PNG signature bytes"
+                );
+                // Must use FlateDecode
+                assert_eq!(
+                    dict.get("Filter").unwrap(),
+                    &Object::Name("FlateDecode".to_string())
+                );
+                // Decompressing must yield exactly width * height * channels bytes
+                use flate2::read::ZlibDecoder;
+                use std::io::Read as IoRead;
+                let mut decoder = ZlibDecoder::new(stream_data.as_slice());
+                let mut decompressed = Vec::new();
+                decoder
+                    .read_to_end(&mut decompressed)
+                    .expect("zlib decompression of PDF stream failed");
+                assert_eq!(
+                    decompressed.len(),
+                    2 * 2 * 3,
+                    "decompressed data must be exactly width*height*channels bytes (no PNG framing)"
+                );
+            } else {
+                panic!("Expected Stream object");
+            }
+        }
+
+        #[test]
+        fn test_png_pdf_stream_pixel_values_correct() {
+            // Build a 1x1 RGB PNG with known pixel [200, 100, 50]
+            let pixels = vec![200u8, 100, 50];
+            let png_data = build_png_with_pixels(1, 1, 2, &pixels);
+            let image = Image::from_png_data(png_data).unwrap();
+
+            let pdf_obj = image.to_pdf_object();
+            if let Object::Stream(_, stream_data) = pdf_obj {
+                use flate2::read::ZlibDecoder;
+                use std::io::Read as IoRead;
+                let mut decoder = ZlibDecoder::new(stream_data.as_slice());
+                let mut decompressed = Vec::new();
+                decoder
+                    .read_to_end(&mut decompressed)
+                    .expect("zlib decompression of PDF stream failed");
+                assert_eq!(
+                    decompressed,
+                    vec![200u8, 100, 50],
+                    "pixel values must round-trip through PDF stream encoding correctly"
+                );
+            } else {
+                panic!("Expected Stream object");
             }
         }
     }
