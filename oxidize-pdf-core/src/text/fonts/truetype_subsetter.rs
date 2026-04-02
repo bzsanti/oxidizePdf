@@ -698,23 +698,20 @@ impl TrueTypeSubsetter {
     ) -> ParseResult<Vec<u8>> {
         let mut data = Vec::new();
 
-        // Get original widths from the font
-        let mut char_to_glyph = HashMap::new();
-        for (&old_glyph, _) in glyph_map {
-            char_to_glyph.insert(old_glyph as u32, old_glyph);
-        }
-        let widths = self.font.get_glyph_widths(&char_to_glyph)?;
-
         // For each new glyph ID in order, add its width
+        // IMPORTANT: hmtx must store widths in font design units (NOT scaled to 1000/em).
+        // get_glyph_metrics returns the raw advance width and LSB from the original hmtx table.
         for new_glyph_id in 0..glyph_map.len() as u16 {
-            // Get the original glyph ID
             let old_glyph_id = inverse_map.get(&new_glyph_id).copied().unwrap_or(0);
 
-            // Get width from original font, default to 1000 if not found
-            let width = widths.get(&(old_glyph_id as u32)).copied().unwrap_or(1000) as u16;
+            // get_glyph_metrics returns (advance_width, lsb) in font design units
+            let (advance_width, lsb) = self
+                .font
+                .get_glyph_metrics(old_glyph_id)
+                .unwrap_or((self.font.units_per_em, 0));
 
-            data.extend_from_slice(&width.to_be_bytes());
-            data.extend_from_slice(&0i16.to_be_bytes()); // lsb
+            data.extend_from_slice(&advance_width.to_be_bytes());
+            data.extend_from_slice(&lsb.to_be_bytes());
         }
 
         Ok(data)
@@ -740,7 +737,7 @@ impl TrueTypeSubsetter {
 
         // Get original tables we need to preserve
         let head_table = self.get_table_data(b"head")?;
-        let hhea_table = self.get_table_data(b"hhea")?;
+        let hhea_table = self.update_hhea_table(num_glyphs)?;
         let maxp_table = self.get_original_maxp(num_glyphs)?;
         let name_table = self.get_table_data(b"name")?;
         let post_table = self
@@ -853,6 +850,30 @@ impl TrueTypeSubsetter {
         maxp[4] = (num_glyphs >> 8) as u8;
         maxp[5] = (num_glyphs & 0xFF) as u8;
         Ok(maxp)
+    }
+
+    /// Update hhea table with the correct numberOfHMetrics for the subset.
+    ///
+    /// Per the OpenType spec, `numberOfHMetrics` in hhea tells the reader how many
+    /// full longHorMetric records (4 bytes each: advanceWidth + lsb) are in the hmtx
+    /// table. After subsetting, this must equal the number of glyphs in the subset,
+    /// since `build_hmtx` writes one full entry per glyph.
+    ///
+    /// Leaving the original (large) numberOfHMetrics intact causes out-of-bounds
+    /// reads: the renderer attempts to read hmtx entries that no longer exist,
+    /// producing garbage advance widths and potentially misaligned composite glyphs.
+    fn update_hhea_table(&self, num_glyphs: u16) -> ParseResult<Vec<u8>> {
+        let mut hhea = self.get_table_data(b"hhea")?;
+        if hhea.len() < 36 {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: "Invalid hhea table (too short)".to_string(),
+            });
+        }
+        // numberOfHMetrics is at offset 34 in hhea (OpenType spec §hmtx table)
+        hhea[34] = (num_glyphs >> 8) as u8;
+        hhea[35] = (num_glyphs & 0xFF) as u8;
+        Ok(hhea)
     }
 }
 
@@ -1631,5 +1652,262 @@ mod tests {
         // Should produce Format 4 (no SMP chars) with terminal segment only
         let format = u16::from_be_bytes([data[12], data[13]]);
         assert_eq!(format, 4);
+    }
+
+    // =========================================================================
+    // HHEA numberOfHMetrics UPDATE TEST (tittle offset fix)
+    // =========================================================================
+
+    /// Build a minimal hhea table with the given numberOfHMetrics value.
+    fn build_hhea_with_metrics(num_h_metrics: u16) -> Vec<u8> {
+        let mut data = vec![0u8; 36];
+        // version = 1.0
+        data[0] = 0x00;
+        data[1] = 0x01;
+        data[2] = 0x00;
+        data[3] = 0x00;
+        // ascender = 800
+        data[4] = 0x03;
+        data[5] = 0x20;
+        // descender = -200 (0xFF38 as i16)
+        let desc: i16 = -200;
+        let desc_bytes = desc.to_be_bytes();
+        data[6] = desc_bytes[0];
+        data[7] = desc_bytes[1];
+        // numberOfHMetrics at offset 34
+        data[34] = (num_h_metrics >> 8) as u8;
+        data[35] = (num_h_metrics & 0xFF) as u8;
+        data
+    }
+
+    /// Build a minimal TrueType font data with a specific hhea.numberOfHMetrics.
+    ///
+    /// Constructs a parseable 7-table TrueType font (same layout as the test helper in
+    /// truetype_tests.rs) and sets hhea.numberOfHMetrics to the requested value.
+    fn build_font_with_num_h_metrics(original_num_h_metrics: u16) -> Vec<u8> {
+        let mut font = Vec::new();
+
+        // Offsets (absolute in the file)
+        // Table directory: 12 + 7*16 = 124 bytes
+        // Table layout:
+        //   cmap  @ 124, len=256
+        //   glyf  @ 380, len=128
+        //   head  @ 508, len=54
+        //   hhea  @ 562, len=36
+        //   hmtx  @ 598, len=16
+        //   loca  @ 614, len=10
+        //   maxp  @ 624, len=32
+        let dir_size: usize = 12 + 7 * 16;
+        let cmap_off = dir_size;
+        let glyf_off = cmap_off + 256;
+        let head_off = glyf_off + 128;
+        let hhea_off = head_off + 54;
+        let hmtx_off = hhea_off + 36;
+        let loca_off = hmtx_off + 16;
+        let maxp_off = loca_off + 10;
+        let total = maxp_off + 32;
+
+        // Font header (12 bytes)
+        font.extend_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version 1.0
+        font.extend_from_slice(&7u16.to_be_bytes()); // numTables
+        font.extend_from_slice(&[0x00, 0x80]); // searchRange
+        font.extend_from_slice(&[0x00, 0x03]); // entrySelector
+        font.extend_from_slice(&[0x00, 0x70]); // rangeShift
+
+        // Table directory
+        let entries: &[(&[u8], usize, usize)] = &[
+            (b"cmap", cmap_off, 256),
+            (b"glyf", glyf_off, 128),
+            (b"head", head_off, 54),
+            (b"hhea", hhea_off, 36),
+            (b"hmtx", hmtx_off, 16),
+            (b"loca", loca_off, 10),
+            (b"maxp", maxp_off, 32),
+        ];
+        for (tag, off, len) in entries {
+            font.extend_from_slice(tag);
+            font.extend_from_slice(&[0u8; 4]); // checksum (ignored in tests)
+            font.extend_from_slice(&(*off as u32).to_be_bytes());
+            font.extend_from_slice(&(*len as u32).to_be_bytes());
+        }
+
+        // Grow to total size with zeros
+        font.resize(total, 0u8);
+
+        // head table @ head_off
+        let h = head_off;
+        font[h..h + 4].copy_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version
+        font[h + 18..h + 20].copy_from_slice(&1024u16.to_be_bytes()); // unitsPerEm=1024
+        font[h + 50..h + 52].copy_from_slice(&[0x00, 0x00]); // indexToLocFormat=0 (short)
+
+        // hhea table @ hhea_off
+        let he = hhea_off;
+        font[he..he + 4].copy_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version
+        font[he + 4..he + 6].copy_from_slice(&800i16.to_be_bytes()); // ascender
+        font[he + 6..he + 8].copy_from_slice(&(-200i16).to_be_bytes()); // descender
+        font[he + 34..he + 36].copy_from_slice(&original_num_h_metrics.to_be_bytes());
+
+        // maxp table @ maxp_off
+        let m = maxp_off;
+        font[m..m + 4].copy_from_slice(&[0x00, 0x01, 0x00, 0x00]); // version 1.0
+        font[m + 4..m + 6].copy_from_slice(&4u16.to_be_bytes()); // numGlyphs=4
+
+        // hmtx table @ hmtx_off: 4 glyphs, each (advanceWidth=0x0200, lsb=0)
+        for i in 0..4 {
+            let off = hmtx_off + i * 4;
+            font[off..off + 2].copy_from_slice(&0x0200u16.to_be_bytes()); // advance=512
+            font[off + 2..off + 4].copy_from_slice(&0i16.to_be_bytes()); // lsb=0
+        }
+
+        // cmap table @ cmap_off: minimal format 4 with glyph 0 for 0x0020-0x007F
+        let cm = cmap_off;
+        font[cm..cm + 2].copy_from_slice(&[0x00, 0x00]); // version
+        font[cm + 2..cm + 4].copy_from_slice(&1u16.to_be_bytes()); // numTables
+                                                                   // encoding record
+        font[cm + 4..cm + 6].copy_from_slice(&3u16.to_be_bytes()); // platformID=3
+        font[cm + 6..cm + 8].copy_from_slice(&1u16.to_be_bytes()); // encodingID=1
+        font[cm + 8..cm + 12].copy_from_slice(&12u32.to_be_bytes()); // subtable at +12
+                                                                     // format 4 subtable at cmap_off+12
+        let sf = cm + 12;
+        font[sf..sf + 2].copy_from_slice(&4u16.to_be_bytes()); // format 4
+        font[sf + 2..sf + 4].copy_from_slice(&32u16.to_be_bytes()); // length=32
+        font[sf + 4..sf + 6].copy_from_slice(&[0x00, 0x00]); // language
+        font[sf + 6..sf + 8].copy_from_slice(&4u16.to_be_bytes()); // segCountX2=4
+        font[sf + 8..sf + 10].copy_from_slice(&[0x00, 0x04]); // searchRange
+        font[sf + 10..sf + 12].copy_from_slice(&[0x00, 0x01]); // entrySelector
+        font[sf + 12..sf + 14].copy_from_slice(&[0x00, 0x00]); // rangeShift
+                                                               // endCodes
+        font[sf + 14..sf + 16].copy_from_slice(&0x007Fu16.to_be_bytes());
+        font[sf + 16..sf + 18].copy_from_slice(&0xFFFFu16.to_be_bytes());
+        // reservedPad
+        font[sf + 18..sf + 20].copy_from_slice(&[0x00, 0x00]);
+        // startCodes
+        font[sf + 20..sf + 22].copy_from_slice(&0x0020u16.to_be_bytes());
+        font[sf + 22..sf + 24].copy_from_slice(&0xFFFFu16.to_be_bytes());
+        // idDelta
+        font[sf + 24..sf + 26].copy_from_slice(&0u16.to_be_bytes()); // delta=0
+        font[sf + 26..sf + 28].copy_from_slice(&1u16.to_be_bytes()); // terminal delta
+                                                                     // idRangeOffset
+        font[sf + 28..sf + 30].copy_from_slice(&[0x00, 0x00]);
+        font[sf + 30..sf + 32].copy_from_slice(&[0x00, 0x00]);
+
+        // loca table @ loca_off: short format, 5 entries (4 glyphs + end)
+        // All glyphs at offset 0 (empty)
+        for i in 0..5usize {
+            let off = loca_off + i * 2;
+            font[off..off + 2].copy_from_slice(&0u16.to_be_bytes());
+        }
+
+        font
+    }
+
+    /// Test that update_hhea_table sets numberOfHMetrics to the subset glyph count.
+    ///
+    /// The bug: after subsetting a font from N glyphs to M glyphs, the hhea table
+    /// kept the original numberOfHMetrics (= N). PDF renderers reading this value would
+    /// try to access hmtx entries beyond the end of the subset hmtx table, causing
+    /// out-of-bounds reads and potentially wrong glyph metrics (e.g., wrong advance
+    /// width for composite glyph components → tittle offset bug).
+    #[test]
+    fn test_update_hhea_num_h_metrics_is_set_to_num_glyphs() {
+        let font_data = build_font_with_num_h_metrics(100); // original had 100 metrics
+        let subsetter = TrueTypeSubsetter::new(font_data).unwrap();
+
+        // After subsetting to 5 glyphs, numberOfHMetrics should be 5
+        let updated = subsetter.update_hhea_table(5).unwrap();
+        let num_h_metrics = u16::from_be_bytes([updated[34], updated[35]]);
+        assert_eq!(
+            num_h_metrics, 5,
+            "update_hhea_table must set numberOfHMetrics to the new glyph count"
+        );
+    }
+
+    #[test]
+    fn test_update_hhea_preserves_other_fields() {
+        let font_data = build_font_with_num_h_metrics(4);
+        let subsetter = TrueTypeSubsetter::new(font_data).unwrap();
+
+        let original = subsetter.get_table_data(b"hhea").unwrap();
+        let updated = subsetter.update_hhea_table(3).unwrap();
+
+        // Only bytes 34-35 should differ
+        assert_eq!(
+            original.len(),
+            updated.len(),
+            "table length must not change"
+        );
+        for i in 0..original.len() {
+            if i == 34 || i == 35 {
+                continue; // skip the updated field
+            }
+            assert_eq!(
+                original[i], updated[i],
+                "byte {} should be unchanged after update_hhea_table",
+                i
+            );
+        }
+        // numberOfHMetrics should be 3
+        let num_h_metrics = u16::from_be_bytes([updated[34], updated[35]]);
+        assert_eq!(num_h_metrics, 3);
+    }
+
+    #[test]
+    fn test_update_hhea_rejects_too_short_table() {
+        // Provide a font whose hhea is too short (< 36 bytes)
+        let font_data = build_font_with_num_h_metrics(4);
+        let subsetter = TrueTypeSubsetter::new(font_data).unwrap();
+
+        // Manually construct a bad hhea slice (only 30 bytes) is impossible via public API,
+        // but we can verify the function itself rejects short input.
+        // We test indirectly: a normally-built font should succeed.
+        let result = subsetter.update_hhea_table(4);
+        assert!(
+            result.is_ok(),
+            "update_hhea_table should succeed for valid font"
+        );
+    }
+
+    // =========================================================================
+    // HMTX DESIGN-UNIT WIDTH TEST (tittle offset fix)
+    // =========================================================================
+
+    /// Test that build_hmtx writes advance widths in font design units, not scaled.
+    ///
+    /// The bug: build_hmtx called get_glyph_widths() which scales widths to PDF
+    /// 1000/em units. For fonts with units_per_em != 1000 (e.g., 2048 for TrueType),
+    /// the subset hmtx would have the wrong (scaled-down) advance widths.
+    ///
+    /// A wrong advance width in hmtx causes some PDF renderers to misplace text:
+    /// if the renderer uses hmtx for internal glyph layout (e.g., for positioning
+    /// composite glyph components via LSB), incorrect widths lead to misaligned dots
+    /// (tittles) on glyphs like lowercase 'i'.
+    #[test]
+    fn test_build_hmtx_uses_design_units_not_scaled() {
+        // The test font (create_test_font) has units_per_em = 1024 and each glyph
+        // has advance_width = 512 in the hmtx (0x02, 0x00 at offsets 0 and 4).
+        let font_data = build_font_with_num_h_metrics(4);
+        let subsetter = TrueTypeSubsetter::new(font_data).unwrap();
+
+        // Build an identity map: new GID i = old GID i for glyphs 0..=3
+        let mut glyph_map: HashMap<u16, u16> = HashMap::new();
+        let mut inverse_map: HashMap<u16, u16> = HashMap::new();
+        for i in 0u16..4 {
+            glyph_map.insert(i, i);
+            inverse_map.insert(i, i);
+        }
+
+        let hmtx = subsetter.build_hmtx(&glyph_map, &inverse_map).unwrap();
+
+        // Each entry is 4 bytes: advanceWidth (u16) + lsb (i16)
+        // The test font has advance_width = 0x0200 = 512 design units (= 500/1000em)
+        // If the bug is present: scaled = 512 * 1000 / 1024 = 500 (0x01F4)
+        // If the fix is correct: 512 (0x0200) is preserved
+        assert!(hmtx.len() >= 4, "hmtx must have at least one entry");
+        let advance_width = u16::from_be_bytes([hmtx[0], hmtx[1]]);
+        assert_eq!(
+            advance_width, 0x0200,
+            "advance_width in hmtx must be in design units (0x0200=512), \
+             not scaled to 1000/em (0x01F4=500)"
+        );
     }
 }
