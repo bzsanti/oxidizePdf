@@ -85,6 +85,22 @@ pub fn should_skip_subsetting(font_size: usize, char_count: usize) -> bool {
     font_size < SUBSETTING_SIZE_THRESHOLD && char_count < SUBSETTING_CHAR_THRESHOLD
 }
 
+/// Filter a full cmap mapping to only include codepoints in `used_chars`.
+/// Used when the font is not subsetted (full font embedded) to avoid leaking
+/// unused entries into the W array and CIDToGIDMap.
+fn filter_mapping_to_used(
+    mappings: &HashMap<u32, u16>,
+    used_chars: &HashSet<char>,
+) -> HashMap<u32, u16> {
+    used_chars
+        .iter()
+        .filter_map(|ch| {
+            let cp = *ch as u32;
+            mappings.get(&cp).map(|&gid| (cp, gid))
+        })
+        .collect()
+}
+
 /// Table record for font directory
 struct TableRecord {
     tag: [u8; 4],
@@ -142,6 +158,9 @@ pub struct SubsetResult {
     pub font_data: Vec<u8>,
     /// Unicode to GlyphID mapping for the subsetted font
     pub glyph_mapping: HashMap<u32, u16>,
+    /// True if font_data is raw CFF bytes (embed with /CIDFontType0C),
+    /// false if it's OTF or TrueType (embed with /OpenType or /FontFile2)
+    pub is_raw_cff: bool,
 }
 
 /// Extract component glyph IDs from a composite glyph's raw data.
@@ -295,7 +314,8 @@ impl TrueTypeSubsetter {
         if should_skip_subsetting(self.font_data.len(), used_chars.len()) {
             return Ok(SubsetResult {
                 font_data: self.font_data.clone(),
-                glyph_mapping: cmap.mappings.clone(),
+                glyph_mapping: filter_mapping_to_used(&cmap.mappings, used_chars),
+                is_raw_cff: false,
             });
         }
 
@@ -325,13 +345,10 @@ impl TrueTypeSubsetter {
                 "  Keeping full font (using {:.1}% of glyphs)",
                 subset_ratio * 100.0
             );
-            // Return the full font with COMPLETE mapping to support all characters
-            // Even though we're not subsetting the font data, we need all mappings
-            // for proper CIDToGIDMap generation
-
             return Ok(SubsetResult {
                 font_data: self.font_data.clone(),
-                glyph_mapping: cmap.mappings.clone(), // Use complete mapping
+                glyph_mapping: filter_mapping_to_used(&cmap.mappings, used_chars),
+                is_raw_cff: false,
             });
         }
 
@@ -353,13 +370,15 @@ impl TrueTypeSubsetter {
                     return Ok(SubsetResult {
                         font_data: result.font_data,
                         glyph_mapping: result.glyph_mapping,
+                        is_raw_cff: result.is_raw_cff,
                     });
                 }
                 Err(e) => {
                     tracing::debug!("  CFF subsetting failed: {:?}, using full font", e);
                     return Ok(SubsetResult {
                         font_data: self.font_data.clone(),
-                        glyph_mapping: cmap.mappings.clone(),
+                        glyph_mapping: filter_mapping_to_used(&cmap.mappings, used_chars),
+                        is_raw_cff: false,
                     });
                 }
             }
@@ -398,14 +417,15 @@ impl TrueTypeSubsetter {
                 Ok(SubsetResult {
                     font_data: subset_font_data,
                     glyph_mapping: new_cmap,
+                    is_raw_cff: false,
                 })
             }
             Err(e) => {
                 tracing::debug!("  Subsetting failed: {:?}, using full font as fallback", e);
-                // Fallback to full font if subsetting fails
                 Ok(SubsetResult {
                     font_data: self.font_data.clone(),
                     glyph_mapping: cmap.mappings.clone(),
+                    is_raw_cff: false,
                 })
             }
         }

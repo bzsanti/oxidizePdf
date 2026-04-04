@@ -183,10 +183,13 @@ impl<'a> Iterator for CffDictScanner<'a> {
 
 /// Result of CFF font subsetting
 pub struct CffSubsetResult {
-    /// Complete OTF file with subsetted CFF table
+    /// Font data: raw CFF bytes for CID-keyed fonts, OTF for non-CID fonts
     pub font_data: Vec<u8>,
     /// Unicode codepoint → new GID mapping
     pub glyph_mapping: HashMap<u32, u16>,
+    /// True if font_data is raw CFF (embed with /CIDFontType0C),
+    /// false if it's a full OTF (embed with /OpenType)
+    pub is_raw_cff: bool,
 }
 
 /// Subset a CFF/OpenType font to include only the specified characters.
@@ -292,17 +295,40 @@ pub fn subset_cff_font(
             return Ok(CffSubsetResult {
                 font_data: font_data.to_vec(),
                 glyph_mapping: filtered_mapping,
+                is_raw_cff: false,
             });
         }
     };
 
-    // Reconstruct OTF with the new CFF table
-    let new_font = otf.rebuild(font_data, b"CFF ", &new_cff)?;
+    // Check if CFF is CID-keyed by looking at the Top DICT for FDArray/FDSelect.
+    // CID-keyed: embed raw CFF with /Subtype /CIDFontType0C (industry standard).
+    // Non-CID: embed as OTF with /Subtype /OpenType.
+    let top_dict_index_for_check = parse_cff_index(cff_data, {
+        let name_idx = parse_cff_index(cff_data, cff_data[2] as usize)?;
+        name_idx.end_offset()
+    })?;
+    let td_bytes = top_dict_index_for_check
+        .get_item(0, cff_data)
+        .unwrap_or(&[]);
+    let td_offsets = parse_top_dict(td_bytes);
+    let is_cid = td_offsets.fd_array_offset.is_some() || td_offsets.fd_select_offset.is_some();
 
-    Ok(CffSubsetResult {
-        font_data: new_font,
-        glyph_mapping: new_glyph_mapping,
-    })
+    if is_cid {
+        // CID-keyed: return raw CFF bytes directly
+        Ok(CffSubsetResult {
+            font_data: new_cff,
+            glyph_mapping: new_glyph_mapping,
+            is_raw_cff: true,
+        })
+    } else {
+        // Non-CID: wrap in OTF
+        let new_font = otf.rebuild_subset(font_data, &new_cff, needed_gids.len() as u16)?;
+        Ok(CffSubsetResult {
+            font_data: new_font,
+            glyph_mapping: new_glyph_mapping,
+            is_raw_cff: false,
+        })
+    }
 }
 
 // =============================================================================
@@ -311,7 +337,6 @@ pub fn subset_cff_font(
 
 struct OtfTableEntry {
     tag: [u8; 4],
-    checksum: u32,
     offset: u32,
     length: u32,
 }
@@ -344,12 +369,10 @@ impl OtfFile {
         for i in 0..num_tables {
             let base = 12 + i * 16;
             let tag = [data[base], data[base + 1], data[base + 2], data[base + 3]];
-            let checksum = read_u32(data, base + 4)?;
             let offset = read_u32(data, base + 8)?;
             let length = read_u32(data, base + 12)?;
             tables.push(OtfTableEntry {
                 tag,
-                checksum,
                 offset,
                 length,
             });
@@ -371,20 +394,48 @@ impl OtfFile {
             })
     }
 
-    /// Rebuild the OTF file, replacing the data for `replaced_tag` with `new_data`.
-    /// All other tables are copied verbatim from `original`.
-    fn rebuild(
+    /// Rebuild the OTF file replacing the CFF table and patching maxp, hhea, hmtx,
+    /// and cmap to match the actual glyph count after subsetting.
+    /// This is critical: if maxp reports 65K glyphs but CFF has 5, viewers reject the font.
+    /// Tables required for a valid CIDFontType0 font embedded in PDF.
+    /// Everything else (GSUB, GPOS, vmtx, vhea, VORG, DSIG, GDEF, BASE, name, post, OS/2)
+    /// is not needed for rendering and can be dropped to save space.
+    const REQUIRED_TABLES: &'static [&'static [u8; 4]] =
+        &[b"CFF ", b"head", b"maxp", b"hhea", b"hmtx", b"cmap"];
+
+    fn rebuild_subset(
         &self,
         original: &[u8],
-        replaced_tag: &[u8; 4],
-        new_data: &[u8],
+        new_cff: &[u8],
+        new_glyph_count: u16,
     ) -> ParseResult<Vec<u8>> {
-        let num_tables = self.tables.len() as u16;
+        // Build patched versions of tables that depend on glyph count
+        let patched_maxp = self.patch_maxp(original, new_glyph_count);
+        let patched_hhea = self.patch_hhea(original, new_glyph_count);
+        let patched_hmtx = self.truncate_hmtx(original, new_glyph_count);
+        let minimal_cmap = Self::build_minimal_cmap();
 
-        // Header size: 12 bytes (sfnt header) + 16 bytes per table entry
+        // Map of tag → replacement data
+        let replacements: std::collections::HashMap<&[u8; 4], &[u8]> = [
+            (b"CFF ", new_cff as &[u8]),
+            (b"maxp", patched_maxp.as_deref().unwrap_or(&[])),
+            (b"hhea", patched_hhea.as_deref().unwrap_or(&[])),
+            (b"hmtx", patched_hmtx.as_deref().unwrap_or(&[])),
+            (b"cmap", &minimal_cmap as &[u8]),
+        ]
+        .into_iter()
+        .filter(|(_, data)| !data.is_empty())
+        .collect();
+
+        // Only keep required tables — drop GSUB, GPOS, vmtx, vhea, etc.
+        let kept_tables: Vec<&OtfTableEntry> = self
+            .tables
+            .iter()
+            .filter(|e| Self::REQUIRED_TABLES.iter().any(|t| *t == &e.tag))
+            .collect();
+        let num_tables = kept_tables.len() as u16;
         let header_size = 12 + num_tables as usize * 16;
 
-        // Compute floor(log2(num_tables)) using integer bit math
         let entry_selector = if num_tables > 0 {
             (u16::BITS - num_tables.leading_zeros() - 1) as u16
         } else {
@@ -393,18 +444,16 @@ impl OtfFile {
         let search_range = (1u16 << entry_selector) * 16;
         let range_shift = num_tables * 16 - search_range;
 
-        // First pass: determine each table's offset in the new file
-        // Tables are written in their original order, 4-byte aligned.
-        let mut offsets: Vec<u32> = Vec::with_capacity(self.tables.len());
+        // Determine offsets
+        let mut offsets: Vec<u32> = Vec::with_capacity(kept_tables.len());
         let mut current = header_size;
-        for entry in &self.tables {
-            // Align to 4-byte boundary
+        for entry in &kept_tables {
             while current % 4 != 0 {
                 current += 1;
             }
             offsets.push(current as u32);
-            let len = if &entry.tag == replaced_tag {
-                new_data.len()
+            let len = if let Some(data) = replacements.get(&entry.tag) {
+                data.len()
             } else {
                 entry.length as usize
             };
@@ -414,18 +463,18 @@ impl OtfFile {
         let total_size = current;
         let mut out = vec![0u8; total_size];
 
-        // Write OTF header
+        // Write header
         out[0..4].copy_from_slice(&self.sfnt_version.to_be_bytes());
         out[4..6].copy_from_slice(&num_tables.to_be_bytes());
         out[6..8].copy_from_slice(&search_range.to_be_bytes());
         out[8..10].copy_from_slice(&entry_selector.to_be_bytes());
         out[10..12].copy_from_slice(&range_shift.to_be_bytes());
 
-        // Write table directory and table data
-        for (i, entry) in self.tables.iter().enumerate() {
+        // Write tables
+        for (i, entry) in kept_tables.iter().enumerate() {
             let offset = offsets[i] as usize;
-            let table_data: &[u8] = if &entry.tag == replaced_tag {
-                new_data
+            let table_data: &[u8] = if let Some(data) = replacements.get(&entry.tag) {
+                data
             } else {
                 let src_start = entry.offset as usize;
                 let src_end = src_start + entry.length as usize;
@@ -441,12 +490,7 @@ impl OtfFile {
                 &original[src_start..src_end]
             };
 
-            // Recompute checksum for this table
-            let checksum = if &entry.tag == replaced_tag {
-                otf_checksum(new_data)
-            } else {
-                entry.checksum
-            };
+            let checksum = otf_checksum(table_data);
 
             // Directory entry
             let dir_base = 12 + i * 16;
@@ -460,29 +504,23 @@ impl OtfFile {
             out[offset..offset + table_data.len()].copy_from_slice(table_data);
         }
 
-        // Set head.checkSumAdjustment per OTF spec §5.2.8:
-        //   1. Zero the checkSumAdjustment field (bytes 8-11 of the head table).
-        //   2. Calculate checksum of the entire font file.
-        //   3. Set checkSumAdjustment = 0xB1B0AFBA - total_checksum.
-        let head_tag = b"head";
-        if let Some((head_idx, _)) = self
-            .tables
+        // Fix head.checkSumAdjustment
+        if let Some((head_idx, _)) = kept_tables
             .iter()
             .enumerate()
-            .find(|(_, e)| &e.tag == head_tag)
+            .find(|(_, e)| &e.tag == b"head")
         {
             let head_offset = offsets[head_idx] as usize;
-            // head table must be at least 12 bytes for checkSumAdjustment at offset 8
             if head_offset + 12 <= out.len() {
-                // Step 1: zero checkSumAdjustment before computing file checksum
                 out[head_offset + 8..head_offset + 12].copy_from_slice(&[0u8; 4]);
-                // Step 2: compute file checksum
                 let total_checksum = otf_checksum(&out);
-                // Step 3: write adjustment
                 let adjustment = 0xB1B0_AFBAu32.wrapping_sub(total_checksum);
                 out[head_offset + 8..head_offset + 12].copy_from_slice(&adjustment.to_be_bytes());
-                // Update head table checksum in the directory entry to reflect the new content
-                let head_len = self.tables[head_idx].length as usize;
+                let head_len = if replacements.contains_key(b"head") {
+                    replacements[b"head"].len()
+                } else {
+                    kept_tables[head_idx].length as usize
+                };
                 let new_head_checksum = otf_checksum(&out[head_offset..head_offset + head_len]);
                 let dir_base = 12 + head_idx * 16;
                 out[dir_base + 4..dir_base + 8].copy_from_slice(&new_head_checksum.to_be_bytes());
@@ -490,6 +528,85 @@ impl OtfFile {
         }
 
         Ok(out)
+    }
+
+    /// Patch maxp table: update numGlyphs field (offset 4, 2 bytes).
+    fn patch_maxp(&self, original: &[u8], new_glyph_count: u16) -> Option<Vec<u8>> {
+        let entry = self.tables.iter().find(|e| &e.tag == b"maxp")?;
+        let start = entry.offset as usize;
+        let end = start + entry.length as usize;
+        if end > original.len() || entry.length < 6 {
+            return None;
+        }
+        let mut patched = original[start..end].to_vec();
+        patched[4..6].copy_from_slice(&new_glyph_count.to_be_bytes());
+        Some(patched)
+    }
+
+    /// Patch hhea table: update numberOfHMetrics (offset 34, 2 bytes).
+    fn patch_hhea(&self, original: &[u8], new_glyph_count: u16) -> Option<Vec<u8>> {
+        let entry = self.tables.iter().find(|e| &e.tag == b"hhea")?;
+        let start = entry.offset as usize;
+        let end = start + entry.length as usize;
+        if end > original.len() || entry.length < 36 {
+            return None;
+        }
+        let mut patched = original[start..end].to_vec();
+        patched[34..36].copy_from_slice(&new_glyph_count.to_be_bytes());
+        Some(patched)
+    }
+
+    /// Truncate hmtx to only include entries for new_glyph_count glyphs.
+    /// Each entry is 4 bytes (advanceWidth u16 + lsb i16).
+    fn truncate_hmtx(&self, original: &[u8], new_glyph_count: u16) -> Option<Vec<u8>> {
+        let entry = self.tables.iter().find(|e| &e.tag == b"hmtx")?;
+        let start = entry.offset as usize;
+        let needed = new_glyph_count as usize * 4;
+        let available = entry.length as usize;
+        let take = needed.min(available);
+        let end = start + take;
+        if end > original.len() {
+            return None;
+        }
+        Some(original[start..end].to_vec())
+    }
+
+    /// Build a minimal cmap table: Format 4 with only the terminal 0xFFFF segment.
+    /// For CIDFontType0 with Identity-H, the PDF viewer resolves CID→GID via the
+    /// CFF charset, not the OTF cmap. A minimal cmap satisfies OTF validation.
+    fn build_minimal_cmap() -> Vec<u8> {
+        let mut cmap = Vec::new();
+        // cmap header: version=0, numTables=1
+        cmap.extend_from_slice(&0u16.to_be_bytes()); // version
+        cmap.extend_from_slice(&1u16.to_be_bytes()); // numTables
+                                                     // Encoding record: platformID=3 (Windows), encodingID=1 (Unicode BMP)
+        cmap.extend_from_slice(&3u16.to_be_bytes()); // platformID
+        cmap.extend_from_slice(&1u16.to_be_bytes()); // encodingID
+        cmap.extend_from_slice(&12u32.to_be_bytes()); // offset to subtable
+
+        // Format 4 subtable with single terminal segment (0xFFFF)
+        let seg_count: u16 = 1;
+        let seg_count_x2 = seg_count * 2;
+        let length: u16 = 14 + seg_count_x2 * 4; // header(14) + 4 arrays of seg_count entries
+        cmap.extend_from_slice(&4u16.to_be_bytes()); // format
+        cmap.extend_from_slice(&length.to_be_bytes()); // length
+        cmap.extend_from_slice(&0u16.to_be_bytes()); // language
+        cmap.extend_from_slice(&seg_count_x2.to_be_bytes()); // segCountX2
+        cmap.extend_from_slice(&2u16.to_be_bytes()); // searchRange
+        cmap.extend_from_slice(&0u16.to_be_bytes()); // entrySelector
+        cmap.extend_from_slice(&0u16.to_be_bytes()); // rangeShift
+                                                     // endCode
+        cmap.extend_from_slice(&0xFFFFu16.to_be_bytes());
+        // reservedPad
+        cmap.extend_from_slice(&0u16.to_be_bytes());
+        // startCode
+        cmap.extend_from_slice(&0xFFFFu16.to_be_bytes());
+        // idDelta
+        cmap.extend_from_slice(&1u16.to_be_bytes());
+        // idRangeOffset
+        cmap.extend_from_slice(&0u16.to_be_bytes());
+
+        cmap
     }
 }
 
@@ -1301,8 +1418,9 @@ fn subset_cid_cff_table(
                     let start = priv_off as usize;
                     let end = (start + priv_size as usize).min(cff.len());
                     let pb = cff[start..end].to_vec();
-                    // Locate Local Subr INDEX: first try op 19 from Private DICT (CFF spec),
-                    // then fall back to heuristic (parse INDEX immediately after Private DICT).
+                    // Keep the Local Subr INDEX — CharStrings use callsubr to
+                    // reference subroutines that contain the actual glyph outlines.
+                    // Without them, glyphs fail to render in PDF viewers.
                     let ls = if let Some(subrs_rel) = parse_local_subrs_offset(&pb) {
                         let subrs_abs = start + subrs_rel;
                         match parse_cff_index(cff, subrs_abs) {
@@ -1332,6 +1450,29 @@ fn subset_cid_cff_table(
         });
     }
 
+    // Patch op 19 (Subrs) in each Private DICT BEFORE offset calculation.
+    // The Local Subr INDEX is placed immediately after the Private DICT,
+    // so op 19 must equal the Private DICT's length. This must happen before
+    // the two-pass assembly because patching can change the Private DICT size.
+    for fd in &mut fd_data_list {
+        if !fd.local_subr_bytes.is_empty() {
+            let orig_len = fd.private_bytes.len();
+            // Two-step patch: first patch with a dummy value to stabilize the size
+            // (encode_cff_int_5byte always produces 5 bytes), then patch with the
+            // actual offset which equals the Private DICT's new length.
+            patch_private_subrs_offset(&mut fd.private_bytes, 0);
+            let after_first = fd.private_bytes.len();
+            let subrs_offset = after_first as i32;
+            patch_private_subrs_offset(&mut fd.private_bytes, subrs_offset);
+            tracing::debug!(
+                "Private DICT patch: {} → {} bytes, op19={}",
+                orig_len,
+                fd.private_bytes.len(),
+                subrs_offset
+            );
+        }
+    }
+
     // --- Two-pass offset assembly ---
     // Layout:
     //   [0] Header
@@ -1346,6 +1487,8 @@ fn subset_cid_cff_table(
     //   [9..] Private DICTs (one per needed FD)
 
     let name_bytes = name_index.raw_bytes(cff);
+    // Keep String INDEX and Global Subr INDEX — CharStrings may reference
+    // global subrs via callgsubr, and some DICTs reference string SIDs.
     let string_bytes = string_index.raw_bytes(cff);
     let global_subr_bytes = global_subr_index.raw_bytes(cff);
 
@@ -1829,6 +1972,48 @@ fn parse_local_subrs_offset(private_dict: &[u8]) -> Option<usize> {
         }
     }
     None
+}
+
+/// Patch the Subrs operator (op 19) in a Private DICT to point to `new_offset`.
+/// The offset is relative to the start of the Private DICT data.
+/// If op 19 doesn't exist but local subrs are present, appends it.
+fn patch_private_subrs_offset(private_dict: &mut Vec<u8>, new_offset: i32) {
+    // Scan for op 19 and replace its operand
+    let mut scanner = CffDictScanner::new(private_dict);
+    let mut op19_operand_start: Option<usize> = None;
+    let mut op19_end: Option<usize> = None;
+    let mut operand_start = 0usize;
+
+    loop {
+        let token = match scanner.next() {
+            Some(t) => t,
+            None => break,
+        };
+        match token {
+            CffDictToken::Operand(_) => {}
+            CffDictToken::EscapedOperator(_) => {
+                operand_start = scanner.position();
+            }
+            CffDictToken::Operator(b) => {
+                if b == 19 {
+                    op19_operand_start = Some(operand_start);
+                    op19_end = Some(scanner.position());
+                }
+                operand_start = scanner.position();
+            }
+        }
+    }
+
+    if let (Some(start), Some(end)) = (op19_operand_start, op19_end) {
+        // Replace: remove old operand+op19, insert new operand+op19
+        let mut replacement = encode_cff_int_5byte(new_offset).to_vec();
+        replacement.push(19); // op 19
+        private_dict.splice(start..end, replacement);
+    } else {
+        // No op 19 found — append it
+        private_dict.extend_from_slice(&encode_cff_int_5byte(new_offset));
+        private_dict.push(19);
+    }
 }
 
 /// Read a CFF Charset table from the CFF table.
