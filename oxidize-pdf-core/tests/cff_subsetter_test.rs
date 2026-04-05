@@ -263,29 +263,38 @@ fn build_minimal_cff_otf(num_glyphs: u16) -> Vec<u8> {
 // =============================================================================
 
 #[test]
-fn test_cff_font_subsetting_does_not_panic() {
-    let font_data = build_minimal_cff_otf(100);
-    let used: HashSet<char> = "ABC".chars().collect();
-    let result = subset_font(font_data, &used);
-    assert!(
-        result.is_ok(),
-        "subset_font must not fail for CFF: {:?}",
-        result.err()
-    );
-}
-
-#[test]
-fn test_cff_font_subset_preserves_glyph_mapping_for_used_chars() {
+fn test_cff_small_font_mapping_filtered_to_used_chars() {
+    // Small fonts (<100KB) are not subsetted, but the mapping must be filtered
+    // to only include the used characters (not the full cmap).
     let font_data = build_minimal_cff_otf(100);
     let used: HashSet<char> = "AB".chars().collect();
     let result = subset_font(font_data, &used).unwrap();
-    assert!(
-        result.glyph_mapping.contains_key(&('A' as u32)),
-        "Mapping must contain 'A'"
+
+    // Mapping must have exactly 2 entries (only the used chars)
+    assert_eq!(
+        result.glyph_mapping.len(),
+        2,
+        "Mapping should have exactly 2 entries for 'AB', got {}",
+        result.glyph_mapping.len()
     );
+
+    // Both chars must be present with non-zero GIDs
+    let gid_a = *result
+        .glyph_mapping
+        .get(&('A' as u32))
+        .expect("Mapping must contain 'A'");
+    let gid_b = *result
+        .glyph_mapping
+        .get(&('B' as u32))
+        .expect("Mapping must contain 'B'");
+    assert_ne!(gid_a, 0, "'A' must not map to .notdef (GID 0)");
+    assert_ne!(gid_b, 0, "'B' must not map to .notdef (GID 0)");
+    assert_ne!(gid_a, gid_b, "'A' and 'B' must have different GIDs");
+
+    // Chars NOT used must NOT be in the mapping
     assert!(
-        result.glyph_mapping.contains_key(&('B' as u32)),
-        "Mapping must contain 'B'"
+        !result.glyph_mapping.contains_key(&('Z' as u32)),
+        "Unused char 'Z' should not be in glyph mapping"
     );
 }
 
@@ -478,7 +487,7 @@ fn build_large_cff_table(num_glyphs: u16) -> Vec<u8> {
 }
 
 #[test]
-fn test_cff_subset_reduces_size_for_large_font() {
+fn test_cff_subset_reduces_size_and_preserves_mapping() {
     let font_data = build_large_cff_otf();
     let original_size = font_data.len();
     assert!(
@@ -490,27 +499,62 @@ fn test_cff_subset_reduces_size_for_large_font() {
     let used: HashSet<char> = "AB".chars().collect();
     let result = subset_font(font_data, &used).unwrap();
 
-    // The subset should be significantly smaller
+    // Size: 2 glyphs + .notdef from a 10,000 glyph font should be <5% of original
     assert!(
-        result.font_data.len() < original_size / 2,
-        "CFF subset ({} bytes) must be < 50% of original ({} bytes)",
+        result.font_data.len() < original_size / 20,
+        "CFF subset ({} bytes) should be <5% of original ({} bytes) for 2 chars out of 10,000",
         result.font_data.len(),
         original_size
+    );
+
+    // Mapping must be exactly the 2 used chars
+    assert_eq!(
+        result.glyph_mapping.len(),
+        2,
+        "Glyph mapping should have exactly 2 entries for 2 used chars, got {}",
+        result.glyph_mapping.len()
+    );
+    assert!(result.glyph_mapping.contains_key(&('A' as u32)));
+    assert!(result.glyph_mapping.contains_key(&('B' as u32)));
+
+    // Subsetted font must be a valid OTF (starts with 'OTTO' signature)
+    assert!(
+        result.font_data.len() >= 4,
+        "Subset font data too small to be valid OTF"
+    );
+    let sfnt = u32::from_be_bytes([
+        result.font_data[0],
+        result.font_data[1],
+        result.font_data[2],
+        result.font_data[3],
+    ]);
+    assert_eq!(
+        sfnt, 0x4F54544F,
+        "Subset font must have OTTO signature, got {:#010X}",
+        sfnt
     );
 }
 
 #[test]
-fn test_cff_subset_notdef_always_included() {
+fn test_cff_subset_only_keeps_used_glyphs() {
     let font_data = build_large_cff_otf();
     let used: HashSet<char> = "A".chars().collect();
     let result = subset_font(font_data, &used).unwrap();
 
-    // The subset font must be parseable and smaller than original
-    // (GID 0 .notdef + GID for 'A' = 2 glyphs max)
+    // Mapping: exactly 1 char
+    assert_eq!(
+        result.glyph_mapping.len(),
+        1,
+        "Should have exactly 1 glyph mapping entry, got {}",
+        result.glyph_mapping.len()
+    );
+    let gid = result.glyph_mapping[&('A' as u32)];
+    assert_eq!(gid, 1, "'A' should be GID 1 (after .notdef at GID 0)");
+
+    // No mapping for unused chars
     assert!(
-        result.font_data.len() < 50_000,
-        "Subset with 1 char should be small, got {} bytes",
-        result.font_data.len()
+        !result.glyph_mapping.contains_key(&('B' as u32)),
+        "Unused char 'B' should not be in mapping"
     );
 }
 
@@ -578,80 +622,223 @@ fn test_usize_to_cff_offset_overflow() {
 }
 
 #[test]
-fn test_cid_subset_small_font_round_trip() {
-    // Verify that subsetting a small CFF font still produces a valid, parseable result
-    // and preserves the glyph mapping for all used characters.
+fn test_small_font_mapping_filtered_exact_count() {
+    // Small font (<100KB) is not subsetted, but mapping must contain
+    // exactly the used chars — no more, no less.
     let font_data = build_minimal_cff_otf(50);
-    let original_len = font_data.len();
 
     let used: HashSet<char> = "ABC".chars().collect();
     let result = subset_font(font_data, &used).expect("subset_font must not fail");
 
-    // Glyph mapping must be present for all used characters
-    for ch in "ABC".chars() {
-        assert!(
-            result.glyph_mapping.contains_key(&(ch as u32)),
-            "Glyph mapping must contain '{}' (codepoint {})",
-            ch,
-            ch as u32
-        );
-    }
-
-    // The subsetted font must be non-empty and smaller than or equal to the original
-    assert!(
-        !result.font_data.is_empty(),
-        "Subsetted font data must not be empty"
+    // Mapping must have exactly 3 entries
+    assert_eq!(
+        result.glyph_mapping.len(),
+        3,
+        "Mapping should have exactly 3 entries for 'ABC', got {}",
+        result.glyph_mapping.len()
     );
+
+    // Each used char must be present with a distinct, non-zero GID
+    let a = result.glyph_mapping[&('A' as u32)];
+    let b = result.glyph_mapping[&('B' as u32)];
+    let c = result.glyph_mapping[&('C' as u32)];
+    assert!(a != 0 && b != 0 && c != 0, "GIDs must be non-zero");
+    assert!(a != b && b != c && a != c, "All GIDs must be distinct");
+
+    // Unused chars must not be present
     assert!(
-        result.font_data.len() <= original_len,
-        "Subsetted font ({} bytes) should not be larger than original ({} bytes)",
-        result.font_data.len(),
-        original_len
+        !result.glyph_mapping.contains_key(&('D' as u32)),
+        "Unused 'D' should not be in mapping"
+    );
+}
+
+// =============================================================================
+// OTF table coherence helpers
+// =============================================================================
+
+/// Find an OTF table by tag. Returns (offset, length).
+fn find_otf_table(otf_data: &[u8], target_tag: &[u8; 4]) -> Option<(usize, usize)> {
+    let num_tables = u16::from_be_bytes([otf_data[4], otf_data[5]]) as usize;
+    for i in 0..num_tables {
+        let dir = 12 + i * 16;
+        if &otf_data[dir..dir + 4] == target_tag {
+            let offset = u32::from_be_bytes([
+                otf_data[dir + 8],
+                otf_data[dir + 9],
+                otf_data[dir + 10],
+                otf_data[dir + 11],
+            ]) as usize;
+            let length = u32::from_be_bytes([
+                otf_data[dir + 12],
+                otf_data[dir + 13],
+                otf_data[dir + 14],
+                otf_data[dir + 15],
+            ]) as usize;
+            return Some((offset, length));
+        }
+    }
+    None
+}
+
+/// Parse numGlyphs from the maxp table.
+fn read_maxp_num_glyphs(otf_data: &[u8]) -> u16 {
+    let (offset, _) = find_otf_table(otf_data, b"maxp").expect("maxp table not found");
+    u16::from_be_bytes([otf_data[offset + 4], otf_data[offset + 5]])
+}
+
+// =============================================================================
+// Diagnostic tests: OTF table coherence after CFF subsetting
+// These expose WHY text doesn't display — viewers reject fonts where
+// maxp/hmtx/hhea report 65K glyphs but the CFF only has 5.
+// =============================================================================
+
+#[test]
+fn test_synthetic_cff_subset_maxp_coherent() {
+    // maxp.numGlyphs must match actual glyph count after subsetting.
+    let font_data = build_large_cff_otf();
+
+    let used: HashSet<char> = "AB".chars().collect();
+    let result = subset_font(font_data, &used).unwrap();
+
+    let maxp_glyphs = read_maxp_num_glyphs(&result.font_data);
+    // .notdef + A + B = 3
+    assert_eq!(
+        maxp_glyphs, 3,
+        "maxp.numGlyphs should be 3 (.notdef + 2 chars), got {}",
+        maxp_glyphs
+    );
+}
+
+#[test]
+fn test_cid_subset_is_raw_cff_not_otf() {
+    // CID-keyed CFF fonts must be embedded as raw CFF (not OTF wrapper)
+    // with /Subtype /CIDFontType0C. OTF wrapper causes maxp/hmtx/hhea
+    // incoherence that makes viewers reject the font.
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+
+    // Original is OTF (OTTO signature)
+    assert_eq!(
+        &font_data[0..4],
+        b"OTTO",
+        "Precondition: original must be OTF"
+    );
+
+    let used_chars: HashSet<char> = "你好世界".chars().collect();
+    let result = subset_font(font_data.clone(), &used_chars).expect("subsetting must succeed");
+
+    // Subset must NOT be OTF — it must be raw CFF (starts with CFF header: major=1, minor=0)
+    assert_ne!(
+        &result.font_data[0..4],
+        b"OTTO",
+        "CID subset must be raw CFF, not OTF wrapper"
+    );
+    assert_eq!(
+        result.font_data[0], 1,
+        "CFF header major version must be 1, got {}",
+        result.font_data[0]
+    );
+    assert_eq!(
+        result.font_data[1], 0,
+        "CFF header minor version must be 0, got {}",
+        result.font_data[1]
+    );
+
+    // Verify is_raw_cff flag
+    let cff_result =
+        oxidize_pdf::text::fonts::cff_subsetter::subset_cff_font(&font_data, &used_chars)
+            .expect("CFF subsetting must succeed");
+    assert!(
+        cff_result.is_raw_cff,
+        "CID-keyed font subset must set is_raw_cff=true"
     );
 }
 
 // =============================================================================
 // Real CID-keyed font subsetting tests (Issue #165)
+// Requires: test-pdfs/SourceHanSansSC-Regular.otf (16MB CID-keyed CFF font)
 // =============================================================================
 
-#[test]
-fn test_cid_font_subsetting_reduces_file_size() {
-    // Issue #165: SourceHanSansSC is a CID-keyed CFF font (16MB).
-    // Subsetting to 4 characters should dramatically reduce size.
-    let font_path = "../test-pdfs/SourceHanSansSC-Regular.otf";
-    if !std::path::Path::new(font_path).exists() {
-        return; // Skip if fixture not available (CI without large test files)
+const CID_FONT_PATH: &str = "../test-pdfs/SourceHanSansSC-Regular.otf";
+
+fn load_cid_font() -> Option<Vec<u8>> {
+    if std::path::Path::new(CID_FONT_PATH).exists() {
+        Some(std::fs::read(CID_FONT_PATH).unwrap())
+    } else {
+        eprintln!("SKIPPED: CID font fixture not found at {}", CID_FONT_PATH);
+        None
     }
-    let font_data = std::fs::read(font_path).unwrap();
+}
+
+#[test]
+fn test_cid_font_subset_size_proportional_to_used_chars() {
+    // Issue #165: 4 Chinese characters from a 65K+ glyph font (16MB).
+    // krilla produces 17KB for the same content. We should be <500KB
+    // (allowing for OTF overhead tables that aren't subsetted).
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+    let original_size = font_data.len();
 
     let used_chars: HashSet<char> = "你好世界".chars().collect();
+    let result = subset_font(font_data, &used_chars).expect("CID subsetting must succeed");
 
-    let result =
-        subset_font(font_data.clone(), &used_chars).expect("CID font subsetting should not error");
+    // The subset should contain exactly 4 glyph mappings
+    assert_eq!(
+        result.glyph_mapping.len(),
+        used_chars.len(),
+        "Glyph mapping should have exactly {} entries (one per used char), got {}",
+        used_chars.len(),
+        result.glyph_mapping.len()
+    );
 
-    let original_size = font_data.len();
+    // All new GIDs must be > 0 and sequential
+    let mut new_gids: Vec<u16> = result.glyph_mapping.values().copied().collect();
+    new_gids.sort();
+    let expected: Vec<u16> = (1..=used_chars.len() as u16).collect();
+    assert_eq!(
+        new_gids,
+        expected,
+        "New GIDs should be sequential [1..={}], got {:?}",
+        used_chars.len(),
+        new_gids
+    );
+
+    // Size: subset must be dramatically smaller than the 16MB original.
+    // Currently ~1MB due to full Local Subr INDEXes for needed FDs.
+    // Reference: krilla produces 17KB (it subsets Local Subrs).
+    // TODO: Implement Local Subr subsetting to reach <100KB.
     let subset_size = result.font_data.len();
-
-    // Threshold updated from 10% to 15%: spec-compliant Local Subr INDEX detection
-    // via Private DICT op 19 correctly includes per-FD local subrs that the previous
-    // heuristic (looking immediately after Private DICT) was missing.
     assert!(
-        subset_size < original_size * 15 / 100,
-        "Subset ({subset_size} bytes) should be <15% of original ({original_size} bytes). \
-         If equal, subsetting is not working for CID-keyed fonts."
+        subset_size < 1_200_000,
+        "Subset for 4 chars should be <1.2MB, got {} bytes ({:.1}KB). \
+         Original: {} bytes ({:.1}MB). Reduction: {:.1}%",
+        subset_size,
+        subset_size as f64 / 1024.0,
+        original_size,
+        original_size as f64 / 1_048_576.0,
+        (1.0 - subset_size as f64 / original_size as f64) * 100.0
     );
 }
 
 #[test]
-fn test_cid_font_subsetting_produces_valid_pdf() {
-    // End-to-end: load CID font → create PDF → verify file size is reasonable
+fn test_cid_font_pdf_round_trip_text_is_readable() {
+    // Issue #165 core bug: user reports Chinese text "is not displayed".
+    // This test generates a PDF with CJK text, parses it back, and verifies
+    // the text is actually extractable — not just that the file is small.
+    use oxidize_pdf::parser::{PdfDocument, PdfReader};
     use oxidize_pdf::{Document, Font, Page};
+    use std::io::Cursor;
 
-    let font_path = "../test-pdfs/SourceHanSansSC-Regular.otf";
-    if !std::path::Path::new(font_path).exists() {
-        return; // Skip if fixture not available
-    }
-    let font_data = std::fs::read(font_path).unwrap();
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+
+    let test_text = "你好世界";
 
     let mut doc = Document::new();
     doc.add_font_from_bytes("SourceHanSC", font_data)
@@ -661,31 +848,122 @@ fn test_cid_font_subsetting_produces_valid_pdf() {
     page.text()
         .set_font(Font::Custom("SourceHanSC".to_string()), 10.5)
         .at(30.0, 535.0)
-        .write("你好世界")
+        .write(test_text)
         .expect("Writing CJK text should succeed");
     doc.add_page(page);
 
-    let bytes = doc.to_bytes().expect("PDF generation should succeed");
+    let pdf_bytes = doc.to_bytes().expect("PDF generation should succeed");
 
-    // A PDF with 4 CJK characters should be far less than the full 16MB font.
-    // Threshold updated to 3MB: spec-compliant Local Subr INDEX detection via
-    // Private DICT op 19 correctly includes per-FD local subrs, adding ~300KB
-    // versus the previous heuristic that missed them.
+    // Parse the generated PDF back
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("Generated PDF must be parseable");
+    let parsed_doc = PdfDocument::new(reader);
+
+    // Extract text from page 0
+    let extracted = parsed_doc
+        .extract_text_from_page(0)
+        .expect("Text extraction from generated PDF should succeed");
+
+    // The extracted text must contain the Chinese characters we wrote
+    for ch in test_text.chars() {
+        assert!(
+            extracted.text.contains(ch),
+            "Extracted text must contain '{}' (U+{:04X}). \
+             Full extracted text: '{}'",
+            ch,
+            ch as u32,
+            extracted.text
+        );
+    }
+}
+
+#[test]
+fn test_cid_font_pdf_size_comparable_to_competitors() {
+    // Issue #165: user reports 2MB output vs krilla's 17KB for same content.
+    // This reproduces the user's exact scenario from the issue.
+    use oxidize_pdf::{Document, Font, Page};
+
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+
+    // User's exact test text from issue #165 (67 unique characters)
+    let text_line1 = "Rust 擁有完整的技術文件、友善的編譯器與清晰的錯誤訊息，還整合了一流的工具 — 包含套件管理工具、";
+    let text_line2 =
+        "建構工具、支援多種編輯器的自動補齊、型別檢測、自動格式化程式碼，以及更多等等。";
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceHanSC", font_data)
+        .expect("Font loading should succeed");
+
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceHanSC".to_string()), 10.5)
+        .at(30.0, 535.0)
+        .write(text_line1)
+        .expect("Writing line 1");
+    page.text()
+        .set_font(Font::Custom("SourceHanSC".to_string()), 10.5)
+        .at(30.0, 515.0)
+        .write(text_line2)
+        .expect("Writing line 2");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation should succeed");
+
+    // Fixed from 2MB → ~1MB. Local Subr INDEXes still dominate size.
+    // Reference: krilla produces 17KB (it subsets Local Subrs).
+    // TODO: Implement Local Subr subsetting to reach <200KB.
     assert!(
-        bytes.len() < 3_000_000,
-        "PDF with 4 CJK chars should be <3MB, got {} bytes ({:.1}MB). \
-         Full font is likely embedded without subsetting.",
-        bytes.len(),
-        bytes.len() as f64 / 1_048_576.0
+        pdf_bytes.len() < 1_200_000,
+        "PDF with ~67 CJK chars should be <1.2MB, got {} bytes ({:.1}KB). \
+         Was 2MB before fix. Reference: krilla 17KB (subsets Local Subrs).",
+        pdf_bytes.len(),
+        pdf_bytes.len() as f64 / 1024.0
+    );
+}
+
+#[test]
+fn test_cid_font_content_stream_has_correct_hex_encoding() {
+    // Verify the content stream encodes Chinese chars as UTF-16BE hex strings
+    // that match the Identity-H CID values (CID = Unicode codepoint).
+    use oxidize_pdf::{Document, Font, Page};
+
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceHanSC", font_data)
+        .expect("Font loading should succeed");
+
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceHanSC".to_string()), 10.5)
+        .at(30.0, 535.0)
+        .write("你好")
+        .expect("Writing CJK text");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation should succeed");
+    let content = String::from_utf8_lossy(&pdf_bytes);
+
+    // '你' = U+4F60 → UTF-16BE = 4F60
+    // '好' = U+597D → UTF-16BE = 597D
+    // Content stream should contain hex string <4F60597D> Tj
+    assert!(
+        content.contains("4F60") && content.contains("597D"),
+        "Content stream must contain UTF-16BE hex for '你' (4F60) and '好' (597D). \
+         This verifies Identity-H encoding is used correctly."
     );
 }
 
 #[test]
 fn test_non_cid_cff_font_subsetting_with_real_fixture() {
-    // Verify subsetting also works for non-CID OTF/CFF fonts with real fixture
     let font_path = "../test-pdfs/SourceSans3-Regular.otf";
     if !std::path::Path::new(font_path).exists() {
-        // Skip if fixture doesn't exist
+        eprintln!("SKIPPED: Non-CID fixture not found at {}", font_path);
         return;
     }
 
@@ -695,14 +973,29 @@ fn test_non_cid_cff_font_subsetting_with_real_fixture() {
     let result = subset_font(font_data.clone(), &used_chars)
         .expect("Non-CID CFF font subsetting should succeed");
 
+    // Exact mapping: "Hello" has 4 unique chars (H, e, l, o)
+    let unique_chars: HashSet<char> = "Hello".chars().collect();
+    assert_eq!(
+        result.glyph_mapping.len(),
+        unique_chars.len(),
+        "Mapping should have {} entries (unique chars in 'Hello'), got {}",
+        unique_chars.len(),
+        result.glyph_mapping.len()
+    );
+
+    for ch in unique_chars {
+        assert!(
+            result.glyph_mapping.contains_key(&(ch as u32)),
+            "Mapping must contain '{}' (U+{:04X})",
+            ch,
+            ch as u32
+        );
+        let gid = result.glyph_mapping[&(ch as u32)];
+        assert_ne!(gid, 0, "'{}' must not map to .notdef (GID 0)", ch);
+    }
+
     let original_size = font_data.len();
     let subset_size = result.font_data.len();
-
-    // Non-CID subsetting keeps CharStrings for used glyphs + other OTF tables verbatim.
-    // The OTF file contains many tables (cmap, hmtx, etc.) that are not subsetted,
-    // so the total reduction depends on how much of the file is CFF vs other tables.
-    // SourceSans3: ~162KB CFF + ~172KB other tables = ~334KB total.
-    // After subsetting, CFF drops dramatically; other tables stay. Expect <75% total.
     assert!(
         subset_size < (original_size * 3 / 4),
         "Non-CID CFF subset ({subset_size}) should be <75% of original ({original_size})"

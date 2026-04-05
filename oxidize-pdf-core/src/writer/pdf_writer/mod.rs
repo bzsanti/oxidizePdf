@@ -1362,49 +1362,47 @@ impl<W: Write> PdfWriter<W> {
         // Write font file (embedded TTF data with subsetting for large fonts)
         // Keep track of the glyph mapping if we subset the font
         // IMPORTANT: We need the ORIGINAL font for width calculations, not the subset
-        let (font_data_to_embed, subset_glyph_mapping, original_font_for_widths) =
+        let (font_data_to_embed, subset_glyph_mapping, original_font_for_widths, embed_as_raw_cff) =
             if font.data.len() > 100_000 && !used_chars.is_empty() {
-                // Large font - try to subset it
                 match crate::text::fonts::truetype_subsetter::subset_font(
                     font.data.clone(),
                     &used_chars,
                 ) {
-                    Ok(subset_result) => {
-                        // Successfully subsetted - keep both font data and mapping
-                        // Also keep reference to original font for width calculations
-                        (
-                            subset_result.font_data,
-                            Some(subset_result.glyph_mapping),
-                            font.clone(),
-                        )
-                    }
+                    Ok(subset_result) => (
+                        subset_result.font_data,
+                        Some(subset_result.glyph_mapping),
+                        font.clone(),
+                        subset_result.is_raw_cff,
+                    ),
                     Err(_) => {
-                        // Subsetting failed, use original if under 25MB
                         if font.data.len() < 25_000_000 {
-                            (font.data.clone(), None, font.clone())
+                            (font.data.clone(), None, font.clone(), false)
                         } else {
-                            // Too large even for fallback
-                            (Vec::new(), None, font.clone())
+                            (Vec::new(), None, font.clone(), false)
                         }
                     }
                 }
             } else {
-                // Small font or no character tracking - use as-is
-                (font.data.clone(), None, font.clone())
+                (font.data.clone(), None, font.clone(), false)
             };
 
         if !font_data_to_embed.is_empty() {
             let mut font_file_dict = Dictionary::new();
-            // Add appropriate properties based on font format
-            match font.format {
-                crate::fonts::FontFormat::OpenType => {
-                    // CFF/OpenType fonts use FontFile3 with OpenType subtype
-                    font_file_dict.set("Subtype", Object::Name("OpenType".to_string()));
-                    font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
-                }
-                crate::fonts::FontFormat::TrueType => {
-                    // TrueType fonts use FontFile2 with Length1
-                    font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+            if embed_as_raw_cff {
+                // CID-keyed CFF: embed raw CFF bytes with /CIDFontType0C
+                // This is the industry standard for CID fonts in PDF.
+                font_file_dict.set("Subtype", Object::Name("CIDFontType0C".to_string()));
+            } else {
+                match font.format {
+                    crate::fonts::FontFormat::OpenType => {
+                        font_file_dict.set("Subtype", Object::Name("OpenType".to_string()));
+                        font_file_dict
+                            .set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+                    }
+                    crate::fonts::FontFormat::TrueType => {
+                        font_file_dict
+                            .set("Length1", Object::Integer(font_data_to_embed.len() as i64));
+                    }
                 }
             }
             let font_stream_obj = Object::Stream(font_file_dict, font_data_to_embed);
