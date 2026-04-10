@@ -190,6 +190,7 @@ pub mod fonts;
 pub mod forms;
 pub mod geometry;
 pub mod graphics;
+pub mod layout;
 pub mod memory;
 pub mod metadata;
 pub mod objects;
@@ -228,11 +229,16 @@ pub use document::{Document, DocumentMetadata};
 pub use error::{OxidizePdfError, PdfError, Result};
 pub use geometry::{Point, Rectangle};
 pub use graphics::{Color, ColorSpace, GraphicsContext, Image, ImageFormat, MaskType};
+pub use layout::{
+    centered_image_x, fit_image_dimensions, DocumentBuilder, FlowElement, FlowLayout, PageConfig,
+    RichText, TextSpan,
+};
 pub use page::{Margins, Page};
 pub use page_lists::{ListStyle, ListType, PageLists};
 pub use page_tables::{PageTables, TableStyle};
 pub use text::{
     measure_text,
+    measure_text_block,
     split_into_words,
     BulletStyle,
     Font,
@@ -258,6 +264,7 @@ pub use text::{
     TableCell,
     TableOptions,
     TextAlign,
+    TextBlockMetrics,
     TextContext,
     TextFlowContext,
     UnorderedList,

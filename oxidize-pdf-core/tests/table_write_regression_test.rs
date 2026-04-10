@@ -7,7 +7,9 @@
 //!
 //! `assert!(result.is_ok())` alone is NOT acceptable.
 
-use oxidize_pdf::advanced_tables::{AdvancedTableBuilder, AdvancedTableExt, CellData};
+use oxidize_pdf::advanced_tables::{
+    AdvancedTableBuilder, AdvancedTableExt, CellData, TableRenderer,
+};
 use oxidize_pdf::text::{Table, TableCell};
 use oxidize_pdf::writer::WriterConfig;
 use oxidize_pdf::{Color, Document, Page, Result};
@@ -507,6 +509,143 @@ fn test_extract_text_positions_is_non_empty() -> Result<()> {
     assert!(
         !positions.is_empty(),
         "extract_text_positions returned empty — regex may not match the PDF operator format"
+    );
+
+    Ok(())
+}
+
+// =============================================================================
+// P6: #171 — AdvancedTable auto row height for multiline content
+// =============================================================================
+
+#[test]
+fn test_advanced_table_auto_height_multiline() -> Result<()> {
+    // Issue #171: calculate_table_height must account for multiline cell content
+    // when auto_height is enabled (default).
+    // 3 lines of text at 12pt × 1.2 line_height = 43.2pt + padding > 25pt default.
+    let table = AdvancedTableBuilder::new()
+        .add_column("Col1", 200.0)
+        .add_column("Col2", 200.0)
+        .add_row_cells(vec![
+            CellData::new("Line1\nLine2\nLine3"),
+            CellData::new("Single"),
+        ])
+        .build()
+        .map_err(|e| oxidize_pdf::error::PdfError::InvalidOperation(e.to_string()))?;
+
+    let renderer = TableRenderer::new();
+    let calc_height = renderer.calculate_table_height(&table);
+
+    // Header (30pt default) + data row.
+    // Data row must be > 25pt default because the cell has 3 lines.
+    // 3 lines × 12pt × 1.2 = 43.2pt + padding (~12pt) = ~55pt.
+    // Total should be header(30) + row(~55) = ~85, NOT header(30) + row(25) = 55.
+    assert!(
+        calc_height > 60.0,
+        "calculate_table_height should expand for multiline content, got {calc_height} \
+         (expected > 60, default without expansion would be ~55)"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_advanced_table_auto_height_renders_all_lines() -> Result<()> {
+    // Issue #171: when auto_height expands the row, all text lines must
+    // be rendered within the cell bounds (not clipped).
+    let table = AdvancedTableBuilder::new()
+        .add_column("Content", 300.0)
+        .add_row_cells(vec![CellData::new("Alpha\nBravo\nCharlie")])
+        .build()
+        .map_err(|e| oxidize_pdf::error::PdfError::InvalidOperation(e.to_string()))?;
+
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    page.add_advanced_table(&table, 50.0, 700.0)?;
+    doc.add_page(page);
+
+    let config = WriterConfig {
+        compress_streams: false,
+        ..WriterConfig::default()
+    };
+    let pdf_bytes = doc.to_bytes_with_config(config)?;
+    let texts = extract_text_strings(&pdf_bytes);
+
+    assert!(
+        texts.contains(&"Alpha".to_string()),
+        "should contain 'Alpha', found: {:?}",
+        texts
+    );
+    assert!(
+        texts.contains(&"Bravo".to_string()),
+        "should contain 'Bravo', found: {:?}",
+        texts
+    );
+    assert!(
+        texts.contains(&"Charlie".to_string()),
+        "should contain 'Charlie', found: {:?}",
+        texts
+    );
+
+    // All 3 lines should be at different Y positions, descending
+    let positions = extract_text_positions(&pdf_bytes);
+    let idx_a = texts.iter().position(|t| t == "Alpha").unwrap();
+    let idx_b = texts.iter().position(|t| t == "Bravo").unwrap();
+    let idx_c = texts.iter().position(|t| t == "Charlie").unwrap();
+
+    assert!(
+        positions[idx_a].1 > positions[idx_b].1,
+        "Alpha (y={}) should be above Bravo (y={})",
+        positions[idx_a].1,
+        positions[idx_b].1
+    );
+    assert!(
+        positions[idx_b].1 > positions[idx_c].1,
+        "Bravo (y={}) should be above Charlie (y={})",
+        positions[idx_b].1,
+        positions[idx_c].1
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_advanced_table_height_matches_render() -> Result<()> {
+    // Issue #171: calculate_table_height and render_table must agree on total height.
+    // render_table returns final_y, so rendered_height = start_y - final_y.
+    let table = AdvancedTableBuilder::new()
+        .add_column("A", 200.0)
+        .add_column("B", 200.0)
+        .add_row_cells(vec![
+            CellData::new("One\nTwo\nThree\nFour"),
+            CellData::new("Short"),
+        ])
+        .add_row_cells(vec![
+            CellData::new("Single"),
+            CellData::new("Also\nTwo lines"),
+        ])
+        .build()
+        .map_err(|e| oxidize_pdf::error::PdfError::InvalidOperation(e.to_string()))?;
+
+    let renderer = TableRenderer::new();
+    let predicted = renderer.calculate_table_height(&table);
+
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    let start_y = 700.0;
+    let final_y = page.add_advanced_table(&table, 50.0, start_y)?;
+    doc.add_page(page);
+
+    let rendered_height = start_y - final_y;
+
+    // predicted height should match rendered height within 3pt tolerance
+    // (calculate_table_height includes a 2pt border buffer that render_table
+    // accounts for differently via border drawing position)
+    let diff = (predicted - rendered_height).abs();
+    assert!(
+        diff < 3.0,
+        "calculate_table_height ({predicted:.1}) and actual render height ({rendered_height:.1}) \
+         disagree by {diff:.1}pt (tolerance 3pt)"
     );
 
     Ok(())
