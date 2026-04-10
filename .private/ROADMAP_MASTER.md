@@ -1,5 +1,5 @@
 # ROADMAP MASTER - oxidize-pdf
-**Ultima actualizacion**: 2026-03-29 (quality review + bug fixes #167, #174)
+**Ultima actualizacion**: 2026-04-05 (cleanup: feature/pdf-editor borrada, rag-aligned-editing actualizada con develop)
 **Horizonte**: Sin deadline — roadmap es orientativo, no vinculante
 **Owner**: bzsanti
 **Repositorio**: https://github.com/bzsanti/oxidizePdf
@@ -9,8 +9,8 @@
 ## ESTADO ACTUAL
 
 ### Posicion en Roadmap
-- **Version**: v2.4.1 released (tag v2.4.1 en main)
-- **Sprint Actual**: Bug fixes — TextFlow width (#167), PNG rendering (#174)
+- **Version**: v2.4.3 released (tag v2.4.3 en main)
+- **Sprint Actual**: CID CFF font subsetting fix (#165)
 - **Tests**: 6,261 passing (lib), clippy limpio
 - **Coverage**: 72.14%
 - **Quality Grade**: A (95/100)
@@ -30,6 +30,8 @@
 
 | Version | Fecha | Highlights |
 |---------|-------|------------|
+| v2.4.3 | 2026-04-04 | CID CFF font subsetting fix (#165): raw CFF embedding, Private DICT Subrs patching, glyph mapping filter |
+| v2.4.2 | 2026-04-02 | TTF tittle offset fix, TextFlow width (#167), PNG rendering (#174) |
 | v2.4.1 | 2026-03-29 | 14 quality fixes (CFF scanner, overflow protection, measure_text &Font, cmap consolidation, PNG fix, TextFlow width), table system overhaul, CID font subsetting |
 | v2.4.0 | 2026-03-27 | CFF font subsetting, cmap Format 12, multilingual corpus tests |
 | v2.3.4 | 2026-03-25 | Table improvements (#162, #163), CJK table font fix (#160) |
@@ -103,7 +105,6 @@
 - **#160** - CJK font NOT displayed correctly in Table (fix en rama `fix/issue-160-cjk-table-font`, pendiente PR+merge)
 - Feature branches activas:
   - `fix/issue-160-cjk-table-font` — fix encoding CJK en GraphicsContext::show_text
-  - `feature/pdf-editor` — nueva feature de edicion (AnnotationInjector, PageManipulator)
 
 ### Cerrados (2026)
 - **#159** - Release v2.3.3 (PR merged)
@@ -194,8 +195,11 @@
 - extraction.rs:618 panic con Cold_Email_Hacks.pdf cuando detect_columns: true
 - Afecta ExtractionProfile::Academic
 
-### 4. feature/pdf-editor
-- Rama activa con AnnotationInjector y PageManipulator (no mergeada)
+### 4. Optimizar tamaño CID CFF subset (Local Subr subsetting)
+- Actualmente ~1MB por font CID (Local Subr INDEXes completos para FDs necesarios)
+- Competencia (krilla): 17KB para el mismo contenido
+- Requiere: parser de CharStrings Type 2 para detectar callsubr/callgsubr, seguir referencias recursivamente, y emitir solo los subrs usados
+- Impacto estimado: de ~1MB a <100KB
 
 ---
 
