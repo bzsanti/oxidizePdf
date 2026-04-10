@@ -17,6 +17,7 @@ pub mod plaintext;
 pub mod structured;
 pub mod table;
 pub mod table_detection;
+pub mod text_block;
 pub mod validation;
 
 #[cfg(test)]
@@ -47,6 +48,7 @@ pub use ocr::{
 };
 pub use plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor, PlainTextResult};
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
+pub use text_block::{compute_line_widths, measure_text_block, TextBlockMetrics};
 pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 
 #[cfg(feature = "ocr-tesseract")]
