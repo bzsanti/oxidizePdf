@@ -46,16 +46,23 @@ impl TableRenderer {
             }
         }
 
-        // Calculate rows height, tracking rows absorbed by rowspan
+        // Calculate rows height, tracking rows absorbed by rowspan.
+        // When auto_height is enabled, expand rows to fit multiline content
+        // (mirrors the same logic used in render_rows).
         let mut rows_to_skip: usize = 0;
-        for row in &table.rows {
-            let row_height = row.min_height.unwrap_or(self.default_row_height);
-
+        for (row_idx, row) in table.rows.iter().enumerate() {
             if rows_to_skip > 0 {
-                // This row is absorbed by a rowspan from a previous row
                 rows_to_skip -= 1;
                 continue;
             }
+
+            let base_height = row.min_height.unwrap_or(self.default_row_height);
+            let row_height = if self.auto_height {
+                let content_height = self.calculate_content_row_height(table, row, row_idx);
+                base_height.max(content_height)
+            } else {
+                base_height
+            };
 
             let max_rowspan = row.cells.iter().map(|cell| cell.rowspan).max().unwrap_or(1);
             if max_rowspan > 1 {
