@@ -808,14 +808,13 @@ fn test_cid_font_subset_size_proportional_to_used_chars() {
     );
 
     // Size: subset must be dramatically smaller than the 16MB original.
-    // Currently ~1MB due to full Local Subr INDEXes for needed FDs.
-    // Reference: krilla produces 17KB (it subsets Local Subrs).
-    // TODO: Implement Local Subr subsetting to reach <100KB.
+    // Local Subr subsetting filters unused subroutines to endchar stubs.
+    // Reference: krilla produces 17KB (it also subsets Local Subrs).
     let subset_size = result.font_data.len();
     assert!(
-        subset_size < 1_200_000,
-        "Subset for 4 chars should be <1.2MB, got {} bytes ({:.1}KB). \
-         Original: {} bytes ({:.1}MB). Reduction: {:.1}%",
+        subset_size < 100_000,
+        "Subset for 4 chars should be <100KB after Local Subr subsetting, \
+         got {} bytes ({:.1}KB). Original: {} bytes ({:.1}MB). Reduction: {:.1}%",
         subset_size,
         subset_size as f64 / 1024.0,
         original_size,
@@ -911,13 +910,12 @@ fn test_cid_font_pdf_size_comparable_to_competitors() {
 
     let pdf_bytes = doc.to_bytes().expect("PDF generation should succeed");
 
-    // Fixed from 2MB → ~1MB. Local Subr INDEXes still dominate size.
-    // Reference: krilla produces 17KB (it subsets Local Subrs).
-    // TODO: Implement Local Subr subsetting to reach <200KB.
+    // Local Subr subsetting filters unused subroutines to endchar stubs.
+    // Reference: krilla produces 17KB for same content.
     assert!(
-        pdf_bytes.len() < 1_200_000,
-        "PDF with ~67 CJK chars should be <1.2MB, got {} bytes ({:.1}KB). \
-         Was 2MB before fix. Reference: krilla 17KB (subsets Local Subrs).",
+        pdf_bytes.len() < 200_000,
+        "PDF with ~67 CJK chars should be <200KB after Local Subr subsetting, \
+         got {} bytes ({:.1}KB). Reference: krilla 17KB.",
         pdf_bytes.len(),
         pdf_bytes.len() as f64 / 1024.0
     );

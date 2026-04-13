@@ -1,5 +1,5 @@
 # ROADMAP MASTER - oxidize-pdf
-**Ultima actualizacion**: 2026-04-05 (cleanup: feature/pdf-editor borrada, rag-aligned-editing actualizada con develop)
+**Ultima actualizacion**: 2026-04-13 (v2.5.1 — Local Subr subsetting, CID font size fix #165)
 **Horizonte**: Sin deadline — roadmap es orientativo, no vinculante
 **Owner**: bzsanti
 **Repositorio**: https://github.com/bzsanti/oxidizePdf
@@ -9,9 +9,9 @@
 ## ESTADO ACTUAL
 
 ### Posicion en Roadmap
-- **Version**: v2.4.3 released (tag v2.4.3 en main)
-- **Sprint Actual**: CID CFF font subsetting fix (#165)
-- **Tests**: 6,261 passing (lib), clippy limpio
+- **Version**: v2.5.1 (Local Subr subsetting — pendiente merge a develop/main)
+- **Sprint Actual**: CID font subset size optimization (#165)
+- **Tests**: 8,191 passing (workspace), clippy limpio
 - **Coverage**: 72.14%
 - **Quality Grade**: A (95/100)
 - **PDF Success Rate**: 99.3% (275/277 failure corpus)
@@ -20,7 +20,7 @@
 - **Downloads**: ~10K+ total (estimado)
 - **Stars**: 20+
 - **Test coverage**: 72.14% (objetivo: 80%)
-- **Tests**: 8,070 passing
+- **Tests**: 8,191 passing
 - **Licencia**: MIT (cambiada desde AGPL-3.0 — monetizacion ya no es objetivo)
 - **ISO compliance**: 310 requisitos curados, 100% linked to code (66.8% alta verificacion)
 
@@ -30,6 +30,8 @@
 
 | Version | Fecha | Highlights |
 |---------|-------|------------|
+| v2.5.1 | 2026-04-13 | Local Subr subsetting: CID CFF font subsets reduced from ~1MB to <150KB (99.1% reduction), fix #165 font size |
+| v2.5.0 | 2026-04-10 | RAG-aligned editing (SourceHighlighter, SemanticRedactor, ChunkPageMapper), FlowLayout engine, fix #171 auto row height |
 | v2.4.3 | 2026-04-04 | CID CFF font subsetting fix (#165): raw CFF embedding, Private DICT Subrs patching, glyph mapping filter |
 | v2.4.2 | 2026-04-02 | TTF tittle offset fix, TextFlow width (#167), PNG rendering (#174) |
 | v2.4.1 | 2026-03-29 | 14 quality fixes (CFF scanner, overflow protection, measure_text &Font, cmap consolidation, PNG fix, TextFlow width), table system overhaul, CID font subsetting |
@@ -102,9 +104,11 @@
 ## ISSUES GITHUB
 
 ### Abiertos
+- **#165** - Font subsetter tamaño excesivo (texto renderiza OK en v2.4.3, pendiente optimización Local Subrs ~1MB→<100KB)
+- **#167** - TextFlow width (fix mergeado en v2.4.2, usuario no ha confirmado cierre)
+- **#170** - Multi-line text in cell (usuario confirmó "much better" en v2.4.1, pendiente cierre por usuario)
+- **#171** - Auto row height en AdvancedTable (fix en v2.5.0, pendiente cierre por usuario)
 - **#160** - CJK font NOT displayed correctly in Table (fix en rama `fix/issue-160-cjk-table-font`, pendiente PR+merge)
-- Feature branches activas:
-  - `fix/issue-160-cjk-table-font` — fix encoding CJK en GraphicsContext::show_text
 
 ### Cerrados (2026)
 - **#159** - Release v2.3.3 (PR merged)
