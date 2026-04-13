@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.5.1] - 2026-04-13
+
+### Fixed
+- **CID CFF subset size optimization** (#165) — Local Subr subsetting filters unused subroutines to `endchar` stubs, reducing CID font subsets from ~1MB to <150KB (99.1% reduction from 16MB original). Global Subr INDEX also filtered transitively.
+
+### Added
+- Type 2 CharString parser for `callsubr`/`callgsubr` analysis
+- Transitive BFS reachability analysis for Local and Global Subr INDEXes
+- 25 new unit tests for subr parsing, traversal, and INDEX filtering
+
 ## [2.3.4] - 2026-03-26
 
 ### Fixed
