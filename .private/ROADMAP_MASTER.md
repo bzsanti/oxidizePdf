@@ -9,8 +9,8 @@
 ## ESTADO ACTUAL
 
 ### Posicion en Roadmap
-- **Version**: v2.5.1 (Local Subr subsetting — pendiente merge a develop/main)
-- **Sprint Actual**: CID font subset size optimization (#165)
+- **Version**: v2.5.1 released (tag v2.5.1 en main, publicado 2026-04-13)
+- **Sprint Actual**: Completado — Local Subr subsetting (#165)
 - **Tests**: 8,191 passing (workspace), clippy limpio
 - **Coverage**: 72.14%
 - **Quality Grade**: A (95/100)
