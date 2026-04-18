@@ -1,5 +1,5 @@
 # ROADMAP MASTER - oxidize-pdf
-**Ultima actualizacion**: 2026-04-13 (v2.5.1 — Local Subr subsetting, CID font size fix #165)
+**Ultima actualizacion**: 2026-04-18 (font subsetting improvements — CFF modularization, issue #165 ongoing)
 **Horizonte**: Sin deadline — roadmap es orientativo, no vinculante
 **Owner**: bzsanti
 **Repositorio**: https://github.com/bzsanti/oxidizePdf
@@ -9,8 +9,12 @@
 ## ESTADO ACTUAL
 
 ### Posicion en Roadmap
-- **Version**: v2.5.1 (Local Subr subsetting — pendiente merge a develop/main)
-- **Sprint Actual**: CID font subset size optimization (#165)
+- **Version**: v2.5.1 (released)
+- **Sprint Actual**: Font subsetting improvements (#165) — branch `feature/font-subsetting-improvements`
+  - Tasks 1-3/12 completadas: CFF modularization (types.rs, index.rs, dict.rs)
+  - Pendiente: desubroutinizer (T4-6), SID→CID conversion (T7), TTF table stripping (T8), writer simplification (T9)
+  - Spec: `docs/superpowers/specs/2026-04-18-font-subsetting-improvements-design.md`
+  - Plan: `docs/superpowers/plans/2026-04-18-font-subsetting-improvements.md`
 - **Tests**: 8,191 passing (workspace), clippy limpio
 - **Coverage**: 72.14%
 - **Quality Grade**: A (95/100)
