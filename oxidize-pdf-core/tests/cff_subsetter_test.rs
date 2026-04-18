@@ -4,10 +4,10 @@
 //! (OpenType with CFF outlines), reducing file size by including only
 //! the glyphs actually used in the document.
 
+use oxidize_pdf::text::fonts::cff::types::CffDictScanner;
+use oxidize_pdf::text::fonts::cff::types::CffDictToken;
 use oxidize_pdf::text::fonts::cff_subsetter::build_cff_index;
 use oxidize_pdf::text::fonts::cff_subsetter::usize_to_cff_offset;
-use oxidize_pdf::text::fonts::cff_subsetter::CffDictScanner;
-use oxidize_pdf::text::fonts::cff_subsetter::CffDictToken;
 use oxidize_pdf::text::fonts::truetype_subsetter::subset_font;
 use std::collections::HashSet;
 
