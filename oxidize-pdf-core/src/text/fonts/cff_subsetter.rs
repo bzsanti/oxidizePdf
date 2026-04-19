@@ -391,13 +391,10 @@ fn subset_cid_cff_table(
                 let start = priv_off as usize;
                 let end = (start + priv_size as usize).min(cff.len());
                 let pb = cff[start..end].to_vec();
+                // Per CFF spec §5.1, Local Subrs exist only when op 19 (Subrs)
+                // is present in the Private DICT; no speculative probing.
                 let ls = if let Some(subrs_rel) = parse_local_subrs_offset(&pb) {
                     parse_cff_index(cff, start + subrs_rel).unwrap_or_else(|_| CffIndex::empty())
-                } else if end < cff.len() {
-                    match parse_cff_index(cff, end) {
-                        Ok(idx) if idx.count() > 0 => idx,
-                        _ => CffIndex::empty(),
-                    }
                 } else {
                     CffIndex::empty()
                 };
@@ -779,14 +776,11 @@ fn subset_cff_table(
 
     let local_subrs = if !private_bytes.is_empty() && private_orig_offset > 0 {
         let priv_start = private_orig_offset as usize;
-        let priv_end = priv_start + private_bytes.len();
+        // Per CFF spec §5.1, Local Subrs exist only when op 19 (Subrs) is
+        // present in the Private DICT; no speculative probing of bytes
+        // that happen to follow the DICT.
         if let Some(subrs_rel) = parse_local_subrs_offset(&private_bytes) {
             parse_cff_index(cff, priv_start + subrs_rel).unwrap_or_else(|_| CffIndex::empty())
-        } else if priv_end < cff.len() {
-            match parse_cff_index(cff, priv_end) {
-                Ok(idx) if idx.count() > 0 => idx,
-                _ => CffIndex::empty(),
-            }
         } else {
             CffIndex::empty()
         }
