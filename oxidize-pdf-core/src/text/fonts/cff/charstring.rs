@@ -43,6 +43,8 @@ pub fn desubroutinize(
 ) -> ParseResult<Vec<u8>> {
     let mut output = Vec::with_capacity(charstring.len());
     let mut state = DesubState::default();
+    // The bool return from desubroutinize_inner tells us whether endchar was
+    // seen; at the top level we don't care — the output is returned either way.
     desubroutinize_inner(
         charstring,
         global_subrs,
@@ -69,6 +71,11 @@ struct DesubState {
     seen_hint_mask: bool,
 }
 
+/// Returns `Ok(true)` when an `endchar` was emitted during this call (possibly
+/// via a nested subroutine). Callers use that signal to stop processing their
+/// own remaining bytes, since `endchar` terminates the entire charstring per
+/// Type 2 spec §4.3. `Ok(false)` means the body ended by `return` or ran off
+/// the end without an endchar — the caller should resume normal processing.
 #[allow(clippy::too_many_arguments)]
 fn desubroutinize_inner(
     charstring: &[u8],
@@ -79,7 +86,7 @@ fn desubroutinize_inner(
     depth: u8,
     state: &mut DesubState,
     output: &mut Vec<u8>,
-) -> ParseResult<()> {
+) -> ParseResult<bool> {
     if depth > MAX_SUBR_DEPTH {
         return Err(ParseError::SyntaxError {
             position: 0,
@@ -103,7 +110,7 @@ fn desubroutinize_inner(
                 output.truncate(operand_start);
                 let actual_index = biased_index + cff_subr_bias(local_subrs.count());
                 let subr_data = subr_item(local_subrs, local_subrs_data, actual_index, offset)?;
-                desubroutinize_inner(
+                let saw_endchar = desubroutinize_inner(
                     subr_data,
                     global_subrs,
                     global_subrs_data,
@@ -113,6 +120,9 @@ fn desubroutinize_inner(
                     state,
                     output,
                 )?;
+                if saw_endchar {
+                    return Ok(true);
+                }
                 offset += 1;
             }
             29 => {
@@ -122,7 +132,7 @@ fn desubroutinize_inner(
                 output.truncate(operand_start);
                 let actual_index = biased_index + cff_subr_bias(global_subrs.count());
                 let subr_data = subr_item(global_subrs, global_subrs_data, actual_index, offset)?;
-                desubroutinize_inner(
+                let saw_endchar = desubroutinize_inner(
                     subr_data,
                     global_subrs,
                     global_subrs_data,
@@ -132,17 +142,20 @@ fn desubroutinize_inner(
                     state,
                     output,
                 )?;
+                if saw_endchar {
+                    return Ok(true);
+                }
                 offset += 1;
             }
             11 => {
                 // return: end of this (sub)routine — drop the operator
-                return Ok(());
+                return Ok(false);
             }
             14 => {
-                // endchar: emit and stop; anything after endchar is ignored
+                // endchar: emit and stop the entire charstring (spec §4.3)
                 output.push(14);
                 state.operand_positions.clear();
-                return Ok(());
+                return Ok(true);
             }
 
             // ---------------- Stem operators ----------------
@@ -246,7 +259,7 @@ fn desubroutinize_inner(
             }
         }
     }
-    Ok(())
+    Ok(false)
 }
 
 fn subr_item<'a>(

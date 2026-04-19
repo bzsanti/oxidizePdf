@@ -352,3 +352,54 @@ fn test_desubroutinize_preserves_preceding_operands() {
     ];
     assert_eq!(result, expected);
 }
+
+// =========================================================================
+// Desubroutinization: endchar inside a subroutine terminates the caller
+// (Type 2 spec §4.3: endchar must be the last command in any charstring)
+// =========================================================================
+
+#[test]
+fn test_desubroutinize_endchar_in_subr_terminates_caller() {
+    // Local subr 0: rmoveto(1, 2) + endchar (no `return`). Per Type 2 spec,
+    // endchar terminates the whole charstring, including callers that
+    // inlined this subr — any bytes after the callsubr operator must be
+    // discarded.
+    let local_body: Vec<u8> = vec![
+        140, // operand 1
+        141, // operand 2
+        21,  // rmoveto
+        14,  // endchar
+    ];
+
+    // Charstring: call subr 0, then some spurious trailing bytes that
+    // must NOT appear in the output because the inlined endchar stops
+    // processing.
+    let charstring: Vec<u8> = vec![
+        32,  // operand -107 (biased subr index 0)
+        10,  // callsubr
+        239, // spurious operand 100 — must be dropped
+        21,  // spurious rmoveto — must be dropped
+        14,  // outer endchar — also dropped (endchar already emitted)
+    ];
+
+    let local_data = build_cff_index(&[&local_body]);
+    let local_subrs = parse_cff_index(&local_data, 0).unwrap();
+    let empty = build_cff_index(&[]);
+    let global_subrs = parse_cff_index(&empty, 0).unwrap();
+
+    let result = desubroutinize(
+        &charstring,
+        &global_subrs,
+        &empty,
+        &local_subrs,
+        &local_data,
+    )
+    .unwrap();
+
+    // Expected: only the subr body (rmoveto + endchar), nothing after.
+    let expected: Vec<u8> = vec![140, 141, 21, 14];
+    assert_eq!(
+        result, expected,
+        "endchar inside subr must terminate the caller's processing"
+    );
+}
