@@ -537,21 +537,64 @@ fn test_cff_subset_reduces_size_and_preserves_mapping() {
         result.font_data.len() >= 4,
         "Subset font data too small to be valid OTF"
     );
-    let sfnt = u32::from_be_bytes([
+    assert!(
+        result.is_raw_cff,
+        "Subset must be raw CFF after SID→CID conversion"
+    );
+    assert_eq!(
+        result.font_data[0], 1,
+        "CFF subset must start with CFF major version 1"
+    );
+    assert_eq!(
+        result.font_data[1], 0,
+        "CFF subset must have CFF minor version 0"
+    );
+}
+
+/// SID-keyed CFF fonts (no FDArray in input) must be converted to CID-keyed
+/// during subsetting and returned as raw CFF — never wrapped in OTF.
+#[test]
+fn test_sid_keyed_font_outputs_raw_cff_not_otf() {
+    let font_data = build_large_cff_otf(); // SID-keyed (no FDArray)
+    let used: HashSet<char> = "AB".chars().collect();
+    let result = subset_font(font_data, &used).unwrap();
+
+    assert!(
+        result.is_raw_cff,
+        "SID-keyed CFF subset must be returned as raw CFF (is_raw_cff=true)"
+    );
+
+    assert!(
+        result.font_data.len() >= 4,
+        "CFF data too short ({} bytes)",
+        result.font_data.len()
+    );
+
+    let sig = u32::from_be_bytes([
         result.font_data[0],
         result.font_data[1],
         result.font_data[2],
         result.font_data[3],
     ]);
+    assert_ne!(
+        sig, 0x4F54544F,
+        "Raw CFF must not start with the OTTO signature"
+    );
+
     assert_eq!(
-        sfnt, 0x4F54544F,
-        "Subset font must have OTTO signature, got {:#010X}",
-        sfnt
+        result.font_data[0], 1,
+        "CFF major version should be 1, got {}",
+        result.font_data[0]
+    );
+    assert_eq!(
+        result.font_data[1], 0,
+        "CFF minor version should be 0, got {}",
+        result.font_data[1]
     );
 }
 
-/// After subsetting, the Global Subr INDEX inside the embedded CFF table must
-/// be empty (count = 0) because charstrings are now desubroutinized and no
+/// After subsetting, the Global Subr INDEX inside the CFF output must be
+/// empty (count = 0) because charstrings are now desubroutinized and no
 /// longer reference any subroutines.
 #[test]
 fn test_cff_subset_global_subr_index_is_empty() {
@@ -559,26 +602,11 @@ fn test_cff_subset_global_subr_index_is_empty() {
     let used: HashSet<char> = "AB".chars().collect();
     let result = subset_font(font_data, &used).unwrap();
 
-    // Non-CID path wraps the CFF inside an OTF. Locate the CFF table.
-    let otf = &result.font_data;
-    assert_eq!(&otf[0..4], b"OTTO");
-    let num_tables = u16::from_be_bytes([otf[4], otf[5]]) as usize;
-    let mut cff_offset: Option<usize> = None;
-    for i in 0..num_tables {
-        let record = 12 + i * 16;
-        let tag = &otf[record..record + 4];
-        if tag == b"CFF " {
-            cff_offset = Some(u32::from_be_bytes([
-                otf[record + 8],
-                otf[record + 9],
-                otf[record + 10],
-                otf[record + 11],
-            ]) as usize);
-            break;
-        }
-    }
-    let cff_start = cff_offset.expect("subset OTF must contain a CFF table");
-    let cff = &otf[cff_start..];
+    // Output is raw CFF (not OTF-wrapped).
+    assert!(result.is_raw_cff);
+    let cff = &result.font_data[..];
+    assert_eq!(cff[0], 1, "CFF major version");
+    assert_eq!(cff[1], 0, "CFF minor version");
 
     // Walk the CFF structure: Header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX.
     // For each INDEX: 2 bytes count; if count = 0, size = 2; otherwise 3 + (count+1)*offSize + data.
@@ -730,59 +758,85 @@ fn test_small_font_mapping_filtered_exact_count() {
 }
 
 // =============================================================================
-// OTF table coherence helpers
+// Diagnostic tests: glyph count coherence after CFF subsetting.
 // =============================================================================
 
-/// Find an OTF table by tag. Returns (offset, length).
-fn find_otf_table(otf_data: &[u8], target_tag: &[u8; 4]) -> Option<(usize, usize)> {
-    let num_tables = u16::from_be_bytes([otf_data[4], otf_data[5]]) as usize;
-    for i in 0..num_tables {
-        let dir = 12 + i * 16;
-        if &otf_data[dir..dir + 4] == target_tag {
-            let offset = u32::from_be_bytes([
-                otf_data[dir + 8],
-                otf_data[dir + 9],
-                otf_data[dir + 10],
-                otf_data[dir + 11],
-            ]) as usize;
-            let length = u32::from_be_bytes([
-                otf_data[dir + 12],
-                otf_data[dir + 13],
-                otf_data[dir + 14],
-                otf_data[dir + 15],
-            ]) as usize;
-            return Some((offset, length));
-        }
-    }
-    None
-}
-
-/// Parse numGlyphs from the maxp table.
-fn read_maxp_num_glyphs(otf_data: &[u8]) -> u16 {
-    let (offset, _) = find_otf_table(otf_data, b"maxp").expect("maxp table not found");
-    u16::from_be_bytes([otf_data[offset + 4], otf_data[offset + 5]])
-}
-
-// =============================================================================
-// Diagnostic tests: OTF table coherence after CFF subsetting
-// These expose WHY text doesn't display — viewers reject fonts where
-// maxp/hmtx/hhea report 65K glyphs but the CFF only has 5.
-// =============================================================================
-
+/// After SID→CID conversion the output is raw CFF, so coherence is measured
+/// against the CharStrings INDEX count instead of the OTF `maxp` table.
 #[test]
-fn test_synthetic_cff_subset_maxp_coherent() {
-    // maxp.numGlyphs must match actual glyph count after subsetting.
+fn test_synthetic_cff_subset_glyph_count_coherent() {
     let font_data = build_large_cff_otf();
 
     let used: HashSet<char> = "AB".chars().collect();
     let result = subset_font(font_data, &used).unwrap();
 
-    let maxp_glyphs = read_maxp_num_glyphs(&result.font_data);
-    // .notdef + A + B = 3
+    assert!(result.is_raw_cff, "output must be raw CFF");
+
+    let cff = &result.font_data[..];
+
+    // Walk header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX
+    // to locate the Top DICT, then parse its CharStrings offset.
+    fn index_end(data: &[u8], pos: usize) -> usize {
+        let count = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+        if count == 0 {
+            return pos + 2;
+        }
+        let off_size = data[pos + 2] as usize;
+        let offsets_start = pos + 3;
+        let data_base = offsets_start + (count + 1) * off_size;
+        let last_off_pos = offsets_start + count * off_size;
+        let mut raw = 0u32;
+        for j in 0..off_size {
+            raw = (raw << 8) | data[last_off_pos + j] as u32;
+        }
+        data_base + raw as usize - 1
+    }
+
+    let hdr_size = cff[2] as usize;
+    let name_end = index_end(cff, hdr_size);
+
+    // Top DICT INDEX contains one item: the actual Top DICT.
+    let top_dict_count = u16::from_be_bytes([cff[name_end], cff[name_end + 1]]) as usize;
     assert_eq!(
-        maxp_glyphs, 3,
-        "maxp.numGlyphs should be 3 (.notdef + 2 chars), got {}",
-        maxp_glyphs
+        top_dict_count, 1,
+        "Top DICT INDEX must have exactly one item"
+    );
+    let top_dict_off_size = cff[name_end + 2] as usize;
+    let top_dict_data_base = name_end + 3 + (top_dict_count + 1) * top_dict_off_size;
+    let mut td_end_raw = 0u32;
+    for j in 0..top_dict_off_size {
+        td_end_raw =
+            (td_end_raw << 8) | cff[name_end + 3 + top_dict_count * top_dict_off_size + j] as u32;
+    }
+    let td_start = top_dict_data_base;
+    let td_end = top_dict_data_base + td_end_raw as usize - 1;
+    let td = &cff[td_start..td_end];
+
+    // Scan Top DICT for op 17 (CharStrings offset).
+    let mut cs_offset: Option<u32> = None;
+    let mut last_i32: Option<i32> = None;
+    let mut i = 0;
+    while i < td.len() {
+        let b = td[i];
+        if b == 29 && i + 4 < td.len() {
+            let v = i32::from_be_bytes([td[i + 1], td[i + 2], td[i + 3], td[i + 4]]);
+            last_i32 = Some(v);
+            i += 5;
+        } else if b == 17 {
+            cs_offset = last_i32.map(|v| v as u32);
+            break;
+        } else {
+            i += 1;
+        }
+    }
+    let cs_off = cs_offset.expect("Top DICT must contain CharStrings op (17)") as usize;
+
+    // CharStrings INDEX count must equal .notdef + 2 used chars = 3.
+    let cs_count = u16::from_be_bytes([cff[cs_off], cff[cs_off + 1]]);
+    assert_eq!(
+        cs_count, 3,
+        "CharStrings count should be 3 (.notdef + 2 chars), got {}",
+        cs_count
     );
 }
 

@@ -32,14 +32,14 @@ use crate::fonts::cmap_utils::parse_cmap_format_12_filtered;
 use crate::parser::{ParseError, ParseResult};
 use crate::text::fonts::cff::charstring::desubroutinize;
 use crate::text::fonts::cff::dict::{
-    build_subset_charset, parse_fd_private, parse_fd_select, parse_local_subrs_offset,
-    parse_top_dict, rebuild_cid_top_dict, rebuild_fd_dict, rebuild_top_dict,
+    build_cid_top_dict, build_minimal_fd_dict, parse_fd_private, parse_fd_select,
+    parse_local_subrs_offset, parse_top_dict, rebuild_cid_top_dict, rebuild_fd_dict,
     strip_private_subrs_op, FdData, TopDictOffsets,
 };
 use crate::text::fonts::cff::index::{
     build_cff_index, parse_cff_index, usize_to_cff_offset, CffIndex,
 };
-use crate::text::fonts::cff::types::{otf_checksum, read_i16, read_u16, read_u32};
+use crate::text::fonts::cff::types::{read_i16, read_u16, read_u32};
 use std::collections::{HashMap, HashSet};
 
 // =============================================================================
@@ -165,35 +165,17 @@ pub fn subset_cff_font(
         }
     };
 
-    // Check if CFF is CID-keyed by looking at the Top DICT for FDArray/FDSelect.
-    // CID-keyed: embed raw CFF with /Subtype /CIDFontType0C (industry standard).
-    // Non-CID: embed as OTF with /Subtype /OpenType.
-    let top_dict_index_for_check = parse_cff_index(cff_data, {
-        let name_idx = parse_cff_index(cff_data, cff_data[2] as usize)?;
-        name_idx.end_offset()
-    })?;
-    let td_bytes = top_dict_index_for_check
-        .get_item(0, cff_data)
-        .unwrap_or(&[]);
-    let td_offsets = parse_top_dict(td_bytes);
-    let is_cid = td_offsets.fd_array_offset.is_some() || td_offsets.fd_select_offset.is_some();
+    // Both the CID path and the SID→CID conversion emit CID-keyed raw CFF,
+    // which the PDF writer embeds with /Subtype /CIDFontType0C.
+    // `otf` is no longer needed once the input has been parsed — the output
+    // is never wrapped in an OTF container.
+    let _ = otf;
 
-    if is_cid {
-        // CID-keyed: return raw CFF bytes directly
-        Ok(CffSubsetResult {
-            font_data: new_cff,
-            glyph_mapping: new_glyph_mapping,
-            is_raw_cff: true,
-        })
-    } else {
-        // Non-CID: wrap in OTF
-        let new_font = otf.rebuild_subset(font_data, &new_cff, needed_gids.len() as u16)?;
-        Ok(CffSubsetResult {
-            font_data: new_font,
-            glyph_mapping: new_glyph_mapping,
-            is_raw_cff: false,
-        })
-    }
+    Ok(CffSubsetResult {
+        font_data: new_cff,
+        glyph_mapping: new_glyph_mapping,
+        is_raw_cff: true,
+    })
 }
 
 // =============================================================================
@@ -207,11 +189,13 @@ struct OtfTableEntry {
 }
 
 struct OtfFile {
-    sfnt_version: u32,
     tables: Vec<OtfTableEntry>,
 }
 
 impl OtfFile {
+    /// Parse the OTF table directory. We only need the entries for CFF and cmap;
+    /// rebuilding the OTF wrapper is no longer required since subsetted output
+    /// is always emitted as raw CFF.
     fn parse(data: &[u8]) -> ParseResult<Self> {
         if data.len() < 12 {
             return Err(ParseError::SyntaxError {
@@ -220,7 +204,6 @@ impl OtfFile {
             });
         }
 
-        let sfnt_version = read_u32(data, 0)?;
         let num_tables = read_u16(data, 4)? as usize;
 
         if data.len() < 12 + num_tables * 16 {
@@ -243,10 +226,7 @@ impl OtfFile {
             });
         }
 
-        Ok(Self {
-            sfnt_version,
-            tables,
-        })
+        Ok(Self { tables })
     }
 
     fn find_table(&self, tag: &[u8; 4]) -> ParseResult<&OtfTableEntry> {
@@ -257,221 +237,6 @@ impl OtfFile {
                 position: 0,
                 message: format!("Table {} not found", String::from_utf8_lossy(tag)),
             })
-    }
-
-    /// Rebuild the OTF file replacing the CFF table and patching maxp, hhea, hmtx,
-    /// and cmap to match the actual glyph count after subsetting.
-    /// This is critical: if maxp reports 65K glyphs but CFF has 5, viewers reject the font.
-    /// Tables required for a valid CIDFontType0 font embedded in PDF.
-    /// Everything else (GSUB, GPOS, vmtx, vhea, VORG, DSIG, GDEF, BASE, name, post, OS/2)
-    /// is not needed for rendering and can be dropped to save space.
-    const REQUIRED_TABLES: &'static [&'static [u8; 4]] =
-        &[b"CFF ", b"head", b"maxp", b"hhea", b"hmtx", b"cmap"];
-
-    fn rebuild_subset(
-        &self,
-        original: &[u8],
-        new_cff: &[u8],
-        new_glyph_count: u16,
-    ) -> ParseResult<Vec<u8>> {
-        // Build patched versions of tables that depend on glyph count
-        let patched_maxp = self.patch_maxp(original, new_glyph_count);
-        let patched_hhea = self.patch_hhea(original, new_glyph_count);
-        let patched_hmtx = self.truncate_hmtx(original, new_glyph_count);
-        let minimal_cmap = Self::build_minimal_cmap();
-
-        // Map of tag → replacement data
-        let replacements: std::collections::HashMap<&[u8; 4], &[u8]> = [
-            (b"CFF ", new_cff as &[u8]),
-            (b"maxp", patched_maxp.as_deref().unwrap_or(&[])),
-            (b"hhea", patched_hhea.as_deref().unwrap_or(&[])),
-            (b"hmtx", patched_hmtx.as_deref().unwrap_or(&[])),
-            (b"cmap", &minimal_cmap as &[u8]),
-        ]
-        .into_iter()
-        .filter(|(_, data)| !data.is_empty())
-        .collect();
-
-        // Only keep required tables — drop GSUB, GPOS, vmtx, vhea, etc.
-        let kept_tables: Vec<&OtfTableEntry> = self
-            .tables
-            .iter()
-            .filter(|e| Self::REQUIRED_TABLES.iter().any(|t| *t == &e.tag))
-            .collect();
-        let num_tables = kept_tables.len() as u16;
-        let header_size = 12 + num_tables as usize * 16;
-
-        let entry_selector = if num_tables > 0 {
-            (u16::BITS - num_tables.leading_zeros() - 1) as u16
-        } else {
-            0
-        };
-        let search_range = (1u16 << entry_selector) * 16;
-        let range_shift = num_tables * 16 - search_range;
-
-        // Determine offsets
-        let mut offsets: Vec<u32> = Vec::with_capacity(kept_tables.len());
-        let mut current = header_size;
-        for entry in &kept_tables {
-            while current % 4 != 0 {
-                current += 1;
-            }
-            offsets.push(current as u32);
-            let len = if let Some(data) = replacements.get(&entry.tag) {
-                data.len()
-            } else {
-                entry.length as usize
-            };
-            current += len;
-        }
-
-        let total_size = current;
-        let mut out = vec![0u8; total_size];
-
-        // Write header
-        out[0..4].copy_from_slice(&self.sfnt_version.to_be_bytes());
-        out[4..6].copy_from_slice(&num_tables.to_be_bytes());
-        out[6..8].copy_from_slice(&search_range.to_be_bytes());
-        out[8..10].copy_from_slice(&entry_selector.to_be_bytes());
-        out[10..12].copy_from_slice(&range_shift.to_be_bytes());
-
-        // Write tables
-        for (i, entry) in kept_tables.iter().enumerate() {
-            let offset = offsets[i] as usize;
-            let table_data: &[u8] = if let Some(data) = replacements.get(&entry.tag) {
-                data
-            } else {
-                let src_start = entry.offset as usize;
-                let src_end = src_start + entry.length as usize;
-                if src_end > original.len() {
-                    return Err(ParseError::SyntaxError {
-                        position: src_start,
-                        message: format!(
-                            "Table {} data out of bounds",
-                            String::from_utf8_lossy(&entry.tag)
-                        ),
-                    });
-                }
-                &original[src_start..src_end]
-            };
-
-            let checksum = otf_checksum(table_data);
-
-            // Directory entry
-            let dir_base = 12 + i * 16;
-            out[dir_base..dir_base + 4].copy_from_slice(&entry.tag);
-            out[dir_base + 4..dir_base + 8].copy_from_slice(&checksum.to_be_bytes());
-            out[dir_base + 8..dir_base + 12].copy_from_slice(&(offsets[i]).to_be_bytes());
-            out[dir_base + 12..dir_base + 16]
-                .copy_from_slice(&(table_data.len() as u32).to_be_bytes());
-
-            // Table data
-            out[offset..offset + table_data.len()].copy_from_slice(table_data);
-        }
-
-        // Fix head.checkSumAdjustment
-        if let Some((head_idx, _)) = kept_tables
-            .iter()
-            .enumerate()
-            .find(|(_, e)| &e.tag == b"head")
-        {
-            let head_offset = offsets[head_idx] as usize;
-            if head_offset + 12 <= out.len() {
-                out[head_offset + 8..head_offset + 12].copy_from_slice(&[0u8; 4]);
-                let total_checksum = otf_checksum(&out);
-                let adjustment = 0xB1B0_AFBAu32.wrapping_sub(total_checksum);
-                out[head_offset + 8..head_offset + 12].copy_from_slice(&adjustment.to_be_bytes());
-                let head_len = if replacements.contains_key(b"head") {
-                    replacements[b"head"].len()
-                } else {
-                    kept_tables[head_idx].length as usize
-                };
-                let new_head_checksum = otf_checksum(&out[head_offset..head_offset + head_len]);
-                let dir_base = 12 + head_idx * 16;
-                out[dir_base + 4..dir_base + 8].copy_from_slice(&new_head_checksum.to_be_bytes());
-            }
-        }
-
-        Ok(out)
-    }
-
-    /// Patch maxp table: update numGlyphs field (offset 4, 2 bytes).
-    fn patch_maxp(&self, original: &[u8], new_glyph_count: u16) -> Option<Vec<u8>> {
-        let entry = self.tables.iter().find(|e| &e.tag == b"maxp")?;
-        let start = entry.offset as usize;
-        let end = start + entry.length as usize;
-        if end > original.len() || entry.length < 6 {
-            return None;
-        }
-        let mut patched = original[start..end].to_vec();
-        patched[4..6].copy_from_slice(&new_glyph_count.to_be_bytes());
-        Some(patched)
-    }
-
-    /// Patch hhea table: update numberOfHMetrics (offset 34, 2 bytes).
-    fn patch_hhea(&self, original: &[u8], new_glyph_count: u16) -> Option<Vec<u8>> {
-        let entry = self.tables.iter().find(|e| &e.tag == b"hhea")?;
-        let start = entry.offset as usize;
-        let end = start + entry.length as usize;
-        if end > original.len() || entry.length < 36 {
-            return None;
-        }
-        let mut patched = original[start..end].to_vec();
-        patched[34..36].copy_from_slice(&new_glyph_count.to_be_bytes());
-        Some(patched)
-    }
-
-    /// Truncate hmtx to only include entries for new_glyph_count glyphs.
-    /// Each entry is 4 bytes (advanceWidth u16 + lsb i16).
-    fn truncate_hmtx(&self, original: &[u8], new_glyph_count: u16) -> Option<Vec<u8>> {
-        let entry = self.tables.iter().find(|e| &e.tag == b"hmtx")?;
-        let start = entry.offset as usize;
-        let needed = new_glyph_count as usize * 4;
-        let available = entry.length as usize;
-        let take = needed.min(available);
-        let end = start + take;
-        if end > original.len() {
-            return None;
-        }
-        Some(original[start..end].to_vec())
-    }
-
-    /// Build a minimal cmap table: Format 4 with only the terminal 0xFFFF segment.
-    /// For CIDFontType0 with Identity-H, the PDF viewer resolves CID→GID via the
-    /// CFF charset, not the OTF cmap. A minimal cmap satisfies OTF validation.
-    fn build_minimal_cmap() -> Vec<u8> {
-        let mut cmap = Vec::new();
-        // cmap header: version=0, numTables=1
-        cmap.extend_from_slice(&0u16.to_be_bytes()); // version
-        cmap.extend_from_slice(&1u16.to_be_bytes()); // numTables
-                                                     // Encoding record: platformID=3 (Windows), encodingID=1 (Unicode BMP)
-        cmap.extend_from_slice(&3u16.to_be_bytes()); // platformID
-        cmap.extend_from_slice(&1u16.to_be_bytes()); // encodingID
-        cmap.extend_from_slice(&12u32.to_be_bytes()); // offset to subtable
-
-        // Format 4 subtable with single terminal segment (0xFFFF)
-        let seg_count: u16 = 1;
-        let seg_count_x2 = seg_count * 2;
-        let length: u16 = 14 + seg_count_x2 * 4; // header(14) + 4 arrays of seg_count entries
-        cmap.extend_from_slice(&4u16.to_be_bytes()); // format
-        cmap.extend_from_slice(&length.to_be_bytes()); // length
-        cmap.extend_from_slice(&0u16.to_be_bytes()); // language
-        cmap.extend_from_slice(&seg_count_x2.to_be_bytes()); // segCountX2
-        cmap.extend_from_slice(&2u16.to_be_bytes()); // searchRange
-        cmap.extend_from_slice(&0u16.to_be_bytes()); // entrySelector
-        cmap.extend_from_slice(&0u16.to_be_bytes()); // rangeShift
-                                                     // endCode
-        cmap.extend_from_slice(&0xFFFFu16.to_be_bytes());
-        // reservedPad
-        cmap.extend_from_slice(&0u16.to_be_bytes());
-        // startCode
-        cmap.extend_from_slice(&0xFFFFu16.to_be_bytes());
-        // idDelta
-        cmap.extend_from_slice(&1u16.to_be_bytes());
-        // idRangeOffset
-        cmap.extend_from_slice(&0u16.to_be_bytes());
-
-        cmap
     }
 }
 
@@ -1045,90 +810,121 @@ fn subset_cff_table(
     let new_charstrings: Vec<&[u8]> = desub_charstrings.iter().map(|v| v.as_slice()).collect();
     let new_charstrings_index = build_cff_index(&new_charstrings);
 
-    // Build new Charset (format 0): GID 0 is implicitly .notdef, then list SIDs for GID 1..N
-    // We copy the original SIDs for each old GID if available; otherwise use old_gid as SID.
-    let orig_charset_offset = top_dict_offsets.charset_offset.unwrap_or(0);
-    let new_charset = build_subset_charset(cff, orig_charset_offset, &sorted_new, total_glyphs);
+    // Build a CID-keyed Charset (Format 0) with CID = Unicode codepoint for
+    // each kept glyph — matches the existing CID path so the PDF content
+    // stream can emit Unicode codepoints as CIDs with Identity-H encoding.
+    let mut new_charset: Vec<u8> = vec![0]; // format 0
+    for (new_gid_idx, &old_gid) in sorted_new.iter().enumerate() {
+        if new_gid_idx == 0 {
+            continue; // GID 0 = .notdef is implicit in charset Format 0
+        }
+        let cid = old_gid_to_unicode
+            .get(&old_gid)
+            .copied()
+            .unwrap_or(old_gid as u32);
+        // CFF CIDs are 16-bit; fall back to old_gid for SMP codepoints.
+        let cid16 = if cid > 0xFFFF { old_gid } else { cid as u16 };
+        new_charset.extend_from_slice(&cid16.to_be_bytes());
+    }
 
-    // Now we need to assemble the new CFF.
-    // We do a two-pass approach: first compute all sizes, then write.
+    // FDSelect (Format 0): every GID maps to FD 0 (single-FD font).
+    let num_glyphs_i32 = sorted_new.len() as i32;
+    let mut new_fd_select: Vec<u8> = vec![0]; // format 0
+    new_fd_select.extend(std::iter::repeat_n(0u8, sorted_new.len()));
+
+    // Assembly: the CID-keyed layout matches subset_cid_cff_table, since a
+    // converted SID font is effectively a CID font with exactly one FD.
     //
-    // Layout:
-    //   [0] Header (hdrSize bytes)
+    //   [0] Header
     //   [1] Name INDEX (verbatim)
-    //   [2] Top DICT INDEX (rebuilt with new offsets)
+    //   [2] Top DICT INDEX (rebuilt as CID Top DICT)
     //   [3] String INDEX (verbatim)
     //   [4] Global Subr INDEX (empty — charstrings are desubroutinized)
-    //   [5] Charset (rebuilt)
-    //   [6] CharStrings INDEX (subset)
-    //   [7] Private DICT (Subrs op stripped, no Local Subr INDEX follows)
+    //   [5] Charset (Unicode-keyed CIDs)
+    //   [6] FDSelect
+    //   [7] CharStrings INDEX
+    //   [8] FDArray INDEX (single FD dict)
+    //   [9] Private DICT (Subrs op stripped)
 
     let name_bytes = name_index.raw_bytes(cff);
     let string_bytes = string_index.raw_bytes(cff);
-
-    // Desubroutinized charstrings make the Global Subr INDEX obsolete.
     let global_subr_bytes = build_cff_index(&[]);
 
-    // For Top DICT INDEX size estimation, build with placeholder offsets (use large value
-    // that still encodes to 5 bytes). We always use 5-byte encoding so the size is stable.
     let placeholder_offset = 100_000i32;
-    let has_private = !private_bytes.is_empty();
-
     let private_size = usize_to_cff_offset(private_bytes.len())?;
-    let placeholder_top_dict = rebuild_top_dict(
+
+    // Pass 1: size estimation with placeholder offsets (5-byte fixed encoding
+    // keeps the Top DICT / FD dict / FDArray sizes stable between passes).
+    let placeholder_top_dict = build_cid_top_dict(
         top_dict_bytes,
+        num_glyphs_i32,
         placeholder_offset,
         placeholder_offset,
-        private_size,
         placeholder_offset,
-        has_private,
+        placeholder_offset,
     );
     let placeholder_top_dict_ref: &[u8] = &placeholder_top_dict;
     let placeholder_top_dict_index = build_cff_index(&[placeholder_top_dict_ref]);
 
-    // Compute actual offsets
+    let placeholder_fd_dict = build_minimal_fd_dict(private_size, placeholder_offset);
+    let placeholder_fd_dict_ref: &[u8] = &placeholder_fd_dict;
+    let placeholder_fd_array_index = build_cff_index(&[placeholder_fd_dict_ref]);
+
+    // Compute final offsets
     let after_header = header_bytes.len();
     let after_name = after_header + name_bytes.len();
-    let after_top_dict_index = after_name + placeholder_top_dict_index.len();
-    let after_string = after_top_dict_index + string_bytes.len();
+    let after_top_dict = after_name + placeholder_top_dict_index.len();
+    let after_string = after_top_dict + string_bytes.len();
     let after_global_subr = after_string + global_subr_bytes.len();
 
     let new_charset_offset = usize_to_cff_offset(after_global_subr)?;
-    let new_charstrings_offset = usize_to_cff_offset(after_global_subr + new_charset.len())?;
+    let new_fd_select_offset = usize_to_cff_offset(after_global_subr + new_charset.len())?;
+    let new_charstrings_offset =
+        usize_to_cff_offset(new_fd_select_offset as usize + new_fd_select.len())?;
+    let new_fd_array_offset =
+        usize_to_cff_offset(new_charstrings_offset as usize + new_charstrings_index.len())?;
+    let new_private_offset =
+        usize_to_cff_offset(new_fd_array_offset as usize + placeholder_fd_array_index.len())?;
 
-    let new_private_offset = if has_private {
-        usize_to_cff_offset(new_charstrings_offset as usize + new_charstrings_index.len())?
-    } else {
-        0
-    };
-
-    // Build real Top DICT with correct offsets
-    let real_top_dict = rebuild_top_dict(
+    // Pass 2: build real Top DICT and FD dict with correct offsets.
+    let real_top_dict = build_cid_top_dict(
         top_dict_bytes,
+        num_glyphs_i32,
         new_charset_offset,
         new_charstrings_offset,
-        private_size,
-        new_private_offset,
-        has_private,
+        new_fd_array_offset,
+        new_fd_select_offset,
     );
     let real_top_dict_ref: &[u8] = &real_top_dict;
     let real_top_dict_index = build_cff_index(&[real_top_dict_ref]);
 
-    // Verify that the real top dict index has the same size as the placeholder
-    // (both use 5-byte encoding, so this is guaranteed unless we have a bug)
+    let real_fd_dict = build_minimal_fd_dict(private_size, new_private_offset);
+    let real_fd_dict_ref: &[u8] = &real_fd_dict;
+    let real_fd_array_index = build_cff_index(&[real_fd_dict_ref]);
+
+    // Size stability checks — 5-byte integer encoding should keep these equal.
     if real_top_dict_index.len() != placeholder_top_dict_index.len() {
         return Err(ParseError::SyntaxError {
             position: 0,
             message: format!(
-                "Top DICT size changed between passes ({} vs {}), \
-                 this indicates a bug in offset encoding",
+                "Top DICT size changed between passes ({} vs {})",
                 real_top_dict_index.len(),
                 placeholder_top_dict_index.len()
             ),
         });
     }
+    if real_fd_array_index.len() != placeholder_fd_array_index.len() {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: format!(
+                "FDArray size changed between passes ({} vs {})",
+                real_fd_array_index.len(),
+                placeholder_fd_array_index.len()
+            ),
+        });
+    }
 
-    // Assemble new CFF
+    // Assemble CID-keyed CFF
     let mut new_cff = Vec::new();
     new_cff.extend_from_slice(header_bytes);
     new_cff.extend_from_slice(name_bytes);
@@ -1136,10 +932,10 @@ fn subset_cff_table(
     new_cff.extend_from_slice(string_bytes);
     new_cff.extend_from_slice(&global_subr_bytes);
     new_cff.extend_from_slice(&new_charset);
+    new_cff.extend_from_slice(&new_fd_select);
     new_cff.extend_from_slice(&new_charstrings_index);
-    if has_private {
-        new_cff.extend_from_slice(&private_bytes);
-    }
+    new_cff.extend_from_slice(&real_fd_array_index);
+    new_cff.extend_from_slice(&private_bytes);
 
     Ok(new_cff)
 }

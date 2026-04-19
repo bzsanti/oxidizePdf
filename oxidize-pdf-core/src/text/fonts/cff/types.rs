@@ -190,31 +190,6 @@ pub(crate) fn read_i16(data: &[u8], offset: usize) -> ParseResult<i16> {
 }
 
 // =============================================================================
-// OTF checksum
-// =============================================================================
-
-/// Compute an OTF table checksum (sum of big-endian u32 words, padded to 4 bytes).
-pub(crate) fn otf_checksum(data: &[u8]) -> u32 {
-    let mut sum = 0u32;
-    let mut i = 0;
-    while i + 3 < data.len() {
-        sum = sum.wrapping_add(u32::from_be_bytes([
-            data[i],
-            data[i + 1],
-            data[i + 2],
-            data[i + 3],
-        ]));
-        i += 4;
-    }
-    if i < data.len() {
-        let mut last = [0u8; 4];
-        last[..data.len() - i].copy_from_slice(&data[i..]);
-        sum = sum.wrapping_add(u32::from_be_bytes(last));
-    }
-    sum
-}
-
-// =============================================================================
 // CFF integer encoding
 // =============================================================================
 

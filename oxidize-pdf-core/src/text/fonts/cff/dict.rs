@@ -92,6 +92,107 @@ pub(crate) fn parse_top_dict(data: &[u8]) -> TopDictOffsets {
 // Top DICT serialisation
 // =============================================================================
 
+/// Build a fresh CID Top DICT for a font converted from SID-keyed to CID-keyed.
+///
+/// The output contains exactly the operators required for a valid CID font:
+/// ROS (Registry=Adobe, Ordering=Identity, Supplement=0), FontBBox (copied
+/// from the original if present), CIDCount, charset, CharStrings, FDArray,
+/// FDSelect. Everything else from the source Top DICT (version, Notice,
+/// FullName, Weight, etc.) is dropped — those are cosmetic strings that
+/// require re-indexing the String INDEX to be valid SIDs for the new font.
+///
+/// Registry "Adobe" and Ordering "Identity" are standard strings (SIDs 138
+/// and 139 per CFF spec Appendix A) so no String INDEX entries are needed.
+pub(crate) fn build_cid_top_dict(
+    original_sid_top_dict: &[u8],
+    num_glyphs: i32,
+    charset_offset: i32,
+    charstrings_offset: i32,
+    fd_array_offset: i32,
+    fd_select_offset: i32,
+) -> Vec<u8> {
+    let mut out = Vec::new();
+
+    // ROS: Registry SID, Ordering SID, Supplement, op (12, 30)
+    // Adobe = SID 138, Identity = SID 139, Supplement = 0
+    out.extend_from_slice(&encode_cff_int_5byte(138));
+    out.extend_from_slice(&encode_cff_int_5byte(139));
+    out.extend_from_slice(&encode_cff_int_5byte(0));
+    out.push(12);
+    out.push(30);
+
+    // Preserve FontBBox (op 5) from the original Top DICT if present — it
+    // carries font-wide metrics that downstream consumers (PDF readers)
+    // rely on for bounding-box computation.
+    if let Some(font_bbox_bytes) = extract_operator_group(original_sid_top_dict, 5, false) {
+        out.extend_from_slice(&font_bbox_bytes);
+    }
+
+    // CIDCount (12 34)
+    out.extend_from_slice(&encode_cff_int_5byte(num_glyphs));
+    out.push(12);
+    out.push(34);
+
+    // charset (op 15)
+    out.extend_from_slice(&encode_cff_int_5byte(charset_offset));
+    out.push(15);
+
+    // CharStrings (op 17)
+    out.extend_from_slice(&encode_cff_int_5byte(charstrings_offset));
+    out.push(17);
+
+    // FDArray (op 12 36)
+    out.extend_from_slice(&encode_cff_int_5byte(fd_array_offset));
+    out.push(12);
+    out.push(36);
+
+    // FDSelect (op 12 37)
+    out.extend_from_slice(&encode_cff_int_5byte(fd_select_offset));
+    out.push(12);
+    out.push(37);
+
+    out
+}
+
+/// Build a minimal FD Dict (Font DICT) for an FDArray entry.
+///
+/// An FD dict in a CID font only needs the Private operator (op 18); all other
+/// metadata lives in the Top DICT. Returned bytes use fixed 5-byte integer
+/// encoding so the DICT size is stable across passes.
+pub(crate) fn build_minimal_fd_dict(private_size: i32, private_offset: i32) -> Vec<u8> {
+    let mut out = Vec::new();
+    out.extend_from_slice(&encode_cff_int_5byte(private_size));
+    out.extend_from_slice(&encode_cff_int_5byte(private_offset));
+    out.push(18);
+    out
+}
+
+/// Scan a CFF DICT and return the raw operand+operator byte group for the
+/// first occurrence of `target_op`. `escaped` selects between 1-byte operators
+/// (false) and 2-byte `(12, op)` escape sequences (true).
+fn extract_operator_group(dict: &[u8], target_op: u8, escaped: bool) -> Option<Vec<u8>> {
+    let mut scanner = CffDictScanner::new(dict);
+    let mut operand_start = 0usize;
+    while let Some(token) = scanner.next() {
+        match token {
+            CffDictToken::Operand(_) => {}
+            CffDictToken::EscapedOperator(op) => {
+                if escaped && op == target_op {
+                    return Some(dict[operand_start..scanner.position()].to_vec());
+                }
+                operand_start = scanner.position();
+            }
+            CffDictToken::Operator(b) => {
+                if !escaped && b == target_op {
+                    return Some(dict[operand_start..scanner.position()].to_vec());
+                }
+                operand_start = scanner.position();
+            }
+        }
+    }
+    None
+}
+
 /// Rebuild a CID Top DICT, replacing charset (15), CharStrings (17),
 /// FDArray (12 36), and FDSelect (12 37) with new offsets.
 /// All other operators (ROS 12 30, etc.) are preserved verbatim.
@@ -199,73 +300,6 @@ pub(crate) fn rebuild_fd_dict(original: &[u8], private_size: i32, private_offset
                     }
                     _ => {
                         // Preserve verbatim: operands + operator
-                        out.extend_from_slice(&original[operand_start..scanner.position()]);
-                    }
-                }
-                operand_start = scanner.position();
-            }
-        }
-    }
-
-    out
-}
-
-/// Rebuild a Top DICT byte sequence, preserving all original operators/operands
-/// except for charset (op 15), CharStrings (op 17), and Private (op 18), which
-/// are replaced with the new offsets.
-///
-/// Operators not related to layout offsets (font name, encoding, etc.) are
-/// preserved verbatim to maintain font metadata.
-pub(crate) fn rebuild_top_dict(
-    original: &[u8],
-    charset_offset: i32,
-    charstrings_offset: i32,
-    private_size: i32,
-    private_offset: i32,
-    has_private: bool,
-) -> Vec<u8> {
-    let mut out = Vec::new();
-    let mut scanner = CffDictScanner::new(original);
-    let mut operand_start = 0usize;
-
-    loop {
-        let token = match scanner.next() {
-            Some(t) => t,
-            None => break,
-        };
-
-        match token {
-            CffDictToken::Operand(_) => {
-                // Continue accumulating operand bytes.
-            }
-            CffDictToken::EscapedOperator(_) => {
-                // All escaped operators in Top DICT are preserved verbatim.
-                out.extend_from_slice(&original[operand_start..scanner.position()]);
-                operand_start = scanner.position();
-            }
-            CffDictToken::Operator(b) => {
-                match b {
-                    15 => {
-                        // charset — replace operand with new offset
-                        out.extend_from_slice(&encode_cff_int_5byte(charset_offset));
-                        out.push(15);
-                    }
-                    17 => {
-                        // CharStrings — replace operand with new offset
-                        out.extend_from_slice(&encode_cff_int_5byte(charstrings_offset));
-                        out.push(17);
-                    }
-                    18 => {
-                        // Private — replace both operands with new size and offset
-                        if has_private {
-                            out.extend_from_slice(&encode_cff_int_5byte(private_size));
-                            out.extend_from_slice(&encode_cff_int_5byte(private_offset));
-                            out.push(18);
-                        }
-                        // If no private, drop the operator entirely
-                    }
-                    _ => {
-                        // Preserve other operators verbatim
                         out.extend_from_slice(&original[operand_start..scanner.position()]);
                     }
                 }
@@ -405,51 +439,6 @@ pub(crate) struct FdData {
 }
 
 // =============================================================================
-// Charset helpers
-// =============================================================================
-
-/// Build a Charset format 0 for the subset glyphs.
-///
-/// Format 0: one byte (format = 0), then (count-1) SIDs (2 bytes each),
-/// one for each GID from 1 upward. GID 0 is always .notdef and not listed.
-///
-/// We read the original SIDs from the original charset if available.
-pub(crate) fn build_subset_charset(
-    cff: &[u8],
-    orig_charset_offset: i32,
-    sorted_old_gids: &[u16], // old GIDs in new-GID order (index 0 = new GID 0, etc.)
-    total_orig_glyphs: usize,
-) -> Vec<u8> {
-    // Read original SID for each old GID using the original charset
-    let orig_sids = if orig_charset_offset > 2 {
-        // offset > 2 means it points to actual data (0=ISOAdobe, 1=Expert, 2=ExpertSubset)
-        read_charset_format0(cff, orig_charset_offset as usize, total_orig_glyphs)
-    } else {
-        vec![]
-    };
-
-    let mut charset = Vec::new();
-    charset.push(0u8); // format 0
-
-    // Entries for GID 1..N (new GIDs). sorted_old_gids[0] is old GID for new GID 0.
-    for (new_gid_idx, &old_gid) in sorted_old_gids.iter().enumerate() {
-        if new_gid_idx == 0 {
-            // GID 0 = .notdef, not listed in charset
-            continue;
-        }
-        // Look up original SID
-        let sid = if old_gid as usize > 0 && old_gid as usize <= orig_sids.len() {
-            orig_sids[old_gid as usize - 1] // orig_sids[i] = SID for old GID i+1
-        } else {
-            old_gid // fallback: use GID as SID
-        };
-        charset.extend_from_slice(&sid.to_be_bytes());
-    }
-
-    charset
-}
-
-// =============================================================================
 // Private DICT helpers
 // =============================================================================
 
@@ -521,79 +510,3 @@ pub(crate) fn strip_private_subrs_op(private_dict: &mut Vec<u8>) {
 }
 
 // =============================================================================
-// Charset parsing
-// =============================================================================
-
-/// Read a CFF Charset table from the CFF table.
-/// Supports format 0, 1, and 2.
-/// Returns a Vec where index i gives the SID for GID (i+1).
-pub(crate) fn read_charset_format0(cff: &[u8], offset: usize, num_glyphs: usize) -> Vec<u16> {
-    if offset >= cff.len() {
-        return vec![];
-    }
-    let format = cff[offset];
-    match format {
-        0 => {
-            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
-            let mut pos = offset + 1;
-            for _ in 1..num_glyphs {
-                if pos + 2 > cff.len() {
-                    break;
-                }
-                let sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
-                sids.push(sid);
-                pos += 2;
-            }
-            sids
-        }
-        1 => {
-            // Format 1: pairs of [SID: u16, nLeft: u8]
-            // Each pair covers nLeft+1 consecutive SIDs starting from SID.
-            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
-            let mut pos = offset + 1;
-            while sids.len() < num_glyphs.saturating_sub(1) {
-                if pos + 3 > cff.len() {
-                    break;
-                }
-                let first_sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
-                let n_left = cff[pos + 2] as u16;
-                pos += 3;
-                for i in 0..=n_left {
-                    if sids.len() >= num_glyphs.saturating_sub(1) {
-                        break;
-                    }
-                    sids.push(first_sid.wrapping_add(i));
-                }
-            }
-            sids
-        }
-        2 => {
-            // Format 2: pairs of [SID: u16, nLeft: u16]
-            // Same as format 1 but nLeft is u16 instead of u8.
-            let mut sids = Vec::with_capacity(num_glyphs.saturating_sub(1));
-            let mut pos = offset + 1;
-            while sids.len() < num_glyphs.saturating_sub(1) {
-                if pos + 4 > cff.len() {
-                    break;
-                }
-                let first_sid = u16::from_be_bytes([cff[pos], cff[pos + 1]]);
-                let n_left = u16::from_be_bytes([cff[pos + 2], cff[pos + 3]]);
-                pos += 4;
-                for i in 0..=n_left {
-                    if sids.len() >= num_glyphs.saturating_sub(1) {
-                        break;
-                    }
-                    sids.push(first_sid.wrapping_add(i));
-                }
-            }
-            sids
-        }
-        _ => {
-            tracing::debug!(
-                "CFF charset format {} not supported; SIDs will be approximated",
-                format
-            );
-            vec![]
-        }
-    }
-}
