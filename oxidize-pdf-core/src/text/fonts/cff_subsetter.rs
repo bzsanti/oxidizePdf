@@ -176,11 +176,10 @@ pub fn subset_cff_font(
     };
 
     // Both the CID path and the SID→CID conversion emit CID-keyed raw CFF,
-    // which the PDF writer embeds with /Subtype /CIDFontType0C.
-    // `otf` is no longer needed once the input has been parsed — the output
-    // is never wrapped in an OTF container.
-    let _ = otf;
-
+    // which the PDF writer embeds with /Subtype /CIDFontType0C. `otf` is no
+    // longer needed once the input has been parsed — the output is never
+    // wrapped in an OTF container, and the binding drops naturally at
+    // end-of-scope.
     Ok(CffSubsetResult {
         font_data: new_cff,
         glyph_mapping: new_glyph_mapping,
@@ -831,7 +830,7 @@ fn subset_cff_table(
     }
 
     // FDSelect (Format 0): every GID maps to FD 0 (single-FD font).
-    let num_glyphs_i32 = sorted_new.len() as i32;
+    let num_glyphs = usize_to_cff_offset(sorted_new.len())?;
     let new_fd_select: Vec<u8> = vec![0u8; 1 + sorted_new.len()]; // format byte + N FD entries
 
     // Assembly: the CID-keyed layout matches subset_cid_cff_table, since a
@@ -859,7 +858,7 @@ fn subset_cff_table(
     // keeps the Top DICT / FD dict / FDArray sizes stable between passes).
     let placeholder_top_dict = build_cid_top_dict(
         top_dict_bytes,
-        num_glyphs_i32,
+        num_glyphs,
         placeholder_offset,
         placeholder_offset,
         placeholder_offset,
@@ -891,7 +890,7 @@ fn subset_cff_table(
     // Pass 2: build real Top DICT and FD dict with correct offsets.
     let real_top_dict = build_cid_top_dict(
         top_dict_bytes,
-        num_glyphs_i32,
+        num_glyphs,
         new_charset_offset,
         new_charstrings_offset,
         new_fd_array_offset,
