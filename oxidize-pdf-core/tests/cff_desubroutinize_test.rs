@@ -438,3 +438,115 @@ fn test_desubroutinize_endchar_in_subr_terminates_caller() {
         "endchar inside subr must terminate the caller's processing"
     );
 }
+
+// =========================================================================
+// Adversarial cases — Cycle 9 of the quality-review fixes
+// =========================================================================
+
+/// `callgsubr` against an empty Global Subr INDEX must return an error —
+/// there is no subr 0 (or any subr) to inline.
+#[test]
+fn test_desubroutinize_callgsubr_empty_global_index() {
+    // Push biased index 0 (byte 139), then callgsubr. With an empty global
+    // INDEX (count=0) the bias is 107, so actual_index = 0 + 107 = 107 —
+    // out of range of an empty INDEX, which `subr_item` rejects.
+    let charstring: Vec<u8> = vec![
+        139, // operand 0
+        29,  // callgsubr
+        14,  // endchar (never reached)
+    ];
+
+    let empty = build_cff_index(&[]);
+    let global_subrs = parse_cff_index(&empty, 0).unwrap();
+    let local_subrs = parse_cff_index(&empty, 0).unwrap();
+
+    let result = desubroutinize(&charstring, &global_subrs, &empty, &local_subrs, &empty);
+    assert!(
+        result.is_err(),
+        "callgsubr into an empty global INDEX must be an error"
+    );
+}
+
+/// `hintmask` (op 19) with no prior stem operators and no operands on the
+/// stack is a degenerate but valid case: `hint_count = 0` so
+/// `hint_mask_bytes = 0` and no mask bytes are consumed.
+#[test]
+fn test_desubroutinize_hintmask_before_any_stem() {
+    let charstring: Vec<u8> = vec![
+        19, // hintmask (zero hints → zero mask bytes)
+        14, // endchar
+    ];
+
+    let empty = build_cff_index(&[]);
+    let global_subrs = parse_cff_index(&empty, 0).unwrap();
+    let local_subrs = parse_cff_index(&empty, 0).unwrap();
+
+    let result = desubroutinize(&charstring, &global_subrs, &empty, &local_subrs, &empty).unwrap();
+
+    // Output equals input: the `19` byte is emitted, no mask bytes follow
+    // it, then `14` terminates.
+    assert_eq!(result, vec![19, 14]);
+}
+
+/// A 5-byte fixed-point operand (byte 255) used as a subroutine index goes
+/// through `decode_type2_number`'s 16.16 path. Biased index -107 → byte
+/// sequence [255, 0xFF, 0x95, 0x00, 0x00] (i32 = -107 << 16). After bias
+/// addition the actual index is 0, which resolves to subr 0.
+#[test]
+fn test_desubroutinize_5byte_fixed_point_as_subr_index() {
+    // Subr 0: just endchar. After inlining the outer endchar is never
+    // reached because the inner endchar propagates up (Cycle 2 fix).
+    let subr_body: Vec<u8> = vec![14];
+
+    let charstring: Vec<u8> = vec![
+        255, 0xFF, 0x95, 0x00, 0x00, // 16.16 fixed-point value -107 (-107 << 16)
+        10,   // callsubr
+        14,   // endchar (unreachable due to endchar propagation from subr)
+    ];
+
+    let local_subrs_data = build_cff_index(&[&subr_body]);
+    let local_subrs = parse_cff_index(&local_subrs_data, 0).unwrap();
+    let empty = build_cff_index(&[]);
+    let global_subrs = parse_cff_index(&empty, 0).unwrap();
+
+    let result = desubroutinize(
+        &charstring,
+        &global_subrs,
+        &empty,
+        &local_subrs,
+        &local_subrs_data,
+    )
+    .unwrap();
+
+    // Only the subr's endchar is emitted — the outer endchar is unreachable.
+    assert_eq!(result, vec![14]);
+}
+
+/// `cntrmask` (op 20) following `hintmask` (op 19) reuses the cached
+/// `hint_mask_bytes` without recounting stems (`seen_hint_mask` is true
+/// after the first mask). Both masks must emit their byte + mask bytes.
+#[test]
+fn test_desubroutinize_cntrmask_after_hintmask() {
+    // hstem consumes 2 operands → hint_count = 1 → hint_mask_bytes = 1.
+    let charstring: Vec<u8> = vec![
+        140,  // operand 1 (stem edge)
+        141,  // operand 2 (stem width)
+        1,    // hstem
+        19,   // hintmask
+        0x80, // 1-byte mask
+        20,   // cntrmask
+        0x40, // 1-byte mask
+        14,   // endchar
+    ];
+
+    let empty = build_cff_index(&[]);
+    let global_subrs = parse_cff_index(&empty, 0).unwrap();
+    let local_subrs = parse_cff_index(&empty, 0).unwrap();
+
+    let result = desubroutinize(&charstring, &global_subrs, &empty, &local_subrs, &empty).unwrap();
+
+    // Output is byte-identical: operands + hstem + hintmask + mask byte +
+    // cntrmask + mask byte + endchar. The second mask reuses the cached
+    // byte width rather than recounting stems.
+    assert_eq!(result, vec![140, 141, 1, 19, 0x80, 20, 0x40, 14]);
+}
