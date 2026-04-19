@@ -3,18 +3,18 @@
 use crate::parser::{ParseError, ParseResult};
 
 /// A parsed CFF INDEX: the byte range of each item within the original data slice.
-pub(crate) struct CffIndex {
-    pub(crate) start_offset: usize,
-    pub(crate) byte_length: usize,
-    pub(crate) item_offsets: Vec<usize>,
+pub struct CffIndex {
+    pub start_offset: usize,
+    pub byte_length: usize,
+    pub item_offsets: Vec<usize>,
 }
 
 impl CffIndex {
-    pub(crate) fn end_offset(&self) -> usize {
+    pub fn end_offset(&self) -> usize {
         self.start_offset + self.byte_length
     }
 
-    pub(crate) fn count(&self) -> usize {
+    pub fn count(&self) -> usize {
         if self.item_offsets.is_empty() {
             0
         } else {
@@ -22,7 +22,7 @@ impl CffIndex {
         }
     }
 
-    pub(crate) fn get_item<'a>(&self, index: usize, cff: &'a [u8]) -> Option<&'a [u8]> {
+    pub fn get_item<'a>(&self, index: usize, cff: &'a [u8]) -> Option<&'a [u8]> {
         if index + 1 >= self.item_offsets.len() {
             return None;
         }
@@ -34,13 +34,13 @@ impl CffIndex {
         Some(&cff[start..end])
     }
 
-    pub(crate) fn raw_bytes<'a>(&self, cff: &'a [u8]) -> &'a [u8] {
+    pub fn raw_bytes<'a>(&self, cff: &'a [u8]) -> &'a [u8] {
         let end = self.start_offset + self.byte_length;
         &cff[self.start_offset..end.min(cff.len())]
     }
 }
 
-pub(crate) fn parse_cff_index(cff: &[u8], pos: usize) -> ParseResult<CffIndex> {
+pub fn parse_cff_index(cff: &[u8], pos: usize) -> ParseResult<CffIndex> {
     if pos + 2 > cff.len() {
         return Err(ParseError::SyntaxError {
             position: pos,
