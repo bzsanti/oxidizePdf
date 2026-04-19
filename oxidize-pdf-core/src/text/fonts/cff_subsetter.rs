@@ -829,8 +829,7 @@ fn subset_cff_table(
 
     // FDSelect (Format 0): every GID maps to FD 0 (single-FD font).
     let num_glyphs_i32 = sorted_new.len() as i32;
-    let mut new_fd_select: Vec<u8> = vec![0]; // format 0
-    new_fd_select.extend(std::iter::repeat_n(0u8, sorted_new.len()));
+    let new_fd_select: Vec<u8> = vec![0u8; 1 + sorted_new.len()]; // format byte + N FD entries
 
     // Assembly: the CID-keyed layout matches subset_cid_cff_table, since a
     // converted SID font is effectively a CID font with exactly one FD.
