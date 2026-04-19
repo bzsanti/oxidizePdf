@@ -4,10 +4,9 @@
 //! (OpenType with CFF outlines), reducing file size by including only
 //! the glyphs actually used in the document.
 
-use oxidize_pdf::text::fonts::cff_subsetter::build_cff_index;
-use oxidize_pdf::text::fonts::cff_subsetter::usize_to_cff_offset;
-use oxidize_pdf::text::fonts::cff_subsetter::CffDictScanner;
-use oxidize_pdf::text::fonts::cff_subsetter::CffDictToken;
+use oxidize_pdf::text::fonts::cff::index::{build_cff_index, usize_to_cff_offset};
+use oxidize_pdf::text::fonts::cff::types::CffDictScanner;
+use oxidize_pdf::text::fonts::cff::types::CffDictToken;
 use oxidize_pdf::text::fonts::truetype_subsetter::subset_font;
 use std::collections::HashSet;
 
@@ -15,14 +14,38 @@ use std::collections::HashSet;
 // Helpers: Build minimal CFF OTF fonts for testing
 // =============================================================================
 
-/// Encode a CFF integer operand using fixed 5-byte encoding.
-/// Always uses the 5-byte form (operator 29 + i32 big-endian) to ensure
-/// stable sizes regardless of the actual value. This simplifies two-pass
-/// offset calculations in test helpers.
+/// Encode a CFF *DICT* integer operand using the fixed 5-byte encoding
+/// (byte 29 + i32 big-endian). Used inside Top DICT / Private DICT where
+/// byte 29 is an integer prefix.
+///
+/// **Do not use inside Type 2 charstrings** — byte 29 there is `callgsubr`.
+/// Use `encode_type2_int` for charstring operands instead.
 fn encode_cff_int(value: i32) -> Vec<u8> {
     let mut result = vec![29u8];
     result.extend_from_slice(&value.to_be_bytes());
     result
+}
+
+/// Encode a CFF Type 2 charstring integer operand using the shortest valid form.
+/// - Values in [-107..=107] encode as 1 byte (b0 = value + 139).
+/// - Values in [108..=1131] encode as 2 bytes (b0 ∈ 247..=250, b1).
+/// - Values in [-1131..=-108] encode as 2 bytes (b0 ∈ 251..=254, b1).
+/// - Everything else falls back to the 3-byte form (byte 28 + i16 big-endian).
+fn encode_type2_int(value: i32) -> Vec<u8> {
+    if (-107..=107).contains(&value) {
+        vec![(value + 139) as u8]
+    } else if (108..=1131).contains(&value) {
+        let adj = value - 108;
+        vec![247 + (adj >> 8) as u8, (adj & 0xFF) as u8]
+    } else if (-1131..=-108).contains(&value) {
+        let adj = -(value + 108);
+        vec![251 + (adj >> 8) as u8, (adj & 0xFF) as u8]
+    } else {
+        // 3-byte signed i16 form
+        let v = value as i16;
+        let bytes = v.to_be_bytes();
+        vec![28, bytes[0], bytes[1]]
+    }
 }
 
 /// Build a minimal CFF table with the given number of glyphs.
@@ -32,13 +55,13 @@ fn encode_cff_int(value: i32) -> Vec<u8> {
 ///   Header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX
 ///   → Charset → CharStrings INDEX
 fn build_cff_table(num_glyphs: u16) -> Vec<u8> {
-    let mut cff = Vec::new();
-
     // --- CFF Header ---
-    cff.push(1); // major version
-    cff.push(0); // minor version
-    cff.push(4); // hdrSize
-    cff.push(1); // offSize (not critical)
+    let mut cff: Vec<u8> = vec![
+        1, // major version
+        0, // minor version
+        4, // hdrSize
+        1, // offSize (not critical)
+    ];
 
     // --- Name INDEX ---
     let name_index = build_cff_index(&[b"TestCFF"]);
@@ -418,13 +441,8 @@ fn build_large_cff_otf() -> Vec<u8> {
 
 /// Build a large CFF table with padded CharStrings to exceed 100KB.
 fn build_large_cff_table(num_glyphs: u16) -> Vec<u8> {
-    let mut cff = Vec::new();
-
     // Header
-    cff.push(1);
-    cff.push(0);
-    cff.push(4);
-    cff.push(1);
+    let mut cff: Vec<u8> = vec![1, 0, 4, 1];
 
     // Name INDEX
     let name_index = build_cff_index(&[b"TestCFF"]);
@@ -435,18 +453,15 @@ fn build_large_cff_table(num_glyphs: u16) -> Vec<u8> {
     // Global Subr INDEX (empty)
     let global_subr_index = build_cff_index(&[]);
 
-    // CharStrings: each glyph has a padded charstring (~12 bytes)
-    // rmoveto (100, 200) + rlineto (50, 50) + endchar
-    // This uses CFF Type 2 encoding:
-    //   encode_cff_int(100) + encode_cff_int(200) + 21 (rmoveto)
-    //   encode_cff_int(50) + encode_cff_int(50) + 5 (rlineto)
-    //   14 (endchar)
+    // CharStrings: each glyph has a short charstring exercising Type 2
+    // 1-byte and 2-byte integer encodings.
+    //   rmoveto(100, 200) + rlineto(50, 50) + endchar
     let mut charstring: Vec<u8> = Vec::new();
-    charstring.extend_from_slice(&encode_cff_int(100));
-    charstring.extend_from_slice(&encode_cff_int(200));
+    charstring.extend_from_slice(&encode_type2_int(100));
+    charstring.extend_from_slice(&encode_type2_int(200));
     charstring.push(21); // rmoveto
-    charstring.extend_from_slice(&encode_cff_int(50));
-    charstring.extend_from_slice(&encode_cff_int(50));
+    charstring.extend_from_slice(&encode_type2_int(50));
+    charstring.extend_from_slice(&encode_type2_int(50));
     charstring.push(5); // rlineto
     charstring.push(14); // endchar
 
@@ -522,16 +537,106 @@ fn test_cff_subset_reduces_size_and_preserves_mapping() {
         result.font_data.len() >= 4,
         "Subset font data too small to be valid OTF"
     );
-    let sfnt = u32::from_be_bytes([
+    assert!(
+        result.is_raw_cff,
+        "Subset must be raw CFF after SID→CID conversion"
+    );
+    assert_eq!(
+        result.font_data[0], 1,
+        "CFF subset must start with CFF major version 1"
+    );
+    assert_eq!(
+        result.font_data[1], 0,
+        "CFF subset must have CFF minor version 0"
+    );
+}
+
+/// SID-keyed CFF fonts (no FDArray in input) must be converted to CID-keyed
+/// during subsetting and returned as raw CFF — never wrapped in OTF.
+#[test]
+fn test_sid_keyed_font_outputs_raw_cff_not_otf() {
+    let font_data = build_large_cff_otf(); // SID-keyed (no FDArray)
+    let used: HashSet<char> = "AB".chars().collect();
+    let result = subset_font(font_data, &used).unwrap();
+
+    assert!(
+        result.is_raw_cff,
+        "SID-keyed CFF subset must be returned as raw CFF (is_raw_cff=true)"
+    );
+
+    assert!(
+        result.font_data.len() >= 4,
+        "CFF data too short ({} bytes)",
+        result.font_data.len()
+    );
+
+    let sig = u32::from_be_bytes([
         result.font_data[0],
         result.font_data[1],
         result.font_data[2],
         result.font_data[3],
     ]);
+    assert_ne!(
+        sig, 0x4F54544F,
+        "Raw CFF must not start with the OTTO signature"
+    );
+
     assert_eq!(
-        sfnt, 0x4F54544F,
-        "Subset font must have OTTO signature, got {:#010X}",
-        sfnt
+        result.font_data[0], 1,
+        "CFF major version should be 1, got {}",
+        result.font_data[0]
+    );
+    assert_eq!(
+        result.font_data[1], 0,
+        "CFF minor version should be 0, got {}",
+        result.font_data[1]
+    );
+}
+
+/// After subsetting, the Global Subr INDEX inside the CFF output must be
+/// empty (count = 0) because charstrings are now desubroutinized and no
+/// longer reference any subroutines.
+#[test]
+fn test_cff_subset_global_subr_index_is_empty() {
+    let font_data = build_large_cff_otf();
+    let used: HashSet<char> = "AB".chars().collect();
+    let result = subset_font(font_data, &used).unwrap();
+
+    // Output is raw CFF (not OTF-wrapped).
+    assert!(result.is_raw_cff);
+    let cff = &result.font_data[..];
+    assert_eq!(cff[0], 1, "CFF major version");
+    assert_eq!(cff[1], 0, "CFF minor version");
+
+    // Walk the CFF structure: Header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX.
+    // For each INDEX: 2 bytes count; if count = 0, size = 2; otherwise 3 + (count+1)*offSize + data.
+    fn index_end(data: &[u8], pos: usize) -> usize {
+        let count = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+        if count == 0 {
+            return pos + 2;
+        }
+        let off_size = data[pos + 2] as usize;
+        let offsets_start = pos + 3;
+        let data_base = offsets_start + (count + 1) * off_size;
+        let last_off_pos = offsets_start + count * off_size;
+        let mut raw = 0u32;
+        for j in 0..off_size {
+            raw = (raw << 8) | data[last_off_pos + j] as u32;
+        }
+        data_base + raw as usize - 1
+    }
+
+    let hdr_size = cff[2] as usize;
+    let name_end = index_end(cff, hdr_size);
+    let top_dict_end = index_end(cff, name_end);
+    let string_end = index_end(cff, top_dict_end);
+
+    // Global Subr INDEX starts here. Count must be 0.
+    let global_subr_count = u16::from_be_bytes([cff[string_end], cff[string_end + 1]]);
+    assert_eq!(
+        global_subr_count, 0,
+        "Global Subr INDEX count must be 0 after desubroutinization, got {}",
+        global_subr_count
     );
 }
 
@@ -653,59 +758,85 @@ fn test_small_font_mapping_filtered_exact_count() {
 }
 
 // =============================================================================
-// OTF table coherence helpers
+// Diagnostic tests: glyph count coherence after CFF subsetting.
 // =============================================================================
 
-/// Find an OTF table by tag. Returns (offset, length).
-fn find_otf_table(otf_data: &[u8], target_tag: &[u8; 4]) -> Option<(usize, usize)> {
-    let num_tables = u16::from_be_bytes([otf_data[4], otf_data[5]]) as usize;
-    for i in 0..num_tables {
-        let dir = 12 + i * 16;
-        if &otf_data[dir..dir + 4] == target_tag {
-            let offset = u32::from_be_bytes([
-                otf_data[dir + 8],
-                otf_data[dir + 9],
-                otf_data[dir + 10],
-                otf_data[dir + 11],
-            ]) as usize;
-            let length = u32::from_be_bytes([
-                otf_data[dir + 12],
-                otf_data[dir + 13],
-                otf_data[dir + 14],
-                otf_data[dir + 15],
-            ]) as usize;
-            return Some((offset, length));
-        }
-    }
-    None
-}
-
-/// Parse numGlyphs from the maxp table.
-fn read_maxp_num_glyphs(otf_data: &[u8]) -> u16 {
-    let (offset, _) = find_otf_table(otf_data, b"maxp").expect("maxp table not found");
-    u16::from_be_bytes([otf_data[offset + 4], otf_data[offset + 5]])
-}
-
-// =============================================================================
-// Diagnostic tests: OTF table coherence after CFF subsetting
-// These expose WHY text doesn't display — viewers reject fonts where
-// maxp/hmtx/hhea report 65K glyphs but the CFF only has 5.
-// =============================================================================
-
+/// After SID→CID conversion the output is raw CFF, so coherence is measured
+/// against the CharStrings INDEX count instead of the OTF `maxp` table.
 #[test]
-fn test_synthetic_cff_subset_maxp_coherent() {
-    // maxp.numGlyphs must match actual glyph count after subsetting.
+fn test_synthetic_cff_subset_glyph_count_coherent() {
     let font_data = build_large_cff_otf();
 
     let used: HashSet<char> = "AB".chars().collect();
     let result = subset_font(font_data, &used).unwrap();
 
-    let maxp_glyphs = read_maxp_num_glyphs(&result.font_data);
-    // .notdef + A + B = 3
+    assert!(result.is_raw_cff, "output must be raw CFF");
+
+    let cff = &result.font_data[..];
+
+    // Walk header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX
+    // to locate the Top DICT, then parse its CharStrings offset.
+    fn index_end(data: &[u8], pos: usize) -> usize {
+        let count = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+        if count == 0 {
+            return pos + 2;
+        }
+        let off_size = data[pos + 2] as usize;
+        let offsets_start = pos + 3;
+        let data_base = offsets_start + (count + 1) * off_size;
+        let last_off_pos = offsets_start + count * off_size;
+        let mut raw = 0u32;
+        for j in 0..off_size {
+            raw = (raw << 8) | data[last_off_pos + j] as u32;
+        }
+        data_base + raw as usize - 1
+    }
+
+    let hdr_size = cff[2] as usize;
+    let name_end = index_end(cff, hdr_size);
+
+    // Top DICT INDEX contains one item: the actual Top DICT.
+    let top_dict_count = u16::from_be_bytes([cff[name_end], cff[name_end + 1]]) as usize;
     assert_eq!(
-        maxp_glyphs, 3,
-        "maxp.numGlyphs should be 3 (.notdef + 2 chars), got {}",
-        maxp_glyphs
+        top_dict_count, 1,
+        "Top DICT INDEX must have exactly one item"
+    );
+    let top_dict_off_size = cff[name_end + 2] as usize;
+    let top_dict_data_base = name_end + 3 + (top_dict_count + 1) * top_dict_off_size;
+    let mut td_end_raw = 0u32;
+    for j in 0..top_dict_off_size {
+        td_end_raw =
+            (td_end_raw << 8) | cff[name_end + 3 + top_dict_count * top_dict_off_size + j] as u32;
+    }
+    let td_start = top_dict_data_base;
+    let td_end = top_dict_data_base + td_end_raw as usize - 1;
+    let td = &cff[td_start..td_end];
+
+    // Scan Top DICT for op 17 (CharStrings offset).
+    let mut cs_offset: Option<u32> = None;
+    let mut last_i32: Option<i32> = None;
+    let mut i = 0;
+    while i < td.len() {
+        let b = td[i];
+        if b == 29 && i + 4 < td.len() {
+            let v = i32::from_be_bytes([td[i + 1], td[i + 2], td[i + 3], td[i + 4]]);
+            last_i32 = Some(v);
+            i += 5;
+        } else if b == 17 {
+            cs_offset = last_i32.map(|v| v as u32);
+            break;
+        } else {
+            i += 1;
+        }
+    }
+    let cs_off = cs_offset.expect("Top DICT must contain CharStrings op (17)") as usize;
+
+    // CharStrings INDEX count must equal .notdef + 2 used chars = 3.
+    let cs_count = u16::from_be_bytes([cff[cs_off], cff[cs_off + 1]]);
+    assert_eq!(
+        cs_count, 3,
+        "CharStrings count should be 3 (.notdef + 2 chars), got {}",
+        cs_count
     );
 }
 
@@ -872,6 +1003,71 @@ fn test_cid_font_pdf_round_trip_text_is_readable() {
             ch as u32,
             extracted.text
         );
+    }
+}
+
+/// Stronger round-trip guard using the exact text from Issue #165 plus
+/// Japanese + Korean. Exercises CJK punctuation (U+3001 `、`, U+FF0C `，`)
+/// which historically triggered two parser bugs in a chain:
+///   1. calculate_offset underflowed when a bfrange spanned bytes where
+///      code[i] < start[i] — panicked during text extraction.
+///   2. After fixing #1, map_code applied the offset only to the last
+///      byte of dst_start without propagating carry — produced outputs
+///      off by 0x100 from the correct Unicode codepoint.
+///
+/// Every character that goes in must come out.
+#[test]
+fn test_cid_font_issue_165_full_text_roundtrip() {
+    use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    use oxidize_pdf::{Document, Font, Page};
+    use std::io::Cursor;
+
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+
+    let lines = [
+        "你好世界",
+        "Rust 擁有完整的技術文件、友善的編譯器與清晰的錯誤訊息，還整合了一流的工具",
+        "建構工具、支援多種編輯器的自動補齊、型別檢測、自動格式化程式碼",
+        "日本語テキスト",
+        "한글 텍스트",
+    ];
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceHanSC", font_data)
+        .expect("font load");
+    let mut page = Page::a4();
+    let mut y = 760.0;
+    for line in &lines {
+        page.text()
+            .set_font(Font::Custom("SourceHanSC".to_string()), 12.0)
+            .at(60.0, y)
+            .write(line)
+            .expect("write line");
+        y -= 25.0;
+    }
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("generate PDF");
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse PDF");
+    let parsed = PdfDocument::new(reader);
+    let extracted = parsed.extract_text_from_page(0).expect("extract text");
+
+    for line in &lines {
+        for ch in line.chars() {
+            if ch.is_whitespace() {
+                continue;
+            }
+            assert!(
+                extracted.text.contains(ch),
+                "missing '{}' (U+{:04X}). Extracted: {:?}",
+                ch,
+                ch as u32,
+                extracted.text
+            );
+        }
     }
 }
 
