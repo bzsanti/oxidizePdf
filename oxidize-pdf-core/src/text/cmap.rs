@@ -234,9 +234,16 @@ impl CMap {
                     let offset = calculate_offset(code, src_start);
                     let mut result = dst_start.clone();
 
-                    // Add offset to destination
-                    if let Some(last) = result.last_mut() {
-                        *last = last.wrapping_add(offset as u8);
+                    // Add offset to the destination treating it as a
+                    // big-endian multi-byte integer, propagating carry.
+                    let mut carry = offset;
+                    for byte in result.iter_mut().rev() {
+                        let sum = *byte as usize + carry;
+                        *byte = (sum & 0xFF) as u8;
+                        carry = sum >> 8;
+                        if carry == 0 {
+                            break;
+                        }
                     }
 
                     return Some(result);
@@ -402,14 +409,21 @@ fn parse_bf_range_entries(line: &str) -> Option<Vec<CMapEntry>> {
     None
 }
 
-/// Calculate offset between two byte arrays
+/// Calculate the offset between two big-endian byte sequences of equal length.
+///
+/// Both inputs are interpreted as unsigned big-endian integers and the
+/// difference is returned as `usize`. Caller must ensure `code >= start`
+/// (checked in `map_code`); this function saturates to 0 if not, to avoid
+/// panicking on malformed input.
+///
+/// The naive byte-by-byte subtraction is wrong when any single byte
+/// position has `code[i] < start[i]` (which is legal as long as the overall
+/// big-endian value is still `>=`) — it underflows. Reducing each side to
+/// its integer value first avoids the issue.
 fn calculate_offset(code: &[u8], start: &[u8]) -> usize {
-    let mut offset = 0;
-    for i in (0..code.len()).rev() {
-        let diff = code[i] as usize - start[i] as usize;
-        offset += diff * (256_usize.pow((code.len() - i - 1) as u32));
-    }
-    offset
+    let code_val: usize = code.iter().fold(0, |acc, &b| acc * 256 + b as usize);
+    let start_val: usize = start.iter().fold(0, |acc, &b| acc * 256 + b as usize);
+    code_val.saturating_sub(start_val)
 }
 
 /// ToUnicode CMap builder for creating custom mappings
@@ -572,6 +586,23 @@ mod tests {
         assert_eq!(calculate_offset(&[0x00, 0x05], &[0x00, 0x00]), 5);
         assert_eq!(calculate_offset(&[0x01, 0x00], &[0x00, 0x00]), 256);
         assert_eq!(calculate_offset(&[0xFF], &[0x00]), 255);
+    }
+
+    /// Regression: the byte-by-byte subtraction underflowed whenever
+    /// code[i] < start[i] in any single byte position, even though
+    /// `code >= start` in the big-endian sense. This triggered panics
+    /// extracting text from PDFs with CJK punctuation (e.g. U+3001 `、`
+    /// in a ToUnicode bfrange spanning U+2FFF → U+3002).
+    #[test]
+    fn test_calculate_offset_with_byte_borrow() {
+        // 0x0100 − 0x00FF = 1 (individual byte 0x00 < 0xFF → borrow)
+        assert_eq!(calculate_offset(&[0x01, 0x00], &[0x00, 0xFF]), 1);
+        // 0x3001 − 0x2FFF = 2 (real-world CJK punctuation case)
+        assert_eq!(calculate_offset(&[0x30, 0x01], &[0x2F, 0xFF]), 2);
+        // 0xFF02 − 0xFEFF = 3 (high byte stays equal, low byte wraps)
+        assert_eq!(calculate_offset(&[0xFF, 0x02], &[0xFE, 0xFF]), 3);
+        // Same start and end → zero offset.
+        assert_eq!(calculate_offset(&[0x12, 0x34], &[0x12, 0x34]), 0);
     }
 
     #[test]

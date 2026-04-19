@@ -133,11 +133,10 @@ impl<'a> FontEmbedder<'a> {
         dict.set("Type", Object::Name("Font".into()));
 
         let font_name = self.font.postscript_name();
-        let is_cff = matches!(self.font.format, super::FontFormat::OpenType);
-        let cid_font_subtype = if CjkFontType::should_use_cidfonttype2(is_cff) {
-            "CIDFontType2" // TrueType fonts
-        } else {
-            "CIDFontType0" // CFF/OpenType fonts
+        // ISO 32000-1 §9.7.4: CIDFontType0 for CFF/OpenType, CIDFontType2 for TrueType.
+        let cid_font_subtype = match self.font.format {
+            super::FontFormat::OpenType => "CIDFontType0",
+            super::FontFormat::TrueType => "CIDFontType2",
         };
 
         dict.set("Subtype", Object::Name(cid_font_subtype.into()));
