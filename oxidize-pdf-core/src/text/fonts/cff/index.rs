@@ -3,10 +3,16 @@
 use crate::parser::{ParseError, ParseResult};
 
 /// A parsed CFF INDEX: the byte range of each item within the original data slice.
+///
+/// The struct itself is `pub` so integration tests and downstream consumers
+/// can use `parse_cff_index`, `build_cff_index`, and the accessor methods
+/// (`count`, `get_item`, `raw_bytes`, `end_offset`), but the fields are
+/// `pub(crate)` to prevent external callers from constructing instances with
+/// offsets that do not correspond to any parsed data.
 pub struct CffIndex {
-    pub start_offset: usize,
-    pub byte_length: usize,
-    pub item_offsets: Vec<usize>,
+    pub(crate) start_offset: usize,
+    pub(crate) byte_length: usize,
+    pub(crate) item_offsets: Vec<usize>,
 }
 
 impl CffIndex {
