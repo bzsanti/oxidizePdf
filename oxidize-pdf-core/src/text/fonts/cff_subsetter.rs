@@ -71,7 +71,12 @@ pub fn subset_cff_font(
     let otf = OtfFile::parse(font_data)?;
     let cff_entry = otf.find_table(b"CFF ")?;
     let cff_start = cff_entry.offset as usize;
-    let cff_end = cff_start + cff_entry.length as usize;
+    let cff_end = (cff_entry.offset as usize)
+        .checked_add(cff_entry.length as usize)
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: cff_start,
+            message: "CFF table range overflow (offset + length wraps usize)".to_string(),
+        })?;
 
     if cff_end > font_data.len() {
         return Err(ParseError::SyntaxError {
@@ -84,7 +89,12 @@ pub fn subset_cff_font(
     // Parse cmap to determine which GIDs to keep
     let cmap_entry = otf.find_table(b"cmap")?;
     let cmap_start = cmap_entry.offset as usize;
-    let cmap_end = cmap_start + cmap_entry.length as usize;
+    let cmap_end = (cmap_entry.offset as usize)
+        .checked_add(cmap_entry.length as usize)
+        .ok_or_else(|| ParseError::SyntaxError {
+            position: cmap_start,
+            message: "cmap table range overflow (offset + length wraps usize)".to_string(),
+        })?;
     if cmap_end > font_data.len() {
         return Err(ParseError::SyntaxError {
             position: cmap_start,
