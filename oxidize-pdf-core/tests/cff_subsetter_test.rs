@@ -14,14 +14,38 @@ use std::collections::HashSet;
 // Helpers: Build minimal CFF OTF fonts for testing
 // =============================================================================
 
-/// Encode a CFF integer operand using fixed 5-byte encoding.
-/// Always uses the 5-byte form (operator 29 + i32 big-endian) to ensure
-/// stable sizes regardless of the actual value. This simplifies two-pass
-/// offset calculations in test helpers.
+/// Encode a CFF *DICT* integer operand using the fixed 5-byte encoding
+/// (byte 29 + i32 big-endian). Used inside Top DICT / Private DICT where
+/// byte 29 is an integer prefix.
+///
+/// **Do not use inside Type 2 charstrings** — byte 29 there is `callgsubr`.
+/// Use `encode_type2_int` for charstring operands instead.
 fn encode_cff_int(value: i32) -> Vec<u8> {
     let mut result = vec![29u8];
     result.extend_from_slice(&value.to_be_bytes());
     result
+}
+
+/// Encode a CFF Type 2 charstring integer operand using the shortest valid form.
+/// - Values in [-107..=107] encode as 1 byte (b0 = value + 139).
+/// - Values in [108..=1131] encode as 2 bytes (b0 ∈ 247..=250, b1).
+/// - Values in [-1131..=-108] encode as 2 bytes (b0 ∈ 251..=254, b1).
+/// - Everything else falls back to the 3-byte form (byte 28 + i16 big-endian).
+fn encode_type2_int(value: i32) -> Vec<u8> {
+    if (-107..=107).contains(&value) {
+        vec![(value + 139) as u8]
+    } else if (108..=1131).contains(&value) {
+        let adj = value - 108;
+        vec![247 + (adj >> 8) as u8, (adj & 0xFF) as u8]
+    } else if (-1131..=-108).contains(&value) {
+        let adj = -(value + 108);
+        vec![251 + (adj >> 8) as u8, (adj & 0xFF) as u8]
+    } else {
+        // 3-byte signed i16 form
+        let v = value as i16;
+        let bytes = v.to_be_bytes();
+        vec![28, bytes[0], bytes[1]]
+    }
 }
 
 /// Build a minimal CFF table with the given number of glyphs.
@@ -31,13 +55,13 @@ fn encode_cff_int(value: i32) -> Vec<u8> {
 ///   Header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX
 ///   → Charset → CharStrings INDEX
 fn build_cff_table(num_glyphs: u16) -> Vec<u8> {
-    let mut cff = Vec::new();
-
     // --- CFF Header ---
-    cff.push(1); // major version
-    cff.push(0); // minor version
-    cff.push(4); // hdrSize
-    cff.push(1); // offSize (not critical)
+    let mut cff: Vec<u8> = vec![
+        1, // major version
+        0, // minor version
+        4, // hdrSize
+        1, // offSize (not critical)
+    ];
 
     // --- Name INDEX ---
     let name_index = build_cff_index(&[b"TestCFF"]);
@@ -417,13 +441,8 @@ fn build_large_cff_otf() -> Vec<u8> {
 
 /// Build a large CFF table with padded CharStrings to exceed 100KB.
 fn build_large_cff_table(num_glyphs: u16) -> Vec<u8> {
-    let mut cff = Vec::new();
-
     // Header
-    cff.push(1);
-    cff.push(0);
-    cff.push(4);
-    cff.push(1);
+    let mut cff: Vec<u8> = vec![1, 0, 4, 1];
 
     // Name INDEX
     let name_index = build_cff_index(&[b"TestCFF"]);
@@ -434,18 +453,15 @@ fn build_large_cff_table(num_glyphs: u16) -> Vec<u8> {
     // Global Subr INDEX (empty)
     let global_subr_index = build_cff_index(&[]);
 
-    // CharStrings: each glyph has a padded charstring (~12 bytes)
-    // rmoveto (100, 200) + rlineto (50, 50) + endchar
-    // This uses CFF Type 2 encoding:
-    //   encode_cff_int(100) + encode_cff_int(200) + 21 (rmoveto)
-    //   encode_cff_int(50) + encode_cff_int(50) + 5 (rlineto)
-    //   14 (endchar)
+    // CharStrings: each glyph has a short charstring exercising Type 2
+    // 1-byte and 2-byte integer encodings.
+    //   rmoveto(100, 200) + rlineto(50, 50) + endchar
     let mut charstring: Vec<u8> = Vec::new();
-    charstring.extend_from_slice(&encode_cff_int(100));
-    charstring.extend_from_slice(&encode_cff_int(200));
+    charstring.extend_from_slice(&encode_type2_int(100));
+    charstring.extend_from_slice(&encode_type2_int(200));
     charstring.push(21); // rmoveto
-    charstring.extend_from_slice(&encode_cff_int(50));
-    charstring.extend_from_slice(&encode_cff_int(50));
+    charstring.extend_from_slice(&encode_type2_int(50));
+    charstring.extend_from_slice(&encode_type2_int(50));
     charstring.push(5); // rlineto
     charstring.push(14); // endchar
 
@@ -531,6 +547,68 @@ fn test_cff_subset_reduces_size_and_preserves_mapping() {
         sfnt, 0x4F54544F,
         "Subset font must have OTTO signature, got {:#010X}",
         sfnt
+    );
+}
+
+/// After subsetting, the Global Subr INDEX inside the embedded CFF table must
+/// be empty (count = 0) because charstrings are now desubroutinized and no
+/// longer reference any subroutines.
+#[test]
+fn test_cff_subset_global_subr_index_is_empty() {
+    let font_data = build_large_cff_otf();
+    let used: HashSet<char> = "AB".chars().collect();
+    let result = subset_font(font_data, &used).unwrap();
+
+    // Non-CID path wraps the CFF inside an OTF. Locate the CFF table.
+    let otf = &result.font_data;
+    assert_eq!(&otf[0..4], b"OTTO");
+    let num_tables = u16::from_be_bytes([otf[4], otf[5]]) as usize;
+    let mut cff_offset: Option<usize> = None;
+    for i in 0..num_tables {
+        let record = 12 + i * 16;
+        let tag = &otf[record..record + 4];
+        if tag == b"CFF " {
+            cff_offset = Some(u32::from_be_bytes([
+                otf[record + 8],
+                otf[record + 9],
+                otf[record + 10],
+                otf[record + 11],
+            ]) as usize);
+            break;
+        }
+    }
+    let cff_start = cff_offset.expect("subset OTF must contain a CFF table");
+    let cff = &otf[cff_start..];
+
+    // Walk the CFF structure: Header → Name INDEX → Top DICT INDEX → String INDEX → Global Subr INDEX.
+    // For each INDEX: 2 bytes count; if count = 0, size = 2; otherwise 3 + (count+1)*offSize + data.
+    fn index_end(data: &[u8], pos: usize) -> usize {
+        let count = u16::from_be_bytes([data[pos], data[pos + 1]]) as usize;
+        if count == 0 {
+            return pos + 2;
+        }
+        let off_size = data[pos + 2] as usize;
+        let offsets_start = pos + 3;
+        let data_base = offsets_start + (count + 1) * off_size;
+        let last_off_pos = offsets_start + count * off_size;
+        let mut raw = 0u32;
+        for j in 0..off_size {
+            raw = (raw << 8) | data[last_off_pos + j] as u32;
+        }
+        data_base + raw as usize - 1
+    }
+
+    let hdr_size = cff[2] as usize;
+    let name_end = index_end(cff, hdr_size);
+    let top_dict_end = index_end(cff, name_end);
+    let string_end = index_end(cff, top_dict_end);
+
+    // Global Subr INDEX starts here. Count must be 0.
+    let global_subr_count = u16::from_be_bytes([cff[string_end], cff[string_end + 1]]);
+    assert_eq!(
+        global_subr_count, 0,
+        "Global Subr INDEX count must be 0 after desubroutinization, got {}",
+        global_subr_count
     );
 }
 

@@ -484,11 +484,12 @@ pub(crate) fn parse_local_subrs_offset(private_dict: &[u8]) -> Option<usize> {
     None
 }
 
-/// Patch the Subrs operator (op 19) in a Private DICT to point to `new_offset`.
-/// The offset is relative to the start of the Private DICT data.
-/// If op 19 doesn't exist but local subrs are present, appends it.
-pub(crate) fn patch_private_subrs_offset(private_dict: &mut Vec<u8>, new_offset: i32) {
-    // Scan for op 19 and replace its operand
+/// Remove the Subrs operator (op 19) and its operand from a Private DICT.
+/// Used after desubroutinization: the charstrings no longer reference Local
+/// Subrs, so the Subrs offset must not be written.
+///
+/// If op 19 is not present, the DICT is returned unchanged.
+pub(crate) fn strip_private_subrs_op(private_dict: &mut Vec<u8>) {
     let mut scanner = CffDictScanner::new(private_dict);
     let mut op19_operand_start: Option<usize> = None;
     let mut op19_end: Option<usize> = None;
@@ -515,14 +516,7 @@ pub(crate) fn patch_private_subrs_offset(private_dict: &mut Vec<u8>, new_offset:
     }
 
     if let (Some(start), Some(end)) = (op19_operand_start, op19_end) {
-        // Replace: remove old operand+op19, insert new operand+op19
-        let mut replacement = encode_cff_int_5byte(new_offset).to_vec();
-        replacement.push(19); // op 19
-        private_dict.splice(start..end, replacement);
-    } else {
-        // No op 19 found — append it
-        private_dict.extend_from_slice(&encode_cff_int_5byte(new_offset));
-        private_dict.push(19);
+        private_dict.drain(start..end);
     }
 }
 

@@ -30,10 +30,11 @@
 
 use crate::fonts::cmap_utils::parse_cmap_format_12_filtered;
 use crate::parser::{ParseError, ParseResult};
+use crate::text::fonts::cff::charstring::desubroutinize;
 use crate::text::fonts::cff::dict::{
     build_subset_charset, parse_fd_private, parse_fd_select, parse_local_subrs_offset,
-    parse_top_dict, patch_private_subrs_offset, rebuild_cid_top_dict, rebuild_fd_dict,
-    rebuild_top_dict, FdData, TopDictOffsets,
+    parse_top_dict, rebuild_cid_top_dict, rebuild_fd_dict, rebuild_top_dict,
+    strip_private_subrs_op, FdData, TopDictOffsets,
 };
 use crate::text::fonts::cff::index::{
     build_cff_index, parse_cff_index, usize_to_cff_offset, CffIndex,
@@ -605,14 +606,73 @@ fn subset_cid_cff_table(
         gids
     };
 
-    let new_charstrings: Vec<&[u8]> = sorted_old_gids
+    // Extract each needed FD's Private DICT and parse its Local Subr INDEX.
+    // Charstrings will be desubroutinized, so the Subrs op (19) is stripped
+    // from each Private DICT and no Local Subr INDEX is written.
+    let mut fd_data_list: Vec<FdData> = Vec::new();
+    let mut fd_local_subrs: HashMap<u8, CffIndex> = HashMap::new();
+    for &old_fd in &needed_fds {
+        let fd_dict = fd_array_index
+            .get_item(old_fd as usize, cff)
+            .ok_or_else(|| ParseError::SyntaxError {
+                position: 0,
+                message: format!("FD {} not found in FDArray", old_fd),
+            })?;
+
+        let (mut private_bytes, local_subrs) = if let Some((priv_size, priv_off)) =
+            parse_fd_private(fd_dict)
+        {
+            if priv_off > 0 && priv_size > 0 {
+                let start = priv_off as usize;
+                let end = (start + priv_size as usize).min(cff.len());
+                let pb = cff[start..end].to_vec();
+                let ls = if let Some(subrs_rel) = parse_local_subrs_offset(&pb) {
+                    parse_cff_index(cff, start + subrs_rel).unwrap_or_else(|_| CffIndex::empty())
+                } else if end < cff.len() {
+                    match parse_cff_index(cff, end) {
+                        Ok(idx) if idx.count() > 0 => idx,
+                        _ => CffIndex::empty(),
+                    }
+                } else {
+                    CffIndex::empty()
+                };
+                (pb, ls)
+            } else {
+                (vec![], CffIndex::empty())
+            }
+        } else {
+            (vec![], CffIndex::empty())
+        };
+
+        strip_private_subrs_op(&mut private_bytes);
+
+        fd_local_subrs.insert(old_fd, local_subrs);
+        fd_data_list.push(FdData {
+            fd_dict_bytes: fd_dict.to_vec(),
+            private_bytes,
+            local_subr_bytes: Vec::new(),
+        });
+    }
+
+    // Desubroutinize every kept charstring so the output is self-contained.
+    // The result owns its bytes; rebuild CharStrings INDEX from references.
+    let empty_index = CffIndex::empty();
+    let desub_charstrings: Vec<Vec<u8>> = sorted_old_gids
         .iter()
         .map(|&old_gid| {
-            charstrings_index
+            let cs = charstrings_index
                 .get_item(old_gid as usize, cff)
-                .unwrap_or(&[0x0E])
+                .unwrap_or(&[0x0E]);
+            let old_fd = if (old_gid as usize) < fd_select.len() {
+                fd_select[old_gid as usize]
+            } else {
+                0
+            };
+            let local = fd_local_subrs.get(&old_fd).unwrap_or(&empty_index);
+            desubroutinize(cs, global_subr_index, cff, local, cff)
         })
-        .collect();
+        .collect::<ParseResult<Vec<_>>>()?;
+    let new_charstrings: Vec<&[u8]> = desub_charstrings.iter().map(|v| v.as_slice()).collect();
     let new_charstrings_index = build_cff_index(&new_charstrings);
 
     // Build new FDSelect (Format 0: one byte per new GID)
@@ -660,153 +720,24 @@ fn subset_cid_cff_table(
         new_charset.extend_from_slice(&cid16.to_be_bytes());
     }
 
-    // Extract each needed FD dict and its Private DICT
-    // Each FD contains: FontName (op 12 38) + Private (op 18)
-    // We need to rebuild FDArray with updated Private DICT offsets
-    let mut fd_data_list: Vec<FdData> = Vec::new();
-    let mut all_global_subr_raw: Vec<i32> = Vec::new();
-    for &old_fd in &needed_fds {
-        let fd_dict = fd_array_index
-            .get_item(old_fd as usize, cff)
-            .ok_or_else(|| ParseError::SyntaxError {
-                position: 0,
-                message: format!("FD {} not found in FDArray", old_fd),
-            })?;
-
-        // Collect CharStrings belonging to this FD for Local Subr analysis
-        let fd_charstrings: Vec<&[u8]> = sorted_old_gids
-            .iter()
-            .filter(|&&old_gid| {
-                let fd = if (old_gid as usize) < fd_select.len() {
-                    fd_select[old_gid as usize]
-                } else {
-                    0
-                };
-                fd == old_fd
-            })
-            .filter_map(|&old_gid| charstrings_index.get_item(old_gid as usize, cff))
-            .collect();
-
-        let (private_bytes, local_subr_bytes) =
-            if let Some((priv_size, priv_off)) = parse_fd_private(fd_dict) {
-                if priv_off > 0 && priv_size > 0 {
-                    let start = priv_off as usize;
-                    let end = (start + priv_size as usize).min(cff.len());
-                    let pb = cff[start..end].to_vec();
-                    // Parse Local Subr INDEX and filter to only used entries.
-                    // Unused subrs become single-byte endchar stubs (0x0E),
-                    // preserving INDEX count so callsubr operands stay valid.
-                    let ls = if let Some(subrs_rel) = parse_local_subrs_offset(&pb) {
-                        let subrs_abs = start + subrs_rel;
-                        match parse_cff_index(cff, subrs_abs) {
-                            Ok(idx) if idx.count() > 0 => {
-                                let (used, global_raw) =
-                                    collect_used_subrs_full(&fd_charstrings, &idx, cff);
-                                all_global_subr_raw.extend(global_raw);
-                                filter_subr_index(&idx, cff, &used)
-                            }
-                            _ => {
-                                // No local subrs but still collect global refs
-                                for cs in &fd_charstrings {
-                                    let (_, gr) = collect_subr_calls(cs);
-                                    all_global_subr_raw.extend(gr);
-                                }
-                                vec![]
-                            }
-                        }
-                    } else if end < cff.len() {
-                        match parse_cff_index(cff, end) {
-                            Ok(idx) if idx.count() > 0 => {
-                                let (used, global_raw) =
-                                    collect_used_subrs_full(&fd_charstrings, &idx, cff);
-                                all_global_subr_raw.extend(global_raw);
-                                filter_subr_index(&idx, cff, &used)
-                            }
-                            _ => {
-                                for cs in &fd_charstrings {
-                                    let (_, gr) = collect_subr_calls(cs);
-                                    all_global_subr_raw.extend(gr);
-                                }
-                                vec![]
-                            }
-                        }
-                    } else {
-                        for cs in &fd_charstrings {
-                            let (_, gr) = collect_subr_calls(cs);
-                            all_global_subr_raw.extend(gr);
-                        }
-                        vec![]
-                    };
-                    (pb, ls)
-                } else {
-                    for cs in &fd_charstrings {
-                        let (_, gr) = collect_subr_calls(cs);
-                        all_global_subr_raw.extend(gr);
-                    }
-                    (vec![], vec![])
-                }
-            } else {
-                for cs in &fd_charstrings {
-                    let (_, gr) = collect_subr_calls(cs);
-                    all_global_subr_raw.extend(gr);
-                }
-                (vec![], vec![])
-            };
-
-        fd_data_list.push(FdData {
-            fd_dict_bytes: fd_dict.to_vec(),
-            private_bytes,
-            local_subr_bytes,
-        });
-    }
-
-    // Patch op 19 (Subrs) in each Private DICT BEFORE offset calculation.
-    // The Local Subr INDEX is placed immediately after the Private DICT,
-    // so op 19 must equal the Private DICT's length. This must happen before
-    // the two-pass assembly because patching can change the Private DICT size.
-    for fd in &mut fd_data_list {
-        if !fd.local_subr_bytes.is_empty() {
-            let orig_len = fd.private_bytes.len();
-            // Two-step patch: first patch with a dummy value to stabilize the size
-            // (encode_cff_int_5byte always produces 5 bytes), then patch with the
-            // actual offset which equals the Private DICT's new length.
-            patch_private_subrs_offset(&mut fd.private_bytes, 0);
-            let after_first = fd.private_bytes.len();
-            let subrs_offset = after_first as i32;
-            patch_private_subrs_offset(&mut fd.private_bytes, subrs_offset);
-            tracing::debug!(
-                "Private DICT patch: {} → {} bytes, op19={}",
-                orig_len,
-                fd.private_bytes.len(),
-                subrs_offset
-            );
-        }
-    }
-
     // --- Two-pass offset assembly ---
     // Layout:
     //   [0] Header
     //   [1] Name INDEX
     //   [2] Top DICT INDEX (rebuilt)
     //   [3] String INDEX
-    //   [4] Global Subr INDEX
+    //   [4] Global Subr INDEX (empty — charstrings are desubroutinized)
     //   [5] Charset
     //   [6] FDSelect
     //   [7] CharStrings INDEX
     //   [8] FDArray INDEX (with rebuilt FD dicts)
-    //   [9..] Private DICTs (one per needed FD)
+    //   [9..] Private DICTs (one per needed FD, Subrs op stripped)
 
     let name_bytes = name_index.raw_bytes(cff);
     let string_bytes = string_index.raw_bytes(cff);
 
-    // Filter Global Subr INDEX: keep only subrs reachable from subset CharStrings
-    let global_subr_bytes = if global_subr_index.count() > 0 {
-        let used_globals =
-            collect_used_global_subrs_transitive(&all_global_subr_raw, &global_subr_index, cff);
-        filter_subr_index(&global_subr_index, cff, &used_globals)
-    } else {
-        global_subr_index.raw_bytes(cff).to_vec()
-    };
+    // Desubroutinized charstrings make the Global Subr INDEX obsolete.
+    let global_subr_bytes = build_cff_index(&[]);
 
     let placeholder_offset = 100_000i32;
 
@@ -1067,24 +998,8 @@ fn subset_cff_table(
         sorted_new.insert(0, 0);
     }
 
-    let new_charstrings: Vec<&[u8]> = sorted_new
-        .iter()
-        .map(|&old_gid| {
-            charstrings_index
-                .get_item(old_gid as usize, cff)
-                .unwrap_or(&[0x0E]) // fallback to endchar
-        })
-        .collect();
-
-    let new_charstrings_index = build_cff_index(&new_charstrings);
-
-    // Build new Charset (format 0): GID 0 is implicitly .notdef, then list SIDs for GID 1..N
-    // We copy the original SIDs for each old GID if available; otherwise use old_gid as SID.
-    let orig_charset_offset = top_dict_offsets.charset_offset.unwrap_or(0);
-    let new_charset = build_subset_charset(cff, orig_charset_offset, &sorted_new, total_glyphs);
-
-    // Copy Private DICT + Local Subr INDEX verbatim
-    let (private_bytes, private_orig_offset) =
+    // Parse Private DICT and Local Subr INDEX (used only to desubroutinize).
+    let (mut private_bytes, private_orig_offset) =
         if let Some((size, offset)) = top_dict_offsets.private_dict {
             if offset > 0 && size > 0 {
                 let start = offset as usize;
@@ -1097,57 +1012,43 @@ fn subset_cff_table(
             (vec![], 0)
         };
 
-    // Parse Local Subr INDEX and filter to only used entries.
-    // Also collect global subr references for Global Subr filtering.
-    let mut noncid_global_raw: Vec<i32> = Vec::new();
-    let local_subr_bytes = if !private_bytes.is_empty() && private_orig_offset > 0 {
+    let local_subrs = if !private_bytes.is_empty() && private_orig_offset > 0 {
         let priv_start = private_orig_offset as usize;
         let priv_end = priv_start + private_bytes.len();
         if let Some(subrs_rel) = parse_local_subrs_offset(&private_bytes) {
-            let subrs_abs = priv_start + subrs_rel;
-            match parse_cff_index(cff, subrs_abs) {
-                Ok(idx) if idx.count() > 0 => {
-                    let (used, global_raw) = collect_used_subrs_full(&new_charstrings, &idx, cff);
-                    noncid_global_raw.extend(global_raw);
-                    filter_subr_index(&idx, cff, &used)
-                }
-                _ => {
-                    for cs in &new_charstrings {
-                        let (_, gr) = collect_subr_calls(cs);
-                        noncid_global_raw.extend(gr);
-                    }
-                    vec![]
-                }
-            }
+            parse_cff_index(cff, priv_start + subrs_rel).unwrap_or_else(|_| CffIndex::empty())
         } else if priv_end < cff.len() {
             match parse_cff_index(cff, priv_end) {
-                Ok(idx) if idx.count() > 0 => {
-                    let (used, global_raw) = collect_used_subrs_full(&new_charstrings, &idx, cff);
-                    noncid_global_raw.extend(global_raw);
-                    filter_subr_index(&idx, cff, &used)
-                }
-                _ => {
-                    for cs in &new_charstrings {
-                        let (_, gr) = collect_subr_calls(cs);
-                        noncid_global_raw.extend(gr);
-                    }
-                    vec![]
-                }
+                Ok(idx) if idx.count() > 0 => idx,
+                _ => CffIndex::empty(),
             }
         } else {
-            for cs in &new_charstrings {
-                let (_, gr) = collect_subr_calls(cs);
-                noncid_global_raw.extend(gr);
-            }
-            vec![]
+            CffIndex::empty()
         }
     } else {
-        for cs in &new_charstrings {
-            let (_, gr) = collect_subr_calls(cs);
-            noncid_global_raw.extend(gr);
-        }
-        vec![]
+        CffIndex::empty()
     };
+
+    // Strip the Subrs op — desubroutinized charstrings no longer reference Local Subrs.
+    strip_private_subrs_op(&mut private_bytes);
+
+    // Desubroutinize every kept charstring so the output is self-contained.
+    let desub_charstrings: Vec<Vec<u8>> = sorted_new
+        .iter()
+        .map(|&old_gid| {
+            let cs = charstrings_index
+                .get_item(old_gid as usize, cff)
+                .unwrap_or(&[0x0E]);
+            desubroutinize(cs, &global_subr_index, cff, &local_subrs, cff)
+        })
+        .collect::<ParseResult<Vec<_>>>()?;
+    let new_charstrings: Vec<&[u8]> = desub_charstrings.iter().map(|v| v.as_slice()).collect();
+    let new_charstrings_index = build_cff_index(&new_charstrings);
+
+    // Build new Charset (format 0): GID 0 is implicitly .notdef, then list SIDs for GID 1..N
+    // We copy the original SIDs for each old GID if available; otherwise use old_gid as SID.
+    let orig_charset_offset = top_dict_offsets.charset_offset.unwrap_or(0);
+    let new_charset = build_subset_charset(cff, orig_charset_offset, &sorted_new, total_glyphs);
 
     // Now we need to assemble the new CFF.
     // We do a two-pass approach: first compute all sizes, then write.
@@ -1157,23 +1058,16 @@ fn subset_cff_table(
     //   [1] Name INDEX (verbatim)
     //   [2] Top DICT INDEX (rebuilt with new offsets)
     //   [3] String INDEX (verbatim)
-    //   [4] Global Subr INDEX (verbatim)
+    //   [4] Global Subr INDEX (empty — charstrings are desubroutinized)
     //   [5] Charset (rebuilt)
     //   [6] CharStrings INDEX (subset)
-    //   [7] Private DICT (verbatim, if present)
-    //   [8] Local Subr INDEX (verbatim, if present)
+    //   [7] Private DICT (Subrs op stripped, no Local Subr INDEX follows)
 
     let name_bytes = name_index.raw_bytes(cff);
     let string_bytes = string_index.raw_bytes(cff);
 
-    // Filter Global Subr INDEX: keep only subrs reachable from subset CharStrings
-    let global_subr_bytes = if global_subr_index.count() > 0 {
-        let used_globals =
-            collect_used_global_subrs_transitive(&noncid_global_raw, &global_subr_index, cff);
-        filter_subr_index(&global_subr_index, cff, &used_globals)
-    } else {
-        global_subr_index.raw_bytes(cff).to_vec()
-    };
+    // Desubroutinized charstrings make the Global Subr INDEX obsolete.
+    let global_subr_bytes = build_cff_index(&[]);
 
     // For Top DICT INDEX size estimation, build with placeholder offsets (use large value
     // that still encodes to 5 bytes). We always use 5-byte encoding so the size is stable.
@@ -1245,9 +1139,6 @@ fn subset_cff_table(
     new_cff.extend_from_slice(&new_charstrings_index);
     if has_private {
         new_cff.extend_from_slice(&private_bytes);
-        if !local_subr_bytes.is_empty() {
-            new_cff.extend_from_slice(&local_subr_bytes);
-        }
     }
 
     Ok(new_cff)
@@ -1398,627 +1289,4 @@ fn parse_cmap_format_4(cmap: &[u8], offset: usize) -> ParseResult<HashMap<u32, u
     }
 
     Ok(map)
-}
-
-// =============================================================================
-// =============================================================================
-// Type 2 CharString subr-call scanner
-// =============================================================================
-
-/// Compute the CFF subroutine bias for a given INDEX count.
-///
-/// Per CFF spec and Type 2 CharString spec:
-/// - count < 1240  -> bias = 107
-/// - count < 33900 -> bias = 1131
-/// - otherwise     -> bias = 32768
-fn cff_subr_bias(count: usize) -> i32 {
-    if count < 1240 {
-        107
-    } else if count < 33900 {
-        1131
-    } else {
-        32768
-    }
-}
-
-/// Scan a Type 2 CharString and collect raw subr indices (stack-top values
-/// consumed by `callsubr`/`callgsubr`, BEFORE bias adjustment).
-///
-/// Returns `(local_raw_indices, global_raw_indices)`.
-///
-/// Type 2 CharString byte encoding:
-/// - 0-11, 13-27: single-byte operators
-///   - 10 = callsubr, 11 = return, 14 = endchar, 29 = callgsubr
-/// - 12: escape prefix (next byte = extended operator)
-/// - 28: 2-byte signed i16
-/// - 32-246: 1-byte integer (value = b - 139)
-/// - 247-250: 2-byte positive ((b-247)*256 + b1 + 108)
-/// - 251-254: 2-byte negative (-(b-251)*256 - b1 - 108)
-/// - 255: 4-byte fixed-point 16.16
-/// - 30-31: reserved (skip)
-fn collect_subr_calls(cs: &[u8]) -> (Vec<i32>, Vec<i32>) {
-    let mut stack: Vec<i32> = Vec::new();
-    let mut local_calls: Vec<i32> = Vec::new();
-    let mut global_calls: Vec<i32> = Vec::new();
-    let mut pos = 0;
-
-    while pos < cs.len() {
-        let b = cs[pos];
-        match b {
-            10 => {
-                // callsubr: pop stack top
-                if let Some(idx) = stack.pop() {
-                    local_calls.push(idx);
-                }
-                pos += 1;
-            }
-            29 => {
-                // callgsubr: pop stack top
-                if let Some(idx) = stack.pop() {
-                    global_calls.push(idx);
-                }
-                pos += 1;
-            }
-            11 | 14 => {
-                // return / endchar: stop scanning
-                break;
-            }
-            12 => {
-                // Escape: skip 2 bytes (escape + extended operator)
-                pos += 2;
-            }
-            0..=9 | 13 | 15..=27 => {
-                // Other operators consume their args
-                stack.clear();
-                pos += 1;
-            }
-            28 => {
-                // 2-byte signed integer
-                if pos + 2 < cs.len() {
-                    let val = i16::from_be_bytes([cs[pos + 1], cs[pos + 2]]) as i32;
-                    stack.push(val);
-                }
-                pos += 3;
-            }
-            32..=246 => {
-                stack.push(b as i32 - 139);
-                pos += 1;
-            }
-            247..=250 => {
-                if pos + 1 < cs.len() {
-                    let val = (b as i32 - 247) * 256 + cs[pos + 1] as i32 + 108;
-                    stack.push(val);
-                }
-                pos += 2;
-            }
-            251..=254 => {
-                if pos + 1 < cs.len() {
-                    let val = -(b as i32 - 251) * 256 - cs[pos + 1] as i32 - 108;
-                    stack.push(val);
-                }
-                pos += 2;
-            }
-            255 => {
-                // 4-byte fixed-point 16.16: integer part = upper 16 bits
-                if pos + 4 < cs.len() {
-                    let raw =
-                        i32::from_be_bytes([cs[pos + 1], cs[pos + 2], cs[pos + 3], cs[pos + 4]]);
-                    stack.push(raw >> 16);
-                }
-                pos += 5;
-            }
-            30 | 31 => {
-                // Reserved in Type 2, skip
-                pos += 1;
-            }
-        }
-    }
-
-    (local_calls, global_calls)
-}
-
-/// Collect all Local Subr indices reachable from a set of CharStrings, transitively.
-///
-/// Starting from each CharString, extracts `callsubr` references, converts them
-/// to absolute indices using the bias, then recursively follows any subr that itself
-/// calls other subrs. Returns `(used_local, global_raw)` where `used_local` is the
-/// complete set of used absolute local subr indices, and `global_raw` is the list
-/// of raw global subr indices found in all scanned bytecode (for later resolution).
-///
-/// `cff` must be the slice that `subr_index` was parsed from (i.e., `get_item`
-/// uses `cff` to resolve item data).
-#[cfg(test)]
-fn collect_used_subrs_transitive(
-    charstrings: &[&[u8]],
-    subr_index: &CffIndex,
-    cff: &[u8],
-) -> HashSet<usize> {
-    let (used, _global_raw) = collect_used_subrs_full(charstrings, subr_index, cff);
-    used
-}
-
-/// Like `collect_used_subrs_transitive` but also returns the raw global subr indices
-/// encountered during traversal (for use by Global Subr filtering).
-fn collect_used_subrs_full(
-    charstrings: &[&[u8]],
-    subr_index: &CffIndex,
-    cff: &[u8],
-) -> (HashSet<usize>, Vec<i32>) {
-    let count = subr_index.count();
-    if count == 0 {
-        // Still collect global subr refs from charstrings even if no local subrs
-        let mut global_raw: Vec<i32> = Vec::new();
-        for cs in charstrings {
-            let (_, gr) = collect_subr_calls(cs);
-            global_raw.extend(gr);
-        }
-        return (HashSet::new(), global_raw);
-    }
-    let bias = cff_subr_bias(count);
-    let mut used: HashSet<usize> = HashSet::new();
-    let mut work_queue: Vec<usize> = Vec::new();
-    let mut global_raw: Vec<i32> = Vec::new();
-
-    // Seed from all CharStrings
-    for cs in charstrings {
-        let (local_raw, gr) = collect_subr_calls(cs);
-        global_raw.extend(gr);
-        for raw in local_raw {
-            let abs = (raw as i64 + bias as i64) as isize;
-            if abs >= 0 && (abs as usize) < count && used.insert(abs as usize) {
-                work_queue.push(abs as usize);
-            }
-        }
-    }
-
-    // BFS: follow subr → subr references
-    while let Some(subr_idx) = work_queue.pop() {
-        if let Some(subr_data) = subr_index.get_item(subr_idx, cff) {
-            let (local_raw, gr) = collect_subr_calls(subr_data);
-            global_raw.extend(gr);
-            for raw in local_raw {
-                let abs = (raw as i64 + bias as i64) as isize;
-                if abs >= 0 && (abs as usize) < count && used.insert(abs as usize) {
-                    work_queue.push(abs as usize);
-                }
-            }
-        }
-    }
-
-    (used, global_raw)
-}
-
-/// Collect all Global Subr indices reachable from a list of raw global subr indices,
-/// transitively. Global subrs can call other global subrs via `callgsubr`.
-fn collect_used_global_subrs_transitive(
-    global_raw_indices: &[i32],
-    global_subr_index: &CffIndex,
-    cff: &[u8],
-) -> HashSet<usize> {
-    let count = global_subr_index.count();
-    if count == 0 {
-        return HashSet::new();
-    }
-    let bias = cff_subr_bias(count);
-    let mut used: HashSet<usize> = HashSet::new();
-    let mut work_queue: Vec<usize> = Vec::new();
-
-    // Seed from provided raw indices
-    for &raw in global_raw_indices {
-        let abs = (raw as i64 + bias as i64) as isize;
-        if abs >= 0 && (abs as usize) < count && used.insert(abs as usize) {
-            work_queue.push(abs as usize);
-        }
-    }
-
-    // BFS: follow gsubr → gsubr references
-    while let Some(subr_idx) = work_queue.pop() {
-        if let Some(subr_data) = global_subr_index.get_item(subr_idx, cff) {
-            let (_, global_raw) = collect_subr_calls(subr_data);
-            for raw in global_raw {
-                let abs = (raw as i64 + bias as i64) as isize;
-                if abs >= 0 && (abs as usize) < count && used.insert(abs as usize) {
-                    work_queue.push(abs as usize);
-                }
-            }
-        }
-    }
-
-    used
-}
-
-/// Build a filtered Subr INDEX: used entries are preserved, unused ones become
-/// a single-byte `{endchar}` stub (`[0x0E]`). This preserves the INDEX count
-/// and all absolute indices, so no `callsubr` operands need rewriting.
-fn filter_subr_index(original: &CffIndex, cff: &[u8], used: &HashSet<usize>) -> Vec<u8> {
-    let endchar_stub: &[u8] = &[0x0E];
-    let count = original.count();
-    let items: Vec<&[u8]> = (0..count)
-        .map(|i| {
-            if used.contains(&i) {
-                original.get_item(i, cff).unwrap_or(endchar_stub)
-            } else {
-                endchar_stub
-            }
-        })
-        .collect();
-    build_cff_index(&items)
-}
-
-/// Compute an OTF table checksum (sum of big-endian u32 words, padded to 4 bytes).
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // =========================================================================
-    // cff_subr_bias
-    // =========================================================================
-
-    #[test]
-    fn test_bias_small_count() {
-        assert_eq!(cff_subr_bias(0), 107);
-        assert_eq!(cff_subr_bias(1), 107);
-        assert_eq!(cff_subr_bias(1239), 107);
-    }
-
-    #[test]
-    fn test_bias_medium_count() {
-        assert_eq!(cff_subr_bias(1240), 1131);
-        assert_eq!(cff_subr_bias(10000), 1131);
-        assert_eq!(cff_subr_bias(33899), 1131);
-    }
-
-    #[test]
-    fn test_bias_large_count() {
-        assert_eq!(cff_subr_bias(33900), 32768);
-        assert_eq!(cff_subr_bias(65535), 32768);
-    }
-
-    // =========================================================================
-    // collect_subr_calls — number encoding
-    // =========================================================================
-
-    #[test]
-    fn test_1byte_numbers() {
-        // byte 139 = value 0, push 0 then callsubr
-        let cs = [139, 10, 14]; // push 0, callsubr, endchar
-        let (local, global) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![0]);
-        assert!(global.is_empty());
-
-        // byte 32 = value -107 (lower bound)
-        let cs = [32, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![-107]);
-
-        // byte 246 = value 107 (upper bound)
-        let cs = [246, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![107]);
-    }
-
-    #[test]
-    fn test_2byte_positive_numbers() {
-        // bytes 247, b1: value = (247-247)*256 + b1 + 108 = b1 + 108
-        let cs = [247, 0, 10, 14]; // value = 108
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![108]);
-
-        // bytes 250, 255: value = (250-247)*256 + 255 + 108 = 768 + 255 + 108 = 1131
-        let cs = [250, 255, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![1131]);
-    }
-
-    #[test]
-    fn test_2byte_negative_numbers() {
-        // bytes 251, b1: value = -(251-251)*256 - b1 - 108 = -b1 - 108
-        let cs = [251, 0, 10, 14]; // value = -108
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![-108]);
-
-        // bytes 254, 255: value = -(254-251)*256 - 255 - 108 = -768 - 255 - 108 = -1131
-        let cs = [254, 255, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![-1131]);
-    }
-
-    #[test]
-    fn test_byte28_signed_i16() {
-        // byte 28, then 2-byte big-endian i16
-        // value = 0x0100 = 256
-        let cs = [28, 0x01, 0x00, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![256]);
-
-        // negative: 0xFF00 = -256 as i16
-        let cs = [28, 0xFF, 0x00, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![-256]);
-    }
-
-    #[test]
-    fn test_byte255_fixed_point() {
-        // byte 255, then 4-byte 16.16 fixed-point
-        // 0x00050000 = integer part 5, fraction 0
-        let cs = [255, 0x00, 0x05, 0x00, 0x00, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![5]);
-
-        // negative: 0xFFFB0000 = -5 as integer part
-        let cs = [255, 0xFF, 0xFB, 0x00, 0x00, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![-5]);
-    }
-
-    // =========================================================================
-    // collect_subr_calls — operator detection
-    // =========================================================================
-
-    #[test]
-    fn test_callsubr_detected() {
-        // push 42 (byte = 42 + 139 = 181), then callsubr (10)
-        let cs = [181, 10, 14];
-        let (local, global) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![42]);
-        assert!(global.is_empty());
-    }
-
-    #[test]
-    fn test_callgsubr_detected() {
-        // push 7 (byte = 7 + 139 = 146), then callgsubr (29)
-        let cs = [146, 29, 14];
-        let (local, global) = collect_subr_calls(&cs);
-        assert!(local.is_empty());
-        assert_eq!(global, vec![7]);
-    }
-
-    #[test]
-    fn test_multiple_subr_calls() {
-        // push 1, callsubr, push 2, callsubr, push 3, callgsubr, endchar
-        let cs = [140, 10, 141, 10, 142, 29, 14];
-        let (local, global) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![1, 2]);
-        assert_eq!(global, vec![3]);
-    }
-
-    #[test]
-    fn test_operators_clear_stack() {
-        // push 10, push 20, rmoveto (21) clears stack, push 5, callsubr
-        // Only 5 should be captured, not 10 or 20
-        let cs = [149, 159, 21, 144, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![5]);
-    }
-
-    #[test]
-    fn test_escape_operator_skipped() {
-        // push 3, escape operator (12, 34 = flex), push 7, callsubr
-        let cs = [142, 12, 34, 146, 10, 14];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![7]);
-    }
-
-    #[test]
-    fn test_endchar_stops_scanning() {
-        // push 1, endchar (14), push 2, callsubr — the 2 should NOT be captured
-        let cs = [140, 14, 141, 10];
-        let (local, _) = collect_subr_calls(&cs);
-        assert!(local.is_empty()); // 1 was on stack but never consumed by callsubr
-    }
-
-    #[test]
-    fn test_return_stops_scanning() {
-        // push 5, callsubr, return (11), push 9, callsubr — 9 should NOT be captured
-        let cs = [144, 10, 11, 148, 10];
-        let (local, _) = collect_subr_calls(&cs);
-        assert_eq!(local, vec![5]);
-    }
-
-    #[test]
-    fn test_empty_charstring() {
-        let (local, global) = collect_subr_calls(&[]);
-        assert!(local.is_empty());
-        assert!(global.is_empty());
-    }
-
-    #[test]
-    fn test_endchar_only() {
-        let (local, global) = collect_subr_calls(&[14]);
-        assert!(local.is_empty());
-        assert!(global.is_empty());
-    }
-
-    #[test]
-    fn test_callsubr_with_empty_stack_is_harmless() {
-        // callsubr with no value on stack — should not panic or produce output
-        let cs = [10, 14];
-        let (local, global) = collect_subr_calls(&cs);
-        assert!(local.is_empty());
-        assert!(global.is_empty());
-    }
-
-    // =========================================================================
-    // collect_used_subrs_transitive
-    // =========================================================================
-
-    /// Helper: build a CFF INDEX from raw byte slices and parse it back
-    fn build_and_parse_index(items: &[&[u8]]) -> (Vec<u8>, CffIndex) {
-        let data = build_cff_index(items);
-        let idx = parse_cff_index(&data, 0).expect("valid INDEX");
-        (data, idx)
-    }
-
-    #[test]
-    fn test_transitive_single_chain() {
-        // CharString calls local subr 0 (raw index = 0 - bias).
-        // With 3 subrs, bias = 107. Raw index for absolute 0 = 0 - 107 = -107.
-        // -107 encoded as 1-byte: byte = -107 + 139 = 32
-        let cs: &[u8] = &[32, 10, 14]; // push -107, callsubr, endchar
-
-        // Subr 0 calls subr 1 (raw = 1 - 107 = -106, byte = 33)
-        let subr0: &[u8] = &[33, 10, 11]; // push -106, callsubr, return
-                                          // Subr 1 is terminal
-        let subr1: &[u8] = &[14]; // endchar
-                                  // Subr 2 is unreachable
-        let subr2: &[u8] = &[100, 100, 100, 14]; // some data + endchar
-
-        let (data, idx) = build_and_parse_index(&[subr0, subr1, subr2]);
-
-        let used = collect_used_subrs_transitive(&[cs], &idx, &data);
-        assert!(used.contains(&0), "subr 0 should be used");
-        assert!(used.contains(&1), "subr 1 should be used (transitively)");
-        assert!(!used.contains(&2), "subr 2 should NOT be used");
-        assert_eq!(used.len(), 2);
-    }
-
-    #[test]
-    fn test_transitive_cycle_guard() {
-        // Subr 0 calls subr 1, subr 1 calls subr 0 (cycle)
-        // bias = 107 for 2 subrs
-        let cs: &[u8] = &[32, 10, 14]; // push -107, callsubr (→ subr 0)
-        let subr0: &[u8] = &[33, 10, 11]; // push -106, callsubr (→ subr 1), return
-        let subr1: &[u8] = &[32, 10, 11]; // push -107, callsubr (→ subr 0), return
-
-        let (data, idx) = build_and_parse_index(&[subr0, subr1]);
-
-        let used = collect_used_subrs_transitive(&[cs], &idx, &data);
-        assert_eq!(used.len(), 2);
-        assert!(used.contains(&0));
-        assert!(used.contains(&1));
-    }
-
-    #[test]
-    fn test_transitive_no_subr_calls() {
-        // CharString with no callsubr
-        let cs: &[u8] = &[139, 139, 21, 14]; // push 0, push 0, rmoveto, endchar
-        let subr0: &[u8] = &[14];
-
-        let (data, idx) = build_and_parse_index(&[subr0]);
-
-        let used = collect_used_subrs_transitive(&[cs], &idx, &data);
-        assert!(used.is_empty());
-    }
-
-    // =========================================================================
-    // filter_subr_index
-    // =========================================================================
-
-    #[test]
-    fn test_filter_subr_index_stubs_unused() {
-        let item0: &[u8] = &[0xAA, 0xBB, 0xCC]; // unused → stub
-        let item1: &[u8] = &[0x11, 0x22]; // used → preserved
-        let item2: &[u8] = &[0xDD, 0xEE, 0xFF, 0x99]; // unused → stub
-        let item3: &[u8] = &[0x33]; // used → preserved
-        let item4: &[u8] = &[0x44, 0x55]; // unused → stub
-
-        let (data, idx) = build_and_parse_index(&[item0, item1, item2, item3, item4]);
-
-        let mut used = HashSet::new();
-        used.insert(1usize);
-        used.insert(3usize);
-
-        let filtered = filter_subr_index(&idx, &data, &used);
-        let filtered_idx = parse_cff_index(&filtered, 0).expect("valid filtered INDEX");
-
-        assert_eq!(filtered_idx.count(), 5, "count must be preserved");
-
-        // Unused items become [0x0E] (endchar stub)
-        assert_eq!(
-            filtered_idx.get_item(0, &filtered),
-            Some(&[0x0Eu8] as &[u8]),
-            "item 0 should be endchar stub"
-        );
-        assert_eq!(
-            filtered_idx.get_item(2, &filtered),
-            Some(&[0x0Eu8] as &[u8]),
-            "item 2 should be endchar stub"
-        );
-        assert_eq!(
-            filtered_idx.get_item(4, &filtered),
-            Some(&[0x0Eu8] as &[u8]),
-            "item 4 should be endchar stub"
-        );
-
-        // Used items preserved verbatim
-        assert_eq!(
-            filtered_idx.get_item(1, &filtered),
-            Some(&[0x11u8, 0x22] as &[u8]),
-            "item 1 should be preserved"
-        );
-        assert_eq!(
-            filtered_idx.get_item(3, &filtered),
-            Some(&[0x33u8] as &[u8]),
-            "item 3 should be preserved"
-        );
-    }
-
-    #[test]
-    fn test_filter_subr_index_all_unused() {
-        let (data, idx) = build_and_parse_index(&[&[0xAA, 0xBB], &[0xCC, 0xDD]]);
-        let used: HashSet<usize> = HashSet::new();
-
-        let filtered = filter_subr_index(&idx, &data, &used);
-        let filtered_idx = parse_cff_index(&filtered, 0).expect("valid INDEX");
-
-        assert_eq!(filtered_idx.count(), 2);
-        assert_eq!(
-            filtered_idx.get_item(0, &filtered),
-            Some(&[0x0Eu8] as &[u8])
-        );
-        assert_eq!(
-            filtered_idx.get_item(1, &filtered),
-            Some(&[0x0Eu8] as &[u8])
-        );
-
-        // Size should be much smaller than original
-        assert!(
-            filtered.len() < data.len(),
-            "filtered ({}) should be smaller than original ({})",
-            filtered.len(),
-            data.len()
-        );
-    }
-
-    #[test]
-    fn test_filter_subr_index_all_used() {
-        let items: Vec<&[u8]> = vec![&[0x11, 0x22], &[0x33, 0x44]];
-        let (data, idx) = build_and_parse_index(&items);
-        let mut used = HashSet::new();
-        used.insert(0usize);
-        used.insert(1usize);
-
-        let filtered = filter_subr_index(&idx, &data, &used);
-        let filtered_idx = parse_cff_index(&filtered, 0).expect("valid INDEX");
-
-        assert_eq!(filtered_idx.count(), 2);
-        assert_eq!(
-            filtered_idx.get_item(0, &filtered),
-            Some(&[0x11u8, 0x22] as &[u8])
-        );
-        assert_eq!(
-            filtered_idx.get_item(1, &filtered),
-            Some(&[0x33u8, 0x44] as &[u8])
-        );
-    }
-
-    #[test]
-    fn test_transitive_multiple_charstrings() {
-        // CharString A calls subr 0, CharString B calls subr 2
-        // bias = 107 for 4 subrs
-        let cs_a: &[u8] = &[32, 10, 14]; // → subr 0
-        let cs_b: &[u8] = &[34, 10, 14]; // push -105 (raw for abs 2), callsubr → subr 2
-
-        let subr0: &[u8] = &[14];
-        let subr1: &[u8] = &[14]; // unreachable
-        let subr2: &[u8] = &[14];
-        let subr3: &[u8] = &[14]; // unreachable
-
-        let (data, idx) = build_and_parse_index(&[subr0, subr1, subr2, subr3]);
-
-        let used = collect_used_subrs_transitive(&[cs_a, cs_b], &idx, &data);
-        assert_eq!(used.len(), 2);
-        assert!(used.contains(&0));
-        assert!(used.contains(&2));
-    }
 }

@@ -10,6 +10,16 @@ pub struct CffIndex {
 }
 
 impl CffIndex {
+    /// An empty INDEX with no items. Useful as a "no local subrs" placeholder
+    /// when calling the desubroutinizer for a font dict that has no Subrs.
+    pub fn empty() -> Self {
+        CffIndex {
+            start_offset: 0,
+            byte_length: 0,
+            item_offsets: Vec::new(),
+        }
+    }
+
     pub fn end_offset(&self) -> usize {
         self.start_offset + self.byte_length
     }
