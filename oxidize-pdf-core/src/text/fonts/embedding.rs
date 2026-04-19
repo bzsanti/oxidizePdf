@@ -132,25 +132,6 @@ impl CjkFontType {
 
         None
     }
-
-    /// Determine if a CID font should use CIDFontType2 subtype.
-    ///
-    /// Per ISO 32000-1 §9.7.4:
-    /// - CIDFontType0: CFF/OpenType fonts (PostScript outlines)
-    /// - CIDFontType2: TrueType fonts (TrueType outlines)
-    ///
-    /// Using the wrong subtype causes PDF viewers to fail to render glyphs.
-    /// A CFF font declared as CIDFontType2 is structurally invalid.
-    ///
-    /// # Arguments
-    /// * `is_cff` - Whether the font has CFF outlines (OpenType/CFF)
-    ///
-    /// # Returns
-    /// * `true` for TrueType fonts → CIDFontType2
-    /// * `false` for CFF/OpenType fonts → CIDFontType0
-    pub fn should_use_cidfonttype2(is_cff: bool) -> bool {
-        !is_cff
-    }
 }
 
 /// Encoding difference entry
@@ -1060,27 +1041,5 @@ mod tests {
         if let Some(Object::Array(bbox)) = desc_dict.get("FontBBox") {
             assert_eq!(bbox.len(), 4);
         }
-    }
-
-    // =========================================================================
-    // CIDFontType selection tests (Issue #165)
-    // =========================================================================
-
-    #[test]
-    fn test_cff_font_uses_cidfonttype0() {
-        // CFF/OpenType fonts MUST use CIDFontType0 per ISO 32000-1 §9.7.4
-        assert!(
-            !CjkFontType::should_use_cidfonttype2(true),
-            "CFF → CIDFontType0"
-        );
-    }
-
-    #[test]
-    fn test_truetype_font_uses_cidfonttype2() {
-        // TrueType fonts MUST use CIDFontType2 per ISO 32000-1 §9.7.4
-        assert!(
-            CjkFontType::should_use_cidfonttype2(false),
-            "TrueType → CIDFontType2"
-        );
     }
 }

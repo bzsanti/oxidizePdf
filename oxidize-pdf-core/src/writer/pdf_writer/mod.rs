@@ -1359,10 +1359,11 @@ impl<W: Write> PdfWriter<W> {
         let font_file_id = self.allocate_object_id();
         let to_unicode_id = self.allocate_object_id();
 
-        // Write font file (embedded TTF data with subsetting for large fonts)
-        // Keep track of the glyph mapping if we subset the font
-        // IMPORTANT: We need the ORIGINAL font for width calculations, not the subset
-        let (font_data_to_embed, subset_glyph_mapping, original_font_for_widths, embed_as_raw_cff) =
+        // Write font file. Large fonts are subsetted; the subsetter always
+        // emits raw CFF for OpenType/CFF fonts, so OpenType font files are
+        // embedded with /CIDFontType0C. TrueType fonts keep the SFNT wrapper.
+        // IMPORTANT: We need the ORIGINAL font for width calculations, not the subset.
+        let (font_data_to_embed, subset_glyph_mapping, original_font_for_widths) =
             if font.data.len() > 100_000 && !used_chars.is_empty() {
                 match crate::text::fonts::truetype_subsetter::subset_font(
                     font.data.clone(),
@@ -1372,37 +1373,28 @@ impl<W: Write> PdfWriter<W> {
                         subset_result.font_data,
                         Some(subset_result.glyph_mapping),
                         font.clone(),
-                        subset_result.is_raw_cff,
                     ),
                     Err(_) => {
                         if font.data.len() < 25_000_000 {
-                            (font.data.clone(), None, font.clone(), false)
+                            (font.data.clone(), None, font.clone())
                         } else {
-                            (Vec::new(), None, font.clone(), false)
+                            (Vec::new(), None, font.clone())
                         }
                     }
                 }
             } else {
-                (font.data.clone(), None, font.clone(), false)
+                (font.data.clone(), None, font.clone())
             };
 
         if !font_data_to_embed.is_empty() {
             let mut font_file_dict = Dictionary::new();
-            if embed_as_raw_cff {
-                // CID-keyed CFF: embed raw CFF bytes with /CIDFontType0C
-                // This is the industry standard for CID fonts in PDF.
-                font_file_dict.set("Subtype", Object::Name("CIDFontType0C".to_string()));
-            } else {
-                match font.format {
-                    crate::fonts::FontFormat::OpenType => {
-                        font_file_dict.set("Subtype", Object::Name("OpenType".to_string()));
-                        font_file_dict
-                            .set("Length1", Object::Integer(font_data_to_embed.len() as i64));
-                    }
-                    crate::fonts::FontFormat::TrueType => {
-                        font_file_dict
-                            .set("Length1", Object::Integer(font_data_to_embed.len() as i64));
-                    }
+            match font.format {
+                crate::fonts::FontFormat::OpenType => {
+                    // Subset CFF is always raw CFF → /CIDFontType0C.
+                    font_file_dict.set("Subtype", Object::Name("CIDFontType0C".to_string()));
+                }
+                crate::fonts::FontFormat::TrueType => {
+                    font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
                 }
             }
             let font_stream_obj = Object::Stream(font_file_dict, font_data_to_embed);
@@ -1447,12 +1439,10 @@ impl<W: Write> PdfWriter<W> {
         // Write CIDFont (descendant font)
         let mut cid_font = Dictionary::new();
         cid_font.set("Type", Object::Name("Font".to_string()));
-        // Use ISO 32000-1 §9.7.4 correct CIDFont subtype based on font format
-        let is_cff = matches!(font.format, crate::fonts::FontFormat::OpenType);
-        let cid_font_subtype = if CjkFontType::should_use_cidfonttype2(is_cff) {
-            "CIDFontType2" // TrueType fonts
-        } else {
-            "CIDFontType0" // CFF/OpenType fonts
+        // ISO 32000-1 §9.7.4: CIDFontType0 for CFF/OpenType, CIDFontType2 for TrueType.
+        let cid_font_subtype = match font.format {
+            crate::fonts::FontFormat::OpenType => "CIDFontType0",
+            crate::fonts::FontFormat::TrueType => "CIDFontType2",
         };
         cid_font.set("Subtype", Object::Name(cid_font_subtype.to_string()));
         cid_font.set("BaseFont", Object::Name(font_name.to_string()));
