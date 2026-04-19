@@ -187,29 +187,38 @@ fn test_desubroutinize_nested_local_subrs() {
 }
 
 // =========================================================================
-// Desubroutinization: max depth exceeded
+// Desubroutinization: max depth boundary
 // =========================================================================
+//
+// The depth guard uses MAX_SUBR_DEPTH = 64. Counting the top-level
+// charstring as depth 0, subr N at depth N+1: a chain of 64 subrs
+// (indices 0..=63) reaches a frame at depth 64 — which must error.
+// A chain of 63 subrs reaches depth 63 — which must succeed.
+
+/// Build a chain of N subrs where subr i calls subr i+1 and the last
+/// one just returns. Returns (index_data, index) ready for desubroutinize.
+fn build_subr_chain(n: usize) -> (Vec<u8>, Vec<Vec<u8>>) {
+    let mut bodies: Vec<Vec<u8>> = Vec::new();
+    // N subrs with bias = 107 (N < 1240). Biased index for subr i+1 = (i+1) - 107.
+    for i in 0i32..(n as i32 - 1) {
+        let biased = (i + 1) - 107;
+        let b0 = (biased + 139) as u8;
+        bodies.push(vec![b0, 10, 11]); // operand + callsubr + return
+    }
+    // Last subr: just return
+    bodies.push(vec![11]);
+    let index_data = {
+        let refs: Vec<&[u8]> = bodies.iter().map(|v| v.as_slice()).collect();
+        build_cff_index(&refs)
+    };
+    (index_data, bodies)
+}
 
 #[test]
 fn test_desubroutinize_max_depth_exceeded() {
-    // Chain of 65 subrs, each calling the next. Exceeds the 64-level safety bound.
-    let mut subr_bodies: Vec<Vec<u8>> = Vec::new();
-
-    // 65 subrs → bias = 107. Biased index for subr i+1 = (i + 1) - 107.
-    for i in 0i32..64 {
-        let next_biased = (i + 1) - 107;
-        let b0 = (next_biased + 139) as u8;
-        subr_bodies.push(vec![
-            b0, 10, // operand + callsubr
-            11, // return
-        ]);
-    }
-
-    // Subr 64: just return
-    subr_bodies.push(vec![11]);
-
-    let subr_refs: Vec<&[u8]> = subr_bodies.iter().map(|v| v.as_slice()).collect();
-    let local_subrs_data = build_cff_index(&subr_refs);
+    // Chain of 64 subrs → deepest frame at depth 64 → must error under
+    // the MAX_SUBR_DEPTH = 64 invariant (depth >= MAX triggers the guard).
+    let (local_subrs_data, _bodies) = build_subr_chain(64);
     let local_subrs = parse_cff_index(&local_subrs_data, 0).unwrap();
     let empty_index_data = build_cff_index(&[]);
     let global_subrs = parse_cff_index(&empty_index_data, 0).unwrap();
@@ -226,8 +235,34 @@ fn test_desubroutinize_max_depth_exceeded() {
     );
     assert!(
         result.is_err(),
-        "Should fail when recursion depth exceeds limit"
+        "A chain of 64 subrs reaches depth 64, must exceed MAX_SUBR_DEPTH"
     );
+}
+
+#[test]
+fn test_desubroutinize_max_depth_allowed() {
+    // Chain of 63 subrs → deepest frame at depth 63 → must succeed
+    // under the MAX_SUBR_DEPTH = 64 invariant.
+    let (local_subrs_data, _bodies) = build_subr_chain(63);
+    let local_subrs = parse_cff_index(&local_subrs_data, 0).unwrap();
+    let empty_index_data = build_cff_index(&[]);
+    let global_subrs = parse_cff_index(&empty_index_data, 0).unwrap();
+
+    let charstring: Vec<u8> = vec![32, 10, 14];
+
+    let result = desubroutinize(
+        &charstring,
+        &global_subrs,
+        &empty_index_data,
+        &local_subrs,
+        &local_subrs_data,
+    );
+    assert!(
+        result.is_ok(),
+        "A chain of 63 subrs reaches depth 63, must stay below MAX_SUBR_DEPTH"
+    );
+    // All calls fold into endchar; output is just the outer endchar.
+    assert_eq!(result.unwrap(), vec![14]);
 }
 
 // =========================================================================

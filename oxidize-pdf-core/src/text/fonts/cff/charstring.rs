@@ -87,7 +87,7 @@ fn desubroutinize_inner(
     state: &mut DesubState,
     output: &mut Vec<u8>,
 ) -> ParseResult<bool> {
-    if depth > MAX_SUBR_DEPTH {
+    if depth >= MAX_SUBR_DEPTH {
         return Err(ParseError::SyntaxError {
             position: 0,
             message: format!(
