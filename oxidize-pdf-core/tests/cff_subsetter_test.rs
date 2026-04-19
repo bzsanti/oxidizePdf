@@ -1006,6 +1006,71 @@ fn test_cid_font_pdf_round_trip_text_is_readable() {
     }
 }
 
+/// Stronger round-trip guard using the exact text from Issue #165 plus
+/// Japanese + Korean. Exercises CJK punctuation (U+3001 `、`, U+FF0C `，`)
+/// which historically triggered two parser bugs in a chain:
+///   1. calculate_offset underflowed when a bfrange spanned bytes where
+///      code[i] < start[i] — panicked during text extraction.
+///   2. After fixing #1, map_code applied the offset only to the last
+///      byte of dst_start without propagating carry — produced outputs
+///      off by 0x100 from the correct Unicode codepoint.
+///
+/// Every character that goes in must come out.
+#[test]
+fn test_cid_font_issue_165_full_text_roundtrip() {
+    use oxidize_pdf::parser::{PdfDocument, PdfReader};
+    use oxidize_pdf::{Document, Font, Page};
+    use std::io::Cursor;
+
+    let font_data = match load_cid_font() {
+        Some(d) => d,
+        None => return,
+    };
+
+    let lines = [
+        "你好世界",
+        "Rust 擁有完整的技術文件、友善的編譯器與清晰的錯誤訊息，還整合了一流的工具",
+        "建構工具、支援多種編輯器的自動補齊、型別檢測、自動格式化程式碼",
+        "日本語テキスト",
+        "한글 텍스트",
+    ];
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceHanSC", font_data)
+        .expect("font load");
+    let mut page = Page::a4();
+    let mut y = 760.0;
+    for line in &lines {
+        page.text()
+            .set_font(Font::Custom("SourceHanSC".to_string()), 12.0)
+            .at(60.0, y)
+            .write(line)
+            .expect("write line");
+        y -= 25.0;
+    }
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("generate PDF");
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse PDF");
+    let parsed = PdfDocument::new(reader);
+    let extracted = parsed.extract_text_from_page(0).expect("extract text");
+
+    for line in &lines {
+        for ch in line.chars() {
+            if ch.is_whitespace() {
+                continue;
+            }
+            assert!(
+                extracted.text.contains(ch),
+                "missing '{}' (U+{:04X}). Extracted: {:?}",
+                ch,
+                ch as u32,
+                extracted.text
+            );
+        }
+    }
+}
+
 #[test]
 fn test_cid_font_pdf_size_comparable_to_competitors() {
     // Issue #165: user reports 2MB output vs krilla's 17KB for same content.
