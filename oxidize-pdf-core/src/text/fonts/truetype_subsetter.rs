@@ -405,7 +405,7 @@ impl TrueTypeSubsetter {
         }
 
         // Build the actual subset font
-        match self.build_subset_font(&glyph_map, &new_cmap) {
+        match self.build_subset_font(&glyph_map) {
             Ok(subset_font_data) => {
                 tracing::debug!(
                     "  Successfully subsetted: {} -> {} bytes ({:.1}% reduction)",
@@ -447,12 +447,13 @@ impl TrueTypeSubsetter {
         }
     }
 
-    /// Build the subset font file
-    fn build_subset_font(
-        &self,
-        glyph_map: &HashMap<u16, u16>,
-        new_cmap: &HashMap<u32, u16>,
-    ) -> ParseResult<Vec<u8>> {
+    /// Build the subset font file.
+    ///
+    /// Output contains only the tables required for PDF embedding: glyf,
+    /// head, loca, hmtx, hhea, maxp, post. `cmap`, `OS/2` and `name` are
+    /// stripped — PDF uses its own ToUnicode CMap and CIDToGIDMap for
+    /// character-to-glyph resolution, and OS/2 / name are cosmetic.
+    fn build_subset_font(&self, glyph_map: &HashMap<u16, u16>) -> ParseResult<Vec<u8>> {
         // Build new glyf table with only needed glyphs
         let mut new_glyf = Vec::new();
         let mut current_offset = 0u32;
@@ -497,217 +498,18 @@ impl TrueTypeSubsetter {
             }
         }
 
-        // Build new cmap subtable (format 4 for BMP characters)
-        let new_cmap_data = self.build_cmap_table(new_cmap)?;
-
         // Build new hmtx table
         let new_hmtx = self.build_hmtx(glyph_map, &inverse_map)?;
 
-        // Now reconstruct the font file
+        // Reconstruct the font file — cmap is not built; PDF handles
+        // character-to-glyph resolution via ToUnicode/CIDToGIDMap.
         self.build_font_file(
             new_glyf,
             new_loca,
-            new_cmap_data,
             new_hmtx,
             glyph_map.len() as u16,
             loca_format,
         )
-    }
-
-    /// Build a cmap format 4 subtable
-    fn build_cmap_format4(&self, mappings: &HashMap<u32, u16>) -> ParseResult<Vec<u8>> {
-        let mut data = Vec::new();
-
-        // cmap header
-        data.extend_from_slice(&0u16.to_be_bytes()); // version
-        data.extend_from_slice(&1u16.to_be_bytes()); // numTables
-
-        // Encoding record
-        data.extend_from_slice(&3u16.to_be_bytes()); // platformID (Windows)
-        data.extend_from_slice(&1u16.to_be_bytes()); // encodingID (Unicode BMP)
-        data.extend_from_slice(&12u32.to_be_bytes()); // offset to subtable
-
-        // Format 4 subtable
-        let subtable_start = data.len();
-        data.extend_from_slice(&4u16.to_be_bytes()); // format
-        let length_pos = data.len();
-        data.extend_from_slice(&0u16.to_be_bytes()); // length (placeholder)
-        data.extend_from_slice(&0u16.to_be_bytes()); // language
-
-        // Build segments from mappings
-        let mut segments = Vec::new();
-        let mut sorted_chars: Vec<u32> = mappings
-            .keys()
-            // Format 4 only supports BMP (U+0000–U+FFFF). SMP characters are
-            // handled by build_cmap_table, which dispatches to build_cmap_format12.
-            .filter(|&&ch| ch <= 0xFFFF)
-            .copied()
-            .collect();
-        sorted_chars.sort();
-
-        // Group consecutive characters into segments
-        if !sorted_chars.is_empty() {
-            let mut seg_start = sorted_chars[0];
-            let mut seg_end = seg_start;
-            let mut seg_start_glyph = mappings[&seg_start];
-
-            for i in 1..sorted_chars.len() {
-                let ch = sorted_chars[i];
-                let glyph = mappings[&ch];
-
-                // Check if this character continues the segment
-                if ch == seg_end + 1 && glyph == seg_start_glyph + (ch - seg_start) as u16 {
-                    seg_end = ch;
-                } else {
-                    // End current segment and start a new one
-                    let id_delta = (seg_start_glyph as i32 - seg_start as i32) as i16;
-                    segments.push((seg_start as u16, seg_end as u16, id_delta));
-                    seg_start = ch;
-                    seg_end = ch;
-                    seg_start_glyph = glyph;
-                }
-            }
-            // Add final segment
-            let id_delta = (seg_start_glyph as i32 - seg_start as i32) as i16;
-            segments.push((seg_start as u16, seg_end as u16, id_delta));
-        }
-
-        // Add terminal segment
-        segments.push((0xFFFF, 0xFFFF, 1));
-
-        let seg_count = segments.len();
-        let seg_count_x2 = (seg_count * 2) as u16;
-
-        // Calculate search parameters for binary search
-        let mut entry_selector: u16 = 0;
-        let mut temp = seg_count;
-        while temp > 1 {
-            temp >>= 1;
-            entry_selector += 1;
-        }
-        let search_range = (1u16 << entry_selector) * 2;
-        let range_shift = if seg_count_x2 > search_range {
-            seg_count_x2 - search_range
-        } else {
-            0
-        };
-
-        data.extend_from_slice(&seg_count_x2.to_be_bytes());
-        data.extend_from_slice(&search_range.to_be_bytes());
-        data.extend_from_slice(&entry_selector.to_be_bytes());
-        data.extend_from_slice(&range_shift.to_be_bytes());
-
-        // Write end codes
-        for &(_, end, _) in &segments {
-            data.extend_from_slice(&end.to_be_bytes());
-        }
-
-        data.extend_from_slice(&0u16.to_be_bytes()); // reservedPad
-
-        // Write start codes
-        for &(start, _, _) in &segments {
-            data.extend_from_slice(&start.to_be_bytes());
-        }
-
-        // Write ID deltas
-        for &(_, _, id_delta) in &segments {
-            data.extend_from_slice(&id_delta.to_be_bytes());
-        }
-
-        // Write ID range offsets (all 0 for direct mapping)
-        for _ in 0..seg_count {
-            data.extend_from_slice(&0u16.to_be_bytes());
-        }
-
-        // Update length field
-        let subtable_length = data.len() - subtable_start;
-        data[length_pos] = (subtable_length >> 8) as u8;
-        data[length_pos + 1] = (subtable_length & 0xFF) as u8;
-
-        Ok(data)
-    }
-
-    /// Build a cmap table, choosing Format 4 or Format 12 based on the mappings.
-    /// Format 4 is used for BMP-only characters (smaller, more compatible).
-    /// Format 12 is used when any codepoint exceeds U+FFFF (SMP support).
-    fn build_cmap_table(&self, mappings: &HashMap<u32, u16>) -> ParseResult<Vec<u8>> {
-        let has_smp = mappings.keys().any(|&cp| cp > 0xFFFF);
-        if has_smp {
-            self.build_cmap_format12(mappings)
-        } else {
-            self.build_cmap_format4(mappings)
-        }
-    }
-
-    /// Build a cmap Format 12 subtable (Segmented coverage, full 32-bit Unicode).
-    ///
-    /// Format 12 uses groups of `(startCharCode, endCharCode, startGlyphID)` where
-    /// consecutive codepoints with consecutive glyph IDs are merged into a single group.
-    fn build_cmap_format12(&self, mappings: &HashMap<u32, u16>) -> ParseResult<Vec<u8>> {
-        let mut data = Vec::new();
-
-        // cmap header
-        data.extend_from_slice(&0u16.to_be_bytes()); // version
-        data.extend_from_slice(&1u16.to_be_bytes()); // numTables
-
-        // Encoding record: Windows, Unicode full repertoire
-        data.extend_from_slice(&3u16.to_be_bytes()); // platformID
-        data.extend_from_slice(&10u16.to_be_bytes()); // encodingID (full Unicode)
-        data.extend_from_slice(&12u32.to_be_bytes()); // offset to subtable
-
-        // Format 12 subtable
-        let subtable_start = data.len();
-        // Format field is Fixed 16.16: 12.0 = 0x000C0000
-        data.extend_from_slice(&12u16.to_be_bytes()); // format (high word)
-        data.extend_from_slice(&0u16.to_be_bytes()); // format (low word, reserved)
-        let length_pos = data.len();
-        data.extend_from_slice(&0u32.to_be_bytes()); // length (placeholder)
-        data.extend_from_slice(&0u32.to_be_bytes()); // language
-        let num_groups_pos = data.len();
-        data.extend_from_slice(&0u32.to_be_bytes()); // numGroups (placeholder)
-
-        // Sort codepoints and build groups
-        let mut sorted_chars: Vec<(u32, u16)> =
-            mappings.iter().map(|(&cp, &gid)| (cp, gid)).collect();
-        sorted_chars.sort_by_key(|&(cp, _)| cp);
-
-        let mut num_groups = 0u32;
-        if !sorted_chars.is_empty() {
-            let mut group_start_cp = sorted_chars[0].0;
-            let mut group_end_cp = group_start_cp;
-            let mut group_start_gid = sorted_chars[0].1;
-
-            for i in 1..sorted_chars.len() {
-                let (cp, gid) = sorted_chars[i];
-                let expected_gid = group_start_gid.wrapping_add((cp - group_start_cp) as u16);
-
-                if cp == group_end_cp + 1 && gid == expected_gid {
-                    group_end_cp = cp;
-                } else {
-                    // Emit current group
-                    data.extend_from_slice(&group_start_cp.to_be_bytes());
-                    data.extend_from_slice(&group_end_cp.to_be_bytes());
-                    data.extend_from_slice(&(group_start_gid as u32).to_be_bytes());
-                    num_groups += 1;
-
-                    group_start_cp = cp;
-                    group_end_cp = cp;
-                    group_start_gid = gid;
-                }
-            }
-            // Emit final group
-            data.extend_from_slice(&group_start_cp.to_be_bytes());
-            data.extend_from_slice(&group_end_cp.to_be_bytes());
-            data.extend_from_slice(&(group_start_gid as u32).to_be_bytes());
-            num_groups += 1;
-        }
-
-        // Patch length and numGroups
-        let subtable_length = (data.len() - subtable_start) as u32;
-        data[length_pos..length_pos + 4].copy_from_slice(&subtable_length.to_be_bytes());
-        data[num_groups_pos..num_groups_pos + 4].copy_from_slice(&num_groups.to_be_bytes());
-
-        Ok(data)
     }
 
     /// Build hmtx table
@@ -741,7 +543,6 @@ impl TrueTypeSubsetter {
         &self,
         glyf: Vec<u8>,
         loca: Vec<u8>,
-        cmap: Vec<u8>,
         hmtx: Vec<u8>,
         num_glyphs: u16,
         loca_format: u16,
@@ -752,33 +553,26 @@ impl TrueTypeSubsetter {
         // Read original font header to preserve some data
         let sfnt_version = read_u32(&self.font_data, 0)?;
 
-        // Tables we'll include in the subset font
-        let mut tables_to_write = Vec::new();
-
-        // Get original tables we need to preserve
+        // Tables we'll include in the subset font. We deliberately omit
+        // cmap / OS/2 / name: PDF provides its own character-to-glyph
+        // resolution (ToUnicode + CIDToGIDMap), and OS/2 / name are
+        // metadata that renderers do not consult when drawing.
         let head_table = self.get_table_data(b"head")?;
         let hhea_table = self.update_hhea_table(num_glyphs)?;
         let maxp_table = self.get_original_maxp(num_glyphs)?;
-        let name_table = self.get_table_data(b"name")?;
         let post_table = self
             .get_table_data(b"post")
             .unwrap_or_else(|_| vec![0x00, 0x03, 0x00, 0x00]); // Version 3.0
-        let os2_table = self.get_table_data(b"OS/2").ok();
 
-        // Add tables in specific order
-        tables_to_write.push((b"cmap", cmap));
-        tables_to_write.push((b"glyf", glyf));
-        tables_to_write.push((b"head", self.update_head_table(head_table, loca_format)?));
-        tables_to_write.push((b"hhea", hhea_table));
-        tables_to_write.push((b"hmtx", hmtx));
-        tables_to_write.push((b"loca", loca));
-        tables_to_write.push((b"maxp", maxp_table));
-        tables_to_write.push((b"name", name_table));
-        tables_to_write.push((b"post", post_table));
-
-        if let Some(os2) = os2_table {
-            tables_to_write.push((b"OS/2", os2));
-        }
+        let tables_to_write: Vec<(&[u8; 4], Vec<u8>)> = vec![
+            (b"glyf", glyf),
+            (b"head", self.update_head_table(head_table, loca_format)?),
+            (b"hhea", hhea_table),
+            (b"hmtx", hmtx),
+            (b"loca", loca),
+            (b"maxp", maxp_table),
+            (b"post", post_table),
+        ];
 
         let num_tables = tables_to_write.len() as u16;
 
@@ -1545,136 +1339,6 @@ mod tests {
     }
 
     // =========================================================================
-    // CMAP FORMAT 12 TESTS
-    // =========================================================================
-
-    /// Helper: parse cmap header from raw bytes and return (numTables, first encoding record)
-    fn parse_cmap_header(data: &[u8]) -> (u16, u16, u16, u32) {
-        let num_tables = u16::from_be_bytes([data[2], data[3]]);
-        let platform_id = u16::from_be_bytes([data[4], data[5]]);
-        let encoding_id = u16::from_be_bytes([data[6], data[7]]);
-        let offset = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
-        (num_tables, platform_id, encoding_id, offset)
-    }
-
-    #[test]
-    fn test_bmp_only_produces_format4() {
-        let subsetter = TrueTypeSubsetter {
-            font_data: vec![],
-            font: TrueTypeFont::empty_for_test(),
-        };
-        let mut mappings = HashMap::new();
-        mappings.insert(0x0041u32, 1u16); // 'A'
-        mappings.insert(0x0042u32, 2u16); // 'B'
-
-        let data = subsetter.build_cmap_table(&mappings).unwrap();
-        let (num_tables, platform_id, encoding_id, _offset) = parse_cmap_header(&data);
-        assert_eq!(num_tables, 1);
-        assert_eq!(platform_id, 3);
-        assert_eq!(encoding_id, 1, "BMP-only should use encoding 1 (Format 4)");
-        // Format field at subtable start (offset 12)
-        let format = u16::from_be_bytes([data[12], data[13]]);
-        assert_eq!(format, 4);
-    }
-
-    #[test]
-    fn test_smp_produces_format12() {
-        let subsetter = TrueTypeSubsetter {
-            font_data: vec![],
-            font: TrueTypeFont::empty_for_test(),
-        };
-        let mut mappings = HashMap::new();
-        mappings.insert(0x0041u32, 1u16); // 'A'
-        mappings.insert(0x1F600u32, 3u16); // 😀
-
-        let data = subsetter.build_cmap_table(&mappings).unwrap();
-        let (num_tables, platform_id, encoding_id, _offset) = parse_cmap_header(&data);
-        assert_eq!(num_tables, 1);
-        assert_eq!(platform_id, 3);
-        assert_eq!(
-            encoding_id, 10,
-            "SMP chars should use encoding 10 (Format 12)"
-        );
-        // Format field: Fixed 16.16, high word = 12
-        let format_hi = u16::from_be_bytes([data[12], data[13]]);
-        assert_eq!(format_hi, 12);
-    }
-
-    #[test]
-    fn test_format12_byte_layout_roundtrip() {
-        let subsetter = TrueTypeSubsetter {
-            font_data: vec![],
-            font: TrueTypeFont::empty_for_test(),
-        };
-        let mut mappings = HashMap::new();
-        mappings.insert(0x1F600u32, 1u16);
-        mappings.insert(0x1F601u32, 2u16);
-        mappings.insert(0x1F602u32, 3u16);
-
-        let data = subsetter.build_cmap_format12(&mappings).unwrap();
-
-        // Header: version(2) + numTables(2) + encoding record(8) = 12 bytes
-        assert_eq!(data.len() >= 12, true);
-        // Subtable starts at offset 12
-        let subtable = &data[12..];
-
-        // format = 12 (Fixed 16.16: high u16 = 12, low u16 = 0)
-        let format_hi = u16::from_be_bytes([subtable[0], subtable[1]]);
-        assert_eq!(format_hi, 12);
-        // length
-        let length = u32::from_be_bytes([subtable[4], subtable[5], subtable[6], subtable[7]]);
-        assert_eq!(length as usize, subtable.len());
-        // language = 0
-        let language = u32::from_be_bytes([subtable[8], subtable[9], subtable[10], subtable[11]]);
-        assert_eq!(language, 0);
-        // numGroups = 1 (contiguous range)
-        let num_groups =
-            u32::from_be_bytes([subtable[12], subtable[13], subtable[14], subtable[15]]);
-        assert_eq!(num_groups, 1);
-        // Group record: startCharCode, endCharCode, startGlyphID
-        let start_cp = u32::from_be_bytes([subtable[16], subtable[17], subtable[18], subtable[19]]);
-        let end_cp = u32::from_be_bytes([subtable[20], subtable[21], subtable[22], subtable[23]]);
-        let start_gid =
-            u32::from_be_bytes([subtable[24], subtable[25], subtable[26], subtable[27]]);
-        assert_eq!(start_cp, 0x1F600);
-        assert_eq!(end_cp, 0x1F602);
-        assert_eq!(start_gid, 1);
-    }
-
-    #[test]
-    fn test_format12_noncontiguous_produces_multiple_groups() {
-        let subsetter = TrueTypeSubsetter {
-            font_data: vec![],
-            font: TrueTypeFont::empty_for_test(),
-        };
-        let mut mappings = HashMap::new();
-        mappings.insert(0x1F600u32, 1u16);
-        mappings.insert(0x1F700u32, 2u16); // gap from 0x1F600
-
-        let data = subsetter.build_cmap_format12(&mappings).unwrap();
-        let subtable = &data[12..];
-        let num_groups =
-            u32::from_be_bytes([subtable[12], subtable[13], subtable[14], subtable[15]]);
-        assert_eq!(
-            num_groups, 2,
-            "Non-contiguous codepoints should produce 2 groups"
-        );
-    }
-
-    #[test]
-    fn test_format4_empty_mapping() {
-        let subsetter = TrueTypeSubsetter {
-            font_data: vec![],
-            font: TrueTypeFont::empty_for_test(),
-        };
-        let mappings = HashMap::new();
-        let data = subsetter.build_cmap_table(&mappings).unwrap();
-        // Should produce Format 4 (no SMP chars) with terminal segment only
-        let format = u16::from_be_bytes([data[12], data[13]]);
-        assert_eq!(format, 4);
-    }
-
-    // =========================================================================
     // HHEA numberOfHMetrics UPDATE TEST (tittle offset fix)
     // =========================================================================
 
@@ -1929,5 +1593,53 @@ mod tests {
             "advance_width in hmtx must be in design units (0x0200=512), \
              not scaled to 1000/em (0x01F4=500)"
         );
+    }
+
+    // =========================================================================
+    // TTF subset output: unused tables stripped for PDF embedding
+    // =========================================================================
+
+    /// The PDF writer uses its own ToUnicode CMap and CIDToGIDMap, so the TTF
+    /// `cmap` table is redundant. `OS/2` and `name` are not consulted during
+    /// rendering. All three are stripped to reduce the embedded font size.
+    #[test]
+    fn test_ttf_subset_excludes_cmap_os2_name_tables() {
+        let font_path = "../test-pdfs/Roboto-Regular.ttf";
+        let font_data = match std::fs::read(font_path) {
+            Ok(d) => d,
+            Err(_) => {
+                eprintln!("SKIPPED: {} not found", font_path);
+                return;
+            }
+        };
+
+        let used: HashSet<char> = "AB".chars().collect();
+        let result = subset_font(font_data, &used).expect("TTF subset must succeed");
+
+        let out = &result.font_data;
+        assert!(out.len() > 12, "output too small to parse");
+        let num_tables = u16::from_be_bytes([out[4], out[5]]) as usize;
+
+        let mut tags: Vec<[u8; 4]> = Vec::with_capacity(num_tables);
+        for i in 0..num_tables {
+            let base = 12 + i * 16;
+            tags.push([out[base], out[base + 1], out[base + 2], out[base + 3]]);
+        }
+
+        for stripped in [b"cmap", b"OS/2", b"name"] {
+            assert!(
+                !tags.iter().any(|t| t == stripped),
+                "subset must not contain {:?}",
+                std::str::from_utf8(stripped).unwrap()
+            );
+        }
+
+        for required in [b"glyf", b"head", b"loca", b"hmtx", b"hhea", b"maxp"] {
+            assert!(
+                tags.iter().any(|t| t == required),
+                "subset must contain {:?}",
+                std::str::from_utf8(required).unwrap()
+            );
+        }
     }
 }
