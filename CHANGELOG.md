@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.5.3] - 2026-04-20
+
+### Fixed
+- **TTF glyph hinting stripped from subset output** (#165) — `build_subset_font` now zeroes `instructionLength` on simple glyphs and truncates the trailing instruction block on composite glyphs (clearing `WE_HAVE_INSTRUCTIONS` on the last component). CJK fonts, where hinting is 30-60% of glyf size, benefit most.
+- **FontFile2 / FontFile3 streams now FlateDecode-compressed** — Font-file stream bytes were previously written raw. TTF glyf data compresses 60-70% with zlib. Applies to both `/CIDFontType0C` (CFF) and `Length1`-carrying (TTF) streams.
+- **ToUnicode CMap filtered to used characters** — The CMap generator emitted a bfchar entry for every glyph in the font (~14 KB for SourceSans3 Latin, ~65K entries for CJK fonts). Now emits entries only for characters actually present in the document, under Identity-H.
+- **ToUnicode stream FlateDecode-compressed** — CMap streams with repetitive `<XXXX> <XXXX>` entries compress ~70%.
+- **CFF String INDEX no longer copied verbatim into subset output** — Subsetted CFF output previously included the original font's full String INDEX (~22 KB for SourceSans3, ~5 KB for SourceHanSansSC) even though the rebuilt Top DICT only references standard SIDs. Now emits an empty String INDEX. CFF output matches typst `subsetter` crate size byte-for-byte.
+
+### Impact
+Measured PDF output sizes vs krilla reference:
+
+| Case | oxidize v2.5.2 | oxidize v2.5.3 | krilla |
+|---|---|---|---|
+| Roboto TTF (45 Latin chars) | ~60 KB | ~20 KB | 8.9 KB |
+| SourceSans3 CFF (45 Latin chars) | ~35 KB | ~8 KB | 6.8 KB |
+| SourceHanSansSC CFF (30 CJK chars) | ~41 KB | ~12 KB | 9.9 KB |
+
+### Added
+- 16 new tests across unit + integration covering instruction stripping (simple/composite glyphs, edge cases, malformed input), FlateDecode filter on FontFile2/3 streams, ToUnicode filtering + compression, CFF String INDEX emptiness, and end-to-end PDF size regression guards.
+
+### Removed
+- `rebuild_cid_top_dict` function (75 lines) — obsoleted by the unified `build_cid_top_dict` path that drops cosmetic SID-referencing operators.
+
+## [2.5.2] - 2026-04-19
+
+### Fixed
+- **CJK punctuation ToUnicode CMap offset math** — Correctly maps punctuation code points during CID CFF text extraction.
+
+### Added
+- Full CFF Type 2 charstring desubroutinizer replacing the Local Subr stub pipeline.
+- SID-keyed CFF → CID-keyed conversion, always emitting raw CFF with `/Subtype /CIDFontType0C`.
+- Strip TTF cmap, OS/2, name tables from subset output (not required for PDF embedding).
+
 ## [2.5.1] - 2026-04-13
 
 ### Fixed

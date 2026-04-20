@@ -183,3 +183,243 @@ fn test_mixed_cff_and_ttf_pdf_round_trip() {
     assert_all_chars_extracted(&extracted.text, cff_text);
     assert_all_chars_extracted(&extracted.text, ttf_text);
 }
+
+// =============================================================================
+// FlateDecode compression tests for font-file streams
+// =============================================================================
+
+fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() || needle.len() > haystack.len() {
+        return None;
+    }
+    (0..=haystack.len() - needle.len()).find(|&i| &haystack[i..i + needle.len()] == needle)
+}
+
+fn rfind_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() || needle.len() > haystack.len() {
+        return None;
+    }
+    (0..=haystack.len() - needle.len())
+        .rev()
+        .find(|&i| &haystack[i..i + needle.len()] == needle)
+}
+
+/// Return true if the PDF bytes contain at least one stream dictionary whose
+/// body includes both `signature` and `/Filter /FlateDecode`.
+fn dictionary_with_signature_has_flate_filter(pdf_bytes: &[u8], signature: &[u8]) -> bool {
+    let mut cursor = 0;
+    while let Some(sig_rel) = find_subslice(&pdf_bytes[cursor..], signature) {
+        let sig_abs = cursor + sig_rel;
+        let dict_start = match rfind_subslice(&pdf_bytes[..sig_abs], b"<<") {
+            Some(p) => p,
+            None => {
+                cursor = sig_abs + signature.len();
+                continue;
+            }
+        };
+        let dict_end_rel = match find_subslice(&pdf_bytes[sig_abs..], b">>") {
+            Some(p) => p,
+            None => break,
+        };
+        let dict_end = sig_abs + dict_end_rel;
+        let dict_body = &pdf_bytes[dict_start..dict_end];
+        if find_subslice(dict_body, b"/Filter").is_some()
+            && find_subslice(dict_body, b"/FlateDecode").is_some()
+        {
+            return true;
+        }
+        cursor = dict_end;
+    }
+    false
+}
+
+#[cfg(feature = "compression")]
+#[test]
+fn test_ttf_fontfile2_stream_has_flatedecode_filter() {
+    let font_data = match load_fixture(ROBOTO_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("Roboto", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("Roboto".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing ASCII text must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+
+    assert!(
+        dictionary_with_signature_has_flate_filter(&pdf_bytes, b"/Length1"),
+        "FontFile2 (TTF) stream dictionary must declare /Filter /FlateDecode"
+    );
+    assert!(
+        pdf_bytes.len() < 100_000,
+        "PDF with 2-char Roboto subset must be under 100 KB, got {} bytes",
+        pdf_bytes.len()
+    );
+}
+
+#[cfg(feature = "compression")]
+#[test]
+fn test_otf_fontfile3_stream_has_flatedecode_filter() {
+    let font_data = match load_fixture(SOURCE_SANS_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceSans3", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceSans3".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing ASCII text must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+
+    assert!(
+        dictionary_with_signature_has_flate_filter(&pdf_bytes, b"/CIDFontType0C"),
+        "FontFile3 (CIDFontType0C) stream dictionary must declare /Filter /FlateDecode"
+    );
+    assert!(
+        pdf_bytes.len() < 50_000,
+        "PDF with 2-char SourceSans3 subset must be under 50 KB, got {} bytes",
+        pdf_bytes.len()
+    );
+}
+
+// =============================================================================
+// ToUnicode CMap size tests
+//
+// The writer previously emitted a ToUnicode CMap entry for every glyph in the
+// embedded font (~14 KB for SourceSans3 Latin, ~65K entries for CJK fonts),
+// and wrote the stream uncompressed. These tests guard the filtered +
+// compressed behaviour.
+// =============================================================================
+
+/// Locate the ToUnicode CMap stream and return `(dict_body, decoded_text)`.
+/// If the stream carries `/Filter /FlateDecode` the bytes are decompressed.
+fn find_tounicode_stream(pdf: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    let stream_marker = b">>\nstream\n";
+    let mut cursor = 0;
+    while let Some(rel) = pdf[cursor..]
+        .windows(stream_marker.len())
+        .position(|w| w == stream_marker)
+    {
+        let stream_start = cursor + rel + stream_marker.len();
+        let end_rel = pdf[stream_start..]
+            .windows(b"\nendstream".len())
+            .position(|w| w == b"\nendstream")?;
+        let raw = &pdf[stream_start..stream_start + end_rel];
+        let dict_end_abs = cursor + rel + 2; // include ">>"
+        let dict_start = pdf[..dict_end_abs].windows(2).rposition(|w| w == b"<<")?;
+        let dict = &pdf[dict_start..dict_end_abs];
+
+        let body = if std::str::from_utf8(dict)
+            .map(|s| s.contains("/FlateDecode"))
+            .unwrap_or(false)
+        {
+            match decompress_flate(raw) {
+                Some(d) => d,
+                None => {
+                    cursor = stream_start + end_rel;
+                    continue;
+                }
+            }
+        } else {
+            raw.to_vec()
+        };
+
+        if body.starts_with(b"/CIDInit /ProcSet") {
+            return Some((dict.to_vec(), body));
+        }
+        cursor = stream_start + end_rel + b"\nendstream".len();
+    }
+    None
+}
+
+#[cfg(feature = "compression")]
+fn decompress_flate(data: &[u8]) -> Option<Vec<u8>> {
+    oxidize_pdf::compression::decompress(data).ok()
+}
+
+#[cfg(not(feature = "compression"))]
+fn decompress_flate(_data: &[u8]) -> Option<Vec<u8>> {
+    None
+}
+
+#[test]
+fn test_tounicode_cmap_only_contains_used_characters() {
+    let font_data = match load_fixture(SOURCE_SANS_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceSans3", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceSans3".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+    let (_dict, body) =
+        find_tounicode_stream(&pdf_bytes).expect("ToUnicode stream must exist in generated PDF");
+
+    assert!(
+        body.len() < 600,
+        "ToUnicode CMap decoded body must be under 600 bytes for a 2-char document, got {}",
+        body.len()
+    );
+
+    let body_str = std::str::from_utf8(&body).expect("CMap is ASCII/Latin-1");
+    assert!(
+        !body_str.contains("FB01"),
+        "unused codepoint FB01 (fi ligature) must not appear in ToUnicode CMap"
+    );
+    assert!(body_str.contains("0041"), "used char 'A' (U+0041) missing");
+    assert!(body_str.contains("0042"), "used char 'B' (U+0042) missing");
+}
+
+#[cfg(feature = "compression")]
+#[test]
+fn test_tounicode_cmap_stream_is_flatedecoded() {
+    let font_data = match load_fixture(ROBOTO_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("Roboto", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("Roboto".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+    let (dict, _stream) = find_tounicode_stream(&pdf_bytes).expect("ToUnicode stream must exist");
+
+    let dict_str = std::str::from_utf8(&dict).expect("dict is ASCII");
+    assert!(
+        dict_str.contains("/Filter") && dict_str.contains("/FlateDecode"),
+        "ToUnicode stream dictionary must declare /Filter /FlateDecode. Got dict: {:?}",
+        dict_str
+    );
+}
