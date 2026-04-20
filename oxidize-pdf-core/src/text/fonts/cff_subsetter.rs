@@ -33,8 +33,8 @@ use crate::parser::{ParseError, ParseResult};
 use crate::text::fonts::cff::charstring::desubroutinize;
 use crate::text::fonts::cff::dict::{
     build_cid_top_dict, build_minimal_fd_dict, parse_fd_private, parse_fd_select,
-    parse_local_subrs_offset, parse_top_dict, rebuild_cid_top_dict, rebuild_fd_dict,
-    strip_private_subrs_op, FdData, TopDictOffsets,
+    parse_local_subrs_offset, parse_top_dict, rebuild_fd_dict, strip_private_subrs_op, FdData,
+    TopDictOffsets,
 };
 use crate::text::fonts::cff::index::{
     build_cff_index, parse_cff_index, usize_to_cff_offset, CffIndex,
@@ -504,16 +504,29 @@ fn subset_cid_cff_table(
     //   [9..] Private DICTs (one per needed FD, Subrs op stripped)
 
     let name_bytes = name_index.raw_bytes(cff);
-    let string_bytes = string_index.raw_bytes(cff);
+    // Emit an empty String INDEX. Our rebuilt Top DICT references only standard
+    // SIDs (Adobe=138, Identity=139), and our minimal FD dicts reference no
+    // strings, so the original font's String INDEX is entirely unreachable.
+    // Preserving it wasted ~22 KB for Latin fonts and ~5 KB for CJK fonts.
+    // `string_index` remains in scope for signature compatibility but is
+    // intentionally unused; silence the unused-binding warning:
+    let _ = &string_index;
+    let string_bytes = build_cff_index(&[]);
 
     // Desubroutinized charstrings make the Global Subr INDEX obsolete.
     let global_subr_bytes = build_cff_index(&[]);
 
     let placeholder_offset = 100_000i32;
+    let num_glyphs = usize_to_cff_offset(needed_gids.len())?;
 
-    // Pass 1: build placeholder Top DICT INDEX to determine its size
-    let placeholder_top_dict = rebuild_cid_top_dict(
+    // Pass 1: build placeholder Top DICT INDEX to determine its size.
+    // `build_cid_top_dict` (vs `rebuild_cid_top_dict`) emits a minimal CID
+    // Top DICT with only ROS + FontBBox + CIDCount + essential offsets,
+    // dropping cosmetic operators (Notice, Copyright, FullName, …) that
+    // reference SIDs in the now-empty String INDEX.
+    let placeholder_top_dict = build_cid_top_dict(
         top_dict_bytes,
+        num_glyphs,
         placeholder_offset,
         placeholder_offset,
         placeholder_offset,
@@ -588,8 +601,9 @@ fn subset_cid_cff_table(
     }
 
     // Pass 2: build real Top DICT
-    let real_top_dict = rebuild_cid_top_dict(
+    let real_top_dict = build_cid_top_dict(
         top_dict_bytes,
+        num_glyphs,
         new_charset_offset,
         new_charstrings_offset,
         new_fd_array_offset,
@@ -615,7 +629,7 @@ fn subset_cid_cff_table(
     new_cff.extend_from_slice(header_bytes);
     new_cff.extend_from_slice(name_bytes);
     new_cff.extend_from_slice(&real_top_dict_index);
-    new_cff.extend_from_slice(string_bytes);
+    new_cff.extend_from_slice(&string_bytes);
     new_cff.extend_from_slice(&global_subr_bytes);
     new_cff.extend_from_slice(&new_charset);
     new_cff.extend_from_slice(&new_fd_select);
@@ -848,7 +862,11 @@ fn subset_cff_table(
     //   [9] Private DICT (Subrs op stripped)
 
     let name_bytes = name_index.raw_bytes(cff);
-    let string_bytes = string_index.raw_bytes(cff);
+    // Emit an empty String INDEX — `build_cid_top_dict` produces a Top DICT
+    // that only references standard SIDs (Adobe=138, Identity=139), and our
+    // minimal FD dict references no strings.
+    let _ = &string_index;
+    let string_bytes = build_cff_index(&[]);
     let global_subr_bytes = build_cff_index(&[]);
 
     let placeholder_offset = 100_000i32;
@@ -930,7 +948,7 @@ fn subset_cff_table(
     new_cff.extend_from_slice(header_bytes);
     new_cff.extend_from_slice(name_bytes);
     new_cff.extend_from_slice(&real_top_dict_index);
-    new_cff.extend_from_slice(string_bytes);
+    new_cff.extend_from_slice(&string_bytes);
     new_cff.extend_from_slice(&global_subr_bytes);
     new_cff.extend_from_slice(&new_charset);
     new_cff.extend_from_slice(&new_fd_select);
