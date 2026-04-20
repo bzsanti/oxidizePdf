@@ -1387,18 +1387,41 @@ impl<W: Write> PdfWriter<W> {
             };
 
         if !font_data_to_embed.is_empty() {
+            // Build the initial font-file dictionary carrying the format-specific
+            // metadata. `/Length1` (uncompressed byte count) is required for
+            // TrueType FontFile2 streams per ISO 32000-1 §9.9. `/Subtype
+            // /CIDFontType0C` marks raw CFF bytes for OpenType FontFile3 streams.
             let mut font_file_dict = Dictionary::new();
             match font.format {
                 crate::fonts::FontFormat::OpenType => {
-                    // Subset CFF is always raw CFF → /CIDFontType0C.
                     font_file_dict.set("Subtype", Object::Name("CIDFontType0C".to_string()));
                 }
                 crate::fonts::FontFormat::TrueType => {
                     font_file_dict.set("Length1", Object::Integer(font_data_to_embed.len() as i64));
                 }
             }
-            let font_stream_obj = Object::Stream(font_file_dict, font_data_to_embed);
-            self.write_object(font_file_id, font_stream_obj)?;
+
+            // Compress the font-file stream when the `compression` feature is
+            // active and the writer config permits it. Uncompressed TTF glyf
+            // data in particular compresses 60-70% with zlib — a 666 KB
+            // subset PDF drops to under 200 KB after compression.
+            #[cfg(feature = "compression")]
+            {
+                let font_stream_obj = if self.config.compress_streams {
+                    let mut stream =
+                        crate::objects::Stream::with_dictionary(font_file_dict, font_data_to_embed);
+                    stream.compress_flate()?;
+                    Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
+                } else {
+                    Object::Stream(font_file_dict, font_data_to_embed)
+                };
+                self.write_object(font_file_id, font_stream_obj)?;
+            }
+            #[cfg(not(feature = "compression"))]
+            {
+                let font_stream_obj = Object::Stream(font_file_dict, font_data_to_embed);
+                self.write_object(font_file_id, font_stream_obj)?;
+            }
         } else {
             // No font data to embed
             let font_file_dict = Dictionary::new();

@@ -278,6 +278,131 @@ fn remap_composite_glyph(glyph_data: &[u8], glyph_map: &HashMap<u16, u16>) -> Ve
     result
 }
 
+/// Strip TrueType hinting instructions from a single glyph's raw bytes.
+///
+/// PDF renderers do not execute TrueType instructions for embedded subset
+/// fonts, so instructions can be removed safely. For CJK fonts this is a
+/// significant size win (instructions often 30-60% of glyf bytes).
+///
+/// - Simple glyph (numberOfContours >= 0): zeroes the `instructionLength`
+///   field at offset `10 + num_contours*2` and elides the instruction bytes.
+/// - Composite glyph (numberOfContours < 0): handled in Cycle B (returns
+///   input unchanged for now).
+/// - Empty or malformed data: returned unchanged.
+fn strip_glyph_instructions(glyph_data: &[u8]) -> Vec<u8> {
+    if glyph_data.len() < 12 {
+        return glyph_data.to_vec();
+    }
+
+    let num_contours = i16::from_be_bytes([glyph_data[0], glyph_data[1]]);
+    if num_contours < 0 {
+        return strip_composite_glyph_instructions(glyph_data);
+    }
+
+    let num_contours = num_contours as usize;
+    let instr_len_offset = 10 + num_contours * 2;
+    if instr_len_offset + 2 > glyph_data.len() {
+        return glyph_data.to_vec();
+    }
+
+    let instruction_length = u16::from_be_bytes([
+        glyph_data[instr_len_offset],
+        glyph_data[instr_len_offset + 1],
+    ]) as usize;
+    if instruction_length == 0 {
+        return glyph_data.to_vec();
+    }
+
+    let instr_start = instr_len_offset + 2;
+    let instr_end = instr_start + instruction_length;
+    if instr_end > glyph_data.len() {
+        return glyph_data.to_vec();
+    }
+
+    let mut result = Vec::with_capacity(glyph_data.len() - instruction_length);
+    result.extend_from_slice(&glyph_data[..instr_len_offset]);
+    result.extend_from_slice(&[0u8, 0u8]); // zero instructionLength
+    result.extend_from_slice(&glyph_data[instr_end..]);
+    result
+}
+
+/// Walk a composite glyph's component records.
+///
+/// Returns `Some((last_flags_offset, cursor_after_last_component))` or `None`
+/// if the data is malformed/truncated. `last_flags_offset` is the byte offset
+/// of the final component's flags field (used when we need to mutate the
+/// WE_HAVE_INSTRUCTIONS bit). `cursor_after_last_component` is where the
+/// optional instruction tail begins.
+///
+/// Caller must ensure `glyph_data[0..2]` indicates a composite glyph.
+fn walk_composite_components(glyph_data: &[u8]) -> Option<(usize, usize)> {
+    if glyph_data.len() < 12 {
+        return None;
+    }
+
+    let mut cursor = 10;
+
+    loop {
+        if cursor + 4 > glyph_data.len() {
+            return None;
+        }
+
+        let flags_offset = cursor;
+        let flags = u16::from_be_bytes([glyph_data[cursor], glyph_data[cursor + 1]]);
+
+        cursor += 4; // flags (2) + glyphIndex (2)
+
+        cursor += if flags & COMPOSITE_ARG_1_AND_2_ARE_WORDS != 0 {
+            4
+        } else {
+            2
+        };
+
+        if flags & COMPOSITE_WE_HAVE_A_TWO_BY_TWO != 0 {
+            cursor += 8;
+        } else if flags & COMPOSITE_WE_HAVE_AN_X_AND_Y_SCALE != 0 {
+            cursor += 4;
+        } else if flags & COMPOSITE_WE_HAVE_A_SCALE != 0 {
+            cursor += 2;
+        }
+
+        if cursor > glyph_data.len() {
+            return None;
+        }
+
+        if flags & COMPOSITE_MORE_COMPONENTS == 0 {
+            return Some((flags_offset, cursor));
+        }
+    }
+}
+
+/// Strip the optional trailing instruction block from a composite glyph and
+/// clear the `WE_HAVE_INSTRUCTIONS` bit on the last component's flags field.
+/// Returns the glyph unchanged if no instructions are present or if the data
+/// is malformed.
+fn strip_composite_glyph_instructions(glyph_data: &[u8]) -> Vec<u8> {
+    let (last_flags_offset, cursor) = match walk_composite_components(glyph_data) {
+        Some(v) => v,
+        None => return glyph_data.to_vec(),
+    };
+
+    let last_flags = u16::from_be_bytes([
+        glyph_data[last_flags_offset],
+        glyph_data[last_flags_offset + 1],
+    ]);
+    if last_flags & COMPOSITE_WE_HAVE_INSTRUCTIONS == 0 {
+        return glyph_data.to_vec();
+    }
+
+    // Build output: everything up to `cursor` (end of component records),
+    // with WE_HAVE_INSTRUCTIONS cleared in the last component's flags field.
+    let mut result = glyph_data[..cursor].to_vec();
+    let cleared = last_flags & !COMPOSITE_WE_HAVE_INSTRUCTIONS;
+    result[last_flags_offset] = (cleared >> 8) as u8;
+    result[last_flags_offset + 1] = (cleared & 0xFF) as u8;
+    result
+}
+
 /// TrueType font subsetter
 pub struct TrueTypeSubsetter {
     /// Original font data
@@ -473,8 +598,9 @@ impl TrueTypeSubsetter {
             let old_glyph_id = inverse_map.get(&new_glyph_id).copied().unwrap_or(0);
             let glyph_data = self.font.get_glyph_data(old_glyph_id)?;
             let remapped = remap_composite_glyph(&glyph_data, glyph_map);
-            new_glyf.extend_from_slice(&remapped);
-            current_offset += remapped.len() as u32;
+            let stripped = strip_glyph_instructions(&remapped);
+            new_glyf.extend_from_slice(&stripped);
+            current_offset += stripped.len() as u32;
         }
         // Final loca entry (points past last glyph)
         glyph_offsets.push(current_offset);
@@ -1641,5 +1767,368 @@ mod tests {
                 std::str::from_utf8(required).unwrap()
             );
         }
+    }
+
+    // =========================================================================
+    // Instruction-stripping tests (Cycle A / A2 / B)
+    //
+    // `strip_glyph_instructions` removes TrueType hinting bytecode from a
+    // single glyph's raw bytes. PDF viewers do not execute TT instructions
+    // for embedded subset fonts, so stripping is safe and meaningfully
+    // reduces CJK subset size (instructions can be 30-60% of glyf bytes).
+    // =========================================================================
+
+    #[test]
+    fn test_strip_simple_glyph_instructions_removes_bytecode() {
+        // Build a minimal simple glyph with instructions:
+        //   numberOfContours = 1  (i16 BE)
+        //   bbox xMin/yMin/xMax/yMax (4 * i16) — 8 bytes
+        //   endPtsOfContours[0] = 3 (u16)  → 4 points (indices 0..=3)
+        //   instructionLength = 4 (u16)
+        //   instructions = [0x01, 0x02, 0x03, 0x04]
+        //   flags = [0x01; 4]  (ON_CURVE, no repeat, 1-byte x/y deltas implicit via short-vector flags)
+        //   NOTE: we use flag = 0x01 here only to occupy space; we do not parse coords.
+        //   xCoords = [10, 20, 30, 40]  (4 bytes — placeholder, parser never touches)
+        //   yCoords = [10, 20, 30, 40]
+        let mut glyph = Vec::new();
+        glyph.extend_from_slice(&1i16.to_be_bytes()); // numberOfContours = 1
+        glyph.extend_from_slice(&0i16.to_be_bytes()); // xMin
+        glyph.extend_from_slice(&0i16.to_be_bytes()); // yMin
+        glyph.extend_from_slice(&100i16.to_be_bytes()); // xMax
+        glyph.extend_from_slice(&100i16.to_be_bytes()); // yMax
+        glyph.extend_from_slice(&3u16.to_be_bytes()); // endPtsOfContours[0] = 3
+        glyph.extend_from_slice(&4u16.to_be_bytes()); // instructionLength = 4
+        glyph.extend_from_slice(&[0x01, 0x02, 0x03, 0x04]); // 4 instruction bytes
+        glyph.extend_from_slice(&[0x01; 4]); // flags (4 points)
+        glyph.extend_from_slice(&[10u8, 20, 30, 40]); // xCoords
+        glyph.extend_from_slice(&[10u8, 20, 30, 40]); // yCoords
+
+        let stripped = strip_glyph_instructions(&glyph);
+
+        // Header (10) + endPtsOfContours (2) = offset 12 for instructionLength field
+        let inst_len = u16::from_be_bytes([stripped[12], stripped[13]]);
+        assert_eq!(inst_len, 0, "instructionLength must be zeroed");
+
+        // Output must be exactly 4 bytes shorter (the dropped instructions)
+        assert_eq!(
+            stripped.len(),
+            glyph.len() - 4,
+            "stripped ({}) must be 4 bytes smaller than original ({})",
+            stripped.len(),
+            glyph.len()
+        );
+
+        // Flags must still be present immediately after the (now empty) instruction block
+        // Position = header(10) + endPts(2) + instrLen(2) + instructions(0) = 14
+        let flags_start = 14;
+        assert_eq!(
+            &stripped[flags_start..flags_start + 4],
+            &[0x01u8; 4],
+            "flags must survive stripping"
+        );
+
+        // xCoord bytes must follow flags
+        assert_eq!(
+            &stripped[flags_start + 4..flags_start + 8],
+            &[10u8, 20, 30, 40],
+            "xCoords must survive stripping"
+        );
+    }
+
+    #[test]
+    fn test_strip_simple_glyph_instructions_noop_when_zero_instructions() {
+        // Minimal simple glyph with instructionLength already 0 — bytes must be
+        // returned exactly as given (no reallocation-induced modification).
+        let mut glyph = Vec::new();
+        glyph.extend_from_slice(&1i16.to_be_bytes()); // numberOfContours = 1
+        glyph.extend_from_slice(&[0u8; 8]); // bbox xMin/yMin/xMax/yMax
+        glyph.extend_from_slice(&0u16.to_be_bytes()); // endPtsOfContours[0] = 0 (1 point)
+        glyph.extend_from_slice(&0u16.to_be_bytes()); // instructionLength = 0
+        glyph.extend_from_slice(&[0x01u8]); // 1 flag byte
+        glyph.extend_from_slice(&[5u8]); // xCoord (1 byte)
+        glyph.extend_from_slice(&[5u8]); // yCoord (1 byte)
+
+        let stripped = strip_glyph_instructions(&glyph);
+        assert_eq!(
+            stripped, glyph,
+            "zero-instruction glyph must be returned unchanged"
+        );
+    }
+
+    #[test]
+    fn test_strip_simple_glyph_instructions_noop_when_too_short() {
+        // Data shorter than minimum parseable glyph header — must not panic.
+        let short = vec![0x00, 0x01, 0x00, 0x00]; // only 4 bytes
+        let stripped = strip_glyph_instructions(&short);
+        assert_eq!(stripped, short);
+    }
+
+    #[test]
+    fn test_strip_composite_glyph_instructions_with_flag_set() {
+        // Composite glyph: numberOfContours = -1, single component record with
+        // ARG_1_AND_2_ARE_WORDS + WE_HAVE_INSTRUCTIONS set, followed by an
+        // instruction tail (instrLen u16 + 3 instruction bytes).
+        let flags: u16 = COMPOSITE_ARG_1_AND_2_ARE_WORDS | COMPOSITE_WE_HAVE_INSTRUCTIONS;
+        let mut glyph = Vec::new();
+        glyph.extend_from_slice(&(-1i16).to_be_bytes()); // numberOfContours = -1 (composite)
+        glyph.extend_from_slice(&[0u8; 8]); // bbox
+        glyph.extend_from_slice(&flags.to_be_bytes()); // component flags (offset 10-11)
+        glyph.extend_from_slice(&2u16.to_be_bytes()); // glyphIndex = 2
+        glyph.extend_from_slice(&1i16.to_be_bytes()); // arg1 (word)
+        glyph.extend_from_slice(&2i16.to_be_bytes()); // arg2 (word)
+                                                      // Instruction tail
+        glyph.extend_from_slice(&3u16.to_be_bytes()); // instructionLength = 3
+        glyph.extend_from_slice(&[0xAA, 0xBB, 0xCC]); // 3 instruction bytes
+
+        let before_len = glyph.len();
+        let stripped = strip_glyph_instructions(&glyph);
+
+        // Instruction bytes must be gone
+        assert!(
+            !stripped.windows(3).any(|w| w == [0xAA, 0xBB, 0xCC]),
+            "instruction bytes must be removed from composite glyph"
+        );
+
+        // WE_HAVE_INSTRUCTIONS flag must be cleared in the (last) component's flags field
+        let out_flags = u16::from_be_bytes([stripped[10], stripped[11]]);
+        assert_eq!(
+            out_flags & COMPOSITE_WE_HAVE_INSTRUCTIONS,
+            0,
+            "WE_HAVE_INSTRUCTIONS flag must be cleared"
+        );
+        // Other flag bits must be preserved
+        assert_eq!(
+            out_flags & COMPOSITE_ARG_1_AND_2_ARE_WORDS,
+            COMPOSITE_ARG_1_AND_2_ARE_WORDS,
+            "other component flag bits must be preserved"
+        );
+
+        // Output must be smaller than input by 2 (instrLen u16) + 3 (bytes) = 5
+        assert_eq!(
+            stripped.len(),
+            before_len - 5,
+            "stripped composite ({}) must be 5 bytes smaller than original ({})",
+            stripped.len(),
+            before_len
+        );
+    }
+
+    #[test]
+    fn test_strip_composite_glyph_instructions_noop_when_flag_absent() {
+        // Same composite shape but no WE_HAVE_INSTRUCTIONS — must be unchanged.
+        let flags: u16 = COMPOSITE_ARG_1_AND_2_ARE_WORDS;
+        let mut glyph = Vec::new();
+        glyph.extend_from_slice(&(-1i16).to_be_bytes());
+        glyph.extend_from_slice(&[0u8; 8]);
+        glyph.extend_from_slice(&flags.to_be_bytes());
+        glyph.extend_from_slice(&2u16.to_be_bytes()); // glyphIndex
+        glyph.extend_from_slice(&1i16.to_be_bytes()); // arg1
+        glyph.extend_from_slice(&2i16.to_be_bytes()); // arg2
+
+        let original = glyph.clone();
+        let stripped = strip_glyph_instructions(&glyph);
+        assert_eq!(
+            stripped, original,
+            "composite without WE_HAVE_INSTRUCTIONS must be returned unchanged"
+        );
+    }
+
+    #[test]
+    fn test_strip_composite_glyph_multi_component_clears_only_last_flag() {
+        // Two components: first has MORE_COMPONENTS set, second has
+        // WE_HAVE_INSTRUCTIONS set (plus terminator: MORE_COMPONENTS = 0).
+        let f1: u16 = COMPOSITE_ARG_1_AND_2_ARE_WORDS | COMPOSITE_MORE_COMPONENTS;
+        let f2: u16 = COMPOSITE_ARG_1_AND_2_ARE_WORDS | COMPOSITE_WE_HAVE_INSTRUCTIONS;
+        let mut glyph = Vec::new();
+        glyph.extend_from_slice(&(-1i16).to_be_bytes());
+        glyph.extend_from_slice(&[0u8; 8]);
+        // Component 1
+        glyph.extend_from_slice(&f1.to_be_bytes()); // flags (offset 10)
+        glyph.extend_from_slice(&3u16.to_be_bytes()); // glyphIndex
+        glyph.extend_from_slice(&1i16.to_be_bytes()); // arg1
+        glyph.extend_from_slice(&2i16.to_be_bytes()); // arg2
+                                                      // Component 2
+        let c2_flags_offset = glyph.len();
+        glyph.extend_from_slice(&f2.to_be_bytes()); // flags
+        glyph.extend_from_slice(&4u16.to_be_bytes()); // glyphIndex
+        glyph.extend_from_slice(&3i16.to_be_bytes()); // arg1
+        glyph.extend_from_slice(&4i16.to_be_bytes()); // arg2
+                                                      // Instruction tail
+        glyph.extend_from_slice(&2u16.to_be_bytes()); // instructionLength = 2
+        glyph.extend_from_slice(&[0xDE, 0xAD]);
+
+        let stripped = strip_glyph_instructions(&glyph);
+
+        // Component 1's flag bytes must be UNCHANGED (MORE_COMPONENTS still set)
+        let c1_flags = u16::from_be_bytes([stripped[10], stripped[11]]);
+        assert_eq!(c1_flags, f1, "component 1 flags must be untouched");
+        // Component 2's WE_HAVE_INSTRUCTIONS bit must be cleared
+        let c2_flags =
+            u16::from_be_bytes([stripped[c2_flags_offset], stripped[c2_flags_offset + 1]]);
+        assert_eq!(
+            c2_flags & COMPOSITE_WE_HAVE_INSTRUCTIONS,
+            0,
+            "component 2 WE_HAVE_INSTRUCTIONS must be cleared"
+        );
+        // Tail gone: 2 + 2 = 4 bytes removed
+        assert_eq!(
+            stripped.len(),
+            glyph.len() - 4,
+            "multi-component stripped must be 4 bytes smaller"
+        );
+    }
+
+    // =========================================================================
+    // Cycle C: end-to-end wiring — subset output must have zero instructions
+    // =========================================================================
+
+    /// Parse an SFNT font file, extract the glyf + loca tables, and return
+    /// offsets of every simple glyph within glyf. Used to walk the glyf table
+    /// in `test_build_subset_font_strips_instructions_from_real_ttf` and verify
+    /// that no simple glyph carries a nonzero instructionLength after subsetting.
+    fn parse_glyf_simple_glyph_offsets(font_data: &[u8]) -> Vec<(usize, usize)> {
+        assert!(font_data.len() > 12, "font too short");
+        let num_tables = u16::from_be_bytes([font_data[4], font_data[5]]) as usize;
+
+        let mut glyf_offset = 0usize;
+        let mut loca_offset = 0usize;
+        let mut loca_length = 0usize;
+        let mut head_offset = 0usize;
+
+        for i in 0..num_tables {
+            let entry = 12 + i * 16;
+            let tag = &font_data[entry..entry + 4];
+            let off = u32::from_be_bytes([
+                font_data[entry + 8],
+                font_data[entry + 9],
+                font_data[entry + 10],
+                font_data[entry + 11],
+            ]) as usize;
+            let len = u32::from_be_bytes([
+                font_data[entry + 12],
+                font_data[entry + 13],
+                font_data[entry + 14],
+                font_data[entry + 15],
+            ]) as usize;
+            match tag {
+                b"glyf" => glyf_offset = off,
+                b"loca" => {
+                    loca_offset = off;
+                    loca_length = len;
+                }
+                b"head" => head_offset = off,
+                _ => {}
+            }
+        }
+
+        assert!(glyf_offset > 0 && loca_offset > 0 && head_offset > 0);
+        let loca_format =
+            u16::from_be_bytes([font_data[head_offset + 50], font_data[head_offset + 51]]);
+
+        let num_glyphs = if loca_format == 0 {
+            loca_length / 2 - 1
+        } else {
+            loca_length / 4 - 1
+        };
+
+        let mut out = Vec::new();
+        for g in 0..num_glyphs {
+            let (start, end) = if loca_format == 0 {
+                let a = u16::from_be_bytes([
+                    font_data[loca_offset + g * 2],
+                    font_data[loca_offset + g * 2 + 1],
+                ]) as usize
+                    * 2;
+                let b = u16::from_be_bytes([
+                    font_data[loca_offset + (g + 1) * 2],
+                    font_data[loca_offset + (g + 1) * 2 + 1],
+                ]) as usize
+                    * 2;
+                (a, b)
+            } else {
+                let a = u32::from_be_bytes([
+                    font_data[loca_offset + g * 4],
+                    font_data[loca_offset + g * 4 + 1],
+                    font_data[loca_offset + g * 4 + 2],
+                    font_data[loca_offset + g * 4 + 3],
+                ]) as usize;
+                let b = u32::from_be_bytes([
+                    font_data[loca_offset + (g + 1) * 4],
+                    font_data[loca_offset + (g + 1) * 4 + 1],
+                    font_data[loca_offset + (g + 1) * 4 + 2],
+                    font_data[loca_offset + (g + 1) * 4 + 3],
+                ]) as usize;
+                (a, b)
+            };
+            if start == end {
+                continue; // empty glyph
+            }
+            let abs_start = glyf_offset + start;
+            let abs_end = glyf_offset + end;
+            if abs_end > font_data.len() {
+                continue;
+            }
+            let num_contours = i16::from_be_bytes([font_data[abs_start], font_data[abs_start + 1]]);
+            if num_contours >= 0 {
+                out.push((abs_start, abs_end));
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn test_build_subset_font_strips_instructions_from_real_ttf() {
+        // Load Roboto (a real TTF known to contain hinting instructions).
+        let font_data = match std::fs::read("../test-pdfs/Roboto-Regular.ttf") {
+            Ok(d) => d,
+            Err(_) => {
+                eprintln!("SKIPPED: Roboto-Regular.ttf not found");
+                return;
+            }
+        };
+
+        let used: std::collections::HashSet<char> = "ABCDEFG".chars().collect();
+        let result = subset_font(font_data, &used).expect("subset must succeed");
+
+        // Walk every simple glyph in the subset output and assert instructionLength == 0.
+        let simple_glyphs = parse_glyf_simple_glyph_offsets(&result.font_data);
+        assert!(
+            !simple_glyphs.is_empty(),
+            "subset must contain at least one simple glyph"
+        );
+
+        for (abs_start, _abs_end) in &simple_glyphs {
+            let num_contours = i16::from_be_bytes([
+                result.font_data[*abs_start],
+                result.font_data[*abs_start + 1],
+            ]) as usize;
+            let instr_len_offset = *abs_start + 10 + num_contours * 2;
+            let instr_len = u16::from_be_bytes([
+                result.font_data[instr_len_offset],
+                result.font_data[instr_len_offset + 1],
+            ]);
+            assert_eq!(
+                instr_len, 0,
+                "simple glyph at offset {} must have instructionLength = 0 after stripping",
+                abs_start
+            );
+        }
+    }
+
+    #[test]
+    fn test_strip_simple_glyph_instructions_noop_when_instr_truncated() {
+        // instructionLength claims 100 bytes but data ends at instruction start:
+        // function must defensively return input unchanged rather than panic.
+        let mut glyph = Vec::new();
+        glyph.extend_from_slice(&1i16.to_be_bytes());
+        glyph.extend_from_slice(&[0u8; 8]);
+        glyph.extend_from_slice(&0u16.to_be_bytes()); // endPtsOfContours[0]
+        glyph.extend_from_slice(&100u16.to_be_bytes()); // instructionLength = 100 (bogus)
+                                                        // no instruction bytes follow
+        let stripped = strip_glyph_instructions(&glyph);
+        assert_eq!(
+            stripped, glyph,
+            "truncated instruction block must be returned unchanged (defensive)"
+        );
     }
 }

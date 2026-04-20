@@ -8,6 +8,7 @@
 //! Each test skips gracefully if its fixture is missing.
 
 use oxidize_pdf::text::fonts::truetype_subsetter::subset_font;
+use oxidize_pdf::{Document, Font, Page};
 use std::collections::HashSet;
 
 const SOURCE_SANS_PATH: &str = "../test-pdfs/SourceSans3-Regular.otf";
@@ -96,5 +97,81 @@ fn test_cid_cff_subset_size_under_1_percent() {
         result.font_data.len(),
         original_size,
         ratio
+    );
+}
+
+// =============================================================================
+// Cycle G: end-to-end PDF size regression after TTF instruction stripping and
+// FontFile2/FontFile3 FlateDecode compression.
+//
+// These tests measure the WHOLE PDF output (not just the subset bytes) and
+// guard against regression of the full pipeline:
+//   parsing → subsetting → instruction stripping → SFNT rebuild →
+//   PDF embedding with FlateDecode.
+// =============================================================================
+
+/// Full-PDF TTF size guard. With instruction stripping + FlateDecode on the
+/// FontFile2 stream, a Roboto PDF carrying ~45 Latin characters must fit under
+/// 50 KB. Latin fonts benefit less than CJK from these fixes (little hinting,
+/// small glyph count), so the threshold is set against a comfortable
+/// regression ceiling rather than a tight best-case target.
+#[cfg(feature = "compression")]
+#[test]
+fn test_roboto_ttf_pdf_end_to_end_under_50kb() {
+    let font_data = match load_fixture(ROBOTO_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+    let text = "The quick brown fox jumps over the lazy dog.";
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("Roboto", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("Roboto".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write(text)
+        .expect("writing must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+    assert!(
+        pdf_bytes.len() < 50_000,
+        "Roboto TTF PDF (~45 chars) must be under 50 KB, got {} bytes",
+        pdf_bytes.len()
+    );
+}
+
+/// Full-PDF CJK CFF size guard. SourceHanSansSC (~16 MB) subset to ~25 CJK
+/// chars, wrapped in a PDF with FlateDecode-compressed FontFile3, must fit
+/// in under 100 KB. v2.5.1 (CFF Local Subr subsetting) already reached
+/// 141 KB uncompressed for a similar case; with compression we expect
+/// ~70-90 KB. This is the direct follow-up to Issue #165.
+#[cfg(feature = "compression")]
+#[test]
+fn test_cjk_cff_pdf_end_to_end_under_100kb() {
+    let font_data = match load_fixture(SOURCE_HAN_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+    let cjk_text = "你好世界人大中国文字学习工作生活时间地方事情问题方法发展政府";
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceHanSansSC", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceHanSansSC".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write(cjk_text)
+        .expect("writing CJK text must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+    assert!(
+        pdf_bytes.len() < 100_000,
+        "CJK CFF PDF (~30 chars) must be under 100 KB, got {} bytes",
+        pdf_bytes.len()
     );
 }
