@@ -183,3 +183,149 @@ fn test_mixed_cff_and_ttf_pdf_round_trip() {
     assert_all_chars_extracted(&extracted.text, cff_text);
     assert_all_chars_extracted(&extracted.text, ttf_text);
 }
+
+// =============================================================================
+// ToUnicode CMap size tests (fix/tounicode-cmap-bloat)
+//
+// The writer previously emitted a ToUnicode CMap entry for every glyph in the
+// embedded font (up to ~14 KB for SourceSans3 Latin, including Cyrillic and
+// Latin-Extended code points that weren't used). These tests guard the
+// filtered-and-compressed behaviour: only used chars appear, and the stream
+// is FlateDecode-compressed.
+// =============================================================================
+
+/// Locate the ToUnicode CMap stream in the generated PDF and return
+/// `(dict_body, decoded_cmap_text)`. If the stream carries /Filter
+/// /FlateDecode the bytes are decompressed before being returned.
+/// Returns `None` if no CMap stream is found.
+fn find_tounicode_stream(pdf: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    // Walk every stream in the PDF. The ToUnicode CMap is the one whose
+    // (post-filter) body starts with "/CIDInit /ProcSet".
+    // Use ">>\nstream\n" as the anchor so we don't match the tail of
+    // "endstream\n" (which literally contains "stream\n").
+    let stream_marker = b">>\nstream\n";
+    let mut cursor = 0;
+    while let Some(rel) = pdf[cursor..]
+        .windows(stream_marker.len())
+        .position(|w| w == stream_marker)
+    {
+        let stream_start = cursor + rel + stream_marker.len();
+        let end_rel = pdf[stream_start..]
+            .windows(b"\nendstream".len())
+            .position(|w| w == b"\nendstream")?;
+        let raw = &pdf[stream_start..stream_start + end_rel];
+        // The dict is everything from the last "<<" up to and including ">>"
+        // (the character just before "\nstream\n").
+        let dict_end_abs = cursor + rel + 2; // include ">>"
+        let dict_start = pdf[..dict_end_abs].windows(2).rposition(|w| w == b"<<")?;
+        let dict = &pdf[dict_start..dict_end_abs];
+
+        // Decode the stream body if it's FlateDecode; otherwise use raw.
+        let body = if std::str::from_utf8(dict)
+            .map(|s| s.contains("/FlateDecode"))
+            .unwrap_or(false)
+        {
+            match decompress_flate(raw) {
+                Some(d) => d,
+                None => {
+                    cursor = stream_start + end_rel;
+                    continue;
+                }
+            }
+        } else {
+            raw.to_vec()
+        };
+
+        if body.starts_with(b"/CIDInit /ProcSet") {
+            return Some((dict.to_vec(), body));
+        }
+        // Advance cursor past the full "\nendstream" to avoid re-matching
+        // "stream\n" inside it.
+        cursor = stream_start + end_rel + b"\nendstream".len();
+    }
+    None
+}
+
+#[cfg(feature = "compression")]
+fn decompress_flate(data: &[u8]) -> Option<Vec<u8>> {
+    oxidize_pdf::compression::decompress(data).ok()
+}
+
+#[cfg(not(feature = "compression"))]
+fn decompress_flate(_data: &[u8]) -> Option<Vec<u8>> {
+    None
+}
+
+#[test]
+fn test_tounicode_cmap_only_contains_used_characters() {
+    let font_data = match load_fixture(SOURCE_SANS_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let used_text = "AB"; // only 2 distinct characters
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceSans3", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceSans3".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write(used_text)
+        .expect("writing must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+    let (_dict, body) =
+        find_tounicode_stream(&pdf_bytes).expect("ToUnicode stream must exist in generated PDF");
+
+    // After decompression the CMap body should be small (header + ~2 entries).
+    // Before the fix it was 13967 bytes (all font glyphs).
+    assert!(
+        body.len() < 600,
+        "ToUnicode CMap decoded body must be under 600 bytes for a 2-char document, got {}",
+        body.len()
+    );
+
+    // Sanity: codepoints of unused characters must NOT appear as bfchar/bfrange
+    // entries. Pick a distinctive unused codepoint: U+FB01 (ligature fi).
+    let body_str = std::str::from_utf8(&body).expect("CMap is ASCII/Latin-1");
+    assert!(
+        !body_str.contains("FB01"),
+        "unused codepoint FB01 (fi ligature) must not appear in ToUnicode CMap"
+    );
+    // Both of the used codepoints MUST appear.
+    assert!(body_str.contains("0041"), "used char 'A' (U+0041) missing");
+    assert!(body_str.contains("0042"), "used char 'B' (U+0042) missing");
+}
+
+#[cfg(feature = "compression")]
+#[test]
+fn test_tounicode_cmap_stream_is_flatedecoded() {
+    let font_data = match load_fixture(ROBOTO_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("Roboto", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("Roboto".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+    let (dict, _stream) = find_tounicode_stream(&pdf_bytes).expect("ToUnicode stream must exist");
+
+    let dict_str = std::str::from_utf8(&dict).expect("dict is ASCII");
+    assert!(
+        dict_str.contains("/Filter") && dict_str.contains("/FlateDecode"),
+        "ToUnicode stream dictionary must declare /Filter /FlateDecode. Got dict: {:?}",
+        dict_str
+    );
+}
