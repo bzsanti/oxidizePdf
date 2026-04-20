@@ -175,3 +175,98 @@ fn test_cjk_cff_pdf_end_to_end_under_100kb() {
         pdf_bytes.len()
     );
 }
+
+// =============================================================================
+// String INDEX elimination
+//
+// Before this fix the subsetted CFF copied the original font's full String
+// INDEX verbatim (~22 KB for SourceSans3, ~5 KB for SourceHanSansSC) even
+// though our rebuilt Top DICT only references standard SIDs (≤391) and our
+// minimal FD dicts reference no strings at all. The String INDEX was entirely
+// unreachable — 93% of the output for Latin CFF was unused metadata.
+// =============================================================================
+
+/// Parse CFF output and return the number of entries in its String INDEX.
+fn string_index_entry_count(cff: &[u8]) -> usize {
+    fn skip_index(cff: &[u8], start: usize) -> usize {
+        if start + 2 > cff.len() {
+            return start;
+        }
+        let count = u16::from_be_bytes([cff[start], cff[start + 1]]) as usize;
+        if count == 0 {
+            return start + 2;
+        }
+        let off_size = cff[start + 2] as usize;
+        let offsets_start = start + 3;
+        let offsets_end = offsets_start + (count + 1) * off_size;
+        if offsets_end > cff.len() {
+            return start;
+        }
+        let mut last = 0usize;
+        let last_off_start = offsets_end - off_size;
+        for i in 0..off_size {
+            last = (last << 8) | cff[last_off_start + i] as usize;
+        }
+        offsets_end + last - 1
+    }
+
+    let header_size = cff[2] as usize;
+    let name_end = skip_index(cff, header_size);
+    let top_dict_end = skip_index(cff, name_end);
+    if top_dict_end + 2 > cff.len() {
+        return 0;
+    }
+    u16::from_be_bytes([cff[top_dict_end], cff[top_dict_end + 1]]) as usize
+}
+
+#[test]
+fn test_non_cid_cff_subset_has_empty_string_index() {
+    let font_data = match load_fixture(SOURCE_SANS_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+    let used: HashSet<char> = "ABC".chars().collect();
+    let result = subset_font(font_data, &used).expect("subsetting must succeed");
+
+    let count = string_index_entry_count(&result.font_data);
+    assert_eq!(
+        count, 0,
+        "SID→CID converted CFF must emit an empty String INDEX (count=0), got {}",
+        count
+    );
+}
+
+#[test]
+fn test_cid_cff_subset_has_empty_string_index() {
+    let font_data = match load_fixture(SOURCE_HAN_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+    let used: HashSet<char> = "你好世界".chars().collect();
+    let result = subset_font(font_data, &used).expect("subsetting must succeed");
+
+    let count = string_index_entry_count(&result.font_data);
+    assert_eq!(
+        count, 0,
+        "CID CFF subset must emit an empty String INDEX (count=0), got {}",
+        count
+    );
+}
+
+#[test]
+fn test_non_cid_cff_subset_size_under_5kb() {
+    // After the String INDEX fix, a 3-char Latin CFF subset must fit under
+    // 5 KB. Before the fix it was ~23 KB (dominated by the unused original
+    // String INDEX copied verbatim).
+    let font_data = match load_fixture(SOURCE_SANS_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+    let used: HashSet<char> = "ABC".chars().collect();
+    let result = subset_font(font_data, &used).expect("subsetting must succeed");
+    assert!(
+        result.font_data.len() < 5_000,
+        "SID→CID CFF subset (3 chars) must be under 5 KB, got {} bytes",
+        result.font_data.len()
+    );
+}
