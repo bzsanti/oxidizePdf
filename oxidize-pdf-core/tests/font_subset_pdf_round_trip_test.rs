@@ -183,3 +183,128 @@ fn test_mixed_cff_and_ttf_pdf_round_trip() {
     assert_all_chars_extracted(&extracted.text, cff_text);
     assert_all_chars_extracted(&extracted.text, ttf_text);
 }
+
+// =============================================================================
+// FlateDecode compression tests for font-file streams (Cycles E and F)
+//
+// A stream-dictionary block is of the form `<< ... >> stream ... endstream`.
+// We locate a dictionary containing a given `signature` key (e.g. `/Length1`
+// for TTF FontFile2 or `/Subtype /CIDFontType0C` for OTF FontFile3) and
+// verify the same dictionary declares `/Filter /FlateDecode`.
+// =============================================================================
+
+/// Return true if the PDF bytes contain at least one stream dictionary whose
+/// body includes both `signature` and `/Filter /FlateDecode`.
+fn dictionary_with_signature_has_flate_filter(pdf_bytes: &[u8], signature: &[u8]) -> bool {
+    let mut cursor = 0;
+    while let Some(sig_rel) = find_subslice(&pdf_bytes[cursor..], signature) {
+        let sig_abs = cursor + sig_rel;
+        // Back up to the nearest "<<" before the signature
+        let dict_start = match rfind_subslice(&pdf_bytes[..sig_abs], b"<<") {
+            Some(p) => p,
+            None => {
+                cursor = sig_abs + signature.len();
+                continue;
+            }
+        };
+        // Forward to the nearest ">>" after the signature
+        let dict_end_rel = match find_subslice(&pdf_bytes[sig_abs..], b">>") {
+            Some(p) => p,
+            None => break,
+        };
+        let dict_end = sig_abs + dict_end_rel;
+        let dict_body = &pdf_bytes[dict_start..dict_end];
+        if find_subslice(dict_body, b"/Filter").is_some()
+            && find_subslice(dict_body, b"/FlateDecode").is_some()
+        {
+            return true;
+        }
+        cursor = dict_end;
+    }
+    false
+}
+
+fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() || needle.len() > haystack.len() {
+        return None;
+    }
+    (0..=haystack.len() - needle.len()).find(|&i| &haystack[i..i + needle.len()] == needle)
+}
+
+fn rfind_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() || needle.len() > haystack.len() {
+        return None;
+    }
+    (0..=haystack.len() - needle.len())
+        .rev()
+        .find(|&i| &haystack[i..i + needle.len()] == needle)
+}
+
+#[cfg(feature = "compression")]
+#[test]
+fn test_ttf_fontfile2_stream_has_flatedecode_filter() {
+    let font_data = match load_fixture(ROBOTO_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("Roboto", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("Roboto".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing ASCII text must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+
+    // A TTF FontFile2 stream dictionary always carries /Length1.
+    assert!(
+        dictionary_with_signature_has_flate_filter(&pdf_bytes, b"/Length1"),
+        "FontFile2 (TTF) stream dictionary must declare /Filter /FlateDecode"
+    );
+
+    // Sanity: a 2-char Roboto subset must fit comfortably under 100 KB.
+    assert!(
+        pdf_bytes.len() < 100_000,
+        "PDF with 2-char Roboto subset must be under 100 KB, got {} bytes",
+        pdf_bytes.len()
+    );
+}
+
+#[cfg(feature = "compression")]
+#[test]
+fn test_otf_fontfile3_stream_has_flatedecode_filter() {
+    let font_data = match load_fixture(SOURCE_SANS_PATH) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes("SourceSans3", font_data)
+        .expect("add_font_from_bytes must succeed");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Custom("SourceSans3".to_string()), 12.0)
+        .at(50.0, 500.0)
+        .write("AB")
+        .expect("writing ASCII text must succeed");
+    doc.add_page(page);
+
+    let pdf_bytes = doc.to_bytes().expect("PDF generation must succeed");
+
+    // An OTF FontFile3 stream dictionary carries /Subtype /CIDFontType0C.
+    assert!(
+        dictionary_with_signature_has_flate_filter(&pdf_bytes, b"/CIDFontType0C"),
+        "FontFile3 (CIDFontType0C) stream dictionary must declare /Filter /FlateDecode"
+    );
+
+    assert!(
+        pdf_bytes.len() < 50_000,
+        "PDF with 2-char SourceSans3 subset must be under 50 KB, got {} bytes",
+        pdf_bytes.len()
+    );
+}
