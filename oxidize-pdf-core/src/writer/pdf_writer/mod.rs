@@ -1523,9 +1523,22 @@ impl<W: Write> PdfWriter<W> {
 
         self.write_object(descendant_font_id, Object::Dictionary(cid_font))?;
 
-        // Write ToUnicode CMap
+        // Write ToUnicode CMap. The CMap is filtered to the characters that
+        // actually appear in the document (via `document_used_chars`) and the
+        // stream is FlateDecode-compressed when the `compression` feature and
+        // writer config allow it. The unfiltered, uncompressed version used to
+        // dominate PDF output (~14 KB for a 2-char Latin document).
         let cmap_data = self.generate_tounicode_cmap_from_font(font);
         let cmap_dict = Dictionary::new();
+        #[cfg(feature = "compression")]
+        let cmap_stream = if self.config.compress_streams {
+            let mut stream = crate::objects::Stream::with_dictionary(cmap_dict, cmap_data);
+            stream.compress_flate()?;
+            Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
+        } else {
+            Object::Stream(cmap_dict, cmap_data)
+        };
+        #[cfg(not(feature = "compression"))]
         let cmap_stream = Object::Stream(cmap_dict, cmap_data);
         self.write_object(to_unicode_id, cmap_stream)?;
 
@@ -1827,89 +1840,37 @@ impl<W: Write> PdfWriter<W> {
         cmap.push_str("<0000> <FFFF>\n");
         cmap.push_str("endcodespacerange\n");
 
-        // Try to get actual mappings from the font
-        let mut mappings = Vec::new();
-        let mut has_font_mappings = false;
+        // Build the set of code points that must appear in the ToUnicode CMap.
+        // With Identity-H encoding, CID == Unicode, so each used character
+        // produces a single `<CID> <unicode>` entry. If the document tracked
+        // no used characters (legacy path), fall back to the font's full cmap
+        // filtered to the BMP — but that path is a backstop, not the norm.
+        let used_codepoints: Option<std::collections::HashSet<u32>> =
+            self.document_used_chars.as_ref().map(|chars| {
+                chars
+                    .iter()
+                    .map(|c| *c as u32)
+                    .filter(|cp| *cp <= 0xFFFF)
+                    .collect()
+            });
 
-        if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+        let mut mappings: Vec<(u32, u32)> = Vec::new();
+
+        if let Some(used) = &used_codepoints {
+            // Fast path: every used codepoint maps to itself under Identity-H.
+            for cp in used {
+                mappings.push((*cp, *cp));
+            }
+        } else if let Ok(tt_font) = TrueTypeFont::parse(font.data.clone()) {
+            // Legacy backstop: no used-char tracking, emit every font mapping.
             if let Ok(cmap_tables) = tt_font.parse_cmap() {
-                // Find the best cmap table (prefer Format 12 for CJK)
                 if let Some(cmap_table) = CmapSubtable::select_best_or_first(&cmap_tables) {
-                    // For Identity-H encoding, we use Unicode code points as CIDs
-                    // So the ToUnicode CMap should map CID (=Unicode) → Unicode
                     for (&unicode, &glyph_id) in &cmap_table.mappings {
                         if glyph_id > 0 && unicode <= 0xFFFF {
-                            // Only non-.notdef glyphs
-                            // Map CID (which is Unicode value) to Unicode
                             mappings.push((unicode, unicode));
                         }
                     }
-                    has_font_mappings = true;
                 }
-            }
-        }
-
-        // If we couldn't get font mappings, use identity mapping for common ranges
-        if !has_font_mappings {
-            // Basic Latin and Latin-1 Supplement (0x0020-0x00FF)
-            for i in 0x0020..=0x00FF {
-                mappings.push((i, i));
-            }
-
-            // Latin Extended-A (0x0100-0x017F)
-            for i in 0x0100..=0x017F {
-                mappings.push((i, i));
-            }
-
-            // CJK Unicode ranges - CRITICAL for CJK font support
-            // Hiragana (Japanese)
-            for i in 0x3040..=0x309F {
-                mappings.push((i, i));
-            }
-
-            // Katakana (Japanese)
-            for i in 0x30A0..=0x30FF {
-                mappings.push((i, i));
-            }
-
-            // CJK Unified Ideographs (Chinese, Japanese, Korean)
-            for i in 0x4E00..=0x9FFF {
-                mappings.push((i, i));
-            }
-
-            // Hangul Syllables (Korean)
-            for i in 0xAC00..=0xD7AF {
-                mappings.push((i, i));
-            }
-
-            // Common symbols and punctuation
-            for i in 0x2000..=0x206F {
-                mappings.push((i, i));
-            }
-
-            // Mathematical symbols
-            for i in 0x2200..=0x22FF {
-                mappings.push((i, i));
-            }
-
-            // Arrows
-            for i in 0x2190..=0x21FF {
-                mappings.push((i, i));
-            }
-
-            // Box drawing
-            for i in 0x2500..=0x259F {
-                mappings.push((i, i));
-            }
-
-            // Geometric shapes
-            for i in 0x25A0..=0x25FF {
-                mappings.push((i, i));
-            }
-
-            // Miscellaneous symbols
-            for i in 0x2600..=0x26FF {
-                mappings.push((i, i));
             }
         }
 
