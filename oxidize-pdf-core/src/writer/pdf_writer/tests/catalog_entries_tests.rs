@@ -11,6 +11,7 @@ mod catalog_entries_tests {
     use crate::document::Document;
     use crate::page::Page;
     use crate::structure::{Destination, PageDestination};
+    use crate::viewer_preferences::ViewerPreferences;
     use crate::writer::PdfWriter;
 
     fn serialize(document: &mut Document) -> String {
@@ -40,6 +41,24 @@ mod catalog_entries_tests {
         assert!(
             content.contains("/S /GoTo"),
             "open action dict should serialize as a /GoTo action (/S /GoTo)"
+        );
+    }
+
+    #[test]
+    fn test_write_catalog_includes_viewer_preferences() {
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        document.set_viewer_preferences(ViewerPreferences::new().hide_toolbar(true));
+
+        let content = serialize(&mut document);
+
+        assert!(
+            content.contains("/ViewerPreferences"),
+            "catalog should emit /ViewerPreferences when set on Document"
+        );
+        assert!(
+            content.contains("/HideToolbar true"),
+            "viewer prefs dict should serialize /HideToolbar true (ISO 32000-1 §12.2)"
         );
     }
 }

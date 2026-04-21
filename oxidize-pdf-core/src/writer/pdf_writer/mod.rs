@@ -930,6 +930,11 @@ impl<W: Write> PdfWriter<W> {
             catalog.set("OpenAction", Object::Dictionary(action.to_dict()));
         }
 
+        // /ViewerPreferences — ISO 32000-1 §7.7.2 Table 28, detailed in §12.2
+        if let Some(prefs) = &document.viewer_preferences {
+            catalog.set("ViewerPreferences", Object::Dictionary(prefs.to_dict()));
+        }
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
         Ok(())
     }
