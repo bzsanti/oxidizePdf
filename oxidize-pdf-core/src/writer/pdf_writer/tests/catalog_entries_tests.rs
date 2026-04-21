@@ -96,6 +96,47 @@ mod catalog_entries_tests {
     }
 
     #[test]
+    fn test_write_catalog_includes_all_four_entries_simultaneously() {
+        // Regression: the four catalog entries are emitted as independent
+        // `if let` blocks, so a bug in one could suppress another. This
+        // test exercises the full cross-product by enabling all four
+        // features on the same Document and asserts each entry — and its
+        // characteristic payload — survives serialisation.
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+
+        document.set_open_action(Action::goto(Destination::fit(PageDestination::PageNumber(
+            0,
+        ))));
+        document.set_viewer_preferences(ViewerPreferences::new().hide_toolbar(true));
+        let mut dests = NamedDestinations::new();
+        dests.add_destination(
+            "combined-target".to_string(),
+            Destination::fit(PageDestination::PageNumber(0)).to_array(),
+        );
+        document.set_named_destinations(dests);
+        let mut labels = PageLabelTree::new();
+        labels.add_range(0, PageLabel::new(PageLabelStyle::DecimalArabic));
+        document.set_page_labels(labels);
+
+        let content = serialize(&mut document);
+
+        // OpenAction
+        assert!(content.contains("/OpenAction"));
+        assert!(content.contains("/S /GoTo"));
+        // ViewerPreferences
+        assert!(content.contains("/ViewerPreferences"));
+        assert!(content.contains("/HideToolbar true"));
+        // Names (named destinations)
+        assert!(content.contains("/Names"));
+        assert!(content.contains("/Dests"));
+        assert!(content.contains("(combined-target)"));
+        // PageLabels
+        assert!(content.contains("/PageLabels"));
+        assert!(content.contains("/S /D"));
+    }
+
+    #[test]
     fn test_write_catalog_includes_page_labels() {
         let mut document = Document::new();
         document.add_page(Page::a4());
