@@ -1508,11 +1508,32 @@ impl<W: Write> PdfWriter<W> {
             let cid_to_gid_map =
                 self.generate_cid_to_gid_map(font, subset_glyph_mapping.as_ref())?;
             if !cid_to_gid_map.is_empty() {
-                // Write the CIDToGIDMap as a stream
+                // Write the CIDToGIDMap as a stream, FlateDecode-compressed
+                // when possible. The raw map is dimensioned to the highest
+                // codepoint in use and is mostly zeros (only mapped code
+                // points carry a 2-byte GID), so Flate compression typically
+                // crushes it by 95-99%. For CJK-heavy documents this is the
+                // difference between a 130 KB map (Issue #165) and a ~1 KB
+                // stream.
                 let cid_to_gid_map_id = self.allocate_object_id();
-                let mut map_dict = Dictionary::new();
-                map_dict.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
-                let map_stream = Object::Stream(map_dict, cid_to_gid_map);
+                let map_dict = Dictionary::new();
+                #[cfg(feature = "compression")]
+                let map_stream = if self.config.compress_streams {
+                    let mut stream =
+                        crate::objects::Stream::with_dictionary(map_dict, cid_to_gid_map);
+                    stream.compress_flate()?;
+                    Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
+                } else {
+                    let mut d = map_dict;
+                    d.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
+                    Object::Stream(d, cid_to_gid_map)
+                };
+                #[cfg(not(feature = "compression"))]
+                let map_stream = {
+                    let mut d = map_dict;
+                    d.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
+                    Object::Stream(d, cid_to_gid_map)
+                };
                 self.write_object(cid_to_gid_map_id, map_stream)?;
                 cid_font.set("CIDToGIDMap", Object::Reference(cid_to_gid_map_id));
             } else {

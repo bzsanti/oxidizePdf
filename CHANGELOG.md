@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.5.4] - 2026-04-21
+
+### Fixed
+- **TTF subset `post` table no longer copies glyph names** (#165) — `truetype_subsetter` was embedding the original font's `post` v2.0 table verbatim, which for CJK fonts carries ~370 KB of Pascal-string glyph names that PDF never consults (ToUnicode + CIDToGIDMap drive rendering). Subsets now always emit a 32-byte `post` v3.0 header, preserving the italic/underline/memory metrics from the original.
+- **CIDToGIDMap stream now FlateDecode-compressed** (#165) — The Type0/CIDFontType2 glyph-index map was written as a raw uncompressed stream. It is dimensioned to the highest codepoint in use and is mostly zeros, so Flate compression shrinks it by 95-99%. For CJK documents a 131 KB map becomes ~340 bytes.
+
+### Impact
+Measured on the user's reported snippet with `SourceHanSansTC-Regular.ttf` (33 MB):
+
+| Release | PDF size | vs krilla (48 KB) |
+|---|---|---|
+| v2.5.3 | 145 KB | +203 % |
+| **v2.5.4** | **19 KB** | **-60 % (smaller)** |
+
+The two fixes are independent and compound: the CJK TTF case drops from 145 KB to 19 KB, the Roboto Latin TTF case drops from 24 KB to 8 KB.
+
+### Added
+- 5 new content-verifying TDD tests in `font_subset_post_and_cidtogidmap_test.rs` covering post version/length, CIDToGIDMap `/Filter /FlateDecode`, Flate compression ratio, and end-to-end PDF size regression.
+- `examples/issue_165_repro.rs` — diagnostic script reproducing the user's exact snippet for local validation.
+
 ## [2.5.3] - 2026-04-20
 
 ### Fixed
