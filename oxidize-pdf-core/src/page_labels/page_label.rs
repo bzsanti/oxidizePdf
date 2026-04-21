@@ -129,11 +129,20 @@ impl PageLabel {
     }
 
     /// Convert to PDF dictionary
+    ///
+    /// Encodes the label per ISO 32000-1 §12.4.2 Table 159:
+    /// - `/Type` — optional name, when present shall be `PageLabel`.
+    /// - `/S`    — numbering style (`D`/`R`/`r`/`A`/`a`); absent when the
+    ///            label has no numeric portion (style `None`).
+    /// - `/P`    — optional prefix string.
+    /// - `/St`   — optional integer starting value (default 1).
     pub fn to_dict(&self) -> Dictionary {
         let mut dict = Dictionary::new();
 
-        if let Some(type_name) = self.style.to_pdf_name() {
-            dict.set("Type", Object::Name(type_name.to_string()));
+        dict.set("Type", Object::Name("PageLabel".to_string()));
+
+        if let Some(style_name) = self.style.to_pdf_name() {
+            dict.set("S", Object::Name(style_name.to_string()));
         }
 
         if let Some(prefix) = &self.prefix {
@@ -283,9 +292,15 @@ mod tests {
 
     #[test]
     fn test_to_dict() {
+        // Per ISO 32000-1 §12.4.2 Table 159, the numbering style is /S (not
+        // /Type). /Type is optional and must be PageLabel when present.
         let label = PageLabel::decimal();
         let dict = label.to_dict();
-        assert_eq!(dict.get("Type"), Some(&Object::Name("D".to_string())));
+        assert_eq!(
+            dict.get("Type"),
+            Some(&Object::Name("PageLabel".to_string()))
+        );
+        assert_eq!(dict.get("S"), Some(&Object::Name("D".to_string())));
         assert!(dict.get("P").is_none());
         assert!(dict.get("St").is_none());
 
@@ -293,7 +308,11 @@ mod tests {
             .with_prefix("p. ")
             .starting_at(5);
         let dict = label.to_dict();
-        assert_eq!(dict.get("Type"), Some(&Object::Name("R".to_string())));
+        assert_eq!(
+            dict.get("Type"),
+            Some(&Object::Name("PageLabel".to_string()))
+        );
+        assert_eq!(dict.get("S"), Some(&Object::Name("R".to_string())));
         assert_eq!(dict.get("P"), Some(&Object::String("p. ".to_string())));
         assert_eq!(dict.get("St"), Some(&Object::Integer(5)));
     }
@@ -451,7 +470,11 @@ mod tests {
         // Test dictionary generation with all combinations
         let label1 = PageLabel::new(PageLabelStyle::DecimalArabic);
         let dict1 = label1.to_dict();
-        assert_eq!(dict1.get("Type"), Some(&Object::Name("D".to_string())));
+        assert_eq!(
+            dict1.get("Type"),
+            Some(&Object::Name("PageLabel".to_string()))
+        );
+        assert_eq!(dict1.get("S"), Some(&Object::Name("D".to_string())));
         assert!(dict1.get("P").is_none()); // No prefix
         assert!(dict1.get("St").is_none()); // Default start (1)
 
@@ -459,17 +482,26 @@ mod tests {
             .with_prefix("Section ")
             .starting_at(10);
         let dict2 = label2.to_dict();
-        assert_eq!(dict2.get("Type"), Some(&Object::Name("A".to_string())));
+        assert_eq!(
+            dict2.get("Type"),
+            Some(&Object::Name("PageLabel".to_string()))
+        );
+        assert_eq!(dict2.get("S"), Some(&Object::Name("A".to_string())));
         assert_eq!(
             dict2.get("P"),
             Some(&Object::String("Section ".to_string()))
         );
         assert_eq!(dict2.get("St"), Some(&Object::Integer(10)));
 
-        // Test prefix-only (no Type field)
+        // Prefix-only dicts still carry /Type PageLabel (§12.4.2 recommends
+        // it), but have no /S entry because the numbering style is None.
         let label3 = PageLabel::prefix_only("Index");
         let dict3 = label3.to_dict();
-        assert!(dict3.get("Type").is_none());
+        assert_eq!(
+            dict3.get("Type"),
+            Some(&Object::Name("PageLabel".to_string()))
+        );
+        assert!(dict3.get("S").is_none());
         assert_eq!(dict3.get("P"), Some(&Object::String("Index".to_string())));
     }
 

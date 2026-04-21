@@ -67,6 +67,18 @@ fn test_hybrid_chunk_with_graph_splits_large_section() {
     for chunk in &chunks {
         assert_eq!(chunk.heading_context.as_deref(), Some("Big Section"));
     }
+
+    // Each body paragraph must appear in exactly one chunk — the split must
+    // not duplicate content across chunks.
+    for i in 0..20 {
+        let needle = format!("paragraph {} with enough words", i);
+        let hits: usize = chunks.iter().filter(|c| c.text().contains(&needle)).count();
+        assert_eq!(
+            hits, 1,
+            "body paragraph {} must appear in exactly one sub-chunk, found {}",
+            i, hits
+        );
+    }
 }
 
 #[test]
@@ -81,8 +93,30 @@ fn test_hybrid_chunk_with_graph_handles_preamble() {
     let chunker = HybridChunker::default();
     let chunks = chunker.chunk_with_graph(&elements, &graph);
 
-    // Should produce at least 2 chunks: preamble + section
     assert!(!chunks.is_empty());
+
+    // Preamble must appear in a chunk with no heading_context.
+    let preamble_chunk = chunks
+        .iter()
+        .find(|c| c.text().contains("Preamble text before any heading."));
+    assert!(preamble_chunk.is_some(), "preamble chunk must be present");
+    assert!(preamble_chunk.unwrap().heading_context.is_none());
+
+    // Section content must appear exactly once, in a chunk whose heading_context
+    // is "Section One". The preamble must not appear in that section chunk.
+    for marker in &["Preamble text before any heading.", "Section content here."] {
+        let hits: usize = chunks.iter().filter(|c| c.text().contains(marker)).count();
+        assert_eq!(hits, 1, "{:?} must appear in exactly one chunk", marker);
+    }
+    let section_chunk = chunks
+        .iter()
+        .find(|c| c.text().contains("Section content here."))
+        .unwrap();
+    assert_eq!(
+        section_chunk.heading_context.as_deref(),
+        Some("Section One")
+    );
+    assert!(!section_chunk.text().contains("Preamble text"));
 }
 
 #[test]
