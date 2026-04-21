@@ -10,7 +10,7 @@ mod catalog_entries_tests {
     use crate::actions::Action;
     use crate::document::Document;
     use crate::page::Page;
-    use crate::structure::{Destination, PageDestination};
+    use crate::structure::{Destination, NamedDestinations, PageDestination};
     use crate::viewer_preferences::ViewerPreferences;
     use crate::writer::PdfWriter;
 
@@ -59,6 +59,38 @@ mod catalog_entries_tests {
         assert!(
             content.contains("/HideToolbar true"),
             "viewer prefs dict should serialize /HideToolbar true (ISO 32000-1 §12.2)"
+        );
+    }
+
+    #[test]
+    fn test_write_catalog_includes_named_destinations() {
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        let mut dests = NamedDestinations::new();
+        dests.add_destination(
+            "target".to_string(),
+            Destination::fit(PageDestination::PageNumber(0)).to_array(),
+        );
+        document.set_named_destinations(dests);
+
+        let content = serialize(&mut document);
+
+        // /Names in the catalog is a Name Dictionary (ISO 32000-1 §7.7.4,
+        // Table 31). Its /Dests entry is the name tree for named
+        // destinations (§12.3.2.3).
+        assert!(
+            content.contains("/Names"),
+            "catalog should emit /Names when named destinations are set"
+        );
+        assert!(
+            content.contains("/Dests"),
+            "/Names dictionary must contain /Dests for named destinations"
+        );
+        // The name tree leaf exposes the entry key as a string literal.
+        assert!(
+            content.contains("(target)"),
+            "named destination key should appear as a string in the name tree \
+             (expected (target))"
         );
     }
 }

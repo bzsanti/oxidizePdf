@@ -935,6 +935,22 @@ impl<W: Write> PdfWriter<W> {
             catalog.set("ViewerPreferences", Object::Dictionary(prefs.to_dict()));
         }
 
+        // /Names — ISO 32000-1 §7.7.4 Table 31 (Name Dictionary).
+        // The /Dests sub-entry is the name tree for named destinations
+        // (§12.3.2.3). Both the name tree and the Name Dictionary are
+        // written as indirect objects.
+        if let Some(named_dests) = &document.named_destinations {
+            let dests_tree_id = self.allocate_object_id();
+            self.write_object(dests_tree_id, Object::Dictionary(named_dests.to_dict()))?;
+
+            let mut names_dict = Dictionary::new();
+            names_dict.set("Dests", Object::Reference(dests_tree_id));
+            let names_dict_id = self.allocate_object_id();
+            self.write_object(names_dict_id, Object::Dictionary(names_dict))?;
+
+            catalog.set("Names", Object::Reference(names_dict_id));
+        }
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
         Ok(())
     }
