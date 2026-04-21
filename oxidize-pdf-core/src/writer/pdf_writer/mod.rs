@@ -925,6 +925,11 @@ impl<W: Write> PdfWriter<W> {
         // Reference it in catalog
         catalog.set("Metadata", Object::Reference(metadata_id));
 
+        // /OpenAction — ISO 32000-1 §7.7.2 Table 28
+        if let Some(action) = &document.open_action {
+            catalog.set("OpenAction", Object::Dictionary(action.to_dict()));
+        }
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
         Ok(())
     }

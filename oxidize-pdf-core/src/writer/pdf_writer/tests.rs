@@ -4303,5 +4303,6 @@ mod comprehensive_tests {
     }
 }
 
+mod catalog_entries_tests;
 mod form_filling_tests;
 mod incremental_update_tests;
