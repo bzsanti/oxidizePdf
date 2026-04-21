@@ -226,7 +226,10 @@ fn test_oversized_table_gets_own_oversized_chunk() {
         .any(|e| matches!(e, Element::Table(_))));
 }
 
-// Cycle 6.7
+// Cycle 6.7 — with overlap_tokens > 0, chunks must still be element-disjoint.
+// Prior to the disjointness fix, overlap_tokens caused the flusher to re-inject
+// the just-flushed elements back into the working buffer, producing chunks that
+// each contained a prefix of the previous chunk (quadratic content duplication).
 #[test]
 fn test_overlap_chunks_preserve_heading_context() {
     let elements: Vec<Element> = (0..20)
@@ -252,6 +255,32 @@ fn test_overlap_chunks_preserve_heading_context() {
     assert!(chunks.len() > 1);
     for chunk in &chunks {
         assert_eq!(chunk.heading_context.as_deref(), Some("Section A"));
+    }
+
+    // Every paragraph must appear in exactly one chunk.
+    for i in 0..20 {
+        let needle = format!("Paragraph number {} with", i);
+        let hits: usize = chunks.iter().filter(|c| c.text().contains(&needle)).count();
+        assert_eq!(
+            hits, 1,
+            "paragraph {} must appear in exactly one chunk, found {}",
+            i, hits
+        );
+    }
+
+    // No chunk's text may be a substring of another's.
+    for i in 0..chunks.len() {
+        for j in (i + 1)..chunks.len() {
+            let (a, b) = (chunks[i].text(), chunks[j].text());
+            assert!(
+                !b.contains(&a) && !a.contains(&b),
+                "chunks [{}] and [{}] overlap:\n  a={:?}\n  b={:?}",
+                i,
+                j,
+                a,
+                b
+            );
+        }
     }
 }
 

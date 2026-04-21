@@ -51,7 +51,15 @@ pub enum MergePolicy {
 pub struct HybridChunkConfig {
     /// Maximum tokens per chunk (approximate — uses word count as proxy).
     pub max_tokens: usize,
-    /// Number of overlap tokens between consecutive chunks.
+    /// Reserved for future text-level overlap. Currently ignored.
+    ///
+    /// Prior versions used this to copy elements from the end of a flushed
+    /// chunk back into the working buffer, which produced chunks with
+    /// overlapping element sets and violated the disjointness invariant
+    /// required by RAG ingestion (see
+    /// `tests/hybrid_chunker_disjoint_test.rs`). The field is preserved for
+    /// API compatibility; if a text-level overlap is reintroduced later it
+    /// will honor this value.
     pub overlap_tokens: usize,
     /// Whether to merge adjacent elements of the same type (Paragraph+Paragraph, ListItem+ListItem).
     pub merge_adjacent: bool,
@@ -337,32 +345,17 @@ impl HybridChunker {
         buffer_tokens: &mut usize,
         buffer_heading: &mut Option<String>,
     ) {
+        // Emit the accumulated buffer as a single chunk and reset all
+        // accumulation state. The chunker's contract is that its emitted
+        // chunks are element-disjoint — every source Element appears in
+        // exactly one chunk. Re-injecting flushed elements back into the
+        // buffer (as the old "overlap_tokens" branch did) would violate
+        // that contract and, under type-boundary flushes, duplicates the
+        // whole just-emitted chunk into the next one. See the regression
+        // suite in tests/hybrid_chunker_disjoint_test.rs.
         let flushed = std::mem::take(buffer);
         let heading = buffer_heading.take();
-
-        // Compute overlap BEFORE moving flushed into the chunk (avoids clone)
-        if self.config.overlap_tokens > 0 {
-            let mut overlap_tokens = 0usize;
-            let mut overlap_elements = Vec::new();
-
-            for elem in flushed.iter().rev() {
-                let t = estimate_tokens(&elem.display_text());
-                if overlap_tokens + t > self.config.overlap_tokens && !overlap_elements.is_empty() {
-                    break;
-                }
-                overlap_elements.push(elem.clone());
-                overlap_tokens += t;
-            }
-
-            overlap_elements.reverse();
-            *buffer = overlap_elements;
-            *buffer_tokens = overlap_tokens;
-            if let Some(first) = buffer.first() {
-                *buffer_heading = first.metadata().parent_heading.clone();
-            }
-        } else {
-            *buffer_tokens = 0;
-        }
+        *buffer_tokens = 0;
 
         chunks.push(HybridChunk {
             elements: flushed,
