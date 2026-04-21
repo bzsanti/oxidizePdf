@@ -951,6 +951,15 @@ impl<W: Write> PdfWriter<W> {
             catalog.set("Names", Object::Reference(names_dict_id));
         }
 
+        // /PageLabels — ISO 32000-1 §7.7.2 Table 28, §12.4.2.
+        // The value is a number tree; we emit it as an indirect object so
+        // large documents can grow without reshuffling the catalog.
+        if let Some(page_labels) = &document.page_labels {
+            let labels_id = self.allocate_object_id();
+            self.write_object(labels_id, Object::Dictionary(page_labels.to_dict()))?;
+            catalog.set("PageLabels", Object::Reference(labels_id));
+        }
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
         Ok(())
     }

@@ -10,6 +10,7 @@ mod catalog_entries_tests {
     use crate::actions::Action;
     use crate::document::Document;
     use crate::page::Page;
+    use crate::page_labels::{PageLabel, PageLabelStyle, PageLabelTree};
     use crate::structure::{Destination, NamedDestinations, PageDestination};
     use crate::viewer_preferences::ViewerPreferences;
     use crate::writer::PdfWriter;
@@ -91,6 +92,30 @@ mod catalog_entries_tests {
             content.contains("(target)"),
             "named destination key should appear as a string in the name tree \
              (expected (target))"
+        );
+    }
+
+    #[test]
+    fn test_write_catalog_includes_page_labels() {
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        let mut labels = PageLabelTree::new();
+        labels.add_range(0, PageLabel::new(PageLabelStyle::DecimalArabic));
+        document.set_page_labels(labels);
+
+        let content = serialize(&mut document);
+
+        // /PageLabels in the catalog is a number tree (ISO 32000-1 §7.7.2
+        // Table 28, §12.4.2).
+        assert!(
+            content.contains("/PageLabels"),
+            "catalog should emit /PageLabels when set on Document"
+        );
+        // Per ISO 32000-1 §12.4.2 Table 159 the numbering style entry is
+        // named /S (not /Type).
+        assert!(
+            content.contains("/S /D"),
+            "decimal page label dict should serialise as /S /D per spec"
         );
     }
 }
