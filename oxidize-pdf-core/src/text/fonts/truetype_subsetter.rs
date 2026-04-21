@@ -152,6 +152,36 @@ fn calculate_checksum(data: &[u8]) -> u32 {
     sum
 }
 
+/// Build a `post` table version 3.0 header (32 bytes, no glyph names).
+///
+/// The PDF spec (ISO 32000-1 §9.6.6 and §9.7) does not consult the `post`
+/// table during rendering — character-to-glyph resolution is driven by
+/// `ToUnicode` CMap and `CIDToGIDMap`, and glyph names aren't read when
+/// drawing. Emitting version 3.0 (which has no glyph names section) saves
+/// the full Pascal-string name table, which for large CJK fonts can be
+/// hundreds of KB of unreachable data.
+///
+/// If the original font has a post table with a valid 32-byte header, its
+/// italic/underline/memory-use metrics are preserved (bytes 4..32). The
+/// only change is overriding the version field to 0x00030000.
+///
+/// If the original post is missing or truncated, a zeroed 32-byte header
+/// is emitted (version 3.0 + zeros for the remaining fields). This matches
+/// what every PDF viewer does with fonts whose post table is irrelevant.
+fn build_post_v3_header(original_post: Option<&[u8]>) -> Vec<u8> {
+    let mut out = Vec::with_capacity(32);
+    out.extend_from_slice(&0x0003_0000u32.to_be_bytes());
+    if let Some(src) = original_post.filter(|s| s.len() >= 32) {
+        // Copy italicAngle, underlinePosition, underlineThickness, isFixedPitch,
+        // minMemType42, maxMemType42, minMemType1, maxMemType1 (bytes 4..32).
+        out.extend_from_slice(&src[4..32]);
+    } else {
+        out.resize(32, 0);
+    }
+    debug_assert_eq!(out.len(), 32);
+    out
+}
+
 /// Result of font subsetting operation
 pub struct SubsetResult {
     /// Subsetted font data
@@ -686,9 +716,13 @@ impl TrueTypeSubsetter {
         let head_table = self.get_table_data(b"head")?;
         let hhea_table = self.update_hhea_table(num_glyphs)?;
         let maxp_table = self.get_original_maxp(num_glyphs)?;
-        let post_table = self
-            .get_table_data(b"post")
-            .unwrap_or_else(|_| vec![0x00, 0x03, 0x00, 0x00]); // Version 3.0
+        // Always emit post version 3.0 (32-byte header, no glyph names).
+        // PDF never consults the post table's glyph names — character-to-glyph
+        // resolution is driven by ToUnicode + CIDToGIDMap, and glyph names
+        // aren't read during rendering. Copying the original post (v2.0 for
+        // most CJK fonts) embeds ~370 KB of unused Pascal name strings and
+        // was the dominant size source in Issue #165's TTF path.
+        let post_table = build_post_v3_header(self.get_table_data(b"post").ok().as_deref());
 
         let tables_to_write: Vec<(&[u8; 4], Vec<u8>)> = vec![
             (b"glyf", glyf),
