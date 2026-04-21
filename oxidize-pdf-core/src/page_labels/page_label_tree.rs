@@ -94,18 +94,24 @@ impl PageLabelTree {
                 _ => continue,
             };
 
-            // Parse label from dictionary
-            let style = if let Some(Object::Name(type_name)) = label_dict.get("Type") {
-                match type_name.as_str() {
-                    "D" => PageLabelStyle::DecimalArabic,
-                    "r" => PageLabelStyle::UppercaseRoman,
-                    "R" => PageLabelStyle::LowercaseRoman,
-                    "A" => PageLabelStyle::UppercaseLetters,
-                    "a" => PageLabelStyle::LowercaseLetters,
-                    _ => PageLabelStyle::None,
-                }
-            } else {
-                PageLabelStyle::None
+            // Parse numbering style per ISO 32000-1 §12.4.2 Table 159.
+            // Spec key is /S; accept a legacy /Type-carrying-style as a
+            // tolerant fallback so documents written by older versions of
+            // this crate still round-trip.
+            let style_name = match label_dict.get("S") {
+                Some(Object::Name(s)) => Some(s.as_str()),
+                _ => match label_dict.get("Type") {
+                    Some(Object::Name(t)) if t != "PageLabel" => Some(t.as_str()),
+                    _ => None,
+                },
+            };
+            let style = match style_name {
+                Some("D") => PageLabelStyle::DecimalArabic,
+                Some("r") => PageLabelStyle::UppercaseRoman,
+                Some("R") => PageLabelStyle::LowercaseRoman,
+                Some("A") => PageLabelStyle::UppercaseLetters,
+                Some("a") => PageLabelStyle::LowercaseLetters,
+                _ => PageLabelStyle::None,
             };
 
             let mut label = PageLabel::new(style);

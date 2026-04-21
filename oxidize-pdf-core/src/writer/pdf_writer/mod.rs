@@ -925,6 +925,41 @@ impl<W: Write> PdfWriter<W> {
         // Reference it in catalog
         catalog.set("Metadata", Object::Reference(metadata_id));
 
+        // /OpenAction — ISO 32000-1 §7.7.2 Table 28
+        if let Some(action) = &document.open_action {
+            catalog.set("OpenAction", Object::Dictionary(action.to_dict()));
+        }
+
+        // /ViewerPreferences — ISO 32000-1 §7.7.2 Table 28, detailed in §12.2
+        if let Some(prefs) = &document.viewer_preferences {
+            catalog.set("ViewerPreferences", Object::Dictionary(prefs.to_dict()));
+        }
+
+        // /Names — ISO 32000-1 §7.7.4 Table 31 (Name Dictionary).
+        // The /Dests sub-entry is the name tree for named destinations
+        // (§12.3.2.3). Both the name tree and the Name Dictionary are
+        // written as indirect objects.
+        if let Some(named_dests) = &document.named_destinations {
+            let dests_tree_id = self.allocate_object_id();
+            self.write_object(dests_tree_id, Object::Dictionary(named_dests.to_dict()))?;
+
+            let mut names_dict = Dictionary::new();
+            names_dict.set("Dests", Object::Reference(dests_tree_id));
+            let names_dict_id = self.allocate_object_id();
+            self.write_object(names_dict_id, Object::Dictionary(names_dict))?;
+
+            catalog.set("Names", Object::Reference(names_dict_id));
+        }
+
+        // /PageLabels — ISO 32000-1 §7.7.2 Table 28, §12.4.2.
+        // The value is a number tree; we emit it as an indirect object so
+        // large documents can grow without reshuffling the catalog.
+        if let Some(page_labels) = &document.page_labels {
+            let labels_id = self.allocate_object_id();
+            self.write_object(labels_id, Object::Dictionary(page_labels.to_dict()))?;
+            catalog.set("PageLabels", Object::Reference(labels_id));
+        }
+
         self.write_object(catalog_id, Object::Dictionary(catalog))?;
         Ok(())
     }

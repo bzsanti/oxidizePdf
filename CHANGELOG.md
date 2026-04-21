@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.5.5] - 2026-04-21
+
+### Fixed
+- **`/OpenAction` now reaches the PDF catalog** — `Document::set_open_action()` was stored on the document but `write_catalog()` in `pdf_writer/mod.rs` never serialised it (ISO 32000-1 §7.7.2 Table 28). Now emitted as an inline action dictionary via `Action::to_dict()`.
+- **`/ViewerPreferences` now reaches the PDF catalog** — same bug class as `/OpenAction`. The preference dictionary (HideToolbar, PageLayout, Direction, etc.) was built by `Document::set_viewer_preferences()` but dropped on write (ISO 32000-1 §7.7.2 Table 28, §12.2). Now emitted as an inline dictionary via `ViewerPreferences::to_dict()`.
+- **`/Names` (named destinations) now reaches the PDF catalog** — `Document::set_named_destinations()` stored a `NamedDestinations` wrapper but the catalog never referenced it, so no reader could resolve named destinations (ISO 32000-1 §7.7.2 Table 28, §7.7.4 Table 31, §12.3.2.3). The writer now emits the name tree and a Name Dictionary as indirect objects and references the Name Dictionary from `/Names`.
+- **`/PageLabels` now reaches the PDF catalog** — `Document::set_page_labels()` stored a `PageLabelTree` but the catalog never referenced it, so custom page numbering was dropped (ISO 32000-1 §7.7.2 Table 28, §12.4.2). The number tree is now written as an indirect object.
+- **Page label dictionaries emit `/S` (numbering style) per spec** — `PageLabel::to_dict()` previously emitted the style under `/Type` (e.g. `/Type /D`). Per ISO 32000-1 §12.4.2 Table 159 the numbering style shall be carried by `/S`; `/Type`, when present, shall be the constant name `PageLabel`. The writer now emits `/Type /PageLabel` + `/S /<style>`, so conforming viewers actually recognise the numbering style. `PageLabel::from_dict()` prefers `/S` and tolerates legacy `/Type`-carrying-style dicts for backward-compatible round-trip.
+
+### Added
+- `src/writer/pdf_writer/tests/catalog_entries_tests.rs` — 5 content-verifying TDD tests that serialise a real `Document` and assert each catalog entry (plus the characteristic payload: `/S /GoTo`, `/HideToolbar true`, `(target)` name tree key, `/S /D`) reaches the PDF bytes. Includes a combined-entry regression guarding against future refactors that could drop one entry while keeping the others.
+
+### Impact
+The C# wrapper `oxidize-pdf-dotnet` (and any other binding) can now expose these four catalog features; previously the setters accepted values that were silently discarded during serialisation.
+
 ## [2.5.4] - 2026-04-21
 
 ### Fixed
