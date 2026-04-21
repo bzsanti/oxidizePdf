@@ -6,15 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
-## [Unreleased]
-
-### Fixed
-- **`HybridChunker::chunk()` now emits element-disjoint chunks** — prior to this release the chunker accumulated content across emissions: any flush (type boundary, `merge_adjacent=false`, or size overflow) re-injected the just-flushed elements back into the working buffer via the `overlap_tokens` branch of `flush_buffer`. The consequence was that each emitted chunk contained a prefix of the previous chunk. For a one-page document with a title followed by three paragraphs the chunker produced `[title]` and `[title, p1, p2, p3]` instead of a single merged chunk (or two disjoint chunks). This made `PdfDocument::rag_chunks()` output unusable for vector-store ingestion: content was duplicated quadratically in document size. `flush_buffer` now empties the buffer unconditionally and never reinjects elements. Element-level overlap was incompatible with the RAG disjointness invariant; the `overlap_tokens` config field is preserved for API compatibility but is currently a no-op (reserved for a future text-level overlap implementation).
-- Hardened three previously shape-only tests (`test_overlap_chunks_preserve_heading_context`, `test_hybrid_chunk_with_graph_splits_large_section`, `test_hybrid_chunk_with_graph_handles_preamble`) to assert pairwise chunk-text disjointness and that each source paragraph appears in exactly one chunk.
-
-### Added
-- `tests/hybrid_chunker_disjoint_test.rs` — four regression scenarios covering the accumulating-chunks bug: title+paragraphs under default config, size-overflow flushes, `merge_adjacent=false` with `overlap_tokens>0`, and an end-to-end PDF generated programmatically, parsed back, and chunked via `rag_chunks()`.
-
 ## [2.5.5] - 2026-04-21
 
 ### Fixed
@@ -23,12 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/Names` (named destinations) now reaches the PDF catalog** — `Document::set_named_destinations()` stored a `NamedDestinations` wrapper but the catalog never referenced it, so no reader could resolve named destinations (ISO 32000-1 §7.7.2 Table 28, §7.7.4 Table 31, §12.3.2.3). The writer now emits the name tree and a Name Dictionary as indirect objects and references the Name Dictionary from `/Names`.
 - **`/PageLabels` now reaches the PDF catalog** — `Document::set_page_labels()` stored a `PageLabelTree` but the catalog never referenced it, so custom page numbering was dropped (ISO 32000-1 §7.7.2 Table 28, §12.4.2). The number tree is now written as an indirect object.
 - **Page label dictionaries emit `/S` (numbering style) per spec** — `PageLabel::to_dict()` previously emitted the style under `/Type` (e.g. `/Type /D`). Per ISO 32000-1 §12.4.2 Table 159 the numbering style shall be carried by `/S`; `/Type`, when present, shall be the constant name `PageLabel`. The writer now emits `/Type /PageLabel` + `/S /<style>`, so conforming viewers actually recognise the numbering style. `PageLabel::from_dict()` prefers `/S` and tolerates legacy `/Type`-carrying-style dicts for backward-compatible round-trip.
+- **`HybridChunker::chunk()` now emits element-disjoint chunks** — the chunker was accumulating content across emissions: any flush (type boundary, `merge_adjacent=false`, or size overflow) re-injected the just-flushed elements back into the working buffer via the `overlap_tokens` branch of `flush_buffer`. The consequence was that each emitted chunk contained a prefix of the previous chunk. For a one-page document with a title followed by three paragraphs the chunker produced `[title]` and `[title, p1, p2, p3]` instead of a single merged chunk (or two disjoint chunks). This made `PdfDocument::rag_chunks()` output unusable for vector-store ingestion: content was duplicated quadratically in document size. `flush_buffer` now empties the buffer unconditionally and never reinjects elements. Element-level overlap was incompatible with the RAG disjointness invariant; the `overlap_tokens` config field is preserved for API compatibility but is currently a no-op (reserved for a future text-level overlap implementation).
+- Hardened three previously shape-only chunker tests (`test_overlap_chunks_preserve_heading_context`, `test_hybrid_chunk_with_graph_splits_large_section`, `test_hybrid_chunk_with_graph_handles_preamble`) to assert pairwise chunk-text disjointness and that each source paragraph appears in exactly one chunk.
 
 ### Added
 - `src/writer/pdf_writer/tests/catalog_entries_tests.rs` — 5 content-verifying TDD tests that serialise a real `Document` and assert each catalog entry (plus the characteristic payload: `/S /GoTo`, `/HideToolbar true`, `(target)` name tree key, `/S /D`) reaches the PDF bytes. Includes a combined-entry regression guarding against future refactors that could drop one entry while keeping the others.
+- `tests/hybrid_chunker_disjoint_test.rs` — four regression scenarios covering the accumulating-chunks bug: title+paragraphs under default config, size-overflow flushes, `merge_adjacent=false` with `overlap_tokens>0`, and an end-to-end PDF generated programmatically, parsed back, and chunked via `rag_chunks()`.
 
 ### Impact
-The C# wrapper `oxidize-pdf-dotnet` (and any other binding) can now expose these four catalog features; previously the setters accepted values that were silently discarded during serialisation.
+The C# wrapper `oxidize-pdf-dotnet` (and any other binding) can now expose these four catalog features; previously the setters accepted values that were silently discarded during serialisation. RAG consumers of `PdfDocument::rag_chunks()` (`oxidize-python`, `llama-index-readers-oxidize-pdf`) will produce correct, non-duplicating chunk output for vector stores.
 
 ## [2.5.4] - 2026-04-21
 
