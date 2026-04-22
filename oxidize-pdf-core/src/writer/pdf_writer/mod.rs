@@ -2592,6 +2592,46 @@ impl<W: Write> PdfWriter<W> {
                 }
             }
 
+            // Externalize inline streams inside /AP.
+            //
+            // `Widget::generate_appearance` (and any user-supplied appearance
+            // dictionary) stores the /N, /R, /D entries as inline
+            // `Object::Stream` values inside the /AP sub-dictionary. Per
+            // ISO 32000-1 §7.3.8.1, "all streams shall be indirect objects" —
+            // inline streams as dictionary values are not permitted. We
+            // therefore externalize each inline stream to a freshly
+            // allocated indirect object and replace it with a /Reference.
+            //
+            // /AP itself has two legal shapes (§12.5.5):
+            //   * A single stream (direct or indirect) → the "default" state.
+            //   * A sub-dictionary mapping state names (/N, /R, /D) to
+            //     streams, where /D may further be a dict mapping values to
+            //     streams (radio buttons, checkboxes).
+            // We handle the sub-dict shape (which is what `fill_field`
+            // emits); the legacy single-stream shape falls through to the
+            // writer's default handling below.
+            if let Some(Object::Dictionary(ap_dict)) = annot_dict.get("AP") {
+                let mut updated_ap = crate::objects::Dictionary::new();
+                for (state_key, state_val) in ap_dict.iter() {
+                    match state_val {
+                        Object::Stream(sd, data) => {
+                            let stream_id = self.allocate_object_id();
+                            self.write_object(stream_id, Object::Stream(sd.clone(), data.clone()))?;
+                            updated_ap.set(state_key, Object::Reference(stream_id));
+                        }
+                        Object::Dictionary(down_dict) => {
+                            // /D sub-dict case: map value → stream.
+                            let externalized = self.externalize_streams_in_dict(down_dict)?;
+                            updated_ap.set(state_key, Object::Dictionary(externalized));
+                        }
+                        _ => {
+                            updated_ap.set(state_key, state_val.clone());
+                        }
+                    }
+                }
+                annot_dict.set("AP", Object::Dictionary(updated_ap));
+            }
+
             self.write_object(annot_id, Object::Dictionary(annot_dict))?;
             annot_refs.push(Object::Reference(annot_id));
 

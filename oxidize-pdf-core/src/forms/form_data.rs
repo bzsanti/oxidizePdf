@@ -405,6 +405,35 @@ impl FormManager {
         self.fields.get(name)
     }
 
+    /// Get a mutable reference to a field by name.
+    ///
+    /// This is the primary entry point for mutating an AcroForm field's
+    /// dictionary (for example, to set `/V` during form filling) and its
+    /// associated widgets' appearance streams. It returns `None` if the
+    /// field does not exist — callers are expected to surface that as an
+    /// error to the user (see `Document::fill_field`).
+    pub fn get_field_mut(&mut self, name: &str) -> Option<&mut FormField> {
+        self.fields.get_mut(name)
+    }
+
+    /// Get the placeholder `ObjectReference` recorded for a field by name.
+    ///
+    /// The reference is a *placeholder* produced by `FormManager`'s local
+    /// counter at `add_*_field` time. It is the same value that widget
+    /// annotations created via `Page::add_form_widget_with_ref` store as
+    /// their `/Parent`, so this accessor is the bridge used by
+    /// `Document::fill_field` to locate the matching widget annotations on
+    /// page dictionaries without relying on field-name matching (which
+    /// would be fragile for nested field hierarchies in the future).
+    ///
+    /// Returns `None` if the field does not exist. Scoped `pub(crate)`
+    /// because the placeholder id is a writer-internal concept — the
+    /// public surface is `Document::fill_field`, not direct manipulation
+    /// of placeholder refs.
+    pub(crate) fn field_ref(&self, name: &str) -> Option<ObjectReference> {
+        self.field_refs.get(name).copied()
+    }
+
     /// Set default appearance for all fields
     pub fn set_default_appearance(&mut self, da: impl Into<String>) {
         self.acro_form.da = Some(da.into());

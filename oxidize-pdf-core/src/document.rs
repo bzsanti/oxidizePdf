@@ -497,6 +497,153 @@ impl Document {
         self.form_manager = None;
     }
 
+    /// Fill an AcroForm field by name, updating `/V` and regenerating the
+    /// widget appearance stream(s) so the value is both machine-readable
+    /// (via `/V` on the field dictionary) and visually present in the PDF
+    /// (via `/AP/N` on each widget annotation).
+    ///
+    /// This implements ISO 32000-1 §12.7.3.3 Table 228 (`/V` on form fields)
+    /// plus §12.5.5 / §12.7.3.3 interplay: a viewer that honours
+    /// `/NeedAppearances true` may regenerate appearance streams on open,
+    /// but a compliant writer should still emit them so the PDF renders
+    /// correctly in readers that do not.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` — the partial field name (`/T` on the field dictionary)
+    ///   assigned when the field was registered via `FormManager::add_*`.
+    /// * `value` — the new value. For text fields this becomes `/V` as a
+    ///   PDF string; it is also embedded verbatim into the regenerated
+    ///   appearance content stream (see `TextFieldAppearance`).
+    ///
+    /// # Errors
+    ///
+    /// * `PdfError::InvalidStructure` if the document has no `FormManager`
+    ///   attached (calling code must register fields before filling them).
+    /// * `PdfError::FieldNotFound` if no field with the given `name` exists
+    ///   in the `FormManager`.
+    ///
+    /// # Path chosen (v2.5.6 Task 3)
+    ///
+    /// This method operates on an in-memory `Document` that was BUILT in
+    /// the current process (via `FormManager` + `Page::add_form_widget_with_ref`).
+    /// It does not re-parse an existing PDF; hydration of a parsed PDF
+    /// back into a mutable `Document` is out of scope for v2.5.6 Task 3
+    /// and tracked separately. The writer accepts the mutated document
+    /// and emits /V + /AP/N so the typical round-trip
+    /// "build → fill → save → reader sees filled value" is covered.
+    pub fn fill_field(&mut self, name: &str, value: impl Into<String>) -> Result<()> {
+        use crate::error::PdfError;
+        use crate::forms::FieldType;
+        use crate::objects::Object;
+
+        let value: String = value.into();
+
+        let form_manager = self.form_manager.as_mut().ok_or_else(|| {
+            PdfError::InvalidStructure(
+                "Document has no FormManager; register fields via enable_forms() or \
+                 set_form_manager() before calling fill_field"
+                    .to_string(),
+            )
+        })?;
+
+        // Capture the placeholder ref BEFORE taking a mutable borrow on the
+        // field; it lets us locate matching widget annotations below without
+        // a second lookup through `form_manager`.
+        let placeholder_ref = form_manager.field_ref(name);
+
+        let form_field = form_manager
+            .get_field_mut(name)
+            .ok_or_else(|| PdfError::FieldNotFound(name.to_string()))?;
+
+        // Resolve the field type from the field dict's `/FT` entry so the
+        // regenerated appearance matches the field's declared type (Tx, Btn,
+        // Ch, Sig). Default to `FieldType::Text` if absent — the FormManager
+        // always sets `/FT`, but defensive default keeps us robust.
+        let field_type = match form_field.field_dict.get("FT") {
+            Some(Object::Name(n)) => match n.as_str() {
+                "Btn" => FieldType::Button,
+                "Ch" => FieldType::Choice,
+                "Sig" => FieldType::Signature,
+                _ => FieldType::Text,
+            },
+            _ => FieldType::Text,
+        };
+
+        // 1) Update /V on the field dict. For text and choice fields
+        //    /V is a PDF string; for button fields it's a name, but the
+        //    `fill_field` contract (set textual value) is targeted at text
+        //    fields. Callers who need to toggle checkboxes should reach
+        //    through `FormManager::get_field_mut` directly.
+        form_field
+            .field_dict
+            .set("V", Object::String(value.clone()));
+
+        // 2) Regenerate the appearance stream(s) on each widget belonging
+        //    to this field. The regenerated /AP dictionary lives on the
+        //    widget struct inside the FormManager — but the `Annotation`
+        //    on the page was built at `add_form_widget_with_ref` time from
+        //    a clone of the widget's annotation dict, and therefore carries
+        //    its own (stale) /AP. Step 3 below refreshes that.
+        for widget in &mut form_field.widgets {
+            widget.generate_appearance(field_type, Some(&value))?;
+        }
+
+        // 3) For each page annotation whose `/Parent` matches this field's
+        //    placeholder ref, rewrite `properties.AP` with the freshly
+        //    generated appearance dict. We iterate all pages because the
+        //    API permits (and the .NET wrapper sometimes exercises) the
+        //    same field being referenced by widgets on multiple pages.
+        if let Some(placeholder) = placeholder_ref {
+            // Re-borrow after the mutable borrow on `form_field` ends.
+            let form_field = self
+                .form_manager
+                .as_ref()
+                .and_then(|fm| fm.get_field(name))
+                .ok_or_else(|| PdfError::FieldNotFound(name.to_string()))?;
+
+            // Use the first widget's appearance as the representative dict
+            // for the field. All widgets of a text field share content in
+            // this implementation (they differ only in geometry), so this
+            // avoids rebuilding per-page — the Widget→Annotation mapping
+            // below re-associates each annotation with its own widget via
+            // `field_parent` matching.
+            for page in self.pages.iter_mut() {
+                for annot in page.annotations_mut().iter_mut() {
+                    if annot.field_parent != Some(placeholder) {
+                        continue;
+                    }
+                    // Find the widget whose rect matches this annotation's
+                    // rect. Widgets on a field are distinguished only by
+                    // geometry, so `Rect` is the natural key.
+                    let matching_widget = form_field.widgets.iter().find(|w| {
+                        (w.rect.lower_left.x - annot.rect.lower_left.x).abs() < f64::EPSILON
+                            && (w.rect.lower_left.y - annot.rect.lower_left.y).abs() < f64::EPSILON
+                            && (w.rect.upper_right.x - annot.rect.upper_right.x).abs()
+                                < f64::EPSILON
+                            && (w.rect.upper_right.y - annot.rect.upper_right.y).abs()
+                                < f64::EPSILON
+                    });
+                    let widget = match matching_widget {
+                        Some(w) => w,
+                        // If rects differ (e.g. the annotation was added via
+                        // the legacy `add_form_widget` path), fall back to
+                        // the first widget's appearance — still correct for
+                        // text content, may be geometrically approximate.
+                        None => &form_field.widgets[0],
+                    };
+                    if let Some(ref app_dict) = widget.appearance_streams {
+                        annot
+                            .properties
+                            .set("AP", Object::Dictionary(app_dict.to_dict()));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Saves the document to a file.
     ///
     /// # Errors
