@@ -105,10 +105,13 @@ impl PageLabelTree {
                     _ => None,
                 },
             };
+            // Per ISO 32000-1 §12.4.2 Table 159 the /S value is case
+            // sensitive: /R = uppercase Roman, /r = lowercase Roman;
+            // /A = uppercase letters, /a = lowercase letters.
             let style = match style_name {
                 Some("D") => PageLabelStyle::DecimalArabic,
-                Some("r") => PageLabelStyle::UppercaseRoman,
-                Some("R") => PageLabelStyle::LowercaseRoman,
+                Some("R") => PageLabelStyle::UppercaseRoman,
+                Some("r") => PageLabelStyle::LowercaseRoman,
                 Some("A") => PageLabelStyle::UppercaseLetters,
                 Some("a") => PageLabelStyle::LowercaseLetters,
                 _ => PageLabelStyle::None,
@@ -399,6 +402,51 @@ mod tests {
     }
 
     #[test]
+    fn test_from_dict_reads_roman_case_per_iso_spec() {
+        // ISO 32000-1 §12.4.2 Table 159 binds /S /R to uppercase Roman
+        // numerals and /S /r to lowercase. from_dict() must therefore
+        // map /R → UppercaseRoman and /r → LowercaseRoman. The v2.5.5
+        // reader was mirror-inverted to compensate for the inverted
+        // writer, so /R was read back as LowercaseRoman; external PDFs
+        // (written by other tools per spec) were interpreted upside
+        // down.
+        //
+        // We can't see the style enum directly (it is private to the
+        // PageLabel fields) so we assert on the rendered label, which
+        // calls format() under the hood — format() is the one thing
+        // that has always been correct.
+        fn build_tree(style_name: &str) -> PageLabelTree {
+            let mut label_dict = Dictionary::new();
+            label_dict.set("Type", Object::Name("PageLabel".to_string()));
+            label_dict.set("S", Object::Name(style_name.to_string()));
+
+            let mut nums = Array::new();
+            nums.push(Object::Integer(0));
+            nums.push(Object::Dictionary(label_dict));
+
+            let mut dict = Dictionary::new();
+            dict.set("Nums", Object::Array(nums.into()));
+            PageLabelTree::from_dict(&dict).expect("valid page label tree")
+        }
+
+        let upper = build_tree("R");
+        assert_eq!(
+            upper.get_label(0),
+            Some("I".to_string()),
+            "/S /R must be parsed as UppercaseRoman per ISO 32000-1 §12.4.2 \
+             Table 159 (viewer renders 'I', not 'i')"
+        );
+
+        let lower = build_tree("r");
+        assert_eq!(
+            lower.get_label(0),
+            Some("i".to_string()),
+            "/S /r must be parsed as LowercaseRoman per ISO 32000-1 §12.4.2 \
+             Table 159 (viewer renders 'i', not 'I')"
+        );
+    }
+
+    #[test]
     fn test_from_dict_with_prefix_and_start() {
         let mut label_dict = Dictionary::new();
         label_dict.set("Type", Object::Name("D".to_string()));
@@ -467,11 +515,16 @@ mod tests {
 
     #[test]
     fn test_from_dict_all_style_types() {
-        // Test r (uppercase roman)
+        // Exercises the legacy /Type-carrying-style fallback for each
+        // ISO 32000-1 §12.4.2 Table 159 style name. Asserts only that
+        // parsing succeeds; for the case-sensitive semantics of /R vs
+        // /r and /A vs /a see `test_from_dict_reads_roman_case_per_iso_spec`.
+
+        // Test r (lowercase roman)
         let mut label_dict1 = Dictionary::new();
         label_dict1.set("Type", Object::Name("r".to_string()));
 
-        // Test R (lowercase roman)
+        // Test R (uppercase roman)
         let mut label_dict2 = Dictionary::new();
         label_dict2.set("Type", Object::Name("R".to_string()));
 
