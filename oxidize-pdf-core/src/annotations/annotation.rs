@@ -220,6 +220,13 @@ pub struct Annotation {
     pub color: Option<Color>,
     /// Page reference (set by manager)
     pub page: Option<ObjectReference>,
+    /// Parent form field reference for widget annotations that live as
+    /// children of an /AcroForm field (ISO 32000-1 §12.7.3.1).
+    ///
+    /// When set, serialization writes `/Parent <ref>` into the annotation
+    /// dictionary so that the widget is linked to the field it belongs to.
+    /// Only meaningful for `AnnotationType::Widget`; ignored otherwise.
+    pub field_parent: Option<ObjectReference>,
     /// Additional properties specific to annotation type
     pub properties: Dictionary,
 }
@@ -241,6 +248,7 @@ impl Annotation {
             border: None,
             color: None,
             page: None,
+            field_parent: None,
             properties: Dictionary::new(),
         }
     }
@@ -364,6 +372,13 @@ impl Annotation {
         // Page reference
         if let Some(page) = self.page {
             dict.set("P", Object::Reference(page));
+        }
+
+        // Parent form field (widget annotations only — ISO 32000-1 §12.7.3.1).
+        // Emitted before merging additional properties so any explicit
+        // `/Parent` already in `properties` takes precedence.
+        if let Some(parent_ref) = self.field_parent {
+            dict.set("Parent", Object::Reference(parent_ref));
         }
 
         // Merge additional properties

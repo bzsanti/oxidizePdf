@@ -102,6 +102,20 @@ pub struct PdfWriter<W: Write> {
     file_id: Option<Vec<u8>>,
     encryption_state: Option<WriterEncryptionState>,
     pending_encrypt_dict: Option<Dictionary>,
+    // FormManager field tracking:
+    //  * `form_field_placeholder_map` translates the placeholder
+    //    `ObjectReference` returned by `FormManager::add_text_field` et al.
+    //    (those use a local counter unaware of writer-side allocation) into
+    //    the real `ObjectId` chosen by `allocate_object_id`. Widgets created
+    //    via `Page::add_form_widget_with_ref` store the placeholder in
+    //    `Annotation::field_parent`; when the annotation dict is written we
+    //    remap it through this table so `/Parent` points at the real field.
+    //  * `form_manager_field_refs` is the ordered (alphabetical by field
+    //    name) list of real refs; it's appended to `document.acro_form.fields`
+    //    during `write_catalog` and is what ends up in
+    //    `/AcroForm/Fields`.
+    form_field_placeholder_map: HashMap<crate::objects::ObjectReference, ObjectId>,
+    form_manager_field_refs: Vec<crate::objects::ObjectReference>,
 }
 
 /// Holds the encryption key and encryptor for encrypting objects during write
@@ -137,6 +151,8 @@ impl<W: Write> PdfWriter<W> {
             file_id: None,
             encryption_state: None,
             pending_encrypt_dict: None,
+            form_field_placeholder_map: HashMap::new(),
+            form_manager_field_refs: Vec::new(),
         }
     }
 
@@ -161,6 +177,14 @@ impl<W: Write> PdfWriter<W> {
 
         // Write custom fonts first (so pages can reference them)
         let font_refs = self.write_fonts(document)?;
+
+        // Pre-allocate object IDs for every field owned by the FormManager
+        // BEFORE writing pages, so widget annotations on those pages can
+        // emit `/Parent <real_id>` instead of pointing at the placeholder
+        // refs returned by `FormManager::add_text_field`. This is the piece
+        // that bridges the FormManager's local id counter and the writer's
+        // global id allocator. See `form_field_placeholder_map` for details.
+        self.preallocate_form_manager_fields(document);
 
         // Write pages (they contain widget annotations and font references)
         self.write_pages(document, &font_refs)?;
@@ -861,12 +885,51 @@ impl<W: Write> PdfWriter<W> {
         catalog.set("Type", Object::Name("Catalog".to_string()));
         catalog.set("Pages", Object::Reference(pages_id));
 
-        // Process FormManager if present to update AcroForm
-        // We'll write the actual fields after pages are written
-        if let Some(_form_manager) = &document.form_manager {
-            // Ensure AcroForm exists
+        // Serialize fields owned by the FormManager (ISO 32000-1 §12.7.3).
+        //
+        // Before v2.5.6 this block did nothing: it bound `_form_manager`
+        // but never read its `fields` map, so only fields appended manually
+        // to `document.acro_form.fields` ever reached the output PDF. Any
+        // field created via `FormManager::add_text_field` / `add_combo_box`
+        // / etc. was silently dropped — exactly the gap the .NET wrapper
+        // hit.
+        //
+        // Object IDs for these fields were pre-allocated in
+        // `preallocate_form_manager_fields` (called before `write_pages`
+        // so widget `/Parent` refs could resolve). Here we only have to:
+        //   (a) write the field-body dict into each pre-allocated id, and
+        //   (b) append those ids to `document.acro_form.fields` so the
+        //       /AcroForm write block below emits
+        //       `/AcroForm/Fields [N 0 R ...]`.
+        //
+        // Iteration follows the same deterministic order used at
+        // pre-allocation time, so the order-vs-id pairing is stable.
+        if let Some(form_manager) = &document.form_manager {
             if document.acro_form.is_none() {
                 document.acro_form = Some(crate::forms::AcroForm::new());
+            }
+
+            // Write each field dict into its reserved id.
+            let sorted: Vec<(Dictionary, crate::objects::ObjectReference)> = form_manager
+                .iter_fields_sorted()
+                .map(|(_name, form_field, placeholder)| {
+                    let real_id = *self
+                        .form_field_placeholder_map
+                        .get(&placeholder)
+                        .expect("every sorted field must have a pre-allocated real id");
+                    (form_field.field_dict.clone(), real_id)
+                })
+                .collect();
+            for (field_dict, real_id) in sorted {
+                self.write_object(real_id, Object::Dictionary(field_dict))?;
+            }
+
+            if let Some(acro) = document.acro_form.as_mut() {
+                for r in &self.form_manager_field_refs {
+                    if !acro.fields.contains(r) {
+                        acro.fields.push(*r);
+                    }
+                }
             }
         }
 
@@ -1276,6 +1339,30 @@ impl<W: Write> PdfWriter<W> {
 
         self.write_object(struct_tree_root_id, Object::Dictionary(struct_tree_root))?;
         Ok(struct_tree_root_id)
+    }
+
+    /// Reserve an `ObjectId` for every field owned by `document.form_manager`
+    /// and build the placeholder → real mapping used when widget annotations
+    /// are serialised (see `Annotation::field_parent`).
+    ///
+    /// Called once from `write_document` before `write_pages`, so widget
+    /// `/Parent` refs on pages resolve to real indirect objects. The field
+    /// bodies themselves are written later, in `write_catalog`, reusing
+    /// these pre-allocated IDs.
+    ///
+    /// Iteration order is deterministic (alphabetical by field name) via
+    /// `FormManager::iter_fields_sorted` so object-ID allocation — and
+    /// therefore the byte-for-byte output — is reproducible across builds.
+    fn preallocate_form_manager_fields(&mut self, document: &Document) {
+        let Some(form_manager) = &document.form_manager else {
+            return;
+        };
+
+        for (_name, _form_field, placeholder) in form_manager.iter_fields_sorted() {
+            let real_id = self.allocate_object_id();
+            self.form_field_placeholder_map.insert(placeholder, real_id);
+            self.form_manager_field_refs.push(real_id);
+        }
     }
 
     fn write_form_fields(&mut self, document: &mut Document) -> Result<()> {
@@ -2472,7 +2559,25 @@ impl<W: Write> PdfWriter<W> {
         //    page.add_annotation(). Each is written as an indirect object.
         for annotation in page.annotations() {
             let annot_id = self.allocate_object_id();
-            let annot_dict = annotation.to_dict();
+            let mut annot_dict = annotation.to_dict();
+
+            // Remap `/Parent` from FormManager placeholder → real ObjectId.
+            // `Annotation::field_parent` stores the placeholder ref returned
+            // by FormManager::add_*_field (which uses a counter disjoint
+            // from the writer's allocator). At this point the writer has
+            // already pre-allocated real ids for every FormManager field
+            // via `preallocate_form_manager_fields`, so we translate.
+            // Widgets whose parent placeholder is NOT in the map (e.g.
+            // the caller supplied a hand-built ref) are left unchanged —
+            // not every `/Parent` necessarily comes from the FormManager.
+            if annotation.field_parent.is_some() {
+                if let Some(Object::Reference(parent_ref)) = annot_dict.get("Parent") {
+                    if let Some(real_id) = self.form_field_placeholder_map.get(parent_ref) {
+                        annot_dict.set("Parent", Object::Reference(*real_id));
+                    }
+                }
+            }
+
             self.write_object(annot_id, Object::Dictionary(annot_dict))?;
             annot_refs.push(Object::Reference(annot_id));
 
@@ -2528,6 +2633,8 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             file_id: None,
             encryption_state: None,
             pending_encrypt_dict: None,
+            form_field_placeholder_map: HashMap::new(),
+            form_manager_field_refs: Vec::new(),
         })
     }
 }

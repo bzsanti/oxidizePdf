@@ -130,6 +130,14 @@ impl Default for FormData {
 pub struct FormManager {
     /// Registered fields
     fields: HashMap<String, FormField>,
+    /// Placeholder `ObjectReference` returned to callers for each field,
+    /// keyed by field name. The reference is a *placeholder* — its object
+    /// number comes from the FormManager's local counter and is disjoint
+    /// from the writer's global object-id allocator. The writer builds a
+    /// placeholder → real-ObjectId map at serialization time so widget
+    /// annotations created via `Page::add_form_widget_with_ref` can
+    /// resolve their `/Parent` to the correct real id.
+    field_refs: HashMap<String, ObjectReference>,
     /// AcroForm dictionary
     acro_form: AcroForm,
     /// Next field ID
@@ -141,6 +149,7 @@ impl FormManager {
     pub fn new() -> Self {
         Self {
             fields: HashMap::new(),
+            field_refs: HashMap::new(),
             acro_form: AcroForm::new(),
             next_field_id: 1,
         }
@@ -172,11 +181,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -205,11 +214,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -238,11 +247,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -277,11 +286,11 @@ impl FormManager {
             }
         }
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -307,11 +316,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -337,11 +346,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -371,11 +380,11 @@ impl FormManager {
             form_field.add_widget(widget);
         }
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -417,6 +426,31 @@ impl FormManager {
     /// Get the number of fields managed by this FormManager
     pub fn field_count(&self) -> usize {
         self.fields.len()
+    }
+
+    /// Iterate over fields in a deterministic (alphabetical by name) order,
+    /// paired with the placeholder `ObjectReference` that was returned to
+    /// the caller when the field was added.
+    ///
+    /// The underlying storage is a `HashMap`, which has non-deterministic
+    /// iteration. Serializers that need reproducible output (diff-stable
+    /// `/AcroForm/Fields` arrays, object-id allocations, etc.) MUST use
+    /// this method instead of `fields().iter()`. The placeholder ref is
+    /// the one the writer uses to build the placeholder → real-id map
+    /// consumed by widget-annotation `/Parent` resolution.
+    pub fn iter_fields_sorted(
+        &self,
+    ) -> impl Iterator<Item = (&String, &FormField, ObjectReference)> {
+        let mut keys: Vec<&String> = self.fields.keys().collect();
+        keys.sort();
+        keys.into_iter().map(move |k| {
+            let field = self.fields.get(k).expect("key came from map");
+            let placeholder = *self
+                .field_refs
+                .get(k)
+                .expect("every field must have a placeholder ref");
+            (k, field, placeholder)
+        })
     }
 }
 

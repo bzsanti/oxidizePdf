@@ -936,6 +936,49 @@ impl Page {
         widget_ref
     }
 
+    /// Add a form field widget to the page and link it to an existing AcroForm field.
+    ///
+    /// Unlike [`Page::add_form_widget`], which expects the writer to track the
+    /// relationship implicitly via shared field names, this variant records
+    /// the `field_ref` as the widget's `/Parent` so the resulting PDF carries
+    /// an explicit widget→field link per ISO 32000-1 §12.7.3.1.
+    ///
+    /// This is the recommended path when the field itself was created via
+    /// [`crate::forms::FormManager`] (whose `add_text_field`, `add_combo_box`,
+    /// etc. return the field's `ObjectReference`): the field object is
+    /// serialized as an indirect object, and every widget placed on a page
+    /// points back to it through `/Parent`.
+    ///
+    /// # Arguments
+    ///
+    /// * `widget` - The widget appearance/geometry to place on the page.
+    /// * `field_ref` - The `ObjectReference` of the AcroForm field this
+    ///   widget belongs to (as returned by `FormManager::add_*`).
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success. The method currently cannot fail; the `Result`
+    /// return type is reserved for future validation.
+    pub fn add_form_widget_with_ref(
+        &mut self,
+        widget: Widget,
+        field_ref: ObjectReference,
+    ) -> crate::error::Result<()> {
+        // Convert widget to annotation, same as add_form_widget.
+        let mut annot = Annotation::new(crate::annotations::AnnotationType::Widget, widget.rect);
+
+        for (key, value) in widget.to_annotation_dict().iter() {
+            annot.properties.set(key, value.clone());
+        }
+
+        // Record the parent field reference so the writer emits
+        // `/Parent <field_ref>` in the widget annotation dictionary.
+        annot.field_parent = Some(field_ref);
+
+        self.annotations.push(annot);
+        Ok(())
+    }
+
     /// Sets the header for this page.
     ///
     /// # Example
