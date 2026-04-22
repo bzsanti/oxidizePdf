@@ -438,18 +438,42 @@ impl FormManager {
     /// this method instead of `fields().iter()`. The placeholder ref is
     /// the one the writer uses to build the placeholder → real-id map
     /// consumed by widget-annotation `/Parent` resolution.
-    pub fn iter_fields_sorted(
+    ///
+    /// Scoped to `pub(crate)` because the placeholder `ObjectReference` is
+    /// a writer-internal concept — leaking it in the public API would
+    /// couple external callers to a serialization detail that is expected
+    /// to evolve. Public iteration can go through [`FormManager::fields`].
+    ///
+    /// # Errors
+    ///
+    /// Returns a streaming iterator of `Result` items. The only way an
+    /// error is produced is if the internal `fields` / `field_refs` maps
+    /// desynchronize — a "can't happen" invariant that every `add_*_field`
+    /// method is responsible for upholding. A desync surfaces as
+    /// [`PdfError::Internal`] rather than a panic so the writer hot path
+    /// stays panic-free (ISO 32000-1 conformance errors must remain
+    /// recoverable).
+    pub(crate) fn iter_fields_sorted(
         &self,
-    ) -> impl Iterator<Item = (&String, &FormField, ObjectReference)> {
+    ) -> impl Iterator<Item = Result<(&String, &FormField, ObjectReference)>> {
         let mut keys: Vec<&String> = self.fields.keys().collect();
         keys.sort();
         keys.into_iter().map(move |k| {
-            let field = self.fields.get(k).expect("key came from map");
-            let placeholder = *self
-                .field_refs
-                .get(k)
-                .expect("every field must have a placeholder ref");
-            (k, field, placeholder)
+            // `k` was just produced by `self.fields.keys()`, so this lookup
+            // cannot fail within the same borrow. We still avoid `expect`
+            // on a hot path and surface an `Internal` error instead of
+            // panicking — callers already propagate `Result<()>`.
+            let field = self.fields.get(k).ok_or_else(|| {
+                crate::error::PdfError::Internal(format!(
+                    "FormManager internal invariant broken: field '{k}' missing from fields map during sorted iteration"
+                ))
+            })?;
+            let placeholder = *self.field_refs.get(k).ok_or_else(|| {
+                crate::error::PdfError::Internal(format!(
+                    "FormManager internal invariant broken: field '{k}' has no placeholder ref (add_*_field forgot to populate field_refs?)"
+                ))
+            })?;
+            Ok((k, field, placeholder))
         })
     }
 }

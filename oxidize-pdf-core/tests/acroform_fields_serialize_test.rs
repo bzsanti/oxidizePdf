@@ -15,7 +15,7 @@
 //!     or carries /T + /FT inline (merged field/widget dict, per
 //!     ISO 32000-1 §12.7.3.1).
 
-use oxidize_pdf::forms::{FormManager, TextField, Widget, WidgetAppearance};
+use oxidize_pdf::forms::{CheckBox, FormManager, TextField, Widget, WidgetAppearance};
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::parser::objects::PdfObject;
 use oxidize_pdf::parser::PdfReader;
@@ -253,5 +253,154 @@ fn form_manager_multiple_fields_are_all_emitted_in_deterministic_order() {
         names,
         vec!["aaa_first".to_string(), "zzz_last".to_string()],
         "FormManager must emit fields in deterministic (alphabetical by name) order"
+    );
+}
+
+/// Regression test for the degenerate but legal case where a user attaches
+/// an empty FormManager to a document.
+///
+/// Behaviour under test: when `set_form_manager` is called with a manager
+/// that has no fields, the writer still emits `/AcroForm` on the catalog
+/// (matching `write_catalog`'s unconditional `AcroForm::new()` fallback)
+/// but its `/Fields` entry is the empty array. ISO 32000-1 §12.7.3 tolerates
+/// this — an AcroForm with no fields is syntactically well-formed — and it's
+/// the path the .NET wrapper takes when a user intends to populate fields
+/// after construction. If a future change decides to omit `/AcroForm` in
+/// this case, this test should be updated alongside that change.
+#[test]
+fn form_manager_empty_produces_empty_fields_array() {
+    let mut doc = Document::new();
+    let page = Page::a4();
+    doc.add_page(page);
+    doc.set_form_manager(FormManager::new());
+
+    let bytes = doc.to_bytes().expect("serialize document with empty FM");
+    let mut reader = PdfReader::new(Cursor::new(&bytes)).expect("parse written PDF");
+
+    let catalog = reader.catalog().expect("catalog").clone();
+    // Current behaviour: `/AcroForm` is emitted even for an empty FormManager.
+    // Accept either "absent" or "present with empty Fields array" so this
+    // test remains stable if the writer later decides to suppress empty
+    // AcroForms. The core invariant we lock in is: no phantom fields.
+    match catalog.get("AcroForm") {
+        None => {
+            // Acceptable: empty FormManager → no AcroForm at all.
+        }
+        Some(acro_obj) => {
+            // Emitted: must then be indirect and carry an empty /Fields.
+            let (acro_n, acro_g) = acro_obj
+                .as_reference()
+                .expect("/AcroForm must be indirect when emitted");
+            let acro = reader
+                .get_object(acro_n, acro_g)
+                .expect("resolve AcroForm")
+                .clone();
+            let acro_dict = acro.as_dict().expect("/AcroForm must be a dictionary");
+            let fields_arr = acro_dict
+                .get("Fields")
+                .and_then(|o| o.as_array())
+                .expect("/AcroForm/Fields must exist as an array");
+            assert!(
+                fields_arr.is_empty(),
+                "empty FormManager must not produce phantom entries in /AcroForm/Fields; got {} entries",
+                fields_arr.len()
+            );
+        }
+    }
+}
+
+/// Regression test for the heterogeneous case: a text field + a checkbox
+/// in the same FormManager. Both must round-trip through the writer as
+/// indirect objects, both must appear in `/AcroForm/Fields`, and their
+/// `/FT` values must match the PDF type each field carries (Tx for text,
+/// Btn for checkbox — ISO 32000-1 Table 220).
+///
+/// This locks in the invariant that the dispatch-by-`add_*` method does
+/// not silently drop non-text field types, which was the original v2.5.6
+/// Task 2 bug class.
+#[test]
+fn form_manager_mixed_field_types_round_trip() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    let mut fm = FormManager::new();
+
+    // Text field — alphabetically "email" (sorts before "subscribe").
+    let text_rect = Rectangle::new(Point::new(100.0, 700.0), Point::new(300.0, 720.0));
+    let text_widget = Widget::new(text_rect).with_appearance(WidgetAppearance::default());
+    let text_ref = fm
+        .add_text_field(TextField::new("email"), text_widget.clone(), None)
+        .expect("add_text_field");
+    page.add_form_widget_with_ref(text_widget, text_ref)
+        .expect("attach text widget");
+
+    // Checkbox — alphabetically "subscribe" (sorts after "email").
+    let cb_rect = Rectangle::new(Point::new(100.0, 660.0), Point::new(115.0, 675.0));
+    let cb_widget = Widget::new(cb_rect).with_appearance(WidgetAppearance::default());
+    let cb_ref = fm
+        .add_checkbox(CheckBox::new("subscribe"), cb_widget.clone(), None)
+        .expect("add_checkbox");
+    page.add_form_widget_with_ref(cb_widget, cb_ref)
+        .expect("attach checkbox widget");
+
+    doc.add_page(page);
+    doc.set_form_manager(fm);
+
+    let bytes = doc.to_bytes().expect("serialize document");
+    let mut reader = PdfReader::new(Cursor::new(&bytes)).expect("parse written PDF");
+
+    // --- Resolve /AcroForm/Fields --------------------------------------
+    let catalog = reader.catalog().expect("catalog").clone();
+    let (acro_n, acro_g) = catalog
+        .get("AcroForm")
+        .and_then(|o| o.as_reference())
+        .expect("/AcroForm indirect");
+    let acro = reader
+        .get_object(acro_n, acro_g)
+        .expect("resolve AcroForm")
+        .clone();
+    let fields_arr: Vec<PdfObject> = acro
+        .as_dict()
+        .and_then(|d| d.get("Fields"))
+        .and_then(|o| o.as_array())
+        .expect("/AcroForm/Fields array")
+        .0
+        .clone();
+
+    assert_eq!(
+        fields_arr.len(),
+        2,
+        "/AcroForm/Fields must hold both the text field and the checkbox"
+    );
+
+    // --- Collect (name, type) pairs in emission order ------------------
+    let mut pairs: Vec<(String, String)> = Vec::new();
+    for entry in &fields_arr {
+        let (n, g) = entry
+            .as_reference()
+            .expect("each field entry must be a reference");
+        let obj = reader.get_object(n, g).expect("resolve field").clone();
+        let d = obj.as_dict().expect("field must be a dict");
+        let t = d
+            .get("T")
+            .and_then(|o| o.as_string())
+            .and_then(|s| s.as_str().ok())
+            .expect("field /T")
+            .to_owned();
+        let ft = d
+            .get("FT")
+            .and_then(|o| o.as_name())
+            .map(|n| n.as_str().to_owned())
+            .expect("field /FT");
+        pairs.push((t, ft));
+    }
+
+    // Deterministic (alphabetical) emission: "email" (Tx) then "subscribe" (Btn).
+    assert_eq!(
+        pairs,
+        vec![
+            ("email".to_string(), "Tx".to_string()),
+            ("subscribe".to_string(), "Btn".to_string()),
+        ],
+        "mixed field types must round-trip with correct /T and /FT values"
     );
 }

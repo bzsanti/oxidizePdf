@@ -184,7 +184,7 @@ impl<W: Write> PdfWriter<W> {
         // refs returned by `FormManager::add_text_field`. This is the piece
         // that bridges the FormManager's local id counter and the writer's
         // global id allocator. See `form_field_placeholder_map` for details.
-        self.preallocate_form_manager_fields(document);
+        self.preallocate_form_manager_fields(document)?;
 
         // Write pages (they contain widget annotations and font references)
         self.write_pages(document, &font_refs)?;
@@ -910,16 +910,22 @@ impl<W: Write> PdfWriter<W> {
             }
 
             // Write each field dict into its reserved id.
-            let sorted: Vec<(Dictionary, crate::objects::ObjectReference)> = form_manager
-                .iter_fields_sorted()
-                .map(|(_name, form_field, placeholder)| {
-                    let real_id = *self
-                        .form_field_placeholder_map
-                        .get(&placeholder)
-                        .expect("every sorted field must have a pre-allocated real id");
-                    (form_field.field_dict.clone(), real_id)
-                })
-                .collect();
+            // Surface a clean `PdfError` if the placeholder-ref → real-id
+            // map is missing any entry — a "can't happen" breach of the
+            // invariant established by `preallocate_form_manager_fields`,
+            // which must run before this function.
+            let mut sorted: Vec<(Dictionary, crate::objects::ObjectReference)> = Vec::new();
+            for item in form_manager.iter_fields_sorted() {
+                let (name, form_field, placeholder) = item?;
+                let real_id = *self.form_field_placeholder_map.get(&placeholder).ok_or_else(
+                    || {
+                        PdfError::Internal(format!(
+                            "AcroForm writer internal invariant broken: field '{name}' (placeholder {placeholder}) has no pre-allocated real object id — preallocate_form_manager_fields must run before write_catalog"
+                        ))
+                    },
+                )?;
+                sorted.push((form_field.field_dict.clone(), real_id));
+            }
             for (field_dict, real_id) in sorted {
                 self.write_object(real_id, Object::Dictionary(field_dict))?;
             }
@@ -1353,16 +1359,18 @@ impl<W: Write> PdfWriter<W> {
     /// Iteration order is deterministic (alphabetical by field name) via
     /// `FormManager::iter_fields_sorted` so object-ID allocation — and
     /// therefore the byte-for-byte output — is reproducible across builds.
-    fn preallocate_form_manager_fields(&mut self, document: &Document) {
+    fn preallocate_form_manager_fields(&mut self, document: &Document) -> Result<()> {
         let Some(form_manager) = &document.form_manager else {
-            return;
+            return Ok(());
         };
 
-        for (_name, _form_field, placeholder) in form_manager.iter_fields_sorted() {
+        for item in form_manager.iter_fields_sorted() {
+            let (_name, _form_field, placeholder) = item?;
             let real_id = self.allocate_object_id();
             self.form_field_placeholder_map.insert(placeholder, real_id);
             self.form_manager_field_refs.push(real_id);
         }
+        Ok(())
     }
 
     fn write_form_fields(&mut self, document: &mut Document) -> Result<()> {
@@ -2567,14 +2575,20 @@ impl<W: Write> PdfWriter<W> {
             // from the writer's allocator). At this point the writer has
             // already pre-allocated real ids for every FormManager field
             // via `preallocate_form_manager_fields`, so we translate.
+            //
+            // We read `field_parent` straight off the struct instead of
+            // round-tripping through `annot_dict.get("Parent")`: the
+            // dictionary representation is what we're producing, not a
+            // source of truth. The struct field is authoritative and
+            // avoids matching on a value we just computed.
+            //
             // Widgets whose parent placeholder is NOT in the map (e.g.
-            // the caller supplied a hand-built ref) are left unchanged —
-            // not every `/Parent` necessarily comes from the FormManager.
-            if annotation.field_parent.is_some() {
-                if let Some(Object::Reference(parent_ref)) = annot_dict.get("Parent") {
-                    if let Some(real_id) = self.form_field_placeholder_map.get(parent_ref) {
-                        annot_dict.set("Parent", Object::Reference(*real_id));
-                    }
+            // the caller supplied a hand-built ref, or `field_parent` was
+            // set from outside the FormManager) are left unchanged — not
+            // every `/Parent` necessarily comes from the FormManager.
+            if let Some(placeholder) = annotation.field_parent {
+                if let Some(real_id) = self.form_field_placeholder_map.get(&placeholder) {
+                    annot_dict.set("Parent", Object::Reference(*real_id));
                 }
             }
 

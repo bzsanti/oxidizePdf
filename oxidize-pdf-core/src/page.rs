@@ -973,7 +973,10 @@ impl Page {
 
         // Record the parent field reference so the writer emits
         // `/Parent <field_ref>` in the widget annotation dictionary.
-        annot.field_parent = Some(field_ref);
+        // Goes through the setter so the Widget-annotation-type invariant
+        // is enforced (debug_assert! in debug builds) — `field_parent` is
+        // `pub(crate)` precisely to prevent external callers bypassing it.
+        annot.set_field_parent(field_ref);
 
         self.annotations.push(annot);
         Ok(())
