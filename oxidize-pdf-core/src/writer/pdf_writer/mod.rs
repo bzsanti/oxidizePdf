@@ -115,8 +115,12 @@ pub struct PdfWriter<W: Write> {
     page_ids: Vec<ObjectId>,       // page IDs for form field references
     // Configuration
     config: WriterConfig,
-    // Characters used in document (for font subsetting)
-    document_used_chars: Option<std::collections::HashSet<char>>,
+    // Characters used in document, bucketed by font name (issue #204).
+    // The writer uses this to subset each custom font with only its
+    // own characters — a single global set caused unused fonts to be
+    // embedded with the active fonts' character coverage, doubling
+    // emitted size when two fonts shared a family.
+    document_used_chars_by_font: std::collections::HashMap<String, std::collections::HashSet<char>>,
     // Object stream buffering (when use_object_streams is enabled)
     buffered_objects: HashMap<ObjectId, Vec<u8>>,
     compressed_object_map: HashMap<ObjectId, (ObjectId, u32)>, // obj_id -> (stream_id, index)
@@ -168,7 +172,7 @@ impl<W: Write> PdfWriter<W> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config,
-            document_used_chars: None,
+            document_used_chars_by_font: std::collections::HashMap::new(),
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
             prev_xref_offset: None,
@@ -184,8 +188,8 @@ impl<W: Write> PdfWriter<W> {
 
     pub fn write_document(&mut self, document: &mut Document) -> Result<()> {
         // Store used characters for font subsetting
-        if !document.used_characters.is_empty() {
-            self.document_used_chars = Some(document.used_characters.clone());
+        if !document.used_characters_by_font.is_empty() {
+            self.document_used_chars_by_font = document.used_characters_by_font.clone();
         }
 
         self.write_header()?;
@@ -393,8 +397,8 @@ impl<W: Write> PdfWriter<W> {
         self.current_position = base_size;
 
         // Step 3: Write new/modified objects only
-        if !document.used_characters.is_empty() {
-            self.document_used_chars = Some(document.used_characters.clone());
+        if !document.used_characters_by_font.is_empty() {
+            self.document_used_chars_by_font = document.used_characters_by_font.clone();
         }
 
         // Allocate IDs for new objects
@@ -619,8 +623,8 @@ impl<W: Write> PdfWriter<W> {
         self.current_position = base_size;
 
         // Step 3: Write replacement pages
-        if !document.used_characters.is_empty() {
-            self.document_used_chars = Some(document.used_characters.clone());
+        if !document.used_characters_by_font.is_empty() {
+            self.document_used_chars_by_font = document.used_characters_by_font.clone();
         }
 
         self.catalog_id = Some(self.allocate_object_id());
@@ -794,8 +798,8 @@ impl<W: Write> PdfWriter<W> {
 
         // Step 7: Write document with standard writer methods
         // This ensures consistent object numbering
-        if !temp_doc.used_characters.is_empty() {
-            self.document_used_chars = Some(temp_doc.used_characters.clone());
+        if !temp_doc.used_characters_by_font.is_empty() {
+            self.document_used_chars_by_font = temp_doc.used_characters_by_font.clone();
         }
 
         self.catalog_id = Some(self.allocate_object_id());
@@ -1466,8 +1470,24 @@ impl<W: Write> PdfWriter<W> {
     fn write_fonts(&mut self, document: &Document) -> Result<HashMap<String, ObjectId>> {
         let mut font_refs = HashMap::new();
 
-        // Write custom fonts from the document
+        // Write custom fonts from the document. Fonts registered via
+        // `add_font_from_bytes` but never referenced from any content
+        // stream (i.e. never `set_font`'d on any page) are skipped —
+        // embedding them waste space and was the direct cause of
+        // issue #204 (two fonts in the same family both getting
+        // subsetted with the active font's character set). The
+        // per-font map is built during tracking by
+        // `GraphicsContext::record_used_chars` / its `TextContext`
+        // counterpart.
         for font_name in document.custom_font_names() {
+            let has_usage = self
+                .document_used_chars_by_font
+                .get(&font_name)
+                .map(|chars| !chars.is_empty())
+                .unwrap_or(false);
+            if !has_usage {
+                continue;
+            }
             if let Some(font) = document.get_custom_font(&font_name) {
                 // For now, write all custom fonts as TrueType with Identity-H for Unicode support
                 // The font from document is Arc<fonts::Font>, not text::font_manager::CustomFont
@@ -1496,16 +1516,25 @@ impl<W: Write> PdfWriter<W> {
         font_name: &str,
         font: &crate::fonts::Font,
     ) -> Result<ObjectId> {
-        // Get used characters from document for subsetting
-        let used_chars = self.document_used_chars.clone().unwrap_or_else(|| {
-            // If no tracking, include common characters as fallback
-            let mut chars = std::collections::HashSet::new();
-            for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?".chars()
-            {
-                chars.insert(ch);
-            }
-            chars
-        });
+        // Per-font character set for subsetting (issue #204). Falls
+        // back to a small ASCII/digit set only when the document
+        // tracked no characters at all for this font — the ancient
+        // code path pre-dating char tracking. Post-fix this fallback
+        // shouldn't fire for any font reached through `write_fonts`
+        // because that path already filters unused fonts out.
+        let used_chars = self
+            .document_used_chars_by_font
+            .get(font_name)
+            .cloned()
+            .unwrap_or_else(|| {
+                let mut chars = std::collections::HashSet::new();
+                for ch in
+                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?".chars()
+                {
+                    chars.insert(ch);
+                }
+                chars
+            });
         // Allocate IDs for all font objects
         let font_id = self.allocate_object_id();
         let descendant_font_id = self.allocate_object_id();
@@ -1660,7 +1689,7 @@ impl<W: Write> PdfWriter<W> {
         if cid_font_subtype == "CIDFontType2" {
             // TrueType fonts need CIDToGIDMap to map CIDs (Unicode code points) to Glyph IDs
             let cid_to_gid_map =
-                self.generate_cid_to_gid_map(font, subset_glyph_mapping.as_ref())?;
+                self.generate_cid_to_gid_map(font_name, font, subset_glyph_mapping.as_ref())?;
             if !cid_to_gid_map.is_empty() {
                 // Write the CIDToGIDMap as a stream, FlateDecode-compressed
                 // when possible. The raw map is dimensioned to the highest
@@ -1703,7 +1732,7 @@ impl<W: Write> PdfWriter<W> {
         // stream is FlateDecode-compressed when the `compression` feature and
         // writer config allow it. The unfiltered, uncompressed version used to
         // dominate PDF output (~14 KB for a 2-char Latin document).
-        let cmap_data = self.generate_tounicode_cmap_from_font(font);
+        let cmap_data = self.generate_tounicode_cmap_from_font(font_name, font);
         let cmap_dict = Dictionary::new();
         #[cfg(feature = "compression")]
         let cmap_stream = if self.config.compress_streams {
@@ -1921,6 +1950,7 @@ impl<W: Write> PdfWriter<W> {
     /// Generate CIDToGIDMap for Type0 font
     fn generate_cid_to_gid_map(
         &mut self,
+        font_name: &str,
         font: &crate::fonts::Font,
         subset_mapping: Option<&HashMap<u32, u16>>,
     ) -> Result<Vec<u8>> {
@@ -1950,7 +1980,11 @@ impl<W: Write> PdfWriter<W> {
 
         // OPTIMIZATION: Only create map for characters actually used in the document
         // Get used characters from document tracking
-        let used_chars = self.document_used_chars.clone().unwrap_or_default();
+        let used_chars = self
+            .document_used_chars_by_font
+            .get(font_name)
+            .cloned()
+            .unwrap_or_default();
 
         // Find the maximum Unicode value from used characters or full font
         let max_unicode = if !used_chars.is_empty() {
@@ -1995,7 +2029,11 @@ impl<W: Write> PdfWriter<W> {
     }
 
     /// Generate ToUnicode CMap for Type0 font from fonts::Font
-    fn generate_tounicode_cmap_from_font(&self, font: &crate::fonts::Font) -> Vec<u8> {
+    fn generate_tounicode_cmap_from_font(
+        &self,
+        font_name: &str,
+        font: &crate::fonts::Font,
+    ) -> Vec<u8> {
         use crate::text::fonts::truetype::TrueTypeFont;
 
         let mut cmap = String::new();
@@ -2020,8 +2058,10 @@ impl<W: Write> PdfWriter<W> {
         // produces a single `<CID> <unicode>` entry. If the document tracked
         // no used characters (legacy path), fall back to the font's full cmap
         // filtered to the BMP — but that path is a backstop, not the norm.
-        let used_codepoints: Option<std::collections::HashSet<u32>> =
-            self.document_used_chars.as_ref().map(|chars| {
+        let used_codepoints: Option<std::collections::HashSet<u32>> = self
+            .document_used_chars_by_font
+            .get(font_name)
+            .map(|chars| {
                 chars
                     .iter()
                     .map(|c| *c as u32)
@@ -2822,7 +2862,7 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             form_field_ids: Vec::new(),
             page_ids: Vec::new(),
             config: WriterConfig::default(),
-            document_used_chars: None,
+            document_used_chars_by_font: std::collections::HashMap::new(),
             buffered_objects: HashMap::new(),
             compressed_object_map: HashMap::new(),
             prev_xref_offset: None,

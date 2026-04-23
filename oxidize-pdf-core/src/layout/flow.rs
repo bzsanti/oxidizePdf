@@ -333,11 +333,11 @@ impl FlowLayout {
                     )?;
                 }
                 FlowElement::RichText { rich, line_height } => {
-                    let ops = rich.render_operations(
+                    let (ops, font_usage) = rich.render_operations(
                         self.config.margin_left,
                         cursor_y - rich.max_font_size() * line_height,
                     );
-                    current_page.append_raw_content(ops.as_bytes());
+                    current_page.append_raw_content(ops.as_bytes(), &font_usage);
                 }
                 FlowElement::Image {
                     name,

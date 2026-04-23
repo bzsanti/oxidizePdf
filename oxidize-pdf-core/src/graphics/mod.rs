@@ -99,8 +99,12 @@ pub struct GraphicsContext {
     current_font_size: f64,
     // Whether the current font is a custom (Type0/CID) font requiring Unicode encoding
     is_custom_font: bool,
-    // Character tracking for font subsetting
-    used_characters: HashSet<char>,
+    // Character tracking for font subsetting, bucketed by custom-font name
+    // (issue #204 — builtin fonts are not tracked because they don't need
+    // subsetting; a single global set across all fonts caused every font's
+    // subset to include chars drawn with a different font, doubling emitted
+    // size when two fonts in the same family were registered).
+    used_characters_by_font: HashMap<String, HashSet<char>>,
     // Glyph mapping for Unicode fonts (Unicode code point -> Glyph ID)
     glyph_mapping: Option<HashMap<u32, u16>>,
     // Transparency group stack for nested groups
@@ -156,7 +160,7 @@ impl GraphicsContext {
             current_font_name: None,
             current_font_size: 12.0,
             is_custom_font: false,
-            used_characters: HashSet::new(),
+            used_characters_by_font: HashMap::new(),
             glyph_mapping: None,
             transparency_stack: Vec::new(),
         }
@@ -752,8 +756,10 @@ impl GraphicsContext {
     /// Supplementary plane characters (U+10000..U+10FFFF) use UTF-16BE surrogate pairs.
     /// For standard fonts, text is encoded as literal PDF strings.
     pub fn show_text(&mut self, text: &str) -> Result<&mut Self> {
-        // Track used characters for font subsetting
-        self.used_characters.extend(text.chars());
+        // Track used characters for font subsetting, bucketed by font name
+        // (issue #204). Builtin fonts skip tracking — subsetting only
+        // applies to custom Type0/CID fonts.
+        self.record_used_chars(text);
 
         if self.is_custom_font {
             // For custom fonts (CJK/Type0), encode as hex string with Unicode code points as CIDs
@@ -1157,8 +1163,9 @@ impl GraphicsContext {
 
     /// Draw text at the specified position with automatic encoding detection
     pub fn draw_text(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
-        // Track used characters for font subsetting
-        self.used_characters.extend(text.chars());
+        // Track used characters for font subsetting, bucketed by font name
+        // (issue #204).
+        self.record_used_chars(text);
 
         // Detect if text needs Unicode encoding: custom fonts always use hex,
         // and text with non-Latin-1 characters also needs Unicode encoding
@@ -1452,12 +1459,65 @@ impl GraphicsContext {
         Ok(self)
     }
 
-    /// Get the characters used in this graphics context
+    /// Record `text` as drawn with the currently-active font.
+    ///
+    /// Chars are bucketed under the font name (builtin or custom) so
+    /// that the writer can subset each custom font with only its own
+    /// characters (issue #204). When no font has been set yet the
+    /// chars are bucketed under an empty-string sentinel — the writer
+    /// iterates `custom_font_names()` when subsetting and that list
+    /// never contains an empty name, so the sentinel is ignored by
+    /// the writer but keeps the merged [`Self::get_used_characters`]
+    /// accessor lossless for diagnostic callers.
+    fn record_used_chars(&mut self, text: &str) {
+        let bucket = self.current_font_name.as_deref().unwrap_or("").to_string();
+        self.used_characters_by_font
+            .entry(bucket)
+            .or_default()
+            .extend(text.chars());
+    }
+
+    /// Get the characters used in this graphics context, merged across
+    /// fonts. Test-only back-compat accessor; production callers go
+    /// through [`GraphicsContext::get_used_characters_by_font`] so the
+    /// writer can subset each custom font with only its own characters
+    /// (issue #204).
+    #[cfg(test)]
     pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
-        if self.used_characters.is_empty() {
+        let merged: HashSet<char> = self
+            .used_characters_by_font
+            .values()
+            .flat_map(|s| s.iter().copied())
+            .collect();
+        if merged.is_empty() {
             None
         } else {
-            Some(self.used_characters.clone())
+            Some(merged)
+        }
+    }
+
+    /// Get the per-font character map for font subsetting (issue #204).
+    ///
+    /// Keys are the registered custom-font names exactly as passed to
+    /// `Document::add_font_from_bytes`. Builtin fonts never appear as
+    /// keys because they don't need subsetting. A font name missing
+    /// from the map means no content stream in this context drew any
+    /// character with that font.
+    pub(crate) fn get_used_characters_by_font(&self) -> &HashMap<String, HashSet<char>> {
+        &self.used_characters_by_font
+    }
+
+    /// Merge a per-font char map produced by an external content-stream
+    /// builder (e.g. [`crate::layout::RichText::render_operations`])
+    /// into this graphics context's accumulator. Issue #204 — callers
+    /// of [`crate::Page::append_raw_content`] MUST report what they
+    /// drew so the writer can subset each custom font correctly.
+    pub(crate) fn merge_font_usage(&mut self, usage: &HashMap<String, HashSet<char>>) {
+        for (name, chars) in usage {
+            self.used_characters_by_font
+                .entry(name.clone())
+                .or_default()
+                .extend(chars);
         }
     }
 }
@@ -2885,9 +2945,12 @@ mod tests {
         ctx.show_text("你好A").unwrap();
         ctx.end_text();
 
-        assert!(ctx.used_characters.contains(&'你'));
-        assert!(ctx.used_characters.contains(&'好'));
-        assert!(ctx.used_characters.contains(&'A'));
+        let chars = ctx
+            .get_used_characters()
+            .expect("show_text with a custom font must record characters");
+        assert!(chars.contains(&'你'));
+        assert!(chars.contains(&'好'));
+        assert!(chars.contains(&'A'));
     }
 
     #[test]

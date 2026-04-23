@@ -10,7 +10,7 @@ use crate::text::metrics::{register_custom_font_metrics, FontMetrics as TextMeas
 use crate::text::FontEncoding;
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 mod encryption;
@@ -52,7 +52,11 @@ pub struct Document {
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
     /// Characters used in the document (for font subsetting)
-    pub(crate) used_characters: HashSet<char>,
+    /// Characters drawn in this document, bucketed by font name
+    /// (ISO 32000-1 §9.7.4 — only custom Type0/CID fonts need
+    /// subsetting; see issue #204). Populated by `add_page` from the
+    /// page's per-font accumulators.
+    pub(crate) used_characters_by_font: HashMap<String, HashSet<char>>,
     /// Action to execute when the document is opened
     pub(crate) open_action: Option<crate::actions::Action>,
     /// Viewer preferences for controlling document display
@@ -123,7 +127,7 @@ impl Document {
             compress: true,          // Enable compression by default
             use_xref_streams: false, // Disabled by default for compatibility
             custom_fonts: FontCache::new(),
-            used_characters: HashSet::new(),
+            used_characters_by_font: HashMap::new(),
             open_action: None,
             viewer_preferences: None,
             semantic_entities: Vec::new(),
@@ -133,9 +137,14 @@ impl Document {
 
     /// Adds a page to the document.
     pub fn add_page(&mut self, page: Page) {
-        // Collect used characters from the page
-        if let Some(used_chars) = page.get_used_characters() {
-            self.used_characters.extend(used_chars);
+        // Merge the page's per-font character accumulators into the
+        // document-wide map (issue #204 — each font gets subsetted with
+        // only its own characters later at write time).
+        for (font_name, chars) in page.get_used_characters_by_font() {
+            self.used_characters_by_font
+                .entry(font_name)
+                .or_default()
+                .extend(chars);
         }
         self.pages.push(page);
     }

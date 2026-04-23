@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::page::Margins;
 use crate::text::{measure_text, split_into_words, Font};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -23,6 +24,11 @@ pub struct TextFlowContext {
     #[allow(dead_code)]
     page_height: f64,
     margins: Margins,
+    /// Characters drawn so far, bucketed by active font name (issue
+    /// #204). Consumed by `Page::add_text_flow` to merge into the
+    /// page's graphics-context tracking so the writer can subset each
+    /// custom font with only its own characters.
+    used_characters_by_font: HashMap<String, HashSet<char>>,
 }
 
 impl TextFlowContext {
@@ -38,7 +44,16 @@ impl TextFlowContext {
             page_width,
             page_height,
             margins,
+            used_characters_by_font: HashMap::new(),
         }
+    }
+
+    /// Get the per-font character usage accumulated by `write_wrapped`
+    /// (issue #204). `Page::add_text_flow` merges this into the page's
+    /// graphics context so the writer knows which custom fonts were
+    /// referenced and what characters each drew.
+    pub(crate) fn get_used_characters_by_font(&self) -> &HashMap<String, HashSet<char>> {
+        &self.used_characters_by_font
     }
 
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
@@ -165,6 +180,16 @@ impl TextFlowContext {
                 }
             }
             self.operations.push_str(") Tj\n");
+
+            // Record per-font char usage so the consuming page can
+            // report it to the writer (issue #204). Bucketed under the
+            // current font's PDF name so both custom and builtin fonts
+            // are visible — the writer filters to registered custom
+            // fonts when subsetting.
+            self.used_characters_by_font
+                .entry(self.current_font.pdf_name())
+                .or_default()
+                .extend(line_text.chars());
 
             // Reset word spacing if it was set
             if self.alignment == TextAlign::Justified && i < lines.len() - 1 {

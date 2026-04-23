@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.5.7] - 2026-04-23
+
+Single-fix patch release for the font subsetter, plus hardening of the internal content-stream API to prevent the same class of silent regression.
+
+### Fixed
+- **Per-font character tracking for subsetting** (reported in issue #204 by @sparkyandrew). `Document.used_characters` was a single `HashSet<char>` shared across every registered custom font, so the writer subsetted every font with the same global character set. Two fonts from the same family (user's report: `SourceHanSansTC-Regular` + `SourceHanSansTC-Bold`) — even when only one was referenced via `set_font` — both ended up with ~200-glyph subsets, roughly doubling the emitted PDF size. Tracking is now per-font via `HashMap<String, HashSet<char>>` at every layer (`GraphicsContext`, `TextContext`, `TextFlowContext`, `Page`, `Document`, `PdfWriter`). Fonts registered via `add_font_from_bytes` but never referenced from any content stream are skipped entirely.
+- **`RichText::render_operations` now reports its per-font character usage** to the caller. Previously the `FlowLayout::RichText` path fed content directly into the page via `append_raw_content` without tracking which fonts were referenced — post-#204 fix, that would silently drop any custom font used only in a `RichText` span. The method now returns `(String, HashMap<String, HashSet<char>>)` and `FlowLayout::build_into` plumbs the map through.
+- **`TextFlowContext` and `Page::add_text_flow` now track per-font character usage**. `TextFlowContext::write_wrapped` records chars under the active font's name; `Page::add_text_flow` absorbs the map via the new `GraphicsContext::merge_font_usage`. Previously chars drawn through `DocumentBuilder::add_text(_, Font::Custom(_), _)` bypassed all tracking.
+- **`Page::set_header` / `Page::set_footer` eagerly register the header/footer font** + sampled template characters. Header/footer rendering happens at writer time, after the document's per-font snapshot is frozen, so any custom font referenced ONLY from a header would otherwise disappear from the output. The fix renders the template with canonical sample values (`page_number=1`, `total_pages=999`) and adds the digit range `0..=9` to cover runtime-varying page numbers. Known limitation: user-supplied `custom_values` not present in the template literal are not pre-tracked (callers needing that should draw the same font somewhere on the page body).
+
+### Changed
+- **`Page::append_raw_content(data)` → `Page::append_raw_content(data, font_usage)`** (type-gated `pub(crate)` API). Every caller that splices raw bytes into the page content stream must now report which fonts it referenced and which characters it drew. The signature change is deliberate: it makes R1/R4-class silent bypasses (content-stream builders forgetting to update tracking) impossible to reintroduce — new call sites fail to compile without providing the map. Because the method is `pub(crate)`, this is not a SemVer break.
+- **`FormManager::iter_fields_sorted`** continues to return a flat iterator (`impl Iterator<Item = (&String, &FormField, ObjectReference)>`) — no change this release, noted for release-notes completeness.
+
+### Added
+- 6 content-verifying integration tests in `tests/per_font_char_tracking_test.rs` (no smoke tests): `unused_font_is_absent_from_resources` (the exact user scenario), `unused_latin_font_absent_when_cjk_used`, `both_fonts_present_when_both_used`, `rich_text_with_custom_font_embeds_font`, `text_flow_with_custom_font_embeds_font`, `header_only_custom_font_embeds_font`.
+- Updated `RichText::render_operations` unit test to lock the `(ops, font_usage)` contract.
+
+### Known limitations
+- **Form field /AP streams with custom Type0 fonts** (tracked in issue #212). `forms/appearance.rs` hard-codes `/Subtype /Type1 /BaseFont <name>` in the self-contained `/Resources/Font` of every widget appearance. Works for the base-14 builtin fonts; produces an invalid PDF for custom CIDFontType0 fonts even after the #204 fix because the widget /AP references the font under the wrong subtype and uses literal `(...) Tj` rather than hex-encoded CIDs. The document-level font is embedded correctly — only the widget's appearance is broken. Requires an architectural change to the appearance generator (late-binding font references or moving generation to write-time); deferred to #212.
+
 ## [2.5.6] - 2026-04-23
 
 This release closes the v2.5.6 gap-closing series (surfaced by the `oxidize-pdf-dotnet` wrapper audit — features whose machinery existed in the graphics / forms / catalog layer but whose wire format never reached the PDF) plus the full set of 11 findings from the post-release `quality-rust` + `security-expert-advisor` review of that work. Two security-relevant hardening fixes land here: PDF-string escape and resource-name validation.
