@@ -7,6 +7,7 @@ pub mod extraction;
 pub mod form_xobject;
 mod indexed_color;
 pub mod lab_color;
+pub mod page_color_space;
 mod path;
 mod patterns;
 mod pdf_image;
@@ -31,6 +32,7 @@ pub use form_xobject::{
 };
 pub use indexed_color::{BaseColorSpace, ColorLookupTable, IndexedColorManager, IndexedColorSpace};
 pub use lab_color::{LabColor, LabColorSpace};
+pub use page_color_space::{DeviceColorSpace, PageColorSpace, ParameterisedFamily};
 pub use path::{LineCap, LineJoin, PathBuilder, PathCommand, WindingRule};
 pub use patterns::{
     PaintType, PatternGraphicsContext, PatternManager, PatternMatrix, PatternType, TilingPattern,

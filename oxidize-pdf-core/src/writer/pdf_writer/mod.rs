@@ -941,8 +941,7 @@ impl<W: Write> PdfWriter<W> {
             // invariant established by `preallocate_form_manager_fields`,
             // which must run before this function.
             let mut sorted: Vec<(Dictionary, crate::objects::ObjectReference)> = Vec::new();
-            for item in form_manager.iter_fields_sorted() {
-                let (name, form_field, placeholder) = item?;
+            for (name, form_field, placeholder) in form_manager.iter_fields_sorted() {
                 let real_id = *self.form_field_placeholder_map.get(&placeholder).ok_or_else(
                     || {
                         PdfError::Internal(format!(
@@ -1390,8 +1389,7 @@ impl<W: Write> PdfWriter<W> {
             return Ok(());
         };
 
-        for item in form_manager.iter_fields_sorted() {
-            let (_name, _form_field, placeholder) = item?;
+        for (_name, _form_field, placeholder) in form_manager.iter_fields_sorted() {
             let real_id = self.allocate_object_id();
             self.form_field_placeholder_map.insert(placeholder, real_id);
             self.form_manager_field_refs.push(real_id);
@@ -2546,8 +2544,11 @@ impl<W: Write> PdfWriter<W> {
         // same sequence, producing byte-identical xref entries).
         if !page.color_spaces().is_empty() {
             let mut cs_dict = Dictionary::new();
-            for (name, obj) in page.color_spaces() {
-                cs_dict.set(name, obj.clone());
+            for (name, cs) in page.color_spaces() {
+                // Conversion lives on the enum (see `PageColorSpace::to_object`)
+                // so a future shape change (e.g. streams for ICCBased) is a
+                // single-file edit, not a writer-wide sweep.
+                cs_dict.set(name, cs.to_object());
             }
             resources.set("ColorSpace", Object::Dictionary(cs_dict));
         }

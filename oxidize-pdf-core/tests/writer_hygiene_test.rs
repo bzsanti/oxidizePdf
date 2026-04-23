@@ -29,8 +29,9 @@
 
 use oxidize_pdf::forms::{FormManager, TextField, Widget, WidgetAppearance};
 use oxidize_pdf::geometry::{Point, Rectangle};
-use oxidize_pdf::graphics::{FormXObject, PaintType, TilingPattern, TilingType};
-use oxidize_pdf::objects::Object;
+use oxidize_pdf::graphics::{
+    DeviceColorSpace, FormXObject, PageColorSpace, PaintType, TilingPattern, TilingType,
+};
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::{Document, Page};
 use std::io::Cursor;
@@ -161,7 +162,10 @@ fn object_string_escapes_backslash() {
 fn add_color_space_rejects_name_with_delimiters() {
     let mut page = Page::a4();
     // `>>` inside a Name would close the resource dict.
-    let result = page.add_color_space("Foo>>/Evil", Object::Name("DeviceRGB".to_string()));
+    let result = page.add_color_space(
+        "Foo>>/Evil",
+        PageColorSpace::DeviceAlias(DeviceColorSpace::Rgb),
+    );
     assert!(
         result.is_err(),
         "add_color_space must reject names containing delimiters, got Ok"
@@ -222,13 +226,16 @@ fn add_form_xobject_rejects_name_with_hash_escape_introducer() {
 #[test]
 fn add_color_space_accepts_valid_names() {
     let mut page = Page::a4();
-    page.add_color_space("CS1", Object::Name("DeviceRGB".to_string()))
+    page.add_color_space("CS1", PageColorSpace::DeviceAlias(DeviceColorSpace::Rgb))
         .expect("CS1 is a valid Name");
-    page.add_color_space("MyCustomSpace", Object::Name("DeviceCMYK".to_string()))
-        .expect("MyCustomSpace is a valid Name");
+    page.add_color_space(
+        "MyCustomSpace",
+        PageColorSpace::DeviceAlias(DeviceColorSpace::Cmyk),
+    )
+    .expect("MyCustomSpace is a valid Name");
     page.add_color_space(
         "CS_with_underscores-and-dashes",
-        Object::Name("DeviceGray".to_string()),
+        PageColorSpace::DeviceAlias(DeviceColorSpace::Gray),
     )
     .expect("underscores and dashes are valid in Names per §7.3.5");
 }
@@ -251,7 +258,7 @@ fn color_space_resource_entries_are_emitted_in_sorted_order() {
     let mut page = Page::a4();
     let insertion_order = ["CSE", "CSA", "CSC", "CSB", "CSD"];
     for name in &insertion_order {
-        page.add_color_space(*name, Object::Name("DeviceRGB".to_string()))
+        page.add_color_space(*name, PageColorSpace::DeviceAlias(DeviceColorSpace::Rgb))
             .expect("add_color_space");
     }
     doc.add_page(page);

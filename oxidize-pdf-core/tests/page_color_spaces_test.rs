@@ -1,22 +1,24 @@
-//! Task 4 of the v2.5.6 gap-closing series.
+//! Task 4 of the v2.5.6 gap-closing series — updated for PR3 / QUAL-5
+//! (typed [`PageColorSpace`] wrapper replacing the raw `Object` API).
 //!
 //! Callers that work with non-Device colour spaces (CalRGB, ICCBased, Lab,
 //! Indexed, DeviceN, Separation, Pattern) need a way to register those
 //! colour spaces against a `Page` so the writer emits them under
-//! `/Resources/ColorSpace` (ISO 32000-1 §8.6, Table 62). Before this
-//! change the `Page` struct had no such registry and the writer emitted
-//! no `/ColorSpace` entry — meaning the `cs` / `CS` content-stream
+//! `/Resources/ColorSpace` (ISO 32000-1 §8.6, Table 62). Before v2.5.6
+//! the `Page` struct had no such registry and the writer emitted no
+//! `/ColorSpace` entry — meaning the `cs` / `CS` content-stream
 //! operators had nothing to resolve by name.
 //!
 //! Contract being exercised:
-//!   * `Page::add_color_space(name, Object)` records a colour-space
-//!     resource under the given name.
+//!   * `Page::add_color_space(name, PageColorSpace)` records a
+//!     colour-space resource under the given name.
 //!   * `Page::color_spaces()` exposes the in-memory registry.
 //!   * The writer emits `/Resources/ColorSpace` as a direct dictionary
-//!     whose entries preserve the caller-supplied `Object` verbatim
-//!     (either `Object::Name("/CalRGB")` for simple names or
-//!     `Object::Array([Name, Dictionary])` for parameterised spaces).
+//!     whose entries are derived from the caller-supplied enum:
+//!     `DeviceAlias` → `Object::Name("<DeviceFoo>")`, `Parameterised`
+//!     → `Object::Array([Name, Dictionary])`.
 
+use oxidize_pdf::graphics::{DeviceColorSpace, PageColorSpace, ParameterisedFamily};
 use oxidize_pdf::objects::{Dictionary, Object};
 use oxidize_pdf::parser::objects::PdfObject;
 use oxidize_pdf::parser::PdfReader;
@@ -90,10 +92,10 @@ fn page_color_space_is_written_as_parameterised_array() {
     );
     page.add_color_space(
         "CS1",
-        Object::Array(vec![
-            Object::Name("CalRGB".to_string()),
-            Object::Dictionary(calrgb),
-        ]),
+        PageColorSpace::Parameterised {
+            family: ParameterisedFamily::CalRgb,
+            params: calrgb,
+        },
     )
     .expect("add_color_space");
     doc.add_page(page);
@@ -140,7 +142,7 @@ fn page_color_space_is_written_as_parameterised_array() {
 fn page_color_space_preserves_name_form() {
     let mut doc = Document::new();
     let mut page = Page::a4();
-    page.add_color_space("MyRGB", Object::Name("DeviceRGB".to_string()))
+    page.add_color_space("MyRGB", PageColorSpace::DeviceAlias(DeviceColorSpace::Rgb))
         .expect("add_color_space");
     doc.add_page(page);
 
@@ -191,7 +193,7 @@ fn page_without_color_spaces_omits_colorspace_entry() {
 fn color_spaces_accessor_is_public_and_reflects_state() {
     let mut page = Page::a4();
     assert!(page.color_spaces().is_empty());
-    page.add_color_space("CS1", Object::Name("DeviceRGB".to_string()))
+    page.add_color_space("CS1", PageColorSpace::DeviceAlias(DeviceColorSpace::Rgb))
         .expect("add_color_space");
     let map = page.color_spaces();
     assert_eq!(map.len(), 1);

@@ -473,36 +473,35 @@ impl FormManager {
     /// couple external callers to a serialization detail that is expected
     /// to evolve. Public iteration can go through [`FormManager::fields`].
     ///
-    /// # Errors
+    /// # Panics
     ///
-    /// Returns a streaming iterator of `Result` items. The only way an
-    /// error is produced is if the internal `fields` / `field_refs` maps
-    /// desynchronize — a "can't happen" invariant that every `add_*_field`
-    /// method is responsible for upholding. A desync surfaces as
-    /// [`PdfError::Internal`] rather than a panic so the writer hot path
-    /// stays panic-free (ISO 32000-1 conformance errors must remain
-    /// recoverable).
+    /// The iterator panics if the internal `fields` / `field_refs` maps
+    /// desynchronize — a "can't happen" invariant that every
+    /// `add_*_field` method is responsible for upholding. Panicking
+    /// here is acceptable because (a) the invariant is entirely under
+    /// this crate's control and (b) a broken invariant signals memory
+    /// corruption or a logic bug in `add_*_field`, not an ISO 32000-1
+    /// conformance issue — the writer has no meaningful recovery path.
+    /// The previous `Result` wrapper was removed (PR3 / QUAL-6) because
+    /// its error arm was observably unreachable and forced every call
+    /// site to thread `?` for no benefit.
     pub(crate) fn iter_fields_sorted(
         &self,
-    ) -> impl Iterator<Item = Result<(&String, &FormField, ObjectReference)>> {
+    ) -> impl Iterator<Item = (&String, &FormField, ObjectReference)> {
         let mut keys: Vec<&String> = self.fields.keys().collect();
         keys.sort();
         keys.into_iter().map(move |k| {
-            // `k` was just produced by `self.fields.keys()`, so this lookup
-            // cannot fail within the same borrow. We still avoid `expect`
-            // on a hot path and surface an `Internal` error instead of
-            // panicking — callers already propagate `Result<()>`.
-            let field = self.fields.get(k).ok_or_else(|| {
-                crate::error::PdfError::Internal(format!(
-                    "FormManager internal invariant broken: field '{k}' missing from fields map during sorted iteration"
-                ))
-            })?;
-            let placeholder = *self.field_refs.get(k).ok_or_else(|| {
-                crate::error::PdfError::Internal(format!(
-                    "FormManager internal invariant broken: field '{k}' has no placeholder ref (add_*_field forgot to populate field_refs?)"
-                ))
-            })?;
-            Ok((k, field, placeholder))
+            // `k` was just produced by `self.fields.keys()`, so this
+            // lookup is infallible under a single immutable borrow.
+            let field = self
+                .fields
+                .get(k)
+                .expect("FormManager invariant: key from fields.keys() must resolve in fields");
+            let placeholder = *self.field_refs.get(k).expect(
+                "FormManager invariant: every field in `fields` must have an entry in \
+                 `field_refs` — check add_*_field",
+            );
+            (k, field, placeholder)
         })
     }
 }
@@ -564,6 +563,41 @@ mod tests {
         let obj_ref = manager.add_checkbox(checkbox, widget, None).unwrap();
         assert_eq!(obj_ref.number(), 1);
         assert!(manager.get_field("agree").is_some());
+    }
+
+    /// PR3 / QUAL-6: `iter_fields_sorted` is non-fallible after cleanup.
+    /// Exercises two invariants at once:
+    ///   * The iterator yields the flat tuple `(&String, &FormField, ObjectReference)`
+    ///     — not a `Result<_>`, because the only previously-documented
+    ///     error path ("sister maps desynchronised") is a "can't happen"
+    ///     invariant upheld by every `add_*_field` call.
+    ///   * Fields are emitted in ASCII-lexicographic order of their
+    ///     partial names, regardless of insertion order. This is what
+    ///     keeps writer object-id allocation reproducible across runs.
+    #[test]
+    fn iter_fields_sorted_is_non_fallible_and_ordered() {
+        let mut manager = FormManager::new();
+        // Deliberately unsorted insertion: "zeta", "alpha", "mu".
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 20.0));
+        manager
+            .add_text_field(TextField::new("zeta"), Widget::new(rect), None)
+            .expect("add zeta");
+        manager
+            .add_text_field(TextField::new("alpha"), Widget::new(rect), None)
+            .expect("add alpha");
+        manager
+            .add_text_field(TextField::new("mu"), Widget::new(rect), None)
+            .expect("add mu");
+
+        let names: Vec<String> = manager
+            .iter_fields_sorted()
+            .map(|(name, _field, _placeholder)| name.clone())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["alpha".to_string(), "mu".to_string(), "zeta".to_string()],
+            "iter_fields_sorted must yield keys in ASCII-lexicographic order"
+        );
     }
 
     #[test]
