@@ -1,5 +1,6 @@
 use crate::text::{measure_text, Font};
 use crate::Color;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 /// A styled text segment with its own font, size, and color.
@@ -78,9 +79,25 @@ impl RichText {
     /// Generate PDF operators to render this rich text at position (x, y).
     ///
     /// Produces a single BT/ET block with per-span font/color/text changes.
-    pub(crate) fn render_operations(&self, x: f64, y: f64) -> String {
+    /// Render this rich-text block to a content-stream fragment plus a
+    /// per-font character usage map (issue #204).
+    ///
+    /// The caller is responsible for splicing `ops` into the target
+    /// page's content stream and reporting `font_usage` via
+    /// [`crate::Page::append_raw_content`] — both go together so the
+    /// writer knows which fonts this fragment referenced and what
+    /// characters it drew with each. Returning the usage map is the
+    /// type-gated replacement for scattering `record_used_chars` calls
+    /// through every content builder; future builders cannot forget
+    /// tracking because `append_raw_content` won't compile without it.
+    pub(crate) fn render_operations(
+        &self,
+        x: f64,
+        y: f64,
+    ) -> (String, HashMap<String, HashSet<char>>) {
+        let mut font_usage: HashMap<String, HashSet<char>> = HashMap::new();
         if self.spans.is_empty() {
-            return String::new();
+            return (String::new(), font_usage);
         }
 
         let mut ops = String::new();
@@ -102,13 +119,8 @@ impl RichText {
             }
 
             // Set font
-            writeln!(
-                &mut ops,
-                "/{} {:.2} Tf",
-                span.font.pdf_name(),
-                span.font_size
-            )
-            .expect("write to String");
+            let font_name = span.font.pdf_name();
+            writeln!(&mut ops, "/{} {:.2} Tf", font_name, span.font_size).expect("write to String");
 
             // Show text with escaping
             ops.push('(');
@@ -124,10 +136,17 @@ impl RichText {
                 }
             }
             ops.push_str(") Tj\n");
+
+            // Report the characters drawn with this span's font so the
+            // writer can subset the font accurately (issue #204).
+            font_usage
+                .entry(font_name)
+                .or_default()
+                .extend(span.text.chars());
         }
 
         ops.push_str("ET\n");
-        ops
+        (ops, font_usage)
     }
 }
 
@@ -140,7 +159,9 @@ mod tests {
         let rt = RichText::new(vec![]);
         assert_eq!(rt.total_width(), 0.0);
         assert_eq!(rt.max_font_size(), 0.0);
-        assert!(rt.render_operations(0.0, 0.0).is_empty());
+        let (ops, font_usage) = rt.render_operations(0.0, 0.0);
+        assert!(ops.is_empty());
+        assert!(font_usage.is_empty(), "no spans → no font usage reported");
     }
 
     #[test]
@@ -151,10 +172,21 @@ mod tests {
             12.0,
             Color::black(),
         )]);
-        let ops = rt.render_operations(50.0, 700.0);
+        let (ops, font_usage) = rt.render_operations(50.0, 700.0);
         assert!(ops.starts_with("BT\n"));
         assert!(ops.ends_with("ET\n"));
         assert!(ops.contains("(Hello) Tj"));
         assert!(ops.contains("/Helvetica 12.00 Tf"));
+
+        // PR for issue #204: render_operations must also report per-font
+        // char usage so the caller can feed it into the page tracker
+        // via `Page::append_raw_content`.
+        let chars = font_usage
+            .get("Helvetica")
+            .expect("Helvetica span must produce a bucket");
+        assert!(chars.contains(&'H'));
+        assert!(chars.contains(&'e'));
+        assert!(chars.contains(&'l'));
+        assert!(chars.contains(&'o'));
     }
 }

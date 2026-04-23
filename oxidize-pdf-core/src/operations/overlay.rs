@@ -14,6 +14,7 @@ use crate::geometry::{Point, Rectangle};
 use crate::graphics::{ExtGState, FormXObject};
 use crate::parser::{PdfDocument, PdfReader};
 use crate::{Document, Page};
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Seek};
 use std::path::Path;
 
@@ -349,8 +350,20 @@ impl<R: Read + Seek> PdfOverlay<R> {
         ops.push_str(&format!("/{} Do\n", xobj_name));
         ops.push_str("Q\n");
 
-        // Append overlay operators to page content (renders on top of existing content)
-        page.append_raw_content(ops.as_bytes());
+        // Append overlay operators to page content (renders on top of
+        // existing content).
+        //
+        // The overlay path composes a `cm` matrix + `/<xobj> Do` — it
+        // does NOT emit `Tj` operators directly. The XObject invoked
+        // carries its own font references and character data (those
+        // live in the source PDF's resources, independent of this
+        // Document's `custom_fonts` registry). Consequently there are
+        // no fonts OF THE TARGET DOCUMENT referenced inside `ops`, and
+        // the issue-#204 font-usage map is correctly empty here. If a
+        // future overlay variant starts embedding inline `Tj` against
+        // target-document fonts, it must populate this map.
+        let font_usage: HashMap<String, HashSet<char>> = HashMap::new();
+        page.append_raw_content(ops.as_bytes(), &font_usage);
 
         Ok(())
     }
