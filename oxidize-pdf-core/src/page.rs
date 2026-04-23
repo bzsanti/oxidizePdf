@@ -56,6 +56,53 @@ impl Default for Margins {
 ///     .fill();
 /// # Ok::<(), oxidize_pdf::PdfError>(())
 /// ```
+/// Validates that `name` is a well-formed PDF resource name per
+/// ISO 32000-1 §7.3.5 (Name Objects).
+///
+/// A resource name is a `Name` token written as `/<name>` inside a
+/// dictionary. The spec forbids:
+///   * empty names (must have at least one regular character);
+///   * whitespace characters (NUL, HT, LF, FF, CR, SP);
+///   * delimiter characters `( ) < > [ ] { } / %`;
+///   * the `#` character, which is reserved for the 2-digit hex escape
+///     form (`#NN`) — accepting raw `#` would require callers to think
+///     about hex escaping, which we decline to do at this layer.
+///
+/// We reject at the public API boundary so a caller cannot — even
+/// unintentionally — smuggle a dict-closing token into a resource name
+/// and produce a PDF where the emitted `/<name>` splits the resource
+/// dict into pieces.
+fn validate_pdf_resource_name(name: &str) -> Result<()> {
+    use crate::error::PdfError;
+
+    if name.is_empty() {
+        return Err(PdfError::InvalidStructure(
+            "PDF resource name must not be empty (ISO 32000-1 §7.3.5)".to_string(),
+        ));
+    }
+
+    for (idx, byte) in name.as_bytes().iter().enumerate() {
+        // Whitespace per Table 1 (§7.2.3).
+        let is_whitespace = matches!(*byte, 0x00 | 0x09 | 0x0A | 0x0C | 0x0D | 0x20);
+        // Delimiters per Table 2 (§7.2.3).
+        let is_delimiter = matches!(
+            *byte,
+            b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}' | b'/' | b'%'
+        );
+        // Hex-escape introducer (§7.3.5): legal only as `#NN`, but we
+        // reject outright rather than trust callers to escape correctly.
+        let is_hash = *byte == b'#';
+
+        if is_whitespace || is_delimiter || is_hash {
+            return Err(PdfError::InvalidStructure(format!(
+                "invalid PDF resource name {name:?}: byte 0x{byte:02X} at position {idx} \
+                 is not allowed per ISO 32000-1 §7.3.5 (whitespace, delimiter, or `#`)"
+            )));
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone)]
 pub struct Page {
     width: f64,
@@ -826,6 +873,14 @@ impl Page {
     /// into the underlying map); if you need idempotent registration,
     /// inspect [`Page::form_xobjects`] before calling.
     ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is empty or
+    /// contains any character forbidden by ISO 32000-1 §7.3.5 (delimiter
+    /// characters `( ) < > [ ] { } / %`, whitespace, or the `#` escape
+    /// introducer). Emitting such a name verbatim would close the
+    /// resource dict early and allow dict-level injection.
+    ///
     /// ```rust
     /// use oxidize_pdf::geometry::Rectangle;
     /// use oxidize_pdf::graphics::FormXObject;
@@ -833,15 +888,18 @@ impl Page {
     ///
     /// let mut page = Page::a4();
     /// let bbox = Rectangle::from_position_and_size(0.0, 0.0, 100.0, 100.0);
-    /// page.add_form_xobject("F1", FormXObject::new(bbox));
+    /// page.add_form_xobject("F1", FormXObject::new(bbox)).unwrap();
     /// assert!(page.form_xobjects().contains_key("F1"));
     /// ```
     pub fn add_form_xobject(
         &mut self,
         name: impl Into<String>,
         form: crate::graphics::FormXObject,
-    ) {
-        self.form_xobjects.insert(name.into(), form);
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.form_xobjects.insert(name, form);
+        Ok(())
     }
 
     /// Returns all Form XObjects registered on this page (public as of v2.5.6).
@@ -861,8 +919,21 @@ impl Page {
     /// `[/CalRGB <<dict>>]` / `[/ICCBased <<stream>>]` /
     /// `[/Indexed /DeviceRGB N <hivals>]`. The writer serialises the
     /// supplied object verbatim into `/Resources/ColorSpace/<name>`.
-    pub fn add_color_space(&mut self, name: impl Into<String>, cs: crate::objects::Object) {
-        self.color_spaces.insert(name.into(), cs);
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid
+    /// PDF resource name per ISO 32000-1 §7.3.5 (see
+    /// [`Page::add_form_xobject`] for the full rule).
+    pub fn add_color_space(
+        &mut self,
+        name: impl Into<String>,
+        cs: crate::objects::Object,
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.color_spaces.insert(name, cs);
+        Ok(())
     }
 
     /// Returns all colour spaces registered on this page.
@@ -877,12 +948,20 @@ impl Page {
     /// `/Resources/Pattern/<name>`. Inside the content stream, paint the
     /// pattern with `/<name> scn` / `/<name> SCN` after selecting the
     /// /Pattern colour space.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid
+    /// PDF resource name per ISO 32000-1 §7.3.5.
     pub fn add_pattern(
         &mut self,
         name: impl Into<String>,
         pattern: crate::graphics::TilingPattern,
-    ) {
-        self.patterns.insert(name.into(), pattern);
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.patterns.insert(name, pattern);
+        Ok(())
     }
 
     /// Returns all tiling patterns registered on this page.
@@ -895,12 +974,20 @@ impl Page {
     /// The writer emits the shading as an indirect dictionary object and
     /// references it from `/Resources/Shading/<name>`. Paint with the
     /// `sh` operator (`/<name> sh`) or via a type-2 Pattern.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid
+    /// PDF resource name per ISO 32000-1 §7.3.5.
     pub fn add_shading(
         &mut self,
         name: impl Into<String>,
         shading: crate::graphics::ShadingDefinition,
-    ) {
-        self.shadings.insert(name.into(), shading);
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.shadings.insert(name, shading);
+        Ok(())
     }
 
     /// Returns all shadings registered on this page.

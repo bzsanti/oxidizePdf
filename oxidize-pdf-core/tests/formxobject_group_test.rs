@@ -113,7 +113,7 @@ fn formxobject_with_transparency_group_emits_group_dict() {
 
     // Public API as of v2.5.6 (Task 7). If this call fails to compile,
     // the visibility regressed to pub(crate).
-    page.add_form_xobject("F1", form);
+    page.add_form_xobject("F1", form).expect("add_form_xobject");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -191,7 +191,7 @@ fn formxobject_transparency_group_emits_isolated_and_knockout_booleans() {
         isolated: true,
         knockout: true,
     });
-    page.add_form_xobject("F1", form);
+    page.add_form_xobject("F1", form).expect("add_form_xobject");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -232,7 +232,8 @@ fn formxobject_without_transparency_group_omits_group_dict() {
     let mut page = Page::a4();
 
     let bbox = Rectangle::from_position_and_size(0.0, 0.0, 100.0, 100.0);
-    page.add_form_xobject("F1", FormXObject::new(bbox));
+    page.add_form_xobject("F1", FormXObject::new(bbox))
+        .expect("add_form_xobject");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -258,7 +259,8 @@ fn form_xobjects_accessor_is_public_and_reflects_state() {
     );
 
     let bbox = Rectangle::from_position_and_size(0.0, 0.0, 10.0, 10.0);
-    page.add_form_xobject("Stamp", FormXObject::new(bbox));
+    page.add_form_xobject("Stamp", FormXObject::new(bbox))
+        .expect("add_form_xobject");
 
     let map = page.form_xobjects();
     assert_eq!(map.len(), 1, "exactly one form xobject expected");
