@@ -159,4 +159,83 @@ mod catalog_entries_tests {
             "decimal page label dict should serialise as /S /D per spec"
         );
     }
+
+    #[test]
+    fn test_page_labels_uppercase_roman_emits_uppercase_s_name() {
+        // Per ISO 32000-1 §12.4.2 Table 159, /R means "uppercase Roman
+        // numerals" and /r means "lowercase Roman numerals". A
+        // spec-conforming viewer uses the /S name to decide the case of
+        // the rendered numeral, so the writer must emit /S /R for
+        // PageLabelStyle::UppercaseRoman — anything else makes the
+        // viewer render the opposite case of what the Rust API promised.
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        let mut labels = PageLabelTree::new();
+        labels.add_range(0, PageLabel::roman_uppercase());
+        document.set_page_labels(labels);
+
+        let content = serialize(&mut document);
+
+        assert!(
+            content.contains("/S /R"),
+            "UppercaseRoman must serialise as /S /R per ISO 32000-1 §12.4.2 \
+             Table 159; PDF never emitted /S /R"
+        );
+        assert!(
+            !content.contains("/S /r"),
+            "UppercaseRoman must NOT emit /S /r (that is the lowercase style); \
+             /S /r found in output for a label built from roman_uppercase()"
+        );
+    }
+
+    #[test]
+    fn test_page_labels_lowercase_roman_emits_lowercase_s_name() {
+        // Mirror of the uppercase test: /S /r is the lowercase form per
+        // ISO 32000-1 §12.4.2 Table 159.
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        let mut labels = PageLabelTree::new();
+        labels.add_range(0, PageLabel::roman_lowercase());
+        document.set_page_labels(labels);
+
+        let content = serialize(&mut document);
+
+        assert!(
+            content.contains("/S /r"),
+            "LowercaseRoman must serialise as /S /r per ISO 32000-1 §12.4.2 \
+             Table 159; PDF never emitted /S /r"
+        );
+        assert!(
+            !content.contains("/S /R"),
+            "LowercaseRoman must NOT emit /S /R (that is the uppercase style); \
+             /S /R found in output for a label built from roman_lowercase()"
+        );
+    }
+
+    #[test]
+    fn test_page_labels_mixed_roman_ranges_keep_correct_case() {
+        // Regression: a document that uses both roman cases in separate
+        // ranges must emit /S /R and /S /r side by side. The v2.5.5 bug
+        // made this doubly visible: a user who explicitly wanted front
+        // matter in uppercase and appendix in lowercase would get the
+        // opposite in a spec-conforming viewer.
+        let mut document = Document::new();
+        document.add_page(Page::a4());
+        document.add_page(Page::a4());
+        let mut labels = PageLabelTree::new();
+        labels.add_range(0, PageLabel::roman_uppercase());
+        labels.add_range(1, PageLabel::roman_lowercase());
+        document.set_page_labels(labels);
+
+        let content = serialize(&mut document);
+
+        assert!(
+            content.contains("/S /R"),
+            "mixed-case roman ranges must emit /S /R for the uppercase range"
+        );
+        assert!(
+            content.contains("/S /r"),
+            "mixed-case roman ranges must emit /S /r for the lowercase range"
+        );
+    }
 }

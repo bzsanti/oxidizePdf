@@ -20,12 +20,24 @@ pub enum PageLabelStyle {
 }
 
 impl PageLabelStyle {
-    /// Convert to PDF name
+    /// Convert to PDF name per ISO 32000-1 §12.4.2 Table 159.
+    ///
+    /// Mapping:
+    /// - `D` — decimal arabic
+    /// - `R` — **uppercase** roman
+    /// - `r` — **lowercase** roman
+    /// - `A` — uppercase letters
+    /// - `a` — lowercase letters
+    ///
+    /// A conforming viewer uses the /S name to decide the case of the
+    /// rendered numeral, so this mapping must match the case implied by
+    /// [`Self::format`] — otherwise the Rust side and the rendered PDF
+    /// disagree on case.
     pub fn to_pdf_name(&self) -> Option<&'static str> {
         match self {
             PageLabelStyle::DecimalArabic => Some("D"),
-            PageLabelStyle::UppercaseRoman => Some("r"),
-            PageLabelStyle::LowercaseRoman => Some("R"),
+            PageLabelStyle::UppercaseRoman => Some("R"),
+            PageLabelStyle::LowercaseRoman => Some("r"),
             PageLabelStyle::UppercaseLetters => Some("A"),
             PageLabelStyle::LowercaseLetters => Some("a"),
             PageLabelStyle::None => None,
@@ -312,7 +324,10 @@ mod tests {
             dict.get("Type"),
             Some(&Object::Name("PageLabel".to_string()))
         );
-        assert_eq!(dict.get("S"), Some(&Object::Name("R".to_string())));
+        // ISO 32000-1 §12.4.2 Table 159: lowercase roman numerals are
+        // encoded as /S /r (lowercase name). /R is reserved for the
+        // uppercase form.
+        assert_eq!(dict.get("S"), Some(&Object::Name("r".to_string())));
         assert_eq!(dict.get("P"), Some(&Object::String("p. ".to_string())));
         assert_eq!(dict.get("St"), Some(&Object::Integer(5)));
     }
@@ -354,12 +369,46 @@ mod tests {
 
     #[test]
     fn test_page_label_style_to_pdf_name() {
+        // ISO 32000-1 §12.4.2 Table 159: /R = uppercase, /r = lowercase.
         assert_eq!(PageLabelStyle::DecimalArabic.to_pdf_name(), Some("D"));
-        assert_eq!(PageLabelStyle::UppercaseRoman.to_pdf_name(), Some("r"));
-        assert_eq!(PageLabelStyle::LowercaseRoman.to_pdf_name(), Some("R"));
+        assert_eq!(PageLabelStyle::UppercaseRoman.to_pdf_name(), Some("R"));
+        assert_eq!(PageLabelStyle::LowercaseRoman.to_pdf_name(), Some("r"));
         assert_eq!(PageLabelStyle::UppercaseLetters.to_pdf_name(), Some("A"));
         assert_eq!(PageLabelStyle::LowercaseLetters.to_pdf_name(), Some("a"));
         assert_eq!(PageLabelStyle::None.to_pdf_name(), None);
+    }
+
+    #[test]
+    fn test_roman_format_and_pdf_name_agree_on_case() {
+        // ISO 32000-1 §12.4.2 Table 159 ties the /S name to the render
+        // case: /R = uppercase, /r = lowercase. The crate's own format()
+        // method decides which case the Rust side renders. These two
+        // views MUST agree: if format(1) emits "I" then /S must be /R,
+        // otherwise a spec-conforming viewer will render the opposite
+        // case of what format() claims.
+        //
+        // Regression guard for the v2.5.5 bug where UppercaseRoman
+        // mapped to /S /r (so `PageLabel::roman_uppercase()` produced
+        // PDFs that Acrobat rendered as "i, ii, iii").
+        let cases: &[(PageLabelStyle, &str, &str)] = &[
+            (PageLabelStyle::UppercaseRoman, "I", "R"),
+            (PageLabelStyle::LowercaseRoman, "i", "r"),
+            (PageLabelStyle::UppercaseLetters, "A", "A"),
+            (PageLabelStyle::LowercaseLetters, "a", "a"),
+        ];
+        for (style, expected_format_1, expected_pdf_name) in cases {
+            let formatted = style.format(1);
+            let pdf_name = style.to_pdf_name().expect("style has /S name");
+            assert_eq!(&formatted, expected_format_1, "format(1) for {:?}", style);
+            assert_eq!(pdf_name, *expected_pdf_name, "/S name for {:?}", style);
+            let format_upper = formatted == formatted.to_uppercase();
+            let pdf_upper = pdf_name == pdf_name.to_uppercase();
+            assert_eq!(
+                format_upper, pdf_upper,
+                "style {:?}: format(1)={:?} (upper={}) disagrees with /S /{} (upper={})",
+                style, formatted, format_upper, pdf_name, pdf_upper
+            );
+        }
     }
 
     #[test]

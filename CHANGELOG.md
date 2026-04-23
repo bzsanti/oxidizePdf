@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
+
+### Fixed
+- **Roman-numeral page label style now uses the correct case per ISO 32000-1 §12.4.2 Table 159** — `PageLabelStyle::UppercaseRoman` now emits `/S /R` and `PageLabelStyle::LowercaseRoman` emits `/S /r`. Prior to this fix the mapping was inverted in both directions: `to_pdf_name()` wrote the opposite case, and `PageLabelTree::from_dict()` read it back with the same inversion, so internal round-trips appeared to work but any spec-conforming viewer (Acrobat, Foxit, etc.) rendered the opposite case of what the Rust API promised (e.g. `roman_uppercase()` produced PDFs shown as "i, ii, iii"). Also affected behaviour: reading PDFs written by other tools — a document that correctly carried `/S /R` was parsed back as `LowercaseRoman`. Documents written by oxidize-pdf ≤ 2.5.5 were already rendered with the inverted case by conforming viewers; the fix aligns oxidize-pdf with the rest of the PDF ecosystem rather than changing what readers see. Non-Roman styles (`D`, `A`, `a`) were already correct.
+
+### Added
+- Four new content-verifying regression tests:
+  - `page_labels::page_label::tests::test_roman_format_and_pdf_name_agree_on_case` — asserts that `format(1)` and `to_pdf_name()` agree on case for every style, catching any future re-inversion at the source.
+  - `page_labels::page_label_tree::tests::test_from_dict_reads_roman_case_per_iso_spec` — parses synthetic `/S /R` and `/S /r` dicts and asserts the resulting labels render as `"I"` and `"i"` respectively.
+  - `writer::pdf_writer::tests::catalog_entries_tests::test_page_labels_uppercase_roman_emits_uppercase_s_name` and `..._lowercase_roman_emits_lowercase_s_name` — serialise a real `Document` and scan the PDF bytes for the correct `/S` name, guarding against any future writer-side inversion.
+
 ## [2.5.5] - 2026-04-21
 
 ### Fixed
