@@ -66,6 +66,18 @@ pub struct Page {
     text_context: TextContext,
     images: HashMap<String, Image>,
     form_xobjects: HashMap<String, crate::graphics::FormXObject>,
+    /// Registered colour spaces, emitted under `/Resources/ColorSpace`
+    /// per ISO 32000-1 §8.6, Table 62. Values preserve the caller-supplied
+    /// `Object` shape (typically `Array([Name, Dictionary])` for
+    /// parameterised spaces like CalRGB / ICCBased / Indexed, or a single
+    /// `Name` for aliasing a device space under a custom resource name).
+    color_spaces: HashMap<String, crate::objects::Object>,
+    /// Registered tiling patterns, emitted as indirect stream objects
+    /// referenced from `/Resources/Pattern` per ISO 32000-1 §8.7.3.
+    patterns: HashMap<String, crate::graphics::TilingPattern>,
+    /// Registered shadings, emitted as indirect dictionary objects
+    /// referenced from `/Resources/Shading` per ISO 32000-1 §8.7.4.
+    shadings: HashMap<String, crate::graphics::ShadingDefinition>,
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
     annotations: Vec<Annotation>,
@@ -94,6 +106,9 @@ impl Page {
             text_context: TextContext::new(),
             images: HashMap::new(),
             form_xobjects: HashMap::new(),
+            color_spaces: HashMap::new(),
+            patterns: HashMap::new(),
+            shadings: HashMap::new(),
             header: None,
             footer: None,
             annotations: Vec::new(),
@@ -836,6 +851,61 @@ impl Page {
     /// [`Page::add_form_xobject`].
     pub fn form_xobjects(&self) -> &HashMap<String, crate::graphics::FormXObject> {
         &self.form_xobjects
+    }
+
+    /// Registers a colour space under `name` (ISO 32000-1 §8.6).
+    ///
+    /// `cs` must be a legal PDF colour-space representation: either a
+    /// single name (e.g. `Object::Name("DeviceRGB")`) aliasing a device
+    /// space under a custom resource key, or an array like
+    /// `[/CalRGB <<dict>>]` / `[/ICCBased <<stream>>]` /
+    /// `[/Indexed /DeviceRGB N <hivals>]`. The writer serialises the
+    /// supplied object verbatim into `/Resources/ColorSpace/<name>`.
+    pub fn add_color_space(&mut self, name: impl Into<String>, cs: crate::objects::Object) {
+        self.color_spaces.insert(name.into(), cs);
+    }
+
+    /// Returns all colour spaces registered on this page.
+    pub fn color_spaces(&self) -> &HashMap<String, crate::objects::Object> {
+        &self.color_spaces
+    }
+
+    /// Registers a tiling pattern under `name` (ISO 32000-1 §8.7.3).
+    ///
+    /// The writer emits each pattern as an indirect stream object (patterns
+    /// are streams per §7.3.8.1) and references it from
+    /// `/Resources/Pattern/<name>`. Inside the content stream, paint the
+    /// pattern with `/<name> scn` / `/<name> SCN` after selecting the
+    /// /Pattern colour space.
+    pub fn add_pattern(
+        &mut self,
+        name: impl Into<String>,
+        pattern: crate::graphics::TilingPattern,
+    ) {
+        self.patterns.insert(name.into(), pattern);
+    }
+
+    /// Returns all tiling patterns registered on this page.
+    pub fn patterns(&self) -> &HashMap<String, crate::graphics::TilingPattern> {
+        &self.patterns
+    }
+
+    /// Registers a shading under `name` (ISO 32000-1 §8.7.4).
+    ///
+    /// The writer emits the shading as an indirect dictionary object and
+    /// references it from `/Resources/Shading/<name>`. Paint with the
+    /// `sh` operator (`/<name> sh`) or via a type-2 Pattern.
+    pub fn add_shading(
+        &mut self,
+        name: impl Into<String>,
+        shading: crate::graphics::ShadingDefinition,
+    ) {
+        self.shadings.insert(name.into(), shading);
+    }
+
+    /// Returns all shadings registered on this page.
+    pub fn shadings(&self) -> &HashMap<String, crate::graphics::ShadingDefinition> {
+        &self.shadings
     }
 
     /// Appends raw PDF operators to the content stream.
