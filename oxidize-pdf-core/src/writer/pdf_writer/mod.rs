@@ -71,6 +71,32 @@ impl WriterConfig {
     }
 }
 
+/// Escape the three characters that are meaningful inside a PDF literal
+/// string (ISO 32000-1 §7.3.4.2): backslash introduces escape sequences
+/// and MUST be doubled; parentheses delimit the string and MUST be
+/// prefixed with a backslash when they appear in the payload.
+///
+/// Other control characters (CR, LF, HT, BS, FF) are legal inside a
+/// literal string *unescaped*, so we leave them alone — the parser is
+/// required to accept them verbatim per §7.3.4.2 Table 3. Octal
+/// escapes are a valid alternative encoding but not required here.
+///
+/// Correct ordering is essential: `\` MUST be escaped first (otherwise
+/// the `\` we insert to escape a `(` would itself get doubled). This
+/// helper walks the input exactly once and emits the escaped form.
+fn escape_pdf_string_bytes(input: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(input.len());
+    for &byte in input {
+        match byte {
+            b'\\' => out.extend_from_slice(b"\\\\"),
+            b'(' => out.extend_from_slice(b"\\("),
+            b')' => out.extend_from_slice(b"\\)"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
 pub struct PdfWriter<W: Write> {
     writer: W,
     xref_positions: HashMap<ObjectId, u64>,
@@ -102,6 +128,20 @@ pub struct PdfWriter<W: Write> {
     file_id: Option<Vec<u8>>,
     encryption_state: Option<WriterEncryptionState>,
     pending_encrypt_dict: Option<Dictionary>,
+    // FormManager field tracking:
+    //  * `form_field_placeholder_map` translates the placeholder
+    //    `ObjectReference` returned by `FormManager::add_text_field` et al.
+    //    (those use a local counter unaware of writer-side allocation) into
+    //    the real `ObjectId` chosen by `allocate_object_id`. Widgets created
+    //    via `Page::add_form_widget_with_ref` store the placeholder in
+    //    `Annotation::field_parent`; when the annotation dict is written we
+    //    remap it through this table so `/Parent` points at the real field.
+    //  * `form_manager_field_refs` is the ordered (alphabetical by field
+    //    name) list of real refs; it's appended to `document.acro_form.fields`
+    //    during `write_catalog` and is what ends up in
+    //    `/AcroForm/Fields`.
+    form_field_placeholder_map: HashMap<crate::objects::ObjectReference, ObjectId>,
+    form_manager_field_refs: Vec<crate::objects::ObjectReference>,
 }
 
 /// Holds the encryption key and encryptor for encrypting objects during write
@@ -137,6 +177,8 @@ impl<W: Write> PdfWriter<W> {
             file_id: None,
             encryption_state: None,
             pending_encrypt_dict: None,
+            form_field_placeholder_map: HashMap::new(),
+            form_manager_field_refs: Vec::new(),
         }
     }
 
@@ -161,6 +203,14 @@ impl<W: Write> PdfWriter<W> {
 
         // Write custom fonts first (so pages can reference them)
         let font_refs = self.write_fonts(document)?;
+
+        // Pre-allocate object IDs for every field owned by the FormManager
+        // BEFORE writing pages, so widget annotations on those pages can
+        // emit `/Parent <real_id>` instead of pointing at the placeholder
+        // refs returned by `FormManager::add_text_field`. This is the piece
+        // that bridges the FormManager's local id counter and the writer's
+        // global id allocator. See `form_field_placeholder_map` for details.
+        self.preallocate_form_manager_fields(document)?;
 
         // Write pages (they contain widget annotations and font references)
         self.write_pages(document, &font_refs)?;
@@ -861,12 +911,56 @@ impl<W: Write> PdfWriter<W> {
         catalog.set("Type", Object::Name("Catalog".to_string()));
         catalog.set("Pages", Object::Reference(pages_id));
 
-        // Process FormManager if present to update AcroForm
-        // We'll write the actual fields after pages are written
-        if let Some(_form_manager) = &document.form_manager {
-            // Ensure AcroForm exists
+        // Serialize fields owned by the FormManager (ISO 32000-1 §12.7.3).
+        //
+        // Before v2.5.6 this block did nothing: it bound `_form_manager`
+        // but never read its `fields` map, so only fields appended manually
+        // to `document.acro_form.fields` ever reached the output PDF. Any
+        // field created via `FormManager::add_text_field` / `add_combo_box`
+        // / etc. was silently dropped — exactly the gap the .NET wrapper
+        // hit.
+        //
+        // Object IDs for these fields were pre-allocated in
+        // `preallocate_form_manager_fields` (called before `write_pages`
+        // so widget `/Parent` refs could resolve). Here we only have to:
+        //   (a) write the field-body dict into each pre-allocated id, and
+        //   (b) append those ids to `document.acro_form.fields` so the
+        //       /AcroForm write block below emits
+        //       `/AcroForm/Fields [N 0 R ...]`.
+        //
+        // Iteration follows the same deterministic order used at
+        // pre-allocation time, so the order-vs-id pairing is stable.
+        if let Some(form_manager) = &document.form_manager {
             if document.acro_form.is_none() {
                 document.acro_form = Some(crate::forms::AcroForm::new());
+            }
+
+            // Write each field dict into its reserved id.
+            // Surface a clean `PdfError` if the placeholder-ref → real-id
+            // map is missing any entry — a "can't happen" breach of the
+            // invariant established by `preallocate_form_manager_fields`,
+            // which must run before this function.
+            let mut sorted: Vec<(Dictionary, crate::objects::ObjectReference)> = Vec::new();
+            for (name, form_field, placeholder) in form_manager.iter_fields_sorted() {
+                let real_id = *self.form_field_placeholder_map.get(&placeholder).ok_or_else(
+                    || {
+                        PdfError::Internal(format!(
+                            "AcroForm writer internal invariant broken: field '{name}' (placeholder {placeholder}) has no pre-allocated real object id — preallocate_form_manager_fields must run before write_catalog"
+                        ))
+                    },
+                )?;
+                sorted.push((form_field.field_dict.clone(), real_id));
+            }
+            for (field_dict, real_id) in sorted {
+                self.write_object(real_id, Object::Dictionary(field_dict))?;
+            }
+
+            if let Some(acro) = document.acro_form.as_mut() {
+                for r in &self.form_manager_field_refs {
+                    if !acro.fields.contains(r) {
+                        acro.fields.push(*r);
+                    }
+                }
             }
         }
 
@@ -1276,6 +1370,31 @@ impl<W: Write> PdfWriter<W> {
 
         self.write_object(struct_tree_root_id, Object::Dictionary(struct_tree_root))?;
         Ok(struct_tree_root_id)
+    }
+
+    /// Reserve an `ObjectId` for every field owned by `document.form_manager`
+    /// and build the placeholder → real mapping used when widget annotations
+    /// are serialised (see `Annotation::field_parent`).
+    ///
+    /// Called once from `write_document` before `write_pages`, so widget
+    /// `/Parent` refs on pages resolve to real indirect objects. The field
+    /// bodies themselves are written later, in `write_catalog`, reusing
+    /// these pre-allocated IDs.
+    ///
+    /// Iteration order is deterministic (alphabetical by field name) via
+    /// `FormManager::iter_fields_sorted` so object-ID allocation — and
+    /// therefore the byte-for-byte output — is reproducible across builds.
+    fn preallocate_form_manager_fields(&mut self, document: &Document) -> Result<()> {
+        let Some(form_manager) = &document.form_manager else {
+            return Ok(());
+        };
+
+        for (_name, _form_field, placeholder) in form_manager.iter_fields_sorted() {
+            let real_id = self.allocate_object_id();
+            self.form_field_placeholder_map.insert(placeholder, real_id);
+            self.form_manager_field_refs.push(real_id);
+        }
+        Ok(())
     }
 
     fn write_form_fields(&mut self, document: &mut Document) -> Result<()> {
@@ -2251,10 +2370,24 @@ impl<W: Write> PdfWriter<W> {
         let has_images = !page.images().is_empty();
         let has_forms = !page.form_xobjects().is_empty();
 
+        // Tracks name→ObjectId for every FormXObject written below.
+        // Used downstream by the ExtGState SMask emission (ISO 32000-1
+        // §11.6.4.3 Table 144 requires /G to be an INDIRECT reference
+        // to a transparency-group Form XObject; the caller supplies the
+        // group by name in `SoftMask::alpha(name)` and we resolve that
+        // name to the ObjectId allocated here).
+        let mut form_xobject_ids: HashMap<String, ObjectId> = HashMap::new();
+
         if has_images || has_forms {
             let mut xobject_dict = Dictionary::new();
 
-            for (name, image) in page.images() {
+            // Sort by name for reproducible output (images first, then
+            // form xobjects — both sorted within their group). Sharing
+            // the sort key produces the same layout across builds.
+            let mut image_entries: Vec<(&String, &crate::graphics::Image)> =
+                page.images().iter().collect();
+            image_entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, image) in image_entries {
                 // Use sequential ObjectId allocation to avoid conflicts
                 let image_id = self.allocate_object_id();
 
@@ -2286,13 +2419,19 @@ impl<W: Write> PdfWriter<W> {
             }
 
             // Write Form XObjects (used for overlay/watermark operations)
-            for (name, form) in page.form_xobjects() {
+            let mut form_entries: Vec<(&String, &crate::graphics::FormXObject)> =
+                page.form_xobjects().iter().collect();
+            form_entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, form) in form_entries {
                 let form_id = self.allocate_object_id();
                 let stream = form.to_stream()?;
                 let stream_obj =
                     Object::Stream(stream.dictionary().clone(), stream.data().to_vec());
                 self.write_object(form_id, stream_obj)?;
                 xobject_dict.set(name, Object::Reference(form_id));
+                // Record the mapping so a downstream SoftMask with
+                // `group_ref == name` can resolve to this indirect ref.
+                form_xobject_ids.insert(name.clone(), form_id);
             }
 
             resources.set("XObject", Object::Dictionary(xobject_dict));
@@ -2301,7 +2440,11 @@ impl<W: Write> PdfWriter<W> {
         // Add ExtGState resources for transparency
         if let Some(extgstate_states) = page.get_extgstate_resources() {
             let mut extgstate_dict = Dictionary::new();
-            for (name, state) in extgstate_states {
+            // Sort ExtGState entries by name for reproducible output.
+            let mut extgstate_entries: Vec<(&String, &crate::graphics::ExtGState)> =
+                extgstate_states.iter().collect();
+            extgstate_entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, state) in extgstate_entries {
                 let mut state_dict = Dictionary::new();
                 state_dict.set("Type", Object::Name("ExtGState".to_string()));
 
@@ -2338,11 +2481,107 @@ impl<W: Write> PdfWriter<W> {
                     );
                 }
 
+                // Blend mode (ISO 32000-1 §11.3.5, Table 137). Emitted as
+                // a single name; blend-mode *arrays* (multiple fallback
+                // modes) are not currently exposed by ExtGState.
+                if let Some(ref bm) = state.blend_mode {
+                    state_dict.set("BM", Object::Name(bm.pdf_name().to_string()));
+                }
+
+                // Soft mask (ISO 32000-1 §11.6.4.3, Table 144).
+                // `SoftMask::to_pdf_dictionary` returns a full mask dict
+                // with /Type /Mask /S <Alpha|Luminosity|None> and,
+                // when a transparency group is attached, the /G, /BC
+                // and /TR entries. The `/SMask /None` Name shortcut is
+                // *also* spec-legal per §11.6.4.3; we emit the dict
+                // form unconditionally so callers see a consistent
+                // shape (and because the builder already populated the
+                // dict variant for them).
+                //
+                // /G MUST be an indirect reference (Table 144). The
+                // `SoftMask` API models the group reference as a `String`
+                // name matching a FormXObject registered on this page
+                // via `Page::add_form_xobject(name, ...)`. Resolve the
+                // name here to the indirect ObjectId allocated above.
+                // If no matching FormXObject exists, surface a structured
+                // error rather than emit a spec-invalid /G /<Name> token.
+                if let Some(ref soft_mask) = state.soft_mask {
+                    let mut mask_dict = soft_mask.to_pdf_dictionary()?;
+                    if let Some(Object::Name(ref g_name)) = mask_dict.get("G").cloned() {
+                        let form_id = form_xobject_ids.get(g_name).ok_or_else(|| {
+                            crate::error::PdfError::InvalidStructure(format!(
+                                "SoftMask references transparency group {:?} but no matching \
+                                 FormXObject is registered on the page; call \
+                                 Page::add_form_xobject({:?}, ...) before saving",
+                                g_name, g_name
+                            ))
+                        })?;
+                        mask_dict.set("G", Object::Reference(*form_id));
+                    }
+                    state_dict.set("SMask", Object::Dictionary(mask_dict));
+                }
+
                 extgstate_dict.set(name, Object::Dictionary(state_dict));
             }
             if !extgstate_dict.is_empty() {
                 resources.set("ExtGState", Object::Dictionary(extgstate_dict));
             }
+        }
+
+        // ColorSpace resources (ISO 32000-1 §8.6, Table 62). Emitted as a
+        // direct sub-dictionary — colour-space *parameters* (the dict
+        // inside `[/CalRGB <<..>>]`) are generally small and inlining them
+        // keeps the cross-reference table lean. Callers that need
+        // larger / shared colour spaces can register them once and reuse
+        // the same key across pages.
+        // Deterministic emission of all three resource sub-dicts is
+        // enforced at Dictionary write time (see QUAL-9 sort below in
+        // `write_object_value`). We therefore iterate the source
+        // HashMaps in any order here — the serializer reorders.
+        // However we DO sort Pattern / Shading entries before
+        // `allocate_object_id()` so object-id allocation is also
+        // reproducible (two identical documents allocate ids in the
+        // same sequence, producing byte-identical xref entries).
+        if !page.color_spaces().is_empty() {
+            let mut cs_dict = Dictionary::new();
+            for (name, cs) in page.color_spaces() {
+                // Conversion lives on the enum (see `PageColorSpace::to_object`)
+                // so a future shape change (e.g. streams for ICCBased) is a
+                // single-file edit, not a writer-wide sweep.
+                cs_dict.set(name, cs.to_object());
+            }
+            resources.set("ColorSpace", Object::Dictionary(cs_dict));
+        }
+
+        if !page.patterns().is_empty() {
+            let mut pat_dict = Dictionary::new();
+            let mut entries: Vec<(&String, &crate::graphics::TilingPattern)> =
+                page.patterns().iter().collect();
+            entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, pattern) in entries {
+                let pattern_id = self.allocate_object_id();
+                let pattern_dict = pattern.to_pdf_dictionary()?;
+                self.write_object(
+                    pattern_id,
+                    Object::Stream(pattern_dict, pattern.content_stream.clone()),
+                )?;
+                pat_dict.set(name, Object::Reference(pattern_id));
+            }
+            resources.set("Pattern", Object::Dictionary(pat_dict));
+        }
+
+        if !page.shadings().is_empty() {
+            let mut sh_dict = Dictionary::new();
+            let mut entries: Vec<(&String, &crate::graphics::ShadingDefinition)> =
+                page.shadings().iter().collect();
+            entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, shading) in entries {
+                let shading_id = self.allocate_object_id();
+                let shading_dict = shading.to_pdf_dictionary()?;
+                self.write_object(shading_id, Object::Dictionary(shading_dict))?;
+                sh_dict.set(name, Object::Reference(shading_id));
+            }
+            resources.set("Shading", Object::Dictionary(sh_dict));
         }
 
         // Merge preserved resources from original PDF (if any)
@@ -2472,7 +2711,71 @@ impl<W: Write> PdfWriter<W> {
         //    page.add_annotation(). Each is written as an indirect object.
         for annotation in page.annotations() {
             let annot_id = self.allocate_object_id();
-            let annot_dict = annotation.to_dict();
+            let mut annot_dict = annotation.to_dict();
+
+            // Remap `/Parent` from FormManager placeholder → real ObjectId.
+            // `Annotation::field_parent` stores the placeholder ref returned
+            // by FormManager::add_*_field (which uses a counter disjoint
+            // from the writer's allocator). At this point the writer has
+            // already pre-allocated real ids for every FormManager field
+            // via `preallocate_form_manager_fields`, so we translate.
+            //
+            // We read `field_parent` straight off the struct instead of
+            // round-tripping through `annot_dict.get("Parent")`: the
+            // dictionary representation is what we're producing, not a
+            // source of truth. The struct field is authoritative and
+            // avoids matching on a value we just computed.
+            //
+            // Widgets whose parent placeholder is NOT in the map (e.g.
+            // the caller supplied a hand-built ref, or `field_parent` was
+            // set from outside the FormManager) are left unchanged — not
+            // every `/Parent` necessarily comes from the FormManager.
+            if let Some(placeholder) = annotation.field_parent {
+                if let Some(real_id) = self.form_field_placeholder_map.get(&placeholder) {
+                    annot_dict.set("Parent", Object::Reference(*real_id));
+                }
+            }
+
+            // Externalize inline streams inside /AP.
+            //
+            // `Widget::generate_appearance` (and any user-supplied appearance
+            // dictionary) stores the /N, /R, /D entries as inline
+            // `Object::Stream` values inside the /AP sub-dictionary. Per
+            // ISO 32000-1 §7.3.8.1, "all streams shall be indirect objects" —
+            // inline streams as dictionary values are not permitted. We
+            // therefore externalize each inline stream to a freshly
+            // allocated indirect object and replace it with a /Reference.
+            //
+            // /AP itself has two legal shapes (§12.5.5):
+            //   * A single stream (direct or indirect) → the "default" state.
+            //   * A sub-dictionary mapping state names (/N, /R, /D) to
+            //     streams, where /D may further be a dict mapping values to
+            //     streams (radio buttons, checkboxes).
+            // We handle the sub-dict shape (which is what `fill_field`
+            // emits); the legacy single-stream shape falls through to the
+            // writer's default handling below.
+            if let Some(Object::Dictionary(ap_dict)) = annot_dict.get("AP") {
+                let mut updated_ap = crate::objects::Dictionary::new();
+                for (state_key, state_val) in ap_dict.iter() {
+                    match state_val {
+                        Object::Stream(sd, data) => {
+                            let stream_id = self.allocate_object_id();
+                            self.write_object(stream_id, Object::Stream(sd.clone(), data.clone()))?;
+                            updated_ap.set(state_key, Object::Reference(stream_id));
+                        }
+                        Object::Dictionary(down_dict) => {
+                            // /D sub-dict case: map value → stream.
+                            let externalized = self.externalize_streams_in_dict(down_dict)?;
+                            updated_ap.set(state_key, Object::Dictionary(externalized));
+                        }
+                        _ => {
+                            updated_ap.set(state_key, state_val.clone());
+                        }
+                    }
+                }
+                annot_dict.set("AP", Object::Dictionary(updated_ap));
+            }
+
             self.write_object(annot_id, Object::Dictionary(annot_dict))?;
             annot_refs.push(Object::Reference(annot_id));
 
@@ -2528,6 +2831,8 @@ impl PdfWriter<BufWriter<std::fs::File>> {
             file_id: None,
             encryption_state: None,
             pending_encrypt_dict: None,
+            form_field_placeholder_map: HashMap::new(),
+            form_manager_field_refs: Vec::new(),
         })
     }
 }
@@ -2770,8 +3075,16 @@ impl<W: Write> PdfWriter<W> {
                     .as_bytes(),
             )?,
             Object::String(s) => {
+                // ISO 32000-1 §7.3.4.2: inside a literal string, the
+                // characters `\`, `(` and `)` MUST be escaped (as `\\`,
+                // `\(`, `\)` respectively) so the parser does not
+                // terminate the string early or treat `\` as an escape
+                // introducer for the following byte. Without this, a
+                // caller-supplied value containing `)` (e.g. through
+                // `Document::fill_field`) would close the literal and
+                // allow dict-level injection into the enclosing object.
                 self.write_bytes(b"(")?;
-                self.write_bytes(s.as_bytes())?;
+                self.write_bytes(&escape_pdf_string_bytes(s.as_bytes()))?;
                 self.write_bytes(b")")?;
             }
             Object::ByteString(bytes) => {
@@ -2797,8 +3110,17 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"]")?;
             }
             Object::Dictionary(dict) => {
+                // Sort entries lexicographically by key for reproducible
+                // output. `Dictionary` is backed by `HashMap` (with
+                // per-instance randomised iteration order), so two
+                // identical logical documents would otherwise emit
+                // byte-different PDFs. PDF dict entries are unordered
+                // by spec (ISO 32000-1 §7.3.7 Table 5: "the order of
+                // entries ... is not significant"), so sorting is safe.
                 self.write_bytes(b"<<")?;
-                for (key, value) in dict.entries() {
+                let mut entries: Vec<(&String, &Object)> = dict.entries().collect();
+                entries.sort_by_key(|(k, _)| k.as_str());
+                for (key, value) in entries {
                     self.write_bytes(b"\n/")?;
                     self.write_bytes(key.as_bytes())?;
                     self.write_bytes(b" ")?;
@@ -2838,8 +3160,10 @@ impl<W: Write> PdfWriter<W> {
                     .as_bytes(),
             ),
             Object::String(s) => {
+                // Same escape rules as the streaming `write_object_value`
+                // path — see ISO 32000-1 §7.3.4.2.
                 buffer.push(b'(');
-                buffer.extend_from_slice(s.as_bytes());
+                buffer.extend_from_slice(&escape_pdf_string_bytes(s.as_bytes()));
                 buffer.push(b')');
             }
             Object::ByteString(bytes) => {
@@ -2864,8 +3188,13 @@ impl<W: Write> PdfWriter<W> {
                 buffer.push(b']');
             }
             Object::Dictionary(dict) => {
+                // Same deterministic-order rule as the streaming writer
+                // (see `write_object_value`): sort entries by key for
+                // reproducible output across builds.
                 buffer.extend_from_slice(b"<<");
-                for (key, value) in dict.entries() {
+                let mut entries: Vec<(&String, &Object)> = dict.entries().collect();
+                entries.sort_by_key(|(k, _)| k.as_str());
+                for (key, value) in entries {
                     buffer.extend_from_slice(b"\n/");
                     buffer.extend_from_slice(key.as_bytes());
                     buffer.push(b' ');

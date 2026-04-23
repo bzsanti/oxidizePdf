@@ -56,6 +56,53 @@ impl Default for Margins {
 ///     .fill();
 /// # Ok::<(), oxidize_pdf::PdfError>(())
 /// ```
+/// Validates that `name` is a well-formed PDF resource name per
+/// ISO 32000-1 §7.3.5 (Name Objects).
+///
+/// A resource name is a `Name` token written as `/<name>` inside a
+/// dictionary. The spec forbids:
+///   * empty names (must have at least one regular character);
+///   * whitespace characters (NUL, HT, LF, FF, CR, SP);
+///   * delimiter characters `( ) < > [ ] { } / %`;
+///   * the `#` character, which is reserved for the 2-digit hex escape
+///     form (`#NN`) — accepting raw `#` would require callers to think
+///     about hex escaping, which we decline to do at this layer.
+///
+/// We reject at the public API boundary so a caller cannot — even
+/// unintentionally — smuggle a dict-closing token into a resource name
+/// and produce a PDF where the emitted `/<name>` splits the resource
+/// dict into pieces.
+fn validate_pdf_resource_name(name: &str) -> Result<()> {
+    use crate::error::PdfError;
+
+    if name.is_empty() {
+        return Err(PdfError::InvalidStructure(
+            "PDF resource name must not be empty (ISO 32000-1 §7.3.5)".to_string(),
+        ));
+    }
+
+    for (idx, byte) in name.as_bytes().iter().enumerate() {
+        // Whitespace per Table 1 (§7.2.3).
+        let is_whitespace = matches!(*byte, 0x00 | 0x09 | 0x0A | 0x0C | 0x0D | 0x20);
+        // Delimiters per Table 2 (§7.2.3).
+        let is_delimiter = matches!(
+            *byte,
+            b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}' | b'/' | b'%'
+        );
+        // Hex-escape introducer (§7.3.5): legal only as `#NN`, but we
+        // reject outright rather than trust callers to escape correctly.
+        let is_hash = *byte == b'#';
+
+        if is_whitespace || is_delimiter || is_hash {
+            return Err(PdfError::InvalidStructure(format!(
+                "invalid PDF resource name {name:?}: byte 0x{byte:02X} at position {idx} \
+                 is not allowed per ISO 32000-1 §7.3.5 (whitespace, delimiter, or `#`)"
+            )));
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone)]
 pub struct Page {
     width: f64,
@@ -66,6 +113,18 @@ pub struct Page {
     text_context: TextContext,
     images: HashMap<String, Image>,
     form_xobjects: HashMap<String, crate::graphics::FormXObject>,
+    /// Registered colour spaces, emitted under `/Resources/ColorSpace`
+    /// per ISO 32000-1 §8.6, Table 62. Values are typed via
+    /// [`crate::graphics::PageColorSpace`] — see that enum for the two
+    /// supported wire-format shapes (device alias vs. parameterised
+    /// `[/<family> <<params>>]`).
+    color_spaces: HashMap<String, crate::graphics::PageColorSpace>,
+    /// Registered tiling patterns, emitted as indirect stream objects
+    /// referenced from `/Resources/Pattern` per ISO 32000-1 §8.7.3.
+    patterns: HashMap<String, crate::graphics::TilingPattern>,
+    /// Registered shadings, emitted as indirect dictionary objects
+    /// referenced from `/Resources/Shading` per ISO 32000-1 §8.7.4.
+    shadings: HashMap<String, crate::graphics::ShadingDefinition>,
     header: Option<HeaderFooter>,
     footer: Option<HeaderFooter>,
     annotations: Vec<Annotation>,
@@ -94,6 +153,9 @@ impl Page {
             text_context: TextContext::new(),
             images: HashMap::new(),
             form_xobjects: HashMap::new(),
+            color_spaces: HashMap::new(),
+            patterns: HashMap::new(),
+            shadings: HashMap::new(),
             header: None,
             footer: None,
             annotations: Vec::new(),
@@ -799,19 +861,151 @@ impl Page {
         &self.images
     }
 
-    /// Adds a Form XObject resource to this page.
-    /// Used by overlay operations to embed external page content.
-    pub(crate) fn add_form_xobject(
+    /// Adds a Form XObject resource to this page (public as of v2.5.6).
+    ///
+    /// `name` is the key under which the Form XObject is exposed in the
+    /// page's `/Resources/XObject` dictionary — typically `F1`, `Fm0`, etc.
+    /// Use this when embedding reusable graphical content, overlays, stamps
+    /// or template page fragments composed with the `FormXObject` /
+    /// `FormXObjectBuilder` APIs.
+    ///
+    /// Duplicate names overwrite silently (the same behaviour as inserting
+    /// into the underlying map); if you need idempotent registration,
+    /// inspect [`Page::form_xobjects`] before calling.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is empty or
+    /// contains any character forbidden by ISO 32000-1 §7.3.5 (delimiter
+    /// characters `( ) < > [ ] { } / %`, whitespace, or the `#` escape
+    /// introducer). Emitting such a name verbatim would close the
+    /// resource dict early and allow dict-level injection.
+    ///
+    /// ```rust
+    /// use oxidize_pdf::geometry::Rectangle;
+    /// use oxidize_pdf::graphics::FormXObject;
+    /// use oxidize_pdf::Page;
+    ///
+    /// let mut page = Page::a4();
+    /// let bbox = Rectangle::from_position_and_size(0.0, 0.0, 100.0, 100.0);
+    /// page.add_form_xobject("F1", FormXObject::new(bbox)).unwrap();
+    /// assert!(page.form_xobjects().contains_key("F1"));
+    /// ```
+    pub fn add_form_xobject(
         &mut self,
         name: impl Into<String>,
         form: crate::graphics::FormXObject,
-    ) {
-        self.form_xobjects.insert(name.into(), form);
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.form_xobjects.insert(name, form);
+        Ok(())
     }
 
-    /// Returns all Form XObjects registered on this page.
-    pub(crate) fn form_xobjects(&self) -> &HashMap<String, crate::graphics::FormXObject> {
+    /// Returns all Form XObjects registered on this page (public as of v2.5.6).
+    ///
+    /// Keys correspond to `/Resources/XObject` entries emitted by the
+    /// writer. The returned map is read-only; to mutate, use
+    /// [`Page::add_form_xobject`].
+    pub fn form_xobjects(&self) -> &HashMap<String, crate::graphics::FormXObject> {
         &self.form_xobjects
+    }
+
+    /// Registers a colour space under `name` (ISO 32000-1 §8.6).
+    ///
+    /// `cs` is a typed [`crate::graphics::PageColorSpace`] — either a
+    /// [`PageColorSpace::DeviceAlias`] wrapping one of the four device
+    /// spaces (`/DeviceGray`, `/DeviceRGB`, `/DeviceCMYK`, `/Pattern`),
+    /// or a [`PageColorSpace::Parameterised`] entry producing
+    /// `[/<family> <<params>>]` for the calibrated families (`CalGray`,
+    /// `CalRGB`, `Lab`, `ICCBased`). Indexed / Separation / DeviceN
+    /// shapes are out of scope for this wrapper at v2.5.6; see the
+    /// [`page_color_space`] module docs for the rationale.
+    ///
+    /// The writer emits the value under `/Resources/ColorSpace/<name>`,
+    /// converting the enum to its concrete wire format at serialization
+    /// time.
+    ///
+    /// [`page_color_space`]: crate::graphics::page_color_space
+    /// [`PageColorSpace::DeviceAlias`]: crate::graphics::PageColorSpace::DeviceAlias
+    /// [`PageColorSpace::Parameterised`]: crate::graphics::PageColorSpace::Parameterised
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid
+    /// PDF resource name per ISO 32000-1 §7.3.5 (see
+    /// [`Page::add_form_xobject`] for the full rule).
+    pub fn add_color_space(
+        &mut self,
+        name: impl Into<String>,
+        cs: crate::graphics::PageColorSpace,
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.color_spaces.insert(name, cs);
+        Ok(())
+    }
+
+    /// Returns all colour spaces registered on this page.
+    ///
+    /// Map values are typed as [`crate::graphics::PageColorSpace`]; the
+    /// writer converts to the concrete PDF `Object` shape at emit time.
+    pub fn color_spaces(&self) -> &HashMap<String, crate::graphics::PageColorSpace> {
+        &self.color_spaces
+    }
+
+    /// Registers a tiling pattern under `name` (ISO 32000-1 §8.7.3).
+    ///
+    /// The writer emits each pattern as an indirect stream object (patterns
+    /// are streams per §7.3.8.1) and references it from
+    /// `/Resources/Pattern/<name>`. Inside the content stream, paint the
+    /// pattern with `/<name> scn` / `/<name> SCN` after selecting the
+    /// /Pattern colour space.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid
+    /// PDF resource name per ISO 32000-1 §7.3.5.
+    pub fn add_pattern(
+        &mut self,
+        name: impl Into<String>,
+        pattern: crate::graphics::TilingPattern,
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.patterns.insert(name, pattern);
+        Ok(())
+    }
+
+    /// Returns all tiling patterns registered on this page.
+    pub fn patterns(&self) -> &HashMap<String, crate::graphics::TilingPattern> {
+        &self.patterns
+    }
+
+    /// Registers a shading under `name` (ISO 32000-1 §8.7.4).
+    ///
+    /// The writer emits the shading as an indirect dictionary object and
+    /// references it from `/Resources/Shading/<name>`. Paint with the
+    /// `sh` operator (`/<name> sh`) or via a type-2 Pattern.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid
+    /// PDF resource name per ISO 32000-1 §7.3.5.
+    pub fn add_shading(
+        &mut self,
+        name: impl Into<String>,
+        shading: crate::graphics::ShadingDefinition,
+    ) -> Result<()> {
+        let name = name.into();
+        validate_pdf_resource_name(&name)?;
+        self.shadings.insert(name, shading);
+        Ok(())
+    }
+
+    /// Returns all shadings registered on this page.
+    pub fn shadings(&self) -> &HashMap<String, crate::graphics::ShadingDefinition> {
+        &self.shadings
     }
 
     /// Appends raw PDF operators to the content stream.
@@ -934,6 +1128,52 @@ impl Page {
         self.annotations.push(annot);
 
         widget_ref
+    }
+
+    /// Add a form field widget to the page and link it to an existing AcroForm field.
+    ///
+    /// Unlike [`Page::add_form_widget`], which expects the writer to track the
+    /// relationship implicitly via shared field names, this variant records
+    /// the `field_ref` as the widget's `/Parent` so the resulting PDF carries
+    /// an explicit widget→field link per ISO 32000-1 §12.7.3.1.
+    ///
+    /// This is the recommended path when the field itself was created via
+    /// [`crate::forms::FormManager`] (whose `add_text_field`, `add_combo_box`,
+    /// etc. return the field's `ObjectReference`): the field object is
+    /// serialized as an indirect object, and every widget placed on a page
+    /// points back to it through `/Parent`.
+    ///
+    /// # Arguments
+    ///
+    /// * `widget` - The widget appearance/geometry to place on the page.
+    /// * `field_ref` - The `ObjectReference` of the AcroForm field this
+    ///   widget belongs to (as returned by `FormManager::add_*`).
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success. The method currently cannot fail; the `Result`
+    /// return type is reserved for future validation.
+    pub fn add_form_widget_with_ref(
+        &mut self,
+        widget: Widget,
+        field_ref: ObjectReference,
+    ) -> crate::error::Result<()> {
+        // Convert widget to annotation, same as add_form_widget.
+        let mut annot = Annotation::new(crate::annotations::AnnotationType::Widget, widget.rect);
+
+        for (key, value) in widget.to_annotation_dict().iter() {
+            annot.properties.set(key, value.clone());
+        }
+
+        // Record the parent field reference so the writer emits
+        // `/Parent <field_ref>` in the widget annotation dictionary.
+        // Goes through the setter so the Widget-annotation-type invariant
+        // is enforced (debug_assert! in debug builds) — `field_parent` is
+        // `pub(crate)` precisely to prevent external callers bypassing it.
+        annot.set_field_parent(field_ref);
+
+        self.annotations.push(annot);
+        Ok(())
     }
 
     /// Sets the header for this page.

@@ -130,6 +130,14 @@ impl Default for FormData {
 pub struct FormManager {
     /// Registered fields
     fields: HashMap<String, FormField>,
+    /// Placeholder `ObjectReference` returned to callers for each field,
+    /// keyed by field name. The reference is a *placeholder* — its object
+    /// number comes from the FormManager's local counter and is disjoint
+    /// from the writer's global object-id allocator. The writer builds a
+    /// placeholder → real-ObjectId map at serialization time so widget
+    /// annotations created via `Page::add_form_widget_with_ref` can
+    /// resolve their `/Parent` to the correct real id.
+    field_refs: HashMap<String, ObjectReference>,
     /// AcroForm dictionary
     acro_form: AcroForm,
     /// Next field ID
@@ -141,6 +149,7 @@ impl FormManager {
     pub fn new() -> Self {
         Self {
             fields: HashMap::new(),
+            field_refs: HashMap::new(),
             acro_form: AcroForm::new(),
             next_field_id: 1,
         }
@@ -172,11 +181,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -205,11 +214,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -238,11 +247,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -277,11 +286,11 @@ impl FormManager {
             }
         }
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -307,11 +316,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -337,11 +346,11 @@ impl FormManager {
         let mut form_field = FormField::new(field_dict);
         form_field.add_widget(widget);
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -371,11 +380,11 @@ impl FormManager {
             form_field.add_widget(widget);
         }
 
-        self.fields.insert(field_name, form_field);
-
         // Create object reference
         let obj_ref = ObjectReference::new(self.next_field_id, 0);
         self.next_field_id += 1;
+        self.field_refs.insert(field_name.clone(), obj_ref);
+        self.fields.insert(field_name, form_field);
         self.acro_form.add_field(obj_ref);
 
         Ok(obj_ref)
@@ -394,6 +403,35 @@ impl FormManager {
     /// Get field by name
     pub fn get_field(&self, name: &str) -> Option<&FormField> {
         self.fields.get(name)
+    }
+
+    /// Get a mutable reference to a field by name.
+    ///
+    /// This is the primary entry point for mutating an AcroForm field's
+    /// dictionary (for example, to set `/V` during form filling) and its
+    /// associated widgets' appearance streams. It returns `None` if the
+    /// field does not exist — callers are expected to surface that as an
+    /// error to the user (see `Document::fill_field`).
+    pub fn get_field_mut(&mut self, name: &str) -> Option<&mut FormField> {
+        self.fields.get_mut(name)
+    }
+
+    /// Get the placeholder `ObjectReference` recorded for a field by name.
+    ///
+    /// The reference is a *placeholder* produced by `FormManager`'s local
+    /// counter at `add_*_field` time. It is the same value that widget
+    /// annotations created via `Page::add_form_widget_with_ref` store as
+    /// their `/Parent`, so this accessor is the bridge used by
+    /// `Document::fill_field` to locate the matching widget annotations on
+    /// page dictionaries without relying on field-name matching (which
+    /// would be fragile for nested field hierarchies in the future).
+    ///
+    /// Returns `None` if the field does not exist. Scoped `pub(crate)`
+    /// because the placeholder id is a writer-internal concept — the
+    /// public surface is `Document::fill_field`, not direct manipulation
+    /// of placeholder refs.
+    pub(crate) fn field_ref(&self, name: &str) -> Option<ObjectReference> {
+        self.field_refs.get(name).copied()
     }
 
     /// Set default appearance for all fields
@@ -417,6 +455,54 @@ impl FormManager {
     /// Get the number of fields managed by this FormManager
     pub fn field_count(&self) -> usize {
         self.fields.len()
+    }
+
+    /// Iterate over fields in a deterministic (alphabetical by name) order,
+    /// paired with the placeholder `ObjectReference` that was returned to
+    /// the caller when the field was added.
+    ///
+    /// The underlying storage is a `HashMap`, which has non-deterministic
+    /// iteration. Serializers that need reproducible output (diff-stable
+    /// `/AcroForm/Fields` arrays, object-id allocations, etc.) MUST use
+    /// this method instead of `fields().iter()`. The placeholder ref is
+    /// the one the writer uses to build the placeholder → real-id map
+    /// consumed by widget-annotation `/Parent` resolution.
+    ///
+    /// Scoped to `pub(crate)` because the placeholder `ObjectReference` is
+    /// a writer-internal concept — leaking it in the public API would
+    /// couple external callers to a serialization detail that is expected
+    /// to evolve. Public iteration can go through [`FormManager::fields`].
+    ///
+    /// # Panics
+    ///
+    /// The iterator panics if the internal `fields` / `field_refs` maps
+    /// desynchronize — a "can't happen" invariant that every
+    /// `add_*_field` method is responsible for upholding. Panicking
+    /// here is acceptable because (a) the invariant is entirely under
+    /// this crate's control and (b) a broken invariant signals memory
+    /// corruption or a logic bug in `add_*_field`, not an ISO 32000-1
+    /// conformance issue — the writer has no meaningful recovery path.
+    /// The previous `Result` wrapper was removed (PR3 / QUAL-6) because
+    /// its error arm was observably unreachable and forced every call
+    /// site to thread `?` for no benefit.
+    pub(crate) fn iter_fields_sorted(
+        &self,
+    ) -> impl Iterator<Item = (&String, &FormField, ObjectReference)> {
+        let mut keys: Vec<&String> = self.fields.keys().collect();
+        keys.sort();
+        keys.into_iter().map(move |k| {
+            // `k` was just produced by `self.fields.keys()`, so this
+            // lookup is infallible under a single immutable borrow.
+            let field = self
+                .fields
+                .get(k)
+                .expect("FormManager invariant: key from fields.keys() must resolve in fields");
+            let placeholder = *self.field_refs.get(k).expect(
+                "FormManager invariant: every field in `fields` must have an entry in \
+                 `field_refs` — check add_*_field",
+            );
+            (k, field, placeholder)
+        })
     }
 }
 
@@ -477,6 +563,41 @@ mod tests {
         let obj_ref = manager.add_checkbox(checkbox, widget, None).unwrap();
         assert_eq!(obj_ref.number(), 1);
         assert!(manager.get_field("agree").is_some());
+    }
+
+    /// PR3 / QUAL-6: `iter_fields_sorted` is non-fallible after cleanup.
+    /// Exercises two invariants at once:
+    ///   * The iterator yields the flat tuple `(&String, &FormField, ObjectReference)`
+    ///     — not a `Result<_>`, because the only previously-documented
+    ///     error path ("sister maps desynchronised") is a "can't happen"
+    ///     invariant upheld by every `add_*_field` call.
+    ///   * Fields are emitted in ASCII-lexicographic order of their
+    ///     partial names, regardless of insertion order. This is what
+    ///     keeps writer object-id allocation reproducible across runs.
+    #[test]
+    fn iter_fields_sorted_is_non_fallible_and_ordered() {
+        let mut manager = FormManager::new();
+        // Deliberately unsorted insertion: "zeta", "alpha", "mu".
+        let rect = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 20.0));
+        manager
+            .add_text_field(TextField::new("zeta"), Widget::new(rect), None)
+            .expect("add zeta");
+        manager
+            .add_text_field(TextField::new("alpha"), Widget::new(rect), None)
+            .expect("add alpha");
+        manager
+            .add_text_field(TextField::new("mu"), Widget::new(rect), None)
+            .expect("add mu");
+
+        let names: Vec<String> = manager
+            .iter_fields_sorted()
+            .map(|(name, _field, _placeholder)| name.clone())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["alpha".to_string(), "mu".to_string(), "zeta".to_string()],
+            "iter_fields_sorted must yield keys in ASCII-lexicographic order"
+        );
     }
 
     #[test]

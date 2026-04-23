@@ -310,7 +310,10 @@ impl<R: Read + Seek> PdfOverlay<R> {
         }
 
         let xobj_name = format!("Overlay{}", overlay_page_idx);
-        page.add_form_xobject(&xobj_name, form);
+        // Overlay-generated names are under our control (`Overlay{n}`)
+        // and always valid per ISO 32000-1 §7.3.5, so `?` is defensive
+        // here rather than a practical failure mode.
+        page.add_form_xobject(&xobj_name, form)?;
 
         // Calculate CTM for positioning and scaling
         let base_w = parsed_base.width();
