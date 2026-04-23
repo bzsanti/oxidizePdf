@@ -2440,6 +2440,54 @@ impl<W: Write> PdfWriter<W> {
             }
         }
 
+        // ColorSpace resources (ISO 32000-1 §8.6, Table 62). Emitted as a
+        // direct sub-dictionary — colour-space *parameters* (the dict
+        // inside `[/CalRGB <<..>>]`) are generally small and inlining them
+        // keeps the cross-reference table lean. Callers that need
+        // larger / shared colour spaces can register them once and reuse
+        // the same key across pages.
+        if !page.color_spaces().is_empty() {
+            let mut cs_dict = Dictionary::new();
+            for (name, obj) in page.color_spaces() {
+                cs_dict.set(name, obj.clone());
+            }
+            resources.set("ColorSpace", Object::Dictionary(cs_dict));
+        }
+
+        // Pattern resources (ISO 32000-1 §8.7.3). Patterns are streams
+        // (§7.3.8.1 requires streams to be indirect objects), so each
+        // pattern is allocated an object id, written as an indirect
+        // stream, and referenced by /Resources/Pattern/<name>.
+        if !page.patterns().is_empty() {
+            let mut pat_dict = Dictionary::new();
+            for (name, pattern) in page.patterns() {
+                let pattern_id = self.allocate_object_id();
+                let pattern_dict = pattern.to_pdf_dictionary()?;
+                self.write_object(
+                    pattern_id,
+                    Object::Stream(pattern_dict, pattern.content_stream.clone()),
+                )?;
+                pat_dict.set(name, Object::Reference(pattern_id));
+            }
+            resources.set("Pattern", Object::Dictionary(pat_dict));
+        }
+
+        // Shading resources (ISO 32000-1 §8.7.4). Shadings are dicts
+        // (not streams for ShadingType 1–3; types 4–7 are streams but we
+        // currently only serialise 1–3 via `ShadingDefinition`). Written
+        // as indirect dicts so the same shading can be referenced from
+        // multiple pages / pattern cells in future iterations.
+        if !page.shadings().is_empty() {
+            let mut sh_dict = Dictionary::new();
+            for (name, shading) in page.shadings() {
+                let shading_id = self.allocate_object_id();
+                let shading_dict = shading.to_pdf_dictionary()?;
+                self.write_object(shading_id, Object::Dictionary(shading_dict))?;
+                sh_dict.set(name, Object::Reference(shading_id));
+            }
+            resources.set("Shading", Object::Dictionary(sh_dict));
+        }
+
         // Merge preserved resources from original PDF (if any)
         // Phase 2.3: Rename preserved fonts to avoid conflicts with overlay fonts
         if let Some(preserved_res) = page.get_preserved_resources() {
