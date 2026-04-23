@@ -618,6 +618,12 @@ impl Document {
             // rendering unit) before declaring two rects distinct.
             const RECT_MATCH_TOLERANCE: f64 = 1e-3;
 
+            // Tracks whether we had to clear any stale /AP below. If so,
+            // flip `/AcroForm/NeedAppearances` true so viewers know to
+            // regenerate the appearance client-side — otherwise readers
+            // that trust /AP would render nothing where we removed it.
+            let mut needs_need_appearances = false;
+
             for page in self.pages.iter_mut() {
                 for annot in page.annotations_mut().iter_mut() {
                     if annot.field_parent != Some(placeholder) {
@@ -636,22 +642,41 @@ impl Document {
                             && (w.rect.upper_right.y - annot.rect.upper_right.y).abs()
                                 < RECT_MATCH_TOLERANCE
                     });
-                    // Fallback to the first widget when no rect matches
-                    // (e.g. annotation added via legacy `add_form_widget`
-                    // with a different rect). If the field has no widgets
-                    // at all — a valid state, e.g.
-                    // `add_radio_button(..., None, None)` — skip /AP sync
-                    // entirely rather than indexing into an empty Vec.
-                    let Some(widget) = matching_widget.or_else(|| form_field.widgets.first())
-                    else {
-                        continue;
-                    };
-                    if let Some(ref app_dict) = widget.appearance_streams {
-                        annot
-                            .properties
-                            .set("AP", Object::Dictionary(app_dict.to_dict()));
+
+                    match matching_widget.and_then(|w| w.appearance_streams.as_ref()) {
+                        Some(app_dict) => {
+                            annot
+                                .properties
+                                .set("AP", Object::Dictionary(app_dict.to_dict()));
+                        }
+                        None => {
+                            // Either (a) no widget rect matches this
+                            // annotation's rect, or (b) the matched
+                            // widget has no regenerated appearance
+                            // stream. In BOTH cases we must NOT guess a
+                            // substitute /AP (the previous fallback to
+                            // `widgets[0]` was a silent-wrong-widget bug
+                            // for multi-widget fields — see code-review
+                            // SEC-F3 2026-04-23). Instead clear any
+                            // stale /AP left from a prior fill and flip
+                            // /NeedAppearances so viewers regenerate.
+                            if annot.properties.get("AP").is_some() {
+                                annot.properties.remove("AP");
+                                needs_need_appearances = true;
+                            } else {
+                                // No stale /AP to clear; still flip
+                                // /NeedAppearances so the new /V gets
+                                // a fresh appearance at open time.
+                                needs_need_appearances = true;
+                            }
+                        }
                     }
                 }
+            }
+
+            if needs_need_appearances {
+                let acro_form = self.acro_form.get_or_insert_with(AcroForm::new);
+                acro_form.need_appearances = true;
             }
         }
 
