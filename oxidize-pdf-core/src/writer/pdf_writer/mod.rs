@@ -2433,6 +2433,27 @@ impl<W: Write> PdfWriter<W> {
                     );
                 }
 
+                // Blend mode (ISO 32000-1 §11.3.5, Table 137). Emitted as
+                // a single name; blend-mode *arrays* (multiple fallback
+                // modes) are not currently exposed by ExtGState.
+                if let Some(ref bm) = state.blend_mode {
+                    state_dict.set("BM", Object::Name(bm.pdf_name().to_string()));
+                }
+
+                // Soft mask (ISO 32000-1 §11.6.4.3, Table 144).
+                // `SoftMask::to_pdf_dictionary` returns a full mask dict
+                // with /Type /Mask /S <Alpha|Luminosity|None> and,
+                // when a transparency group is attached, the /G, /BC
+                // and /TR entries. The `/SMask /None` Name shortcut is
+                // *also* spec-legal per §11.6.4.3; we emit the dict
+                // form unconditionally so callers see a consistent
+                // shape (and because the builder already populated the
+                // dict variant for them).
+                if let Some(ref soft_mask) = state.soft_mask {
+                    let mask_dict = soft_mask.to_pdf_dictionary()?;
+                    state_dict.set("SMask", Object::Dictionary(mask_dict));
+                }
+
                 extgstate_dict.set(name, Object::Dictionary(state_dict));
             }
             if !extgstate_dict.is_empty() {
