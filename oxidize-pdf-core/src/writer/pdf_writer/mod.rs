@@ -2372,6 +2372,14 @@ impl<W: Write> PdfWriter<W> {
         let has_images = !page.images().is_empty();
         let has_forms = !page.form_xobjects().is_empty();
 
+        // Tracks name→ObjectId for every FormXObject written below.
+        // Used downstream by the ExtGState SMask emission (ISO 32000-1
+        // §11.6.4.3 Table 144 requires /G to be an INDIRECT reference
+        // to a transparency-group Form XObject; the caller supplies the
+        // group by name in `SoftMask::alpha(name)` and we resolve that
+        // name to the ObjectId allocated here).
+        let mut form_xobject_ids: HashMap<String, ObjectId> = HashMap::new();
+
         if has_images || has_forms {
             let mut xobject_dict = Dictionary::new();
 
@@ -2423,6 +2431,9 @@ impl<W: Write> PdfWriter<W> {
                     Object::Stream(stream.dictionary().clone(), stream.data().to_vec());
                 self.write_object(form_id, stream_obj)?;
                 xobject_dict.set(name, Object::Reference(form_id));
+                // Record the mapping so a downstream SoftMask with
+                // `group_ref == name` can resolve to this indirect ref.
+                form_xobject_ids.insert(name.clone(), form_id);
             }
 
             resources.set("XObject", Object::Dictionary(xobject_dict));
@@ -2488,8 +2499,27 @@ impl<W: Write> PdfWriter<W> {
                 // form unconditionally so callers see a consistent
                 // shape (and because the builder already populated the
                 // dict variant for them).
+                //
+                // /G MUST be an indirect reference (Table 144). The
+                // `SoftMask` API models the group reference as a `String`
+                // name matching a FormXObject registered on this page
+                // via `Page::add_form_xobject(name, ...)`. Resolve the
+                // name here to the indirect ObjectId allocated above.
+                // If no matching FormXObject exists, surface a structured
+                // error rather than emit a spec-invalid /G /<Name> token.
                 if let Some(ref soft_mask) = state.soft_mask {
-                    let mask_dict = soft_mask.to_pdf_dictionary()?;
+                    let mut mask_dict = soft_mask.to_pdf_dictionary()?;
+                    if let Some(Object::Name(ref g_name)) = mask_dict.get("G").cloned() {
+                        let form_id = form_xobject_ids.get(g_name).ok_or_else(|| {
+                            crate::error::PdfError::InvalidStructure(format!(
+                                "SoftMask references transparency group {:?} but no matching \
+                                 FormXObject is registered on the page; call \
+                                 Page::add_form_xobject({:?}, ...) before saving",
+                                g_name, g_name
+                            ))
+                        })?;
+                        mask_dict.set("G", Object::Reference(*form_id));
+                    }
                     state_dict.set("SMask", Object::Dictionary(mask_dict));
                 }
 

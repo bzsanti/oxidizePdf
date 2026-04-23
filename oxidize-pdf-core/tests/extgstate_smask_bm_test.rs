@@ -208,21 +208,36 @@ fn extgstate_emits_smask_none_when_set_soft_mask_none() {
 }
 
 /// Task 8 positive path: a real alpha soft mask must emit a dict with
-/// `/Type /Mask`, `/S /Alpha`, and a `/G` entry referencing the
-/// transparency group XObject name supplied by the caller (Table 144).
+/// `/Type /Mask`, `/S /Alpha`, and a `/G` entry that is an **indirect
+/// reference** to the transparency-group Form XObject registered on
+/// the page. ISO 32000-1 §11.6.4.3 Table 144 is explicit: `/G` is an
+/// indirect reference — a raw `/Name` is a spec violation and strict
+/// validators (Acrobat preflight, pdfcpu) reject it.
 ///
-/// We store the group ref as a Name for now (placeholder for a later
-/// indirect Object reference). That matches how `SoftMask::alpha(name)`
-/// models the reference today — when the writer upgrades to emitting
-/// `/G` as an indirect object reference, only the assertion on `/G`
-/// needs to adapt, not the public API.
+/// Previous iteration of this test accepted either form; that
+/// permissiveness masked a real bug. The PR2 code-quality audit
+/// tightened this assertion — the writer now resolves the
+/// `SoftMask::alpha(name)` string to the ObjectId allocated for the
+/// matching `Page::add_form_xobject(name, ...)` entry, and emits an
+/// indirect reference.
 #[test]
-fn extgstate_emits_smask_alpha_dict_with_group_reference() {
+fn extgstate_emits_smask_alpha_dict_with_indirect_g_reference() {
+    use oxidize_pdf::geometry::{Point, Rectangle};
+    use oxidize_pdf::graphics::FormXObject;
+
     let mut doc = Document::new();
     let mut page = Page::a4();
+
+    // The SoftMask references the transparency group by name — which
+    // means the caller MUST have registered a FormXObject under that
+    // name via `Page::add_form_xobject` so the writer can resolve it
+    // to an indirect reference.
+    let bbox = Rectangle::new(Point::new(0.0, 0.0), Point::new(100.0, 100.0));
+    page.add_form_xobject("TransGroup", FormXObject::new(bbox))
+        .expect("add_form_xobject");
+
     let sm = SoftMask::alpha("TransGroup".to_string());
-    let gs = ExtGState::new().with_alpha_stroke(1.0);
-    let mut gs = gs;
+    let mut gs = ExtGState::new().with_alpha_stroke(1.0);
     gs.set_soft_mask(sm);
     let name = page
         .graphics()
@@ -252,14 +267,13 @@ fn extgstate_emits_smask_alpha_dict_with_group_reference() {
         Some("Alpha"),
         "/SMask/S must be /Alpha for SoftMask::alpha(...)"
     );
-    // /G is present as either a Name (current placeholder form) or a
-    // Reference. Either is acceptable for this regression check; the
-    // key invariant is that the group identifier survives round-trip.
+
+    // /G MUST be an indirect reference per §11.6.4.3 Table 144.
     let g = smask.get("G").expect("/SMask/G must be present");
-    let g_desc = format!("{:?}", g);
     assert!(
-        g_desc.contains("TransGroup"),
-        "/SMask/G must preserve the group reference 'TransGroup', got {:?}",
+        matches!(g, oxidize_pdf::parser::objects::PdfObject::Reference(_, _)),
+        "/SMask/G MUST be an indirect reference (ISO 32000-1 §11.6.4.3); \
+         got: {:?}",
         g
     );
 }
