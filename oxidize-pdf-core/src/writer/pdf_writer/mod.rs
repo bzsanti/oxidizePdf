@@ -71,6 +71,32 @@ impl WriterConfig {
     }
 }
 
+/// Escape the three characters that are meaningful inside a PDF literal
+/// string (ISO 32000-1 §7.3.4.2): backslash introduces escape sequences
+/// and MUST be doubled; parentheses delimit the string and MUST be
+/// prefixed with a backslash when they appear in the payload.
+///
+/// Other control characters (CR, LF, HT, BS, FF) are legal inside a
+/// literal string *unescaped*, so we leave them alone — the parser is
+/// required to accept them verbatim per §7.3.4.2 Table 3. Octal
+/// escapes are a valid alternative encoding but not required here.
+///
+/// Correct ordering is essential: `\` MUST be escaped first (otherwise
+/// the `\` we insert to escape a `(` would itself get doubled). This
+/// helper walks the input exactly once and emits the escaped form.
+fn escape_pdf_string_bytes(input: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(input.len());
+    for &byte in input {
+        match byte {
+            b'\\' => out.extend_from_slice(b"\\\\"),
+            b'(' => out.extend_from_slice(b"\\("),
+            b')' => out.extend_from_slice(b"\\)"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
 pub struct PdfWriter<W: Write> {
     writer: W,
     xref_positions: HashMap<ObjectId, u64>,
@@ -2349,7 +2375,13 @@ impl<W: Write> PdfWriter<W> {
         if has_images || has_forms {
             let mut xobject_dict = Dictionary::new();
 
-            for (name, image) in page.images() {
+            // Sort by name for reproducible output (images first, then
+            // form xobjects — both sorted within their group). Sharing
+            // the sort key produces the same layout across builds.
+            let mut image_entries: Vec<(&String, &crate::graphics::Image)> =
+                page.images().iter().collect();
+            image_entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, image) in image_entries {
                 // Use sequential ObjectId allocation to avoid conflicts
                 let image_id = self.allocate_object_id();
 
@@ -2381,7 +2413,10 @@ impl<W: Write> PdfWriter<W> {
             }
 
             // Write Form XObjects (used for overlay/watermark operations)
-            for (name, form) in page.form_xobjects() {
+            let mut form_entries: Vec<(&String, &crate::graphics::FormXObject)> =
+                page.form_xobjects().iter().collect();
+            form_entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, form) in form_entries {
                 let form_id = self.allocate_object_id();
                 let stream = form.to_stream()?;
                 let stream_obj =
@@ -2396,7 +2431,11 @@ impl<W: Write> PdfWriter<W> {
         // Add ExtGState resources for transparency
         if let Some(extgstate_states) = page.get_extgstate_resources() {
             let mut extgstate_dict = Dictionary::new();
-            for (name, state) in extgstate_states {
+            // Sort ExtGState entries by name for reproducible output.
+            let mut extgstate_entries: Vec<(&String, &crate::graphics::ExtGState)> =
+                extgstate_states.iter().collect();
+            extgstate_entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, state) in extgstate_entries {
                 let mut state_dict = Dictionary::new();
                 state_dict.set("Type", Object::Name("ExtGState".to_string()));
 
@@ -2467,6 +2506,14 @@ impl<W: Write> PdfWriter<W> {
         // keeps the cross-reference table lean. Callers that need
         // larger / shared colour spaces can register them once and reuse
         // the same key across pages.
+        // Deterministic emission of all three resource sub-dicts is
+        // enforced at Dictionary write time (see QUAL-9 sort below in
+        // `write_object_value`). We therefore iterate the source
+        // HashMaps in any order here — the serializer reorders.
+        // However we DO sort Pattern / Shading entries before
+        // `allocate_object_id()` so object-id allocation is also
+        // reproducible (two identical documents allocate ids in the
+        // same sequence, producing byte-identical xref entries).
         if !page.color_spaces().is_empty() {
             let mut cs_dict = Dictionary::new();
             for (name, obj) in page.color_spaces() {
@@ -2475,13 +2522,12 @@ impl<W: Write> PdfWriter<W> {
             resources.set("ColorSpace", Object::Dictionary(cs_dict));
         }
 
-        // Pattern resources (ISO 32000-1 §8.7.3). Patterns are streams
-        // (§7.3.8.1 requires streams to be indirect objects), so each
-        // pattern is allocated an object id, written as an indirect
-        // stream, and referenced by /Resources/Pattern/<name>.
         if !page.patterns().is_empty() {
             let mut pat_dict = Dictionary::new();
-            for (name, pattern) in page.patterns() {
+            let mut entries: Vec<(&String, &crate::graphics::TilingPattern)> =
+                page.patterns().iter().collect();
+            entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, pattern) in entries {
                 let pattern_id = self.allocate_object_id();
                 let pattern_dict = pattern.to_pdf_dictionary()?;
                 self.write_object(
@@ -2493,14 +2539,12 @@ impl<W: Write> PdfWriter<W> {
             resources.set("Pattern", Object::Dictionary(pat_dict));
         }
 
-        // Shading resources (ISO 32000-1 §8.7.4). Shadings are dicts
-        // (not streams for ShadingType 1–3; types 4–7 are streams but we
-        // currently only serialise 1–3 via `ShadingDefinition`). Written
-        // as indirect dicts so the same shading can be referenced from
-        // multiple pages / pattern cells in future iterations.
         if !page.shadings().is_empty() {
             let mut sh_dict = Dictionary::new();
-            for (name, shading) in page.shadings() {
+            let mut entries: Vec<(&String, &crate::graphics::ShadingDefinition)> =
+                page.shadings().iter().collect();
+            entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, shading) in entries {
                 let shading_id = self.allocate_object_id();
                 let shading_dict = shading.to_pdf_dictionary()?;
                 self.write_object(shading_id, Object::Dictionary(shading_dict))?;
@@ -3000,8 +3044,16 @@ impl<W: Write> PdfWriter<W> {
                     .as_bytes(),
             )?,
             Object::String(s) => {
+                // ISO 32000-1 §7.3.4.2: inside a literal string, the
+                // characters `\`, `(` and `)` MUST be escaped (as `\\`,
+                // `\(`, `\)` respectively) so the parser does not
+                // terminate the string early or treat `\` as an escape
+                // introducer for the following byte. Without this, a
+                // caller-supplied value containing `)` (e.g. through
+                // `Document::fill_field`) would close the literal and
+                // allow dict-level injection into the enclosing object.
                 self.write_bytes(b"(")?;
-                self.write_bytes(s.as_bytes())?;
+                self.write_bytes(&escape_pdf_string_bytes(s.as_bytes()))?;
                 self.write_bytes(b")")?;
             }
             Object::ByteString(bytes) => {
@@ -3027,8 +3079,17 @@ impl<W: Write> PdfWriter<W> {
                 self.write_bytes(b"]")?;
             }
             Object::Dictionary(dict) => {
+                // Sort entries lexicographically by key for reproducible
+                // output. `Dictionary` is backed by `HashMap` (with
+                // per-instance randomised iteration order), so two
+                // identical logical documents would otherwise emit
+                // byte-different PDFs. PDF dict entries are unordered
+                // by spec (ISO 32000-1 §7.3.7 Table 5: "the order of
+                // entries ... is not significant"), so sorting is safe.
                 self.write_bytes(b"<<")?;
-                for (key, value) in dict.entries() {
+                let mut entries: Vec<(&String, &Object)> = dict.entries().collect();
+                entries.sort_by_key(|(k, _)| k.as_str());
+                for (key, value) in entries {
                     self.write_bytes(b"\n/")?;
                     self.write_bytes(key.as_bytes())?;
                     self.write_bytes(b" ")?;
@@ -3068,8 +3129,10 @@ impl<W: Write> PdfWriter<W> {
                     .as_bytes(),
             ),
             Object::String(s) => {
+                // Same escape rules as the streaming `write_object_value`
+                // path — see ISO 32000-1 §7.3.4.2.
                 buffer.push(b'(');
-                buffer.extend_from_slice(s.as_bytes());
+                buffer.extend_from_slice(&escape_pdf_string_bytes(s.as_bytes()));
                 buffer.push(b')');
             }
             Object::ByteString(bytes) => {
@@ -3094,8 +3157,13 @@ impl<W: Write> PdfWriter<W> {
                 buffer.push(b']');
             }
             Object::Dictionary(dict) => {
+                // Same deterministic-order rule as the streaming writer
+                // (see `write_object_value`): sort entries by key for
+                // reproducible output across builds.
                 buffer.extend_from_slice(b"<<");
-                for (key, value) in dict.entries() {
+                let mut entries: Vec<(&String, &Object)> = dict.entries().collect();
+                entries.sort_by_key(|(k, _)| k.as_str());
+                for (key, value) in entries {
                     buffer.extend_from_slice(b"\n/");
                     buffer.extend_from_slice(key.as_bytes());
                     buffer.push(b' ');

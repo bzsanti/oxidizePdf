@@ -94,7 +94,8 @@ fn page_color_space_is_written_as_parameterised_array() {
             Object::Name("CalRGB".to_string()),
             Object::Dictionary(calrgb),
         ]),
-    );
+    )
+    .expect("add_color_space");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -139,7 +140,8 @@ fn page_color_space_is_written_as_parameterised_array() {
 fn page_color_space_preserves_name_form() {
     let mut doc = Document::new();
     let mut page = Page::a4();
-    page.add_color_space("MyRGB", Object::Name("DeviceRGB".to_string()));
+    page.add_color_space("MyRGB", Object::Name("DeviceRGB".to_string()))
+        .expect("add_color_space");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -189,7 +191,8 @@ fn page_without_color_spaces_omits_colorspace_entry() {
 fn color_spaces_accessor_is_public_and_reflects_state() {
     let mut page = Page::a4();
     assert!(page.color_spaces().is_empty());
-    page.add_color_space("CS1", Object::Name("DeviceRGB".to_string()));
+    page.add_color_space("CS1", Object::Name("DeviceRGB".to_string()))
+        .expect("add_color_space");
     let map = page.color_spaces();
     assert_eq!(map.len(), 1);
     assert!(map.contains_key("CS1"));

@@ -89,7 +89,8 @@ fn make_red_tile(name: &str) -> TilingPattern {
 fn page_pattern_is_written_as_indirect_stream_with_required_entries() {
     let mut doc = Document::new();
     let mut page = Page::a4();
-    page.add_pattern("P1", make_red_tile("P1"));
+    page.add_pattern("P1", make_red_tile("P1"))
+        .expect("add_pattern");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -177,7 +178,8 @@ fn page_without_patterns_omits_pattern_entry() {
 fn patterns_accessor_is_public_and_reflects_state() {
     let mut page = Page::a4();
     assert!(page.patterns().is_empty());
-    page.add_pattern("P1", make_red_tile("P1"));
+    page.add_pattern("P1", make_red_tile("P1"))
+        .expect("add_pattern");
     let map = page.patterns();
     assert_eq!(map.len(), 1);
     assert!(map.contains_key("P1"));

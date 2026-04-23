@@ -1508,9 +1508,22 @@ mod comprehensive_tests {
 
         let content = String::from_utf8_lossy(&buffer);
 
-        // Should properly handle special characters
-        assert!(content.contains("(Text with ) and ( parentheses)"));
-        assert!(content.contains("(Text with \\ backslash)"));
+        // Should properly escape special characters per ISO 32000-1
+        // §7.3.4.2 (post-F1 fix). Raw `)` and `(` inside the string
+        // payload close / open new groups; a raw `\` introduces an
+        // escape sequence. All three MUST be backslash-escaped so the
+        // parser round-trips the original bytes. Accepting the
+        // pre-F1-fix unescaped form would re-introduce the dict-level
+        // injection vector documented in
+        // tests/writer_hygiene_test.rs::object_string_escapes_delimiters_in_dict_injection_payload.
+        assert!(
+            content.contains(r"(Text with \) and \( parentheses)"),
+            "parens inside Object::String must be escaped as \\) and \\("
+        );
+        assert!(
+            content.contains(r"(Text with \\ backslash)"),
+            "backslash inside Object::String must be escaped as \\\\"
+        );
     }
 
     // Test 30: Resource dictionary structure

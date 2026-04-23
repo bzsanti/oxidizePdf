@@ -87,7 +87,8 @@ fn make_axial(name: &str) -> ShadingDefinition {
 fn page_shading_is_written_as_indirect_dict_with_shadingtype() {
     let mut doc = Document::new();
     let mut page = Page::a4();
-    page.add_shading("Sh1", make_axial("Sh1"));
+    page.add_shading("Sh1", make_axial("Sh1"))
+        .expect("add_shading");
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("serialize");
@@ -145,7 +146,8 @@ fn page_without_shadings_omits_shading_entry() {
 fn shadings_accessor_is_public_and_reflects_state() {
     let mut page = Page::a4();
     assert!(page.shadings().is_empty());
-    page.add_shading("Sh1", make_axial("Sh1"));
+    page.add_shading("Sh1", make_axial("Sh1"))
+        .expect("add_shading");
     let map = page.shadings();
     assert_eq!(map.len(), 1);
     assert!(map.contains_key("Sh1"));
