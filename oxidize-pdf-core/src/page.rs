@@ -799,9 +799,29 @@ impl Page {
         &self.images
     }
 
-    /// Adds a Form XObject resource to this page.
-    /// Used by overlay operations to embed external page content.
-    pub(crate) fn add_form_xobject(
+    /// Adds a Form XObject resource to this page (public as of v2.5.6).
+    ///
+    /// `name` is the key under which the Form XObject is exposed in the
+    /// page's `/Resources/XObject` dictionary — typically `F1`, `Fm0`, etc.
+    /// Use this when embedding reusable graphical content, overlays, stamps
+    /// or template page fragments composed with the `FormXObject` /
+    /// `FormXObjectBuilder` APIs.
+    ///
+    /// Duplicate names overwrite silently (the same behaviour as inserting
+    /// into the underlying map); if you need idempotent registration,
+    /// inspect [`Page::form_xobjects`] before calling.
+    ///
+    /// ```rust
+    /// use oxidize_pdf::geometry::Rectangle;
+    /// use oxidize_pdf::graphics::FormXObject;
+    /// use oxidize_pdf::Page;
+    ///
+    /// let mut page = Page::a4();
+    /// let bbox = Rectangle::from_position_and_size(0.0, 0.0, 100.0, 100.0);
+    /// page.add_form_xobject("F1", FormXObject::new(bbox));
+    /// assert!(page.form_xobjects().contains_key("F1"));
+    /// ```
+    pub fn add_form_xobject(
         &mut self,
         name: impl Into<String>,
         form: crate::graphics::FormXObject,
@@ -809,8 +829,12 @@ impl Page {
         self.form_xobjects.insert(name.into(), form);
     }
 
-    /// Returns all Form XObjects registered on this page.
-    pub(crate) fn form_xobjects(&self) -> &HashMap<String, crate::graphics::FormXObject> {
+    /// Returns all Form XObjects registered on this page (public as of v2.5.6).
+    ///
+    /// Keys correspond to `/Resources/XObject` entries emitted by the
+    /// writer. The returned map is read-only; to mutate, use
+    /// [`Page::add_form_xobject`].
+    pub fn form_xobjects(&self) -> &HashMap<String, crate::graphics::FormXObject> {
         &self.form_xobjects
     }
 
