@@ -832,6 +832,16 @@ impl Page {
     pub fn add_text_flow(&mut self, text_flow: &TextFlowContext) {
         let operations = text_flow.generate_operations();
         self.content.extend_from_slice(&operations);
+        // Absorb the text flow's per-font character tracking into the
+        // page's graphics-context accumulator so the writer can subset
+        // each custom font referenced by the flow (issue #204). Pre-fix
+        // this merge did not happen, so a `TextFlowContext` with a
+        // `Font::Custom` produced a content stream that referenced a
+        // font whose subset was driven by whatever other page drew
+        // with the global `used_characters` — and after the fix, the
+        // unused-font skip would remove the font entirely.
+        self.graphics_context
+            .merge_font_usage(text_flow.get_used_characters_by_font());
     }
 
     pub fn add_image(&mut self, name: impl Into<String>, image: Image) {
@@ -1008,10 +1018,28 @@ impl Page {
         &self.shadings
     }
 
-    /// Appends raw PDF operators to the content stream.
-    /// Content appended here renders AFTER the existing page content (on top).
-    pub(crate) fn append_raw_content(&mut self, data: &[u8]) {
+    /// Append raw PDF operators to the content stream and record which
+    /// fonts each character was drawn with (issue #204).
+    ///
+    /// `font_usage` MUST account for every `Tj`/`TJ` emitted inside
+    /// `data` — the caller is the only actor that has ground truth
+    /// about which font was active when the operator was generated.
+    /// Pre-fix this method took just `data`; the resulting silent
+    /// failure mode (unused fonts being subsetted with someone else's
+    /// characters, or — post-fix — missing entirely from the emitted
+    /// PDF because no per-font bucket existed) is exactly what the
+    /// type-gate here prevents. Future content builders must return
+    /// their usage map alongside their bytes.
+    ///
+    /// Content appended here renders AFTER the existing page content
+    /// (on top).
+    pub(crate) fn append_raw_content(
+        &mut self,
+        data: &[u8],
+        font_usage: &HashMap<String, HashSet<char>>,
+    ) {
         self.content.extend_from_slice(data);
+        self.graphics_context.merge_font_usage(font_usage);
     }
 
     /// Add a table to the page.
@@ -1187,6 +1215,7 @@ impl Page {
     /// page.set_header(HeaderFooter::new_header("Company Report 2024"));
     /// ```
     pub fn set_header(&mut self, header: HeaderFooter) {
+        self.register_header_footer_font_usage(&header);
         self.header = Some(header);
     }
 
@@ -1201,7 +1230,53 @@ impl Page {
     /// page.set_footer(HeaderFooter::new_footer("Page {{page_number}} of {{total_pages}}"));
     /// ```
     pub fn set_footer(&mut self, footer: HeaderFooter) {
+        self.register_header_footer_font_usage(&footer);
         self.footer = Some(footer);
+    }
+
+    /// Eagerly record the font + estimated character set of a header or
+    /// footer on the page's graphics-context accumulator (gap R5 of
+    /// issue #204).
+    ///
+    /// Header/footer content is rendered at serialization time — inside
+    /// `generate_content_with_page_info` — which runs AFTER the writer
+    /// has snapshotted the document's per-font map into its own
+    /// `document_used_chars_by_font`. Any characters drawn at render
+    /// time therefore arrive too late to be included in the font
+    /// subset. We compensate here by expanding the template with
+    /// canonical sample values (the numeric placeholders become the
+    /// digit set; `{{date}}`, `{{time}}`, `{{month}}`, etc. expand to
+    /// the current locale's rendering) and registering those chars
+    /// plus the template's literal text up front.
+    ///
+    /// **Known limitation**: user-supplied `custom_values` passed later
+    /// to the writer may introduce characters not in the template
+    /// literal. Those chars will NOT appear in the embedded subset and
+    /// will render as `.notdef`. Callers who need runtime-defined
+    /// custom strings in a custom-font header should also draw a
+    /// `page.text()` with the same font somewhere (even invisibly)
+    /// so the chars reach the per-font bucket through the standard
+    /// path.
+    fn register_header_footer_font_usage(&mut self, hf: &HeaderFooter) {
+        let font_name = hf.options().font.pdf_name();
+
+        // Render the template with canonical sample values to capture
+        // both the literal text and whatever the locale-dependent
+        // placeholders expand to (month name, date format, etc.).
+        // page_number=1 / total_pages=999 covers the digit 9 which is
+        // the upper boundary of common PDFs; a further safety net adds
+        // the full digit set below.
+        let sampled = hf.render(1, 999, None);
+
+        let mut chars: HashSet<char> = sampled.chars().collect();
+        // Digits 0-9 are guaranteed to appear once the template is
+        // rendered with real page numbers (the sample above only
+        // covered {1, 9} digits). Include the rest so page 2..8 don't
+        // render as .notdef on the last page of a >10-page document.
+        chars.extend('0'..='9');
+
+        self.graphics_context
+            .merge_font_usage(&std::iter::once((font_name, chars)).collect());
     }
 
     /// Gets a reference to the header if set.
@@ -1370,21 +1445,42 @@ impl Page {
         dict
     }
 
-    /// Gets all characters used in this page.
+    /// Gets all characters used in this page, bucketed by font name
+    /// (issue #204).
     ///
-    /// Combines characters from both graphics_context and text_context
-    /// to ensure proper font subsetting for custom fonts (fixes issue #97).
-    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
-        let graphics_chars = self.graphics_context.get_used_characters();
-        let text_chars = self.text_context.get_used_characters();
+    /// Merges the per-font maps from `graphics_context` and
+    /// `text_context` — either or both may contain entries for the
+    /// same font (e.g. a caller mixed `page.text()` with direct
+    /// graphics-context `draw_text`). Both builtin and custom fonts
+    /// appear as keys; the writer filters to the registered custom
+    /// fonts at subsetting time (builtin fonts don't need subsetting).
+    pub(crate) fn get_used_characters_by_font(&self) -> HashMap<String, HashSet<char>> {
+        let mut merged: HashMap<String, HashSet<char>> = HashMap::new();
+        for (name, chars) in self.graphics_context.get_used_characters_by_font() {
+            merged.entry(name.clone()).or_default().extend(chars);
+        }
+        for (name, chars) in self.text_context.get_used_characters_by_font() {
+            merged.entry(name.clone()).or_default().extend(chars);
+        }
+        merged
+    }
 
-        match (graphics_chars, text_chars) {
-            (None, None) => None,
-            (Some(chars), None) | (None, Some(chars)) => Some(chars),
-            (Some(mut g_chars), Some(t_chars)) => {
-                g_chars.extend(t_chars);
-                Some(g_chars)
-            }
+    /// Back-compat accessor used by the legacy issue-#97 tests: returns
+    /// all characters drawn on this page merged across fonts. Prefer
+    /// [`Page::get_used_characters_by_font`] for new callers — the
+    /// writer depends on per-font accuracy to avoid bundling the
+    /// active font's coverage into unused fonts (issue #204).
+    #[cfg(test)]
+    pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
+        let merged: HashSet<char> = self
+            .get_used_characters_by_font()
+            .into_values()
+            .flatten()
+            .collect();
+        if merged.is_empty() {
+            None
+        } else {
+            Some(merged)
         }
     }
 

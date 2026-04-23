@@ -56,7 +56,7 @@ pub use tesseract_provider::{RustyTesseractConfig, RustyTesseractProvider};
 
 use crate::error::Result;
 use crate::Color;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 /// Text rendering mode for PDF text operations
@@ -98,8 +98,13 @@ pub struct TextContext {
     // Color parameters
     fill_color: Option<Color>,
     stroke_color: Option<Color>,
-    // Track used characters for font subsetting (fixes issue #97)
-    used_characters: HashSet<char>,
+    // Track used characters per custom-font name (issue #204 — a single
+    // global set caused every registered font to be subsetted with the
+    // same characters, so two fonts of the same family ended up with
+    // duplicated subsets). Builtin fonts are not tracked because they
+    // don't need subsetting. Extended by `write` whenever the active
+    // font is `Font::Custom`.
+    used_characters_by_font: HashMap<String, HashSet<char>>,
 }
 
 impl Default for TextContext {
@@ -124,20 +129,46 @@ impl TextContext {
             rendering_mode: None,
             fill_color: None,
             stroke_color: None,
-            used_characters: HashSet::new(),
+            used_characters_by_font: HashMap::new(),
         }
     }
 
-    /// Get the characters used in this text context for font subsetting.
-    ///
-    /// This is used to determine which glyphs need to be embedded when using
-    /// custom fonts (especially CJK fonts).
+    /// Record `text` as drawn with the currently-active font, bucketed
+    /// under the font's PDF name (issue #204). Builtin and custom fonts
+    /// are both tracked; the writer later filters to the set of
+    /// registered custom fonts when subsetting.
+    fn record_used_chars(&mut self, text: &str) {
+        let name = match &self.current_font {
+            Font::Custom(name) => name.clone(),
+            builtin => builtin.pdf_name(),
+        };
+        self.used_characters_by_font
+            .entry(name)
+            .or_default()
+            .extend(text.chars());
+    }
+
+    /// Get the characters used in this text context (merged across all
+    /// fonts). Test-only compatibility accessor; callers that need
+    /// per-font accuracy for subsetting should use
+    /// [`TextContext::get_used_characters_by_font`] (issue #204).
+    #[cfg(test)]
     pub(crate) fn get_used_characters(&self) -> Option<HashSet<char>> {
-        if self.used_characters.is_empty() {
+        let merged: HashSet<char> = self
+            .used_characters_by_font
+            .values()
+            .flat_map(|s| s.iter().copied())
+            .collect();
+        if merged.is_empty() {
             None
         } else {
-            Some(self.used_characters.clone())
+            Some(merged)
         }
+    }
+
+    /// Get the per-font character map for font subsetting (issue #204).
+    pub(crate) fn get_used_characters_by_font(&self) -> &HashMap<String, HashSet<char>> {
+        &self.used_characters_by_font
     }
 
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
@@ -234,8 +265,9 @@ impl TextContext {
             }
         }
 
-        // Track used characters for font subsetting (fixes issue #97)
-        self.used_characters.extend(text.chars());
+        // Track used characters for font subsetting bucketed by the
+        // active custom font (issue #204).
+        self.record_used_chars(text);
 
         // End text object
         self.operations.push_str("ET\n");
