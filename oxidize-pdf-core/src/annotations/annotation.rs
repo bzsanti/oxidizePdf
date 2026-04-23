@@ -310,12 +310,20 @@ impl Annotation {
     /// the writer remaps the placeholder to a real indirect-object id
     /// at serialization time.
     ///
-    /// Only meaningful for [`AnnotationType::Widget`]. In debug builds,
-    /// calling this on a non-Widget annotation is a programming error
-    /// and trips a `debug_assert!`. In release builds the setter still
-    /// stores the value, but `to_dict` will refuse to emit `/Parent`
-    /// for non-Widget annotations (defence in depth: the setter is the
-    /// primary gate; the emitter is the safety net).
+    /// Only meaningful for [`AnnotationType::Widget`].
+    ///
+    /// # Panics
+    ///
+    /// In **debug builds**, calling this on a non-Widget annotation
+    /// trips a `debug_assert!` — using `/Parent` on a non-Widget
+    /// annotation is a spec violation and almost always a programmer
+    /// error. In **release builds** the setter still stores the value
+    /// (no panic), but the defence-in-depth check in [`to_dict`] will
+    /// refuse to emit `/Parent` for non-Widget annotations, so a
+    /// mis-targeted call is degraded to a silent no-op rather than an
+    /// invalid PDF.
+    ///
+    /// [`to_dict`]: Annotation::to_dict
     pub fn set_field_parent(&mut self, parent: ObjectReference) {
         debug_assert!(
             matches!(self.annotation_type, AnnotationType::Widget),

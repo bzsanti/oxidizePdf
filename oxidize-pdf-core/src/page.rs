@@ -114,11 +114,11 @@ pub struct Page {
     images: HashMap<String, Image>,
     form_xobjects: HashMap<String, crate::graphics::FormXObject>,
     /// Registered colour spaces, emitted under `/Resources/ColorSpace`
-    /// per ISO 32000-1 §8.6, Table 62. Values preserve the caller-supplied
-    /// `Object` shape (typically `Array([Name, Dictionary])` for
-    /// parameterised spaces like CalRGB / ICCBased / Indexed, or a single
-    /// `Name` for aliasing a device space under a custom resource name).
-    color_spaces: HashMap<String, crate::objects::Object>,
+    /// per ISO 32000-1 §8.6, Table 62. Values are typed via
+    /// [`crate::graphics::PageColorSpace`] — see that enum for the two
+    /// supported wire-format shapes (device alias vs. parameterised
+    /// `[/<family> <<params>>]`).
+    color_spaces: HashMap<String, crate::graphics::PageColorSpace>,
     /// Registered tiling patterns, emitted as indirect stream objects
     /// referenced from `/Resources/Pattern` per ISO 32000-1 §8.7.3.
     patterns: HashMap<String, crate::graphics::TilingPattern>,
@@ -913,12 +913,22 @@ impl Page {
 
     /// Registers a colour space under `name` (ISO 32000-1 §8.6).
     ///
-    /// `cs` must be a legal PDF colour-space representation: either a
-    /// single name (e.g. `Object::Name("DeviceRGB")`) aliasing a device
-    /// space under a custom resource key, or an array like
-    /// `[/CalRGB <<dict>>]` / `[/ICCBased <<stream>>]` /
-    /// `[/Indexed /DeviceRGB N <hivals>]`. The writer serialises the
-    /// supplied object verbatim into `/Resources/ColorSpace/<name>`.
+    /// `cs` is a typed [`crate::graphics::PageColorSpace`] — either a
+    /// [`PageColorSpace::DeviceAlias`] wrapping one of the four device
+    /// spaces (`/DeviceGray`, `/DeviceRGB`, `/DeviceCMYK`, `/Pattern`),
+    /// or a [`PageColorSpace::Parameterised`] entry producing
+    /// `[/<family> <<params>>]` for the calibrated families (`CalGray`,
+    /// `CalRGB`, `Lab`, `ICCBased`). Indexed / Separation / DeviceN
+    /// shapes are out of scope for this wrapper at v2.5.6; see the
+    /// [`page_color_space`] module docs for the rationale.
+    ///
+    /// The writer emits the value under `/Resources/ColorSpace/<name>`,
+    /// converting the enum to its concrete wire format at serialization
+    /// time.
+    ///
+    /// [`page_color_space`]: crate::graphics::page_color_space
+    /// [`PageColorSpace::DeviceAlias`]: crate::graphics::PageColorSpace::DeviceAlias
+    /// [`PageColorSpace::Parameterised`]: crate::graphics::PageColorSpace::Parameterised
     ///
     /// # Errors
     ///
@@ -928,7 +938,7 @@ impl Page {
     pub fn add_color_space(
         &mut self,
         name: impl Into<String>,
-        cs: crate::objects::Object,
+        cs: crate::graphics::PageColorSpace,
     ) -> Result<()> {
         let name = name.into();
         validate_pdf_resource_name(&name)?;
@@ -937,7 +947,10 @@ impl Page {
     }
 
     /// Returns all colour spaces registered on this page.
-    pub fn color_spaces(&self) -> &HashMap<String, crate::objects::Object> {
+    ///
+    /// Map values are typed as [`crate::graphics::PageColorSpace`]; the
+    /// writer converts to the concrete PDF `Object` shape at emit time.
+    pub fn color_spaces(&self) -> &HashMap<String, crate::graphics::PageColorSpace> {
         &self.color_spaces
     }
 
