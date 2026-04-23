@@ -220,6 +220,18 @@ pub struct Annotation {
     pub color: Option<Color>,
     /// Page reference (set by manager)
     pub page: Option<ObjectReference>,
+    /// Parent form field reference for widget annotations that live as
+    /// children of an /AcroForm field (ISO 32000-1 §12.7.3.1).
+    ///
+    /// When set, serialization writes `/Parent <ref>` into the annotation
+    /// dictionary so that the widget is linked to the field it belongs to.
+    /// Only meaningful for `AnnotationType::Widget`; ignored otherwise.
+    ///
+    /// Scoped to `pub(crate)` because setting a `/Parent` on a non-Widget
+    /// annotation is meaningless and (for encrypted / PDF/A output) risky.
+    /// External callers must go through [`Annotation::set_field_parent`],
+    /// which validates the annotation type.
+    pub(crate) field_parent: Option<ObjectReference>,
     /// Additional properties specific to annotation type
     pub properties: Dictionary,
 }
@@ -241,6 +253,7 @@ impl Annotation {
             border: None,
             color: None,
             page: None,
+            field_parent: None,
             properties: Dictionary::new(),
         }
     }
@@ -287,6 +300,29 @@ impl Annotation {
         for (key, value) in field_dict.iter() {
             self.properties.set(key, value.clone());
         }
+    }
+
+    /// Set the parent form-field reference for a Widget annotation.
+    ///
+    /// Widget annotations that live as children of an /AcroForm field
+    /// (ISO 32000-1 §12.7.3.1) must carry `/Parent` pointing at the
+    /// parent field dictionary. This setter records that relationship;
+    /// the writer remaps the placeholder to a real indirect-object id
+    /// at serialization time.
+    ///
+    /// Only meaningful for [`AnnotationType::Widget`]. In debug builds,
+    /// calling this on a non-Widget annotation is a programming error
+    /// and trips a `debug_assert!`. In release builds the setter still
+    /// stores the value, but `to_dict` will refuse to emit `/Parent`
+    /// for non-Widget annotations (defence in depth: the setter is the
+    /// primary gate; the emitter is the safety net).
+    pub fn set_field_parent(&mut self, parent: ObjectReference) {
+        debug_assert!(
+            matches!(self.annotation_type, AnnotationType::Widget),
+            "Annotation::set_field_parent should only be called on Widget annotations, got {:?}",
+            self.annotation_type
+        );
+        self.field_parent = Some(parent);
     }
 
     /// Convert to PDF dictionary
@@ -364,6 +400,22 @@ impl Annotation {
         // Page reference
         if let Some(page) = self.page {
             dict.set("P", Object::Reference(page));
+        }
+
+        // Parent form field (widget annotations only — ISO 32000-1 §12.7.3.1).
+        // Emitted before merging additional properties so any explicit
+        // `/Parent` already in `properties` takes precedence.
+        //
+        // We gate on `annotation_type == Widget` as defence in depth even
+        // though `set_field_parent` already refuses non-Widget types: if
+        // someone flipped `annotation_type` after setting `field_parent`,
+        // emitting `/Parent` on, say, a Link would produce a malformed
+        // form hierarchy that most viewers silently tolerate but ISO
+        // 32000-1 §12.7.3.1 forbids.
+        if matches!(self.annotation_type, AnnotationType::Widget) {
+            if let Some(parent_ref) = self.field_parent {
+                dict.set("Parent", Object::Reference(parent_ref));
+            }
         }
 
         // Merge additional properties

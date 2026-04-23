@@ -157,11 +157,19 @@ fn test_forms_integration() {
 
                 if let Some(fields_obj) = acroform_dict.get("Fields") {
                     if let Some(fields_array) = fields_obj.as_array() {
-                        // Note: Due to current implementation, form fields are written
-                        // separately from widgets, so we just check that the array exists
-                        // The array might be empty or have different count than expected
-                        // This is a known limitation of the current implementation
-                        let _ = fields_array.len(); // Just verify it's a valid array
+                        // Both fields added via FormManager must reach the wire
+                        // (name_field + subscribe_checkbox). Before the v2.5.6
+                        // fix, `write_catalog` discarded manager fields entirely
+                        // and this array could be empty or reflect only legacy
+                        // widgets — that was the "known limitation" we just
+                        // closed.
+                        assert_eq!(
+                            fields_array.len(),
+                            2,
+                            "/AcroForm/Fields should hold the 2 fields added via FormManager \
+                             (name_field, subscribe_checkbox); got {}",
+                            fields_array.len()
+                        );
                     } else {
                         panic!("Fields should be an array");
                     }
