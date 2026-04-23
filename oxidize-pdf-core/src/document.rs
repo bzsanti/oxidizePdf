@@ -608,29 +608,43 @@ impl Document {
             // avoids rebuilding per-page — the Widget→Annotation mapping
             // below re-associates each annotation with its own widget via
             // `field_parent` matching.
+            // Tolerance for widget ↔ annotation rect matching. PDF
+            // coordinates are serialised as decimal strings and may drift
+            // by a few ULPs through a write → parse round-trip or through
+            // caller-side float arithmetic; `f64::EPSILON` (~2.22e-16) is
+            // far too tight to absorb that drift, so we allow up to 1e-3
+            // points (~0.00035 mm — well below any physically meaningful
+            // distance on paper, and 10× tighter than the smallest PDF
+            // rendering unit) before declaring two rects distinct.
+            const RECT_MATCH_TOLERANCE: f64 = 1e-3;
+
             for page in self.pages.iter_mut() {
                 for annot in page.annotations_mut().iter_mut() {
                     if annot.field_parent != Some(placeholder) {
                         continue;
                     }
-                    // Find the widget whose rect matches this annotation's
-                    // rect. Widgets on a field are distinguished only by
-                    // geometry, so `Rect` is the natural key.
+                    // Find the widget whose rect is within tolerance of
+                    // this annotation's rect. Widgets on a field are
+                    // distinguished only by geometry, so `Rect` is the
+                    // natural key.
                     let matching_widget = form_field.widgets.iter().find(|w| {
-                        (w.rect.lower_left.x - annot.rect.lower_left.x).abs() < f64::EPSILON
-                            && (w.rect.lower_left.y - annot.rect.lower_left.y).abs() < f64::EPSILON
+                        (w.rect.lower_left.x - annot.rect.lower_left.x).abs() < RECT_MATCH_TOLERANCE
+                            && (w.rect.lower_left.y - annot.rect.lower_left.y).abs()
+                                < RECT_MATCH_TOLERANCE
                             && (w.rect.upper_right.x - annot.rect.upper_right.x).abs()
-                                < f64::EPSILON
+                                < RECT_MATCH_TOLERANCE
                             && (w.rect.upper_right.y - annot.rect.upper_right.y).abs()
-                                < f64::EPSILON
+                                < RECT_MATCH_TOLERANCE
                     });
-                    let widget = match matching_widget {
-                        Some(w) => w,
-                        // If rects differ (e.g. the annotation was added via
-                        // the legacy `add_form_widget` path), fall back to
-                        // the first widget's appearance — still correct for
-                        // text content, may be geometrically approximate.
-                        None => &form_field.widgets[0],
+                    // Fallback to the first widget when no rect matches
+                    // (e.g. annotation added via legacy `add_form_widget`
+                    // with a different rect). If the field has no widgets
+                    // at all — a valid state, e.g.
+                    // `add_radio_button(..., None, None)` — skip /AP sync
+                    // entirely rather than indexing into an empty Vec.
+                    let Some(widget) = matching_widget.or_else(|| form_field.widgets.first())
+                    else {
+                        continue;
                     };
                     if let Some(ref app_dict) = widget.appearance_streams {
                         annot
