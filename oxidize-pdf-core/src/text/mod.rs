@@ -26,7 +26,7 @@ mod cmap_tests;
 #[cfg(feature = "ocr-tesseract")]
 pub mod tesseract_provider;
 
-pub use encoding::TextEncoding;
+pub use encoding::{escape_pdf_string_literal, TextEncoding};
 pub use extraction::{
     sanitize_extracted_text, ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
 };

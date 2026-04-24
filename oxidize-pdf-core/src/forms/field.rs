@@ -3,6 +3,7 @@
 use crate::geometry::Rectangle;
 use crate::graphics::Color;
 use crate::objects::{Dictionary, Object};
+use std::collections::{HashMap, HashSet};
 
 /// Field flags according to ISO 32000-1 Table 221
 #[derive(Debug, Clone, Copy, Default)]
@@ -131,31 +132,81 @@ impl Widget {
         self
     }
 
-    /// Generate default appearance streams based on field type
+    /// Generate default appearance streams based on field type.
+    ///
+    /// Backwards-compatible entry point — delegates to
+    /// [`generate_appearance_with_font`] without any custom-font context.
+    /// Emits Helvetica + WinAnsi by default, so non-WinAnsi values fail with
+    /// `PdfError::EncodingError`. Callers that need CJK, Arabic, or other
+    /// scripts must use the `_with_font` variant (typically via
+    /// `Document::fill_field`, which routes through it automatically).
     pub fn generate_appearance(
         &mut self,
         field_type: crate::forms::FieldType,
         value: Option<&str>,
     ) -> crate::error::Result<()> {
-        use crate::forms::{generate_default_appearance, AppearanceDictionary, AppearanceState};
+        let _ = self.generate_appearance_with_font(field_type, value, None, None)?;
+        Ok(())
+    }
+
+    /// Generate appearance streams honouring an optional `/DA` and an
+    /// optional pre-resolved custom (Type0) font.
+    ///
+    /// Returns the per-font character accumulator produced by the Type0 path
+    /// — an empty map for the built-in path — so the caller can merge it
+    /// into `Document::used_characters_by_font` (subsetter invariant, issue
+    /// #204).
+    pub fn generate_appearance_with_font(
+        &mut self,
+        field_type: crate::forms::FieldType,
+        value: Option<&str>,
+        default_appearance: Option<&crate::forms::DefaultAppearance>,
+        custom_font: Option<&crate::fonts::Font>,
+    ) -> crate::error::Result<HashMap<String, HashSet<char>>> {
+        use crate::forms::{generate_field_appearance, AppearanceDictionary, AppearanceState};
 
         let mut app_dict = AppearanceDictionary::new();
+        let mut merged: HashMap<String, HashSet<char>> = HashMap::new();
 
-        // Generate normal appearance
-        let normal_stream = generate_default_appearance(field_type, self, value)?;
-        app_dict.set_appearance(AppearanceState::Normal, normal_stream);
+        // Normal appearance
+        let normal =
+            generate_field_appearance(field_type, self, value, default_appearance, custom_font)?;
+        app_dict.set_appearance(AppearanceState::Normal, normal.stream);
+        for (font_name, chars) in normal.used_chars_by_font {
+            merged.entry(font_name).or_default().extend(chars);
+        }
 
-        // For buttons, also generate rollover and down states
+        // Buttons also get rollover + down states. Per-state duplication is
+        // intentional — different viewers rely on distinct streams even when
+        // the content is visually identical.
         if field_type == crate::forms::FieldType::Button {
-            let rollover_stream = generate_default_appearance(field_type, self, value)?;
-            app_dict.set_appearance(AppearanceState::Rollover, rollover_stream);
+            let rollover = generate_field_appearance(
+                field_type,
+                self,
+                value,
+                default_appearance,
+                custom_font,
+            )?;
+            app_dict.set_appearance(AppearanceState::Rollover, rollover.stream);
+            for (font_name, chars) in rollover.used_chars_by_font {
+                merged.entry(font_name).or_default().extend(chars);
+            }
 
-            let down_stream = generate_default_appearance(field_type, self, value)?;
-            app_dict.set_appearance(AppearanceState::Down, down_stream);
+            let down = generate_field_appearance(
+                field_type,
+                self,
+                value,
+                default_appearance,
+                custom_font,
+            )?;
+            app_dict.set_appearance(AppearanceState::Down, down.stream);
+            for (font_name, chars) in down.used_chars_by_font {
+                merged.entry(font_name).or_default().extend(chars);
+            }
         }
 
         self.appearance_streams = Some(app_dict);
-        Ok(())
+        Ok(merged)
     }
 
     /// Convert to annotation dictionary
@@ -248,6 +299,11 @@ pub struct FormField {
     pub field_dict: Dictionary,
     /// Associated widgets
     pub widgets: Vec<Widget>,
+    /// Typed `/DA` kept alongside the serialised form in `field_dict` so
+    /// `Document::fill_field` can pick the right font + size + colour when
+    /// regenerating the appearance stream without re-parsing the /DA PDF
+    /// string. `None` falls back to Helvetica + WinAnsi.
+    pub default_appearance: Option<crate::forms::DefaultAppearance>,
 }
 
 impl FormField {
@@ -256,6 +312,7 @@ impl FormField {
         Self {
             field_dict,
             widgets: Vec::new(),
+            default_appearance: None,
         }
     }
 

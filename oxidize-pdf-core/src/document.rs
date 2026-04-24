@@ -594,8 +594,70 @@ impl Document {
         //    on the page was built at `add_form_widget_with_ref` time from
         //    a clone of the widget's annotation dict, and therefore carries
         //    its own (stale) /AP. Step 3 below refreshes that.
+        //
+        //    Font selection for the appearance follows the field's typed
+        //    `/DA` when present:
+        //      - `Font::Custom(name)` with a matching registered font →
+        //        Type0/CID path (hex-glyph Tj, subsetter covers the value's
+        //        chars). See issue #212.
+        //      - Built-in font (Helvetica/Times/Courier) → WinAnsi strict
+        //        encoding. Fails explicitly for non-WinAnsi values.
+        //      - No `/DA` → Helvetica fallback, same WinAnsi-strict path.
+        let typed_da = form_field.default_appearance.clone();
+        let custom_font_arc = match typed_da.as_ref().and_then(|da| match &da.font {
+            crate::text::Font::Custom(name) => Some(name.clone()),
+            _ => None,
+        }) {
+            Some(name) => self.get_custom_font(&name),
+            None => None,
+        };
+
+        // Re-fetch `form_field` mutably — `self.get_custom_font` borrowed
+        // `self` immutably so the earlier `form_manager.get_field_mut`
+        // borrow has already ended. The FormManager still owns the field.
+        let form_manager = self.form_manager.as_mut().ok_or_else(|| {
+            PdfError::InvalidStructure(
+                "FormManager vanished between steps of fill_field — unreachable in single-thread"
+                    .to_string(),
+            )
+        })?;
+        let form_field = form_manager
+            .get_field_mut(name)
+            .ok_or_else(|| PdfError::FieldNotFound(name.to_string()))?;
+
+        // Aggregated per-font chars from every widget on this field. Merged
+        // into `self.used_characters_by_font` below so the writer subsetter
+        // covers the value's chars on the custom font (issue #204 invariant).
+        let mut ap_used_chars_by_font: std::collections::HashMap<
+            String,
+            std::collections::HashSet<char>,
+        > = std::collections::HashMap::new();
+        // `CustomFont` is the type alias `Font as CustomFont` → the struct
+        // at `crate::fonts::Font`. `custom_font_arc.as_deref()` therefore
+        // yields `Option<&crate::fonts::Font>` — exactly what
+        // `generate_appearance_with_font` wants.
+        let custom_font_ref: Option<&crate::fonts::Font> = custom_font_arc.as_deref();
         for widget in &mut form_field.widgets {
-            widget.generate_appearance(field_type, Some(&value))?;
+            let used = widget.generate_appearance_with_font(
+                field_type,
+                Some(&value),
+                typed_da.as_ref(),
+                custom_font_ref,
+            )?;
+            for (font_name, chars) in used {
+                ap_used_chars_by_font
+                    .entry(font_name)
+                    .or_default()
+                    .extend(chars);
+            }
+        }
+        // Merge into the document-wide char tracker so the writer subsets
+        // this font with the appearance's chars included.
+        for (font_name, chars) in ap_used_chars_by_font {
+            self.used_characters_by_font
+                .entry(font_name)
+                .or_default()
+                .extend(chars);
         }
 
         // 3) For each page annotation whose `/Parent` matches this field's

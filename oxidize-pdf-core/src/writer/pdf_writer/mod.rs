@@ -2799,13 +2799,20 @@ impl<W: Write> PdfWriter<W> {
                 for (state_key, state_val) in ap_dict.iter() {
                     match state_val {
                         Object::Stream(sd, data) => {
+                            // Patch `/Resources/Font/<name>` placeholders to
+                            // indirect references to the document-level fonts
+                            // (issue #212 Fase 3). The placeholder is emitted
+                            // by form-field appearance generators that don't
+                            // know the Type0 font's ObjectId.
+                            let patched_sd = Self::rewrite_ap_stream_font_resources(sd, font_refs);
                             let stream_id = self.allocate_object_id();
-                            self.write_object(stream_id, Object::Stream(sd.clone(), data.clone()))?;
+                            self.write_object(stream_id, Object::Stream(patched_sd, data.clone()))?;
                             updated_ap.set(state_key, Object::Reference(stream_id));
                         }
                         Object::Dictionary(down_dict) => {
                             // /D sub-dict case: map value → stream.
-                            let externalized = self.externalize_streams_in_dict(down_dict)?;
+                            let externalized = self
+                                .externalize_streams_in_dict_with_font_refs(down_dict, font_refs)?;
                             updated_ap.set(state_key, Object::Dictionary(externalized));
                         }
                         _ => {
@@ -2900,12 +2907,24 @@ impl<W: Write> PdfWriter<W> {
         &mut self,
         dict: &crate::objects::Dictionary,
     ) -> Result<crate::objects::Dictionary> {
+        self.externalize_streams_in_dict_with_font_refs(dict, &HashMap::new())
+    }
+
+    /// Same as [`externalize_streams_in_dict`] but also rewrites any
+    /// `/Resources/Font/<name>` placeholders inside the externalised stream
+    /// dictionaries to indirect references from `font_refs` (issue #212).
+    fn externalize_streams_in_dict_with_font_refs(
+        &mut self,
+        dict: &crate::objects::Dictionary,
+        font_refs: &HashMap<String, ObjectId>,
+    ) -> Result<crate::objects::Dictionary> {
         let mut result = crate::objects::Dictionary::new();
         for (key, value) in dict.iter() {
             match value {
                 Object::Stream(d, data) => {
+                    let patched_d = Self::rewrite_ap_stream_font_resources(d, font_refs);
                     let obj_id = self.allocate_object_id();
-                    self.write_object(obj_id, Object::Stream(d.clone(), data.clone()))?;
+                    self.write_object(obj_id, Object::Stream(patched_d, data.clone()))?;
                     result.set(key, Object::Reference(obj_id));
                 }
                 _ => {
@@ -2914,6 +2933,79 @@ impl<W: Write> PdfWriter<W> {
             }
         }
         Ok(result)
+    }
+
+    /// Rewrite `/Resources/Font/<name>` entries inside an appearance-stream
+    /// dictionary: any entry whose name appears in `font_refs` is replaced
+    /// by an `Object::Reference` to the document-level font object.
+    ///
+    /// Why: form-field appearance generators cannot know the ObjectId of
+    /// the Type0 font at content-stream build time — they emit a
+    /// placeholder dict (see `TextFieldAppearance::generate_appearance_with_font`).
+    /// This pass wires that placeholder to the real indirect object produced
+    /// by `write_fonts`. Built-in Type1 fonts (Helvetica etc.) stay as
+    /// inline dictionaries, since they have no document-level object.
+    ///
+    /// Returns a copy of the input dictionary with the /Resources/Font
+    /// rewrite applied. All non-/Resources keys are passed through intact.
+    /// Called on the stream DICTIONARY (not the stream data) so the original
+    /// content bytes remain untouched.
+    fn rewrite_ap_stream_font_resources(
+        stream_dict: &crate::objects::Dictionary,
+        font_refs: &HashMap<String, ObjectId>,
+    ) -> crate::objects::Dictionary {
+        // Fast path: if the document has no custom fonts registered (i.e.
+        // `font_refs` is empty), no placeholder entry can possibly match.
+        // Skip the clone+walk entirely — this is the common case for
+        // built-in-font forms, and `externalize_streams_in_dict` (the
+        // legacy non-AP path) calls us with an empty map for every stream
+        // it externalises.
+        if font_refs.is_empty() {
+            return stream_dict.clone();
+        }
+
+        let mut out = stream_dict.clone();
+
+        // Drill /Resources → /Font. Both may be direct dicts; we rebuild
+        // them rather than mutate in place so reference semantics are
+        // explicit. Indirect /Resources isn't emitted by our generators, so
+        // only the direct-dict shape is handled here (defensive: anything
+        // else is left untouched).
+        let Some(Object::Dictionary(resources)) = stream_dict.get("Resources") else {
+            return out;
+        };
+        let Some(Object::Dictionary(fonts)) = resources.get("Font") else {
+            return out;
+        };
+
+        let mut patched_fonts = crate::objects::Dictionary::new();
+        let mut changed = false;
+        for (font_name, entry) in fonts.iter() {
+            // Rewrite when (a) this is the placeholder inline dict shape our
+            // generator emits (Object::Dictionary with /Subtype /Type0), AND
+            // (b) the name is registered as a document-level custom font.
+            let should_rewrite = match entry {
+                Object::Dictionary(d) => {
+                    matches!(d.get("Subtype"), Some(Object::Name(s)) if s == "Type0")
+                }
+                _ => false,
+            };
+            if should_rewrite {
+                if let Some(font_id) = font_refs.get(font_name.as_str()) {
+                    patched_fonts.set(font_name, Object::Reference(*font_id));
+                    changed = true;
+                    continue;
+                }
+            }
+            patched_fonts.set(font_name, entry.clone());
+        }
+
+        if changed {
+            let mut patched_resources = resources.clone();
+            patched_resources.set("Font", Object::Dictionary(patched_fonts));
+            out.set("Resources", Object::Dictionary(patched_resources));
+        }
+        out
     }
 
     fn write_embedded_font_streams(

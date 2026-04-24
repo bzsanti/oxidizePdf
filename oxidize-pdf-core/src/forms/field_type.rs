@@ -1,6 +1,61 @@
 //! Form field types according to ISO 32000-1 Section 12.7.4
 
+use crate::graphics::Color;
 use crate::objects::{Dictionary, Object};
+use crate::text::Font;
+
+/// Default appearance for a form field's value rendering (ISO 32000-1 §12.7.3.3).
+///
+/// The `/DA` entry on a form field dictionary tells viewers — and, critically,
+/// `Document::fill_field` — which font, size, and colour to use when
+/// generating the field's `/AP/N` stream. Expressed in PDF as a content-stream
+/// fragment (`/FontName size Tf <color op>`); this struct models it with typed
+/// fields and serialises to that exact syntax.
+///
+/// Selecting a custom Type0/CID font here is the only path today that lets
+/// `fill_field` emit a correct appearance for non-WinAnsi values (CJK, Arabic,
+/// etc.) — see issue #212.
+#[derive(Debug, Clone)]
+pub struct DefaultAppearance {
+    /// Font to use in the appearance stream. Must be registered on the
+    /// Document via `add_font_from_bytes` if a custom font is selected.
+    pub font: Font,
+    /// Font size in user-space units.
+    pub font_size: f64,
+    /// Fill colour for the drawn text.
+    pub color: Color,
+}
+
+impl DefaultAppearance {
+    /// Build a default appearance from its typed components.
+    pub fn new(font: Font, font_size: f64, color: Color) -> Self {
+        Self {
+            font,
+            font_size,
+            color,
+        }
+    }
+
+    /// Render as the PDF `/DA` string per ISO 32000-1 §12.7.3.3.
+    ///
+    /// Examples:
+    /// - `Font::Helvetica`, 12.0, `Color::gray(0.0)` → `/Helvetica 12 Tf 0 g`
+    /// - `Font::Custom("CJK")`, 14.0, `Color::rgb(0.0, 0.0, 0.0)` →
+    ///   `/CJK 14 Tf 0 0 0 rg`
+    pub fn to_da_string(&self) -> String {
+        let color_op = match self.color {
+            Color::Gray(g) => format!("{} g", g),
+            Color::Rgb(r, g, b) => format!("{} {} {} rg", r, g, b),
+            Color::Cmyk(c, m, y, k) => format!("{} {} {} {} k", c, m, y, k),
+        };
+        format!(
+            "/{} {} Tf {}",
+            self.font.pdf_name(),
+            self.font_size,
+            color_op
+        )
+    }
+}
 
 /// Type of form field
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -48,6 +103,11 @@ pub struct TextField {
     pub do_not_spell_check: bool,
     /// Whether field allows rich text
     pub rich_text: bool,
+    /// Typed `/DA` (default appearance) — drives the font/size/colour used to
+    /// regenerate the field's `/AP/N` when `Document::fill_field` is called.
+    /// When `None`, fill_field falls back to Helvetica + WinAnsi (which fails
+    /// for any non-WinAnsi value — see issue #212).
+    pub default_appearance: Option<DefaultAppearance>,
 }
 
 impl TextField {
@@ -63,7 +123,22 @@ impl TextField {
             file_select: false,
             do_not_spell_check: false,
             rich_text: false,
+            default_appearance: None,
         }
+    }
+
+    /// Attach a typed default appearance (font, size, colour) that
+    /// `Document::fill_field` will use when regenerating the field's `/AP/N`.
+    ///
+    /// Required for non-WinAnsi fills (CJK, Arabic, Cyrillic outside basic
+    /// Latin, etc.) — the default built-in Helvetica cannot render those and
+    /// `fill_field` will otherwise return `PdfError::EncodingError`.
+    ///
+    /// The font must be registered on the `Document` via
+    /// `add_font_from_bytes` if it's a `Font::Custom(_)`.
+    pub fn with_default_appearance(mut self, font: Font, font_size: f64, color: Color) -> Self {
+        self.default_appearance = Some(DefaultAppearance::new(font, font_size, color));
+        self
     }
 
     /// Set the default value
@@ -135,6 +210,13 @@ impl TextField {
 
         if flags != 0 {
             dict.set("Ff", Object::Integer(flags as i64));
+        }
+
+        // Default appearance (ISO 32000-1 §12.7.3.3) — emitted as a PDF
+        // string that's a content-stream fragment. Drives which font
+        // `Document::fill_field` (and any viewer that regenerates /AP) uses.
+        if let Some(ref da) = self.default_appearance {
+            dict.set("DA", Object::String(da.to_da_string()));
         }
 
         dict
