@@ -7,6 +7,44 @@ pub enum TextEncoding {
 }
 
 impl TextEncoding {
+    /// Strict encoding: returns `Err(char)` for the first codepoint the
+    /// encoding cannot represent. Unlike [`encode`], does NOT silently
+    /// substitute `?` for unmappable characters — callers that must refuse
+    /// to emit corrupt output (e.g. form-field appearance streams) use this
+    /// path to produce explicit errors instead of silent garbage.
+    ///
+    /// Contract per encoding:
+    /// - `WinAnsiEncoding`: every Unicode codepoint in the Windows-1252
+    ///   repertoire is representable; every other codepoint fails.
+    /// - `MacRomanEncoding`: same idea over the Mac Roman repertoire.
+    /// - `StandardEncoding` / `PdfDocEncoding`: accepts only the ASCII
+    ///   range `0x00..=0x7F` (the safe lowest-common-denominator — the
+    ///   lossy UTF-8 passthrough used by `encode` would silently produce
+    ///   garbage for non-ASCII here).
+    pub fn encode_strict(&self, text: &str) -> Result<Vec<u8>, char> {
+        let mut out = Vec::with_capacity(text.len());
+        for ch in text.chars() {
+            match self {
+                TextEncoding::WinAnsiEncoding => match winansi_encode_char(ch) {
+                    Some(b) => out.push(b),
+                    None => return Err(ch),
+                },
+                TextEncoding::MacRomanEncoding => match macroman_encode_char(ch) {
+                    Some(b) => out.push(b),
+                    None => return Err(ch),
+                },
+                TextEncoding::StandardEncoding | TextEncoding::PdfDocEncoding => {
+                    if (ch as u32) <= 0x7F {
+                        out.push(ch as u8);
+                    } else {
+                        return Err(ch);
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
     pub fn encode(&self, text: &str) -> Vec<u8> {
         match self {
             TextEncoding::StandardEncoding | TextEncoding::PdfDocEncoding => {
@@ -314,6 +352,141 @@ impl TextEncoding {
             }
         }
     }
+}
+
+/// Encode a single Unicode character as a Windows-1252 (PDF WinAnsi) byte.
+///
+/// Returns `None` for any codepoint outside the Windows-1252 repertoire.
+/// Mirrors the mapping used inline by `TextEncoding::encode` so that the
+/// strict and lossy paths stay in lock-step.
+pub fn winansi_encode_char(ch: char) -> Option<u8> {
+    match ch as u32 {
+        0x00..=0x7F => Some(ch as u8),
+        0xA0..=0xFF => Some(ch as u8),
+        0x20AC => Some(0x80), // €
+        0x201A => Some(0x82), // ‚
+        0x0192 => Some(0x83), // ƒ
+        0x201E => Some(0x84), // „
+        0x2026 => Some(0x85), // …
+        0x2020 => Some(0x86), // †
+        0x2021 => Some(0x87), // ‡
+        0x02C6 => Some(0x88), // ˆ
+        0x2030 => Some(0x89), // ‰
+        0x0160 => Some(0x8A), // Š
+        0x2039 => Some(0x8B), // ‹
+        0x0152 => Some(0x8C), // Œ
+        0x017D => Some(0x8E), // Ž
+        0x2018 => Some(0x91), // '
+        0x2019 => Some(0x92), // '
+        0x201C => Some(0x93), // "
+        0x201D => Some(0x94), // "
+        0x2022 => Some(0x95), // •
+        0x2013 => Some(0x96), // –
+        0x2014 => Some(0x97), // —
+        0x02DC => Some(0x98), // ˜
+        0x2122 => Some(0x99), // ™
+        0x0161 => Some(0x9A), // š
+        0x203A => Some(0x9B), // ›
+        0x0153 => Some(0x9C), // œ
+        0x017E => Some(0x9E), // ž
+        0x0178 => Some(0x9F), // Ÿ
+        _ => None,
+    }
+}
+
+/// Encode a single Unicode character as a Mac Roman byte.
+///
+/// Mirrors the table used by `TextEncoding::encode` for MacRoman. Returns
+/// `None` for codepoints outside the encoding's repertoire. Kept only for
+/// symmetry with `winansi_encode_char`; callers outside this module should
+/// prefer `TextEncoding::encode_strict`.
+pub fn macroman_encode_char(ch: char) -> Option<u8> {
+    match ch as u32 {
+        0x00..=0x7F => Some(ch as u8),
+        0x00C4 => Some(0x80),
+        0x00C5 => Some(0x81),
+        0x00C7 => Some(0x82),
+        0x00C9 => Some(0x83),
+        0x00D1 => Some(0x84),
+        0x00D6 => Some(0x85),
+        0x00DC => Some(0x86),
+        0x00E1 => Some(0x87),
+        0x00E0 => Some(0x88),
+        0x00E2 => Some(0x89),
+        0x00E4 => Some(0x8A),
+        0x00E3 => Some(0x8B),
+        0x00E5 => Some(0x8C),
+        0x00E7 => Some(0x8D),
+        0x00E9 => Some(0x8E),
+        0x00E8 => Some(0x8F),
+        0x00EA => Some(0x90),
+        0x00EB => Some(0x91),
+        0x00ED => Some(0x92),
+        0x00EC => Some(0x93),
+        0x00EE => Some(0x94),
+        0x00EF => Some(0x95),
+        0x00F1 => Some(0x96),
+        0x00F3 => Some(0x97),
+        0x00F2 => Some(0x98),
+        0x00F4 => Some(0x99),
+        0x00F6 => Some(0x9A),
+        0x00F5 => Some(0x9B),
+        0x00FA => Some(0x9C),
+        0x00F9 => Some(0x9D),
+        0x00FB => Some(0x9E),
+        0x00FC => Some(0x9F),
+        0x2020 => Some(0xA0),
+        0x00B0 => Some(0xA1),
+        0x00A2 => Some(0xA2),
+        0x00A3 => Some(0xA3),
+        0x00A7 => Some(0xA4),
+        0x2022 => Some(0xA5),
+        0x00B6 => Some(0xA6),
+        0x00DF => Some(0xA7),
+        0x00AE => Some(0xA8),
+        0x00A9 => Some(0xA9),
+        0x2122 => Some(0xAA),
+        0x00B4 => Some(0xAB),
+        0x00A8 => Some(0xAC),
+        0x2260 => Some(0xAD),
+        0x00C6 => Some(0xAE),
+        0x00D8 => Some(0xAF),
+        _ => None,
+    }
+}
+
+/// Emit the UTF-8 bytes `input` as a PDF string-literal body, escaping
+/// characters that have special meaning inside `(...)` and writing bytes
+/// above 0x7F as three-digit octal escapes. Does NOT wrap the output in
+/// parentheses — callers compose that around it.
+///
+/// Used by appearance-stream emitters so the bytes of a WinAnsi-encoded
+/// value survive the serialisation round-trip intact (avoids interference
+/// from 8-bit-unsafe channels).
+pub fn escape_pdf_string_literal(input: &[u8]) -> String {
+    let mut out = String::with_capacity(input.len());
+    for &b in input {
+        match b {
+            b'\\' => out.push_str("\\\\"),
+            b'(' => out.push_str("\\("),
+            b')' => out.push_str("\\)"),
+            b'\n' => out.push_str("\\n"),
+            b'\r' => out.push_str("\\r"),
+            b'\t' => out.push_str("\\t"),
+            b'\x08' => out.push_str("\\b"),
+            b'\x0C' => out.push_str("\\f"),
+            0x20..=0x7E => out.push(b as char),
+            _ => {
+                // Three-digit octal escape keeps 8-bit bytes intact through
+                // any 7-bit-safe intermediary.
+                out.push('\\');
+                out.push(char::from_digit(((b >> 6) & 0x07) as u32, 8).unwrap());
+                out.push(char::from_digit(((b >> 3) & 0x07) as u32, 8).unwrap());
+                out.push(char::from_digit((b & 0x07) as u32, 8).unwrap());
+            }
+        }
+    }
+    out
 }
 
 #[cfg(test)]
