@@ -3,6 +3,7 @@
 use crate::geometry::Rectangle;
 use crate::graphics::Color;
 use crate::objects::{Dictionary, Object};
+use std::collections::{HashMap, HashSet};
 
 /// Field flags according to ISO 32000-1 Table 221
 #[derive(Debug, Clone, Copy, Default)]
@@ -161,19 +162,17 @@ impl Widget {
         value: Option<&str>,
         default_appearance: Option<&crate::forms::DefaultAppearance>,
         custom_font: Option<&crate::fonts::Font>,
-    ) -> crate::error::Result<std::collections::HashMap<String, std::collections::HashSet<char>>>
-    {
+    ) -> crate::error::Result<HashMap<String, HashSet<char>>> {
         use crate::forms::{generate_field_appearance, AppearanceDictionary, AppearanceState};
 
         let mut app_dict = AppearanceDictionary::new();
-        let mut merged: std::collections::HashMap<String, std::collections::HashSet<char>> =
-            std::collections::HashMap::new();
+        let mut merged: HashMap<String, HashSet<char>> = HashMap::new();
 
         // Normal appearance
-        let (normal_stream, used) =
+        let normal =
             generate_field_appearance(field_type, self, value, default_appearance, custom_font)?;
-        app_dict.set_appearance(AppearanceState::Normal, normal_stream);
-        for (font_name, chars) in used {
+        app_dict.set_appearance(AppearanceState::Normal, normal.stream);
+        for (font_name, chars) in normal.used_chars_by_font {
             merged.entry(font_name).or_default().extend(chars);
         }
 
@@ -181,27 +180,27 @@ impl Widget {
         // intentional — different viewers rely on distinct streams even when
         // the content is visually identical.
         if field_type == crate::forms::FieldType::Button {
-            let (rollover_stream, used_r) = generate_field_appearance(
+            let rollover = generate_field_appearance(
                 field_type,
                 self,
                 value,
                 default_appearance,
                 custom_font,
             )?;
-            app_dict.set_appearance(AppearanceState::Rollover, rollover_stream);
-            for (font_name, chars) in used_r {
+            app_dict.set_appearance(AppearanceState::Rollover, rollover.stream);
+            for (font_name, chars) in rollover.used_chars_by_font {
                 merged.entry(font_name).or_default().extend(chars);
             }
 
-            let (down_stream, used_d) = generate_field_appearance(
+            let down = generate_field_appearance(
                 field_type,
                 self,
                 value,
                 default_appearance,
                 custom_font,
             )?;
-            app_dict.set_appearance(AppearanceState::Down, down_stream);
-            for (font_name, chars) in used_d {
+            app_dict.set_appearance(AppearanceState::Down, down.stream);
+            for (font_name, chars) in down.used_chars_by_font {
                 merged.entry(font_name).or_default().extend(chars);
             }
         }

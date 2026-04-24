@@ -2954,6 +2954,16 @@ impl<W: Write> PdfWriter<W> {
         stream_dict: &crate::objects::Dictionary,
         font_refs: &HashMap<String, ObjectId>,
     ) -> crate::objects::Dictionary {
+        // Fast path: if the document has no custom fonts registered (i.e.
+        // `font_refs` is empty), no placeholder entry can possibly match.
+        // Skip the clone+walk entirely — this is the common case for
+        // built-in-font forms, and `externalize_streams_in_dict` (the
+        // legacy non-AP path) calls us with an empty map for every stream
+        // it externalises.
+        if font_refs.is_empty() {
+            return stream_dict.clone();
+        }
+
         let mut out = stream_dict.clone();
 
         // Drill /Resources → /Font. Both may be direct dicts; we rebuild

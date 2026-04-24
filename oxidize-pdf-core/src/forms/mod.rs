@@ -23,8 +23,8 @@ mod working_field;
 pub use appearance::{
     generate_default_appearance, generate_field_appearance, AppearanceDictionary,
     AppearanceGenerator, AppearanceState, AppearanceStream, CheckBoxAppearance, CheckStyle,
-    ComboBoxAppearance, ListBoxAppearance, PushButtonAppearance, RadioButtonAppearance,
-    TextFieldAppearance,
+    ComboBoxAppearance, FieldAppearanceResult, ListBoxAppearance, PushButtonAppearance,
+    RadioButtonAppearance, TextFieldAppearance,
 };
 pub use button_widget::{
     create_checkbox_widget, create_pushbutton_widget, create_radio_widget, ButtonWidget,

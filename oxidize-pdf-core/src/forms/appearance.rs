@@ -172,6 +172,26 @@ impl AppearanceStream {
     }
 }
 
+/// Outcome of an appearance-stream build — carries the stream plus the
+/// per-font character obligations the generator recorded. Callers
+/// (typically `Document::fill_field`) merge `used_chars_by_font` into
+/// `Document::used_characters_by_font` so the writer's font subsetter
+/// covers every codepoint referenced from any `/AP` stream (preserves
+/// the #204 invariant).
+///
+/// Named struct instead of a tuple so adding further outputs (e.g.
+/// computed bbox overrides, resource hints) doesn't become a breaking
+/// API change. The map is empty for built-in fonts that don't need
+/// subsetting.
+#[derive(Debug, Clone)]
+pub struct FieldAppearanceResult {
+    /// The rendered appearance stream ready to attach to a widget.
+    pub stream: AppearanceStream,
+    /// Characters consumed from each custom Type0 font, keyed by font
+    /// name. Empty when every emission went through the built-in path.
+    pub used_chars_by_font: HashMap<String, HashSet<char>>,
+}
+
 /// Appearance dictionary for a form field
 #[derive(Debug, Clone)]
 pub struct AppearanceDictionary {
@@ -285,27 +305,29 @@ impl AppearanceGenerator for TextFieldAppearance {
         value: Option<&str>,
         state: AppearanceState,
     ) -> Result<AppearanceStream> {
-        let (stream, _) = self.generate_appearance_with_font(widget, value, state, None)?;
-        Ok(stream)
+        let result = self.generate_appearance_with_font(widget, value, state, None)?;
+        Ok(result.stream)
     }
 }
 
 impl TextFieldAppearance {
     /// Generate the appearance honouring an optional pre-resolved custom
-    /// (Type0/CID) font. Returns both the stream and any characters that
-    /// the Type0 path consumed from the font (empty for the built-in path).
+    /// (Type0/CID) font. Returns a [`FieldAppearanceResult`] carrying both
+    /// the stream and any characters that the Type0 path consumed from the
+    /// font (empty for the built-in path).
     ///
     /// The caller is responsible for supplying `custom_font` when
-    /// `self.font == Font::Custom(_)` — otherwise the built-in WinAnsi path
-    /// is used and a `Font::Custom(_)` self.font will trigger an explicit
-    /// `PdfError::EncodingError` inside `emit_tj_for_builtin`.
+    /// `self.font == Font::Custom(_)`. If `self.font` is custom but
+    /// `custom_font` is `None`, an explicit `PdfError::EncodingError`
+    /// signals "font not registered on the Document" (a common user
+    /// mistake distinct from the generator not supporting custom fonts).
     pub fn generate_appearance_with_font(
         &self,
         widget: &Widget,
         value: Option<&str>,
         _state: AppearanceState,
         custom_font: Option<&crate::fonts::Font>,
-    ) -> Result<(AppearanceStream, HashMap<String, HashSet<char>>)> {
+    ) -> Result<FieldAppearanceResult> {
         let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
         let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
 
@@ -381,18 +403,35 @@ impl TextFieldAppearance {
 
             content.push_str(&format!("{text_x} {text_y} Td\n"));
 
-            // Dispatch on the font kind. Custom Type0/CID fonts go through the
-            // hex-CID path and accumulate used chars so the subsetter covers
-            // the appearance stream (issue #204 invariant). Built-in fonts go
-            // through the WinAnsi-strict path, which fails explicitly on any
-            // codepoint outside the repertoire instead of silently mangling.
+            // Dispatch on the font kind.
+            //
+            // `(true, Some)`  → Custom Type0/CID font with a resolved font
+            //                   handle. Emits hex-CID Tj and records used
+            //                   chars (#204 subsetter invariant).
+            // `(true, None)`  → `/DA` names a custom font the Document does
+            //                   not have registered. Fail fast with a
+            //                   diagnostic that points the caller at the
+            //                   likely mistake; silently falling through to
+            //                   `emit_tj_for_builtin` would produce an
+            //                   opaque "Custom fonts not supported" error
+            //                   from a different code path, confusing
+            //                   anyone who mistyped a font name.
+            // `(false, _)`    → Built-in Type1 path, WinAnsi strict.
             match (self.font.is_custom(), custom_font) {
                 (true, Some(cf)) => {
                     let font_name = self.font.pdf_name();
                     let entry = used_chars_per_font.entry(font_name.clone()).or_default();
                     emit_tj_for_custom(&mut content, text, &font_name, cf, entry)?;
                 }
-                _ => {
+                (true, None) => {
+                    return Err(PdfError::EncodingError(format!(
+                        "Font {:?} is marked as Custom but was not found in the \
+                         document registry; call Document::add_font_from_bytes with \
+                         this name before fill_field/save. See issue #212.",
+                        self.font.pdf_name(),
+                    )));
+                }
+                (false, _) => {
                     emit_tj_for_builtin(&mut content, text, &self.font)?;
                 }
             }
@@ -432,7 +471,10 @@ impl TextFieldAppearance {
         let stream = AppearanceStream::new(content.into_bytes(), [0.0, 0.0, width, height])
             .with_resources(resources);
 
-        Ok((stream, used_chars_per_font))
+        Ok(FieldAppearanceResult {
+            stream,
+            used_chars_by_font: used_chars_per_font,
+        })
     }
 }
 
@@ -978,8 +1020,8 @@ impl AppearanceGenerator for ComboBoxAppearance {
         value: Option<&str>,
         state: AppearanceState,
     ) -> Result<AppearanceStream> {
-        let (s, _) = self.generate_appearance_with_font(widget, value, state, None)?;
-        Ok(s)
+        let result = self.generate_appearance_with_font(widget, value, state, None)?;
+        Ok(result.stream)
     }
 }
 
@@ -988,14 +1030,16 @@ impl ComboBoxAppearance {
     /// When `self.font == Font::Custom(name)` AND `custom_font` is supplied,
     /// emits a hex-CID `<HHHH...> Tj` with a Type0 placeholder resource; the
     /// writer rewrites the placeholder into an indirect Reference to the
-    /// document-level font object.
+    /// document-level font object. Same contract on the
+    /// `Custom + None` case: fails fast with a "font not registered"
+    /// `PdfError::EncodingError` instead of silently falling back.
     pub fn generate_appearance_with_font(
         &self,
         widget: &Widget,
         value: Option<&str>,
         _state: AppearanceState,
         custom_font: Option<&crate::fonts::Font>,
-    ) -> Result<(AppearanceStream, HashMap<String, HashSet<char>>)> {
+    ) -> Result<FieldAppearanceResult> {
         let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
         let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
 
@@ -1050,13 +1094,25 @@ impl ComboBoxAppearance {
             }
             content.push_str(&format!("5 {} Td\n", (height - self.font_size) / 2.0));
 
+            // Same dispatch as `TextFieldAppearance::generate_appearance_with_font`
+            // — see that function for the rationale on the explicit
+            // `(true, None)` arm. Combo boxes reach this path when the field's
+            // `/DA` picks a custom font and the user renders the selected value.
             match (self.font.is_custom(), custom_font) {
                 (true, Some(cf)) => {
                     let font_name = self.font.pdf_name();
                     let entry = used_chars_per_font.entry(font_name.clone()).or_default();
                     emit_tj_for_custom(&mut content, text, &font_name, cf, entry)?;
                 }
-                _ => emit_tj_for_builtin(&mut content, text, &self.font)?,
+                (true, None) => {
+                    return Err(PdfError::EncodingError(format!(
+                        "Font {:?} is marked as Custom but was not found in the \
+                         document registry; call Document::add_font_from_bytes with \
+                         this name before fill_field/save. See issue #212.",
+                        self.font.pdf_name(),
+                    )));
+                }
+                (false, _) => emit_tj_for_builtin(&mut content, text, &self.font)?,
             }
             content.push_str("ET\n");
         }
@@ -1083,7 +1139,10 @@ impl ComboBoxAppearance {
 
         let bbox = [0.0, 0.0, width, height];
         let stream = AppearanceStream::new(content.into_bytes(), bbox).with_resources(resources);
-        Ok((stream, used_chars_per_font))
+        Ok(FieldAppearanceResult {
+            stream,
+            used_chars_by_font: used_chars_per_font,
+        })
     }
 }
 
@@ -1217,8 +1276,7 @@ pub fn generate_default_appearance(
     widget: &Widget,
     value: Option<&str>,
 ) -> Result<AppearanceStream> {
-    let (stream, _used_chars) = generate_field_appearance(field_type, widget, value, None, None)?;
-    Ok(stream)
+    Ok(generate_field_appearance(field_type, widget, value, None, None)?.stream)
 }
 
 /// Generate an appearance stream honouring an optional typed `/DA` and an
@@ -1245,7 +1303,7 @@ pub fn generate_field_appearance(
     value: Option<&str>,
     default_appearance: Option<&DefaultAppearance>,
     custom_font: Option<&crate::fonts::Font>,
-) -> Result<(AppearanceStream, HashMap<String, HashSet<char>>)> {
+) -> Result<FieldAppearanceResult> {
     match field_type {
         FieldType::Text => {
             let mut generator = TextFieldAppearance::default();
@@ -1266,7 +1324,10 @@ pub fn generate_field_appearance(
             // user-supplied `/DA` today — the button glyphs are synthesised.
             let generator = CheckBoxAppearance::default();
             let stream = generator.generate_appearance(widget, value, AppearanceState::Normal)?;
-            Ok((stream, HashMap::new()))
+            Ok(FieldAppearanceResult {
+                stream,
+                used_chars_by_font: HashMap::new(),
+            })
         }
         FieldType::Choice => {
             let mut generator = ComboBoxAppearance::default();
@@ -1285,10 +1346,10 @@ pub fn generate_field_appearance(
         FieldType::Signature => {
             let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
             let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
-            Ok((
-                AppearanceStream::new(b"q\nQ\n".to_vec(), [0.0, 0.0, width, height]),
-                HashMap::new(),
-            ))
+            Ok(FieldAppearanceResult {
+                stream: AppearanceStream::new(b"q\nQ\n".to_vec(), [0.0, 0.0, width, height]),
+                used_chars_by_font: HashMap::new(),
+            })
         }
     }
 }

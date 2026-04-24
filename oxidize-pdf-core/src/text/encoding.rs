@@ -479,6 +479,13 @@ pub fn escape_pdf_string_literal(input: &[u8]) -> String {
             _ => {
                 // Three-digit octal escape keeps 8-bit bytes intact through
                 // any 7-bit-safe intermediary.
+                //
+                // Infallibility invariant for the three `from_digit` calls:
+                //   - Each extracted nibble is `x & 0x07`, always in `0..=7`.
+                //   - Radix 8 — `char::from_digit(n, 8)` is documented to
+                //     return `Some(_)` iff `n < 8`.
+                // Therefore every `.unwrap()` below cannot observe `None`;
+                // no input byte reaches this branch.
                 out.push('\\');
                 out.push(char::from_digit(((b >> 6) & 0x07) as u32, 8).unwrap());
                 out.push(char::from_digit(((b >> 3) & 0x07) as u32, 8).unwrap());
@@ -520,6 +527,73 @@ mod tests {
         let encoded = encoding.encode(text);
         let decoded = encoding.decode(&encoded);
         assert_eq!(decoded, text);
+    }
+
+    /// Parity contract: `encode_strict(ch)` and `encode(ch)` must agree on
+    /// each Unicode codepoint in the Basic Multilingual Plane (BMP) — the
+    /// strict path rejects a char iff the lossy path would have emitted the
+    /// substitute `?` (0x3F) for it. Any divergence means the two code
+    /// paths got out of sync (which is a real risk because the tables are
+    /// duplicated: one inline in `encode`, one in the `*_encode_char`
+    /// helper called by `encode_strict`).
+    ///
+    /// This is NOT a completeness test: if both paths fail to encode a
+    /// valid codepoint (gap in both tables), parity still holds. Callers
+    /// who need completeness must extend both tables in lock-step.
+    ///
+    /// The `?` character (U+003F) is the one legitimate case where
+    /// `encode` would emit byte 0x3F as the actual encoded result; the
+    /// strict path also emits 0x3F for it. Handled as a special case
+    /// below so the test logic stays readable.
+    #[test]
+    fn test_encode_strict_matches_encode_across_bmp() {
+        for encoding in [
+            TextEncoding::WinAnsiEncoding,
+            TextEncoding::MacRomanEncoding,
+        ] {
+            let mut divergences: Vec<(u32, Vec<u8>, Result<Vec<u8>, char>)> = Vec::new();
+
+            for cp in 0u32..=0xFFFF {
+                let Some(ch) = char::from_u32(cp) else {
+                    continue;
+                };
+                let s: String = std::iter::once(ch).collect();
+                let strict = encoding.encode_strict(&s);
+                let lossy = encoding.encode(&s);
+
+                match &strict {
+                    Ok(bytes) => {
+                        // Strict succeeded → lossy must produce the same
+                        // bytes (that's the definition of agreement).
+                        if bytes != &lossy {
+                            divergences.push((cp, lossy.clone(), strict.clone()));
+                        }
+                    }
+                    Err(_) => {
+                        // Strict rejected → lossy must be the substitute
+                        // byte 0x3F (single byte). If lossy produced
+                        // something else, the two tables disagree.
+                        //
+                        // Special case: `?` itself (U+003F) is ASCII and
+                        // both paths return [0x3F], but strict returns
+                        // Ok — handled by the Ok arm above, never reaches
+                        // here.
+                        if lossy != vec![b'?'] {
+                            divergences.push((cp, lossy.clone(), strict.clone()));
+                        }
+                    }
+                }
+            }
+
+            assert!(
+                divergences.is_empty(),
+                "{:?} encoding: strict/lossy disagreement on {} codepoints. \
+                 First 5: {:?}",
+                encoding,
+                divergences.len(),
+                &divergences[..divergences.len().min(5)],
+            );
+        }
     }
 
     #[test]
