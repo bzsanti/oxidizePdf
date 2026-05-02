@@ -183,6 +183,13 @@ impl TextContext {
         &self.current_font
     }
 
+    /// Current non-stroking (fill) colour, if one has been explicitly set.
+    /// Used by `Page::text_flow` to propagate the page-level text colour
+    /// into derived `TextFlowContext`s (issue #216).
+    pub(crate) fn fill_color(&self) -> Option<Color> {
+        self.fill_color
+    }
+
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
         // Update text_matrix immediately and store for write() operation
         self.text_matrix[4] = x;
