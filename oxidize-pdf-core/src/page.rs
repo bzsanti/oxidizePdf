@@ -826,7 +826,21 @@ impl Page {
     }
 
     pub fn text_flow(&self) -> TextFlowContext {
-        TextFlowContext::new(self.width, self.height, self.margins.clone())
+        // Issue #216: inherit the page-level text state (font, size, and
+        // fill colour) so callers that rely on `set_font` / `set_text_color`
+        // before invoking flow helpers (notably `text_flow_at` in the Python
+        // and .NET wrappers) get the formatting they configured. An explicit
+        // `ctx.set_font(...)` / `ctx.set_fill_color(...)` afterwards still
+        // overrides the inherited values.
+        let mut ctx = TextFlowContext::new(self.width, self.height, self.margins.clone());
+        ctx.set_font(
+            self.text_context.current_font().clone(),
+            self.text_context.font_size(),
+        );
+        if let Some(color) = self.text_context.fill_color() {
+            ctx.set_fill_color(color);
+        }
+        ctx
     }
 
     pub fn add_text_flow(&mut self, text_flow: &TextFlowContext) {
