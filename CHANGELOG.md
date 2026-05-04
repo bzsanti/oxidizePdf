@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+- **`PageTables::add_styled_table` now correctly marks the header row as a header** (addresses #217). The convenience method appended the headers via `add_row`, which sets `is_header: false`. The `Table::render` path then skipped the configured `HeaderStyle` entirely (`use_header_style = row.is_header && …`) and the header was drawn with the default data-row font. Calling `add_header_row` instead applies the configured `HeaderStyle` as documented. Visible rendering change for `TableStyle::professional()` and `TableStyle::colorful()` callers: the header row now renders in `Helvetica-Bold` (the `HeaderStyle` default) rather than plain `Helvetica`.
+
+### Added
+- **`TableStyle::header_font: Option<Font>`** and **`TableStyle::header_bold: Option<bool>`** (addresses #217). Optional overrides for header typography; both default to `None`, in which case the legacy hardcoded `Font::Helvetica` + `bold: true` apply. The `add_styled_table` header-style gate now also fires on either of these so `TableStyle::minimal()` / `simple()` callers can override typography without having to also set a background colour.
+- **`TableStyle::with_header_font(font)`** and **`TableStyle::with_header_bold(bold)`** chainable setters for ergonomic preset overrides: `TableStyle::professional().with_header_font(Font::TimesRoman)`.
+- 11 content-verifying integration tests in `tests/issue_217_tablestyle_header_typography_test.rs` covering preset defaults, override behaviour (Times-Bold, non-bold Helvetica, Courier-Bold, Helvetica-Oblique pass-through), preset chaining, and the gate for typography-only overrides.
+
 ## [2.5.7] - 2026-04-23
 
 Single-fix patch release for the font subsetter, plus hardening of the internal content-stream API to prevent the same class of silent regression.
