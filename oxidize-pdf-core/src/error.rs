@@ -70,9 +70,35 @@ pub enum PdfError {
 
     #[error("Object stream error: {0}")]
     ObjectStreamError(String),
+
+    #[error("Table overflow: {rendered} rows fit, {dropped} dropped below floor y={bottom_y}")]
+    TableOverflow {
+        /// Rows that would fit above `bottom_y`.
+        rendered: usize,
+        /// Rows that would not fit and were not drawn.
+        dropped: usize,
+        /// The vertical floor that triggered the overflow check.
+        bottom_y: f64,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;
+
+/// Reject NaN/±∞ values at API boundaries.
+///
+/// Used by features that compare floating-point coordinates against thresholds
+/// (e.g. table-pagination floors). NaN comparisons silently return `false`,
+/// so an unchecked NaN can bypass overflow guards entirely; ∞ does the
+/// opposite. Both are rejected as malformed input.
+pub(crate) fn ensure_finite(name: &str, v: f64) -> std::result::Result<(), PdfError> {
+    if v.is_finite() {
+        Ok(())
+    } else {
+        Err(PdfError::InvalidStructure(format!(
+            "{name} must be a finite f64, got {v}"
+        )))
+    }
+}
 
 // Convert AesError to PdfError
 impl From<crate::encryption::AesError> for PdfError {

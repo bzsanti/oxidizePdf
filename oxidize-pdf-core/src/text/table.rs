@@ -3,7 +3,7 @@
 //! This module provides basic table functionality without CSS styling,
 //! suitable for structured data presentation in PDF documents.
 
-use crate::error::PdfError;
+use crate::error::{ensure_finite, PdfError};
 use crate::graphics::{Color, GraphicsContext, LineDashPattern};
 use crate::text::{measure_text, Font, TextAlign};
 
@@ -47,6 +47,9 @@ pub struct TableOptions {
     pub alternating_row_colors: Option<(Color, Color)>,
     /// Table background color
     pub background_color: Option<Color>,
+    /// When the table is split across pages by `Document::add_paginated_table`,
+    /// repeat header rows at the top of every continuation page. Defaults to `true`.
+    pub repeat_header_on_split: bool,
 }
 
 /// Header row styling options
@@ -141,6 +144,7 @@ impl Default for TableOptions {
             cell_border_style: CellBorderStyle::default(),
             alternating_row_colors: None,
             background_color: None,
+            repeat_header_on_split: true,
         }
     }
 }
@@ -173,6 +177,11 @@ impl Table {
     pub fn set_options(&mut self, options: TableOptions) -> &mut Self {
         self.options = options;
         self
+    }
+
+    /// Get a reference to the table's current options.
+    pub fn options(&self) -> &TableOptions {
+        &self.options
     }
 
     /// Add a header row
@@ -312,21 +321,161 @@ impl Table {
         self.column_widths.iter().sum()
     }
 
-    /// Render the table to a graphics context
+    /// Number of rows in this table (header + data).
+    pub fn row_count(&self) -> usize {
+        self.rows.len()
+    }
+
+    /// Number of leading header rows in this table.
+    pub fn header_count(&self) -> usize {
+        self.rows.iter().take_while(|r| r.is_header).count()
+    }
+
+    /// Current top-left position of the table, `(x, y)`.
+    pub fn position(&self) -> (f64, f64) {
+        self.position
+    }
+
+    /// Prepend a clone of the leading header rows from `source` to this table.
+    ///
+    /// Used by `Document::add_paginated_table` to repeat headers on continuation
+    /// pages when `TableOptions::repeat_header_on_split` is true. No-op when
+    /// `source` has zero header rows.
+    ///
+    /// Crate-private: callers outside this crate have no use case for this and
+    /// passing a `source` with mismatched `column_widths` would yield malformed
+    /// rendering.
+    pub(crate) fn prepend_headers_from(&mut self, source: &Table) {
+        let header_count = source.header_count();
+        if header_count == 0 {
+            return;
+        }
+        let mut new_rows: Vec<TableRow> = source.rows[..header_count].to_vec();
+        new_rows.extend(self.rows.drain(..));
+        self.rows = new_rows;
+    }
+
+    /// Render the table to a graphics context.
+    ///
+    /// Back-compat note: this method is **vertical-overflow-unaware** by design.
+    /// Rows past the page boundary are still drawn off-page (silent overflow).
+    /// Callers concerned with overflow should use [`Table::render_with_split`]
+    /// or [`Table::render_strict`], or [`crate::page_tables::DocumentTables::add_paginated_table`].
     pub fn render(&self, graphics: &mut GraphicsContext) -> Result<(), PdfError> {
+        // Direct call to the row-drawing helper with all rows — preserves the
+        // pre-#218 silent-overflow behaviour callers depend on, and skips the
+        // boundary `ensure_finite` check (which the safe APIs apply).
+        self.render_rows_slice(graphics, &self.rows, self.get_height())
+    }
+
+    /// Render as many leading rows as fully fit above `bottom_y`; return the
+    /// unrendered tail as a fresh [`Table`] (with the same `column_widths` and
+    /// `options`), or `None` when everything fit.
+    ///
+    /// **Tail position is a sentinel `(start_x, 0.0)`** — the caller MUST call
+    /// [`Table::set_position`] on the returned tail before using it for
+    /// rendering or fit checks. Calling `render_with_split` on a tail without
+    /// repositioning will report 0 rows fitting (since `start_y - row_height < bottom_y`
+    /// for any positive `bottom_y`) and yield a tail identical to the input.
+    /// For batteries-included pagination, see
+    /// [`crate::page_tables::DocumentTables::add_paginated_table`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] when `bottom_y` is not a finite
+    /// value (NaN or ±∞).
+    pub fn render_with_split(
+        &self,
+        graphics: &mut GraphicsContext,
+        bottom_y: f64,
+    ) -> Result<Option<Table>, PdfError> {
+        ensure_finite("bottom_y", bottom_y)?;
+        let (start_x, _start_y) = self.position;
+
+        // Pre-flight: how many leading rows fully fit above the floor?
+        let rendered_count = self.fit_count(bottom_y);
+        let rendered_height = self.rows[..rendered_count]
+            .iter()
+            .map(|r| self.calculate_row_height(r))
+            .sum::<f64>();
+
+        if rendered_count > 0 {
+            self.render_rows_slice(graphics, &self.rows[..rendered_count], rendered_height)?;
+        }
+
+        if rendered_count == self.rows.len() {
+            Ok(None)
+        } else {
+            let mut tail = self.clone();
+            tail.rows = self.rows[rendered_count..].to_vec();
+            tail.position = (start_x, 0.0);
+            Ok(Some(tail))
+        }
+    }
+
+    /// Strict variant: pre-flight check the table against `bottom_y`. If any
+    /// row would overflow, return [`PdfError::TableOverflow`] **without
+    /// drawing anything**; otherwise render normally.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] when `bottom_y` is not finite.
+    pub fn render_strict(
+        &self,
+        graphics: &mut GraphicsContext,
+        bottom_y: f64,
+    ) -> Result<(), PdfError> {
+        ensure_finite("bottom_y", bottom_y)?;
+        let rendered = self.fit_count(bottom_y);
+        if rendered < self.rows.len() {
+            return Err(PdfError::TableOverflow {
+                rendered,
+                dropped: self.rows.len() - rendered,
+                bottom_y,
+            });
+        }
+        // Skip the redundant fit_count inside render() by going straight to
+        // the helper with the full row set.
+        self.render_rows_slice(graphics, &self.rows, self.get_height())
+    }
+
+    /// Count the number of leading rows that fully fit above `bottom_y`.
+    fn fit_count(&self, bottom_y: f64) -> usize {
+        let (_start_x, start_y) = self.position;
+        let mut current_y = start_y;
+        let mut count = 0usize;
+        for row in &self.rows {
+            let row_height = self.calculate_row_height(row);
+            let next_y = current_y - row_height;
+            if next_y < bottom_y {
+                break;
+            }
+            count += 1;
+            current_y = next_y;
+        }
+        count
+    }
+
+    /// Internal: draw a slice of rows starting at `self.position`. The
+    /// `rendered_height` parameter sizes the optional table-wide background.
+    fn render_rows_slice(
+        &self,
+        graphics: &mut GraphicsContext,
+        rows: &[TableRow],
+        rendered_height: f64,
+    ) -> Result<(), PdfError> {
         let (start_x, start_y) = self.position;
         let mut current_y = start_y;
 
-        // Draw table background if specified
-        // Table grows downward from start_y, so bottom-left is at start_y - height
+        // Draw table background if specified, sized to the rendered subset.
         if let Some(bg_color) = self.options.background_color {
             graphics.save_state();
             graphics.set_fill_color(bg_color);
             graphics.rectangle(
                 start_x,
-                start_y - self.get_height(),
+                start_y - rendered_height,
                 self.get_width(),
-                self.get_height(),
+                rendered_height,
             );
             graphics.fill();
             graphics.restore_state();
@@ -334,7 +483,7 @@ impl Table {
 
         // Draw each row
         let mut data_row_index: usize = 0; // Counts only non-header rows (for zebra stripes)
-        for (row_index, row) in self.rows.iter().enumerate() {
+        for (row_index, row) in rows.iter().enumerate() {
             let row_height = self.calculate_row_height(row);
             let mut current_x = start_x;
 
@@ -404,11 +553,13 @@ impl Table {
                         true
                     }
                     GridStyle::Outline => {
-                        // Only draw if it's an edge cell
+                        // Only draw if it's an edge cell.
+                        // For partial renders (page splits), the outline tracks the
+                        // boundary of the rendered slice, not the original full table.
                         col_index == 0
                             || col_index + cell.colspan >= self.column_widths.len()
                             || row_index == 0
-                            || row_index == self.rows.len() - 1
+                            || row_index == rows.len() - 1
                     }
                 };
 

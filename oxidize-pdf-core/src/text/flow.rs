@@ -1,4 +1,5 @@
 use crate::error::Result;
+use crate::graphics::Color;
 use crate::page::Margins;
 use crate::text::{measure_text, split_into_words, Font};
 use std::collections::{HashMap, HashSet};
@@ -24,6 +25,12 @@ pub struct TextFlowContext {
     #[allow(dead_code)]
     page_height: f64,
     margins: Margins,
+    /// Optional fill color for text glyphs (issue #216). When `Some`,
+    /// `write_wrapped` emits the corresponding non-stroking color
+    /// operator (`rg`/`g`/`k`) inside each `BT … ET` block before the
+    /// `Tj`. `None` keeps the previous behaviour (whatever fill colour
+    /// the surrounding graphics state is already carrying).
+    fill_color: Option<Color>,
     /// Characters drawn so far, bucketed by active font name (issue
     /// #204). Consumed by `Page::add_text_flow` to merge into the
     /// page's graphics-context tracking so the writer can subset each
@@ -44,6 +51,7 @@ impl TextFlowContext {
             page_width,
             page_height,
             margins,
+            fill_color: None,
             used_characters_by_font: HashMap::new(),
         }
     }
@@ -70,6 +78,31 @@ impl TextFlowContext {
     pub fn set_alignment(&mut self, alignment: TextAlign) -> &mut Self {
         self.alignment = alignment;
         self
+    }
+
+    /// Sets the non-stroking (fill) color used for subsequent text emitted
+    /// by `write_wrapped` (issue #216). Mirrors `TextContext::set_fill_color`.
+    /// `None` keeps the surrounding graphics state untouched (previous
+    /// behaviour); `Some(color)` emits the matching PDF operator inside each
+    /// `BT … ET` block.
+    pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
+        self.fill_color = Some(color);
+        self
+    }
+
+    /// Current font this context will use when emitting text.
+    pub fn current_font(&self) -> &Font {
+        &self.current_font
+    }
+
+    /// Current font size in points.
+    pub fn font_size(&self) -> f64 {
+        self.font_size
+    }
+
+    /// Current fill color, if one has been explicitly set (issue #216).
+    pub fn fill_color(&self) -> Option<Color> {
+        self.fill_color
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
@@ -147,6 +180,19 @@ impl TextFlowContext {
                 self.font_size
             )
             .expect("Writing to String should never fail");
+
+            // Apply non-stroking fill colour if one was inherited from the
+            // page-level text state (issue #216) or explicitly configured
+            // via `set_fill_color`. PDF spec ISO 32000-1 §8.6.8 allows
+            // colour-setting operators inside a text object; they take
+            // effect for the show-text operators that follow.
+            //
+            // Routed through the shared NaN-sanitising helper (issues
+            // #220 + #221) so this site cannot diverge from `TextContext`
+            // / `GraphicsContext`.
+            if let Some(color) = self.fill_color {
+                crate::graphics::color::write_fill_color(&mut self.operations, color);
+            }
 
             // Set text position
             writeln!(&mut self.operations, "{:.2} {:.2} Td", x, self.cursor_y)

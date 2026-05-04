@@ -2,7 +2,8 @@
 //!
 //! This module provides traits and implementations to easily add tables to PDF pages.
 
-use crate::error::PdfError;
+use crate::document::Document;
+use crate::error::{ensure_finite, PdfError};
 use crate::graphics::Color;
 use crate::page::Page;
 use crate::text::{Font, HeaderStyle, Table, TableOptions};
@@ -43,6 +44,15 @@ pub struct TableStyle {
     pub header_text_color: Option<Color>,
     /// Default font size
     pub font_size: f64,
+    /// Header font override. `None` keeps the legacy default (`Font::Helvetica`).
+    /// See [issue #217](https://github.com/bzsanti/oxidizePdf/issues/217).
+    pub header_font: Option<Font>,
+    /// Header bold override. `None` keeps the legacy default (`true`).
+    /// Combined with `header_font`, the rendering layer maps non-oblique
+    /// builtin fonts to their `*Bold` variant (e.g. `TimesRoman` + `bold=true`
+    /// → `TimesBold`); oblique fonts and custom fonts are passed through
+    /// unchanged.
+    pub header_bold: Option<bool>,
 }
 
 impl TableStyle {
@@ -52,6 +62,8 @@ impl TableStyle {
             header_background: None,
             header_text_color: None,
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
     }
 
@@ -61,6 +73,8 @@ impl TableStyle {
             header_background: None,
             header_text_color: None,
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
     }
 
@@ -70,6 +84,8 @@ impl TableStyle {
             header_background: Some(Color::gray(0.1)),
             header_text_color: Some(Color::white()),
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
     }
 
@@ -79,7 +95,34 @@ impl TableStyle {
             header_background: Some(Color::rgb(0.2, 0.4, 0.8)),
             header_text_color: Some(Color::white()),
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
+    }
+
+    /// Override the header font. Chainable on presets.
+    ///
+    /// ```
+    /// use oxidize_pdf::page_tables::TableStyle;
+    /// use oxidize_pdf::text::Font;
+    /// let style = TableStyle::professional().with_header_font(Font::TimesRoman);
+    /// assert_eq!(style.header_font, Some(Font::TimesRoman));
+    /// ```
+    pub fn with_header_font(mut self, font: Font) -> Self {
+        self.header_font = Some(font);
+        self
+    }
+
+    /// Override the header bold flag. Chainable on presets.
+    ///
+    /// ```
+    /// use oxidize_pdf::page_tables::TableStyle;
+    /// let style = TableStyle::simple().with_header_bold(false);
+    /// assert_eq!(style.header_bold, Some(false));
+    /// ```
+    pub fn with_header_bold(mut self, bold: bool) -> Self {
+        self.header_bold = Some(bold);
+        self
     }
 }
 
@@ -134,14 +177,22 @@ impl PageTables for Page {
         // Create a simple table with the given style
         let mut table = Table::with_equal_columns(num_columns, width);
 
-        // Create table options based on style
-        let header_style = if style.header_background.is_some() || style.header_text_color.is_some()
+        // Create table options based on style.
+        //
+        // The header gate now also fires on `header_font` / `header_bold`
+        // overrides — without this, a caller picking `TableStyle::minimal()`
+        // (where both colour fields are `None`) and overriding only the font
+        // would have their request silently ignored.
+        let header_style = if style.header_background.is_some()
+            || style.header_text_color.is_some()
+            || style.header_font.is_some()
+            || style.header_bold.is_some()
         {
             Some(HeaderStyle {
                 background_color: style.header_background.unwrap_or(Color::white()),
                 text_color: style.header_text_color.unwrap_or(Color::black()),
-                font: Font::Helvetica,
-                bold: true,
+                font: style.header_font.clone().unwrap_or(Font::Helvetica),
+                bold: style.header_bold.unwrap_or(true),
             })
         } else {
             None
@@ -155,8 +206,12 @@ impl PageTables for Page {
 
         table.set_options(options);
 
-        // Add header row
-        table.add_row(headers)?;
+        // Add header row — `add_header_row` (not `add_row`) sets
+        // `is_header: true`. Without it the row is treated as data and the
+        // configured `HeaderStyle` is never applied at render time
+        // (see `Table::render`'s `use_header_style = row.is_header && …`
+        // guard). This was a pre-existing bug surfaced while fixing #217.
+        table.add_header_row(headers)?;
 
         // Add data rows
         for row_data in data {
@@ -164,6 +219,134 @@ impl PageTables for Page {
         }
 
         self.add_simple_table(&table, x, y)
+    }
+}
+
+/// Document-level extension for table rendering with automatic pagination.
+///
+/// Where [`PageTables`] writes a table on a single page, this trait will
+/// allocate continuation pages as needed when the table doesn't fit, and
+/// (by default) repeat header rows on each new page.
+///
+/// See [issue #218](https://github.com/bzsanti/oxidizePdf/issues/218) for the
+/// motivating use case.
+pub trait DocumentTables {
+    /// Render `table` starting at `(x, y)` on the page at `starting_page_index`.
+    /// If the table doesn't fit above `bottom_y`, allocate new pages of the
+    /// same dimensions and continue rendering each remaining slice at
+    /// `(x, next_page_y)`.
+    ///
+    /// All `y` values are absolute coordinates in the page's PDF coordinate
+    /// system (origin at the bottom-left). `bottom_y` is the floor below
+    /// which no row may be drawn; `next_page_y` is the top of the table on
+    /// every continuation page.
+    ///
+    /// When `table.options().repeat_header_on_split` is `true` (the default),
+    /// the leading header rows are repeated at the top of every continuation
+    /// page.
+    ///
+    /// # Returns
+    ///
+    /// `(final_page_index, final_y)` — where the layout cursor ended up after
+    /// the table was fully rendered. Callers can resume layout from there.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::TableOverflow`] when a single row is taller than
+    /// the available vertical space on a fresh page (the table cannot make
+    /// progress and would loop forever).
+    fn add_paginated_table(
+        &mut self,
+        starting_page_index: usize,
+        table: &Table,
+        x: f64,
+        y: f64,
+        bottom_y: f64,
+        next_page_y: f64,
+    ) -> Result<(usize, f64), PdfError>;
+}
+
+impl DocumentTables for Document {
+    fn add_paginated_table(
+        &mut self,
+        starting_page_index: usize,
+        table: &Table,
+        x: f64,
+        y: f64,
+        bottom_y: f64,
+        next_page_y: f64,
+    ) -> Result<(usize, f64), PdfError> {
+        // Reject non-finite floats at the API boundary. NaN comparisons silently
+        // return `false`, which would bypass `fit_count`'s overflow guard and
+        // silently render off-page — exactly the failure mode #218 prevents.
+        ensure_finite("x", x)?;
+        ensure_finite("y", y)?;
+        ensure_finite("bottom_y", bottom_y)?;
+        ensure_finite("next_page_y", next_page_y)?;
+
+        let repeat_headers = table.options().repeat_header_on_split;
+
+        let mut current_table = table.clone();
+        current_table.set_position(x, y);
+
+        let mut current_page_idx = starting_page_index;
+
+        loop {
+            // Capture the current page's dims (needed both for the floor check
+            // and for allocating a same-sized continuation page).
+            let (page_width, page_height) = match self.page(current_page_idx) {
+                Some(p) => (p.width(), p.height()),
+                None => {
+                    return Err(PdfError::InvalidStructure(format!(
+                        "page index {current_page_idx} out of bounds (page_count={})",
+                        self.page_count()
+                    )))
+                }
+            };
+
+            // Snapshot the data-row count BEFORE rendering. The progress check
+            // must compare *data* rows, not raw row counts: a header-heavy
+            // table where the page only fits headers would render some rows
+            // but advance zero data rows, then re-prepend headers for the next
+            // page — unbounded memory growth (DoS).
+            let current_data_rows = current_table.row_count() - current_table.header_count();
+
+            let tail = {
+                let page = self.page_mut(current_page_idx).expect("checked above");
+                current_table.render_with_split(page.graphics(), bottom_y)?
+            };
+
+            match tail {
+                None => {
+                    let final_y = current_table.position().1 - current_table.get_height();
+                    return Ok((current_page_idx, final_y));
+                }
+                Some(mut tail) => {
+                    // Forward progress: at least one *data* row must have been
+                    // drawn on this page. Comparing raw `row_count()` is wrong
+                    // because headers prepended on the next iteration inflate
+                    // the count without making progress.
+                    let tail_data_rows = tail.row_count() - tail.header_count();
+                    let data_rows_drawn = current_data_rows.saturating_sub(tail_data_rows);
+                    if data_rows_drawn == 0 {
+                        return Err(PdfError::TableOverflow {
+                            rendered: current_table.row_count() - tail.row_count(),
+                            dropped: tail.row_count(),
+                            bottom_y,
+                        });
+                    }
+
+                    self.add_page(Page::new(page_width, page_height));
+                    current_page_idx = self.page_count() - 1;
+
+                    if repeat_headers {
+                        tail.prepend_headers_from(table);
+                    }
+                    tail.set_position(x, next_page_y);
+                    current_table = tail;
+                }
+            }
+        }
     }
 }
 

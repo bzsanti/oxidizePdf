@@ -21,9 +21,10 @@ pub mod validation;
 mod working_field;
 
 pub use appearance::{
-    generate_default_appearance, AppearanceDictionary, AppearanceGenerator, AppearanceState,
-    AppearanceStream, CheckBoxAppearance, CheckStyle, ComboBoxAppearance, ListBoxAppearance,
-    PushButtonAppearance, RadioButtonAppearance, TextFieldAppearance,
+    generate_default_appearance, generate_field_appearance, AppearanceDictionary,
+    AppearanceGenerator, AppearanceState, AppearanceStream, CheckBoxAppearance, CheckStyle,
+    ComboBoxAppearance, FieldAppearanceResult, ListBoxAppearance, PushButtonAppearance,
+    RadioButtonAppearance, TextFieldAppearance,
 };
 pub use button_widget::{
     create_checkbox_widget, create_pushbutton_widget, create_radio_widget, ButtonWidget,
@@ -38,8 +39,8 @@ pub use field_appearance::{
     TextAlignment, TextPosition,
 };
 pub use field_type::{
-    ButtonField, CheckBox, ChoiceField, ComboBox, FieldType, ListBox, PushButton, RadioButton,
-    TextField,
+    ButtonField, CheckBox, ChoiceField, ComboBox, DefaultAppearance, FieldType, ListBox,
+    PushButton, RadioButton, TextField,
 };
 pub use form_data::{AcroForm, FormData, FormManager};
 pub use working_field::{

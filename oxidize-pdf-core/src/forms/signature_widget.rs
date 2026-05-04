@@ -453,34 +453,15 @@ impl SignatureWidget {
         Ok(())
     }
 
-    /// Helper to set fill color
+    /// Helper to set fill color — routed through the shared NaN-sanitising
+    /// helper (issues #220 + #221).
     fn set_fill_color(stream: &mut Vec<u8>, color: &Color) {
-        match color {
-            Color::Rgb(r, g, b) => {
-                stream.extend(format!("{} {} {} rg\n", r, g, b).as_bytes());
-            }
-            Color::Gray(v) => {
-                stream.extend(format!("{} g\n", v).as_bytes());
-            }
-            Color::Cmyk(c, m, y, k) => {
-                stream.extend(format!("{} {} {} {} k\n", c, m, y, k).as_bytes());
-            }
-        }
+        crate::graphics::color::write_fill_color_bytes(stream, *color);
     }
 
-    /// Helper to set stroke color
+    /// Helper to set stroke color — routed through the shared sanitising helper.
     fn set_stroke_color(stream: &mut Vec<u8>, color: &Color) {
-        match color {
-            Color::Rgb(r, g, b) => {
-                stream.extend(format!("{} {} {} RG\n", r, g, b).as_bytes());
-            }
-            Color::Gray(v) => {
-                stream.extend(format!("{} G\n", v).as_bytes());
-            }
-            Color::Cmyk(c, m, y, k) => {
-                stream.extend(format!("{} {} {} {} K\n", c, m, y, k).as_bytes());
-            }
-        }
+        crate::graphics::color::write_stroke_color_bytes(stream, *color);
     }
 
     /// Convert to PDF widget annotation dictionary
@@ -821,50 +802,52 @@ mod tests {
     fn test_set_fill_color() {
         let mut stream = Vec::new();
 
-        // Test RGB fill
+        // After the issue #220/#221 helper migration these emitters now
+        // share the `.3`-precision format used elsewhere in the pipeline,
+        // so the wire form is `1.000 0.500 0.000 rg`, not `1 0.5 0 rg`.
         let rgb = Color::rgb(1.0, 0.5, 0.0);
         SignatureWidget::set_fill_color(&mut stream, &rgb);
         let result = String::from_utf8_lossy(&stream);
-        assert!(result.contains("1 0.5 0 rg"));
+        assert!(result.contains("1.000 0.500 0.000 rg"));
 
         // Test gray fill
         stream.clear();
         let gray = Color::gray(0.7);
         SignatureWidget::set_fill_color(&mut stream, &gray);
         let result = String::from_utf8_lossy(&stream);
-        assert!(result.contains("0.7 g"));
+        assert!(result.contains("0.700 g"));
 
         // Test CMYK fill
         stream.clear();
         let cmyk = Color::cmyk(0.2, 0.3, 0.4, 0.1);
         SignatureWidget::set_fill_color(&mut stream, &cmyk);
         let result = String::from_utf8_lossy(&stream);
-        assert!(result.contains("0.2 0.3 0.4 0.1 k"));
+        assert!(result.contains("0.200 0.300 0.400 0.100 k"));
     }
 
     #[test]
     fn test_set_stroke_color() {
         let mut stream = Vec::new();
 
-        // Test RGB stroke
+        // `.3`-precision format (issue #220/#221 helper migration).
         let rgb = Color::rgb(0.0, 0.0, 1.0);
         SignatureWidget::set_stroke_color(&mut stream, &rgb);
         let result = String::from_utf8_lossy(&stream);
-        assert!(result.contains("0 0 1 RG"));
+        assert!(result.contains("0.000 0.000 1.000 RG"));
 
         // Test gray stroke
         stream.clear();
         let gray = Color::gray(0.3);
         SignatureWidget::set_stroke_color(&mut stream, &gray);
         let result = String::from_utf8_lossy(&stream);
-        assert!(result.contains("0.3 G"));
+        assert!(result.contains("0.300 G"));
 
         // Test CMYK stroke
         stream.clear();
         let cmyk = Color::cmyk(1.0, 0.0, 0.0, 0.0);
         SignatureWidget::set_stroke_color(&mut stream, &cmyk);
         let result = String::from_utf8_lossy(&stream);
-        assert!(result.contains("1 0 0 0 K"));
+        assert!(result.contains("1.000 0.000 0.000 0.000 K"));
     }
 
     #[test]

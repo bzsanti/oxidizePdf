@@ -162,6 +162,11 @@ impl FormManager {
         widget: Widget,
         options: Option<FieldOptions>,
     ) -> Result<ObjectReference> {
+        // Preserve the typed /DA on the FormField so `Document::fill_field`
+        // can pick the right font without re-parsing the PDF string in
+        // `field_dict["DA"]`. `to_dict()` consumes the visible state; stash
+        // the typed view first.
+        let typed_da = field.default_appearance.clone();
         let mut field_dict = field.to_dict();
 
         // Apply options
@@ -179,6 +184,7 @@ impl FormManager {
 
         let field_name = field.name;
         let mut form_field = FormField::new(field_dict);
+        form_field.default_appearance = typed_da;
         form_field.add_widget(widget);
 
         // Create object reference

@@ -554,6 +554,14 @@ impl Page {
         &mut self.graphics_context
     }
 
+    /// Returns the accumulated content-stream operators string for this page.
+    ///
+    /// Read-only counterpart to [`Page::graphics`]. Useful for inspecting what
+    /// has been drawn without taking a mutable borrow (eg. multi-page tests).
+    pub fn graphics_operations(&self) -> &str {
+        self.graphics_context.operations()
+    }
+
     /// Returns a mutable reference to the text context for adding text.
     pub fn text(&mut self) -> &mut TextContext {
         &mut self.text_context
@@ -826,7 +834,21 @@ impl Page {
     }
 
     pub fn text_flow(&self) -> TextFlowContext {
-        TextFlowContext::new(self.width, self.height, self.margins.clone())
+        // Issue #216: inherit the page-level text state (font, size, and
+        // fill colour) so callers that rely on `set_font` / `set_text_color`
+        // before invoking flow helpers (notably `text_flow_at` in the Python
+        // and .NET wrappers) get the formatting they configured. An explicit
+        // `ctx.set_font(...)` / `ctx.set_fill_color(...)` afterwards still
+        // overrides the inherited values.
+        let mut ctx = TextFlowContext::new(self.width, self.height, self.margins.clone());
+        ctx.set_font(
+            self.text_context.current_font().clone(),
+            self.text_context.font_size(),
+        );
+        if let Some(color) = self.text_context.fill_color() {
+            ctx.set_fill_color(color);
+        }
+        ctx
     }
 
     pub fn add_text_flow(&mut self, text_flow: &TextFlowContext) {

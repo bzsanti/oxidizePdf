@@ -434,14 +434,15 @@ fn test_field_with_background_and_border() {
     let stream = generator.generate_text_field().unwrap();
     let content = String::from_utf8_lossy(stream.data());
 
-    // Should contain background fill
-    assert!(content.contains("0.95 0.95 1 rg"));
+    // Should contain background fill — `.3`-precision after the issue
+    // #220/#221 helper migration (single source of truth for colour ops).
+    assert!(content.contains("0.950 0.950 1.000 rg"));
     assert!(content.contains("re"));
     assert!(content.contains("f"));
 
     // Should contain border stroke
     assert!(content.contains("2 w"));
-    assert!(content.contains("0 0 0.5 RG"));
+    assert!(content.contains("0.000 0.000 0.500 RG"));
     assert!(content.contains("S"));
 }
 

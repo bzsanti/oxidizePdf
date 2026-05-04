@@ -1,6 +1,6 @@
 pub mod calibrated_color;
 pub mod clipping;
-mod color;
+pub(crate) mod color;
 mod color_profiles;
 pub mod devicen_color;
 pub mod extraction;
@@ -604,37 +604,16 @@ impl GraphicsContext {
     }
 
     fn apply_stroke_color(&mut self) {
-        match self.stroke_color {
-            Color::Rgb(r, g, b) => {
-                writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} RG")
-                    .expect("Writing to string should never fail");
-            }
-            Color::Gray(g) => {
-                writeln!(&mut self.operations, "{g:.3} G")
-                    .expect("Writing to string should never fail");
-            }
-            Color::Cmyk(c, m, y, k) => {
-                writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} K")
-                    .expect("Writing to string should never fail");
-            }
-        }
+        // Single source of truth for stroke-colour emission across
+        // `TextContext`, `TextFlowContext`, and `GraphicsContext` — see
+        // `graphics::color::write_stroke_color` (issues #220 + #221).
+        color::write_stroke_color(&mut self.operations, self.stroke_color);
     }
 
     fn apply_fill_color(&mut self) {
-        match self.current_color {
-            Color::Rgb(r, g, b) => {
-                writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} rg")
-                    .expect("Writing to string should never fail");
-            }
-            Color::Gray(g) => {
-                writeln!(&mut self.operations, "{g:.3} g")
-                    .expect("Writing to string should never fail");
-            }
-            Color::Cmyk(c, m, y, k) => {
-                writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} k")
-                    .expect("Writing to string should never fail");
-            }
-        }
+        // Single source of truth for fill-colour emission. See sibling
+        // `apply_stroke_color` and `graphics::color::write_fill_color`.
+        color::write_fill_color(&mut self.operations, self.current_color);
     }
 
     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
