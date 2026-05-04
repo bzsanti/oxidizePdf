@@ -44,6 +44,15 @@ pub struct TableStyle {
     pub header_text_color: Option<Color>,
     /// Default font size
     pub font_size: f64,
+    /// Header font override. `None` keeps the legacy default (`Font::Helvetica`).
+    /// See [issue #217](https://github.com/bzsanti/oxidizePdf/issues/217).
+    pub header_font: Option<Font>,
+    /// Header bold override. `None` keeps the legacy default (`true`).
+    /// Combined with `header_font`, the rendering layer maps non-oblique
+    /// builtin fonts to their `*Bold` variant (e.g. `TimesRoman` + `bold=true`
+    /// → `TimesBold`); oblique fonts and custom fonts are passed through
+    /// unchanged.
+    pub header_bold: Option<bool>,
 }
 
 impl TableStyle {
@@ -53,6 +62,8 @@ impl TableStyle {
             header_background: None,
             header_text_color: None,
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
     }
 
@@ -62,6 +73,8 @@ impl TableStyle {
             header_background: None,
             header_text_color: None,
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
     }
 
@@ -71,6 +84,8 @@ impl TableStyle {
             header_background: Some(Color::gray(0.1)),
             header_text_color: Some(Color::white()),
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
     }
 
@@ -80,7 +95,34 @@ impl TableStyle {
             header_background: Some(Color::rgb(0.2, 0.4, 0.8)),
             header_text_color: Some(Color::white()),
             font_size: 10.0,
+            header_font: None,
+            header_bold: None,
         }
+    }
+
+    /// Override the header font. Chainable on presets.
+    ///
+    /// ```
+    /// use oxidize_pdf::page_tables::TableStyle;
+    /// use oxidize_pdf::text::Font;
+    /// let style = TableStyle::professional().with_header_font(Font::TimesRoman);
+    /// assert_eq!(style.header_font, Some(Font::TimesRoman));
+    /// ```
+    pub fn with_header_font(mut self, font: Font) -> Self {
+        self.header_font = Some(font);
+        self
+    }
+
+    /// Override the header bold flag. Chainable on presets.
+    ///
+    /// ```
+    /// use oxidize_pdf::page_tables::TableStyle;
+    /// let style = TableStyle::simple().with_header_bold(false);
+    /// assert_eq!(style.header_bold, Some(false));
+    /// ```
+    pub fn with_header_bold(mut self, bold: bool) -> Self {
+        self.header_bold = Some(bold);
+        self
     }
 }
 
@@ -135,14 +177,22 @@ impl PageTables for Page {
         // Create a simple table with the given style
         let mut table = Table::with_equal_columns(num_columns, width);
 
-        // Create table options based on style
-        let header_style = if style.header_background.is_some() || style.header_text_color.is_some()
+        // Create table options based on style.
+        //
+        // The header gate now also fires on `header_font` / `header_bold`
+        // overrides — without this, a caller picking `TableStyle::minimal()`
+        // (where both colour fields are `None`) and overriding only the font
+        // would have their request silently ignored.
+        let header_style = if style.header_background.is_some()
+            || style.header_text_color.is_some()
+            || style.header_font.is_some()
+            || style.header_bold.is_some()
         {
             Some(HeaderStyle {
                 background_color: style.header_background.unwrap_or(Color::white()),
                 text_color: style.header_text_color.unwrap_or(Color::black()),
-                font: Font::Helvetica,
-                bold: true,
+                font: style.header_font.clone().unwrap_or(Font::Helvetica),
+                bold: style.header_bold.unwrap_or(true),
             })
         } else {
             None
@@ -156,8 +206,12 @@ impl PageTables for Page {
 
         table.set_options(options);
 
-        // Add header row
-        table.add_row(headers)?;
+        // Add header row — `add_header_row` (not `add_row`) sets
+        // `is_header: true`. Without it the row is treated as data and the
+        // configured `HeaderStyle` is never applied at render time
+        // (see `Table::render`'s `use_header_style = row.is_header && …`
+        // guard). This was a pre-existing bug surfaced while fixing #217.
+        table.add_header_row(headers)?;
 
         // Add data rows
         for row_data in data {
