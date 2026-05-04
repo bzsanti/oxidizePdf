@@ -3710,8 +3710,8 @@ impl<W: Write> PdfWriter<W> {
         // Set graphics state
         content.push_str("q\n");
 
-        // Draw border (black)
-        content.push_str("0 0 0 RG\n"); // Black stroke color
+        // Draw border (black) — single source of truth for color emission.
+        crate::graphics::color::write_stroke_color(&mut content, crate::graphics::Color::black());
         content.push_str("1 w\n"); // 1pt line width
 
         // Draw rectangle border
@@ -3719,7 +3719,7 @@ impl<W: Write> PdfWriter<W> {
         content.push_str("S\n"); // Stroke
 
         // Fill with white background
-        content.push_str("1 1 1 rg\n"); // White fill color
+        crate::graphics::color::write_fill_color(&mut content, crate::graphics::Color::white());
         content.push_str(&format!("0.5 0.5 {} {} re\n", width - 1.0, height - 1.0));
         content.push_str("f\n"); // Fill
 
@@ -3764,36 +3764,17 @@ impl<W: Write> PdfWriter<W> {
         // Set graphics state
         content.push_str("q\n");
 
-        // Draw background if specified
+        // Draw background if specified — routed through the shared
+        // NaN-sanitising helpers (issues #220, #221).
         if let Some(bg_color) = &widget.appearance.background_color {
-            match bg_color {
-                crate::graphics::Color::Gray(g) => {
-                    content.push_str(&format!("{g} g\n"));
-                }
-                crate::graphics::Color::Rgb(r, g, b) => {
-                    content.push_str(&format!("{r} {g} {b} rg\n"));
-                }
-                crate::graphics::Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{c} {m} {y} {k} k\n"));
-                }
-            }
+            crate::graphics::color::write_fill_color(&mut content, *bg_color);
             content.push_str(&format!("0 0 {width} {height} re\n"));
             content.push_str("f\n");
         }
 
         // Draw border
         if let Some(border_color) = &widget.appearance.border_color {
-            match border_color {
-                crate::graphics::Color::Gray(g) => {
-                    content.push_str(&format!("{g} G\n"));
-                }
-                crate::graphics::Color::Rgb(r, g, b) => {
-                    content.push_str(&format!("{r} {g} {b} RG\n"));
-                }
-                crate::graphics::Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{c} {m} {y} {k} K\n"));
-                }
-            }
+            crate::graphics::color::write_stroke_color(&mut content, *border_color);
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
             content.push_str(&format!("0 0 {width} {height} re\n"));
             content.push_str("S\n");
@@ -3805,7 +3786,10 @@ impl<W: Write> PdfWriter<W> {
                 if let Some(Object::Name(v)) = field_dict.get("V") {
                     if v == "Yes" {
                         // Draw checkmark
-                        content.push_str("0 0 0 RG\n"); // Black
+                        crate::graphics::color::write_stroke_color(
+                            &mut content,
+                            crate::graphics::Color::black(),
+                        );
                         content.push_str("2 w\n");
                         let margin = width * 0.2;
                         content.push_str(&format!("{} {} m\n", margin, height / 2.0));

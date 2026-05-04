@@ -43,11 +43,7 @@ impl DefaultAppearance {
     /// - `Font::Custom("CJK")`, 14.0, `Color::rgb(0.0, 0.0, 0.0)` →
     ///   `/CJK 14 Tf 0 0 0 rg`
     pub fn to_da_string(&self) -> String {
-        let color_op = match self.color {
-            Color::Gray(g) => format!("{} g", g),
-            Color::Rgb(r, g, b) => format!("{} {} {} rg", r, g, b),
-            Color::Cmyk(c, m, y, k) => format!("{} {} {} {} k", c, m, y, k),
-        };
+        let color_op = crate::graphics::color::fill_color_op(self.color);
         format!(
             "/{} {} Tf {}",
             self.font.pdf_name(),

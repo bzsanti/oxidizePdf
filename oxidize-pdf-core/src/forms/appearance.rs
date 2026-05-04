@@ -339,21 +339,13 @@ impl TextFieldAppearance {
 
         // Draw background if specified
         if let Some(bg_color) = &widget.appearance.background_color {
-            match bg_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, *bg_color);
             content.push_str(&format!("0 0 {width} {height} re f\n"));
         }
 
         // Draw border
         if let Some(border_color) = &widget.appearance.border_color {
-            match border_color {
-                Color::Gray(g) => content.push_str(&format!("{g} G\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} RG\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} K\n")),
-            }
+            crate::graphics::color::write_stroke_color(&mut content, *border_color);
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
 
             match widget.appearance.border_style {
@@ -377,11 +369,7 @@ impl TextFieldAppearance {
         // Draw text if value is provided
         if let Some(text) = value {
             // Set text color
-            match self.text_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, self.text_color);
 
             // Begin text
             content.push_str("BT\n");
@@ -528,21 +516,13 @@ impl AppearanceGenerator for CheckBoxAppearance {
 
         // Draw background
         if let Some(bg_color) = &widget.appearance.background_color {
-            match bg_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, *bg_color);
             content.push_str(&format!("0 0 {width} {height} re f\n"));
         }
 
         // Draw border
         if let Some(border_color) = &widget.appearance.border_color {
-            match border_color {
-                Color::Gray(g) => content.push_str(&format!("{g} G\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} RG\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} K\n")),
-            }
+            crate::graphics::color::write_stroke_color(&mut content, *border_color);
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
             content.push_str(&format!("0 0 {width} {height} re S\n"));
         }
@@ -550,11 +530,7 @@ impl AppearanceGenerator for CheckBoxAppearance {
         // Draw check mark if checked
         if is_checked {
             // Set check color
-            match self.check_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, self.check_color);
 
             let inset = width * 0.2;
 
@@ -694,13 +670,9 @@ impl AppearanceGenerator for RadioButtonAppearance {
 
         // Draw background circle
         if let Some(bg_color) = &widget.appearance.background_color {
-            match bg_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, *bg_color);
         } else {
-            content.push_str("1 g\n"); // White background
+            crate::graphics::color::write_fill_color(&mut content, Color::Gray(1.0));
         }
 
         let cx = width / 2.0;
@@ -750,11 +722,7 @@ impl AppearanceGenerator for RadioButtonAppearance {
 
         // Draw border
         if let Some(border_color) = &widget.appearance.border_color {
-            match border_color {
-                Color::Gray(g) => content.push_str(&format!("{g} G\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} RG\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} K\n")),
-            }
+            crate::graphics::color::write_stroke_color(&mut content, *border_color);
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
 
             content.push_str(&format!("{} {} m\n", cx + r, cy));
@@ -799,11 +767,7 @@ impl AppearanceGenerator for RadioButtonAppearance {
 
         // Draw inner dot if selected
         if is_selected {
-            match self.selected_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, self.selected_color);
 
             let inner_r = r * 0.4;
             content.push_str(&format!("{} {} m\n", cx + inner_r, cy));
@@ -903,11 +867,7 @@ impl AppearanceGenerator for PushButtonAppearance {
                 .unwrap_or(Color::gray(0.9)),
         };
 
-        match bg_color {
-            Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-            Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-            Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-        }
+        crate::graphics::color::write_fill_color(&mut content, bg_color);
         content.push_str(&format!("0 0 {width} {height} re f\n"));
 
         // Draw beveled border for button appearance
@@ -925,11 +885,7 @@ impl AppearanceGenerator for PushButtonAppearance {
         } else {
             // Regular border
             if let Some(border_color) = &widget.appearance.border_color {
-                match border_color {
-                    Color::Gray(g) => content.push_str(&format!("{g} G\n")),
-                    Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} RG\n")),
-                    Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} K\n")),
-                }
+                crate::graphics::color::write_stroke_color(&mut content, *border_color);
                 content.push_str(&format!("{} w\n", widget.appearance.border_width));
                 content.push_str(&format!("0 0 {width} {height} re S\n"));
             }
@@ -937,11 +893,7 @@ impl AppearanceGenerator for PushButtonAppearance {
 
         // Draw label text
         if !self.label.is_empty() {
-            match self.text_color {
-                Color::Gray(g) => content.push_str(&format!("{g} g\n")),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{r} {g} {b} rg\n")),
-                Color::Cmyk(c, m, y, k) => content.push_str(&format!("{c} {m} {y} {k} k\n")),
-            }
+            crate::graphics::color::write_fill_color(&mut content, self.text_color);
 
             content.push_str("BT\n");
             content.push_str(&format!(
@@ -1047,19 +999,13 @@ impl ComboBoxAppearance {
         let mut used_chars_per_font: HashMap<String, HashSet<char>> = HashMap::new();
 
         // Draw background
-        content.push_str("1 1 1 rg\n"); // White background
+        crate::graphics::color::write_fill_color(&mut content, Color::white());
         content.push_str(&format!("0 0 {} {} re\n", width, height));
         content.push_str("f\n");
 
         // Draw border
         if let Some(ref border_color) = widget.appearance.border_color {
-            match border_color {
-                Color::Gray(g) => content.push_str(&format!("{} G\n", g)),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} RG\n", r, g, b)),
-                Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{} {} {} {} K\n", c, m, y, k))
-                }
-            }
+            crate::graphics::color::write_stroke_color(&mut content, *border_color);
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
             content.push_str(&format!("0 0 {} {} re\n", width, height));
             content.push_str("S\n");
@@ -1069,7 +1015,7 @@ impl ComboBoxAppearance {
         if self.show_arrow {
             let arrow_x = width - 15.0;
             let arrow_y = height / 2.0;
-            content.push_str("0.5 0.5 0.5 rg\n"); // Gray arrow
+            crate::graphics::color::write_fill_color(&mut content, Color::gray(0.5));
             content.push_str(&format!("{} {} m\n", arrow_x, arrow_y + 3.0));
             content.push_str(&format!("{} {} l\n", arrow_x + 8.0, arrow_y + 3.0));
             content.push_str(&format!("{} {} l\n", arrow_x + 4.0, arrow_y - 3.0));
@@ -1085,13 +1031,7 @@ impl ComboBoxAppearance {
                 self.font.pdf_name(),
                 self.font_size
             ));
-            match self.text_color {
-                Color::Gray(g) => content.push_str(&format!("{} g\n", g)),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} rg\n", r, g, b)),
-                Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{} {} {} {} k\n", c, m, y, k))
-                }
-            }
+            crate::graphics::color::write_fill_color(&mut content, self.text_color);
             content.push_str(&format!("5 {} Td\n", (height - self.font_size) / 2.0));
 
             // Same dispatch as `TextFieldAppearance::generate_appearance_with_font`
@@ -1192,19 +1132,13 @@ impl AppearanceGenerator for ListBoxAppearance {
         let mut content = String::new();
 
         // Draw background
-        content.push_str("1 1 1 rg\n"); // White background
+        crate::graphics::color::write_fill_color(&mut content, Color::white());
         content.push_str(&format!("0 0 {} {} re\n", width, height));
         content.push_str("f\n");
 
         // Draw border
         if let Some(ref border_color) = widget.appearance.border_color {
-            match border_color {
-                Color::Gray(g) => content.push_str(&format!("{} G\n", g)),
-                Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} RG\n", r, g, b)),
-                Color::Cmyk(c, m, y, k) => {
-                    content.push_str(&format!("{} {} {} {} K\n", c, m, y, k))
-                }
-            }
+            crate::graphics::color::write_stroke_color(&mut content, *border_color);
             content.push_str(&format!("{} w\n", widget.appearance.border_width));
             content.push_str(&format!("0 0 {} {} re\n", width, height));
             content.push_str("S\n");
@@ -1219,13 +1153,7 @@ impl AppearanceGenerator for ListBoxAppearance {
 
             // Draw selection background if selected
             if self.selected.contains(&index) {
-                match self.selection_color {
-                    Color::Gray(g) => content.push_str(&format!("{} g\n", g)),
-                    Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} rg\n", r, g, b)),
-                    Color::Cmyk(c, m, y_val, k) => {
-                        content.push_str(&format!("{} {} {} {} k\n", c, m, y_val, k))
-                    }
-                }
+                crate::graphics::color::write_fill_color(&mut content, self.selection_color);
                 content.push_str(&format!("0 {} {} {} re\n", y, width, self.item_height));
                 content.push_str("f\n");
             }
@@ -1238,17 +1166,11 @@ impl AppearanceGenerator for ListBoxAppearance {
                 self.font_size
             ));
 
-            // Use white text for selected items, black for others
+            // Use white text for selected items, regular colour for others
             if self.selected.contains(&index) {
-                content.push_str("1 1 1 rg\n");
+                crate::graphics::color::write_fill_color(&mut content, Color::white());
             } else {
-                match self.text_color {
-                    Color::Gray(g) => content.push_str(&format!("{} g\n", g)),
-                    Color::Rgb(r, g, b) => content.push_str(&format!("{} {} {} rg\n", r, g, b)),
-                    Color::Cmyk(c, m, y_val, k) => {
-                        content.push_str(&format!("{} {} {} {} k\n", c, m, y_val, k))
-                    }
-                }
+                crate::graphics::color::write_fill_color(&mut content, self.text_color);
             }
 
             content.push_str(&format!("5 {} Td\n", y + 2.0));

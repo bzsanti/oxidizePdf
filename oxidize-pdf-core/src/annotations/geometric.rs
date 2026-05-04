@@ -360,23 +360,15 @@ impl GeometricAppearance {
         // Set border width
         stream.extend(format!("{} w\n", border_width).as_bytes());
 
-        // Set colors
+        // Set colors. Routed through the shared sanitising helpers
+        // (issues #220 + #221) so /AP appearance streams cannot emit
+        // NaN/inf tokens that ISO 32000-1 §7.3.3 rejects.
         if let Some(color) = interior_color {
-            let fill_op = match color {
-                Color::Gray(g) => format!("{} g\n", g),
-                Color::Rgb(r, g, b) => format!("{} {} {} rg\n", r, g, b),
-                Color::Cmyk(c, m, y, k) => format!("{} {} {} {} k\n", c, m, y, k),
-            };
-            stream.extend(fill_op.as_bytes());
+            crate::graphics::color::write_fill_color_bytes(&mut stream, *color);
         }
 
         if let Some(color) = border_color {
-            let stroke_op = match color {
-                Color::Gray(g) => format!("{} G\n", g),
-                Color::Rgb(r, g, b) => format!("{} {} {} RG\n", r, g, b),
-                Color::Cmyk(c, m, y, k) => format!("{} {} {} {} K\n", c, m, y, k),
-            };
-            stream.extend(stroke_op.as_bytes());
+            crate::graphics::color::write_stroke_color_bytes(&mut stream, *color);
         }
 
         // Draw circle using Bézier curves
@@ -467,23 +459,15 @@ impl GeometricAppearance {
         // Set border width
         stream.extend(format!("{} w\n", border_width).as_bytes());
 
-        // Set colors
+        // Set colors. Routed through the shared sanitising helpers
+        // (issues #220 + #221) so /AP appearance streams cannot emit
+        // NaN/inf tokens that ISO 32000-1 §7.3.3 rejects.
         if let Some(color) = interior_color {
-            let fill_op = match color {
-                Color::Gray(g) => format!("{} g\n", g),
-                Color::Rgb(r, g, b) => format!("{} {} {} rg\n", r, g, b),
-                Color::Cmyk(c, m, y, k) => format!("{} {} {} {} k\n", c, m, y, k),
-            };
-            stream.extend(fill_op.as_bytes());
+            crate::graphics::color::write_fill_color_bytes(&mut stream, *color);
         }
 
         if let Some(color) = border_color {
-            let stroke_op = match color {
-                Color::Gray(g) => format!("{} G\n", g),
-                Color::Rgb(r, g, b) => format!("{} {} {} RG\n", r, g, b),
-                Color::Cmyk(c, m, y, k) => format!("{} {} {} {} K\n", c, m, y, k),
-            };
-            stream.extend(stroke_op.as_bytes());
+            crate::graphics::color::write_stroke_color_bytes(&mut stream, *color);
         }
 
         // Draw rectangle
