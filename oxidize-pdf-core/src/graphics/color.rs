@@ -222,6 +222,199 @@ impl Color {
     }
 }
 
+/// Substitute non-finite floats with `0.0` for safe content-stream emission
+/// (issue #220). Direct enum construction such as `Color::Rgb(f64::NAN, …)`
+/// bypasses the `Color::rgb`/`gray`/`cmyk` clamps; emitting the raw value with
+/// `{:.3}` would produce `NaN`/`inf`/`-inf` tokens, which ISO 32000-1 §7.3.3
+/// rejects as numeric values and conformant viewers reject the entire content
+/// stream.
+///
+/// This is a finite-only check — finite values pass through unchanged
+/// (including values outside `[0.0, 1.0]`, which the renderer is responsible
+/// for clamping). The aim is strictly to keep the wire format syntactically
+/// valid, not to enforce colour-value semantics here.
+#[inline]
+pub(crate) fn finite_or_zero(val: f64) -> f64 {
+    if val.is_finite() {
+        val
+    } else {
+        0.0
+    }
+}
+
+/// Single source of truth for non-stroking colour-operator emission (issue
+/// #221). Returns the operator as a `String` *without* trailing newline,
+/// with NaN/inf sanitisation (issue #220) and `.3`-precision formatting.
+///
+/// Operators emitted (ISO 32000-1 §8.6.8):
+/// - `Color::Rgb(r, g, b)`     → `"r g b rg"`
+/// - `Color::Gray(g)`          → `"g g"`
+/// - `Color::Cmyk(c, m, y, k)` → `"c m y k k"`
+///
+/// Use this when embedding the operator inside a larger PDF expression —
+/// e.g. an annotation `/DA` default-appearance string `/Helv 12 Tf 0 0 0 rg`.
+/// For content-stream emission with trailing newline, prefer
+/// [`write_fill_color`] (writes to `&mut String`) or
+/// [`write_fill_color_bytes`] (writes to `&mut Vec<u8>`).
+pub(crate) fn fill_color_op(color: Color) -> String {
+    use std::fmt::Write;
+    let mut s = String::new();
+    match color {
+        Color::Rgb(r, g, b) => write!(
+            &mut s,
+            "{:.3} {:.3} {:.3} rg",
+            finite_or_zero(r),
+            finite_or_zero(g),
+            finite_or_zero(b)
+        ),
+        Color::Gray(gray) => write!(&mut s, "{:.3} g", finite_or_zero(gray)),
+        Color::Cmyk(c, m, y, k) => write!(
+            &mut s,
+            "{:.3} {:.3} {:.3} {:.3} k",
+            finite_or_zero(c),
+            finite_or_zero(m),
+            finite_or_zero(y),
+            finite_or_zero(k)
+        ),
+    }
+    .expect("writing to a String never fails");
+    s
+}
+
+/// Single source of truth for stroking colour-operator emission. Companion
+/// to [`fill_color_op`] (uppercase `RG` / `G` / `K`). No trailing newline,
+/// NaN/inf sanitised.
+pub(crate) fn stroke_color_op(color: Color) -> String {
+    use std::fmt::Write;
+    let mut s = String::new();
+    match color {
+        Color::Rgb(r, g, b) => write!(
+            &mut s,
+            "{:.3} {:.3} {:.3} RG",
+            finite_or_zero(r),
+            finite_or_zero(g),
+            finite_or_zero(b)
+        ),
+        Color::Gray(gray) => write!(&mut s, "{:.3} G", finite_or_zero(gray)),
+        Color::Cmyk(c, m, y, k) => write!(
+            &mut s,
+            "{:.3} {:.3} {:.3} {:.3} K",
+            finite_or_zero(c),
+            finite_or_zero(m),
+            finite_or_zero(y),
+            finite_or_zero(k)
+        ),
+    }
+    .expect("writing to a String never fails");
+    s
+}
+
+/// Append the non-stroking colour operator for `color` to a `String`
+/// content-stream buffer, followed by a `\n`. Direct emission via
+/// `std::fmt::Write` — no intermediate `String` allocation.
+pub(crate) fn write_fill_color(ops: &mut String, color: Color) {
+    use std::fmt::Write;
+    match color {
+        Color::Rgb(r, g, b) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} rg",
+            finite_or_zero(r),
+            finite_or_zero(g),
+            finite_or_zero(b)
+        ),
+        Color::Gray(gray) => writeln!(ops, "{:.3} g", finite_or_zero(gray)),
+        Color::Cmyk(c, m, y, k) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} {:.3} k",
+            finite_or_zero(c),
+            finite_or_zero(m),
+            finite_or_zero(y),
+            finite_or_zero(k)
+        ),
+    }
+    .expect("writing to a String never fails");
+}
+
+/// Append the stroking colour operator for `color` to a `String`
+/// content-stream buffer, followed by a `\n`. Companion to
+/// [`write_fill_color`] (uppercase `RG` / `G` / `K`).
+pub(crate) fn write_stroke_color(ops: &mut String, color: Color) {
+    use std::fmt::Write;
+    match color {
+        Color::Rgb(r, g, b) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} RG",
+            finite_or_zero(r),
+            finite_or_zero(g),
+            finite_or_zero(b)
+        ),
+        Color::Gray(gray) => writeln!(ops, "{:.3} G", finite_or_zero(gray)),
+        Color::Cmyk(c, m, y, k) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} {:.3} K",
+            finite_or_zero(c),
+            finite_or_zero(m),
+            finite_or_zero(y),
+            finite_or_zero(k)
+        ),
+    }
+    .expect("writing to a String never fails");
+}
+
+/// Append the non-stroking colour operator for `color` to a `Vec<u8>`
+/// content-stream buffer, followed by `\n`. Direct emission via
+/// `std::io::Write` — no intermediate allocation. For form-widget streams
+/// in `forms/button_widget.rs`, `forms/appearance.rs`, etc., which use
+/// `Vec<u8>` as their accumulator.
+pub(crate) fn write_fill_color_bytes(ops: &mut Vec<u8>, color: Color) {
+    use std::io::Write;
+    match color {
+        Color::Rgb(r, g, b) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} rg",
+            finite_or_zero(r),
+            finite_or_zero(g),
+            finite_or_zero(b)
+        ),
+        Color::Gray(gray) => writeln!(ops, "{:.3} g", finite_or_zero(gray)),
+        Color::Cmyk(c, m, y, k) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} {:.3} k",
+            finite_or_zero(c),
+            finite_or_zero(m),
+            finite_or_zero(y),
+            finite_or_zero(k)
+        ),
+    }
+    .expect("writing to a Vec<u8> never fails");
+}
+
+/// Append the stroking colour operator for `color` to a `Vec<u8>`
+/// content-stream buffer, followed by `\n`. Companion to
+/// [`write_fill_color_bytes`].
+pub(crate) fn write_stroke_color_bytes(ops: &mut Vec<u8>, color: Color) {
+    use std::io::Write;
+    match color {
+        Color::Rgb(r, g, b) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} RG",
+            finite_or_zero(r),
+            finite_or_zero(g),
+            finite_or_zero(b)
+        ),
+        Color::Gray(gray) => writeln!(ops, "{:.3} G", finite_or_zero(gray)),
+        Color::Cmyk(c, m, y, k) => writeln!(
+            ops,
+            "{:.3} {:.3} {:.3} {:.3} K",
+            finite_or_zero(c),
+            finite_or_zero(m),
+            finite_or_zero(y),
+            finite_or_zero(k)
+        ),
+    }
+    .expect("writing to a Vec<u8> never fails");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -870,5 +1063,121 @@ mod tests {
         assert_eq!(m, 0.0, "Magenta should be 0 for pure black");
         assert_eq!(y, 0.0, "Yellow should be 0 for pure black");
         assert_eq!(k, 1.0, "K should be 1.0 for pure black");
+    }
+
+    // ---------- write_fill_color / write_stroke_color helpers (issues #220, #221) ----------
+
+    #[test]
+    fn finite_or_zero_passes_finite_values_unchanged() {
+        assert_eq!(finite_or_zero(0.0), 0.0);
+        assert_eq!(finite_or_zero(0.5), 0.5);
+        assert_eq!(finite_or_zero(1.0), 1.0);
+        assert_eq!(finite_or_zero(-0.5), -0.5); // out-of-range but finite — caller's problem
+        assert_eq!(finite_or_zero(2.0), 2.0);
+    }
+
+    #[test]
+    fn finite_or_zero_replaces_nan_with_zero() {
+        assert_eq!(finite_or_zero(f64::NAN), 0.0);
+    }
+
+    #[test]
+    fn finite_or_zero_replaces_pos_inf_with_zero() {
+        assert_eq!(finite_or_zero(f64::INFINITY), 0.0);
+    }
+
+    #[test]
+    fn finite_or_zero_replaces_neg_inf_with_zero() {
+        assert_eq!(finite_or_zero(f64::NEG_INFINITY), 0.0);
+    }
+
+    #[test]
+    fn write_fill_color_rgb_emits_lowercase_rg_with_three_decimals() {
+        let mut ops = String::new();
+        write_fill_color(&mut ops, Color::Rgb(0.25, 0.5, 0.75));
+        assert_eq!(ops, "0.250 0.500 0.750 rg\n");
+    }
+
+    #[test]
+    fn write_fill_color_gray_emits_lowercase_g() {
+        let mut ops = String::new();
+        write_fill_color(&mut ops, Color::Gray(0.5));
+        assert_eq!(ops, "0.500 g\n");
+    }
+
+    #[test]
+    fn write_fill_color_cmyk_emits_lowercase_k() {
+        let mut ops = String::new();
+        write_fill_color(&mut ops, Color::Cmyk(0.1, 0.2, 0.3, 0.4));
+        assert_eq!(ops, "0.100 0.200 0.300 0.400 k\n");
+    }
+
+    #[test]
+    fn write_stroke_color_rgb_emits_uppercase_rg() {
+        let mut ops = String::new();
+        write_stroke_color(&mut ops, Color::Rgb(0.25, 0.5, 0.75));
+        assert_eq!(ops, "0.250 0.500 0.750 RG\n");
+    }
+
+    #[test]
+    fn write_stroke_color_gray_emits_uppercase_g() {
+        let mut ops = String::new();
+        write_stroke_color(&mut ops, Color::Gray(0.5));
+        assert_eq!(ops, "0.500 G\n");
+    }
+
+    #[test]
+    fn write_stroke_color_cmyk_emits_uppercase_k() {
+        let mut ops = String::new();
+        write_stroke_color(&mut ops, Color::Cmyk(0.1, 0.2, 0.3, 0.4));
+        assert_eq!(ops, "0.100 0.200 0.300 0.400 K\n");
+    }
+
+    #[test]
+    fn write_fill_color_sanitises_nan_red_only() {
+        let mut ops = String::new();
+        write_fill_color(&mut ops, Color::Rgb(f64::NAN, 0.5, 0.75));
+        assert_eq!(ops, "0.000 0.500 0.750 rg\n");
+    }
+
+    #[test]
+    fn write_fill_color_sanitises_pos_inf() {
+        let mut ops = String::new();
+        write_fill_color(&mut ops, Color::Gray(f64::INFINITY));
+        assert_eq!(ops, "0.000 g\n");
+    }
+
+    #[test]
+    fn write_fill_color_sanitises_neg_inf() {
+        let mut ops = String::new();
+        write_fill_color(&mut ops, Color::Cmyk(f64::NEG_INFINITY, 0.0, 0.0, 0.0));
+        assert_eq!(ops, "0.000 0.000 0.000 0.000 k\n");
+    }
+
+    #[test]
+    fn write_stroke_color_sanitises_nan_in_cmyk() {
+        let mut ops = String::new();
+        write_stroke_color(&mut ops, Color::Cmyk(0.1, f64::NAN, 0.3, f64::INFINITY));
+        assert_eq!(ops, "0.100 0.000 0.300 0.000 K\n");
+    }
+
+    #[test]
+    fn write_fill_color_appends_to_existing_ops_buffer() {
+        let mut ops = String::from("BT\n");
+        write_fill_color(&mut ops, Color::Rgb(0.0, 0.0, 0.0));
+        assert_eq!(ops, "BT\n0.000 0.000 0.000 rg\n");
+    }
+
+    #[test]
+    fn fill_and_stroke_operators_differ_only_in_case() {
+        // Lock the case-difference contract: the same colour goes through both
+        // helpers and emits operators that match in everything except the
+        // case of the operator-name suffix.
+        let mut fill_ops = String::new();
+        let mut stroke_ops = String::new();
+        write_fill_color(&mut fill_ops, Color::Rgb(0.1, 0.2, 0.3));
+        write_stroke_color(&mut stroke_ops, Color::Rgb(0.1, 0.2, 0.3));
+        assert_eq!(fill_ops, "0.100 0.200 0.300 rg\n");
+        assert_eq!(stroke_ops, "0.100 0.200 0.300 RG\n");
     }
 }

@@ -301,30 +301,18 @@ fn create_checkbox_appearance(widget: &ButtonWidget, checked: bool) -> Result<St
 
     // Draw background
     if let Some(bg) = &widget.background_color {
-        match bg {
-            Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} rg", r, g, b)?,
-            Color::Gray(g) => writeln!(&mut content, "{} g", g)?,
-            Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} k", c, m, y, k)?,
-        }
+        crate::graphics::color::write_fill_color_bytes(&mut content, *bg);
         writeln!(&mut content, "0 0 {} {} re f", width, height)?;
     }
 
     // Draw border
-    match &widget.border_color {
-        Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} RG", r, g, b)?,
-        Color::Gray(gray) => writeln!(&mut content, "{} G", gray)?,
-        Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} K", c, m, y, k)?,
-    }
+    crate::graphics::color::write_stroke_color_bytes(&mut content, widget.border_color);
     writeln!(&mut content, "{} w", widget.border_width)?;
     writeln!(&mut content, "0 0 {} {} re S", width, height)?;
 
     // Draw check mark if checked
     if checked {
-        match &widget.text_color {
-            Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} RG", r, g, b)?,
-            Color::Gray(gray) => writeln!(&mut content, "{} G", gray)?,
-            Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} K", c, m, y, k)?,
-        }
+        crate::graphics::color::write_stroke_color_bytes(&mut content, widget.text_color);
         writeln!(&mut content, "2 w")?;
         writeln!(&mut content, "1 J")?; // Round line cap
 
@@ -364,11 +352,7 @@ fn create_radio_appearance(widget: &ButtonWidget, selected: bool) -> Result<Stre
 
     // Draw background circle
     if let Some(bg) = &widget.background_color {
-        match bg {
-            Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} rg", r, g, b)?,
-            Color::Gray(g) => writeln!(&mut content, "{} g", g)?,
-            Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} k", c, m, y, k)?,
-        }
+        crate::graphics::color::write_fill_color_bytes(&mut content, *bg);
         draw_circle(
             &mut content,
             center_x,
@@ -379,11 +363,7 @@ fn create_radio_appearance(widget: &ButtonWidget, selected: bool) -> Result<Stre
     }
 
     // Draw border circle
-    match &widget.border_color {
-        Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} RG", r, g, b)?,
-        Color::Gray(gray) => writeln!(&mut content, "{} G", gray)?,
-        Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} K", c, m, y, k)?,
-    }
+    crate::graphics::color::write_stroke_color_bytes(&mut content, widget.border_color);
     writeln!(&mut content, "{} w", widget.border_width)?;
     draw_circle(
         &mut content,
@@ -395,11 +375,7 @@ fn create_radio_appearance(widget: &ButtonWidget, selected: bool) -> Result<Stre
 
     // Draw inner dot if selected
     if selected {
-        match &widget.text_color {
-            Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} rg", r, g, b)?,
-            Color::Gray(gray) => writeln!(&mut content, "{} g", gray)?,
-            Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} k", c, m, y, k)?,
-        }
+        crate::graphics::color::write_fill_color_bytes(&mut content, widget.text_color);
         let dot_radius = radius * 0.4;
         draw_circle(&mut content, center_x, center_y, dot_radius)?;
         writeln!(&mut content, "f")?;
@@ -425,33 +401,25 @@ fn create_pushbutton_appearance(widget: &ButtonWidget, caption: Option<&str>) ->
     // Draw background with beveled effect
     if let Some(bg) = &widget.background_color {
         // Main background
-        match bg {
-            Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} rg", r, g, b)?,
-            Color::Gray(g) => writeln!(&mut content, "{} g", g)?,
-            Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} k", c, m, y, k)?,
-        }
+        crate::graphics::color::write_fill_color_bytes(&mut content, *bg);
         writeln!(&mut content, "0 0 {} {} re f", width, height)?;
 
         // Top/left highlight (lighter)
-        writeln!(&mut content, "0.9 0.9 0.9 RG")?;
+        crate::graphics::color::write_stroke_color_bytes(&mut content, Color::gray(0.9));
         writeln!(&mut content, "2 w")?;
         writeln!(&mut content, "1 {} m", height - 1.0)?;
         writeln!(&mut content, "1 1 l")?;
         writeln!(&mut content, "{} 1 l S", width - 1.0)?;
 
         // Bottom/right shadow (darker)
-        writeln!(&mut content, "0.5 0.5 0.5 RG")?;
+        crate::graphics::color::write_stroke_color_bytes(&mut content, Color::gray(0.5));
         writeln!(&mut content, "{} 1 m", width - 1.0)?;
         writeln!(&mut content, "{} {} l", width - 1.0, height - 1.0)?;
         writeln!(&mut content, "1 {} l S", height - 1.0)?;
     }
 
     // Draw border
-    match &widget.border_color {
-        Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} RG", r, g, b)?,
-        Color::Gray(gray) => writeln!(&mut content, "{} G", gray)?,
-        Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} K", c, m, y, k)?,
-    }
+    crate::graphics::color::write_stroke_color_bytes(&mut content, widget.border_color);
     writeln!(&mut content, "{} w", widget.border_width)?;
     writeln!(&mut content, "0 0 {} {} re S", width, height)?;
 
@@ -459,11 +427,7 @@ fn create_pushbutton_appearance(widget: &ButtonWidget, caption: Option<&str>) ->
     if let Some(text) = caption {
         writeln!(&mut content, "BT")?;
         writeln!(&mut content, "/Helvetica {} Tf", widget.font_size)?;
-        match &widget.text_color {
-            Color::Rgb(r, g, b) => writeln!(&mut content, "{} {} {} rg", r, g, b)?,
-            Color::Gray(gray) => writeln!(&mut content, "{} g", gray)?,
-            Color::Cmyk(c, m, y, k) => writeln!(&mut content, "{} {} {} {} k", c, m, y, k)?,
-        }
+        crate::graphics::color::write_fill_color_bytes(&mut content, widget.text_color);
 
         // Center text
         let text_width = text.len() as f64 * widget.font_size * 0.5;

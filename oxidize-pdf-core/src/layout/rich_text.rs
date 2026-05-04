@@ -105,18 +105,8 @@ impl RichText {
         writeln!(&mut ops, "{x:.2} {y:.2} Td").expect("write to String");
 
         for span in &self.spans {
-            // Set color
-            match span.color {
-                Color::Rgb(r, g, b) => {
-                    writeln!(&mut ops, "{r:.3} {g:.3} {b:.3} rg").expect("write to String");
-                }
-                Color::Gray(gray) => {
-                    writeln!(&mut ops, "{gray:.3} g").expect("write to String");
-                }
-                Color::Cmyk(c, m, y, k) => {
-                    writeln!(&mut ops, "{c:.3} {m:.3} {y:.3} {k:.3} k").expect("write to String");
-                }
-            }
+            // Set color via the shared NaN-sanitising helper (issues #220, #221).
+            crate::graphics::color::write_fill_color(&mut ops, span.color);
 
             // Set font
             let font_name = span.font.pdf_name();

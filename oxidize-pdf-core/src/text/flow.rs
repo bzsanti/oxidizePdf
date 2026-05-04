@@ -186,21 +186,12 @@ impl TextFlowContext {
             // via `set_fill_color`. PDF spec ISO 32000-1 §8.6.8 allows
             // colour-setting operators inside a text object; they take
             // effect for the show-text operators that follow.
+            //
+            // Routed through the shared NaN-sanitising helper (issues
+            // #220 + #221) so this site cannot diverge from `TextContext`
+            // / `GraphicsContext`.
             if let Some(color) = self.fill_color {
-                match color {
-                    Color::Rgb(r, g, b) => {
-                        writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} rg")
-                            .expect("Writing to String should never fail");
-                    }
-                    Color::Gray(gray) => {
-                        writeln!(&mut self.operations, "{gray:.3} g")
-                            .expect("Writing to String should never fail");
-                    }
-                    Color::Cmyk(c, m, y, k) => {
-                        writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} k")
-                            .expect("Writing to String should never fail");
-                    }
-                }
+                crate::graphics::color::write_fill_color(&mut self.operations, color);
             }
 
             // Set text position

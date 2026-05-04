@@ -224,15 +224,22 @@ impl FormXObjectBuilder {
         self
     }
 
-    /// Set fill color (RGB)
+    /// Set fill color (RGB) — routed through the shared NaN-sanitising
+    /// helper (issues #220 + #221) so non-finite inputs cannot produce
+    /// `NaN`/`inf` tokens that ISO 32000-1 §7.3.3 rejects.
     pub fn fill_color(mut self, r: f64, g: f64, b: f64) -> Self {
-        self.operations.push(format!("{} {} {} rg", r, g, b));
+        self.operations.push(crate::graphics::color::fill_color_op(
+            crate::graphics::Color::Rgb(r, g, b),
+        ));
         self
     }
 
-    /// Set stroke color (RGB)
+    /// Set stroke color (RGB) — sanitised via shared helper.
     pub fn stroke_color(mut self, r: f64, g: f64, b: f64) -> Self {
-        self.operations.push(format!("{} {} {} RG", r, g, b));
+        self.operations
+            .push(crate::graphics::color::stroke_color_op(
+                crate::graphics::Color::Rgb(r, g, b),
+            ));
         self
     }
 
@@ -575,7 +582,9 @@ mod tests {
             .build();
 
         let content = String::from_utf8(form.content).unwrap();
-        assert!(content.contains("1 0 0 rg"));
+        // After issue #220/#221 helper migration, fill_color/stroke_color
+        // emit `.3`-precision tokens — `1.000 0.000 0.000 rg`, not `1 0 0 rg`.
+        assert!(content.contains("1.000 0.000 0.000 rg"));
         assert!(content.contains("10 10 80 80 re"));
         assert!(content.contains("f"));
     }
@@ -597,7 +606,7 @@ mod tests {
         let content = String::from_utf8(form.content.clone()).unwrap();
         assert!(content.contains("q"));
         assert!(content.contains("Q"));
-        assert!(content.contains("0 0 1 RG"));
+        assert!(content.contains("0.000 0.000 1.000 RG"));
         assert!(form.has_transparency());
     }
 
@@ -609,7 +618,7 @@ mod tests {
         assert_eq!(form.bbox.height(), 20.0);
 
         let content = String::from_utf8(form.content).unwrap();
-        assert!(content.contains("0 0.5 0 RG")); // Green color
+        assert!(content.contains("0.000 0.500 0.000 RG")); // Green color
     }
 
     #[test]
@@ -619,7 +628,7 @@ mod tests {
         assert_eq!(form.bbox.width(), 30.0);
 
         let content = String::from_utf8(form.content).unwrap();
-        assert!(content.contains("0.8 0 0 RG")); // Red color
+        assert!(content.contains("0.800 0.000 0.000 RG")); // Red color
     }
 
     #[test]
@@ -644,7 +653,7 @@ mod tests {
         assert_eq!(star.bbox.width(), 100.0);
 
         let content = String::from_utf8(star.content).unwrap();
-        assert!(content.contains("1 0.8 0 rg")); // Gold color
+        assert!(content.contains("1.000 0.800 0.000 rg")); // Gold color
     }
 
     #[test]

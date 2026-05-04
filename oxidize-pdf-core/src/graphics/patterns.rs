@@ -7,7 +7,7 @@
 //! - Pattern resources
 
 use crate::error::{PdfError, Result};
-use crate::graphics::GraphicsContext;
+use crate::graphics::{Color, GraphicsContext};
 use crate::objects::{Dictionary, Object};
 use std::collections::HashMap;
 
@@ -418,8 +418,13 @@ impl PatternManager {
             cell_size * 2.0,
         );
 
-        // Add first color rectangle
-        pattern.add_command(&format!("{} {} {} rg", color1[0], color1[1], color1[2]));
+        // Add first color rectangle. The public APIs accept raw `[f64; 3]`,
+        // so we wrap them in `Color::Rgb` and route through the shared
+        // sanitising helper (issues #220 + #221) — single emission site for
+        // every colour operator in the codebase.
+        let c1 = Color::Rgb(color1[0], color1[1], color1[2]);
+        let c2 = Color::Rgb(color2[0], color2[1], color2[2]);
+        pattern.add_command(crate::graphics::color::fill_color_op(c1).as_str());
         pattern.add_rectangle(0.0, 0.0, cell_size, cell_size);
         pattern.fill();
 
@@ -427,7 +432,7 @@ impl PatternManager {
         pattern.fill();
 
         // Add second color rectangles
-        pattern.add_command(&format!("{} {} {} rg", color2[0], color2[1], color2[2]));
+        pattern.add_command(crate::graphics::color::fill_color_op(c2).as_str());
         pattern.add_rectangle(cell_size, 0.0, cell_size, cell_size);
         pattern.fill();
 
@@ -461,13 +466,15 @@ impl PatternManager {
             pattern = pattern.with_matrix(rotation_matrix);
         }
 
-        // Add first color stripe
-        pattern.add_command(&format!("{} {} {} rg", color1[0], color1[1], color1[2]));
+        // Add first color stripe (sanitised via shared helper).
+        let c1 = Color::Rgb(color1[0], color1[1], color1[2]);
+        let c2 = Color::Rgb(color2[0], color2[1], color2[2]);
+        pattern.add_command(crate::graphics::color::fill_color_op(c1).as_str());
         pattern.add_rectangle(0.0, 0.0, stripe_width, pattern_size);
         pattern.fill();
 
         // Add second color stripe
-        pattern.add_command(&format!("{} {} {} rg", color2[0], color2[1], color2[2]));
+        pattern.add_command(crate::graphics::color::fill_color_op(c2).as_str());
         pattern.add_rectangle(stripe_width, 0.0, stripe_width, pattern_size);
         pattern.fill();
 
@@ -492,19 +499,19 @@ impl PatternManager {
             pattern_size,
         );
 
-        // Background
-        pattern.add_command(&format!(
-            "{} {} {} rg",
-            background_color[0], background_color[1], background_color[2]
-        ));
+        // Background (sanitised via shared helper).
+        let bg = Color::Rgb(
+            background_color[0],
+            background_color[1],
+            background_color[2],
+        );
+        let dot = Color::Rgb(dot_color[0], dot_color[1], dot_color[2]);
+        pattern.add_command(crate::graphics::color::fill_color_op(bg).as_str());
         pattern.add_rectangle(0.0, 0.0, pattern_size, pattern_size);
         pattern.fill();
 
         // Dot
-        pattern.add_command(&format!(
-            "{} {} {} rg",
-            dot_color[0], dot_color[1], dot_color[2]
-        ));
+        pattern.add_command(crate::graphics::color::fill_color_op(dot).as_str());
         pattern.add_circle(pattern_size / 2.0, pattern_size / 2.0, dot_radius);
         pattern.fill();
 
@@ -1073,10 +1080,13 @@ mod tests {
         let pattern = manager.get_pattern(&name).unwrap();
         let content = String::from_utf8(pattern.content_stream.clone()).unwrap();
 
-        // Should contain color commands
-        assert!(content.contains("1 1 1 rg")); // White
-        assert!(content.contains("0 0 0 rg")); // Black
-                                               // Should contain rectangles
+        // Should contain color commands. Pattern emitters now share the
+        // `.3`-precision format used elsewhere in the pipeline (issue #220
+        // sanitisation pass), so the wire form is `1.000 1.000 1.000 rg`,
+        // not the unformatted `1 1 1 rg` the previous emitter produced.
+        assert!(content.contains("1.000 1.000 1.000 rg")); // White
+        assert!(content.contains("0.000 0.000 0.000 rg")); // Black
+                                                           // Should contain rectangles
         assert!(content.contains("re"));
         assert!(content.contains("f"));
     }
@@ -1113,12 +1123,14 @@ mod tests {
         let pattern = manager.get_pattern(&name).unwrap();
         let content = String::from_utf8(pattern.content_stream.clone()).unwrap();
 
-        // Should draw background rectangle
-        assert!(content.contains("1 1 1 rg")); // White background
+        // Should draw background rectangle. Pattern emitters now use
+        // `.3`-precision (issue #220 sanitisation pass), so the wire form
+        // is `1.000 1.000 1.000 rg`, not unformatted `1 1 1 rg`.
+        assert!(content.contains("1.000 1.000 1.000 rg")); // White background
         assert!(content.contains("0 0 10 10 re")); // Background rectangle
 
         // Should draw circle
-        assert!(content.contains("0 0 0 rg")); // Black dot
+        assert!(content.contains("0.000 0.000 0.000 rg")); // Black dot
         assert!(content.contains("m")); // Move to
         assert!(content.contains("c")); // Curve (for circle)
     }

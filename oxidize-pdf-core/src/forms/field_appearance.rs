@@ -257,12 +257,7 @@ impl FieldAppearanceGenerator {
 
         // Draw background if specified
         if let Some(bg_color) = &self.background_color {
-            ops.push(format!(
-                "{} {} {} rg",
-                bg_color.r(),
-                bg_color.g(),
-                bg_color.b()
-            ));
+            ops.push(crate::graphics::color::fill_color_op(*bg_color));
             ops.push(format!("0 0 {} {} re", width, height));
             ops.push("f".to_string());
         }
@@ -271,12 +266,7 @@ impl FieldAppearanceGenerator {
         if let Some(border_color) = &self.border_color {
             if self.border_width > 0.0 {
                 ops.push(format!("{} w", self.border_width));
-                ops.push(format!(
-                    "{} {} {} RG",
-                    border_color.r(),
-                    border_color.g(),
-                    border_color.b()
-                ));
+                ops.push(crate::graphics::color::stroke_color_op(*border_color));
                 ops.push(format!(
                     "{} {} {} {} re",
                     self.border_width / 2.0,
@@ -295,12 +285,7 @@ impl FieldAppearanceGenerator {
         ops.push(format!("/{} {} Tf", self.font, self.font_size));
 
         // Set text color
-        ops.push(format!(
-            "{} {} {} rg",
-            self.text_color.r(),
-            self.text_color.g(),
-            self.text_color.b()
-        ));
+        ops.push(crate::graphics::color::fill_color_op(self.text_color));
 
         // Calculate text position
         let padding = 2.0;
@@ -426,12 +411,7 @@ impl ButtonAppearanceGenerator {
         ops.push("q".to_string());
 
         // Draw background
-        ops.push(format!(
-            "{} {} {} rg",
-            self.background_color.r(),
-            self.background_color.g(),
-            self.background_color.b()
-        ));
+        ops.push(crate::graphics::color::fill_color_op(self.background_color));
 
         match self.style {
             ButtonStyle::Radio => {
@@ -442,23 +422,13 @@ impl ButtonAppearanceGenerator {
                 // Draw border
                 if self.border_width > 0.0 {
                     ops.push(format!("{} w", self.border_width));
-                    ops.push(format!(
-                        "{} {} {} RG",
-                        self.border_color.r(),
-                        self.border_color.g(),
-                        self.border_color.b()
-                    ));
+                    ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                     ops.push("s".to_string());
                 }
 
                 // Draw dot
                 let dot_size = self.size * 0.3;
-                ops.push(format!(
-                    "{} {} {} rg",
-                    self.check_color.r(),
-                    self.check_color.g(),
-                    self.check_color.b()
-                ));
+                ops.push(crate::graphics::color::fill_color_op(self.check_color));
                 self.draw_circle(&mut ops, self.size / 2.0, self.size / 2.0, dot_size);
                 ops.push("f".to_string());
             }
@@ -470,12 +440,7 @@ impl ButtonAppearanceGenerator {
                 // Draw border
                 if self.border_width > 0.0 {
                     ops.push(format!("{} w", self.border_width));
-                    ops.push(format!(
-                        "{} {} {} RG",
-                        self.border_color.r(),
-                        self.border_color.g(),
-                        self.border_color.b()
-                    ));
+                    ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                     ops.push(format!(
                         "{} {} {} {} re",
                         self.border_width / 2.0,
@@ -487,12 +452,7 @@ impl ButtonAppearanceGenerator {
                 }
 
                 // Draw check mark based on style
-                ops.push(format!(
-                    "{} {} {} rg",
-                    self.check_color.r(),
-                    self.check_color.g(),
-                    self.check_color.b()
-                ));
+                ops.push(crate::graphics::color::fill_color_op(self.check_color));
 
                 self.draw_check_style(&mut ops);
             }
@@ -531,12 +491,7 @@ impl ButtonAppearanceGenerator {
         ops.push("q".to_string());
 
         // Draw background
-        ops.push(format!(
-            "{} {} {} rg",
-            self.background_color.r(),
-            self.background_color.g(),
-            self.background_color.b()
-        ));
+        ops.push(crate::graphics::color::fill_color_op(self.background_color));
 
         if self.style == ButtonStyle::Radio {
             // Circle background
@@ -546,12 +501,7 @@ impl ButtonAppearanceGenerator {
             // Draw border
             if self.border_width > 0.0 {
                 ops.push(format!("{} w", self.border_width));
-                ops.push(format!(
-                    "{} {} {} RG",
-                    self.border_color.r(),
-                    self.border_color.g(),
-                    self.border_color.b()
-                ));
+                ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                 ops.push("s".to_string());
             }
         } else {
@@ -562,12 +512,7 @@ impl ButtonAppearanceGenerator {
             // Draw border
             if self.border_width > 0.0 {
                 ops.push(format!("{} w", self.border_width));
-                ops.push(format!(
-                    "{} {} {} RG",
-                    self.border_color.r(),
-                    self.border_color.g(),
-                    self.border_color.b()
-                ));
+                ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                 ops.push(format!(
                     "{} {} {} {} re",
                     self.border_width / 2.0,
@@ -797,12 +742,7 @@ impl PushButtonAppearanceGenerator {
             self.background_color
         };
 
-        ops.push(format!(
-            "{} {} {} rg",
-            bg_color.r(),
-            bg_color.g(),
-            bg_color.b()
-        ));
+        ops.push(crate::graphics::color::fill_color_op(bg_color));
         ops.push(format!("0 0 {} {} re", width, height));
         ops.push("f".to_string());
 
@@ -813,12 +753,7 @@ impl PushButtonAppearanceGenerator {
         if !self.caption.is_empty() {
             ops.push("BT".to_string());
             ops.push(format!("/{} {} Tf", self.font, self.font_size));
-            ops.push(format!(
-                "{} {} {} rg",
-                self.text_color.r(),
-                self.text_color.g(),
-                self.text_color.b()
-            ));
+            ops.push(crate::graphics::color::fill_color_op(self.text_color));
 
             // Center text
             let text_x = width / 2.0;
@@ -859,12 +794,7 @@ impl PushButtonAppearanceGenerator {
             ButtonBorderStyle::Solid => {
                 if self.border_width > 0.0 {
                     ops.push(format!("{} w", self.border_width));
-                    ops.push(format!(
-                        "{} {} {} RG",
-                        self.border_color.r(),
-                        self.border_color.g(),
-                        self.border_color.b()
-                    ));
+                    ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                     ops.push(format!(
                         "{} {} {} {} re",
                         self.border_width / 2.0,
@@ -879,12 +809,7 @@ impl PushButtonAppearanceGenerator {
                 if self.border_width > 0.0 {
                     ops.push(format!("{} w", self.border_width));
                     ops.push("[3 3] 0 d".to_string()); // Dash pattern
-                    ops.push(format!(
-                        "{} {} {} RG",
-                        self.border_color.r(),
-                        self.border_color.g(),
-                        self.border_color.b()
-                    ));
+                    ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                     ops.push(format!(
                         "{} {} {} {} re",
                         self.border_width / 2.0,
@@ -910,24 +835,14 @@ impl PushButtonAppearanceGenerator {
 
                 // Top and left edges (light)
                 ops.push(format!("{} w", self.border_width));
-                ops.push(format!(
-                    "{} {} {} RG",
-                    light_color.r(),
-                    light_color.g(),
-                    light_color.b()
-                ));
+                ops.push(crate::graphics::color::stroke_color_op(light_color));
                 ops.push(format!("{} {} m", 0.0, 0.0));
                 ops.push(format!("{} {} l", 0.0, height));
                 ops.push(format!("{} {} l", width, height));
                 ops.push("S".to_string());
 
                 // Bottom and right edges (dark)
-                ops.push(format!(
-                    "{} {} {} RG",
-                    dark_color.r(),
-                    dark_color.g(),
-                    dark_color.b()
-                ));
+                ops.push(crate::graphics::color::stroke_color_op(dark_color));
                 ops.push(format!("{} {} m", width, height));
                 ops.push(format!("{} {} l", width, 0.0));
                 ops.push(format!("{} {} l", 0.0, 0.0));
@@ -936,12 +851,7 @@ impl PushButtonAppearanceGenerator {
             ButtonBorderStyle::Underline => {
                 if self.border_width > 0.0 {
                     ops.push(format!("{} w", self.border_width));
-                    ops.push(format!(
-                        "{} {} {} RG",
-                        self.border_color.r(),
-                        self.border_color.g(),
-                        self.border_color.b()
-                    ));
+                    ops.push(crate::graphics::color::stroke_color_op(self.border_color));
                     ops.push(format!("{} {} m", 0.0, self.border_width / 2.0));
                     ops.push(format!("{} {} l", width, self.border_width / 2.0));
                     ops.push("S".to_string());

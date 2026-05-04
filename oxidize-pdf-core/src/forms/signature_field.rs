@@ -250,34 +250,15 @@ impl SignatureField {
     pub fn generate_appearance(&self, width: f64, height: f64) -> Result<Vec<u8>, PdfError> {
         let mut stream = Vec::new();
 
-        // Background
+        // Background — routed through the shared NaN-sanitising helper
+        // (issues #220 + #221).
         if let Some(bg_color) = self.appearance.background_color {
-            match bg_color {
-                Color::Rgb(r, g, b) => {
-                    stream.extend(format!("{} {} {} rg\n", r, g, b).as_bytes());
-                }
-                Color::Gray(v) => {
-                    stream.extend(format!("{} g\n", v).as_bytes());
-                }
-                Color::Cmyk(c, m, y, k) => {
-                    stream.extend(format!("{} {} {} {} k\n", c, m, y, k).as_bytes());
-                }
-            }
+            crate::graphics::color::write_fill_color_bytes(&mut stream, bg_color);
             stream.extend(format!("0 0 {} {} re f\n", width, height).as_bytes());
         }
 
         // Border
-        match self.appearance.border_color {
-            Color::Rgb(r, g, b) => {
-                stream.extend(format!("{} {} {} RG\n", r, g, b).as_bytes());
-            }
-            Color::Gray(v) => {
-                stream.extend(format!("{} G\n", v).as_bytes());
-            }
-            Color::Cmyk(c, m, y, k) => {
-                stream.extend(format!("{} {} {} {} K\n", c, m, y, k).as_bytes());
-            }
-        }
+        crate::graphics::color::write_stroke_color_bytes(&mut stream, self.appearance.border_color);
         stream.extend(format!("{} w\n", self.appearance.border_width).as_bytes());
         stream.extend(format!("0 0 {} {} re S\n", width, height).as_bytes());
 
@@ -291,17 +272,7 @@ impl SignatureField {
             )
             .as_bytes(),
         );
-        match self.appearance.text_color {
-            Color::Rgb(r, g, b) => {
-                stream.extend(format!("{} {} {} rg\n", r, g, b).as_bytes());
-            }
-            Color::Gray(v) => {
-                stream.extend(format!("{} g\n", v).as_bytes());
-            }
-            Color::Cmyk(c, m, y, k) => {
-                stream.extend(format!("{} {} {} {} k\n", c, m, y, k).as_bytes());
-            }
-        }
+        crate::graphics::color::write_fill_color_bytes(&mut stream, self.appearance.text_color);
 
         let mut y_pos = height - self.appearance.font_size - 5.0;
         let x_pos = 5.0;

@@ -106,16 +106,13 @@ impl ChoiceWidget {
         // Save graphics state
         writeln!(&mut stream, "q").expect("Writing to string should never fail");
 
-        // Draw background if specified
+        // Draw background if specified — routed through the shared
+        // NaN-sanitising helpers (issues #220 + #221). The previous
+        // emitter forced RGB output via `.r()/.g()/.b()` regardless of
+        // the colour's native space; the helper now preserves the
+        // native space (`rg` / `g` / `k`) which is strictly more correct.
         if let Some(bg_color) = &self.background_color {
-            writeln!(
-                &mut stream,
-                "{:.3} {:.3} {:.3} rg",
-                bg_color.r(),
-                bg_color.g(),
-                bg_color.b()
-            )
-            .expect("Writing to string should never fail");
+            crate::graphics::color::write_fill_color(&mut stream, *bg_color);
             writeln!(
                 &mut stream,
                 "0 0 {} {} re",
@@ -127,14 +124,7 @@ impl ChoiceWidget {
         }
 
         // Draw border
-        writeln!(
-            &mut stream,
-            "{:.3} {:.3} {:.3} RG",
-            self.border_color.r(),
-            self.border_color.g(),
-            self.border_color.b()
-        )
-        .expect("Writing to string should never fail");
+        crate::graphics::color::write_stroke_color(&mut stream, self.border_color);
         writeln!(&mut stream, "{} w", self.border_width)
             .expect("Writing to string should never fail");
         writeln!(
@@ -149,8 +139,10 @@ impl ChoiceWidget {
         // Draw dropdown arrow on the right
         let arrow_x = self.rect.width() - 15.0;
         let arrow_y = self.rect.height() / 2.0;
-        writeln!(&mut stream, "{:.3} {:.3} {:.3} rg", 0.3, 0.3, 0.3)
-            .expect("Writing to string should never fail");
+        crate::graphics::color::write_fill_color(
+            &mut stream,
+            crate::graphics::Color::Rgb(0.3, 0.3, 0.3),
+        );
         writeln!(&mut stream, "{} {} m", arrow_x, arrow_y + 3.0)
             .expect("Writing to string should never fail");
         writeln!(&mut stream, "{} {} l", arrow_x + 8.0, arrow_y + 3.0)
@@ -170,14 +162,7 @@ impl ChoiceWidget {
                     self.font_size
                 )
                 .expect("Writing to string should never fail");
-                writeln!(
-                    &mut stream,
-                    "{:.3} {:.3} {:.3} rg",
-                    self.text_color.r(),
-                    self.text_color.g(),
-                    self.text_color.b()
-                )
-                .expect("Writing to string should never fail");
+                crate::graphics::color::write_fill_color(&mut stream, self.text_color);
                 writeln!(
                     &mut stream,
                     "2 {} Td",
@@ -203,16 +188,9 @@ impl ChoiceWidget {
         // Save graphics state
         writeln!(&mut stream, "q").expect("Writing to string should never fail");
 
-        // Draw background
+        // Draw background — sanitised via shared helper (issues #220 + #221).
         if let Some(bg_color) = &self.background_color {
-            writeln!(
-                &mut stream,
-                "{:.3} {:.3} {:.3} rg",
-                bg_color.r(),
-                bg_color.g(),
-                bg_color.b()
-            )
-            .expect("Writing to string should never fail");
+            crate::graphics::color::write_fill_color(&mut stream, *bg_color);
             writeln!(
                 &mut stream,
                 "0 0 {} {} re",
@@ -224,14 +202,7 @@ impl ChoiceWidget {
         }
 
         // Draw border
-        writeln!(
-            &mut stream,
-            "{:.3} {:.3} {:.3} RG",
-            self.border_color.r(),
-            self.border_color.g(),
-            self.border_color.b()
-        )
-        .expect("Writing to string should never fail");
+        crate::graphics::color::write_stroke_color(&mut stream, self.border_color);
         writeln!(&mut stream, "{} w", self.border_width)
             .expect("Writing to string should never fail");
         writeln!(
@@ -252,17 +223,10 @@ impl ChoiceWidget {
         for (idx, (_, display_text)) in listbox.options.iter().enumerate().take(visible_items) {
             let y_pos = self.rect.height() - ((idx + 1) as f64 * item_height);
 
-            // Draw highlight for selected items
+            // Draw highlight for selected items — sanitised via shared helper.
             if listbox.selected.contains(&idx) {
                 if let Some(highlight) = &self.highlight_color {
-                    writeln!(
-                        &mut stream,
-                        "{:.3} {:.3} {:.3} rg",
-                        highlight.r(),
-                        highlight.g(),
-                        highlight.b()
-                    )
-                    .expect("Writing to string should never fail");
+                    crate::graphics::color::write_fill_color(&mut stream, *highlight);
                     writeln!(
                         &mut stream,
                         "0 {} {} {} re",
@@ -284,14 +248,7 @@ impl ChoiceWidget {
                 self.font_size
             )
             .expect("Writing to string should never fail");
-            writeln!(
-                &mut stream,
-                "{:.3} {:.3} {:.3} rg",
-                self.text_color.r(),
-                self.text_color.g(),
-                self.text_color.b()
-            )
-            .expect("Writing to string should never fail");
+            crate::graphics::color::write_fill_color(&mut stream, self.text_color);
             writeln!(&mut stream, "2 {} Td", y_pos + 2.0)
                 .expect("Writing to string should never fail");
             writeln!(&mut stream, "({}) Tj", escape_pdf_string(display_text))
@@ -299,16 +256,16 @@ impl ChoiceWidget {
             writeln!(&mut stream, "ET").expect("Writing to string should never fail");
         }
 
-        // Draw scrollbar if needed
+        // Draw scrollbar if needed — sanitised via shared helper.
         if listbox.options.len() > visible_items {
-            writeln!(&mut stream, "0.7 0.7 0.7 rg").expect("Writing to string should never fail");
+            crate::graphics::color::write_fill_color(&mut stream, Color::gray(0.7));
             let scrollbar_x = self.rect.width() - 10.0;
             writeln!(&mut stream, "{} 0 8 {} re", scrollbar_x, self.rect.height())
                 .expect("Writing to string should never fail");
             writeln!(&mut stream, "f").expect("Writing to string should never fail");
 
             // Draw scroll thumb
-            writeln!(&mut stream, "0.4 0.4 0.4 rg").expect("Writing to string should never fail");
+            crate::graphics::color::write_fill_color(&mut stream, Color::gray(0.4));
             let thumb_height =
                 (visible_items as f64 / listbox.options.len() as f64) * self.rect.height();
             writeln!(
@@ -368,14 +325,13 @@ pub fn create_combobox_widget(combo: &ComboBox, widget: &ChoiceWidget) -> Result
     ap_dict.set("N", Object::Dictionary(n_dict));
     field_dict.set("AP", Object::Dictionary(ap_dict));
 
-    // Set default appearance string
+    // Set default appearance string — sanitised via shared helper
+    // (issues #220 + #221). Emits the colour's native space, not always RGB.
     let da = format!(
-        "/{} {} Tf {} {} {} rg",
+        "/{} {} Tf {}",
         widget.font.pdf_name(),
         widget.font_size,
-        widget.text_color.r(),
-        widget.text_color.g(),
-        widget.text_color.b(),
+        crate::graphics::color::fill_color_op(widget.text_color),
     );
     field_dict.set("DA", Object::String(da));
 
@@ -424,14 +380,13 @@ pub fn create_listbox_widget(listbox: &ListBox, widget: &ChoiceWidget) -> Result
     ap_dict.set("N", Object::Dictionary(n_dict));
     field_dict.set("AP", Object::Dictionary(ap_dict));
 
-    // Set default appearance string
+    // Set default appearance string — sanitised via shared helper
+    // (issues #220 + #221). Emits the colour's native space, not always RGB.
     let da = format!(
-        "/{} {} Tf {} {} {} rg",
+        "/{} {} Tf {}",
         widget.font.pdf_name(),
         widget.font_size,
-        widget.text_color.r(),
-        widget.text_color.g(),
-        widget.text_color.b(),
+        crate::graphics::color::fill_color_op(widget.text_color),
     );
     field_dict.set("DA", Object::String(da));
 

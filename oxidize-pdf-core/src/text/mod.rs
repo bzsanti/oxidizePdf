@@ -369,40 +369,14 @@ impl TextContext {
                 .expect("Writing to String should never fail");
         }
 
-        // Fill color
+        // Fill / stroke colour: routed through the shared NaN-sanitising
+        // helpers (issues #220 + #221) so every emission site treats
+        // non-finite floats identically and emits .3-precision operators.
         if let Some(color) = self.fill_color {
-            match color {
-                Color::Rgb(r, g, b) => {
-                    writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} rg")
-                        .expect("Writing to String should never fail");
-                }
-                Color::Gray(gray) => {
-                    writeln!(&mut self.operations, "{gray:.3} g")
-                        .expect("Writing to String should never fail");
-                }
-                Color::Cmyk(c, m, y, k) => {
-                    writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} k")
-                        .expect("Writing to String should never fail");
-                }
-            }
+            crate::graphics::color::write_fill_color(&mut self.operations, color);
         }
-
-        // Stroke color
         if let Some(color) = self.stroke_color {
-            match color {
-                Color::Rgb(r, g, b) => {
-                    writeln!(&mut self.operations, "{r:.3} {g:.3} {b:.3} RG")
-                        .expect("Writing to String should never fail");
-                }
-                Color::Gray(gray) => {
-                    writeln!(&mut self.operations, "{gray:.3} G")
-                        .expect("Writing to String should never fail");
-                }
-                Color::Cmyk(c, m, y, k) => {
-                    writeln!(&mut self.operations, "{c:.3} {m:.3} {y:.3} {k:.3} K")
-                        .expect("Writing to String should never fail");
-                }
-            }
+            crate::graphics::color::write_stroke_color(&mut self.operations, color);
         }
     }
 

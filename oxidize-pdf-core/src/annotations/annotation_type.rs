@@ -38,11 +38,10 @@ impl FreeTextAnnotation {
 
     /// Set font and size
     pub fn with_font(mut self, font: Font, size: f64, color: Color) -> Self {
-        let color_str = match color {
-            Color::Gray(g) => format!("{g} g"),
-            Color::Rgb(r, g, b) => format!("{r} {g} {b} rg"),
-            Color::Cmyk(c, m, y, k) => format!("{c} {m} {y} {k} k"),
-        };
+        // Use the shared NaN-sanitising helper (issues #220, #221) — emits
+        // `.3`-precision tokens so the /DA string never carries
+        // `NaN`/`inf` that ISO 32000-1 §7.3.3 rejects.
+        let color_str = crate::graphics::color::fill_color_op(color);
 
         self.default_appearance = format!("/{} {size} Tf {color_str}", font.pdf_name());
         self
