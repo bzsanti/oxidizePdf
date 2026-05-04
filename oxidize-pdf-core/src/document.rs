@@ -481,6 +481,16 @@ impl Document {
         self.pages.len()
     }
 
+    /// Gets a reference to the page at `index`, or `None` if out of bounds.
+    pub fn page(&self, index: usize) -> Option<&Page> {
+        self.pages.get(index)
+    }
+
+    /// Gets a mutable reference to the page at `index`, or `None` if out of bounds.
+    pub fn page_mut(&mut self, index: usize) -> Option<&mut Page> {
+        self.pages.get_mut(index)
+    }
+
     /// Gets a reference to the AcroForm (interactive form) if present.
     pub fn acro_form(&self) -> Option<&AcroForm> {
         self.acro_form.as_ref()

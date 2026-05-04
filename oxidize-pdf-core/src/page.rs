@@ -554,6 +554,14 @@ impl Page {
         &mut self.graphics_context
     }
 
+    /// Returns the accumulated content-stream operators string for this page.
+    ///
+    /// Read-only counterpart to [`Page::graphics`]. Useful for inspecting what
+    /// has been drawn without taking a mutable borrow (eg. multi-page tests).
+    pub fn graphics_operations(&self) -> &str {
+        self.graphics_context.operations()
+    }
+
     /// Returns a mutable reference to the text context for adding text.
     pub fn text(&mut self) -> &mut TextContext {
         &mut self.text_context
