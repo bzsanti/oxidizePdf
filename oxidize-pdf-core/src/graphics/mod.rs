@@ -7,6 +7,7 @@ pub mod extraction;
 pub mod form_xobject;
 mod indexed_color;
 pub mod lab_color;
+pub(crate) mod ops;
 pub mod page_color_space;
 mod path;
 mod patterns;
