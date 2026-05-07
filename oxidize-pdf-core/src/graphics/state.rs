@@ -135,18 +135,24 @@ impl LineDashPattern {
         }
     }
 
-    /// Generate PDF representation of the line dash pattern
+    /// Generate PDF representation of the line dash pattern.
+    ///
+    /// Non-finite components (NaN / ±inf) are clamped to `0.0` via the
+    /// shared `finite_or_zero` helper (issue #220 / Phase 5 of the
+    /// v2.7.0 IR refactor) so the emitted `d` operator never contains
+    /// invalid PDF numeric tokens per ISO 32000-1 §7.3.3.
     pub fn to_pdf_string(&self) -> String {
+        use crate::graphics::color::finite_or_zero;
         if self.array.is_empty() {
             "[] 0".to_string()
         } else {
             let array_str = self
                 .array
                 .iter()
-                .map(|&x| format!("{x:.2}"))
+                .map(|&x| format!("{:.2}", finite_or_zero(x)))
                 .collect::<Vec<_>>()
                 .join(" ");
-            format!("[{array_str}] {:.2}", self.phase)
+            format!("[{array_str}] {:.2}", finite_or_zero(self.phase))
         }
     }
 }
@@ -1589,5 +1595,46 @@ mod tests {
         assert!(pdf.contains("/FunctionType 2"));
         // Should have 4 functions for CMYK
         assert_eq!(pdf.matches("/FunctionType 2").count(), 4);
+    }
+
+    /// RED for Phase 5 of the v2.7.0 IR refactor: with the legacy
+    /// `format!("{x:.2}")` emission, a non-finite component in the
+    /// dash array (e.g. an attacker-controlled value bypassing the
+    /// public constructors) propagates `NaN` / `inf` into a `d`
+    /// operator, which is invalid per ISO 32000-1 §7.3.3. Once
+    /// `to_pdf_string` routes through `finite_or_zero`, non-finite
+    /// values are clamped to `0.00` and the assertion below passes.
+    #[test]
+    fn nan_dash_array_component_sanitised_at_emission() {
+        let pattern = LineDashPattern {
+            array: vec![5.0, f64::NAN, 3.0],
+            phase: 0.0,
+        };
+        let s = pattern.to_pdf_string();
+        assert!(
+            !s.contains("NaN") && !s.contains("inf"),
+            "non-finite tokens must not appear in `d` operator, got: {s:?}"
+        );
+        assert_eq!(
+            s, "[5.00 0.00 3.00] 0.00",
+            "NaN dash component must clamp to 0.00, got: {s:?}"
+        );
+    }
+
+    #[test]
+    fn pos_inf_dash_phase_sanitised_at_emission() {
+        let pattern = LineDashPattern {
+            array: vec![5.0, 3.0],
+            phase: f64::INFINITY,
+        };
+        let s = pattern.to_pdf_string();
+        assert!(
+            !s.contains("inf") && !s.contains("NaN"),
+            "non-finite phase must not appear in `d` operator, got: {s:?}"
+        );
+        assert_eq!(
+            s, "[5.00 3.00] 0.00",
+            "+inf phase must clamp to 0.00, got: {s:?}"
+        );
     }
 }
