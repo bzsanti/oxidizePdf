@@ -558,7 +558,7 @@ impl Page {
     ///
     /// Read-only counterpart to [`Page::graphics`]. Useful for inspecting what
     /// has been drawn without taking a mutable borrow (eg. multi-page tests).
-    pub fn graphics_operations(&self) -> &str {
+    pub fn graphics_operations(&self) -> String {
         self.graphics_context.operations()
     }
 

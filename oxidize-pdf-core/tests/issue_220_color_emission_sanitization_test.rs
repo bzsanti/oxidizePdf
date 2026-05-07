@@ -40,7 +40,7 @@ fn text_context_fill_color_nan_red_emits_zero_and_keeps_other_components() {
     ctx.write("hello").expect("write must succeed");
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextContext fill NaN red");
+    assert_no_non_finite_tokens(&ops, "TextContext fill NaN red");
     assert!(
         ops.contains("0.000 0.500 0.750 rg"),
         "NaN red must be substituted with 0.000 while green/blue pass through; ops:\n{ops}"
@@ -55,7 +55,7 @@ fn text_context_fill_color_pos_inf_emits_zero() {
     ctx.write("x").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextContext fill +inf red");
+    assert_no_non_finite_tokens(&ops, "TextContext fill +inf red");
     assert!(
         ops.contains("0.000 0.000 0.000 rg"),
         "+inf red must be sanitised to 0.000; ops:\n{ops}"
@@ -70,7 +70,7 @@ fn text_context_fill_color_neg_inf_gray_emits_zero() {
     ctx.write("x").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextContext fill -inf gray");
+    assert_no_non_finite_tokens(&ops, "TextContext fill -inf gray");
     assert!(
         ops.contains("0.000 g"),
         "-inf gray must emit 0.000 g; ops:\n{ops}"
@@ -85,7 +85,7 @@ fn text_context_fill_color_cmyk_with_nan_yellow() {
     ctx.write("x").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextContext fill cmyk NaN yellow");
+    assert_no_non_finite_tokens(&ops, "TextContext fill cmyk NaN yellow");
     assert!(
         ops.contains("0.100 0.200 0.000 0.400 k"),
         "NaN yellow must be 0.000, others pass through; ops:\n{ops}"
@@ -102,7 +102,7 @@ fn text_context_stroke_color_nan_emits_zero() {
     ctx.write("x").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextContext stroke NaN");
+    assert_no_non_finite_tokens(&ops, "TextContext stroke NaN");
     assert!(
         ops.contains("0.000 0.500 0.500 RG"),
         "stroke RG with NaN red must sanitise; ops:\n{ops}"
@@ -117,7 +117,7 @@ fn text_context_stroke_color_inf_cmyk_emits_zero() {
     ctx.write("x").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextContext stroke +inf cyan");
+    assert_no_non_finite_tokens(&ops, "TextContext stroke +inf cyan");
     assert!(
         ops.contains("0.000 0.200 0.300 0.400 K"),
         "stroke K with inf cyan must sanitise; ops:\n{ops}"
@@ -133,7 +133,7 @@ fn text_flow_context_fill_color_nan_emits_zero() {
     ctx.write_wrapped("hello world").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextFlowContext fill NaN green");
+    assert_no_non_finite_tokens(&ops, "TextFlowContext fill NaN green");
     assert!(
         ops.contains("0.500 0.000 0.500 rg"),
         "NaN green must be 0.000; ops:\n{ops}"
@@ -147,7 +147,7 @@ fn text_flow_context_fill_color_inf_gray_emits_zero() {
     ctx.write_wrapped("x").unwrap();
 
     let ops = ctx.operations();
-    assert_no_non_finite_tokens(ops, "TextFlowContext fill +inf gray");
+    assert_no_non_finite_tokens(&ops, "TextFlowContext fill +inf gray");
     assert!(
         ops.contains("0.000 g"),
         "+inf gray must emit 0.000 g; ops:\n{ops}"
@@ -163,7 +163,7 @@ fn graphics_context_fill_color_nan_emits_zero() {
     g.fill();
 
     let ops = g.get_operations();
-    assert_no_non_finite_tokens(ops, "GraphicsContext fill NaN");
+    assert_no_non_finite_tokens(&ops, "GraphicsContext fill NaN");
     assert!(
         ops.contains("0.000 0.400 0.600 rg"),
         "GraphicsContext fill must sanitise NaN; ops:\n{ops}"
@@ -177,7 +177,7 @@ fn graphics_context_stroke_color_neg_inf_emits_zero() {
     g.stroke();
 
     let ops = g.get_operations();
-    assert_no_non_finite_tokens(ops, "GraphicsContext stroke -inf");
+    assert_no_non_finite_tokens(&ops, "GraphicsContext stroke -inf");
     assert!(
         ops.contains("0.000 0.000 0.000 0.000 K"),
         "GraphicsContext stroke must sanitise -inf; ops:\n{ops}"
