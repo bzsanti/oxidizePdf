@@ -57,9 +57,10 @@ pub use tesseract_provider::{RustyTesseractConfig, RustyTesseractProvider};
 use crate::error::Result;
 use crate::Color;
 use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
 
-/// Text rendering mode for PDF text operations
+/// Text rendering mode for PDF text operations.
+///
+/// Re-exported via `oxidize_pdf::text::TextRenderingMode`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextRenderingMode {
     /// Fill text (default)
@@ -82,7 +83,7 @@ pub enum TextRenderingMode {
 
 #[derive(Clone)]
 pub struct TextContext {
-    operations: String,
+    operations: Vec<crate::graphics::ops::Op>,
     current_font: Font,
     font_size: f64,
     text_matrix: [f64; 6],
@@ -116,7 +117,7 @@ impl Default for TextContext {
 impl TextContext {
     pub fn new() -> Self {
         Self {
-            operations: String::new(),
+            operations: Vec::new(),
             current_font: Font::Helvetica,
             font_size: 12.0,
             text_matrix: [1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
@@ -190,6 +191,32 @@ impl TextContext {
         self.fill_color
     }
 
+    /// Accessors for the remaining text-state parameters (issue #222 —
+    /// Phase 6 of the v2.7.0 IR refactor). Used by `Page::text_flow` to
+    /// propagate the configured page-level state into derived
+    /// `TextFlowContext`s. Mirror of `fill_color()` above.
+    pub(crate) fn character_spacing(&self) -> Option<f64> {
+        self.character_spacing
+    }
+    pub(crate) fn word_spacing(&self) -> Option<f64> {
+        self.word_spacing
+    }
+    pub(crate) fn horizontal_scaling(&self) -> Option<f64> {
+        self.horizontal_scaling
+    }
+    pub(crate) fn leading(&self) -> Option<f64> {
+        self.leading
+    }
+    pub(crate) fn text_rise(&self) -> Option<f64> {
+        self.text_rise
+    }
+    pub(crate) fn rendering_mode(&self) -> Option<TextRenderingMode> {
+        self.rendering_mode
+    }
+    pub(crate) fn stroke_color(&self) -> Option<Color> {
+        self.stroke_color
+    }
+
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {
         // Update text_matrix immediately and store for write() operation
         self.text_matrix[4] = x;
@@ -199,76 +226,67 @@ impl TextContext {
     }
 
     pub fn write(&mut self, text: &str) -> Result<&mut Self> {
-        // Begin text object
-        self.operations.push_str("BT\n");
+        use crate::graphics::ops::Op;
+
+        self.operations.push(Op::BeginText);
 
         // Set font
-        writeln!(
-            &mut self.operations,
-            "/{} {} Tf",
-            self.current_font.pdf_name(),
-            self.font_size
-        )
-        .expect("Writing to String should never fail");
+        self.operations.push(Op::SetFont {
+            name: self.current_font.pdf_name(),
+            size: self.font_size,
+        });
 
-        // Apply text state parameters
+        // Apply text state parameters (Tc/Tw/Tz/TL/Ts/Tr + colour)
         self.apply_text_state_parameters();
 
         // Set text position using pending_position if available, otherwise use text_matrix
         let (x, y) = if let Some((px, py)) = self.pending_position.take() {
-            // Use and consume the pending position
             (px, py)
         } else {
-            // Fallback to text_matrix values
             (self.text_matrix[4], self.text_matrix[5])
         };
-
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
-            .expect("Writing to String should never fail");
+        self.operations.push(Op::SetTextPosition { x, y });
 
         // Choose encoding based on font type
         match &self.current_font {
             Font::Custom(_) => {
                 // For custom fonts (CJK), use UTF-16BE encoding with hex strings
                 let utf16_units: Vec<u16> = text.encode_utf16().collect();
-                let mut utf16be_bytes = Vec::new();
-
+                let mut hex = String::new();
                 for unit in utf16_units {
-                    utf16be_bytes.push((unit >> 8) as u8); // High byte
-                    utf16be_bytes.push((unit & 0xFF) as u8); // Low byte
+                    use std::fmt::Write as _;
+                    write!(
+                        &mut hex,
+                        "{:02X}{:02X}",
+                        (unit >> 8) as u8,
+                        (unit & 0xFF) as u8
+                    )
+                    .expect("write to String never fails");
                 }
-
-                // Write as hex string for Type0 fonts
-                self.operations.push('<');
-                for &byte in &utf16be_bytes {
-                    write!(&mut self.operations, "{:02X}", byte)
-                        .expect("Writing to String should never fail");
-                }
-                self.operations.push_str("> Tj\n");
+                self.operations.push(Op::ShowTextHex(hex.into_bytes()));
             }
             _ => {
-                // For standard fonts, use WinAnsiEncoding with literal strings
+                // For standard fonts, use WinAnsiEncoding with literal-string escaping.
                 let encoding = TextEncoding::WinAnsiEncoding;
                 let encoded_bytes = encoding.encode(text);
 
-                // Show text as a literal string
-                self.operations.push('(');
+                let mut buf = Vec::with_capacity(encoded_bytes.len());
                 for &byte in &encoded_bytes {
                     match byte {
-                        b'(' => self.operations.push_str("\\("),
-                        b')' => self.operations.push_str("\\)"),
-                        b'\\' => self.operations.push_str("\\\\"),
-                        b'\n' => self.operations.push_str("\\n"),
-                        b'\r' => self.operations.push_str("\\r"),
-                        b'\t' => self.operations.push_str("\\t"),
-                        // For bytes in the printable ASCII range, write as is
-                        0x20..=0x7E => self.operations.push(byte as char),
-                        // For other bytes, write as octal escape sequences
-                        _ => write!(&mut self.operations, "\\{byte:03o}")
-                            .expect("Writing to String should never fail"),
+                        b'(' => buf.extend_from_slice(b"\\("),
+                        b')' => buf.extend_from_slice(b"\\)"),
+                        b'\\' => buf.extend_from_slice(b"\\\\"),
+                        b'\n' => buf.extend_from_slice(b"\\n"),
+                        b'\r' => buf.extend_from_slice(b"\\r"),
+                        b'\t' => buf.extend_from_slice(b"\\t"),
+                        0x20..=0x7E => buf.push(byte),
+                        _ => {
+                            use std::io::Write as _;
+                            write!(&mut buf, "\\{byte:03o}").expect("write to Vec<u8> never fails");
+                        }
                     }
                 }
-                self.operations.push_str(") Tj\n");
+                self.operations.push(Op::ShowText(buf));
             }
         }
 
@@ -276,8 +294,7 @@ impl TextContext {
         // active custom font (issue #204).
         self.record_used_chars(text);
 
-        // End text object
-        self.operations.push_str("ET\n");
+        self.operations.push(Op::EndText);
 
         Ok(self)
     }
@@ -331,57 +348,65 @@ impl TextContext {
         self
     }
 
-    /// Apply text state parameters to the operations string
+    /// Apply text state parameters as `Op` values pushed into `self.operations`.
+    ///
+    /// All non-finite floats are clamped to `0.0` at serialisation time by
+    /// `serialize_ops` (issues #220 + #221 extend to non-colour emitters in
+    /// the v2.7.0 IR refactor).
     fn apply_text_state_parameters(&mut self) {
-        // Character spacing (Tc)
+        use crate::graphics::ops::Op;
+
         if let Some(spacing) = self.character_spacing {
-            writeln!(&mut self.operations, "{spacing:.2} Tc")
-                .expect("Writing to String should never fail");
+            self.operations.push(Op::SetCharSpacing(spacing));
         }
-
-        // Word spacing (Tw)
         if let Some(spacing) = self.word_spacing {
-            writeln!(&mut self.operations, "{spacing:.2} Tw")
-                .expect("Writing to String should never fail");
+            self.operations.push(Op::SetWordSpacing(spacing));
         }
-
-        // Horizontal scaling (Tz)
         if let Some(scale) = self.horizontal_scaling {
-            writeln!(&mut self.operations, "{:.2} Tz", scale * 100.0)
-                .expect("Writing to String should never fail");
+            // Tz operator takes a percentage. The setter accepts a 0.0–1.0
+            // ratio and the original implementation multiplied by 100 at
+            // emission; preserve that contract.
+            self.operations
+                .push(Op::SetHorizontalScaling(scale * 100.0));
         }
-
-        // Leading (TL)
         if let Some(leading) = self.leading {
-            writeln!(&mut self.operations, "{leading:.2} TL")
-                .expect("Writing to String should never fail");
+            self.operations.push(Op::SetLeading(leading));
         }
-
-        // Text rise (Ts)
         if let Some(rise) = self.text_rise {
-            writeln!(&mut self.operations, "{rise:.2} Ts")
-                .expect("Writing to String should never fail");
+            self.operations.push(Op::SetTextRise(rise));
         }
-
-        // Text rendering mode (Tr)
         if let Some(mode) = self.rendering_mode {
-            writeln!(&mut self.operations, "{} Tr", mode as u8)
-                .expect("Writing to String should never fail");
+            self.operations.push(Op::SetRenderingMode(mode as u8));
         }
 
-        // Fill / stroke colour: routed through the shared NaN-sanitising
-        // helpers (issues #220 + #221) so every emission site treats
-        // non-finite floats identically and emits .3-precision operators.
+        // Fill / stroke colour delegates to the IR variants which in turn
+        // delegate to `write_fill_color_bytes` / `write_stroke_color_bytes`
+        // (issues #220 + #221).
         if let Some(color) = self.fill_color {
-            crate::graphics::color::write_fill_color(&mut self.operations, color);
+            self.operations.push(Op::SetFillColor(color));
         }
         if let Some(color) = self.stroke_color {
-            crate::graphics::color::write_stroke_color(&mut self.operations, color);
+            self.operations.push(Op::SetStrokeColor(color));
         }
     }
 
     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
-        Ok(self.operations.as_bytes().to_vec())
+        let mut buf = Vec::new();
+        crate::graphics::ops::serialize_ops(&mut buf, &self.operations);
+        Ok(buf)
+    }
+
+    /// Take ownership of the accumulated `Op` buffer, leaving an empty
+    /// `Vec` in its place. Mirror of `GraphicsContext::drain_ops` —
+    /// used by `Page` to flush the text buffer into a unified content
+    /// stream on context switch (issue #227).
+    pub(crate) fn drain_ops(&mut self) -> Vec<crate::graphics::ops::Op> {
+        std::mem::take(&mut self.operations)
+    }
+
+    /// Read-only access to the operation list.
+    pub(crate) fn ops_slice(&self) -> &[crate::graphics::ops::Op] {
+        &self.operations
     }
 
     /// Appends a raw PDF operation to the text context
@@ -389,7 +414,8 @@ impl TextContext {
     /// This is used internally for marked content operators (BDC/EMC) and other
     /// low-level PDF operations that need to be interleaved with text operations.
     pub(crate) fn append_raw_operation(&mut self, operation: &str) {
-        self.operations.push_str(operation);
+        self.operations
+            .push(crate::graphics::ops::Op::Raw(operation.as_bytes().to_vec()));
     }
 
     /// Get the current font size
@@ -420,47 +446,42 @@ impl TextContext {
         self.stroke_color = None;
     }
 
-    /// Get the raw operations string
-    pub fn operations(&self) -> &str {
-        &self.operations
+    /// Get the operations as a serialised PDF content-stream `String`.
+    ///
+    /// Pre-2.7.0 this returned `&str`. The IR migration replaced the
+    /// internal `String` buffer with a typed `Vec<Op>`, so the legacy
+    /// borrow is materialised on demand. Internal callers prefer
+    /// `generate_operations()` which returns the byte buffer directly.
+    pub fn operations(&self) -> String {
+        crate::graphics::ops::ops_to_string(&self.operations)
     }
 
-    /// Generate text state operations for testing purposes
+    /// Generate text state operations for testing purposes.
+    /// Routes through the IR so the same sanitisation applies.
     #[cfg(test)]
     pub fn generate_text_state_operations(&self) -> String {
-        let mut ops = String::new();
+        use crate::graphics::ops::{ops_to_string, Op};
 
-        // Character spacing (Tc)
+        let mut ops = Vec::new();
         if let Some(spacing) = self.character_spacing {
-            writeln!(&mut ops, "{spacing:.2} Tc").unwrap();
+            ops.push(Op::SetCharSpacing(spacing));
         }
-
-        // Word spacing (Tw)
         if let Some(spacing) = self.word_spacing {
-            writeln!(&mut ops, "{spacing:.2} Tw").unwrap();
+            ops.push(Op::SetWordSpacing(spacing));
         }
-
-        // Horizontal scaling (Tz)
         if let Some(scale) = self.horizontal_scaling {
-            writeln!(&mut ops, "{:.2} Tz", scale * 100.0).unwrap();
+            ops.push(Op::SetHorizontalScaling(scale * 100.0));
         }
-
-        // Leading (TL)
         if let Some(leading) = self.leading {
-            writeln!(&mut ops, "{leading:.2} TL").unwrap();
+            ops.push(Op::SetLeading(leading));
         }
-
-        // Text rise (Ts)
         if let Some(rise) = self.text_rise {
-            writeln!(&mut ops, "{rise:.2} Ts").unwrap();
+            ops.push(Op::SetTextRise(rise));
         }
-
-        // Text rendering mode (Tr)
         if let Some(mode) = self.rendering_mode {
-            writeln!(&mut ops, "{} Tr", mode as u8).unwrap();
+            ops.push(Op::SetRenderingMode(mode as u8));
         }
-
-        ops
+        ops_to_string(&ops)
     }
 }
 
@@ -874,5 +895,71 @@ mod tests {
         assert!(chars.contains(&'C'));
         assert!(chars.contains(&'D'));
         assert_eq!(chars.len(), 4);
+    }
+
+    /// RED for Phase 2 of the v2.7.0 IR refactor: with the legacy `String`
+    /// emission, `set_character_spacing(f64::NAN)` propagates `NaN` into a
+    /// `Tc` operator, which is invalid per ISO 32000-1 §7.3.3. Once the
+    /// migration routes Tc through `serialize_ops`, `finite_or_zero`
+    /// clamps non-finite values to `0.0` and the assertion below passes.
+    #[test]
+    fn nan_char_spacing_sanitised_at_emission() {
+        let mut ctx = TextContext::new();
+        ctx.set_character_spacing(f64::NAN);
+        ctx.write("hi").unwrap();
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("0.00 Tc\n"),
+            "NaN char spacing must emit `0.00 Tc`, got: {ops:?}"
+        );
+        assert!(
+            !ops.contains("NaN") && !ops.contains("inf"),
+            "non-finite tokens must not appear in any Tc/Tw/Tz/TL/Ts emission, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn pos_inf_word_spacing_sanitised_at_emission() {
+        let mut ctx = TextContext::new();
+        ctx.set_word_spacing(f64::INFINITY);
+        ctx.write("hi").unwrap();
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("0.00 Tw\n"),
+            "+inf word spacing must emit `0.00 Tw`, got: {ops:?}"
+        );
+        assert!(
+            !ops.contains("inf"),
+            "`inf` must not appear in Tw output, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn nan_horizontal_scaling_sanitised_at_emission() {
+        let mut ctx = TextContext::new();
+        ctx.set_horizontal_scaling(f64::NAN);
+        ctx.write("hi").unwrap();
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("0.00 Tz\n"),
+            "NaN horizontal scaling must emit `0.00 Tz`, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn nan_leading_and_text_rise_sanitised_at_emission() {
+        let mut ctx = TextContext::new();
+        ctx.set_leading(f64::NEG_INFINITY);
+        ctx.set_text_rise(f64::NAN);
+        ctx.write("hi").unwrap();
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("0.00 TL\n"),
+            "-inf leading must emit `0.00 TL`, got: {ops:?}"
+        );
+        assert!(
+            ops.contains("0.00 Ts\n"),
+            "NaN text rise must emit `0.00 Ts`, got: {ops:?}"
+        );
     }
 }

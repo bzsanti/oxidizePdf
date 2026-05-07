@@ -75,10 +75,10 @@ fn render_with_split_returns_tail_when_rows_overflow_bottom_y() {
     let ops = page.graphics().get_operations();
     // Each row has 2 cells → 2 `Tj` per row × 5 rendered rows = 10
     assert_eq!(
-        count_tj(ops),
+        count_tj(&ops),
         10,
         "exactly 10 Tj operators expected (5 rendered rows × 2 cells), got: {}",
-        count_tj(ops)
+        count_tj(&ops)
     );
 
     for i in 5..10 {
@@ -115,7 +115,7 @@ fn render_with_split_returns_none_when_everything_fits() {
 
     let ops = page.graphics().get_operations();
     assert_eq!(
-        count_tj(ops),
+        count_tj(&ops),
         10,
         "all 5 rows × 2 cells = 10 Tj operators expected"
     );
@@ -154,7 +154,7 @@ fn render_strict_returns_overflow_error_without_drawing_anything() {
     // Critical invariant: pre-flight Err must NOT draw anything.
     let ops = page.graphics().get_operations();
     assert_eq!(
-        count_tj(ops),
+        count_tj(&ops),
         0,
         "render_strict must not emit any Tj before returning Err, got: {}",
         ops
@@ -172,7 +172,7 @@ fn render_strict_succeeds_when_everything_fits() {
         .expect("render_strict must succeed when everything fits");
 
     let ops = page.graphics().get_operations();
-    assert_eq!(count_tj(ops), 10);
+    assert_eq!(count_tj(&ops), 10);
 }
 
 #[test]
@@ -300,7 +300,7 @@ fn render_back_compat_silently_overflows_unchanged() {
     let ops = page.graphics().get_operations();
     // All 50 rows must be drawn regardless of the page boundary.
     assert_eq!(
-        count_tj(ops),
+        count_tj(&ops),
         100,
         "legacy render must keep silently drawing past page bottom (50 rows × 2 cells)"
     );
@@ -385,7 +385,7 @@ fn render_with_split_rejects_non_finite_bottom_y() {
 
     // Critical: no Tj operators emitted for any of the rejected calls.
     assert_eq!(
-        count_tj(page.graphics().get_operations()),
+        count_tj(&page.graphics().get_operations()),
         0,
         "non-finite bottom_y must not draw anything"
     );
@@ -401,7 +401,7 @@ fn render_strict_rejects_non_finite_bottom_y() {
         .render_strict(page.graphics(), f64::NAN)
         .expect_err("NaN bottom_y must be rejected");
     assert!(matches!(err, PdfError::InvalidStructure(_)));
-    assert_eq!(count_tj(page.graphics().get_operations()), 0);
+    assert_eq!(count_tj(&page.graphics().get_operations()), 0);
 }
 
 #[test]
@@ -442,5 +442,5 @@ fn page_tables_add_simple_table_unchanged() {
         .expect("add_simple_table must still succeed");
 
     let ops = page.graphics().get_operations();
-    assert_eq!(count_tj(ops), 6, "3 rows × 2 cells");
+    assert_eq!(count_tj(&ops), 6, "3 rows × 2 cells");
 }

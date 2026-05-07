@@ -3,7 +3,6 @@ use crate::graphics::Color;
 use crate::page::Margins;
 use crate::text::{measure_text, split_into_words, Font};
 use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TextAlign {
@@ -14,7 +13,7 @@ pub enum TextAlign {
 }
 
 pub struct TextFlowContext {
-    operations: String,
+    operations: Vec<crate::graphics::ops::Op>,
     current_font: Font,
     font_size: f64,
     line_height: f64,
@@ -31,6 +30,17 @@ pub struct TextFlowContext {
     /// `Tj`. `None` keeps the previous behaviour (whatever fill colour
     /// the surrounding graphics state is already carrying).
     fill_color: Option<Color>,
+    /// Remaining text-state parameters propagated from `TextContext`
+    /// (issue #222 — Phase 6 of the v2.7.0 IR refactor). When set,
+    /// `write_wrapped` emits the corresponding operator inside each
+    /// `BT … ET` block. `None` keeps the surrounding graphics state.
+    character_spacing: Option<f64>,
+    word_spacing: Option<f64>,
+    horizontal_scaling: Option<f64>,
+    leading: Option<f64>,
+    text_rise: Option<f64>,
+    rendering_mode: Option<u8>,
+    stroke_color: Option<Color>,
     /// Characters drawn so far, bucketed by active font name (issue
     /// #204). Consumed by `Page::add_text_flow` to merge into the
     /// page's graphics-context tracking so the writer can subset each
@@ -41,7 +51,7 @@ pub struct TextFlowContext {
 impl TextFlowContext {
     pub fn new(page_width: f64, page_height: f64, margins: Margins) -> Self {
         Self {
-            operations: String::new(),
+            operations: Vec::new(),
             current_font: Font::Helvetica,
             font_size: 12.0,
             line_height: 1.2,
@@ -52,6 +62,13 @@ impl TextFlowContext {
             page_height,
             margins,
             fill_color: None,
+            character_spacing: None,
+            word_spacing: None,
+            horizontal_scaling: None,
+            leading: None,
+            text_rise: None,
+            rendering_mode: None,
+            stroke_color: None,
             used_characters_by_font: HashMap::new(),
         }
     }
@@ -87,6 +104,52 @@ impl TextFlowContext {
     /// `BT … ET` block.
     pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
         self.fill_color = Some(color);
+        self
+    }
+
+    /// Setters for the remaining text-state parameters, mirroring
+    /// `TextContext`. Closes the propagation gap reported in issue #222.
+    /// All apply on the next `BT … ET` block emitted by `write_wrapped`.
+    pub fn set_character_spacing(&mut self, spacing: f64) -> &mut Self {
+        self.character_spacing = Some(spacing);
+        self
+    }
+
+    pub fn set_word_spacing(&mut self, spacing: f64) -> &mut Self {
+        self.word_spacing = Some(spacing);
+        self
+    }
+
+    /// Set horizontal scaling. The argument is the ratio (e.g. `0.85`
+    /// for 85 %); it is converted to the PDF `Tz` percentage at
+    /// emission time. Matches the contract documented on
+    /// `TextContext::set_horizontal_scaling`.
+    pub fn set_horizontal_scaling(&mut self, scale: f64) -> &mut Self {
+        self.horizontal_scaling = Some(scale);
+        self
+    }
+
+    pub fn set_leading(&mut self, leading: f64) -> &mut Self {
+        self.leading = Some(leading);
+        self
+    }
+
+    pub fn set_text_rise(&mut self, rise: f64) -> &mut Self {
+        self.text_rise = Some(rise);
+        self
+    }
+
+    /// Set the text rendering mode (`0`..=`7` per ISO 32000-1 §9.3.6).
+    /// The argument is taken as a `u8` rather than the typed
+    /// `TextRenderingMode` enum to avoid an extra public dependency
+    /// from `TextFlowContext` on the parent module.
+    pub fn set_rendering_mode(&mut self, mode: u8) -> &mut Self {
+        self.rendering_mode = Some(mode);
+        self
+    }
+
+    pub fn set_stroke_color(&mut self, color: Color) -> &mut Self {
+        self.stroke_color = Some(color);
         self
     }
 
@@ -169,81 +232,107 @@ impl TextFlowContext {
                 TextAlign::Justified => start_x,
             };
 
-            // Begin text object
-            self.operations.push_str("BT\n");
+            use crate::graphics::ops::Op;
+
+            self.operations.push(Op::BeginText);
 
             // Set font
-            writeln!(
-                &mut self.operations,
-                "/{} {} Tf",
-                self.current_font.pdf_name(),
-                self.font_size
-            )
-            .expect("Writing to String should never fail");
+            self.operations.push(Op::SetFont {
+                name: self.current_font.pdf_name(),
+                size: self.font_size,
+            });
 
-            // Apply non-stroking fill colour if one was inherited from the
-            // page-level text state (issue #216) or explicitly configured
-            // via `set_fill_color`. PDF spec ISO 32000-1 §8.6.8 allows
-            // colour-setting operators inside a text object; they take
-            // effect for the show-text operators that follow.
-            //
-            // Routed through the shared NaN-sanitising helper (issues
-            // #220 + #221) so this site cannot diverge from `TextContext`
-            // / `GraphicsContext`.
-            if let Some(color) = self.fill_color {
-                crate::graphics::color::write_fill_color(&mut self.operations, color);
+            // Apply text-state parameters propagated from `TextContext`
+            // (issue #222 — Phase 6 of the v2.7.0 IR refactor).
+            // These mirror `TextContext::apply_text_state_parameters`
+            // but live inside the per-line `BT … ET` block of the flow
+            // emitter. PDF spec ISO 32000-1 §8.6.8 / §9.3 allow these
+            // operators inside a text object; they take effect for the
+            // `Tj` that follows.
+            if let Some(spacing) = self.character_spacing {
+                self.operations.push(Op::SetCharSpacing(spacing));
+            }
+            if let Some(spacing) = self.word_spacing {
+                self.operations.push(Op::SetWordSpacing(spacing));
+            }
+            if let Some(scale) = self.horizontal_scaling {
+                // The Tz operator takes a percentage; the setter accepts
+                // a 0.0–1.0 ratio (matching `TextContext`), so multiply
+                // by 100 at emission.
+                self.operations
+                    .push(Op::SetHorizontalScaling(scale * 100.0));
+            }
+            if let Some(leading) = self.leading {
+                self.operations.push(Op::SetLeading(leading));
+            }
+            if let Some(rise) = self.text_rise {
+                self.operations.push(Op::SetTextRise(rise));
+            }
+            if let Some(mode) = self.rendering_mode {
+                self.operations.push(Op::SetRenderingMode(mode));
             }
 
-            // Set text position
-            writeln!(&mut self.operations, "{:.2} {:.2} Td", x, self.cursor_y)
-                .expect("Writing to String should never fail");
+            // Apply non-stroking fill colour (issue #216) and stroking
+            // colour (issue #222) if one was inherited from the
+            // page-level text state or explicitly configured via the
+            // setters. The IR variants route through
+            // `write_fill_color_bytes` / `write_stroke_color_bytes` so
+            // the same NaN-sanitising helpers (issues #220 + #221) apply.
+            if let Some(color) = self.fill_color {
+                self.operations.push(Op::SetFillColor(color));
+            }
+            if let Some(color) = self.stroke_color {
+                self.operations.push(Op::SetStrokeColor(color));
+            }
 
-            // Handle justification
+            self.operations.push(Op::SetTextPosition {
+                x,
+                y: self.cursor_y,
+            });
+
+            // Handle justification: emit Tw with the per-line word-spacing
+            // adjustment so the rendered line spans `available_width`.
             if self.alignment == TextAlign::Justified && i < lines.len() - 1 && line.len() > 1 {
-                // Calculate extra space to distribute
                 let spaces_count = line.iter().filter(|w| w.trim().is_empty()).count();
                 if spaces_count > 0 {
                     let extra_space = available_width - line_width;
                     let space_adjustment = extra_space / spaces_count as f64;
-
-                    // Set word spacing
-                    writeln!(&mut self.operations, "{space_adjustment:.2} Tw")
-                        .expect("Writing to String should never fail");
+                    self.operations.push(Op::SetWordSpacing(space_adjustment));
                 }
             }
 
-            // Show text
-            self.operations.push('(');
+            // Show text — escape PDF literal-string special characters.
+            let mut buf = Vec::with_capacity(line_text.len());
             for ch in line_text.chars() {
                 match ch {
-                    '(' => self.operations.push_str("\\("),
-                    ')' => self.operations.push_str("\\)"),
-                    '\\' => self.operations.push_str("\\\\"),
-                    '\n' => self.operations.push_str("\\n"),
-                    '\r' => self.operations.push_str("\\r"),
-                    '\t' => self.operations.push_str("\\t"),
-                    _ => self.operations.push(ch),
+                    '(' => buf.extend_from_slice(b"\\("),
+                    ')' => buf.extend_from_slice(b"\\)"),
+                    '\\' => buf.extend_from_slice(b"\\\\"),
+                    '\n' => buf.extend_from_slice(b"\\n"),
+                    '\r' => buf.extend_from_slice(b"\\r"),
+                    '\t' => buf.extend_from_slice(b"\\t"),
+                    _ => {
+                        let mut tmp = [0u8; 4];
+                        buf.extend_from_slice(ch.encode_utf8(&mut tmp).as_bytes());
+                    }
                 }
             }
-            self.operations.push_str(") Tj\n");
+            self.operations.push(Op::ShowText(buf));
 
             // Record per-font char usage so the consuming page can
-            // report it to the writer (issue #204). Bucketed under the
-            // current font's PDF name so both custom and builtin fonts
-            // are visible — the writer filters to registered custom
-            // fonts when subsetting.
+            // report it to the writer (issue #204).
             self.used_characters_by_font
                 .entry(self.current_font.pdf_name())
                 .or_default()
                 .extend(line_text.chars());
 
-            // Reset word spacing if it was set
+            // Reset word spacing if it was set. The IR emits this as
+            // `0.00 Tw` (was `0 Tw` in pre-2.7.0 — documented in CHANGELOG).
             if self.alignment == TextAlign::Justified && i < lines.len() - 1 {
-                self.operations.push_str("0 Tw\n");
+                self.operations.push(Op::SetWordSpacing(0.0));
             }
 
-            // End text object
-            self.operations.push_str("ET\n");
+            self.operations.push(Op::EndText);
 
             // Move cursor down for next line
             self.cursor_y -= self.font_size * self.line_height;
@@ -270,7 +359,9 @@ impl TextFlowContext {
     }
 
     pub fn generate_operations(&self) -> Vec<u8> {
-        self.operations.as_bytes().to_vec()
+        let mut buf = Vec::new();
+        crate::graphics::ops::serialize_ops(&mut buf, &self.operations);
+        buf
     }
 
     /// Get the current alignment
@@ -293,9 +384,14 @@ impl TextFlowContext {
         self.line_height
     }
 
-    /// Get the operations string
-    pub fn operations(&self) -> &str {
-        &self.operations
+    /// Get the operations as a serialised PDF content-stream `String`.
+    ///
+    /// Pre-2.7.0 this returned `&str`. The IR migration replaced the
+    /// internal `String` buffer with a typed `Vec<Op>`, so the legacy
+    /// borrow is materialised on demand. Internal callers prefer
+    /// `generate_operations()` which returns the byte buffer directly.
+    pub fn operations(&self) -> String {
+        crate::graphics::ops::ops_to_string(&self.operations)
     }
 
     /// Clear all operations
@@ -1048,5 +1144,28 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// RED for Phase 3 of the v2.7.0 IR refactor: with the legacy `String`
+    /// emission, a non-finite cursor position (e.g. `at(NaN, NaN)`) reaches
+    /// `write_wrapped` and emits `NaN NaN Td`, which is invalid per
+    /// ISO 32000-1 §7.3.3. Once the migration routes Td through
+    /// `serialize_ops`, `finite_or_zero` clamps non-finite values to `0.0`
+    /// and the assertion below passes.
+    #[test]
+    fn nan_cursor_position_in_flow_is_sanitised_at_emission() {
+        let mut ctx = TextFlowContext::new(595.0, 842.0, Margins::default());
+        ctx.at(f64::NAN, f64::NAN);
+        ctx.write_wrapped("hello").unwrap();
+        let ops = String::from_utf8(ctx.generate_operations())
+            .expect("operations bytes must be valid UTF-8");
+        assert!(
+            !ops.contains("NaN") && !ops.contains("inf"),
+            "non-finite tokens must not appear in flow content stream, got: {ops:?}"
+        );
+        assert!(
+            ops.contains(" Td\n"),
+            "Td operator must still be emitted, got: {ops:?}"
+        );
     }
 }

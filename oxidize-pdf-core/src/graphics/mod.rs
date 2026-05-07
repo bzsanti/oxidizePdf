@@ -7,6 +7,7 @@ pub mod extraction;
 pub mod form_xobject;
 mod indexed_color;
 pub mod lab_color;
+pub(crate) mod ops;
 pub mod page_color_space;
 mod path;
 mod patterns;
@@ -73,7 +74,7 @@ struct GraphicsState {
 
 #[derive(Clone)]
 pub struct GraphicsContext {
-    operations: String,
+    operations: Vec<ops::Op>,
     current_color: Color,
     stroke_color: Color,
     line_width: f64,
@@ -136,7 +137,7 @@ impl Default for GraphicsContext {
 impl GraphicsContext {
     pub fn new() -> Self {
         Self {
-            operations: String::new(),
+            operations: Vec::new(),
             current_color: Color::black(),
             stroke_color: Color::black(),
             line_width: 1.0,
@@ -167,32 +168,34 @@ impl GraphicsContext {
     }
 
     pub fn move_to(&mut self, x: f64, y: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{x:.2} {y:.2} m")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::MoveTo { x, y });
         self
     }
 
     pub fn line_to(&mut self, x: f64, y: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{x:.2} {y:.2} l")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::LineTo { x, y });
         self
     }
 
     pub fn curve_to(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, x3: f64, y3: f64) -> &mut Self {
-        writeln!(
-            &mut self.operations,
-            "{x1:.2} {y1:.2} {x2:.2} {y2:.2} {x3:.2} {y3:.2} c"
-        )
-        .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::CurveTo {
+            x1,
+            y1,
+            x2,
+            y2,
+            x3,
+            y3,
+        });
         self
     }
 
     pub fn rect(&mut self, x: f64, y: f64, width: f64, height: f64) -> &mut Self {
-        writeln!(
-            &mut self.operations,
-            "{x:.2} {y:.2} {width:.2} {height:.2} re"
-        )
-        .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::Rect {
+            x,
+            y,
+            w: width,
+            h: height,
+        });
         self
     }
 
@@ -209,21 +212,21 @@ impl GraphicsContext {
     }
 
     pub fn close_path(&mut self) -> &mut Self {
-        self.operations.push_str("h\n");
+        self.operations.push(ops::Op::ClosePath);
         self
     }
 
     pub fn stroke(&mut self) -> &mut Self {
         self.apply_pending_extgstate().unwrap_or_default();
         self.apply_stroke_color();
-        self.operations.push_str("S\n");
+        self.operations.push(ops::Op::Stroke);
         self
     }
 
     pub fn fill(&mut self) -> &mut Self {
         self.apply_pending_extgstate().unwrap_or_default();
         self.apply_fill_color();
-        self.operations.push_str("f\n");
+        self.operations.push(ops::Op::FillNonZero);
         self
     }
 
@@ -231,7 +234,7 @@ impl GraphicsContext {
         self.apply_pending_extgstate().unwrap_or_default();
         self.apply_fill_color();
         self.apply_stroke_color();
-        self.operations.push_str("B\n");
+        self.operations.push(ops::Op::FillStroke);
         self
     }
 
@@ -247,100 +250,63 @@ impl GraphicsContext {
 
     /// Set fill color using calibrated color space
     pub fn set_fill_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
-        // Generate a unique color space name
         let cs_name = match &color {
             CalibratedColor::Gray(_, _) => "CalGray1",
             CalibratedColor::Rgb(_, _) => "CalRGB1",
         };
-
-        // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/{} cs", cs_name)
-            .expect("Writing to string should never fail");
-
-        // Set color values
-        let values = color.values();
-        for value in &values {
-            write!(&mut self.operations, "{:.4} ", value)
-                .expect("Writing to string should never fail");
-        }
-        writeln!(&mut self.operations, "sc").expect("Writing to string should never fail");
-
+        self.operations
+            .push(ops::Op::SetFillColorSpace(cs_name.to_string()));
+        self.operations
+            .push(ops::Op::SetFillColorComponents(color.values()));
         self
     }
 
     /// Set stroke color using calibrated color space
     pub fn set_stroke_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
-        // Generate a unique color space name
         let cs_name = match &color {
             CalibratedColor::Gray(_, _) => "CalGray1",
             CalibratedColor::Rgb(_, _) => "CalRGB1",
         };
-
-        // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/{} CS", cs_name)
-            .expect("Writing to string should never fail");
-
-        // Set color values
-        let values = color.values();
-        for value in &values {
-            write!(&mut self.operations, "{:.4} ", value)
-                .expect("Writing to string should never fail");
-        }
-        writeln!(&mut self.operations, "SC").expect("Writing to string should never fail");
-
+        self.operations
+            .push(ops::Op::SetStrokeColorSpace(cs_name.to_string()));
+        self.operations
+            .push(ops::Op::SetStrokeColorComponents(color.values()));
         self
     }
 
     /// Set fill color using Lab color space
     pub fn set_fill_color_lab(&mut self, color: LabColor) -> &mut Self {
-        // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/Lab1 cs").expect("Writing to string should never fail");
-
-        // Set color values (normalized for PDF)
-        let values = color.values();
-        for value in &values {
-            write!(&mut self.operations, "{:.4} ", value)
-                .expect("Writing to string should never fail");
-        }
-        writeln!(&mut self.operations, "sc").expect("Writing to string should never fail");
-
+        self.operations
+            .push(ops::Op::SetFillColorSpace("Lab1".to_string()));
+        self.operations
+            .push(ops::Op::SetFillColorComponents(color.values()));
         self
     }
 
     /// Set stroke color using Lab color space
     pub fn set_stroke_color_lab(&mut self, color: LabColor) -> &mut Self {
-        // Set the color space (this would need to be registered in the PDF resources)
-        writeln!(&mut self.operations, "/Lab1 CS").expect("Writing to string should never fail");
-
-        // Set color values (normalized for PDF)
-        let values = color.values();
-        for value in &values {
-            write!(&mut self.operations, "{:.4} ", value)
-                .expect("Writing to string should never fail");
-        }
-        writeln!(&mut self.operations, "SC").expect("Writing to string should never fail");
-
+        self.operations
+            .push(ops::Op::SetStrokeColorSpace("Lab1".to_string()));
+        self.operations
+            .push(ops::Op::SetStrokeColorComponents(color.values()));
         self
     }
 
     pub fn set_line_width(&mut self, width: f64) -> &mut Self {
         self.line_width = width;
-        writeln!(&mut self.operations, "{width:.2} w")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetLineWidth(width));
         self
     }
 
     pub fn set_line_cap(&mut self, cap: LineCap) -> &mut Self {
         self.current_line_cap = cap;
-        writeln!(&mut self.operations, "{} J", cap as u8)
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetLineCap(cap as u8));
         self
     }
 
     pub fn set_line_join(&mut self, join: LineJoin) -> &mut Self {
         self.current_line_join = join;
-        writeln!(&mut self.operations, "{} j", join as u8)
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetLineJoin(join as u8));
         self
     }
 
@@ -398,7 +364,7 @@ impl GraphicsContext {
     }
 
     pub fn save_state(&mut self) -> &mut Self {
-        self.operations.push_str("q\n");
+        self.operations.push(ops::Op::SaveState);
         self.save_clipping_state();
         // Save color + font state
         self.state_stack.push(GraphicsState {
@@ -412,7 +378,7 @@ impl GraphicsContext {
     }
 
     pub fn restore_state(&mut self) -> &mut Self {
-        self.operations.push_str("Q\n");
+        self.operations.push(ops::Op::RestoreState);
         self.restore_clipping_state();
         // Restore color + font state
         if let Some(state) = self.state_stack.pop() {
@@ -432,8 +398,8 @@ impl GraphicsContext {
         self.save_state();
 
         // Mark beginning of transparency group with special comment
-        writeln!(&mut self.operations, "% Begin Transparency Group")
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::Comment("Begin Transparency Group".to_string()));
 
         // Apply group settings via ExtGState
         let mut extgstate = ExtGState::new();
@@ -445,11 +411,12 @@ impl GraphicsContext {
         self.pending_extgstate = Some(extgstate);
         let _ = self.apply_pending_extgstate();
 
-        // Create group state and push to stack
-        let mut group_state = TransparencyGroupState::new(group);
-        // Save current operations state
-        group_state.saved_state = self.operations.as_bytes().to_vec();
-        self.transparency_stack.push(group_state);
+        // Push group state onto the stack. Pre-2.7.0 we also serialised
+        // the entire ops buffer into a `saved_state` snapshot here, but
+        // the snapshot was never consumed — both fields were dead code.
+        // Removed in v2.7.0 (review finding).
+        self.transparency_stack
+            .push(TransparencyGroupState::new(group));
 
         self
     }
@@ -458,8 +425,8 @@ impl GraphicsContext {
     pub fn end_transparency_group(&mut self) -> &mut Self {
         if let Some(_group_state) = self.transparency_stack.pop() {
             // Mark end of transparency group
-            writeln!(&mut self.operations, "% End Transparency Group")
-                .expect("Writing to string should never fail");
+            self.operations
+                .push(ops::Op::Comment("End Transparency Group".to_string()));
 
             // Restore state
             self.restore_state();
@@ -478,35 +445,48 @@ impl GraphicsContext {
     }
 
     pub fn translate(&mut self, tx: f64, ty: f64) -> &mut Self {
-        writeln!(&mut self.operations, "1 0 0 1 {tx:.2} {ty:.2} cm")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::Cm {
+            a: 1.0,
+            b: 0.0,
+            c: 0.0,
+            d: 1.0,
+            e: tx,
+            f: ty,
+        });
         self
     }
 
     pub fn scale(&mut self, sx: f64, sy: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{sx:.2} 0 0 {sy:.2} 0 0 cm")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::Cm {
+            a: sx,
+            b: 0.0,
+            c: 0.0,
+            d: sy,
+            e: 0.0,
+            f: 0.0,
+        });
         self
     }
 
     pub fn rotate(&mut self, angle: f64) -> &mut Self {
         let cos = angle.cos();
         let sin = angle.sin();
-        writeln!(
-            &mut self.operations,
-            "{:.6} {:.6} {:.6} {:.6} 0 0 cm",
-            cos, sin, -sin, cos
-        )
-        .expect("Writing to string should never fail");
+        // Rotation historically used `{:.6}` precision; the IR uses `{:.2}`
+        // throughout the v2.7.0 refactor for consistency. The behavioural
+        // change is documented in CHANGELOG (2.7.0 cm matrix format).
+        self.operations.push(ops::Op::Cm {
+            a: cos,
+            b: sin,
+            c: -sin,
+            d: cos,
+            e: 0.0,
+            f: 0.0,
+        });
         self
     }
 
     pub fn transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) -> &mut Self {
-        writeln!(
-            &mut self.operations,
-            "{a:.2} {b:.2} {c:.2} {d:.2} {e:.2} {f:.2} cm"
-        )
-        .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::Cm { a, b, c, d, e, f });
         self
     }
 
@@ -527,15 +507,18 @@ impl GraphicsContext {
 
         // Set up transformation matrix for image placement
         // PDF coordinate system has origin at bottom-left, so we need to translate and scale
-        writeln!(
-            &mut self.operations,
-            "{width:.2} 0 0 {height:.2} {x:.2} {y:.2} cm"
-        )
-        .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::Cm {
+            a: width,
+            b: 0.0,
+            c: 0.0,
+            d: height,
+            e: x,
+            f: y,
+        });
 
         // Draw the image XObject
-        writeln!(&mut self.operations, "/{image_name} Do")
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::InvokeXObject(image_name.to_string()));
 
         // Restore graphics state
         self.restore_state();
@@ -568,20 +551,22 @@ impl GraphicsContext {
                 .extgstate_manager
                 .add_state(extgstate)
                 .unwrap_or_else(|_| "GS1".to_string());
-            writeln!(&mut self.operations, "/{} gs", gs_name)
-                .expect("Writing to string should never fail");
+            self.operations.push(ops::Op::SetExtGState(gs_name));
         }
 
         // Set up transformation matrix for image placement
-        writeln!(
-            &mut self.operations,
-            "{width:.2} 0 0 {height:.2} {x:.2} {y:.2} cm"
-        )
-        .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::Cm {
+            a: width,
+            b: 0.0,
+            c: 0.0,
+            d: height,
+            e: x,
+            f: y,
+        });
 
         // Draw the image XObject
-        writeln!(&mut self.operations, "/{image_name} Do")
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::InvokeXObject(image_name.to_string()));
 
         // If we had a mask, reset the soft mask to None
         if mask_name.is_some() {
@@ -593,8 +578,7 @@ impl GraphicsContext {
                 .extgstate_manager
                 .add_state(reset_extgstate)
                 .unwrap_or_else(|_| "GS2".to_string());
-            writeln!(&mut self.operations, "/{} gs", gs_name)
-                .expect("Writing to string should never fail");
+            self.operations.push(ops::Op::SetExtGState(gs_name));
         }
 
         // Restore graphics state
@@ -607,17 +591,44 @@ impl GraphicsContext {
         // Single source of truth for stroke-colour emission across
         // `TextContext`, `TextFlowContext`, and `GraphicsContext` — see
         // `graphics::color::write_stroke_color` (issues #220 + #221).
-        color::write_stroke_color(&mut self.operations, self.stroke_color);
+        // After the IR migration the operator is pushed as `Op::SetStrokeColor`
+        // and `serialize_ops` delegates to `write_stroke_color_bytes`.
+        self.operations
+            .push(ops::Op::SetStrokeColor(self.stroke_color));
     }
 
     fn apply_fill_color(&mut self) {
         // Single source of truth for fill-colour emission. See sibling
-        // `apply_stroke_color` and `graphics::color::write_fill_color`.
-        color::write_fill_color(&mut self.operations, self.current_color);
+        // `apply_stroke_color`. The IR delegates emission to
+        // `write_fill_color_bytes`, preserving the NaN/inf sanitisation
+        // and device-space selection from 2.6.0.
+        self.operations
+            .push(ops::Op::SetFillColor(self.current_color));
     }
 
     pub(crate) fn generate_operations(&self) -> Result<Vec<u8>> {
-        Ok(self.operations.as_bytes().to_vec())
+        let mut buf = Vec::new();
+        ops::serialize_ops(&mut buf, &self.operations);
+        Ok(buf)
+    }
+
+    /// Take ownership of the accumulated `Op` buffer, leaving an empty
+    /// `Vec` in its place. Used by `Page` to flush the graphics buffer
+    /// into a unified content stream when the caller switches contexts
+    /// (issue #227 — preserves PDF painter-model call order across
+    /// `Page::graphics()` / `Page::text()` switches).
+    ///
+    /// State fields (`current_color`, `line_width`, …) are unaffected so
+    /// the next chain of calls on this context resumes with the same
+    /// graphics state.
+    pub(crate) fn drain_ops(&mut self) -> Vec<ops::Op> {
+        std::mem::take(&mut self.operations)
+    }
+
+    /// Read-only access to the operation list (used by `Page` to peek
+    /// at whether a flush is required without taking the buffer).
+    pub(crate) fn ops_slice(&self) -> &[ops::Op] {
+        &self.operations
     }
 
     /// Check if transparency is used (opacity != 1.0)
@@ -672,14 +683,20 @@ impl GraphicsContext {
         self.stroke_opacity
     }
 
-    /// Get the operations string
-    pub fn operations(&self) -> &str {
-        &self.operations
+    /// Get the operations as a serialised PDF content-stream `String`.
+    ///
+    /// Pre-2.7.0 this returned `&str`. The IR migration replaced the
+    /// internal `String` buffer with a typed `Vec<Op>`, so the legacy
+    /// borrow is materialised on demand. Internal callers prefer
+    /// `generate_operations()` which returns the byte buffer directly.
+    pub fn operations(&self) -> String {
+        ops::ops_to_string(&self.operations)
     }
 
-    /// Get the operations string (alias for testing)
-    pub fn get_operations(&self) -> &str {
-        &self.operations
+    /// Get the operations as a serialised content-stream `String` (alias
+    /// retained for legacy tests; mirrors `operations()`).
+    pub fn get_operations(&self) -> String {
+        ops::ops_to_string(&self.operations)
     }
 
     /// Clear all operations
@@ -689,20 +706,22 @@ impl GraphicsContext {
 
     /// Begin a text object
     pub fn begin_text(&mut self) -> &mut Self {
-        self.operations.push_str("BT\n");
+        self.operations.push(ops::Op::BeginText);
         self
     }
 
     /// End a text object
     pub fn end_text(&mut self) -> &mut Self {
-        self.operations.push_str("ET\n");
+        self.operations.push(ops::Op::EndText);
         self
     }
 
     /// Set font and size
     pub fn set_font(&mut self, font: Font, size: f64) -> &mut Self {
-        writeln!(&mut self.operations, "/{} {} Tf", font.pdf_name(), size)
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetFont {
+            name: font.pdf_name(),
+            size,
+        });
 
         // Track font name, size, and type for Unicode detection and proper font handling
         match &font {
@@ -723,8 +742,7 @@ impl GraphicsContext {
 
     /// Set text position
     pub fn set_text_position(&mut self, x: f64, y: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{x:.2} {y:.2} Td")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetTextPosition { x, y });
         self
     }
 
@@ -742,41 +760,40 @@ impl GraphicsContext {
 
         if self.is_custom_font {
             // For custom fonts (CJK/Type0), encode as hex string with Unicode code points as CIDs
-            self.operations.push('<');
+            let mut hex = String::new();
             for ch in text.chars() {
-                encode_char_as_cid(ch, &mut self.operations);
+                encode_char_as_cid(ch, &mut hex);
             }
-            self.operations.push_str("> Tj\n");
+            self.operations.push(ops::Op::ShowTextHex(hex.into_bytes()));
         } else {
             // For standard fonts, escape special characters in PDF literal string
-            self.operations.push('(');
+            let mut escaped = String::new();
             for ch in text.chars() {
                 match ch {
-                    '(' => self.operations.push_str("\\("),
-                    ')' => self.operations.push_str("\\)"),
-                    '\\' => self.operations.push_str("\\\\"),
-                    '\n' => self.operations.push_str("\\n"),
-                    '\r' => self.operations.push_str("\\r"),
-                    '\t' => self.operations.push_str("\\t"),
-                    _ => self.operations.push(ch),
+                    '(' => escaped.push_str("\\("),
+                    ')' => escaped.push_str("\\)"),
+                    '\\' => escaped.push_str("\\\\"),
+                    '\n' => escaped.push_str("\\n"),
+                    '\r' => escaped.push_str("\\r"),
+                    '\t' => escaped.push_str("\\t"),
+                    _ => escaped.push(ch),
                 }
             }
-            self.operations.push_str(") Tj\n");
+            self.operations
+                .push(ops::Op::ShowText(escaped.into_bytes()));
         }
         Ok(self)
     }
 
     /// Set word spacing for text justification
     pub fn set_word_spacing(&mut self, spacing: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{spacing:.2} Tw")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetWordSpacing(spacing));
         self
     }
 
     /// Set character spacing
     pub fn set_character_spacing(&mut self, spacing: f64) -> &mut Self {
-        writeln!(&mut self.operations, "{spacing:.2} Tc")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetCharSpacing(spacing));
         self
     }
 
@@ -856,47 +873,47 @@ impl GraphicsContext {
     /// Set line dash pattern
     pub fn set_line_dash_pattern(&mut self, pattern: LineDashPattern) -> &mut Self {
         self.current_dash_pattern = Some(pattern.clone());
-        writeln!(&mut self.operations, "{} d", pattern.to_pdf_string())
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::SetDashPatternRaw(pattern.to_pdf_string()));
         self
     }
 
     /// Set line dash pattern to solid (no dashes)
     pub fn set_line_solid(&mut self) -> &mut Self {
         self.current_dash_pattern = None;
-        self.operations.push_str("[] 0 d\n");
+        self.operations
+            .push(ops::Op::SetDashPatternRaw("[] 0".to_string()));
         self
     }
 
     /// Set miter limit
     pub fn set_miter_limit(&mut self, limit: f64) -> &mut Self {
         self.current_miter_limit = limit.max(1.0);
-        writeln!(&mut self.operations, "{:.2} M", self.current_miter_limit)
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::SetMiterLimit(self.current_miter_limit));
         self
     }
 
     /// Set rendering intent
     pub fn set_rendering_intent(&mut self, intent: RenderingIntent) -> &mut Self {
         self.current_rendering_intent = intent;
-        writeln!(&mut self.operations, "/{} ri", intent.pdf_name())
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::SetRenderingIntent(intent.pdf_name().to_string()));
         self
     }
 
     /// Set flatness tolerance
     pub fn set_flatness(&mut self, flatness: f64) -> &mut Self {
         self.current_flatness = flatness.clamp(0.0, 100.0);
-        writeln!(&mut self.operations, "{:.2} i", self.current_flatness)
-            .expect("Writing to string should never fail");
+        self.operations
+            .push(ops::Op::SetFlatness(self.current_flatness));
         self
     }
 
     /// Apply an ExtGState dictionary immediately
     pub fn apply_extgstate(&mut self, state: ExtGState) -> Result<&mut Self> {
         let state_name = self.extgstate_manager.add_state(state)?;
-        writeln!(&mut self.operations, "/{state_name} gs")
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetExtGState(state_name));
         Ok(self)
     }
 
@@ -910,8 +927,7 @@ impl GraphicsContext {
     fn apply_pending_extgstate(&mut self) -> Result<()> {
         if let Some(state) = self.pending_extgstate.take() {
             let state_name = self.extgstate_manager.add_state(state)?;
-            writeln!(&mut self.operations, "/{state_name} gs")
-                .expect("Writing to string should never fail");
+            self.operations.push(ops::Op::SetExtGState(state_name));
         }
         Ok(())
     }
@@ -1031,35 +1047,41 @@ impl GraphicsContext {
         self.extgstate_manager.count() > 0
     }
 
-    /// Add a command to the operations
+    /// Add a command to the operations.
+    ///
+    /// Untyped escape hatch — bytes are emitted verbatim with a trailing
+    /// newline. Used by callers that need to inject operators not yet
+    /// modelled as `Op` variants. New code should prefer the typed
+    /// methods on `GraphicsContext`.
     pub fn add_command(&mut self, command: &str) {
-        self.operations.push_str(command);
-        self.operations.push('\n');
+        let mut bytes = command.as_bytes().to_vec();
+        bytes.push(b'\n');
+        self.operations.push(ops::Op::Raw(bytes));
     }
 
     /// Create clipping path from current path using non-zero winding rule
     pub fn clip(&mut self) -> &mut Self {
-        self.operations.push_str("W\n");
+        self.operations.push(ops::Op::ClipNonZero);
         self
     }
 
     /// Create clipping path from current path using even-odd rule
     pub fn clip_even_odd(&mut self) -> &mut Self {
-        self.operations.push_str("W*\n");
+        self.operations.push(ops::Op::ClipEvenOdd);
         self
     }
 
     /// Create clipping path and stroke it
     pub fn clip_stroke(&mut self) -> &mut Self {
         self.apply_stroke_color();
-        self.operations.push_str("W S\n");
+        self.operations.push(ops::Op::ClipStroke);
         self
     }
 
     /// Set a custom clipping path
     pub fn set_clipping_path(&mut self, path: ClippingPath) -> Result<&mut Self> {
-        let ops = path.to_pdf_operations()?;
-        self.operations.push_str(&ops);
+        let ops_str = path.to_pdf_operations()?;
+        self.operations.push(ops::Op::Raw(ops_str.into_bytes()));
         self.clipping_region.set_clip(path);
         Ok(self)
     }
@@ -1117,8 +1139,10 @@ impl GraphicsContext {
     /// Set the current font to a custom font
     pub fn set_custom_font(&mut self, font_name: &str, size: f64) -> &mut Self {
         // Emit Tf operator to the content stream (consistent with set_font)
-        writeln!(&mut self.operations, "/{} {} Tf", font_name, size)
-            .expect("Writing to string should never fail");
+        self.operations.push(ops::Op::SetFont {
+            name: font_name.to_string(),
+            size,
+        });
 
         self.current_font_name = Some(Arc::from(font_name));
         self.current_font_size = size;
@@ -1164,166 +1188,94 @@ impl GraphicsContext {
         let has_unicode = text.chars().any(|c| c as u32 > 255);
 
         if has_unicode {
-            // Warning: Text contains Unicode characters but no Unicode font is set
             tracing::debug!("Warning: Text contains Unicode characters but using Latin-1 font. Characters will be replaced with '?'");
         }
 
-        // Begin text object
-        self.operations.push_str("BT\n");
-
-        // Apply fill color for text rendering (must be inside BT...ET)
+        self.operations.push(ops::Op::BeginText);
         self.apply_fill_color();
+        self.push_active_font();
+        self.operations.push(ops::Op::SetTextPosition { x, y });
 
-        // Set font if available
-        if let Some(font_name) = &self.current_font_name {
-            writeln!(
-                &mut self.operations,
-                "/{} {} Tf",
-                font_name, self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        } else {
-            writeln!(
-                &mut self.operations,
-                "/Helvetica {} Tf",
-                self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        }
-
-        // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
-            .expect("Writing to string should never fail");
-
-        // Use parentheses encoding for Latin-1 text (standard PDF fonts use WinAnsiEncoding)
-        // This allows proper rendering of accented characters
-        self.operations.push('(');
+        // Encode text as a literal string (parentheses, WinAnsi octal escapes
+        // for 128–255, '?' fallback for code points beyond Latin-1).
+        let mut buf = String::new();
         for ch in text.chars() {
             let code = ch as u32;
             if code <= 127 {
-                // ASCII characters - handle special characters that need escaping
                 match ch {
-                    '(' => self.operations.push_str("\\("),
-                    ')' => self.operations.push_str("\\)"),
-                    '\\' => self.operations.push_str("\\\\"),
-                    '\n' => self.operations.push_str("\\n"),
-                    '\r' => self.operations.push_str("\\r"),
-                    '\t' => self.operations.push_str("\\t"),
-                    _ => self.operations.push(ch),
+                    '(' => buf.push_str("\\("),
+                    ')' => buf.push_str("\\)"),
+                    '\\' => buf.push_str("\\\\"),
+                    '\n' => buf.push_str("\\n"),
+                    '\r' => buf.push_str("\\r"),
+                    '\t' => buf.push_str("\\t"),
+                    _ => buf.push(ch),
                 }
             } else if code <= 255 {
-                // Latin-1 characters (128-255)
-                // For WinAnsiEncoding, we can use octal notation for high-bit characters
-                write!(&mut self.operations, "\\{:03o}", code)
-                    .expect("Writing to string should never fail");
+                use std::fmt::Write as _;
+                write!(&mut buf, "\\{code:03o}").expect("write to String never fails");
             } else {
-                // Characters outside Latin-1 - replace with '?'
-                self.operations.push('?');
+                buf.push('?');
             }
         }
-        self.operations.push_str(") Tj\n");
-
-        // End text object
-        self.operations.push_str("ET\n");
+        self.operations.push(ops::Op::ShowText(buf.into_bytes()));
+        self.operations.push(ops::Op::EndText);
 
         Ok(self)
     }
 
     /// Internal: Draw text with Unicode encoding (Type0/CID)
     fn draw_with_unicode_encoding(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
-        // Begin text object
-        self.operations.push_str("BT\n");
-
-        // Apply fill color for text rendering (must be inside BT...ET)
+        self.operations.push(ops::Op::BeginText);
         self.apply_fill_color();
+        self.push_active_font();
+        self.operations.push(ops::Op::SetTextPosition { x, y });
 
-        // Set font - ensure it's a Type0 font for Unicode
-        if let Some(font_name) = &self.current_font_name {
-            // The font should be converted to Type0 by FontManager if needed
-            writeln!(
-                &mut self.operations,
-                "/{} {} Tf",
-                font_name, self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        } else {
-            writeln!(
-                &mut self.operations,
-                "/Helvetica {} Tf",
-                self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        }
-
-        // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
-            .expect("Writing to string should never fail");
-
-        // For Type0 fonts with Identity-H encoding, write Unicode code points as CIDs.
-        // The CIDToGIDMap in the font handles the CID → GlyphID conversion.
-        self.operations.push('<');
+        let mut hex = String::new();
         for ch in text.chars() {
-            encode_char_as_cid(ch, &mut self.operations);
+            encode_char_as_cid(ch, &mut hex);
         }
-        self.operations.push_str("> Tj\n");
-
-        // End text object
-        self.operations.push_str("ET\n");
+        self.operations.push(ops::Op::ShowTextHex(hex.into_bytes()));
+        self.operations.push(ops::Op::EndText);
 
         Ok(self)
+    }
+
+    /// Push a `Tf` operator for the active font, falling back to
+    /// `/Helvetica` at the current size when no font has been set.
+    /// Shared by `draw_with_simple_encoding`, `draw_with_unicode_encoding`,
+    /// and the deprecated `draw_text_*` aliases.
+    fn push_active_font(&mut self) {
+        let name = self
+            .current_font_name
+            .as_deref()
+            .unwrap_or("Helvetica")
+            .to_string();
+        self.operations.push(ops::Op::SetFont {
+            name,
+            size: self.current_font_size,
+        });
     }
 
     /// Legacy: Draw text with hex encoding (kept for compatibility)
     #[deprecated(note = "Use draw_text() which automatically detects encoding")]
     pub fn draw_text_hex(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
-        // Begin text object
-        self.operations.push_str("BT\n");
-
-        // Apply fill color for text rendering (must be inside BT...ET)
+        self.operations.push(ops::Op::BeginText);
         self.apply_fill_color();
+        self.push_active_font();
+        self.operations.push(ops::Op::SetTextPosition { x, y });
 
-        // Set font if available
-        if let Some(font_name) = &self.current_font_name {
-            writeln!(
-                &mut self.operations,
-                "/{} {} Tf",
-                font_name, self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        } else {
-            // Fallback to Helvetica if no font is set
-            writeln!(
-                &mut self.operations,
-                "/Helvetica {} Tf",
-                self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        }
-
-        // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
-            .expect("Writing to string should never fail");
-
-        // Encode text as hex string
-        // For TrueType fonts with Identity-H encoding, we need UTF-16BE
-        // But we'll use single-byte encoding for now to fix spacing
-        self.operations.push('<');
+        let mut hex = String::new();
         for ch in text.chars() {
+            use std::fmt::Write as _;
             if ch as u32 <= 255 {
-                // For characters in the Latin-1 range, use single byte
-                write!(&mut self.operations, "{:02X}", ch as u8)
-                    .expect("Writing to string should never fail");
+                write!(&mut hex, "{:02X}", ch as u8).expect("write to String never fails");
             } else {
-                // For characters outside Latin-1, we need proper glyph mapping
-                // For now, use a placeholder
-                write!(&mut self.operations, "3F").expect("Writing to string should never fail");
-                // '?' character
+                hex.push_str("3F");
             }
         }
-        self.operations.push_str("> Tj\n");
-
-        // End text object
-        self.operations.push_str("ET\n");
+        self.operations.push(ops::Op::ShowTextHex(hex.into_bytes()));
+        self.operations.push(ops::Op::EndText);
 
         Ok(self)
     }
@@ -1333,107 +1285,51 @@ impl GraphicsContext {
     pub fn draw_text_cid(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
         use crate::fonts::needs_type0_font;
 
-        // Begin text object
-        self.operations.push_str("BT\n");
-
-        // Apply fill color for text rendering (must be inside BT...ET)
+        self.operations.push(ops::Op::BeginText);
         self.apply_fill_color();
+        self.push_active_font();
+        self.operations.push(ops::Op::SetTextPosition { x, y });
 
-        // Set font if available
-        if let Some(font_name) = &self.current_font_name {
-            writeln!(
-                &mut self.operations,
-                "/{} {} Tf",
-                font_name, self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        } else {
-            writeln!(
-                &mut self.operations,
-                "/Helvetica {} Tf",
-                self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        }
-
-        // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
-            .expect("Writing to string should never fail");
-
-        // Check if text needs Type0 encoding
+        let mut hex = String::new();
         if needs_type0_font(text) {
-            // Use 2-byte hex encoding for CIDs with identity mapping
-            self.operations.push('<');
             for ch in text.chars() {
-                encode_char_as_cid(ch, &mut self.operations);
+                encode_char_as_cid(ch, &mut hex);
             }
-            self.operations.push_str("> Tj\n");
         } else {
-            // Use regular single-byte encoding for Latin-1
-            self.operations.push('<');
             for ch in text.chars() {
+                use std::fmt::Write as _;
                 if ch as u32 <= 255 {
-                    write!(&mut self.operations, "{:02X}", ch as u8)
-                        .expect("Writing to string should never fail");
+                    write!(&mut hex, "{:02X}", ch as u8).expect("write to String never fails");
                 } else {
-                    write!(&mut self.operations, "3F")
-                        .expect("Writing to string should never fail");
+                    hex.push_str("3F");
                 }
             }
-            self.operations.push_str("> Tj\n");
         }
+        self.operations.push(ops::Op::ShowTextHex(hex.into_bytes()));
+        self.operations.push(ops::Op::EndText);
 
-        // End text object
-        self.operations.push_str("ET\n");
         Ok(self)
     }
 
     /// Legacy: Draw text with UTF-16BE encoding (kept for compatibility)
     #[deprecated(note = "Use draw_text() which automatically detects encoding")]
     pub fn draw_text_unicode(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
-        // Begin text object
-        self.operations.push_str("BT\n");
-
-        // Apply fill color for text rendering (must be inside BT...ET)
+        self.operations.push(ops::Op::BeginText);
         self.apply_fill_color();
+        self.push_active_font();
+        self.operations.push(ops::Op::SetTextPosition { x, y });
 
-        // Set font if available
-        if let Some(font_name) = &self.current_font_name {
-            writeln!(
-                &mut self.operations,
-                "/{} {} Tf",
-                font_name, self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        } else {
-            // Fallback to Helvetica if no font is set
-            writeln!(
-                &mut self.operations,
-                "/Helvetica {} Tf",
-                self.current_font_size
-            )
-            .expect("Writing to string should never fail");
-        }
-
-        // Set text position
-        writeln!(&mut self.operations, "{:.2} {:.2} Td", x, y)
-            .expect("Writing to string should never fail");
-
-        // Encode text as UTF-16BE hex string
-        self.operations.push('<');
+        let mut hex = String::new();
         let mut utf16_buffer = [0u16; 2];
         for ch in text.chars() {
             let encoded = ch.encode_utf16(&mut utf16_buffer);
             for unit in encoded {
-                // Write UTF-16BE (big-endian)
-                write!(&mut self.operations, "{:04X}", unit)
-                    .expect("Writing to string should never fail");
+                use std::fmt::Write as _;
+                write!(&mut hex, "{:04X}", unit).expect("write to String never fails");
             }
         }
-        self.operations.push_str("> Tj\n");
-
-        // End text object
-        self.operations.push_str("ET\n");
+        self.operations.push(ops::Op::ShowTextHex(hex.into_bytes()));
+        self.operations.push(ops::Op::EndText);
 
         Ok(self)
     }
@@ -1682,14 +1578,22 @@ mod tests {
     fn test_translate() {
         let mut ctx = GraphicsContext::new();
         ctx.translate(50.0, 100.0);
-        assert!(ctx.operations().contains("1 0 0 1 50.00 100.00 cm\n"));
+        // v2.7.0 IR: every component of the `cm` matrix is emitted as `{:.2}`,
+        // including identity-matrix slots (`1 0 0 1` → `1.00 0.00 0.00 1.00`).
+        // See CHANGELOG → "cm matrix format" under 2.7.0.
+        assert!(ctx
+            .operations()
+            .contains("1.00 0.00 0.00 1.00 50.00 100.00 cm\n"));
     }
 
     #[test]
     fn test_scale() {
         let mut ctx = GraphicsContext::new();
         ctx.scale(2.0, 3.0);
-        assert!(ctx.operations().contains("2.00 0 0 3.00 0 0 cm\n"));
+        // v2.7.0 IR: see test_translate.
+        assert!(ctx
+            .operations()
+            .contains("2.00 0.00 0.00 3.00 0.00 0.00 cm\n"));
     }
 
     #[test]
@@ -1700,8 +1604,9 @@ mod tests {
 
         let ops = ctx.operations();
         assert!(ops.contains(" cm\n"));
-        // Should contain cos and sin values
-        assert!(ops.contains("0.707107")); // Approximate cos(45°)
+        // v2.7.0 IR: rotation matrix emitted at `{:.2}` (was `{:.6}`).
+        // 0.707107 truncates to "0.71". See CHANGELOG.
+        assert!(ops.contains("0.71"));
     }
 
     #[test]
@@ -1720,7 +1625,8 @@ mod tests {
 
         let ops = ctx.operations();
         assert!(ops.contains("q\n")); // Save state
-        assert!(ops.contains("100.00 0 0 150.00 10.00 20.00 cm\n")); // Transform
+                                      // v2.7.0 IR: cm matrix slots emitted at `{:.2}` consistently. See CHANGELOG.
+        assert!(ops.contains("100.00 0.00 0.00 150.00 10.00 20.00 cm\n"));
         assert!(ops.contains("/Image1 Do\n")); // Draw image
         assert!(ops.contains("Q\n")); // Restore state
     }
@@ -2279,8 +2185,10 @@ mod tests {
             .generate_operations()
             .expect("Writing to string should never fail");
         let ops_str = String::from_utf8_lossy(&ops);
-        assert!(ops_str.contains("1 0 0 1 100.00 200.00 cm")); // translate
-        assert!(ops_str.contains("2.00 0 0 3.00 0 0 cm")); // scale
+        // v2.7.0 IR: cm matrix slots emitted at `{:.2}` consistently
+        // (identity slots are no longer integer literals). See CHANGELOG.
+        assert!(ops_str.contains("1.00 0.00 0.00 1.00 100.00 200.00 cm")); // translate
+        assert!(ops_str.contains("2.00 0.00 0.00 3.00 0.00 0.00 cm")); // scale
         assert!(ops_str.contains("cm")); // rotate matrix
     }
 
@@ -3627,5 +3535,67 @@ mod tests {
             // Arc::ptr_eq confirms O(1) clone (same backing allocation)
             assert!(Arc::ptr_eq(arc, &cloned));
         }
+    }
+
+    /// RED for Phase 1 of the v2.7.0 IR refactor: with the current `String`
+    /// emission, `set_line_width(f64::NAN)` writes literally `NaN w` into the
+    /// content stream — invalid per ISO 32000-1 §7.3.3, same CWE-20 class as
+    /// the colour-emission fix in 2.6.0 (issues #220, #221). Once the
+    /// migration routes line width through `serialize_ops`, the helper
+    /// `finite_or_zero` clamps non-finite floats to `0.0` at the emission
+    /// boundary and the assertion below passes.
+    #[test]
+    fn nan_line_width_sanitised_at_emission() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_width(f64::NAN);
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("0.00 w\n"),
+            "NaN line width must emit `0.00 w`, got: {ops:?}"
+        );
+        assert!(
+            !ops.contains("NaN"),
+            "`NaN` must not appear in any content-stream output, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn pos_inf_line_width_sanitised_at_emission() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_line_width(f64::INFINITY);
+        let ops = ctx.operations();
+        assert!(
+            ops.contains("0.00 w\n"),
+            "+inf line width must emit `0.00 w`, got: {ops:?}"
+        );
+        assert!(
+            !ops.contains("inf"),
+            "`inf` must not appear in any content-stream output, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn nan_path_coords_sanitised_at_emission() {
+        let mut ctx = GraphicsContext::new();
+        ctx.move_to(f64::NAN, 20.0);
+        ctx.line_to(30.0, f64::NEG_INFINITY);
+        ctx.rect(f64::NAN, f64::INFINITY, 100.0, f64::NEG_INFINITY);
+        let ops = ctx.operations();
+        assert!(
+            !ops.contains("NaN") && !ops.contains("inf"),
+            "non-finite floats must not appear in path operators, got: {ops:?}"
+        );
+        assert!(
+            ops.contains("0.00 20.00 m\n"),
+            "NaN x must clamp to 0.00 in `m` op, got: {ops:?}"
+        );
+        assert!(
+            ops.contains("30.00 0.00 l\n"),
+            "-inf y must clamp to 0.00 in `l` op, got: {ops:?}"
+        );
+        assert!(
+            ops.contains("0.00 0.00 100.00 0.00 re\n"),
+            "non-finite components must clamp to 0.00 in `re` op, got: {ops:?}"
+        );
     }
 }
