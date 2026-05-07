@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.7.0] - unreleased
+
+### Added
+
+- **Typed content-stream IR** (`graphics::ops::Op` + `serialize_ops`) replacing the per-context `String` buffers in `GraphicsContext`, `TextContext`, and `TextFlowContext`. Internal refactor; prepares the codebase for editor-mode workflows and future optimisation passes. `Op::Raw(Vec<u8>)` is the escape hatch for emitters not yet migrated.
+- **`TextFlowContext` text-state setters** (closes #222): `set_character_spacing`, `set_word_spacing`, `set_horizontal_scaling`, `set_leading`, `set_text_rise`, `set_rendering_mode`, `set_stroke_color`. Mirror of the corresponding `TextContext` API. `Page::text_flow()` now propagates the full set of nine text-state parameters from the page-level `TextContext` into the derived flow context (PR #219 covered three; this release covers the remaining seven).
+
+### Fixed
+
+- **Painter-model call order** preserved across `Page::graphics()` / `Page::text()` switches (closes #227). Pre-2.7.0, `generate_content_with_page_info` flushed the entire graphics buffer before the entire text buffer regardless of caller order, defeating PDF Z-ordering for any sequence that interleaved graphics and text. The fix is a flush-on-borrow sentinel: each `Page::graphics()` / `Page::text()` flushes the opposite context into a unified `page_ops` buffer before returning the borrow.
+- **Non-finite floats sanitised across the entire content-stream surface** (extends the 2.6.0 colour fix, issues #220 / #221). Every numeric operator emitted via the IR now routes through `finite_or_zero` at the emission boundary: path coords (`m`, `l`, `c`, `re`), line widths (`w`), miter limits (`M`), flatness (`i`), transforms (`cm`), text positioning (`Td`), text-state operators (`Tc`, `Tw`, `Tz`, `TL`, `Ts`), and dash-pattern arrays / phase (`d`). After this release, no `NaN` or `inf` token can appear in a content stream regardless of caller-controlled `f64` inputs.
+
+### Changed
+
+- **API surface (semver patch-compat for callers using only documented methods)**:
+  - `GraphicsContext::operations()` and `get_operations()` now return owned `String` instead of `&str`. Internally the buffer is `Vec<Op>` and serialisation is on demand. Callers who borrowed the legacy `&str` need a `&` (e.g. `count_tj(&ops)`).
+  - `TextContext::operations()` follows the same change.
+  - `TextFlowContext::operations()` follows the same change.
+  - `Page::graphics_operations()` follows the same change.
+- **`cm` matrix format**: every slot is now emitted at `{:.2}` consistently. Pre-2.7.0 the identity slots were integer literals (`1 0 0 1 …`) and rotation used `{:.6}`. The new wire form is `1.00 0.00 0.00 1.00 …` and `{:.2}` for rotation. PDF-conformant in both forms; pure cosmetic for downstream consumers, but tests asserting byte-exact `cm` output need updating.
+- **Justified-line `Tw` reset** in `TextFlowContext::write_wrapped` is now emitted as `0.00 Tw` (was `0 Tw`). Same wire semantics, normalised to the IR's `{:.2}` precision.
+
 ## [2.6.0] - 2026-05-04
 
 Bundle release closing six issues across forms, text-flow state, table rendering, and graphics colour emission. Includes one security hardening (CWE-20: NaN/inf bypass in colour content-stream emission, public-issue #220) plus its companion refactor #221 establishing a single source of truth for every colour-operator emission across the codebase.
