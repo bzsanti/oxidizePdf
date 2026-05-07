@@ -411,15 +411,12 @@ impl GraphicsContext {
         self.pending_extgstate = Some(extgstate);
         let _ = self.apply_pending_extgstate();
 
-        // Create group state and push to stack
-        let mut group_state = TransparencyGroupState::new(group);
-        // Snapshot the serialised content so far (kept as bytes for legacy
-        // callers that introspect transparency state — only the snapshot
-        // semantics matter, the field is otherwise unread).
-        let mut snapshot = Vec::new();
-        ops::serialize_ops(&mut snapshot, &self.operations);
-        group_state.saved_state = snapshot;
-        self.transparency_stack.push(group_state);
+        // Push group state onto the stack. Pre-2.7.0 we also serialised
+        // the entire ops buffer into a `saved_state` snapshot here, but
+        // the snapshot was never consumed — both fields were dead code.
+        // Removed in v2.7.0 (review finding).
+        self.transparency_stack
+            .push(TransparencyGroupState::new(group));
 
         self
     }
@@ -1064,20 +1061,20 @@ impl GraphicsContext {
 
     /// Create clipping path from current path using non-zero winding rule
     pub fn clip(&mut self) -> &mut Self {
-        self.operations.push(ops::Op::Raw(b"W\n".to_vec()));
+        self.operations.push(ops::Op::ClipNonZero);
         self
     }
 
     /// Create clipping path from current path using even-odd rule
     pub fn clip_even_odd(&mut self) -> &mut Self {
-        self.operations.push(ops::Op::Raw(b"W*\n".to_vec()));
+        self.operations.push(ops::Op::ClipEvenOdd);
         self
     }
 
     /// Create clipping path and stroke it
     pub fn clip_stroke(&mut self) -> &mut Self {
         self.apply_stroke_color();
-        self.operations.push(ops::Op::Raw(b"W S\n".to_vec()));
+        self.operations.push(ops::Op::ClipStroke);
         self
     }
 

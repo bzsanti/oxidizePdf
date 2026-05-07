@@ -573,12 +573,27 @@ impl Page {
         &mut self.graphics_context
     }
 
-    /// Returns the accumulated content-stream operators string for this page.
+    /// Returns the accumulated content-stream operators for this page.
     ///
-    /// Read-only counterpart to [`Page::graphics`]. Useful for inspecting what
-    /// has been drawn without taking a mutable borrow (eg. multi-page tests).
+    /// Read-only counterpart to [`Page::graphics`]. The returned string is
+    /// the union of:
+    /// - operators already flushed to the page-level ordered buffer
+    ///   (`page_ops`) — i.e. graphics ops drawn before any
+    ///   `Page::text()` / `Page::add_text_flow()` switch — and
+    /// - operators still pending in the active `GraphicsContext` tail.
+    ///
+    /// Pre-2.7.0 this returned only the tail; the union is the correct
+    /// answer for callers inspecting "what has been drawn so far"
+    /// because the tail alone is incomplete after the first context
+    /// switch (review finding).
     pub fn graphics_operations(&self) -> String {
-        self.graphics_context.operations()
+        let mut buf = Vec::new();
+        crate::graphics::ops::serialize_ops(&mut buf, &self.page_ops);
+        let tail = self.graphics_context.operations();
+        let mut out =
+            String::from_utf8(buf).expect("serialize_ops emits ASCII content-stream tokens");
+        out.push_str(&tail);
+        out
     }
 
     /// Returns a mutable reference to the text context for adding text.
@@ -906,8 +921,18 @@ impl Page {
     }
 
     pub fn add_text_flow(&mut self, text_flow: &TextFlowContext) {
+        // Route the flow's serialised content into the page-level
+        // ordered buffer so its position respects PDF painter-model
+        // call order across `Page::graphics()` / `Page::text()` /
+        // `Page::add_text_flow()` interleaving (issue #227, residual
+        // gap surfaced by the v2.7.0 review). Drain both context tails
+        // first so the page_ops timeline stays monotonic by call.
+        self.flush_pending_contexts();
         let operations = text_flow.generate_operations();
-        self.content.extend_from_slice(&operations);
+        if !operations.is_empty() {
+            self.page_ops
+                .push(crate::graphics::ops::Op::Raw(operations));
+        }
         // Absorb the text flow's per-font character tracking into the
         // page's graphics-context accumulator so the writer can subset
         // each custom font referenced by the flow (issue #204). Pre-fix
@@ -918,6 +943,22 @@ impl Page {
         // unused-font skip would remove the font entirely.
         self.graphics_context
             .merge_font_usage(text_flow.get_used_characters_by_font());
+    }
+
+    /// Drain whatever ops are currently buffered in the per-context
+    /// `operations` vectors into `page_ops`, preserving call order.
+    /// Used by APIs that emit content directly to `page_ops`
+    /// (`add_text_flow`, `append_raw_content`) so the timeline does
+    /// not skip over pending tails.
+    fn flush_pending_contexts(&mut self) {
+        if !self.graphics_context.ops_slice().is_empty() {
+            let drained = self.graphics_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
+        if !self.text_context.ops_slice().is_empty() {
+            let drained = self.text_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
     }
 
     pub fn add_image(&mut self, name: impl Into<String>, image: Image) {
@@ -1114,7 +1155,15 @@ impl Page {
         data: &[u8],
         font_usage: &HashMap<String, HashSet<char>>,
     ) {
-        self.content.extend_from_slice(data);
+        // Mirror of `add_text_flow`: route through `page_ops` so this
+        // content respects painter-model call order against
+        // `graphics()` / `text()` / `add_text_flow()` calls
+        // (issue #227 residual). Drain pending tails first.
+        self.flush_pending_contexts();
+        if !data.is_empty() {
+            self.page_ops
+                .push(crate::graphics::ops::Op::Raw(data.to_vec()));
+        }
         self.graphics_context.merge_font_usage(font_usage);
     }
 

@@ -136,6 +136,15 @@ pub(crate) enum Op {
     /// `mode Tr` — text rendering mode (`0`..=`7` per ISO 32000-1 §9.3.6)
     SetRenderingMode(u8),
 
+    // ── clipping ──
+    /// `W` — modify current clipping path using the non-zero winding rule.
+    ClipNonZero,
+    /// `W*` — modify current clipping path using the even-odd rule.
+    ClipEvenOdd,
+    /// `W S` — clip then stroke. Used by the `clip_stroke` builder for
+    /// the common pattern of stroking the boundary of the clip region.
+    ClipStroke,
+
     // ── special ──
     /// `% comment` — a PDF comment line. Used for transparency-group
     /// markers; ignored by viewers but useful for diff/debug.
@@ -274,6 +283,7 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
             Op::BeginText => out.extend_from_slice(b"BT\n"),
             Op::EndText => out.extend_from_slice(b"ET\n"),
             Op::SetFont { name, size } => {
+                let size = finite_or_zero(*size);
                 writeln!(out, "/{name} {size} Tf").expect("writing to Vec<u8> never fails");
             }
             Op::SetTextPosition { x, y } => {
@@ -314,6 +324,11 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
             Op::SetRenderingMode(mode) => {
                 writeln!(out, "{mode} Tr").expect("writing to Vec<u8> never fails");
             }
+
+            // ── clipping ──
+            Op::ClipNonZero => out.extend_from_slice(b"W\n"),
+            Op::ClipEvenOdd => out.extend_from_slice(b"W*\n"),
+            Op::ClipStroke => out.extend_from_slice(b"W S\n"),
 
             // ── special ──
             Op::Comment(text) => {

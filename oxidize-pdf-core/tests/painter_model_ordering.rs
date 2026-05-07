@@ -152,3 +152,120 @@ fn pure_text_only_does_not_regress() {
 
     assert!(pos_bt < pos_label && pos_label < pos_et);
 }
+
+/// RED for the residual #227 gap surfaced by the v2.7.0 review:
+/// `Page::add_text_flow` writes to `self.content`, which is appended
+/// AFTER `page_ops` and the context tails in `generate_content_with_page_info`.
+/// A caller that interleaves `graphics()` → `add_text_flow()` → `graphics()`
+/// has the flow rendered LAST regardless of its position in call order.
+/// The fix routes `add_text_flow` through `page_ops` instead.
+#[test]
+fn add_text_flow_between_gfx_preserves_call_order() {
+    use oxidize_pdf::page::Margins;
+    use oxidize_pdf::text::TextFlowContext;
+
+    let mut page = Page::a4();
+    page.graphics()
+        .set_fill_color(Color::Rgb(0.0, 0.0, 1.0))
+        .rect(50.0, 700.0, 100.0, 50.0)
+        .fill();
+
+    let mut flow = TextFlowContext::new(595.0, 842.0, Margins::default());
+    flow.set_font(oxidize_pdf::text::Font::Helvetica, 12.0);
+    flow.at(50.0, 680.0);
+    flow.write_wrapped("FlowLabel").unwrap();
+    page.add_text_flow(&flow);
+
+    page.graphics()
+        .set_fill_color(Color::Rgb(1.0, 0.0, 0.0))
+        .rect(50.0, 640.0, 100.0, 30.0)
+        .fill();
+
+    let mut doc = oxidize_pdf::Document::new();
+    doc.set_compress(false);
+    doc.add_page(page);
+    let bytes = doc.to_bytes().expect("to_bytes must succeed");
+    let s = String::from_utf8_lossy(&bytes);
+
+    let pos_blue = s.find("0.000 0.000 1.000 rg").expect("blue rg must exist");
+    let pos_flow = s.find("(FlowLabel)").expect("FlowLabel literal must exist");
+    let pos_red = s.find("1.000 0.000 0.000 rg").expect("red rg must exist");
+
+    assert!(
+        pos_blue < pos_flow,
+        "blue rg ({pos_blue}) must precede the flow text ({pos_flow}) — content stream:\n{s}"
+    );
+    assert!(
+        pos_flow < pos_red,
+        "flow text ({pos_flow}) must precede the red rg ({pos_red}) — content stream:\n{s}"
+    );
+}
+
+/// RED for the residual #227 gap surfaced by the v2.7.0 review:
+/// `add_text_flow` interleaved with `text()` calls must respect call
+/// order. Pre-fix, `add_text_flow` writes to `self.content` which is
+/// emitted last in `generate_content_with_page_info`, so the flow text
+/// ends up after the page text regardless of the order of calls.
+#[test]
+fn add_text_flow_then_page_text_preserves_call_order() {
+    use oxidize_pdf::page::Margins;
+    use oxidize_pdf::text::TextFlowContext;
+
+    let mut page = Page::a4();
+
+    let mut flow = TextFlowContext::new(595.0, 842.0, Margins::default());
+    flow.set_font(oxidize_pdf::text::Font::Helvetica, 12.0);
+    flow.at(50.0, 700.0);
+    flow.write_wrapped("Flow").unwrap();
+    page.add_text_flow(&flow);
+
+    page.text()
+        .set_font(oxidize_pdf::text::Font::Helvetica, 12.0)
+        .at(50.0, 680.0)
+        .write("PageText")
+        .unwrap();
+
+    let mut doc = oxidize_pdf::Document::new();
+    doc.set_compress(false);
+    doc.add_page(page);
+    let bytes = doc.to_bytes().expect("to_bytes must succeed");
+    let s = String::from_utf8_lossy(&bytes);
+
+    let pos_flow = s.find("(Flow)").expect("(Flow) literal must exist");
+    let pos_text = s.find("(PageText)").expect("(PageText) literal must exist");
+
+    assert!(
+        pos_flow < pos_text,
+        "flow text added first ({pos_flow}) must precede page text ({pos_text}); content stream:\n{s}"
+    );
+}
+
+/// RED for the IR-internal sanitisation gap on `Op::SetFont { size }`
+/// surfaced by the security review: `serialize_ops` formats `size`
+/// directly without `finite_or_zero`. A caller passing `f64::NAN` as
+/// font size emits `/Helvetica NaN Tf`, an invalid PDF token per
+/// ISO 32000-1 §7.3.3.
+#[test]
+fn nan_font_size_sanitised_at_emission_via_text_context() {
+    let mut page = Page::a4();
+    page.text()
+        .set_font(oxidize_pdf::text::Font::Helvetica, f64::NAN)
+        .at(100.0, 700.0)
+        .write("hello")
+        .unwrap();
+
+    let mut doc = oxidize_pdf::Document::new();
+    doc.set_compress(false);
+    doc.add_page(page);
+    let bytes = doc.to_bytes().expect("to_bytes must succeed");
+    let s = String::from_utf8_lossy(&bytes);
+
+    assert!(
+        !s.contains("NaN") && !s.contains("/Helvetica inf"),
+        "NaN/inf must not appear in `Tf` emission, content stream:\n{s}"
+    );
+    assert!(
+        s.contains("/Helvetica 0 Tf") || s.contains("/Helvetica 0.0 Tf"),
+        "NaN font size must clamp to 0 in `Tf`, content stream:\n{s}"
+    );
+}
