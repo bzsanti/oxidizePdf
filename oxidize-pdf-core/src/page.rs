@@ -137,6 +137,14 @@ pub struct Page {
     /// Preserved resources from original PDF (for overlay operations)
     /// Contains fonts, XObjects, ColorSpaces, etc. from parsed pages
     preserved_resources: Option<crate::pdf_objects::Dictionary>,
+    /// Aggregated content-stream operators in caller-defined order
+    /// (issue #227). Each call to [`Page::graphics`] or [`Page::text`]
+    /// flushes the buffer of the *opposite* context here before
+    /// returning the borrow, so PDF painter-model call order is
+    /// preserved across context switches. The remaining tail in
+    /// either context's own buffer is appended at flush time
+    /// (`generate_content_with_page_info`).
+    page_ops: Vec<crate::graphics::ops::Op>,
 }
 
 impl Page {
@@ -164,6 +172,7 @@ impl Page {
             next_mcid: 0,
             marked_content_stack: Vec::new(),
             preserved_resources: None,
+            page_ops: Vec::new(),
         }
     }
 
@@ -550,7 +559,17 @@ impl Page {
     }
 
     /// Returns a mutable reference to the graphics context for drawing shapes.
+    ///
+    /// As of v2.7.0, this also flushes any pending text-context operations
+    /// into the page-level ordered buffer (`page_ops`) so that subsequent
+    /// graphics calls are emitted *after* the text that preceded them in
+    /// call order — preserving the PDF painter model across context
+    /// switches (issue #227).
     pub fn graphics(&mut self) -> &mut GraphicsContext {
+        if !self.text_context.ops_slice().is_empty() {
+            let drained = self.text_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
         &mut self.graphics_context
     }
 
@@ -563,7 +582,16 @@ impl Page {
     }
 
     /// Returns a mutable reference to the text context for adding text.
+    ///
+    /// As of v2.7.0, this also flushes any pending graphics-context
+    /// operations into the page-level ordered buffer (`page_ops`) so
+    /// that subsequent text calls are emitted *after* the graphics that
+    /// preceded them in call order (issue #227).
     pub fn text(&mut self) -> &mut TextContext {
+        if !self.graphics_context.ops_slice().is_empty() {
+            let drained = self.graphics_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
         &mut self.text_context
     }
 
@@ -1344,11 +1372,23 @@ impl Page {
             }
         }
 
-        // Add graphics operations
-        final_content.extend_from_slice(&self.graphics_context.generate_operations()?);
-
-        // Add text operations
-        final_content.extend_from_slice(&self.text_context.generate_operations()?);
+        // Painter-model preservation (issue #227): emit operators in
+        // caller call order, not in fixed `graphics-then-text` category
+        // order.
+        //
+        // `page_ops` already holds the operators flushed at every
+        // context switch (see `Page::graphics` / `Page::text`). Whatever
+        // remains in either context's own buffer is the *tail* — the
+        // operators emitted after the last switch — and is appended in
+        // its natural ordering. Only one of the two tails can be
+        // non-empty at any given time (because the other was drained on
+        // the most recent switch), so the relative order of the two
+        // appends below is irrelevant.
+        crate::graphics::ops::serialize_ops(&mut final_content, &self.page_ops);
+        let gfx_tail = self.graphics_context.generate_operations()?;
+        final_content.extend_from_slice(&gfx_tail);
+        let text_tail = self.text_context.generate_operations()?;
+        final_content.extend_from_slice(&text_tail);
 
         // Add any content that was added via add_text_flow
         // Phase 2.3: Rewrite font references in preserved content if fonts were renamed

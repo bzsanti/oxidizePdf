@@ -368,6 +368,19 @@ impl TextContext {
         Ok(buf)
     }
 
+    /// Take ownership of the accumulated `Op` buffer, leaving an empty
+    /// `Vec` in its place. Mirror of `GraphicsContext::drain_ops` —
+    /// used by `Page` to flush the text buffer into a unified content
+    /// stream on context switch (issue #227).
+    pub(crate) fn drain_ops(&mut self) -> Vec<crate::graphics::ops::Op> {
+        std::mem::take(&mut self.operations)
+    }
+
+    /// Read-only access to the operation list.
+    pub(crate) fn ops_slice(&self) -> &[crate::graphics::ops::Op] {
+        &self.operations
+    }
+
     /// Appends a raw PDF operation to the text context
     ///
     /// This is used internally for marked content operators (BDC/EMC) and other

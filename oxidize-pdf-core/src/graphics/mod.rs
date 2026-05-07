@@ -615,6 +615,25 @@ impl GraphicsContext {
         Ok(buf)
     }
 
+    /// Take ownership of the accumulated `Op` buffer, leaving an empty
+    /// `Vec` in its place. Used by `Page` to flush the graphics buffer
+    /// into a unified content stream when the caller switches contexts
+    /// (issue #227 — preserves PDF painter-model call order across
+    /// `Page::graphics()` / `Page::text()` switches).
+    ///
+    /// State fields (`current_color`, `line_width`, …) are unaffected so
+    /// the next chain of calls on this context resumes with the same
+    /// graphics state.
+    pub(crate) fn drain_ops(&mut self) -> Vec<ops::Op> {
+        std::mem::take(&mut self.operations)
+    }
+
+    /// Read-only access to the operation list (used by `Page` to peek
+    /// at whether a flush is required without taking the buffer).
+    pub(crate) fn ops_slice(&self) -> &[ops::Op] {
+        &self.operations
+    }
+
     /// Check if transparency is used (opacity != 1.0)
     pub fn uses_transparency(&self) -> bool {
         self.fill_opacity < 1.0 || self.stroke_opacity < 1.0
