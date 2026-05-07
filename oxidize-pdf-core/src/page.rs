@@ -137,6 +137,14 @@ pub struct Page {
     /// Preserved resources from original PDF (for overlay operations)
     /// Contains fonts, XObjects, ColorSpaces, etc. from parsed pages
     preserved_resources: Option<crate::pdf_objects::Dictionary>,
+    /// Aggregated content-stream operators in caller-defined order
+    /// (issue #227). Each call to [`Page::graphics`] or [`Page::text`]
+    /// flushes the buffer of the *opposite* context here before
+    /// returning the borrow, so PDF painter-model call order is
+    /// preserved across context switches. The remaining tail in
+    /// either context's own buffer is appended at flush time
+    /// (`generate_content_with_page_info`).
+    page_ops: Vec<crate::graphics::ops::Op>,
 }
 
 impl Page {
@@ -164,6 +172,7 @@ impl Page {
             next_mcid: 0,
             marked_content_stack: Vec::new(),
             preserved_resources: None,
+            page_ops: Vec::new(),
         }
     }
 
@@ -550,20 +559,54 @@ impl Page {
     }
 
     /// Returns a mutable reference to the graphics context for drawing shapes.
+    ///
+    /// As of v2.7.0, this also flushes any pending text-context operations
+    /// into the page-level ordered buffer (`page_ops`) so that subsequent
+    /// graphics calls are emitted *after* the text that preceded them in
+    /// call order — preserving the PDF painter model across context
+    /// switches (issue #227).
     pub fn graphics(&mut self) -> &mut GraphicsContext {
+        if !self.text_context.ops_slice().is_empty() {
+            let drained = self.text_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
         &mut self.graphics_context
     }
 
-    /// Returns the accumulated content-stream operators string for this page.
+    /// Returns the accumulated content-stream operators for this page.
     ///
-    /// Read-only counterpart to [`Page::graphics`]. Useful for inspecting what
-    /// has been drawn without taking a mutable borrow (eg. multi-page tests).
-    pub fn graphics_operations(&self) -> &str {
-        self.graphics_context.operations()
+    /// Read-only counterpart to [`Page::graphics`]. The returned string is
+    /// the union of:
+    /// - operators already flushed to the page-level ordered buffer
+    ///   (`page_ops`) — i.e. graphics ops drawn before any
+    ///   `Page::text()` / `Page::add_text_flow()` switch — and
+    /// - operators still pending in the active `GraphicsContext` tail.
+    ///
+    /// Pre-2.7.0 this returned only the tail; the union is the correct
+    /// answer for callers inspecting "what has been drawn so far"
+    /// because the tail alone is incomplete after the first context
+    /// switch (review finding).
+    pub fn graphics_operations(&self) -> String {
+        let mut buf = Vec::new();
+        crate::graphics::ops::serialize_ops(&mut buf, &self.page_ops);
+        let tail = self.graphics_context.operations();
+        let mut out =
+            String::from_utf8(buf).expect("serialize_ops emits ASCII content-stream tokens");
+        out.push_str(&tail);
+        out
     }
 
     /// Returns a mutable reference to the text context for adding text.
+    ///
+    /// As of v2.7.0, this also flushes any pending graphics-context
+    /// operations into the page-level ordered buffer (`page_ops`) so
+    /// that subsequent text calls are emitted *after* the graphics that
+    /// preceded them in call order (issue #227).
     pub fn text(&mut self) -> &mut TextContext {
+        if !self.graphics_context.ops_slice().is_empty() {
+            let drained = self.graphics_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
         &mut self.text_context
     }
 
@@ -837,9 +880,14 @@ impl Page {
         // Issue #216: inherit the page-level text state (font, size, and
         // fill colour) so callers that rely on `set_font` / `set_text_color`
         // before invoking flow helpers (notably `text_flow_at` in the Python
-        // and .NET wrappers) get the formatting they configured. An explicit
-        // `ctx.set_font(...)` / `ctx.set_fill_color(...)` afterwards still
-        // overrides the inherited values.
+        // and .NET wrappers) get the formatting they configured.
+        //
+        // Issue #222 (Phase 6 of the v2.7.0 IR refactor): the remaining
+        // seven text-state parameters (character spacing, word spacing,
+        // horizontal scaling, leading, text rise, rendering mode, stroke
+        // colour) are now propagated as well. An explicit setter call on
+        // the returned `TextFlowContext` still overrides the inherited
+        // value, so this is a strict superset of the previous behaviour.
         let mut ctx = TextFlowContext::new(self.width, self.height, self.margins.clone());
         ctx.set_font(
             self.text_context.current_font().clone(),
@@ -848,12 +896,43 @@ impl Page {
         if let Some(color) = self.text_context.fill_color() {
             ctx.set_fill_color(color);
         }
+        if let Some(spacing) = self.text_context.character_spacing() {
+            ctx.set_character_spacing(spacing);
+        }
+        if let Some(spacing) = self.text_context.word_spacing() {
+            ctx.set_word_spacing(spacing);
+        }
+        if let Some(scale) = self.text_context.horizontal_scaling() {
+            ctx.set_horizontal_scaling(scale);
+        }
+        if let Some(leading) = self.text_context.leading() {
+            ctx.set_leading(leading);
+        }
+        if let Some(rise) = self.text_context.text_rise() {
+            ctx.set_text_rise(rise);
+        }
+        if let Some(mode) = self.text_context.rendering_mode() {
+            ctx.set_rendering_mode(mode as u8);
+        }
+        if let Some(color) = self.text_context.stroke_color() {
+            ctx.set_stroke_color(color);
+        }
         ctx
     }
 
     pub fn add_text_flow(&mut self, text_flow: &TextFlowContext) {
+        // Route the flow's serialised content into the page-level
+        // ordered buffer so its position respects PDF painter-model
+        // call order across `Page::graphics()` / `Page::text()` /
+        // `Page::add_text_flow()` interleaving (issue #227, residual
+        // gap surfaced by the v2.7.0 review). Drain both context tails
+        // first so the page_ops timeline stays monotonic by call.
+        self.flush_pending_contexts();
         let operations = text_flow.generate_operations();
-        self.content.extend_from_slice(&operations);
+        if !operations.is_empty() {
+            self.page_ops
+                .push(crate::graphics::ops::Op::Raw(operations));
+        }
         // Absorb the text flow's per-font character tracking into the
         // page's graphics-context accumulator so the writer can subset
         // each custom font referenced by the flow (issue #204). Pre-fix
@@ -864,6 +943,22 @@ impl Page {
         // unused-font skip would remove the font entirely.
         self.graphics_context
             .merge_font_usage(text_flow.get_used_characters_by_font());
+    }
+
+    /// Drain whatever ops are currently buffered in the per-context
+    /// `operations` vectors into `page_ops`, preserving call order.
+    /// Used by APIs that emit content directly to `page_ops`
+    /// (`add_text_flow`, `append_raw_content`) so the timeline does
+    /// not skip over pending tails.
+    fn flush_pending_contexts(&mut self) {
+        if !self.graphics_context.ops_slice().is_empty() {
+            let drained = self.graphics_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
+        if !self.text_context.ops_slice().is_empty() {
+            let drained = self.text_context.drain_ops();
+            self.page_ops.extend(drained);
+        }
     }
 
     pub fn add_image(&mut self, name: impl Into<String>, image: Image) {
@@ -1060,7 +1155,15 @@ impl Page {
         data: &[u8],
         font_usage: &HashMap<String, HashSet<char>>,
     ) {
-        self.content.extend_from_slice(data);
+        // Mirror of `add_text_flow`: route through `page_ops` so this
+        // content respects painter-model call order against
+        // `graphics()` / `text()` / `add_text_flow()` calls
+        // (issue #227 residual). Drain pending tails first.
+        self.flush_pending_contexts();
+        if !data.is_empty() {
+            self.page_ops
+                .push(crate::graphics::ops::Op::Raw(data.to_vec()));
+        }
         self.graphics_context.merge_font_usage(font_usage);
     }
 
@@ -1344,11 +1447,23 @@ impl Page {
             }
         }
 
-        // Add graphics operations
-        final_content.extend_from_slice(&self.graphics_context.generate_operations()?);
-
-        // Add text operations
-        final_content.extend_from_slice(&self.text_context.generate_operations()?);
+        // Painter-model preservation (issue #227): emit operators in
+        // caller call order, not in fixed `graphics-then-text` category
+        // order.
+        //
+        // `page_ops` already holds the operators flushed at every
+        // context switch (see `Page::graphics` / `Page::text`). Whatever
+        // remains in either context's own buffer is the *tail* — the
+        // operators emitted after the last switch — and is appended in
+        // its natural ordering. Only one of the two tails can be
+        // non-empty at any given time (because the other was drained on
+        // the most recent switch), so the relative order of the two
+        // appends below is irrelevant.
+        crate::graphics::ops::serialize_ops(&mut final_content, &self.page_ops);
+        let gfx_tail = self.graphics_context.generate_operations()?;
+        final_content.extend_from_slice(&gfx_tail);
+        let text_tail = self.text_context.generate_operations()?;
+        final_content.extend_from_slice(&text_tail);
 
         // Add any content that was added via add_text_flow
         // Phase 2.3: Rewrite font references in preserved content if fonts were renamed

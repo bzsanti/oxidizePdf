@@ -13,7 +13,8 @@ fn test_draw_image_basic() -> Result<()> {
 
     let ops = gc.get_operations();
     assert!(ops.contains("q\n"));
-    assert!(ops.contains("150.00 0 0 100.00 100.00 200.00 cm"));
+    // v2.7.0 IR: cm matrix slots emitted at `{:.2}` consistently. See CHANGELOG.
+    assert!(ops.contains("150.00 0.00 0.00 100.00 100.00 200.00 cm"));
     assert!(ops.contains("/Image1 Do"));
     assert!(ops.contains("Q\n"));
 
@@ -132,8 +133,9 @@ fn test_image_transformation_matrix() -> Result<()> {
 
     let ops = gc.get_operations();
 
-    // Check transformation matrix is correct
-    assert!(ops.contains("234.56 0 0 345.67 123.45 678.90 cm"));
+    // Check transformation matrix is correct.
+    // v2.7.0 IR: cm matrix slots emitted at `{:.2}` consistently. See CHANGELOG.
+    assert!(ops.contains("234.56 0.00 0.00 345.67 123.45 678.90 cm"));
 
     Ok(())
 }

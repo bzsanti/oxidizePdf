@@ -118,28 +118,23 @@ impl TransparencyGroup {
     }
 }
 
-/// Stack entry for managing nested transparency groups
+/// Stack entry for managing nested transparency groups.
+///
+/// `saved_state` and `content` were removed in v2.7.0 — both fields
+/// were filled at every `begin_transparency_group` call but never
+/// read by any consumer. Snapshotting the entire serialised content
+/// stream on every entry was a non-trivial cost (allocates a fresh
+/// `Vec<u8>` proportional to the page's content size) for no benefit.
 #[derive(Debug, Clone)]
 pub(crate) struct TransparencyGroupState {
     /// The transparency group configuration
     pub group: TransparencyGroup,
-
-    /// Saved graphics state before entering the group
-    pub saved_state: Vec<u8>,
-
-    /// Content stream for the group
-    #[allow(dead_code)]
-    pub content: Vec<u8>,
 }
 
 impl TransparencyGroupState {
     /// Create a new transparency group state
     pub fn new(group: TransparencyGroup) -> Self {
-        Self {
-            group,
-            saved_state: Vec::new(),
-            content: Vec::new(),
-        }
+        Self { group }
     }
 }
 
