@@ -126,6 +126,15 @@ pub(crate) enum Op {
     SetWordSpacing(f64),
     /// `value Tc`
     SetCharSpacing(f64),
+    /// `value Tz` — horizontal scaling, expressed as a percentage
+    /// (`100.0` is "no scaling"). Caller passes the percentage value.
+    SetHorizontalScaling(f64),
+    /// `value TL` — text leading
+    SetLeading(f64),
+    /// `value Ts` — text rise
+    SetTextRise(f64),
+    /// `mode Tr` — text rendering mode (`0`..=`7` per ISO 32000-1 §9.3.6)
+    SetRenderingMode(u8),
 
     // ── special ──
     /// `% comment` — a PDF comment line. Used for transparency-group
@@ -289,6 +298,21 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
             Op::SetCharSpacing(value) => {
                 let v = finite_or_zero(*value);
                 writeln!(out, "{v:.2} Tc").expect("writing to Vec<u8> never fails");
+            }
+            Op::SetHorizontalScaling(value) => {
+                let v = finite_or_zero(*value);
+                writeln!(out, "{v:.2} Tz").expect("writing to Vec<u8> never fails");
+            }
+            Op::SetLeading(value) => {
+                let v = finite_or_zero(*value);
+                writeln!(out, "{v:.2} TL").expect("writing to Vec<u8> never fails");
+            }
+            Op::SetTextRise(value) => {
+                let v = finite_or_zero(*value);
+                writeln!(out, "{v:.2} Ts").expect("writing to Vec<u8> never fails");
+            }
+            Op::SetRenderingMode(mode) => {
+                writeln!(out, "{mode} Tr").expect("writing to Vec<u8> never fails");
             }
 
             // ── special ──
