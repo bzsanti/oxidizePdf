@@ -865,9 +865,14 @@ impl Page {
         // Issue #216: inherit the page-level text state (font, size, and
         // fill colour) so callers that rely on `set_font` / `set_text_color`
         // before invoking flow helpers (notably `text_flow_at` in the Python
-        // and .NET wrappers) get the formatting they configured. An explicit
-        // `ctx.set_font(...)` / `ctx.set_fill_color(...)` afterwards still
-        // overrides the inherited values.
+        // and .NET wrappers) get the formatting they configured.
+        //
+        // Issue #222 (Phase 6 of the v2.7.0 IR refactor): the remaining
+        // seven text-state parameters (character spacing, word spacing,
+        // horizontal scaling, leading, text rise, rendering mode, stroke
+        // colour) are now propagated as well. An explicit setter call on
+        // the returned `TextFlowContext` still overrides the inherited
+        // value, so this is a strict superset of the previous behaviour.
         let mut ctx = TextFlowContext::new(self.width, self.height, self.margins.clone());
         ctx.set_font(
             self.text_context.current_font().clone(),
@@ -875,6 +880,27 @@ impl Page {
         );
         if let Some(color) = self.text_context.fill_color() {
             ctx.set_fill_color(color);
+        }
+        if let Some(spacing) = self.text_context.character_spacing() {
+            ctx.set_character_spacing(spacing);
+        }
+        if let Some(spacing) = self.text_context.word_spacing() {
+            ctx.set_word_spacing(spacing);
+        }
+        if let Some(scale) = self.text_context.horizontal_scaling() {
+            ctx.set_horizontal_scaling(scale);
+        }
+        if let Some(leading) = self.text_context.leading() {
+            ctx.set_leading(leading);
+        }
+        if let Some(rise) = self.text_context.text_rise() {
+            ctx.set_text_rise(rise);
+        }
+        if let Some(mode) = self.text_context.rendering_mode() {
+            ctx.set_rendering_mode(mode as u8);
+        }
+        if let Some(color) = self.text_context.stroke_color() {
+            ctx.set_stroke_color(color);
         }
         ctx
     }

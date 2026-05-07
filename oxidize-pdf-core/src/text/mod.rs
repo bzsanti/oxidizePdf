@@ -58,7 +58,9 @@ use crate::error::Result;
 use crate::Color;
 use std::collections::{HashMap, HashSet};
 
-/// Text rendering mode for PDF text operations
+/// Text rendering mode for PDF text operations.
+///
+/// Re-exported via `oxidize_pdf::text::TextRenderingMode`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextRenderingMode {
     /// Fill text (default)
@@ -187,6 +189,32 @@ impl TextContext {
     /// into derived `TextFlowContext`s (issue #216).
     pub(crate) fn fill_color(&self) -> Option<Color> {
         self.fill_color
+    }
+
+    /// Accessors for the remaining text-state parameters (issue #222 —
+    /// Phase 6 of the v2.7.0 IR refactor). Used by `Page::text_flow` to
+    /// propagate the configured page-level state into derived
+    /// `TextFlowContext`s. Mirror of `fill_color()` above.
+    pub(crate) fn character_spacing(&self) -> Option<f64> {
+        self.character_spacing
+    }
+    pub(crate) fn word_spacing(&self) -> Option<f64> {
+        self.word_spacing
+    }
+    pub(crate) fn horizontal_scaling(&self) -> Option<f64> {
+        self.horizontal_scaling
+    }
+    pub(crate) fn leading(&self) -> Option<f64> {
+        self.leading
+    }
+    pub(crate) fn text_rise(&self) -> Option<f64> {
+        self.text_rise
+    }
+    pub(crate) fn rendering_mode(&self) -> Option<TextRenderingMode> {
+        self.rendering_mode
+    }
+    pub(crate) fn stroke_color(&self) -> Option<Color> {
+        self.stroke_color
     }
 
     pub fn at(&mut self, x: f64, y: f64) -> &mut Self {

@@ -30,6 +30,17 @@ pub struct TextFlowContext {
     /// `Tj`. `None` keeps the previous behaviour (whatever fill colour
     /// the surrounding graphics state is already carrying).
     fill_color: Option<Color>,
+    /// Remaining text-state parameters propagated from `TextContext`
+    /// (issue #222 — Phase 6 of the v2.7.0 IR refactor). When set,
+    /// `write_wrapped` emits the corresponding operator inside each
+    /// `BT … ET` block. `None` keeps the surrounding graphics state.
+    character_spacing: Option<f64>,
+    word_spacing: Option<f64>,
+    horizontal_scaling: Option<f64>,
+    leading: Option<f64>,
+    text_rise: Option<f64>,
+    rendering_mode: Option<u8>,
+    stroke_color: Option<Color>,
     /// Characters drawn so far, bucketed by active font name (issue
     /// #204). Consumed by `Page::add_text_flow` to merge into the
     /// page's graphics-context tracking so the writer can subset each
@@ -51,6 +62,13 @@ impl TextFlowContext {
             page_height,
             margins,
             fill_color: None,
+            character_spacing: None,
+            word_spacing: None,
+            horizontal_scaling: None,
+            leading: None,
+            text_rise: None,
+            rendering_mode: None,
+            stroke_color: None,
             used_characters_by_font: HashMap::new(),
         }
     }
@@ -86,6 +104,52 @@ impl TextFlowContext {
     /// `BT … ET` block.
     pub fn set_fill_color(&mut self, color: Color) -> &mut Self {
         self.fill_color = Some(color);
+        self
+    }
+
+    /// Setters for the remaining text-state parameters, mirroring
+    /// `TextContext`. Closes the propagation gap reported in issue #222.
+    /// All apply on the next `BT … ET` block emitted by `write_wrapped`.
+    pub fn set_character_spacing(&mut self, spacing: f64) -> &mut Self {
+        self.character_spacing = Some(spacing);
+        self
+    }
+
+    pub fn set_word_spacing(&mut self, spacing: f64) -> &mut Self {
+        self.word_spacing = Some(spacing);
+        self
+    }
+
+    /// Set horizontal scaling. The argument is the ratio (e.g. `0.85`
+    /// for 85 %); it is converted to the PDF `Tz` percentage at
+    /// emission time. Matches the contract documented on
+    /// `TextContext::set_horizontal_scaling`.
+    pub fn set_horizontal_scaling(&mut self, scale: f64) -> &mut Self {
+        self.horizontal_scaling = Some(scale);
+        self
+    }
+
+    pub fn set_leading(&mut self, leading: f64) -> &mut Self {
+        self.leading = Some(leading);
+        self
+    }
+
+    pub fn set_text_rise(&mut self, rise: f64) -> &mut Self {
+        self.text_rise = Some(rise);
+        self
+    }
+
+    /// Set the text rendering mode (`0`..=`7` per ISO 32000-1 §9.3.6).
+    /// The argument is taken as a `u8` rather than the typed
+    /// `TextRenderingMode` enum to avoid an extra public dependency
+    /// from `TextFlowContext` on the parent module.
+    pub fn set_rendering_mode(&mut self, mode: u8) -> &mut Self {
+        self.rendering_mode = Some(mode);
+        self
+    }
+
+    pub fn set_stroke_color(&mut self, color: Color) -> &mut Self {
+        self.stroke_color = Some(color);
         self
     }
 
@@ -178,15 +242,47 @@ impl TextFlowContext {
                 size: self.font_size,
             });
 
-            // Apply non-stroking fill colour if one was inherited from the
-            // page-level text state (issue #216) or explicitly configured
-            // via `set_fill_color`. PDF spec ISO 32000-1 §8.6.8 allows
-            // colour-setting operators inside a text object; they take
-            // effect for the show-text operators that follow. The IR
-            // variant routes through `write_fill_color_bytes` so the same
-            // NaN-sanitising helper (issues #220 + #221) is preserved.
+            // Apply text-state parameters propagated from `TextContext`
+            // (issue #222 — Phase 6 of the v2.7.0 IR refactor).
+            // These mirror `TextContext::apply_text_state_parameters`
+            // but live inside the per-line `BT … ET` block of the flow
+            // emitter. PDF spec ISO 32000-1 §8.6.8 / §9.3 allow these
+            // operators inside a text object; they take effect for the
+            // `Tj` that follows.
+            if let Some(spacing) = self.character_spacing {
+                self.operations.push(Op::SetCharSpacing(spacing));
+            }
+            if let Some(spacing) = self.word_spacing {
+                self.operations.push(Op::SetWordSpacing(spacing));
+            }
+            if let Some(scale) = self.horizontal_scaling {
+                // The Tz operator takes a percentage; the setter accepts
+                // a 0.0–1.0 ratio (matching `TextContext`), so multiply
+                // by 100 at emission.
+                self.operations
+                    .push(Op::SetHorizontalScaling(scale * 100.0));
+            }
+            if let Some(leading) = self.leading {
+                self.operations.push(Op::SetLeading(leading));
+            }
+            if let Some(rise) = self.text_rise {
+                self.operations.push(Op::SetTextRise(rise));
+            }
+            if let Some(mode) = self.rendering_mode {
+                self.operations.push(Op::SetRenderingMode(mode));
+            }
+
+            // Apply non-stroking fill colour (issue #216) and stroking
+            // colour (issue #222) if one was inherited from the
+            // page-level text state or explicitly configured via the
+            // setters. The IR variants route through
+            // `write_fill_color_bytes` / `write_stroke_color_bytes` so
+            // the same NaN-sanitising helpers (issues #220 + #221) apply.
             if let Some(color) = self.fill_color {
                 self.operations.push(Op::SetFillColor(color));
+            }
+            if let Some(color) = self.stroke_color {
+                self.operations.push(Op::SetStrokeColor(color));
             }
 
             self.operations.push(Op::SetTextPosition {
