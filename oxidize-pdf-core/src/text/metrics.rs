@@ -234,11 +234,17 @@ pub fn measure_text_with(
 /// rate-limited diagnostic warning. For new code, prefer `measure_text_with`
 /// or use `Document::new_page_a4()` so the measurement context carries a
 /// `FontMetricsStore` automatically.
+#[inline]
 pub fn measure_text(text: &str, font: &Font, font_size: f64) -> f64 {
     measure_text_with(text, font, font_size, None)
 }
 
-/// Measure the width of a single character with optional Document scope.
+/// Measure the width of a single character in a given font and size.
+///
+/// Variant of `measure_char` that consults a `FontMetricsStore` for
+/// `Font::Custom` lookups before falling back to the legacy global
+/// registry. Takes the font by value (matching the existing
+/// `measure_char` signature, which predates this scope-aware variant).
 pub fn measure_char_with(
     ch: char,
     font: Font,
@@ -253,6 +259,7 @@ pub fn measure_char_with(
 }
 
 /// Back-compat shim — see `measure_char_with`.
+#[inline]
 pub fn measure_char(ch: char, font: Font, font_size: f64) -> f64 {
     measure_char_with(ch, font, font_size, None)
 }
