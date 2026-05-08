@@ -1,10 +1,10 @@
 use crate::text::Font;
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// Character width information for standard PDF fonts
 /// All widths are in 1/1000 of a unit (font size 1.0)
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FontMetrics {
     widths: HashMap<char, u16>,
     default_width: u16,
@@ -35,6 +35,71 @@ impl FontMetrics {
 
     pub fn char_width(&self, ch: char) -> u16 {
         self.widths.get(&ch).copied().unwrap_or(self.default_width)
+    }
+}
+
+/// Per-Document store of custom font metrics.
+///
+/// Cheap to clone (Arc-backed). The lifetime of registered metrics is bound
+/// to the lifetime of the owning Document — when the Document is dropped,
+/// the metrics are freed (assuming no other Arc clones survive).
+///
+/// This type was introduced in v2.8.0 to replace the process-wide
+/// `CUSTOM_FONT_METRICS` lazy_static registry, which leaked across
+/// Document lifetimes (issue #230).
+#[derive(Clone, Debug)]
+pub struct FontMetricsStore {
+    inner: Arc<RwLock<HashMap<String, Arc<FontMetrics>>>>,
+}
+
+impl FontMetricsStore {
+    /// Create a new empty store.
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Register or replace metrics for `font_name`. Last-writer-wins on the
+    /// same name. Concurrent calls into the same store are serialised by the
+    /// internal RwLock; concurrent calls into the same Document are
+    /// prevented by `Document::add_font_from_bytes` taking `&mut self`.
+    pub fn register(&self, font_name: impl Into<String>, metrics: FontMetrics) {
+        let name = font_name.into();
+        match self.inner.write() {
+            Ok(mut map) => {
+                map.insert(name, Arc::new(metrics));
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "FontMetricsStore lock is poisoned; could not register '{}': {}",
+                    name,
+                    e
+                );
+            }
+        }
+    }
+
+    /// Look up metrics by name. Returns `None` on miss; no side effects.
+    pub fn get(&self, font_name: &str) -> Option<Arc<FontMetrics>> {
+        let map = self.inner.read().ok()?;
+        map.get(font_name).cloned()
+    }
+
+    /// Number of registered fonts. Diagnostic / test introspection.
+    pub fn len(&self) -> usize {
+        self.inner.read().map(|m| m.len()).unwrap_or(0)
+    }
+
+    /// Whether the store contains no fonts.
+    pub fn is_empty(&self) -> bool {
+        self.inner.read().map(|m| m.is_empty()).unwrap_or(true)
+    }
+}
+
+impl Default for FontMetricsStore {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -830,5 +895,55 @@ mod tests {
     fn test_split_into_words_mixed_whitespace() {
         let words = split_into_words("A B  C   D");
         assert_eq!(words, vec!["A", " ", "B", "  ", "C", "   ", "D"]);
+    }
+
+    #[test]
+    fn test_font_metrics_store_register_and_get() {
+        let store = FontMetricsStore::new();
+        assert!(store.is_empty());
+        assert_eq!(store.len(), 0);
+
+        let metrics = FontMetrics::new(500).with_widths(&[('A', 700), ('B', 720)]);
+        store.register("MyFont", metrics);
+
+        assert_eq!(store.len(), 1);
+        assert!(!store.is_empty());
+
+        let got = store.get("MyFont").expect("font should be present");
+        assert_eq!(got.char_width('A'), 700);
+        assert_eq!(got.char_width('B'), 720);
+        assert_eq!(got.char_width('Z'), 500); // default fallback
+    }
+
+    #[test]
+    fn test_font_metrics_store_overwrite_same_name() {
+        let store = FontMetricsStore::new();
+        store.register("X", FontMetrics::new(500).with_widths(&[('A', 600)]));
+        store.register("X", FontMetrics::new(500).with_widths(&[('A', 800)]));
+
+        let got = store.get("X").unwrap();
+        assert_eq!(got.char_width('A'), 800); // last writer wins
+        assert_eq!(store.len(), 1);
+    }
+
+    #[test]
+    fn test_font_metrics_store_clone_shares_state() {
+        let store_a = FontMetricsStore::new();
+        let store_b = store_a.clone();
+
+        store_a.register("Shared", FontMetrics::new(400));
+        assert_eq!(store_b.len(), 1, "clone must share the underlying registry");
+        assert!(store_b.get("Shared").is_some());
+
+        store_b.register("AlsoShared", FontMetrics::new(400));
+        assert_eq!(store_a.len(), 2);
+    }
+
+    #[test]
+    fn test_font_metrics_store_get_miss_returns_none_no_side_effects() {
+        let store = FontMetricsStore::new();
+        assert!(store.get("Unknown").is_none());
+        assert_eq!(store.len(), 0); // no auto-register
+        assert!(store.is_empty());
     }
 }
