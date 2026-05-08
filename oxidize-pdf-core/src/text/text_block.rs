@@ -34,7 +34,7 @@ pub fn compute_line_widths(text: &str, font: &Font, font_size: f64, max_width: f
 /// Scope-aware variant of `compute_line_widths`. Consults `store` (if Some)
 /// before the legacy global registry for `Font::Custom` lookups via the
 /// underlying `measure_text_with`.
-pub fn compute_line_widths_with(
+pub(crate) fn compute_line_widths_with(
     text: &str,
     font: &Font,
     font_size: f64,
@@ -185,6 +185,53 @@ mod tests {
         assert!(
             (m.width - 24.0).abs() < 0.01,
             "expected scope-aware width 24, got {}",
+            m.width
+        );
+    }
+
+    #[test]
+    fn test_measure_text_block_with_uses_store_across_wrap() {
+        use crate::text::metrics::{FontMetrics, FontMetricsStore};
+        let unique = format!("MeasureBlockWrapTask5_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        // 'A' = 'B' = 1000 units → "AB" word width = 2000 units → 24.0 at 12pt.
+        // Space ' ' = 1000 → 12.0 at 12pt.
+        //
+        // `split_into_words("AB AB")` yields three tokens: ["AB", " ", "AB"].
+        // With max_width = 30.0 and per-store widths:
+        //   token 1 "AB"  → current = 24.0               (fits)
+        //   token 2 " "   → 24.0 + 12.0 = 36.0 > 30.0  → push 24.0, current = 12.0
+        //   token 3 "AB"  → 12.0 + 24.0 = 36.0 > 30.0  → push 12.0, current = 24.0
+        //   end            → push 24.0
+        // → 3 lines: [24.0, 12.0, 24.0], width = 24.0.
+        // This exercises all three iterations of the wrap loop, proving the store
+        // is correctly threaded into compute_line_widths_with on every pass.
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 1000), ('B', 1000), (' ', 1000)]),
+        );
+
+        // max_width = 30.0 fits the first "AB" (24.0) but neither the space+AB
+        // continuation nor the trailing "AB" fits, forcing two wraps (three lines).
+        let m = measure_text_block_with(
+            "AB AB",
+            &Font::Custom(unique.clone()),
+            12.0,
+            1.2,
+            30.0,
+            Some(&store),
+        );
+
+        assert_eq!(
+            m.line_count, 3,
+            "split_into_words yields 3 tokens (\"AB\", \" \", \"AB\") and max_width=30 \
+             forces a wrap after each; expected 3 lines"
+        );
+        // Block width is the max of [24.0, 12.0, 24.0] = 24.0, derived from
+        // per-store widths. If the store were not threaded the widths would differ.
+        assert!(
+            (m.width - 24.0).abs() < 0.01,
+            "wrapped block width must come from per-store widths (24.0); got {}",
             m.width
         );
     }
