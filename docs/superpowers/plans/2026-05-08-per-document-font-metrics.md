@@ -539,10 +539,11 @@ fn test_measure_text_with_uses_document_scope() {
 #[test]
 fn test_measure_text_back_compat_shim_passes_none() {
     let unique = format!("BackCompatTask4_{}", std::process::id());
-    // Without store, with empty global → default 500.
+    // Without store, with empty global → default 'A' from create_default_custom_metrics
+    // ('A' = 667; default_width = 556 only applies to chars not explicitly mapped).
     let width = measure_text("AAAA", &Font::Custom(unique), 12.0);
-    // 4 * 500 / 1000 * 12 = 24
-    assert!((width - 24.0).abs() < 0.01, "got {}", width);
+    // 4 chars × 667 / 1000 × 12 = 32.016
+    assert!((width - 32.016).abs() < 0.01, "got {}", width);
 }
 
 #[test]
