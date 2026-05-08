@@ -1187,7 +1187,10 @@ mod tests {
         use crate::text::metrics::{FontMetrics, FontMetricsStore};
         let unique = format!("FlowThreadTask6_{}", std::process::id());
         let store = FontMetricsStore::new();
-        // 'A' = 1000 → 12pt → 12.0 per char.
+        // 'A' = 1000 units → (1000/1000) * 12.0 = 12.0 pts per char.
+        // "AA" = 24.0 pts total line width with the per-store widths.
+        // Without the store, the default fallback maps 'A' = 667 →
+        // (667/1000) * 12.0 ≈ 8.004 pts per char → "AA" ≈ 16.008 pts.
         store.register(
             unique.clone(),
             FontMetrics::new(500).with_widths(&[('A', 1000)]),
@@ -1200,15 +1203,44 @@ mod tests {
             Some(store),
         );
         ctx.set_font(Font::Custom(unique), 12.0);
+        ctx.set_alignment(TextAlign::Center);
         ctx.write_wrapped("AA").unwrap();
 
-        // The flow should have measured "AA" using the per-store widths and
-        // produced a positive width on the line. The exact public way to
-        // observe this depends on the flow API; this test asserts that the
-        // generated_operations() output contains a Tj with the expected text
-        // and that the flow advanced.
-        let ops = ctx.generate_operations();
-        assert!(!ops.is_empty(), "flow must emit content for 'AA'");
+        // With center alignment the emitted `Td x` is:
+        //   x = margins.left + (available_width - line_width) / 2
+        // available_width = 595 - 72 - 72 = 451 pts (A4, default margins)
+        //
+        // With store    : line_width = 24.0  → x = 72 + (451 - 24.0)  / 2 = 285.5
+        // Without store : line_width ≈ 16.008 → x ≈ 72 + (451 - 16.008) / 2 ≈ 289.496
+        //
+        // The two values are ~4 pts apart, far above the 0.01 tolerance.
+        // A regression where the store is silently dropped produces x ≈ 289.5
+        // and the assertion fails.
+        let margins = Margins::default();
+        let available_width = 595.0_f64 - margins.left - margins.right; // 451.0
+        let expected_line_width = 24.0_f64; // 'A'=1000 units × 2 chars × 12 pt / 1000
+        let expected_td_x = margins.left + (available_width - expected_line_width) / 2.0;
+
+        let ops_bytes = ctx.generate_operations();
+        let ops_str =
+            String::from_utf8(ops_bytes).expect("generated operations must be valid UTF-8");
+
+        // Extract the Td x-coordinate from the first `<x> <y> Td` line.
+        let td_x: f64 = ops_str
+            .lines()
+            .find(|l| l.ends_with(" Td"))
+            .and_then(|l| l.split_whitespace().next())
+            .and_then(|tok| tok.parse().ok())
+            .expect("operations must contain a Td operator");
+
+        assert!(
+            (td_x - expected_td_x).abs() < 0.01,
+            "Td x must reflect per-store line width 24.0 pts \
+             (expected {:.2}, got {:.2}); if the store was dropped the \
+             fallback width produces x ≈ 289.50",
+            expected_td_x,
+            td_x
+        );
     }
 
     /// RED for Phase 3 of the v2.7.0 IR refactor: with the legacy `String`
