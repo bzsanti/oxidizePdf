@@ -207,29 +207,54 @@ lazy_static::lazy_static! {
     };
 }
 
-/// Measure the width of a text string in a given font and size
-pub fn measure_text(text: &str, font: &Font, font_size: f64) -> f64 {
+/// Measure the width of a text string in a given font and size.
+///
+/// Variant of `measure_text` that consults a `FontMetricsStore` for
+/// `Font::Custom` lookups before falling back to the legacy global
+/// registry. Used internally by `TextFlowContext`, `TextContext`, and
+/// `measure_text_block_with` to scope measurement to a single Document.
+pub fn measure_text_with(
+    text: &str,
+    font: &Font,
+    font_size: f64,
+    store: Option<&FontMetricsStore>,
+) -> f64 {
     if font.is_symbolic() {
-        // Symbol and ZapfDingbats need special handling
         return text.len() as f64 * font_size * 0.6;
     }
-
-    let metrics = lookup(font, None);
-
+    let metrics = lookup(font, store);
     let width_units: u32 = text.chars().map(|ch| metrics.char_width(ch) as u32).sum();
-
     (width_units as f64 / 1000.0) * font_size
 }
 
-/// Measure the width of a single character
-pub fn measure_char(ch: char, font: Font, font_size: f64) -> f64 {
+/// Measure the width of a text string in a given font and size.
+///
+/// Back-compat shim. Delegates to `measure_text_with(text, font, font_size, None)`.
+/// Custom fonts not registered globally fall back to default widths plus a
+/// rate-limited diagnostic warning. For new code, prefer `measure_text_with`
+/// or use `Document::new_page_a4()` so the measurement context carries a
+/// `FontMetricsStore` automatically.
+pub fn measure_text(text: &str, font: &Font, font_size: f64) -> f64 {
+    measure_text_with(text, font, font_size, None)
+}
+
+/// Measure the width of a single character with optional Document scope.
+pub fn measure_char_with(
+    ch: char,
+    font: Font,
+    font_size: f64,
+    store: Option<&FontMetricsStore>,
+) -> f64 {
     if font.is_symbolic() {
         return font_size * 0.6;
     }
-
-    let metrics = lookup(&font, None);
-
+    let metrics = lookup(&font, store);
     (metrics.char_width(ch) as f64 / 1000.0) * font_size
+}
+
+/// Back-compat shim — see `measure_char_with`.
+pub fn measure_char(ch: char, font: Font, font_size: f64) -> f64 {
+    measure_char_with(ch, font, font_size, None)
 }
 
 /// Split text into words, preserving spaces
@@ -1130,5 +1155,44 @@ mod tests {
         // No global, no store. Should default+warn.
         let resolved = lookup(&Font::Custom(unique), None);
         assert_eq!(resolved.char_width('A'), 667); // create_default_custom_metrics maps 'A' = 667
+    }
+
+    // ── Task 4 tests ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_measure_text_with_uses_document_scope() {
+        let unique = format!("MeasureWithTask4_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        store.register(
+            unique.clone(),
+            // Each char (A through F) at 1000 units; 'A' x 4 chars = 48.0 at 12pt.
+            FontMetrics::new(500).with_widths(&[('A', 1000)]),
+        );
+
+        let width = measure_text_with("AAAA", &Font::Custom(unique), 12.0, Some(&store));
+        // 4 * 1000 / 1000 * 12 = 48
+        assert!((width - 48.0).abs() < 0.01, "got {}", width);
+    }
+
+    #[test]
+    fn test_measure_text_back_compat_shim_passes_none() {
+        let unique = format!("BackCompatTask4_{}", std::process::id());
+        // Without store, with empty global → default 'A' from create_default_custom_metrics
+        // ('A' = 667). 4 chars × 667 / 1000 × 12 = 32.016
+        let width = measure_text("AAAA", &Font::Custom(unique), 12.0);
+        assert!((width - 32.016).abs() < 0.01, "got {}", width);
+    }
+
+    #[test]
+    fn test_measure_char_with_uses_document_scope() {
+        let unique = format!("MeasureCharWithTask4_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('Z', 800)]),
+        );
+        let width = measure_char_with('Z', Font::Custom(unique), 10.0, Some(&store));
+        // 800 / 1000 * 10 = 8
+        assert!((width - 8.0).abs() < 0.01, "got {}", width);
     }
 }
