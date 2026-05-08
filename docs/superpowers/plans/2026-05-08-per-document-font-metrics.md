@@ -668,8 +668,7 @@ Append to the existing `mod tests` block in `oxidize-pdf-core/src/text/text_bloc
 ```rust
 #[test]
 fn test_measure_text_block_with_uses_document_scope() {
-    use crate::text::metrics::FontMetricsStore;
-    use crate::text::FontMetrics;
+    use crate::text::metrics::{FontMetrics, FontMetricsStore};
     let unique = format!("MeasureBlockTask5_{}", std::process::id());
     let store = FontMetricsStore::new();
     // Make every char width = 1000 (i.e., 1.0em per char). Word "AB" = 24 at 12pt.
@@ -808,8 +807,7 @@ Append to the `mod tests` block in `oxidize-pdf-core/src/text/flow.rs`:
 ```rust
 #[test]
 fn test_text_flow_context_threads_metrics_store() {
-    use crate::text::metrics::FontMetricsStore;
-    use crate::text::FontMetrics;
+    use crate::text::metrics::{FontMetrics, FontMetricsStore};
     let unique = format!("FlowThreadTask6_{}", std::process::id());
     let store = FontMetricsStore::new();
     // 'A' = 1000 → 12pt → 12.0 per char.
@@ -953,7 +951,7 @@ Append to the test module in `oxidize-pdf-core/src/text/mod.rs` (find or create 
 ```rust
 #[test]
 fn test_text_context_threads_metrics_store() {
-    use crate::text::metrics::FontMetricsStore;
+    use crate::text::metrics::{FontMetrics, FontMetricsStore};
     let store = FontMetricsStore::new();
     let ctx = TextContext::with_metrics_store(Some(store.clone()));
     // The store handle round-trips.
@@ -1531,9 +1529,8 @@ Create `oxidize-pdf-core/tests/deprecation_warning_test.rs`:
 //! documents the v2.8 deprecation contract for issue #230.
 
 use oxidize_pdf::text::metrics::{
-    get_custom_font_metrics, register_custom_font_metrics,
+    get_custom_font_metrics, register_custom_font_metrics, FontMetrics,
 };
-use oxidize_pdf::text::FontMetrics;
 
 #[allow(deprecated)]
 #[test]
@@ -1650,12 +1647,14 @@ Locate the `pub use metrics::{...}` line and extend it:
 ```rust
 pub use metrics::{
     measure_char, measure_char_with, measure_text, measure_text_with,
-    split_into_words, FontMetrics, FontMetricsStore,
+    split_into_words, FontMetricsStore,
 };
 pub use text_block::{
     compute_line_widths, measure_text_block, measure_text_block_with, TextBlockMetrics,
 };
 ```
+
+**Important — naming collision avoided.** Do **not** add `FontMetrics` to the `pub use metrics::{...}` line. The existing `pub use font_manager::{..., FontMetrics, ...}` in this file already exposes a different `FontMetrics` (the font-embedding descriptor, `Vec<f64>` widths) at the path `oxidize_pdf::text::FontMetrics`. The character-width `FontMetrics` defined in `text::metrics` stays accessible to internal call sites and external callers via the explicit module path `oxidize_pdf::text::metrics::FontMetrics`. Re-exporting it at the module level would cause an `ambiguous_glob_reexports`-style conflict and silently shadow the embedding type. The `FontMetricsStore` type is unambiguous and is the only addition to the module-level re-exports for v2.8.0.
 
 (Compare against the existing `pub use` lines and add only the missing entries.)
 
@@ -1715,8 +1714,14 @@ Create `oxidize-pdf-core/tests/font_metrics_per_document_test.rs`:
 //! coverage; synthetic FontMetrics are reserved for behavioural unit tests
 //! inside metrics.rs.
 
-use oxidize_pdf::text::{measure_text_with, Font, FontMetrics};
+use oxidize_pdf::text::metrics::FontMetrics;
+use oxidize_pdf::text::{measure_text_with, Font};
 use oxidize_pdf::Document;
+
+// NOTE: `FontMetrics` is imported via the explicit module path
+// `text::metrics::FontMetrics` to avoid a name collision — the
+// `oxidize_pdf::text::FontMetrics` re-export resolves to a different type
+// (`text::font_manager::FontMetrics`, the font-embedding descriptor).
 
 const DEJAVU_SANS_BYTES: &[u8] =
     include_bytes!("fixtures/multilingual/DejaVuSans.ttf");
@@ -2126,7 +2131,10 @@ Create `oxidize-pdf-core/tests/font_metrics_per_document_render_test.rs`:
 //! values computed directly from the source TTF for the document the page
 //! was bound to.
 
-use oxidize_pdf::text::{Font, FontMetrics};
+use oxidize_pdf::text::Font;
+// FontMetrics imported only if needed via the explicit module path:
+// `oxidize_pdf::text::metrics::FontMetrics` (see Task 14 note on the name
+// collision with `text::font_manager::FontMetrics`).
 use oxidize_pdf::{Document, Page};
 
 const DEJAVU_SANS_BYTES: &[u8] =
@@ -2281,7 +2289,8 @@ Create `oxidize-pdf-core/benches/font_metrics_lookup.rs`:
 //! pre-230 --bench font_metrics_lookup` on the parent commit.
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use oxidize_pdf::text::{measure_text, measure_text_with, Font, FontMetrics, FontMetricsStore};
+use oxidize_pdf::text::metrics::FontMetrics;
+use oxidize_pdf::text::{measure_text, measure_text_with, Font, FontMetricsStore};
 use std::hint::black_box;
 
 fn bench_standard(c: &mut Criterion) {
