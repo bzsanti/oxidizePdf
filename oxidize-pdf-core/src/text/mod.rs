@@ -39,7 +39,10 @@ pub use list::{
     BulletStyle, ListElement, ListItem, ListOptions, ListStyle as ListStyleEnum, OrderedList,
     OrderedListStyle, UnorderedList,
 };
-pub use metrics::{measure_char, measure_text, split_into_words};
+pub use metrics::{
+    measure_char, measure_char_with, measure_text, measure_text_with, split_into_words,
+    FontMetricsStore,
+};
 pub use ocr::{
     CharacterConfidence, CorrectionCandidate, CorrectionReason, CorrectionSuggestion,
     CorrectionType, FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError,
@@ -48,7 +51,9 @@ pub use ocr::{
 };
 pub use plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor, PlainTextResult};
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
-pub use text_block::{compute_line_widths, measure_text_block, TextBlockMetrics};
+pub use text_block::{
+    compute_line_widths, measure_text_block, measure_text_block_with, TextBlockMetrics,
+};
 pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 
 #[cfg(feature = "ocr-tesseract")]
