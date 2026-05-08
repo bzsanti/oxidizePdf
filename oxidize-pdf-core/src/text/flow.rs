@@ -81,13 +81,9 @@ impl TextFlowContext {
 
     /// Create a `TextFlowContext` bound to a per-Document `FontMetricsStore`
     /// (issue #230, v2.8.0). Internal use only — external callers should use
-    /// `Document::new_page_a4()` and `page.text_flow()` (Task 8 wires this).
+    /// `Document::new_page_a4()` and `page.text_flow()`.
     ///
     /// When `store` is `None`, behaviour is identical to `TextFlowContext::new`.
-    // Task 8 will wire Page::text_flow() to call this; until then it is only
-    // exercised by the test below. Suppress the lint so clippy stays clean
-    // across the whole feature branch.
-    #[allow(dead_code)]
     pub(crate) fn with_metrics_store(
         page_width: f64,
         page_height: f64,

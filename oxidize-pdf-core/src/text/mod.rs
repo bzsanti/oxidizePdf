@@ -113,6 +113,8 @@ pub struct TextContext {
     used_characters_by_font: HashMap<String, HashSet<char>>,
     /// Per-document font metrics store threaded from `Page` (issue #230).
     /// `None` means the built-in heuristic width tables are used.
+    /// Non-test callers arrive in Task 9-11 (Document integration).
+    #[allow(dead_code)]
     pub(crate) font_metrics_store: Option<FontMetricsStore>,
 }
 
@@ -146,8 +148,8 @@ impl TextContext {
     /// Create a `TextContext` bound to a per-document `FontMetricsStore`
     /// (issue #230). `None` is equivalent to `TextContext::new()`.
     ///
-    /// `pub(crate)` — wired by `Page::text()` in Task 8; the test gate below
-    /// keeps the lint quiet until then.
+    /// `pub(crate)` — wired by `Page::*_with_metrics()` constructors (Task 8).
+    /// Non-test callers for `Page::*_with_metrics` arrive in Tasks 9-11.
     #[allow(dead_code)]
     pub(crate) fn with_metrics_store(store: Option<FontMetricsStore>) -> Self {
         let mut ctx = Self::default();
