@@ -111,6 +111,9 @@ pub struct TextContext {
     // don't need subsetting. Extended by `write` whenever the active
     // font is `Font::Custom`.
     used_characters_by_font: HashMap<String, HashSet<char>>,
+    /// Per-document font metrics store threaded from `Page` (issue #230).
+    /// `None` means the built-in heuristic width tables are used.
+    pub(crate) font_metrics_store: Option<FontMetricsStore>,
 }
 
 impl Default for TextContext {
@@ -136,7 +139,20 @@ impl TextContext {
             fill_color: None,
             stroke_color: None,
             used_characters_by_font: HashMap::new(),
+            font_metrics_store: None,
         }
+    }
+
+    /// Create a `TextContext` bound to a per-document `FontMetricsStore`
+    /// (issue #230). `None` is equivalent to `TextContext::new()`.
+    ///
+    /// `pub(crate)` — wired by `Page::text()` in Task 8; the test gate below
+    /// keeps the lint quiet until then.
+    #[allow(dead_code)]
+    pub(crate) fn with_metrics_store(store: Option<FontMetricsStore>) -> Self {
+        let mut ctx = Self::default();
+        ctx.font_metrics_store = store;
+        ctx
     }
 
     /// Record `text` as drawn with the currently-active font, bucketed
@@ -152,6 +168,12 @@ impl TextContext {
             .entry(name)
             .or_default()
             .extend(text.chars());
+    }
+
+    /// Introspection helper for Task 7 tests (issue #230).
+    #[cfg(test)]
+    pub(crate) fn font_metrics_store_for_test(&self) -> Option<&FontMetricsStore> {
+        self.font_metrics_store.as_ref()
     }
 
     /// Get the characters used in this text context (merged across all
@@ -965,6 +987,22 @@ mod tests {
         assert!(
             ops.contains("0.00 Ts\n"),
             "NaN text rise must emit `0.00 Ts`, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn test_text_context_threads_metrics_store() {
+        use crate::text::metrics::{FontMetrics, FontMetricsStore};
+        let store = FontMetricsStore::new();
+        let ctx = TextContext::with_metrics_store(Some(store.clone()));
+        // The store handle round-trips.
+        assert!(ctx.font_metrics_store_for_test().is_some());
+        // Cloning shares state.
+        store.register("X", FontMetrics::new(400));
+        assert_eq!(
+            ctx.font_metrics_store_for_test().unwrap().len(),
+            1,
+            "TextContext must hold a clone that shares the underlying registry"
         );
     }
 }
