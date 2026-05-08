@@ -316,9 +316,10 @@ fn get_font_metrics(font: &Font) -> FontMetrics {
     }
 }
 
-/// Internal accessor for the legacy global registry. Wraps the deprecated
-/// `get_custom_font_metrics` so the lookup path does not itself emit a
-/// deprecation warning at every call site.
+/// Internal accessor for the legacy global registry. Wraps
+/// `get_custom_font_metrics` (which Task 12 of #230 will mark `#[deprecated]`)
+/// so the lookup path does not itself produce a deprecation warning at
+/// every internal call site once Task 12 lands.
 fn get_custom_font_metrics_internal(font_name: &str) -> Option<FontMetrics> {
     if let Ok(custom_metrics) = CUSTOM_FONT_METRICS.read() {
         custom_metrics.get(font_name).cloned()
@@ -863,6 +864,8 @@ mod tests {
         assert!((width - expected).abs() < 0.01);
 
         // Must NOT be registered as a side effect
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
         #[allow(deprecated)]
         let metrics = get_custom_font_metrics(&unique);
         assert!(
@@ -945,11 +948,33 @@ mod tests {
     // ── Task 2 tests ────────────────────────────────────────────────────────
 
     /// Clear the warned-set between tests that assert warn-once behaviour.
-    #[allow(dead_code)]
     fn reset_warned_unknown_fonts() {
         if let Ok(mut set) = WARNED_UNKNOWN_FONTS.write() {
             set.clear();
         }
+    }
+
+    #[test]
+    fn test_warn_unknown_font_rate_limited_once_per_name() {
+        let unique = format!("RateLimitTask2_{}", std::process::id());
+        // Isolate the warned-set from any state planted by earlier tests in this
+        // process. Helper is intentionally test-only.
+        reset_warned_unknown_fonts();
+
+        warn_unknown_custom_font_once(&unique);
+        warn_unknown_custom_font_once(&unique);
+        warn_unknown_custom_font_once(&unique);
+
+        let set = WARNED_UNKNOWN_FONTS.read().expect("lock");
+        assert!(
+            set.contains(&unique),
+            "name should be in the warned set after first call"
+        );
+        let count = set.iter().filter(|n| *n == &unique).count();
+        assert_eq!(
+            count, 1,
+            "warn_unknown_custom_font_once must rate-limit to one entry per name"
+        );
     }
 
     #[test]
@@ -959,6 +984,8 @@ mod tests {
         let unique = format!("UnknownNameTask2_{}", std::process::id());
         let _ = measure_text("hello", &Font::Custom(unique.clone()), 12.0);
         // Lookup must not have planted the name in the global registry.
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
         #[allow(deprecated)]
         let leaked = get_custom_font_metrics(&unique);
         assert!(
@@ -972,11 +999,8 @@ mod tests {
     fn test_unknown_custom_font_returns_default_widths() {
         let unique = format!("UnknownReturnTask2_{}", std::process::id());
         let width = measure_text("AAAA", &Font::Custom(unique), 12.0);
-        // 4 chars × 500 default width / 1000 × 12 pt = 24.0
-        // Note: default_custom_metrics has 'A' = 667, not 500.
-        // The plan comment says "500 default width" but the actual default is 667 for 'A'.
-        // The default_width field is 556 (for unmapped chars). 'A' is explicitly mapped to 667.
-        // Recalculate: 4 × 667 / 1000 × 12 = 32.016
+        // create_default_custom_metrics maps 'A' = 667; default_width = 556 for
+        // unmapped chars. Test uses "AAAA": 4 × 667 / 1000 × 12 = 32.016.
         assert!(
             (width - 32.016).abs() < 0.01,
             "unknown custom fonts must use the default metrics (A=667), got {}",
