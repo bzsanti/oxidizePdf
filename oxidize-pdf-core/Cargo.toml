@@ -550,3 +550,7 @@ harness = false
 [[bench]]
 name = "pipeline_granular_benchmark"
 harness = false
+
+[[bench]]
+name = "font_metrics_lookup"
+harness = false
