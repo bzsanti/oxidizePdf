@@ -4,6 +4,7 @@ use crate::fonts::type0_parsing::{detect_type0_font, resolve_type0_hierarchy};
 use crate::forms::Widget;
 use crate::graphics::{GraphicsContext, Image};
 use crate::objects::{Array, Dictionary, Object, ObjectReference};
+use crate::text::metrics::FontMetricsStore;
 use crate::text::{HeaderFooter, Table, TextContext, TextFlowContext};
 use std::collections::{HashMap, HashSet};
 
@@ -145,6 +146,11 @@ pub struct Page {
     /// either context's own buffer is appended at flush time
     /// (`generate_content_with_page_info`).
     page_ops: Vec<crate::graphics::ops::Op>,
+    /// Optional per-document font metrics store (issue #230 / v2.8.0).
+    /// `None` on pages created via `Page::a4()` / `letter()` / `new()`.
+    /// Populated by `Page::a4_with_metrics` and friends, or injected by
+    /// `Document::add_page()` in Task 11.
+    pub(crate) font_metrics_store: Option<FontMetricsStore>,
 }
 
 impl Page {
@@ -173,6 +179,7 @@ impl Page {
             marked_content_stack: Vec::new(),
             preserved_resources: None,
             page_ops: Vec::new(),
+            font_metrics_store: None,
         }
     }
 
@@ -548,6 +555,49 @@ impl Page {
         Self::new(792.0, 612.0)
     }
 
+    /// Returns the `FontMetricsStore` bound to this page, if any (issue #230).
+    ///
+    /// Pages constructed via `Document::new_page_*()` carry the Document's
+    /// store; pages constructed via `Page::a4()` / `Page::letter()` /
+    /// `Page::new()` are bound at `Document::add_page` time. Returns `None`
+    /// for pages that have not yet been attached to a Document.
+    pub fn font_metrics_store(&self) -> Option<&FontMetricsStore> {
+        self.font_metrics_store.as_ref()
+    }
+
+    /// Creates a new A4 page pre-loaded with a `FontMetricsStore` (issue #230).
+    ///
+    /// `Page::a4()` has `font_metrics_store: None`; this variant is used by
+    /// `Document::new_page_a4()` (Task 10) to bind the document-level store.
+    /// Non-test callers arrive in Tasks 9-11 (Document integration).
+    #[allow(dead_code)]
+    pub(crate) fn a4_with_metrics(store: FontMetricsStore) -> Self {
+        let mut p = Self::a4();
+        p.font_metrics_store = Some(store.clone());
+        p.text_context = TextContext::with_metrics_store(Some(store));
+        p
+    }
+
+    /// Creates a new US Letter page pre-loaded with a `FontMetricsStore` (issue #230).
+    /// Non-test callers arrive in Tasks 9-11 (Document integration).
+    #[allow(dead_code)]
+    pub(crate) fn letter_with_metrics(store: FontMetricsStore) -> Self {
+        let mut p = Self::letter();
+        p.font_metrics_store = Some(store.clone());
+        p.text_context = TextContext::with_metrics_store(Some(store));
+        p
+    }
+
+    /// Creates a new page of custom size pre-loaded with a `FontMetricsStore` (issue #230).
+    /// Non-test callers arrive in Tasks 9-11 (Document integration).
+    #[allow(dead_code)]
+    pub(crate) fn new_with_metrics(width: f64, height: f64, store: FontMetricsStore) -> Self {
+        let mut p = Self::new(width, height);
+        p.font_metrics_store = Some(store.clone());
+        p.text_context = TextContext::with_metrics_store(Some(store));
+        p
+    }
+
     /// Creates a new US Legal page (612 x 1008 points).
     pub fn legal() -> Self {
         Self::new(612.0, 1008.0)
@@ -888,7 +938,12 @@ impl Page {
         // colour) are now propagated as well. An explicit setter call on
         // the returned `TextFlowContext` still overrides the inherited
         // value, so this is a strict superset of the previous behaviour.
-        let mut ctx = TextFlowContext::new(self.width, self.height, self.margins.clone());
+        let mut ctx = TextFlowContext::with_metrics_store(
+            self.width,
+            self.height,
+            self.margins.clone(),
+            self.font_metrics_store.clone(),
+        );
         ctx.set_font(
             self.text_context.current_font().clone(),
             self.text_context.font_size(),
@@ -2658,6 +2713,37 @@ mod tests {
             // Note: We can't check for specific text content as it may be compressed
             // The test validates that headers/footers with date placeholders don't cause errors
         }
+    }
+
+    // ── Task 8: FontMetricsStore threading through Page ──────────────────────
+
+    #[test]
+    fn test_page_a4_default_has_no_metrics_store() {
+        let page = Page::a4();
+        assert!(
+            page.font_metrics_store.is_none(),
+            "Page::a4() must not bind a store; binding happens via Document"
+        );
+    }
+
+    #[test]
+    fn test_page_a4_with_metrics_carries_store() {
+        use crate::text::metrics::FontMetricsStore;
+        let store = FontMetricsStore::new();
+        let page = Page::a4_with_metrics(store);
+        assert!(page.font_metrics_store.is_some());
+    }
+
+    #[test]
+    fn test_page_text_flow_propagates_store() {
+        use crate::text::metrics::FontMetricsStore;
+        let store = FontMetricsStore::new();
+        let page = Page::a4_with_metrics(store);
+        let flow = page.text_flow();
+        assert!(
+            flow.font_metrics_store.is_some(),
+            "page.text_flow() must propagate the store handle"
+        );
     }
 }
 
