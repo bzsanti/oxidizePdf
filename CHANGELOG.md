@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`measure_text_with(text, &Font, size, Option<&FontMetricsStore>)`**,
   **`measure_char_with(...)`**, **`measure_text_block_with(...)`** —
   scope-aware variants of the existing measurement helpers.
+- **`ComboBox::with_default_appearance(font, size, color)`** — typed `/DA` builder mirroring `TextField::with_default_appearance`. `FormManager::add_combo_box` now propagates the typed `DefaultAppearance` to `FormField.default_appearance`, so `Document::fill_field` on a `Choice` field can dispatch to the Type0/CID custom-font path. Without this, fill_field on a ComboBox fell through to the Helvetica + WinAnsi path and returned `PdfError::EncodingError` for any non-WinAnsi value (addresses #212).
+- **`ListBoxAppearance::generate_appearance_with_font(widget, value, state, custom_font)`** — Type0/CID-aware appearance generator, matching the existing pattern on `TextFieldAppearance` and `ComboBoxAppearance`. Dispatches on `(font.is_custom(), custom_font)` to emit hex-CID Tj operators and a Type0 placeholder resource entry for custom fonts; the legacy `AppearanceGenerator::generate_appearance` now delegates to it with `custom_font = None` (addresses #212).
 
 ### Changed
 
@@ -59,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and cross-document name collisions in long-running services.
 - Side fix: the read path no longer plants default metrics in the
   global registry on unknown `Font::Custom(name)` lookups.
+- **`PushButtonAppearance` with `Font::Custom(_)`** unconditionally emitted `/Subtype /Type1` in the AP `/Resources/Font` dict and called `emit_tj_for_builtin` on the label (which rejects custom fonts with `PdfError::EncodingError`), so push buttons with CJK / non-WinAnsi fonts could not be generated at all. The resource dict now emits a `/Subtype /Type0` placeholder for custom fonts (rewritten to an indirect Reference at write time by `rewrite_ap_stream_font_resources`), and the label-render block is skipped when the font is custom — the hex-CID Tj path for push button labels remains a follow-up because the generator does not yet take a `custom_font` parameter (addresses #212).
+- **ComboBox `/AP/N` for `Font::Custom`** now correctly emits hex-CID Tj content and a Type0 resource placeholder via `Document::fill_field`. This completes the v2.6.0 partial fix (PR #215) which addressed encoding for built-in WinAnsi values; the architectural Type0/CID path now works end-to-end for `FieldType::Text` and `FieldType::Choice` (addresses #212).
 
 ## [2.7.0] - 2026-05-07
 

@@ -591,6 +591,30 @@ impl Document {
     /// * `PdfError::FieldNotFound` if no field with the given `name` exists
     ///   in the `FormManager`.
     ///
+    /// # Custom Type0/CID font dispatch (issue #212)
+    ///
+    /// Both `FieldType::Text` (TextField) and `FieldType::Choice` (ComboBox)
+    /// honour the field's typed `/DA` and dispatch to the correct emission
+    /// path:
+    ///
+    /// - `Font::Custom(name)` with the font registered via
+    ///   `add_font_from_bytes` → Type0/CID path. Hex-CID `<HHHH> Tj` in the
+    ///   appearance content stream and a `/Subtype /Type0` /
+    ///   `/Encoding /Identity-H` resource entry that the writer rewrites to
+    ///   an indirect Reference to the document-level CIDFontType0 object.
+    /// - Built-in font (Helvetica, Times, Courier) → WinAnsi-strict path.
+    ///   Returns `PdfError::EncodingError` for any character outside the
+    ///   WinAnsi repertoire.
+    /// - No `/DA` → Helvetica fallback, same WinAnsi-strict path.
+    ///
+    /// To use a custom font with a ComboBox, call
+    /// `ComboBox::with_default_appearance(Font::Custom("name"), size, color)`
+    /// before passing it to `FormManager::add_combo_box`. The same
+    /// constructor on `TextField` covers text fields. For PushButton labels
+    /// with custom fonts the resource dict is correct (Type0 placeholder)
+    /// but the label-render block is currently skipped; full hex-CID Tj for
+    /// push button labels remains a follow-up.
+    ///
     /// # Path chosen (v2.5.6 Task 3)
     ///
     /// This method operates on an in-memory `Document` that was BUILT in

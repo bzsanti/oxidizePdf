@@ -204,7 +204,18 @@ impl FormManager {
         widget: Widget,
         options: Option<FieldOptions>,
     ) -> Result<ObjectReference> {
+        // Preserve the typed /DA on the FormField so `Document::fill_field`
+        // can pick the right font without re-parsing the PDF string in
+        // `field_dict["DA"]`. Same pattern as `add_text_field` (issue #212).
+        let typed_da = combo.default_appearance.clone();
         let mut field_dict = combo.to_dict();
+
+        // If a typed DA is present and no explicit options.default_appearance
+        // overrides it, render the typed DA to its PDF string form so the
+        // serialised dict carries `/DA` for viewers that read it directly.
+        if let Some(ref da) = typed_da {
+            field_dict.set("DA", Object::String(da.to_da_string()));
+        }
 
         // Apply options
         if let Some(opts) = options {
@@ -218,6 +229,7 @@ impl FormManager {
 
         let field_name = combo.name;
         let mut form_field = FormField::new(field_dict);
+        form_field.default_appearance = typed_da;
         form_field.add_widget(widget);
 
         // Create object reference
