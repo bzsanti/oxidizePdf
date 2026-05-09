@@ -139,7 +139,17 @@ impl Document {
     }
 
     /// Adds a page to the document.
-    pub fn add_page(&mut self, page: Page) {
+    pub fn add_page(&mut self, mut page: Page) {
+        // Inject the Document's metrics store into the page if it does not
+        // already carry one. Pages constructed via Document::new_page_*()
+        // already carry a store and are skipped (preserves bindings to
+        // other Documents if a page is moved). Pages constructed via
+        // Page::a4() / Page::letter() / Page::new() get the Document store
+        // here so their text_flow / text contexts can resolve custom fonts
+        // via Document scope when measurements happen after add_page.
+        if page.font_metrics_store.is_none() {
+            page.font_metrics_store = Some(self.font_metrics.clone());
+        }
         // Merge the page's per-font character accumulators into the
         // document-wide map (issue #204 — each font gets subsetted with
         // only its own characters later at write time).
@@ -2611,5 +2621,52 @@ mod tests {
             .register("S", crate::text::metrics::FontMetrics::new(400));
         assert!(doc.new_page_letter().font_metrics_store.is_some());
         assert!(doc.new_page(400.0, 600.0).font_metrics_store.is_some());
+    }
+
+    #[test]
+    fn test_add_page_injects_store_into_legacy_page() {
+        let mut doc = Document::new();
+        doc.font_metrics
+            .register("Inj", crate::text::metrics::FontMetrics::new(400));
+
+        let page = Page::a4(); // legacy ctor → store = None
+        assert!(page.font_metrics_store.is_none());
+
+        doc.add_page(page);
+
+        let stored_page = doc.pages.last().expect("page added");
+        assert!(
+            stored_page.font_metrics_store.is_some(),
+            "add_page must inject the Document store when page has none"
+        );
+        assert!(
+            stored_page
+                .font_metrics_store
+                .as_ref()
+                .unwrap()
+                .get("Inj")
+                .is_some(),
+            "injected store must share state with the Document"
+        );
+    }
+
+    #[test]
+    fn test_add_page_does_not_overwrite_existing_store() {
+        let doc_a = Document::new();
+        doc_a
+            .font_metrics
+            .register("FromA", crate::text::metrics::FontMetrics::new(400));
+        let page = doc_a.new_page_a4(); // bound to doc_a's store
+
+        let mut doc_b = Document::new();
+        doc_b
+            .font_metrics
+            .register("FromB", crate::text::metrics::FontMetrics::new(500));
+        doc_b.add_page(page);
+
+        let stored_page = doc_b.pages.last().expect("page added");
+        let store = stored_page.font_metrics_store.as_ref().unwrap();
+        assert!(store.get("FromA").is_some(), "page kept doc_a's store");
+        assert!(store.get("FromB").is_none(), "doc_b did not overwrite");
     }
 }
