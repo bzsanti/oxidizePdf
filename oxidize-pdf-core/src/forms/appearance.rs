@@ -891,8 +891,12 @@ impl AppearanceGenerator for PushButtonAppearance {
             }
         }
 
-        // Draw label text
-        if !self.label.is_empty() {
+        // Draw label text — skipped for custom Type0 fonts because the
+        // hex-CID Tj path requires the font's glyph mapping, which is not
+        // yet a parameter of this generator (see issue #212 follow-up).
+        // The resource dict below still emits the Type0 placeholder so the
+        // writer can rewrite the indirect reference correctly.
+        if !self.label.is_empty() && !self.font.is_custom() {
             crate::graphics::color::write_fill_color(&mut content, self.text_color);
 
             content.push_str("BT\n");
@@ -922,13 +926,27 @@ impl AppearanceGenerator for PushButtonAppearance {
         // Create resources dictionary
         let mut resources = Dictionary::new();
 
-        // Add font resource
+        // Font resource — Type0 placeholder for custom fonts so the writer's
+        // rewrite_ap_stream_font_resources can substitute an indirect
+        // reference to the document-level CIDFontType0 object. Built-in
+        // Type1 fonts continue to embed the inline Type1 dict (the writer
+        // does not rewrite Type1 inline dicts; viewers resolve base-14 by
+        // name).
         let mut font_dict = Dictionary::new();
-        let mut font_res = Dictionary::new();
-        font_res.set("Type", Object::Name("Font".to_string()));
-        font_res.set("Subtype", Object::Name("Type1".to_string()));
-        font_res.set("BaseFont", Object::Name(self.font.pdf_name()));
-        font_dict.set(self.font.pdf_name(), Object::Dictionary(font_res));
+        if self.font.is_custom() {
+            let mut placeholder = Dictionary::new();
+            placeholder.set("Type", Object::Name("Font".to_string()));
+            placeholder.set("Subtype", Object::Name("Type0".to_string()));
+            placeholder.set("BaseFont", Object::Name(self.font.pdf_name()));
+            placeholder.set("Encoding", Object::Name("Identity-H".to_string()));
+            font_dict.set(self.font.pdf_name(), Object::Dictionary(placeholder));
+        } else {
+            let mut font_res = Dictionary::new();
+            font_res.set("Type", Object::Name("Font".to_string()));
+            font_res.set("Subtype", Object::Name("Type1".to_string()));
+            font_res.set("BaseFont", Object::Name(self.font.pdf_name()));
+            font_dict.set(self.font.pdf_name(), Object::Dictionary(font_res));
+        }
         resources.set("Font", Object::Dictionary(font_dict));
 
         let stream = AppearanceStream::new(content.into_bytes(), [0.0, 0.0, width, height])
@@ -1123,13 +1141,42 @@ impl AppearanceGenerator for ListBoxAppearance {
     fn generate_appearance(
         &self,
         widget: &Widget,
+        value: Option<&str>,
+        state: AppearanceState,
+    ) -> Result<AppearanceStream> {
+        Ok(self
+            .generate_appearance_with_font(widget, value, state, None)?
+            .stream)
+    }
+}
+
+impl ListBoxAppearance {
+    /// Type0/CID-aware appearance generator for ListBox fields.
+    ///
+    /// Mirrors [`TextFieldAppearance::generate_appearance_with_font`] and
+    /// [`ComboBoxAppearance::generate_appearance_with_font`]: dispatches on
+    /// `self.font.is_custom()` × the optional `custom_font` parameter to emit
+    /// hex-CID Tj for Type0/CID fonts, an explicit error when the font name
+    /// is custom but the resolved font object is missing, and the legacy
+    /// WinAnsi-strict path for built-in Type1 fonts.
+    ///
+    /// The `/Resources/Font/<name>` entry follows the same pattern: a Type0
+    /// placeholder when `is_custom()` (rewritten by the writer to an indirect
+    /// reference at serialisation time, see
+    /// `writer::pdf_writer::rewrite_ap_stream_font_resources`), and an inline
+    /// Type1 dict otherwise. Used in support of issue #212.
+    pub fn generate_appearance_with_font(
+        &self,
+        widget: &Widget,
         _value: Option<&str>,
         _state: AppearanceState,
-    ) -> Result<AppearanceStream> {
+        custom_font: Option<&crate::fonts::Font>,
+    ) -> Result<FieldAppearanceResult> {
         let width = widget.rect.upper_right.x - widget.rect.lower_left.x;
         let height = widget.rect.upper_right.y - widget.rect.lower_left.y;
 
         let mut content = String::new();
+        let mut used_chars_per_font: HashMap<String, HashSet<char>> = HashMap::new();
 
         // Draw background
         crate::graphics::color::write_fill_color(&mut content, Color::white());
@@ -1175,14 +1222,54 @@ impl AppearanceGenerator for ListBoxAppearance {
 
             content.push_str(&format!("5 {} Td\n", y + 2.0));
 
-            emit_tj_for_builtin(&mut content, option, &self.font)?;
+            // Same dispatch as ComboBoxAppearance / TextFieldAppearance.
+            match (self.font.is_custom(), custom_font) {
+                (true, Some(cf)) => {
+                    let font_name = self.font.pdf_name();
+                    let entry = used_chars_per_font.entry(font_name.clone()).or_default();
+                    emit_tj_for_custom(&mut content, option, &font_name, cf, entry)?;
+                }
+                (true, None) => {
+                    return Err(PdfError::EncodingError(format!(
+                        "Font {:?} is marked as Custom but was not found in the \
+                         document registry; call Document::add_font_from_bytes with \
+                         this name before fill_field/save. See issue #212.",
+                        self.font.pdf_name(),
+                    )));
+                }
+                (false, _) => emit_tj_for_builtin(&mut content, option, &self.font)?,
+            }
+
             content.push_str("ET\n");
 
             y -= self.item_height;
         }
 
+        // Resources dict — Type0 placeholder for custom, inline Type1 for built-in.
+        let mut resources = Dictionary::new();
+        let mut font_dict = Dictionary::new();
+        if self.font.is_custom() {
+            let mut placeholder = Dictionary::new();
+            placeholder.set("Type", Object::Name("Font".to_string()));
+            placeholder.set("Subtype", Object::Name("Type0".to_string()));
+            placeholder.set("BaseFont", Object::Name(self.font.pdf_name()));
+            placeholder.set("Encoding", Object::Name("Identity-H".to_string()));
+            font_dict.set(self.font.pdf_name(), Object::Dictionary(placeholder));
+        } else {
+            let mut font_res = Dictionary::new();
+            font_res.set("Type", Object::Name("Font".to_string()));
+            font_res.set("Subtype", Object::Name("Type1".to_string()));
+            font_res.set("BaseFont", Object::Name(self.font.pdf_name()));
+            font_dict.set(self.font.pdf_name(), Object::Dictionary(font_res));
+        }
+        resources.set("Font", Object::Dictionary(font_dict));
+
         let bbox = [0.0, 0.0, width, height];
-        Ok(AppearanceStream::new(content.into_bytes(), bbox))
+        let stream = AppearanceStream::new(content.into_bytes(), bbox).with_resources(resources);
+        Ok(FieldAppearanceResult {
+            stream,
+            used_chars_by_font: used_chars_per_font,
+        })
     }
 }
 
