@@ -152,6 +152,26 @@ impl Document {
         self.pages.push(page);
     }
 
+    /// Create a new A4 page already bound to this Document's font metrics store.
+    ///
+    /// Recommended over `Page::a4()` for code that uses custom fonts: the
+    /// returned page measures `Font::Custom(...)` against the Document's
+    /// per-instance metrics, avoiding the deprecated process-wide registry.
+    pub fn new_page_a4(&self) -> Page {
+        Page::a4_with_metrics(self.font_metrics.clone())
+    }
+
+    /// Create a new US Letter page bound to this Document's font metrics store.
+    pub fn new_page_letter(&self) -> Page {
+        Page::letter_with_metrics(self.font_metrics.clone())
+    }
+
+    /// Create a new page of arbitrary dimensions bound to this Document's
+    /// font metrics store.
+    pub fn new_page(&self, width: f64, height: f64) -> Page {
+        Page::new_with_metrics(width, height, self.font_metrics.clone())
+    }
+
     /// Sets the document title.
     pub fn set_title(&mut self, title: impl Into<String>) {
         self.metadata.title = Some(title.into());
@@ -2567,5 +2587,29 @@ mod tests {
         #[allow(deprecated)]
         let after = crate::text::metrics::get_custom_font_metrics(&unique);
         assert!(after.is_none(), "global must remain untouched");
+    }
+
+    #[test]
+    fn test_new_page_a4_returns_page_bound_to_document_store() {
+        let doc = Document::new();
+        doc.font_metrics
+            .register("Sentinel", crate::text::metrics::FontMetrics::new(400));
+
+        let page = doc.new_page_a4();
+        assert!(page.font_metrics_store.is_some());
+        let store = page.font_metrics_store.as_ref().unwrap();
+        assert!(
+            store.get("Sentinel").is_some(),
+            "store must share with Document"
+        );
+    }
+
+    #[test]
+    fn test_new_page_letter_and_new_page_carry_store() {
+        let doc = Document::new();
+        doc.font_metrics
+            .register("S", crate::text::metrics::FontMetrics::new(400));
+        assert!(doc.new_page_letter().font_metrics_store.is_some());
+        assert!(doc.new_page(400.0, 600.0).font_metrics_store.is_some());
     }
 }
