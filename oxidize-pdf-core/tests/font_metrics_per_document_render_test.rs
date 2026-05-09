@@ -49,9 +49,11 @@ fn cjk_render_per_document_widths() {
     doc.add_page(page);
 
     let bytes = doc.to_bytes().expect("render");
-    assert!(!bytes.is_empty(), "PDF must contain bytes");
 
     // Round-trip: parse the rendered PDF and verify it has 1 page.
+    // PdfReader::new fails loudly if the bytes are not a valid PDF — that
+    // is the structural-validity gate. page_count == 1 verifies the
+    // content tree shape that the test set up.
     let mut reader =
         oxidize_pdf::parser::PdfReader::new(std::io::Cursor::new(&bytes)).expect("read back");
     assert_eq!(reader.page_count().expect("page count"), 1);
@@ -111,12 +113,34 @@ fn render_two_documents_no_cross_contamination() {
     // "Hello" would have been measured/embedded with doc_b's CJK font's
     // metrics. Post-fix, each Document carries its own font bytes.
     // The byte-level cross-contamination signal lives in Suite 1
-    // (`multi_document_isolation`); here we only ratify that the full
-    // render pipeline produces distinct, non-empty PDFs for two docs
-    // sharing a font name.
+    // (`multi_document_isolation`); here we ratify that the full render
+    // pipeline produces two structurally-valid, distinct PDFs for two
+    // docs sharing a font name. Both must round-trip through PdfReader
+    // (proves they are not garbage), each must have exactly one page,
+    // and each must reference the font name they registered.
+    let mut reader_a = oxidize_pdf::parser::PdfReader::new(std::io::Cursor::new(&bytes_a))
+        .expect("doc_a parses back");
+    assert_eq!(reader_a.page_count().expect("page count a"), 1);
+    let mut reader_b = oxidize_pdf::parser::PdfReader::new(std::io::Cursor::new(&bytes_b))
+        .expect("doc_b parses back");
+    assert_eq!(reader_b.page_count().expect("page count b"), 1);
+
+    let raw_a = String::from_utf8_lossy(&bytes_a);
+    let raw_b = String::from_utf8_lossy(&bytes_b);
+    assert!(
+        raw_a.contains("Shared_4_2"),
+        "doc_a PDF must reference its font name 'Shared_4_2'"
+    );
+    assert!(
+        raw_b.contains("Shared_4_2"),
+        "doc_b PDF must reference its font name 'Shared_4_2'"
+    );
+
+    // The two encoded text payloads differ (Latin "Hello" vs CJK glyphs),
+    // and each Document subsetted its own TTF, so the produced bytes
+    // cannot be byte-identical even though they share the font name.
     assert_ne!(
         bytes_a, bytes_b,
-        "two docs with the same font name but different bytes must produce different PDFs"
+        "two docs with the same font name but different bytes/text must produce different PDFs"
     );
-    assert!(!bytes_a.is_empty() && !bytes_b.is_empty());
 }
