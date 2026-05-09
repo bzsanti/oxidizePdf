@@ -7,7 +7,7 @@
 
 use oxidize_pdf::text::metrics::FontMetrics;
 use oxidize_pdf::text::{measure_text_with, Font};
-use oxidize_pdf::Document;
+use oxidize_pdf::{Document, Page};
 
 // NOTE: `FontMetrics` (the character-width metrics) lives at
 // `oxidize_pdf::text::metrics::FontMetrics`. The `oxidize_pdf::text::FontMetrics`
@@ -243,4 +243,67 @@ fn unknown_font_warns_once_no_register() {
         0,
         "doc store size must remain zero"
     );
+}
+
+// =================== Suite 3 — threading / API surface ===================
+
+/// Test 3.1 — Document::new_page_a4 attaches the store.
+#[test]
+fn factory_method_attaches_store() {
+    let latin = match load_latin_font() {
+        Some(b) => b,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes(format!("Factory_3_1_{}", std::process::id()), latin)
+        .expect("font");
+    let page = doc.new_page_a4();
+    assert!(page.font_metrics_store().is_some());
+}
+
+/// Test 3.2 — add_page injects the store into a legacy Page::a4.
+#[test]
+fn add_page_fallback_attaches_store() {
+    let latin = match load_latin_font() {
+        Some(b) => b,
+        None => return,
+    };
+
+    let mut doc = Document::new();
+    doc.add_font_from_bytes(format!("Fallback_3_2_{}", std::process::id()), latin)
+        .expect("font");
+    let page = Page::a4();
+    assert!(page.font_metrics_store().is_none());
+    doc.add_page(page);
+    let stored = doc.pages().last().expect("page");
+    assert!(stored.font_metrics_store().is_some());
+}
+
+/// Test 3.3 — add_page does not overwrite an existing store binding.
+#[test]
+fn add_page_does_not_overwrite_existing_store() {
+    let latin = match load_latin_font() {
+        Some(b) => b,
+        None => return,
+    };
+    let cjk = match load_cjk_font() {
+        Some(b) => b,
+        None => return,
+    };
+
+    let mut doc_a = Document::new();
+    doc_a
+        .add_font_from_bytes("FromA_3_3", latin)
+        .expect("doc_a");
+    let page = doc_a.new_page_a4();
+
+    let mut doc_b = Document::new();
+    doc_b.add_font_from_bytes("FromB_3_3", cjk).expect("doc_b");
+    doc_b.add_page(page);
+
+    let stored = doc_b.pages().last().expect("page");
+    let store = stored.font_metrics_store().expect("page kept its store");
+    assert!(store.get("FromA_3_3").is_some(), "kept doc_a binding");
+    assert!(store.get("FromB_3_3").is_none(), "doc_b did not override");
 }

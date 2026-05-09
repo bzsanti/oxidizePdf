@@ -555,6 +555,16 @@ impl Page {
         Self::new(792.0, 612.0)
     }
 
+    /// Returns the `FontMetricsStore` bound to this page, if any (issue #230).
+    ///
+    /// Pages constructed via `Document::new_page_*()` carry the Document's
+    /// store; pages constructed via `Page::a4()` / `Page::letter()` /
+    /// `Page::new()` are bound at `Document::add_page` time. Returns `None`
+    /// for pages that have not yet been attached to a Document.
+    pub fn font_metrics_store(&self) -> Option<&FontMetricsStore> {
+        self.font_metrics_store.as_ref()
+    }
+
     /// Creates a new A4 page pre-loaded with a `FontMetricsStore` (issue #230).
     ///
     /// `Page::a4()` has `font_metrics_store: None`; this variant is used by

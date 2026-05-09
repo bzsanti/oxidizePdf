@@ -162,6 +162,11 @@ impl Document {
         self.pages.push(page);
     }
 
+    /// Returns the document's pages as a slice.
+    pub fn pages(&self) -> &[Page] {
+        &self.pages
+    }
+
     /// Returns a reference to this Document's font metrics store.
     ///
     /// Public surface for external callers that need to thread the
