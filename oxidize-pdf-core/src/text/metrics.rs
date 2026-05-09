@@ -296,6 +296,10 @@ pub fn split_into_words(text: &str) -> Vec<&str> {
 }
 
 /// Register metrics for a custom font
+#[deprecated(
+    since = "2.8.0",
+    note = "use Document::add_font_from_bytes; the global registry is process-wide and not bounded — see issue #230"
+)]
 pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
     match CUSTOM_FONT_METRICS.write() {
         Ok(mut custom_metrics) => {
@@ -313,6 +317,10 @@ pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
 }
 
 /// Get metrics for a custom font
+#[deprecated(
+    since = "2.8.0",
+    note = "use FontMetricsStore::get via a Document — the global registry is process-wide and not bounded — see issue #230"
+)]
 pub fn get_custom_font_metrics(font_name: &str) -> Option<FontMetrics> {
     if let Ok(custom_metrics) = CUSTOM_FONT_METRICS.read() {
         custom_metrics.get(font_name).cloned()
@@ -848,6 +856,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_register_custom_font_metrics() {
         let metrics = FontMetrics::new(750).with_widths(&[('A', 800), ('B', 850)]);
         register_custom_font_metrics("TestFont".to_string(), metrics);
@@ -862,6 +871,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_get_custom_font_metrics_not_found() {
         let result = get_custom_font_metrics("NonExistentFont12345");
         // May or may not be found depending on previous tests
@@ -870,6 +880,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_measure_text_custom_font() {
         // Register a custom font with known metrics
         let metrics = FontMetrics::new(500).with_widths(&[('A', 600), ('B', 600), ('C', 600)]);
@@ -882,6 +893,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_measure_char_custom_font() {
         let metrics = FontMetrics::new(500).with_widths(&[('X', 700)]);
         register_custom_font_metrics("CustomCharTest".to_string(), metrics);
