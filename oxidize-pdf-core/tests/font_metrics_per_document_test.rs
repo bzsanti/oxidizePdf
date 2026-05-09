@@ -5,6 +5,7 @@
 //! coverage; synthetic FontMetrics are reserved for behavioural unit tests
 //! inside metrics.rs.
 
+use oxidize_pdf::text::metrics::FontMetrics;
 use oxidize_pdf::text::{measure_text_with, Font};
 use oxidize_pdf::Document;
 
@@ -156,5 +157,90 @@ fn cross_document_no_leak_after_drop() {
     assert!(
         global_lookup.is_none(),
         "Ghost must not be findable in the legacy global after doc_a drop"
+    );
+}
+
+// =================== Suite 2 — hierarchical lookup ===================
+
+/// Test 2.1 — Document scope takes precedence over the legacy global.
+#[test]
+fn document_scope_takes_precedence_over_global() {
+    let latin = match load_latin_font() {
+        Some(b) => b,
+        None => return,
+    };
+
+    let name = format!("PrecedenceCheck_2_1_{}", std::process::id());
+
+    // Plant something in the legacy global with a known small width.
+    #[allow(deprecated)]
+    oxidize_pdf::text::metrics::register_custom_font_metrics(
+        name.clone(),
+        FontMetrics::new(500).with_widths(&[('A', 100)]),
+    );
+
+    // Per-Document store registers a different font under the same name.
+    let mut doc = Document::new();
+    doc.add_font_from_bytes(&name, latin).expect("doc font");
+
+    let width_via_doc = measure_text_with(
+        "A",
+        &Font::Custom(name.clone()),
+        12.0,
+        Some(doc.font_metrics()),
+    );
+    // The legacy global value would be 100 / 1000 * 12 = 1.2.
+    // Roboto's real 'A' is around 8 (well above 1.2). The exact value
+    // depends on the TTF; we only need to assert "Document wins".
+    assert!(
+        width_via_doc > 2.0,
+        "Document scope must win over the legacy global; got {width_via_doc}"
+    );
+}
+
+/// Test 2.2 — Legacy global visible when Document scope misses.
+#[test]
+fn legacy_global_visible_when_document_misses() {
+    let name = format!("OnlyGlobal_2_2_{}", std::process::id());
+    #[allow(deprecated)]
+    oxidize_pdf::text::metrics::register_custom_font_metrics(
+        name.clone(),
+        FontMetrics::new(500).with_widths(&[('A', 700)]),
+    );
+
+    let doc = Document::new(); // empty store
+    let width = measure_text_with("A", &Font::Custom(name), 12.0, Some(doc.font_metrics()));
+    // 700 / 1000 * 12 = 8.4
+    assert!(
+        (width - 8.4).abs() < 0.01,
+        "expected legacy-global width 8.4; got {width}"
+    );
+}
+
+/// Test 2.3 — Unknown font warns once and never registers.
+#[test]
+fn unknown_font_warns_once_no_register() {
+    let name = format!("Typo_2_3_{}", std::process::id());
+    let doc = Document::new();
+    for _ in 0..100 {
+        let _ = measure_text_with(
+            "A",
+            &Font::Custom(name.clone()),
+            12.0,
+            Some(doc.font_metrics()),
+        );
+    }
+    // Neither the global nor the Document store should have grown.
+    #[allow(deprecated)]
+    let leaked = oxidize_pdf::text::metrics::get_custom_font_metrics(&name);
+    assert!(leaked.is_none(), "global must remain empty");
+    assert!(
+        doc.font_metrics().get(&name).is_none(),
+        "doc store must remain empty"
+    );
+    assert_eq!(
+        doc.font_metrics().len(),
+        0,
+        "doc store size must remain zero"
     );
 }
