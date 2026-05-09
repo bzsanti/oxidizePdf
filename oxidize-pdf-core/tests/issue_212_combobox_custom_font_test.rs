@@ -15,7 +15,7 @@ use oxidize_pdf::forms::{ComboBox, FormManager, Widget, WidgetAppearance};
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::graphics::Color;
 use oxidize_pdf::parser::objects::PdfObject;
-use oxidize_pdf::parser::PdfReader;
+use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::{Document, Page};
 use std::io::Cursor;
@@ -168,7 +168,11 @@ fn combobox_custom_font_ap_emits_type0_and_hex_cid() {
     );
 
     // Invariant 3: /V on the field dict is non-empty.
-    let mut reader3 = PdfReader::new(Cursor::new(&pdf)).expect("PdfReader for /V");
+    // Strict parsing — the default lenient_encoding mangles non-ASCII bytes
+    // by interpreting them as Windows-1252 and re-encoding to UTF-8, which
+    // destroys byte-level fidelity of /V.
+    let mut reader3 = PdfReader::new_with_options(Cursor::new(&pdf), ParseOptions::strict())
+        .expect("PdfReader for /V (strict)");
     let catalog = reader3.catalog().expect("catalog").clone();
     let acro = match catalog.get("AcroForm").expect("/AcroForm") {
         PdfObject::Reference(n, g) => reader3
@@ -190,11 +194,20 @@ fn combobox_custom_font_ap_emits_type0_and_hex_cid() {
         let (fn_, fg) = field_ref.as_reference().expect("field ref");
         let field_obj = reader3.get_object(fn_, fg).expect("field obj").clone();
         let fd = field_obj.as_dict().expect("field dict").clone();
-        if let Some(v) = fd.get("V") {
-            if let PdfObject::String(s) = v {
-                assert!(!s.0.is_empty(), "/V must be non-empty after fill_field");
-                found_v = true;
-            }
+        if let Some(PdfObject::String(s)) = fd.get("V") {
+            // /V is currently written by the writer as raw UTF-8 bytes inside
+            // a literal `(...)` string. (ISO 32000-1 §12.7.3.3 prefers
+            // UTF-16BE-with-BOM for non-Latin field values; raw UTF-8 is
+            // tolerated by Adobe Reader and Chrome but is non-conformant —
+            // tracked as a separate fidelity follow-up. This test pins the
+            // current contract: /V bytes equal the UTF-8 of the input value.)
+            assert_eq!(
+                s.0.as_slice(),
+                value.as_bytes(),
+                "/V byte content must equal UTF-8 of filled value; got {:?}",
+                s.0
+            );
+            found_v = true;
         }
     }
     assert!(

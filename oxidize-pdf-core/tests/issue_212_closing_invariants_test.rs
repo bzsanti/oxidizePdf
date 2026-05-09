@@ -10,7 +10,7 @@ use oxidize_pdf::forms::{FormManager, TextField, Widget, WidgetAppearance};
 use oxidize_pdf::geometry::{Point, Rectangle};
 use oxidize_pdf::graphics::Color;
 use oxidize_pdf::parser::objects::PdfObject;
-use oxidize_pdf::parser::PdfReader;
+use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::{Document, Page};
 use std::io::Cursor;
@@ -204,12 +204,26 @@ fn invariant_3_roundtrip_v_and_appearance_present() {
     let pdf = build_and_fill(cjk, value);
 
     let (ap_content, _) = extract_ap_n(&pdf);
+    // Verify AP carries a complete text section (BT…ET) plus the hex-CID Tj
+    // operator for the value — these are the structural invariants that a
+    // viewer needs to render the field. Asserting "non-empty" alone would be
+    // a smoke test (any 1-byte stream passes); we assert the actual operators.
+    let ap_str = String::from_utf8_lossy(&ap_content);
     assert!(
-        !ap_content.is_empty(),
-        "Invariant 3 FAIL: /AP/N content is empty"
+        ap_str.contains("BT\n") && ap_str.contains("ET\n"),
+        "Invariant 3 FAIL: /AP/N must contain a BT…ET text section; got {ap_str:?}"
+    );
+    assert!(
+        ap_str.contains("> Tj"),
+        "Invariant 3 FAIL: /AP/N must contain a hex-CID Tj operator; got {ap_str:?}"
     );
 
-    let mut reader = PdfReader::new(Cursor::new(&pdf)).expect("parse PDF");
+    // Strict parsing — the default lenient_encoding interprets 0x80–0xFF as
+    // Windows-1252 and re-encodes to UTF-8, which destroys byte-level
+    // fidelity of /V. For a PDF we just generated in-process we want the
+    // raw bytes back exactly as the writer emitted them.
+    let mut reader = PdfReader::new_with_options(Cursor::new(&pdf), ParseOptions::strict())
+        .expect("parse PDF (strict)");
     let catalog = reader.catalog().expect("catalog").clone();
     let acro_dict = match catalog.get("AcroForm").expect("/AcroForm") {
         PdfObject::Reference(n, g) => reader
@@ -227,20 +241,29 @@ fn invariant_3_roundtrip_v_and_appearance_present() {
         .and_then(|o| o.as_array())
         .expect("/AcroForm/Fields");
 
-    let mut found_nonempty_v = false;
+    // /V must equal the UTF-8 of the input value byte-for-byte. (The writer
+    // currently emits /V as a literal `(...)` carrying raw UTF-8; this test
+    // pins that contract. UTF-16BE-with-BOM conformance is tracked as a
+    // separate fidelity follow-up — when fixed, this assertion will need to
+    // accept the BOM-prefixed form.)
+    let mut v_found = false;
     for fr in &fields.0 {
         let (fn_, fg) = fr.as_reference().expect("field ref");
         let fobj = reader.get_object(fn_, fg).expect("field obj").clone();
         let fd = fobj.as_dict().expect("field dict").clone();
         if let Some(PdfObject::String(s)) = fd.get("V") {
-            if !s.0.is_empty() {
-                found_nonempty_v = true;
-            }
+            assert_eq!(
+                s.0.as_slice(),
+                value.as_bytes(),
+                "Invariant 3 FAIL: /V byte content must equal UTF-8 of '{value}'; got {:?}",
+                s.0
+            );
+            v_found = true;
         }
     }
     assert!(
-        found_nonempty_v,
-        "Invariant 3 FAIL: no AcroForm field with non-empty /V found after fill_field"
+        v_found,
+        "Invariant 3 FAIL: no AcroForm field with /V found after fill_field"
     );
 }
 
@@ -273,10 +296,6 @@ fn invariant_4_helvetica_builtin_regression() {
     let pdf = doc
         .to_bytes()
         .expect("Invariant 4 FAIL: to_bytes must succeed for Helvetica");
-    assert!(
-        !pdf.is_empty(),
-        "Invariant 4 FAIL: serialized PDF must be non-empty"
-    );
 
     let (ap_content, _) = extract_ap_n(&pdf);
     let content_str = String::from_utf8_lossy(&ap_content);

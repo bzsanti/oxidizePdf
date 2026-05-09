@@ -28,19 +28,17 @@ fn listbox_custom_font_generate_appearance_with_font_emits_type0_resource() {
     // passing custom_font: None is acceptable for this test — what we are
     // verifying here is the resource dict shape.
 
-    let mut appearance_gen = ListBoxAppearance::default();
-    appearance_gen.font = Font::Custom("CJK".to_string());
-    appearance_gen.options = vec![];
+    let appearance_gen = ListBoxAppearance {
+        font: Font::Custom("CJK".to_string()),
+        options: vec![],
+        ..ListBoxAppearance::default()
+    };
 
     let widget = make_widget();
-    let result =
-        appearance_gen.generate_appearance_with_font(&widget, None, AppearanceState::Normal, None);
-    assert!(
-        result.is_ok(),
-        "generate_appearance_with_font with empty options must succeed: {:?}",
-        result.err()
-    );
-    let stream = result.unwrap().stream;
+    let stream = appearance_gen
+        .generate_appearance_with_font(&widget, None, AppearanceState::Normal, None)
+        .expect("generate_appearance_with_font with empty options must succeed")
+        .stream;
 
     let font_entry = stream
         .resources
@@ -85,19 +83,17 @@ fn listbox_custom_font_generate_appearance_with_font_emits_type0_resource() {
 
 #[test]
 fn listbox_builtin_font_generate_appearance_with_font_emits_type1() {
-    let mut appearance_gen = ListBoxAppearance::default();
-    appearance_gen.font = Font::Helvetica;
-    appearance_gen.options = vec!["Option A".to_string(), "Option B".to_string()];
+    let appearance_gen = ListBoxAppearance {
+        font: Font::Helvetica,
+        options: vec!["Option A".to_string(), "Option B".to_string()],
+        ..ListBoxAppearance::default()
+    };
 
     let widget = make_widget();
-    let result =
-        appearance_gen.generate_appearance_with_font(&widget, None, AppearanceState::Normal, None);
-    assert!(
-        result.is_ok(),
-        "built-in font must succeed: {:?}",
-        result.err()
-    );
-    let stream = result.unwrap().stream;
+    let stream = appearance_gen
+        .generate_appearance_with_font(&widget, None, AppearanceState::Normal, None)
+        .expect("built-in font must succeed")
+        .stream;
 
     let font_dict = stream
         .resources
@@ -133,15 +129,21 @@ fn listbox_custom_font_with_options_but_no_font_param_returns_error() {
     // caller passes None for the font parameter, the generator must reject
     // explicitly (matching ComboBox / TextField behaviour). Silent fallback
     // is forbidden — the result would be malformed.
-    let mut appearance_gen = ListBoxAppearance::default();
-    appearance_gen.font = Font::Custom("CJK".to_string());
-    appearance_gen.options = vec!["项目一".to_string()];
+    let appearance_gen = ListBoxAppearance {
+        font: Font::Custom("CJK".to_string()),
+        options: vec!["项目一".to_string()],
+        ..ListBoxAppearance::default()
+    };
 
     let widget = make_widget();
-    let result =
-        appearance_gen.generate_appearance_with_font(&widget, None, AppearanceState::Normal, None);
+    let err = appearance_gen
+        .generate_appearance_with_font(&widget, None, AppearanceState::Normal, None)
+        .expect_err("Custom font + non-empty options + custom_font=None must fail explicitly");
+    // Verify the error variant + message specifically — silent fallback is
+    // forbidden, but so is conflating this with an unrelated failure mode.
+    let msg = format!("{err}");
     assert!(
-        result.is_err(),
-        "Custom font + non-empty options + custom_font=None must fail explicitly; got Ok"
+        msg.contains("Custom") && msg.contains("not found"),
+        "expected EncodingError mentioning the missing custom font; got: {msg}"
     );
 }

@@ -17,9 +17,11 @@ fn make_widget() -> Widget {
 
 #[test]
 fn pushbutton_custom_font_resources_emit_type0_not_type1() {
-    let mut appearance_gen = PushButtonAppearance::default();
-    appearance_gen.font = Font::Custom("CJK".to_string());
-    appearance_gen.label = "Submit".to_string();
+    let appearance_gen = PushButtonAppearance {
+        font: Font::Custom("CJK".to_string()),
+        label: "Submit".to_string(),
+        ..PushButtonAppearance::default()
+    };
 
     let widget = make_widget();
     let stream = appearance_gen
@@ -83,9 +85,11 @@ fn pushbutton_builtin_font_resources_still_emit_type1() {
     // Regression: Helvetica (built-in) must continue to produce a Type1
     // inline dict — the Type1 path is correct for built-ins and the writer
     // does NOT attempt to rewrite it.
-    let mut appearance_gen = PushButtonAppearance::default();
-    appearance_gen.font = Font::Helvetica;
-    appearance_gen.label = "Click".to_string();
+    let appearance_gen = PushButtonAppearance {
+        font: Font::Helvetica,
+        label: "Click".to_string(),
+        ..PushButtonAppearance::default()
+    };
 
     let widget = make_widget();
     let stream = appearance_gen
