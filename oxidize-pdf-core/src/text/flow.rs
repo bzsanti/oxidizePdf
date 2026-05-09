@@ -1,7 +1,8 @@
 use crate::error::Result;
 use crate::graphics::Color;
 use crate::page::Margins;
-use crate::text::{measure_text, split_into_words, Font};
+use crate::text::metrics::{measure_text_with, FontMetricsStore};
+use crate::text::{split_into_words, Font};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -46,6 +47,10 @@ pub struct TextFlowContext {
     /// page's graphics-context tracking so the writer can subset each
     /// custom font with only its own characters.
     used_characters_by_font: HashMap<String, HashSet<char>>,
+    /// Per-Document font metrics store threaded from the owning `Document`
+    /// (issue #230, v2.8.0). When `Some`, `write_wrapped` resolves custom
+    /// font widths via this store instead of the process-wide legacy registry.
+    pub(crate) font_metrics_store: Option<FontMetricsStore>,
 }
 
 impl TextFlowContext {
@@ -70,7 +75,24 @@ impl TextFlowContext {
             rendering_mode: None,
             stroke_color: None,
             used_characters_by_font: HashMap::new(),
+            font_metrics_store: None,
         }
+    }
+
+    /// Create a `TextFlowContext` bound to a per-Document `FontMetricsStore`
+    /// (issue #230, v2.8.0). Internal use only — external callers should use
+    /// `Document::new_page_a4()` and `page.text_flow()`.
+    ///
+    /// When `store` is `None`, behaviour is identical to `TextFlowContext::new`.
+    pub(crate) fn with_metrics_store(
+        page_width: f64,
+        page_height: f64,
+        margins: Margins,
+        store: Option<FontMetricsStore>,
+    ) -> Self {
+        let mut ctx = Self::new(page_width, page_height, margins);
+        ctx.font_metrics_store = store;
+        ctx
     }
 
     /// Get the per-font character usage accumulated by `write_wrapped`
@@ -199,7 +221,12 @@ impl TextFlowContext {
 
         // Build lines based on available width (respects cursor_x offset)
         for word in words {
-            let word_width = measure_text(word, &self.current_font, self.font_size);
+            let word_width = measure_text_with(
+                word,
+                &self.current_font,
+                self.font_size,
+                self.font_metrics_store.as_ref(),
+            );
 
             // Check if we need to start a new line
             if !current_line.is_empty() && current_width + word_width > available_width {
@@ -219,7 +246,12 @@ impl TextFlowContext {
         // Render each line
         for (i, line) in lines.iter().enumerate() {
             let line_text = line.join("");
-            let line_width = measure_text(&line_text, &self.current_font, self.font_size);
+            let line_width = measure_text_with(
+                &line_text,
+                &self.current_font,
+                self.font_size,
+                self.font_metrics_store.as_ref(),
+            );
 
             // Calculate x position based on alignment.
             // start_x is the column where this block of text begins (set via .at()).
@@ -1144,6 +1176,67 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_text_flow_context_threads_metrics_store() {
+        use crate::text::metrics::{FontMetrics, FontMetricsStore};
+        let unique = format!("FlowThreadTask6_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        // 'A' = 1000 units → (1000/1000) * 12.0 = 12.0 pts per char.
+        // "AA" = 24.0 pts total line width with the per-store widths.
+        // Without the store, the default fallback maps 'A' = 667 →
+        // (667/1000) * 12.0 ≈ 8.004 pts per char → "AA" ≈ 16.008 pts.
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 1000)]),
+        );
+
+        let mut ctx = TextFlowContext::with_metrics_store(
+            595.0, // A4 width pt
+            842.0, // A4 height pt
+            Margins::default(),
+            Some(store),
+        );
+        ctx.set_font(Font::Custom(unique), 12.0);
+        ctx.set_alignment(TextAlign::Center);
+        ctx.write_wrapped("AA").unwrap();
+
+        // With center alignment the emitted `Td x` is:
+        //   x = margins.left + (available_width - line_width) / 2
+        // available_width = 595 - 72 - 72 = 451 pts (A4, default margins)
+        //
+        // With store    : line_width = 24.0  → x = 72 + (451 - 24.0)  / 2 = 285.5
+        // Without store : line_width ≈ 16.008 → x ≈ 72 + (451 - 16.008) / 2 ≈ 289.496
+        //
+        // The two values are ~4 pts apart, far above the 0.01 tolerance.
+        // A regression where the store is silently dropped produces x ≈ 289.5
+        // and the assertion fails.
+        let margins = Margins::default();
+        let available_width = 595.0_f64 - margins.left - margins.right; // 451.0
+        let expected_line_width = 24.0_f64; // 'A'=1000 units × 2 chars × 12 pt / 1000
+        let expected_td_x = margins.left + (available_width - expected_line_width) / 2.0;
+
+        let ops_bytes = ctx.generate_operations();
+        let ops_str =
+            String::from_utf8(ops_bytes).expect("generated operations must be valid UTF-8");
+
+        // Extract the Td x-coordinate from the first `<x> <y> Td` line.
+        let td_x: f64 = ops_str
+            .lines()
+            .find(|l| l.ends_with(" Td"))
+            .and_then(|l| l.split_whitespace().next())
+            .and_then(|tok| tok.parse().ok())
+            .expect("operations must contain a Td operator");
+
+        assert!(
+            (td_x - expected_td_x).abs() < 0.01,
+            "Td x must reflect per-store line width 24.0 pts \
+             (expected {:.2}, got {:.2}); if the store was dropped the \
+             fallback width produces x ≈ 289.50",
+            expected_td_x,
+            td_x
+        );
     }
 
     /// RED for Phase 3 of the v2.7.0 IR refactor: with the legacy `String`

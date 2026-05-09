@@ -6,7 +6,7 @@ use crate::page_labels::PageLabelTree;
 use crate::semantic::{BoundingBox, EntityType, RelationType, SemanticEntity};
 use crate::structure::{NamedDestinations, OutlineTree, StructTree};
 // Alias to avoid collision with crate::fonts::FontMetrics (PDF font objects)
-use crate::text::metrics::{register_custom_font_metrics, FontMetrics as TextMeasurementMetrics};
+use crate::text::metrics::{FontMetrics as TextMeasurementMetrics, FontMetricsStore};
 use crate::text::FontEncoding;
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
@@ -51,6 +51,8 @@ pub struct Document {
     pub(crate) use_xref_streams: bool,
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
+    /// Per-document font metrics store for text measurement (char widths)
+    pub(crate) font_metrics: FontMetricsStore,
     /// Characters used in the document (for font subsetting)
     /// Characters drawn in this document, bucketed by font name
     /// (ISO 32000-1 §9.7.4 — only custom Type0/CID fonts need
@@ -127,6 +129,7 @@ impl Document {
             compress: true,          // Enable compression by default
             use_xref_streams: false, // Disabled by default for compatibility
             custom_fonts: FontCache::new(),
+            font_metrics: FontMetricsStore::new(),
             used_characters_by_font: HashMap::new(),
             open_action: None,
             viewer_preferences: None,
@@ -136,7 +139,17 @@ impl Document {
     }
 
     /// Adds a page to the document.
-    pub fn add_page(&mut self, page: Page) {
+    pub fn add_page(&mut self, mut page: Page) {
+        // Inject the Document's metrics store into the page if it does not
+        // already carry one. Pages constructed via Document::new_page_*()
+        // already carry a store and are skipped (preserves bindings to
+        // other Documents if a page is moved). Pages constructed via
+        // Page::a4() / Page::letter() / Page::new() get the Document store
+        // here so their text_flow / text contexts can resolve custom fonts
+        // via Document scope when measurements happen after add_page.
+        if page.font_metrics_store.is_none() {
+            page.font_metrics_store = Some(self.font_metrics.clone());
+        }
         // Merge the page's per-font character accumulators into the
         // document-wide map (issue #204 — each font gets subsetted with
         // only its own characters later at write time).
@@ -147,6 +160,42 @@ impl Document {
                 .extend(chars);
         }
         self.pages.push(page);
+    }
+
+    /// Returns the document's pages as a slice.
+    pub fn pages(&self) -> &[Page] {
+        &self.pages
+    }
+
+    /// Returns a reference to this Document's font metrics store.
+    ///
+    /// Public surface for external callers that need to thread the
+    /// per-Document scope into the `_with` measurement helpers
+    /// (`measure_text_with`, `measure_char_with`, `measure_text_block_with`).
+    /// `FontMetricsStore` uses interior mutability, so callers can also
+    /// `register` and `get` directly via this reference.
+    pub fn font_metrics(&self) -> &FontMetricsStore {
+        &self.font_metrics
+    }
+
+    /// Create a new A4 page already bound to this Document's font metrics store.
+    ///
+    /// Recommended over `Page::a4()` for code that uses custom fonts: the
+    /// returned page measures `Font::Custom(...)` against the Document's
+    /// per-instance metrics, avoiding the deprecated process-wide registry.
+    pub fn new_page_a4(&self) -> Page {
+        Page::a4_with_metrics(self.font_metrics.clone())
+    }
+
+    /// Create a new US Letter page bound to this Document's font metrics store.
+    pub fn new_page_letter(&self) -> Page {
+        Page::letter_with_metrics(self.font_metrics.clone())
+    }
+
+    /// Create a new page of arbitrary dimensions bound to this Document's
+    /// font metrics store.
+    pub fn new_page(&self, width: f64, height: f64) -> Page {
+        Page::new_with_metrics(width, height, self.font_metrics.clone())
     }
 
     /// Sets the document title.
@@ -455,7 +504,7 @@ impl Document {
             let sum: u32 = char_width_map.values().map(|&w| w as u32).sum();
             let default_width = (sum / char_width_map.len() as u32) as u16;
             let text_metrics = TextMeasurementMetrics::from_char_map(char_width_map, default_width);
-            register_custom_font_metrics(name, text_metrics);
+            self.font_metrics.register(name, text_metrics);
         }
 
         Ok(())
@@ -2560,5 +2609,104 @@ mod tests {
             assert_eq!(doc.metadata.author.as_deref(), Some(long_author.as_str()));
             assert!(doc.metadata.keywords.as_ref().unwrap().len() > 500);
         }
+    }
+
+    #[test]
+    fn test_add_font_from_bytes_writes_to_per_document_store_not_global() {
+        // Use a unique font name so this test does not collide with parallel tests.
+        let unique = format!("PerDocTask9_{}", std::process::id());
+        // Capture global size before.
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
+        #[allow(deprecated)]
+        let before = crate::text::metrics::get_custom_font_metrics(&unique);
+        assert!(before.is_none(), "precondition: name not in global");
+
+        // Construct a Document and register a synthetic font under this name.
+        // We bypass the TTF parser by going through the metrics store directly
+        // — the public API requires real TTF bytes, which is exercised in the
+        // integration suite (Task 14). This unit test focuses on the routing.
+        let doc = Document::new();
+        doc.font_metrics
+            .register(unique.clone(), crate::text::metrics::FontMetrics::new(500));
+
+        // The Document store contains the entry.
+        assert!(doc.font_metrics.get(&unique).is_some());
+
+        // The legacy global was untouched.
+        #[allow(deprecated)]
+        let after = crate::text::metrics::get_custom_font_metrics(&unique);
+        assert!(after.is_none(), "global must remain untouched");
+    }
+
+    #[test]
+    fn test_new_page_a4_returns_page_bound_to_document_store() {
+        let doc = Document::new();
+        doc.font_metrics
+            .register("Sentinel", crate::text::metrics::FontMetrics::new(400));
+
+        let page = doc.new_page_a4();
+        assert!(page.font_metrics_store.is_some());
+        let store = page.font_metrics_store.as_ref().unwrap();
+        assert!(
+            store.get("Sentinel").is_some(),
+            "store must share with Document"
+        );
+    }
+
+    #[test]
+    fn test_new_page_letter_and_new_page_carry_store() {
+        let doc = Document::new();
+        doc.font_metrics
+            .register("S", crate::text::metrics::FontMetrics::new(400));
+        assert!(doc.new_page_letter().font_metrics_store.is_some());
+        assert!(doc.new_page(400.0, 600.0).font_metrics_store.is_some());
+    }
+
+    #[test]
+    fn test_add_page_injects_store_into_legacy_page() {
+        let mut doc = Document::new();
+        doc.font_metrics
+            .register("Inj", crate::text::metrics::FontMetrics::new(400));
+
+        let page = Page::a4(); // legacy ctor → store = None
+        assert!(page.font_metrics_store.is_none());
+
+        doc.add_page(page);
+
+        let stored_page = doc.pages.last().expect("page added");
+        assert!(
+            stored_page.font_metrics_store.is_some(),
+            "add_page must inject the Document store when page has none"
+        );
+        assert!(
+            stored_page
+                .font_metrics_store
+                .as_ref()
+                .unwrap()
+                .get("Inj")
+                .is_some(),
+            "injected store must share state with the Document"
+        );
+    }
+
+    #[test]
+    fn test_add_page_does_not_overwrite_existing_store() {
+        let doc_a = Document::new();
+        doc_a
+            .font_metrics
+            .register("FromA", crate::text::metrics::FontMetrics::new(400));
+        let page = doc_a.new_page_a4(); // bound to doc_a's store
+
+        let mut doc_b = Document::new();
+        doc_b
+            .font_metrics
+            .register("FromB", crate::text::metrics::FontMetrics::new(500));
+        doc_b.add_page(page);
+
+        let stored_page = doc_b.pages.last().expect("page added");
+        let store = stored_page.font_metrics_store.as_ref().unwrap();
+        assert!(store.get("FromA").is_some(), "page kept doc_a's store");
+        assert!(store.get("FromB").is_none(), "doc_b did not overwrite");
     }
 }

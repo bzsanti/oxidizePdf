@@ -39,7 +39,10 @@ pub use list::{
     BulletStyle, ListElement, ListItem, ListOptions, ListStyle as ListStyleEnum, OrderedList,
     OrderedListStyle, UnorderedList,
 };
-pub use metrics::{measure_char, measure_text, split_into_words};
+pub use metrics::{
+    measure_char, measure_char_with, measure_text, measure_text_with, split_into_words,
+    FontMetricsStore,
+};
 pub use ocr::{
     CharacterConfidence, CorrectionCandidate, CorrectionReason, CorrectionSuggestion,
     CorrectionType, FragmentType, ImagePreprocessing, MockOcrProvider, OcrEngine, OcrError,
@@ -48,7 +51,9 @@ pub use ocr::{
 };
 pub use plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor, PlainTextResult};
 pub use table::{HeaderStyle, Table, TableCell, TableOptions};
-pub use text_block::{compute_line_widths, measure_text_block, TextBlockMetrics};
+pub use text_block::{
+    compute_line_widths, measure_text_block, measure_text_block_with, TextBlockMetrics,
+};
 pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 
 #[cfg(feature = "ocr-tesseract")]
@@ -106,6 +111,11 @@ pub struct TextContext {
     // don't need subsetting. Extended by `write` whenever the active
     // font is `Font::Custom`.
     used_characters_by_font: HashMap<String, HashSet<char>>,
+    /// Per-document font metrics store threaded from `Page` (issue #230).
+    /// `None` means the built-in heuristic width tables are used.
+    /// Non-test callers arrive in Task 9-11 (Document integration).
+    #[allow(dead_code)]
+    pub(crate) font_metrics_store: Option<FontMetricsStore>,
 }
 
 impl Default for TextContext {
@@ -131,7 +141,20 @@ impl TextContext {
             fill_color: None,
             stroke_color: None,
             used_characters_by_font: HashMap::new(),
+            font_metrics_store: None,
         }
+    }
+
+    /// Create a `TextContext` bound to a per-document `FontMetricsStore`
+    /// (issue #230). `None` is equivalent to `TextContext::new()`.
+    ///
+    /// `pub(crate)` — wired by `Page::*_with_metrics()` constructors (Task 8).
+    /// Non-test callers for `Page::*_with_metrics` arrive in Tasks 9-11.
+    #[allow(dead_code)]
+    pub(crate) fn with_metrics_store(store: Option<FontMetricsStore>) -> Self {
+        let mut ctx = Self::default();
+        ctx.font_metrics_store = store;
+        ctx
     }
 
     /// Record `text` as drawn with the currently-active font, bucketed
@@ -147,6 +170,12 @@ impl TextContext {
             .entry(name)
             .or_default()
             .extend(text.chars());
+    }
+
+    /// Introspection helper for Task 7 tests (issue #230).
+    #[cfg(test)]
+    pub(crate) fn font_metrics_store_for_test(&self) -> Option<&FontMetricsStore> {
+        self.font_metrics_store.as_ref()
     }
 
     /// Get the characters used in this text context (merged across all
@@ -960,6 +989,22 @@ mod tests {
         assert!(
             ops.contains("0.00 Ts\n"),
             "NaN text rise must emit `0.00 Ts`, got: {ops:?}"
+        );
+    }
+
+    #[test]
+    fn test_text_context_threads_metrics_store() {
+        use crate::text::metrics::{FontMetrics, FontMetricsStore};
+        let store = FontMetricsStore::new();
+        let ctx = TextContext::with_metrics_store(Some(store.clone()));
+        // The store handle round-trips.
+        assert!(ctx.font_metrics_store_for_test().is_some());
+        // Cloning shares state.
+        store.register("X", FontMetrics::new(400));
+        assert_eq!(
+            ctx.font_metrics_store_for_test().unwrap().len(),
+            1,
+            "TextContext must hold a clone that shares the underlying registry"
         );
     }
 }

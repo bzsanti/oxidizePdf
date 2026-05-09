@@ -1,6 +1,7 @@
 //! Integration tests for table functionality
 
 use oxidize_pdf::advanced_tables::{CellData, RowData};
+#[allow(deprecated)]
 use oxidize_pdf::text::metrics::{
     get_custom_font_metrics, measure_text, register_custom_font_metrics, FontMetrics,
 };
@@ -476,6 +477,7 @@ fn test_table_with_standard_font_uses_literal_encoding() -> Result<()> {
 /// When custom font metrics are registered, measure_text should use actual widths
 /// instead of Helvetica-like fallbacks, producing correct centering.
 #[test]
+#[allow(deprecated)]
 fn test_measure_text_uses_registered_custom_font_metrics() {
     // Register a custom font with known CJK widths
     let mut widths = std::collections::HashMap::new();
@@ -598,6 +600,7 @@ fn test_from_char_map_default_width_is_average() {
 
 /// Quality item #1: add_font_from_bytes must not leave metrics registered on failure.
 #[test]
+#[allow(deprecated)]
 fn test_add_font_from_bytes_no_metrics_on_failure() {
     let font_name = "FailTestFont_unique_162_163";
     assert!(

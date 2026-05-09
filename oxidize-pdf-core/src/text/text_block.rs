@@ -1,4 +1,5 @@
-use crate::text::{measure_text, split_into_words, Font};
+use crate::text::metrics::{measure_text_with, FontMetricsStore};
+use crate::text::{split_into_words, Font};
 
 /// Result of measuring a text block before rendering.
 ///
@@ -23,7 +24,23 @@ pub struct TextBlockMetrics {
 /// Each "word" from `split_into_words` is placed on the current line if it fits;
 /// otherwise a new line is started. A single word wider than `max_width` is placed
 /// on its own line (it will exceed `max_width` but avoids infinite loops).
+///
+/// Back-compat shim; delegates to `compute_line_widths_with(..., None)`.
+#[inline]
 pub fn compute_line_widths(text: &str, font: &Font, font_size: f64, max_width: f64) -> Vec<f64> {
+    compute_line_widths_with(text, font, font_size, max_width, None)
+}
+
+/// Scope-aware variant of `compute_line_widths`. Consults `store` (if Some)
+/// before the legacy global registry for `Font::Custom` lookups via the
+/// underlying `measure_text_with`.
+pub(crate) fn compute_line_widths_with(
+    text: &str,
+    font: &Font,
+    font_size: f64,
+    max_width: f64,
+    store: Option<&FontMetricsStore>,
+) -> Vec<f64> {
     if text.is_empty() {
         return Vec::new();
     }
@@ -37,7 +54,7 @@ pub fn compute_line_widths(text: &str, font: &Font, font_size: f64, max_width: f
     let mut current_width = 0.0;
 
     for word in &words {
-        let word_width = measure_text(word, font, font_size);
+        let word_width = measure_text_with(word, font, font_size, store);
 
         if current_width > 0.0 && current_width + word_width > max_width {
             line_widths.push(current_width);
@@ -83,6 +100,9 @@ pub fn compute_line_widths(text: &str, font: &Font, font_size: f64, max_width: f
 /// assert!(metrics.width > 0.0);
 /// assert!(metrics.height > 0.0);
 /// ```
+///
+/// Back-compat shim; delegates to `measure_text_block_with(..., None)`.
+#[inline]
 pub fn measure_text_block(
     text: &str,
     font: &Font,
@@ -90,7 +110,21 @@ pub fn measure_text_block(
     line_height: f64,
     max_width: f64,
 ) -> TextBlockMetrics {
-    let line_widths = compute_line_widths(text, font, font_size, max_width);
+    measure_text_block_with(text, font, font_size, line_height, max_width, None)
+}
+
+/// Scope-aware variant of `measure_text_block`. Consults `store` (if Some)
+/// before the legacy global registry for `Font::Custom` lookups via the
+/// underlying `measure_text_with`.
+pub fn measure_text_block_with(
+    text: &str,
+    font: &Font,
+    font_size: f64,
+    line_height: f64,
+    max_width: f64,
+    store: Option<&FontMetricsStore>,
+) -> TextBlockMetrics {
+    let line_widths = compute_line_widths_with(text, font, font_size, max_width, store);
 
     let line_count = line_widths.len();
     let width = line_widths.iter().copied().fold(0.0_f64, f64::max);
@@ -126,5 +160,79 @@ mod tests {
         assert_eq!(m.line_count, 0);
         assert_eq!(m.width, 0.0);
         assert_eq!(m.height, 0.0);
+    }
+
+    #[test]
+    fn test_measure_text_block_with_uses_document_scope() {
+        use crate::text::metrics::{FontMetrics, FontMetricsStore};
+        let unique = format!("MeasureBlockTask5_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        // Make every char width = 1000 (i.e., 1.0em per char). Word "AB" = 24 at 12pt.
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 1000), ('B', 1000)]),
+        );
+
+        let m = measure_text_block_with(
+            "AB",
+            &Font::Custom(unique.clone()),
+            12.0,
+            1.2,
+            500.0,
+            Some(&store),
+        );
+        // One line with width = 2 * 1000 / 1000 * 12 = 24
+        assert!(
+            (m.width - 24.0).abs() < 0.01,
+            "expected scope-aware width 24, got {}",
+            m.width
+        );
+    }
+
+    #[test]
+    fn test_measure_text_block_with_uses_store_across_wrap() {
+        use crate::text::metrics::{FontMetrics, FontMetricsStore};
+        let unique = format!("MeasureBlockWrapTask5_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        // 'A' = 'B' = 1000 units → "AB" word width = 2000 units → 24.0 at 12pt.
+        // Space ' ' = 1000 → 12.0 at 12pt.
+        //
+        // `split_into_words("AB AB")` yields three tokens: ["AB", " ", "AB"].
+        // With max_width = 30.0 and per-store widths:
+        //   token 1 "AB"  → current = 24.0               (fits)
+        //   token 2 " "   → 24.0 + 12.0 = 36.0 > 30.0  → push 24.0, current = 12.0
+        //   token 3 "AB"  → 12.0 + 24.0 = 36.0 > 30.0  → push 12.0, current = 24.0
+        //   end            → push 24.0
+        // → 3 lines: [24.0, 12.0, 24.0], width = 24.0.
+        // This exercises all three iterations of the wrap loop, proving the store
+        // is correctly threaded into compute_line_widths_with on every pass.
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 1000), ('B', 1000), (' ', 1000)]),
+        );
+
+        // max_width = 30.0 fits the first "AB" (24.0) but neither the space+AB
+        // continuation nor the trailing "AB" fits, forcing two wraps (three lines).
+        let m = measure_text_block_with(
+            "AB AB",
+            &Font::Custom(unique.clone()),
+            12.0,
+            1.2,
+            30.0,
+            Some(&store),
+        );
+
+        assert_eq!(
+            m.line_count, 3,
+            "split_into_words yields 3 tokens (\"AB\", \" \", \"AB\") and max_width=30 \
+             forces a wrap after each; expected 3 lines"
+        );
+        // Block width is the max of [24.0, 12.0, 24.0] = 24.0, derived from
+        // per-store widths. If the store were not threaded the widths would differ.
+        assert!(
+            (m.width - 24.0).abs() < 0.01,
+            "wrapped block width must come from per-store widths (24.0); got {}",
+            m.width
+        );
     }
 }

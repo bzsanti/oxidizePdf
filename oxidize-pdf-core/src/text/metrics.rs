@@ -1,10 +1,10 @@
 use crate::text::Font;
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// Character width information for standard PDF fonts
 /// All widths are in 1/1000 of a unit (font size 1.0)
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FontMetrics {
     widths: HashMap<char, u16>,
     default_width: u16,
@@ -35,6 +35,71 @@ impl FontMetrics {
 
     pub fn char_width(&self, ch: char) -> u16 {
         self.widths.get(&ch).copied().unwrap_or(self.default_width)
+    }
+}
+
+/// Per-Document store of custom font metrics.
+///
+/// Cheap to clone (Arc-backed). The lifetime of registered metrics is bound
+/// to the lifetime of the owning Document — when the Document is dropped,
+/// the metrics are freed (assuming no other Arc clones survive).
+///
+/// This type was introduced in v2.8.0 to replace the process-wide
+/// `CUSTOM_FONT_METRICS` lazy_static registry, which leaked across
+/// Document lifetimes (issue #230).
+#[derive(Clone, Debug)]
+pub struct FontMetricsStore {
+    inner: Arc<RwLock<HashMap<String, Arc<FontMetrics>>>>,
+}
+
+impl FontMetricsStore {
+    /// Create a new empty store.
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Register or replace metrics for `font_name`. Last-writer-wins on the
+    /// same name. Concurrent calls into the same store are serialised by the
+    /// internal RwLock; concurrent calls into the same Document are
+    /// prevented by `Document::add_font_from_bytes` taking `&mut self`.
+    pub fn register(&self, font_name: impl Into<String>, metrics: FontMetrics) {
+        let name = font_name.into();
+        match self.inner.write() {
+            Ok(mut map) => {
+                map.insert(name, Arc::new(metrics));
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "FontMetricsStore lock is poisoned; could not register '{}': {}",
+                    name,
+                    e
+                );
+            }
+        }
+    }
+
+    /// Look up metrics by name. Returns `None` on miss; no side effects.
+    pub fn get(&self, font_name: &str) -> Option<Arc<FontMetrics>> {
+        let map = self.inner.read().ok()?;
+        map.get(font_name).cloned()
+    }
+
+    /// Number of registered fonts. Diagnostic / test introspection.
+    pub fn len(&self) -> usize {
+        self.inner.read().map(|m| m.len()).unwrap_or(0)
+    }
+
+    /// Whether the store contains no fonts.
+    pub fn is_empty(&self) -> bool {
+        self.inner.read().map(|m| m.is_empty()).unwrap_or(true)
+    }
+}
+
+impl Default for FontMetricsStore {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -142,29 +207,61 @@ lazy_static::lazy_static! {
     };
 }
 
-/// Measure the width of a text string in a given font and size
-pub fn measure_text(text: &str, font: &Font, font_size: f64) -> f64 {
+/// Measure the width of a text string in a given font and size.
+///
+/// Variant of `measure_text` that consults a `FontMetricsStore` for
+/// `Font::Custom` lookups before falling back to the legacy global
+/// registry. Used internally by `TextFlowContext`, `TextContext`, and
+/// `measure_text_block_with` to scope measurement to a single Document.
+pub fn measure_text_with(
+    text: &str,
+    font: &Font,
+    font_size: f64,
+    store: Option<&FontMetricsStore>,
+) -> f64 {
     if font.is_symbolic() {
-        // Symbol and ZapfDingbats need special handling
         return text.len() as f64 * font_size * 0.6;
     }
-
-    let metrics = get_font_metrics(font);
-
+    let metrics = lookup(font, store);
     let width_units: u32 = text.chars().map(|ch| metrics.char_width(ch) as u32).sum();
-
     (width_units as f64 / 1000.0) * font_size
 }
 
-/// Measure the width of a single character
-pub fn measure_char(ch: char, font: Font, font_size: f64) -> f64 {
+/// Measure the width of a text string in a given font and size.
+///
+/// Back-compat shim. Delegates to `measure_text_with(text, font, font_size, None)`.
+/// Custom fonts not registered globally fall back to default widths plus a
+/// rate-limited diagnostic warning. For new code, prefer `measure_text_with`
+/// or use `Document::new_page_a4()` so the measurement context carries a
+/// `FontMetricsStore` automatically.
+#[inline]
+pub fn measure_text(text: &str, font: &Font, font_size: f64) -> f64 {
+    measure_text_with(text, font, font_size, None)
+}
+
+/// Measure the width of a single character in a given font and size.
+///
+/// Variant of `measure_char` that consults a `FontMetricsStore` for
+/// `Font::Custom` lookups before falling back to the legacy global
+/// registry. Takes the font by value (matching the existing
+/// `measure_char` signature, which predates this scope-aware variant).
+pub fn measure_char_with(
+    ch: char,
+    font: Font,
+    font_size: f64,
+    store: Option<&FontMetricsStore>,
+) -> f64 {
     if font.is_symbolic() {
         return font_size * 0.6;
     }
-
-    let metrics = get_font_metrics(&font);
-
+    let metrics = lookup(&font, store);
     (metrics.char_width(ch) as f64 / 1000.0) * font_size
+}
+
+/// Back-compat shim — see `measure_char_with`.
+#[inline]
+pub fn measure_char(ch: char, font: Font, font_size: f64) -> f64 {
+    measure_char_with(ch, font, font_size, None)
 }
 
 /// Split text into words, preserving spaces
@@ -199,6 +296,10 @@ pub fn split_into_words(text: &str) -> Vec<&str> {
 }
 
 /// Register metrics for a custom font
+#[deprecated(
+    since = "2.8.0",
+    note = "use Document::add_font_from_bytes; the global registry is process-wide and not bounded — see issue #230"
+)]
 pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
     match CUSTOM_FONT_METRICS.write() {
         Ok(mut custom_metrics) => {
@@ -216,6 +317,10 @@ pub fn register_custom_font_metrics(font_name: String, metrics: FontMetrics) {
 }
 
 /// Get metrics for a custom font
+#[deprecated(
+    since = "2.8.0",
+    note = "use FontMetricsStore::get via a Document — the global registry is process-wide and not bounded — see issue #230"
+)]
 pub fn get_custom_font_metrics(font_name: &str) -> Option<FontMetrics> {
     if let Ok(custom_metrics) = CUSTOM_FONT_METRICS.read() {
         custom_metrics.get(font_name).cloned()
@@ -224,33 +329,87 @@ pub fn get_custom_font_metrics(font_name: &str) -> Option<FontMetrics> {
     }
 }
 
-/// Get font metrics for any font (standard or custom)
-fn get_font_metrics(font: &Font) -> FontMetrics {
+/// Look up font metrics for any font (standard or custom).
+///
+/// Resolution order for `Font::Custom(name)`:
+/// 1. Document scope (`store`) — takes precedence when present.
+/// 2. Legacy global registry — hierarchical fallback (deprecated in Task 12 of #230).
+/// 3. Default metrics + rate-limited warning via `warn_unknown_custom_font_once`.
+///
+/// Read path only — no side effects on either registry.
+fn lookup(font: &Font, store: Option<&FontMetricsStore>) -> FontMetrics {
     match font {
         Font::Custom(font_name) => {
-            // Try to get custom metrics first
-            if let Some(custom_metrics) = get_custom_font_metrics(font_name) {
-                custom_metrics
-            } else {
-                // Register default metrics for unknown custom fonts
-                let default_metrics = create_default_custom_metrics();
-                register_custom_font_metrics(font_name.clone(), default_metrics.clone());
-                tracing::debug!(
-                    "Warning: Using default metrics for unknown custom font: {}",
-                    font_name
-                );
-                default_metrics
+            // 1. Document scope (precedence)
+            if let Some(s) = store {
+                if let Some(arc_m) = s.get(font_name) {
+                    return (*arc_m).clone();
+                }
+            }
+            // 2. Legacy global (deprecated, hierarchical fallback)
+            if let Some(custom_metrics) = get_custom_font_metrics_internal(font_name) {
+                return custom_metrics;
+            }
+            // 3. Default + warn-once
+            warn_unknown_custom_font_once(font_name);
+            (*default_custom_metrics_arc()).clone()
+        }
+        _ => FONT_METRICS.get(font).cloned().unwrap_or_else(|| {
+            tracing::debug!(
+                "Warning: Standard font metrics not found for {:?}, using default",
+                font
+            );
+            (*default_custom_metrics_arc()).clone()
+        }),
+    }
+}
+
+/// Internal accessor for the legacy global registry. Wraps
+/// `get_custom_font_metrics` (which Task 12 of #230 will mark `#[deprecated]`)
+/// so the lookup path does not itself produce a deprecation warning at
+/// every internal call site once Task 12 lands.
+fn get_custom_font_metrics_internal(font_name: &str) -> Option<FontMetrics> {
+    if let Ok(custom_metrics) = CUSTOM_FONT_METRICS.read() {
+        custom_metrics.get(font_name).cloned()
+    } else {
+        None
+    }
+}
+
+lazy_static::lazy_static! {
+    /// Cached default metrics for unknown custom fonts. Building this map
+    /// once (lazy_static) means subsequent fallbacks reuse the same data
+    /// rather than rebuilding the CJK table on every miss.
+    static ref DEFAULT_CUSTOM_METRICS_ARC: Arc<FontMetrics> =
+        Arc::new(create_default_custom_metrics());
+}
+
+fn default_custom_metrics_arc() -> Arc<FontMetrics> {
+    DEFAULT_CUSTOM_METRICS_ARC.clone()
+}
+
+lazy_static::lazy_static! {
+    /// Names already warned about. Rate-limits the unknown-font warning to
+    /// one emission per name per process.
+    static ref WARNED_UNKNOWN_FONTS: RwLock<std::collections::HashSet<String>> =
+        RwLock::new(std::collections::HashSet::new());
+}
+
+fn warn_unknown_custom_font_once(font_name: &str) {
+    {
+        if let Ok(set) = WARNED_UNKNOWN_FONTS.read() {
+            if set.contains(font_name) {
+                return;
             }
         }
-        _ => {
-            // Standard fonts
-            FONT_METRICS.get(font).cloned().unwrap_or_else(|| {
-                tracing::debug!(
-                    "Warning: Standard font metrics not found for {:?}, using default",
-                    font
-                );
-                create_default_custom_metrics()
-            })
+    }
+    if let Ok(mut set) = WARNED_UNKNOWN_FONTS.write() {
+        if set.insert(font_name.to_string()) {
+            tracing::warn!(
+                "custom font '{}' measured but not registered; widths will use \
+                 defaults — register via Document::add_font_from_bytes",
+                font_name
+            );
         }
     }
 }
@@ -697,6 +856,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_register_custom_font_metrics() {
         let metrics = FontMetrics::new(750).with_widths(&[('A', 800), ('B', 850)]);
         register_custom_font_metrics("TestFont".to_string(), metrics);
@@ -711,6 +871,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_get_custom_font_metrics_not_found() {
         let result = get_custom_font_metrics("NonExistentFont12345");
         // May or may not be found depending on previous tests
@@ -719,6 +880,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_measure_text_custom_font() {
         // Register a custom font with known metrics
         let metrics = FontMetrics::new(500).with_widths(&[('A', 600), ('B', 600), ('C', 600)]);
@@ -731,6 +893,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_measure_char_custom_font() {
         let metrics = FontMetrics::new(500).with_widths(&[('X', 700)]);
         register_custom_font_metrics("CustomCharTest".to_string(), metrics);
@@ -742,17 +905,25 @@ mod tests {
     }
 
     #[test]
-    fn test_custom_font_auto_register_default() {
-        // When using an unregistered custom font, default metrics should be registered
-        let width = measure_char('A', Font::Custom("AutoRegisterTest".to_string()), 10.0);
+    fn test_custom_font_no_auto_register_default() {
+        // When using an unregistered custom font, default metrics are used but NOT
+        // registered into the global. The read path must have no side effects.
+        let unique = format!("NoAutoRegister_{}", std::process::id());
+        let width = measure_char('A', Font::Custom(unique.clone()), 10.0);
 
         // Should use default metrics (Helvetica-like), A = 667
         let expected = 667.0 * 10.0 / 1000.0;
         assert!((width - expected).abs() < 0.01);
 
-        // Now it should be registered
-        let metrics = get_custom_font_metrics("AutoRegisterTest");
-        assert!(metrics.is_some());
+        // Must NOT be registered as a side effect
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
+        #[allow(deprecated)]
+        let metrics = get_custom_font_metrics(&unique);
+        assert!(
+            metrics.is_none(),
+            "read path must not auto-register unknown custom fonts"
+        );
     }
 
     #[test]
@@ -826,9 +997,221 @@ mod tests {
         assert_eq!(base_width, bold_oblique_width);
     }
 
+    // ── Task 2 tests ────────────────────────────────────────────────────────
+
+    /// Clear the warned-set between tests that assert warn-once behaviour.
+    fn reset_warned_unknown_fonts() {
+        if let Ok(mut set) = WARNED_UNKNOWN_FONTS.write() {
+            set.clear();
+        }
+    }
+
+    #[test]
+    fn test_warn_unknown_font_rate_limited_once_per_name() {
+        let unique = format!("RateLimitTask2_{}", std::process::id());
+        // Isolate the warned-set from any state planted by earlier tests in this
+        // process. Helper is intentionally test-only.
+        reset_warned_unknown_fonts();
+
+        warn_unknown_custom_font_once(&unique);
+        warn_unknown_custom_font_once(&unique);
+        warn_unknown_custom_font_once(&unique);
+
+        let set = WARNED_UNKNOWN_FONTS.read().expect("lock");
+        assert!(
+            set.contains(&unique),
+            "name should be in the warned set after first call"
+        );
+        let count = set.iter().filter(|n| *n == &unique).count();
+        assert_eq!(
+            count, 1,
+            "warn_unknown_custom_font_once must rate-limit to one entry per name"
+        );
+    }
+
+    #[test]
+    fn test_unknown_custom_font_does_not_register_on_read() {
+        // Use a unique name so this test does not collide with other tests
+        // running in parallel under cargo test.
+        let unique = format!("UnknownNameTask2_{}", std::process::id());
+        let _ = measure_text("hello", &Font::Custom(unique.clone()), 12.0);
+        // Lookup must not have planted the name in the global registry.
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
+        #[allow(deprecated)]
+        let leaked = get_custom_font_metrics(&unique);
+        assert!(
+            leaked.is_none(),
+            "read path must not auto-register '{}'",
+            unique
+        );
+    }
+
+    #[test]
+    fn test_unknown_custom_font_returns_default_widths() {
+        let unique = format!("UnknownReturnTask2_{}", std::process::id());
+        let width = measure_text("AAAA", &Font::Custom(unique), 12.0);
+        // create_default_custom_metrics maps 'A' = 667; default_width = 556 for
+        // unmapped chars. Test uses "AAAA": 4 × 667 / 1000 × 12 = 32.016.
+        assert!(
+            (width - 32.016).abs() < 0.01,
+            "unknown custom fonts must use the default metrics (A=667), got {}",
+            width
+        );
+    }
+
     #[test]
     fn test_split_into_words_mixed_whitespace() {
         let words = split_into_words("A B  C   D");
         assert_eq!(words, vec!["A", " ", "B", "  ", "C", "   ", "D"]);
+    }
+
+    #[test]
+    fn test_font_metrics_store_register_and_get() {
+        let store = FontMetricsStore::new();
+        assert!(store.is_empty());
+        assert_eq!(store.len(), 0);
+
+        let metrics = FontMetrics::new(500).with_widths(&[('A', 700), ('B', 720)]);
+        store.register("MyFont", metrics);
+
+        assert_eq!(store.len(), 1);
+        assert!(!store.is_empty());
+
+        let got = store.get("MyFont").expect("font should be present");
+        assert_eq!(got.char_width('A'), 700);
+        assert_eq!(got.char_width('B'), 720);
+        assert_eq!(got.char_width('Z'), 500); // default fallback
+    }
+
+    #[test]
+    fn test_font_metrics_store_overwrite_same_name() {
+        let store = FontMetricsStore::new();
+        store.register("X", FontMetrics::new(500).with_widths(&[('A', 600)]));
+        store.register("X", FontMetrics::new(500).with_widths(&[('A', 800)]));
+
+        let got = store.get("X").unwrap();
+        assert_eq!(got.char_width('A'), 800); // last writer wins
+        assert_eq!(store.len(), 1);
+    }
+
+    #[test]
+    fn test_font_metrics_store_clone_shares_state() {
+        let store_a = FontMetricsStore::new();
+        let store_b = store_a.clone();
+
+        store_a.register("Shared", FontMetrics::new(400));
+        assert_eq!(store_b.len(), 1, "clone must share the underlying registry");
+        assert!(store_b.get("Shared").is_some());
+
+        store_b.register("AlsoShared", FontMetrics::new(400));
+        assert_eq!(store_a.len(), 2);
+    }
+
+    #[test]
+    fn test_font_metrics_store_get_miss_returns_none_no_side_effects() {
+        let store = FontMetricsStore::new();
+        assert!(store.get("Unknown").is_none());
+        assert_eq!(store.len(), 0); // no auto-register
+        assert!(store.is_empty());
+    }
+
+    // ── Task 3 tests ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_lookup_document_scope_takes_precedence_over_global() {
+        let unique = format!("PrecedenceTask3_{}", std::process::id());
+
+        // Plant something in the legacy global.
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
+        #[allow(deprecated)]
+        register_custom_font_metrics(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 100)]),
+        );
+
+        // Per-Document store has different metrics for the same name.
+        let store = FontMetricsStore::new();
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 900)]),
+        );
+
+        let resolved = lookup(&Font::Custom(unique), Some(&store));
+        assert_eq!(
+            resolved.char_width('A'),
+            900,
+            "Document scope must win over global"
+        );
+    }
+
+    #[test]
+    fn test_lookup_falls_through_to_global_when_store_misses() {
+        let unique = format!("FallthroughTask3_{}", std::process::id());
+
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
+        #[allow(deprecated)]
+        register_custom_font_metrics(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('A', 333)]),
+        );
+
+        let empty_store = FontMetricsStore::new();
+        let resolved = lookup(&Font::Custom(unique), Some(&empty_store));
+        assert_eq!(
+            resolved.char_width('A'),
+            333,
+            "must fall through to legacy global when Document store misses"
+        );
+    }
+
+    #[test]
+    fn test_lookup_with_none_store_uses_global_then_default() {
+        let unique = format!("NoneStoreTask3_{}", std::process::id());
+
+        // No global, no store. Should default+warn.
+        let resolved = lookup(&Font::Custom(unique), None);
+        assert_eq!(resolved.char_width('A'), 667); // create_default_custom_metrics maps 'A' = 667
+    }
+
+    // ── Task 4 tests ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_measure_text_with_uses_document_scope() {
+        let unique = format!("MeasureWithTask4_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        store.register(
+            unique.clone(),
+            // Each char (A through F) at 1000 units; 'A' x 4 chars = 48.0 at 12pt.
+            FontMetrics::new(500).with_widths(&[('A', 1000)]),
+        );
+
+        let width = measure_text_with("AAAA", &Font::Custom(unique), 12.0, Some(&store));
+        // 4 * 1000 / 1000 * 12 = 48
+        assert!((width - 48.0).abs() < 0.01, "got {}", width);
+    }
+
+    #[test]
+    fn test_measure_text_back_compat_shim_passes_none() {
+        let unique = format!("BackCompatTask4_{}", std::process::id());
+        // Without store, with empty global → default 'A' from create_default_custom_metrics
+        // ('A' = 667). 4 chars × 667 / 1000 × 12 = 32.016
+        let width = measure_text("AAAA", &Font::Custom(unique), 12.0);
+        assert!((width - 32.016).abs() < 0.01, "got {}", width);
+    }
+
+    #[test]
+    fn test_measure_char_with_uses_document_scope() {
+        let unique = format!("MeasureCharWithTask4_{}", std::process::id());
+        let store = FontMetricsStore::new();
+        store.register(
+            unique.clone(),
+            FontMetrics::new(500).with_widths(&[('Z', 800)]),
+        );
+        let width = measure_char_with('Z', Font::Custom(unique), 10.0, Some(&store));
+        // 800 / 1000 * 10 = 8
+        assert!((width - 8.0).abs() < 0.01, "got {}", width);
     }
 }
