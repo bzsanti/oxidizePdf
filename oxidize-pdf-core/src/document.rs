@@ -162,6 +162,17 @@ impl Document {
         self.pages.push(page);
     }
 
+    /// Returns a reference to this Document's font metrics store.
+    ///
+    /// Public surface for external callers that need to thread the
+    /// per-Document scope into the `_with` measurement helpers
+    /// (`measure_text_with`, `measure_char_with`, `measure_text_block_with`).
+    /// `FontMetricsStore` uses interior mutability, so callers can also
+    /// `register` and `get` directly via this reference.
+    pub fn font_metrics(&self) -> &FontMetricsStore {
+        &self.font_metrics
+    }
+
     /// Create a new A4 page already bound to this Document's font metrics store.
     ///
     /// Recommended over `Page::a4()` for code that uses custom fonts: the
