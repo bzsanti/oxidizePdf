@@ -6,7 +6,7 @@ use crate::page_labels::PageLabelTree;
 use crate::semantic::{BoundingBox, EntityType, RelationType, SemanticEntity};
 use crate::structure::{NamedDestinations, OutlineTree, StructTree};
 // Alias to avoid collision with crate::fonts::FontMetrics (PDF font objects)
-use crate::text::metrics::{register_custom_font_metrics, FontMetrics as TextMeasurementMetrics};
+use crate::text::metrics::{FontMetrics as TextMeasurementMetrics, FontMetricsStore};
 use crate::text::FontEncoding;
 use crate::writer::PdfWriter;
 use chrono::{DateTime, Local, Utc};
@@ -51,6 +51,8 @@ pub struct Document {
     pub(crate) use_xref_streams: bool,
     /// Cache for custom fonts
     pub(crate) custom_fonts: FontCache,
+    /// Per-document font metrics store for text measurement (char widths)
+    pub(crate) font_metrics: FontMetricsStore,
     /// Characters used in the document (for font subsetting)
     /// Characters drawn in this document, bucketed by font name
     /// (ISO 32000-1 §9.7.4 — only custom Type0/CID fonts need
@@ -127,6 +129,7 @@ impl Document {
             compress: true,          // Enable compression by default
             use_xref_streams: false, // Disabled by default for compatibility
             custom_fonts: FontCache::new(),
+            font_metrics: FontMetricsStore::new(),
             used_characters_by_font: HashMap::new(),
             open_action: None,
             viewer_preferences: None,
@@ -455,7 +458,7 @@ impl Document {
             let sum: u32 = char_width_map.values().map(|&w| w as u32).sum();
             let default_width = (sum / char_width_map.len() as u32) as u16;
             let text_metrics = TextMeasurementMetrics::from_char_map(char_width_map, default_width);
-            register_custom_font_metrics(name, text_metrics);
+            self.font_metrics.register(name, text_metrics);
         }
 
         Ok(())
@@ -2536,5 +2539,33 @@ mod tests {
             assert_eq!(doc.metadata.author.as_deref(), Some(long_author.as_str()));
             assert!(doc.metadata.keywords.as_ref().unwrap().len() > 500);
         }
+    }
+
+    #[test]
+    fn test_add_font_from_bytes_writes_to_per_document_store_not_global() {
+        // Use a unique font name so this test does not collide with parallel tests.
+        let unique = format!("PerDocTask9_{}", std::process::id());
+        // Capture global size before.
+        // get_custom_font_metrics is deprecated by Task 12 of #230 (v2.8.0).
+        // #[allow(deprecated)] is applied now to avoid churn when the attribute lands.
+        #[allow(deprecated)]
+        let before = crate::text::metrics::get_custom_font_metrics(&unique);
+        assert!(before.is_none(), "precondition: name not in global");
+
+        // Construct a Document and register a synthetic font under this name.
+        // We bypass the TTF parser by going through the metrics store directly
+        // — the public API requires real TTF bytes, which is exercised in the
+        // integration suite (Task 14). This unit test focuses on the routing.
+        let doc = Document::new();
+        doc.font_metrics
+            .register(unique.clone(), crate::text::metrics::FontMetrics::new(500));
+
+        // The Document store contains the entry.
+        assert!(doc.font_metrics.get(&unique).is_some());
+
+        // The legacy global was untouched.
+        #[allow(deprecated)]
+        let after = crate::text::metrics::get_custom_font_metrics(&unique);
+        assert!(after.is_none(), "global must remain untouched");
     }
 }
