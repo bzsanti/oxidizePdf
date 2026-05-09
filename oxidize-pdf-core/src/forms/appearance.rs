@@ -891,8 +891,12 @@ impl AppearanceGenerator for PushButtonAppearance {
             }
         }
 
-        // Draw label text
-        if !self.label.is_empty() {
+        // Draw label text — skipped for custom Type0 fonts because the
+        // hex-CID Tj path requires the font's glyph mapping, which is not
+        // yet a parameter of this generator (see issue #212 follow-up).
+        // The resource dict below still emits the Type0 placeholder so the
+        // writer can rewrite the indirect reference correctly.
+        if !self.label.is_empty() && !self.font.is_custom() {
             crate::graphics::color::write_fill_color(&mut content, self.text_color);
 
             content.push_str("BT\n");
@@ -922,13 +926,27 @@ impl AppearanceGenerator for PushButtonAppearance {
         // Create resources dictionary
         let mut resources = Dictionary::new();
 
-        // Add font resource
+        // Font resource — Type0 placeholder for custom fonts so the writer's
+        // rewrite_ap_stream_font_resources can substitute an indirect
+        // reference to the document-level CIDFontType0 object. Built-in
+        // Type1 fonts continue to embed the inline Type1 dict (the writer
+        // does not rewrite Type1 inline dicts; viewers resolve base-14 by
+        // name).
         let mut font_dict = Dictionary::new();
-        let mut font_res = Dictionary::new();
-        font_res.set("Type", Object::Name("Font".to_string()));
-        font_res.set("Subtype", Object::Name("Type1".to_string()));
-        font_res.set("BaseFont", Object::Name(self.font.pdf_name()));
-        font_dict.set(self.font.pdf_name(), Object::Dictionary(font_res));
+        if self.font.is_custom() {
+            let mut placeholder = Dictionary::new();
+            placeholder.set("Type", Object::Name("Font".to_string()));
+            placeholder.set("Subtype", Object::Name("Type0".to_string()));
+            placeholder.set("BaseFont", Object::Name(self.font.pdf_name()));
+            placeholder.set("Encoding", Object::Name("Identity-H".to_string()));
+            font_dict.set(self.font.pdf_name(), Object::Dictionary(placeholder));
+        } else {
+            let mut font_res = Dictionary::new();
+            font_res.set("Type", Object::Name("Font".to_string()));
+            font_res.set("Subtype", Object::Name("Type1".to_string()));
+            font_res.set("BaseFont", Object::Name(self.font.pdf_name()));
+            font_dict.set(self.font.pdf_name(), Object::Dictionary(font_res));
+        }
         resources.set("Font", Object::Dictionary(font_dict));
 
         let stream = AppearanceStream::new(content.into_bytes(), [0.0, 0.0, width, height])
