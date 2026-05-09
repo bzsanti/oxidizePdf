@@ -515,6 +515,11 @@ pub struct ComboBox {
     pub selected: Option<usize>,
     /// Whether custom text entry is allowed
     pub editable: bool,
+    /// Typed `/DA` (default appearance) — drives the font/size/colour used
+    /// to regenerate the field's `/AP/N` when `Document::fill_field` is
+    /// called. When `None`, fill_field falls back to Helvetica + WinAnsi
+    /// (which fails for any non-WinAnsi value — see issue #212).
+    pub default_appearance: Option<DefaultAppearance>,
 }
 
 impl ComboBox {
@@ -526,7 +531,25 @@ impl ComboBox {
             value: None,
             selected: None,
             editable: false,
+            default_appearance: None,
         }
+    }
+
+    /// Attach a typed `/DA` so `Document::fill_field` knows which font to
+    /// pick when regenerating this combo box's `/AP/N` stream.
+    ///
+    /// Mirrors [`TextField::with_default_appearance`]. Selecting a custom
+    /// Type0/CID font here is the only path today that lets `fill_field`
+    /// emit a correct appearance for non-WinAnsi values (CJK, Arabic,
+    /// non-WinAnsi Latin) — the default built-in Helvetica cannot render
+    /// those and `fill_field` will otherwise return
+    /// `PdfError::EncodingError`. See issue #212.
+    ///
+    /// The font must be registered on the `Document` via
+    /// `add_font_from_bytes` if it's a `Font::Custom(_)`.
+    pub fn with_default_appearance(mut self, font: Font, font_size: f64, color: Color) -> Self {
+        self.default_appearance = Some(DefaultAppearance::new(font, font_size, color));
+        self
     }
 
     /// Add an option
