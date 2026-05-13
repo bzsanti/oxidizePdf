@@ -142,13 +142,20 @@ impl Document {
     pub fn add_page(&mut self, mut page: Page) {
         // Inject the Document's metrics store into the page if it does not
         // already carry one. Pages constructed via Document::new_page_*()
-        // already carry a store and are skipped (preserves bindings to
-        // other Documents if a page is moved). Pages constructed via
-        // Page::a4() / Page::letter() / Page::new() get the Document store
-        // here so their text_flow / text contexts can resolve custom fonts
-        // via Document scope when measurements happen after add_page.
+        // carry the store on BOTH `page.font_metrics_store` AND
+        // `page.text_context.font_metrics_store` from the factory, and are
+        // skipped here (preserves bindings to other Documents if a page is
+        // moved between them). Pages constructed via Page::a4() /
+        // Page::letter() / Page::new() start with both fields as None;
+        // both are set here so that subsequent measurements through the
+        // page's text context resolve custom fonts via the Document scope
+        // rather than the legacy global registry. The text context's
+        // accumulated ops (if the caller pushed any before add_page) are
+        // preserved — only the `font_metrics_store` field is mutated
+        // (issue #230 follow-up M1).
         if page.font_metrics_store.is_none() {
             page.font_metrics_store = Some(self.font_metrics.clone());
+            page.set_text_context_metrics_store(Some(self.font_metrics.clone()));
         }
         // Merge the page's per-font character accumulators into the
         // document-wide map (issue #204 — each font gets subsetted with

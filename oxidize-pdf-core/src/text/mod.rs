@@ -157,6 +157,18 @@ impl TextContext {
         ctx
     }
 
+    /// Inject or replace the per-Document `FontMetricsStore` on an
+    /// already-constructed context. Preserves accumulated ops and any
+    /// other state — only the `font_metrics_store` field is mutated.
+    ///
+    /// Called by `Document::add_page` for pages constructed via
+    /// `Page::a4()` / `Page::letter()` / `Page::new()` (those start with
+    /// `font_metrics_store: None` and may already carry ops the caller
+    /// pushed before transferring ownership to the Document).
+    pub(crate) fn set_metrics_store(&mut self, store: Option<FontMetricsStore>) {
+        self.font_metrics_store = store;
+    }
+
     /// Record `text` as drawn with the currently-active font, bucketed
     /// under the font's PDF name (issue #204). Builtin and custom fonts
     /// are both tracked; the writer later filters to the set of
