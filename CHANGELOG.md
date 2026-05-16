@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Fixed
+
+- Text extraction in `preserve_layout` mode now emits `TextFragment` for
+  `TJ` (`ShowTextArray`), `'` (`NextLineShowText`), and `"`
+  (`SetSpacingNextLineShowText`) operators — not only for `Tj`
+  (`ShowText`). Previously, PDFs whose body relied on `TJ` (typical for
+  LaTeX, InDesign, and modern Word output) yielded zero fragments per
+  page, causing the partitioner to receive zero elements and
+  `Document::rag_chunks()` to return an empty vector. Addresses #235.
+- The `'` and `"` text-show operators were previously swallowed by the
+  catch-all match arm in `TextExtractor::extract_from_page`, leaving
+  their text out of `ExtractedText::text` and out of
+  `ExtractedText::fragments`. Both now advance the line matrix by
+  `-leading`, emit text into both buffers, and (for `"`) apply the
+  embedded word- and character-spacing values to the text state.
+
 ## [2.8.0] - 2026-05-09
 
 ### Added

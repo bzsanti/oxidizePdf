@@ -369,26 +369,7 @@ impl TextExtractor {
                                 calculate_text_width(&decoded, state.font_size, font_info);
 
                             if self.options.preserve_layout {
-                                // Detect bold/italic from font name
-                                let (is_bold, is_italic) = state
-                                    .font_name
-                                    .as_ref()
-                                    .map(|name| parse_font_style(name))
-                                    .unwrap_or((false, false));
-
-                                fragments.push(TextFragment {
-                                    text: decoded.clone(),
-                                    x,
-                                    y,
-                                    width: text_width,
-                                    height: state.font_size,
-                                    font_size: state.font_size,
-                                    font_name: state.font_name.clone(),
-                                    is_bold,
-                                    is_italic,
-                                    color: state.fill_color,
-                                    space_decisions: Vec::new(),
-                                });
+                                emit_text_fragment(&mut fragments, &decoded, text_width, &state);
                             }
 
                             // Update position for next text
@@ -416,12 +397,21 @@ impl TextExtractor {
                                         let decoded = self.decode_text(&text_bytes, &state)?;
                                         extracted_text.push_str(&decoded);
 
-                                        // Update text matrix
                                         let text_width = calculate_text_width(
                                             &decoded,
                                             state.font_size,
                                             font_info,
                                         );
+
+                                        if self.options.preserve_layout {
+                                            emit_text_fragment(
+                                                &mut fragments,
+                                                &decoded,
+                                                text_width,
+                                                &state,
+                                            );
+                                        }
+
                                         let tx = text_width * state.horizontal_scale / 100.0;
                                         state.text_matrix = multiply_matrix(
                                             &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
@@ -438,6 +428,90 @@ impl TextExtractor {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    ContentOperation::NextLineShowText(text) => {
+                        if in_text_object {
+                            // ' = T* then Tj string. Advance line matrix by -leading.
+                            let new_matrix = multiply_matrix(
+                                &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+                                &state.text_line_matrix,
+                            );
+                            state.text_matrix = new_matrix;
+                            state.text_line_matrix = new_matrix;
+
+                            let decoded = self.decode_text(&text, &state)?;
+                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
+                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
+
+                            if !extracted_text.is_empty() {
+                                extracted_text.push('\n');
+                            }
+                            extracted_text.push_str(&decoded);
+
+                            let font_info = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+                            let text_width =
+                                calculate_text_width(&decoded, state.font_size, font_info);
+
+                            if self.options.preserve_layout {
+                                emit_text_fragment(&mut fragments, &decoded, text_width, &state);
+                            }
+
+                            last_x = x + text_width;
+                            last_y = y;
+
+                            let tx = text_width * state.horizontal_scale / 100.0;
+                            state.text_matrix =
+                                multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
+                        }
+                    }
+
+                    ContentOperation::SetSpacingNextLineShowText(word_space, char_space, text) => {
+                        if in_text_object {
+                            // " = aw Tw, ac Tc, then ' string.
+                            // ISO 32000-1 §9.4.3. Parser at content.rs has already
+                            // permuted operand-stack order so the variant fields
+                            // arrive as (word_spacing, char_spacing, text).
+                            state.word_space = word_space as f64;
+                            state.char_space = char_space as f64;
+
+                            let new_matrix = multiply_matrix(
+                                &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+                                &state.text_line_matrix,
+                            );
+                            state.text_matrix = new_matrix;
+                            state.text_line_matrix = new_matrix;
+
+                            let decoded = self.decode_text(&text, &state)?;
+                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
+                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
+
+                            if !extracted_text.is_empty() {
+                                extracted_text.push('\n');
+                            }
+                            extracted_text.push_str(&decoded);
+
+                            let font_info = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+                            let text_width =
+                                calculate_text_width(&decoded, state.font_size, font_info);
+
+                            if self.options.preserve_layout {
+                                emit_text_fragment(&mut fragments, &decoded, text_width, &state);
+                            }
+
+                            last_x = x + text_width;
+                            last_y = y;
+
+                            let tx = text_width * state.horizontal_scale / 100.0;
+                            state.text_matrix =
+                                multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
                         }
                     }
 
@@ -866,6 +940,45 @@ impl Default for TextExtractor {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Compute the user-space position of a glyph run about to be shown,
+/// and push the corresponding `TextFragment` into the buffer.
+///
+/// Encapsulates the position-capture + style-derivation + push sequence
+/// shared by every text-show operator handler in `extract_from_page`
+/// (`Tj`, `TJ`, `'`, `"`). The caller must invoke this **before**
+/// advancing the text matrix by `tx`, so the captured `(x, y)` is the
+/// pen position at the start of the run.
+fn emit_text_fragment(
+    fragments: &mut Vec<TextFragment>,
+    decoded: &str,
+    text_width: f64,
+    state: &TextState,
+) {
+    if decoded.is_empty() {
+        return;
+    }
+    let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
+    let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
+    let (is_bold, is_italic) = state
+        .font_name
+        .as_ref()
+        .map(|name| parse_font_style(name))
+        .unwrap_or((false, false));
+    fragments.push(TextFragment {
+        text: decoded.to_owned(),
+        x,
+        y,
+        width: text_width,
+        height: state.font_size,
+        font_size: state.font_size,
+        font_name: state.font_name.clone(),
+        is_bold,
+        is_italic,
+        color: state.fill_color,
+        space_decisions: Vec::new(),
+    });
 }
 
 /// Multiply two transformation matrices
