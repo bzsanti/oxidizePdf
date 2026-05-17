@@ -88,7 +88,7 @@ jobs:
 
       - name: Run tests (all others)
         if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
-        run: cargo test --all --verbose
+        run: cargo test --all --features internal-testing --verbose
 
       - name: Build documentation
         run: cargo doc --all --no-deps

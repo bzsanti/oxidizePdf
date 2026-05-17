@@ -24,6 +24,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-leading`, emit text into both buffers, and (for `"`) apply the
   embedded word- and character-spacing values to the text state.
 
+## [2.8.1] - 2026-05-13
+
+### Fixed
+
+- **`Document::add_page`** now also injects the per-Document
+  `FontMetricsStore` into `page.text_context.font_metrics_store` when the
+  page was constructed via `Page::a4()` / `Page::letter()` /
+  `Page::new(...)`. Before this fix, only `page.font_metrics_store` was set;
+  the text context was left with `font_metrics_store: None` and any
+  subsequent measurement through the page's text context fell through to
+  the legacy global registry, re-introducing the cross-`Document` leak that
+  issue #230 was meant to close architecturally. Pages constructed via
+  `Document::new_page_*()` were unaffected (the factory path already wired
+  both fields). The fix mutates only the `font_metrics_store` field on the
+  existing `TextContext`, preserving any operations the caller pushed
+  before `add_page`. Issue #230 follow-up M1.
+
 ## [2.8.0] - 2026-05-09
 
 ### Added
