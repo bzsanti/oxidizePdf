@@ -148,13 +148,24 @@ impl TextContext {
     /// Create a `TextContext` bound to a per-document `FontMetricsStore`
     /// (issue #230). `None` is equivalent to `TextContext::new()`.
     ///
-    /// `pub(crate)` — wired by `Page::*_with_metrics()` constructors (Task 8).
-    /// Non-test callers for `Page::*_with_metrics` arrive in Tasks 9-11.
-    #[allow(dead_code)]
+    /// `pub(crate)` — wired by `Page::*_with_metrics()` constructors and
+    /// by `Document::new_page_*()` factories.
     pub(crate) fn with_metrics_store(store: Option<FontMetricsStore>) -> Self {
         let mut ctx = Self::default();
         ctx.font_metrics_store = store;
         ctx
+    }
+
+    /// Inject or replace the per-Document `FontMetricsStore` on an
+    /// already-constructed context. Preserves accumulated ops and any
+    /// other state — only the `font_metrics_store` field is mutated.
+    ///
+    /// Called by `Document::add_page` for pages constructed via
+    /// `Page::a4()` / `Page::letter()` / `Page::new()` (those start with
+    /// `font_metrics_store: None` and may already carry ops the caller
+    /// pushed before transferring ownership to the Document).
+    pub(crate) fn set_metrics_store(&mut self, store: Option<FontMetricsStore>) {
+        self.font_metrics_store = store;
     }
 
     /// Record `text` as drawn with the currently-active font, bucketed

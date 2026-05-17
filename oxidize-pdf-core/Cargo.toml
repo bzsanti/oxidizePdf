@@ -441,6 +441,7 @@ performance = ["dep:rayon", "compression"]
 # Test features
 real-pdf-tests = []  # Enable tests with real PDF files from fixtures
 multilingual-fixtures = []  # Enable tests that require UDHR multilingual fixture PDFs
+internal-testing = []  # Enable `_for_test` introspection helpers used by integration tests (kept out of production ABI)
 
 # Digital signature verification features
 signatures = [
