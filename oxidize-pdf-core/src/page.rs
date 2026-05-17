@@ -565,12 +565,49 @@ impl Page {
         self.font_metrics_store.as_ref()
     }
 
+    /// Returns the `FontMetricsStore` bound to this page's `text_context`,
+    /// if any. Exposed for integration tests verifying that
+    /// `Document::add_page` injects the per-Document store into the
+    /// text context as well as into the page itself (issue #230 follow-up).
+    ///
+    /// Gated behind the `internal-testing` feature so it does not enter the
+    /// production ABI. Lib unit tests get it via `cfg(test)`.
+    #[cfg(any(test, feature = "internal-testing"))]
+    #[doc(hidden)]
+    pub fn text_context_metrics_store_for_test(
+        &self,
+    ) -> Option<&crate::text::metrics::FontMetricsStore> {
+        self.text_context.font_metrics_store.as_ref()
+    }
+
+    /// Returns the number of operations accumulated in the page's
+    /// `text_context`. Exposed for integration tests verifying that
+    /// `Document::add_page` does not erase ops while injecting the
+    /// per-Document `FontMetricsStore` (issue #230 follow-up).
+    ///
+    /// Gated behind the `internal-testing` feature so it does not enter the
+    /// production ABI. Lib unit tests get it via `cfg(test)`.
+    #[cfg(any(test, feature = "internal-testing"))]
+    #[doc(hidden)]
+    pub fn text_context_ops_count_for_test(&self) -> usize {
+        self.text_context.ops_slice().len()
+    }
+
+    /// Injects or replaces the `FontMetricsStore` on this page's text
+    /// context. Called by `Document::add_page` to wire the Document scope
+    /// into pages constructed via `Page::a4() / Page::letter() / Page::new()`
+    /// (issue #230 follow-up). Accumulated ops are preserved.
+    pub(crate) fn set_text_context_metrics_store(
+        &mut self,
+        store: Option<crate::text::metrics::FontMetricsStore>,
+    ) {
+        self.text_context.set_metrics_store(store);
+    }
+
     /// Creates a new A4 page pre-loaded with a `FontMetricsStore` (issue #230).
     ///
     /// `Page::a4()` has `font_metrics_store: None`; this variant is used by
-    /// `Document::new_page_a4()` (Task 10) to bind the document-level store.
-    /// Non-test callers arrive in Tasks 9-11 (Document integration).
-    #[allow(dead_code)]
+    /// `Document::new_page_a4()` to bind the document-level store.
     pub(crate) fn a4_with_metrics(store: FontMetricsStore) -> Self {
         let mut p = Self::a4();
         p.font_metrics_store = Some(store.clone());
@@ -579,8 +616,6 @@ impl Page {
     }
 
     /// Creates a new US Letter page pre-loaded with a `FontMetricsStore` (issue #230).
-    /// Non-test callers arrive in Tasks 9-11 (Document integration).
-    #[allow(dead_code)]
     pub(crate) fn letter_with_metrics(store: FontMetricsStore) -> Self {
         let mut p = Self::letter();
         p.font_metrics_store = Some(store.clone());
@@ -589,8 +624,6 @@ impl Page {
     }
 
     /// Creates a new page of custom size pre-loaded with a `FontMetricsStore` (issue #230).
-    /// Non-test callers arrive in Tasks 9-11 (Document integration).
-    #[allow(dead_code)]
     pub(crate) fn new_with_metrics(width: f64, height: f64, store: FontMetricsStore) -> Self {
         let mut p = Self::new(width, height);
         p.font_metrics_store = Some(store.clone());
