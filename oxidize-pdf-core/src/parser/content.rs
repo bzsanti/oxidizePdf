@@ -1010,10 +1010,15 @@ impl ContentParser {
                 ContentOperation::NextLineShowText(text)
             }
             "\"" => {
+                // ISO 32000-1 §9.4.3: operand order is `aw ac string "`
+                // (aw at the bottom of the operand stack). `pop_*` is LIFO,
+                // so we pop string first, then `ac`, then `aw`. The enum
+                // variant is `(word_spacing, char_spacing, text)` to match
+                // the spec field names — pass aw first, then ac.
                 let text = self.pop_string(operands)?;
-                let aw = self.pop_number(operands)?;
                 let ac = self.pop_number(operands)?;
-                ContentOperation::SetSpacingNextLineShowText(ac, aw, text)
+                let aw = self.pop_number(operands)?;
+                ContentOperation::SetSpacingNextLineShowText(aw, ac, text)
             }
 
             // Graphics state operators

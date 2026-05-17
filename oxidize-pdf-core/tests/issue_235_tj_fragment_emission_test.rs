@@ -21,6 +21,14 @@ fn open_fixture() -> PdfDocument<std::fs::File> {
     PdfDocument::new(reader)
 }
 
+/// Write a PDF object body to `bytes`, recording its absolute offset in
+/// `offset` for the xref table. Used by `build_pdf_with_content_stream`
+/// to lay out objects 1..5 sequentially.
+fn write_obj(bytes: &mut Vec<u8>, offset: &mut usize, body: &str) {
+    *offset = bytes.len();
+    bytes.extend_from_slice(body.as_bytes());
+}
+
 /// Build a minimal valid 1-page PDF whose Contents stream is the supplied
 /// raw byte sequence (typically a hand-crafted sequence of text operators).
 /// Resources expose a single Type1 Helvetica font as `/F1`.
@@ -30,27 +38,22 @@ fn build_pdf_with_content_stream(content: &[u8]) -> Vec<u8> {
 
     bytes.extend_from_slice(b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
 
-    let push_obj = |b: &mut Vec<u8>, off: &mut usize, body: &str| {
-        *off = b.len();
-        b.extend_from_slice(body.as_bytes());
-    };
-
-    push_obj(
+    write_obj(
         &mut bytes,
         &mut offsets[1],
         "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
     );
-    push_obj(
+    write_obj(
         &mut bytes,
         &mut offsets[2],
         "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
     );
-    push_obj(
+    write_obj(
         &mut bytes,
         &mut offsets[3],
         "3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /MediaBox [0 0 612 792] >>\nendobj\n",
     );
-    push_obj(
+    write_obj(
         &mut bytes,
         &mut offsets[4],
         "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
@@ -247,10 +250,12 @@ fn tj_only_page_zero_watermark_still_extractable() {
         .expect("page 0 must extract");
 
     let watermark = page0.fragments.iter().find(|f| f.text.contains("arXiv"));
-    let wm = watermark.expect(&format!(
-        "page 0 must still emit the arXiv watermark fragment; got fragments: {:?}",
-        page0.fragments.iter().map(|f| &f.text).collect::<Vec<_>>()
-    ));
+    let wm = watermark.unwrap_or_else(|| {
+        panic!(
+            "page 0 must still emit the arXiv watermark fragment; got fragments: {:?}",
+            page0.fragments.iter().map(|f| &f.text).collect::<Vec<_>>()
+        )
+    });
     assert!(
         wm.text.contains("2310.06770"),
         "watermark text must contain the arXiv id; got {:?}",

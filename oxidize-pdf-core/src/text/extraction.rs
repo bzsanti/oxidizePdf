@@ -339,10 +339,8 @@ impl TextExtractor {
                             let text_bytes = &text;
                             let decoded = self.decode_text(text_bytes, &state)?;
 
-                            // Calculate position: Apply text_matrix, then CTM
-                            // Concatenate: final = CTM × text_matrix
-                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
-                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
+                            // Pen origin in user space = (CTM × text_matrix)(0, 0).
+                            let (x, y) = text_origin(&state);
 
                             // Add spacing based on position change
                             if !extracted_text.is_empty() {
@@ -369,7 +367,14 @@ impl TextExtractor {
                                 calculate_text_width(&decoded, state.font_size, font_info);
 
                             if self.options.preserve_layout {
-                                emit_text_fragment(&mut fragments, &decoded, text_width, &state);
+                                emit_text_fragment(
+                                    &mut fragments,
+                                    &decoded,
+                                    text_width,
+                                    x,
+                                    y,
+                                    &state,
+                                );
                             }
 
                             // Update position for next text
@@ -404,10 +409,13 @@ impl TextExtractor {
                                         );
 
                                         if self.options.preserve_layout {
+                                            let (x, y) = text_origin(&state);
                                             emit_text_fragment(
                                                 &mut fragments,
                                                 &decoded,
                                                 text_width,
+                                                x,
+                                                y,
                                                 &state,
                                             );
                                         }
@@ -442,8 +450,7 @@ impl TextExtractor {
                             state.text_line_matrix = new_matrix;
 
                             let decoded = self.decode_text(&text, &state)?;
-                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
-                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
+                            let (x, y) = text_origin(&state);
 
                             if !extracted_text.is_empty() {
                                 extracted_text.push('\n');
@@ -458,7 +465,14 @@ impl TextExtractor {
                                 calculate_text_width(&decoded, state.font_size, font_info);
 
                             if self.options.preserve_layout {
-                                emit_text_fragment(&mut fragments, &decoded, text_width, &state);
+                                emit_text_fragment(
+                                    &mut fragments,
+                                    &decoded,
+                                    text_width,
+                                    x,
+                                    y,
+                                    &state,
+                                );
                             }
 
                             last_x = x + text_width;
@@ -472,10 +486,9 @@ impl TextExtractor {
 
                     ContentOperation::SetSpacingNextLineShowText(word_space, char_space, text) => {
                         if in_text_object {
-                            // " = aw Tw, ac Tc, then ' string.
-                            // ISO 32000-1 §9.4.3. Parser at content.rs has already
-                            // permuted operand-stack order so the variant fields
-                            // arrive as (word_spacing, char_spacing, text).
+                            // " = aw Tw, ac Tc, then ' string. ISO 32000-1 §9.4.3.
+                            // The variant fields mirror the spec field names:
+                            // (word_spacing, char_spacing, text).
                             state.word_space = word_space as f64;
                             state.char_space = char_space as f64;
 
@@ -487,8 +500,7 @@ impl TextExtractor {
                             state.text_line_matrix = new_matrix;
 
                             let decoded = self.decode_text(&text, &state)?;
-                            let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
-                            let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
+                            let (x, y) = text_origin(&state);
 
                             if !extracted_text.is_empty() {
                                 extracted_text.push('\n');
@@ -503,7 +515,14 @@ impl TextExtractor {
                                 calculate_text_width(&decoded, state.font_size, font_info);
 
                             if self.options.preserve_layout {
-                                emit_text_fragment(&mut fragments, &decoded, text_width, &state);
+                                emit_text_fragment(
+                                    &mut fragments,
+                                    &decoded,
+                                    text_width,
+                                    x,
+                                    y,
+                                    &state,
+                                );
                             }
 
                             last_x = x + text_width;
@@ -942,25 +961,26 @@ impl Default for TextExtractor {
     }
 }
 
-/// Compute the user-space position of a glyph run about to be shown,
-/// and push the corresponding `TextFragment` into the buffer.
+/// Push a `TextFragment` capturing a glyph run about to be shown.
 ///
-/// Encapsulates the position-capture + style-derivation + push sequence
-/// shared by every text-show operator handler in `extract_from_page`
-/// (`Tj`, `TJ`, `'`, `"`). The caller must invoke this **before**
-/// advancing the text matrix by `tx`, so the captured `(x, y)` is the
-/// pen position at the start of the run.
+/// Encapsulates the style-derivation + push sequence shared by every
+/// text-show operator handler in `extract_from_page` (`Tj`, `TJ`, `'`,
+/// `"`). The caller supplies the pen origin `(x, y)` already mapped to
+/// user space (typically via `text_origin(&state)`); doing so avoids the
+/// double `multiply_matrix + transform_point` that prior versions did
+/// (handler computed it for `last_x`/`last_y`, then this fn recomputed
+/// it on the same `state`).
 fn emit_text_fragment(
     fragments: &mut Vec<TextFragment>,
     decoded: &str,
     text_width: f64,
+    x: f64,
+    y: f64,
     state: &TextState,
 ) {
     if decoded.is_empty() {
         return;
     }
-    let combined_matrix = multiply_matrix(&state.ctm, &state.text_matrix);
-    let (x, y) = transform_point(0.0, 0.0, &combined_matrix);
     let (is_bold, is_italic) = state
         .font_name
         .as_ref()
@@ -979,6 +999,15 @@ fn emit_text_fragment(
         color: state.fill_color,
         space_decisions: Vec::new(),
     });
+}
+
+/// Pen origin (user-space coordinates) of the next glyph in the current
+/// text state — i.e. `CTM × text_matrix` applied to (0, 0). Centralized
+/// to eliminate the duplicated `multiply_matrix + transform_point` pair
+/// across the four `extract_from_page` show-text handlers.
+fn text_origin(state: &TextState) -> (f64, f64) {
+    let combined = multiply_matrix(&state.ctm, &state.text_matrix);
+    transform_point(0.0, 0.0, &combined)
 }
 
 /// Multiply two transformation matrices
