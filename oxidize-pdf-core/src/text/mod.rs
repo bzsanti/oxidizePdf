@@ -148,9 +148,8 @@ impl TextContext {
     /// Create a `TextContext` bound to a per-document `FontMetricsStore`
     /// (issue #230). `None` is equivalent to `TextContext::new()`.
     ///
-    /// `pub(crate)` — wired by `Page::*_with_metrics()` constructors (Task 8).
-    /// Non-test callers for `Page::*_with_metrics` arrive in Tasks 9-11.
-    #[allow(dead_code)]
+    /// `pub(crate)` — wired by `Page::*_with_metrics()` constructors and
+    /// by `Document::new_page_*()` factories.
     pub(crate) fn with_metrics_store(store: Option<FontMetricsStore>) -> Self {
         let mut ctx = Self::default();
         ctx.font_metrics_store = store;

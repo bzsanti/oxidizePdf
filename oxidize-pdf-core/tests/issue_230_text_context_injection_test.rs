@@ -1,3 +1,4 @@
+#![cfg(feature = "internal-testing")]
 //! Integration tests for issue #230 follow-up M1 — `Document::add_page`
 //! must also inject the per-Document `FontMetricsStore` into the page's
 //! `text_context.font_metrics_store`, not only into `page.font_metrics_store`.
@@ -39,6 +40,12 @@ use oxidize_pdf::{Document, Page};
 fn add_page_injects_store_into_text_context() {
     let name = format!("TC_Wide_1_1_{}", std::process::id());
 
+    // `register_custom_font_metrics` is `#[deprecated since "2.8.0"]` (issue #230, Task 12).
+    // The legacy global registry is exactly what this test contrasts against the
+    // per-Document store; the deprecation is intentional and this call is the
+    // canonical way to plant a value into the global path. When the API is
+    // eventually removed, the entire `global_width` arm of this test must be
+    // dropped — see oxidize-pdf-core/src/text/metrics.rs:299.
     #[allow(deprecated)]
     oxidize_pdf::text::metrics::register_custom_font_metrics(
         name.clone(),
