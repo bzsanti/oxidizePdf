@@ -8,23 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
-### Fixed
-
-- Text extraction in `preserve_layout` mode now emits `TextFragment` for
-  `TJ` (`ShowTextArray`), `'` (`NextLineShowText`), and `"`
-  (`SetSpacingNextLineShowText`) operators — not only for `Tj`
-  (`ShowText`). Previously, PDFs whose body relied on `TJ` (typical for
-  LaTeX, InDesign, and modern Word output) yielded zero fragments per
-  page, causing the partitioner to receive zero elements and
-  `Document::rag_chunks()` to return an empty vector. Addresses #235.
-- The `'` and `"` text-show operators were previously swallowed by the
-  catch-all match arm in `TextExtractor::extract_from_page`, leaving
-  their text out of `ExtractedText::text` and out of
-  `ExtractedText::fragments`. Both now advance the line matrix by
-  `-leading`, emit text into both buffers, and (for `"`) apply the
-  embedded word- and character-spacing values to the text state.
-
-## [2.8.1] - 2026-05-13
+## [2.8.1] - 2026-05-17
 
 ### Fixed
 
@@ -40,6 +24,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both fields). The fix mutates only the `font_metrics_store` field on the
   existing `TextContext`, preserving any operations the caller pushed
   before `add_page`. Issue #230 follow-up M1.
+- Text extraction in `preserve_layout` mode now emits `TextFragment` for
+  `TJ` (`ShowTextArray`), `'` (`NextLineShowText`), and `"`
+  (`SetSpacingNextLineShowText`) operators — not only for `Tj`
+  (`ShowText`). Previously, PDFs whose body relied on `TJ` (typical for
+  LaTeX, InDesign, and modern Word output) yielded zero fragments per
+  page, causing the partitioner to receive zero elements and
+  `Document::rag_chunks()` to return an empty vector. Addresses #235.
+- The `'` and `"` text-show operators were previously swallowed by the
+  catch-all match arm in `TextExtractor::extract_from_page`, leaving
+  their text out of `ExtractedText::text` and out of
+  `ExtractedText::fragments`. Both now advance the line matrix by
+  `-leading`, emit text into both buffers, and (for `"`) apply the
+  embedded word- and character-spacing values to the text state.
+
+### Changed
+
+- New cargo feature `internal-testing` (off by default) gates the
+  `Page::text_context_*_for_test` introspection helpers used by the #230
+  follow-up integration tests, keeping them out of the production ABI.
+  CI runs `cargo test --all --features internal-testing` so the gated
+  tests still execute.
 
 ## [2.8.0] - 2026-05-09
 
