@@ -9,8 +9,8 @@ repository.workspace = true
 documentation = "https://docs.rs/oxidize-pdf"
 homepage = "https://github.com/bzsanti/oxidizePdf"
 description = "A pure Rust PDF generation and manipulation library with zero external dependencies"
-keywords = ["pdf", "document", "generation", "parser", "graphics"]
-categories = ["graphics", "text-processing", "parsing", "multimedia::images"]
+keywords = ["pdf", "pdf-parser", "text-extraction", "pdf-generation", "rag"]
+categories = ["parser-implementations", "text-processing", "graphics", "encoding"]
 readme = "../README.md"
 exclude = [
     "tests/fixtures/*.pdf",
