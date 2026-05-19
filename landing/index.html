@@ -90,6 +90,7 @@
     <a href="https://crates.io/crates/oxidize-pdf"><img src="https://img.shields.io/crates/v/oxidize-pdf.svg" alt="crates.io"></a>
     <a href="https://docs.rs/oxidize-pdf"><img src="https://docs.rs/oxidize-pdf/badge.svg" alt="docs.rs"></a>
     <a href="https://pypi.org/project/oxidize-pdf/"><img src="https://img.shields.io/pypi/v/oxidize-pdf?label=pypi" alt="PyPI"></a>
+    <a href="https://www.nuget.org/packages/OxidizePdf.NET"><img src="https://img.shields.io/nuget/v/OxidizePdf.NET?label=nuget" alt="NuGet"></a>
     <a href="https://github.com/bzsanti/oxidizePdf"><img src="https://img.shields.io/github/stars/bzsanti/oxidizePdf?style=social" alt="GitHub"></a>
   </div>
 
@@ -103,11 +104,55 @@ let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
 
   <p>Each <code>RagChunk</code> ships with the metadata your vector store actually needs: page numbers for citation, bounding boxes for visual grounding, element types (<code>title</code>, <code>table</code>, <code>paragraph</code>, ...) for filtering, and heading context prepended to <code>full_text</code> for stronger embeddings.</p>
 
-  <h2>Install</h2>
-  <p><strong>Rust</strong></p>
-  <pre><code>cargo add oxidize-pdf</code></pre>
-  <p><strong>Python</strong></p>
-  <pre><code>pip install oxidize-pdf</code></pre>
+  <h2>Choose your runtime</h2>
+
+  <table>
+    <thead>
+      <tr><th>Runtime</th><th>Package</th><th>Install</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Rust</td>
+        <td><a href="https://crates.io/crates/oxidize-pdf">crates.io/oxidize-pdf</a></td>
+        <td><code>cargo add oxidize-pdf</code></td>
+      </tr>
+      <tr>
+        <td>Python</td>
+        <td><a href="https://pypi.org/project/oxidize-pdf/">pypi.org/oxidize-pdf</a></td>
+        <td><code>pip install oxidize-pdf</code></td>
+      </tr>
+      <tr>
+        <td>.NET</td>
+        <td><a href="https://www.nuget.org/packages/OxidizePdf.NET">nuget.org/OxidizePdf.NET</a></td>
+        <td><code>dotnet add package OxidizePdf.NET</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>AI/RAG ecosystem integrations</h2>
+
+  <table>
+    <thead>
+      <tr><th>Integration</th><th>What it gives you</th><th>Install</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="https://pypi.org/project/llama-index-readers-oxidize-pdf/">LlamaIndex reader</a></td>
+        <td>Drop-in <code>OxidizePdfReader</code> for LlamaIndex pipelines. Each chunk becomes a <code>Document</code> with <code>heading_context</code>, <code>page_numbers</code>, <code>element_types</code>, and <code>token_estimate</code> in <code>metadata</code>.</td>
+        <td><code>pip install llama-index-readers-oxidize-pdf</code></td>
+      </tr>
+      <tr>
+        <td><a href="https://registry.modelcontextprotocol.io">MCP server</a></td>
+        <td>12 tools and 6 resources for PDF read / create / extract / analyze / secure / manipulate over the Model Context Protocol. Ships as the <code>oxidize-mcp</code> entry point of the Python package.</td>
+        <td><code>pip install oxidize-pdf</code><br><span style="color:var(--muted)">then point your MCP client at <code>oxidize-mcp</code></span></td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/bzsanti/oxidize-pdf-integrations">Claude Code plugin</a></td>
+        <td>6 skills (<code>read-pdf</code>, <code>extract-text</code>, <code>create-pdf</code>, <code>analyze-pdf</code>, <code>secure-pdf</code>, <code>manipulate-pdf</code>) and 1 orchestrating agent.</td>
+        <td><code>/plugin marketplace add bzsanti/oxidize-pdf-integrations</code><br><code>/plugin install oxidize-pdf@oxidize-pdf</code></td>
+      </tr>
+    </tbody>
+  </table>
 
   <h2>Why this, not <code>pypdf + RecursiveCharacterTextSplitter</code>?</h2>
 
@@ -146,6 +191,8 @@ let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
     <li>API documentation — <a href="https://docs.rs/oxidize-pdf">docs.rs/oxidize-pdf</a></li>
     <li>Source code &amp; issue tracker — <a href="https://github.com/bzsanti/oxidizePdf">github.com/bzsanti/oxidizePdf</a></li>
     <li>Python bindings — <a href="https://pypi.org/project/oxidize-pdf/">pypi.org/project/oxidize-pdf</a></li>
+    <li>.NET bindings — <a href="https://www.nuget.org/packages/OxidizePdf.NET">nuget.org/OxidizePdf.NET</a></li>
+    <li>Ecosystem integrations (MCP, LlamaIndex, Claude Code) — <a href="https://github.com/bzsanti/oxidize-pdf-integrations">oxidize-pdf-integrations</a></li>
     <li>Changelog — <a href="https://github.com/bzsanti/oxidizePdf/blob/main/CHANGELOG.md">CHANGELOG.md</a></li>
   </ul>
 
@@ -155,6 +202,8 @@ let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
     <a href="https://docs.rs/oxidize-pdf">Docs</a>
     <a href="https://crates.io/crates/oxidize-pdf">crates.io</a>
     <a href="https://pypi.org/project/oxidize-pdf/">PyPI</a>
+    <a href="https://www.nuget.org/packages/OxidizePdf.NET">NuGet</a>
+    <a href="https://github.com/bzsanti/oxidize-pdf-integrations">Integrations</a>
   </footer>
 </main>
 </body>
