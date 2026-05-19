@@ -333,23 +333,16 @@ impl TextFlowContext {
                 }
             }
 
-            // Show text — escape PDF literal-string special characters.
-            let mut buf = Vec::with_capacity(line_text.len());
-            for ch in line_text.chars() {
-                match ch {
-                    '(' => buf.extend_from_slice(b"\\("),
-                    ')' => buf.extend_from_slice(b"\\)"),
-                    '\\' => buf.extend_from_slice(b"\\\\"),
-                    '\n' => buf.extend_from_slice(b"\\n"),
-                    '\r' => buf.extend_from_slice(b"\\r"),
-                    '\t' => buf.extend_from_slice(b"\\t"),
-                    _ => {
-                        let mut tmp = [0u8; 4];
-                        buf.extend_from_slice(ch.encode_utf8(&mut tmp).as_bytes());
-                    }
-                }
-            }
-            self.operations.push(Op::ShowText(buf));
+            // Encode + escape through the shared show-text factory
+            // (issue #240). Pre-fix this branch wrote `ch.encode_utf8(...)`
+            // bytes directly, bypassing `TextEncoding::WinAnsiEncoding` so
+            // characters outside ASCII (`€`, `—`, smart quotes …) reached
+            // the content stream as raw UTF-8 multi-byte runs that any
+            // PDF viewer re-interpreted as Windows-1252 mojibake.
+            self.operations.push(crate::text::build_show_text_op(
+                &line_text,
+                &self.current_font,
+            ));
 
             // Record per-font char usage so the consuming page can
             // report it to the writer (issue #204).

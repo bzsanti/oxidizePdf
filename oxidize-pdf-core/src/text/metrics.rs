@@ -424,7 +424,14 @@ pub(crate) fn create_default_custom_metrics() -> FontMetrics {
     DEFAULT_CUSTOM_METRICS.clone()
 }
 
+#[cfg(test)]
+pub(crate) static DEFAULT_CUSTOM_METRICS_BUILD_COUNT: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
 fn build_default_custom_metrics() -> FontMetrics {
+    #[cfg(test)]
+    DEFAULT_CUSTOM_METRICS_BUILD_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
     let mut metrics = FontMetrics::new(556).with_widths(&[
         (' ', 278),
         ('!', 278),
@@ -940,18 +947,22 @@ mod tests {
 
     #[test]
     fn test_create_default_custom_metrics_is_cached() {
-        // With lazy_static caching, repeated calls should be fast (clone only).
-        // Without caching, each call does ~6,500 HashMap inserts.
-        use std::time::Instant;
-        let start = Instant::now();
+        // Verifies the lazy_static cache: build_default_custom_metrics must run
+        // at most once regardless of how many times create_default_custom_metrics
+        // is called. Instrumented via a #[cfg(test)] AtomicUsize counter so the
+        // assertion is invariant to runner load (the prior timing-based threshold
+        // was flaky under full-suite parallelism).
+        use std::sync::atomic::Ordering;
+        let before = DEFAULT_CUSTOM_METRICS_BUILD_COUNT.load(Ordering::Relaxed);
         for _ in 0..1000 {
             let _ = create_default_custom_metrics();
         }
-        let elapsed = start.elapsed();
+        let after = DEFAULT_CUSTOM_METRICS_BUILD_COUNT.load(Ordering::Relaxed);
+        let delta = after - before;
         assert!(
-            elapsed.as_millis() < 50,
-            "1000 calls took {}ms; expected < 50ms with caching",
-            elapsed.as_millis()
+            delta <= 1,
+            "build_default_custom_metrics ran {} times during 1000 calls; cache broken",
+            delta
         );
     }
 

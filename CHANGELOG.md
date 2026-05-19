@@ -8,6 +8,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.8.2] - 2026-05-19
+
+### Fixed
+
+- **crates.io / lib.rs categories** corrected for `oxidize-pdf-core`.
+  The previous `categories = ["graphics", "text-processing", "parsing",
+  "multimedia::images"]` listed an invalid slug (`"parsing"` — the
+  correct one is `parser-implementations`) which crates.io silently
+  dropped, and a semantically wrong slug (`"multimedia::images"`, meant
+  for image codecs) which lib.rs surfaced as the primary display
+  category. The crate now ships with
+  `["parser-implementations", "text-processing", "graphics", "encoding"]`
+  and refreshed keywords (`pdf`, `pdf-parser`, `text-extraction`,
+  `pdf-generation`, `rag`). Addresses #241.
+- **`Page::set_fill_color` (graphics) now affects subsequent text rendering**
+  when no explicit text fill colour has been set. Per ISO 32000-1 §8.6.8,
+  the `rg` operator sets the non-stroking colour of the graphics state,
+  which applies to both path fills and glyph fills at text rendering
+  mode 0 (default). Pre-fix, `GraphicsContext.current_color` and
+  `TextContext.fill_color` were independent slots: a caller that drew a
+  filled rectangle in magenta and then wrote text without an explicit
+  text colour saw the glyphs painted in magenta (the last `rg` left in
+  the stream) instead of the colour they had set via
+  `graphics().set_fill_color(...)`. `Page::text()` and `Page::text_flow()`
+  now inherit the current graphics-state non-stroking colour when the
+  text context has no explicit colour of its own; an explicit
+  `text().set_fill_color(...)` still overrides the inherited value.
+  Addresses #239.
+- **`TextFlowContext::write_wrapped` now encodes text through
+  `TextEncoding::WinAnsiEncoding`** (matching `TextContext::write`),
+  fixing multi-byte Unicode characters (e.g. `€`, `—`, `ñ`, smart
+  quotes) being emitted as raw UTF-8 bytes that PDF viewers
+  reinterpreted as Windows-1252 mojibake (`€` → `â‚¬`, `—` → `â€"`).
+  Both `TextContext::write` and `TextFlowContext::write_wrapped` now
+  delegate to a shared `text::build_show_text_op` helper so they cannot
+  diverge again on encoding or escape rules per ISO 32000-1 §7.9.2 and
+  §9.10.3 (Custom CJK fonts continue to use UTF-16BE hex; builtin fonts
+  use WinAnsi + octal-escape literal strings). Addresses #240.
+
+### Changed
+
+- **Behavioural change in the emitted content stream** (no visual
+  difference): pages that emit text without an explicit text fill
+  colour now also emit the graphics-state default `0.000 g` (gray
+  black) inside the surrounding `BT … ET` block. The text was already
+  rendered in black via the inherited graphics state; the stream is now
+  explicit about it. Tests that asserted absence of `rg` / `g` inside
+  pure-text BT…ET blocks should be updated to assert presence of the
+  expected colour operator instead.
+
+### Internal
+
+- `text::metrics::tests::test_create_default_custom_metrics_is_cached`
+  rewritten from a timing-based assertion (`< 50ms` for 1000 calls,
+  observed at 74–84ms under full-suite parallelism with the unoptimised
+  test profile) to a call-counter (`AtomicUsize` incremented by
+  `build_default_custom_metrics` under `#[cfg(test)]`, asserting
+  `delta <= 1` after 1000 calls). Load-invariant and deterministic.
+
 ## [2.8.1] - 2026-05-17
 
 ### Fixed

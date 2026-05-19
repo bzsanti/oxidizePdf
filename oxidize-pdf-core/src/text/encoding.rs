@@ -455,6 +455,52 @@ pub fn macroman_encode_char(ch: char) -> Option<u8> {
     }
 }
 
+/// Escape `bytes` as the body of a PDF literal-string `(...)` show-text
+/// payload, suitable for direct use as the payload of `Op::ShowText`.
+///
+/// Produces `Vec<u8>` (vs `escape_pdf_string_literal`'s `String`) and
+/// uses the same six named escapes as that helper plus the octal
+/// fallback for everything else. The two helpers are kept in lock-step
+/// by sharing the named-escape table; only the output container differs.
+///
+/// - `(`, `)`, `\\` → backslash-prefixed.
+/// - `\n`, `\r`, `\t`, `\x08` (`BS`), `\x0C` (`FF`) → named two-character
+///   escapes per ISO 32000-1 §7.9.2 Table 3.
+/// - Printable ASCII `0x20..=0x7E` → passed through verbatim.
+/// - Everything else (including the WinAnsi high range `0x80..=0xFF`)
+///   → three-digit octal `\NNN`. The octal form keeps eight-bit bytes
+///   intact through 7-bit-safe intermediaries and matches ISO 32000-1
+///   §7.9.2.
+///
+/// Used by `text::build_show_text_op` to consolidate the encoding +
+/// escape pipeline between `TextContext::write` and
+/// `TextFlowContext::write_wrapped` (issue #240). The initial capacity
+/// (`bytes.len() * 4`) is the upper bound (every byte expanding to the
+/// four-char `\NNN` octal form); for the common ASCII-dominant case it
+/// is an over-allocation but avoids realloc cascades on
+/// multibyte-heavy text (French, German, typographic glyphs).
+pub(crate) fn escape_show_text_literal_bytes(bytes: &[u8]) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(bytes.len() * 4);
+    for &b in bytes {
+        match b {
+            b'(' => buf.extend_from_slice(b"\\("),
+            b')' => buf.extend_from_slice(b"\\)"),
+            b'\\' => buf.extend_from_slice(b"\\\\"),
+            b'\n' => buf.extend_from_slice(b"\\n"),
+            b'\r' => buf.extend_from_slice(b"\\r"),
+            b'\t' => buf.extend_from_slice(b"\\t"),
+            b'\x08' => buf.extend_from_slice(b"\\b"),
+            b'\x0C' => buf.extend_from_slice(b"\\f"),
+            0x20..=0x7E => buf.push(b),
+            _ => {
+                use std::io::Write as _;
+                write!(&mut buf, "\\{b:03o}").expect("write to Vec<u8> never fails");
+            }
+        }
+    }
+    buf
+}
+
 /// Emit the UTF-8 bytes `input` as a PDF string-literal body, escaping
 /// characters that have special meaning inside `(...)` and writing bytes
 /// above 0x7F as three-digit octal escapes. Does NOT wrap the output in
@@ -499,6 +545,61 @@ pub fn escape_pdf_string_literal(input: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `escape_show_text_literal_bytes` must use the SAME named escapes
+    /// as `escape_pdf_string_literal` for the six controls listed in
+    /// ISO 32000-1 §7.9.2 Table 3 (`\\b`, `\\f`, `\\n`, `\\r`, `\\t`,
+    /// plus the literal backslash). Without this guard the two helpers
+    /// can drift again — pre-fix, `escape_show_text_literal_bytes`
+    /// emitted `\\010` and `\\014` for `BS`/`FF` while the sibling
+    /// emitted `\\b`/`\\f`.
+    #[test]
+    fn escape_show_text_literal_bytes_named_escape_parity() {
+        // Each byte must produce the exact named-escape form, byte-for-byte.
+        let cases: &[(u8, &[u8])] = &[
+            (b'(', b"\\("),
+            (b')', b"\\)"),
+            (b'\\', b"\\\\"),
+            (b'\n', b"\\n"),
+            (b'\r', b"\\r"),
+            (b'\t', b"\\t"),
+            (b'\x08', b"\\b"),
+            (b'\x0C', b"\\f"),
+        ];
+        for (input, expected) in cases {
+            let got = escape_show_text_literal_bytes(&[*input]);
+            assert_eq!(
+                got,
+                *expected,
+                "byte 0x{input:02X} must escape as {:?}, got {:?}",
+                std::str::from_utf8(expected).unwrap(),
+                String::from_utf8_lossy(&got),
+            );
+        }
+    }
+
+    /// The octal fallback must emit three digits for every byte in
+    /// `0x80..=0xFF` (Windows-1252 high range) and for any sub-`0x20`
+    /// control byte not covered by a named escape (e.g. `0x01`).
+    #[test]
+    fn escape_show_text_literal_bytes_octal_fallback_three_digits() {
+        // 0x80 → "\\200", 0xFF → "\\377", 0x01 → "\\001"
+        assert_eq!(escape_show_text_literal_bytes(&[0x80]), b"\\200");
+        assert_eq!(escape_show_text_literal_bytes(&[0xFF]), b"\\377");
+        assert_eq!(escape_show_text_literal_bytes(&[0x01]), b"\\001");
+    }
+
+    /// Printable ASCII (`0x20..=0x7E`) must pass through unchanged
+    /// (single byte each). Guard against a future change that adds
+    /// unnecessary escapes to this range.
+    #[test]
+    fn escape_show_text_literal_bytes_printable_ascii_passthrough() {
+        let printable: Vec<u8> = (0x20u8..=0x7E)
+            .filter(|b| !matches!(b, b'(' | b')' | b'\\'))
+            .collect();
+        let got = escape_show_text_literal_bytes(&printable);
+        assert_eq!(got, printable);
+    }
 
     #[test]
     fn test_text_encoding_variants() {

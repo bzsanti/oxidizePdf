@@ -86,6 +86,45 @@ pub enum TextRenderingMode {
     Clip = 7,
 }
 
+/// Build the show-text IR op for `text` rendered with `font`. Single
+/// emission path shared by `TextContext::write` and
+/// `TextFlowContext::write_wrapped` so the two cannot diverge on encoding
+/// or escaping (issue #240 — pre-fix, the flow path emitted raw UTF-8
+/// bytes inside the literal `( … ) Tj` and any character outside ASCII
+/// rendered as Windows-1252 mojibake).
+///
+/// - `Font::Custom(_)` → UTF-16BE hex string per ISO 32000-1 §9.10.3,
+///   wrapped in `Op::ShowTextHex` so the writer emits `< … > Tj`.
+/// - Any builtin font → bytes are first WinAnsi-encoded
+///   ([`TextEncoding::WinAnsiEncoding`]) and then escaped for inclusion
+///   in a PDF string literal via
+///   [`encoding::escape_show_text_literal_bytes`].
+pub(crate) fn build_show_text_op(text: &str, font: &Font) -> crate::graphics::ops::Op {
+    use crate::graphics::ops::Op;
+
+    match font {
+        Font::Custom(_) => {
+            let utf16_units: Vec<u16> = text.encode_utf16().collect();
+            let mut hex = String::with_capacity(utf16_units.len() * 4);
+            for unit in utf16_units {
+                use std::fmt::Write as _;
+                write!(
+                    &mut hex,
+                    "{:02X}{:02X}",
+                    (unit >> 8) as u8,
+                    (unit & 0xFF) as u8
+                )
+                .expect("write to String never fails");
+            }
+            Op::ShowTextHex(hex.into_bytes())
+        }
+        _ => {
+            let encoded = TextEncoding::WinAnsiEncoding.encode(text);
+            Op::ShowText(encoding::escape_show_text_literal_bytes(&encoded))
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct TextContext {
     operations: Vec<crate::graphics::ops::Op>,
@@ -287,48 +326,12 @@ impl TextContext {
         };
         self.operations.push(Op::SetTextPosition { x, y });
 
-        // Choose encoding based on font type
-        match &self.current_font {
-            Font::Custom(_) => {
-                // For custom fonts (CJK), use UTF-16BE encoding with hex strings
-                let utf16_units: Vec<u16> = text.encode_utf16().collect();
-                let mut hex = String::new();
-                for unit in utf16_units {
-                    use std::fmt::Write as _;
-                    write!(
-                        &mut hex,
-                        "{:02X}{:02X}",
-                        (unit >> 8) as u8,
-                        (unit & 0xFF) as u8
-                    )
-                    .expect("write to String never fails");
-                }
-                self.operations.push(Op::ShowTextHex(hex.into_bytes()));
-            }
-            _ => {
-                // For standard fonts, use WinAnsiEncoding with literal-string escaping.
-                let encoding = TextEncoding::WinAnsiEncoding;
-                let encoded_bytes = encoding.encode(text);
-
-                let mut buf = Vec::with_capacity(encoded_bytes.len());
-                for &byte in &encoded_bytes {
-                    match byte {
-                        b'(' => buf.extend_from_slice(b"\\("),
-                        b')' => buf.extend_from_slice(b"\\)"),
-                        b'\\' => buf.extend_from_slice(b"\\\\"),
-                        b'\n' => buf.extend_from_slice(b"\\n"),
-                        b'\r' => buf.extend_from_slice(b"\\r"),
-                        b'\t' => buf.extend_from_slice(b"\\t"),
-                        0x20..=0x7E => buf.push(byte),
-                        _ => {
-                            use std::io::Write as _;
-                            write!(&mut buf, "\\{byte:03o}").expect("write to Vec<u8> never fails");
-                        }
-                    }
-                }
-                self.operations.push(Op::ShowText(buf));
-            }
-        }
+        // Shared encoding + escape pipeline (issue #240): builtin fonts
+        // route through WinAnsi + literal-string escape; Custom (CJK)
+        // fonts route through UTF-16BE hex. Mirror of the same call in
+        // `TextFlowContext::write_wrapped` — single source of truth.
+        self.operations
+            .push(build_show_text_op(text, &self.current_font));
 
         // Track used characters for font subsetting bucketed by the
         // active custom font (issue #204).
