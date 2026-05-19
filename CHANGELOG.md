@@ -8,8 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.8.2] - 2026-05-19
+
 ### Fixed
 
+- **crates.io / lib.rs categories** corrected for `oxidize-pdf-core`.
+  The previous `categories = ["graphics", "text-processing", "parsing",
+  "multimedia::images"]` listed an invalid slug (`"parsing"` — the
+  correct one is `parser-implementations`) which crates.io silently
+  dropped, and a semantically wrong slug (`"multimedia::images"`, meant
+  for image codecs) which lib.rs surfaced as the primary display
+  category. The crate now ships with
+  `["parser-implementations", "text-processing", "graphics", "encoding"]`
+  and refreshed keywords (`pdf`, `pdf-parser`, `text-extraction`,
+  `pdf-generation`, `rag`). Addresses #241.
 - **`Page::set_fill_color` (graphics) now affects subsequent text rendering**
   when no explicit text fill colour has been set. Per ISO 32000-1 §8.6.8,
   the `rg` operator sets the non-stroking colour of the graphics state,
@@ -45,6 +57,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explicit about it. Tests that asserted absence of `rg` / `g` inside
   pure-text BT…ET blocks should be updated to assert presence of the
   expected colour operator instead.
+
+### Internal
+
+- `text::metrics::tests::test_create_default_custom_metrics_is_cached`
+  rewritten from a timing-based assertion (`< 50ms` for 1000 calls,
+  observed at 74–84ms under full-suite parallelism with the unoptimised
+  test profile) to a call-counter (`AtomicUsize` incremented by
+  `build_default_custom_metrics` under `#[cfg(test)]`, asserting
+  `delta <= 1` after 1000 calls). Load-invariant and deterministic.
 
 ## [2.8.1] - 2026-05-17
 
