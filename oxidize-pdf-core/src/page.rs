@@ -685,10 +685,34 @@ impl Page {
     /// operations into the page-level ordered buffer (`page_ops`) so
     /// that subsequent text calls are emitted *after* the graphics that
     /// preceded them in call order (issue #227).
+    ///
+    /// As of issue #239, this also propagates the current graphics-state
+    /// non-stroking colour into the text context when the caller has not
+    /// set an explicit text fill colour. Per ISO 32000-1 §8.6.8, `rg` is
+    /// a graphics-state operator that applies both to path fills and to
+    /// glyph fills at text rendering mode 0 (default). Splitting the
+    /// fill-colour slot between `GraphicsContext` and `TextContext`
+    /// without this handoff produced a stream where the text was painted
+    /// in whatever colour the previous path fill left active, never the
+    /// colour the caller intended for the text. An explicit
+    /// `text().set_fill_color(...)` still overrides the inherited value.
+    ///
+    /// **Side effect on the returned `TextContext`:** when the handoff
+    /// fires, this call mutates `text_context.fill_color` from `None`
+    /// to `Some(<graphics-state colour>)` BEFORE returning the
+    /// reference. Code that probes `fill_color()` as a signal of
+    /// "user has set a colour" will see `Some(...)` even when the user
+    /// never called `set_fill_color`, because the graphics state is now
+    /// considered the source of truth for the non-stroking colour.
+    /// After `clear()`, the next `text()` call will repeat the handoff.
     pub fn text(&mut self) -> &mut TextContext {
         if !self.graphics_context.ops_slice().is_empty() {
             let drained = self.graphics_context.drain_ops();
             self.page_ops.extend(drained);
+        }
+        if self.text_context.fill_color().is_none() {
+            let inherited = self.graphics_context.fill_color();
+            self.text_context.set_fill_color(inherited);
         }
         &mut self.text_context
     }
@@ -981,9 +1005,15 @@ impl Page {
             self.text_context.current_font().clone(),
             self.text_context.font_size(),
         );
-        if let Some(color) = self.text_context.fill_color() {
-            ctx.set_fill_color(color);
-        }
+        // Issue #239: when no explicit text fill colour was set, fall
+        // back to the graphics-state non-stroking colour so the flow
+        // honours `graphics().set_fill_color(...)` per ISO 32000-1
+        // §8.6.8. Symmetric with the handoff in `Page::text()`.
+        let effective_fill = self
+            .text_context
+            .fill_color()
+            .unwrap_or_else(|| self.graphics_context.fill_color());
+        ctx.set_fill_color(effective_fill);
         if let Some(spacing) = self.text_context.character_spacing() {
             ctx.set_character_spacing(spacing);
         }
