@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oxidize-pdf — Pure Rust PDF library for AI/RAG</title>
+<meta name="description" content="Pure Rust PDF library for AI/RAG pipelines: structure-aware chunking with bounding boxes, heading context, and token estimates. No Python, no ML dependencies, no C bindings.">
+<meta property="og:title" content="oxidize-pdf — Pure Rust PDF library for AI/RAG">
+<meta property="og:description" content="Structure-aware chunking with bounding boxes, heading context, and token estimates. No Python, no ML, no C bindings.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bzsanti.github.io/oxidizePdf/">
+<link rel="canonical" href="https://bzsanti.github.io/oxidizePdf/">
+<style>
+  :root {
+    --bg: #0f1115;
+    --fg: #e7e9ee;
+    --muted: #9aa3b2;
+    --accent: #ff6b35;
+    --code-bg: #1a1d24;
+    --border: #2a2f3a;
+    --max-w: 760px;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  main { max-width: var(--max-w); margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+  h1 { font-size: 2.2rem; line-height: 1.15; margin: 0 0 0.6rem; letter-spacing: -0.02em; }
+  h1 .name { color: var(--accent); }
+  .tagline { font-size: 1.2rem; color: var(--muted); margin: 0 0 2.2rem; max-width: 36rem; }
+  h2 { margin: 3rem 0 1rem; font-size: 1.3rem; letter-spacing: -0.01em; }
+  p { margin: 0.6rem 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { border-bottom-color: var(--accent); }
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 0.92rem;
+  }
+  code { background: var(--code-bg); padding: 0.12rem 0.36rem; border-radius: 4px; color: #ffd9c9; }
+  pre {
+    background: var(--code-bg);
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; color: var(--fg); }
+  .badges { margin: 0.5rem 0 2rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .badges img { height: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.94rem; }
+  th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.yes { color: #7adf78; }
+  td.no { color: #b87878; }
+  .grid {
+    display: grid; gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin: 1rem 0;
+  }
+  .card {
+    border: 1px solid var(--border);
+    padding: 1rem 1.1rem;
+    border-radius: 8px;
+    background: #141821;
+  }
+  .card h3 { margin: 0 0 0.3rem; font-size: 1rem; color: var(--accent); }
+  .card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+  footer {
+    margin-top: 4rem; padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 0.9rem;
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+  }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--fg); border-bottom-color: var(--fg); }
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="name">oxidize-pdf</span></h1>
+  <p class="tagline">Pure Rust PDF library built for AI/RAG. Structure-aware chunks with bounding boxes, heading context, and token estimates — in one line. No Python, no ML, no C bindings.</p>
+
+  <div class="badges">
+    <a href="https://crates.io/crates/oxidize-pdf"><img src="https://img.shields.io/crates/v/oxidize-pdf.svg" alt="crates.io"></a>
+    <a href="https://docs.rs/oxidize-pdf"><img src="https://docs.rs/oxidize-pdf/badge.svg" alt="docs.rs"></a>
+    <a href="https://pypi.org/project/oxidize-pdf/"><img src="https://img.shields.io/pypi/v/oxidize-pdf?label=pypi" alt="PyPI"></a>
+    <a href="https://github.com/bzsanti/oxidizePdf"><img src="https://img.shields.io/github/stars/bzsanti/oxidizePdf?style=social" alt="GitHub"></a>
+  </div>
+
+  <h2>RAG pipeline in one line</h2>
+  <pre><code>use oxidize_pdf::parser::PdfDocument;
+
+let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
+// Each chunk: text, page numbers, bounding boxes, element types,
+//             heading context, token estimate
+</code></pre>
+
+  <p>Each <code>RagChunk</code> ships with the metadata your vector store actually needs: page numbers for citation, bounding boxes for visual grounding, element types (<code>title</code>, <code>table</code>, <code>paragraph</code>, ...) for filtering, and heading context prepended to <code>full_text</code> for stronger embeddings.</p>
+
+  <h2>Install</h2>
+  <p><strong>Rust</strong></p>
+  <pre><code>cargo add oxidize-pdf</code></pre>
+  <p><strong>Python</strong></p>
+  <pre><code>pip install oxidize-pdf</code></pre>
+
+  <h2>Why this, not <code>pypdf + RecursiveCharacterTextSplitter</code>?</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>oxidize-pdf</th>
+        <th>pypdf + LangChain</th>
+        <th>unstructured / docling</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Structure-aware chunks</td><td class="yes">yes</td><td class="no">no (text-only split)</td><td class="yes">yes</td></tr>
+      <tr><td>Bounding boxes per chunk</td><td class="yes">yes</td><td class="no">no</td><td class="yes">yes</td></tr>
+      <tr><td>Heading context propagation</td><td class="yes">yes</td><td class="no">no</td><td class="yes">yes</td></tr>
+      <tr><td>ML model dependency</td><td class="yes">none</td><td class="yes">none</td><td class="no">required</td></tr>
+      <tr><td>Native binary (no Python runtime)</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td></tr>
+      <tr><td>Language</td><td>Rust</td><td>Python</td><td>Python + ML</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Beyond RAG</h2>
+
+  <div class="grid">
+    <div class="card"><h3>Parse</h3><p>PDF 1.0–1.7, 99.3% success on 9,000+ real-world PDFs. CJK text, lenient recovery, decompression-bomb protection.</p></div>
+    <div class="card"><h3>Generate</h3><p>Multi-page documents with text, graphics, images. 3,000–4,000 pages/sec.</p></div>
+    <div class="card"><h3>Encrypt</h3><p>RC4-40/128, AES-128, AES-256 (R5/R6). Read and write.</p></div>
+    <div class="card"><h3>Signatures</h3><p>Detection, PKCS#7 verification, certificate validation.</p></div>
+    <div class="card"><h3>PDF/A</h3><p>Validation across 8 conformance levels (1a/b, 2a/b/u, 3a/b/u).</p></div>
+    <div class="card"><h3>OCR &amp; JBIG2</h3><p>Pure-Rust JBIG2 decoder (ITU-T T.88). Tesseract integration optional.</p></div>
+  </div>
+
+  <h2>Links</h2>
+  <ul>
+    <li>API documentation — <a href="https://docs.rs/oxidize-pdf">docs.rs/oxidize-pdf</a></li>
+    <li>Source code &amp; issue tracker — <a href="https://github.com/bzsanti/oxidizePdf">github.com/bzsanti/oxidizePdf</a></li>
+    <li>Python bindings — <a href="https://pypi.org/project/oxidize-pdf/">pypi.org/project/oxidize-pdf</a></li>
+    <li>Changelog — <a href="https://github.com/bzsanti/oxidizePdf/blob/main/CHANGELOG.md">CHANGELOG.md</a></li>
+  </ul>
+
+  <footer>
+    <span>MIT licensed.</span>
+    <a href="https://github.com/bzsanti/oxidizePdf">GitHub</a>
+    <a href="https://docs.rs/oxidize-pdf">Docs</a>
+    <a href="https://crates.io/crates/oxidize-pdf">crates.io</a>
+    <a href="https://pypi.org/project/oxidize-pdf/">PyPI</a>
+  </footer>
+</main>
+</body>
+</html>
