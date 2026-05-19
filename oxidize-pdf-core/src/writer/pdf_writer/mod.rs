@@ -84,6 +84,17 @@ impl WriterConfig {
 /// Correct ordering is essential: `\` MUST be escaped first (otherwise
 /// the `\` we insert to escape a `(` would itself get doubled). This
 /// helper walks the input exactly once and emits the escaped form.
+///
+/// **Scope clarification (issue #240 follow-up):** this helper serves
+/// only `Object::String` payloads (metadata, dict entries, array
+/// elements). The show-text `(text) Tj` payloads inside content
+/// streams take an independent path (`Op::ShowText` bytes are produced
+/// by `text::encoding::escape_show_text_literal_bytes`, which DOES
+/// escape the high byte range `0x80..=0xFF` as `\NNN` octal because
+/// those payloads carry WinAnsi-encoded text whose bytes must survive
+/// 7-bit-safe intermediaries). The two helpers solve different
+/// problems and intentionally have different coverage; they are not
+/// coordinated and one is not "downstream" of the other.
 fn escape_pdf_string_bytes(input: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(input.len());
     for &byte in input {
