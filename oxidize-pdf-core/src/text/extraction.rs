@@ -33,6 +33,18 @@ pub struct ExtractionOptions {
     /// Track space insertion decisions in each TextFragment (default: false).
     /// When false: zero overhead. When true: populates `TextFragment::space_decisions`.
     pub track_space_decisions: bool,
+    /// Reconstruct visual lines and paragraphs from the raw text fragments
+    /// produced by PDF text-show operators. When `true`, the extractor groups
+    /// fragments by baseline into single-line fragments, then groups
+    /// consecutive lines with normal leading into paragraph-level fragments.
+    /// This is what the partition pipeline needs to produce Element values at
+    /// paragraph granularity rather than at per-`Tj` granularity (see
+    /// [issue #261](https://github.com/bzsanti/oxidizePdf/issues/261)).
+    ///
+    /// Default `false` for backward compatibility with direct `extract_text`
+    /// callers. The `PdfDocument::partition*` entry points force this to
+    /// `true`.
+    pub reconstruct_paragraphs: bool,
 }
 
 impl Default for ExtractionOptions {
@@ -46,6 +58,7 @@ impl Default for ExtractionOptions {
             column_threshold: 50.0,
             merge_hyphenated: true,
             track_space_decisions: false,
+            reconstruct_paragraphs: false,
         }
     }
 }
@@ -215,6 +228,36 @@ impl TextExtractor {
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
+    }
+
+    /// Run the full fragment-merge chain used by the partition pipeline:
+    /// kerning fix → line reconstruction → paragraph reconstruction.
+    ///
+    /// Honors `ExtractionOptions::reconstruct_paragraphs`: when `false`, only
+    /// `merge_close_fragments` (the kerning fix) runs and the input is
+    /// returned at fragment granularity.
+    ///
+    /// This method is `pub` so the integration test in
+    /// `tests/paragraph_reconstruction_test.rs` can exercise it without going
+    /// through a PDF file. Production callers should prefer
+    /// `PdfDocument::partition()` and friends, which use this internally.
+    pub fn merge_fragments_for_partition(&self, fragments: &[TextFragment]) -> Vec<TextFragment> {
+        let kerning_fixed = self.merge_close_fragments(fragments);
+        if !self.options.reconstruct_paragraphs {
+            return kerning_fixed;
+        }
+        let lines = self.merge_into_lines(&kerning_fixed);
+        self.merge_into_paragraphs(&lines)
+    }
+
+    fn merge_into_lines(&self, _fragments: &[TextFragment]) -> Vec<TextFragment> {
+        // Stub: Task 3 replaces.
+        Vec::new()
+    }
+
+    fn merge_into_paragraphs(&self, _lines: &[TextFragment]) -> Vec<TextFragment> {
+        // Stub: Task 4 replaces.
+        Vec::new()
     }
 
     /// Extract text from a PDF document
@@ -1215,6 +1258,7 @@ mod tests {
             column_threshold: 75.0,
             merge_hyphenated: false,
             track_space_decisions: false,
+            reconstruct_paragraphs: false,
         };
         assert!(options.preserve_layout);
         assert_eq!(options.space_threshold, 0.5);
@@ -1405,6 +1449,7 @@ mod tests {
             column_threshold: 60.0,
             merge_hyphenated: false,
             track_space_decisions: false,
+            reconstruct_paragraphs: false,
         };
         let extractor = TextExtractor::with_options(options.clone());
         assert_eq!(extractor.options.preserve_layout, options.preserve_layout);
