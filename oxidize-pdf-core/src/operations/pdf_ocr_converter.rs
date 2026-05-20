@@ -13,13 +13,18 @@
 //!
 //! # Usage
 //!
+//! The example below uses `MockOcrProvider` so it compiles under the
+//! default feature set. For real OCR, enable the `ocr-tesseract` feature
+//! and substitute `RustyTesseractProvider::new()` (which requires the
+//! Tesseract binary on `PATH`).
+//!
 //! ```rust,no_run
 //! use oxidize_pdf::operations::pdf_ocr_converter::{PdfOcrConverter, ConversionOptions};
-//! use oxidize_pdf::text::RustyTesseractProvider;
+//! use oxidize_pdf::text::MockOcrProvider;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let converter = PdfOcrConverter::new()?;
-//! let ocr_provider = RustyTesseractProvider::new();
+//! let ocr_provider = MockOcrProvider::new();
 //! let options = ConversionOptions::default();
 //!
 //! converter.convert_to_searchable_pdf(
