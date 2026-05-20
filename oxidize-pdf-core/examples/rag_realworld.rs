@@ -18,6 +18,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use oxidize_pdf::parser::{PdfDocument, PdfReader};
+use oxidize_pdf::pipeline::RagChunk;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 struct CorpusEntry {
@@ -136,21 +139,102 @@ fn ensure_local_copy(entry: &CorpusEntry) -> Result<PathBuf, FetchError> {
     Ok(path)
 }
 
-fn main() {
-    let entry = &CORPUS[0]; // ENS, smallest known-good URL
-    match ensure_local_copy(entry) {
-        Ok(path) => {
-            let size = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-            eprintln!(
-                "[ok]   {} cached at {} ({} bytes)",
-                entry.slug,
-                path.display(),
-                size
-            );
+#[derive(Debug)]
+enum RunError {
+    Fetch(FetchError),
+    Parse(String),
+    Empty,
+}
+
+impl std::fmt::Display for RunError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RunError::Fetch(e) => write!(f, "{}", e),
+            RunError::Parse(s) => write!(f, "parse error: {}", s),
+            RunError::Empty => write!(f, "produced 0 valid chunks"),
         }
-        Err(e) => {
-            eprintln!("[fail] {} → {}", entry.slug, e);
-            std::process::exit(1);
+    }
+}
+
+impl From<FetchError> for RunError {
+    fn from(e: FetchError) -> Self {
+        RunError::Fetch(e)
+    }
+}
+
+struct DocStats {
+    chunks: usize,
+    avg_tokens: usize,
+    oversized: usize,
+    headings: usize,
+}
+
+fn run_one(entry: &CorpusEntry) -> Result<(Vec<RagChunk>, DocStats), RunError> {
+    let path = ensure_local_copy(entry)?;
+    let reader = PdfReader::open(&path).map_err(|e| RunError::Parse(e.to_string()))?;
+    let doc = PdfDocument::new(reader);
+    let chunks = doc
+        .rag_chunks()
+        .map_err(|e| RunError::Parse(e.to_string()))?;
+    let non_empty: Vec<RagChunk> = chunks
+        .into_iter()
+        .filter(|c| !c.text.trim().is_empty())
+        .collect();
+    if non_empty.is_empty() {
+        return Err(RunError::Empty);
+    }
+    let total_tokens: usize = non_empty.iter().map(|c| c.token_estimate).sum();
+    let stats = DocStats {
+        chunks: non_empty.len(),
+        avg_tokens: total_tokens / non_empty.len(),
+        oversized: non_empty.iter().filter(|c| c.is_oversized).count(),
+        headings: non_empty
+            .iter()
+            .filter(|c| c.heading_context.is_some())
+            .count(),
+    };
+    Ok((non_empty, stats))
+}
+
+fn main() -> std::process::ExitCode {
+    let mut failed = 0usize;
+    let mut total_chunks = 0usize;
+
+    for entry in CORPUS {
+        match run_one(entry) {
+            Ok((chunks, stats)) => {
+                total_chunks += stats.chunks;
+                eprintln!(
+                    "[ok]   {:<13} → {} chunks   ~{} tok/avg   {} oversized   {} headings",
+                    entry.slug, stats.chunks, stats.avg_tokens, stats.oversized, stats.headings
+                );
+                #[allow(clippy::let_underscore_drop)]
+                let _ = chunks; // JSONL output added in Task 5
+            }
+            Err(e) => {
+                failed += 1;
+                eprintln!("[fail] {:<13} → {}", entry.slug, e);
+            }
         }
+    }
+
+    let ok = CORPUS.len() - failed;
+    if failed == 0 {
+        eprintln!(
+            "\n{}/{} documents processed successfully · {} total chunks",
+            ok,
+            CORPUS.len(),
+            total_chunks
+        );
+        std::process::ExitCode::SUCCESS
+    } else {
+        eprintln!(
+            "\n{}/{} documents processed ({} failed) · exit {}",
+            ok,
+            CORPUS.len(),
+            failed,
+            failed
+        );
+        std::process::ExitCode::from(failed.min(255) as u8)
     }
 }
