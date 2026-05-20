@@ -181,7 +181,6 @@ const CORPUS: &[CorpusEntry] = &[
     },
     CorpusEntry {
         slug: "boe-sumario",
-        // REPLACE the URL below with the one chosen in Step 0.2.
         name: "BOE sumario diario (2025-01-15)",
         url: "https://www.boe.es/boe/dias/2025/01/15/pdfs/BOE-S-2025-13.pdf",
         country: "ES",
@@ -196,15 +195,15 @@ const CORPUS: &[CorpusEntry] = &[
     },
     CorpusEntry {
         slug: "bsi-tr-02102",
-        name: "BSI TR-02102-1 — Cryptographic Mechanisms (German version)",
-        url: "https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publications/TechGuidelines/TG02102/BSI-TR-02102.pdf?__blob=publicationFile",
+        name: "BSI TR-02102 — Kryptographische Verfahren (German master)",
+        url: "https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/TechnischeRichtlinien/TR02102/BSI-TR-02102.pdf?__blob=publicationFile&v=15",
         country: "DE",
         language: "de",
     },
     CorpusEntry {
         slug: "ncsc-caf",
-        name: "NCSC Cyber Assessment Framework v3.2",
-        url: "https://www.ncsc.gov.uk/files/NCSC_CAF_v3.2.pdf",
+        name: "NCSC Cyber Assessment Framework v4.0",
+        url: "https://www.ncsc.gov.uk/sites/default/files/documents/NCSC-Cyber-Assessment-Framework-4.0.pdf",
         country: "UK",
         language: "en",
     },
@@ -898,8 +897,8 @@ jobs:
             "https://www.boe.es/boe/dias/2022/05/04/pdfs/BOE-A-2022-7191.pdf|ens"
             "https://www.boe.es/boe/dias/2025/01/15/pdfs/BOE-S-2025-13.pdf|boe-sumario"
             "https://arxiv.org/pdf/1207.7214|higgs"
-            "https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publications/TechGuidelines/TG02102/BSI-TR-02102.pdf?__blob=publicationFile|bsi-tr-02102"
-            "https://www.ncsc.gov.uk/files/NCSC_CAF_v3.2.pdf|ncsc-caf"
+            "https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/TechnischeRichtlinien/TR02102/BSI-TR-02102.pdf?__blob=publicationFile&v=15|bsi-tr-02102"
+            "https://www.ncsc.gov.uk/sites/default/files/documents/NCSC-Cyber-Assessment-Framework-4.0.pdf|ncsc-caf"
           )
           fails=""
           for entry in "${urls[@]}"; do

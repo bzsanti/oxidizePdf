@@ -19,12 +19,12 @@ Out of scope: vector store integration, embedding generation, retrieval. The exa
 | # | Slug | Document | URL | Country | Language | Approx size |
 |---|------|----------|-----|---------|----------|-------------|
 | 1 | `ens` | Real Decreto 311/2022 (Esquema Nacional de Seguridad) | `https://www.boe.es/boe/dias/2022/05/04/pdfs/BOE-A-2022-7191.pdf` | ES | es | ~1 MB |
-| 2 | `boe-sumario` | BOE sumario diario (fecha fija, a verificar en implementación) | `https://www.boe.es/boe/dias/2025/XX/XX/pdfs/BOE-S-2025-XXX.pdf` | ES | es | ~5 MB |
+| 2 | `boe-sumario` | BOE sumario diario (2025-01-15) | `https://www.boe.es/boe/dias/2025/01/15/pdfs/BOE-S-2025-13.pdf` | ES | es | ~330 KB |
 | 3 | `higgs` | ATLAS Collaboration — Higgs boson observation (Phys. Lett. B 716, 2012) | `https://arxiv.org/pdf/1207.7214` | CERN | en | ~1.5 MB |
-| 4 | `bsi-tr-02102` | BSI Technische Richtlinie TR-02102-1 — Cryptographic Mechanisms (German version) | `https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publications/TechGuidelines/TG02102/BSI-TR-02102.pdf?__blob=publicationFile` (canonical URL to confirm during implementation) | DE | de | ~1 MB |
-| 5 | `ncsc-caf` | NCSC Cyber Assessment Framework v3.2 | `https://www.ncsc.gov.uk/files/NCSC_CAF_v3.2.pdf` (URL to confirm during implementation) | UK | en | ~1 MB |
+| 4 | `bsi-tr-02102` | BSI Technische Richtlinie TR-02102 — Kryptographische Verfahren (German master document) | `https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/TechnischeRichtlinien/TR02102/BSI-TR-02102.pdf?__blob=publicationFile&v=15` | DE | de | ~1 MB |
+| 5 | `ncsc-caf` | NCSC Cyber Assessment Framework v4.0 (latest, released 2025-08) | `https://www.ncsc.gov.uk/sites/default/files/documents/NCSC-Cyber-Assessment-Framework-4.0.pdf` | UK | en | ~615 KB |
 
-**URL verification gate**: before implementing each example, fetch each URL with `HEAD` and confirm 200 + content-type PDF. If a URL has moved, find the canonical replacement before writing code.
+**URL verification gate**: before implementing the examples, the 5 URLs above were verified live on 2026-05-20. Note: BSI's CDN rejects HTTP HEAD requests (returns 400) but serves GET correctly — the `verify-corpus.yml` workflow uses `curl -sSL -o /dev/null` (GET, discard body) for that reason. If any URL moves in the future, find the canonical replacement and update both this spec and the `CORPUS` constant in each language's example.
 
 **Why this corpus**:
 - Three national cybersecurity baselines (ENS / BSI / NCSC) form a coherent compliance/regulatory thread — common RAG use case.
