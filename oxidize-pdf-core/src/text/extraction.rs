@@ -141,6 +141,18 @@ struct TextState {
     render_mode: u8,
     /// Fill color (for text rendering)
     fill_color: Option<Color>,
+    /// Graphics state stack for `q`/`Q` operators. Each entry holds the CTM
+    /// and other graphics state items that the text extractor needs to restore.
+    /// Per PDF spec §8.4.4, `q` pushes the full graphics state and `Q` pops it;
+    /// here we save only the fields that influence text extraction.
+    saved_states: Vec<SavedGraphicsState>,
+}
+
+/// Subset of graphics state saved by `q` and restored by `Q` (issue #262).
+#[derive(Clone)]
+struct SavedGraphicsState {
+    ctm: [f64; 6],
+    fill_color: Option<Color>,
 }
 
 impl Default for TextState {
@@ -158,6 +170,7 @@ impl Default for TextState {
             font_name: None,
             render_mode: 0,
             fill_color: None,
+            saved_states: Vec::new(),
         }
     }
 }
@@ -720,6 +733,26 @@ impl TextExtractor {
                         ];
                     }
 
+                    // Graphics state stack (issue #262). `q` snapshots the
+                    // current CTM and fill_color; `Q` restores the most recent
+                    // snapshot. Without these, every `cm` accumulates onto the
+                    // CTM forever, producing absurd page-space coordinates and
+                    // wrong font_size scaling on PDFs that nest graphics state.
+                    ContentOperation::SaveGraphicsState => {
+                        state.saved_states.push(SavedGraphicsState {
+                            ctm: state.ctm,
+                            fill_color: state.fill_color,
+                        });
+                    }
+                    ContentOperation::RestoreGraphicsState => {
+                        if let Some(saved) = state.saved_states.pop() {
+                            state.ctm = saved.ctm;
+                            state.fill_color = saved.fill_color;
+                        }
+                        // Unbalanced Q (pop on empty stack) is silently ignored
+                        // to keep extraction robust to malformed PDFs.
+                    }
+
                     // Color operations (Phase 4: Color extraction)
                     ContentOperation::SetNonStrokingGray(gray) => {
                         state.fill_color = Some(Color::gray(gray as f64));
@@ -1135,13 +1168,25 @@ fn emit_text_fragment(
         .as_ref()
         .map(|name| parse_font_style(name))
         .unwrap_or((false, false));
+
+    // Issue #262: font_size, height, and width must be in page space so that
+    // downstream heuristics (line/paragraph reconstruction, header/footer zone
+    // detection, table detection) reason about real geometry. `x` and `y` are
+    // already page-space (caller transforms via `text_origin`); we still need
+    // to scale the size/width fields by the combined `text_matrix × CTM`.
+    let combined = multiply_matrix(&state.text_matrix, &state.ctm);
+    let x_scale = (combined[0] * combined[0] + combined[1] * combined[1]).sqrt();
+    let y_scale = (combined[2] * combined[2] + combined[3] * combined[3]).sqrt();
+    let effective_width = text_width * x_scale;
+    let effective_size = state.font_size * y_scale;
+
     fragments.push(TextFragment {
         text: decoded.to_owned(),
         x,
         y,
-        width: text_width,
-        height: state.font_size,
-        font_size: state.font_size,
+        width: effective_width,
+        height: effective_size,
+        font_size: effective_size,
         font_name: state.font_name.clone(),
         is_bold,
         is_italic,
@@ -1151,11 +1196,16 @@ fn emit_text_fragment(
 }
 
 /// Pen origin (user-space coordinates) of the next glyph in the current
-/// text state — i.e. `CTM × text_matrix` applied to (0, 0). Centralized
-/// to eliminate the duplicated `multiply_matrix + transform_point` pair
-/// across the four `extract_from_page` show-text handlers.
+/// text state.
+///
+/// Per ISO 32000-1 §8.3.4, the text rendering matrix is `Tm × CTM` (row-vector
+/// convention). `multiply_matrix(a, b)` returns the matrix that applies `a`
+/// first and then `b`, so the correct composition is
+/// `multiply_matrix(text_matrix, ctm)`. Prior to issue #262 this used the
+/// reverse order which gave correct results only when the CTM was an identity
+/// or pure-translation matrix; non-uniform CTM scaling produced wrong origins.
 fn text_origin(state: &TextState) -> (f64, f64) {
-    let combined = multiply_matrix(&state.ctm, &state.text_matrix);
+    let combined = multiply_matrix(&state.text_matrix, &state.ctm);
     transform_point(0.0, 0.0, &combined)
 }
 
