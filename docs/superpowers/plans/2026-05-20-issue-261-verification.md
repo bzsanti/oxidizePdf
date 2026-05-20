@@ -53,12 +53,17 @@ The title spans multiple PDF fragments. Now a single readable line. (The leading
 
 ## Residual issues observed
 
-These remain after the fix and are out of scope for #261:
+These remain after the fix and are tracked separately:
 
-1. **BSI title strings concatenated without spaces** — e.g. `"TechnischeRichtlinie–KryptographischeAlgorithmenundSchlüssellängen"`. Root cause: the kerning-fix path (`merge_close_fragments`) merges fragments whose X gap is below `0.5 × font_size`. On display headings with letter-spacing > 1 but < that threshold, individual words still merge without spaces. Task 4's incidental fix to `merge_close_fragments` (insert a space when gap exceeds `space_threshold × font_size`) addresses this for body text but not for tightly letter-spaced display type. Tunable via the `space_threshold` field in a follow-up issue.
+1. **NCSC chunks contain letter-spaced text** — e.g. `"p r i n c i p l e"` instead of `"principle"`, on 65–78 % of NCSC chunks. Root cause is upstream of #261: the NCSC PDF uses a text matrix with `Tf size = 1` and a 10× scaling CTM, but `TextExtractor` records the raw `Tf` value (1pt) and the raw glyph advance (0.5pt) without composing with the CTM. With `font_size = 1.0` artificially, all threshold heuristics (`space_threshold * font_size = 0.3pt`) collapse and inter-glyph gaps (~4pt in text space) end up classified as inter-word gaps. **Tracked in issue #262**.
 
-2. **Higgs paper parse failure** — tracked separately in issue #260, unrelated to the chunking pipeline.
+2. **ENS fragments use mixed coordinate systems within a single page** — fragments 0-3 on page 5 are at `(x≈181088, y≈635260)` (text space, six-digit values), while fragments 4+ are at normal page coordinates. The partitioner's `header_zone` thresholds and #261's line merger both rely on consistent geometry — neither can group fragments correctly across coordinate systems. **Tracked in issue #262** (same root cause: CTM not consistently composed).
 
-## Conclusion
+3. **BSI title strings concatenated without spaces** — e.g. `"TechnischeRichtlinie–KryptographischeAlgorithmenundSchlüssellängen"`. Root cause: the kerning-fix path (`merge_close_fragments`) merges fragments whose X gap is below `0.5 × font_size`. On display headings with letter-spacing > 1 but < that threshold, individual words still merge without spaces. Tunable via the `space_threshold` field in a follow-up.
 
-The fix delivers paragraph-granularity chunks across all four real-world PDFs that parse, with 6–24× reduction in chunk count and proportionally larger average chunks. Output is now suitable for RAG ingestion against the four targets.
+4. **Higgs paper parse failure** — tracked separately in **issue #260**, unrelated to the chunking pipeline.
+
+## Conclusion (revised)
+
+#261 delivers a 5.9× to 23.5× reduction in chunk count, and on PDFs where text extraction operates in page space throughout (BOE sumario, BSI body content) the chunks are usable for RAG ingestion. On PDFs that trip the CTM bug #262 (NCSC entirely, ENS partially), residual letter-spaced output persists. Both issues are independently fixable; #261 should land first because it's the prerequisite (paragraph-level Elements) that makes #262's effects visible at all.
+
