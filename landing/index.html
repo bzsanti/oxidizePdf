@@ -175,16 +175,9 @@ let chunks = PdfDocument::open("paper.pdf")?.rag_chunks()?;
     </tbody>
   </table>
 
-  <h2>Beyond RAG</h2>
+  <h2>Also in the box</h2>
 
-  <div class="grid">
-    <div class="card"><h3>Parse</h3><p>PDF 1.0–1.7, 99.3% success on 9,000+ real-world PDFs. CJK text, lenient recovery, decompression-bomb protection.</p></div>
-    <div class="card"><h3>Generate</h3><p>Multi-page documents with text, graphics, images. 3,000–4,000 pages/sec.</p></div>
-    <div class="card"><h3>Encrypt</h3><p>RC4-40/128, AES-128, AES-256 (R5/R6). Read and write.</p></div>
-    <div class="card"><h3>Signatures</h3><p>Detection, PKCS#7 verification, certificate validation.</p></div>
-    <div class="card"><h3>PDF/A</h3><p>Validation across 8 conformance levels (1a/b, 2a/b/u, 3a/b/u).</p></div>
-    <div class="card"><h3>OCR &amp; JBIG2</h3><p>Pure-Rust JBIG2 decoder (ITU-T T.88). Tesseract integration optional.</p></div>
-  </div>
+  <p>Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (PKCS#7 verification), PDF/A validation (8 conformance levels), and JBIG2 image decoding (pure-Rust ITU-T T.88). One dependency for the full pipeline. <a href="https://docs.rs/oxidize-pdf">Full API on docs.rs</a>.</p>
 
   <h2>Links</h2>
   <ul>

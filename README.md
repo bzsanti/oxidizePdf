@@ -110,94 +110,11 @@ for section in graph.top_level_sections() {
 }
 ```
 
-## Beyond RAG
+## Also in the box
 
-oxidize-pdf is a full-featured PDF library. Everything below works alongside the RAG pipeline.
+Beyond RAG, the same crate also handles PDF parsing (99.3 % success on 9,000+ real-world PDFs, CJK, lenient recovery), generation (3,000–4,000 pages/sec), encryption (RC4-40/128, AES-128, AES-256 R5/R6 — read and write), digital signatures (PKCS#7 verification), PDF/A validation (8 conformance levels), JBIG2 image decoding (pure-Rust ITU-T T.88), invoice extraction (ES/EN/DE/IT), and split/merge/rotate operations. One dependency for the full pipeline.
 
-### PDF Generation
-
-```rust
-use oxidize_pdf::{Document, Page, Font, Color, Result};
-
-fn main() -> Result<()> {
-    let mut doc = Document::new();
-    let mut page = Page::a4();
-
-    page.text()
-        .set_font(Font::Helvetica, 24.0)
-        .at(50.0, 700.0)
-        .write("Hello, PDF!")?;
-
-    page.graphics()
-        .set_fill_color(Color::rgb(0.0, 0.5, 1.0))
-        .circle(300.0, 400.0, 50.0)
-        .fill();
-
-    doc.add_page(page);
-    doc.save("hello.pdf")?;
-    Ok(())
-}
-```
-
-### PDF Parsing
-
-```rust
-use oxidize_pdf::parser::{PdfReader, PdfDocument};
-
-let doc = PdfDocument::open("document.pdf")?;
-let text = doc.extract_text()?;
-for (i, page) in text.iter().enumerate() {
-    println!("Page {}: {}", i + 1, &page.text[..80.min(page.text.len())]);
-}
-```
-
-### Encryption (Read + Write)
-
-```rust
-use oxidize_pdf::{Document, Page, DocumentEncryption, Permissions, EncryptionStrength};
-
-// Write encrypted PDFs
-let mut doc = Document::new();
-doc.add_page(Page::a4());
-doc.set_encryption(DocumentEncryption::new(
-    "user_password", "owner_password",
-    Permissions::all(), EncryptionStrength::Aes256,
-));
-doc.save("encrypted.pdf")?;
-
-// Read encrypted PDFs
-let mut reader = PdfReader::open("encrypted.pdf")?;
-reader.unlock("user_password")?;
-```
-
-### Invoice Extraction
-
-```rust
-use oxidize_pdf::text::invoice::InvoiceExtractor;
-
-let doc = PdfDocument::open("invoice.pdf")?;
-let text = doc.extract_text()?;
-let extractor = InvoiceExtractor::builder()
-    .with_language("es")
-    .build();
-let invoice = extractor.extract(&text[0].fragments)?;
-// invoice.fields: invoice number, dates, amounts, VAT, line items
-```
-
-### PDF Operations
-
-```rust
-use oxidize_pdf::operations::{PdfSplitter, PdfMerger, PageRange};
-
-// Split
-PdfSplitter::new("input.pdf")?.split_by_pages("page_{}.pdf")?;
-
-// Merge
-let mut merger = PdfMerger::new();
-merger.add_pdf("doc1.pdf", PageRange::All)?;
-merger.add_pdf("doc2.pdf", PageRange::Pages(vec![1, 3]))?;
-merger.save("merged.pdf")?;
-```
+See [`oxidize-pdf-core/examples/`](https://github.com/bzsanti/oxidizePdf/tree/main/oxidize-pdf-core/examples) for working samples (133 examples) and [docs.rs](https://docs.rs/oxidize-pdf) for the API surface.
 
 ## Full Feature Set
 
@@ -217,7 +134,6 @@ merger.save("merged.pdf")?;
 - Digital signatures: detection, PKCS#7 verification, certificate validation
 - PDF/A validation: 8 conformance levels (1a/b, 2a/b/u, 3a/b/u)
 - JBIG2 decoder: pure Rust (ITU-T T.88)
-- OCR via Tesseract (optional feature)
 - Split, merge, rotate operations
 - CJK text support (Chinese, Japanese, Korean)
 - Corruption recovery and lenient parsing
