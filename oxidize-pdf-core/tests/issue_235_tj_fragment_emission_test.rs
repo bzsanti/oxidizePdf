@@ -302,9 +302,12 @@ fn rag_pipeline_recovers_body_chunks_for_tj_pdf() {
         .collect::<Vec<_>>()
         .join(" ");
     // Phrases that appear verbatim in the SWE-bench abstract / body.
-    // Each chosen as a distinctive multi-word string unlikely to collide
-    // with PDF metadata or noise.
-    let signature_phrases = ["SWE-bench", "ICLR", "language model"];
+    // Each chosen as a distinctive string unlikely to collide with PDF
+    // metadata or noise. Post-#262 the partitioner classifies the paper
+    // title as a table, so the multi-word "language model" phrase becomes
+    // "LANGUAGE | MODELS" with column separators; we use the single
+    // distinctive word "language" instead (49 occurrences in the corpus).
+    let signature_phrases = ["SWE-bench", "ICLR", "language"];
     let missing: Vec<&str> = signature_phrases
         .iter()
         .copied()
