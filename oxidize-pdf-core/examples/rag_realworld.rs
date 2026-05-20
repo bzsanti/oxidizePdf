@@ -14,9 +14,12 @@
 //! 2 if a fatal error occurred (filesystem, etc.).
 
 use std::fs;
+use std::io::BufWriter;
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Duration;
+
+use serde_json::json;
 
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::pipeline::RagChunk;
@@ -196,6 +199,54 @@ fn run_one(entry: &CorpusEntry) -> Result<(Vec<RagChunk>, DocStats), RunError> {
     Ok((non_empty, stats))
 }
 
+/// Serialize a single chunk to the canonical JSONL line shape.
+/// Pub so the integration test can call it; lives in the example for showcase clarity.
+pub fn jsonl_line(
+    entry_slug: &str,
+    entry_name: &str,
+    entry_country: &str,
+    entry_language: &str,
+    entry_url: &str,
+    chunk: &RagChunk,
+) -> String {
+    let value = json!({
+        "id": format!("{}-{:04}", entry_slug, chunk.chunk_index),
+        "text": chunk.text,
+        "metadata": {
+            "source_url": entry_url,
+            "document_name": entry_name,
+            "country": entry_country,
+            "language": entry_language,
+            "page_numbers": chunk.page_numbers,
+            "heading_context": chunk.heading_context,
+            "element_types": chunk.element_types,
+            "token_estimate": chunk.token_estimate,
+            "is_oversized": chunk.is_oversized,
+        }
+    });
+    value.to_string()
+}
+
+fn write_jsonl(entry: &CorpusEntry, chunks: &[RagChunk]) -> std::io::Result<PathBuf> {
+    fs::create_dir_all(OUT_DIR)?;
+    let path = PathBuf::from(OUT_DIR).join(format!("{}.jsonl", entry.slug));
+    let file = fs::File::create(&path)?;
+    let mut w = BufWriter::new(file);
+    for chunk in chunks {
+        let line = jsonl_line(
+            entry.slug,
+            entry.name,
+            entry.country,
+            entry.language,
+            entry.url,
+            chunk,
+        );
+        writeln!(w, "{}", line)?;
+    }
+    w.flush()?;
+    Ok(path)
+}
+
 fn main() -> std::process::ExitCode {
     let mut failed = 0usize;
     let mut total_chunks = 0usize;
@@ -204,12 +255,19 @@ fn main() -> std::process::ExitCode {
         match run_one(entry) {
             Ok((chunks, stats)) => {
                 total_chunks += stats.chunks;
-                eprintln!(
-                    "[ok]   {:<13} → {} chunks   ~{} tok/avg   {} oversized   {} headings",
-                    entry.slug, stats.chunks, stats.avg_tokens, stats.oversized, stats.headings
-                );
-                #[allow(clippy::let_underscore_drop)]
-                let _ = chunks; // JSONL output added in Task 5
+                match write_jsonl(entry, &chunks) {
+                    Ok(out_path) => {
+                        eprintln!(
+                            "[ok]   {:<13} → {} chunks   ~{} tok/avg   {} oversized   {} headings   {}",
+                            entry.slug, stats.chunks, stats.avg_tokens, stats.oversized, stats.headings,
+                            out_path.display()
+                        );
+                    }
+                    Err(e) => {
+                        failed += 1;
+                        eprintln!("[fail] {:<13} → io error writing jsonl: {}", entry.slug, e);
+                    }
+                }
             }
             Err(e) => {
                 failed += 1;
