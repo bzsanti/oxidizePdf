@@ -1527,6 +1527,7 @@ impl<R: Read + Seek> PdfDocument<R> {
     ) -> ParseResult<Vec<crate::pipeline::Element>> {
         let options = crate::text::ExtractionOptions {
             preserve_layout: true,
+            reconstruct_paragraphs: true,
             ..Default::default()
         };
         self.do_partition_pages(options, config)
@@ -1540,6 +1541,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         let profile_cfg = profile.config();
         let options = crate::text::ExtractionOptions {
             preserve_layout: true,
+            reconstruct_paragraphs: true,
             space_threshold: profile_cfg.extraction.space_threshold,
             detect_columns: profile_cfg.extraction.detect_columns,
             ..crate::text::ExtractionOptions::default()

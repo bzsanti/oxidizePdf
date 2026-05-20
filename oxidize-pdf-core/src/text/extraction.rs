@@ -749,10 +749,17 @@ impl TextExtractor {
                 self.sort_and_merge_fragments(&mut fragments);
             }
 
-            // Merge close fragments to eliminate spacing artifacts
-            // This is crucial for table detection and structured data extraction
+            // Merge close fragments to eliminate spacing artifacts (kerning fix)
             if self.options.preserve_layout && !fragments.is_empty() {
                 fragments = self.merge_close_fragments(&fragments);
+            }
+
+            // Reconstruct visual lines and paragraphs from raw fragments.
+            // Required for the partition pipeline to produce Element values at
+            // paragraph granularity (issue #261).
+            if self.options.reconstruct_paragraphs && !fragments.is_empty() {
+                let lines = self.merge_into_lines(&fragments);
+                fragments = self.merge_into_paragraphs(&lines);
             }
 
             // Reconstruct text from sorted fragments if layout is preserved
