@@ -66,7 +66,7 @@ Create `oxidize-pdf-core/tests/paragraph_reconstruction_test.rs`:
 //! operators are passed through the partitioner one-per-fragment, producing
 //! per-word "chunks" that are unusable for RAG ingestion.
 
-use oxidize_pdf::text::extraction::{ExtractionOptions, TextExtractor, TextFragment};
+use oxidize_pdf::text::{ExtractionOptions, TextExtractor, TextFragment};
 
 fn frag(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment {
     TextFragment {
@@ -76,7 +76,11 @@ fn frag(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment 
         width,
         height: font_size,
         font_size,
-        font_name: "Helvetica".to_string(),
+        font_name: Some("Helvetica".to_string()),
+        is_bold: false,
+        is_italic: false,
+        color: None,
+        space_decisions: Vec::new(),
     }
 }
 
@@ -411,6 +415,25 @@ The line merger groups fragments whose baselines are within a small tolerance, s
 Locate the existing `#[cfg(test)] mod tests` block at the bottom of `extraction.rs`. Add inside it:
 
 ```rust
+    // Helper for unit tests in this module. `TextFragment` does not implement
+    // `Default`, so an explicit helper avoids 11-field struct literals
+    // everywhere.
+    fn tf(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment {
+        TextFragment {
+            text: text.to_string(),
+            x,
+            y,
+            width,
+            height: font_size,
+            font_size,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
+            color: None,
+            space_decisions: Vec::new(),
+        }
+    }
+
     #[test]
     fn merge_into_lines_groups_same_baseline_fragments() {
         let extractor = TextExtractor::with_options(ExtractionOptions {
@@ -419,31 +442,11 @@ Locate the existing `#[cfg(test)] mod tests` block at the bottom of `extraction.
         });
         // Two lines, each with three fragments
         let input = vec![
-            TextFragment {
-                text: "Hello".to_string(),
-                x: 50.0, y: 400.0, width: 30.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "world".to_string(),
-                x: 90.0, y: 400.0, width: 30.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "now.".to_string(),
-                x: 130.0, y: 400.0, width: 25.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "Next".to_string(),
-                x: 50.0, y: 386.0, width: 30.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "line.".to_string(),
-                x: 90.0, y: 386.0, width: 25.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("Hello", 50.0, 400.0, 30.0, 12.0),
+            tf("world", 90.0, 400.0, 30.0, 12.0),
+            tf("now.", 130.0, 400.0, 25.0, 12.0),
+            tf("Next", 50.0, 386.0, 30.0, 12.0),
+            tf("line.", 90.0, 386.0, 25.0, 12.0),
         ];
         let lines = extractor.merge_into_lines(&input);
         assert_eq!(lines.len(), 2, "two distinct baselines must produce two line fragments");
@@ -460,32 +463,16 @@ Locate the existing `#[cfg(test)] mod tests` block at the bottom of `extraction.
         });
         // Two fragments with a gap of 4pt (0.33× font_size = above threshold)
         let with_gap = vec![
-            TextFragment {
-                text: "AB".to_string(),
-                x: 50.0, y: 400.0, width: 10.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "CD".to_string(),
-                x: 64.0, y: 400.0, width: 10.0, height: 12.0, // gap = 4pt
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("AB", 50.0, 400.0, 10.0, 12.0),
+            tf("CD", 64.0, 400.0, 10.0, 12.0), // gap = 4pt
         ];
         let lines = extractor.merge_into_lines(&with_gap);
         assert_eq!(lines[0].text, "AB CD", "gap above threshold must insert space");
 
         // Same shape but gap of 1pt (0.083× — below threshold)
         let tight = vec![
-            TextFragment {
-                text: "AB".to_string(),
-                x: 50.0, y: 400.0, width: 10.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "CD".to_string(),
-                x: 61.0, y: 400.0, width: 10.0, height: 12.0, // gap = 1pt
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("AB", 50.0, 400.0, 10.0, 12.0),
+            tf("CD", 61.0, 400.0, 10.0, 12.0), // gap = 1pt
         ];
         let lines = extractor.merge_into_lines(&tight);
         assert_eq!(lines[0].text, "ABCD", "tight gap must NOT insert space");
@@ -498,16 +485,8 @@ Locate the existing `#[cfg(test)] mod tests` block at the bottom of `extraction.
             ..Default::default()
         });
         let input = vec![
-            TextFragment {
-                text: "A".to_string(),
-                x: 50.0, y: 400.0, width: 10.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "B".to_string(),
-                x: 100.0, y: 400.0, width: 10.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("A", 50.0, 400.0, 10.0, 12.0),
+            tf("B", 100.0, 400.0, 10.0, 12.0),
         ];
         let lines = extractor.merge_into_lines(&input);
         assert_eq!(lines.len(), 1);
@@ -606,6 +585,10 @@ fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFr
         height: y_max - y_min,
         font_size: head.font_size,
         font_name: head.font_name.clone(),
+        is_bold: head.is_bold,
+        is_italic: head.is_italic,
+        color: head.color,
+        space_decisions: Vec::new(),
     }
 }
 ```
@@ -645,21 +628,9 @@ The paragraph merger groups consecutive lines whose vertical gap is close to the
         });
         // Three lines, 14pt leading (line height 12pt, gap 2pt)
         let lines = vec![
-            TextFragment {
-                text: "Line one.".to_string(),
-                x: 50.0, y: 400.0, width: 60.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "Line two.".to_string(),
-                x: 50.0, y: 386.0, width: 60.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "Line three.".to_string(),
-                x: 50.0, y: 372.0, width: 70.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("Line one.", 50.0, 400.0, 60.0, 12.0),
+            tf("Line two.", 50.0, 386.0, 60.0, 12.0),
+            tf("Line three.", 50.0, 372.0, 70.0, 12.0),
         ];
         let paragraphs = extractor.merge_into_paragraphs(&lines);
         assert_eq!(paragraphs.len(), 1);
@@ -674,21 +645,9 @@ The paragraph merger groups consecutive lines whose vertical gap is close to the
         });
         // First paragraph: y=400, then huge gap, then y=300
         let lines = vec![
-            TextFragment {
-                text: "P1L1.".to_string(),
-                x: 50.0, y: 400.0, width: 40.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "P1L2.".to_string(),
-                x: 50.0, y: 386.0, width: 40.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "P2L1.".to_string(),
-                x: 50.0, y: 300.0, width: 40.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("P1L1.", 50.0, 400.0, 40.0, 12.0),
+            tf("P1L2.", 50.0, 386.0, 40.0, 12.0),
+            tf("P2L1.", 50.0, 300.0, 40.0, 12.0),
         ];
         let paragraphs = extractor.merge_into_paragraphs(&lines);
         assert_eq!(paragraphs.len(), 2);
@@ -704,16 +663,8 @@ The paragraph merger groups consecutive lines whose vertical gap is close to the
             ..Default::default()
         });
         let lines = vec![
-            TextFragment {
-                text: "Kryp-".to_string(),
-                x: 50.0, y: 400.0, width: 30.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
-            TextFragment {
-                text: "tographie".to_string(),
-                x: 50.0, y: 386.0, width: 60.0, height: 12.0,
-                font_size: 12.0, font_name: "Helvetica".to_string(),
-            },
+            tf("Kryp-", 50.0, 400.0, 30.0, 12.0),
+            tf("tographie", 50.0, 386.0, 60.0, 12.0),
         ];
         let paragraphs = extractor.merge_into_paragraphs(&lines);
         assert_eq!(paragraphs.len(), 1);
@@ -791,6 +742,10 @@ Replace the stub:
                 height: y_max - y_min,
                 font_size: current.font_size,
                 font_name: current.font_name.clone(),
+                is_bold: current.is_bold,
+                is_italic: current.is_italic,
+                color: current.color,
+                space_decisions: Vec::new(),
             };
         }
         paragraphs.push(current);
