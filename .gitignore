@@ -174,3 +174,9 @@ test_subset/
 output.pdf
 test*_page_*.pdf
 /docs/internal/
+
+# rag_realworld example artifacts
+corpus_cache/
+out/
+oxidize-pdf-core/corpus_cache/
+oxidize-pdf-core/out/
