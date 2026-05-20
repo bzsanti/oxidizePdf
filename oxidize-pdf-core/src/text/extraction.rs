@@ -33,6 +33,18 @@ pub struct ExtractionOptions {
     /// Track space insertion decisions in each TextFragment (default: false).
     /// When false: zero overhead. When true: populates `TextFragment::space_decisions`.
     pub track_space_decisions: bool,
+    /// Reconstruct visual lines and paragraphs from the raw text fragments
+    /// produced by PDF text-show operators. When `true`, the extractor groups
+    /// fragments by baseline into single-line fragments, then groups
+    /// consecutive lines with normal leading into paragraph-level fragments.
+    /// This is what the partition pipeline needs to produce Element values at
+    /// paragraph granularity rather than at per-`Tj` granularity (see
+    /// [issue #261](https://github.com/bzsanti/oxidizePdf/issues/261)).
+    ///
+    /// Default `false` for backward compatibility with direct `extract_text`
+    /// callers. The `PdfDocument::partition*` entry points force this to
+    /// `true`.
+    pub reconstruct_paragraphs: bool,
 }
 
 impl Default for ExtractionOptions {
@@ -46,6 +58,7 @@ impl Default for ExtractionOptions {
             column_threshold: 50.0,
             merge_hyphenated: true,
             track_space_decisions: false,
+            reconstruct_paragraphs: false,
         }
     }
 }
@@ -215,6 +228,131 @@ impl TextExtractor {
             font_cache: HashMap::new(),
             font_object_cache: HashMap::new(),
         }
+    }
+
+    /// Run the full fragment-merge chain used by the partition pipeline:
+    /// kerning fix → line reconstruction → paragraph reconstruction.
+    ///
+    /// Honors `ExtractionOptions::reconstruct_paragraphs`: when `false`, only
+    /// `merge_close_fragments` (the kerning fix) runs and the input is
+    /// returned at fragment granularity.
+    ///
+    /// This method is `pub` so the integration test in
+    /// `tests/paragraph_reconstruction_test.rs` can exercise it without going
+    /// through a PDF file. Production callers should prefer
+    /// `PdfDocument::partition()` and friends, which use this internally.
+    pub fn merge_fragments_for_partition(&self, fragments: &[TextFragment]) -> Vec<TextFragment> {
+        let kerning_fixed = self.merge_close_fragments(fragments);
+        if !self.options.reconstruct_paragraphs {
+            return kerning_fixed;
+        }
+        let lines = self.merge_into_lines(&kerning_fixed);
+        self.merge_into_paragraphs(&lines)
+    }
+
+    /// Group fragments by baseline into single-line fragments.
+    ///
+    /// Two fragments are on the same line when their Y centers differ by less
+    /// than half the smaller fragment's height. Within a line, fragments are
+    /// sorted left-to-right; a space is inserted between adjacent fragments
+    /// when the X gap exceeds `space_threshold * font_size`.
+    ///
+    /// The output bounding box for each line is the axis-aligned union of the
+    /// input fragments' bounding boxes; `font_size` and `font_name` are
+    /// inherited from the line's first fragment.
+    fn merge_into_lines(&self, fragments: &[TextFragment]) -> Vec<TextFragment> {
+        if fragments.is_empty() {
+            return Vec::new();
+        }
+
+        // Sort by Y descending (PDF top-down), then X ascending
+        let mut sorted: Vec<&TextFragment> = fragments.iter().collect();
+        sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then(a.x.total_cmp(&b.x)));
+
+        let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
+        for frag in sorted {
+            let placed = lines.last_mut().is_some_and(|line| {
+                let head = line[0];
+                let tol = (head.height.min(frag.height)) * 0.5;
+                (head.y - frag.y).abs() < tol
+            });
+            if placed {
+                lines.last_mut().unwrap().push(frag);
+            } else {
+                lines.push(vec![frag]);
+            }
+        }
+
+        lines
+            .into_iter()
+            .map(|line| build_line_fragment(line, self.options.space_threshold))
+            .collect()
+    }
+
+    /// Group consecutive lines into paragraphs based on vertical gap.
+    ///
+    /// Two consecutive lines are part of the same paragraph when the vertical
+    /// gap between them is less than 1.5× the median line height in the
+    /// input. Hyphenated line breaks (previous line ends with `-` and
+    /// `merge_hyphenated` is set) join without a separator and drop the
+    /// hyphen; otherwise lines join with `'\n'`.
+    fn merge_into_paragraphs(&self, lines: &[TextFragment]) -> Vec<TextFragment> {
+        if lines.is_empty() {
+            return Vec::new();
+        }
+
+        // Median line height — robust to outliers
+        let mut heights: Vec<f64> = lines.iter().map(|l| l.height).collect();
+        heights.sort_by(f64::total_cmp);
+        let median_h = heights[heights.len() / 2];
+        let max_paragraph_gap = median_h * 1.5;
+
+        let mut paragraphs: Vec<TextFragment> = Vec::new();
+        let mut current = lines[0].clone();
+
+        for line in &lines[1..] {
+            let prev_bottom = current.y;
+            let line_top = line.y + line.height;
+            let gap = prev_bottom - line_top;
+
+            if gap < 0.0 || gap > max_paragraph_gap {
+                paragraphs.push(current);
+                current = line.clone();
+                continue;
+            }
+
+            // Same paragraph — join
+            let joined_text = if self.options.merge_hyphenated && current.text.ends_with('-') {
+                let mut s = current.text.clone();
+                s.pop(); // drop trailing hyphen
+                s.push_str(&line.text);
+                s
+            } else {
+                format!("{}\n{}", current.text, line.text)
+            };
+
+            let x_min = current.x.min(line.x);
+            let x_max = (current.x + current.width).max(line.x + line.width);
+            let y_min = current.y.min(line.y);
+            let y_max = (current.y + current.height).max(line.y + line.height);
+
+            current = TextFragment {
+                text: joined_text,
+                x: x_min,
+                y: y_min,
+                width: x_max - x_min,
+                height: y_max - y_min,
+                font_size: current.font_size,
+                font_name: current.font_name.clone(),
+                is_bold: current.is_bold,
+                is_italic: current.is_italic,
+                color: current.color,
+                space_decisions: Vec::new(),
+            };
+        }
+        paragraphs.push(current);
+
+        paragraphs
     }
 
     /// Extract text from a PDF document
@@ -611,10 +749,17 @@ impl TextExtractor {
                 self.sort_and_merge_fragments(&mut fragments);
             }
 
-            // Merge close fragments to eliminate spacing artifacts
-            // This is crucial for table detection and structured data extraction
+            // Merge close fragments to eliminate spacing artifacts (kerning fix)
             if self.options.preserve_layout && !fragments.is_empty() {
                 fragments = self.merge_close_fragments(&fragments);
+            }
+
+            // Reconstruct visual lines and paragraphs from raw fragments.
+            // Required for the partition pipeline to produce Element values at
+            // paragraph granularity (issue #261).
+            if self.options.reconstruct_paragraphs && !fragments.is_empty() {
+                let lines = self.merge_into_lines(&fragments);
+                fragments = self.merge_into_paragraphs(&lines);
             }
 
             // Reconstruct text from sorted fragments if layout is preserved
@@ -791,7 +936,11 @@ impl TextExtractor {
                 && x_gap < fragment.font_size * 0.5; // Gap less than 50% of font size
 
             if should_merge {
-                // Merge this fragment into current
+                // Merge this fragment into current, preserving word boundaries
+                // when the gap exceeds the space threshold.
+                if x_gap > self.options.space_threshold * fragment.font_size {
+                    current.text.push(' ');
+                }
                 current.text.push_str(&fragment.text);
                 current.width = (fragment.x + fragment.width) - current.x;
             } else {
@@ -1168,6 +1317,44 @@ pub fn sanitize_extracted_text(text: &str) -> String {
     result
 }
 
+fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
+    let head = line[0];
+    let mut text = String::new();
+    let mut x_min = head.x;
+    let mut x_max = head.x + head.width;
+    let mut y_min = head.y;
+    let mut y_max = head.y + head.height;
+
+    for (i, frag) in line.iter().enumerate() {
+        if i > 0 {
+            let prev = line[i - 1];
+            let gap = frag.x - (prev.x + prev.width);
+            if gap > space_threshold * frag.font_size {
+                text.push(' ');
+            }
+        }
+        text.push_str(&frag.text);
+        x_min = x_min.min(frag.x);
+        x_max = x_max.max(frag.x + frag.width);
+        y_min = y_min.min(frag.y);
+        y_max = y_max.max(frag.y + frag.height);
+    }
+
+    TextFragment {
+        text,
+        x: x_min,
+        y: y_min,
+        width: x_max - x_min,
+        height: y_max - y_min,
+        font_size: head.font_size,
+        font_name: head.font_name.clone(),
+        is_bold: head.is_bold,
+        is_italic: head.is_italic,
+        color: head.color,
+        space_decisions: Vec::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1215,6 +1402,7 @@ mod tests {
             column_threshold: 75.0,
             merge_hyphenated: false,
             track_space_decisions: false,
+            reconstruct_paragraphs: false,
         };
         assert!(options.preserve_layout);
         assert_eq!(options.space_threshold, 0.5);
@@ -1405,6 +1593,7 @@ mod tests {
             column_threshold: 60.0,
             merge_hyphenated: false,
             track_space_decisions: false,
+            reconstruct_paragraphs: false,
         };
         let extractor = TextExtractor::with_options(options.clone());
         assert_eq!(extractor.options.preserve_layout, options.preserve_layout);
@@ -1969,6 +2158,149 @@ mod tests {
         assert!(
             kerning_map.is_empty(),
             "Should return empty HashMap when no kern table exists"
+        );
+    }
+
+    // Helper for paragraph-reconstruction unit tests. TextFragment has 11
+    // fields so a helper keeps the test bodies focused on geometry.
+    fn tf(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment {
+        TextFragment {
+            text: text.to_string(),
+            x,
+            y,
+            width,
+            height: font_size,
+            font_size,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
+            color: None,
+            space_decisions: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn merge_into_lines_groups_same_baseline_fragments() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let input = vec![
+            tf("Hello", 50.0, 400.0, 30.0, 12.0),
+            tf("world", 90.0, 400.0, 30.0, 12.0),
+            tf("now.", 130.0, 400.0, 25.0, 12.0),
+            tf("Next", 50.0, 386.0, 30.0, 12.0),
+            tf("line.", 90.0, 386.0, 25.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(
+            lines.len(),
+            2,
+            "two distinct baselines must produce two line fragments"
+        );
+        assert_eq!(
+            lines[0].text, "Hello world now.",
+            "first line concatenated with spaces"
+        );
+        assert_eq!(lines[1].text, "Next line.", "second line concatenated");
+    }
+
+    #[test]
+    fn merge_into_lines_inserts_space_only_when_gap_exceeds_threshold() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            space_threshold: 0.3,
+            ..Default::default()
+        });
+        // Gap of 4pt at font_size 12 = 0.33x — above threshold 0.3
+        let with_gap = vec![
+            tf("AB", 50.0, 400.0, 10.0, 12.0),
+            tf("CD", 64.0, 400.0, 10.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&with_gap);
+        assert_eq!(
+            lines[0].text, "AB CD",
+            "gap above threshold must insert space"
+        );
+
+        // Gap of 1pt = 0.083x — below threshold
+        let tight = vec![
+            tf("AB", 50.0, 400.0, 10.0, 12.0),
+            tf("CD", 61.0, 400.0, 10.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&tight);
+        assert_eq!(lines[0].text, "ABCD", "tight gap must NOT insert space");
+    }
+
+    #[test]
+    fn merge_into_lines_unioned_bounding_box() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let input = vec![
+            tf("A", 50.0, 400.0, 10.0, 12.0),
+            tf("B", 100.0, 400.0, 10.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(lines.len(), 1);
+        assert!((lines[0].x - 50.0).abs() < 0.01);
+        assert!(
+            (lines[0].width - 60.0).abs() < 0.01,
+            "width must span 50->110"
+        );
+    }
+
+    #[test]
+    fn merge_into_paragraphs_groups_consecutive_lines() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Three lines, 14pt leading (line height 12pt, gap 2pt)
+        let lines = vec![
+            tf("Line one.", 50.0, 400.0, 60.0, 12.0),
+            tf("Line two.", 50.0, 386.0, 60.0, 12.0),
+            tf("Line three.", 50.0, 372.0, 70.0, 12.0),
+        ];
+        let paragraphs = extractor.merge_into_paragraphs(&lines);
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].text, "Line one.\nLine two.\nLine three.");
+    }
+
+    #[test]
+    fn merge_into_paragraphs_splits_on_large_vertical_gap() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let lines = vec![
+            tf("P1L1.", 50.0, 400.0, 40.0, 12.0),
+            tf("P1L2.", 50.0, 386.0, 40.0, 12.0),
+            tf("P2L1.", 50.0, 300.0, 40.0, 12.0),
+        ];
+        let paragraphs = extractor.merge_into_paragraphs(&lines);
+        assert_eq!(paragraphs.len(), 2);
+        assert_eq!(paragraphs[0].text, "P1L1.\nP1L2.");
+        assert_eq!(paragraphs[1].text, "P2L1.");
+    }
+
+    #[test]
+    fn merge_into_paragraphs_drops_hyphen_when_merge_hyphenated() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            merge_hyphenated: true,
+            ..Default::default()
+        });
+        let lines = vec![
+            tf("Kryp-", 50.0, 400.0, 30.0, 12.0),
+            tf("tographie", 50.0, 386.0, 60.0, 12.0),
+        ];
+        let paragraphs = extractor.merge_into_paragraphs(&lines);
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(
+            paragraphs[0].text, "Kryptographie",
+            "hyphen elided, no newline inserted"
         );
     }
 }
