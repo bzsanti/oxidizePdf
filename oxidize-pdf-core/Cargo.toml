@@ -8,8 +8,8 @@ license.workspace = true
 repository.workspace = true
 documentation = "https://docs.rs/oxidize-pdf"
 homepage = "https://github.com/bzsanti/oxidizePdf"
-description = "A pure Rust PDF generation and manipulation library with zero external dependencies"
-keywords = ["pdf", "pdf-parser", "text-extraction", "pdf-generation", "rag"]
+description = "Pure Rust PDF library for AI/RAG: structure-aware chunking with bounding boxes, heading context, and token estimates. No Python, no ML, no C bindings."
+keywords = ["pdf", "rag", "chunking", "ai", "embeddings"]
 categories = ["parser-implementations", "text-processing", "graphics", "encoding"]
 readme = "../README.md"
 exclude = [
@@ -285,6 +285,7 @@ path = "examples/extreme_complexity_benchmark.rs"
 [[example]]
 name = "tesseract_debug"
 path = "examples/tesseract_debug.rs"
+required-features = ["ocr-tesseract"]
 
 
 [[example]]
@@ -343,10 +344,12 @@ path = "examples/debug_transparency.rs"
 [[example]]
 name = "convert_pdf_ocr"
 path = "examples/convert_pdf_ocr.rs"
+required-features = ["ocr-tesseract"]
 
 [[example]]
 name = "test_ocr_simple"
 path = "examples/test_ocr_simple.rs"
+required-features = ["ocr-tesseract"]
 
 [[example]]
 name = "extract_images_demo"
@@ -420,7 +423,7 @@ path = "examples/line_chart_dashboard_test.rs"
 # harness = false
 
 [features]
-default = ["compression", "ocr-tesseract"]
+default = ["compression", "external-images"]
 
 # Basic features
 compression = ["dep:flate2"]
@@ -428,10 +431,10 @@ compression = ["dep:flate2"]
 # Debug features
 verbose-debug = []  # Enable verbose debug logging (disabled by default for zero runtime cost)
 
-# Image processing features
+# Image processing features (pure Rust via `image` crate, used for PNG/JPEG/etc. extraction)
 external-images = ["dep:image"]
 
-# OCR features
+# OCR features (opt-in: pulls `rusty-tesseract`, which requires the C `tesseract` binary on PATH)
 ocr-tesseract = ["dep:rusty-tesseract", "external-images"]
 ocr-full = ["ocr-tesseract"]
 

@@ -8,6 +8,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.9.0] - 2026-05-20
+
+### Changed
+
+- **BREAKING (feature surface, not API).** `ocr-tesseract` is no longer in
+  default features of `oxidize-pdf`. Users that relied on default-feature
+  OCR must opt in explicitly:
+  ```toml
+  oxidize-pdf = { version = "2.9", features = ["ocr-tesseract"] }
+  ```
+  Rationale: `rusty-tesseract` invokes the Tesseract C binary at runtime,
+  which contradicted the "no C dependencies" claim that the manifest has
+  always made. Making OCR opt-in removes the contradiction. The OCR API
+  surface (`OcrProvider`, `OcrEngine`, `MockOcrProvider`, `OcrResult`,
+  `OcrOptions`) is exported unchanged; only `RustyTesseractProvider` is
+  now feature-gated. Migration guidance is published at
+  [Discussion #246](https://github.com/bzsanti/oxidizePdf/discussions/246).
+- **`oxidize-pdf-core/Cargo.toml` `description`** rewritten as a RAG-first
+  one-liner: *"Pure Rust PDF library for AI/RAG: structure-aware chunking
+  with bounding boxes, heading context, and token estimates. No Python,
+  no ML, no C bindings."* Reflects the project's actual differentiator at
+  the level of `cargo add` / crates.io metadata.
+- **`oxidize-pdf-core/Cargo.toml` `keywords`** switched from generic
+  (`pdf-parser`, `text-extraction`, `pdf-generation`) to acquisition-
+  oriented (`rag`, `chunking`, `ai`, `embeddings`). Five-keyword slot
+  reallocated; redundant terms (`pdf-parser`/`pdf-generation` overlapped
+  with `pdf`) removed.
+- **`external-images` added to default features.** The pure-Rust `image`
+  crate dependency that powers PNG/JPEG extraction is now in default
+  features. It was previously only enabled transitively via
+  `ocr-tesseract`. With OCR moving to opt-in, `external-images` becomes
+  its own default-on feature so RAG pipelines that extract embedded
+  images keep working out-of-the-box.
+
+### Documentation
+
+- **README and landing page demote the "Beyond RAG" feature catalogue.**
+  The README section that previously showed five generation/encryption/
+  signatures/operations code blocks now collapses to a single "Also in
+  the box" paragraph + link to `oxidize-pdf-core/examples/` and
+  `docs.rs`. The landing-page grid of six cards collapses similarly to a
+  single paragraph. RAG one-liner stays as the hero. Features unchanged;
+  presentation tightened.
+- **Doc-test in `pdf_ocr_converter`** switched to use `MockOcrProvider`
+  (always available) instead of `RustyTesseractProvider` (now feature-
+  gated). The example still demonstrates the API; a leading sentence
+  redirects readers to `ocr-tesseract` + `RustyTesseractProvider` for
+  real OCR.
+
+### Internal
+
+- Examples requiring OCR (`tesseract_debug`, `convert_pdf_ocr`,
+  `test_ocr_simple`) now declare `required-features = ["ocr-tesseract"]`
+  so they are skipped when the feature is not enabled rather than
+  failing to compile.
+
 ## [2.8.2] - 2026-05-19
 
 ### Fixed
