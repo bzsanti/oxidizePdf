@@ -250,9 +250,43 @@ impl TextExtractor {
         self.merge_into_paragraphs(&lines)
     }
 
-    fn merge_into_lines(&self, _fragments: &[TextFragment]) -> Vec<TextFragment> {
-        // Stub: Task 3 replaces.
-        Vec::new()
+    /// Group fragments by baseline into single-line fragments.
+    ///
+    /// Two fragments are on the same line when their Y centers differ by less
+    /// than half the smaller fragment's height. Within a line, fragments are
+    /// sorted left-to-right; a space is inserted between adjacent fragments
+    /// when the X gap exceeds `space_threshold * font_size`.
+    ///
+    /// The output bounding box for each line is the axis-aligned union of the
+    /// input fragments' bounding boxes; `font_size` and `font_name` are
+    /// inherited from the line's first fragment.
+    fn merge_into_lines(&self, fragments: &[TextFragment]) -> Vec<TextFragment> {
+        if fragments.is_empty() {
+            return Vec::new();
+        }
+
+        // Sort by Y descending (PDF top-down), then X ascending
+        let mut sorted: Vec<&TextFragment> = fragments.iter().collect();
+        sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then(a.x.total_cmp(&b.x)));
+
+        let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
+        for frag in sorted {
+            let placed = lines.last_mut().is_some_and(|line| {
+                let head = line[0];
+                let tol = (head.height.min(frag.height)) * 0.5;
+                (head.y - frag.y).abs() < tol
+            });
+            if placed {
+                lines.last_mut().unwrap().push(frag);
+            } else {
+                lines.push(vec![frag]);
+            }
+        }
+
+        lines
+            .into_iter()
+            .map(|line| build_line_fragment(line, self.options.space_threshold))
+            .collect()
     }
 
     fn merge_into_paragraphs(&self, _lines: &[TextFragment]) -> Vec<TextFragment> {
@@ -1211,6 +1245,44 @@ pub fn sanitize_extracted_text(text: &str) -> String {
     result
 }
 
+fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
+    let head = line[0];
+    let mut text = String::new();
+    let mut x_min = head.x;
+    let mut x_max = head.x + head.width;
+    let mut y_min = head.y;
+    let mut y_max = head.y + head.height;
+
+    for (i, frag) in line.iter().enumerate() {
+        if i > 0 {
+            let prev = line[i - 1];
+            let gap = frag.x - (prev.x + prev.width);
+            if gap > space_threshold * frag.font_size {
+                text.push(' ');
+            }
+        }
+        text.push_str(&frag.text);
+        x_min = x_min.min(frag.x);
+        x_max = x_max.max(frag.x + frag.width);
+        y_min = y_min.min(frag.y);
+        y_max = y_max.max(frag.y + frag.height);
+    }
+
+    TextFragment {
+        text,
+        x: x_min,
+        y: y_min,
+        width: x_max - x_min,
+        height: y_max - y_min,
+        font_size: head.font_size,
+        font_name: head.font_name.clone(),
+        is_bold: head.is_bold,
+        is_italic: head.is_italic,
+        color: head.color,
+        space_decisions: Vec::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2014,6 +2086,96 @@ mod tests {
         assert!(
             kerning_map.is_empty(),
             "Should return empty HashMap when no kern table exists"
+        );
+    }
+
+    // Helper for paragraph-reconstruction unit tests. TextFragment has 11
+    // fields so a helper keeps the test bodies focused on geometry.
+    fn tf(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment {
+        TextFragment {
+            text: text.to_string(),
+            x,
+            y,
+            width,
+            height: font_size,
+            font_size,
+            font_name: None,
+            is_bold: false,
+            is_italic: false,
+            color: None,
+            space_decisions: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn merge_into_lines_groups_same_baseline_fragments() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let input = vec![
+            tf("Hello", 50.0, 400.0, 30.0, 12.0),
+            tf("world", 90.0, 400.0, 30.0, 12.0),
+            tf("now.", 130.0, 400.0, 25.0, 12.0),
+            tf("Next", 50.0, 386.0, 30.0, 12.0),
+            tf("line.", 90.0, 386.0, 25.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(
+            lines.len(),
+            2,
+            "two distinct baselines must produce two line fragments"
+        );
+        assert_eq!(
+            lines[0].text, "Hello world now.",
+            "first line concatenated with spaces"
+        );
+        assert_eq!(lines[1].text, "Next line.", "second line concatenated");
+    }
+
+    #[test]
+    fn merge_into_lines_inserts_space_only_when_gap_exceeds_threshold() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            space_threshold: 0.3,
+            ..Default::default()
+        });
+        // Gap of 4pt at font_size 12 = 0.33x — above threshold 0.3
+        let with_gap = vec![
+            tf("AB", 50.0, 400.0, 10.0, 12.0),
+            tf("CD", 64.0, 400.0, 10.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&with_gap);
+        assert_eq!(
+            lines[0].text, "AB CD",
+            "gap above threshold must insert space"
+        );
+
+        // Gap of 1pt = 0.083x — below threshold
+        let tight = vec![
+            tf("AB", 50.0, 400.0, 10.0, 12.0),
+            tf("CD", 61.0, 400.0, 10.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&tight);
+        assert_eq!(lines[0].text, "ABCD", "tight gap must NOT insert space");
+    }
+
+    #[test]
+    fn merge_into_lines_unioned_bounding_box() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let input = vec![
+            tf("A", 50.0, 400.0, 10.0, 12.0),
+            tf("B", 100.0, 400.0, 10.0, 12.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(lines.len(), 1);
+        assert!((lines[0].x - 50.0).abs() < 0.01);
+        assert!(
+            (lines[0].width - 60.0).abs() < 0.01,
+            "width must span 50->110"
         );
     }
 }
