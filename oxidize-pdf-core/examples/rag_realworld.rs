@@ -13,8 +13,12 @@
 //! Exit code: 0 if every document succeeded; N if N documents failed;
 //! 2 if a fatal error occurred (filesystem, etc.).
 
+use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
+use std::time::Duration;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 struct CorpusEntry {
     slug: &'static str,
@@ -63,6 +67,7 @@ const CORPUS: &[CorpusEntry] = &[
 ];
 
 const CACHE_DIR: &str = "corpus_cache";
+#[allow(dead_code)]
 const OUT_DIR: &str = "out";
 const DOWNLOAD_TIMEOUT_SECS: u64 = 30;
 
@@ -79,9 +84,73 @@ fn cache_path(url: &str) -> PathBuf {
     PathBuf::from(CACHE_DIR).join(format!("{}.pdf", hex))
 }
 
+#[derive(Debug)]
+enum FetchError {
+    Http(String),
+    Io(std::io::Error),
+}
+
+impl std::fmt::Display for FetchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FetchError::Http(msg) => write!(f, "http error: {}", msg),
+            FetchError::Io(e) => write!(f, "io error: {}", e),
+        }
+    }
+}
+
+impl From<std::io::Error> for FetchError {
+    fn from(e: std::io::Error) -> Self {
+        FetchError::Io(e)
+    }
+}
+
+/// Returns Ok(path) on success. If the file is already cached, no HTTP request
+/// is made. Network errors and non-2xx responses become `FetchError::Http`.
+fn ensure_local_copy(entry: &CorpusEntry) -> Result<PathBuf, FetchError> {
+    fs::create_dir_all(CACHE_DIR)?;
+    let path = cache_path(entry.url);
+    if path.exists() {
+        return Ok(path);
+    }
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(10))
+        .timeout_read(Duration::from_secs(DOWNLOAD_TIMEOUT_SECS))
+        .build();
+    let resp = agent
+        .get(entry.url)
+        .call()
+        .map_err(|e| FetchError::Http(e.to_string()))?;
+    let status = resp.status();
+    if !(200..300).contains(&status) {
+        return Err(FetchError::Http(format!("status {}", status)));
+    }
+    let mut reader = resp.into_reader();
+    let tmp = path.with_extension("pdf.partial");
+    {
+        let mut out = fs::File::create(&tmp)?;
+        std::io::copy(&mut reader, &mut out)?;
+        out.flush()?;
+    }
+    fs::rename(&tmp, &path)?;
+    Ok(path)
+}
+
 fn main() {
-    eprintln!("rag_realworld: corpus has {} documents", CORPUS.len());
-    for entry in CORPUS {
-        eprintln!("  - {} ({}) → {}", entry.slug, entry.country, entry.url);
+    let entry = &CORPUS[0]; // ENS, smallest known-good URL
+    match ensure_local_copy(entry) {
+        Ok(path) => {
+            let size = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            eprintln!(
+                "[ok]   {} cached at {} ({} bytes)",
+                entry.slug,
+                path.display(),
+                size
+            );
+        }
+        Err(e) => {
+            eprintln!("[fail] {} → {}", entry.slug, e);
+            std::process::exit(1);
+        }
     }
 }
