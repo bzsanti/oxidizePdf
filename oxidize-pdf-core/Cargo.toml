@@ -114,6 +114,8 @@ serde_json = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
 indicatif = "0.18"
 tracing-subscriber = { workspace = true }
+ureq = { version = "2.10", default-features = false, features = ["tls"] }
+sha1 = "0.10"
 
 [[example]]
 name = "font_spacing_test"
@@ -536,6 +538,10 @@ path = "examples/table_extraction.rs"
 [[example]]
 name = "tagged_pdf_demo"
 path = "examples/tagged_pdf_demo.rs"
+
+[[example]]
+name = "rag_realworld"
+path = "examples/rag_realworld.rs"
 
 # Disabled - requires benchmark framework
 # [[example]]

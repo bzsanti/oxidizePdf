@@ -1,0 +1,59 @@
+name: verify-corpus
+
+on:
+  schedule:
+    # Weekly on Monday 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-urls:
+    runs-on: ubuntu-latest
+    steps:
+      - name: HEAD-check each corpus URL
+        id: check
+        shell: bash
+        run: |
+          set +e
+          urls=(
+            "https://www.boe.es/boe/dias/2022/05/04/pdfs/BOE-A-2022-7191.pdf|ens"
+            "https://www.boe.es/boe/dias/2025/01/15/pdfs/BOE-S-2025-13.pdf|boe-sumario"
+            "https://arxiv.org/pdf/1207.7214|higgs"
+            "https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/TechnischeRichtlinien/TR02102/BSI-TR-02102.pdf?__blob=publicationFile&v=15|bsi-tr-02102"
+            "https://www.ncsc.gov.uk/sites/default/files/documents/NCSC-Cyber-Assessment-Framework-4.0.pdf|ncsc-caf"
+          )
+          fails=""
+          for entry in "${urls[@]}"; do
+            url="${entry%|*}"
+            slug="${entry#*|}"
+            # Use GET with -o /dev/null because some servers reject HEAD.
+            code=$(curl -sSL -o /dev/null -w "%{http_code}" --max-time 30 "$url" || echo "000")
+            echo "$slug → $url → HTTP $code"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+              fails="${fails}- ${slug}: HTTP ${code} ${url}%0A"
+            fi
+          done
+          if [ -n "$fails" ]; then
+            echo "fails=${fails}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+      - name: Open issue on failure
+        if: failure() && steps.check.outputs.fails != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILS: ${{ steps.check.outputs.fails }}
+        run: |
+          # Avoid opening duplicate issues if one is already open with this label.
+          existing=$(gh issue list --label corpus-staleness --state open --json number --jq '.[].number' | head -n1)
+          body="Weekly verify-corpus workflow detected unreachable URLs:%0A%0A${FAILS}%0AUpdate \`oxidize-pdf-core/examples/rag_realworld.rs\` (the CORPUS constant) and the workflow file with corrected URLs."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$(printf '%b' "$body")"
+          else
+            gh issue create --title "[corpus] Some RAG-example URLs are unreachable" \
+                            --label corpus-staleness \
+                            --body "$(printf '%b' "$body")"
+          fi
