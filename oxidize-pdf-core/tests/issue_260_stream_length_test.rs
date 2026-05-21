@@ -19,7 +19,7 @@ fn build_pdf_with_length_mismatch(actual_content: &[u8], declared_length: usize)
 
     bytes.extend_from_slice(b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
 
-    let mut emit = |bytes: &mut Vec<u8>, idx: usize, body: &str, off: &mut usize| {
+    let emit = |bytes: &mut Vec<u8>, idx: usize, body: &str, off: &mut usize| {
         *off = bytes.len();
         bytes.extend_from_slice(body.as_bytes());
         let _ = idx;
