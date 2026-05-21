@@ -266,9 +266,15 @@ impl TextExtractor {
     /// Group fragments by baseline into single-line fragments.
     ///
     /// Two fragments are on the same line when their Y centers differ by less
-    /// than half the smaller fragment's height. Within a line, fragments are
-    /// sorted left-to-right; a space is inserted between adjacent fragments
-    /// when the X gap exceeds `space_threshold * font_size`.
+    /// than `0.2 * min(head.height, frag.height)`. The 0.2 ratio absorbs
+    /// sub-point baseline jitter from text-matrix arithmetic while keeping
+    /// tightly-spaced visual rows (e.g. table cells whose baselines are
+    /// separated by ~2-3pt at 9pt font) on distinct logical lines — see
+    /// issue #265.
+    ///
+    /// Within a line, fragments are processed in their globally-sorted order
+    /// (Y desc, X asc); a space is inserted between adjacent fragments when
+    /// the X gap exceeds `space_threshold * font_size`.
     ///
     /// The output bounding box for each line is the axis-aligned union of the
     /// input fragments' bounding boxes; `font_size` and `font_name` are
@@ -286,7 +292,7 @@ impl TextExtractor {
         for frag in sorted {
             let placed = lines.last_mut().is_some_and(|line| {
                 let head = line[0];
-                let tol = (head.height.min(frag.height)) * 0.5;
+                let tol = (head.height.min(frag.height)) * 0.2;
                 (head.y - frag.y).abs() < tol
             });
             if placed {
