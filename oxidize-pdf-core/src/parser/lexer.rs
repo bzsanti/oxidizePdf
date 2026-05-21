@@ -776,6 +776,22 @@ impl<R: Read> Lexer<R> {
         let mut bytes_read = 0;
         let mut match_buffer = Vec::new();
 
+        // If a peeked byte is buffered, the lexer's logical position is one
+        // byte BEFORE `current_pos`. That byte is at the start of the scan
+        // window and must be checked as a candidate keyword char, otherwise
+        // the caller (which consumes peek_buffer via `read_bytes` and so
+        // operates in logical space) ends up off-by-one when it reads
+        // the returned offset. (Issue #260 root cause.)
+        if let Some(buffered) = start_buffer_state {
+            bytes_read = 1;
+            match_buffer.push(buffered);
+            if match_buffer.len() == keyword_bytes.len() && match_buffer == keyword_bytes {
+                self.reader.seek(SeekFrom::Start(current_pos))?;
+                self.peek_buffer = start_buffer_state;
+                return Ok(Some(bytes_read - keyword_bytes.len()));
+            }
+        }
+
         // Search for the keyword
         while bytes_read < max_bytes {
             let mut byte = [0u8; 1];
@@ -852,15 +868,21 @@ impl<R: Read> Lexer<R> {
         Ok(())
     }
 
-    /// Peek the next token without consuming it
+    /// Peek the next token without consuming it.
+    ///
+    /// Restores the lexer position whether `next_token` succeeds or fails.
+    /// Prior to issue #260 the error path propagated via `?` before the
+    /// position was restored, leaving the cursor mid-word — recovery code
+    /// using `find_keyword_ahead` from the post-error position then could
+    /// not find the keyword it expected to discover ahead.
     pub fn peek_token(&mut self) -> ParseResult<Token>
     where
         R: Seek,
     {
         let saved_pos = self.save_position()?;
-        let token = self.next_token()?;
+        let result = self.next_token();
         self.restore_position(saved_pos)?;
-        Ok(token)
+        result
     }
 
     /// Process string bytes with enhanced character encoding recovery
