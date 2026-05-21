@@ -2,6 +2,12 @@
 //! valid 1-page PDF with a Type1 Helvetica font as `/F1` and the supplied
 //! bytes as the `/Contents` stream. Identical layout to the helper introduced
 //! by issue #235; extracted here so Phase 1 tests can reuse it without copy.
+//!
+//! `dead_code` is suppressed at the module level: cargo compiles this file
+//! once per test crate that imports `common::synthetic_pdf`, but other
+//! test crates flag the helpers as unused. This is the conventional
+//! pattern for `tests/common/` modules in Rust.
+#![allow(dead_code)]
 
 /// Write a PDF object body to `bytes`, recording its absolute offset in
 /// `offset` for the xref table. Used by `build_pdf_with_content_stream`
