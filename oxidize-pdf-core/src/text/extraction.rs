@@ -1392,7 +1392,11 @@ fn resolve_props(
                 return (None, None);
             };
             let mcid = dict.get("MCID").and_then(|o| match o {
-                crate::parser::objects::PdfObject::Integer(n) if *n >= 0 => Some(*n as u32),
+                crate::parser::objects::PdfObject::Integer(n)
+                    if *n >= 0 && *n <= u32::MAX as i64 =>
+                {
+                    Some(*n as u32)
+                }
                 _ => None,
             });
             let actual_text = dict.get("ActualText").and_then(|o| match o {
@@ -2621,6 +2625,27 @@ mod tests {
         let props = MarkedContentProps::Inline(map);
 
         let (mcid, _) = super::resolve_props(&props, None);
+        assert_eq!(mcid, None);
+    }
+
+    #[test]
+    fn resolve_props_resource_ref_overflow_mcid_rejected() {
+        // ISO 32000-1 §14.7.4: MCID is an unsigned 32-bit integer. A
+        // PdfObject::Integer holds an i64, so a malformed PDF can carry an
+        // out-of-range MCID. The ResourceRef path must reject those rather
+        // than wrap silently via `as u32`. Mirrors the Inline-path guard
+        // already covered by `resolve_props_negative_mcid_rejected`.
+        use crate::parser::content::MarkedContentProps;
+        use crate::parser::objects::{PdfDictionary, PdfObject};
+
+        let mut inner = PdfDictionary::new();
+        inner.insert("MCID".to_string(), PdfObject::Integer(i64::MAX));
+
+        let mut properties = PdfDictionary::new();
+        properties.insert("PropsName".to_string(), PdfObject::Dictionary(inner));
+
+        let props = MarkedContentProps::ResourceRef("PropsName".to_string());
+        let (mcid, _) = super::resolve_props(&props, Some(&properties));
         assert_eq!(mcid, None);
     }
 }
