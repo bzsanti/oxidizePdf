@@ -378,7 +378,9 @@ impl TextExtractor {
             let placed = lines.last_mut().is_some_and(|line| {
                 let head = line[0];
                 let tol = (head.height.min(frag.height)) * 0.2;
-                (head.y - frag.y).abs() < tol
+                // Same Y-bucket AND same mcid. `None == None` collapses to legacy
+                // single-key grouping for non-tagged PDFs (issue #269 Phase 1).
+                (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
             });
             if placed {
                 lines.last_mut().unwrap().push(frag);
@@ -419,7 +421,7 @@ impl TextExtractor {
             let line_top = line.y + line.height;
             let gap = prev_bottom - line_top;
 
-            if gap < 0.0 || gap > max_paragraph_gap {
+            if gap < 0.0 || gap > max_paragraph_gap || current.mcid != line.mcid {
                 paragraphs.push(current);
                 current = line.clone();
                 continue;
@@ -1154,7 +1156,8 @@ impl TextExtractor {
             // Use 0.5 * font_size as threshold - this catches most artificial spacing
             let should_merge = y_diff < 1.0  // Same line (very tight tolerance)
                 && x_gap >= 0.0  // Fragment is to the right
-                && x_gap < fragment.font_size * 0.5; // Gap less than 50% of font size
+                && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
+                && current.mcid == fragment.mcid;
 
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
