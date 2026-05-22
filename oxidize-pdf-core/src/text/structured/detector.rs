@@ -164,6 +164,8 @@ mod tests {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         }];
 
         let result = detector

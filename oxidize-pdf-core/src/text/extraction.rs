@@ -113,6 +113,14 @@ pub struct TextFragment {
     pub color: Option<Color>,
     /// Space insertion decisions (empty unless `track_space_decisions` is true).
     pub space_decisions: Vec<SpaceDecision>,
+    /// Marked-content identifier from the innermost ancestor BDC with `/MCID`
+    /// (issue #269 Phase 1). `None` for non-tagged PDFs, which preserves the
+    /// pre-Phase-1 grouping behavior (`None == None` collapses to legacy keys).
+    pub mcid: Option<u32>,
+    /// Structural tag of the owning BDC (e.g. `"P"`, `"H1"`, `"Figure"`,
+    /// `"Artifact"`). Set on the same ancestor that supplied `mcid`. Phase 3
+    /// will consume this for partitioner classification; Phase 1 only carries it.
+    pub struct_tag: Option<String>,
 }
 
 /// Text extraction state
@@ -367,6 +375,8 @@ impl TextExtractor {
                 is_italic: current.is_italic,
                 color: current.color,
                 space_decisions: Vec::new(),
+                mcid: current.mcid,
+                struct_tag: current.struct_tag.clone(),
             };
         }
         paragraphs.push(current);
@@ -1198,6 +1208,8 @@ fn emit_text_fragment(
         is_italic,
         color: state.fill_color,
         space_decisions: Vec::new(),
+        mcid: None,       // wired in Task 9
+        struct_tag: None, // wired in Task 9
     });
 }
 
@@ -1408,6 +1420,8 @@ fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFr
         is_italic: head.is_italic,
         color: head.color,
         space_decisions: Vec::new(),
+        mcid: head.mcid,
+        struct_tag: head.struct_tag.clone(),
     }
 }
 
@@ -1537,6 +1551,8 @@ mod tests {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -1561,6 +1577,8 @@ mod tests {
                 is_italic: false,
                 color: None,
                 space_decisions: Vec::new(),
+                mcid: None,
+                struct_tag: None,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -1574,6 +1592,8 @@ mod tests {
                 is_italic: false,
                 color: None,
                 space_decisions: Vec::new(),
+                mcid: None,
+                struct_tag: None,
             },
         ];
 
@@ -2232,6 +2252,8 @@ mod tests {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         }
     }
 

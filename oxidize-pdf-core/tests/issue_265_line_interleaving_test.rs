@@ -25,6 +25,8 @@ fn frag(text: &str, x: f64, y: f64, width: f64, font_size: f64) -> TextFragment 
         is_italic: false,
         color: None,
         space_decisions: Vec::new(),
+        mcid: None,
+        struct_tag: None,
     }
 }
 
