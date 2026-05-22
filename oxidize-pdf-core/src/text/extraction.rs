@@ -1318,6 +1318,94 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
     ]
 }
 
+/// Decode a PDF string operand into Rust `String`.
+///
+/// PDF strings inside marked-content properties (notably `/ActualText`)
+/// may be encoded as:
+///
+/// - **UTF-16BE with BOM**: leading `0xFE 0xFF`, then big-endian 16-bit
+///   code units. This is the canonical encoding for non-ASCII ActualText
+///   (e.g. `fi` ligature, Greek/math symbols). Decoded via `String::from_utf16_lossy`
+///   so invalid surrogate pairs become `U+FFFD` rather than panicking.
+/// - **PDFDocEncoding** (the catch-all for non-BOM bytes). For the ASCII
+///   subset (0x20-0x7E) PDFDocEncoding is identical to Latin-1. We
+///   conservatively map byte-by-byte to `char`. A future revision can
+///   plug in the full PDFDocEncoding table if a real PDF emerges with
+///   high-bit characters in ActualText *without* a UTF-16BE BOM (rare;
+///   most producers emit the BOM when going outside ASCII).
+#[allow(dead_code)] // Task 8 wires callers
+fn decode_pdf_string(bytes: &[u8]) -> String {
+    if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
+        let mut code_units: Vec<u16> = Vec::with_capacity((bytes.len() - 2) / 2);
+        let mut i = 2;
+        while i + 1 < bytes.len() {
+            code_units.push(u16::from_be_bytes([bytes[i], bytes[i + 1]]));
+            i += 2;
+        }
+        String::from_utf16_lossy(&code_units)
+    } else {
+        bytes.iter().map(|&b| b as char).collect()
+    }
+}
+
+/// Resolve a `MarkedContentProps` to `(mcid, actual_text)`.
+///
+/// For `Inline` props, walk the map: `/MCID` (Integer, must fit in `u32`)
+/// becomes `mcid`; `/ActualText` (String) is decoded via `decode_pdf_string`.
+///
+/// For `ResourceRef(name)`, look up `properties.get(name)`. If found and
+/// it's a Dictionary, extract `/MCID` and `/ActualText` from there. If
+/// not found (or the named entry is not a dict), return `(None, None)`
+/// — a malformed reference must not abort extraction.
+#[allow(dead_code)] // Task 8 wires callers
+fn resolve_props(
+    props: &crate::parser::content::MarkedContentProps,
+    properties: Option<&crate::parser::objects::PdfDictionary>,
+) -> (Option<u32>, Option<String>) {
+    use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+
+    let map_mcid_actual =
+        |map: &std::collections::HashMap<String, MarkedContentValue>| -> (Option<u32>, Option<String>) {
+            let mcid = match map.get("MCID") {
+                Some(MarkedContentValue::Integer(n)) if *n >= 0 && *n <= u32::MAX as i64 => {
+                    Some(*n as u32)
+                }
+                _ => None,
+            };
+            let actual = match map.get("ActualText") {
+                Some(MarkedContentValue::String(bytes)) => Some(decode_pdf_string(bytes)),
+                _ => None,
+            };
+            (mcid, actual)
+        };
+
+    match props {
+        MarkedContentProps::Inline(map) => map_mcid_actual(map),
+        MarkedContentProps::ResourceRef(name) => {
+            let Some(properties) = properties else {
+                return (None, None);
+            };
+            let Some(entry) = properties.get(name) else {
+                return (None, None);
+            };
+            let crate::parser::objects::PdfObject::Dictionary(dict) = entry else {
+                return (None, None);
+            };
+            let mcid = dict.get("MCID").and_then(|o| match o {
+                crate::parser::objects::PdfObject::Integer(n) if *n >= 0 => Some(*n as u32),
+                _ => None,
+            });
+            let actual_text = dict.get("ActualText").and_then(|o| match o {
+                crate::parser::objects::PdfObject::String(s) => {
+                    Some(decode_pdf_string(s.as_bytes()))
+                }
+                _ => None,
+            });
+            (mcid, actual_text)
+        }
+    }
+}
+
 /// Transform a point using a transformation matrix
 fn transform_point(x: f64, y: f64, matrix: &[f64; 6]) -> (f64, f64) {
     let tx = matrix[0] * x + matrix[2] * y + matrix[4];
@@ -2461,5 +2549,78 @@ mod tests {
             paragraphs[0].text, "Kryptographie",
             "hyphen elided, no newline inserted"
         );
+    }
+
+    #[test]
+    fn decode_pdf_string_utf16be_bom_decodes_fi_ligature() {
+        let bytes = [0xFE, 0xFF, 0x00, 0x66, 0x00, 0x69];
+        assert_eq!(super::decode_pdf_string(&bytes), "fi");
+    }
+
+    #[test]
+    fn decode_pdf_string_ascii_pdfdocencoding_passthrough() {
+        let bytes = b"page 12";
+        assert_eq!(super::decode_pdf_string(bytes), "page 12");
+    }
+
+    #[test]
+    fn decode_pdf_string_empty_input_returns_empty() {
+        assert_eq!(super::decode_pdf_string(&[]), "");
+    }
+
+    #[test]
+    fn decode_pdf_string_lone_bom_returns_empty() {
+        // BOM only, no code units after.
+        assert_eq!(super::decode_pdf_string(&[0xFE, 0xFF]), "");
+    }
+
+    #[test]
+    fn resolve_props_extracts_integer_mcid() {
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+        use std::collections::HashMap;
+        let mut map = HashMap::new();
+        map.insert("MCID".to_string(), MarkedContentValue::Integer(7));
+        let props = MarkedContentProps::Inline(map);
+
+        let (mcid, actual) = super::resolve_props(&props, None);
+        assert_eq!(mcid, Some(7));
+        assert_eq!(actual, None);
+    }
+
+    #[test]
+    fn resolve_props_decodes_utf16be_actualtext() {
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+        use std::collections::HashMap;
+        let mut map = HashMap::new();
+        map.insert(
+            "ActualText".to_string(),
+            MarkedContentValue::String(vec![0xFE, 0xFF, 0x00, 0x66, 0x00, 0x69]),
+        );
+        let props = MarkedContentProps::Inline(map);
+
+        let (mcid, actual) = super::resolve_props(&props, None);
+        assert_eq!(mcid, None);
+        assert_eq!(actual.as_deref(), Some("fi"));
+    }
+
+    #[test]
+    fn resolve_props_returns_none_for_unresolvable_resource_ref() {
+        use crate::parser::content::MarkedContentProps;
+        let props = MarkedContentProps::ResourceRef("PropsName".to_string());
+        let (mcid, actual) = super::resolve_props(&props, None);
+        assert_eq!((mcid, actual), (None, None));
+    }
+
+    #[test]
+    fn resolve_props_negative_mcid_rejected() {
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+        use std::collections::HashMap;
+        // MCID is unsigned per ISO 32000-1; negative integer is malformed.
+        let mut map = HashMap::new();
+        map.insert("MCID".to_string(), MarkedContentValue::Integer(-1));
+        let props = MarkedContentProps::Inline(map);
+
+        let (mcid, _) = super::resolve_props(&props, None);
+        assert_eq!(mcid, None);
     }
 }
