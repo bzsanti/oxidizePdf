@@ -12,9 +12,11 @@ fn extract(content: &[u8], include_artifacts: bool) -> Vec<oxidize_pdf::text::Te
     let pdf = build_pdf_with_content_stream(content);
     let reader = PdfReader::new(Cursor::new(pdf)).expect("reader");
     let document = PdfDocument::new(reader);
-    let mut opts = ExtractionOptions::default();
-    opts.preserve_layout = true;
-    opts.include_artifacts = include_artifacts;
+    let opts = ExtractionOptions {
+        preserve_layout: true,
+        include_artifacts,
+        ..ExtractionOptions::default()
+    };
     let mut extractor = TextExtractor::with_options(opts);
     extractor
         .extract_from_page(&document, 0)
@@ -52,7 +54,7 @@ fn artifact_content_extracted_when_opted_in() {
     let frags = extract(content, true);
     let texts: Vec<&str> = frags.iter().map(|f| f.text.as_str()).collect();
     assert!(
-        texts.iter().any(|t| *t == "page 12"),
+        texts.contains(&"page 12"),
         "with include_artifacts=true, 'page 12' must be present; got {:?}",
         texts
     );

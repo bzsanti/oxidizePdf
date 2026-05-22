@@ -35,8 +35,10 @@ fn nested_bdc_innermost_mcid_and_tag_win() {
                     EMC\n\
                     EMC\n\
                     ET\n";
-    let mut opts = ExtractionOptions::default();
-    opts.preserve_layout = true;
+    let opts = ExtractionOptions {
+        preserve_layout: true,
+        ..ExtractionOptions::default()
+    };
     let frags = extract_fragments(content, opts);
 
     let frag = frags
@@ -60,9 +62,11 @@ fn overlaid_baselines_distinct_lines_when_mcid_differs() {
                     1 0 0 1 200 700 Tm (World) Tj\n\
                     EMC\n\
                     ET\n";
-    let mut opts = ExtractionOptions::default();
-    opts.preserve_layout = true;
-    opts.reconstruct_paragraphs = true;
+    let opts = ExtractionOptions {
+        preserve_layout: true,
+        reconstruct_paragraphs: true,
+        ..ExtractionOptions::default()
+    };
     let frags = extract_fragments(content, opts);
 
     let texts: Vec<String> = frags.iter().map(|f| f.text.clone()).collect();

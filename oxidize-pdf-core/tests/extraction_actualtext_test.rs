@@ -13,8 +13,10 @@ fn extract(content: &[u8]) -> Vec<oxidize_pdf::text::TextFragment> {
     let pdf = build_pdf_with_content_stream(content);
     let reader = PdfReader::new(Cursor::new(pdf)).expect("reader");
     let document = PdfDocument::new(reader);
-    let mut opts = ExtractionOptions::default();
-    opts.preserve_layout = true;
+    let opts = ExtractionOptions {
+        preserve_layout: true,
+        ..ExtractionOptions::default()
+    };
     let mut extractor = TextExtractor::with_options(opts);
     extractor
         .extract_from_page(&document, 0)
