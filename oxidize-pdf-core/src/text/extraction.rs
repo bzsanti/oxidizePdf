@@ -45,6 +45,13 @@ pub struct ExtractionOptions {
     /// callers. The `PdfDocument::partition*` entry points force this to
     /// `true`.
     pub reconstruct_paragraphs: bool,
+    /// Include content inside `/Artifact` marked-content scopes (page headers,
+    /// footers, watermarks, decorative content). Default `false` — Artifact
+    /// content is filtered out, as the PDF/UA conformance level recommends
+    /// for accessibility tooling and as RAG callers consistently want
+    /// (issue #269 Phase 1). Opt-in by setting `true` when extracting
+    /// page furniture matters (e.g. forensic auditing, redaction tools).
+    pub include_artifacts: bool,
 }
 
 impl Default for ExtractionOptions {
@@ -59,6 +66,7 @@ impl Default for ExtractionOptions {
             merge_hyphenated: true,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
+            include_artifacts: false,
         }
     }
 }
@@ -1473,6 +1481,7 @@ mod tests {
             merge_hyphenated: false,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
+            include_artifacts: false,
         };
         assert!(options.preserve_layout);
         assert_eq!(options.space_threshold, 0.5);
@@ -1670,6 +1679,7 @@ mod tests {
             merge_hyphenated: false,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
+            include_artifacts: false,
         };
         let extractor = TextExtractor::with_options(options.clone());
         assert_eq!(extractor.options.preserve_layout, options.preserve_layout);
