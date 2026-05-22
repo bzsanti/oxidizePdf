@@ -131,7 +131,69 @@ pub struct TextFragment {
     pub struct_tag: Option<String>,
 }
 
+/// One entry on the marked-content stack maintained by `TextState`.
+///
+/// PDF marked-content operators (BDC/BMC/EMC) form a balanced LIFO stack
+/// per content stream. Each entry remembers the tag (`"P"`, `"H1"`,
+/// `"Artifact"`, …), the optional `MCID` for fragment grouping, the
+/// optional `/ActualText` substitution string, and a computed
+/// `is_artifact` flag that inherits from any ancestor (so nested
+/// `/P` inside `/Artifact` is still filtered out).
+#[allow(dead_code)] // Fields wired in Task 7 (BDC/EMC handler).
+#[derive(Debug, Clone)]
+struct MarkedContentEntry {
+    /// The BDC/BMC tag (e.g. `"P"`, `"Figure"`, `"Artifact"`, `"Span"`).
+    tag: String,
+    /// MCID from `/MCID <int>` if present in the BDC props.
+    mcid: Option<u32>,
+    /// Decoded ActualText from `/ActualText (...)` if present. Decoded
+    /// once at BDC time (UTF-16BE BOM detection in `decode_pdf_string`)
+    /// rather than per-fragment.
+    actual_text: Option<String>,
+    /// True if this entry's tag == `"Artifact"` OR any ancestor on the
+    /// stack at push time had `is_artifact == true`. Inheritance lets the
+    /// emitter check only the innermost entry to decide filtering.
+    is_artifact: bool,
+}
+
+/// A pending ActualText run. Created when a BDC pushes an entry with
+/// `actual_text == Some(_)`; drained and emitted as a single synthetic
+/// `TextFragment` when the matching EMC pops the entry.
+///
+/// Spec §3a/§4 (collapse-on-EMC): per-`Tj` emission inside an ActualText
+/// scope is suppressed; on scope close we emit one fragment whose `text`
+/// is the substitution string, `x`/`y` is the first `Tj` origin, and
+/// `width` is the sum of suppressed text widths.
+#[allow(dead_code)] // Fields wired in Task 8 (emit_text_fragment update).
+#[derive(Debug, Clone)]
+struct PendingActualText {
+    /// Substitution text from the BDC's `/ActualText` (already decoded).
+    text: String,
+    /// Pen origin of the first suppressed `Tj` (page-space).
+    first_x: f64,
+    /// Same for Y.
+    first_y: f64,
+    /// Accumulated effective width of suppressed `Tj` runs.
+    width: f64,
+    /// Effective font size at the time the first `Tj` was suppressed.
+    font_size: f64,
+    /// Font name + style at first `Tj`. Set on first suppression.
+    font_name: Option<String>,
+    /// Bold/italic from the font name at first suppression.
+    is_bold: bool,
+    is_italic: bool,
+    /// Fill color at first suppression.
+    color: Option<Color>,
+    /// Depth in `mc_stack` at which this run was opened. When the entry at
+    /// this depth is popped, the pending run is flushed.
+    stack_depth: usize,
+    /// Whether a `Tj`/`TJ`/`'`/`"` has been observed yet inside the scope.
+    /// Until the first one fires, the run has no origin to record.
+    populated: bool,
+}
+
 /// Text extraction state
+#[allow(dead_code)] // Task 7+8 wire mc_stack and pending_actualtext fields
 struct TextState {
     /// Current text matrix
     text_matrix: [f64; 6],
@@ -162,6 +224,13 @@ struct TextState {
     /// Per PDF spec §8.4.4, `q` pushes the full graphics state and `Q` pops it;
     /// here we save only the fields that influence text extraction.
     saved_states: Vec<SavedGraphicsState>,
+    /// Marked-content stack (issue #269 Phase 1). Pushed on BMC/BDC,
+    /// popped on EMC. Empty on entry to each page.
+    mc_stack: Vec<MarkedContentEntry>,
+    /// Pending ActualText run if any BDC ancestor declared `/ActualText`.
+    /// At most one active run at a time — nested ActualText replaces the
+    /// outer (innermost wins, per spec §4).
+    pending_actualtext: Option<PendingActualText>,
 }
 
 /// Subset of graphics state saved by `q` and restored by `Q` (issue #262).
@@ -187,6 +256,8 @@ impl Default for TextState {
             render_mode: 0,
             fill_color: None,
             saved_states: Vec::new(),
+            mc_stack: Vec::new(),
+            pending_actualtext: None,
         }
     }
 }
