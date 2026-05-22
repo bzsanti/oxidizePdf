@@ -611,14 +611,13 @@ impl TextExtractor {
                             extracted_text.push_str(&decoded);
 
                             // Get font info for accurate width calculation
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-
-                            // Calculate width once and reuse
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width = {
+                                let font_info = state
+                                    .font_name
+                                    .as_ref()
+                                    .and_then(|name| self.font_cache.get(name));
+                                calculate_text_width(&decoded, state.font_size, font_info)
+                            };
 
                             if self.options.preserve_layout {
                                 emit_text_fragment(
@@ -627,7 +626,8 @@ impl TextExtractor {
                                     text_width,
                                     x,
                                     y,
-                                    &state,
+                                    &mut state,
+                                    self.options.include_artifacts,
                                 );
                             }
 
@@ -644,23 +644,23 @@ impl TextExtractor {
 
                     ContentOperation::ShowTextArray(array) => {
                         if in_text_object {
-                            // Get font info for accurate width calculation
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-
                             for item in array {
                                 match item {
                                     TextElement::Text(text_bytes) => {
                                         let decoded = self.decode_text(&text_bytes, &state)?;
                                         extracted_text.push_str(&decoded);
 
-                                        let text_width = calculate_text_width(
-                                            &decoded,
-                                            state.font_size,
-                                            font_info,
-                                        );
+                                        let text_width = {
+                                            let font_info = state
+                                                .font_name
+                                                .as_ref()
+                                                .and_then(|name| self.font_cache.get(name));
+                                            calculate_text_width(
+                                                &decoded,
+                                                state.font_size,
+                                                font_info,
+                                            )
+                                        };
 
                                         if self.options.preserve_layout {
                                             let (x, y) = text_origin(&state);
@@ -670,7 +670,8 @@ impl TextExtractor {
                                                 text_width,
                                                 x,
                                                 y,
-                                                &state,
+                                                &mut state,
+                                                self.options.include_artifacts,
                                             );
                                         }
 
@@ -711,12 +712,13 @@ impl TextExtractor {
                             }
                             extracted_text.push_str(&decoded);
 
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width = {
+                                let font_info = state
+                                    .font_name
+                                    .as_ref()
+                                    .and_then(|name| self.font_cache.get(name));
+                                calculate_text_width(&decoded, state.font_size, font_info)
+                            };
 
                             if self.options.preserve_layout {
                                 emit_text_fragment(
@@ -725,7 +727,8 @@ impl TextExtractor {
                                     text_width,
                                     x,
                                     y,
-                                    &state,
+                                    &mut state,
+                                    self.options.include_artifacts,
                                 );
                             }
 
@@ -761,12 +764,13 @@ impl TextExtractor {
                             }
                             extracted_text.push_str(&decoded);
 
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width = {
+                                let font_info = state
+                                    .font_name
+                                    .as_ref()
+                                    .and_then(|name| self.font_cache.get(name));
+                                calculate_text_width(&decoded, state.font_size, font_info)
+                            };
 
                             if self.options.preserve_layout {
                                 emit_text_fragment(
@@ -775,7 +779,8 @@ impl TextExtractor {
                                     text_width,
                                     x,
                                     y,
-                                    &state,
+                                    &mut state,
+                                    self.options.include_artifacts,
                                 );
                             }
 
@@ -1326,7 +1331,7 @@ impl Default for TextExtractor {
     }
 }
 
-/// Push a `TextFragment` capturing a glyph run about to be shown.
+/// Emit a `TextFragment` for one decoded text-show event under `preserve_layout`.
 ///
 /// Encapsulates the style-derivation + push sequence shared by every
 /// text-show operator handler in `extract_from_page` (`Tj`, `TJ`, `'`,
@@ -1335,17 +1340,33 @@ impl Default for TextExtractor {
 /// double `multiply_matrix + transform_point` that prior versions did
 /// (handler computed it for `last_x`/`last_y`, then this fn recomputed
 /// it on the same `state`).
+///
+/// Skips emission when an ancestor in the marked-content stack is `/Artifact`
+/// and `include_artifacts` is false. When a pending ActualText run is
+/// active in the current scope, accumulates the text-width contribution and
+/// records the first origin instead of pushing a fragment (the run is flushed
+/// once on EMC, see Task 8's EndMarkedContent handler).
+///
+/// `mcid` and `struct_tag` come from the innermost ancestor on the stack that
+/// declared `/MCID`; non-tagged content leaves both as `None`.
 fn emit_text_fragment(
     fragments: &mut Vec<TextFragment>,
     decoded: &str,
     text_width: f64,
     x: f64,
     y: f64,
-    state: &TextState,
+    state: &mut TextState,
+    include_artifacts: bool,
 ) {
     if decoded.is_empty() {
         return;
     }
+
+    // Artifact filter (default: skip emission for Artifact subtrees).
+    if !include_artifacts && state.mc_stack.iter().any(|e| e.is_artifact) {
+        return;
+    }
+
     let (is_bold, is_italic) = state
         .font_name
         .as_ref()
@@ -1363,6 +1384,30 @@ fn emit_text_fragment(
     let effective_width = text_width * x_scale;
     let effective_size = state.font_size * y_scale;
 
+    // If a pending ActualText run is active in the current scope, accumulate
+    // into it instead of emitting a fragment now. The run is flushed on the
+    // matching EMC by the EndMarkedContent arm (Task 8).
+    // Hoist font_name/fill_color reads before taking &mut on pending_actualtext
+    // to avoid borrow-checker conflicts with the disjoint fields.
+    let local_font_name = state.font_name.clone();
+    let local_fill_color = state.fill_color;
+    if let Some(pending) = state.pending_actualtext.as_mut() {
+        if !pending.populated {
+            pending.first_x = x;
+            pending.first_y = y;
+            pending.font_size = effective_size;
+            pending.font_name = local_font_name;
+            pending.is_bold = is_bold;
+            pending.is_italic = is_italic;
+            pending.color = local_fill_color;
+            pending.populated = true;
+        }
+        pending.width += effective_width;
+        return;
+    }
+
+    let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
+
     fragments.push(TextFragment {
         text: decoded.to_owned(),
         x,
@@ -1375,8 +1420,8 @@ fn emit_text_fragment(
         is_italic,
         color: state.fill_color,
         space_decisions: Vec::new(),
-        mcid: None,       // wired in Task 9
-        struct_tag: None, // wired in Task 9
+        mcid,
+        struct_tag,
     });
 }
 
@@ -1501,7 +1546,6 @@ fn resolve_props(
 /// `(None, None)` when no ancestor declared an MCID — typical of non-tagged
 /// PDFs, in which case the `None == None` grouping-key invariant preserves
 /// legacy behaviour.
-#[allow(dead_code)] // Task 9 wires callers in emit_text_fragment
 fn innermost_mc_tag(stack: &[MarkedContentEntry]) -> (Option<u32>, Option<String>) {
     stack
         .iter()
