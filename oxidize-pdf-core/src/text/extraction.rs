@@ -139,7 +139,6 @@ pub struct TextFragment {
 /// optional `/ActualText` substitution string, and a computed
 /// `is_artifact` flag that inherits from any ancestor (so nested
 /// `/P` inside `/Artifact` is still filtered out).
-#[allow(dead_code)] // Fields wired in Task 7 (BDC/EMC handler).
 #[derive(Debug, Clone)]
 struct MarkedContentEntry {
     /// The BDC/BMC tag (e.g. `"P"`, `"Figure"`, `"Artifact"`, `"Span"`).
@@ -149,6 +148,7 @@ struct MarkedContentEntry {
     /// Decoded ActualText from `/ActualText (...)` if present. Decoded
     /// once at BDC time (UTF-16BE BOM detection in `decode_pdf_string`)
     /// rather than per-fragment.
+    #[allow(dead_code)] // Task 9 reads this via pending_actualtext flush path
     actual_text: Option<String>,
     /// True if this entry's tag == `"Artifact"` OR any ancestor on the
     /// stack at push time had `is_artifact == true`. Inheritance lets the
@@ -164,7 +164,6 @@ struct MarkedContentEntry {
 /// scope is suppressed; on scope close we emit one fragment whose `text`
 /// is the substitution string, `x`/`y` is the first `Tj` origin, and
 /// `width` is the sum of suppressed text widths.
-#[allow(dead_code)] // Fields wired in Task 8 (emit_text_fragment update).
 #[derive(Debug, Clone)]
 struct PendingActualText {
     /// Substitution text from the BDC's `/ActualText` (already decoded).
@@ -193,7 +192,6 @@ struct PendingActualText {
 }
 
 /// Text extraction state
-#[allow(dead_code)] // Task 7+8 wire mc_stack and pending_actualtext fields
 struct TextState {
     /// Current text matrix
     text_matrix: [f64; 6],
@@ -506,6 +504,16 @@ impl TextExtractor {
         let mut in_text_object = false;
         let mut last_x = 0.0;
         let mut last_y = 0.0;
+
+        // Issue #269 Phase 1: resolve /Properties resource dictionary for BDC
+        // resource-ref operands (e.g. `/Span /PropsName BDC`). Optional — most
+        // PDFs use inline dicts.
+        let page_properties: Option<&crate::parser::objects::PdfDictionary> = page
+            .get_resources()
+            .and_then(|res| match res.get("Properties") {
+                Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
+                _ => None,
+            });
 
         // Process each content stream
         for (stream_idx, stream_data) in streams.iter().enumerate() {
@@ -860,6 +868,86 @@ impl TextExtractor {
                     ContentOperation::SetNonStrokingCMYK(c, m, y, k) => {
                         state.fill_color =
                             Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
+                    }
+
+                    // Issue #269 Phase 1: marked-content operators
+                    ContentOperation::BeginMarkedContent(tag) => {
+                        let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
+                        state.mc_stack.push(MarkedContentEntry {
+                            is_artifact: tag == "Artifact" || parent_artifact,
+                            tag,
+                            mcid: None,
+                            actual_text: None,
+                        });
+                    }
+
+                    ContentOperation::BeginMarkedContentWithProps(tag, props) => {
+                        let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
+                        let (mcid, actual_text) = resolve_props(&props, page_properties);
+
+                        // If this scope declares ActualText, open a pending run that will be
+                        // flushed on the matching EMC. Suppresses per-Tj emission inside the
+                        // scope (innermost-ActualText-wins per spec §4).
+                        if let Some(ref text) = actual_text {
+                            state.pending_actualtext = Some(PendingActualText {
+                                text: text.clone(),
+                                first_x: 0.0,
+                                first_y: 0.0,
+                                width: 0.0,
+                                font_size: state.font_size,
+                                font_name: state.font_name.clone(),
+                                is_bold: false, // overwritten on first Tj
+                                is_italic: false,
+                                color: state.fill_color,
+                                stack_depth: state.mc_stack.len(), // BEFORE the push below
+                                populated: false,
+                            });
+                        }
+
+                        state.mc_stack.push(MarkedContentEntry {
+                            is_artifact: tag == "Artifact" || parent_artifact,
+                            tag,
+                            mcid,
+                            actual_text,
+                        });
+                    }
+
+                    ContentOperation::EndMarkedContent => {
+                        let popped_depth = state.mc_stack.len();
+                        if state.mc_stack.pop().is_none() {
+                            // Unbalanced EMC — log and ignore. Real PDFs occasionally emit
+                            // dangling EMC (e.g. from incremental updates). We must not panic.
+                            tracing::debug!(
+                                "extraction: EMC with empty marked-content stack on page {}",
+                                page_index + 1
+                            );
+                        } else if let Some(pending) = state.pending_actualtext.as_ref() {
+                            // If we just closed the scope that opened the pending run, flush it.
+                            if pending.stack_depth + 1 == popped_depth {
+                                let run = state.pending_actualtext.take().unwrap();
+                                if run.populated && self.options.preserve_layout {
+                                    let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
+                                    let in_artifact = state.mc_stack.iter().any(|e| e.is_artifact);
+                                    if !in_artifact || self.options.include_artifacts {
+                                        fragments.push(TextFragment {
+                                            text: run.text,
+                                            x: run.first_x,
+                                            y: run.first_y,
+                                            width: run.width,
+                                            height: run.font_size,
+                                            font_size: run.font_size,
+                                            font_name: run.font_name,
+                                            is_bold: run.is_bold,
+                                            is_italic: run.is_italic,
+                                            color: run.color,
+                                            space_decisions: Vec::new(),
+                                            mcid,
+                                            struct_tag,
+                                        });
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     _ => {
@@ -1333,7 +1421,6 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
 ///   plug in the full PDFDocEncoding table if a real PDF emerges with
 ///   high-bit characters in ActualText *without* a UTF-16BE BOM (rare;
 ///   most producers emit the BOM when going outside ASCII).
-#[allow(dead_code)] // Task 8 wires callers
 fn decode_pdf_string(bytes: &[u8]) -> String {
     if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
         let mut code_units: Vec<u16> = Vec::with_capacity((bytes.len() - 2) / 2);
@@ -1357,7 +1444,6 @@ fn decode_pdf_string(bytes: &[u8]) -> String {
 /// it's a Dictionary, extract `/MCID` and `/ActualText` from there. If
 /// not found (or the named entry is not a dict), return `(None, None)`
 /// — a malformed reference must not abort extraction.
-#[allow(dead_code)] // Task 8 wires callers
 fn resolve_props(
     props: &crate::parser::content::MarkedContentProps,
     properties: Option<&crate::parser::objects::PdfDictionary>,
@@ -1408,6 +1494,20 @@ fn resolve_props(
             (mcid, actual_text)
         }
     }
+}
+
+/// Walk the marked-content stack from innermost (top) outward, returning the
+/// first entry's `(mcid, tag)` pair whose `mcid` is `Some`. Returns
+/// `(None, None)` when no ancestor declared an MCID — typical of non-tagged
+/// PDFs, in which case the `None == None` grouping-key invariant preserves
+/// legacy behaviour.
+#[allow(dead_code)] // Task 9 wires callers in emit_text_fragment
+fn innermost_mc_tag(stack: &[MarkedContentEntry]) -> (Option<u32>, Option<String>) {
+    stack
+        .iter()
+        .rev()
+        .find(|e| e.mcid.is_some())
+        .map_or((None, None), |e| (e.mcid, Some(e.tag.clone())))
 }
 
 /// Transform a point using a transformation matrix
