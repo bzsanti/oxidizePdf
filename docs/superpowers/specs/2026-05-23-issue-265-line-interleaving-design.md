@@ -88,6 +88,27 @@ build_line_fragment per group
 
 Floor of 2.0pt guards against very small fonts where `font_size × 0.5` would be under typical font-metric noise.
 
+### Within-line tie-break for tagged PDFs (added 2026-05-23 after NCSC verification)
+
+The initial algorithm sorted within a `(row_id, Y_bucket, mcid)` group by `X ascending`. Verification against NCSC CAF v4.0 revealed that the PDF author places glyphs within a logical line via non-monotone `Td`/`Tm` operators — for example, " of" at X=388 immediately followed by " kno" at X=314 in emission order. ISO 32000 specifies that tagged PDFs deliver glyphs in logical reading order, so X-sort within a tagged-PDF line corrupts that order.
+
+Algorithm refinement:
+
+```text
+is_tagged = fragments.iter().any(|f| f.mcid.is_some())
+within-line tie-break:
+    if is_tagged: emission index ascending
+    else:         X coordinate ascending
+```
+
+Trade-off:
+- Tagged PDFs (PDF/UA, ISO 32000-2 tagged, NCSC, gov/compliance docs): emission order is the spec-prescribed reading order, so use it.
+- Non-tagged PDFs (legacy generators, scan-OCR pipelines, marketing PDFs): emission order is unreliable; fall back to X-sort as the only available heuristic.
+
+The `is_tagged` predicate is computed once per page in `merge_into_lines` (O(n) scan). For non-tagged pages this evaluates to `false` and the behavior is identical to the pre-2026-05-23 algorithm. The change is therefore additive and non-regressive for the non-tagged corpus.
+
+This refinement was discovered during Task 4 verification, not anticipated in the original spec.
+
 ## Scope
 
 ### In scope
@@ -95,6 +116,7 @@ Floor of 2.0pt guards against very small fonts where `font_size × 0.5` would be
 - Single function change: `merge_into_lines` + new private helper `assign_row_ids`.
 - 6 new unit tests + 2 new integration tests + extension of existing NCSC test.
 - Regression validation against full `rag_realworld` corpus (5 docs, 795 chunks baseline).
+- Within-line emission-order tie-break for tagged PDFs (added during Task 4 implementation; see refinement section below).
 
 ### Out of scope
 

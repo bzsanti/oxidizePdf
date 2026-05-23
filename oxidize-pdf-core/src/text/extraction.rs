@@ -357,9 +357,12 @@ impl TextExtractor {
     /// separated by ~2-3pt at 9pt font) on distinct logical lines — see
     /// issue #265.
     ///
-    /// Within a line, fragments are processed in their globally-sorted order
-    /// (Y desc, X asc); a space is inserted between adjacent fragments when
-    /// the X gap exceeds `space_threshold * font_size`.
+    /// Fragments are grouped by `(row_id, Y_bucket, mcid)`, where `row_id`
+    /// comes from `assign_row_ids` (increments on Y-up-jumps in emission
+    /// order). Within a line the tie-break is emission index for tagged PDFs
+    /// (any fragment carries an mcid — ISO 32000 mandates logical order) and
+    /// X coordinate for non-tagged PDFs. A space is inserted between adjacent
+    /// fragments when the X gap exceeds `space_threshold * font_size`.
     ///
     /// The output bounding box for each line is the axis-aligned union of the
     /// input fragments' bounding boxes; `font_size` and `font_name` are
@@ -396,7 +399,7 @@ impl TextExtractor {
         let mut indexed: Vec<(u32, usize, &TextFragment)> = row_ids
             .iter()
             .copied()
-            .zip(fragments.iter().enumerate().map(|(i, f)| (i, f)))
+            .zip(fragments.iter().enumerate())
             .map(|(rid, (idx, f))| (rid, idx, f))
             .collect();
         indexed.sort_by(|a, b| {
@@ -405,9 +408,7 @@ impl TextExtractor {
                 .then(if is_tagged {
                     a.1.cmp(&b.1)
                 } else {
-                    a.2.x
-                        .partial_cmp(&b.2.x)
-                        .unwrap_or(std::cmp::Ordering::Equal)
+                    a.2.x.total_cmp(&b.2.x)
                 })
         });
 
