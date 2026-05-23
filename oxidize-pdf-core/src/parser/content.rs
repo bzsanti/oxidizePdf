@@ -57,6 +57,52 @@ use super::{ParseError, ParseResult};
 use crate::objects::Object;
 use std::collections::HashMap;
 
+/// A single value inside a marked-content properties dictionary or array.
+///
+/// PDF marked-content properties (BDC, DP) carry typed values: strings,
+/// integers, real numbers, names, arrays, and nested dictionaries. The
+/// previous `HashMap<String, String>` carrier was lossy for `/ActualText`
+/// (UTF-16BE bytes mangled by `String::from_utf8_lossy`) and for `/MCID`
+/// (integer values stored as their decimal string representation). This
+/// enum preserves the original token type and bytes; decoding happens
+/// lazily at the extractor level (e.g. UTF-16BE detection via BOM).
+///
+/// Hex strings (`<FEFF00660069>`) and literal strings (`(text)`) both
+/// land here as `MarkedContentValue::String(Vec<u8>)` because both are
+/// raw byte sequences at the PDF tokenizer level.
+#[derive(Debug, Clone, PartialEq)]
+pub enum MarkedContentValue {
+    /// Raw PDF string bytes (from either `Token::String` or `Token::HexString`).
+    /// Decoded lazily by consumers — UTF-16BE detection via BOM happens in the
+    /// extractor's `decode_pdf_string` helper.
+    String(Vec<u8>),
+    /// PDF integer (e.g. `/MCID 0`).
+    Integer(i64),
+    /// PDF real number.
+    Real(f64),
+    /// PDF name token (e.g. `/Pagination`).
+    Name(String),
+    /// PDF array; nested values are themselves `MarkedContentValue`.
+    Array(Vec<MarkedContentValue>),
+    /// Nested dictionary; keys are PDF name strings (the leading `/` is stripped).
+    Dict(HashMap<String, MarkedContentValue>),
+}
+
+/// Properties operand of a BDC/DP operator. Two shapes per ISO 32000-1
+/// §14.6.2:
+///
+/// - **Inline**: the second BDC operand is an inline dictionary literal
+///   (`<< /MCID 0 /ActualText (fi) >>`). Keys map to `MarkedContentValue`.
+/// - **ResourceRef**: the second BDC operand is a name (`/PropsName`) that
+///   references the page's `/Resources /Properties /<name>` dictionary.
+///   Resolution against the page's resource tree happens in the extractor
+///   (parser does not have access to the page object).
+#[derive(Debug, Clone, PartialEq)]
+pub enum MarkedContentProps {
+    Inline(HashMap<String, MarkedContentValue>),
+    ResourceRef(String),
+}
+
 /// Represents a single operator in a PDF content stream.
 ///
 /// Each variant corresponds to a specific PDF operator and carries the associated
@@ -326,11 +372,11 @@ pub enum ContentOperation {
     PaintXObject(String),
 
     // Marked content operators
-    BeginMarkedContent(String),                                   // BMC
-    BeginMarkedContentWithProps(String, HashMap<String, String>), // BDC
-    EndMarkedContent,                                             // EMC
-    DefineMarkedContentPoint(String),                             // MP
-    DefineMarkedContentPointWithProps(String, HashMap<String, String>), // DP
+    BeginMarkedContent(String),                                    // BMC
+    BeginMarkedContentWithProps(String, MarkedContentProps),       // BDC
+    EndMarkedContent,                                              // EMC
+    DefineMarkedContentPoint(String),                              // MP
+    DefineMarkedContentPointWithProps(String, MarkedContentProps), // DP
 
     // Compatibility operators
     BeginCompatibility, // BX
@@ -1312,75 +1358,112 @@ impl ContentParser {
         Ok(array)
     }
 
-    fn pop_dict_or_name(&self, operands: &mut Vec<Token>) -> ParseResult<HashMap<String, String>> {
-        if let Some(token) = operands.pop() {
-            match token {
-                Token::Name(name) => {
-                    // Name token - this is a reference to properties in the resource dictionary
-                    // For now, we'll store it as a special entry to indicate it's a resource reference
-                    let mut props = HashMap::new();
-                    props.insert("__resource_ref".to_string(), name);
-                    Ok(props)
-                }
-                Token::DictEnd => {
-                    // Inline dictionary - tokens are on stack in reverse order:
-                    // Stack: [..., DictStart, Name("key"), Value, DictEnd] <- top
-                    // After popping DictEnd, we need to pop value-key pairs until DictStart
-                    let mut props = HashMap::new();
+    fn pop_dict_or_name(&self, operands: &mut Vec<Token>) -> ParseResult<MarkedContentProps> {
+        let token = operands.pop().ok_or_else(|| ParseError::SyntaxError {
+            position: self.position,
+            message: "Expected dict or name operand for BDC/DP".to_string(),
+        })?;
 
-                    // Collect key-value pairs (values come before keys on stack)
-                    while let Some(value_token) = operands.pop() {
-                        if matches!(value_token, Token::DictStart) {
-                            break;
-                        }
-
-                        // In PDF dict syntax: /Key Value
-                        // On stack after tokenization: [DictStart, Name(Key), Value, ...]
-                        // Popping gives us: Value first, then Key
-                        let value = match &value_token {
-                            Token::Name(name) => name.clone(),
-                            Token::String(s) => String::from_utf8_lossy(s).to_string(),
-                            Token::Integer(i) => i.to_string(),
-                            Token::Number(f) => f.to_string(),
-                            Token::ArrayEnd => {
-                                // Array value - collect elements until ArrayStart
-                                let mut array_elements = Vec::new();
-                                while let Some(arr_token) = operands.pop() {
-                                    match arr_token {
-                                        Token::ArrayStart => break,
-                                        Token::Name(n) => array_elements.push(n),
-                                        Token::String(s) => array_elements
-                                            .push(String::from_utf8_lossy(&s).to_string()),
-                                        Token::Integer(i) => array_elements.push(i.to_string()),
-                                        Token::Number(f) => array_elements.push(f.to_string()),
-                                        _ => {} // Skip other token types in array
-                                    }
-                                }
-                                array_elements.reverse();
-                                format!("[{}]", array_elements.join(", "))
-                            }
-                            _ => continue, // Skip unsupported value types
-                        };
-
-                        // Now pop the key (should be a Name)
-                        if let Some(Token::Name(key)) = operands.pop() {
-                            props.insert(key, value);
-                        }
+        match token {
+            Token::Name(name) => Ok(MarkedContentProps::ResourceRef(name)),
+            Token::DictEnd => {
+                // Inline dictionary. Stack layout (newest on top):
+                //   ... DictStart Name(k1) Value(v1) Name(k2) Value(v2) DictEnd
+                // We pop value-then-key pairs in reverse until we hit DictStart.
+                let mut map: HashMap<String, MarkedContentValue> = HashMap::new();
+                loop {
+                    let next = operands.pop().ok_or_else(|| ParseError::SyntaxError {
+                        position: self.position,
+                        message: "Unterminated inline dict in BDC/DP".to_string(),
+                    })?;
+                    if matches!(next, Token::DictStart) {
+                        break;
                     }
-
-                    Ok(props)
+                    let value = Self::token_to_mc_value(next, operands)?;
+                    let key = match operands.pop() {
+                        Some(Token::Name(k)) => k,
+                        Some(other) => {
+                            return Err(ParseError::SyntaxError {
+                                position: self.position,
+                                message: format!(
+                                    "Expected Name as inline dict key, got {:?}",
+                                    other
+                                ),
+                            });
+                        }
+                        None => {
+                            return Err(ParseError::SyntaxError {
+                                position: self.position,
+                                message: "Unterminated inline dict (missing key)".to_string(),
+                            });
+                        }
+                    };
+                    map.insert(key, value);
                 }
-                _ => {
-                    // Unexpected token type, treat as empty properties
-                    Ok(HashMap::new())
-                }
+                Ok(MarkedContentProps::Inline(map))
             }
-        } else {
-            // No operand available
-            Err(ParseError::SyntaxError {
+            other => Err(ParseError::SyntaxError {
+                position: self.position,
+                message: format!("Expected name or inline dict for BDC/DP, got {:?}", other),
+            }),
+        }
+    }
+
+    /// Convert a popped token to a `MarkedContentValue`. For `ArrayEnd` and
+    /// `DictEnd` tokens we recursively collect the matching container; all
+    /// other tokens map to leaf variants.
+    fn token_to_mc_value(
+        token: Token,
+        operands: &mut Vec<Token>,
+    ) -> ParseResult<MarkedContentValue> {
+        match token {
+            Token::String(b) | Token::HexString(b) => Ok(MarkedContentValue::String(b)),
+            Token::Integer(i) => Ok(MarkedContentValue::Integer(i as i64)),
+            Token::Number(f) => Ok(MarkedContentValue::Real(f as f64)),
+            Token::Name(n) => Ok(MarkedContentValue::Name(n)),
+            Token::ArrayEnd => {
+                let mut items: Vec<MarkedContentValue> = Vec::new();
+                loop {
+                    let next = operands.pop().ok_or_else(|| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Unterminated array in marked-content props".to_string(),
+                    })?;
+                    if matches!(next, Token::ArrayStart) {
+                        break;
+                    }
+                    items.push(Self::token_to_mc_value(next, operands)?);
+                }
+                items.reverse();
+                Ok(MarkedContentValue::Array(items))
+            }
+            Token::DictEnd => {
+                let mut nested: HashMap<String, MarkedContentValue> = HashMap::new();
+                loop {
+                    let next = operands.pop().ok_or_else(|| ParseError::SyntaxError {
+                        position: 0,
+                        message: "Unterminated nested dict in marked-content props".to_string(),
+                    })?;
+                    if matches!(next, Token::DictStart) {
+                        break;
+                    }
+                    let value = Self::token_to_mc_value(next, operands)?;
+                    let key = match operands.pop() {
+                        Some(Token::Name(k)) => k,
+                        _ => {
+                            return Err(ParseError::SyntaxError {
+                                position: 0,
+                                message: "Expected name key in nested dict".to_string(),
+                            });
+                        }
+                    };
+                    nested.insert(key, value);
+                }
+                Ok(MarkedContentValue::Dict(nested))
+            }
+            other => Err(ParseError::SyntaxError {
                 position: 0,
-                message: "Expected dictionary or name for marked content properties".to_string(),
-            })
+                message: format!("Unexpected token type in marked-content value: {:?}", other),
+            }),
         }
     }
 

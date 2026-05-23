@@ -45,6 +45,13 @@ pub struct ExtractionOptions {
     /// callers. The `PdfDocument::partition*` entry points force this to
     /// `true`.
     pub reconstruct_paragraphs: bool,
+    /// Include content inside `/Artifact` marked-content scopes (page headers,
+    /// footers, watermarks, decorative content). Default `false` — Artifact
+    /// content is filtered out, as the PDF/UA conformance level recommends
+    /// for accessibility tooling and as RAG callers consistently want
+    /// (issue #269 Phase 1). Opt-in by setting `true` when extracting
+    /// page furniture matters (e.g. forensic auditing, redaction tools).
+    pub include_artifacts: bool,
 }
 
 impl Default for ExtractionOptions {
@@ -59,6 +66,7 @@ impl Default for ExtractionOptions {
             merge_hyphenated: true,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
+            include_artifacts: false,
         }
     }
 }
@@ -113,6 +121,74 @@ pub struct TextFragment {
     pub color: Option<Color>,
     /// Space insertion decisions (empty unless `track_space_decisions` is true).
     pub space_decisions: Vec<SpaceDecision>,
+    /// Marked-content identifier from the innermost ancestor BDC with `/MCID`
+    /// (issue #269 Phase 1). `None` for non-tagged PDFs, which preserves the
+    /// pre-Phase-1 grouping behavior (`None == None` collapses to legacy keys).
+    pub mcid: Option<u32>,
+    /// Structural tag of the owning BDC (e.g. `"P"`, `"H1"`, `"Figure"`,
+    /// `"Artifact"`). Set on the same ancestor that supplied `mcid`. Phase 3
+    /// will consume this for partitioner classification; Phase 1 only carries it.
+    pub struct_tag: Option<String>,
+}
+
+/// One entry on the marked-content stack maintained by `TextState`.
+///
+/// PDF marked-content operators (BDC/BMC/EMC) form a balanced LIFO stack
+/// per content stream. Each entry remembers the tag (`"P"`, `"H1"`,
+/// `"Artifact"`, …), the optional `MCID` for fragment grouping, the
+/// optional `/ActualText` substitution string, and a computed
+/// `is_artifact` flag that inherits from any ancestor (so nested
+/// `/P` inside `/Artifact` is still filtered out).
+#[derive(Debug, Clone)]
+struct MarkedContentEntry {
+    /// The BDC/BMC tag (e.g. `"P"`, `"Figure"`, `"Artifact"`, `"Span"`).
+    tag: String,
+    /// MCID from `/MCID <int>` if present in the BDC props.
+    mcid: Option<u32>,
+    /// Decoded ActualText from `/ActualText (...)` if present. Decoded
+    /// once at BDC time (UTF-16BE BOM detection in `decode_pdf_string`)
+    /// rather than per-fragment.
+    #[allow(dead_code)] // Task 9 reads this via pending_actualtext flush path
+    actual_text: Option<String>,
+    /// True if this entry's tag == `"Artifact"` OR any ancestor on the
+    /// stack at push time had `is_artifact == true`. Inheritance lets the
+    /// emitter check only the innermost entry to decide filtering.
+    is_artifact: bool,
+}
+
+/// A pending ActualText run. Created when a BDC pushes an entry with
+/// `actual_text == Some(_)`; drained and emitted as a single synthetic
+/// `TextFragment` when the matching EMC pops the entry.
+///
+/// Spec §3a/§4 (collapse-on-EMC): per-`Tj` emission inside an ActualText
+/// scope is suppressed; on scope close we emit one fragment whose `text`
+/// is the substitution string, `x`/`y` is the first `Tj` origin, and
+/// `width` is the sum of suppressed text widths.
+#[derive(Debug, Clone)]
+struct PendingActualText {
+    /// Substitution text from the BDC's `/ActualText` (already decoded).
+    text: String,
+    /// Pen origin of the first suppressed `Tj` (page-space).
+    first_x: f64,
+    /// Same for Y.
+    first_y: f64,
+    /// Accumulated effective width of suppressed `Tj` runs.
+    width: f64,
+    /// Effective font size at the time the first `Tj` was suppressed.
+    font_size: f64,
+    /// Font name + style at first `Tj`. Set on first suppression.
+    font_name: Option<String>,
+    /// Bold/italic from the font name at first suppression.
+    is_bold: bool,
+    is_italic: bool,
+    /// Fill color at first suppression.
+    color: Option<Color>,
+    /// Depth in `mc_stack` at which this run was opened. When the entry at
+    /// this depth is popped, the pending run is flushed.
+    stack_depth: usize,
+    /// Whether a `Tj`/`TJ`/`'`/`"` has been observed yet inside the scope.
+    /// Until the first one fires, the run has no origin to record.
+    populated: bool,
 }
 
 /// Text extraction state
@@ -146,6 +222,13 @@ struct TextState {
     /// Per PDF spec §8.4.4, `q` pushes the full graphics state and `Q` pops it;
     /// here we save only the fields that influence text extraction.
     saved_states: Vec<SavedGraphicsState>,
+    /// Marked-content stack (issue #269 Phase 1). Pushed on BMC/BDC,
+    /// popped on EMC. Empty on entry to each page.
+    mc_stack: Vec<MarkedContentEntry>,
+    /// Pending ActualText run if any BDC ancestor declared `/ActualText`.
+    /// At most one active run at a time — nested ActualText replaces the
+    /// outer (innermost wins, per spec §4).
+    pending_actualtext: Option<PendingActualText>,
 }
 
 /// Subset of graphics state saved by `q` and restored by `Q` (issue #262).
@@ -171,6 +254,8 @@ impl Default for TextState {
             render_mode: 0,
             fill_color: None,
             saved_states: Vec::new(),
+            mc_stack: Vec::new(),
+            pending_actualtext: None,
         }
     }
 }
@@ -272,9 +357,12 @@ impl TextExtractor {
     /// separated by ~2-3pt at 9pt font) on distinct logical lines — see
     /// issue #265.
     ///
-    /// Within a line, fragments are processed in their globally-sorted order
-    /// (Y desc, X asc); a space is inserted between adjacent fragments when
-    /// the X gap exceeds `space_threshold * font_size`.
+    /// Fragments are grouped by `(row_id, Y_bucket, mcid)`, where `row_id`
+    /// comes from `assign_row_ids` (increments on Y-up-jumps in emission
+    /// order). Within a line the tie-break is emission index for tagged PDFs
+    /// (any fragment carries an mcid — ISO 32000 mandates logical order) and
+    /// X coordinate for non-tagged PDFs. A space is inserted between adjacent
+    /// fragments when the X gap exceeds `space_threshold * font_size`.
     ///
     /// The output bounding box for each line is the axis-aligned union of the
     /// input fragments' bounding boxes; `font_size` and `font_name` are
@@ -284,21 +372,64 @@ impl TextExtractor {
             return Vec::new();
         }
 
-        // Sort by Y descending (PDF top-down), then X ascending
-        let mut sorted: Vec<&TextFragment> = fragments.iter().collect();
-        sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then(a.x.total_cmp(&b.x)));
+        // Pre-pass: assign row_id from Y-up-jumps in emission order. This
+        // disambiguates columns in multi-column layouts where a single outer
+        // BDC makes mcid uniform across visually distinct columns. See
+        // `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+        let row_ids = assign_row_ids(fragments);
+
+        // Whether this page has at least one tagged (mcid-carrying) fragment.
+        // `.any()` returns true if even one fragment has mcid=Some; the within-line
+        // tie-break then uses emission index for the whole page rather than X.
+        // See `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+        //
+        // For tagged PDFs (PDF/UA, ISO 32000-2 tagged), the content stream delivers
+        // text in logical reading order, so within a visual line we preserve emission
+        // order rather than sorting by X. Out-of-left-to-right glyph placement
+        // (common in typeset tagged PDFs where the PDF author lays out glyphs via
+        // non-monotone Td/Tm operators) is correctly rendered by keeping emission order.
+        //
+        // For non-tagged PDFs (all mcid=None), we retain the X-sort fallback
+        // because many generators emit glyphs in arbitrary (often right-to-left
+        // or random) order and only the X coordinate gives reading order.
+        let is_tagged = fragments.iter().any(|f| f.mcid.is_some());
+
+        // Sort by (row_id asc, y desc, emission_idx/x asc).
+        // row_id primary keeps fragments from different visual rows in
+        // separate Y-bucket groups. Within a row, we sort by Y descending
+        // (so higher-on-page fragments come first) and then by emission index
+        // (tagged) or X coordinate (non-tagged).
+        let mut indexed: Vec<(u32, usize, &TextFragment)> = row_ids
+            .iter()
+            .copied()
+            .zip(fragments.iter().enumerate())
+            .map(|(rid, (idx, f))| (rid, idx, f))
+            .collect();
+        indexed.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then(b.2.y.total_cmp(&a.2.y))
+                .then(if is_tagged {
+                    a.1.cmp(&b.1)
+                } else {
+                    a.2.x.total_cmp(&b.2.x)
+                })
+        });
 
         let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
-        for frag in sorted {
-            let placed = lines.last_mut().is_some_and(|line| {
-                let head = line[0];
-                let tol = (head.height.min(frag.height)) * 0.2;
-                (head.y - frag.y).abs() < tol
-            });
+        let mut last_seen_row_id: Option<u32> = None;
+        for (rid, _idx, frag) in indexed {
+            let same_batch = last_seen_row_id == Some(rid);
+            let placed = same_batch
+                && lines.last_mut().is_some_and(|line| {
+                    let head = line[0];
+                    let tol = (head.height.min(frag.height)) * 0.2;
+                    (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
+                });
             if placed {
                 lines.last_mut().unwrap().push(frag);
             } else {
                 lines.push(vec![frag]);
+                last_seen_row_id = Some(rid);
             }
         }
 
@@ -334,7 +465,7 @@ impl TextExtractor {
             let line_top = line.y + line.height;
             let gap = prev_bottom - line_top;
 
-            if gap < 0.0 || gap > max_paragraph_gap {
+            if gap < 0.0 || gap > max_paragraph_gap || current.mcid != line.mcid {
                 paragraphs.push(current);
                 current = line.clone();
                 continue;
@@ -367,6 +498,8 @@ impl TextExtractor {
                 is_italic: current.is_italic,
                 color: current.color,
                 space_decisions: Vec::new(),
+                mcid: current.mcid,
+                struct_tag: current.struct_tag.clone(),
             };
         }
         paragraphs.push(current);
@@ -417,6 +550,16 @@ impl TextExtractor {
         let mut in_text_object = false;
         let mut last_x = 0.0;
         let mut last_y = 0.0;
+
+        // Issue #269 Phase 1: resolve /Properties resource dictionary for BDC
+        // resource-ref operands (e.g. `/Span /PropsName BDC`). Optional — most
+        // PDFs use inline dicts.
+        let page_properties: Option<&crate::parser::objects::PdfDictionary> = page
+            .get_resources()
+            .and_then(|res| match res.get("Properties") {
+                Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
+                _ => None,
+            });
 
         // Process each content stream
         for (stream_idx, stream_data) in streams.iter().enumerate() {
@@ -514,14 +657,13 @@ impl TextExtractor {
                             extracted_text.push_str(&decoded);
 
                             // Get font info for accurate width calculation
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-
-                            // Calculate width once and reuse
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width = {
+                                let font_info = state
+                                    .font_name
+                                    .as_ref()
+                                    .and_then(|name| self.font_cache.get(name));
+                                calculate_text_width(&decoded, state.font_size, font_info)
+                            };
 
                             if self.options.preserve_layout {
                                 emit_text_fragment(
@@ -530,7 +672,8 @@ impl TextExtractor {
                                     text_width,
                                     x,
                                     y,
-                                    &state,
+                                    &mut state,
+                                    self.options.include_artifacts,
                                 );
                             }
 
@@ -547,23 +690,23 @@ impl TextExtractor {
 
                     ContentOperation::ShowTextArray(array) => {
                         if in_text_object {
-                            // Get font info for accurate width calculation
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-
                             for item in array {
                                 match item {
                                     TextElement::Text(text_bytes) => {
                                         let decoded = self.decode_text(&text_bytes, &state)?;
                                         extracted_text.push_str(&decoded);
 
-                                        let text_width = calculate_text_width(
-                                            &decoded,
-                                            state.font_size,
-                                            font_info,
-                                        );
+                                        let text_width = {
+                                            let font_info = state
+                                                .font_name
+                                                .as_ref()
+                                                .and_then(|name| self.font_cache.get(name));
+                                            calculate_text_width(
+                                                &decoded,
+                                                state.font_size,
+                                                font_info,
+                                            )
+                                        };
 
                                         if self.options.preserve_layout {
                                             let (x, y) = text_origin(&state);
@@ -573,7 +716,8 @@ impl TextExtractor {
                                                 text_width,
                                                 x,
                                                 y,
-                                                &state,
+                                                &mut state,
+                                                self.options.include_artifacts,
                                             );
                                         }
 
@@ -614,12 +758,13 @@ impl TextExtractor {
                             }
                             extracted_text.push_str(&decoded);
 
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width = {
+                                let font_info = state
+                                    .font_name
+                                    .as_ref()
+                                    .and_then(|name| self.font_cache.get(name));
+                                calculate_text_width(&decoded, state.font_size, font_info)
+                            };
 
                             if self.options.preserve_layout {
                                 emit_text_fragment(
@@ -628,7 +773,8 @@ impl TextExtractor {
                                     text_width,
                                     x,
                                     y,
-                                    &state,
+                                    &mut state,
+                                    self.options.include_artifacts,
                                 );
                             }
 
@@ -664,12 +810,13 @@ impl TextExtractor {
                             }
                             extracted_text.push_str(&decoded);
 
-                            let font_info = state
-                                .font_name
-                                .as_ref()
-                                .and_then(|name| self.font_cache.get(name));
-                            let text_width =
-                                calculate_text_width(&decoded, state.font_size, font_info);
+                            let text_width = {
+                                let font_info = state
+                                    .font_name
+                                    .as_ref()
+                                    .and_then(|name| self.font_cache.get(name));
+                                calculate_text_width(&decoded, state.font_size, font_info)
+                            };
 
                             if self.options.preserve_layout {
                                 emit_text_fragment(
@@ -678,7 +825,8 @@ impl TextExtractor {
                                     text_width,
                                     x,
                                     y,
-                                    &state,
+                                    &mut state,
+                                    self.options.include_artifacts,
                                 );
                             }
 
@@ -773,6 +921,86 @@ impl TextExtractor {
                             Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
                     }
 
+                    // Issue #269 Phase 1: marked-content operators
+                    ContentOperation::BeginMarkedContent(tag) => {
+                        let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
+                        state.mc_stack.push(MarkedContentEntry {
+                            is_artifact: tag == "Artifact" || parent_artifact,
+                            tag,
+                            mcid: None,
+                            actual_text: None,
+                        });
+                    }
+
+                    ContentOperation::BeginMarkedContentWithProps(tag, props) => {
+                        let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
+                        let (mcid, actual_text) = resolve_props(&props, page_properties);
+
+                        // If this scope declares ActualText, open a pending run that will be
+                        // flushed on the matching EMC. Suppresses per-Tj emission inside the
+                        // scope (innermost-ActualText-wins per spec §4).
+                        if let Some(ref text) = actual_text {
+                            state.pending_actualtext = Some(PendingActualText {
+                                text: text.clone(),
+                                first_x: 0.0,
+                                first_y: 0.0,
+                                width: 0.0,
+                                font_size: state.font_size,
+                                font_name: state.font_name.clone(),
+                                is_bold: false, // overwritten on first Tj
+                                is_italic: false,
+                                color: state.fill_color,
+                                stack_depth: state.mc_stack.len(), // BEFORE the push below
+                                populated: false,
+                            });
+                        }
+
+                        state.mc_stack.push(MarkedContentEntry {
+                            is_artifact: tag == "Artifact" || parent_artifact,
+                            tag,
+                            mcid,
+                            actual_text,
+                        });
+                    }
+
+                    ContentOperation::EndMarkedContent => {
+                        let popped_depth = state.mc_stack.len();
+                        if state.mc_stack.pop().is_none() {
+                            // Unbalanced EMC — log and ignore. Real PDFs occasionally emit
+                            // dangling EMC (e.g. from incremental updates). We must not panic.
+                            tracing::debug!(
+                                "extraction: EMC with empty marked-content stack on page {}",
+                                page_index + 1
+                            );
+                        } else if let Some(pending) = state.pending_actualtext.as_ref() {
+                            // If we just closed the scope that opened the pending run, flush it.
+                            if pending.stack_depth + 1 == popped_depth {
+                                let run = state.pending_actualtext.take().unwrap();
+                                if run.populated && self.options.preserve_layout {
+                                    let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
+                                    let in_artifact = state.mc_stack.iter().any(|e| e.is_artifact);
+                                    if !in_artifact || self.options.include_artifacts {
+                                        fragments.push(TextFragment {
+                                            text: run.text,
+                                            x: run.first_x,
+                                            y: run.first_y,
+                                            width: run.width,
+                                            height: run.font_size,
+                                            font_size: run.font_size,
+                                            font_name: run.font_name,
+                                            is_bold: run.is_bold,
+                                            is_italic: run.is_italic,
+                                            color: run.color,
+                                            space_decisions: Vec::new(),
+                                            mcid,
+                                            struct_tag,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     _ => {
                         // Other operations don't affect text extraction
                     }
@@ -783,8 +1011,16 @@ impl TextExtractor {
         {
             let _span = tracing::info_span!("layout_finalize").entered();
 
-            // Sort and process fragments if requested
-            if self.options.sort_by_position && !fragments.is_empty() {
+            // Sort and process fragments if requested — but ONLY when we're not
+            // going to run merge_into_lines later. merge_into_lines does its
+            // own (row_id, y, x) sort that needs pre-sort emission order to
+            // detect Y-up-jumps for column splitting (issue #265). For the
+            // legacy path with reconstruct_paragraphs=false, the early sort is
+            // still required because nothing downstream reorders fragments.
+            if self.options.sort_by_position
+                && !self.options.reconstruct_paragraphs
+                && !fragments.is_empty()
+            {
                 self.sort_and_merge_fragments(&mut fragments);
             }
 
@@ -968,11 +1204,40 @@ impl TextExtractor {
             let y_diff = (current.y - fragment.y).abs();
             let x_gap = fragment.x - (current.x + current.width);
 
-            // Merge if on same line and gap is less than a character width
-            // Use 0.5 * font_size as threshold - this catches most artificial spacing
-            let should_merge = y_diff < 1.0  // Same line (very tight tolerance)
+            // Y-tolerance for same-line merging.
+            //
+            // Legacy path (`reconstruct_paragraphs=false`): fragments arrive
+            // after `sort_and_merge_fragments` which quantizes Y into 10pt bands.
+            // All same-band fragments share nearly identical Y, so 1.0pt is enough.
+            //
+            // Reconstruct-paragraphs path (`reconstruct_paragraphs=true`): fragments
+            // arrive in emission order. Inline superscripts (e.g. citation numbers
+            // raised via `Td` operators) have Y deltas of 3-4pt for 10pt body text.
+            // Without a wider tolerance, each superscript becomes its own fragment
+            // → line proliferation (issue #265 follow-up). Use 0.5 * font_size,
+            // which captures typical superscript/subscript offsets (typically
+            // 0.33-0.4 * font_size from baseline) and stays below the row_id
+            // threshold (also 0.5 * font_size) so adjacent rows are not collapsed.
+            let y_tol = if self.options.reconstruct_paragraphs {
+                // Defend against malformed PDFs that emit text before any `Tf` font
+                // operator (font_size=0 in TextState initial). 0.5 * 0 = 0 would
+                // prevent any merge, even at identical Y. Fall back to the legacy
+                // 1.0pt threshold in that case so the path is at least as forgiving
+                // as the non-reconstruct path.
+                let base = 0.5 * current.font_size.min(fragment.font_size);
+                if base > 0.0 {
+                    base
+                } else {
+                    1.0
+                }
+            } else {
+                1.0
+            };
+
+            let should_merge = y_diff < y_tol
                 && x_gap >= 0.0  // Fragment is to the right
-                && x_gap < fragment.font_size * 0.5; // Gap less than 50% of font size
+                && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
+                && current.mcid == fragment.mcid;
 
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
@@ -1149,7 +1414,7 @@ impl Default for TextExtractor {
     }
 }
 
-/// Push a `TextFragment` capturing a glyph run about to be shown.
+/// Emit a `TextFragment` for one decoded text-show event under `preserve_layout`.
 ///
 /// Encapsulates the style-derivation + push sequence shared by every
 /// text-show operator handler in `extract_from_page` (`Tj`, `TJ`, `'`,
@@ -1158,17 +1423,33 @@ impl Default for TextExtractor {
 /// double `multiply_matrix + transform_point` that prior versions did
 /// (handler computed it for `last_x`/`last_y`, then this fn recomputed
 /// it on the same `state`).
+///
+/// Skips emission when an ancestor in the marked-content stack is `/Artifact`
+/// and `include_artifacts` is false. When a pending ActualText run is
+/// active in the current scope, accumulates the text-width contribution and
+/// records the first origin instead of pushing a fragment (the run is flushed
+/// once on EMC, see Task 8's EndMarkedContent handler).
+///
+/// `mcid` and `struct_tag` come from the innermost ancestor on the stack that
+/// declared `/MCID`; non-tagged content leaves both as `None`.
 fn emit_text_fragment(
     fragments: &mut Vec<TextFragment>,
     decoded: &str,
     text_width: f64,
     x: f64,
     y: f64,
-    state: &TextState,
+    state: &mut TextState,
+    include_artifacts: bool,
 ) {
     if decoded.is_empty() {
         return;
     }
+
+    // Artifact filter (default: skip emission for Artifact subtrees).
+    if !include_artifacts && state.mc_stack.iter().any(|e| e.is_artifact) {
+        return;
+    }
+
     let (is_bold, is_italic) = state
         .font_name
         .as_ref()
@@ -1186,6 +1467,30 @@ fn emit_text_fragment(
     let effective_width = text_width * x_scale;
     let effective_size = state.font_size * y_scale;
 
+    // If a pending ActualText run is active in the current scope, accumulate
+    // into it instead of emitting a fragment now. The run is flushed on the
+    // matching EMC by the EndMarkedContent arm (Task 8).
+    // Hoist font_name/fill_color reads before taking &mut on pending_actualtext
+    // to avoid borrow-checker conflicts with the disjoint fields.
+    let local_font_name = state.font_name.clone();
+    let local_fill_color = state.fill_color;
+    if let Some(pending) = state.pending_actualtext.as_mut() {
+        if !pending.populated {
+            pending.first_x = x;
+            pending.first_y = y;
+            pending.font_size = effective_size;
+            pending.font_name = local_font_name;
+            pending.is_bold = is_bold;
+            pending.is_italic = is_italic;
+            pending.color = local_fill_color;
+            pending.populated = true;
+        }
+        pending.width += effective_width;
+        return;
+    }
+
+    let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
+
     fragments.push(TextFragment {
         text: decoded.to_owned(),
         x,
@@ -1198,6 +1503,8 @@ fn emit_text_fragment(
         is_italic,
         color: state.fill_color,
         space_decisions: Vec::new(),
+        mcid,
+        struct_tag,
     });
 }
 
@@ -1225,6 +1532,109 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
         a[4] * b[0] + a[5] * b[2] + b[4],
         a[4] * b[1] + a[5] * b[3] + b[5],
     ]
+}
+
+/// Decode a PDF string operand into Rust `String`.
+///
+/// PDF strings inside marked-content properties (notably `/ActualText`)
+/// may be encoded as:
+///
+/// - **UTF-16BE with BOM**: leading `0xFE 0xFF`, then big-endian 16-bit
+///   code units. This is the canonical encoding for non-ASCII ActualText
+///   (e.g. `fi` ligature, Greek/math symbols). Decoded via `String::from_utf16_lossy`
+///   so invalid surrogate pairs become `U+FFFD` rather than panicking.
+/// - **PDFDocEncoding** (the catch-all for non-BOM bytes). For the ASCII
+///   subset (0x20-0x7E) PDFDocEncoding is identical to Latin-1. We
+///   conservatively map byte-by-byte to `char`. A future revision can
+///   plug in the full PDFDocEncoding table if a real PDF emerges with
+///   high-bit characters in ActualText *without* a UTF-16BE BOM (rare;
+///   most producers emit the BOM when going outside ASCII).
+fn decode_pdf_string(bytes: &[u8]) -> String {
+    if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
+        let mut code_units: Vec<u16> = Vec::with_capacity((bytes.len() - 2) / 2);
+        let mut i = 2;
+        while i + 1 < bytes.len() {
+            code_units.push(u16::from_be_bytes([bytes[i], bytes[i + 1]]));
+            i += 2;
+        }
+        String::from_utf16_lossy(&code_units)
+    } else {
+        bytes.iter().map(|&b| b as char).collect()
+    }
+}
+
+/// Resolve a `MarkedContentProps` to `(mcid, actual_text)`.
+///
+/// For `Inline` props, walk the map: `/MCID` (Integer, must fit in `u32`)
+/// becomes `mcid`; `/ActualText` (String) is decoded via `decode_pdf_string`.
+///
+/// For `ResourceRef(name)`, look up `properties.get(name)`. If found and
+/// it's a Dictionary, extract `/MCID` and `/ActualText` from there. If
+/// not found (or the named entry is not a dict), return `(None, None)`
+/// — a malformed reference must not abort extraction.
+fn resolve_props(
+    props: &crate::parser::content::MarkedContentProps,
+    properties: Option<&crate::parser::objects::PdfDictionary>,
+) -> (Option<u32>, Option<String>) {
+    use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+
+    let map_mcid_actual =
+        |map: &std::collections::HashMap<String, MarkedContentValue>| -> (Option<u32>, Option<String>) {
+            let mcid = match map.get("MCID") {
+                Some(MarkedContentValue::Integer(n)) if *n >= 0 && *n <= u32::MAX as i64 => {
+                    Some(*n as u32)
+                }
+                _ => None,
+            };
+            let actual = match map.get("ActualText") {
+                Some(MarkedContentValue::String(bytes)) => Some(decode_pdf_string(bytes)),
+                _ => None,
+            };
+            (mcid, actual)
+        };
+
+    match props {
+        MarkedContentProps::Inline(map) => map_mcid_actual(map),
+        MarkedContentProps::ResourceRef(name) => {
+            let Some(properties) = properties else {
+                return (None, None);
+            };
+            let Some(entry) = properties.get(name) else {
+                return (None, None);
+            };
+            let crate::parser::objects::PdfObject::Dictionary(dict) = entry else {
+                return (None, None);
+            };
+            let mcid = dict.get("MCID").and_then(|o| match o {
+                crate::parser::objects::PdfObject::Integer(n)
+                    if *n >= 0 && *n <= u32::MAX as i64 =>
+                {
+                    Some(*n as u32)
+                }
+                _ => None,
+            });
+            let actual_text = dict.get("ActualText").and_then(|o| match o {
+                crate::parser::objects::PdfObject::String(s) => {
+                    Some(decode_pdf_string(s.as_bytes()))
+                }
+                _ => None,
+            });
+            (mcid, actual_text)
+        }
+    }
+}
+
+/// Walk the marked-content stack from innermost (top) outward, returning the
+/// first entry's `(mcid, tag)` pair whose `mcid` is `Some`. Returns
+/// `(None, None)` when no ancestor declared an MCID — typical of non-tagged
+/// PDFs, in which case the `None == None` grouping-key invariant preserves
+/// legacy behaviour.
+fn innermost_mc_tag(stack: &[MarkedContentEntry]) -> (Option<u32>, Option<String>) {
+    stack
+        .iter()
+        .rev()
+        .find(|e| e.mcid.is_some())
+        .map_or((None, None), |e| (e.mcid, Some(e.tag.clone())))
 }
 
 /// Transform a point using a transformation matrix
@@ -1373,6 +1783,44 @@ pub fn sanitize_extracted_text(text: &str) -> String {
     result
 }
 
+/// Assign a logical row identifier to each fragment based on Y-up-jumps in
+/// emission order. Used by `merge_into_lines` to distinguish columns in
+/// multi-column layouts where a single outer BDC scope makes mcid uniform.
+///
+/// Increments `row_id` whenever the next fragment's Y exceeds the previous
+/// by more than `max(font_size * 0.5, 2.0)`. Superscripts (small positive
+/// deltas) and normal line descents (negative deltas) leave `row_id`
+/// unchanged. See `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+///
+/// # Invariants
+/// Returns a `Vec<u32>` with exactly `fragments.len()` elements — one
+/// row id per input fragment, in input order. Callers may safely `.zip(fragments)`.
+fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
+    let mut result = Vec::with_capacity(fragments.len());
+    let mut row_id: u32 = 0;
+    let mut prev_y: Option<f64> = None;
+    for frag in fragments {
+        if let Some(py) = prev_y {
+            let delta = frag.y - py;
+            // Threshold anchored to the arriving fragment's font_size; for the
+            // symmetric same-font case (body→body, same font) this is equivalent
+            // to anchoring to the previous fragment.
+            let threshold = (frag.font_size * 0.5).max(2.0);
+            if delta > threshold {
+                row_id += 1;
+            }
+        }
+        result.push(row_id);
+        prev_y = Some(frag.y);
+    }
+    debug_assert_eq!(
+        result.len(),
+        fragments.len(),
+        "assign_row_ids: output length must equal input length"
+    );
+    result
+}
+
 fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
     let head = line[0];
     let mut text = String::new();
@@ -1408,6 +1856,8 @@ fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFr
         is_italic: head.is_italic,
         color: head.color,
         space_decisions: Vec::new(),
+        mcid: head.mcid,
+        struct_tag: head.struct_tag.clone(),
     }
 }
 
@@ -1459,6 +1909,7 @@ mod tests {
             merge_hyphenated: false,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
+            include_artifacts: false,
         };
         assert!(options.preserve_layout);
         assert_eq!(options.space_threshold, 0.5);
@@ -1537,6 +1988,8 @@ mod tests {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         };
         assert_eq!(fragment.text, "Hello");
         assert_eq!(fragment.x, 100.0);
@@ -1561,6 +2014,8 @@ mod tests {
                 is_italic: false,
                 color: None,
                 space_decisions: Vec::new(),
+                mcid: None,
+                struct_tag: None,
             },
             TextFragment {
                 text: "World".to_string(),
@@ -1574,6 +2029,8 @@ mod tests {
                 is_italic: false,
                 color: None,
                 space_decisions: Vec::new(),
+                mcid: None,
+                struct_tag: None,
             },
         ];
 
@@ -1650,6 +2107,7 @@ mod tests {
             merge_hyphenated: false,
             track_space_decisions: false,
             reconstruct_paragraphs: false,
+            include_artifacts: false,
         };
         let extractor = TextExtractor::with_options(options.clone());
         assert_eq!(extractor.options.preserve_layout, options.preserve_layout);
@@ -2232,6 +2690,8 @@ mod tests {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         }
     }
 
@@ -2308,6 +2768,188 @@ mod tests {
     }
 
     #[test]
+    fn assign_row_ids_monotone_y_descending_keeps_zero() {
+        let frags = vec![
+            tf("A", 50.0, 400.0, 10.0, 9.0),
+            tf("B", 50.0, 395.0, 10.0, 9.0),
+            tf("C", 50.0, 390.0, 10.0, 9.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 0, 0]);
+    }
+
+    #[test]
+    fn assign_row_ids_increments_on_y_up_jump_above_threshold() {
+        // font_size=9 → threshold = max(4.5, 2.0) = 4.5
+        // deltas: 395-400=-5, 420-395=+25 (>4.5)
+        let frags = vec![
+            tf("A", 50.0, 400.0, 10.0, 9.0),
+            tf("B", 50.0, 395.0, 10.0, 9.0),
+            tf("C", 50.0, 420.0, 10.0, 9.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 0, 1]);
+    }
+
+    #[test]
+    fn assign_row_ids_ignores_superscript_within_threshold() {
+        // font_size=9 → threshold 4.5. delta 2.5 must NOT trigger.
+        let frags = vec![
+            tf("A", 50.0, 400.0, 10.0, 9.0),
+            tf("^2", 60.0, 402.5, 5.0, 9.0),
+            tf("B", 65.0, 395.0, 10.0, 9.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 0, 0]);
+    }
+
+    #[test]
+    fn assign_row_ids_floor_2pt_for_small_fonts() {
+        // font_size=3 → font_size*0.5 = 1.5; floor lifts threshold to 2.0
+        // delta = +2.5 > 2.0 must trigger.
+        let frags = vec![
+            tf("A", 50.0, 100.0, 10.0, 3.0),
+            tf("B", 50.0, 102.5, 10.0, 3.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 1]);
+    }
+
+    #[test]
+    fn assign_row_ids_empty_slice_returns_empty() {
+        let frags: Vec<TextFragment> = vec![];
+        let row_ids = super::assign_row_ids(&frags);
+        assert!(row_ids.is_empty(), "empty input must yield empty output");
+    }
+
+    #[test]
+    fn merge_into_lines_splits_two_columns_emitted_sequentially() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Emission order: col1.l1, col1.l2 (Y monotone down), then col2.l1
+        // (Y jumps UP by 10 > threshold 5 for font 10pt), col2.l2.
+        let input = vec![
+            tf("col1-top", 50.0, 400.0, 80.0, 10.0),
+            tf("col1-bot", 50.0, 395.0, 80.0, 10.0),
+            tf("col2-top", 200.0, 405.0, 80.0, 10.0),
+            tf("col2-bot", 200.0, 400.0, 80.0, 10.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(
+            lines.len(),
+            4,
+            "two columns at near-identical Y must split into 4 lines"
+        );
+        // row_id=0 batch first (col1), then row_id=1 (col2). Within each batch, Y desc.
+        assert_eq!(lines[0].text, "col1-top");
+        assert_eq!(lines[0].y, 400.0);
+        assert_eq!(lines[1].text, "col1-bot");
+        assert_eq!(lines[1].y, 395.0);
+        assert_eq!(lines[2].text, "col2-top");
+        assert_eq!(lines[2].y, 405.0);
+        assert_eq!(lines[3].text, "col2-bot");
+        assert_eq!(lines[3].y, 400.0);
+    }
+
+    #[test]
+    fn merge_into_lines_preserves_single_column_continuation() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Single column: same Y continuation (X grows), then next line down.
+        let input = vec![
+            tf("Hello", 50.0, 400.0, 30.0, 10.0),
+            tf("world", 90.0, 400.0, 30.0, 10.0),
+            tf("next-line", 50.0, 395.0, 70.0, 10.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(
+            lines.len(),
+            2,
+            "single column continuation must collapse to 2 lines"
+        );
+        assert!(lines[0].text.contains("Hello"));
+        assert!(lines[0].text.contains("world"));
+        assert_eq!(lines[1].text, "next-line");
+    }
+
+    #[test]
+    fn merge_into_lines_splits_columns_with_uniform_mcid() {
+        // Regression guard for #265 root cause: NCSC page 12 has a single
+        // outer BDC, so every fragment has mcid=Some(0). Column separation
+        // must come from row_id alone, not from mcid.
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let mut frags = vec![
+            tf("col1-top", 50.0, 400.0, 80.0, 10.0),
+            tf("col1-bot", 50.0, 395.0, 80.0, 10.0),
+            tf("col2-top", 200.0, 405.0, 80.0, 10.0),
+            tf("col2-bot", 200.0, 400.0, 80.0, 10.0),
+        ];
+        for f in &mut frags {
+            f.mcid = Some(0);
+        }
+        let lines = extractor.merge_into_lines(&frags);
+        assert_eq!(
+            lines.len(),
+            4,
+            "uniform mcid must not prevent row_id-based column split (NCSC root cause)"
+        );
+        assert_eq!(lines[0].text, "col1-top");
+        assert_eq!(lines[1].text, "col1-bot");
+        assert_eq!(lines[2].text, "col2-top");
+        assert_eq!(lines[3].text, "col2-bot");
+    }
+
+    #[test]
+    fn merge_close_fragments_superscript_merges_when_reconstruct_paragraphs() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Citation superscript: body text at y=400, raised digit at y=403.5
+        // (3.5pt above baseline for 10pt font). y_tol = 0.5 * 10 = 5.0 > 3.5
+        // and x_gap = 4pt < 10*0.5 = 5pt, so the superscript must merge into
+        // the body fragment.
+        let frags = vec![
+            tf("body-text", 50.0, 400.0, 25.0, 10.0),
+            tf("1", 79.0, 403.5, 4.0, 10.0),
+        ];
+        let merged = extractor.merge_close_fragments(&frags);
+        assert_eq!(
+            merged.len(),
+            1,
+            "superscript within 5pt of baseline must merge in reconstruct path"
+        );
+        assert!(merged[0].text.contains("body-text"));
+        assert!(merged[0].text.contains("1"));
+    }
+
+    #[test]
+    fn merge_close_fragments_superscript_does_not_merge_in_legacy_path() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: false,
+            ..Default::default()
+        });
+        // Legacy path: y_tol=1.0 fixed. A 3.5pt delta must NOT merge.
+        let frags = vec![
+            tf("body-text", 50.0, 400.0, 25.0, 10.0),
+            tf("1", 79.0, 403.5, 4.0, 10.0),
+        ];
+        let merged = extractor.merge_close_fragments(&frags);
+        assert_eq!(
+            merged.len(),
+            2,
+            "3.5pt Y delta exceeds legacy 1.0pt threshold; superscript stays separate"
+        );
+    }
+
+    #[test]
     fn merge_into_paragraphs_groups_consecutive_lines() {
         let extractor = TextExtractor::with_options(ExtractionOptions {
             reconstruct_paragraphs: true,
@@ -2358,5 +3000,99 @@ mod tests {
             paragraphs[0].text, "Kryptographie",
             "hyphen elided, no newline inserted"
         );
+    }
+
+    #[test]
+    fn decode_pdf_string_utf16be_bom_decodes_fi_ligature() {
+        let bytes = [0xFE, 0xFF, 0x00, 0x66, 0x00, 0x69];
+        assert_eq!(super::decode_pdf_string(&bytes), "fi");
+    }
+
+    #[test]
+    fn decode_pdf_string_ascii_pdfdocencoding_passthrough() {
+        let bytes = b"page 12";
+        assert_eq!(super::decode_pdf_string(bytes), "page 12");
+    }
+
+    #[test]
+    fn decode_pdf_string_empty_input_returns_empty() {
+        assert_eq!(super::decode_pdf_string(&[]), "");
+    }
+
+    #[test]
+    fn decode_pdf_string_lone_bom_returns_empty() {
+        // BOM only, no code units after.
+        assert_eq!(super::decode_pdf_string(&[0xFE, 0xFF]), "");
+    }
+
+    #[test]
+    fn resolve_props_extracts_integer_mcid() {
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+        use std::collections::HashMap;
+        let mut map = HashMap::new();
+        map.insert("MCID".to_string(), MarkedContentValue::Integer(7));
+        let props = MarkedContentProps::Inline(map);
+
+        let (mcid, actual) = super::resolve_props(&props, None);
+        assert_eq!(mcid, Some(7));
+        assert_eq!(actual, None);
+    }
+
+    #[test]
+    fn resolve_props_decodes_utf16be_actualtext() {
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+        use std::collections::HashMap;
+        let mut map = HashMap::new();
+        map.insert(
+            "ActualText".to_string(),
+            MarkedContentValue::String(vec![0xFE, 0xFF, 0x00, 0x66, 0x00, 0x69]),
+        );
+        let props = MarkedContentProps::Inline(map);
+
+        let (mcid, actual) = super::resolve_props(&props, None);
+        assert_eq!(mcid, None);
+        assert_eq!(actual.as_deref(), Some("fi"));
+    }
+
+    #[test]
+    fn resolve_props_returns_none_for_unresolvable_resource_ref() {
+        use crate::parser::content::MarkedContentProps;
+        let props = MarkedContentProps::ResourceRef("PropsName".to_string());
+        let (mcid, actual) = super::resolve_props(&props, None);
+        assert_eq!((mcid, actual), (None, None));
+    }
+
+    #[test]
+    fn resolve_props_negative_mcid_rejected() {
+        use crate::parser::content::{MarkedContentProps, MarkedContentValue};
+        use std::collections::HashMap;
+        // MCID is unsigned per ISO 32000-1; negative integer is malformed.
+        let mut map = HashMap::new();
+        map.insert("MCID".to_string(), MarkedContentValue::Integer(-1));
+        let props = MarkedContentProps::Inline(map);
+
+        let (mcid, _) = super::resolve_props(&props, None);
+        assert_eq!(mcid, None);
+    }
+
+    #[test]
+    fn resolve_props_resource_ref_overflow_mcid_rejected() {
+        // ISO 32000-1 §14.7.4: MCID is an unsigned 32-bit integer. A
+        // PdfObject::Integer holds an i64, so a malformed PDF can carry an
+        // out-of-range MCID. The ResourceRef path must reject those rather
+        // than wrap silently via `as u32`. Mirrors the Inline-path guard
+        // already covered by `resolve_props_negative_mcid_rejected`.
+        use crate::parser::content::MarkedContentProps;
+        use crate::parser::objects::{PdfDictionary, PdfObject};
+
+        let mut inner = PdfDictionary::new();
+        inner.insert("MCID".to_string(), PdfObject::Integer(i64::MAX));
+
+        let mut properties = PdfDictionary::new();
+        properties.insert("PropsName".to_string(), PdfObject::Dictionary(inner));
+
+        let props = MarkedContentProps::ResourceRef("PropsName".to_string());
+        let (mcid, _) = super::resolve_props(&props, Some(&properties));
+        assert_eq!(mcid, None);
     }
 }

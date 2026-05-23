@@ -15,6 +15,8 @@ fn table_frag(text: &str, x: f64, y: f64) -> TextFragment {
         is_italic: false,
         color: None,
         space_decisions: Vec::new(),
+        mcid: None,
+        struct_tag: None,
     }
 }
 
