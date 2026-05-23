@@ -2803,6 +2803,36 @@ mod tests {
     }
 
     #[test]
+    fn merge_into_lines_splits_columns_with_uniform_mcid() {
+        // Regression guard for #265 root cause: NCSC page 12 has a single
+        // outer BDC, so every fragment has mcid=Some(0). Column separation
+        // must come from row_id alone, not from mcid.
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let mut frags = vec![
+            tf("col1-top", 50.0, 400.0, 80.0, 10.0),
+            tf("col1-bot", 50.0, 395.0, 80.0, 10.0),
+            tf("col2-top", 200.0, 405.0, 80.0, 10.0),
+            tf("col2-bot", 200.0, 400.0, 80.0, 10.0),
+        ];
+        for f in &mut frags {
+            f.mcid = Some(0);
+        }
+        let lines = extractor.merge_into_lines(&frags);
+        assert_eq!(
+            lines.len(),
+            4,
+            "uniform mcid must not prevent row_id-based column split (NCSC root cause)"
+        );
+        assert_eq!(lines[0].text, "col1-top");
+        assert_eq!(lines[1].text, "col1-bot");
+        assert_eq!(lines[2].text, "col2-top");
+        assert_eq!(lines[3].text, "col2-bot");
+    }
+
+    #[test]
     fn merge_into_paragraphs_groups_consecutive_lines() {
         let extractor = TextExtractor::with_options(ExtractionOptions {
             reconstruct_paragraphs: true,
