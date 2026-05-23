@@ -375,20 +375,45 @@ impl TextExtractor {
         // `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
         let row_ids = assign_row_ids(fragments);
 
-        // Sort by (row_id asc, y desc, x asc). row_id primary ensures that
-        // fragments from different visual rows never become candidates for
-        // the same Y-bucket group.
-        let mut indexed: Vec<(u32, &TextFragment)> =
-            row_ids.iter().copied().zip(fragments.iter()).collect();
+        // Whether the page has any tagged (mcid-carrying) fragment. For tagged
+        // PDFs (PDF/UA, ISO 32000-2 tagged), the content stream delivers text
+        // in logical reading order, so within a visual line we preserve
+        // emission order rather than sorting by X. Out-of-left-to-right glyph
+        // placement (common in typeset tagged PDFs where the PDF author lays
+        // out glyphs via non-monotone Td/Tm operators) is correctly rendered
+        // by keeping emission order.
+        //
+        // For non-tagged PDFs (all mcid=None), we retain the X-sort fallback
+        // because many generators emit glyphs in arbitrary (often right-to-left
+        // or random) order and only the X coordinate gives reading order.
+        let is_tagged = fragments.iter().any(|f| f.mcid.is_some());
+
+        // Sort by (row_id asc, y desc, emission_idx/x asc).
+        // row_id primary keeps fragments from different visual rows in
+        // separate Y-bucket groups. Within a row, we sort by Y descending
+        // (so higher-on-page fragments come first) and then by emission index
+        // (tagged) or X coordinate (non-tagged).
+        let mut indexed: Vec<(u32, usize, &TextFragment)> = row_ids
+            .iter()
+            .copied()
+            .zip(fragments.iter().enumerate().map(|(i, f)| (i, f)))
+            .map(|(rid, (idx, f))| (rid, idx, f))
+            .collect();
         indexed.sort_by(|a, b| {
             a.0.cmp(&b.0)
-                .then(b.1.y.total_cmp(&a.1.y))
-                .then(a.1.x.total_cmp(&b.1.x))
+                .then(b.2.y.total_cmp(&a.2.y))
+                .then(if is_tagged {
+                    a.1.cmp(&b.1)
+                } else {
+                    a.2.x
+                        .partial_cmp(&b.2.x)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
         });
 
         let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
         let mut current_row_id: Option<u32> = None;
-        for (rid, frag) in indexed {
+        for (rid, _idx, frag) in indexed {
             let same_row_id = current_row_id == Some(rid);
             let placed = same_row_id
                 && lines.last_mut().is_some_and(|line| {
@@ -982,8 +1007,16 @@ impl TextExtractor {
         {
             let _span = tracing::info_span!("layout_finalize").entered();
 
-            // Sort and process fragments if requested
-            if self.options.sort_by_position && !fragments.is_empty() {
+            // Sort and process fragments if requested — but ONLY when we're not
+            // going to run merge_into_lines later. merge_into_lines does its
+            // own (row_id, y, x) sort that needs pre-sort emission order to
+            // detect Y-up-jumps for column splitting (issue #265). For the
+            // legacy path with reconstruct_paragraphs=false, the early sort is
+            // still required because nothing downstream reorders fragments.
+            if self.options.sort_by_position
+                && !self.options.reconstruct_paragraphs
+                && !fragments.is_empty()
+            {
                 self.sort_and_merge_fragments(&mut fragments);
             }
 

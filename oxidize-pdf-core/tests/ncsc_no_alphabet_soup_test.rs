@@ -27,8 +27,6 @@ fn ncsc_page_12_extracts_coherent_text_no_alphabet_soup() {
     let path = match corpus_path() {
         Some(p) => p,
         None => {
-            // Corpus not present (e.g. CI minimal checkout). Don't fail —
-            // skip with an eprintln so dev runs see the gap.
             eprintln!("ncsc_no_alphabet_soup_test: corpus file missing, skipping");
             return;
         }
@@ -44,33 +42,53 @@ fn ncsc_page_12_extracts_coherent_text_no_alphabet_soup() {
     };
     let mut extractor = TextExtractor::with_options(opts);
 
-    // Page 12 in 1-based numbering = page_index 11.
     let extracted = extractor
         .extract_from_page(&document, 11)
         .expect("extract page 12");
 
     let full_text = extracted.text.as_str();
 
-    // Negative assertions — the pre-fix garbage substrings must be absent.
+    // Phase 1 garbage substrings (closed by #269 PR #270).
     for garbage in &["Tahre", "iansag", "efysftecemtaitivecl", "neod s ef"] {
         assert!(
             !full_text.contains(garbage),
-            "page 12 still contains interleaved garbage substring {:?}; \
+            "Phase-1 garbage substring {:?} still present; extracted text:\n{}",
+            garbage,
+            full_text
+        );
+    }
+
+    // Phase 2 (#265 row_id heuristic) — residual column-overlap garbage.
+    // These substrings only appear in interleaved output; no legitimate
+    // English token contains them.
+    for garbage in &[
+        "sesyssteenmtias",
+        "iprdeionrtiitfiiseed",
+        "Yinfoorur",
+        "rimsekd",
+        "smund",
+    ] {
+        assert!(
+            !full_text.contains(garbage),
+            "residual #265 column-interleave garbage substring {:?} still present; \
              extracted text:\n{}",
             garbage,
             full_text
         );
     }
 
-    // Positive assertions — at least one coherent English fragment survives.
-    let coherent_hits: Vec<&&str> = ["There", "systems", "Security", "process"]
-        .iter()
-        .filter(|needle| full_text.contains(*needle))
-        .collect();
-    assert!(
-        !coherent_hits.is_empty(),
-        "page 12 must contain at least one coherent English word from the \
-         expected set [There, systems, Security, process]; got text:\n{}",
-        full_text
-    );
+    // Coherent runs from column 2 (right-hand cell of the A2.a table).
+    // Their presence proves column 2 was extracted intact, not destroyed.
+    for needle in &[
+        "identified, analysed",
+        "prioritised, and managed",
+        "Your organisation has effective internal processes",
+    ] {
+        assert!(
+            full_text.contains(needle),
+            "expected coherent column-2 phrase {:?} missing; extracted text:\n{}",
+            needle,
+            full_text
+        );
+    }
 }

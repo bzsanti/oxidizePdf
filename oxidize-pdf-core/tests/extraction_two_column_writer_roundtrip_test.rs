@@ -80,3 +80,83 @@ fn two_column_layout_extracts_without_interleaving() {
         );
     }
 }
+
+#[test]
+fn x_overlapping_columns_split_via_row_id() {
+    // The actual #265 root cause: two columns with X ranges that overlap.
+    // NCSC CAF v4.0 has col1 X=49.68..158 and col2 X=65.08..200 — sharing
+    // the 65-158 range. With a wide column gap (like the prior test) the
+    // bug doesn't reproduce because build_line_fragment inserts a space.
+    // Here we use deliberately narrow column gaps.
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+
+    // Column 1: X=50, Y descending, lines like "AlphaTextOne", "AlphaTextTwo"
+    for (i, text) in ["AlphaTextOne", "AlphaTextTwo", "AlphaTextThree"]
+        .iter()
+        .enumerate()
+    {
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(50.0, 700.0 - (i as f64) * 12.0)
+            .write(text)
+            .expect("col1 write");
+    }
+    // Column 2: X=80 (X range overlaps col1's text width). Lines have
+    // distinct content to make character interleaving detectable.
+    for (i, text) in ["BetaTextOne", "BetaTextTwo", "BetaTextThree"]
+        .iter()
+        .enumerate()
+    {
+        page.text()
+            .set_font(Font::Helvetica, 10.0)
+            .at(80.0, 700.5 - (i as f64) * 12.0)
+            .write(text)
+            .expect("col2 write");
+    }
+
+    doc.add_page(page);
+    let buf = doc.to_bytes().expect("to_bytes");
+
+    let reader = PdfReader::new(Cursor::new(buf)).expect("read PDF");
+    let document = PdfDocument::new(reader);
+
+    let opts = ExtractionOptions {
+        preserve_layout: true,
+        reconstruct_paragraphs: true,
+        ..ExtractionOptions::default()
+    };
+    let mut extractor = TextExtractor::with_options(opts);
+    let extracted = extractor.extract_from_page(&document, 0).expect("extract");
+    let text = extracted.text.as_str();
+
+    // Negative: no character interleaving. "AlBetaphaTexa..." would result
+    // from sorted-by-X concatenation of "AlphaTextOne" + "BetaTextOne".
+    assert!(
+        !text.contains("AlBeta"),
+        "X-overlapping columns interleaved at character level; got:\n{}",
+        text
+    );
+    assert!(
+        !text.contains("BeAlpha"),
+        "X-overlapping columns interleaved at character level; got:\n{}",
+        text
+    );
+
+    // Positive: all 6 lines present as recognizable contiguous runs.
+    for needle in &[
+        "AlphaTextOne",
+        "AlphaTextTwo",
+        "AlphaTextThree",
+        "BetaTextOne",
+        "BetaTextTwo",
+        "BetaTextThree",
+    ] {
+        assert!(
+            text.contains(needle),
+            "missing column run {:?}; got:\n{}",
+            needle,
+            text
+        );
+    }
+}
