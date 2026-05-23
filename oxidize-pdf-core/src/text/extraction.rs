@@ -378,13 +378,16 @@ impl TextExtractor {
         // `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
         let row_ids = assign_row_ids(fragments);
 
-        // Whether the page has any tagged (mcid-carrying) fragment. For tagged
-        // PDFs (PDF/UA, ISO 32000-2 tagged), the content stream delivers text
-        // in logical reading order, so within a visual line we preserve
-        // emission order rather than sorting by X. Out-of-left-to-right glyph
-        // placement (common in typeset tagged PDFs where the PDF author lays
-        // out glyphs via non-monotone Td/Tm operators) is correctly rendered
-        // by keeping emission order.
+        // Whether this page has at least one tagged (mcid-carrying) fragment.
+        // `.any()` returns true if even one fragment has mcid=Some; the within-line
+        // tie-break then uses emission index for the whole page rather than X.
+        // See `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+        //
+        // For tagged PDFs (PDF/UA, ISO 32000-2 tagged), the content stream delivers
+        // text in logical reading order, so within a visual line we preserve emission
+        // order rather than sorting by X. Out-of-left-to-right glyph placement
+        // (common in typeset tagged PDFs where the PDF author lays out glyphs via
+        // non-monotone Td/Tm operators) is correctly rendered by keeping emission order.
         //
         // For non-tagged PDFs (all mcid=None), we retain the X-sort fallback
         // because many generators emit glyphs in arbitrary (often right-to-left
@@ -413,10 +416,10 @@ impl TextExtractor {
         });
 
         let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
-        let mut current_row_id: Option<u32> = None;
+        let mut last_seen_row_id: Option<u32> = None;
         for (rid, _idx, frag) in indexed {
-            let same_row_id = current_row_id == Some(rid);
-            let placed = same_row_id
+            let same_batch = last_seen_row_id == Some(rid);
+            let placed = same_batch
                 && lines.last_mut().is_some_and(|line| {
                     let head = line[0];
                     let tol = (head.height.min(frag.height)) * 0.2;
@@ -426,7 +429,7 @@ impl TextExtractor {
                 lines.last_mut().unwrap().push(frag);
             } else {
                 lines.push(vec![frag]);
-                current_row_id = Some(rid);
+                last_seen_row_id = Some(rid);
             }
         }
 
@@ -1788,6 +1791,10 @@ pub fn sanitize_extracted_text(text: &str) -> String {
 /// by more than `max(font_size * 0.5, 2.0)`. Superscripts (small positive
 /// deltas) and normal line descents (negative deltas) leave `row_id`
 /// unchanged. See `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+///
+/// # Invariants
+/// Returns a `Vec<u32>` with exactly `fragments.len()` elements — one
+/// row id per input fragment, in input order. Callers may safely `.zip(fragments)`.
 fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
     let mut result = Vec::with_capacity(fragments.len());
     let mut row_id: u32 = 0;
@@ -1806,6 +1813,11 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
         result.push(row_id);
         prev_y = Some(frag.y);
     }
+    debug_assert_eq!(
+        result.len(),
+        fragments.len(),
+        "assign_row_ids: output length must equal input length"
+    );
     result
 }
 
@@ -2892,6 +2904,49 @@ mod tests {
         assert_eq!(lines[1].text, "col1-bot");
         assert_eq!(lines[2].text, "col2-top");
         assert_eq!(lines[3].text, "col2-bot");
+    }
+
+    #[test]
+    fn merge_close_fragments_superscript_merges_when_reconstruct_paragraphs() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Citation superscript: body text at y=400, raised digit at y=403.5
+        // (3.5pt above baseline for 10pt font). y_tol = 0.5 * 10 = 5.0 > 3.5
+        // and x_gap = 4pt < 10*0.5 = 5pt, so the superscript must merge into
+        // the body fragment.
+        let frags = vec![
+            tf("body-text", 50.0, 400.0, 25.0, 10.0),
+            tf("1", 79.0, 403.5, 4.0, 10.0),
+        ];
+        let merged = extractor.merge_close_fragments(&frags);
+        assert_eq!(
+            merged.len(),
+            1,
+            "superscript within 5pt of baseline must merge in reconstruct path"
+        );
+        assert!(merged[0].text.contains("body-text"));
+        assert!(merged[0].text.contains("1"));
+    }
+
+    #[test]
+    fn merge_close_fragments_superscript_does_not_merge_in_legacy_path() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: false,
+            ..Default::default()
+        });
+        // Legacy path: y_tol=1.0 fixed. A 3.5pt delta must NOT merge.
+        let frags = vec![
+            tf("body-text", 50.0, 400.0, 25.0, 10.0),
+            tf("1", 79.0, 403.5, 4.0, 10.0),
+        ];
+        let merged = extractor.merge_close_fragments(&frags);
+        assert_eq!(
+            merged.len(),
+            2,
+            "3.5pt Y delta exceeds legacy 1.0pt threshold; superscript stays separate"
+        );
     }
 
     #[test]
