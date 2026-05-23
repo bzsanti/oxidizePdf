@@ -1216,7 +1216,17 @@ impl TextExtractor {
             // 0.33-0.4 * font_size from baseline) and stays below the row_id
             // threshold (also 0.5 * font_size) so adjacent rows are not collapsed.
             let y_tol = if self.options.reconstruct_paragraphs {
-                0.5 * current.font_size.min(fragment.font_size)
+                // Defend against malformed PDFs that emit text before any `Tf` font
+                // operator (font_size=0 in TextState initial). 0.5 * 0 = 0 would
+                // prevent any merge, even at identical Y. Fall back to the legacy
+                // 1.0pt threshold in that case so the path is at least as forgiving
+                // as the non-reconstruct path.
+                let base = 0.5 * current.font_size.min(fragment.font_size);
+                if base > 0.0 {
+                    base
+                } else {
+                    1.0
+                }
             } else {
                 1.0
             };
