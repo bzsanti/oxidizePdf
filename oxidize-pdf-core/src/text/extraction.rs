@@ -369,23 +369,38 @@ impl TextExtractor {
             return Vec::new();
         }
 
-        // Sort by Y descending (PDF top-down), then X ascending
-        let mut sorted: Vec<&TextFragment> = fragments.iter().collect();
-        sorted.sort_by(|a, b| b.y.total_cmp(&a.y).then(a.x.total_cmp(&b.x)));
+        // Pre-pass: assign row_id from Y-up-jumps in emission order. This
+        // disambiguates columns in multi-column layouts where a single outer
+        // BDC makes mcid uniform across visually distinct columns. See
+        // `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+        let row_ids = assign_row_ids(fragments);
+
+        // Sort by (row_id asc, y desc, x asc). row_id primary ensures that
+        // fragments from different visual rows never become candidates for
+        // the same Y-bucket group.
+        let mut indexed: Vec<(u32, &TextFragment)> =
+            row_ids.iter().copied().zip(fragments.iter()).collect();
+        indexed.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then(b.1.y.total_cmp(&a.1.y))
+                .then(a.1.x.total_cmp(&b.1.x))
+        });
 
         let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
-        for frag in sorted {
-            let placed = lines.last_mut().is_some_and(|line| {
-                let head = line[0];
-                let tol = (head.height.min(frag.height)) * 0.2;
-                // Same Y-bucket AND same mcid. `None == None` collapses to legacy
-                // single-key grouping for non-tagged PDFs (issue #269 Phase 1).
-                (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
-            });
+        let mut current_row_id: Option<u32> = None;
+        for (rid, frag) in indexed {
+            let same_row_id = current_row_id == Some(rid);
+            let placed = same_row_id
+                && lines.last_mut().is_some_and(|line| {
+                    let head = line[0];
+                    let tol = (head.height.min(frag.height)) * 0.2;
+                    (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
+                });
             if placed {
                 lines.last_mut().unwrap().push(frag);
             } else {
                 lines.push(vec![frag]);
+                current_row_id = Some(rid);
             }
         }
 
@@ -1711,8 +1726,6 @@ pub fn sanitize_extracted_text(text: &str) -> String {
 /// by more than `max(font_size * 0.5, 2.0)`. Superscripts (small positive
 /// deltas) and normal line descents (negative deltas) leave `row_id`
 /// unchanged. See `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
-// Task 2 will wire this into merge_into_lines; dead_code until then.
-#[allow(dead_code)]
 fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
     let mut result = Vec::with_capacity(fragments.len());
     let mut row_id: u32 = 0;
@@ -2733,6 +2746,60 @@ mod tests {
         let frags: Vec<TextFragment> = vec![];
         let row_ids = super::assign_row_ids(&frags);
         assert!(row_ids.is_empty(), "empty input must yield empty output");
+    }
+
+    #[test]
+    fn merge_into_lines_splits_two_columns_emitted_sequentially() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Emission order: col1.l1, col1.l2 (Y monotone down), then col2.l1
+        // (Y jumps UP by 10 > threshold 5 for font 10pt), col2.l2.
+        let input = vec![
+            tf("col1-top", 50.0, 400.0, 80.0, 10.0),
+            tf("col1-bot", 50.0, 395.0, 80.0, 10.0),
+            tf("col2-top", 200.0, 405.0, 80.0, 10.0),
+            tf("col2-bot", 200.0, 400.0, 80.0, 10.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(
+            lines.len(),
+            4,
+            "two columns at near-identical Y must split into 4 lines"
+        );
+        // row_id=0 batch first (col1), then row_id=1 (col2). Within each batch, Y desc.
+        assert_eq!(lines[0].text, "col1-top");
+        assert_eq!(lines[0].y, 400.0);
+        assert_eq!(lines[1].text, "col1-bot");
+        assert_eq!(lines[1].y, 395.0);
+        assert_eq!(lines[2].text, "col2-top");
+        assert_eq!(lines[2].y, 405.0);
+        assert_eq!(lines[3].text, "col2-bot");
+        assert_eq!(lines[3].y, 400.0);
+    }
+
+    #[test]
+    fn merge_into_lines_preserves_single_column_continuation() {
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // Single column: same Y continuation (X grows), then next line down.
+        let input = vec![
+            tf("Hello", 50.0, 400.0, 30.0, 10.0),
+            tf("world", 90.0, 400.0, 30.0, 10.0),
+            tf("next-line", 50.0, 395.0, 70.0, 10.0),
+        ];
+        let lines = extractor.merge_into_lines(&input);
+        assert_eq!(
+            lines.len(),
+            2,
+            "single column continuation must collapse to 2 lines"
+        );
+        assert!(lines[0].text.contains("Hello"));
+        assert!(lines[0].text.contains("world"));
+        assert_eq!(lines[1].text, "next-line");
     }
 
     #[test]
