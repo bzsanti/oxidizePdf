@@ -1703,6 +1703,34 @@ pub fn sanitize_extracted_text(text: &str) -> String {
     result
 }
 
+/// Assign a logical row identifier to each fragment based on Y-up-jumps in
+/// emission order. Used by `merge_into_lines` to distinguish columns in
+/// multi-column layouts where a single outer BDC scope makes mcid uniform.
+///
+/// Increments `row_id` whenever the next fragment's Y exceeds the previous
+/// by more than `max(font_size * 0.5, 2.0)`. Superscripts (small positive
+/// deltas) and normal line descents (negative deltas) leave `row_id`
+/// unchanged. See `docs/superpowers/specs/2026-05-23-issue-265-line-interleaving-design.md`.
+// Task 2 will wire this into merge_into_lines; dead_code until then.
+#[allow(dead_code)]
+fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
+    let mut result = Vec::with_capacity(fragments.len());
+    let mut row_id: u32 = 0;
+    let mut prev_y: Option<f64> = None;
+    for frag in fragments {
+        if let Some(py) = prev_y {
+            let delta = frag.y - py;
+            let threshold = (frag.font_size * 0.5).max(2.0);
+            if delta > threshold {
+                row_id += 1;
+            }
+        }
+        result.push(row_id);
+        prev_y = Some(frag.y);
+    }
+    result
+}
+
 fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
     let head = line[0];
     let mut text = String::new();
@@ -2647,6 +2675,54 @@ mod tests {
             (lines[0].width - 60.0).abs() < 0.01,
             "width must span 50->110"
         );
+    }
+
+    #[test]
+    fn assign_row_ids_monotone_y_descending_keeps_zero() {
+        let frags = vec![
+            tf("A", 50.0, 400.0, 10.0, 9.0),
+            tf("B", 50.0, 395.0, 10.0, 9.0),
+            tf("C", 50.0, 390.0, 10.0, 9.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 0, 0]);
+    }
+
+    #[test]
+    fn assign_row_ids_increments_on_y_up_jump_above_threshold() {
+        // font_size=9 → threshold = max(4.5, 2.0) = 4.5
+        // deltas: 395-400=-5, 420-395=+25 (>4.5)
+        let frags = vec![
+            tf("A", 50.0, 400.0, 10.0, 9.0),
+            tf("B", 50.0, 395.0, 10.0, 9.0),
+            tf("C", 50.0, 420.0, 10.0, 9.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 0, 1]);
+    }
+
+    #[test]
+    fn assign_row_ids_ignores_superscript_within_threshold() {
+        // font_size=9 → threshold 4.5. delta 2.5 must NOT trigger.
+        let frags = vec![
+            tf("A", 50.0, 400.0, 10.0, 9.0),
+            tf("^2", 60.0, 402.5, 5.0, 9.0),
+            tf("B", 65.0, 395.0, 10.0, 9.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 0, 0]);
+    }
+
+    #[test]
+    fn assign_row_ids_floor_2pt_for_small_fonts() {
+        // font_size=3 → font_size*0.5 = 1.5; floor lifts threshold to 2.0
+        // delta = +2.5 > 2.0 must trigger.
+        let frags = vec![
+            tf("A", 50.0, 100.0, 10.0, 3.0),
+            tf("B", 50.0, 102.5, 10.0, 3.0),
+        ];
+        let row_ids = super::assign_row_ids(&frags);
+        assert_eq!(row_ids, vec![0u32, 1]);
     }
 
     #[test]
