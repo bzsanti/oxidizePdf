@@ -1201,9 +1201,27 @@ impl TextExtractor {
             let y_diff = (current.y - fragment.y).abs();
             let x_gap = fragment.x - (current.x + current.width);
 
-            // Merge if on same line and gap is less than a character width
-            // Use 0.5 * font_size as threshold - this catches most artificial spacing
-            let should_merge = y_diff < 1.0  // Same line (very tight tolerance)
+            // Y-tolerance for same-line merging.
+            //
+            // Legacy path (`reconstruct_paragraphs=false`): fragments arrive
+            // after `sort_and_merge_fragments` which quantizes Y into 10pt bands.
+            // All same-band fragments share nearly identical Y, so 1.0pt is enough.
+            //
+            // Reconstruct-paragraphs path (`reconstruct_paragraphs=true`): fragments
+            // arrive in emission order. Inline superscripts (e.g. citation numbers
+            // raised via `Td` operators) have Y deltas of 3-4pt for 10pt body text.
+            // Without a wider tolerance, each superscript becomes its own fragment
+            // → line proliferation (issue #265 follow-up). Use 0.5 * font_size,
+            // which captures typical superscript/subscript offsets (typically
+            // 0.33-0.4 * font_size from baseline) and stays below the row_id
+            // threshold (also 0.5 * font_size) so adjacent rows are not collapsed.
+            let y_tol = if self.options.reconstruct_paragraphs {
+                0.5 * current.font_size.min(fragment.font_size)
+            } else {
+                1.0
+            };
+
+            let should_merge = y_diff < y_tol
                 && x_gap >= 0.0  // Fragment is to the right
                 && x_gap < fragment.font_size * 0.5 // Gap less than 50% of font size
                 && current.mcid == fragment.mcid;
