@@ -1720,6 +1720,9 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
     for frag in fragments {
         if let Some(py) = prev_y {
             let delta = frag.y - py;
+            // Threshold anchored to the arriving fragment's font_size; for the
+            // symmetric same-font case (body→body, same font) this is equivalent
+            // to anchoring to the previous fragment.
             let threshold = (frag.font_size * 0.5).max(2.0);
             if delta > threshold {
                 row_id += 1;
@@ -2723,6 +2726,13 @@ mod tests {
         ];
         let row_ids = super::assign_row_ids(&frags);
         assert_eq!(row_ids, vec![0u32, 1]);
+    }
+
+    #[test]
+    fn assign_row_ids_empty_slice_returns_empty() {
+        let frags: Vec<TextFragment> = vec![];
+        let row_ids = super::assign_row_ids(&frags);
+        assert!(row_ids.is_empty(), "empty input must yield empty output");
     }
 
     #[test]
