@@ -268,6 +268,13 @@ impl CMap {
                         }
                     }
                 }
+                // Top-level fall-through covers PostScript constructs the
+                // state machine deliberately ignores: the integer operand
+                // count before `begin*` keywords (`14 beginbfchar`), the
+                // `def` / `dict` / `findresource` / `begincmap` / `endcmap`
+                // boilerplate, and any unrecognised name token. Dropping
+                // these keeps the parser robust against producer-specific
+                // headers without coupling the state machine to them.
                 _ => i += 1,
             }
         }
@@ -458,11 +465,25 @@ fn tokenize_cmap(content: &str) -> Vec<Token> {
             continue;
         }
 
-        // Hex string `<...>`
+        // Hex string `<...>`. Bail out resiliently if the closing `>` is
+        // absent OR if a stray `<` appears before it (meaning the
+        // original `<` was unterminated and we are about to greedily
+        // consume the *next* valid hex string instead). Skipping just
+        // the lone byte preserves any following well-formed mappings.
         if b == b'<' {
             let start = i + 1;
-            if let Some(rel) = bytes[start..].iter().position(|&c| c == b'>') {
-                let end = start + rel;
+            let mut end_pos: Option<usize> = None;
+            for (off, &c) in bytes[start..].iter().enumerate() {
+                if c == b'>' {
+                    end_pos = Some(start + off);
+                    break;
+                }
+                if c == b'<' {
+                    // Another `<` arrived before `>` — original is malformed.
+                    break;
+                }
+            }
+            if let Some(end) = end_pos {
                 let inner: String = bytes[start..end].iter().map(|&c| c as char).collect();
                 if let Some(decoded) = parse_hex(&inner) {
                     tokens.push(Token::Hex(decoded));
@@ -470,8 +491,8 @@ fn tokenize_cmap(content: &str) -> Vec<Token> {
                 i = end + 1;
                 continue;
             } else {
-                // Malformed: unterminated hex string. Stop.
-                break;
+                i += 1;
+                continue;
             }
         }
 
@@ -1109,5 +1130,61 @@ endcmap\n";
         assert_eq!(cmap.map(&[0x00, 0x02]), Some(vec![0x00, 0x42]));
         assert_eq!(cmap.map(&[0x00, 0x10]), Some(vec![0x00, 0x50]));
         assert_eq!(cmap.map(&[0x00, 0x12]), Some(vec![0x00, 0x52]));
+    }
+
+    /// `bfrange` array form with an empty `[]` is legal but degenerate:
+    /// it should produce zero entries and must not panic. This locks in
+    /// the early-exit behaviour of the `for dst in dsts` body when the
+    /// array vector is empty.
+    #[test]
+    fn bfrange_array_form_with_empty_array_emits_zero_mappings_no_panic() {
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+1 beginbfrange\n\
+<0010> <0012> []\n\
+endbfrange\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse must not panic on empty array");
+        assert_eq!(
+            cmap.mappings.len(),
+            0,
+            "empty bfrange array must yield zero mappings; got {:?}",
+            cmap.mappings
+        );
+        assert_eq!(cmap.map(&[0x00, 0x10]), None);
+    }
+
+    /// Unterminated hex string (`<00FF` without `>`) used to silently
+    /// truncate the entire token stream. The resilience fix keeps the
+    /// scanner advancing past the lone `<` so that subsequent valid
+    /// mappings still land in the CMap.
+    #[test]
+    fn unterminated_hex_string_does_not_discard_following_mappings() {
+        // The `<00FF` (no closing `>`) appears between two valid mappings.
+        // Pre-fix the entire trailing `<0042><0043> endbfchar endcmap`
+        // would have been silently dropped; post-fix only the lone `<` is
+        // skipped and the second mapping survives.
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+2 beginbfchar\n\
+<0041><0061>\n\
+<00FF\n\
+<0042><0062>\n\
+endbfchar\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        // At least the two well-formed mappings must survive.
+        assert!(
+            cmap.single_mappings.contains_key(&vec![0x00, 0x41]),
+            "first valid mapping (<0041>→<0061>) must survive unterminated hex"
+        );
+        assert!(
+            cmap.single_mappings.contains_key(&vec![0x00, 0x42]),
+            "second valid mapping after the malformed `<00FF` must survive"
+        );
+        assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
+        assert_eq!(cmap.map(&[0x00, 0x42]), Some(vec![0x00, 0x62]));
     }
 }

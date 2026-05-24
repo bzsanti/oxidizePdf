@@ -234,6 +234,50 @@ fn tj_wide_kerning_inside_actualtext_does_not_inflate_pending_run() {
     );
 }
 
+/// Custom `tj_space_threshold` values must be honoured. A very high
+/// threshold (1.0 = 1000 milli-em, wider than any real font's space
+/// glyph) must suppress the implicit space even for the `-300` kern
+/// that the default threshold accepts. Conversely, a very low threshold
+/// (0.01 = 10 milli-em) must emit spaces for kerns that the default
+/// (0.20) would ignore. This guards the public field semantics.
+#[test]
+fn tj_space_threshold_custom_value_affects_emission() {
+    let content = b"BT\n/F1 12 Tf\n100 700 Td\n[(Hello)-300(World)] TJ\nET\n";
+
+    // High threshold: -300 kern (3.6 user-units) is below 1.0 * 12 = 12.0.
+    // No implicit space.
+    let pdf = build_pdf_with_content_stream(content);
+    let reader = PdfReader::new(Cursor::new(pdf)).expect("parse");
+    let document = PdfDocument::new(reader);
+    let mut high = TextExtractor::with_options(ExtractionOptions {
+        tj_space_threshold: 1.0,
+        ..ExtractionOptions::default()
+    });
+    let extracted_high = high.extract_from_page(&document, 0).expect("extract");
+    assert!(
+        extracted_high.text.contains("HelloWorld"),
+        "tj_space_threshold=1.0 must suppress the implicit space; got {:?}",
+        extracted_high.text
+    );
+
+    // Low threshold: even the small `-50` intra-letter kern (0.6 user-units)
+    // is above 0.01 * 12 = 0.12, so spaces appear between letters.
+    let content_kerned = b"BT\n/F1 12 Tf\n100 700 Td\n[(W)-50(o)-50(r)-50(d)] TJ\nET\n";
+    let pdf = build_pdf_with_content_stream(content_kerned);
+    let reader = PdfReader::new(Cursor::new(pdf)).expect("parse");
+    let document = PdfDocument::new(reader);
+    let mut low = TextExtractor::with_options(ExtractionOptions {
+        tj_space_threshold: 0.01,
+        ..ExtractionOptions::default()
+    });
+    let extracted_low = low.extract_from_page(&document, 0).expect("extract");
+    assert!(
+        extracted_low.text.contains("W o r d"),
+        "tj_space_threshold=0.01 must split intra-letter kerning; got {:?}",
+        extracted_low.text
+    );
+}
+
 /// Real corpus assertion. The ATLAS Higgs paper (arXiv 1207.7214) emits
 /// the title as a single TJ with kerning offsets between every glyph,
 /// no literal spaces. Before the fix this comes out as
