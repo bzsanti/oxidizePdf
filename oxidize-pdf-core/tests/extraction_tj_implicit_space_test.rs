@@ -223,12 +223,12 @@ fn tj_wide_kerning_inside_actualtext_does_not_inflate_pending_run() {
         .map(|f| f.text.as_str())
         .collect();
     assert!(
-        texts.iter().any(|t| *t == "fi"),
+        texts.contains(&"fi"),
         "ActualText override 'fi' must be emitted as a fragment; got {:?}",
         texts
     );
     assert!(
-        !texts.iter().any(|t| *t == " "),
+        !texts.contains(&" "),
         "no synthetic space fragment may leak inside an ActualText scope; got {:?}",
         texts
     );
