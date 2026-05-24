@@ -75,6 +75,14 @@ pub struct CMap {
     pub mappings: Vec<CMapEntry>,
     /// Cached single mappings for fast lookup
     single_mappings: HashMap<Vec<u8>, Vec<u8>>,
+    /// Predefined parent CMap inherited via `usecmap`. When set to
+    /// `"Identity-H"` or `"Identity-V"`, `map()` falls back to
+    /// returning the input code as-is for any code the child CMap
+    /// did not map explicitly, and `is_valid_code()` accepts the full
+    /// 2-byte (Identity-H) or 1-byte (Identity-V) space. External
+    /// CMap chaining (non-predefined parents) is recorded for
+    /// observability but does not enable any fallback.
+    pub inherited_predefined: Option<String>,
 }
 
 impl Default for CMap {
@@ -93,6 +101,7 @@ impl CMap {
             codespace_ranges: Vec::new(),
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
+            inherited_predefined: None,
         }
     }
 
@@ -108,6 +117,7 @@ impl CMap {
             }],
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
+            inherited_predefined: None,
         }
     }
 
@@ -123,6 +133,7 @@ impl CMap {
             }],
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
+            inherited_predefined: None,
         }
     }
 
@@ -155,6 +166,26 @@ impl CMap {
                     } else {
                         i += 1;
                     }
+                }
+                // `usecmap` directive: the immediately preceding Name token
+                // (e.g. `/Identity-H usecmap`) names the parent CMap whose
+                // mappings the child inherits. For the two predefined
+                // Identity CMaps the codebase can synthesise (Identity-H,
+                // Identity-V), this enables an identity fallback in `map()`
+                // for codes the child doesn't explicitly cover. External
+                // CMap names are recorded but produce no fallback (a real
+                // chain resolver would need access to the document's CMap
+                // resources, which this parser cannot reach).
+                Token::Keyword(k) if k == "usecmap" => {
+                    let mut j = i;
+                    while j > 0 {
+                        j -= 1;
+                        if let Token::Name(parent) = &tokens[j] {
+                            cmap.inherited_predefined = Some(parent.clone());
+                            break;
+                        }
+                    }
+                    i += 1;
                 }
                 Token::Name(n) if n == "WMode" => {
                     if let Some(Token::Integer(w)) = tokens.get(i + 1) {
@@ -331,6 +362,15 @@ impl CMap {
             }
         }
 
+        // Identity fallback inherited via `usecmap`. If the child CMap
+        // didn't map this code explicitly and the parent is Identity-H
+        // or Identity-V (both 2-byte CID encodings), pass the code
+        // through unchanged. The downstream `to_unicode` then interprets
+        // the bytes as UTF-16BE.
+        if code.len() == 2 && self.identity_inherited() {
+            return Some(code.to_vec());
+        }
+
         None
     }
 
@@ -341,7 +381,31 @@ impl CMap {
                 return true;
             }
         }
+        // No explicit codespace covers this code, but `usecmap`
+        // inheritance from a predefined Identity CMap means the full
+        // 2-byte space is valid.
+        if code.len() == 2
+            && (self.inherited_predefined_is("Identity-H")
+                || self.inherited_predefined_is("Identity-V"))
+        {
+            return true;
+        }
         false
+    }
+
+    /// `true` iff this CMap inherits identity-mapping semantics from a
+    /// predefined parent via `usecmap`.
+    fn identity_inherited(&self) -> bool {
+        self.inherited_predefined_is("Identity-H") || self.inherited_predefined_is("Identity-V")
+    }
+
+    /// `true` iff the inherited parent (set by `usecmap`) matches the
+    /// given predefined CMap name exactly.
+    fn inherited_predefined_is(&self, name: &str) -> bool {
+        self.inherited_predefined
+            .as_deref()
+            .map(|p| p == name)
+            .unwrap_or(false)
     }
 
     /// Convert mapped value to Unicode string
@@ -620,6 +684,15 @@ fn tokenize_cmap(content: &str) -> Vec<Token> {
         if i > start {
             let kw: String = bytes[start..i].iter().map(|&c| c as char).collect();
             tokens.push(Token::Keyword(kw));
+        } else {
+            // The byte at `i` is a stray close-delimiter that no earlier
+            // branch consumed: a lone `>` (not `>>`), or an unmatched `]`
+            // or `)`. The keyword loop above `break`s on it immediately
+            // without advancing, so we must skip it explicitly to
+            // guarantee forward progress. Without this, the tokeniser
+            // spins forever on such a byte (regression seen on
+            // pdf.js corpus issue11651.pdf).
+            i += 1;
         }
     }
 
@@ -1153,6 +1226,113 @@ endcmap\n";
             cmap.mappings
         );
         assert_eq!(cmap.map(&[0x00, 0x10]), None);
+    }
+
+    /// Regression for an infinite loop introduced by the token-based
+    /// rewrite: a stray close-delimiter (`>` that is not part of `>>`,
+    /// or a lone `]` / `)`) reached the keyword branch of the tokeniser,
+    /// which `break`s immediately without advancing the cursor. The
+    /// scanner then spun forever on that byte. issue11651.pdf from the
+    /// pdf.js corpus contained exactly such a byte in a CMap-adjacent
+    /// stream and hung text extraction. The tokeniser must always make
+    /// forward progress; this test must complete (not hang) and parse
+    /// the surrounding valid mappings.
+    #[test]
+    fn stray_close_delimiters_do_not_hang_tokenizer() {
+        // A lone `>`, `]`, and `)` interspersed with valid content.
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+> ] )\n\
+2 beginbfchar\n\
+<0041><0061>\n\
+<0042><0062>\n\
+endbfchar\n\
+endcmap\n";
+
+        // The assertion that matters is that parse() RETURNS at all.
+        let cmap = CMap::parse(cmap_data).expect("parse must terminate, not hang");
+        assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
+        assert_eq!(cmap.map(&[0x00, 0x42]), Some(vec![0x00, 0x62]));
+    }
+
+    /// A CMap consisting solely of a stray `>` must terminate (empty CMap).
+    #[test]
+    fn lone_gt_delimiter_terminates() {
+        let cmap = CMap::parse(b">").expect("must terminate");
+        assert!(cmap.mappings.is_empty());
+    }
+
+    /// `usecmap` directive must inherit the codespace + identity fallback
+    /// from a predefined parent (`Identity-H` / `Identity-V`). Codes
+    /// that the child CMap doesn't explicitly map should pass through
+    /// as their UTF-16BE code units (Identity behaviour), while
+    /// explicit mappings still override.
+    #[test]
+    fn usecmap_identity_h_inheritance_provides_fallback() {
+        let cmap_data = b"begincmap\n\
+/CMapName /CustomChild def\n\
+/CMapType 2 def\n\
+/Identity-H usecmap\n\
+1 beginbfchar\n\
+<0041><0061>\n\
+endbfchar\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+
+        // Explicit override survives.
+        assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
+        assert_eq!(cmap.to_unicode(&[0x00, 0x61]).as_deref(), Some("a"));
+
+        // Unmapped code falls back to identity: <0042> → CID <0042>
+        // → ToUnicode interprets as UTF-16BE 'B'.
+        let mapped = cmap
+            .map(&[0x00, 0x42])
+            .expect("identity fallback must map <0042>");
+        assert_eq!(mapped, vec![0x00, 0x42]);
+        assert_eq!(cmap.to_unicode(&mapped).as_deref(), Some("B"));
+
+        // Inherited codespace covers the full 2-byte range even though
+        // no explicit `begincodespacerange` appears in the child CMap.
+        assert!(cmap.is_valid_code(&[0x12, 0x34]));
+    }
+
+    /// `usecmap Identity-V` mirrors Identity-H semantics for vertical
+    /// writing-mode CMaps. Same fallback behaviour.
+    #[test]
+    fn usecmap_identity_v_inheritance_provides_fallback() {
+        let cmap_data = b"begincmap\n\
+/Identity-V usecmap\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+
+        // No explicit mappings, but identity fallback covers everything.
+        assert_eq!(cmap.map(&[0x4E, 0x2D]), Some(vec![0x4E, 0x2D]));
+        assert_eq!(
+            cmap.to_unicode(&[0x4E, 0x2D]).as_deref(),
+            Some("中"),
+            "identity fallback should let CJK code <4E2D> decode to U+4E2D"
+        );
+    }
+
+    /// A non-Identity parent (`/Foo usecmap`) must NOT enable the
+    /// identity fallback. This locks in that the inheritance is only
+    /// honoured for the two predefined Identity CMaps the codebase
+    /// can synthesise internally — external CMap chaining is out of
+    /// scope and must remain absent (no resolver yet).
+    #[test]
+    fn usecmap_non_identity_parent_does_not_enable_identity_fallback() {
+        let cmap_data = b"begincmap\n\
+/SomeOtherCMap usecmap\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        assert_eq!(
+            cmap.map(&[0x00, 0x41]),
+            None,
+            "non-Identity usecmap must not provide identity fallback"
+        );
     }
 
     /// Unterminated hex string (`<00FF` without `>`) used to silently
