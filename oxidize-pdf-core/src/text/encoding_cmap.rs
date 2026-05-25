@@ -116,10 +116,67 @@ impl EncodingCMap {
                         }
                     }
                 }
+                Token::Keyword(k) if k == "beginnotdefchar" => {
+                    i += 1;
+                    while i < tokens.len() {
+                        match &tokens[i] {
+                            Token::Keyword(k) if k == "endnotdefchar" => {
+                                i += 1;
+                                break;
+                            }
+                            Token::Hex(code) => {
+                                if let Some(Token::Integer(cid)) = tokens.get(i + 1) {
+                                    cmap.notdef_ranges.push(CidRange {
+                                        lo: code.clone(),
+                                        hi: code.clone(),
+                                        base_cid: *cid as u16,
+                                    });
+                                    i += 2;
+                                } else {
+                                    i += 1;
+                                }
+                            }
+                            _ => i += 1,
+                        }
+                    }
+                }
+                Token::Keyword(k) if k == "beginnotdefrange" => {
+                    i += 1;
+                    while i < tokens.len() {
+                        match &tokens[i] {
+                            Token::Keyword(k) if k == "endnotdefrange" => {
+                                i += 1;
+                                break;
+                            }
+                            Token::Hex(lo) => match (tokens.get(i + 1), tokens.get(i + 2)) {
+                                (Some(Token::Hex(hi)), Some(Token::Integer(cid))) => {
+                                    cmap.notdef_ranges.push(CidRange {
+                                        lo: lo.clone(),
+                                        hi: hi.clone(),
+                                        base_cid: *cid as u16,
+                                    });
+                                    i += 3;
+                                }
+                                _ => i += 1,
+                            },
+                            _ => i += 1,
+                        }
+                    }
+                }
                 _ => i += 1,
             }
         }
         Ok(cmap)
+    }
+
+    /// Resolve a code that falls in a notdef range to its notdef CID.
+    pub fn map_notdef(&self, code: &[u8]) -> Option<u16> {
+        for r in &self.notdef_ranges {
+            if code.len() == r.lo.len() && code >= &r.lo[..] && code <= &r.hi[..] {
+                return Some(r.base_cid);
+            }
+        }
+        None
     }
 
     /// Determine the byte width of the code starting at `pos` by matching the
@@ -260,5 +317,30 @@ endcmap";
             Some(202),
             "range still applies elsewhere"
         );
+    }
+
+    #[test]
+    fn notdefrange_maps_to_notdef_cid() {
+        let data = b"begincmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 beginnotdefrange <0000> <001F> 0 endnotdefrange\n\
+endcmap";
+        let cmap = EncodingCMap::parse(data).expect("parse");
+        assert_eq!(cmap.map_notdef(&[0x00, 0x10]), Some(0));
+        assert_eq!(cmap.map_notdef(&[0x00, 0x41]), None);
+    }
+
+    #[test]
+    fn adversarial_input_terminates_without_hang() {
+        // Stray close delimiters and dangling ranges must not loop forever.
+        for data in [
+            b">>>".as_slice(),
+            b"begincmap\n1 begincidrange <0041>".as_slice(),
+            b"]]] endcidchar beginnotdefrange".as_slice(),
+            b"beginnotdefchar <0041>".as_slice(),
+            b"begincidchar <0041> 5 begincidrange <00".as_slice(),
+        ] {
+            let _ = EncodingCMap::parse(data).expect("must terminate, not hang");
+        }
     }
 }
