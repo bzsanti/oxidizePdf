@@ -231,6 +231,40 @@ fn be_offset(code: &[u8], lo: &[u8]) -> u16 {
     (to_u64(code).saturating_sub(to_u64(lo)) & 0xFFFF) as u16
 }
 
+/// The resolved, non-Identity encoding of a Type0 font, as carried on `FontInfo`.
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub(crate) enum CidEncoding {
+    /// `Uni*-UCS2-*` / `Uni*-UTF16-*`: the code IS a UTF-16BE value.
+    Utf16Be,
+    /// An embedded stream CMap or a vendored predefined CMap (code → CID).
+    Cmap(EncodingCMap),
+}
+
+/// Decode a byte string as UTF-16BE, replacing malformed units with U+FFFD.
+#[allow(dead_code)]
+pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
+    let units: Vec<u16> = bytes
+        .chunks(2)
+        .filter(|c| c.len() == 2)
+        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        .collect();
+    char::decode_utf16(units)
+        .map(|r| r.unwrap_or('\u{FFFD}'))
+        .collect()
+}
+
+/// Resolve a predefined `/Encoding` name. `Uni*-UCS2-*`/`Uni*-UTF16-*` are
+/// algorithmic UTF-16BE. Vendored multibyte names are added in Task 7.
+/// Unknown names return `None` (caller falls back to current behavior).
+#[allow(dead_code)]
+pub(crate) fn resolve_predefined(name: &str) -> Option<CidEncoding> {
+    if name.starts_with("Uni") && (name.contains("UCS2") || name.contains("UTF16")) {
+        return Some(CidEncoding::Utf16Be);
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,6 +377,34 @@ endcmap";
         let cmap = EncodingCMap::parse(data).expect("parse");
         assert_eq!(cmap.map_notdef(&[0x00, 0x41]), Some(7));
         assert_eq!(cmap.map_notdef(&[0x00, 0x42]), None);
+    }
+
+    #[test]
+    fn utf16be_decodes_bmp_and_surrogates() {
+        // U+4E2D (中) then U+1F600 (😀, surrogate pair D83D DE00).
+        let bytes = [0x4E, 0x2D, 0xD8, 0x3D, 0xDE, 0x00];
+        assert_eq!(decode_utf16be(&bytes), "中😀");
+    }
+
+    #[test]
+    fn predefined_uni_families_resolve_to_utf16be() {
+        assert!(matches!(
+            resolve_predefined("UniGB-UCS2-H"),
+            Some(CidEncoding::Utf16Be)
+        ));
+        assert!(matches!(
+            resolve_predefined("UniJIS-UTF16-H"),
+            Some(CidEncoding::Utf16Be)
+        ));
+        assert!(matches!(
+            resolve_predefined("UniKS-UTF16-H"),
+            Some(CidEncoding::Utf16Be)
+        ));
+        assert!(matches!(
+            resolve_predefined("UniCNS-UCS2-H"),
+            Some(CidEncoding::Utf16Be)
+        ));
+        assert!(resolve_predefined("WhateverUnknown-H").is_none());
     }
 
     #[test]
