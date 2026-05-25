@@ -154,14 +154,16 @@ impl EncodingCMap {
                 && code <= &r.hi[..]
             {
                 let offset = be_offset(code, &r.lo);
-                return Some(r.base_cid.wrapping_add(offset));
+                return r.base_cid.checked_add(offset);
             }
         }
         None
     }
 }
 
-/// Big-endian numeric distance `code - lo`, saturating into u16.
+/// Big-endian numeric distance `code - lo`, truncated to the low 16 bits.
+/// For well-formed CID ranges (codes ≤ 2 bytes) the distance is ≤ 0xFFFF,
+/// so the mask is a no-op.
 #[allow(dead_code)]
 fn be_offset(code: &[u8], lo: &[u8]) -> u16 {
     let to_u64 = |b: &[u8]| b.iter().fold(0u64, |acc, &x| (acc << 8) | x as u64);
@@ -237,5 +239,26 @@ endcmap";
         assert_eq!(cmap.codespace_ranges.len(), 2);
         assert_eq!(cmap.code_len_at(&[0x81, 0x40], 0), 2);
         assert_eq!(cmap.usecmap_parent.as_deref(), Some("Foo-Base"));
+    }
+
+    #[test]
+    fn single_cid_takes_precedence_over_overlapping_range() {
+        // A cidchar entry whose code falls inside a cidrange must win.
+        let data = b"begincmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 begincidrange <0060> <0070> 200 endcidrange\n\
+1 begincidchar <0061> 999 endcidchar\n\
+endcmap";
+        let cmap = EncodingCMap::parse(data).expect("parse");
+        assert_eq!(
+            cmap.map_code_to_cid(&[0x00, 0x61]),
+            Some(999),
+            "single_cid wins over range"
+        );
+        assert_eq!(
+            cmap.map_code_to_cid(&[0x00, 0x62]),
+            Some(202),
+            "range still applies elsewhere"
+        );
     }
 }
