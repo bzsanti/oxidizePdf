@@ -62,7 +62,9 @@ pub struct FontInfo {
     pub cid_ordering: Option<String>,
     /// Font metrics (widths, kerning)
     pub metrics: FontMetrics,
-    /// Resolved non-Identity CID encoding (code→CID), if any.
+    /// Resolved non-Identity CID encoding (code→CID), if any. Only consulted in
+    /// the Type0 decode path in `decode_text_with_font`; ignored for other font
+    /// types (it may be populated for them but is never read).
     pub cid_encoding: Option<crate::text::encoding_cmap::CidEncoding>,
 }
 
@@ -567,30 +569,30 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
             }
 
             // Non-Identity encoding: map code→CID (or UTF-16BE) before CID→Unicode.
+            let ordering = descendant
+                .cid_ordering
+                .as_deref()
+                .or(font_info.cid_ordering.as_deref());
+
             match &font_info.cid_encoding {
                 Some(crate::text::encoding_cmap::CidEncoding::Utf16Be) => {
                     return Ok(crate::text::encoding_cmap::decode_utf16be(text_bytes));
                 }
                 Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc)) => {
-                    let ordering = descendant
-                        .cid_ordering
-                        .as_deref()
-                        .or(font_info.cid_ordering.as_deref());
                     if let Some(coll) =
                         ordering.and_then(crate::text::cid_to_unicode::CidCollection::from_ordering)
                     {
                         return Ok(decode_via_encoding_cmap(text_bytes, enc, &coll));
                     }
+                    // Non-Identity encoding but the CID collection is unknown
+                    // (malformed PDF without CIDSystemInfo/Ordering). Fall through
+                    // to the Identity CID-table path below as best-effort.
                 }
                 None => {}
             }
 
             // Try CID→Unicode mapping using CIDSystemInfo Ordering
             // This handles fonts with Identity-H encoding and no ToUnicode CMap
-            let ordering = descendant
-                .cid_ordering
-                .as_deref()
-                .or(font_info.cid_ordering.as_deref());
             if let Some(ordering) = ordering {
                 if let Some(collection) =
                     crate::text::cid_to_unicode::CidCollection::from_ordering(ordering)
@@ -971,6 +973,38 @@ mod tests {
 
         let out = decode_text_with_font(&[0x00, 0x41], &parent).unwrap();
         assert_eq!(out, expected.to_string());
+    }
+
+    #[test]
+    fn type0_utf16be_encoding_decodes_through_dispatch() {
+        use crate::text::encoding_cmap::CidEncoding;
+        let descendant = FontInfo {
+            name: "Desc".into(),
+            font_type: "CIDFontType2".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            cid_ordering: Some("GB1".into()),
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let parent = FontInfo {
+            name: "Type0".into(),
+            font_type: "Type0".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: Some(Box::new(descendant)),
+            cid_to_gid_map: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: Some(CidEncoding::Utf16Be),
+        };
+        // UTF-16BE code 0x4E2D ('中') must decode directly, ignoring the ordering.
+        let out = decode_text_with_font(&[0x4E, 0x2D], &parent).unwrap();
+        assert_eq!(out, "中");
     }
 
     #[test]
