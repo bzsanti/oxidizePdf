@@ -242,21 +242,25 @@ pub(crate) enum CidEncoding {
 }
 
 /// Decode a byte string as UTF-16BE, replacing malformed units with U+FFFD.
+/// A trailing odd byte is dropped (no complete code unit can be formed from it).
 #[allow(dead_code)]
 pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
-    let units: Vec<u16> = bytes
-        .chunks(2)
-        .filter(|c| c.len() == 2)
-        .map(|c| u16::from_be_bytes([c[0], c[1]]))
-        .collect();
-    char::decode_utf16(units)
-        .map(|r| r.unwrap_or('\u{FFFD}'))
-        .collect()
+    char::decode_utf16(
+        bytes
+            .chunks(2)
+            .filter(|c| c.len() == 2)
+            .map(|c| u16::from_be_bytes([c[0], c[1]])),
+    )
+    .map(|r| r.unwrap_or('\u{FFFD}'))
+    .collect()
 }
 
 /// Resolve a predefined `/Encoding` name. `Uni*-UCS2-*`/`Uni*-UTF16-*` are
 /// algorithmic UTF-16BE. Vendored multibyte names are added in Task 7.
 /// Unknown names return `None` (caller falls back to current behavior).
+///
+/// Note: the `starts_with("Uni")` check is case-sensitive per PDF spec
+/// (predefined CMap names are case-sensitive, ISO 32000-1 §9.7.5.2).
 #[allow(dead_code)]
 pub(crate) fn resolve_predefined(name: &str) -> Option<CidEncoding> {
     if name.starts_with("Uni") && (name.contains("UCS2") || name.contains("UTF16")) {
@@ -384,6 +388,13 @@ endcmap";
         // U+4E2D (中) then U+1F600 (😀, surrogate pair D83D DE00).
         let bytes = [0x4E, 0x2D, 0xD8, 0x3D, 0xDE, 0x00];
         assert_eq!(decode_utf16be(&bytes), "中😀");
+    }
+
+    #[test]
+    fn utf16be_drops_trailing_odd_byte() {
+        // U+4E2D (中) followed by a lone orphan byte that must be dropped.
+        let bytes = [0x4E, 0x2D, 0xFF];
+        assert_eq!(decode_utf16be(&bytes), "中");
     }
 
     #[test]
