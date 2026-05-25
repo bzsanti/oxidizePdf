@@ -402,6 +402,7 @@ impl CMap {
             "Adobe-GB1-UCS2" => Some("GB1"),
             "Adobe-CNS1-UCS2" => Some("CNS1"),
             "Adobe-Japan1-UCS2" => Some("Japan1"),
+            // `Adobe-KR-UCS2` is an alias for the Korea1 collection used by some producers.
             "Adobe-Korea1-UCS2" | "Adobe-KR-UCS2" => Some("Korea1"),
             _ => None,
         }

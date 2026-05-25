@@ -6,6 +6,7 @@
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
+use crate::text::cid_to_unicode::CidCollection;
 use crate::text::cmap::CMap;
 use crate::text::extraction::TextExtractor;
 use std::collections::HashMap;
@@ -602,7 +603,6 @@ fn decode_with_cid_table(
 
 /// Decode text using a CMap — free function (no allocations).
 fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
-    use crate::text::cid_to_unicode::CidCollection;
     let inherited = cmap
         .inherited_ordering()
         .and_then(CidCollection::from_ordering);
@@ -628,15 +628,20 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
         if !decoded {
             // External usecmap to a predefined Adobe `*-UCS2` parent: treat an
             // unmapped 2-byte code as a CID and resolve via the inherited
-            // collection. Explicit child bf* mappings already won above.
+            // collection. Explicit child bf* mappings already won above. Advance
+            // a full 2 bytes regardless of lookup success to keep the 2-byte
+            // stride (matching decode_with_cid_table); emit U+FFFD for an
+            // unmapped non-zero CID, nothing for CID 0.
             if let Some(coll) = inherited {
                 if text_bytes.len() - i >= 2 {
                     let cid = u16::from_be_bytes([text_bytes[i], text_bytes[i + 1]]);
-                    if let Some(ch) = coll.cid_to_unicode(cid) {
-                        result.push(ch);
-                        i += 2;
-                        continue;
+                    match coll.cid_to_unicode(cid) {
+                        Some(ch) => result.push(ch),
+                        None if cid > 0 => result.push('\u{FFFD}'),
+                        None => {}
                     }
+                    i += 2;
+                    continue;
                 }
             }
             i += 1;
@@ -850,6 +855,29 @@ mod tests {
         assert_eq!(font_info.name, "Helvetica");
         assert_eq!(font_info.font_type, "Type1");
         assert_eq!(font_info.encoding, Some("WinAnsiEncoding".to_string()));
+    }
+
+    #[test]
+    fn explicit_bfchar_overrides_usecmap_cid_fallback() {
+        use crate::text::cmap::CMap;
+        let with_override = CMap::parse(
+            b"begincmap\n/Adobe-Korea1-UCS2 usecmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 beginbfchar <0041> <AC00> endbfchar\nendcmap",
+        )
+        .expect("parse with_override");
+        let without = CMap::parse(
+            b"begincmap\n/Adobe-Korea1-UCS2 usecmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\nendcmap",
+        )
+        .expect("parse without");
+        let got = decode_with_cmap(&[0x00, 0x41], &with_override).unwrap();
+        let fallback = decode_with_cmap(&[0x00, 0x41], &without).unwrap();
+        assert_eq!(got, "\u{AC00}", "explicit bfchar must win");
+        assert_ne!(
+            got, fallback,
+            "explicit mapping must override the CID-table fallback"
+        );
     }
 }
 
