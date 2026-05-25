@@ -172,7 +172,11 @@ impl EncodingCMap {
     /// Resolve a code that falls in a notdef range to its notdef CID.
     pub fn map_notdef(&self, code: &[u8]) -> Option<u16> {
         for r in &self.notdef_ranges {
-            if code.len() == r.lo.len() && code >= &r.lo[..] && code <= &r.hi[..] {
+            if code.len() == r.lo.len()
+                && code.len() == r.hi.len()
+                && code >= &r.lo[..]
+                && code <= &r.hi[..]
+            {
                 return Some(r.base_cid);
             }
         }
@@ -328,6 +332,17 @@ endcmap";
         let cmap = EncodingCMap::parse(data).expect("parse");
         assert_eq!(cmap.map_notdef(&[0x00, 0x10]), Some(0));
         assert_eq!(cmap.map_notdef(&[0x00, 0x41]), None);
+    }
+
+    #[test]
+    fn notdefchar_maps_to_notdef_cid() {
+        let data = b"begincmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 beginnotdefchar <0041> 7 endnotdefchar\n\
+endcmap";
+        let cmap = EncodingCMap::parse(data).expect("parse");
+        assert_eq!(cmap.map_notdef(&[0x00, 0x41]), Some(7));
+        assert_eq!(cmap.map_notdef(&[0x00, 0x42]), None);
     }
 
     #[test]
