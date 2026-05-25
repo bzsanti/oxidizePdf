@@ -393,6 +393,20 @@ impl CMap {
         false
     }
 
+    /// If this CMap inherits (via `usecmap`) from a predefined Adobe
+    /// `*-UCS2` CMap, return the matching CID collection ordering.
+    /// Used by ToUnicode decoding to resolve codes the child CMap did
+    /// not map explicitly (the code is treated as a CID into the table).
+    pub(crate) fn inherited_ordering(&self) -> Option<&'static str> {
+        match self.inherited_predefined.as_deref()? {
+            "Adobe-GB1-UCS2" => Some("GB1"),
+            "Adobe-CNS1-UCS2" => Some("CNS1"),
+            "Adobe-Japan1-UCS2" => Some("Japan1"),
+            "Adobe-Korea1-UCS2" | "Adobe-KR-UCS2" => Some("Korea1"),
+            _ => None,
+        }
+    }
+
     /// `true` iff this CMap inherits identity-mapping semantics from a
     /// predefined parent via `usecmap`.
     fn identity_inherited(&self) -> bool {
@@ -1366,5 +1380,14 @@ endcmap\n";
         );
         assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
         assert_eq!(cmap.map(&[0x00, 0x42]), Some(vec![0x00, 0x62]));
+    }
+
+    #[test]
+    fn usecmap_external_ucs2_parent_maps_to_ordering() {
+        let data = b"begincmap\n/Adobe-Korea1-UCS2 usecmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+endcmap";
+        let cmap = CMap::parse(data).expect("parse");
+        assert_eq!(cmap.inherited_ordering(), Some("Korea1"));
     }
 }

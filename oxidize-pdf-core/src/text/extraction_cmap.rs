@@ -602,6 +602,11 @@ fn decode_with_cid_table(
 
 /// Decode text using a CMap — free function (no allocations).
 fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
+    use crate::text::cid_to_unicode::CidCollection;
+    let inherited = cmap
+        .inherited_ordering()
+        .and_then(CidCollection::from_ordering);
+
     let mut result = String::new();
     let mut i = 0;
 
@@ -610,7 +615,6 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
 
         for len in 1..=4.min(text_bytes.len() - i) {
             let code = &text_bytes[i..i + len];
-
             if let Some(mapped) = cmap.map(code) {
                 if let Some(unicode_str) = cmap.to_unicode(&mapped) {
                     result.push_str(&unicode_str);
@@ -622,6 +626,19 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
         }
 
         if !decoded {
+            // External usecmap to a predefined Adobe `*-UCS2` parent: treat an
+            // unmapped 2-byte code as a CID and resolve via the inherited
+            // collection. Explicit child bf* mappings already won above.
+            if let Some(coll) = inherited {
+                if text_bytes.len() - i >= 2 {
+                    let cid = u16::from_be_bytes([text_bytes[i], text_bytes[i + 1]]);
+                    if let Some(ch) = coll.cid_to_unicode(cid) {
+                        result.push(ch);
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
             i += 1;
         }
     }
