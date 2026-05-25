@@ -488,7 +488,7 @@ fn parse_hex(s: &str) -> Option<Vec<u8>> {
 /// keywords) is either skipped at tokenisation time or ignored by the
 /// state machine.
 #[derive(Debug, Clone)]
-enum Token {
+pub(crate) enum Token {
     /// Hex string `<00D1>` → `vec![0x00, 0xD1]`.
     Hex(Vec<u8>),
     /// Array `[ <abcd> <ef01> ... ]` of hex strings, used by the
@@ -511,7 +511,7 @@ enum Token {
 /// all on one line, BOE-style) are parsed identically to the multi-line
 /// canonical form. Unknown PostScript constructs (literal strings,
 /// `<<` ... `>>` dictionaries, comments) are silently skipped.
-fn tokenize_cmap(content: &str) -> Vec<Token> {
+pub(crate) fn tokenize_cmap(content: &str) -> Vec<Token> {
     let bytes = content.as_bytes();
     let mut tokens = Vec::new();
     let mut i = 0;
