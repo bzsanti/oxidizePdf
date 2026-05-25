@@ -62,6 +62,8 @@ pub struct FontInfo {
     pub cid_ordering: Option<String>,
     /// Font metrics (widths, kerning)
     pub metrics: FontMetrics,
+    /// Resolved non-Identity CID encoding (code→CID), if any.
+    pub cid_encoding: Option<crate::text::encoding_cmap::CidEncoding>,
 }
 
 /// Enhanced text extractor with CMap support
@@ -114,6 +116,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
+            cid_encoding: None,
         };
 
         // Extract CIDSystemInfo Ordering (for CIDFont dictionaries)
@@ -137,6 +140,10 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             match encoding_obj {
                 PdfObject::Name(enc_name) => {
                     font_info.encoding = Some(enc_name.0.clone());
+                    if enc_name.0 != "Identity-H" && enc_name.0 != "Identity-V" {
+                        font_info.cid_encoding =
+                            crate::text::encoding_cmap::resolve_predefined(&enc_name.0);
+                    }
                 }
                 PdfObject::Dictionary(enc_dict) => {
                     // Handle encoding with differences
@@ -147,6 +154,17 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                     if let Some(PdfObject::Array(differences)) = enc_dict.get("Differences") {
                         font_info.differences =
                             Some(self.parse_encoding_differences(&differences.0)?);
+                    }
+                }
+                PdfObject::Reference(num, gen) => {
+                    if let Ok(PdfObject::Stream(stream)) = document.get_object(*num, *gen) {
+                        if let Ok(data) = stream.decode(&ParseOptions::default()) {
+                            if let Ok(enc) = crate::text::encoding_cmap::EncodingCMap::parse(&data)
+                            {
+                                font_info.cid_encoding =
+                                    Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
+                            }
+                        }
                     }
                 }
                 _ => {}
@@ -548,6 +566,25 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
                 return decode_text_with_font(text_bytes, descendant);
             }
 
+            // Non-Identity encoding: map code→CID (or UTF-16BE) before CID→Unicode.
+            match &font_info.cid_encoding {
+                Some(crate::text::encoding_cmap::CidEncoding::Utf16Be) => {
+                    return Ok(crate::text::encoding_cmap::decode_utf16be(text_bytes));
+                }
+                Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc)) => {
+                    let ordering = descendant
+                        .cid_ordering
+                        .as_deref()
+                        .or(font_info.cid_ordering.as_deref());
+                    if let Some(coll) =
+                        ordering.and_then(crate::text::cid_to_unicode::CidCollection::from_ordering)
+                    {
+                        return Ok(decode_via_encoding_cmap(text_bytes, enc, &coll));
+                    }
+                }
+                None => {}
+            }
+
             // Try CID→Unicode mapping using CIDSystemInfo Ordering
             // This handles fonts with Identity-H encoding and no ToUnicode CMap
             let ordering = descendant
@@ -574,6 +611,34 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
 
     // Fall back to encoding-based decoding
     decode_with_encoding(text_bytes, font_info)
+}
+
+/// Decode using an embedded/predefined encoding CMap (code→CID) followed by a
+/// CID→Unicode collection. Walks variable-width codes per the CMap codespace.
+fn decode_via_encoding_cmap(
+    text_bytes: &[u8],
+    enc: &crate::text::encoding_cmap::EncodingCMap,
+    collection: &crate::text::cid_to_unicode::CidCollection,
+) -> String {
+    let mut result = String::new();
+    let mut i = 0;
+    while i < text_bytes.len() {
+        let len = enc
+            .code_len_at(text_bytes, i)
+            .max(1)
+            .min(text_bytes.len() - i);
+        let code = &text_bytes[i..i + len];
+        match enc.map_code_to_cid(code).or_else(|| enc.map_notdef(code)) {
+            Some(cid) => match collection.cid_to_unicode(cid) {
+                Some(ch) => result.push(ch),
+                None if cid > 0 => result.push('\u{FFFD}'),
+                None => {}
+            },
+            None => result.push('\u{FFFD}'),
+        }
+        i += len;
+    }
+    result
 }
 
 /// Decode text using CID→Unicode lookup tables (Adobe CMap Resources).
@@ -850,11 +915,62 @@ mod tests {
             cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
+            cid_encoding: None,
         };
 
         assert_eq!(font_info.name, "Helvetica");
         assert_eq!(font_info.font_type, "Type1");
         assert_eq!(font_info.encoding, Some("WinAnsiEncoding".to_string()));
+    }
+
+    #[test]
+    fn embedded_encoding_cmap_decodes_via_cid_table() {
+        use crate::text::cid_to_unicode::CidCollection;
+        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
+        // Pick a CID that is present in the GB1 collection; assert decode equals
+        // exactly the GB1 table's Unicode for that CID (real content, not shape).
+        let coll = CidCollection::from_ordering("GB1").unwrap();
+        // find a small CID that maps (scan upward to be robust to table contents)
+        let (cid, expected) = (1u16..2000)
+            .find_map(|c| coll.cid_to_unicode(c).map(|ch| (c, ch)))
+            .expect("GB1 has at least one mapped CID");
+
+        let enc = EncodingCMap::parse(
+            format!(
+                "begincmap\n1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 begincidchar <0041> {cid} endcidchar\nendcmap"
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+
+        let descendant = FontInfo {
+            name: "Desc".into(),
+            font_type: "CIDFontType0".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            cid_ordering: Some("GB1".into()),
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let parent = FontInfo {
+            name: "Type0".into(),
+            font_type: "Type0".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: Some(Box::new(descendant)),
+            cid_to_gid_map: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: Some(CidEncoding::Cmap(enc)),
+        };
+
+        let out = decode_text_with_font(&[0x00, 0x41], &parent).unwrap();
+        assert_eq!(out, expected.to_string());
     }
 
     #[test]

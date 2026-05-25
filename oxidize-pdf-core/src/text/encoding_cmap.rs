@@ -9,19 +9,23 @@ use crate::text::cmap::{tokenize_cmap, CodeRange, Token};
 /// A CID encoding CMap: maps character codes (1–2 bytes, variable width per
 /// the codespace) to CIDs. Distinct from `CMap` (ToUnicode), whose
 /// destinations are Unicode hex strings.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub(crate) struct EncodingCMap {
     pub codespace_ranges: Vec<CodeRange>,
     pub single_cid: HashMap<Vec<u8>, u16>,
     pub cid_ranges: Vec<CidRange>,
     pub notdef_ranges: Vec<CidRange>,
+    /// CIDSystemInfo Ordering from the CMap (informational, not used in decode path).
+    #[allow(dead_code)]
     pub ordering: Option<String>,
+    /// Parent CMap name from `usecmap` (informational, not followed at runtime).
+    #[allow(dead_code)]
     pub usecmap_parent: Option<String>,
+    /// Writing mode (0 = horizontal, 1 = vertical). Reserved for future use.
+    #[allow(dead_code)]
     pub wmode: u8,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct CidRange {
     pub lo: Vec<u8>,
@@ -29,7 +33,6 @@ pub(crate) struct CidRange {
     pub base_cid: u16,
 }
 
-#[allow(dead_code)]
 impl EncodingCMap {
     /// Parse the codespace ranges, usecmap parent, cidchar and cidrange entries.
     pub fn parse(data: &[u8]) -> ParseResult<Self> {
@@ -225,14 +228,12 @@ impl EncodingCMap {
 /// Big-endian numeric distance `code - lo`, truncated to the low 16 bits.
 /// For well-formed CID ranges (codes ≤ 2 bytes) the distance is ≤ 0xFFFF,
 /// so the mask is a no-op.
-#[allow(dead_code)]
 fn be_offset(code: &[u8], lo: &[u8]) -> u16 {
     let to_u64 = |b: &[u8]| b.iter().fold(0u64, |acc, &x| (acc << 8) | x as u64);
     (to_u64(code).saturating_sub(to_u64(lo)) & 0xFFFF) as u16
 }
 
 /// The resolved, non-Identity encoding of a Type0 font, as carried on `FontInfo`.
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) enum CidEncoding {
     /// `Uni*-UCS2-*` / `Uni*-UTF16-*`: the code IS a UTF-16BE value.
@@ -243,7 +244,6 @@ pub(crate) enum CidEncoding {
 
 /// Decode a byte string as UTF-16BE, replacing malformed units with U+FFFD.
 /// A trailing odd byte is dropped (no complete code unit can be formed from it).
-#[allow(dead_code)]
 pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
     char::decode_utf16(
         bytes
@@ -261,7 +261,6 @@ pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
 ///
 /// Note: the `starts_with("Uni")` check is case-sensitive per PDF spec
 /// (predefined CMap names are case-sensitive, ISO 32000-1 §9.7.5.2).
-#[allow(dead_code)]
 pub(crate) fn resolve_predefined(name: &str) -> Option<CidEncoding> {
     if name.starts_with("Uni") && (name.contains("UCS2") || name.contains("UTF16")) {
         return Some(CidEncoding::Utf16Be);

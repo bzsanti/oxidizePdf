@@ -2222,6 +2222,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let width = calculate_text_width("Hello", 12.0, Some(&font_info));
@@ -2263,6 +2264,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let width = calculate_text_width("Hello", 12.0, Some(&font_info));
@@ -2315,6 +2317,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Test with character outside range
@@ -2355,6 +2358,7 @@ mod tests {
                 missing_width: Some(600.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Character 42 (index 10 from first_char 32)
@@ -2390,6 +2394,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let width = calculate_text_width("", 12.0, Some(&font_info));
@@ -2424,6 +2429,7 @@ mod tests {
                 missing_width: Some(600.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Test with Unicode characters outside ASCII range
@@ -2457,6 +2463,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Test same character with different font sizes
@@ -2495,6 +2502,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Simulate monospace font (same width)
@@ -2515,6 +2523,7 @@ mod tests {
                 missing_width: Some(600.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let prop_width = calculate_text_width("i", 12.0, Some(&proportional_font));
@@ -2565,6 +2574,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: Some(kerning),
             },
+            cid_encoding: None,
         };
 
         // Test "AV" with kerning
