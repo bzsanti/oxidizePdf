@@ -2,6 +2,7 @@
 //! See docs/superpowers/specs/2026-05-25-cid-encoding-cmap-design.md.
 
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use crate::parser::ParseResult;
 use crate::text::cmap::{tokenize_cmap, CodeRange, Token};
@@ -255,8 +256,23 @@ pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
     .collect()
 }
 
+/// Lazily parse a vendored Adobe CMap embedded at compile time. Parsed once,
+/// cached for the process lifetime. Returns `None` only if the embedded data
+/// fails to parse (should never happen for the shipped files).
+macro_rules! vendored_cmap {
+    ($file:literal) => {{
+        static CELL: OnceLock<Option<EncodingCMap>> = OnceLock::new();
+        CELL.get_or_init(|| {
+            EncodingCMap::parse(include_bytes!(concat!("cmap_resources/", $file))).ok()
+        })
+        .clone()
+        .map(CidEncoding::Cmap)
+    }};
+}
+
 /// Resolve a predefined `/Encoding` name. `Uni*-UCS2-*`/`Uni*-UTF16-*` are
-/// algorithmic UTF-16BE. Vendored multibyte names are added in Task 7.
+/// algorithmic UTF-16BE. Vendored CJK names resolve to lazily-parsed
+/// Adobe predefined CMaps (BSD-3-Clause, embedded at compile time).
 /// Unknown names return `None` (caller falls back to current behavior).
 ///
 /// Note: the `starts_with("Uni")` check is case-sensitive per PDF spec
@@ -264,6 +280,14 @@ pub(crate) fn decode_utf16be(bytes: &[u8]) -> String {
 pub(crate) fn resolve_predefined(name: &str) -> Option<CidEncoding> {
     if name.starts_with("Uni") && (name.contains("UCS2") || name.contains("UTF16")) {
         return Some(CidEncoding::Utf16Be);
+    }
+    match name {
+        "GBK-EUC-H" => return vendored_cmap!("GBK-EUC-H"),
+        "GBKp-EUC-H" => return vendored_cmap!("GBKp-EUC-H"),
+        "90ms-RKSJ-H" => return vendored_cmap!("90ms-RKSJ-H"),
+        "90pv-RKSJ-H" => return vendored_cmap!("90pv-RKSJ-H"),
+        "KSCms-UHC-H" => return vendored_cmap!("KSCms-UHC-H"),
+        _ => {}
     }
     None
 }
@@ -415,6 +439,31 @@ endcmap";
             Some(CidEncoding::Utf16Be)
         ));
         assert!(resolve_predefined("WhateverUnknown-H").is_none());
+    }
+
+    #[test]
+    fn gbk_euc_h_loads_and_maps_ascii_and_cjk() {
+        let enc = match resolve_predefined("GBK-EUC-H") {
+            Some(CidEncoding::Cmap(c)) => c,
+            other => panic!("expected vendored Cmap, got {other:?}"),
+        };
+        // GBK-EUC-H codespace: <00>..<80> (single-byte) and <8140>..<FEFE> (double-byte).
+        assert_eq!(enc.code_len_at(&[0x41], 0), 1, "ASCII is single-byte");
+        assert_eq!(
+            enc.code_len_at(&[0x81, 0x40], 0),
+            2,
+            "GBK lead byte is double"
+        );
+        // Single-byte 'A' (0x41) falls in cidrange <21>..<7e> base 814 → CID 846.
+        assert!(
+            enc.map_code_to_cid(&[0x41]).is_some(),
+            "ASCII 'A' maps to a CID"
+        );
+        // First GBK double-byte code <8140> maps to CID 10072 via cidrange.
+        assert!(
+            enc.map_code_to_cid(&[0x81, 0x40]).is_some(),
+            "GBK double-byte maps to a CID"
+        );
     }
 
     #[test]
