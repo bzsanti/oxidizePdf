@@ -16,15 +16,9 @@ pub(crate) struct EncodingCMap {
     pub single_cid: HashMap<Vec<u8>, u16>,
     pub cid_ranges: Vec<CidRange>,
     pub notdef_ranges: Vec<CidRange>,
-    /// CIDSystemInfo Ordering from the CMap (informational, not used in decode path).
-    #[allow(dead_code)]
-    pub ordering: Option<String>,
     /// Parent CMap name from `usecmap` (informational, not followed at runtime).
     #[allow(dead_code)]
     pub usecmap_parent: Option<String>,
-    /// Writing mode (0 = horizontal, 1 = vertical). Reserved for future use.
-    #[allow(dead_code)]
-    pub wmode: u8,
 }
 
 #[derive(Debug, Clone)]
