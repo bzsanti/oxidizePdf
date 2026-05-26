@@ -282,14 +282,13 @@ pub(crate) fn resolve_predefined(name: &str) -> Option<CidEncoding> {
         return Some(CidEncoding::Utf16Be);
     }
     match name {
-        "GBK-EUC-H" => return vendored_cmap!("GBK-EUC-H"),
-        "GBKp-EUC-H" => return vendored_cmap!("GBKp-EUC-H"),
-        "90ms-RKSJ-H" => return vendored_cmap!("90ms-RKSJ-H"),
-        "90pv-RKSJ-H" => return vendored_cmap!("90pv-RKSJ-H"),
-        "KSCms-UHC-H" => return vendored_cmap!("KSCms-UHC-H"),
-        _ => {}
+        "GBK-EUC-H" => vendored_cmap!("GBK-EUC-H"),
+        "GBKp-EUC-H" => vendored_cmap!("GBKp-EUC-H"),
+        "90ms-RKSJ-H" => vendored_cmap!("90ms-RKSJ-H"),
+        "90pv-RKSJ-H" => vendored_cmap!("90pv-RKSJ-H"),
+        "KSCms-UHC-H" => vendored_cmap!("KSCms-UHC-H"),
+        _ => None,
     }
-    None
 }
 
 #[cfg(test)]
@@ -454,16 +453,10 @@ endcmap";
             2,
             "GBK lead byte is double"
         );
-        // Single-byte 'A' (0x41) falls in cidrange <21>..<7e> base 814 → CID 846.
-        assert!(
-            enc.map_code_to_cid(&[0x41]).is_some(),
-            "ASCII 'A' maps to a CID"
-        );
-        // First GBK double-byte code <8140> maps to CID 10072 via cidrange.
-        assert!(
-            enc.map_code_to_cid(&[0x81, 0x40]).is_some(),
-            "GBK double-byte maps to a CID"
-        );
+        // ASCII 'A' (0x41) maps to GB1 CID 846 (GBK-EUC-H cidrange <21>..<7e>).
+        assert_eq!(enc.map_code_to_cid(&[0x41]), Some(846));
+        // First GBK double-byte code <8140> maps to GB1 CID 10072.
+        assert_eq!(enc.map_code_to_cid(&[0x81, 0x40]), Some(10072));
     }
 
     #[test]
