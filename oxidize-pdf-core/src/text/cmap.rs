@@ -75,6 +75,14 @@ pub struct CMap {
     pub mappings: Vec<CMapEntry>,
     /// Cached single mappings for fast lookup
     single_mappings: HashMap<Vec<u8>, Vec<u8>>,
+    /// Predefined parent CMap inherited via `usecmap`. When set to
+    /// `"Identity-H"` or `"Identity-V"`, `map()` falls back to
+    /// returning the input code as-is for any code the child CMap
+    /// did not map explicitly, and `is_valid_code()` accepts the full
+    /// 2-byte (Identity-H) or 1-byte (Identity-V) space. External
+    /// CMap chaining (non-predefined parents) is recorded for
+    /// observability but does not enable any fallback.
+    pub inherited_predefined: Option<String>,
 }
 
 impl Default for CMap {
@@ -93,6 +101,7 @@ impl CMap {
             codespace_ranges: Vec::new(),
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
+            inherited_predefined: None,
         }
     }
 
@@ -108,6 +117,7 @@ impl CMap {
             }],
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
+            inherited_predefined: None,
         }
     }
 
@@ -123,10 +133,19 @@ impl CMap {
             }],
             mappings: Vec::new(),
             single_mappings: HashMap::new(),
+            inherited_predefined: None,
         }
     }
 
-    /// Parse a CMap from data
+    /// Parse a CMap from data.
+    ///
+    /// Adobe CMaps are PostScript, not line-oriented. Same-line forms
+    /// like `1 begincodespacerange <0000><00D1> endcodespacerange` are
+    /// legal (and shipped by BOE / various other producers — see issue
+    /// #272). The previous line-based scanner could get stuck in a state
+    /// flag because `endcodespacerange` never appeared as its own line.
+    /// This implementation tokenises the input first and then consumes
+    /// tokens with a state machine that is whitespace-agnostic.
     pub fn parse(data: &[u8]) -> ParseResult<Self> {
         let mut cmap = Self::new();
         let content =
@@ -135,67 +154,159 @@ impl CMap {
                 message: format!("Invalid UTF-8 in CMap: {e}"),
             })?;
 
-        let lines = content.lines();
-        let mut in_codespace_range = false;
-        let mut in_bf_char = false;
-        let mut in_bf_range = false;
+        let tokens = tokenize_cmap(content);
+        let mut i = 0;
 
-        for line in lines {
-            let line = line.trim();
-
-            // Skip comments
-            if line.starts_with('%') {
-                continue;
-            }
-
-            // CMap name
-            if line.starts_with("/CMapName") {
-                if let Some(name) = extract_name(line) {
-                    cmap.name = Some(name);
-                }
-            }
-            // Writing mode
-            else if line.starts_with("/WMode") {
-                if let Some(wmode) = extract_number(line) {
-                    cmap.wmode = wmode as u8;
-                }
-            }
-            // Code space range
-            else if line.contains("begincodespacerange") {
-                in_codespace_range = true;
-            } else if line == "endcodespacerange" {
-                in_codespace_range = false;
-            } else if in_codespace_range {
-                if let Some((start, end)) = parse_hex_range(line) {
-                    cmap.codespace_ranges.push(CodeRange { start, end });
-                }
-            }
-            // BF char mappings
-            else if line.contains("beginbfchar") {
-                in_bf_char = true;
-            } else if line == "endbfchar" {
-                in_bf_char = false;
-            } else if in_bf_char {
-                if let Some((src, dst)) = parse_bf_char(line) {
-                    cmap.single_mappings.insert(src.clone(), dst.clone());
-                    cmap.mappings.push(CMapEntry::Single { src, dst });
-                }
-            }
-            // BF range mappings
-            else if line.contains("beginbfrange") {
-                in_bf_range = true;
-            } else if line == "endbfrange" {
-                in_bf_range = false;
-            } else if in_bf_range {
-                // Handle both simple format and array format
-                if let Some(entries) = parse_bf_range_entries(line) {
-                    for entry in entries {
-                        if let CMapEntry::Single { ref src, ref dst } = entry {
-                            cmap.single_mappings.insert(src.clone(), dst.clone());
-                        }
-                        cmap.mappings.push(entry);
+        while i < tokens.len() {
+            match &tokens[i] {
+                Token::Name(n) if n == "CMapName" => {
+                    if let Some(Token::Name(name)) = tokens.get(i + 1) {
+                        cmap.name = Some(name.clone());
+                        i += 2;
+                    } else {
+                        i += 1;
                     }
                 }
+                // `usecmap` directive: the immediately preceding Name token
+                // (e.g. `/Identity-H usecmap`) names the parent CMap whose
+                // mappings the child inherits. For the two predefined
+                // Identity CMaps the codebase can synthesise (Identity-H,
+                // Identity-V), this enables an identity fallback in `map()`
+                // for codes the child doesn't explicitly cover. External
+                // CMap names are recorded but produce no fallback (a real
+                // chain resolver would need access to the document's CMap
+                // resources, which this parser cannot reach).
+                Token::Keyword(k) if k == "usecmap" => {
+                    let mut j = i;
+                    while j > 0 {
+                        j -= 1;
+                        if let Token::Name(parent) = &tokens[j] {
+                            cmap.inherited_predefined = Some(parent.clone());
+                            break;
+                        }
+                    }
+                    i += 1;
+                }
+                Token::Name(n) if n == "WMode" => {
+                    if let Some(Token::Integer(w)) = tokens.get(i + 1) {
+                        cmap.wmode = *w as u8;
+                        i += 2;
+                    } else {
+                        i += 1;
+                    }
+                }
+                Token::Keyword(k) if k == "begincodespacerange" => {
+                    i += 1;
+                    while i < tokens.len() {
+                        match &tokens[i] {
+                            Token::Keyword(k) if k == "endcodespacerange" => {
+                                i += 1;
+                                break;
+                            }
+                            Token::Hex(start) => {
+                                if let Some(Token::Hex(end)) = tokens.get(i + 1) {
+                                    cmap.codespace_ranges.push(CodeRange {
+                                        start: start.clone(),
+                                        end: end.clone(),
+                                    });
+                                    i += 2;
+                                } else {
+                                    i += 1;
+                                }
+                            }
+                            _ => i += 1,
+                        }
+                    }
+                }
+                Token::Keyword(k) if k == "beginbfchar" => {
+                    i += 1;
+                    while i < tokens.len() {
+                        match &tokens[i] {
+                            Token::Keyword(k) if k == "endbfchar" => {
+                                i += 1;
+                                break;
+                            }
+                            Token::Hex(src) => {
+                                if let Some(Token::Hex(dst)) = tokens.get(i + 1) {
+                                    cmap.single_mappings.insert(src.clone(), dst.clone());
+                                    cmap.mappings.push(CMapEntry::Single {
+                                        src: src.clone(),
+                                        dst: dst.clone(),
+                                    });
+                                    i += 2;
+                                } else {
+                                    i += 1;
+                                }
+                            }
+                            _ => i += 1,
+                        }
+                    }
+                }
+                Token::Keyword(k) if k == "beginbfrange" => {
+                    i += 1;
+                    while i < tokens.len() {
+                        match &tokens[i] {
+                            Token::Keyword(k) if k == "endbfrange" => {
+                                i += 1;
+                                break;
+                            }
+                            Token::Hex(src_start) => {
+                                // Need src_end + (Hex dst_start | Array of dst)
+                                let src_end = match tokens.get(i + 1) {
+                                    Some(Token::Hex(e)) => e.clone(),
+                                    _ => {
+                                        i += 1;
+                                        continue;
+                                    }
+                                };
+                                match tokens.get(i + 2) {
+                                    Some(Token::Hex(dst_start)) => {
+                                        cmap.mappings.push(CMapEntry::Range {
+                                            src_start: src_start.clone(),
+                                            src_end,
+                                            dst_start: dst_start.clone(),
+                                        });
+                                        i += 3;
+                                    }
+                                    Some(Token::Array(dsts)) => {
+                                        // Array form: each dst replaces one src code,
+                                        // walking src_start..=src_end in lockstep. The
+                                        // increment is big-endian with carry — wrapping
+                                        // only the last byte (`<00FE> + 1 = <0000>`) would
+                                        // silently insert into the wrong slot when the
+                                        // range crosses a byte boundary.
+                                        let mut current_src = src_start.clone();
+                                        for dst in dsts {
+                                            cmap.single_mappings
+                                                .insert(current_src.clone(), dst.clone());
+                                            cmap.mappings.push(CMapEntry::Single {
+                                                src: current_src.clone(),
+                                                dst: dst.clone(),
+                                            });
+                                            if current_src.as_slice() >= src_end.as_slice() {
+                                                break;
+                                            }
+                                            increment_be(&mut current_src);
+                                        }
+                                        i += 3;
+                                    }
+                                    _ => {
+                                        i += 1;
+                                    }
+                                }
+                            }
+                            _ => i += 1,
+                        }
+                    }
+                }
+                // Top-level fall-through covers PostScript constructs the
+                // state machine deliberately ignores: the integer operand
+                // count before `begin*` keywords (`14 beginbfchar`), the
+                // `def` / `dict` / `findresource` / `begincmap` / `endcmap`
+                // boilerplate, and any unrecognised name token. Dropping
+                // these keeps the parser robust against producer-specific
+                // headers without coupling the state machine to them.
+                _ => i += 1,
             }
         }
 
@@ -251,6 +362,15 @@ impl CMap {
             }
         }
 
+        // Identity fallback inherited via `usecmap`. If the child CMap
+        // didn't map this code explicitly and the parent is Identity-H
+        // or Identity-V (both 2-byte CID encodings), pass the code
+        // through unchanged. The downstream `to_unicode` then interprets
+        // the bytes as UTF-16BE.
+        if code.len() == 2 && self.identity_inherited() {
+            return Some(code.to_vec());
+        }
+
         None
     }
 
@@ -261,7 +381,46 @@ impl CMap {
                 return true;
             }
         }
+        // No explicit codespace covers this code, but `usecmap`
+        // inheritance from a predefined Identity CMap means the full
+        // 2-byte space is valid.
+        if code.len() == 2
+            && (self.inherited_predefined_is("Identity-H")
+                || self.inherited_predefined_is("Identity-V"))
+        {
+            return true;
+        }
         false
+    }
+
+    /// If this CMap inherits (via `usecmap`) from a predefined Adobe
+    /// `*-UCS2` CMap, return the matching CID collection ordering.
+    /// Used by ToUnicode decoding to resolve codes the child CMap did
+    /// not map explicitly (the code is treated as a CID into the table).
+    pub(crate) fn inherited_ordering(&self) -> Option<&'static str> {
+        match self.inherited_predefined.as_deref()? {
+            "Adobe-GB1-UCS2" => Some("GB1"),
+            "Adobe-CNS1-UCS2" => Some("CNS1"),
+            "Adobe-Japan1-UCS2" => Some("Japan1"),
+            // `Adobe-KR-UCS2` is an alias for the Korea1 collection used by some producers.
+            "Adobe-Korea1-UCS2" | "Adobe-KR-UCS2" => Some("Korea1"),
+            _ => None,
+        }
+    }
+
+    /// `true` iff this CMap inherits identity-mapping semantics from a
+    /// predefined parent via `usecmap`.
+    fn identity_inherited(&self) -> bool {
+        self.inherited_predefined_is("Identity-H") || self.inherited_predefined_is("Identity-V")
+    }
+
+    /// `true` iff the inherited parent (set by `usecmap`) matches the
+    /// given predefined CMap name exactly.
+    fn inherited_predefined_is(&self, name: &str) -> bool {
+        self.inherited_predefined
+            .as_deref()
+            .map(|p| p == name)
+            .unwrap_or(false)
     }
 
     /// Convert mapped value to Unicode string
@@ -285,36 +444,36 @@ impl CMap {
     }
 }
 
-/// Extract name from a line like "/CMapName /Adobe-Identity-UCS def"
-fn extract_name(line: &str) -> Option<String> {
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    if parts.len() >= 2 && parts[1].starts_with('/') {
-        Some(parts[1][1..].to_string())
-    } else {
-        None
+/// Increment a big-endian byte sequence by 1 in place, propagating carry
+/// across byte boundaries. Returns `true` on success, `false` on
+/// overflow (e.g. `<FFFF> + 1`). Used by the `bfrange` array form to
+/// walk `src_start..=src_end` in lockstep with the dst array.
+fn increment_be(bytes: &mut [u8]) -> bool {
+    let mut carry = 1u32;
+    for byte in bytes.iter_mut().rev() {
+        let sum = *byte as u32 + carry;
+        *byte = (sum & 0xFF) as u8;
+        carry = sum >> 8;
+        if carry == 0 {
+            return true;
+        }
     }
+    carry == 0
 }
 
-/// Extract number from a line like "/WMode 0 def"
-fn extract_number(line: &str) -> Option<i32> {
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    if parts.len() >= 2 {
-        parts[1].parse().ok()
-    } else {
-        None
-    }
-}
-
-/// Parse hex string to bytes
+/// Parse hex string `<...>` bytes into a `Vec<u8>`. Whitespace inside
+/// the angle brackets is permitted (PostScript allows it); odd-length
+/// strings or non-hex characters return `None`.
 fn parse_hex(s: &str) -> Option<Vec<u8>> {
     let s = s.trim_start_matches('<').trim_end_matches('>');
-    if s.len() % 2 != 0 {
+    let clean: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+    if clean.len() % 2 != 0 {
         return None;
     }
 
     let mut bytes = Vec::new();
-    for i in (0..s.len()).step_by(2) {
-        if let Ok(byte) = u8::from_str_radix(&s[i..i + 2], 16) {
+    for i in (0..clean.len()).step_by(2) {
+        if let Ok(byte) = u8::from_str_radix(&clean[i..i + 2], 16) {
             bytes.push(byte);
         } else {
             return None;
@@ -323,90 +482,236 @@ fn parse_hex(s: &str) -> Option<Vec<u8>> {
     Some(bytes)
 }
 
-/// Parse a hex range like "<0000> <FFFF>"
-fn parse_hex_range(line: &str) -> Option<(Vec<u8>, Vec<u8>)> {
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    if parts.len() >= 2 {
-        if let (Some(start), Some(end)) = (parse_hex(parts[0]), parse_hex(parts[1])) {
-            return Some((start, end));
+/// A single PostScript token extracted from a CMap stream. Only the
+/// shapes the CMap state machine consumes are represented; everything
+/// else (dictionary `<<...>>` markers, literal strings, unknown
+/// keywords) is either skipped at tokenisation time or ignored by the
+/// state machine.
+#[derive(Debug, Clone)]
+pub(crate) enum Token {
+    /// Hex string `<00D1>` → `vec![0x00, 0xD1]`.
+    Hex(Vec<u8>),
+    /// Array `[ <abcd> <ef01> ... ]` of hex strings, used by the
+    /// `beginbfrange` array form `<srcStart> <srcEnd> [<dst0> <dst1> ...]`.
+    Array(Vec<Vec<u8>>),
+    /// PostScript name `/CMapName`, `/WMode`, etc. — the leading `/`
+    /// is stripped.
+    Name(String),
+    /// Decimal integer such as the operand count before `begin*` or the
+    /// `0` in `/WMode 0`.
+    Integer(i64),
+    /// Bare identifier such as `begincmap`, `endbfchar`, `def`. We treat
+    /// every non-delimited identifier as a keyword and let the parser
+    /// state machine pick the ones it cares about.
+    Keyword(String),
+}
+
+/// Tokenise a CMap PostScript stream into [`Token`]s. The scanner is
+/// whitespace-agnostic so that minified CMaps (`begin... <a><b> end...`
+/// all on one line, BOE-style) are parsed identically to the multi-line
+/// canonical form. Unknown PostScript constructs (literal strings,
+/// `<<` ... `>>` dictionaries, comments) are silently skipped.
+pub(crate) fn tokenize_cmap(content: &str) -> Vec<Token> {
+    let bytes = content.as_bytes();
+    let mut tokens = Vec::new();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        let b = bytes[i];
+
+        // Whitespace
+        if b.is_ascii_whitespace() {
+            i += 1;
+            continue;
         }
-    }
-    None
-}
 
-/// Parse a bfchar line like "<0001> <0041>"
-fn parse_bf_char(line: &str) -> Option<(Vec<u8>, Vec<u8>)> {
-    parse_hex_range(line)
-}
+        // Comments: `% ... \n`
+        if b == b'%' {
+            while i < bytes.len() && bytes[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
 
-/// Parse a bfrange line - returns Vec of entries (array format creates multiple entries)
-fn parse_bf_range_entries(line: &str) -> Option<Vec<CMapEntry>> {
-    // Check if line contains an array (format: <start> <end> [<dst1> <dst2> ...])
-    if line.contains('[') {
-        // Parse array format: <srcStart> <srcEnd> [<dst1> <dst2> <dst3> ...]
-        if let Some(array_start) = line.find('[') {
-            let before_array = &line[..array_start];
-            let parts: Vec<&str> = before_array.split_whitespace().collect();
+        // Dictionary `<<` / `>>` — skip the markers, the state machine
+        // does not need dict contents.
+        if b == b'<' && bytes.get(i + 1) == Some(&b'<') {
+            i += 2;
+            continue;
+        }
+        if b == b'>' && bytes.get(i + 1) == Some(&b'>') {
+            i += 2;
+            continue;
+        }
 
-            if parts.len() >= 2 {
-                if let (Some(src_start), Some(src_end)) = (parse_hex(parts[0]), parse_hex(parts[1]))
-                {
-                    // Extract array values
-                    let after_bracket = &line[array_start + 1..];
-                    if let Some(array_end) = after_bracket.find(']') {
-                        let array_content = &after_bracket[..array_end];
-
-                        // Parse each hex value in the array
-                        let hex_values: Vec<Vec<u8>> = array_content
-                            .split_whitespace()
-                            .filter_map(parse_hex)
-                            .collect();
-
-                        // Create individual Single entries for each mapping
-                        let mut entries = Vec::new();
-                        let mut current_src = src_start;
-
-                        for dst in hex_values {
-                            entries.push(CMapEntry::Single {
-                                src: current_src.clone(),
-                                dst,
-                            });
-
-                            // Increment source code
-                            if let Some(last) = current_src.last_mut() {
-                                *last = last.wrapping_add(1);
-                            }
-
-                            // Stop if we've reached src_end
-                            if current_src > src_end {
-                                break;
-                            }
-                        }
-
-                        return Some(entries);
-                    }
+        // Hex string `<...>`. Bail out resiliently if the closing `>` is
+        // absent OR if a stray `<` appears before it (meaning the
+        // original `<` was unterminated and we are about to greedily
+        // consume the *next* valid hex string instead). Skipping just
+        // the lone byte preserves any following well-formed mappings.
+        if b == b'<' {
+            let start = i + 1;
+            let mut end_pos: Option<usize> = None;
+            for (off, &c) in bytes[start..].iter().enumerate() {
+                if c == b'>' {
+                    end_pos = Some(start + off);
+                    break;
+                }
+                if c == b'<' {
+                    // Another `<` arrived before `>` — original is malformed.
+                    break;
                 }
             }
+            if let Some(end) = end_pos {
+                let inner: String = bytes[start..end].iter().map(|&c| c as char).collect();
+                if let Some(decoded) = parse_hex(&inner) {
+                    tokens.push(Token::Hex(decoded));
+                }
+                i = end + 1;
+                continue;
+            } else {
+                i += 1;
+                continue;
+            }
         }
-        return None;
+
+        // Array of hex strings `[ <...> <...> ... ]`
+        if b == b'[' {
+            i += 1;
+            let mut values = Vec::new();
+            while i < bytes.len() {
+                let bb = bytes[i];
+                if bb.is_ascii_whitespace() {
+                    i += 1;
+                } else if bb == b']' {
+                    i += 1;
+                    break;
+                } else if bb == b'<' {
+                    let start = i + 1;
+                    if let Some(rel) = bytes[start..].iter().position(|&c| c == b'>') {
+                        let end = start + rel;
+                        let inner: String = bytes[start..end].iter().map(|&c| c as char).collect();
+                        if let Some(decoded) = parse_hex(&inner) {
+                            values.push(decoded);
+                        }
+                        i = end + 1;
+                    } else {
+                        break;
+                    }
+                } else {
+                    // Skip non-hex content inside arrays (defensive: PostScript
+                    // permits other token types but bfrange arrays in practice
+                    // only contain hex strings).
+                    i += 1;
+                }
+            }
+            tokens.push(Token::Array(values));
+            continue;
+        }
+
+        // Literal string `( ... )` — skipped. PostScript supports balanced
+        // parens and `\` escapes; CMaps only use these inside CIDSystemInfo
+        // which the state machine doesn't read.
+        if b == b'(' {
+            let mut depth = 1;
+            i += 1;
+            while i < bytes.len() && depth > 0 {
+                match bytes[i] {
+                    b'\\' if i + 1 < bytes.len() => i += 2,
+                    b'(' => {
+                        depth += 1;
+                        i += 1;
+                    }
+                    b')' => {
+                        depth -= 1;
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
+            }
+            continue;
+        }
+
+        // PostScript name `/ident`
+        if b == b'/' {
+            let start = i + 1;
+            let end = bytes[start..]
+                .iter()
+                .position(|&c| {
+                    c.is_ascii_whitespace()
+                        || c == b'<'
+                        || c == b'>'
+                        || c == b'/'
+                        || c == b'['
+                        || c == b']'
+                        || c == b'('
+                        || c == b')'
+                        || c == b'%'
+                })
+                .map(|p| start + p)
+                .unwrap_or(bytes.len());
+            if end > start {
+                let name: String = bytes[start..end].iter().map(|&c| c as char).collect();
+                tokens.push(Token::Name(name));
+            }
+            i = end;
+            continue;
+        }
+
+        // Integer (decimal). Negative numbers permitted with leading `-`.
+        if b.is_ascii_digit()
+            || (b == b'-'
+                && bytes
+                    .get(i + 1)
+                    .map(|c| c.is_ascii_digit())
+                    .unwrap_or(false))
+        {
+            let start = i;
+            i += 1;
+            while i < bytes.len() && bytes[i].is_ascii_digit() {
+                i += 1;
+            }
+            let s: String = bytes[start..i].iter().map(|&c| c as char).collect();
+            if let Ok(n) = s.parse::<i64>() {
+                tokens.push(Token::Integer(n));
+            }
+            continue;
+        }
+
+        // Keyword: bare identifier (everything until whitespace / delimiter).
+        let start = i;
+        while i < bytes.len() {
+            let c = bytes[i];
+            if c.is_ascii_whitespace()
+                || c == b'<'
+                || c == b'>'
+                || c == b'/'
+                || c == b'['
+                || c == b']'
+                || c == b'('
+                || c == b')'
+                || c == b'%'
+            {
+                break;
+            }
+            i += 1;
+        }
+        if i > start {
+            let kw: String = bytes[start..i].iter().map(|&c| c as char).collect();
+            tokens.push(Token::Keyword(kw));
+        } else {
+            // The byte at `i` is a stray close-delimiter that no earlier
+            // branch consumed: a lone `>` (not `>>`), or an unmatched `]`
+            // or `)`. The keyword loop above `break`s on it immediately
+            // without advancing, so we must skip it explicitly to
+            // guarantee forward progress. Without this, the tokeniser
+            // spins forever on such a byte (regression seen on
+            // pdf.js corpus issue11651.pdf).
+            i += 1;
+        }
     }
 
-    // Original simple format: <start> <end> <dst>
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    if parts.len() >= 3 {
-        if let (Some(start), Some(end), Some(dst)) = (
-            parse_hex(parts[0]),
-            parse_hex(parts[1]),
-            parse_hex(parts[2]),
-        ) {
-            return Some(vec![CMapEntry::Range {
-                src_start: start,
-                src_end: end,
-                dst_start: dst,
-            }]);
-        }
-    }
-    None
+    tokens
 }
 
 /// Calculate the offset between two big-endian byte sequences of equal length.
@@ -704,5 +1009,386 @@ endcmap
         assert!(content_str.contains("<0000> <FFFF>"));
         assert!(content_str.contains("<0041>"));
         assert!(content_str.contains("<0042>"));
+    }
+
+    // ------------------------------------------------------------------
+    // Issue #272 (Bug A) — minified / single-line CMap directives.
+    //
+    // BOE (Spanish official gazette) PDFs ship ToUnicode CMaps with
+    // `begin*` and `end*` operators on the SAME line as the entries:
+    //
+    //   1 begincodespacerange <0000><00D1> endcodespacerange
+    //
+    // PostScript permits this (CMaps are tokens, not lines). The original
+    // parser was line-based and got stuck in `in_codespace_range = true`
+    // forever, so subsequent `beginbfchar` / `beginbfrange` lines were
+    // discarded and the CMap produced 0 mappings. Encoding fallback
+    // (PdfDocEncoding) then leaked each 2-byte CID as two ASCII bytes
+    // ("M" → "\0" + "0" → " 0" after sanitization).
+    // ------------------------------------------------------------------
+
+    /// The actual BOE F0 CMap, verbatim from
+    /// `corpus_cache/6320a941c903a04f.pdf` (Boletín Oficial del Estado,
+    /// sumario 2025-01-15). Single-line `begincodespacerange ...
+    /// endcodespacerange`, then multi-line bfchar and bfrange blocks.
+    /// Must parse to 1 codespace, 14 bfchar singles, and 8 bfrange
+    /// entries (22 mappings total).
+    #[test]
+    fn boe_single_line_codespacerange_parses_full_cmap() {
+        let cmap_data = b"/CIDInit /ProcSet findresource begin 12 dict begin begincmap \n\
+/CIDSystemInfo <</Registry (F0+0) /Ordering (F0) /Supplement 0>> def\n\
+/CMapName /F0+0 def\n\
+/CMapType 2 def\n\
+1 begincodespacerange <0000><00D1> endcodespacerange\n\
+14 beginbfchar\n\
+<0000><0000>\n\
+<0003><0020>\n\
+<005C><0079>\n\
+<0066><00D1>\n\
+<0069><00E1>\n\
+<0070><00E9>\n\
+<0074><00ED>\n\
+<0078><00F1>\n\
+<0079><00F3>\n\
+<007E><00FA>\n\
+<00C7><00C1>\n\
+<00CA><00CD>\n\
+<00CE><00D3>\n\
+<00D1><00DA>\n\
+endbfchar\n\
+8 beginbfrange\n\
+<000F><001D><002C>\n\
+<0024><002D><0041>\n\
+<002F><0033><004C>\n\
+<0035><0039><0052>\n\
+<003B><003D><0058>\n\
+<0044><004C><0061>\n\
+<004F><0053><006C>\n\
+<0055><005A><0072>\n\
+endbfrange\n\
+endcmap CMapName currentdict /CMap defineresource pop end end\n";
+
+        let cmap = CMap::parse(cmap_data).expect("CMap parse must succeed");
+
+        assert_eq!(
+            cmap.codespace_ranges.len(),
+            1,
+            "single-line begincodespacerange must produce 1 codespace; got {} ({:?})",
+            cmap.codespace_ranges.len(),
+            cmap.codespace_ranges
+        );
+        let cs = &cmap.codespace_ranges[0];
+        assert_eq!(cs.start, vec![0x00, 0x00]);
+        assert_eq!(cs.end, vec![0x00, 0xD1]);
+
+        // 14 bfchar singles + 8 bfrange entries = 22 entries.
+        assert_eq!(
+            cmap.mappings.len(),
+            22,
+            "expected 22 entries (14 bfchar + 8 bfrange); got {}",
+            cmap.mappings.len()
+        );
+
+        // Concrete decoding probe: CID <0030> via bfrange <002F><0033><004C>
+        // (the 'M' glyph in this font) → offset 1 → 0x004D → 'M'.
+        let mapped = cmap.map(&[0x00, 0x30]).expect("CID 0030 must map");
+        assert_eq!(mapped, vec![0x00, 0x4D]);
+        assert_eq!(cmap.to_unicode(&mapped).as_deref(), Some("M"));
+
+        // bfchar single: CID <0003> → <0020> (space).
+        let mapped = cmap.map(&[0x00, 0x03]).expect("CID 0003 must map");
+        assert_eq!(mapped, vec![0x00, 0x20]);
+    }
+
+    /// Defensive coverage for the same minification pattern on `beginbfchar`
+    /// and `beginbfrange` blocks. Any of the three Adobe CMap operators
+    /// may legally appear with the `end*` on the same line — the parser
+    /// must handle all three uniformly.
+    #[test]
+    fn single_line_beginbfchar_parses() {
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <00><FF> endcodespacerange\n\
+2 beginbfchar <20><0020> <41><0041> endbfchar\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        assert_eq!(cmap.codespace_ranges.len(), 1);
+        assert_eq!(cmap.mappings.len(), 2, "got {:?}", cmap.mappings);
+        assert_eq!(cmap.map(&[0x20]), Some(vec![0x00, 0x20]));
+        assert_eq!(cmap.map(&[0x41]), Some(vec![0x00, 0x41]));
+    }
+
+    #[test]
+    fn single_line_beginbfrange_parses() {
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><00FF> endcodespacerange\n\
+1 beginbfrange <0020><007E><0020> endbfrange\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        assert_eq!(cmap.codespace_ranges.len(), 1);
+        assert_eq!(cmap.mappings.len(), 1, "got {:?}", cmap.mappings);
+        // CID 0x0041 should map via the range (offset 0x21) to 0x0041 (UTF-16BE 'A').
+        let mapped = cmap.map(&[0x00, 0x41]).expect("CID 0041 must map");
+        assert_eq!(mapped, vec![0x00, 0x41]);
+    }
+
+    /// `bfrange` array form must use big-endian carry when incrementing
+    /// `current_src` between dst entries. A naive last-byte-only increment
+    /// (`<00FE> + 1 → <0000>`) would silently insert into the wrong slot
+    /// whenever the range crosses a byte boundary, producing bogus
+    /// mappings without any error.
+    #[test]
+    fn bfrange_array_form_increments_src_with_big_endian_carry() {
+        // 4 dsts over <00FE>..=<0101>: the second increment crosses
+        // from 0x00FF to 0x0100, which requires the carry to land in
+        // the high byte.
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+1 beginbfrange\n\
+<00FE> <0101> [<0041> <0042> <0043> <0044>]\n\
+endbfrange\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+
+        // Expect exactly four Single entries at <00FE>, <00FF>, <0100>, <0101>.
+        assert_eq!(
+            cmap.mappings.len(),
+            4,
+            "expected 4 mappings across the byte boundary; got {:?}",
+            cmap.mappings
+        );
+
+        // Each src code must map to the matching dst from the array.
+        assert_eq!(cmap.map(&[0x00, 0xFE]), Some(vec![0x00, 0x41]));
+        assert_eq!(cmap.map(&[0x00, 0xFF]), Some(vec![0x00, 0x42]));
+        assert_eq!(
+            cmap.map(&[0x01, 0x00]),
+            Some(vec![0x00, 0x43]),
+            "carry across byte boundary: <0100> must map to dsts[2] (0x0043)"
+        );
+        assert_eq!(cmap.map(&[0x01, 0x01]), Some(vec![0x00, 0x44]));
+
+        // Crucially: <0000> (the would-be result of naive last-byte
+        // wrap of <00FF>) must NOT have inherited dsts[2].
+        assert_eq!(
+            cmap.map(&[0x00, 0x00]),
+            None,
+            "<0000> must not be populated; naive wraparound would have put 0x0043 here"
+        );
+    }
+
+    /// `increment_be` direct unit test: a focused regression guard for
+    /// the carry helper used by the bfrange array form.
+    #[test]
+    fn increment_be_carries_across_byte_boundary() {
+        let mut bytes = vec![0x00, 0xFF];
+        assert!(increment_be(&mut bytes));
+        assert_eq!(bytes, vec![0x01, 0x00]);
+
+        let mut bytes = vec![0x00, 0x00, 0xFF, 0xFF];
+        assert!(increment_be(&mut bytes));
+        assert_eq!(bytes, vec![0x00, 0x01, 0x00, 0x00]);
+
+        // Overflow at the top: <FFFF> + 1 returns false and wraps.
+        let mut bytes = vec![0xFF, 0xFF];
+        assert!(!increment_be(&mut bytes));
+        assert_eq!(bytes, vec![0x00, 0x00]);
+    }
+
+    /// Mixed: some `begin*` directives on their own line, others combined.
+    /// The parser must not let one form pollute the state of another.
+    #[test]
+    fn mixed_single_line_and_multi_line_directives_parse() {
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange\n\
+<0000><FFFF>\n\
+endcodespacerange\n\
+2 beginbfchar <0001><0041> <0002><0042> endbfchar\n\
+1 beginbfrange\n\
+<0010> <0012> <0050>\n\
+endbfrange\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        assert_eq!(cmap.codespace_ranges.len(), 1);
+        assert_eq!(cmap.mappings.len(), 3);
+        assert_eq!(cmap.map(&[0x00, 0x01]), Some(vec![0x00, 0x41]));
+        assert_eq!(cmap.map(&[0x00, 0x02]), Some(vec![0x00, 0x42]));
+        assert_eq!(cmap.map(&[0x00, 0x10]), Some(vec![0x00, 0x50]));
+        assert_eq!(cmap.map(&[0x00, 0x12]), Some(vec![0x00, 0x52]));
+    }
+
+    /// `bfrange` array form with an empty `[]` is legal but degenerate:
+    /// it should produce zero entries and must not panic. This locks in
+    /// the early-exit behaviour of the `for dst in dsts` body when the
+    /// array vector is empty.
+    #[test]
+    fn bfrange_array_form_with_empty_array_emits_zero_mappings_no_panic() {
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+1 beginbfrange\n\
+<0010> <0012> []\n\
+endbfrange\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse must not panic on empty array");
+        assert_eq!(
+            cmap.mappings.len(),
+            0,
+            "empty bfrange array must yield zero mappings; got {:?}",
+            cmap.mappings
+        );
+        assert_eq!(cmap.map(&[0x00, 0x10]), None);
+    }
+
+    /// Regression for an infinite loop introduced by the token-based
+    /// rewrite: a stray close-delimiter (`>` that is not part of `>>`,
+    /// or a lone `]` / `)`) reached the keyword branch of the tokeniser,
+    /// which `break`s immediately without advancing the cursor. The
+    /// scanner then spun forever on that byte. issue11651.pdf from the
+    /// pdf.js corpus contained exactly such a byte in a CMap-adjacent
+    /// stream and hung text extraction. The tokeniser must always make
+    /// forward progress; this test must complete (not hang) and parse
+    /// the surrounding valid mappings.
+    #[test]
+    fn stray_close_delimiters_do_not_hang_tokenizer() {
+        // A lone `>`, `]`, and `)` interspersed with valid content.
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+> ] )\n\
+2 beginbfchar\n\
+<0041><0061>\n\
+<0042><0062>\n\
+endbfchar\n\
+endcmap\n";
+
+        // The assertion that matters is that parse() RETURNS at all.
+        let cmap = CMap::parse(cmap_data).expect("parse must terminate, not hang");
+        assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
+        assert_eq!(cmap.map(&[0x00, 0x42]), Some(vec![0x00, 0x62]));
+    }
+
+    /// A CMap consisting solely of a stray `>` must terminate (empty CMap).
+    #[test]
+    fn lone_gt_delimiter_terminates() {
+        let cmap = CMap::parse(b">").expect("must terminate");
+        assert!(cmap.mappings.is_empty());
+    }
+
+    /// `usecmap` directive must inherit the codespace + identity fallback
+    /// from a predefined parent (`Identity-H` / `Identity-V`). Codes
+    /// that the child CMap doesn't explicitly map should pass through
+    /// as their UTF-16BE code units (Identity behaviour), while
+    /// explicit mappings still override.
+    #[test]
+    fn usecmap_identity_h_inheritance_provides_fallback() {
+        let cmap_data = b"begincmap\n\
+/CMapName /CustomChild def\n\
+/CMapType 2 def\n\
+/Identity-H usecmap\n\
+1 beginbfchar\n\
+<0041><0061>\n\
+endbfchar\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+
+        // Explicit override survives.
+        assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
+        assert_eq!(cmap.to_unicode(&[0x00, 0x61]).as_deref(), Some("a"));
+
+        // Unmapped code falls back to identity: <0042> → CID <0042>
+        // → ToUnicode interprets as UTF-16BE 'B'.
+        let mapped = cmap
+            .map(&[0x00, 0x42])
+            .expect("identity fallback must map <0042>");
+        assert_eq!(mapped, vec![0x00, 0x42]);
+        assert_eq!(cmap.to_unicode(&mapped).as_deref(), Some("B"));
+
+        // Inherited codespace covers the full 2-byte range even though
+        // no explicit `begincodespacerange` appears in the child CMap.
+        assert!(cmap.is_valid_code(&[0x12, 0x34]));
+    }
+
+    /// `usecmap Identity-V` mirrors Identity-H semantics for vertical
+    /// writing-mode CMaps. Same fallback behaviour.
+    #[test]
+    fn usecmap_identity_v_inheritance_provides_fallback() {
+        let cmap_data = b"begincmap\n\
+/Identity-V usecmap\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+
+        // No explicit mappings, but identity fallback covers everything.
+        assert_eq!(cmap.map(&[0x4E, 0x2D]), Some(vec![0x4E, 0x2D]));
+        assert_eq!(
+            cmap.to_unicode(&[0x4E, 0x2D]).as_deref(),
+            Some("中"),
+            "identity fallback should let CJK code <4E2D> decode to U+4E2D"
+        );
+    }
+
+    /// A non-Identity parent (`/Foo usecmap`) must NOT enable the
+    /// identity fallback. This locks in that the inheritance is only
+    /// honoured for the two predefined Identity CMaps the codebase
+    /// can synthesise internally — external CMap chaining is out of
+    /// scope and must remain absent (no resolver yet).
+    #[test]
+    fn usecmap_non_identity_parent_does_not_enable_identity_fallback() {
+        let cmap_data = b"begincmap\n\
+/SomeOtherCMap usecmap\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        assert_eq!(
+            cmap.map(&[0x00, 0x41]),
+            None,
+            "non-Identity usecmap must not provide identity fallback"
+        );
+    }
+
+    /// Unterminated hex string (`<00FF` without `>`) used to silently
+    /// truncate the entire token stream. The resilience fix keeps the
+    /// scanner advancing past the lone `<` so that subsequent valid
+    /// mappings still land in the CMap.
+    #[test]
+    fn unterminated_hex_string_does_not_discard_following_mappings() {
+        // The `<00FF` (no closing `>`) appears between two valid mappings.
+        // Pre-fix the entire trailing `<0042><0043> endbfchar endcmap`
+        // would have been silently dropped; post-fix only the lone `<` is
+        // skipped and the second mapping survives.
+        let cmap_data = b"begincmap\n\
+1 begincodespacerange <0000><FFFF> endcodespacerange\n\
+2 beginbfchar\n\
+<0041><0061>\n\
+<00FF\n\
+<0042><0062>\n\
+endbfchar\n\
+endcmap\n";
+
+        let cmap = CMap::parse(cmap_data).expect("parse");
+        // At least the two well-formed mappings must survive.
+        assert!(
+            cmap.single_mappings.contains_key(&vec![0x00, 0x41]),
+            "first valid mapping (<0041>→<0061>) must survive unterminated hex"
+        );
+        assert!(
+            cmap.single_mappings.contains_key(&vec![0x00, 0x42]),
+            "second valid mapping after the malformed `<00FF` must survive"
+        );
+        assert_eq!(cmap.map(&[0x00, 0x41]), Some(vec![0x00, 0x61]));
+        assert_eq!(cmap.map(&[0x00, 0x42]), Some(vec![0x00, 0x62]));
+    }
+
+    #[test]
+    fn usecmap_external_ucs2_parent_maps_to_ordering() {
+        let data = b"begincmap\n/Adobe-Korea1-UCS2 usecmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+endcmap";
+        let cmap = CMap::parse(data).expect("parse");
+        assert_eq!(cmap.inherited_ordering(), Some("Korea1"));
     }
 }

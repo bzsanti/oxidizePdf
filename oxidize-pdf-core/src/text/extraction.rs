@@ -20,6 +20,22 @@ pub struct ExtractionOptions {
     pub preserve_layout: bool,
     /// Minimum space width to insert space character (in text space units)
     pub space_threshold: f64,
+    /// Threshold for synthesising an implicit `U+0020` from a `TJ` numeric
+    /// kerning offset, expressed as a fraction of the current font size.
+    /// A TJ kern advances the text matrix by `-adjustment/1000 * font_size`
+    /// without rendering any glyph; many PDFs (academic publishers, LaTeX,
+    /// kerned typography) encode inter-word gaps purely as wide negative
+    /// kerns rather than literal space bytes. When the synthesised advance
+    /// exceeds `tj_space_threshold * font_size`, the extractor inserts one
+    /// `U+0020`. Default `0.2` (200 milli-em) sits well between typical
+    /// intra-word kerning (10-50 milli-em) and the width of a `space`
+    /// glyph in most fonts (250-300 milli-em). Lower values catch tighter
+    /// spaces; higher values reduce false positives in fonts with unusually
+    /// wide kerning. Separate from `space_threshold` (which governs the
+    /// post-glyph gap between separate text-show operators) because the TJ
+    /// numeric kern is measured without any glyph advance baseline and
+    /// needs a more sensitive threshold (issue #272).
+    pub tj_space_threshold: f64,
     /// Minimum vertical distance to insert newline (in text space units)
     pub newline_threshold: f64,
     /// Sort text fragments by position (useful for multi-column layouts)
@@ -59,6 +75,7 @@ impl Default for ExtractionOptions {
         Self {
             preserve_layout: false,
             space_threshold: 0.3,
+            tj_space_threshold: 0.2,
             newline_threshold: 10.0,
             sort_by_position: true,
             detect_columns: false,
@@ -728,8 +745,51 @@ impl TextExtractor {
                                         );
                                     }
                                     TextElement::Spacing(adjustment) => {
-                                        // Text position adjustment (negative = move left)
+                                        // Text position adjustment (negative = move left,
+                                        // i.e. shifts the pen forward). When the synthesised
+                                        // forward advance exceeds `tj_space_threshold * font_size`
+                                        // we treat the kern as an implicit `U+0020` (issue #272):
+                                        // many PDFs encode word breaks purely as wide negative
+                                        // kerns and never emit a literal space byte.
                                         let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+
+                                        if tx > self.options.tj_space_threshold * state.font_size
+                                            && !extracted_text.is_empty()
+                                            && !extracted_text.ends_with(' ')
+                                        {
+                                            extracted_text.push(' ');
+
+                                            // Skip the fragment-level emission while an
+                                            // ActualText scope is pending: the synthesised
+                                            // space is a heuristic, not real content, and
+                                            // emitting it would call `emit_text_fragment`
+                                            // whose ActualText short-circuit would inflate
+                                            // `pending.width` and set `pending.populated`
+                                            // even though no real `Tj` has fired yet. The
+                                            // EMC flush will supply the canonical fragment
+                                            // text from the override (Phase 1 #269 contract).
+                                            if self.options.preserve_layout
+                                                && state.pending_actualtext.is_none()
+                                            {
+                                                // Emit a synthetic single-space fragment at the
+                                                // current pen origin so downstream layout merges
+                                                // (e.g. `merge_close_fragments`) see the gap as
+                                                // explicit content rather than as a sub-threshold
+                                                // x-jump. Width = the kern advance so the next
+                                                // text fragment begins flush against it.
+                                                let (sx, sy) = text_origin(&state);
+                                                emit_text_fragment(
+                                                    &mut fragments,
+                                                    " ",
+                                                    tx,
+                                                    sx,
+                                                    sy,
+                                                    &mut state,
+                                                    self.options.include_artifacts,
+                                                );
+                                            }
+                                        }
+
                                         state.text_matrix = multiply_matrix(
                                             &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
                                             &state.text_matrix,
@@ -1902,6 +1962,7 @@ mod tests {
         let options = ExtractionOptions {
             preserve_layout: true,
             space_threshold: 0.5,
+            tj_space_threshold: 0.15,
             newline_threshold: 15.0,
             sort_by_position: false,
             detect_columns: true,
@@ -1913,6 +1974,7 @@ mod tests {
         };
         assert!(options.preserve_layout);
         assert_eq!(options.space_threshold, 0.5);
+        assert_eq!(options.tj_space_threshold, 0.15);
         assert_eq!(options.newline_threshold, 15.0);
         assert!(!options.sort_by_position);
         assert!(options.detect_columns);
@@ -2100,6 +2162,7 @@ mod tests {
         let options = ExtractionOptions {
             preserve_layout: true,
             space_threshold: 0.3,
+            tj_space_threshold: 0.2,
             newline_threshold: 12.0,
             sort_by_position: false,
             detect_columns: true,
@@ -2159,6 +2222,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let width = calculate_text_width("Hello", 12.0, Some(&font_info));
@@ -2200,6 +2264,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let width = calculate_text_width("Hello", 12.0, Some(&font_info));
@@ -2252,6 +2317,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Test with character outside range
@@ -2292,6 +2358,7 @@ mod tests {
                 missing_width: Some(600.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Character 42 (index 10 from first_char 32)
@@ -2327,6 +2394,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let width = calculate_text_width("", 12.0, Some(&font_info));
@@ -2361,6 +2429,7 @@ mod tests {
                 missing_width: Some(600.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Test with Unicode characters outside ASCII range
@@ -2394,6 +2463,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Test same character with different font sizes
@@ -2432,6 +2502,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         // Simulate monospace font (same width)
@@ -2452,6 +2523,7 @@ mod tests {
                 missing_width: Some(600.0),
                 kerning: None,
             },
+            cid_encoding: None,
         };
 
         let prop_width = calculate_text_width("i", 12.0, Some(&proportional_font));
@@ -2502,6 +2574,7 @@ mod tests {
                 missing_width: Some(500.0),
                 kerning: Some(kerning),
             },
+            cid_encoding: None,
         };
 
         // Test "AV" with kerning

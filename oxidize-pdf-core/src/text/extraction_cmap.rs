@@ -6,6 +6,7 @@
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
+use crate::text::cid_to_unicode::CidCollection;
 use crate::text::cmap::CMap;
 use crate::text::extraction::TextExtractor;
 use std::collections::HashMap;
@@ -61,6 +62,10 @@ pub struct FontInfo {
     pub cid_ordering: Option<String>,
     /// Font metrics (widths, kerning)
     pub metrics: FontMetrics,
+    /// Resolved non-Identity CID encoding (code→CID), if any. Only consulted in
+    /// the Type0 decode path in `decode_text_with_font`; ignored for other font
+    /// types (it may be populated for them but is never read).
+    pub cid_encoding: Option<crate::text::encoding_cmap::CidEncoding>,
 }
 
 /// Enhanced text extractor with CMap support
@@ -113,6 +118,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
+            cid_encoding: None,
         };
 
         // Extract CIDSystemInfo Ordering (for CIDFont dictionaries)
@@ -136,6 +142,10 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             match encoding_obj {
                 PdfObject::Name(enc_name) => {
                     font_info.encoding = Some(enc_name.0.clone());
+                    if enc_name.0 != "Identity-H" && enc_name.0 != "Identity-V" {
+                        font_info.cid_encoding =
+                            crate::text::encoding_cmap::resolve_predefined(&enc_name.0);
+                    }
                 }
                 PdfObject::Dictionary(enc_dict) => {
                     // Handle encoding with differences
@@ -146,6 +156,17 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                     if let Some(PdfObject::Array(differences)) = enc_dict.get("Differences") {
                         font_info.differences =
                             Some(self.parse_encoding_differences(&differences.0)?);
+                    }
+                }
+                PdfObject::Reference(num, gen) => {
+                    if let Ok(PdfObject::Stream(stream)) = document.get_object(*num, *gen) {
+                        if let Ok(data) = stream.decode(&ParseOptions::default()) {
+                            if let Ok(enc) = crate::text::encoding_cmap::EncodingCMap::parse(&data)
+                            {
+                                font_info.cid_encoding =
+                                    Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc));
+                            }
+                        }
                     }
                 }
                 _ => {}
@@ -492,91 +513,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
         Ok(kerning_pairs)
     }
 
-    /// Decode text using font information and CMap
-    #[allow(dead_code)]
-    pub fn decode_text_with_font(
-        &self,
-        text_bytes: &[u8],
-        font_info: &FontInfo,
-    ) -> ParseResult<String> {
-        // First try ToUnicode CMap if available
-        if let Some(ref to_unicode) = font_info.to_unicode {
-            return self.decode_with_cmap(text_bytes, to_unicode);
-        }
-
-        // For Type0 fonts, use descendant font
-        if font_info.font_type == "Type0" {
-            if let Some(ref descendant) = font_info.descendant_font {
-                return self.decode_text_with_font(text_bytes, descendant);
-            }
-        }
-
-        // Fall back to encoding-based decoding
-        self.decode_with_encoding(text_bytes, font_info)
-    }
-
-    /// Decode text using CMap
-    #[allow(dead_code)]
-    fn decode_with_cmap(&self, text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
-        let mut result = String::new();
-        let mut i = 0;
-
-        while i < text_bytes.len() {
-            // Try different code lengths (1 to 4 bytes)
-            let mut decoded = false;
-
-            for len in 1..=4.min(text_bytes.len() - i) {
-                let code = &text_bytes[i..i + len];
-
-                if let Some(mapped) = cmap.map(code) {
-                    if let Some(unicode_str) = cmap.to_unicode(&mapped) {
-                        result.push_str(&unicode_str);
-                        i += len;
-                        decoded = true;
-                        break;
-                    }
-                }
-            }
-
-            if !decoded {
-                // Skip undecodable byte
-                i += 1;
-            }
-        }
-
-        Ok(result)
-    }
-
-    /// Decode text using encoding
-    #[allow(dead_code)]
-    fn decode_with_encoding(&self, text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<String> {
-        let mut result = String::new();
-
-        for &byte in text_bytes {
-            // Check encoding differences first
-            if let Some(ref differences) = font_info.differences {
-                if let Some(char_name) = differences.get(&byte) {
-                    if let Some(unicode_char) = glyph_name_to_unicode(char_name) {
-                        result.push(unicode_char);
-                        continue;
-                    }
-                }
-            }
-
-            // Use base encoding
-            let ch = match font_info.encoding.as_deref() {
-                Some("WinAnsiEncoding") => decode_winansi(byte),
-                Some("MacRomanEncoding") => decode_macroman(byte),
-                Some("StandardEncoding") => decode_standard(byte),
-                _ => byte as char, // Default to Latin-1
-            };
-
-            result.push(ch);
-        }
-
-        Ok(result)
-    }
-
     /// Extract text from a page with CMap support
     #[allow(dead_code)]
     pub fn extract_text_from_page(
@@ -632,12 +568,31 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
                 return decode_text_with_font(text_bytes, descendant);
             }
 
-            // Try CID→Unicode mapping using CIDSystemInfo Ordering
-            // This handles fonts with Identity-H encoding and no ToUnicode CMap
+            // Non-Identity encoding: map code→CID (or UTF-16BE) before CID→Unicode.
             let ordering = descendant
                 .cid_ordering
                 .as_deref()
                 .or(font_info.cid_ordering.as_deref());
+
+            match &font_info.cid_encoding {
+                Some(crate::text::encoding_cmap::CidEncoding::Utf16Be) => {
+                    return Ok(crate::text::encoding_cmap::decode_utf16be(text_bytes));
+                }
+                Some(crate::text::encoding_cmap::CidEncoding::Cmap(enc)) => {
+                    if let Some(coll) =
+                        ordering.and_then(crate::text::cid_to_unicode::CidCollection::from_ordering)
+                    {
+                        return Ok(decode_via_encoding_cmap(text_bytes, enc, &coll));
+                    }
+                    // Non-Identity encoding but the CID collection is unknown
+                    // (malformed PDF without CIDSystemInfo/Ordering). Fall through
+                    // to the Identity CID-table path below as best-effort.
+                }
+                None => {}
+            }
+
+            // Try CID→Unicode mapping using CIDSystemInfo Ordering
+            // This handles fonts with Identity-H encoding and no ToUnicode CMap
             if let Some(ordering) = ordering {
                 if let Some(collection) =
                     crate::text::cid_to_unicode::CidCollection::from_ordering(ordering)
@@ -658,6 +613,34 @@ pub fn decode_text_with_font(text_bytes: &[u8], font_info: &FontInfo) -> ParseRe
 
     // Fall back to encoding-based decoding
     decode_with_encoding(text_bytes, font_info)
+}
+
+/// Decode using an embedded/predefined encoding CMap (code→CID) followed by a
+/// CID→Unicode collection. Walks variable-width codes per the CMap codespace.
+fn decode_via_encoding_cmap(
+    text_bytes: &[u8],
+    enc: &crate::text::encoding_cmap::EncodingCMap,
+    collection: &crate::text::cid_to_unicode::CidCollection,
+) -> String {
+    let mut result = String::new();
+    let mut i = 0;
+    while i < text_bytes.len() {
+        let len = enc
+            .code_len_at(text_bytes, i)
+            .max(1)
+            .min(text_bytes.len() - i);
+        let code = &text_bytes[i..i + len];
+        match enc.map_code_to_cid(code).or_else(|| enc.map_notdef(code)) {
+            Some(cid) => match collection.cid_to_unicode(cid) {
+                Some(ch) => result.push(ch),
+                None if cid > 0 => result.push('\u{FFFD}'),
+                None => {}
+            },
+            None => result.push('\u{FFFD}'),
+        }
+        i += len;
+    }
+    result
 }
 
 /// Decode text using CID→Unicode lookup tables (Adobe CMap Resources).
@@ -687,6 +670,10 @@ fn decode_with_cid_table(
 
 /// Decode text using a CMap — free function (no allocations).
 fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
+    let inherited = cmap
+        .inherited_ordering()
+        .and_then(CidCollection::from_ordering);
+
     let mut result = String::new();
     let mut i = 0;
 
@@ -695,7 +682,6 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
 
         for len in 1..=4.min(text_bytes.len() - i) {
             let code = &text_bytes[i..i + len];
-
             if let Some(mapped) = cmap.map(code) {
                 if let Some(unicode_str) = cmap.to_unicode(&mapped) {
                     result.push_str(&unicode_str);
@@ -707,6 +693,24 @@ fn decode_with_cmap(text_bytes: &[u8], cmap: &CMap) -> ParseResult<String> {
         }
 
         if !decoded {
+            // External usecmap to a predefined Adobe `*-UCS2` parent: treat an
+            // unmapped 2-byte code as a CID and resolve via the inherited
+            // collection. Explicit child bf* mappings already won above. Advance
+            // a full 2 bytes regardless of lookup success to keep the 2-byte
+            // stride (matching decode_with_cid_table); emit U+FFFD for an
+            // unmapped non-zero CID, nothing for CID 0.
+            if let Some(coll) = inherited {
+                if text_bytes.len() - i >= 2 {
+                    let cid = u16::from_be_bytes([text_bytes[i], text_bytes[i + 1]]);
+                    match coll.cid_to_unicode(cid) {
+                        Some(ch) => result.push(ch),
+                        None if cid > 0 => result.push('\u{FFFD}'),
+                        None => {}
+                    }
+                    i += 2;
+                    continue;
+                }
+            }
             i += 1;
         }
     }
@@ -913,11 +917,117 @@ mod tests {
             cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
+            cid_encoding: None,
         };
 
         assert_eq!(font_info.name, "Helvetica");
         assert_eq!(font_info.font_type, "Type1");
         assert_eq!(font_info.encoding, Some("WinAnsiEncoding".to_string()));
+    }
+
+    #[test]
+    fn embedded_encoding_cmap_decodes_via_cid_table() {
+        use crate::text::cid_to_unicode::CidCollection;
+        use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};
+        // Pick a CID that is present in the GB1 collection; assert decode equals
+        // exactly the GB1 table's Unicode for that CID (real content, not shape).
+        let coll = CidCollection::from_ordering("GB1").unwrap();
+        // find a small CID that maps (scan upward to be robust to table contents)
+        let (cid, expected) = (1u16..2000)
+            .find_map(|c| coll.cid_to_unicode(c).map(|ch| (c, ch)))
+            .expect("GB1 has at least one mapped CID");
+
+        let enc = EncodingCMap::parse(
+            format!(
+                "begincmap\n1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 begincidchar <0041> {cid} endcidchar\nendcmap"
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+
+        let descendant = FontInfo {
+            name: "Desc".into(),
+            font_type: "CIDFontType0".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            cid_ordering: Some("GB1".into()),
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let parent = FontInfo {
+            name: "Type0".into(),
+            font_type: "Type0".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: Some(Box::new(descendant)),
+            cid_to_gid_map: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: Some(CidEncoding::Cmap(enc)),
+        };
+
+        let out = decode_text_with_font(&[0x00, 0x41], &parent).unwrap();
+        assert_eq!(out, expected.to_string());
+    }
+
+    #[test]
+    fn type0_utf16be_encoding_decodes_through_dispatch() {
+        use crate::text::encoding_cmap::CidEncoding;
+        let descendant = FontInfo {
+            name: "Desc".into(),
+            font_type: "CIDFontType2".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            cid_ordering: Some("GB1".into()),
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let parent = FontInfo {
+            name: "Type0".into(),
+            font_type: "Type0".into(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: Some(Box::new(descendant)),
+            cid_to_gid_map: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: Some(CidEncoding::Utf16Be),
+        };
+        // UTF-16BE code 0x4E2D ('中') must decode directly, ignoring the ordering.
+        let out = decode_text_with_font(&[0x4E, 0x2D], &parent).unwrap();
+        assert_eq!(out, "中");
+    }
+
+    #[test]
+    fn explicit_bfchar_overrides_usecmap_cid_fallback() {
+        use crate::text::cmap::CMap;
+        let with_override = CMap::parse(
+            b"begincmap\n/Adobe-Korea1-UCS2 usecmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\n\
+1 beginbfchar <0041> <AC00> endbfchar\nendcmap",
+        )
+        .expect("parse with_override");
+        let without = CMap::parse(
+            b"begincmap\n/Adobe-Korea1-UCS2 usecmap\n\
+1 begincodespacerange <0000> <FFFF> endcodespacerange\nendcmap",
+        )
+        .expect("parse without");
+        let got = decode_with_cmap(&[0x00, 0x41], &with_override).unwrap();
+        let fallback = decode_with_cmap(&[0x00, 0x41], &without).unwrap();
+        assert_eq!(got, "\u{AC00}", "explicit bfchar must win");
+        assert_ne!(
+            got, fallback,
+            "explicit mapping must override the CID-table fallback"
+        );
     }
 }
 
