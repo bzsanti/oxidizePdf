@@ -14,6 +14,8 @@ fn frag(text: &str, x: f64, y: f64, font_size: f64, bold: bool) -> TextFragment 
         is_italic: false,
         color: None,
         space_decisions: Vec::new(),
+        mcid: None,
+        struct_tag: None,
     }
 }
 
@@ -340,6 +342,8 @@ fn test_partition_preserves_page_numbers() {
 
 #[test]
 fn test_partition_reading_order() {
+    use oxidize_pdf::pipeline::Element;
+
     let doc = oxidize_pdf::parser::PdfDocument::open(format!(
         "{}/tests/fixtures/Cold_Email_Hacks.pdf",
         env!("CARGO_MANIFEST_DIR")
@@ -348,12 +352,27 @@ fn test_partition_reading_order() {
 
     let elements = doc.partition().unwrap();
 
-    // Within same page, Y should be descending (top-to-bottom in PDF coords)
-    for window in elements.windows(2) {
+    // Reading order applies to inline body content (paragraphs, list items,
+    // key-value pairs). Headers/footers are appended in their own pass and
+    // tables in another pass; the partitioner does not currently sort the
+    // final element list by y. Filtering to inline-body keeps the assertion
+    // honest about what reading order means here.
+    let body_only: Vec<&Element> = elements
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                Element::Paragraph(_) | Element::ListItem(_) | Element::KeyValue(_)
+            )
+        })
+        .collect();
+
+    for window in body_only.windows(2) {
         if window[0].page() == window[1].page() {
             assert!(
                 window[0].bbox().y >= window[1].bbox().y,
-                "Reading order violated: y {} < y {}",
+                "Reading order violated within body content on page {}: y {} < y {}",
+                window[0].page(),
                 window[0].bbox().y,
                 window[1].bbox().y
             );

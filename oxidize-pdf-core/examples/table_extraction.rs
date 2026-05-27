@@ -40,6 +40,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         TextFragment {
             text: "Age".to_string(),
@@ -53,6 +55,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         TextFragment {
             text: "City".to_string(),
@@ -66,6 +70,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         // Data row 1 (Y = 680)
         TextFragment {
@@ -80,6 +86,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         TextFragment {
             text: "30".to_string(),
@@ -93,6 +101,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         TextFragment {
             text: "NYC".to_string(),
@@ -106,6 +116,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         // Data row 2 (Y = 660)
         TextFragment {
@@ -120,6 +132,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         TextFragment {
             text: "25".to_string(),
@@ -133,6 +147,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
         TextFragment {
             text: "LA".to_string(),
@@ -146,6 +162,8 @@ fn demo_table_detection() -> Result<(), Box<dyn std::error::Error>> {
             is_italic: false,
             color: None,
             space_decisions: Vec::new(),
+            mcid: None,
+            struct_tag: None,
         },
     ];
 

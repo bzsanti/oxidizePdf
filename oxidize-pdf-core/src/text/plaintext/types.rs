@@ -34,6 +34,17 @@ pub struct PlainTextConfig {
     /// **Range**: 0.05 to 1.0 (typical)
     pub space_threshold: f64,
 
+    /// Threshold for synthesising an implicit space from a `TJ` numeric
+    /// kerning offset, expressed as a fraction of the font size. Mirrors
+    /// [`ExtractionOptions::tj_space_threshold`](crate::text::ExtractionOptions).
+    /// A `TJ` kern advances the text matrix without rendering a glyph;
+    /// many PDFs encode inter-word gaps purely as wide negative kerns
+    /// rather than literal spaces. When the advance exceeds
+    /// `tj_space_threshold * font_size`, one `U+0020` is inserted.
+    /// Default `0.2` (200 milli-em). Separate from `space_threshold`
+    /// because the TJ kern carries no glyph-advance baseline (issue #272).
+    pub tj_space_threshold: f64,
+
     /// Newline detection threshold (multiple of line height)
     ///
     /// When vertical displacement between text elements exceeds this threshold
@@ -77,6 +88,7 @@ impl Default for PlainTextConfig {
     fn default() -> Self {
         Self {
             space_threshold: 0.3,
+            tj_space_threshold: 0.2,
             newline_threshold: 10.0,
             preserve_layout: false,
             line_break_mode: LineBreakMode::Auto,
@@ -114,6 +126,7 @@ impl PlainTextConfig {
     pub fn dense() -> Self {
         Self {
             space_threshold: 0.1,
+            tj_space_threshold: 0.1,
             newline_threshold: 8.0,
             preserve_layout: false,
             line_break_mode: LineBreakMode::Auto,
@@ -136,6 +149,7 @@ impl PlainTextConfig {
     pub fn loose() -> Self {
         Self {
             space_threshold: 0.4,
+            tj_space_threshold: 0.25,
             newline_threshold: 15.0,
             preserve_layout: false,
             line_break_mode: LineBreakMode::Auto,
@@ -158,6 +172,7 @@ impl PlainTextConfig {
     pub fn preserve_layout() -> Self {
         Self {
             space_threshold: 0.3,
+            tj_space_threshold: 0.2,
             newline_threshold: 10.0,
             preserve_layout: true,
             line_break_mode: LineBreakMode::PreserveAll,

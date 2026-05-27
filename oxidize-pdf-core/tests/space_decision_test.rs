@@ -30,6 +30,8 @@ fn test_text_fragment_has_space_decisions_field() {
         is_italic: false,
         color: None,
         space_decisions: Vec::new(),
+        mcid: None,
+        struct_tag: None,
     };
     assert!(frag.space_decisions.is_empty());
 }

@@ -4,7 +4,7 @@
 //! instead of position-annotated fragments.
 
 use super::types::{LineBreakMode, PlainTextConfig, PlainTextResult};
-use crate::parser::content::{ContentOperation, ContentParser};
+use crate::parser::content::{ContentOperation, ContentParser, TextElement};
 use crate::parser::document::PdfDocument;
 use crate::parser::objects::PdfObject;
 use crate::parser::page_tree::ParsedPage;
@@ -96,6 +96,7 @@ impl Default for TextState {
 ///     newline_threshold: 12.0,
 ///     preserve_layout: true,
 ///     line_break_mode: oxidize_pdf::text::plaintext::LineBreakMode::Normalize,
+///     ..Default::default()
 /// };
 ///
 /// let mut extractor = PlainTextExtractor::with_config(config);
@@ -267,6 +268,53 @@ impl PlainTextExtractor {
 
                             extracted_text.push_str(&decoded);
                             last_x = x;
+                            last_y = y;
+                        }
+                    }
+
+                    ContentOperation::ShowTextArray(array) => {
+                        if in_text_object {
+                            // Inter-operator spacing once, at the start of the
+                            // array, mirroring the single-`Tj` path.
+                            let (x, y) = transform_point(0.0, 0.0, &state.text_matrix);
+                            if !extracted_text.is_empty() {
+                                let dx = x - last_x;
+                                let dy = (y - last_y).abs();
+                                if dy > self.config.newline_threshold {
+                                    extracted_text.push('\n');
+                                } else if dx > self.config.space_threshold * state.font_size {
+                                    extracted_text.push(' ');
+                                }
+                            }
+
+                            for item in array {
+                                match item {
+                                    TextElement::Text(bytes) => {
+                                        let decoded = self.decode_text::<R>(&bytes, &state)?;
+                                        extracted_text.push_str(&decoded);
+                                    }
+                                    TextElement::Spacing(adjustment) => {
+                                        // Negative adjustment shifts the pen
+                                        // forward. A wide forward advance is an
+                                        // implicit word break (issue #272): emit
+                                        // one space unless the previous char is
+                                        // already a space.
+                                        let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+                                        if tx > self.config.tj_space_threshold * state.font_size
+                                            && !extracted_text.is_empty()
+                                            && !extracted_text.ends_with(' ')
+                                        {
+                                            extracted_text.push(' ');
+                                        }
+                                        state.text_matrix = multiply_matrix(
+                                            &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
+                                            &state.text_matrix,
+                                        );
+                                    }
+                                }
+                            }
+
+                            last_x = transform_point(0.0, 0.0, &state.text_matrix).0;
                             last_y = y;
                         }
                     }
