@@ -8,6 +8,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.10.0] - 2026-05-27
+
+This release ships the text-extraction quality work merged to `develop`
+since 2.9.0 (PRs #263, #264, #266, #267, #268, #270, #273, #274). The focus
+is RAG-grade extraction correctness: non-Identity CID decoding, marked-content
+semantics, paragraph reconstruction, and multi-column line ordering.
+
+### Added
+
+- **Non-Identity CID encoding decode for Type0 fonts (#272).** Character codes
+  are resolved to CIDs through embedded `/Encoding` stream CMaps and predefined
+  Adobe CMaps before mapping to Unicode, instead of assuming Identity. Vendored
+  five Adobe CJK CMaps (GBK-EUC-H, GBKp-EUC-H, 90ms-RKSJ-H, 90pv-RKSJ-H,
+  KSCms-UHC-H, BSD-3-Clause), algorithmic `Uni*` UTF-16BE handling, and external
+  `usecmap` resolution to predefined UCS2 in `/ToUnicode`.
+- **Marked-content extraction (#269).** `TextFragment` gains public `mcid:
+  Option<u32>` and `struct_tag: Option<String>` fields carrying the innermost
+  BDC ancestor's identity. `ExtractionOptions.include_artifacts` (default
+  `false`) filters `/Artifact` subtrees; BDC/BMC/EMC operators are consumed and
+  `/ActualText` overrides the marked run (UTF-16BE preserved).
+- **Paragraph reconstruction (#261).** `ExtractionOptions.reconstruct_paragraphs`
+  merges fragments into lines and paragraphs with hyphenation handling.
+- **`ExtractionOptions.tj_space_threshold`** (default `0.2`) synthesises an
+  implicit space when `TJ` kerning exceeds `threshold × font_size`, fixing
+  run-on words in PDFs that emit one glyph per `(…)` array element (#272).
+- **`rag_realworld` example (#266)** running `rag_chunks()` over a cached corpus
+  of real government/academic PDFs, emitting RAG-ready JSONL per document.
+
+### Fixed
+
+- **Glyph-code-as-Latin1 garbage on CJK / government PDFs (#272).** Embedded and
+  predefined encoding CMaps are now decoded; previously codes were treated as
+  raw CIDs (Identity) and produced garbage (e.g. BOE `MINISTERIO` → ` 0 , 1 …`).
+- **CMap parser hang and mis-parse on minified PostScript (#272).** Rewritten to
+  a whitespace-agnostic token-based parser with a guaranteed progress invariant
+  (no infinite loop on stray close delimiters in adversarial corpus input).
+- **Line interleaving and column splitting on tightly-spaced multi-column
+  layouts (#265).** `row_id`-aware `merge_into_lines`, font-size-relative Y
+  tolerance, deferred sort, baseline tolerance tightened to `0.2 × height`, and
+  a `font_size = 0` fallback.
+- **CTM not composed into fragment positions (#262).** Text positions now
+  account for the current transformation matrix; added a `q`/`Q` graphics-state
+  stack.
+- **Parser position leak (#260).** `peek_token` restores position on error and
+  `find_keyword_ahead` no longer reads past the peek buffer.
+
+### Compatibility
+
+- New public fields were added to `TextFragment` and `ExtractionOptions`. Both
+  structs are produced by the library and consumed via field access or
+  `..Default::default()`, so the additions are non-breaking in practice; they
+  are released as a minor per the project's versioning convention.
+
 ## [2.9.0] - 2026-05-20
 
 ### Changed
