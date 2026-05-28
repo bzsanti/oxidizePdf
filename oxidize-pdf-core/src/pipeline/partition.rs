@@ -382,12 +382,14 @@ impl Partitioner {
             }
 
             // 4. Title detection — three OR'd signals (issue #271).
-            //    struct_tag=P/Span explicitly marks body content; in that case
-            //    the bold-short and numeric-prefix heuristics are suppressed,
-            //    but a strong font-ratio signal still wins (defensive: tagged
-            //    PDFs occasionally mis-mark display text as P).
-            let struct_tag_blocks_heuristic =
-                matches!(f.struct_tag.as_deref(), Some("P") | Some("Span"));
+            //    struct_tag=P/Span suppresses the weaker bold-short heuristic
+            //    (too easy to misfire on emphasized words inside paragraphs).
+            //    Font-ratio and numeric-prefix heuristics still fire under P:
+            //    real-world tagged PDFs (notably NCSC CAF v4.0) ship sub-section
+            //    headings like "A2.a Risk Management Process" tagged as P;
+            //    numeric_prefix_title's shape + capitalization guard is strict
+            //    enough to win over the (mis)tag.
+            let p_or_span = matches!(f.struct_tag.as_deref(), Some("P") | Some("Span"));
 
             let mut is_title = false;
             let mut title_confidence = 0.0_f64;
@@ -402,14 +404,14 @@ impl Partitioner {
                 ));
             }
 
-            // 4b. Bold-short heuristic
-            if !struct_tag_blocks_heuristic && bold_short_title(f) {
+            // 4b. Bold-short heuristic — suppressed by P/Span.
+            if !p_or_span && bold_short_title(f) {
                 is_title = true;
                 title_confidence = title_confidence.max(0.7);
             }
 
-            // 4c. Numeric-prefix heuristic
-            if !struct_tag_blocks_heuristic && numeric_prefix_title(f) {
+            // 4c. Numeric-prefix heuristic — fires even under P (strict pattern).
+            if numeric_prefix_title(f) {
                 is_title = true;
                 title_confidence = title_confidence.max(0.8);
             }
@@ -751,7 +753,8 @@ fn compute_kv_confidence(key: &str) -> f64 {
 
 const MAX_HEADER_TEXT_LEN: usize = 100;
 const MAX_BOLD_TITLE_LEN: usize = 120;
-const MAX_NUMERIC_TITLE_LEN: usize = 200;
+const MAX_NUMERIC_TITLE_LEN: usize = 120;
+const MAX_NUMERIC_TITLE_WORDS: usize = 14;
 
 /// `true` when the trimmed text ends with `.`, `!`, or `?`. Used by the
 /// bold-short heading heuristic to exclude complete sentences.
@@ -805,9 +808,16 @@ fn strip_section_prefix(s: &str) -> &str {
 
 /// Heading heuristic: `true` if the trimmed text begins with a recognized
 /// section prefix (`A2.a`, `1.1`, `Section 4:`, `IV.`) AND the next word
-/// after the prefix begins with an uppercase letter. The uppercase guard
-/// rejects measurement strings (`"1.2 million users"`) and instruction
-/// items (`"1. take action"`) that match the prefix but are not headings.
+/// after the prefix begins with an uppercase letter.
+///
+/// The uppercase guard rejects measurement strings (`"1.2 million users"`)
+/// and instruction items (`"1. take action"`) that match the prefix but
+/// are not headings.
+///
+/// Additional guards: real headings rarely contain commas (sentences do)
+/// and rarely exceed [`MAX_NUMERIC_TITLE_LEN`] chars; an ordered list item
+/// that starts with `"N. La ..."` followed by 100+ chars of prose is
+/// almost certainly body text in a Romance-language document, not a heading.
 fn numeric_prefix_title(f: &TextFragment) -> bool {
     let trimmed = f.text.trim();
     let char_count = trimmed.chars().count();
@@ -818,7 +828,26 @@ fn numeric_prefix_title(f: &TextFragment) -> bool {
         return false;
     }
     let rest = strip_section_prefix(trimmed).trim_start();
-    matches!(rest.chars().next(), Some(c) if c.is_uppercase())
+    if !matches!(rest.chars().next(), Some(c) if c.is_uppercase()) {
+        return false;
+    }
+    // Sentence-body discriminator: comma presence almost always indicates
+    // prose rather than a heading. Tradeoff: rare headings with commas
+    // ("Section 1: Foundations, Architecture, and Design") are missed,
+    // but the false-positive rate on Spanish/French ordered lists is much
+    // worse without this guard.
+    if trimmed.contains(',') {
+        return false;
+    }
+    // Word-count guard: numbered headings in Spanish/legal text are short
+    // (typically <= 14 words). Numbered list items that form full
+    // sentences run much longer ("1. La vigilancia continua permitira la
+    // deteccion de actividades o comportamientos anomalos y su oportuna
+    // respuesta." = 17 words).
+    if trimmed.split_whitespace().count() > MAX_NUMERIC_TITLE_WORDS {
+        return false;
+    }
+    true
 }
 
 /// Classification class implied by a PDF structural tag (`/H1`, `/L`, `/Artifact`, ...).
@@ -1069,6 +1098,36 @@ mod tests {
         assert!(!numeric_prefix_title(&frag(&s, false, 12.0)));
     }
 
+    #[test]
+    fn numeric_prefix_title_rejects_text_with_comma() {
+        // Spanish/French ordered list items: "1. La vigilancia, la deteccion, ..."
+        // are body sentences, not headings.
+        assert!(!numeric_prefix_title(&frag(
+            "1. La vigilancia continua permite detectar amenazas, vulnerabilidades y errores.",
+            false,
+            12.0,
+        )));
+    }
+
+    #[test]
+    fn numeric_prefix_title_rejects_long_sentence_without_comma() {
+        // Spanish numbered paragraph without commas but with many words:
+        // 17 words, no comma, ends in period. Must NOT be classified as Title.
+        assert!(!numeric_prefix_title(&frag(
+            "1. La vigilancia continua permitira la deteccion de actividades o comportamientos anomalos y su oportuna respuesta.",
+            false,
+            12.0,
+        )));
+    }
+
+    #[test]
+    fn numeric_prefix_title_rejects_just_over_max_len() {
+        // Heading-like prefix but text length 121 chars > MAX_NUMERIC_TITLE_LEN.
+        let mut s = String::from("A2.a Risk Management ");
+        s.push_str(&"X".repeat(120));
+        assert!(!numeric_prefix_title(&frag(&s, false, 12.0)));
+    }
+
     // --- Partitioner-level integration tests (issue #271 wiring) ---
 
     fn frag_at(text: &str, x: f64, y: f64, font_size: f64) -> TextFragment {
@@ -1103,6 +1162,28 @@ mod tests {
                 .filter(|e| matches!(e, Element::Title(_)))
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn struct_tag_p_does_not_block_numeric_prefix_title() {
+        // Real NCSC pattern: sub-section headings like "A2.a Risk Management Process"
+        // are tagged P (only top-level "Principle Ax" carries H1). The numeric-prefix
+        // pattern is strict enough to fire even under P; without this, ~26 NCSC
+        // sub-section titles would be lost to the Paragraph classifier.
+        let mut f = frag_at("A2.a Risk Management Process", 50.0, 400.0, 12.0);
+        f.struct_tag = Some("P".to_string());
+        let frags = vec![f];
+        let partitioner = Partitioner::new(PartitionConfig::default());
+        let elements = partitioner.partition_fragments(&frags, 0, 800.0);
+
+        assert_eq!(
+            elements
+                .iter()
+                .filter(|e| matches!(e, Element::Title(_)))
+                .count(),
+            1,
+            "numeric-prefix heuristic must fire even when struct_tag=P (NCSC sub-sections)"
         );
     }
 
