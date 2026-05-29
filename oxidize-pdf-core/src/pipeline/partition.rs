@@ -827,6 +827,15 @@ fn numeric_prefix_title(f: &TextFragment) -> bool {
     if !matches_section_prefix(trimmed) {
         return false;
     }
+    // List-marker discriminator: a flat single-level numbered marker
+    // ("1. ", "10) ") is an ordered-list item, never a heading. Real
+    // headings carry multi-level ("3.1", "4.1.1"), lettered ("A2.a"),
+    // "Section N"/"Chapter N", or roman ("IV.") prefixes — none of which
+    // `is_list_item` recognizes. Yielding to ListItem here keeps Title and
+    // ListItem mutually exclusive on the ambiguous bare-integer prefix.
+    if is_list_item(trimmed) {
+        return false;
+    }
     let rest = strip_section_prefix(trimmed).trim_start();
     if !matches!(rest.chars().next(), Some(c) if c.is_uppercase()) {
         return false;
@@ -1080,6 +1089,25 @@ mod tests {
             false,
             12.0
         )));
+    }
+
+    #[test]
+    fn numeric_prefix_title_rejects_flat_numbered_list_marker() {
+        // Single-level "N. Word" / "N) Word" is an ordered-list item, not a
+        // heading — it must yield to is_list_item (regression for #271 / PR #276).
+        for c in &["1. First item", "2. Second item", "10) Tenth item"] {
+            assert!(
+                !numeric_prefix_title(&frag(c, false, 12.0)),
+                "flat numbered list marker must not be a Title: {c}"
+            );
+        }
+        // Multi-level and lettered prefixes remain headings.
+        for c in &["1.1 Overview", "A2.a Risk Management Process"] {
+            assert!(
+                numeric_prefix_title(&frag(c, false, 12.0)),
+                "multi-level/lettered prefix must remain a Title: {c}"
+            );
+        }
     }
 
     #[test]
