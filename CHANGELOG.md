@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Added
+
+- `GraphicsContext::set_fill_color_icc` / `set_stroke_color_icc` — draw with an
+  ICC-based color space registered on the page via `Page::add_color_space`
+  (`/Resources/ColorSpace/<name>`). The resource name is supplied by the caller
+  because ICC profiles are named dynamically by `IccProfileManager`. Unblocks
+  ICC color drawing in the .NET wrapper (GFX-019).
+- `GraphicsContext::set_fill_color_calibrated_named` /
+  `set_stroke_color_calibrated_named` / `set_fill_color_lab_named` /
+  `set_stroke_color_lab_named` — calibrated and Lab color setters that accept a
+  caller-supplied resource name, allowing multiple calibrated/Lab color spaces
+  to coexist on one page. This removes the previous one-calibrated-space-per-page
+  limitation; the existing `set_fill_color_calibrated`/`set_fill_color_lab`
+  methods now delegate to these with the default `CalGray1`/`CalRGB1`/`Lab1`
+  names, so existing behavior is unchanged.
+
 ## [2.10.0] - 2026-05-27
 
 This release ships the text-extraction quality work merged to `develop`
