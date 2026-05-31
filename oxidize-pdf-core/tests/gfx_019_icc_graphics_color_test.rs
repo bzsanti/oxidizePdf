@@ -15,6 +15,10 @@
 //! these tests assert on the colour operators directly, which is exactly what
 //! the .NET wrapper needs.
 
+#[path = "common/mod.rs"]
+mod common;
+
+use common::colorspace_inspect::resolve_page0_colorspace;
 use oxidize_pdf::graphics::{
     CalRgbColorSpace, CalibratedColor, IccColorSpace, IccProfile, PageColorSpace,
     ParameterisedFamily,
@@ -41,39 +45,6 @@ fn page0_dict<R: Read + Seek>(reader: &mut PdfReader<R>) -> PdfDictionary {
         .as_dict()
         .expect("page dict")
         .clone()
-}
-
-/// Resolve a page dictionary's `/Resources` dict (inline or indirect).
-fn resources_of<R: Read + Seek>(reader: &mut PdfReader<R>, page: &PdfDictionary) -> PdfDictionary {
-    match page.get("Resources").expect("/Resources") {
-        PdfObject::Dictionary(d) => d.clone(),
-        PdfObject::Reference(n, g) => reader
-            .get_object(*n, *g)
-            .expect("resolve /Resources")
-            .clone()
-            .as_dict()
-            .expect("/Resources dict")
-            .clone(),
-        other => panic!("/Resources: unexpected {other:?}"),
-    }
-}
-
-/// Resolve `/Resources/ColorSpace` (inline or indirect).
-fn colorspace_dict<R: Read + Seek>(
-    reader: &mut PdfReader<R>,
-    resources: &PdfDictionary,
-) -> PdfDictionary {
-    match resources.get("ColorSpace").expect("/Resources/ColorSpace") {
-        PdfObject::Dictionary(d) => d.clone(),
-        PdfObject::Reference(n, g) => reader
-            .get_object(*n, *g)
-            .expect("resolve /ColorSpace")
-            .clone()
-            .as_dict()
-            .expect("/ColorSpace dict")
-            .clone(),
-        other => panic!("/ColorSpace: unexpected {other:?}"),
-    }
 }
 
 /// Decode the first page's content stream(s) to a UTF-8 string. `/Contents`
@@ -130,9 +101,7 @@ fn icc_fill_color_emits_resource_and_content_stream() {
     let mut reader = PdfReader::new(Cursor::new(&bytes)).expect("parse document");
 
     // (a) the ICCBased entry survives in /Resources/ColorSpace.
-    let page = page0_dict(&mut reader);
-    let resources = resources_of(&mut reader, &page);
-    let cs = colorspace_dict(&mut reader, &resources);
+    let cs = resolve_page0_colorspace(&mut reader);
     let entry = cs.get("ICCRGB1").expect("ICCRGB1 registered").clone();
     let arr = match entry {
         PdfObject::Array(a) => a,
@@ -189,9 +158,7 @@ fn add_icc_color_space_emits_stream_resource_and_drives_content() {
     let mut reader = PdfReader::new(Cursor::new(&bytes)).expect("parse");
 
     // (a) resource resolves to an /ICCBased stream with the profile bytes.
-    let page = page0_dict(&mut reader);
-    let resources = resources_of(&mut reader, &page);
-    let cs = colorspace_dict(&mut reader, &resources);
+    let cs = resolve_page0_colorspace(&mut reader);
     let arr = cs
         .get("ICC1")
         .and_then(|o| o.as_array())
@@ -309,9 +276,7 @@ fn two_named_calibrated_spaces_coexist_on_one_page() {
     let mut reader = PdfReader::new(Cursor::new(&bytes)).expect("parse");
 
     // Both calibrated spaces survive in the resource dict.
-    let page = page0_dict(&mut reader);
-    let resources = resources_of(&mut reader, &page);
-    let cs = colorspace_dict(&mut reader, &resources);
+    let cs = resolve_page0_colorspace(&mut reader);
     for name in ["CalA", "CalB"] {
         let entry = cs
             .get(name)
