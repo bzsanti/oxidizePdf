@@ -24,6 +24,10 @@
 //! CJK. Extracting 中我国 therefore proves the embedded CMap remapped the codes,
 //! not the Identity path.
 
+#[path = "common/mod.rs"]
+mod common;
+
+use common::pdf_assembler::{assemble_pdf, stream_obj};
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
 use oxidize_pdf::text::{ExtractionOptions, TextExtractor};
 use std::io::Cursor;
@@ -57,46 +61,6 @@ end\n";
 
 /// Content stream showing the three 2-byte codes as a single hex string.
 const CONTENT: &[u8] = b"BT\n/F0 12 Tf\n100 700 Td\n<000100020003> Tj\nET\n";
-
-/// Assemble a PDF from full object bodies (object N is `objects[N-1]`).
-fn assemble_pdf(objects: &[Vec<u8>]) -> Vec<u8> {
-    let n = objects.len();
-    let mut bytes: Vec<u8> = Vec::with_capacity(1024);
-    bytes.extend_from_slice(b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
-
-    let mut offsets = vec![0usize; n + 1];
-    for (idx, body) in objects.iter().enumerate() {
-        let id = idx + 1;
-        offsets[id] = bytes.len();
-        bytes.extend_from_slice(format!("{} 0 obj\n", id).as_bytes());
-        bytes.extend_from_slice(body);
-        bytes.extend_from_slice(b"\nendobj\n");
-    }
-
-    let xref_off = bytes.len();
-    bytes.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", n + 1).as_bytes());
-    for off in offsets.iter().skip(1) {
-        bytes.extend_from_slice(format!("{:010} 00000 n \n", off).as_bytes());
-    }
-    bytes.extend_from_slice(
-        format!(
-            "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{}\n%%EOF\n",
-            n + 1,
-            xref_off
-        )
-        .as_bytes(),
-    );
-    bytes
-}
-
-/// Build a stream object body: `<< {dict} /Length L >> stream … endstream`.
-fn stream_obj(dict: &str, data: &[u8]) -> Vec<u8> {
-    let mut v = Vec::new();
-    v.extend_from_slice(format!("<< {} /Length {} >>\nstream\n", dict, data.len()).as_bytes());
-    v.extend_from_slice(data);
-    v.extend_from_slice(b"\nendstream");
-    v
-}
 
 /// Build the 7-object Type0 PDF. `encoding_entry` is the value of the Type0
 /// font's `/Encoding` key (e.g. "6 0 R" for the embedded stream, or
