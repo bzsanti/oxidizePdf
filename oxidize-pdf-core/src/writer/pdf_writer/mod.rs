@@ -2595,11 +2595,29 @@ impl<W: Write> PdfWriter<W> {
         // same sequence, producing byte-identical xref entries).
         if !page.color_spaces().is_empty() {
             let mut cs_dict = Dictionary::new();
-            for (name, cs) in page.color_spaces() {
-                // Conversion lives on the enum (see `PageColorSpace::to_object`)
-                // so a future shape change (e.g. streams for ICCBased) is a
-                // single-file edit, not a writer-wide sweep.
-                cs_dict.set(name, cs.to_object());
+            // Sort by name before allocating any stream object ids so id
+            // allocation stays reproducible (mirrors the Pattern/Shading blocks).
+            let mut entries: Vec<(&String, &crate::graphics::PageColorSpace)> =
+                page.color_spaces().iter().collect();
+            entries.sort_by_key(|(name, _)| name.as_str());
+            for (name, cs) in entries {
+                // ICCBased colour spaces MUST be an indirect stream carrying the
+                // profile bytes (ISO 32000-1 §8.6.5.5) — a stream cannot be
+                // inlined into the resource dict. Every other shape (device-name
+                // alias, Cal*/Lab parameterised dict) is inline via `to_object`.
+                if let Some((icc_dict, icc_data)) = cs.icc_stream_parts() {
+                    let icc_id = self.allocate_object_id();
+                    self.write_object(icc_id, Object::Stream(icc_dict, icc_data))?;
+                    cs_dict.set(
+                        name,
+                        Object::Array(vec![
+                            Object::Name("ICCBased".to_string()),
+                            Object::Reference(icc_id),
+                        ]),
+                    );
+                } else {
+                    cs_dict.set(name, cs.to_object());
+                }
             }
             resources.set("ColorSpace", Object::Dictionary(cs_dict));
         }
