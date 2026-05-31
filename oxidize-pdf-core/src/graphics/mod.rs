@@ -248,48 +248,169 @@ impl GraphicsContext {
         self
     }
 
-    /// Set fill color using calibrated color space
+    /// Emit a colour-space selection followed by its components.
+    ///
+    /// Shared by every named colour setter (ICC, calibrated, Lab): each
+    /// produces a colour-space operator (`cs`/`CS`) immediately followed by its
+    /// component operator (`sc`/`SC`) per ISO 32000-1 §8.6.8.
+    fn push_color_space_and_components(
+        &mut self,
+        space: ops::Op,
+        components: ops::Op,
+    ) -> &mut Self {
+        self.operations.push(space);
+        self.operations.push(components);
+        self
+    }
+
+    /// Set fill color using an ICC-based color space already registered on the
+    /// page under `/Resources/ColorSpace/<name>` (see [`crate::page::Page::add_color_space`]).
+    /// `components` are the raw color values for the profile's channel count
+    /// (1=Gray, 3=RGB/Lab, 4=CMYK).
+    ///
+    /// ICC profiles are named dynamically by [`IccProfileManager`], so the
+    /// resource name is supplied by the caller rather than hardcoded.
+    ///
+    /// `components` must be non-empty: an empty list would emit a bare `sc`
+    /// operator with no operands, invalid per ISO 32000-1 §8.6.8.
+    pub fn set_fill_color_icc(
+        &mut self,
+        name: impl Into<String>,
+        components: Vec<f64>,
+    ) -> &mut Self {
+        debug_assert!(
+            !components.is_empty(),
+            "ICC fill colour components must not be empty"
+        );
+        self.push_color_space_and_components(
+            ops::Op::SetFillColorSpace(name.into()),
+            ops::Op::SetFillColorComponents(components),
+        )
+    }
+
+    /// Set stroke color using an ICC-based color space already registered on
+    /// the page under `/Resources/ColorSpace/<name>` (see
+    /// [`crate::page::Page::add_color_space`]). See [`Self::set_fill_color_icc`].
+    ///
+    /// `components` must be non-empty (see [`Self::set_fill_color_icc`]).
+    pub fn set_stroke_color_icc(
+        &mut self,
+        name: impl Into<String>,
+        components: Vec<f64>,
+    ) -> &mut Self {
+        debug_assert!(
+            !components.is_empty(),
+            "ICC stroke colour components must not be empty"
+        );
+        self.push_color_space_and_components(
+            ops::Op::SetStrokeColorSpace(name.into()),
+            ops::Op::SetStrokeColorComponents(components),
+        )
+    }
+
+    /// Set fill color using a calibrated color space registered under a
+    /// caller-supplied resource name (`/Resources/ColorSpace/<name>`).
+    ///
+    /// Unlike [`Self::set_fill_color_calibrated`], which always references the
+    /// single default `CalGray1`/`CalRGB1` slot, this accepts the name of any
+    /// registered calibrated space — removing the one-calibrated-space-per-page
+    /// limitation.
+    pub fn set_fill_color_calibrated_named(
+        &mut self,
+        name: impl Into<String>,
+        color: CalibratedColor,
+    ) -> &mut Self {
+        self.push_color_space_and_components(
+            ops::Op::SetFillColorSpace(name.into()),
+            ops::Op::SetFillColorComponents(color.values()),
+        )
+    }
+
+    /// Set stroke color using a calibrated color space registered under a
+    /// caller-supplied resource name. See [`Self::set_fill_color_calibrated_named`].
+    pub fn set_stroke_color_calibrated_named(
+        &mut self,
+        name: impl Into<String>,
+        color: CalibratedColor,
+    ) -> &mut Self {
+        self.push_color_space_and_components(
+            ops::Op::SetStrokeColorSpace(name.into()),
+            ops::Op::SetStrokeColorComponents(color.values()),
+        )
+    }
+
+    /// Set fill color using a Lab color space registered under a
+    /// caller-supplied resource name (`/Resources/ColorSpace/<name>`).
+    ///
+    /// Companion to [`Self::set_fill_color_lab`] (which references the default
+    /// `Lab1` slot); accepts any registered Lab space so multiple Lab spaces
+    /// can coexist on one page.
+    pub fn set_fill_color_lab_named(
+        &mut self,
+        name: impl Into<String>,
+        color: LabColor,
+    ) -> &mut Self {
+        self.push_color_space_and_components(
+            ops::Op::SetFillColorSpace(name.into()),
+            ops::Op::SetFillColorComponents(color.values()),
+        )
+    }
+
+    /// Set stroke color using a Lab color space registered under a
+    /// caller-supplied resource name. See [`Self::set_fill_color_lab_named`].
+    pub fn set_stroke_color_lab_named(
+        &mut self,
+        name: impl Into<String>,
+        color: LabColor,
+    ) -> &mut Self {
+        self.push_color_space_and_components(
+            ops::Op::SetStrokeColorSpace(name.into()),
+            ops::Op::SetStrokeColorComponents(color.values()),
+        )
+    }
+
+    /// Set fill color using calibrated color space, referencing the default
+    /// `CalGray1`/`CalRGB1` resource slot.
+    ///
+    /// Delegates to [`Self::set_fill_color_calibrated_named`] with the default
+    /// name; behaviour is unchanged for existing callers.
     pub fn set_fill_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
         let cs_name = match &color {
             CalibratedColor::Gray(_, _) => "CalGray1",
             CalibratedColor::Rgb(_, _) => "CalRGB1",
         };
-        self.operations
-            .push(ops::Op::SetFillColorSpace(cs_name.to_string()));
-        self.operations
-            .push(ops::Op::SetFillColorComponents(color.values()));
-        self
+        self.set_fill_color_calibrated_named(cs_name, color)
     }
 
-    /// Set stroke color using calibrated color space
+    /// Set stroke color using calibrated color space, referencing the default
+    /// `CalGray1`/`CalRGB1` resource slot.
+    ///
+    /// Delegates to [`Self::set_stroke_color_calibrated_named`] with the
+    /// default name; behaviour is unchanged for existing callers.
     pub fn set_stroke_color_calibrated(&mut self, color: CalibratedColor) -> &mut Self {
         let cs_name = match &color {
             CalibratedColor::Gray(_, _) => "CalGray1",
             CalibratedColor::Rgb(_, _) => "CalRGB1",
         };
-        self.operations
-            .push(ops::Op::SetStrokeColorSpace(cs_name.to_string()));
-        self.operations
-            .push(ops::Op::SetStrokeColorComponents(color.values()));
-        self
+        self.set_stroke_color_calibrated_named(cs_name, color)
     }
 
-    /// Set fill color using Lab color space
+    /// Set fill color using Lab color space, referencing the default `Lab1`
+    /// resource slot.
+    ///
+    /// Delegates to [`Self::set_fill_color_lab_named`] with the default name;
+    /// behaviour is unchanged for existing callers.
     pub fn set_fill_color_lab(&mut self, color: LabColor) -> &mut Self {
-        self.operations
-            .push(ops::Op::SetFillColorSpace("Lab1".to_string()));
-        self.operations
-            .push(ops::Op::SetFillColorComponents(color.values()));
-        self
+        self.set_fill_color_lab_named("Lab1", color)
     }
 
-    /// Set stroke color using Lab color space
+    /// Set stroke color using Lab color space, referencing the default `Lab1`
+    /// resource slot.
+    ///
+    /// Delegates to [`Self::set_stroke_color_lab_named`] with the default name;
+    /// behaviour is unchanged for existing callers.
     pub fn set_stroke_color_lab(&mut self, color: LabColor) -> &mut Self {
-        self.operations
-            .push(ops::Op::SetStrokeColorSpace("Lab1".to_string()));
-        self.operations
-            .push(ops::Op::SetStrokeColorComponents(color.values()));
-        self
+        self.set_stroke_color_lab_named("Lab1", color)
     }
 
     pub fn set_line_width(&mut self, width: f64) -> &mut Self {
@@ -496,7 +617,7 @@ impl GraphicsContext {
 
     pub fn draw_image(
         &mut self,
-        image_name: &str,
+        image_name: impl Into<String>,
         x: f64,
         y: f64,
         width: f64,
@@ -518,7 +639,7 @@ impl GraphicsContext {
 
         // Draw the image XObject
         self.operations
-            .push(ops::Op::InvokeXObject(image_name.to_string()));
+            .push(ops::Op::InvokeXObject(image_name.into()));
 
         // Restore graphics state
         self.restore_state();
@@ -530,7 +651,7 @@ impl GraphicsContext {
     /// This method handles images with alpha channels or soft masks
     pub fn draw_image_with_transparency(
         &mut self,
-        image_name: &str,
+        image_name: impl Into<String>,
         x: f64,
         y: f64,
         width: f64,
@@ -566,7 +687,7 @@ impl GraphicsContext {
 
         // Draw the image XObject
         self.operations
-            .push(ops::Op::InvokeXObject(image_name.to_string()));
+            .push(ops::Op::InvokeXObject(image_name.into()));
 
         // If we had a mask, reset the soft mask to None
         if mask_name.is_some() {
@@ -3597,5 +3718,186 @@ mod tests {
             ops.contains("0.00 0.00 100.00 0.00 re\n"),
             "non-finite components must clamp to 0.00 in `re` op, got: {ops:?}"
         );
+    }
+
+    // ── GFX-019: ICC + named calibrated/Lab colour-space methods ──
+    //
+    // The content-stream wire format these assert against is fixed by
+    // graphics/ops.rs: `SetFill/StrokeColorSpace(name)` → `/<name> cs\n`
+    // (fill) / `/<name> CS\n` (stroke); `SetFill/StrokeColorComponents` →
+    // each value as `"{v:.4} "` followed by `sc\n` (fill) / `SC\n` (stroke).
+    // A fresh GraphicsContext has no operations, so the full serialised
+    // string equals colour-space line + components line — which also proves
+    // the colour space is emitted BEFORE the components (correct order).
+
+    /// Format a components line exactly as `ops.rs` does (`"{v:.4} "` per
+    /// value, then the painting operator + newline).
+    fn expected_components(values: &[f64], op: &str) -> String {
+        let mut s = String::new();
+        for v in values {
+            s.push_str(&format!("{v:.4} "));
+        }
+        s.push_str(op);
+        s.push('\n');
+        s
+    }
+
+    #[test]
+    fn set_fill_color_icc_emits_named_cs_then_components() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_icc("ICCRGB1", vec![0.25, 0.5, 0.75]);
+        let expected = format!(
+            "/ICCRGB1 cs\n{}",
+            expected_components(&[0.25, 0.5, 0.75], "sc")
+        );
+        assert_eq!(
+            ctx.operations(),
+            expected,
+            "ICC fill must emit `/ICCRGB1 cs` then `0.2500 0.5000 0.7500 sc`"
+        );
+    }
+
+    #[test]
+    fn set_stroke_color_icc_emits_named_cs_then_components() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_stroke_color_icc("ICCRGB1", vec![0.25, 0.5, 0.75]);
+        let expected = format!(
+            "/ICCRGB1 CS\n{}",
+            expected_components(&[0.25, 0.5, 0.75], "SC")
+        );
+        assert_eq!(
+            ctx.operations(),
+            expected,
+            "ICC stroke must emit `/ICCRGB1 CS` then `0.2500 0.5000 0.7500 SC`"
+        );
+    }
+
+    #[test]
+    fn set_fill_color_icc_single_channel_gray() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_icc("ICCGray1", vec![0.42]);
+        let expected = format!("/ICCGray1 cs\n{}", expected_components(&[0.42], "sc"));
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn set_fill_color_icc_cmyk_four_channels() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_icc("ICCCmyk1", vec![0.1, 0.2, 0.3, 0.4]);
+        let expected = format!(
+            "/ICCCmyk1 cs\n{}",
+            expected_components(&[0.1, 0.2, 0.3, 0.4], "sc")
+        );
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn set_fill_color_calibrated_named_uses_caller_name() {
+        let color = CalibratedColor::cal_rgb([0.1, 0.2, 0.3], CalRgbColorSpace::new());
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_calibrated_named("MyCalRgb", color.clone());
+        let expected = format!(
+            "/MyCalRgb cs\n{}",
+            expected_components(&color.values(), "sc")
+        );
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn set_stroke_color_calibrated_named_uses_caller_name() {
+        let color = CalibratedColor::cal_gray(0.6, CalGrayColorSpace::new());
+        let mut ctx = GraphicsContext::new();
+        ctx.set_stroke_color_calibrated_named("MyCalGray", color.clone());
+        let expected = format!(
+            "/MyCalGray CS\n{}",
+            expected_components(&color.values(), "SC")
+        );
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn set_fill_color_lab_named_uses_caller_name() {
+        let color = LabColor::with_default(50.0, 12.0, -8.0);
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_lab_named("MyLab", color.clone());
+        let expected = format!("/MyLab cs\n{}", expected_components(&color.values(), "sc"));
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn set_stroke_color_lab_named_uses_caller_name() {
+        let color = LabColor::with_default(50.0, 12.0, -8.0);
+        let mut ctx = GraphicsContext::new();
+        ctx.set_stroke_color_lab_named("MyLab", color.clone());
+        let expected = format!("/MyLab CS\n{}", expected_components(&color.values(), "SC"));
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    // ── Regression: the four existing methods keep their hardcoded default
+    //    resource names after being refactored to delegate to `_named`. ──
+
+    #[test]
+    fn legacy_calibrated_rgb_still_emits_calrgb1() {
+        let color = CalibratedColor::cal_rgb([0.1, 0.2, 0.3], CalRgbColorSpace::new());
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_calibrated(color.clone());
+        let expected = format!(
+            "/CalRGB1 cs\n{}",
+            expected_components(&color.values(), "sc")
+        );
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn legacy_calibrated_gray_still_emits_calgray1() {
+        let color = CalibratedColor::cal_gray(0.6, CalGrayColorSpace::new());
+        let mut ctx = GraphicsContext::new();
+        ctx.set_stroke_color_calibrated(color.clone());
+        let expected = format!(
+            "/CalGray1 CS\n{}",
+            expected_components(&color.values(), "SC")
+        );
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn legacy_lab_still_emits_lab1() {
+        let color = LabColor::with_default(50.0, 12.0, -8.0);
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_lab(color.clone());
+        let expected = format!("/Lab1 cs\n{}", expected_components(&color.values(), "sc"));
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    #[test]
+    fn legacy_lab_stroke_still_emits_lab1() {
+        let color = LabColor::with_default(50.0, 12.0, -8.0);
+        let mut ctx = GraphicsContext::new();
+        ctx.set_stroke_color_lab(color.clone());
+        let expected = format!("/Lab1 CS\n{}", expected_components(&color.values(), "SC"));
+        assert_eq!(ctx.operations(), expected);
+    }
+
+    // The empty-components guard is a `debug_assert!`, compiled out in release
+    // builds (`cargo test --release`, tarpaulin coverage). Gating these tests to
+    // `debug_assertions` keeps them honest: they only run where the assert fires.
+    // Without the gate they fail in release with "did not panic as expected".
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "ICC fill colour components must not be empty")]
+    fn set_fill_color_icc_empty_components_panics_in_debug() {
+        // An empty component list would emit a bare `sc` operator with no
+        // operands, invalid per ISO 32000-1 §8.6.8. The debug_assert guards
+        // the caller-supplied ICC path (calibrated/Lab cannot reach this).
+        let mut ctx = GraphicsContext::new();
+        ctx.set_fill_color_icc("ICCRGB1", vec![]);
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "ICC stroke colour components must not be empty")]
+    fn set_stroke_color_icc_empty_components_panics_in_debug() {
+        let mut ctx = GraphicsContext::new();
+        ctx.set_stroke_color_icc("ICCRGB1", vec![]);
     }
 }

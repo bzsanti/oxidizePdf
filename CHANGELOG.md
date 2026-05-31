@@ -8,6 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.11.0] - 2026-05-30
+
+### Added
+
+- `GraphicsContext::set_fill_color_icc` / `set_stroke_color_icc` — draw with an
+  ICC-based color space registered on the page via `Page::add_color_space`
+  (`/Resources/ColorSpace/<name>`). The resource name is supplied by the caller
+  because ICC profiles are named dynamically by `IccProfileManager`. Unblocks
+  ICC color drawing in the .NET wrapper (GFX-019).
+- `GraphicsContext::set_fill_color_calibrated_named` /
+  `set_stroke_color_calibrated_named` / `set_fill_color_lab_named` /
+  `set_stroke_color_lab_named` — calibrated and Lab color setters that accept a
+  caller-supplied resource name, allowing multiple calibrated/Lab color spaces
+  to coexist on one page. This removes the previous one-calibrated-space-per-page
+  limitation; the existing `set_fill_color_calibrated`/`set_fill_color_lab`
+  methods now delegate to these with the default `CalGray1`/`CalRGB1`/`Lab1`
+  names, so existing behavior is unchanged.
+
+### Fixed
+
+- **Partitioner heading classification on tagged / tightly-spaced structured
+  PDFs (#271).** The partitioner now consumes `TextFragment.struct_tag` (a new
+  Step 0: `H`/`H1`..`H6`/`Title` → `Title`, `LI`/`Lbl`/`LBody` → `ListItem`),
+  and Title detection gained two heuristics beyond font-size ratio: bold-short
+  text and numeric/lettered section prefixes (`A2.a`, `3.1`, `Section 4:`,
+  `IV.`) with strict guards. Flat single-level numbered markers (`1.`, `10)`)
+  correctly yield to `ListItem` rather than `Title`. The Header zone detector
+  gained a length cap and a body-tag gate so full paragraphs in the top page
+  zone are no longer misclassified as `header`. On the NCSC CAF v4.0 corpus
+  this turns 75 mislabeled long-text headers into 0 and 0 detected titles into
+  57; ENS (Real Decreto 311/2022) goes from 3 to 107 titles.
+
 ## [2.10.0] - 2026-05-27
 
 This release ships the text-extraction quality work merged to `develop`

@@ -21,14 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
 
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -37,7 +37,7 @@ jobs:
           key: ${{ runner.os }}-cargo-corpus-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Cache T1 corpus
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: test-corpus/t1-spec
           key: corpus-t1-v1
@@ -56,7 +56,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: results-commit-${{ github.sha }}
           path: test-corpus/results/
@@ -71,14 +71,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
 
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -87,13 +87,13 @@ jobs:
           key: ${{ runner.os }}-cargo-corpus-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Cache T2 corpus
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: test-corpus/t2-realworld
           key: corpus-t2-v1
 
       - name: Cache T3 corpus
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: test-corpus/t3-stress
           key: corpus-t3-v1
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: results-nightly-${{ github.run_id }}
           path: test-corpus/results/
@@ -127,14 +127,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
 
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -143,7 +143,7 @@ jobs:
           key: ${{ runner.os }}-cargo-corpus-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Cache weekly corpora
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             test-corpus/t4-ai-target
@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: results-weekly-${{ github.run_id }}
           path: test-corpus/results/
