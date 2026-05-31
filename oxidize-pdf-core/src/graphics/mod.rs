@@ -3878,7 +3878,12 @@ mod tests {
         assert_eq!(ctx.operations(), expected);
     }
 
+    // The empty-components guard is a `debug_assert!`, compiled out in release
+    // builds (`cargo test --release`, tarpaulin coverage). Gating these tests to
+    // `debug_assertions` keeps them honest: they only run where the assert fires.
+    // Without the gate they fail in release with "did not panic as expected".
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic(expected = "ICC fill colour components must not be empty")]
     fn set_fill_color_icc_empty_components_panics_in_debug() {
         // An empty component list would emit a bare `sc` operator with no
@@ -3889,6 +3894,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(debug_assertions)]
     #[should_panic(expected = "ICC stroke colour components must not be empty")]
     fn set_stroke_color_icc_empty_components_panics_in_debug() {
         let mut ctx = GraphicsContext::new();
