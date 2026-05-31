@@ -22,13 +22,13 @@ jobs:
 
     steps:
     - name: Checkout PR code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
 
     - name: Cache dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cargo/registry
@@ -85,7 +85,7 @@ jobs:
         fi
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: pr-benchmark-results
