@@ -7,6 +7,7 @@
 //! conventional pattern for `tests/common/` shared helpers in Rust.
 #![allow(dead_code)]
 
+pub mod colorspace_inspect;
 pub mod pdf_assembler;
 pub mod synthetic_pdf;
 

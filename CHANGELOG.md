@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Added
+
+- `Page::add_icc_color_space(name, &IccProfile)` — register an ICC-profile-backed
+  colour space that the writer emits as a conformant `/ICCBased` **stream**
+  `[/ICCBased <ref>]` carrying the embedded profile bytes (ISO 32000-1 §8.6.5.5),
+  closing the gap where ICC profiles registered as `PageColorSpace::Parameterised`
+  were written as an inline dictionary with the profile data dropped (#282).
+- `impl From<&CalGrayColorSpace>` / `From<&CalRgbColorSpace>` / `From<&LabColorSpace>`
+  / `From<&IccProfile>` for `PageColorSpace`, plus `CalGrayColorSpace::params_dictionary`
+  / `CalRgbColorSpace::params_dictionary` / `LabColorSpace::params_dictionary` — bridge
+  typed calibrated/Lab/ICC colour-space structs directly into `Page::add_color_space`
+  without hand-building a parameter `Dictionary` (#283).
+- `PageColorSpace::IccStream` variant — stream-backed ICC colour space carrying the
+  raw profile bytes, `N`, `Alternate`, and optional `Range`.
+
+### Fixed
+
+- `ICCBased` colour spaces registered via the new `Page::add_icc_color_space` are now
+  emitted as conformant indirect streams with the embedded profile, instead of an inline
+  parameter dictionary that silently dropped the profile bytes (#282).
+
 ## [2.11.0] - 2026-05-30
 
 ### Added

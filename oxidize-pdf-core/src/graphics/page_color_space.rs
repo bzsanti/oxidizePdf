@@ -19,7 +19,11 @@
 //! dedicated constructors added in a future SemVer-compatible superset
 //! (the enum is `#[non_exhaustive]` to preserve that option).
 
+use super::calibrated_color::{CalGrayColorSpace, CalRgbColorSpace};
+use super::color_profiles::{IccColorSpace, IccProfile};
+use super::lab_color::LabColorSpace;
 use crate::objects::{Dictionary, Object};
+use std::sync::Arc;
 
 /// A colour space eligible for registration on a [`crate::Page`] under
 /// `/Resources/ColorSpace/<name>`.
@@ -42,6 +46,32 @@ pub enum PageColorSpace {
         /// Parameter dictionary — e.g. `WhitePoint`, `Gamma`, `Matrix`
         /// for CalRGB; `N`, `Alternate`, `Metadata` for ICCBased.
         params: Dictionary,
+    },
+    /// An ICC-profile-backed colour space emitted as a conformant indirect
+    /// **stream**: `[/ICCBased <ref>]` where `<ref>` resolves to a stream
+    /// `<< /N n /Alternate … /Range … >> stream <profile bytes> endstream`
+    /// (ISO 32000-1 §8.6.5.5). Unlike [`Self::Parameterised`] with
+    /// [`ParameterisedFamily::IccBased`] — which can only express an inline
+    /// dict and therefore drops the profile bytes — this variant carries the
+    /// raw profile so the writer can embed it. The stream object id is
+    /// allocated by the writer at emit time (a stream cannot be inlined into a
+    /// resource dict), so the conversion goes through
+    /// [`Self::icc_stream_parts`], not [`Self::to_object`].
+    IccStream {
+        /// Number of colour components (`/N`: 1, 3, or 4).
+        n: u8,
+        /// Device colour space to fall back to (`/Alternate`). Must not be
+        /// `Pattern` (ISO 32000-1 §8.6.5.5 forbids it as an alternate space).
+        alternate: DeviceColorSpace,
+        /// Raw ICC profile bytes, written verbatim into the stream. Wrapped in
+        /// `Arc` so cloning a `PageColorSpace` (e.g. when a templated page is
+        /// reused across a document) shares the buffer instead of copying a
+        /// potentially large profile.
+        profile_data: Arc<Vec<u8>>,
+        /// Optional `/Range` for the components. Omitted from the stream when
+        /// it equals the ISO 32000-1 §8.6.5.5 Table 66 default (`[0 1]` per
+        /// component); see [`Self::icc_stream_parts`].
+        range: Option<Vec<f64>>,
     },
 }
 
@@ -118,6 +148,122 @@ impl PageColorSpace {
                 Object::Name(family.pdf_name().to_string()),
                 Object::Dictionary(params.clone()),
             ]),
+            // `IccStream` has no inline `Object` form: a PDF stream MUST be an
+            // indirect object, so it cannot be inlined into the resource dict.
+            // The writer emits it via `icc_stream_parts` (allocating a stream
+            // object) and never routes `IccStream` through `to_object`. Reaching
+            // here is a programmer error — panic rather than silently emit a
+            // dict that drops the profile bytes.
+            PageColorSpace::IccStream { .. } => {
+                unreachable!("IccStream must be emitted via icc_stream_parts, not to_object")
+            }
+        }
+    }
+
+    /// If this is an [`Self::IccStream`], return the ICC stream dictionary
+    /// (`/N`, `/Alternate`, optional `/Range`) and the raw profile bytes for
+    /// the writer to emit as an indirect stream object. Returns `None` for the
+    /// inline (name / parameterised-dict) variants.
+    ///
+    /// `/Range` is omitted when it equals the ISO 32000-1 §8.6.5.5 Table 66
+    /// default (`[0 1]` per component), keeping the stream dict minimal for the
+    /// common device-range profiles while preserving non-default ranges (e.g.
+    /// Lab's `[0 100 -128 127 -128 127]`).
+    pub(crate) fn icc_stream_parts(&self) -> Option<(Dictionary, Vec<u8>)> {
+        match self {
+            PageColorSpace::IccStream {
+                n,
+                alternate,
+                profile_data,
+                range,
+            } => {
+                debug_assert!(
+                    !matches!(alternate, DeviceColorSpace::Pattern),
+                    "/Alternate must not be Pattern (ISO 32000-1 §8.6.5.5)"
+                );
+                let mut dict = Dictionary::new();
+                dict.set("N", Object::Integer(*n as i64));
+                dict.set("Alternate", Object::Name(alternate.pdf_name().to_string()));
+                if let Some(r) = range {
+                    // The ICCBased default range is `[0 1]` per component; only
+                    // emit `/Range` when the profile deviates from it.
+                    let default: Vec<f64> = (0..*n).flat_map(|_| [0.0, 1.0]).collect();
+                    if *r != default {
+                        dict.set(
+                            "Range",
+                            Object::Array(r.iter().map(|&x| Object::Real(x)).collect()),
+                        );
+                    }
+                }
+                Some((dict, (**profile_data).clone()))
+            }
+            _ => None,
+        }
+    }
+}
+
+impl From<&CalGrayColorSpace> for PageColorSpace {
+    /// Bridge a typed [`CalGrayColorSpace`] into a registrable colour space,
+    /// reusing the struct's own [`CalGrayColorSpace::params_dictionary`]
+    /// (ISO 32000-1 §8.6.5.1).
+    fn from(cs: &CalGrayColorSpace) -> Self {
+        PageColorSpace::Parameterised {
+            family: ParameterisedFamily::CalGray,
+            params: cs.params_dictionary(),
+        }
+    }
+}
+
+impl From<&CalRgbColorSpace> for PageColorSpace {
+    /// Bridge a typed [`CalRgbColorSpace`] into a registrable colour space
+    /// (ISO 32000-1 §8.6.5.2).
+    fn from(cs: &CalRgbColorSpace) -> Self {
+        PageColorSpace::Parameterised {
+            family: ParameterisedFamily::CalRgb,
+            params: cs.params_dictionary(),
+        }
+    }
+}
+
+impl From<&LabColorSpace> for PageColorSpace {
+    /// Bridge a typed [`LabColorSpace`] into a registrable colour space
+    /// (ISO 32000-1 §8.6.5.4).
+    fn from(cs: &LabColorSpace) -> Self {
+        PageColorSpace::Parameterised {
+            family: ParameterisedFamily::Lab,
+            params: cs.params_dictionary(),
+        }
+    }
+}
+
+impl From<&IccProfile> for PageColorSpace {
+    /// Bridge an [`IccProfile`] into a stream-backed ICC colour space
+    /// ([`PageColorSpace::IccStream`]), carrying the profile bytes so the
+    /// writer emits a conformant `/ICCBased` stream (ISO 32000-1 §8.6.5.5).
+    ///
+    /// `/Alternate` is derived from the profile's semantic
+    /// [`IccColorSpace`](crate::graphics::IccColorSpace), not just its component
+    /// count. `Lab` profiles fall back to `DeviceRGB` — the closest device space
+    /// (`DeviceColorSpace` has no `Lab` variant; `DeviceRGB` is spec-valid as an
+    /// alternate per §8.6.5.5). `Generic(n)` maps by component count, defaulting
+    /// to `DeviceRGB` for component counts with no exact device space (2, 5, …);
+    /// such alternates are a best-effort fallback only.
+    fn from(profile: &IccProfile) -> Self {
+        let alternate = match profile.color_space {
+            IccColorSpace::Gray => DeviceColorSpace::Gray,
+            IccColorSpace::Cmyk => DeviceColorSpace::Cmyk,
+            IccColorSpace::Rgb | IccColorSpace::Lab => DeviceColorSpace::Rgb,
+            IccColorSpace::Generic(n) => match n {
+                1 => DeviceColorSpace::Gray,
+                4 => DeviceColorSpace::Cmyk,
+                _ => DeviceColorSpace::Rgb,
+            },
+        };
+        PageColorSpace::IccStream {
+            n: profile.components,
+            alternate,
+            profile_data: Arc::new(profile.data.clone()),
+            range: profile.range.clone(),
         }
     }
 }

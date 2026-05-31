@@ -1191,6 +1191,29 @@ impl Page {
         Ok(())
     }
 
+    /// Register an ICC-profile-backed colour space under `name`, embedding the
+    /// profile bytes so the writer emits a conformant `/ICCBased` **stream**
+    /// `[/ICCBased <ref>]` (ISO 32000-1 §8.6.5.5).
+    ///
+    /// This is the ergonomic entry point for ICC colour: it bridges an
+    /// [`IccProfile`](crate::graphics::IccProfile) into the stream-backed
+    /// [`PageColorSpace::IccStream`](crate::graphics::PageColorSpace) variant.
+    /// Unlike registering `PageColorSpace::Parameterised` with the `IccBased`
+    /// family — which can only express an inline dictionary and drops the
+    /// profile data — this path preserves the profile in the output.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PdfError::InvalidStructure`] if `name` is not a valid PDF
+    /// resource name per ISO 32000-1 §7.3.5.
+    pub fn add_icc_color_space(
+        &mut self,
+        name: impl Into<String>,
+        profile: &crate::graphics::IccProfile,
+    ) -> Result<()> {
+        self.add_color_space(name, crate::graphics::PageColorSpace::from(profile))
+    }
+
     /// Returns all colour spaces registered on this page.
     ///
     /// Map values are typed as [`crate::graphics::PageColorSpace`]; the
