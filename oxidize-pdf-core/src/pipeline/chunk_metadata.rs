@@ -146,6 +146,28 @@ pub struct ChunkMetadata {
     pub source: Option<DocumentSource>,
 }
 
+use sha2::{Digest, Sha256};
+
+/// Deterministic chunk id: `<doc_id>:<index>` where `doc_id` is the supplied
+/// `doc_hash` or, absent that, the first 8 bytes of SHA-256(full_text) in hex.
+// consumed by ChunkMetadata::from_elements (Task 6) and link_chunks (Task 7)
+#[allow(dead_code)]
+pub(crate) fn content_chunk_id(doc_hash: Option<&str>, index: usize, full_text: &str) -> String {
+    let doc_id = match doc_hash {
+        Some(h) => h.to_string(),
+        None => {
+            let mut hasher = Sha256::new();
+            hasher.update(full_text.as_bytes());
+            let digest = hasher.finalize();
+            digest[..8]
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
+        }
+    };
+    format!("{doc_id}:{index}")
+}
+
 // consumed by ChunkMetadata::from_elements (Task 6)
 #[allow(dead_code)]
 pub(crate) fn content_type_flags(elements: &[Element]) -> ContentTypeFlags {
@@ -252,6 +274,20 @@ mod tests {
         assert_eq!(agg.dominant_font_size, Some(12.0));
         assert!(agg.is_bold, "4 bold chars vs 2 non-bold → bold majority");
         assert!((agg.min_confidence - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn chunk_id_is_deterministic_and_prefixed() {
+        let a = content_chunk_id(None, 0, "the quick brown fox");
+        let b = content_chunk_id(None, 0, "the quick brown fox");
+        assert_eq!(a, b, "same text + index → same id");
+        assert!(a.ends_with(":0"));
+
+        let with_hash = content_chunk_id(Some("dochash123"), 7, "ignored when hash present");
+        assert_eq!(with_hash, "dochash123:7");
+
+        let other = content_chunk_id(None, 0, "different text");
+        assert_ne!(a, other);
     }
 
     #[test]
