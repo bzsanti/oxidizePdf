@@ -11,8 +11,6 @@ use crate::pipeline::element::Element;
 use crate::pipeline::hybrid_chunking::split_into_sentences;
 
 /// Char-weighted aggregates over a chunk's elements.
-// consumed by ChunkMetadata::from_elements (Task 6)
-#[allow(dead_code)]
 pub(crate) struct Aggregates {
     pub dominant_font: Option<String>,
     pub dominant_font_size: Option<f64>,
@@ -21,7 +19,6 @@ pub(crate) struct Aggregates {
     pub min_confidence: f32,
 }
 
-#[allow(dead_code)]
 impl Aggregates {
     pub(crate) fn from_elements(elements: &[Element]) -> Self {
         let mut font_weight: Vec<(String, usize)> = Vec::new();
@@ -148,10 +145,45 @@ pub struct ChunkMetadata {
 
 use sha2::{Digest, Sha256};
 
+#[allow(dead_code)] // wired into RagChunk::from_hybrid_chunk (Task 7)
+impl ChunkMetadata {
+    /// Build chunk metadata from the chunk's elements and text. `full_text` is
+    /// used for the content-hash id; `doc_hash` (when `Some`) overrides it.
+    /// Language and prev/next links are filled by later passes.
+    pub(crate) fn from_elements(
+        elements: &[Element],
+        text: &str,
+        full_text: &str,
+        chunk_index: usize,
+        doc_hash: Option<&str>,
+    ) -> Self {
+        let agg = Aggregates::from_elements(elements);
+        let heading_path = elements
+            .first()
+            .map(|e| e.metadata().heading_path.clone())
+            .unwrap_or_default();
+        ChunkMetadata {
+            heading_path,
+            dominant_font: agg.dominant_font,
+            dominant_font_size: agg.dominant_font_size,
+            is_bold: agg.is_bold,
+            is_italic: agg.is_italic,
+            min_confidence: agg.min_confidence,
+            content_types: content_type_flags(elements),
+            char_count: char_count(text),
+            word_count: word_count(text),
+            sentence_count: sentence_count(text),
+            language: None,
+            chunk_id: content_chunk_id(doc_hash, chunk_index, full_text),
+            prev_chunk_id: None,
+            next_chunk_id: None,
+            source: None,
+        }
+    }
+}
+
 /// Deterministic chunk id: `<doc_id>:<index>` where `doc_id` is the supplied
 /// `doc_hash` or, absent that, the first 8 bytes of SHA-256(full_text) in hex.
-// consumed by ChunkMetadata::from_elements (Task 6) and link_chunks (Task 7)
-#[allow(dead_code)]
 pub(crate) fn content_chunk_id(doc_hash: Option<&str>, index: usize, full_text: &str) -> String {
     let doc_id = match doc_hash {
         Some(h) => h.to_string(),
@@ -168,8 +200,6 @@ pub(crate) fn content_chunk_id(doc_hash: Option<&str>, index: usize, full_text: 
     format!("{doc_id}:{index}")
 }
 
-// consumed by ChunkMetadata::from_elements (Task 6)
-#[allow(dead_code)]
 pub(crate) fn content_type_flags(elements: &[Element]) -> ContentTypeFlags {
     let mut flags = ContentTypeFlags::default();
     let mut all_titles = !elements.is_empty();
@@ -188,20 +218,14 @@ pub(crate) fn content_type_flags(elements: &[Element]) -> ContentTypeFlags {
     flags
 }
 
-// consumed by ChunkMetadata::from_elements (Task 6)
-#[allow(dead_code)]
 pub(crate) fn char_count(text: &str) -> usize {
     text.chars().count()
 }
 
-// consumed by ChunkMetadata::from_elements (Task 6)
-#[allow(dead_code)]
 pub(crate) fn word_count(text: &str) -> usize {
     text.split_whitespace().count()
 }
 
-// consumed by ChunkMetadata::from_elements (Task 6)
-#[allow(dead_code)]
 pub(crate) fn sentence_count(text: &str) -> usize {
     if text.trim().is_empty() {
         return 0;
@@ -302,5 +326,21 @@ mod tests {
         assert_eq!(m.language, None);
         assert_eq!(m.chunk_id, "");
         assert!(m.source.is_none());
+    }
+
+    #[test]
+    fn build_metadata_from_chunk_elements() {
+        let els = vec![
+            para("aaaa", "Helvetica", 12.0, true, 0.8),
+            para("bb. cc.", "Helvetica", 12.0, false, 0.6),
+        ];
+        let text = "aaaa\nbb. cc.";
+        let m = ChunkMetadata::from_elements(&els, text, text, 3, None);
+        assert_eq!(m.dominant_font.as_deref(), Some("Helvetica"));
+        assert!((m.min_confidence - 0.6).abs() < 1e-6);
+        assert_eq!(m.char_count, text.chars().count());
+        assert_eq!(m.chunk_id, content_chunk_id(None, 3, text));
+        assert!(m.source.is_none());
+        assert_eq!(m.language, None); // language filled separately in a later task
     }
 }
