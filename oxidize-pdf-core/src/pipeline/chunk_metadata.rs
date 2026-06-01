@@ -7,6 +7,73 @@
 #[cfg(feature = "semantic")]
 use serde::{Deserialize, Serialize};
 
+use crate::pipeline::element::Element;
+
+/// Char-weighted aggregates over a chunk's elements.
+// consumed by ChunkMetadata::from_elements (Task 6)
+#[allow(dead_code)]
+pub(crate) struct Aggregates {
+    pub dominant_font: Option<String>,
+    pub dominant_font_size: Option<f64>,
+    pub is_bold: bool,
+    pub is_italic: bool,
+    pub min_confidence: f32,
+}
+
+#[allow(dead_code)]
+impl Aggregates {
+    pub(crate) fn from_elements(elements: &[Element]) -> Self {
+        let mut font_weight: Vec<(String, usize)> = Vec::new();
+        let mut size_weight: Vec<(f64, usize)> = Vec::new();
+        let mut bold_chars = 0usize;
+        let mut italic_chars = 0usize;
+        let mut total_chars = 0usize;
+        let mut min_conf = 1.0f32;
+
+        for e in elements {
+            let w = e.text().chars().count();
+            total_chars += w;
+            let meta = e.metadata();
+            if let Some(f) = &meta.font_name {
+                match font_weight.iter_mut().find(|(name, _)| name == f) {
+                    Some((_, c)) => *c += w,
+                    None => font_weight.push((f.clone(), w)),
+                }
+            }
+            if let Some(s) = meta.font_size {
+                match size_weight.iter_mut().find(|(sz, _)| (*sz - s).abs() < 0.1) {
+                    Some((_, c)) => *c += w,
+                    None => size_weight.push((s, w)),
+                }
+            }
+            if meta.is_bold {
+                bold_chars += w;
+            }
+            if meta.is_italic {
+                italic_chars += w;
+            }
+            min_conf = min_conf.min(meta.confidence as f32);
+        }
+
+        let dominant_font = font_weight
+            .into_iter()
+            .max_by_key(|(_, c)| *c)
+            .map(|(name, _)| name);
+        let dominant_font_size = size_weight
+            .into_iter()
+            .max_by_key(|(_, c)| *c)
+            .map(|(sz, _)| sz);
+
+        Self {
+            dominant_font,
+            dominant_font_size,
+            is_bold: total_chars > 0 && bold_chars * 2 > total_chars,
+            is_italic: total_chars > 0 && italic_chars * 2 > total_chars,
+            min_confidence: if elements.is_empty() { 0.0 } else { min_conf },
+        }
+    }
+}
+
 /// Boolean flags describing the kinds of content present in a chunk.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
@@ -81,6 +148,35 @@ pub struct ChunkMetadata {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pipeline::element::{Element, ElementData, ElementMetadata};
+
+    fn para(text: &str, font: &str, size: f64, bold: bool, conf: f64) -> Element {
+        let metadata = ElementMetadata {
+            font_name: Some(font.to_string()),
+            font_size: Some(size),
+            is_bold: bold,
+            confidence: conf,
+            ..ElementMetadata::default()
+        };
+        Element::Paragraph(ElementData {
+            text: text.to_string(),
+            metadata,
+        })
+    }
+
+    #[test]
+    fn aggregate_picks_char_weighted_dominant_font_and_min_confidence() {
+        // "aaaa" (4 chars) Helvetica bold conf=0.9 ; "bb" (2) Times conf=0.5
+        let els = vec![
+            para("aaaa", "Helvetica", 12.0, true, 0.9),
+            para("bb", "Times", 10.0, false, 0.5),
+        ];
+        let agg = Aggregates::from_elements(&els);
+        assert_eq!(agg.dominant_font.as_deref(), Some("Helvetica"));
+        assert_eq!(agg.dominant_font_size, Some(12.0));
+        assert!(agg.is_bold, "4 bold chars vs 2 non-bold → bold majority");
+        assert!((agg.min_confidence - 0.5).abs() < 1e-6);
+    }
 
     #[test]
     fn chunk_metadata_default_is_empty() {
