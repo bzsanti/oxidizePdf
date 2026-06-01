@@ -574,6 +574,7 @@ impl Partitioner {
             .iter()
             .filter(|e| matches!(e, Element::Title(_)))
             .filter_map(|e| e.metadata().font_size)
+            .filter(|s| s.is_finite() && *s > 0.0)
             .collect();
         sizes.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
         let mut buckets: Vec<f64> = Vec::new();
@@ -584,13 +585,20 @@ impl Partitioner {
         }
 
         let level_of = |size: Option<f64>| -> u8 {
-            let Some(s) = size else { return 1 };
-            for (i, b) in buckets.iter().enumerate() {
-                if (s - b).abs() <= b * 0.05 {
-                    return (i + 1) as u8;
+            match size {
+                Some(s) if s.is_finite() && s > 0.0 => {
+                    for (i, b) in buckets.iter().enumerate() {
+                        if (s - b).abs() <= b * 0.05 {
+                            return (i + 1) as u8;
+                        }
+                    }
+                    buckets.len().max(1) as u8
                 }
+                // Unknown / non-finite / non-positive size: treat as one level
+                // deeper than the deepest known bucket, so the title is appended
+                // as a leaf child and never pops a known-size ancestor.
+                _ => (buckets.len() + 1) as u8,
             }
-            buckets.len().max(1) as u8
         };
 
         // 2. Walk elements maintaining a (level, text) stack.
@@ -1632,5 +1640,45 @@ mod tests {
             Some("1.2 Scope")
         );
         assert_eq!(linked[4].metadata().heading_path, vec!["2 Methods"]);
+    }
+
+    #[test]
+    fn heading_path_unknown_size_title_appends_not_resets() {
+        use crate::pipeline::element::{Element, ElementData, ElementMetadata};
+        let title = |t: &str, size: Option<f64>| {
+            let metadata = ElementMetadata {
+                font_size: size,
+                ..ElementMetadata::default()
+            };
+            Element::Title(ElementData {
+                text: t.to_string(),
+                metadata,
+            })
+        };
+        let para = |t: &str| {
+            Element::Paragraph(ElementData {
+                text: t.to_string(),
+                metadata: ElementMetadata::default(),
+            })
+        };
+
+        // Big(20) > Small(10) > a None-size title must NOT clear the breadcrumb;
+        // it is appended at the deepest level.
+        let elements = vec![
+            title("H1", Some(20.0)),
+            title("H1.1", Some(10.0)),
+            title("NoSize", None),
+            para("body"),
+        ];
+        let linked = Partitioner::assign_heading_paths(elements);
+        // The None-size title is deepest; it sits under H1>H1.1.
+        assert_eq!(
+            linked[3].metadata().heading_path,
+            vec!["H1", "H1.1", "NoSize"]
+        );
+        assert_eq!(
+            linked[3].metadata().parent_heading.as_deref(),
+            Some("NoSize")
+        );
     }
 }
