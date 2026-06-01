@@ -560,15 +560,51 @@ impl Partitioner {
             }
         }
 
-        // Post-classification relationship pass: assign parent_heading
-        let mut current_heading: Option<String> = None;
-        for element in &mut elements {
-            if matches!(element, Element::Title(_)) {
-                current_heading = Some(element.text().to_string());
+        // Post-classification relationship pass: assign parent_heading + heading_path
+        elements = Self::assign_heading_paths(elements);
+
+        elements
+    }
+
+    /// Assign `heading_path` (full breadcrumb) and `parent_heading` (its leaf) to
+    /// every element, inferring heading level from Title font sizes.
+    pub(crate) fn assign_heading_paths(mut elements: Vec<Element>) -> Vec<Element> {
+        // 1. Rank distinct Title font sizes desc, merging sizes within 5%.
+        let mut sizes: Vec<f64> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::Title(_)))
+            .filter_map(|e| e.metadata().font_size)
+            .collect();
+        sizes.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+        let mut buckets: Vec<f64> = Vec::new();
+        for s in sizes {
+            if !buckets.iter().any(|b| (b - s).abs() <= b * 0.05) {
+                buckets.push(s);
             }
-            element.set_parent_heading(current_heading.clone());
         }
 
+        let level_of = |size: Option<f64>| -> u8 {
+            let Some(s) = size else { return 1 };
+            for (i, b) in buckets.iter().enumerate() {
+                if (s - b).abs() <= b * 0.05 {
+                    return (i + 1) as u8;
+                }
+            }
+            buckets.len().max(1) as u8
+        };
+
+        // 2. Walk elements maintaining a (level, text) stack.
+        let mut stack: Vec<(u8, String)> = Vec::new();
+        for element in &mut elements {
+            if matches!(element, Element::Title(_)) {
+                let level = level_of(element.metadata().font_size);
+                stack.retain(|(lvl, _)| *lvl < level);
+                stack.push((level, element.text().to_string()));
+            }
+            let path: Vec<String> = stack.iter().map(|(_, t)| t.clone()).collect();
+            element.set_parent_heading(path.last().cloned());
+            element.set_heading_path(path);
+        }
         elements
     }
 }
@@ -836,6 +872,7 @@ fn meta_from_fragment(f: &TextFragment, page: u32) -> ElementMetadata {
         is_bold: f.is_bold,
         is_italic: f.is_italic,
         parent_heading: None,
+        heading_path: Vec::new(),
     }
 }
 
@@ -1554,5 +1591,46 @@ mod tests {
             .filter(|e| matches!(e, Element::Footer(_)))
             .count();
         assert_eq!(footer_count, 0);
+    }
+
+    #[test]
+    fn heading_path_builds_breadcrumb_by_font_size() {
+        use crate::pipeline::element::{Element, ElementData, ElementMetadata};
+        let title = |t: &str, size: f64| {
+            let metadata = ElementMetadata {
+                font_size: Some(size),
+                ..ElementMetadata::default()
+            };
+            Element::Title(ElementData {
+                text: t.to_string(),
+                metadata,
+            })
+        };
+        let para = |t: &str| {
+            Element::Paragraph(ElementData {
+                text: t.to_string(),
+                metadata: ElementMetadata::default(),
+            })
+        };
+
+        // H1(20) > H2(14) > body ; then a new H1(20) resets depth.
+        let elements = vec![
+            title("1 Introduction", 20.0),
+            title("1.2 Scope", 14.0),
+            para("Body text under scope."),
+            title("2 Methods", 20.0),
+            para("Body under methods."),
+        ];
+
+        let linked = Partitioner::assign_heading_paths(elements);
+        assert_eq!(
+            linked[2].metadata().heading_path,
+            vec!["1 Introduction", "1.2 Scope"]
+        );
+        assert_eq!(
+            linked[2].metadata().parent_heading.as_deref(),
+            Some("1.2 Scope")
+        );
+        assert_eq!(linked[4].metadata().heading_path, vec!["2 Methods"]);
     }
 }
