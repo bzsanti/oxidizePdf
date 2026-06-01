@@ -1,3 +1,4 @@
+mod chunk_metadata;
 pub mod element;
 pub mod export;
 pub mod graph;
@@ -8,6 +9,7 @@ pub mod rag;
 pub mod reading_order;
 pub mod semantic_chunking;
 
+pub use chunk_metadata::{ChunkMetadata, ContentTypeFlags, DocumentSource};
 pub use element::{
     element_reading_order, Element, ElementBBox, ElementData, ElementMetadata, ImageElementData,
     KeyValueElementData, TableElementData,
