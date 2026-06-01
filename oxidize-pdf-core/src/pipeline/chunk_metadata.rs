@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::pipeline::element::Element;
+use crate::pipeline::hybrid_chunking::split_into_sentences;
 
 /// Char-weighted aggregates over a chunk's elements.
 // consumed by ChunkMetadata::from_elements (Task 6)
@@ -145,10 +146,85 @@ pub struct ChunkMetadata {
     pub source: Option<DocumentSource>,
 }
 
+// consumed by ChunkMetadata::from_elements (Task 6)
+#[allow(dead_code)]
+pub(crate) fn content_type_flags(elements: &[Element]) -> ContentTypeFlags {
+    let mut flags = ContentTypeFlags::default();
+    let mut all_titles = !elements.is_empty();
+    for e in elements {
+        match e {
+            Element::Table(_) => flags.has_table = true,
+            Element::ListItem(_) => flags.has_list = true,
+            Element::CodeBlock(_) => flags.has_code = true,
+            _ => {}
+        }
+        if !matches!(e, Element::Title(_)) {
+            all_titles = false;
+        }
+    }
+    flags.heading_only = all_titles;
+    flags
+}
+
+// consumed by ChunkMetadata::from_elements (Task 6)
+#[allow(dead_code)]
+pub(crate) fn char_count(text: &str) -> usize {
+    text.chars().count()
+}
+
+// consumed by ChunkMetadata::from_elements (Task 6)
+#[allow(dead_code)]
+pub(crate) fn word_count(text: &str) -> usize {
+    text.split_whitespace().count()
+}
+
+// consumed by ChunkMetadata::from_elements (Task 6)
+#[allow(dead_code)]
+pub(crate) fn sentence_count(text: &str) -> usize {
+    if text.trim().is_empty() {
+        return 0;
+    }
+    split_into_sentences(text).len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::pipeline::element::{Element, ElementData, ElementMetadata};
+
+    fn table_el() -> Element {
+        Element::Table(crate::pipeline::element::TableElementData {
+            rows: vec![],
+            metadata: crate::pipeline::element::ElementMetadata::default(),
+        })
+    }
+
+    #[test]
+    fn content_types_and_counts() {
+        let els = vec![
+            para("Hello world. Second sentence!", "F", 10.0, false, 1.0),
+            table_el(),
+        ];
+        let flags = content_type_flags(&els);
+        assert!(flags.has_table);
+        assert!(!flags.has_list);
+        assert!(!flags.heading_only);
+
+        let text = "Hello world. Second sentence!";
+        assert_eq!(char_count(text), text.chars().count());
+        assert_eq!(word_count(text), 4);
+        assert_eq!(sentence_count(text), 2);
+    }
+
+    #[test]
+    fn heading_only_when_all_titles() {
+        let d = crate::pipeline::element::ElementData {
+            text: "Title".to_string(),
+            metadata: crate::pipeline::element::ElementMetadata::default(),
+        };
+        let els = vec![Element::Title(d)];
+        assert!(content_type_flags(&els).heading_only);
+    }
 
     fn para(text: &str, font: &str, size: f64, bold: bool, conf: f64) -> Element {
         let metadata = ElementMetadata {
