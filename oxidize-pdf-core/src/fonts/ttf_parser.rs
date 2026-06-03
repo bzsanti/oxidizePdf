@@ -24,6 +24,12 @@ impl GlyphMapping {
         self.char_to_glyph.get(&(ch as u32)).copied()
     }
 
+    /// Whether the character→glyph table is empty (no cmap could be parsed).
+    /// When empty, glyph coverage cannot be determined for this font.
+    pub fn is_empty(&self) -> bool {
+        self.char_to_glyph.is_empty()
+    }
+
     /// Get character for a glyph index
     pub fn glyph_to_char(&self, glyph: u16) -> Option<char> {
         self.glyph_to_char

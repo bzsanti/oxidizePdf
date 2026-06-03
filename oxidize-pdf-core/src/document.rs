@@ -476,6 +476,28 @@ impl Document {
         Ok(())
     }
 
+    /// Get a registered custom font by name, if present.
+    ///
+    /// Useful for inspecting glyph coverage via [`crate::fonts::Font::has_glyph`]
+    /// or [`crate::fonts::Font::missing_glyphs`] (issue #287).
+    pub fn custom_font(&self, name: &str) -> Option<std::sync::Arc<CustomFont>> {
+        self.custom_fonts.get_font(name)
+    }
+
+    /// Characters in `text` that the named custom font cannot render because
+    /// its embedded glyph set has no glyph for them (they would appear as
+    /// `.notdef`, an empty box — issue #287). Deduplicated, first-seen order.
+    ///
+    /// Returns an empty vector when the font is not registered (nothing can be
+    /// determined). This lets callers detect coverage gaps before rendering,
+    /// e.g. to substitute a character or pick a different font.
+    pub fn font_missing_glyphs(&self, font_name: &str, text: &str) -> Vec<char> {
+        match self.custom_fonts.get_font(font_name) {
+            Some(font) => font.missing_glyphs(text),
+            None => Vec::new(),
+        }
+    }
+
     /// Add a custom font from byte data
     ///
     /// # Example

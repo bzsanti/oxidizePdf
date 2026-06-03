@@ -1546,6 +1546,30 @@ impl<W: Write> PdfWriter<W> {
                 }
                 chars
             });
+
+        // Diagnose characters the embedded font has no glyph for: they render
+        // as .notdef (empty boxes). This is correct when the font genuinely
+        // lacks the glyph, but warn so it is not a silent failure — the most
+        // common cause of "my ✓/✗ show as boxes" reports (issue #287).
+        let used_text: String = used_chars.iter().copied().collect();
+        let mut missing = font.missing_glyphs(&used_text);
+        if !missing.is_empty() {
+            missing.sort_unstable();
+            let list = missing
+                .iter()
+                .map(|c| format!("U+{:04X} {:?}", *c as u32, c))
+                .collect::<Vec<_>>()
+                .join(", ");
+            tracing::warn!(
+                "Custom font '{}' has no glyph for {} character(s): {}. \
+                 They will render as .notdef (empty boxes); the embedded font \
+                 does not contain these glyphs.",
+                font_name,
+                missing.len(),
+                list
+            );
+        }
+
         // Allocate IDs for all font objects
         let font_id = self.allocate_object_id();
         let descendant_font_id = self.allocate_object_id();

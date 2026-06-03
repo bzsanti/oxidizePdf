@@ -98,6 +98,33 @@ impl Font {
         self.glyph_mapping.char_to_glyph(ch).is_some()
     }
 
+    /// Characters in `text` the font has no glyph for, deduplicated and in
+    /// first-seen order. Control characters (newlines, tabs, …) are ignored
+    /// because they are never rendered.
+    ///
+    /// Such characters render as `.notdef` (an empty box) — this is the
+    /// correct PDF behaviour when the embedded font genuinely lacks the glyph
+    /// (issue #287). Use this to detect coverage gaps before rendering rather
+    /// than discovering empty boxes in the output.
+    pub fn missing_glyphs(&self, text: &str) -> Vec<char> {
+        // Coverage cannot be determined if no cmap was parsed (e.g. some CFF
+        // fonts): report nothing rather than flagging every character.
+        if self.glyph_mapping.is_empty() {
+            return Vec::new();
+        }
+        let mut seen = std::collections::HashSet::new();
+        let mut missing = Vec::new();
+        for ch in text.chars() {
+            if ch.is_control() {
+                continue;
+            }
+            if !self.has_glyph(ch) && seen.insert(ch) {
+                missing.push(ch);
+            }
+        }
+        missing
+    }
+
     /// Measure text using this font at a specific size
     pub fn measure_text(&self, text: &str, font_size: f32) -> TextMeasurement {
         self.metrics
