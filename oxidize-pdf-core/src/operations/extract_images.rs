@@ -1066,7 +1066,14 @@ impl<R: Read + Seek> ImageExtractor<R> {
     /// Resolve indirect references inside a `/DecodeParms` value (the value
     /// itself, or each element of a per-filter array).
     fn resolve_decode_params(&self, obj: &PdfObject) -> PdfObject {
-        match self.document.resolve(obj).unwrap_or_else(|_| obj.clone()) {
+        let resolved = self.document.resolve(obj).unwrap_or_else(|e| {
+            // Falling back to the unresolved reference means the predictor is
+            // skipped and the image decodes to garbage — the original #286
+            // symptom. Surface it instead of failing silently.
+            tracing::warn!("Failed to resolve /DecodeParms reference: {e}");
+            obj.clone()
+        });
+        match resolved {
             PdfObject::Array(arr) => PdfObject::Array(PdfArray(
                 arr.0
                     .iter()
@@ -1117,7 +1124,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
             .0
             .get(&PdfName("N".to_string()))?
             .as_integer()?;
-        Some(n as u8)
+        // /N is 1, 3 or 4 for valid ICC profiles. Clamp so a malformed value
+        // can't truncate (e.g. -1 → 255) and blow up a downstream allocation.
+        Some(n.clamp(1, 4) as u8)
     }
 
     /// Convert raw image sample data to PNG format.
@@ -1142,7 +1151,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
         // rather than indices misread as grayscale.
         if let Some((base, hival, palette)) = self.try_resolve_indexed(cs) {
             let base_components = self.color_space_component_count(Some(&base)) as usize;
-            let indices = unpack_indices(data, width, height, bits_per_component);
+            // 8-bit indices are already one byte per pixel — borrow directly
+            // instead of cloning; only sub-byte depths need unpacking.
+            let indices: std::borrow::Cow<[u8]> = if bits_per_component == 8 {
+                std::borrow::Cow::Borrowed(data)
+            } else {
+                std::borrow::Cow::Owned(unpack_indices(data, width, height, bits_per_component))
+            };
             let pixel_count = (width as usize) * (height as usize);
             if indices.len() < pixel_count {
                 return Err(OperationError::ParseError(format!(
@@ -1159,9 +1174,14 @@ impl<R: Read + Seek> ImageExtractor<R> {
         let icc_n = self.icc_components(cs);
         let components = image_sample_components(cs, icc_n);
 
-        // Calculate expected data size
+        // Calculate expected data size. Use usize arithmetic so large images
+        // do not overflow the intermediate product (a u32 multiply wraps near
+        // 4 GB and would let truncated data pass the check below).
         let bytes_per_sample = if bits_per_component <= 8 { 1 } else { 2 };
-        let expected_size = (width * height * components as u32 * bytes_per_sample as u32) as usize;
+        let expected_size = (width as usize)
+            * (height as usize)
+            * (components as usize)
+            * (bytes_per_sample as usize);
 
         // Validate data size
         if data.len() < expected_size {
@@ -1660,7 +1680,11 @@ fn expand_indexed(indices: &[u8], lookup: &[u8], base_components: usize, hival: 
 ///
 /// For `bits_per_component >= 8` the data is returned unchanged.
 fn unpack_indices(data: &[u8], width: u32, height: u32, bits_per_component: u8) -> Vec<u8> {
-    if bits_per_component >= 8 || bits_per_component == 0 {
+    // Only the spec-valid packed depths {1, 2, 4} are unpacked. 8 (and the
+    // defensive 0) pass through unchanged; any other value (e.g. a malformed
+    // 3/5/6/7) would make the scanline shift underflow, so it also passes
+    // through and the caller's size check rejects it cleanly.
+    if !matches!(bits_per_component, 1 | 2 | 4) {
         return data.to_vec();
     }
     let bpc = bits_per_component as usize;
@@ -1763,6 +1787,20 @@ mod tests {
         // One row of 2 pixels at 4 bpc packed into a single byte 0xA3 -> [0xA, 0x3].
         let data = vec![0xA3];
         assert_eq!(unpack_indices(&data, 2, 1, 4), vec![0x0A, 0x03]);
+    }
+
+    #[test]
+    fn test_unpack_indices_2bit_four_pixels_per_byte() {
+        // One row of 4 pixels at 2 bpc packed into a byte 0b11_10_01_00 -> [3,2,1,0].
+        let data = vec![0b1110_0100];
+        assert_eq!(unpack_indices(&data, 4, 1, 2), vec![3, 2, 1, 0]);
+    }
+
+    #[test]
+    fn test_unpack_indices_passthrough_for_unsupported_bpc() {
+        // A malformed 3 bpc must not panic (shift underflow); it passes through.
+        let data = vec![0xAB, 0xCD];
+        assert_eq!(unpack_indices(&data, 4, 1, 3), data);
     }
 
     #[test]
