@@ -5,7 +5,7 @@
 
 use super::{OperationError, OperationResult};
 use crate::graphics::ImageFormat;
-use crate::parser::objects::{PdfName, PdfObject, PdfStream};
+use crate::parser::objects::{PdfArray, PdfName, PdfObject, PdfStream};
 use crate::parser::{PdfDocument, PdfReader};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -315,11 +315,9 @@ impl<R: Read + Seek> ImageExtractor<R> {
             _ => 8, // Default to 8 bits per component
         };
 
-        // Get the decoded image data
-        let parse_options = self.document.options();
-        let mut data = stream.decode(&parse_options).map_err(|e| {
-            OperationError::ParseError(format!("Failed to decode image stream: {e}"))
-        })?;
+        // Get the decoded image data (resolving an indirect /DecodeParms so
+        // predictors are applied — issue #286).
+        let mut data = self.decode_image_stream(stream)?;
 
         // Determine format from filter and process data accordingly
         let format = match stream.dict.0.get(&PdfName("Filter".to_string())) {
@@ -1014,7 +1012,119 @@ impl<R: Read + Seek> ImageExtractor<R> {
         })
     }
 
-    /// Convert raw image data to PNG format
+    /// Decode an image stream, resolving an indirect `/DecodeParms` (or `/DP`)
+    /// first so that filter predictors are actually applied (issue #286).
+    ///
+    /// `PdfStream::decode` only sees the stream's own dictionary; when the
+    /// decode parameters are stored as an indirect reference the predictor is
+    /// silently skipped, leaving the per-row predictor bytes in the output.
+    fn decode_image_stream(&self, stream: &PdfStream) -> OperationResult<Vec<u8>> {
+        let parse_options = self.document.options();
+
+        let needs_resolution = ["DecodeParms", "DP"].into_iter().any(|key| {
+            stream
+                .dict
+                .0
+                .get(&PdfName(key.to_string()))
+                .map(Self::contains_reference)
+                .unwrap_or(false)
+        });
+
+        let decode_result = if needs_resolution {
+            let mut dict = stream.dict.clone();
+            for key in ["DecodeParms", "DP"] {
+                if let Some(obj) = dict.0.get(&PdfName(key.to_string())).cloned() {
+                    let resolved = self.resolve_decode_params(&obj);
+                    dict.0.insert(PdfName(key.to_string()), resolved);
+                }
+            }
+            PdfStream {
+                dict,
+                data: stream.data.clone(),
+            }
+            .decode(&parse_options)
+        } else {
+            stream.decode(&parse_options)
+        };
+
+        decode_result
+            .map_err(|e| OperationError::ParseError(format!("Failed to decode image stream: {e}")))
+    }
+
+    /// Whether an object is, or directly contains, an indirect reference.
+    fn contains_reference(obj: &PdfObject) -> bool {
+        match obj {
+            PdfObject::Reference(_, _) => true,
+            PdfObject::Array(arr) => arr
+                .0
+                .iter()
+                .any(|e| matches!(e, PdfObject::Reference(_, _))),
+            _ => false,
+        }
+    }
+
+    /// Resolve indirect references inside a `/DecodeParms` value (the value
+    /// itself, or each element of a per-filter array).
+    fn resolve_decode_params(&self, obj: &PdfObject) -> PdfObject {
+        match self.document.resolve(obj).unwrap_or_else(|_| obj.clone()) {
+            PdfObject::Array(arr) => PdfObject::Array(PdfArray(
+                arr.0
+                    .iter()
+                    .map(|e| self.document.resolve(e).unwrap_or_else(|_| e.clone()))
+                    .collect(),
+            )),
+            other => other,
+        }
+    }
+
+    /// If `color_space` is an `[/Indexed base hival lookup]` array, resolve it
+    /// into `(resolved_base, hival, palette_bytes)`.
+    fn try_resolve_indexed(
+        &self,
+        color_space: Option<&PdfObject>,
+    ) -> Option<(PdfObject, usize, Vec<u8>)> {
+        let array = color_space?.as_array()?;
+        let first = array.0.first()?.as_name()?;
+        if first.0 != "Indexed" && first.0 != "I" {
+            return None;
+        }
+        let base = self.document.resolve(array.0.get(1)?).ok()?;
+        let hival = array.0.get(2)?.as_integer()?.max(0) as usize;
+        let lookup = self.resolve_lookup_bytes(array.0.get(3)?)?;
+        Some((base, hival, lookup))
+    }
+
+    /// Resolve the Indexed lookup table into palette bytes (it may be a string
+    /// literal or an indirect stream).
+    fn resolve_lookup_bytes(&self, lookup: &PdfObject) -> Option<Vec<u8>> {
+        match self.document.resolve(lookup).ok()? {
+            PdfObject::String(s) => Some(s.0),
+            PdfObject::Stream(s) => s.decode(&self.document.options()).ok(),
+            _ => None,
+        }
+    }
+
+    /// Resolve the `/N` (component count) of an `[/ICCBased stream]` colour space.
+    fn icc_components(&self, color_space: Option<&PdfObject>) -> Option<u8> {
+        let array = color_space?.as_array()?;
+        if array.0.first()?.as_name()?.0 != "ICCBased" {
+            return None;
+        }
+        let stream = self.document.resolve(array.0.get(1)?).ok()?;
+        let n = stream
+            .as_stream()?
+            .dict
+            .0
+            .get(&PdfName("N".to_string()))?
+            .as_integer()?;
+        Some(n as u8)
+    }
+
+    /// Convert raw image sample data to PNG format.
+    ///
+    /// Handles Indexed colour spaces (one palette index per pixel, expanded to
+    /// the base colour) and computes the component count from the colour space
+    /// (issue #286 — Indexed was previously treated as 3-component RGB).
     fn convert_raw_image_data_to_png(
         &self,
         data: &[u8],
@@ -1023,27 +1133,31 @@ impl<R: Read + Seek> ImageExtractor<R> {
         color_space: Option<&PdfObject>,
         bits_per_component: u8,
     ) -> OperationResult<Vec<u8>> {
-        // Determine color components and channels
-        let (components, _channels) = match color_space {
-            Some(PdfObject::Name(cs)) => match cs.0.as_str() {
-                "DeviceGray" => (1, 1),
-                "DeviceRGB" => (3, 3),
-                "DeviceCMYK" => (4, 4),
-                _ => (3, 3), // Default to RGB
-            },
-            Some(PdfObject::Array(cs_array)) if !cs_array.0.is_empty() => {
-                if let Some(PdfObject::Name(cs_name)) = cs_array.0.first() {
-                    match cs_name.0.as_str() {
-                        "ICCBased" | "CalRGB" => (3, 3),
-                        "CalGray" => (1, 1),
-                        _ => (3, 3),
-                    }
-                } else {
-                    (3, 3)
-                }
+        // Resolve an indirect ColorSpace reference up front.
+        let resolved_cs = color_space.and_then(|cs| self.document.resolve(cs).ok());
+        let cs = resolved_cs.as_ref().or(color_space);
+
+        // Indexed colour space: the data carries a single palette index per
+        // pixel. Expand to the base colour space so the PNG is a real picture
+        // rather than indices misread as grayscale.
+        if let Some((base, hival, palette)) = self.try_resolve_indexed(cs) {
+            let base_components = self.color_space_component_count(Some(&base)) as usize;
+            let indices = unpack_indices(data, width, height, bits_per_component);
+            let pixel_count = (width as usize) * (height as usize);
+            if indices.len() < pixel_count {
+                return Err(OperationError::ParseError(format!(
+                    "Indexed image data too small: expected {} indices, got {}",
+                    pixel_count,
+                    indices.len()
+                )));
             }
-            _ => (3, 3), // Default to RGB
-        };
+            let rgb = expand_indexed(&indices[..pixel_count], &palette, base_components, hival);
+            return self.create_png_from_raw_data(&rgb, width, height, base_components as u8, 8);
+        }
+
+        // Non-indexed: component count from the colour space.
+        let icc_n = self.icc_components(cs);
+        let components = image_sample_components(cs, icc_n);
 
         // Calculate expected data size
         let bytes_per_sample = if bits_per_component <= 8 { 1 } else { 2 };
@@ -1060,6 +1174,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
 
         // Convert to PNG format using simple PNG encoding
         self.create_png_from_raw_data(data, width, height, components, bits_per_component)
+    }
+
+    /// Number of colour components for a (resolved) colour space, resolving an
+    /// `/ICCBased` `/N` when needed.
+    fn color_space_component_count(&self, color_space: Option<&PdfObject>) -> u8 {
+        let icc_n = self.icc_components(color_space);
+        image_sample_components(color_space, icc_n)
     }
 
     /// Create PNG from raw pixel data
@@ -1477,10 +1598,180 @@ pub fn extract_images_from_pages<P: AsRef<Path>>(
     Ok(all_images)
 }
 
+/// Number of colour samples per pixel carried by the *image data* for a colour
+/// space.
+///
+/// For `Indexed` the data carries a single palette index per pixel (1). For
+/// `ICCBased`, pass the profile's resolved `/N` via `icc_n` (defaults to 3 when
+/// unknown). `DeviceN` reports the number of named colorants.
+fn image_sample_components(color_space: Option<&PdfObject>, icc_n: Option<u8>) -> u8 {
+    match color_space {
+        Some(PdfObject::Name(cs)) => match cs.0.as_str() {
+            "DeviceGray" | "G" | "CalGray" => 1,
+            "DeviceRGB" | "RGB" | "CalRGB" | "Lab" => 3,
+            "DeviceCMYK" | "CMYK" => 4,
+            _ => 3,
+        },
+        Some(PdfObject::Array(array)) => {
+            match array
+                .0
+                .first()
+                .and_then(|o| o.as_name())
+                .map(|n| n.0.as_str())
+            {
+                Some("Indexed") | Some("I") => 1,
+                Some("Separation") => 1,
+                Some("DeviceN") => array
+                    .0
+                    .get(1)
+                    .and_then(|o| o.as_array())
+                    .map(|names| names.0.len().max(1) as u8)
+                    .unwrap_or(1),
+                Some("ICCBased") => icc_n.unwrap_or(3),
+                Some("CalGray") | Some("DeviceGray") => 1,
+                Some("DeviceCMYK") => 4,
+                Some("CalRGB") | Some("Lab") | Some("DeviceRGB") => 3,
+                _ => 3,
+            }
+        }
+        _ => 3,
+    }
+}
+
+/// Expand one-index-per-pixel data into `base_components`-byte pixels using the
+/// `lookup` palette (`(hival + 1) * base_components` bytes).
+///
+/// Indices greater than `hival` are clamped; a short palette is zero-padded so
+/// the output length is always `indices.len() * base_components`.
+fn expand_indexed(indices: &[u8], lookup: &[u8], base_components: usize, hival: usize) -> Vec<u8> {
+    let mut out = Vec::with_capacity(indices.len() * base_components);
+    for &idx in indices {
+        let entry = (idx as usize).min(hival);
+        let start = entry * base_components;
+        for c in 0..base_components {
+            out.push(lookup.get(start + c).copied().unwrap_or(0));
+        }
+    }
+    out
+}
+
+/// Unpack packed samples (1/2/4/8 bits per component) into one byte per sample,
+/// honouring PDF row alignment (each scanline starts on a byte boundary).
+///
+/// For `bits_per_component >= 8` the data is returned unchanged.
+fn unpack_indices(data: &[u8], width: u32, height: u32, bits_per_component: u8) -> Vec<u8> {
+    if bits_per_component >= 8 || bits_per_component == 0 {
+        return data.to_vec();
+    }
+    let bpc = bits_per_component as usize;
+    let width = width as usize;
+    let height = height as usize;
+    let row_bytes = (width * bpc).div_ceil(8);
+    let mask = (1u16 << bpc) - 1;
+    let mut out = Vec::with_capacity(width * height);
+    for row in 0..height {
+        let row_start = row * row_bytes;
+        for col in 0..width {
+            let bit_index = col * bpc;
+            let byte = row_start + bit_index / 8;
+            let shift = 8 - bpc - (bit_index % 8);
+            let value = data
+                .get(byte)
+                .map(|b| ((*b as u16) >> shift) & mask)
+                .unwrap_or(0);
+            out.push(value as u8);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
+
+    fn name(s: &str) -> PdfObject {
+        PdfObject::Name(PdfName(s.to_string()))
+    }
+
+    #[test]
+    fn test_image_sample_components_device_color_spaces() {
+        assert_eq!(image_sample_components(Some(&name("DeviceGray")), None), 1);
+        assert_eq!(image_sample_components(Some(&name("DeviceRGB")), None), 3);
+        assert_eq!(image_sample_components(Some(&name("DeviceCMYK")), None), 4);
+        // Unknown name / missing colour space default to RGB (legacy behaviour).
+        assert_eq!(image_sample_components(Some(&name("Weird")), None), 3);
+        assert_eq!(image_sample_components(None, None), 3);
+    }
+
+    #[test]
+    fn test_image_sample_components_indexed_is_one() {
+        let indexed = PdfObject::Array(PdfArray(vec![
+            name("Indexed"),
+            name("DeviceRGB"),
+            PdfObject::Integer(23),
+            PdfObject::String(crate::parser::objects::PdfString(vec![0u8; 72])),
+        ]));
+        assert_eq!(image_sample_components(Some(&indexed), None), 1);
+    }
+
+    #[test]
+    fn test_image_sample_components_iccbased_uses_n() {
+        let icc = PdfObject::Array(PdfArray(vec![name("ICCBased"), PdfObject::Reference(5, 0)]));
+        assert_eq!(image_sample_components(Some(&icc), Some(1)), 1);
+        assert_eq!(image_sample_components(Some(&icc), Some(4)), 4);
+        // Falls back to RGB when /N is unknown.
+        assert_eq!(image_sample_components(Some(&icc), None), 3);
+    }
+
+    #[test]
+    fn test_image_sample_components_devicen_counts_colorants() {
+        let devicen = PdfObject::Array(PdfArray(vec![
+            name("DeviceN"),
+            PdfObject::Array(PdfArray(vec![name("Cyan"), name("Magenta")])),
+            name("DeviceCMYK"),
+            PdfObject::Reference(9, 0),
+        ]));
+        assert_eq!(image_sample_components(Some(&devicen), None), 2);
+    }
+
+    #[test]
+    fn test_expand_indexed_maps_indices_to_palette_rgb() {
+        // 3-entry RGB palette: red, green, blue.
+        let palette = vec![255, 0, 0, 0, 255, 0, 0, 0, 255];
+        let indices = [0u8, 2, 1];
+        let rgb = expand_indexed(&indices, &palette, 3, 2);
+        assert_eq!(rgb, vec![255, 0, 0, 0, 0, 255, 0, 255, 0]);
+    }
+
+    #[test]
+    fn test_expand_indexed_clamps_out_of_range_index() {
+        let palette = vec![10, 20, 30, 40, 50, 60]; // 2 entries, hival = 1
+                                                    // Index 5 is past hival -> clamped to the last entry.
+        let rgb = expand_indexed(&[5u8], &palette, 3, 1);
+        assert_eq!(rgb, vec![40, 50, 60]);
+    }
+
+    #[test]
+    fn test_unpack_indices_passthrough_for_8bit() {
+        let data = vec![1, 2, 3, 4];
+        assert_eq!(unpack_indices(&data, 2, 2, 8), data);
+    }
+
+    #[test]
+    fn test_unpack_indices_4bit_two_pixels_per_byte() {
+        // One row of 2 pixels at 4 bpc packed into a single byte 0xA3 -> [0xA, 0x3].
+        let data = vec![0xA3];
+        assert_eq!(unpack_indices(&data, 2, 1, 4), vec![0x0A, 0x03]);
+    }
+
+    #[test]
+    fn test_unpack_indices_1bit_respects_row_byte_alignment() {
+        // 3 pixels per row at 1 bpc => each row occupies 1 byte (padded).
+        // Row 0: 0b101_00000 -> 1,0,1 ; Row 1: 0b011_00000 -> 0,1,1
+        let data = vec![0b1010_0000, 0b0110_0000];
+        assert_eq!(unpack_indices(&data, 3, 2, 1), vec![1, 0, 1, 0, 1, 1]);
+    }
 
     #[test]
     fn test_extract_options_default() {
