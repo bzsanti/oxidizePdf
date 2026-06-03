@@ -16,12 +16,23 @@ pub struct GlyphMapping {
     glyph_to_char: HashMap<u16, u32>,
     /// Glyph widths in font units
     glyph_widths: HashMap<u16, u16>,
+    /// `true` when the real cmap could not be parsed and `char_to_glyph` holds
+    /// only a synthetic ASCII fallback. In that case glyph coverage is NOT
+    /// reliable and must not be reported as authoritative.
+    cmap_unparsed: bool,
 }
 
 impl GlyphMapping {
     /// Get glyph index for a character
     pub fn char_to_glyph(&self, ch: char) -> Option<u16> {
         self.char_to_glyph.get(&(ch as u32)).copied()
+    }
+
+    /// Whether glyph coverage can be reliably determined: the table is
+    /// non-empty AND was built from the font's real cmap (not the ASCII
+    /// fallback used when cmap parsing fails).
+    pub(crate) fn coverage_known(&self) -> bool {
+        !self.char_to_glyph.is_empty() && !self.cmap_unparsed
     }
 
     /// Get character for a glyph index
@@ -358,7 +369,10 @@ impl<'a> TtfParser<'a> {
         let cmap_data = cmap_table;
 
         if self.parse_cmap_table(cmap_data, &mut mapping).is_err() {
-            // Fallback to basic ASCII mapping if cmap parsing fails
+            // Fallback to basic ASCII mapping if cmap parsing fails. This is a
+            // best-effort guess, not the font's real coverage — flag it so
+            // coverage diagnostics do not treat it as authoritative.
+            mapping.cmap_unparsed = true;
             for ch in 0x20..=0x7E {
                 mapping.add_mapping(char::from(ch), ch as u16);
             }
