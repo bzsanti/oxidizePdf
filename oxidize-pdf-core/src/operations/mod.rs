@@ -19,7 +19,7 @@ pub mod split;
 pub use chunk_page_mapper::ChunkPageMapper;
 pub use extract_images::{
     extract_images_from_pages, extract_images_from_pdf, ExtractImagesOptions, ExtractedImage,
-    ImageExtractor,
+    ImageExtractor, ImagePreprocessingOptions,
 };
 pub use merge::{merge_pdf_files, merge_pdfs, MergeInput, MergeOptions, PdfMerger};
 pub use overlay::{overlay_pdf, OverlayOptions, OverlayPosition, PdfOverlay};

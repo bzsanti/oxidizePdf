@@ -768,14 +768,27 @@ impl<R: Read + Seek> PdfDocument<R> {
             .get_integer(page_dict, inherited, "Rotate")?
             .unwrap_or(0) as i32;
 
-        // Get inherited resources
-        let inherited_resources = if let Some(inherited) = inherited {
-            inherited
+        // Resolve the effective /Resources into an owned dictionary so that
+        // `ParsedPage::get_resources()` always yields a dictionary, even when
+        // /Resources is given as an indirect reference (issue #286). The page's
+        // own /Resources takes precedence over inherited ones; when it is an
+        // inline dictionary `get_resources()` returns it directly from the page
+        // dict, so we only need a resolved fallback for the reference / inherited
+        // cases.
+        let inherited_resources = {
+            let own_is_inline_dict = page_dict
                 .get("Resources")
-                .and_then(|r| r.as_dict())
-                .cloned()
-        } else {
-            None
+                .map(|o| o.as_dict().is_some())
+                .unwrap_or(false);
+            if own_is_inline_dict {
+                None
+            } else {
+                page_dict
+                    .get("Resources")
+                    .or_else(|| inherited.and_then(|i| i.get("Resources")))
+                    .and_then(|r| self.resolve(r).ok())
+                    .and_then(|r| r.as_dict().cloned())
+            }
         };
 
         // Get annotations if present
