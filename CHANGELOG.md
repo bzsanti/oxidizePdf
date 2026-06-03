@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.12.0] - 2026-06-03
+
 ### Added
 
 - `Page::add_icc_color_space(name, &IccProfile)` — register an ICC-profile-backed
@@ -22,12 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without hand-building a parameter `Dictionary` (#283).
 - `PageColorSpace::IccStream` variant — stream-backed ICC colour space carrying the
   raw profile bytes, `N`, `Alternate`, and optional `Range`.
+- Glyph-coverage diagnostics for embedded custom fonts: `Font::missing_glyphs`,
+  `Document::font_missing_glyphs`, and `Document::embedded_font`. The Type0 writer now
+  logs a warning naming a custom font and the characters it has no glyph for (they
+  render as `.notdef`) instead of failing silently (#287).
+- `ImagePreprocessingOptions` re-exported from `oxidize_pdf::operations` (#286).
 
 ### Fixed
 
 - `ICCBased` colour spaces registered via the new `Page::add_icc_color_space` are now
   emitted as conformant indirect streams with the embedded profile, instead of an inline
   parameter dictionary that silently dropped the profile bytes (#282).
+- Image extraction from `Indexed` colour-space images: the single palette index per
+  pixel is expanded to the base colour via the palette (was mis-sized as 3-component
+  RGB, producing `Image data too small`); the FlateDecode PNG predictor is applied when
+  `/DecodeParms` is an indirect reference; and pages whose `/Resources` is an indirect
+  reference are now resolved instead of falling back to a brute-force object scan (#286).
 
 ## [2.11.0] - 2026-05-30
 
