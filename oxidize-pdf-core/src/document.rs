@@ -476,11 +476,13 @@ impl Document {
         Ok(())
     }
 
-    /// Get a registered custom font by name, if present.
+    /// Get a registered embedded font by name, if present.
     ///
-    /// Useful for inspecting glyph coverage via [`crate::fonts::Font::has_glyph`]
-    /// or [`crate::fonts::Font::missing_glyphs`] (issue #287).
-    pub fn custom_font(&self, name: &str) -> Option<std::sync::Arc<CustomFont>> {
+    /// Returns the embedding-layer [`crate::fonts::Font`] (not the
+    /// `oxidize_pdf::CustomFont` builder type). Useful for inspecting glyph
+    /// coverage via [`crate::fonts::Font::has_glyph`] or
+    /// [`crate::fonts::Font::missing_glyphs`] (issue #287).
+    pub fn embedded_font(&self, name: &str) -> Option<std::sync::Arc<CustomFont>> {
         self.custom_fonts.get_font(name)
     }
 

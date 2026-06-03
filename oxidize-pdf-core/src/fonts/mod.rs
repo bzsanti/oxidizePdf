@@ -107,9 +107,10 @@ impl Font {
     /// (issue #287). Use this to detect coverage gaps before rendering rather
     /// than discovering empty boxes in the output.
     pub fn missing_glyphs(&self, text: &str) -> Vec<char> {
-        // Coverage cannot be determined if no cmap was parsed (e.g. some CFF
-        // fonts): report nothing rather than flagging every character.
-        if self.glyph_mapping.is_empty() {
+        // Coverage cannot be determined if the real cmap was not parsed (no
+        // cmap, or the ASCII fallback fired): report nothing rather than
+        // flagging every character as missing.
+        if !self.glyph_mapping.coverage_known() {
             return Vec::new();
         }
         let mut seen = std::collections::HashSet::new();
@@ -118,7 +119,9 @@ impl Font {
             if ch.is_control() {
                 continue;
             }
-            if !self.has_glyph(ch) && seen.insert(ch) {
+            // `seen` dedups across all characters so repeated present
+            // characters skip the per-occurrence `has_glyph` lookup.
+            if seen.insert(ch) && !self.has_glyph(ch) {
                 missing.push(ch);
             }
         }

@@ -1551,6 +1551,9 @@ impl<W: Write> PdfWriter<W> {
         // as .notdef (empty boxes). This is correct when the font genuinely
         // lacks the glyph, but warn so it is not a silent failure — the most
         // common cause of "my ✓/✗ show as boxes" reports (issue #287).
+        // Fires once per font per save; a document saved repeatedly logs it
+        // each time. `missing_glyphs` returns nothing when coverage is unknown
+        // (e.g. an unparseable cmap), so this never produces false positives.
         let used_text: String = used_chars.iter().copied().collect();
         let mut missing = font.missing_glyphs(&used_text);
         if !missing.is_empty() {

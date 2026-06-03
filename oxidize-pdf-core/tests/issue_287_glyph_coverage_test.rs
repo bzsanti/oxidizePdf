@@ -91,7 +91,7 @@ fn test_font_has_glyph_reflects_cmap_coverage() {
     let mut doc = Document::new();
     doc.add_font_from_bytes("Roboto", roboto_bytes()).unwrap();
     let font = doc
-        .custom_font("Roboto")
+        .embedded_font("Roboto")
         .expect("registered font must be retrievable");
 
     assert!(font.has_glyph('A'));
