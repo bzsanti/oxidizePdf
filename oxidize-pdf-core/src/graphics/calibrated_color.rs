@@ -63,10 +63,11 @@ impl CalGrayColorSpace {
         Self::new().with_white_point([0.9504, 1.0000, 1.0888])
     }
 
-    /// Convert to PDF color space array
-    pub fn to_pdf_array(&self) -> Vec<Object> {
-        let mut array = vec![Object::Name("CalGray".to_string())];
-
+    /// Build the `CalGray` parameter dictionary (`WhitePoint`, optional
+    /// `BlackPoint`/`Gamma`). Single source of the dict shape, shared by
+    /// [`Self::to_pdf_array`] and the `PageColorSpace` bridge
+    /// (`impl From<&CalGrayColorSpace> for PageColorSpace`).
+    pub fn params_dictionary(&self) -> Dictionary {
         let mut dict = Dictionary::new();
 
         // White point (required)
@@ -88,8 +89,15 @@ impl CalGrayColorSpace {
             dict.set("Gamma", Object::Real(self.gamma));
         }
 
-        array.push(Object::Dictionary(dict));
-        array
+        dict
+    }
+
+    /// Convert to PDF color space array
+    pub fn to_pdf_array(&self) -> Vec<Object> {
+        vec![
+            Object::Name("CalGray".to_string()),
+            Object::Dictionary(self.params_dictionary()),
+        ]
     }
 
     /// Apply gamma correction to a gray value
@@ -181,10 +189,11 @@ impl CalRgbColorSpace {
         Self::new().with_white_point([0.9504, 1.0000, 1.0888])
     }
 
-    /// Convert to PDF color space array
-    pub fn to_pdf_array(&self) -> Vec<Object> {
-        let mut array = vec![Object::Name("CalRGB".to_string())];
-
+    /// Build the `CalRGB` parameter dictionary (`WhitePoint`, optional
+    /// `BlackPoint`/`Gamma`/`Matrix`). Single source of the dict shape, shared
+    /// by [`Self::to_pdf_array`] and the `PageColorSpace` bridge
+    /// (`impl From<&CalRgbColorSpace> for PageColorSpace`).
+    pub fn params_dictionary(&self) -> Dictionary {
         let mut dict = Dictionary::new();
 
         // White point (required)
@@ -218,8 +227,15 @@ impl CalRgbColorSpace {
             );
         }
 
-        array.push(Object::Dictionary(dict));
-        array
+        dict
+    }
+
+    /// Convert to PDF color space array
+    pub fn to_pdf_array(&self) -> Vec<Object> {
+        vec![
+            Object::Name("CalRGB".to_string()),
+            Object::Dictionary(self.params_dictionary()),
+        ]
     }
 
     /// Apply gamma correction to RGB values

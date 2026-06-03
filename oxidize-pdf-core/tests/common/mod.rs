@@ -7,6 +7,8 @@
 //! conventional pattern for `tests/common/` shared helpers in Rust.
 #![allow(dead_code)]
 
+pub mod colorspace_inspect;
+pub mod pdf_assembler;
 pub mod synthetic_pdf;
 
 /// Count the number of /Type /Page entries in PDF bytes (excluding /Type /Pages).

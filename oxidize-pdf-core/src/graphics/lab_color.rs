@@ -67,10 +67,11 @@ impl LabColorSpace {
         Self::new().with_white_point([0.9504, 1.0000, 1.0888])
     }
 
-    /// Convert to PDF color space array
-    pub fn to_pdf_array(&self) -> Vec<Object> {
-        let mut array = vec![Object::Name("Lab".to_string())];
-
+    /// Build the `Lab` parameter dictionary (`WhitePoint`, optional
+    /// `BlackPoint`/`Range`). Single source of the dict shape, shared by
+    /// [`Self::to_pdf_array`] and the `PageColorSpace` bridge
+    /// (`impl From<&LabColorSpace> for PageColorSpace`).
+    pub fn params_dictionary(&self) -> Dictionary {
         let mut dict = Dictionary::new();
 
         // White point (required)
@@ -95,8 +96,15 @@ impl LabColorSpace {
             );
         }
 
-        array.push(Object::Dictionary(dict));
-        array
+        dict
+    }
+
+    /// Convert to PDF color space array
+    pub fn to_pdf_array(&self) -> Vec<Object> {
+        vec![
+            Object::Name("Lab".to_string()),
+            Object::Dictionary(self.params_dictionary()),
+        ]
     }
 
     /// Convert Lab values to CIE XYZ
