@@ -893,6 +893,9 @@ impl ContextualFormat {
 /// inherent methods (`JsonExporter::export_with_chunks`,
 /// `TokenEfficientExporter::export_chunks`), so callers can pick a format at
 /// runtime behind a `dyn ChunkExporter`.
+///
+/// `TokenEfficientExporter` always implements this trait. `JsonExporter`
+/// implements it only when the `semantic` feature is enabled.
 pub trait ChunkExporter {
     /// Serialize the given chunks into this exporter's output format.
     fn export_chunks(&self, chunks: &[DocumentChunk]) -> Result<String>;
@@ -972,7 +975,7 @@ impl TokenEfficientExporter {
     /// newlines are reassembled correctly. Returns an error on a wrong version,
     /// a wrong header, or a row whose column count does not match the header.
     pub fn parse_chunks(input: &str) -> Result<Vec<DocumentChunk>> {
-        let logical = Self::rejoin_quoted_lines(input);
+        let logical = Self::rejoin_quoted_lines(input)?;
         let mut iter = logical.iter();
 
         match iter.next().map(|s| s.trim_end_matches('\r')) {
@@ -1029,13 +1032,18 @@ impl TokenEfficientExporter {
                 fields[7]
             ))
         })?;
+        if !confidence.is_finite() {
+            return Err(crate::error::PdfError::InvalidStructure(format!(
+                "token-efficient: confidence must be finite, got {confidence:?}"
+            )));
+        }
 
         Ok(DocumentChunk {
             id: fields[0].to_string(),
             tokens: parse_usize("tokens", fields[1])?,
             chunk_index: parse_usize("chunk_index", fields[2])?,
             page_numbers: Self::parse_page_numbers_field(fields[9])?,
-            content: Self::parse_content_field(fields[10]),
+            content: Self::parse_content_field(fields[10])?,
             metadata: ChunkMetadata {
                 position: ChunkPosition {
                     start_char: parse_usize("start_char", fields[3])?,
@@ -1052,7 +1060,11 @@ impl TokenEfficientExporter {
     /// Split the input into logical rows, treating `\n` inside a quoted field as
     /// part of the content rather than a row separator. `""` (an escaped quote)
     /// toggles the quote state twice, correctly keeping the parser inside the field.
-    fn rejoin_quoted_lines(input: &str) -> Vec<String> {
+    ///
+    /// A dangling open quote at end of input (odd number of `"`, e.g. a corrupt or
+    /// hand-crafted payload) is rejected rather than silently merging every
+    /// remaining row into one record.
+    fn rejoin_quoted_lines(input: &str) -> Result<Vec<String>> {
         let mut rows = Vec::new();
         let mut current = String::new();
         let mut in_quote = false;
@@ -1068,8 +1080,13 @@ impl TokenEfficientExporter {
                 _ => current.push(ch),
             }
         }
+        if in_quote {
+            return Err(crate::error::PdfError::InvalidStructure(
+                "token-efficient: unterminated quoted field".to_string(),
+            ));
+        }
         rows.push(current);
-        rows
+        Ok(rows)
     }
 
     /// Parse the `page_numbers` column (semicolon-separated integers).
@@ -1093,12 +1110,14 @@ impl TokenEfficientExporter {
     /// Quote the `content` field only when required to keep rows unambiguous.
     ///
     /// `content` is the last field and is recovered with `splitn(11, '\t')`, so
-    /// interior tabs and commas are safe raw. Quoting is needed only when the
-    /// content contains a newline/CR (which would otherwise split the row) or
-    /// starts with `"` (which would otherwise be read as a quoted field). When
-    /// quoted, the field is wrapped in `"` and interior `"` are doubled.
+    /// interior tabs and commas are safe raw. Quoting is required when the content
+    /// contains any `"` (otherwise the parser's quote-tracking would desync and
+    /// swallow following rows) or a newline/CR (which would otherwise split the
+    /// row). When quoted, the field is wrapped in `"` and interior `"` are doubled.
+    /// This keeps the RFC-4180 invariant: a field is raw iff it contains no
+    /// `"`, `\n`, or `\r`.
     fn quote_content(s: &str) -> String {
-        let needs_quote = s.starts_with('"') || s.contains('\n') || s.contains('\r');
+        let needs_quote = s.contains('"') || s.contains('\n') || s.contains('\r');
         if needs_quote {
             format!("\"{}\"", s.replace('"', "\"\""))
         } else {
@@ -1107,11 +1126,30 @@ impl TokenEfficientExporter {
     }
 
     /// Inverse of [`Self::quote_content`].
-    fn parse_content_field(s: &str) -> String {
+    ///
+    /// A raw field (no surrounding quotes) is returned as-is. A quoted field is
+    /// unwrapped and its doubled `""` are collapsed. A malformed quoted field
+    /// (an interior lone `"` that is not part of a `""` pair) is rejected, since
+    /// the encoder never produces one.
+    fn parse_content_field(s: &str) -> Result<String> {
         if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
-            s[1..s.len() - 1].replace("\"\"", "\"")
+            let inner = &s[1..s.len() - 1];
+            // Every interior `"` must be part of a doubled `""`. Removing the
+            // pairs must leave no stray quote behind.
+            if inner.replace("\"\"", "").contains('"') {
+                return Err(crate::error::PdfError::InvalidStructure(
+                    "token-efficient: malformed quoted content field (unbalanced quotes)"
+                        .to_string(),
+                ));
+            }
+            Ok(inner.replace("\"\"", "\""))
+        } else if s.contains('"') {
+            // A raw field can never legitimately contain a `"`.
+            Err(crate::error::PdfError::InvalidStructure(
+                "token-efficient: unquoted content field contains a stray quote".to_string(),
+            ))
         } else {
-            s.to_string()
+            Ok(s.to_string())
         }
     }
 
@@ -1315,10 +1353,19 @@ mod tests {
             te_content_field(&te_export_one("hello, world")),
             "hello, world"
         );
-        // interior double-quote, not at start: safe raw
-        assert_eq!(te_content_field(&te_export_one("say \"hi\"")), "say \"hi\"");
+        // any interior double-quote must be quoted + doubled (RFC-4180 invariant),
+        // otherwise the parser's quote tracking would desync on odd quote counts
+        assert_eq!(
+            te_content_field(&te_export_one("say \"hi\"")),
+            "\"say \"\"hi\"\"\""
+        );
         // content that starts with a quote must be quoted + interior quotes doubled
         assert_eq!(te_content_field(&te_export_one("\"hi\"")), "\"\"\"hi\"\"\"");
+        // odd number of interior quotes: still fully quoted (the QR #3 case)
+        assert_eq!(
+            te_content_field(&te_export_one("say \"hello")),
+            "\"say \"\"hello\""
+        );
         // embedded newline must be quoted (so the row stays one logical record)
         assert_eq!(
             te_content_field(&te_export_one("line1\nline2")),
@@ -1332,23 +1379,27 @@ mod tests {
 
     #[test]
     fn test_parse_content_field() {
+        // raw field with no special chars
         assert_eq!(
-            TokenEfficientExporter::parse_content_field("hello, world"),
+            TokenEfficientExporter::parse_content_field("hello, world").unwrap(),
             "hello, world"
         );
+        // properly quoted field with doubled interior quotes
         assert_eq!(
-            TokenEfficientExporter::parse_content_field("say \"hi\""),
-            "say \"hi\""
-        );
-        assert_eq!(
-            TokenEfficientExporter::parse_content_field("\"\"\"hi\"\"\""),
+            TokenEfficientExporter::parse_content_field("\"\"\"hi\"\"\"").unwrap(),
             "\"hi\""
         );
-        assert_eq!(TokenEfficientExporter::parse_content_field(""), "");
+        // empty
+        assert_eq!(TokenEfficientExporter::parse_content_field("").unwrap(), "");
+        // quoted field spanning a newline
         assert_eq!(
-            TokenEfficientExporter::parse_content_field("\"line1\nline2\""),
+            TokenEfficientExporter::parse_content_field("\"line1\nline2\"").unwrap(),
             "line1\nline2"
         );
+        // a raw field can never legitimately contain a stray quote -> rejected
+        assert!(TokenEfficientExporter::parse_content_field("say \"hi\"").is_err());
+        // a quoted field with an unbalanced interior quote -> rejected
+        assert!(TokenEfficientExporter::parse_content_field("\"ab\"cd\"").is_err());
     }
 
     #[test]
@@ -1451,7 +1502,7 @@ mod tests {
     fn test_rejoin_quoted_lines_with_embedded_newline() {
         // a quoted field spanning a physical newline must rejoin into one logical row
         let raw = "#oxct/1\nHDR\nrow_a\t\"line1\nline2\"\nrow_b";
-        let logical = TokenEfficientExporter::rejoin_quoted_lines(raw);
+        let logical = TokenEfficientExporter::rejoin_quoted_lines(raw).unwrap();
         assert_eq!(logical.len(), 4); // magic, hdr, row_a(quoted), row_b
         assert_eq!(logical[0], "#oxct/1");
         assert_eq!(logical[1], "HDR");
@@ -1637,6 +1688,42 @@ mod tests {
     }
 
     #[test]
+    fn test_roundtrip_content_with_odd_interior_quote() {
+        // QR #3: content with a single (odd) interior quote, no newline, not at
+        // the start. Must not let the parser swallow the following row.
+        let chunks = vec![
+            te_chunk("a", "say \"hello", 2, vec![1], 0, 0, 10, 1, 1, 0.5, false),
+            te_chunk("b", "second chunk", 1, vec![1], 1, 10, 22, 1, 1, 0.5, false),
+        ];
+        let serialized = TokenEfficientExporter::new()
+            .export_chunks(&chunks)
+            .unwrap();
+        let parsed = TokenEfficientExporter::parse_chunks(&serialized).unwrap();
+        assert_eq!(parsed.len(), 2, "the second row must not be swallowed");
+        assert_chunk_eq(&parsed[0], &chunks[0]);
+        assert_chunk_eq(&parsed[1], &chunks[1]);
+    }
+
+    #[test]
+    fn test_parse_rejects_unterminated_quote() {
+        // QR #1: hand-crafted/corrupt input with a dangling quote must error,
+        // not silently consume the rest of the document.
+        let bad =
+            format!("#oxct/1\n{TE_HEADER}\nc\t1\t0\t0\t1\t1\t1\t0.5000\ttrue\t1\t\"unterminated");
+        assert!(TokenEfficientExporter::parse_chunks(&bad).is_err());
+    }
+
+    #[test]
+    fn test_parse_rejects_non_finite_confidence() {
+        // QR #4: NaN/Infinity confidence must be rejected rather than silently
+        // producing a NaN that corrupts downstream ranking.
+        let bad = format!("#oxct/1\n{TE_HEADER}\nc\t1\t0\t0\t1\t1\t1\tNaN\ttrue\t1\tx");
+        assert!(TokenEfficientExporter::parse_chunks(&bad).is_err());
+        let bad_inf = format!("#oxct/1\n{TE_HEADER}\nc\t1\t0\t0\t1\t1\t1\tinf\ttrue\t1\tx");
+        assert!(TokenEfficientExporter::parse_chunks(&bad_inf).is_err());
+    }
+
+    #[test]
     fn test_chunk_exporter_trait_object() {
         let chunks = vec![te_chunk("a", "x", 1, vec![1], 0, 0, 1, 1, 1, 1.0, true)];
         // object-safe: usable behind a trait object
@@ -1671,7 +1758,7 @@ mod tests {
     /// the JSON baseline. Gated behind `token-bench` (pulls `tiktoken-rs`,
     /// MSRV 1.85+) so it never enters the default MSRV-1.77 build.
     ///
-    /// Run: `cargo test -p oxidize-pdf --features token-bench token_reduction -- --nocapture`
+    /// Run: `cargo test -p oxidize-pdf --features token-bench uses_fewer_tokens -- --nocapture`
     #[cfg(feature = "token-bench")]
     #[test]
     fn test_token_efficient_uses_fewer_tokens_than_json() {
