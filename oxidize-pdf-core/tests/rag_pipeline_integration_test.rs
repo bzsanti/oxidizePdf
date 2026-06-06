@@ -60,6 +60,7 @@ fn make_chunk(content: &str, start: usize, end: usize, pages: Vec<usize>) -> Doc
             },
             confidence: 1.0,
             sentence_boundary_respected: true,
+            language: None,
         },
     }
 }

@@ -31,6 +31,7 @@
 //! ```
 
 use crate::{Document, Result};
+use std::collections::HashMap;
 
 /// A chunk of a PDF document suitable for LLM processing
 ///
@@ -57,6 +58,42 @@ pub struct DocumentChunk {
     pub metadata: ChunkMetadata,
 }
 
+/// A language detected for a chunk or aggregated over a document.
+///
+/// `code` is the ISO 639-3 code (e.g. `"eng"`, `"spa"`, `"cmn"`). The
+/// underlying detector (`whatlang`) is an internal implementation detail and is
+/// not part of this public API.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DetectedLanguage {
+    /// ISO 639-3 language code.
+    pub code: String,
+    /// Detector confidence in `[0.0, 1.0]`.
+    pub confidence: f32,
+    /// Whether the detector considers this detection reliable.
+    pub reliable: bool,
+}
+
+/// Detect the language of `text` using `whatlang`. Returns `None` only when
+/// `whatlang` cannot produce any detection (e.g. empty input). Detections are
+/// surfaced as-is, including unreliable ones — callers decide whether to trust a
+/// result using the `reliable` flag (and `confidence`). Unreliable detections on
+/// short or ambiguous text carry effectively-random codes, so consumers should
+/// gate routing on `reliable`.
+#[cfg(feature = "language-detection")]
+fn detect_chunk_language(text: &str) -> Option<DetectedLanguage> {
+    whatlang::detect(text).map(|info| DetectedLanguage {
+        code: info.lang().code().to_string(),
+        confidence: info.confidence() as f32,
+        reliable: info.is_reliable(),
+    })
+}
+
+/// No-op when the `language-detection` feature is disabled.
+#[cfg(not(feature = "language-detection"))]
+fn detect_chunk_language(_text: &str) -> Option<DetectedLanguage> {
+    None
+}
+
 /// Metadata for a document chunk
 #[derive(Debug, Clone, Default)]
 pub struct ChunkMetadata {
@@ -69,6 +106,11 @@ pub struct ChunkMetadata {
 
     /// Whether this chunk respects sentence boundaries
     pub sentence_boundary_respected: bool,
+
+    /// Detected language for this chunk, if language detection ran
+    /// (`DocumentChunker::with_language_detection(true)` + the
+    /// `language-detection` feature). `None` otherwise.
+    pub language: Option<DetectedLanguage>,
 }
 
 /// Position information for a chunk within the document
@@ -107,6 +149,9 @@ pub struct DocumentChunker {
 
     /// Number of tokens to overlap between consecutive chunks
     overlap: usize,
+
+    /// Whether to run per-chunk language detection
+    detect_language: bool,
 }
 
 impl DocumentChunker {
@@ -132,6 +177,7 @@ impl DocumentChunker {
         Self {
             chunk_size,
             overlap,
+            detect_language: false,
         }
     }
 
@@ -141,6 +187,47 @@ impl DocumentChunker {
     /// GPT-3.5, GPT-4, and similar models.
     pub fn default() -> Self {
         Self::new(512, 50)
+    }
+
+    /// Enable per-chunk language detection.
+    ///
+    /// Requires the `language-detection` feature; without it this flag is a
+    /// no-op and `ChunkMetadata::language` stays `None`. Disabled by default.
+    pub fn with_language_detection(mut self, enabled: bool) -> Self {
+        self.detect_language = enabled;
+        self
+    }
+
+    /// Dominant language across chunks that already carry a detected language,
+    /// weighted by chunk content length (chars). Returns `None` if no chunk has
+    /// a language.
+    ///
+    /// `confidence` is the length-weighted mean of the winning code's chunk
+    /// confidences; `reliable` is true if any contributing chunk for the winning
+    /// code was reliable.
+    pub fn document_language(chunks: &[DocumentChunk]) -> Option<DetectedLanguage> {
+        // Per-code accumulators: (total_weight, weighted_confidence_sum, any_reliable)
+        let mut acc: HashMap<String, (usize, f64, bool)> = HashMap::new();
+        for chunk in chunks {
+            if let Some(lang) = &chunk.metadata.language {
+                let weight = chunk.content.chars().count().max(1);
+                let entry = acc.entry(lang.code.clone()).or_insert((0, 0.0, false));
+                entry.0 += weight;
+                entry.1 += weight as f64 * lang.confidence as f64;
+                entry.2 |= lang.reliable;
+            }
+        }
+
+        // Winner = highest total weight; tie broken by code for determinism.
+        let (code, (total_weight, conf_sum, reliable)) = acc
+            .into_iter()
+            .max_by(|a, b| a.1 .0.cmp(&b.1 .0).then_with(|| b.0.cmp(&a.0)))?;
+
+        Some(DetectedLanguage {
+            code,
+            confidence: (conf_sum / total_weight as f64) as f32,
+            reliable,
+        })
     }
 
     /// Chunk a PDF document into pieces suitable for LLM processing
@@ -237,7 +324,10 @@ impl DocumentChunker {
 
         let page_numbers: Vec<usize> = page_texts.iter().map(|(num, _)| *num).collect();
 
-        self.chunk_text_internal(&full_text, &page_boundaries, page_numbers[0])
+        // `page_texts` may be empty (e.g. a PDF from which no text extracted);
+        // fall back to page 0 rather than indexing into an empty vec.
+        let first_page = page_numbers.first().copied().unwrap_or(0);
+        self.chunk_text_internal(&full_text, &page_boundaries, first_page)
     }
 
     /// Internal chunking implementation with page tracking
@@ -296,6 +386,13 @@ impl DocumentChunker {
             // Join tokens back into text
             let content = chunk_tokens.join(" ");
 
+            // Detect language for this chunk (no-op unless enabled + feature on)
+            let language = if self.detect_language {
+                detect_chunk_language(&content)
+            } else {
+                None
+            };
+
             // Calculate character positions
             let start_char = char_offset;
             let end_char = char_offset + content.len();
@@ -346,6 +443,7 @@ impl DocumentChunker {
                     },
                     confidence: 1.0, // Default high confidence for text-based chunking
                     sentence_boundary_respected,
+                    language,
                 },
             };
 
