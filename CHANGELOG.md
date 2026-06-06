@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Added
+
+- Per-chunk and document-level language detection for RAG chunks, behind the
+  opt-in `language-detection` feature (pure-Rust `whatlang`). `ChunkMetadata`
+  gains `language: Option<DetectedLanguage>` (ISO 639-3 code + confidence +
+  reliability); enable via `DocumentChunker::with_language_detection(true)`.
+  `DocumentChunker::document_language(&chunks)` returns the dominant language
+  weighted by chunk length (#293).
+
 ### Changed
 
 - **MSRV raised to Rust 1.88** (from 1.77). The 2025 ecosystem migration to
