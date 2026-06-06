@@ -2,7 +2,9 @@
 //! Content-verifying: asserts exact ISO 639-3 codes on real native-script text.
 #![cfg(feature = "language-detection")]
 
-use oxidize_pdf::ai::{DetectedLanguage, DocumentChunker};
+use oxidize_pdf::ai::{
+    ChunkMetadata, ChunkPosition, DetectedLanguage, DocumentChunk, DocumentChunker,
+};
 
 // UDHR Article 1, used as guaranteed-valid native-script input.
 const EN: &str = "All human beings are born free and equal in dignity and rights. They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood.";
@@ -65,4 +67,62 @@ fn empty_text_yields_no_chunks_and_short_text_is_unreliable() {
     if let Some(lang) = &chunks[0].metadata.language {
         assert!(!lang.reliable, "2-char detection must not be reliable");
     }
+}
+
+fn chunk_with(content: &str, code: &str, confidence: f32, reliable: bool) -> DocumentChunk {
+    DocumentChunk {
+        id: "c".to_string(),
+        content: content.to_string(),
+        tokens: 0,
+        page_numbers: vec![],
+        chunk_index: 0,
+        metadata: ChunkMetadata {
+            position: ChunkPosition::default(),
+            confidence: 1.0,
+            sentence_boundary_respected: false,
+            language: Some(DetectedLanguage {
+                code: code.to_string(),
+                confidence,
+                reliable,
+            }),
+        },
+    }
+}
+
+#[test]
+fn document_language_picks_dominant_by_length() {
+    // "spa" carries far more characters than "eng" -> spa wins.
+    let chunks = vec![
+        chunk_with("short english bit", "eng", 0.9, true),
+        chunk_with(&"texto en español ".repeat(20), "spa", 0.95, true),
+    ];
+    let doc = DocumentChunker::document_language(&chunks).expect("a dominant language");
+    assert_eq!(doc.code, "spa");
+    assert!(doc.reliable);
+}
+
+#[test]
+fn document_language_none_when_no_chunk_has_language() {
+    let chunker = DocumentChunker::new(512, 0); // detection off -> all None
+    let chunks = chunker.chunk_text(EN).unwrap();
+    assert!(DocumentChunker::document_language(&chunks).is_none());
+}
+
+#[test]
+fn document_language_empty_slice_is_none() {
+    assert!(DocumentChunker::document_language(&[]).is_none());
+}
+
+#[test]
+fn document_language_reliable_if_any_winner_chunk_reliable() {
+    let chunks = vec![
+        chunk_with(&"a".repeat(10), "eng", 0.4, false),
+        chunk_with(&"b".repeat(10), "eng", 0.8, true),
+    ];
+    let doc = DocumentChunker::document_language(&chunks).unwrap();
+    assert_eq!(doc.code, "eng");
+    assert!(
+        doc.reliable,
+        "reliable if any contributing chunk was reliable"
+    );
 }

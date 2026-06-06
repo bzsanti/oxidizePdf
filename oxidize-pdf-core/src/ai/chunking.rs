@@ -31,6 +31,7 @@
 //! ```
 
 use crate::{Document, Result};
+use std::collections::HashMap;
 
 /// A chunk of a PDF document suitable for LLM processing
 ///
@@ -195,6 +196,38 @@ impl DocumentChunker {
     pub fn with_language_detection(mut self, enabled: bool) -> Self {
         self.detect_language = enabled;
         self
+    }
+
+    /// Dominant language across chunks that already carry a detected language,
+    /// weighted by chunk content length (chars). Returns `None` if no chunk has
+    /// a language.
+    ///
+    /// `confidence` is the length-weighted mean of the winning code's chunk
+    /// confidences; `reliable` is true if any contributing chunk for the winning
+    /// code was reliable.
+    pub fn document_language(chunks: &[DocumentChunk]) -> Option<DetectedLanguage> {
+        // Per-code accumulators: (total_weight, weighted_confidence_sum, any_reliable)
+        let mut acc: HashMap<String, (usize, f64, bool)> = HashMap::new();
+        for chunk in chunks {
+            if let Some(lang) = &chunk.metadata.language {
+                let weight = chunk.content.chars().count().max(1);
+                let entry = acc.entry(lang.code.clone()).or_insert((0, 0.0, false));
+                entry.0 += weight;
+                entry.1 += weight as f64 * lang.confidence as f64;
+                entry.2 |= lang.reliable;
+            }
+        }
+
+        // Winner = highest total weight; tie broken by code for determinism.
+        let (code, (total_weight, conf_sum, reliable)) = acc
+            .into_iter()
+            .max_by(|a, b| a.1 .0.cmp(&b.1 .0).then_with(|| b.0.cmp(&a.0)))?;
+
+        Some(DetectedLanguage {
+            code,
+            confidence: (conf_sum / total_weight as f64) as f32,
+            reliable,
+        })
     }
 
     /// Chunk a PDF document into pieces suitable for LLM processing
