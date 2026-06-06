@@ -165,16 +165,25 @@ Tests gated on `#[cfg(all(feature = "language-detection", feature = "multilingua
 for the corpus tests; the synthetic-text and aggregate tests need only
 `language-detection`.
 
-1. **Multilingual corpus** — for each
-   `oxidize-pdf-core/tests/fixtures/multilingual/udhr_{chinese,japanese,korean,arabic,hebrew}.pdf`:
-   extract text, chunk with detection enabled, assert each chunk's
-   `metadata.language.code` equals the expected ISO 639-3 code (exact codes
-   asserted against the real `whatlang` output, pinned during implementation)
-   and `confidence > 0.0`.
-2. **Known Latin-script text** — fixed multi-sentence English and Spanish
-   strings (long enough for reliable detection) via `chunk_text` assert
-   `code == "eng"` / `code == "spa"` and `reliable == true`. Reliability is
-   only asserted on this sufficiently-long text, never on short inputs.
+1. **CJK corpus** — for
+   `oxidize-pdf-core/tests/fixtures/multilingual/udhr_{chinese,japanese,korean}.pdf`:
+   extract text, chunk with detection enabled, assert the document-level
+   `document_language().code` equals `"cmn"` / `"jpn"` / `"kor"` respectively,
+   `reliable == true`. (Verified empirically 2026-06-06: these three extract to
+   clean Unicode and `whatlang` detects them at confidence 1.0.)
+
+   **RTL fixtures excluded:** `udhr_arabic.pdf` and `udhr_hebrew.pdf` do NOT
+   currently extract to native-script Unicode (Arabic yields the English
+   copyright header; Hebrew yields control-character garbage), so `whatlang`
+   cannot detect them. That is a text-extraction gap, out of scope for #293.
+   Arabic/Hebrew detection is instead covered by synthetic native-script strings
+   (test 2), which exercises the detection logic on guaranteed-valid input.
+2. **Known native-script text via `chunk_text`** — fixed multi-sentence strings:
+   English → `"eng"`, Spanish → `"spa"`, plus a real Arabic string → `"ara"` and
+   a real Hebrew string → `"heb"`. Assert `code` and `reliable == true`.
+   Reliability is only asserted on these sufficiently-long strings, never on
+   short inputs. This proves the detection path is script-agnostic, decoupled
+   from the RTL extraction gap.
 3. **Mixed-language document** — synthetic text with distinct-language sections
    sized to fall in different chunks: assert per-chunk `code` differs and
    `document_language` returns the dominant-by-length code.
