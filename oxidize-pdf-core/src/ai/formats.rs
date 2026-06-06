@@ -1053,6 +1053,9 @@ impl TokenEfficientExporter {
                 },
                 confidence,
                 sentence_boundary_respected: fields[8] == "true",
+                // The token-efficient format does not carry language; round-trip
+                // leaves it unset (re-derivable via DocumentChunker detection).
+                language: None,
             },
         })
     }
@@ -1223,6 +1226,7 @@ mod tests {
                 },
                 confidence,
                 sentence_boundary_respected,
+                language: None,
             },
         }
     }
