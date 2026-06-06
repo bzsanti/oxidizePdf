@@ -72,6 +72,27 @@ pub struct DetectedLanguage {
     pub reliable: bool,
 }
 
+/// Detect the language of `text` using `whatlang`. Returns `None` only when
+/// `whatlang` cannot produce any detection (e.g. empty input). Detections are
+/// surfaced as-is, including unreliable ones — callers decide whether to trust a
+/// result using the `reliable` flag (and `confidence`). Unreliable detections on
+/// short or ambiguous text carry effectively-random codes, so consumers should
+/// gate routing on `reliable`.
+#[cfg(feature = "language-detection")]
+fn detect_chunk_language(text: &str) -> Option<DetectedLanguage> {
+    whatlang::detect(text).map(|info| DetectedLanguage {
+        code: info.lang().code().to_string(),
+        confidence: info.confidence() as f32,
+        reliable: info.is_reliable(),
+    })
+}
+
+/// No-op when the `language-detection` feature is disabled.
+#[cfg(not(feature = "language-detection"))]
+fn detect_chunk_language(_text: &str) -> Option<DetectedLanguage> {
+    None
+}
+
 /// Metadata for a document chunk
 #[derive(Debug, Clone, Default)]
 pub struct ChunkMetadata {
@@ -127,6 +148,9 @@ pub struct DocumentChunker {
 
     /// Number of tokens to overlap between consecutive chunks
     overlap: usize,
+
+    /// Whether to run per-chunk language detection
+    detect_language: bool,
 }
 
 impl DocumentChunker {
@@ -152,6 +176,7 @@ impl DocumentChunker {
         Self {
             chunk_size,
             overlap,
+            detect_language: false,
         }
     }
 
@@ -161,6 +186,15 @@ impl DocumentChunker {
     /// GPT-3.5, GPT-4, and similar models.
     pub fn default() -> Self {
         Self::new(512, 50)
+    }
+
+    /// Enable per-chunk language detection.
+    ///
+    /// Requires the `language-detection` feature; without it this flag is a
+    /// no-op and `ChunkMetadata::language` stays `None`. Disabled by default.
+    pub fn with_language_detection(mut self, enabled: bool) -> Self {
+        self.detect_language = enabled;
+        self
     }
 
     /// Chunk a PDF document into pieces suitable for LLM processing
@@ -316,6 +350,13 @@ impl DocumentChunker {
             // Join tokens back into text
             let content = chunk_tokens.join(" ");
 
+            // Detect language for this chunk (no-op unless enabled + feature on)
+            let language = if self.detect_language {
+                detect_chunk_language(&content)
+            } else {
+                None
+            };
+
             // Calculate character positions
             let start_char = char_offset;
             let end_char = char_offset + content.len();
@@ -366,7 +407,7 @@ impl DocumentChunker {
                     },
                     confidence: 1.0, // Default high confidence for text-based chunking
                     sentence_boundary_respected,
-                    language: None,
+                    language,
                 },
             };
 
