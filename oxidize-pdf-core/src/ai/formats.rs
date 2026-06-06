@@ -1266,6 +1266,7 @@ mod tests {
                     },
                     confidence: 1.0,
                     sentence_boundary_respected: true,
+                    language: None,
                 },
             },
             DocumentChunk {
@@ -1283,6 +1284,7 @@ mod tests {
                     },
                     confidence: 0.95,
                     sentence_boundary_respected: false,
+                    language: None,
                 },
             },
         ];
@@ -1364,6 +1366,7 @@ mod tests {
                 },
                 confidence: 0.85,
                 sentence_boundary_respected: false,
+                language: None,
             },
         };
 
@@ -1423,6 +1426,7 @@ mod tests {
                 },
                 confidence: 1.0,
                 sentence_boundary_respected: true,
+                language: None,
             },
         };
 

@@ -24,6 +24,7 @@ fn make_chunk_with_pages(page_numbers: Vec<usize>) -> DocumentChunk {
             },
             confidence: 1.0,
             sentence_boundary_respected: true,
+            language: None,
         },
     }
 }

@@ -57,6 +57,21 @@ pub struct DocumentChunk {
     pub metadata: ChunkMetadata,
 }
 
+/// A language detected for a chunk or aggregated over a document.
+///
+/// `code` is the ISO 639-3 code (e.g. `"eng"`, `"spa"`, `"cmn"`). The
+/// underlying detector (`whatlang`) is an internal implementation detail and is
+/// not part of this public API.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DetectedLanguage {
+    /// ISO 639-3 language code.
+    pub code: String,
+    /// Detector confidence in `[0.0, 1.0]`.
+    pub confidence: f32,
+    /// Whether the detector considers this detection reliable.
+    pub reliable: bool,
+}
+
 /// Metadata for a document chunk
 #[derive(Debug, Clone, Default)]
 pub struct ChunkMetadata {
@@ -69,6 +84,11 @@ pub struct ChunkMetadata {
 
     /// Whether this chunk respects sentence boundaries
     pub sentence_boundary_respected: bool,
+
+    /// Detected language for this chunk, if language detection ran
+    /// (`DocumentChunker::with_language_detection(true)` + the
+    /// `language-detection` feature). `None` otherwise.
+    pub language: Option<DetectedLanguage>,
 }
 
 /// Position information for a chunk within the document
@@ -346,6 +366,7 @@ impl DocumentChunker {
                     },
                     confidence: 1.0, // Default high confidence for text-based chunking
                     sentence_boundary_respected,
+                    language: None,
                 },
             };
 
