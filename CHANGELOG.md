@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+### Changed
+
+- **MSRV raised to Rust 1.88** (from 1.77). The 2025 ecosystem migration to
+  edition 2024 (Rust 1.85) plus `let`-chains (Rust 1.88, used by `subprocess`
+  via `rusty-tesseract`) and 1.88-gated releases of `image`/`time` made the
+  previously declared 1.77 unbuildable. Holding it would require pinning common
+  dependencies (`image`, `time`, `clap`, `icu_*`, `rand`, `toml`, …) to old
+  versions indefinitely. Added `resolver.incompatible-rust-versions = "fallback"`
+  in `.cargo/config.toml` and a CI job that builds on 1.88 with `--locked` to
+  prevent future silent MSRV drift.
+
 ## [2.12.0] - 2026-06-03
 
 ### Added

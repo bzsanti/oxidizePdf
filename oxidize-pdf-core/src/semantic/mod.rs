@@ -20,7 +20,7 @@ pub use marking::{EntityBuilder, SemanticMarker};
 pub trait SemanticMarking {
     /// Mark a region with semantic meaning
     /// bounds is (x, y, width, height)
-    #[allow(mismatched_lifetime_syntaxes)]
+    #[allow(unknown_lints, mismatched_lifetime_syntaxes)]
     fn mark_region(&mut self, bounds: (f64, f64, f64, f64)) -> EntityBuilder;
 
     /// Add a schema definition to the document
