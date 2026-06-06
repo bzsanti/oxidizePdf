@@ -61,6 +61,9 @@ p384 = { version = "0.13", optional = true }         # NIST P-384 curve
 webpki-roots = { version = "1.0", optional = true }  # Mozilla CA bundle for certificate validation
 time = { version = "0.3", optional = true }          # Date/time for certificate validity checks
 
+# Language detection (opt-in via `language-detection` feature; pure Rust, trigram + script based)
+whatlang = { version = "0.18", optional = true }
+
 # Unicode processing
 unicode-normalization = "0.1"
 
@@ -466,6 +469,9 @@ signatures = [
 
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]
+
+# Language detection for RAG chunks (opt-in: pulls pure-Rust `whatlang`)
+language-detection = ["dep:whatlang"]
 
 # Parallel processing features
 rayon = ["dep:rayon"]
