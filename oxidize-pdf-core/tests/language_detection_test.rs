@@ -61,12 +61,17 @@ fn empty_text_yields_no_chunks_and_short_text_is_unreliable() {
     let chunker = DocumentChunker::new(512, 0).with_language_detection(true);
     // Empty input produces no chunks at all.
     assert!(chunker.chunk_text("").unwrap().is_empty());
-    // A 2-char string is detectable by whatlang but must never be marked
-    // reliable (it carries an effectively-random code).
+    // A 2-char string yields a (current whatlang) detection that must never be
+    // marked reliable — it carries an effectively-random code. Asserting `Some`
+    // makes this a real regression gate (not vacuously true) for the current
+    // whatlang behavior.
     let chunks = chunker.chunk_text("ab").unwrap();
-    if let Some(lang) = &chunks[0].metadata.language {
-        assert!(!lang.reliable, "2-char detection must not be reliable");
-    }
+    let lang = chunks[0]
+        .metadata
+        .language
+        .as_ref()
+        .expect("whatlang produces a (low-confidence) detection for 2 chars");
+    assert!(!lang.reliable, "2-char detection must not be reliable");
 }
 
 fn chunk_with(content: &str, code: &str, confidence: f32, reliable: bool) -> DocumentChunk {
@@ -125,4 +130,27 @@ fn document_language_reliable_if_any_winner_chunk_reliable() {
         doc.reliable,
         "reliable if any contributing chunk was reliable"
     );
+}
+
+#[test]
+fn document_language_skips_chunks_without_language() {
+    // A chunk with no detected language must not contribute or dilute the result.
+    let no_lang = DocumentChunk {
+        id: "n".to_string(),
+        content: "x".repeat(1000), // long, but carries no language
+        tokens: 0,
+        page_numbers: vec![],
+        chunk_index: 0,
+        metadata: ChunkMetadata {
+            position: ChunkPosition::default(),
+            confidence: 1.0,
+            sentence_boundary_respected: false,
+            language: None,
+        },
+    };
+    let chunks = vec![chunk_with("short english", "eng", 0.9, true), no_lang];
+    let doc =
+        DocumentChunker::document_language(&chunks).expect("eng from the only detected chunk");
+    assert_eq!(doc.code, "eng");
+    assert!(doc.reliable);
 }

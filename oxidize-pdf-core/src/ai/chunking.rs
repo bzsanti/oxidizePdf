@@ -324,7 +324,10 @@ impl DocumentChunker {
 
         let page_numbers: Vec<usize> = page_texts.iter().map(|(num, _)| *num).collect();
 
-        self.chunk_text_internal(&full_text, &page_boundaries, page_numbers[0])
+        // `page_texts` may be empty (e.g. a PDF from which no text extracted);
+        // fall back to page 0 rather than indexing into an empty vec.
+        let first_page = page_numbers.first().copied().unwrap_or(0);
+        self.chunk_text_internal(&full_text, &page_boundaries, first_page)
     }
 
     /// Internal chunking implementation with page tracking
