@@ -150,7 +150,6 @@ impl Partitioner {
         page: u32,
         page_height: f64,
     ) -> Vec<Element> {
-        let _ = graphics;
         if fragments.is_empty() {
             return Vec::new();
         }
@@ -270,6 +269,56 @@ impl Partitioner {
         // c) Detected tables whose confidence is below `min_table_confidence` are
         //    discarded and their fragments fall through to prose classification.
         if self.config.detect_tables {
+            // Ruling-first: when the page has a drawn table grid, detect bordered
+            // tables from vector lines and claim their fragments so the spatial
+            // pass below only sees the remainder. region_looks_like_list is NOT
+            // applied here — drawn borders are strong table evidence.
+            if self.config.prefer_ruling_tables {
+                if let Some(graphics) = graphics {
+                    if graphics.has_table_structure() {
+                        let detector = crate::text::table_detection::TableDetector::default();
+                        if let Ok(tables) = detector.detect(graphics, fragments) {
+                            for table in &tables {
+                                if table.confidence < self.config.min_table_confidence {
+                                    continue;
+                                }
+                                let rows = ruling_table_to_rows(table);
+                                let bbox = ElementBBox::new(
+                                    table.bbox.x,
+                                    table.bbox.y,
+                                    table.bbox.width,
+                                    table.bbox.height,
+                                );
+                                elements.push(Element::Table(TableElementData {
+                                    rows,
+                                    metadata: ElementMetadata {
+                                        page,
+                                        bbox,
+                                        confidence: table.confidence,
+                                        ..Default::default()
+                                    },
+                                }));
+                                let (rx, ry) = (table.bbox.x, table.bbox.y);
+                                let (rr, rt) = (
+                                    table.bbox.x + table.bbox.width,
+                                    table.bbox.y + table.bbox.height,
+                                );
+                                for (i, f) in fragments.iter().enumerate() {
+                                    if !claimed[i]
+                                        && f.x >= rx - 1.0
+                                        && f.x <= rr + 1.0
+                                        && f.y >= ry - 1.0
+                                        && f.y <= rt + 1.0
+                                    {
+                                        claimed[i] = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             let unclaimed_frags: Vec<&TextFragment> = fragments
                 .iter()
                 .enumerate()
@@ -606,6 +655,18 @@ fn is_list_item(text: &str) -> bool {
         }
     }
     false
+}
+
+/// Flatten a ruling-detected table into row-major `Vec<Vec<String>>`, filling
+/// absent cells with empty strings.
+fn ruling_table_to_rows(table: &crate::text::table_detection::DetectedTable) -> Vec<Vec<String>> {
+    let mut grid = vec![vec![String::new(); table.columns]; table.rows];
+    for cell in &table.cells {
+        if cell.row < table.rows && cell.column < table.columns {
+            grid[cell.row][cell.column] = cell.text.clone();
+        }
+    }
+    grid
 }
 
 /// Splits unclaimed fragments into Y-separated table candidate regions.
