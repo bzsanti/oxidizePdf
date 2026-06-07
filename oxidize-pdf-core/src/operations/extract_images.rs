@@ -319,6 +319,13 @@ impl<R: Read + Seek> ImageExtractor<R> {
         // predictors are applied — issue #286).
         let mut data = self.decode_image_stream(stream)?;
 
+        // Soft mask (/SMask): a grayscale image whose samples are the per-pixel
+        // alpha of this image. Decoded once here (resized to this image's
+        // dimensions) and composited into an RGBA PNG by the raw→PNG paths below
+        // (issue #286: images whose visible shape lives entirely in the SMask
+        // otherwise extract as opaque, often near-black, rectangles).
+        let smask_alpha = self.extract_smask_alpha(&stream.dict, width, height);
+
         // Determine format from filter and process data accordingly
         let format = match stream.dict.0.get(&PdfName("Filter".to_string())) {
             Some(PdfObject::Name(filter)) => match filter.0.as_str() {
@@ -336,6 +343,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
                         height,
                         color_space,
                         bits_per_component,
+                        smask_alpha.as_deref(),
                     )?;
                     ImageFormat::Png
                 }
@@ -352,6 +360,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
                         height,
                         color_space,
                         bits_per_component,
+                        smask_alpha.as_deref(),
                     )?;
                     ImageFormat::Png
                 }
@@ -376,6 +385,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
                                 height,
                                 color_space,
                                 bits_per_component,
+                                smask_alpha.as_deref(),
                             )?;
                             ImageFormat::Png
                         }
@@ -390,6 +400,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
                                 height,
                                 color_space,
                                 bits_per_component,
+                                smask_alpha.as_deref(),
                             )?;
                             ImageFormat::Png
                         }
@@ -410,6 +421,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
                     height,
                     color_space,
                     bits_per_component,
+                    smask_alpha.as_deref(),
                 )?;
                 ImageFormat::Png
             }
@@ -1141,6 +1153,7 @@ impl<R: Read + Seek> ImageExtractor<R> {
         height: u32,
         color_space: Option<&PdfObject>,
         bits_per_component: u8,
+        smask_alpha: Option<&[u8]>,
     ) -> OperationResult<Vec<u8>> {
         // Resolve an indirect ColorSpace reference up front.
         let resolved_cs = color_space.and_then(|cs| self.document.resolve(cs).ok());
@@ -1167,7 +1180,14 @@ impl<R: Read + Seek> ImageExtractor<R> {
                 )));
             }
             let rgb = expand_indexed(&indices[..pixel_count], &palette, base_components, hival);
-            return self.create_png_from_raw_data(&rgb, width, height, base_components as u8, 8);
+            return self.encode_png_maybe_alpha(
+                &rgb,
+                width,
+                height,
+                base_components as u8,
+                8,
+                smask_alpha,
+            );
         }
 
         // Non-indexed: component count from the colour space.
@@ -1193,7 +1213,14 @@ impl<R: Read + Seek> ImageExtractor<R> {
         }
 
         // Convert to PNG format using simple PNG encoding
-        self.create_png_from_raw_data(data, width, height, components, bits_per_component)
+        self.encode_png_maybe_alpha(
+            data,
+            width,
+            height,
+            components,
+            bits_per_component,
+            smask_alpha,
+        )
     }
 
     /// Number of colour components for a (resolved) colour space, resolving an
@@ -1201,6 +1228,107 @@ impl<R: Read + Seek> ImageExtractor<R> {
     fn color_space_component_count(&self, color_space: Option<&PdfObject>) -> u8 {
         let icc_n = self.icc_components(color_space);
         image_sample_components(color_space, icc_n)
+    }
+
+    /// Decode an image's `/SMask` into a per-pixel 8-bit alpha buffer sized to
+    /// `width`×`height` (nearest-neighbour resized if the mask resolution
+    /// differs). Returns `None` when there is no soft mask, or when the mask
+    /// is not a plain 8-bit grayscale raster we can interpret (e.g. a DCT or
+    /// 16-bit mask), in which case the image is emitted without alpha.
+    fn extract_smask_alpha(
+        &self,
+        image_dict: &crate::parser::objects::PdfDictionary,
+        width: u32,
+        height: u32,
+    ) -> Option<Vec<u8>> {
+        let smask = image_dict.0.get(&PdfName("SMask".to_string()))?;
+        let resolved = self.document.resolve(smask).ok()?;
+        let stream = match &resolved {
+            PdfObject::Stream(s) => s,
+            _ => return None,
+        };
+        let dict = &stream.dict.0;
+        let sw = dict.get(&PdfName("Width".to_string()))?.as_integer()? as u32;
+        let sh = dict.get(&PdfName("Height".to_string()))?.as_integer()? as u32;
+        if sw == 0 || sh == 0 {
+            return None;
+        }
+        let sbpc = dict
+            .get(&PdfName("BitsPerComponent".to_string()))
+            .and_then(|b| b.as_integer())
+            .unwrap_or(8);
+        if sbpc != 8 {
+            return None; // only 8-bit masks are supported
+        }
+
+        let gray = self.decode_image_stream(stream).ok()?;
+        let expected = (sw as usize) * (sh as usize);
+        // A shorter buffer means the mask is not a plain gray raster (e.g. DCT);
+        // bail rather than misread it.
+        if gray.len() < expected {
+            return None;
+        }
+        let gray = &gray[..expected];
+
+        if sw == width && sh == height {
+            return Some(gray.to_vec());
+        }
+        // Nearest-neighbour resize to the base image's dimensions.
+        let mut out = Vec::with_capacity((width as usize) * (height as usize));
+        for y in 0..height {
+            let sy = ((y as u64 * sh as u64) / height as u64) as usize;
+            let row = sy * sw as usize;
+            for x in 0..width {
+                let sx = ((x as u64 * sw as u64) / width as u64) as usize;
+                out.push(gray[row + sx]);
+            }
+        }
+        Some(out)
+    }
+
+    /// Encode `samples` as PNG. When `alpha` is present and the samples are
+    /// 8-bit grayscale or RGB, composite it as the alpha channel and emit an
+    /// RGBA PNG (grayscale is expanded to RGB first); otherwise emit the image
+    /// as-is.
+    fn encode_png_maybe_alpha(
+        &self,
+        samples: &[u8],
+        width: u32,
+        height: u32,
+        components: u8,
+        bits_per_component: u8,
+        alpha: Option<&[u8]>,
+    ) -> OperationResult<Vec<u8>> {
+        match alpha {
+            Some(a) if bits_per_component == 8 && (components == 1 || components == 3) => {
+                let pixel_count = (width as usize) * (height as usize);
+                let mut rgba = Vec::with_capacity(pixel_count * 4);
+                for i in 0..pixel_count {
+                    let (r, g, b) = if components == 3 {
+                        let p = i * 3;
+                        (
+                            *samples.get(p).unwrap_or(&0),
+                            *samples.get(p + 1).unwrap_or(&0),
+                            *samples.get(p + 2).unwrap_or(&0),
+                        )
+                    } else {
+                        let v = *samples.get(i).unwrap_or(&0);
+                        (v, v, v)
+                    };
+                    // Missing mask samples default to opaque.
+                    let al = *a.get(i).unwrap_or(&255);
+                    rgba.extend_from_slice(&[r, g, b, al]);
+                }
+                self.create_png_from_raw_data(&rgba, width, height, 4, 8)
+            }
+            _ => self.create_png_from_raw_data(
+                samples,
+                width,
+                height,
+                components,
+                bits_per_component,
+            ),
+        }
     }
 
     /// Create PNG from raw pixel data
