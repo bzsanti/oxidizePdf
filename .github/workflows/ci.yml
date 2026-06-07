@@ -92,3 +92,29 @@ jobs:
 
       - name: Build documentation
         run: cargo doc --all --no-deps
+
+  msrv:
+    name: MSRV (1.88)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Pin the declared MSRV. This job is the gate that catches dependency
+      # drift past the MSRV (the lack of which let edition-2024 deps silently
+      # break the previously-declared 1.77). `--locked` fails if the committed
+      # Cargo.lock resolves to versions incompatible with 1.88.
+      - name: Install Rust 1.88 (MSRV)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-msrv-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      # Build only — rusty-tesseract (ocr-tesseract) shells out to the tesseract
+      # binary at runtime via subprocess, so the C library is not needed to compile.
+      - name: Build library on MSRV (all features, locked)
+        run: cargo build --lib --all-features --locked

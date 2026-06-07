@@ -2,6 +2,15 @@
 # Limit parallel jobs to reduce CPU usage
 jobs = 2
 
+[resolver]
+# Keep the locked dependency graph within the declared MSRV (1.88).
+# `fallback` makes the resolver prefer dependency versions whose own
+# `rust-version` is <= our MSRV, only floating to incompatible versions when no
+# compatible one satisfies the requirement. Stops silent MSRV drift past 1.88
+# on future `cargo update` (deps that declare rust-version are held back
+# automatically). Honoured by cargo >= 1.84.
+incompatible-rust-versions = "fallback"
+
 [target.x86_64-apple-darwin]
 rustflags = ["-C", "codegen-units=1"]
 

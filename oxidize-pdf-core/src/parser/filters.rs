@@ -25,12 +25,28 @@ use std::io::Read;
 /// (e.g., large maps, engineering drawings) while protecting against attacks.
 const MAX_DECOMPRESSED_SIZE: usize = 256 * 1024 * 1024;
 
-/// Maximum compression ratio allowed (input:output).
+/// Maximum compression ratio allowed (input:output), applied only to large
+/// outputs (see `RATIO_GUARD_MIN_OUTPUT`).
 ///
 /// If `output_size / input_size > MAX_COMPRESSION_RATIO`, the stream is
-/// considered a potential decompression bomb. Normal PDF streams rarely
-/// exceed 1:100; we allow up to 1:1000 for edge cases.
+/// considered a potential decompression bomb. Note this is a *secondary*
+/// heuristic: the primary, authoritative bomb guard is the absolute
+/// `MAX_DECOMPRESSED_SIZE` cap enforced incrementally during the streaming
+/// read. DEFLATE's theoretical maximum single-pass ratio is ~1032:1, so this
+/// threshold sits just under it on purpose — it is only meaningful for codecs
+/// or layered inputs that can exceed that, and only above the output floor.
 const MAX_COMPRESSION_RATIO: usize = 1000;
+
+/// Below this absolute output size, the compression-ratio heuristic is NOT
+/// applied. Such outputs cannot exhaust resources (the hard guard is
+/// `MAX_DECOMPRESSED_SIZE`), and legitimate, highly-compressible images — e.g.
+/// flat-colour diagrams — routinely reach DEFLATE's ~1032:1 maximum while
+/// producing only a few MB of output. Enforcing the ratio on them is a false
+/// positive that silently dropped real images (issue #286: a 600×603 RGB image
+/// whose 1074 FlateDecode bytes legitimately expand to 1_085_400). The ratio
+/// guard remains in force for large expansions, where a bomb would actually be
+/// dangerous, and the 256 MB absolute cap bounds everything regardless.
+const RATIO_GUARD_MIN_OUTPUT: usize = 64 * 1024 * 1024;
 
 /// Read from a decoder into a Vec with a size limit.
 ///
@@ -69,7 +85,13 @@ fn read_to_end_limited<R: Read>(reader: &mut R, max_bytes: usize) -> std::io::Re
 /// Called after successful decompression to catch bombs that stay
 /// just under the absolute size limit but have absurd ratios.
 fn check_compression_ratio(input_size: usize, output_size: usize) -> Result<(), std::io::Error> {
-    if input_size > 0 && output_size / input_size > MAX_COMPRESSION_RATIO {
+    // Only police genuinely large expansions. Small/medium outputs are bounded
+    // by the absolute MAX_DECOMPRESSED_SIZE cap and cannot be bombs, while
+    // legitimate flat images can exceed the ratio at small sizes (issue #286).
+    if output_size > RATIO_GUARD_MIN_OUTPUT
+        && input_size > 0
+        && output_size / input_size > MAX_COMPRESSION_RATIO
+    {
         return Err(std::io::Error::new(
             std::io::ErrorKind::Other,
             format!(
@@ -1389,9 +1411,33 @@ mod tests {
     }
 
     #[test]
-    fn test_check_compression_ratio_high() {
-        // 1001x ratio exceeds MAX_COMPRESSION_RATIO (1000)
-        assert!(check_compression_ratio(1, 1001).is_err());
+    fn test_check_compression_ratio_small_output_high_ratio_allowed() {
+        // A high ratio at a SMALL absolute output is allowed: such an output
+        // cannot be a decompression bomb (bounded by MAX_DECOMPRESSED_SIZE) and
+        // legitimate flat images reach DEFLATE's ~1032:1 max (issue #286).
+        assert!(check_compression_ratio(1, 1001).is_ok());
+        assert!(check_compression_ratio(1074, 1_085_400).is_ok());
+    }
+
+    #[test]
+    fn test_check_compression_ratio_large_output_high_ratio_rejected() {
+        // Above the output floor, a high ratio is still rejected as a bomb.
+        let big = RATIO_GUARD_MIN_OUTPUT + 1;
+        assert!(check_compression_ratio(big / 2000, big).is_err());
+    }
+
+    #[test]
+    fn test_check_compression_ratio_large_output_low_ratio_allowed() {
+        // A large output with a sane ratio is fine.
+        let big = RATIO_GUARD_MIN_OUTPUT + 1;
+        assert!(check_compression_ratio(big / 10, big).is_ok());
+    }
+
+    #[test]
+    fn test_check_compression_ratio_at_exact_floor_allowed() {
+        // The gate is `output > floor`, so an output exactly at the floor is not
+        // policed even with an absurd ratio.
+        assert!(check_compression_ratio(1, RATIO_GUARD_MIN_OUTPUT).is_ok());
     }
 
     #[test]
@@ -1424,38 +1470,35 @@ mod tests {
 
     #[cfg(feature = "compression")]
     #[test]
-    fn test_flate_high_ratio_rejected() {
+    fn test_flate_high_ratio_small_output_now_decodes() {
         use flate2::write::ZlibEncoder;
         use flate2::Compression;
         use std::io::Write;
 
-        // Create highly compressible data: 2MB of zeros → ~2KB compressed
-        // Ratio ~1000:1 — should be rejected by the ratio check
+        // 2 MB of zeros → ~2 KB compressed (ratio ~1000:1). This is a small
+        // output and must now decode fully rather than be rejected (issue #286).
         let original = vec![0u8; 2 * 1024 * 1024];
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
         encoder.write_all(&original).unwrap();
         let compressed = encoder.finish().unwrap();
 
-        let result = try_standard_zlib_decode(&compressed);
-        assert!(result.is_err(), "High compression ratio should be rejected");
-        let err = result.unwrap_err();
-        assert!(
-            err.to_string().contains("compression ratio")
-                || err.to_string().contains("exceeds limit"),
-            "Expected compression ratio error, got: {}",
-            err
-        );
+        let result = try_standard_zlib_decode(&compressed).expect("small output must decode");
+        assert_eq!(result.len(), original.len());
     }
 
     #[cfg(feature = "compression")]
     #[test]
-    fn test_flate_compression_ratio_check() {
-        // Verify that a tiny input producing large output gets caught by ratio check
-        // 10 bytes input → 10_010 bytes output = 1001:1 ratio (exceeds 1000:1 limit)
-        let result = check_compression_ratio(10, 10_010);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("Suspicious compression ratio"));
+    fn test_flate_large_high_ratio_still_rejected() {
+        // A genuinely large expansion above the output floor is still rejected as
+        // a bomb. check_compression_ratio is the gate; exercise it directly with
+        // a >floor output to avoid allocating tens of MB in the test.
+        let big = RATIO_GUARD_MIN_OUTPUT + 1;
+        let result = check_compression_ratio(big / 2000, big);
+        assert!(result.is_err(), "large high-ratio output must be rejected");
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Suspicious compression ratio"));
     }
 
     #[test]
@@ -1464,6 +1507,39 @@ mod tests {
         let mut cursor = std::io::Cursor::new(&data);
         let result = read_to_end_limited(&mut cursor, 1000).unwrap();
         assert!(result.is_empty());
+    }
+
+    #[cfg(feature = "compression")]
+    #[test]
+    fn test_flate_high_ratio_small_output_decodes_issue_286() {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        // Issue #286: mitosis.pdf has a 600x603 DeviceRGB image whose 1074 bytes
+        // of FlateDecode expand to exactly 1_085_400 bytes (ratio ~1010:1).
+        // DEFLATE's theoretical maximum is ~1032:1, so a legitimate near-uniform
+        // image routinely exceeds the old 1000:1 guard. Such a SMALL output (a
+        // few MB) cannot be a decompression bomb (the hard guard is the 256 MB
+        // absolute cap), so it must decode fully rather than be rejected and
+        // silently returned as empty.
+        let original = vec![0u8; 1_085_400];
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
+        encoder.write_all(&original).unwrap();
+        let compressed = encoder.finish().unwrap();
+        assert!(
+            original.len() / compressed.len() > MAX_COMPRESSION_RATIO,
+            "test premise: ratio {} must exceed the guard {}",
+            original.len() / compressed.len(),
+            MAX_COMPRESSION_RATIO
+        );
+
+        let decoded = decode_flate(&compressed).expect("decode must succeed");
+        assert_eq!(
+            decoded.len(),
+            original.len(),
+            "must decode the full image, not return empty"
+        );
     }
 }
 

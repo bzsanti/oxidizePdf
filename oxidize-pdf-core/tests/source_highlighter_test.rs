@@ -53,6 +53,7 @@ fn make_chunk(
             },
             confidence: 1.0,
             sentence_boundary_respected: true,
+            language: None,
         },
     }
 }

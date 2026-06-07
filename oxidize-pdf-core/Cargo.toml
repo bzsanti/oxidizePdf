@@ -61,6 +61,9 @@ p384 = { version = "0.13", optional = true }         # NIST P-384 curve
 webpki-roots = { version = "1.0", optional = true }  # Mozilla CA bundle for certificate validation
 time = { version = "0.3", optional = true }          # Date/time for certificate validity checks
 
+# Language detection (opt-in via `language-detection` feature; pure Rust, trigram + script based)
+whatlang = { version = "0.18", optional = true }
+
 # Unicode processing
 unicode-normalization = "0.1"
 
@@ -90,6 +93,7 @@ toml = "0.9.11"
 tempfile = "3.8"
 rusty-tesseract = { version = "1.1.10", optional = true }
 image = { workspace = true, features = ["png", "jpeg"], optional = true }
+tiktoken-rs = { version = "0.12.0", optional = true }
 
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
@@ -467,8 +471,19 @@ signatures = [
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]
 
+# Language detection for RAG chunks (opt-in: pulls pure-Rust `whatlang`)
+language-detection = ["dep:whatlang"]
+
 # Parallel processing features
 rayon = ["dep:rayon"]
+
+# Token-count benchmark harness for the token-efficient chunk serializer (#291).
+# Opt-in only: `tiktoken-rs` bundles multi-MB BPE rank tables, so it is kept OUT
+# of normal builds (including default `cargo test`) and pulled only when running
+# this measurement. Implies `semantic` so the JSON baseline (`JsonExporter`) is
+# available for comparison.
+# Run with: cargo test --features token-bench -- --nocapture
+token-bench = ["dep:tiktoken-rs", "semantic"]
 
 
 [[example]]

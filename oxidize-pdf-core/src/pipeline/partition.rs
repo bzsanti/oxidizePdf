@@ -1,3 +1,4 @@
+use crate::graphics::extraction::ExtractedGraphics;
 use crate::pipeline::reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 use crate::pipeline::{
     Element, ElementBBox, ElementData, ElementMetadata, KeyValueElementData, TableElementData,
@@ -39,6 +40,10 @@ pub struct PartitionConfig {
     /// fragments fall through to the prose classification steps.
     /// Range: `[0.0, 1.0]`. Default: `0.5`.
     pub min_table_confidence: f64,
+    /// Prefer the ruling-based (vector-grid) table detector for bordered tables,
+    /// falling back to the spatial detector for the rest. When false, only the
+    /// spatial detector runs and no page graphics are extracted. Default: true.
+    pub prefer_ruling_tables: bool,
 }
 
 impl Default for PartitionConfig {
@@ -51,6 +56,7 @@ impl Default for PartitionConfig {
             footer_zone: 0.05,
             reading_order: ReadingOrderStrategy::Simple,
             min_table_confidence: 0.5,
+            prefer_ruling_tables: true,
         }
     }
 }
@@ -119,15 +125,68 @@ impl Partitioner {
     /// * `fragments` — text fragments from one page (with `preserve_layout`)
     /// * `page` — 0-indexed page number
     /// * `page_height` — page height in PDF points (for header/footer zones)
+    ///
+    /// Partition fragments without page graphics (spatial table detection only).
     pub fn partition_fragments(
         &self,
         fragments: &[TextFragment],
         page: u32,
         page_height: f64,
     ) -> Vec<Element> {
+        self.partition_fragments_with_graphics(fragments, None, page, page_height)
+    }
+
+    /// Partition a page's text fragments into typed elements, optionally using
+    /// page graphics (vector lines) for ruling-based table detection.
+    ///
+    /// * `fragments` — text fragments from one page (with `preserve_layout`)
+    /// * `graphics` — extracted vector lines for the page, if available
+    /// * `page` — 0-indexed page number
+    /// * `page_height` — page height in PDF points (for header/footer zones)
+    pub fn partition_fragments_with_graphics(
+        &self,
+        fragments: &[TextFragment],
+        graphics: Option<&ExtractedGraphics>,
+        page: u32,
+        page_height: f64,
+    ) -> Vec<Element> {
+        self.partition_fragments_with_graphics_raw(fragments, None, graphics, page, page_height)
+    }
+
+    /// Partition a page's text fragments, using a separate **raw** (un-reconstructed)
+    /// fragment set for ruling-based table cell assignment.
+    ///
+    /// The partition pipeline (`PdfDocument::partition`) extracts text with
+    /// `reconstruct_paragraphs: true`, which merges per-cell fragments into
+    /// paragraph-granular fragments. The ruling-based table detector needs
+    /// **cell-granular** fragments to assign text to grid cells, so this method
+    /// accepts `raw_fragments` (extracted with `reconstruct_paragraphs: false`)
+    /// for that purpose while `fragments` (reconstructed) drives prose
+    /// classification (titles, headers, paragraphs) and fragment claiming.
+    ///
+    /// * `fragments` — reconstructed fragments used for classification + claiming
+    /// * `raw_fragments` — cell-granular fragments for the ruling detector; when
+    ///   `None`, `fragments` is used for ruling too (legacy/unit-test behavior)
+    /// * `graphics` — extracted vector lines for the page, if available
+    /// * `page` — 0-indexed page number
+    /// * `page_height` — page height in PDF points (for header/footer zones)
+    ///
+    /// Internal to the partition pipeline (`do_partition_pages` supplies the raw
+    /// fragments); the public entry points are `partition_fragments` and
+    /// `partition_fragments_with_graphics`.
+    pub(crate) fn partition_fragments_with_graphics_raw(
+        &self,
+        fragments: &[TextFragment],
+        raw_fragments: Option<&[TextFragment]>,
+        graphics: Option<&ExtractedGraphics>,
+        page: u32,
+        page_height: f64,
+    ) -> Vec<Element> {
         if fragments.is_empty() {
             return Vec::new();
         }
+        // Fragments fed to the ruling detector for cell-text assignment.
+        let ruling_fragments = raw_fragments.unwrap_or(fragments);
 
         // Apply reading order strategy to fragments BEFORE classification
         let fragments: std::borrow::Cow<[TextFragment]> = match &self.config.reading_order {
@@ -244,6 +303,56 @@ impl Partitioner {
         // c) Detected tables whose confidence is below `min_table_confidence` are
         //    discarded and their fragments fall through to prose classification.
         if self.config.detect_tables {
+            // Ruling-first: when the page has a drawn table grid, detect bordered
+            // tables from vector lines and claim their fragments so the spatial
+            // pass below only sees the remainder. region_looks_like_list is NOT
+            // applied here — drawn borders are strong table evidence.
+            if self.config.prefer_ruling_tables {
+                if let Some(graphics) = graphics {
+                    if graphics.has_table_structure() {
+                        let detector = crate::text::table_detection::TableDetector::default();
+                        if let Ok(tables) = detector.detect(graphics, ruling_fragments) {
+                            for table in &tables {
+                                if table.confidence < self.config.min_table_confidence {
+                                    continue;
+                                }
+                                let rows = ruling_table_to_rows(table);
+                                let bbox = ElementBBox::new(
+                                    table.bbox.x,
+                                    table.bbox.y,
+                                    table.bbox.width,
+                                    table.bbox.height,
+                                );
+                                elements.push(Element::Table(TableElementData {
+                                    rows,
+                                    metadata: ElementMetadata {
+                                        page,
+                                        bbox,
+                                        confidence: table.confidence,
+                                        ..Default::default()
+                                    },
+                                }));
+                                let (rx, ry) = (table.bbox.x, table.bbox.y);
+                                let (rr, rt) = (
+                                    table.bbox.x + table.bbox.width,
+                                    table.bbox.y + table.bbox.height,
+                                );
+                                for (i, f) in fragments.iter().enumerate() {
+                                    if !claimed[i]
+                                        && f.x >= rx - 1.0
+                                        && f.x <= rr + 1.0
+                                        && f.y >= ry - 1.0
+                                        && f.y <= rt + 1.0
+                                    {
+                                        claimed[i] = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             let unclaimed_frags: Vec<&TextFragment> = fragments
                 .iter()
                 .enumerate()
@@ -580,6 +689,18 @@ fn is_list_item(text: &str) -> bool {
         }
     }
     false
+}
+
+/// Flatten a ruling-detected table into row-major `Vec<Vec<String>>`, filling
+/// absent cells with empty strings.
+fn ruling_table_to_rows(table: &crate::text::table_detection::DetectedTable) -> Vec<Vec<String>> {
+    let mut grid = vec![vec![String::new(); table.columns]; table.rows];
+    for cell in &table.cells {
+        if cell.row < table.rows && cell.column < table.columns {
+            grid[cell.row][cell.column] = cell.text.clone();
+        }
+    }
+    grid
 }
 
 /// Splits unclaimed fragments into Y-separated table candidate regions.
@@ -1174,6 +1295,69 @@ mod tests {
             mcid: None,
             struct_tag: None,
         }
+    }
+
+    /// Narrow fragment (width 10) whose center sits at (x+5, y) — for placing
+    /// text unambiguously inside a single grid cell.
+    fn cell_frag(text: &str, x: f64, y: f64) -> TextFragment {
+        let mut f = frag_at(text, x, y, 8.0);
+        f.width = 10.0;
+        f
+    }
+
+    #[test]
+    fn raw_fragments_drive_cell_text_while_reconstructed_drive_claiming() {
+        use crate::graphics::extraction::{ExtractedGraphics, VectorLine};
+
+        // 2x2 grid: x in {100,200,300}, y in {100,150,200}.
+        let mut graphics = ExtractedGraphics::new();
+        for y in [100.0, 150.0, 200.0] {
+            graphics.add_line(VectorLine::new(100.0, y, 300.0, y, 1.0, true, None));
+        }
+        for x in [100.0, 200.0, 300.0] {
+            graphics.add_line(VectorLine::new(x, 100.0, x, 200.0, 1.0, true, None));
+        }
+        assert!(graphics.has_table_structure());
+
+        // Cell-granular "raw" fragments: one per cell.
+        let raw = vec![
+            cell_frag("TL", 120.0, 175.0),
+            cell_frag("TR", 220.0, 175.0),
+            cell_frag("BL", 120.0, 125.0),
+            cell_frag("BR", 220.0, 125.0),
+        ];
+        // Reconstructed set: a single merged fragment (what reconstruct_paragraphs
+        // produces). No usable per-cell text, but its position is inside the table
+        // bbox so it must be claimed and NOT resurface as a prose element.
+        let reconstructed = vec![cell_frag("TL TR BL BR", 120.0, 175.0)];
+
+        let p = Partitioner::new(PartitionConfig::default());
+        let elements = p.partition_fragments_with_graphics_raw(
+            &reconstructed,
+            Some(&raw),
+            Some(&graphics),
+            0,
+            842.0,
+        );
+
+        let rows = elements
+            .iter()
+            .find_map(|e| match e {
+                Element::Table(t) => Some(t.rows.clone()),
+                _ => None,
+            })
+            .expect("a Table element");
+        // Cells came from the raw set, not the merged reconstructed fragment.
+        assert_eq!(rows.len(), 2, "two grid rows, got {rows:?}");
+        assert_eq!(rows[0], vec!["TL".to_string(), "TR".to_string()]);
+        assert_eq!(rows[1], vec!["BL".to_string(), "BR".to_string()]);
+        // The merged reconstructed fragment was claimed, so the Table is the only
+        // element (it does not also appear as prose).
+        assert_eq!(
+            elements.len(),
+            1,
+            "merged fragment must be claimed, got {elements:?}"
+        );
     }
 
     #[test]

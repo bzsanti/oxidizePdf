@@ -6,7 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
-## [Unreleased]
+## [2.13.0] - 2026-06-07
+
+### Added
+
+- Ruling-based (vector-grid) table detection wired into the partition pipeline:
+  bordered tables are now reconstructed from the PDF's drawn grid (primary path),
+  with the spatial detector handling the rest. Controlled by
+  `PartitionConfig::prefer_ruling_tables` (default true). Cell-granular fragments
+  are re-extracted only for pages with a drawn grid, so table-free documents pay
+  no extra cost (#292).
+- Per-chunk and document-level language detection for RAG chunks, behind the
+  opt-in `language-detection` feature (pure-Rust `whatlang`). `ChunkMetadata`
+  gains `language: Option<DetectedLanguage>` (ISO 639-3 code + confidence +
+  reliability); enable via `DocumentChunker::with_language_detection(true)`.
+  `DocumentChunker::document_language(&chunks)` returns the dominant language
+  weighted by chunk length (#293).
+- Image extraction now composites an image's `/SMask` (soft mask) as the alpha
+  channel, emitting an RGBA PNG, instead of dropping it. Images whose visible
+  shape lives entirely in the soft mask (e.g. logos over a flat-colour base)
+  previously extracted as opaque rectangles (#286).
+- Token-efficient chunk serialization for RAG output: `TokenEfficientExporter`
+  emits a compact, round-trippable tabular format (`#oxct/1`, header once + one
+  tab-separated row per chunk) that roughly halves the serialized-token count
+  versus JSON, with `parse_chunks` to read it back. The new `ChunkExporter` trait
+  unifies it with `JsonExporter` (both in `oxidize_pdf::ai`) (#291).
+
+### Fixed
+
+- Image extraction failed with `Image data too small: expected N, got 0` on
+  legitimate highly-compressible images (e.g. flat-colour diagrams that reach
+  DEFLATE's ~1032:1 maximum). The anti-decompression-bomb compression-ratio
+  guard (1000:1) false-positived and the multi-strategy flate decoder masked the
+  rejection by returning empty data; one such image early in a document also
+  aborted the whole extraction batch. The ratio heuristic is now applied only
+  above a large absolute output floor — the 256 MB absolute size cap remains the
+  authoritative bomb guard (#286).
+
+### Changed
+
+- **MSRV raised to Rust 1.88** (from 1.77). The 2025 ecosystem migration to
+  edition 2024 (Rust 1.85) plus `let`-chains (Rust 1.88, used by `subprocess`
+  via `rusty-tesseract`) and 1.88-gated releases of `image`/`time` made the
+  previously declared 1.77 unbuildable. Holding it would require pinning common
+  dependencies (`image`, `time`, `clap`, `icu_*`, `rand`, `toml`, …) to old
+  versions indefinitely. Added `resolver.incompatible-rust-versions = "fallback"`
+  in `.cargo/config.toml` and a CI job that builds on 1.88 with `--locked` to
+  prevent future silent MSRV drift.
 
 ## [2.12.0] - 2026-06-03
 
