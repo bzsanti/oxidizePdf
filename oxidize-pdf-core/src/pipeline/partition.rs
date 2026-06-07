@@ -170,7 +170,11 @@ impl Partitioner {
     /// * `graphics` — extracted vector lines for the page, if available
     /// * `page` — 0-indexed page number
     /// * `page_height` — page height in PDF points (for header/footer zones)
-    pub fn partition_fragments_with_graphics_raw(
+    ///
+    /// Internal to the partition pipeline (`do_partition_pages` supplies the raw
+    /// fragments); the public entry points are `partition_fragments` and
+    /// `partition_fragments_with_graphics`.
+    pub(crate) fn partition_fragments_with_graphics_raw(
         &self,
         fragments: &[TextFragment],
         raw_fragments: Option<&[TextFragment]>,
