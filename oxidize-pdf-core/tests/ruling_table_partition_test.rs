@@ -174,3 +174,38 @@ fn full_pipeline_partition_emits_bordered_table() {
         vec!["Pear".to_string(), "5".to_string(), "0.90".to_string()]
     );
 }
+
+#[test]
+fn flag_off_uses_spatial_only() {
+    // With the same bordered table inputs but prefer_ruling_tables = false,
+    // the ruling path is skipped; passing graphics must not change the result
+    // versus passing None (graphics are ignored when the flag is off).
+    let (graphics, frags) =
+        bordered_table_inputs(&[["H1", "H2", "H3"], ["a1", "a2", "a3"], ["b1", "b2", "b3"]]);
+    let cfg = PartitionConfig {
+        prefer_ruling_tables: false,
+        ..Default::default()
+    };
+    let p = Partitioner::new(cfg);
+    let with_g = p.partition_fragments_with_graphics(&frags, Some(&graphics), 0, 842.0);
+    let without_g = p.partition_fragments_with_graphics(&frags, None, 0, 842.0);
+    assert_eq!(
+        with_g.len(),
+        without_g.len(),
+        "graphics ignored when flag off"
+    );
+}
+
+#[test]
+fn no_grid_falls_back_to_spatial() {
+    // Graphics with no table structure -> ruling path skipped, spatial still runs.
+    let empty = ExtractedGraphics::new();
+    assert!(!empty.has_table_structure());
+    let (_g, frags) = bordered_table_inputs(&[["x1", "x2", "x3"], ["y1", "y2", "y3"]]);
+    let p = Partitioner::new(PartitionConfig::default());
+    // Passing empty graphics must not panic and must still classify via spatial,
+    // producing the same element count as the None path.
+    let elements = p.partition_fragments_with_graphics(&frags, Some(&empty), 0, 842.0);
+    let none_path = p.partition_fragments_with_graphics(&frags, None, 0, 842.0);
+    assert_eq!(elements.len(), none_path.len());
+}

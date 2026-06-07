@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ruling-based (vector-grid) table detection wired into the partition pipeline:
+  bordered tables are now reconstructed from the PDF's drawn grid (primary path),
+  with the spatial detector handling the rest. Controlled by
+  `PartitionConfig::prefer_ruling_tables` (default true). Cell-granular fragments
+  are re-extracted only for pages with a drawn grid, so table-free documents pay
+  no extra cost (#292).
 - Per-chunk and document-level language detection for RAG chunks, behind the
   opt-in `language-detection` feature (pure-Rust `whatlang`). `ChunkMetadata`
   gains `language: Option<DetectedLanguage>` (ISO 639-3 code + confidence +
