@@ -1567,8 +1567,32 @@ impl<R: Read + Seek> PdfDocument<R> {
         options: crate::text::ExtractionOptions,
         config: crate::pipeline::PartitionConfig,
     ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        // Read the gating flags before `config` is moved into the partitioner,
+        // so we avoid cloning the config just to inspect two bools.
+        let extract_graphics = config.detect_tables && config.prefer_ruling_tables;
+
         let pages = self.extract_text_with_options(options)?;
+
+        // The reconstructed `pages` above merge per-cell fragments into
+        // paragraph-granular fragments (issue #261), which the ruling-based
+        // table detector cannot map back to grid cells. When ruling-table
+        // detection is active, extract a second, cell-granular fragment set
+        // (reconstruct_paragraphs = false) and feed it to the detector while
+        // the reconstructed fragments still drive prose classification.
+        let raw_pages = if extract_graphics {
+            Some(
+                self.extract_text_with_options(crate::text::ExtractionOptions {
+                    preserve_layout: true,
+                    reconstruct_paragraphs: false,
+                    ..Default::default()
+                })?,
+            )
+        } else {
+            None
+        };
+
         let partitioner = crate::pipeline::Partitioner::new(config);
+        let mut graphics_extractor = crate::graphics::extraction::GraphicsExtractor::default();
 
         let mut all_elements = Vec::new();
         for (page_idx, page_text) in pages.iter().enumerate() {
@@ -1580,8 +1604,22 @@ impl<R: Read + Seek> PdfDocument<R> {
                 .get_page(page_idx_u32)
                 .map(|p| p.height())
                 .unwrap_or(842.0);
-            let elements =
-                partitioner.partition_fragments(&page_text.fragments, page_idx_u32, page_height);
+            let page_graphics = if extract_graphics {
+                graphics_extractor.extract_from_page(self, page_idx).ok()
+            } else {
+                None
+            };
+            let raw_fragments = raw_pages
+                .as_ref()
+                .and_then(|rp| rp.get(page_idx))
+                .map(|pt| pt.fragments.as_slice());
+            let elements = partitioner.partition_fragments_with_graphics_raw(
+                &page_text.fragments,
+                raw_fragments,
+                page_graphics.as_ref(),
+                page_idx_u32,
+                page_height,
+            );
             all_elements.extend(elements);
         }
 

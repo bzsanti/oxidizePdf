@@ -140,3 +140,37 @@ fn ruling_keeps_wrapped_cell_as_single_cell() {
         rows[0][0]
     );
 }
+
+#[test]
+fn full_pipeline_partition_emits_bordered_table() {
+    // Build the same bordered table, save, reopen, run the public partition entry.
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    let mut table = Table::with_equal_columns(3, 400.0);
+    table.set_position(50.0, 700.0);
+    for r in [
+        ["N", "Qty", "Price"],
+        ["Apple", "3", "1.20"],
+        ["Pear", "5", "0.90"],
+    ] {
+        table
+            .add_row(vec![r[0].into(), r[1].into(), r[2].into()])
+            .unwrap();
+    }
+    page.add_table(&table).unwrap();
+    doc.add_page(page);
+    let path = std::env::temp_dir().join("rt_fullpipe.pdf");
+    doc.save(&path).unwrap();
+
+    let pdoc = PdfReader::open_document(&path).unwrap();
+    let elements = pdoc.partition().unwrap();
+    let rows = table_rows(&elements);
+    assert_eq!(
+        rows[0],
+        vec!["N".to_string(), "Qty".to_string(), "Price".to_string()]
+    );
+    assert_eq!(
+        rows[2],
+        vec!["Pear".to_string(), "5".to_string(), "0.90".to_string()]
+    );
+}

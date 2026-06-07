@@ -150,9 +150,39 @@ impl Partitioner {
         page: u32,
         page_height: f64,
     ) -> Vec<Element> {
+        self.partition_fragments_with_graphics_raw(fragments, None, graphics, page, page_height)
+    }
+
+    /// Partition a page's text fragments, using a separate **raw** (un-reconstructed)
+    /// fragment set for ruling-based table cell assignment.
+    ///
+    /// The partition pipeline (`PdfDocument::partition`) extracts text with
+    /// `reconstruct_paragraphs: true`, which merges per-cell fragments into
+    /// paragraph-granular fragments. The ruling-based table detector needs
+    /// **cell-granular** fragments to assign text to grid cells, so this method
+    /// accepts `raw_fragments` (extracted with `reconstruct_paragraphs: false`)
+    /// for that purpose while `fragments` (reconstructed) drives prose
+    /// classification (titles, headers, paragraphs) and fragment claiming.
+    ///
+    /// * `fragments` — reconstructed fragments used for classification + claiming
+    /// * `raw_fragments` — cell-granular fragments for the ruling detector; when
+    ///   `None`, `fragments` is used for ruling too (legacy/unit-test behavior)
+    /// * `graphics` — extracted vector lines for the page, if available
+    /// * `page` — 0-indexed page number
+    /// * `page_height` — page height in PDF points (for header/footer zones)
+    pub fn partition_fragments_with_graphics_raw(
+        &self,
+        fragments: &[TextFragment],
+        raw_fragments: Option<&[TextFragment]>,
+        graphics: Option<&ExtractedGraphics>,
+        page: u32,
+        page_height: f64,
+    ) -> Vec<Element> {
         if fragments.is_empty() {
             return Vec::new();
         }
+        // Fragments fed to the ruling detector for cell-text assignment.
+        let ruling_fragments = raw_fragments.unwrap_or(fragments);
 
         // Apply reading order strategy to fragments BEFORE classification
         let fragments: std::borrow::Cow<[TextFragment]> = match &self.config.reading_order {
@@ -277,7 +307,7 @@ impl Partitioner {
                 if let Some(graphics) = graphics {
                     if graphics.has_table_structure() {
                         let detector = crate::text::table_detection::TableDetector::default();
-                        if let Ok(tables) = detector.detect(graphics, fragments) {
+                        if let Ok(tables) = detector.detect(graphics, ruling_fragments) {
                             for table in &tables {
                                 if table.confidence < self.config.min_table_confidence {
                                     continue;
