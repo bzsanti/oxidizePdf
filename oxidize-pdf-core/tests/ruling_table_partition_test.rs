@@ -10,11 +10,21 @@ use oxidize_pdf::text::TextFragment;
 
 #[test]
 fn with_graphics_none_matches_legacy_partition() {
-    let frags: Vec<TextFragment> = vec![];
+    // Non-trivial fragment set: the delegator must produce element-for-element
+    // identical output (same count AND same element types) as the legacy entry.
+    let (_g, frags) = bordered_table_inputs(&[["A", "B", "C"], ["1", "2", "3"]]);
+    assert!(!frags.is_empty(), "fixture must yield fragments");
     let p = Partitioner::new(PartitionConfig::default());
     let legacy = p.partition_fragments(&frags, 1, 800.0);
     let with_graphics = p.partition_fragments_with_graphics(&frags, None, 1, 800.0);
     assert_eq!(legacy.len(), with_graphics.len());
+    for (l, r) in legacy.iter().zip(with_graphics.iter()) {
+        assert_eq!(
+            std::mem::discriminant(l),
+            std::mem::discriminant(r),
+            "delegator must emit the same element types as legacy"
+        );
+    }
 }
 
 use oxidize_pdf::graphics::extraction::{ExtractedGraphics, GraphicsExtractor};
@@ -189,11 +199,9 @@ fn flag_off_uses_spatial_only() {
     let p = Partitioner::new(cfg);
     let with_g = p.partition_fragments_with_graphics(&frags, Some(&graphics), 0, 842.0);
     let without_g = p.partition_fragments_with_graphics(&frags, None, 0, 842.0);
-    assert_eq!(
-        with_g.len(),
-        without_g.len(),
-        "graphics ignored when flag off"
-    );
+    // Not just the count: with the flag off, supplying graphics must yield the
+    // exact same elements (types + table contents) as supplying None.
+    assert_same_elements(&with_g, &without_g);
 }
 
 #[test]
@@ -207,5 +215,73 @@ fn no_grid_falls_back_to_spatial() {
     // producing the same element count as the None path.
     let elements = p.partition_fragments_with_graphics(&frags, Some(&empty), 0, 842.0);
     let none_path = p.partition_fragments_with_graphics(&frags, None, 0, 842.0);
-    assert_eq!(elements.len(), none_path.len());
+    // Empty graphics must be a no-op: same elements (types + contents) as None.
+    assert_same_elements(&elements, &none_path);
+}
+
+/// Assert two element lists are equivalent: same length, same per-position
+/// element type, and identical row contents for `Table` elements.
+fn assert_same_elements(a: &[Element], b: &[Element]) {
+    assert_eq!(a.len(), b.len(), "element count differs: {a:?} vs {b:?}");
+    for (x, y) in a.iter().zip(b.iter()) {
+        assert_eq!(
+            std::mem::discriminant(x),
+            std::mem::discriminant(y),
+            "element type differs"
+        );
+        if let (Element::Table(tx), Element::Table(ty)) = (x, y) {
+            assert_eq!(tx.rows, ty.rows, "table rows differ");
+        }
+    }
+}
+
+#[test]
+fn ruling_table_and_prose_elements_are_disjoint() {
+    // A drawn grid (y 100..200) plus prose fragments well below it (y ~ 40-50).
+    // The prose must become its own element(s), and no emitted element's bbox may
+    // overlap another's (partition disjointness invariant).
+    let mut graphics = ExtractedGraphics::new();
+    for y in [100.0, 150.0, 200.0] {
+        graphics.add_line(h_line(100.0, 300.0, y));
+    }
+    for x in [100.0, 200.0, 300.0] {
+        graphics.add_line(v_line(x, 100.0, 200.0));
+    }
+    assert!(graphics.has_table_structure());
+
+    let frags = vec![
+        frag("TL", 120.0, 175.0),
+        frag("TR", 220.0, 175.0),
+        frag("BL", 120.0, 125.0),
+        frag("BR", 220.0, 125.0),
+        // prose line below the grid (outside the table bbox)
+        frag("Prose", 120.0, 50.0),
+        frag("below", 160.0, 50.0),
+        frag("table", 200.0, 50.0),
+    ];
+
+    let p = Partitioner::new(PartitionConfig::default());
+    let elements = p.partition_fragments_with_graphics(&frags, Some(&graphics), 0, 842.0);
+
+    let has_table = elements.iter().any(|e| matches!(e, Element::Table(_)));
+    assert!(has_table, "expected a ruling Table, got {elements:?}");
+    assert!(
+        elements.len() >= 2,
+        "expected table + prose element(s), got {elements:?}"
+    );
+
+    // Pairwise bbox disjointness across all emitted elements.
+    let boxes: Vec<_> = elements.iter().map(|e| e.bbox()).collect();
+    for i in 0..boxes.len() {
+        for j in (i + 1)..boxes.len() {
+            let a = &boxes[i];
+            let b = &boxes[j];
+            let overlap_x = a.x < b.x + b.width && b.x < a.x + a.width;
+            let overlap_y = a.y < b.y + b.height && b.y < a.y + a.height;
+            assert!(
+                !(overlap_x && overlap_y),
+                "elements {i} and {j} have overlapping bboxes: {a:?} vs {b:?}"
+            );
+        }
+    }
 }

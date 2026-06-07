@@ -1297,6 +1297,69 @@ mod tests {
         }
     }
 
+    /// Narrow fragment (width 10) whose center sits at (x+5, y) — for placing
+    /// text unambiguously inside a single grid cell.
+    fn cell_frag(text: &str, x: f64, y: f64) -> TextFragment {
+        let mut f = frag_at(text, x, y, 8.0);
+        f.width = 10.0;
+        f
+    }
+
+    #[test]
+    fn raw_fragments_drive_cell_text_while_reconstructed_drive_claiming() {
+        use crate::graphics::extraction::{ExtractedGraphics, VectorLine};
+
+        // 2x2 grid: x in {100,200,300}, y in {100,150,200}.
+        let mut graphics = ExtractedGraphics::new();
+        for y in [100.0, 150.0, 200.0] {
+            graphics.add_line(VectorLine::new(100.0, y, 300.0, y, 1.0, true, None));
+        }
+        for x in [100.0, 200.0, 300.0] {
+            graphics.add_line(VectorLine::new(x, 100.0, x, 200.0, 1.0, true, None));
+        }
+        assert!(graphics.has_table_structure());
+
+        // Cell-granular "raw" fragments: one per cell.
+        let raw = vec![
+            cell_frag("TL", 120.0, 175.0),
+            cell_frag("TR", 220.0, 175.0),
+            cell_frag("BL", 120.0, 125.0),
+            cell_frag("BR", 220.0, 125.0),
+        ];
+        // Reconstructed set: a single merged fragment (what reconstruct_paragraphs
+        // produces). No usable per-cell text, but its position is inside the table
+        // bbox so it must be claimed and NOT resurface as a prose element.
+        let reconstructed = vec![cell_frag("TL TR BL BR", 120.0, 175.0)];
+
+        let p = Partitioner::new(PartitionConfig::default());
+        let elements = p.partition_fragments_with_graphics_raw(
+            &reconstructed,
+            Some(&raw),
+            Some(&graphics),
+            0,
+            842.0,
+        );
+
+        let rows = elements
+            .iter()
+            .find_map(|e| match e {
+                Element::Table(t) => Some(t.rows.clone()),
+                _ => None,
+            })
+            .expect("a Table element");
+        // Cells came from the raw set, not the merged reconstructed fragment.
+        assert_eq!(rows.len(), 2, "two grid rows, got {rows:?}");
+        assert_eq!(rows[0], vec!["TL".to_string(), "TR".to_string()]);
+        assert_eq!(rows[1], vec!["BL".to_string(), "BR".to_string()]);
+        // The merged reconstructed fragment was claimed, so the Table is the only
+        // element (it does not also appear as prose).
+        assert_eq!(
+            elements.len(),
+            1,
+            "merged fragment must be claimed, got {elements:?}"
+        );
+    }
+
     #[test]
     fn struct_tag_h1_yields_title_no_font_ratio_needed() {
         let mut f = frag_at("Section One", 50.0, 400.0, 12.0);
