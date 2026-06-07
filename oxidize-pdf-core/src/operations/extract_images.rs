@@ -332,6 +332,11 @@ impl<R: Read + Seek> ImageExtractor<R> {
                 "DCTDecode" => {
                     // JPEG data is already in correct format - use raw stream data
                     // DCTDecode streams contain complete JPEG data, don't decode
+                    if smask_alpha.is_some() {
+                        tracing::debug!(
+                            "image has an /SMask but is DCT-encoded; alpha not composited into JPEG output"
+                        );
+                    }
                     data = stream.data.clone();
                     ImageFormat::Jpeg
                 }
@@ -375,6 +380,11 @@ impl<R: Read + Seek> ImageExtractor<R> {
                     match filter.0.as_str() {
                         "DCTDecode" => {
                             // JPEG data is already in correct format - use raw stream data
+                            if smask_alpha.is_some() {
+                                tracing::debug!(
+                                    "image has an /SMask but is DCT-encoded; alpha not composited into JPEG output"
+                                );
+                            }
                             data = stream.data.clone();
                             ImageFormat::Jpeg
                         }
@@ -1248,11 +1258,16 @@ impl<R: Read + Seek> ImageExtractor<R> {
             _ => return None,
         };
         let dict = &stream.dict.0;
-        let sw = dict.get(&PdfName("Width".to_string()))?.as_integer()? as u32;
-        let sh = dict.get(&PdfName("Height".to_string()))?.as_integer()? as u32;
-        if sw == 0 || sh == 0 {
+        // Validate sign before casting: a negative /Width or /Height would cast
+        // to a huge u32 and (on 32-bit targets) wrap the `sw * sh` product,
+        // producing a corrupt mask. Reject non-positive dimensions outright.
+        let sw_i = dict.get(&PdfName("Width".to_string()))?.as_integer()?;
+        let sh_i = dict.get(&PdfName("Height".to_string()))?.as_integer()?;
+        if sw_i <= 0 || sh_i <= 0 {
             return None;
         }
+        let sw = sw_i as u32;
+        let sh = sh_i as u32;
         let sbpc = dict
             .get(&PdfName("BitsPerComponent".to_string()))
             .and_then(|b| b.as_integer())
@@ -1289,7 +1304,8 @@ impl<R: Read + Seek> ImageExtractor<R> {
     /// Encode `samples` as PNG. When `alpha` is present and the samples are
     /// 8-bit grayscale or RGB, composite it as the alpha channel and emit an
     /// RGBA PNG (grayscale is expanded to RGB first); otherwise emit the image
-    /// as-is.
+    /// as-is. Images that are 16-bit, DCT-encoded, or have 4 components (CMYK or
+    /// an already-RGBA base) are emitted without alpha (the soft mask is dropped).
     fn encode_png_maybe_alpha(
         &self,
         samples: &[u8],
@@ -1302,6 +1318,18 @@ impl<R: Read + Seek> ImageExtractor<R> {
         match alpha {
             Some(a) if bits_per_component == 8 && (components == 1 || components == 3) => {
                 let pixel_count = (width as usize) * (height as usize);
+                // Callers guarantee these: the non-indexed path validates
+                // `data.len() >= width*height*components`, the indexed path feeds
+                // exactly `pixel_count*components` expanded bytes, and `alpha` is
+                // sized to the base image. The `unwrap_or` below stay as a release
+                // safety net; the asserts surface a broken contract in tests.
+                debug_assert!(
+                    samples.len() >= pixel_count * components as usize,
+                    "sample buffer too short: {} < {}",
+                    samples.len(),
+                    pixel_count * components as usize
+                );
+                debug_assert_eq!(a.len(), pixel_count, "alpha length must match pixel count");
                 let mut rgba = Vec::with_capacity(pixel_count * 4);
                 for i in 0..pixel_count {
                     let (r, g, b) = if components == 3 {

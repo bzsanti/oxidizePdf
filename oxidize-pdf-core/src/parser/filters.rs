@@ -1434,6 +1434,13 @@ mod tests {
     }
 
     #[test]
+    fn test_check_compression_ratio_at_exact_floor_allowed() {
+        // The gate is `output > floor`, so an output exactly at the floor is not
+        // policed even with an absurd ratio.
+        assert!(check_compression_ratio(1, RATIO_GUARD_MIN_OUTPUT).is_ok());
+    }
+
+    #[test]
     fn test_check_compression_ratio_zero_input() {
         // Zero input size should not cause division by zero
         assert!(check_compression_ratio(0, 1000).is_ok());
