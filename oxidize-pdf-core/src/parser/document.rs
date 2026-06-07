@@ -1567,8 +1567,31 @@ impl<R: Read + Seek> PdfDocument<R> {
         options: crate::text::ExtractionOptions,
         config: crate::pipeline::PartitionConfig,
     ) -> ParseResult<Vec<crate::pipeline::Element>> {
+        // Read the gating flags before `config` is moved into the partitioner,
+        // so we avoid cloning the config just to inspect two bools.
+        let extract_graphics = config.detect_tables && config.prefer_ruling_tables;
+
+        // The reconstructed `pages` (extracted with `reconstruct_paragraphs = true`)
+        // merge per-cell fragments into paragraph-granular fragments (issue #261),
+        // which the ruling-based table detector cannot map back to grid cells. When
+        // a page actually has a drawn table grid we re-extract just that page with
+        // `reconstruct_paragraphs = false` to recover cell-granular fragments for
+        // the detector; the reconstructed fragments still drive prose
+        // classification. Inherit every other option (notably `space_threshold`
+        // and `detect_columns`, which profiles override) so cell text is assembled
+        // identically to the primary pass. Built before `options` is moved into
+        // `extract_text_with_options`.
+        let mut raw_options = options.clone();
+        raw_options.reconstruct_paragraphs = false;
+
         let pages = self.extract_text_with_options(options)?;
+
         let partitioner = crate::pipeline::Partitioner::new(config);
+        let mut graphics_extractor = crate::graphics::extraction::GraphicsExtractor::default();
+        // Extracting per table-bearing page (rather than a second whole-document
+        // pass) keeps the cost proportional to pages that need it and zero for
+        // table-free documents even with `prefer_ruling_tables` on.
+        let mut raw_extractor = crate::text::TextExtractor::with_options(raw_options);
 
         let mut all_elements = Vec::new();
         for (page_idx, page_text) in pages.iter().enumerate() {
@@ -1580,8 +1603,28 @@ impl<R: Read + Seek> PdfDocument<R> {
                 .get_page(page_idx_u32)
                 .map(|p| p.height())
                 .unwrap_or(842.0);
-            let elements =
-                partitioner.partition_fragments(&page_text.fragments, page_idx_u32, page_height);
+            let page_graphics = if extract_graphics {
+                graphics_extractor.extract_from_page(self, page_idx).ok()
+            } else {
+                None
+            };
+            // Re-extract cell-granular fragments only for pages with a drawn grid.
+            let raw_page = if page_graphics
+                .as_ref()
+                .is_some_and(|g| g.has_table_structure())
+            {
+                raw_extractor.extract_from_page(self, page_idx_u32).ok()
+            } else {
+                None
+            };
+            let raw_fragments = raw_page.as_ref().map(|pt| pt.fragments.as_slice());
+            let elements = partitioner.partition_fragments_with_graphics_raw(
+                &page_text.fragments,
+                raw_fragments,
+                page_graphics.as_ref(),
+                page_idx_u32,
+                page_height,
+            );
             all_elements.extend(elements);
         }
 
