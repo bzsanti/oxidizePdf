@@ -1,3 +1,4 @@
+use crate::graphics::extraction::ExtractedGraphics;
 use crate::pipeline::reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 use crate::pipeline::{
     Element, ElementBBox, ElementData, ElementMetadata, KeyValueElementData, TableElementData,
@@ -124,12 +125,32 @@ impl Partitioner {
     /// * `fragments` — text fragments from one page (with `preserve_layout`)
     /// * `page` — 0-indexed page number
     /// * `page_height` — page height in PDF points (for header/footer zones)
+    ///
+    /// Partition fragments without page graphics (spatial table detection only).
     pub fn partition_fragments(
         &self,
         fragments: &[TextFragment],
         page: u32,
         page_height: f64,
     ) -> Vec<Element> {
+        self.partition_fragments_with_graphics(fragments, None, page, page_height)
+    }
+
+    /// Partition a page's text fragments into typed elements, optionally using
+    /// page graphics (vector lines) for ruling-based table detection.
+    ///
+    /// * `fragments` — text fragments from one page (with `preserve_layout`)
+    /// * `graphics` — extracted vector lines for the page, if available
+    /// * `page` — 0-indexed page number
+    /// * `page_height` — page height in PDF points (for header/footer zones)
+    pub fn partition_fragments_with_graphics(
+        &self,
+        fragments: &[TextFragment],
+        graphics: Option<&ExtractedGraphics>,
+        page: u32,
+        page_height: f64,
+    ) -> Vec<Element> {
+        let _ = graphics;
         if fragments.is_empty() {
             return Vec::new();
         }
