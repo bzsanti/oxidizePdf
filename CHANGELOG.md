@@ -22,6 +22,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reliability); enable via `DocumentChunker::with_language_detection(true)`.
   `DocumentChunker::document_language(&chunks)` returns the dominant language
   weighted by chunk length (#293).
+- Image extraction now composites an image's `/SMask` (soft mask) as the alpha
+  channel, emitting an RGBA PNG, instead of dropping it. Images whose visible
+  shape lives entirely in the soft mask (e.g. logos over a flat-colour base)
+  previously extracted as opaque rectangles (#286).
+
+### Fixed
+
+- Image extraction failed with `Image data too small: expected N, got 0` on
+  legitimate highly-compressible images (e.g. flat-colour diagrams that reach
+  DEFLATE's ~1032:1 maximum). The anti-decompression-bomb compression-ratio
+  guard (1000:1) false-positived and the multi-strategy flate decoder masked the
+  rejection by returning empty data; one such image early in a document also
+  aborted the whole extraction batch. The ratio heuristic is now applied only
+  above a large absolute output floor — the 256 MB absolute size cap remains the
+  authoritative bomb guard (#286).
 
 ### Changed
 

@@ -88,11 +88,13 @@ fn test_indexed_image_is_expanded_to_rgb_png() {
     assert_eq!(w, 600, "PNG width");
     assert_eq!(h, 603, "PNG height");
     assert_eq!(bit_depth, 8, "PNG bit depth");
-    // Indexed/DeviceRGB must be expanded to true-colour RGB (PNG colour type 2),
-    // NOT written as 1-byte palette indices misread as grayscale.
-    assert_eq!(
-        color_type, 2,
-        "Indexed image must be expanded to RGB (colour type 2), got {color_type}"
+    // Indexed/DeviceRGB must be expanded to true colour, NOT written as 1-byte
+    // palette indices misread as grayscale. The image also carries an /SMask, so
+    // it is composited into RGBA (colour type 6); plain RGB (2) is also valid.
+    // The point is it must not be grayscale (0).
+    assert!(
+        color_type == 2 || color_type == 6,
+        "Indexed image must be expanded to RGB/RGBA, got colour type {color_type}"
     );
 }
 
@@ -129,14 +131,20 @@ fn decode_png_rgb(png: &[u8]) -> (u32, u32, Vec<u8>) {
         pos = de + 4; // skip CRC
     }
     assert_eq!(bit_depth, 8, "decoder supports 8-bit only");
-    assert_eq!(color_type, 2, "decoder supports RGB (colour type 2) only");
+    // The image carries an /SMask, so it is now composited into RGBA (colour
+    // type 6); plain RGB (colour type 2) is also accepted. Either way the RGB
+    // channels are returned (alpha stripped) for the palette comparison.
+    let bpp = match color_type {
+        2 => 3usize,
+        6 => 4usize,
+        other => panic!("decoder supports RGB/RGBA only, got colour type {other}"),
+    };
 
     let mut raw = Vec::new();
     ZlibDecoder::new(&idat[..])
         .read_to_end(&mut raw)
         .expect("IDAT must be valid zlib");
 
-    let bpp = 3usize; // RGB, 8 bit
     let w = width as usize;
     let h = height as usize;
     let stride = 1 + w * bpp;
@@ -185,7 +193,17 @@ fn decode_png_rgb(png: &[u8]) -> (u32, u32, Vec<u8>) {
             out[row * w * bpp + x] = (recon & 0xff) as u8;
         }
     }
-    (width, height, out)
+    // Return RGB only; drop the alpha channel when the source was RGBA.
+    let rgb = if bpp == 4 {
+        let mut r = Vec::with_capacity(w * h * 3);
+        for px in out.chunks_exact(4) {
+            r.extend_from_slice(&px[..3]);
+        }
+        r
+    } else {
+        out
+    };
+    (width, height, rgb)
 }
 
 /// Independently decode the Indexed image (object 10 in the fixture):
