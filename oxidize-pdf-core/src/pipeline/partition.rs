@@ -39,6 +39,10 @@ pub struct PartitionConfig {
     /// fragments fall through to the prose classification steps.
     /// Range: `[0.0, 1.0]`. Default: `0.5`.
     pub min_table_confidence: f64,
+    /// Prefer the ruling-based (vector-grid) table detector for bordered tables,
+    /// falling back to the spatial detector for the rest. When false, only the
+    /// spatial detector runs and no page graphics are extracted. Default: true.
+    pub prefer_ruling_tables: bool,
 }
 
 impl Default for PartitionConfig {
@@ -51,6 +55,7 @@ impl Default for PartitionConfig {
             footer_zone: 0.05,
             reading_order: ReadingOrderStrategy::Simple,
             min_table_confidence: 0.5,
+            prefer_ruling_tables: true,
         }
     }
 }
