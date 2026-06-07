@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
-## [Unreleased]
+## [2.13.0] - 2026-06-07
 
 ### Added
 
@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   channel, emitting an RGBA PNG, instead of dropping it. Images whose visible
   shape lives entirely in the soft mask (e.g. logos over a flat-colour base)
   previously extracted as opaque rectangles (#286).
+- Token-efficient chunk serialization for RAG output: `TokenEfficientExporter`
+  emits a compact, round-trippable tabular format (`#oxct/1`, header once + one
+  tab-separated row per chunk) that roughly halves the serialized-token count
+  versus JSON, with `parse_chunks` to read it back. The new `ChunkExporter` trait
+  unifies it with `JsonExporter` (both in `oxidize_pdf::ai`) (#291).
 
 ### Fixed
 
