@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a new capability for the oxidize-pdf Rust core
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to do that you can't today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API
+      description: How would you like the Rust API to look? Include a usage sketch if you can.
+      render: rust
+    validations:
+      required: false
+  - type: dropdown
+    id: bindings
+    attributes:
+      label: Relevant bindings
+      description: Which downstream bindings should also expose this, if any?
+      multiple: true
+      options:
+        - Python (oxidize-pdf)
+        - .NET (OxidizePdf.NET)
+        - WASM
+        - Core only
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

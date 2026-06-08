@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/bzsanti/oxidizePdf/discussions
+    about: Ask questions and discuss ideas with the community.
+  - name: Security vulnerability
+    url: https://github.com/bzsanti/oxidizePdf/security/advisories/new
+    about: Report a security issue privately (do not open a public issue).
