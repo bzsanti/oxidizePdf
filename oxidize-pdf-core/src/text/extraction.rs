@@ -673,13 +673,21 @@ impl TextExtractor {
 
                             extracted_text.push_str(&decoded);
 
-                            // Get font info for accurate width calculation
+                            // Get font info for accurate width calculation.
+                            // Width comes from the char codes (`text_bytes`), not
+                            // the decoded Unicode: the Widths array is code-indexed
+                            // (issue #302).
                             let text_width = {
                                 let font_info = state
                                     .font_name
                                     .as_ref()
                                     .and_then(|name| self.font_cache.get(name));
-                                calculate_text_width(&decoded, state.font_size, font_info)
+                                calculate_text_width_from_codes(
+                                    text_bytes,
+                                    &decoded,
+                                    state.font_size,
+                                    font_info,
+                                )
                             };
 
                             if self.options.preserve_layout {
@@ -718,7 +726,8 @@ impl TextExtractor {
                                                 .font_name
                                                 .as_ref()
                                                 .and_then(|name| self.font_cache.get(name));
-                                            calculate_text_width(
+                                            calculate_text_width_from_codes(
+                                                &text_bytes,
                                                 &decoded,
                                                 state.font_size,
                                                 font_info,
@@ -823,7 +832,12 @@ impl TextExtractor {
                                     .font_name
                                     .as_ref()
                                     .and_then(|name| self.font_cache.get(name));
-                                calculate_text_width(&decoded, state.font_size, font_info)
+                                calculate_text_width_from_codes(
+                                    &text,
+                                    &decoded,
+                                    state.font_size,
+                                    font_info,
+                                )
                             };
 
                             if self.options.preserve_layout {
@@ -875,7 +889,12 @@ impl TextExtractor {
                                     .font_name
                                     .as_ref()
                                     .and_then(|name| self.font_cache.get(name));
-                                calculate_text_width(&decoded, state.font_size, font_info)
+                                calculate_text_width_from_codes(
+                                    &text,
+                                    &decoded,
+                                    state.font_size,
+                                    font_info,
+                                )
                             };
 
                             if self.options.preserve_layout {
@@ -1750,6 +1769,75 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
     text.len() as f64 * font_size * 0.5
 }
 
+/// Compute advance width from the original character **codes**, not the decoded
+/// Unicode text.
+///
+/// A simple font's `Widths` array is indexed by character code (`first_char..=
+/// last_char`), i.e. the byte value in the content stream — not by the Unicode
+/// codepoint the code decodes to. [`calculate_text_width`] indexes by the decoded
+/// codepoint (`ch as u32`), which is correct only when code == codepoint (ASCII /
+/// WinAnsi fonts). For custom-encoded fonts (Type1 with `Differences`, embedded
+/// Computer Modern in LaTeX PDFs, ToUnicode remaps) the codepoint diverges from
+/// the code, so the wrong slot — or `missing_width` — is read, desyncing glyph
+/// advance and scrambling word order once fragments are sorted by position
+/// (issue #302).
+///
+/// `decoded` is the already-decoded text for this run; it is only consulted for
+/// composite (Type0) fonts, whose multi-byte codes cannot be indexed byte-wise
+/// and whose width path is unchanged here to avoid regressing CJK extraction.
+fn calculate_text_width_from_codes(
+    codes: &[u8],
+    decoded: &str,
+    font_size: f64,
+    font_info: Option<&FontInfo>,
+) -> f64 {
+    // Composite (Type0) fonts use multi-byte codes; a single byte is not a code,
+    // so byte-indexed width lookup is invalid. Preserve the existing decoded-based
+    // behavior for them.
+    let is_composite =
+        font_info.is_some_and(|f| f.font_type == "Type0" || f.descendant_font.is_some());
+    if is_composite {
+        return calculate_text_width(decoded, font_size, font_info);
+    }
+
+    if let Some(font) = font_info {
+        if let Some(ref widths) = font.metrics.widths {
+            let first_char = font.metrics.first_char.unwrap_or(0);
+            let last_char = font.metrics.last_char.unwrap_or(255);
+            let missing_width = font.metrics.missing_width.unwrap_or(500.0);
+
+            let mut total_width = 0.0;
+            let mut iter = codes.iter().peekable();
+            while let Some(&byte) = iter.next() {
+                let code = byte as u32;
+                let width = if code >= first_char && code <= last_char {
+                    widths
+                        .get((code - first_char) as usize)
+                        .copied()
+                        .unwrap_or(missing_width)
+                } else {
+                    missing_width
+                };
+                total_width += width / 1000.0 * font_size;
+
+                // Kerning is keyed by code pair, consistent with code-based widths.
+                if let Some(ref kerning) = font.metrics.kerning {
+                    if let Some(&next_byte) = iter.peek() {
+                        if let Some(&kern_value) = kerning.get(&(code, *next_byte as u32)) {
+                            total_width += kern_value / 1000.0 * font_size;
+                        }
+                    }
+                }
+            }
+
+            return total_width;
+        }
+    }
+
+    // No metrics: one fallback width per code (byte), the simple-font glyph count.
+    codes.len() as f64 * font_size * 0.5
+}
+
 /// Sanitize extracted text by removing or replacing control characters.
 ///
 /// This function addresses Issue #116 where extracted text contains NUL bytes (`\0`)
@@ -2291,6 +2379,55 @@ mod tests {
         assert_ne!(
             width, simplified,
             "Metrics-based calculation should differ from simplified (30.0)"
+        );
+    }
+
+    #[test]
+    fn width_from_codes_uses_char_code_not_decoded_unicode() {
+        use crate::text::extraction_cmap::{FontInfo, FontMetrics};
+
+        // Simple Type1 font with a code-indexed Widths array: code 1 -> 1000,
+        // code 2 -> 100. A custom encoding decodes code 1 -> 'm' (U+006D) and
+        // code 2 -> 'i' (U+0069), so the decoded Unicode codepoints (109, 105)
+        // are far from the codes (1, 2). The advance width MUST come from the
+        // codes; indexing the Widths array by the decoded Unicode codepoint
+        // reads out-of-range -> missing_width, desyncing glyph advance on
+        // custom-encoded fonts (issue #302, Higgs/Computer-Modern scramble).
+        let font_info = FontInfo {
+            name: "F1".to_string(),
+            font_type: "Type1".to_string(),
+            encoding: None,
+            to_unicode: None,
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            cid_ordering: None,
+            metrics: FontMetrics {
+                first_char: Some(1),
+                last_char: Some(2),
+                widths: Some(vec![1000.0, 100.0]),
+                missing_width: Some(500.0),
+                kerning: None,
+            },
+            cid_encoding: None,
+        };
+
+        let codes = [1u8, 2u8];
+        let decoded = "mi"; // what decode_text produced for these codes
+        let width = calculate_text_width_from_codes(&codes, decoded, 10.0, Some(&font_info));
+        let expected = (1000.0 + 100.0) / 1000.0 * 10.0; // 11.0
+        assert!(
+            (width - expected).abs() < 1e-6,
+            "width must come from char codes: expected {expected}, got {width}"
+        );
+
+        // The decoded-Unicode-indexed path is the bug: 109 and 105 are outside
+        // [1,2] so both fall back to missing_width -> (500+500)/1000*10 = 10.0.
+        let buggy = calculate_text_width(decoded, 10.0, Some(&font_info));
+        assert_eq!(buggy, 10.0);
+        assert_ne!(
+            width, buggy,
+            "code-based width must differ from the Unicode-indexed bug"
         );
     }
 
