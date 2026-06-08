@@ -1,0 +1,50 @@
+name: Bug report
+description: Report incorrect behavior in the oxidize-pdf Rust core
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please provide a minimal
+        reproduction and verify the actual behavior — not just a panic message.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you observe, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A short Rust snippet that reproduces the issue. Attach the input PDF if relevant.
+      render: rust
+      placeholder: |
+        use oxidize_pdf::parser::{PdfReader, PdfDocument};
+        // ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: oxidize-pdf version
+      description: The version from your `Cargo.toml` / `Cargo.lock`.
+      placeholder: "2.13.0"
+    validations:
+      required: true
+  - type: input
+    id: rust-version
+    attributes:
+      label: Rust version
+      description: Output of `rustc --version`.
+      placeholder: "1.88.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Ubuntu 24.04 / macOS 14 / Windows 11"
+    validations:
+      required: true
