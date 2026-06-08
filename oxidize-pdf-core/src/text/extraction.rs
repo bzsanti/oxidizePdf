@@ -6,7 +6,7 @@
 use crate::graphics::Color;
 use crate::parser::content::{ContentOperation, ContentParser, TextElement};
 use crate::parser::document::PdfDocument;
-use crate::parser::objects::PdfObject;
+use crate::parser::objects::{PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
@@ -1355,26 +1355,45 @@ impl TextExtractor {
         if let Some(res_ref) = page.dict.get("Resources").and_then(|o| o.as_reference()) {
             if let Ok(PdfObject::Dictionary(resources)) = document.get_object(res_ref.0, res_ref.1)
             {
-                if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                    for (font_name, font_obj) in font_dict.0.iter() {
-                        if let Some(font_ref) = font_obj.as_reference() {
-                            self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
-                        }
-                    }
-                }
+                self.cache_fonts_from_resources::<R>(&resources, document);
             }
         } else if let Some(resources) = page.get_resources() {
             // Fallback to get_resources() if Resources is not a reference
-            if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                for (font_name, font_obj) in font_dict.0.iter() {
-                    if let Some(font_ref) = font_obj.as_reference() {
-                        self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
-                    }
-                }
-            }
+            self.cache_fonts_from_resources::<R>(resources, document);
         }
 
         Ok(())
+    }
+
+    /// Cache every font declared in a page's `/Resources` `/Font` dictionary.
+    ///
+    /// `/Font` itself may be either an inline dictionary or an indirect
+    /// reference (`/Font 191 0 R`); both are common in real PDFs (e.g. the
+    /// ATLAS Higgs paper references it). Resolving the reference is required —
+    /// otherwise the font cache stays empty, decoding loses ToUnicode, and
+    /// glyph widths fall back to a flat estimate that scrambles multi-column
+    /// layout (issue #302).
+    fn cache_fonts_from_resources<R: Read + Seek>(
+        &mut self,
+        resources: &PdfDictionary,
+        document: &PdfDocument<R>,
+    ) {
+        let font_dict = match resources.get("Font") {
+            Some(PdfObject::Dictionary(dict)) => Some(dict.clone()),
+            Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+                Ok(PdfObject::Dictionary(dict)) => Some(dict),
+                _ => None,
+            },
+            _ => None,
+        };
+
+        if let Some(font_dict) = font_dict {
+            for (font_name, font_obj) in font_dict.0.iter() {
+                if let Some(font_ref) = font_obj.as_reference() {
+                    self.cache_font_by_ref::<R>(&font_name.0, font_ref, document);
+                }
+            }
+        }
     }
 
     /// Cache a font, reusing the persistent object cache when possible.
