@@ -93,6 +93,35 @@ jobs:
       - name: Build documentation
         run: cargo doc --all --no-deps
 
+  examples:
+    name: Examples compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The `test` job runs `cargo build --all`, which builds workspace
+      # packages' default targets only — examples are NOT default targets, so a
+      # broken or removed-API example is invisible to CI without this job. The
+      # script's compile gate (`cargo check --examples --all-features`) closes
+      # that gap. The output gate (`--run`) is skipped here: it needs the corpus
+      # cache, which requires network the CI runner does not use.
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Tesseract OCR
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libtesseract-dev
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-examples-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Verify examples compile
+        run: ./scripts/verify-examples.sh
+
   msrv:
     name: MSRV (1.88)
     runs-on: ubuntu-latest
