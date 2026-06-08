@@ -4,6 +4,18 @@ This directory contains automation scripts for the oxidize-pdf project.
 
 ## Available Scripts
 
+### verify-examples.sh
+Compile gate for all examples plus an output gate for the RAG showcase.
+
+```bash
+./scripts/verify-examples.sh          # compile all examples (--all-features)
+./scripts/verify-examples.sh --run    # also run rag_realworld if corpus_cache present
+```
+
+`cargo build --all` (CI) builds workspace default targets only — examples are
+not default targets, so a broken example slips through without this. Wired into
+CI (`examples` job) and `release.sh`.
+
 ### release.sh
 Automated release script using cargo-release.
 
