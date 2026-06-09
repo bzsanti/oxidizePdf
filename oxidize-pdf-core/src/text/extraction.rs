@@ -411,11 +411,12 @@ impl TextExtractor {
         // or random) order and only the X coordinate gives reading order.
         let is_tagged = fragments.iter().any(|f| f.mcid.is_some());
 
-        // Sort by (row_id asc, y desc, emission_idx/x asc).
-        // row_id primary keeps fragments from different visual rows in
-        // separate Y-bucket groups. Within a row, we sort by Y descending
-        // (so higher-on-page fragments come first) and then by emission index
-        // (tagged) or X coordinate (non-tagged).
+        // Sort for line GROUPING only: row_id, then Y descending, then X.
+        // row_id keeps fragments from different visual rows in separate
+        // Y-bucket groups; Y descending puts higher-on-page lines first. The
+        // X tie-break only makes same-line fragments adjacent for grouping —
+        // the authoritative reading order WITHIN each line is decided per line
+        // below (#302 symptom 1), so this grouping order is not the final order.
         let mut indexed: Vec<(u32, usize, &TextFragment)> = row_ids
             .iter()
             .copied()
@@ -425,34 +426,53 @@ impl TextExtractor {
         indexed.sort_by(|a, b| {
             a.0.cmp(&b.0)
                 .then(b.2.y.total_cmp(&a.2.y))
-                .then(if is_tagged {
-                    a.1.cmp(&b.1)
-                } else {
-                    a.2.x.total_cmp(&b.2.x)
-                })
+                .then(a.2.x.total_cmp(&b.2.x))
         });
 
-        let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
+        // Group into visual lines, carrying each fragment's emission index so
+        // the per-line ordering decision below can restore emission order.
+        let mut lines: Vec<Vec<(usize, &TextFragment)>> = Vec::new();
         let mut last_seen_row_id: Option<u32> = None;
-        for (rid, _idx, frag) in indexed {
+        for (rid, idx, frag) in indexed {
             let same_batch = last_seen_row_id == Some(rid);
             let placed = same_batch
                 && lines.last_mut().is_some_and(|line| {
-                    let head = line[0];
+                    let head = line[0].1;
                     let tol = (head.height.min(frag.height)) * 0.2;
                     (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
                 });
             if placed {
-                lines.last_mut().unwrap().push(frag);
+                lines.last_mut().unwrap().push((idx, frag));
             } else {
-                lines.push(vec![frag]);
+                lines.push(vec![(idx, frag)]);
                 last_seen_row_id = Some(rid);
             }
         }
 
+        // Decide reading order per visual line (#302 symptom 1).
+        //
+        // X-sort is wrong when one line mixes fonts whose glyph metrics differ
+        // (e.g. an italic particle symbol set in roman body text): the producer
+        // gives the font-switched run an x-origin that falls INSIDE the x-span
+        // of its neighbours, so sorting by x interleaves it
+        // ("to the Z boson" -> "tZboso theon"). The content stream still emits
+        // these runs in correct reading order, so when a line's emission order
+        // has no DISJOINT backward x-step (only span overlaps, or is already
+        // x-monotone) we keep emission order. A disjoint backward step signals
+        // a genuinely scrambled stream (right-to-left / random generators), for
+        // which x-order stays authoritative. Deciding per line — not per
+        // column — prevents one scrambled line from forcing x-sort on the rest.
         lines
             .into_iter()
-            .map(|line| build_line_fragment(line, self.options.space_threshold))
+            .map(|mut line| {
+                if is_tagged || line_prefers_emission_order(&line) {
+                    line.sort_by_key(|&(idx, _)| idx);
+                } else {
+                    line.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
+                }
+                let frags: Vec<&TextFragment> = line.into_iter().map(|(_, f)| f).collect();
+                build_line_fragment(frags, self.options.space_threshold)
+            })
             .collect()
     }
 
@@ -1988,6 +2008,38 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
     result
 }
 
+/// Decide whether a single visual line should be read in emission order.
+///
+/// `line` holds `(emission_index, fragment)` pairs for one visual line in any
+/// order. Returns `true` when, walked in emission order, the line has no
+/// DISJOINT backward x-step: every fragment either advances in x or only
+/// overlaps its predecessor's box (a font switch whose glyph box reaches back
+/// over the previous run — #302 symptom 1). A backward step to a non-
+/// overlapping x position means the emission order is not reading order
+/// (right-to-left / random generators), so x-order should be used instead.
+/// Lines that are already x-monotone in emission satisfy this trivially and
+/// decode identically under either policy.
+fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
+    if line.len() < 2 {
+        return true;
+    }
+    let mut em: Vec<&(usize, &TextFragment)> = line.iter().collect();
+    em.sort_by_key(|&&(idx, _)| idx);
+    for pair in em.windows(2) {
+        let prev = pair[0].1;
+        let cur = pair[1].1;
+        if cur.x < prev.x {
+            let prev_end = prev.x + prev.width;
+            let cur_end = cur.x + cur.width;
+            let spans_overlap = cur.x < prev_end && cur_end > prev.x;
+            if !spans_overlap {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
     let head = line[0];
     let mut text = String::new();
@@ -2975,6 +3027,56 @@ mod tests {
         ];
         let lines = extractor.merge_into_lines(&tight);
         assert_eq!(lines[0].text, "ABCD", "tight gap must NOT insert space");
+    }
+
+    #[test]
+    fn merge_into_lines_keeps_emission_order_for_font_switch_overlap() {
+        // #302 symptom 1: a font-switched glyph (e.g. the italic particle
+        // symbol "Z" in "to the Z boson") is positioned by the producer with
+        // an x-origin that falls INSIDE the x-span of the preceding roman run
+        // ("to the"). The content stream still delivers it in correct reading
+        // order. Sorting a row purely by x-origin interleaves the overlapping
+        // fragment, yielding "Zto the" instead of "to theZ". When a row's only
+        // backward emission steps are span overlaps (not disjoint jumps),
+        // emission order is the authoritative reading order.
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // emission order = reading order; "Z" overlaps "to t" + "he" in x.
+        let row = vec![
+            tf("to t", 455.5, 400.0, 12.0, 10.0), // 455.5 .. 467.5
+            tf("he", 467.5, 400.0, 10.0, 10.0),   // 467.5 .. 477.5
+            tf("Z", 455.3, 400.0, 23.0, 10.0),    // 455.3 .. 478.3 (overlaps both)
+        ];
+        let lines = extractor.merge_into_lines(&row);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].text, "to theZ",
+            "overlapping font-switch fragment must keep emission (reading) order"
+        );
+    }
+
+    #[test]
+    fn merge_into_lines_uses_x_order_for_disjoint_backward_jump() {
+        // Guard: a genuinely scrambled non-tagged stream (fragments emitted
+        // out of x-order at DISJOINT positions, e.g. right-to-left or random
+        // generators) must still be reordered by x. Here "the" is emitted
+        // after "boson" with no span overlap, so x-order is authoritative.
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let row = vec![
+            tf("boson", 100.0, 400.0, 28.0, 10.0), // 100 .. 128
+            tf("the", 80.0, 400.0, 15.0, 10.0),    // 80 .. 95 (disjoint, left of boson)
+        ];
+        let lines = extractor.merge_into_lines(&row);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].text, "the boson",
+            "disjoint backward emission jump must be reordered by x"
+        );
     }
 
     #[test]
