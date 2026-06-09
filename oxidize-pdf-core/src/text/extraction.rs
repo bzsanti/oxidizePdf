@@ -411,11 +411,12 @@ impl TextExtractor {
         // or random) order and only the X coordinate gives reading order.
         let is_tagged = fragments.iter().any(|f| f.mcid.is_some());
 
-        // Sort by (row_id asc, y desc, emission_idx/x asc).
-        // row_id primary keeps fragments from different visual rows in
-        // separate Y-bucket groups. Within a row, we sort by Y descending
-        // (so higher-on-page fragments come first) and then by emission index
-        // (tagged) or X coordinate (non-tagged).
+        // Sort for line GROUPING only: row_id, then Y descending, then X.
+        // row_id keeps fragments from different visual rows in separate
+        // Y-bucket groups; Y descending puts higher-on-page lines first. The
+        // X tie-break only makes same-line fragments adjacent for grouping —
+        // the authoritative reading order WITHIN each line is decided per line
+        // below (#302 symptom 1), so this grouping order is not the final order.
         let mut indexed: Vec<(u32, usize, &TextFragment)> = row_ids
             .iter()
             .copied()
@@ -425,35 +426,132 @@ impl TextExtractor {
         indexed.sort_by(|a, b| {
             a.0.cmp(&b.0)
                 .then(b.2.y.total_cmp(&a.2.y))
-                .then(if is_tagged {
-                    a.1.cmp(&b.1)
-                } else {
-                    a.2.x.total_cmp(&b.2.x)
-                })
+                .then(a.2.x.total_cmp(&b.2.x))
         });
 
-        let mut lines: Vec<Vec<&TextFragment>> = Vec::new();
+        // Group into visual lines, carrying each fragment's emission index so
+        // the per-line ordering decision below can restore emission order.
+        let mut lines: Vec<Vec<(usize, &TextFragment)>> = Vec::new();
         let mut last_seen_row_id: Option<u32> = None;
-        for (rid, _idx, frag) in indexed {
+        for (rid, idx, frag) in indexed {
             let same_batch = last_seen_row_id == Some(rid);
             let placed = same_batch
                 && lines.last_mut().is_some_and(|line| {
-                    let head = line[0];
+                    let head = line[0].1;
                     let tol = (head.height.min(frag.height)) * 0.2;
                     (head.y - frag.y).abs() < tol && head.mcid == frag.mcid
                 });
             if placed {
-                lines.last_mut().unwrap().push(frag);
+                lines.last_mut().unwrap().push((idx, frag));
             } else {
-                lines.push(vec![frag]);
+                lines.push(vec![(idx, frag)]);
                 last_seen_row_id = Some(rid);
             }
         }
 
+        // Decide reading order per visual line (#302 symptom 1).
+        //
+        // X-sort is wrong when one line mixes fonts whose glyph metrics differ
+        // (e.g. an italic particle symbol set in roman body text): the producer
+        // gives the font-switched run an x-origin that falls INSIDE the x-span
+        // of its neighbours, so sorting by x interleaves it
+        // ("to the Z boson" -> "tZboso theon"). The content stream still emits
+        // these runs in correct reading order, so when a line's emission order
+        // has no DISJOINT backward x-step (only span overlaps, or is already
+        // x-monotone) we keep emission order. A disjoint backward step signals
+        // a genuinely scrambled stream (right-to-left / random generators), for
+        // which x-order stays authoritative. Deciding per line — not per
+        // column — prevents one scrambled line from forcing x-sort on the rest.
         lines
             .into_iter()
-            .map(|line| build_line_fragment(line, self.options.space_threshold))
+            .map(|mut line| {
+                if is_tagged || line_prefers_emission_order(&line) {
+                    line.sort_by_key(|&(idx, _)| idx);
+                } else {
+                    line.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
+                }
+                let frags: Vec<&TextFragment> = line.into_iter().map(|(_, f)| f).collect();
+                self.build_line_fragment(frags)
+            })
             .collect()
+    }
+
+    /// Space-glyph advance for `font_name` in text space (point units at
+    /// `font_size`), or `None` when unknown. Prefers the font's embedded
+    /// `/Widths` entry for code 32; falls back to the Adobe Core-14 AFM space
+    /// width for the standard base fonts (Times/Helvetica/Courier/Symbol/
+    /// ZapfDingbats), which ship no `/Widths` array (#302 symptom 2).
+    fn font_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
+        let info = self.font_cache.get(font_name?)?;
+        if let Some(ref widths) = info.metrics.widths {
+            let first = info.metrics.first_char.unwrap_or(0);
+            if first <= 32 {
+                if let Some(&w) = widths.get((32 - first) as usize) {
+                    if w > 0.0 {
+                        return Some(w / 1000.0 * font_size);
+                    }
+                }
+            }
+        }
+        standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
+    }
+
+    /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
+    /// Anchored to the font's real space-glyph advance when known — word gaps
+    /// scale with the font's space metric, not with a fixed fraction of font
+    /// size — falling back to `space_threshold * font_size` otherwise. Tightly
+    /// set justified text (e.g. Standard-14 Times body) has word gaps near
+    /// 0.2em, far below the legacy 0.3*font_size, which dropped spaces
+    /// ("thequadrupletis"); a font with a 250-unit space then gets a 0.125em
+    /// threshold instead (#302 symptom 2).
+    fn space_gap_threshold(&self, frag: &TextFragment) -> f64 {
+        match self.font_space_advance(frag.font_name.as_deref(), frag.font_size) {
+            Some(adv) if adv > 0.0 => 0.5 * adv,
+            _ => self.options.space_threshold * frag.font_size,
+        }
+    }
+
+    /// Assemble one visual line's fragments into a single line `TextFragment`,
+    /// inserting a space between consecutive fragments whose x-gap exceeds the
+    /// font-anchored [`space_gap_threshold`](Self::space_gap_threshold).
+    fn build_line_fragment(&self, line: Vec<&TextFragment>) -> TextFragment {
+        let head = line[0];
+        let mut text = String::new();
+        let mut x_min = head.x;
+        let mut x_max = head.x + head.width;
+        let mut y_min = head.y;
+        let mut y_max = head.y + head.height;
+
+        for (i, frag) in line.iter().enumerate() {
+            if i > 0 {
+                let prev = line[i - 1];
+                let gap = frag.x - (prev.x + prev.width);
+                if gap > self.space_gap_threshold(frag) {
+                    text.push(' ');
+                }
+            }
+            text.push_str(&frag.text);
+            x_min = x_min.min(frag.x);
+            x_max = x_max.max(frag.x + frag.width);
+            y_min = y_min.min(frag.y);
+            y_max = y_max.max(frag.y + frag.height);
+        }
+
+        TextFragment {
+            text,
+            x: x_min,
+            y: y_min,
+            width: x_max - x_min,
+            height: y_max - y_min,
+            font_size: head.font_size,
+            font_name: head.font_name.clone(),
+            is_bold: head.is_bold,
+            is_italic: head.is_italic,
+            color: head.color,
+            space_decisions: Vec::new(),
+            mcid: head.mcid,
+            struct_tag: head.struct_tag.clone(),
+        }
     }
 
     /// Group consecutive lines into paragraphs based on vertical gap.
@@ -1320,8 +1418,8 @@ impl TextExtractor {
 
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
-                // when the gap exceeds the space threshold.
-                if x_gap > self.options.space_threshold * fragment.font_size {
+                // when the gap exceeds the font-anchored space threshold.
+                if x_gap > self.space_gap_threshold(fragment) {
                     current.text.push(' ');
                 }
                 current.text.push_str(&fragment.text);
@@ -1988,43 +2086,63 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
     result
 }
 
-fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
-    let head = line[0];
-    let mut text = String::new();
-    let mut x_min = head.x;
-    let mut x_max = head.x + head.width;
-    let mut y_min = head.y;
-    let mut y_max = head.y + head.height;
-
-    for (i, frag) in line.iter().enumerate() {
-        if i > 0 {
-            let prev = line[i - 1];
-            let gap = frag.x - (prev.x + prev.width);
-            if gap > space_threshold * frag.font_size {
-                text.push(' ');
-            }
-        }
-        text.push_str(&frag.text);
-        x_min = x_min.min(frag.x);
-        x_max = x_max.max(frag.x + frag.width);
-        y_min = y_min.min(frag.y);
-        y_max = y_max.max(frag.y + frag.height);
+/// Decide whether a single visual line should be read in emission order.
+///
+/// `line` holds `(emission_index, fragment)` pairs for one visual line in any
+/// order. Returns `true` when, walked in emission order, the line has no
+/// DISJOINT backward x-step — i.e. no fragment lands entirely to the LEFT of
+/// everything emitted so far on the line. Such a left jump is the signature of
+/// a genuinely scrambled stream (right-to-left / random generators), for which
+/// x-order is authoritative.
+///
+/// The comparison is against the line's running left edge, not the immediately
+/// preceding fragment: dense bodies are split into sub-word glyph runs, so a
+/// run that legitimately backfills the line (a font-switched math symbol, or a
+/// word whose run starts left of the previous short run — #302 symptom 1 /
+/// #305) overlaps the *covered span* even when it does not overlap the single
+/// fragment right before it. As long as it does not jump past the line's left
+/// edge, emission order is preserved. Lines that are already x-monotone in
+/// emission satisfy this trivially and decode identically under either policy.
+fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
+    if line.len() < 2 {
+        return true;
     }
+    let mut em: Vec<&(usize, &TextFragment)> = line.iter().collect();
+    em.sort_by_key(|&&(idx, _)| idx);
+    let mut min_start = em[0].1.x;
+    for &&(_, f) in &em[1..] {
+        let end = f.x + f.width;
+        // A fragment whose right edge is at or left of the leftmost glyph seen
+        // so far is a true backward jump — emission order is not reading order.
+        if end <= min_start {
+            return false;
+        }
+        min_start = min_start.min(f.x);
+    }
+    true
+}
 
-    TextFragment {
-        text,
-        x: x_min,
-        y: y_min,
-        width: x_max - x_min,
-        height: y_max - y_min,
-        font_size: head.font_size,
-        font_name: head.font_name.clone(),
-        is_bold: head.is_bold,
-        is_italic: head.is_italic,
-        color: head.color,
-        space_decisions: Vec::new(),
-        mcid: head.mcid,
-        struct_tag: head.struct_tag.clone(),
+/// Space-glyph advance width (1000-em units) for the Adobe Core-14 base fonts,
+/// keyed by `/BaseFont`. Subset prefixes (`ABCDEF+`) are stripped; common
+/// substitute names (Arial→Helvetica, TimesNewRoman→Times, CourierNew→Courier)
+/// map to their metric-compatible base. Returns `None` for unknown fonts, which
+/// leaves the caller on its fixed-fraction fallback. These fonts legitimately
+/// ship no `/Widths` array, so their space metric is only available here.
+fn standard_14_space_width(base_font: &str) -> Option<f64> {
+    let name = base_font.rsplit('+').next().unwrap_or(base_font);
+    let lower = name.to_ascii_lowercase();
+    if lower.contains("courier") {
+        Some(600.0)
+    } else if lower.contains("helvetica") || lower.contains("arial") {
+        Some(278.0)
+    } else if lower.contains("times") {
+        Some(250.0)
+    } else if lower == "symbol" {
+        Some(250.0)
+    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
+        Some(278.0)
+    } else {
+        None
     }
 }
 
@@ -2975,6 +3093,116 @@ mod tests {
         ];
         let lines = extractor.merge_into_lines(&tight);
         assert_eq!(lines[0].text, "ABCD", "tight gap must NOT insert space");
+    }
+
+    #[test]
+    fn standard_14_space_width_maps_base_fonts_and_substitutes() {
+        // Adobe Core-14 AFM space advances, with subset prefixes stripped and
+        // metric-compatible substitutes folded in (#302 symptom 2).
+        assert_eq!(super::standard_14_space_width("Times-Roman"), Some(250.0));
+        assert_eq!(
+            super::standard_14_space_width("Times-BoldItalic"),
+            Some(250.0)
+        );
+        assert_eq!(super::standard_14_space_width("Helvetica"), Some(278.0));
+        assert_eq!(super::standard_14_space_width("Courier-Bold"), Some(600.0));
+        assert_eq!(super::standard_14_space_width("Symbol"), Some(250.0));
+        assert_eq!(super::standard_14_space_width("ZapfDingbats"), Some(278.0));
+        // subset prefix stripped
+        assert_eq!(
+            super::standard_14_space_width("ABCDEF+Times-Roman"),
+            Some(250.0)
+        );
+        // metric-compatible substitutes
+        assert_eq!(super::standard_14_space_width("Arial-BoldMT"), Some(278.0));
+        assert_eq!(
+            super::standard_14_space_width("TimesNewRomanPSMT"),
+            Some(250.0)
+        );
+        assert_eq!(
+            super::standard_14_space_width("CourierNewPSMT"),
+            Some(600.0)
+        );
+        // unknown / embedded fonts fall through to the caller's fallback
+        assert_eq!(super::standard_14_space_width("Poppins-Regular"), None);
+        assert_eq!(super::standard_14_space_width("VUNXGH+Calibri"), None);
+    }
+
+    #[test]
+    fn merge_into_lines_keeps_emission_order_for_font_switch_overlap() {
+        // #302 symptom 1: a font-switched glyph (e.g. the italic particle
+        // symbol "Z" in "to the Z boson") is positioned by the producer with
+        // an x-origin that falls INSIDE the x-span of the preceding roman run
+        // ("to the"). The content stream still delivers it in correct reading
+        // order. Sorting a row purely by x-origin interleaves the overlapping
+        // fragment, yielding "Zto the" instead of "to theZ". When a row's only
+        // backward emission steps are span overlaps (not disjoint jumps),
+        // emission order is the authoritative reading order.
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        // emission order = reading order; "Z" overlaps "to t" + "he" in x.
+        let row = vec![
+            tf("to t", 455.5, 400.0, 12.0, 10.0), // 455.5 .. 467.5
+            tf("he", 467.5, 400.0, 10.0, 10.0),   // 467.5 .. 477.5
+            tf("Z", 455.3, 400.0, 23.0, 10.0),    // 455.3 .. 478.3 (overlaps both)
+        ];
+        let lines = extractor.merge_into_lines(&row);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].text, "to theZ",
+            "overlapping font-switch fragment must keep emission (reading) order"
+        );
+    }
+
+    #[test]
+    fn merge_into_lines_keeps_emission_when_run_backfills_covered_span() {
+        // #305: dense justified body text is split into sub-word fragments by
+        // the font's arbitrary glyph runs. A later word ("described", x 492..537)
+        // is emitted with a backward x-origin that lands INSIDE the span already
+        // covered by the line ("...selections", 479..521), but does NOT overlap
+        // the short immediately-preceding fragment ("s", 517..521). Emission is
+        // still the reading order, so the line must keep it — the overlap test
+        // has to consider the line's running extent, not just the previous
+        // fragment. (Real case: Higgs p5 "kinematic selections described in".)
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let row = vec![
+            tf("selection", 479.0, 400.0, 38.0, 8.0), // 479..517
+            tf("s", 517.0, 400.0, 4.0, 8.0),          // 517..521  short predecessor
+            tf("d", 492.0, 400.0, 4.0, 8.0),          // 492..496  backfill, no overlap with "s"
+            tf("escribed", 496.0, 400.0, 41.0, 8.0),  // 496..537
+        ];
+        let lines = extractor.merge_into_lines(&row);
+        assert_eq!(
+            lines[0].text, "selectionsdescribed",
+            "a run that backfills the line's covered span must keep emission order"
+        );
+    }
+
+    #[test]
+    fn merge_into_lines_uses_x_order_for_disjoint_backward_jump() {
+        // Guard: a genuinely scrambled non-tagged stream (fragments emitted
+        // out of x-order at DISJOINT positions, e.g. right-to-left or random
+        // generators) must still be reordered by x. Here "the" is emitted
+        // after "boson" with no span overlap, so x-order is authoritative.
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let row = vec![
+            tf("boson", 100.0, 400.0, 28.0, 10.0), // 100 .. 128
+            tf("the", 80.0, 400.0, 15.0, 10.0),    // 80 .. 95 (disjoint, left of boson)
+        ];
+        let lines = extractor.merge_into_lines(&row);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(
+            lines[0].text, "the boson",
+            "disjoint backward emission jump must be reordered by x"
+        );
     }
 
     #[test]
