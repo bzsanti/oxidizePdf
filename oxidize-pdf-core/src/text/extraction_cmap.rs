@@ -926,6 +926,44 @@ mod tests {
     }
 
     #[test]
+    fn simple_font_one_byte_tounicode_under_two_byte_codespace_decodes() {
+        // #302 symptom 3 end-to-end: a simple TrueType font whose ToUnicode
+        // declares the generic 2-byte codespace <0000><FFFF> but maps 1-byte
+        // codes. Before the fix `decode_with_cmap` returned "" for any string
+        // containing such a code, the result was rejected as garbage, and the
+        // wrong base-encoding fallback produced U+FFFD. The full decode chain
+        // must now recover the real characters (here U+2019 RIGHT SINGLE
+        // QUOTATION MARK for code 0x92, followed by a comma).
+        let cmap_src = br#"begincmap
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+2 beginbfchar
+<92> <2019>
+<2C> <002C>
+endbfchar
+endcmap
+"#;
+        let cmap = crate::text::cmap::CMap::parse(cmap_src).unwrap();
+        let font_info = FontInfo {
+            name: "VUNXGH+ArialMT".to_string(),
+            font_type: "TrueType".to_string(),
+            encoding: Some("WinAnsiEncoding".to_string()),
+            to_unicode: Some(cmap),
+            differences: None,
+            descendant_font: None,
+            cid_to_gid_map: None,
+            cid_ordering: None,
+            metrics: FontMetrics::default(),
+            cid_encoding: None,
+        };
+        let out = decode_text_with_font(&[0x92, 0x2C], &font_info).unwrap();
+        assert_eq!(out, "\u{2019},");
+    }
+
+    #[test]
     fn embedded_encoding_cmap_decodes_via_cid_table() {
         use crate::text::cid_to_unicode::CidCollection;
         use crate::text::encoding_cmap::{CidEncoding, EncodingCMap};

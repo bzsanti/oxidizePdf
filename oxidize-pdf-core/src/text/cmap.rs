@@ -315,17 +315,14 @@ impl CMap {
 
     /// Map a character code to its destination
     pub fn map(&self, code: &[u8]) -> Option<Vec<u8>> {
-        // Check if code is in valid codespace
-        if !self.is_valid_code(code) {
-            return None;
-        }
-
-        // For predefined Identity CMaps
-        if let CMapType::Predefined(name) = &self.cmap_type {
-            if name.starts_with("Identity") {
-                return Some(code.to_vec());
-            }
-        }
+        // Explicit bfchar/bfrange mappings take precedence and are matched by
+        // their own key length, independent of the (frequently sloppy)
+        // codespacerange. Producers routinely declare the generic 2-byte
+        // Identity codespace <0000><FFFF> for a *simple* font whose ToUnicode
+        // entries are 1-byte bfchars; gating these behind a strict
+        // length-equal codespace check made `map` return None for every such
+        // code, blanking the whole stream and forcing a wrong base-encoding
+        // fallback that turned typographic glyphs into U+FFFD (#302 symptom 3).
 
         // Check single mappings first (cached)
         if let Some(dst) = self.single_mappings.get(code) {
@@ -359,6 +356,21 @@ impl CMap {
 
                     return Some(result);
                 }
+            }
+        }
+
+        // Codespace-gated passthroughs (Identity). These synthesise a result
+        // from the code itself rather than an explicit table, so they must
+        // stay constrained to the declared codespace to avoid swallowing
+        // out-of-range bytes.
+        if !self.is_valid_code(code) {
+            return None;
+        }
+
+        // For predefined Identity CMaps
+        if let CMapType::Predefined(name) = &self.cmap_type {
+            if name.starts_with("Identity") {
+                return Some(code.to_vec());
             }
         }
 
@@ -995,6 +1007,37 @@ endcmap
         assert_eq!(cmap.map(&[0x41]), Some(vec![0x00, 0x41])); // 'A'
         assert_eq!(cmap.map(&[0x7E]), Some(vec![0x00, 0x7E])); // '~'
         assert_eq!(cmap.map(&[0x7F]), None); // Out of range
+    }
+
+    #[test]
+    fn test_one_byte_bfchar_under_two_byte_codespace() {
+        // #302 symptom 3: producers frequently declare the generic Identity
+        // codespace <0000><FFFF> (2-byte) for a *simple* font whose ToUnicode
+        // entries are actually 1-byte bfchars. The strict length check in
+        // `CodeRange::contains` rejected every 1-byte code, so `map` returned
+        // None for the whole stream and the decoder fell back to the wrong
+        // base encoding — turning typographic glyphs (curly quotes, U+2019)
+        // into U+FFFD. A 1-byte code that has an explicit bfchar entry must
+        // decode regardless of the (sloppy) 2-byte codespace declaration.
+        let cmap_data = br#"/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+3 beginbfchar
+<2C> <002C>
+<92> <2019>
+<61> <0061>
+endbfchar
+endcmap
+"#;
+        let cmap = CMap::parse(cmap_data).unwrap();
+        assert_eq!(cmap.map(&[0x92]), Some(vec![0x20, 0x19]), "rsquo 0x92");
+        assert_eq!(cmap.map(&[0x2C]), Some(vec![0x00, 0x2C]), "comma 0x2C");
+        assert_eq!(cmap.map(&[0x61]), Some(vec![0x00, 0x61]), "'a' 0x61");
     }
 
     #[test]
