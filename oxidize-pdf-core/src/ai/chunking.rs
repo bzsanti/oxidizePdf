@@ -352,6 +352,12 @@ impl DocumentChunker {
             return Ok(Vec::new());
         }
 
+        // Normalize degenerate configuration without changing the public
+        // constructor: a chunk must hold at least one token, and the overlap must
+        // leave room for `start` to advance by at least one token between chunks.
+        let chunk_size = self.chunk_size.max(1);
+        let overlap = self.overlap.min(chunk_size - 1);
+
         let mut chunks = Vec::new();
         let mut start = 0;
         let mut chunk_idx = 0;
@@ -359,12 +365,16 @@ impl DocumentChunker {
 
         while start < tokens.len() {
             // Calculate end position for this chunk
-            let mut end = (start + self.chunk_size).min(tokens.len());
+            let mut end = (start + chunk_size).min(tokens.len());
 
             // Try to respect sentence boundaries
             let sentence_boundary_respected = if end < tokens.len() && end > start {
-                // Look for sentence endings in the last few tokens
-                let search_window = (end.saturating_sub(10)..end).rev();
+                // Look for sentence endings in the last few tokens, but never
+                // before this chunk's own start: backtracking past `start` would
+                // collapse `end` to <= start, panicking on tokens[start..end] and
+                // stalling forward progress (#308).
+                let window_start = end.saturating_sub(10).max(start + 1);
+                let search_window = (window_start..end).rev();
                 let mut found_boundary = false;
 
                 for i in search_window {
@@ -452,13 +462,12 @@ impl DocumentChunker {
 
             // Move start position with overlap
             if end < tokens.len() {
-                // Not at end yet, apply overlap
-                start = end.saturating_sub(self.overlap);
-
-                // Ensure we make progress (avoid infinite loop)
-                if start + self.chunk_size <= end {
-                    start = end;
-                }
+                // Apply overlap, but guarantee strict forward progress regardless
+                // of how far sentence-boundary backtracking pulled `end` back or
+                // how `overlap` compares to the chunk size (#308). `end > start`
+                // always holds here, so falling back to `start = end` advances.
+                let next_start = end.saturating_sub(overlap);
+                start = if next_start > start { next_start } else { end };
             } else {
                 // Reached the end
                 break;
@@ -764,5 +773,135 @@ mod tests {
             "Chunking 100 pages took {:?}, should be < 500ms",
             duration
         );
+    }
+
+    /// Run `chunk_text` on a worker thread so a reintroduced infinite loop fails
+    /// the test with a timeout instead of hanging the whole test runner.
+    fn chunk_text_bounded(chunker: DocumentChunker, text: &str) -> Vec<DocumentChunk> {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let (tx, rx) = mpsc::channel();
+        let owned = text.to_string();
+        std::thread::spawn(move || {
+            let result = chunker.chunk_text(&owned);
+            // Ignore send errors: the receiver may have already timed out.
+            let _ = tx.send(result);
+        });
+
+        match rx.recv_timeout(Duration::from_secs(10)) {
+            Ok(result) => result.expect("chunk_text returned an error"),
+            Err(_) => panic!("chunk_text did not terminate within 10s (infinite loop, #308)"),
+        }
+    }
+
+    /// Reconstruct the set of source tokens covered by the chunks. Every input
+    /// token must appear in at least one chunk (coverage), proving the loop both
+    /// terminated and did not silently drop content.
+    fn assert_full_token_coverage(text: &str, chunks: &[DocumentChunk]) {
+        let mut covered = std::collections::HashSet::new();
+        for chunk in chunks {
+            for tok in chunk.content.split_whitespace() {
+                covered.insert(tok.to_string());
+            }
+        }
+        for tok in text.split_whitespace() {
+            assert!(
+                covered.contains(tok),
+                "token {:?} from the source is missing from all chunks",
+                tok
+            );
+        }
+    }
+
+    #[test]
+    fn test_no_infinite_loop_when_sentence_boundary_at_chunk_start() {
+        // Exact reproduction from issue #308: chunk_size=10, overlap=2, and the
+        // only sentence-ending token in the first window is at index 0 ("Hi.").
+        // Pre-fix, sentence-boundary backtracking set end=1, start=0 stayed put,
+        // and the loop never advanced.
+        let chunker = DocumentChunker::new(10, 2);
+        let text = "Hi. word word word word word word word word word word word word";
+
+        let chunks = chunk_text_bounded(chunker, text);
+
+        assert!(!chunks.is_empty(), "must produce at least one chunk");
+        assert_full_token_coverage(text, &chunks);
+        // Chunk indices must be strictly sequential (no repeats from a stalled loop).
+        for (i, chunk) in chunks.iter().enumerate() {
+            assert_eq!(chunk.chunk_index, i, "chunk indices must be sequential");
+        }
+    }
+
+    #[test]
+    fn test_no_infinite_loop_when_overlap_meets_or_exceeds_chunk_size() {
+        // overlap >= chunk_size leaves no room for the overlap to advance `start`.
+        // The loop must still make forward progress via the strict-advance guard.
+        let text = (0..30)
+            .map(|i| format!("word{}", i))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        for (chunk_size, overlap) in [(3usize, 5usize), (4, 4), (1, 10)] {
+            let chunker = DocumentChunker::new(chunk_size, overlap);
+            let chunks = chunk_text_bounded(chunker, &text);
+            assert!(
+                !chunks.is_empty(),
+                "chunk_size={chunk_size}, overlap={overlap}: must produce chunks"
+            );
+            assert_full_token_coverage(&text, &chunks);
+        }
+    }
+
+    #[test]
+    fn test_no_panic_when_chunk_size_below_search_window() {
+        // chunk_size < 10 means the raw sentence-boundary search window
+        // (end-10 .. end) can reach below `start`. The window lower bound must be
+        // clamped so `end` never collapses to <= start (would panic on the slice
+        // tokens[start..end]).
+        let text =
+            "first. second third fourth. fifth sixth seventh eighth. ninth tenth eleventh twelfth";
+        let chunker = DocumentChunker::new(4, 1);
+
+        let chunks = chunk_text_bounded(chunker, text);
+
+        assert!(!chunks.is_empty());
+        assert_full_token_coverage(text, &chunks);
+        // No empty chunks: every chunk holds at least one token.
+        for chunk in &chunks {
+            assert!(chunk.tokens >= 1, "chunk {} is empty", chunk.chunk_index);
+        }
+    }
+
+    #[test]
+    fn test_zero_chunk_size_terminates_with_coverage() {
+        // Degenerate chunk_size=0 must not loop forever; it is normalized to a
+        // minimum of one token per chunk.
+        let text = "alpha beta gamma delta epsilon";
+        let chunker = DocumentChunker::new(0, 0);
+
+        let chunks = chunk_text_bounded(chunker, text);
+
+        assert!(!chunks.is_empty());
+        assert_full_token_coverage(text, &chunks);
+    }
+
+    #[test]
+    fn test_sentence_boundary_still_respected_after_loop_fix() {
+        // Regression guard: the loop fix must not disable the sentence-boundary
+        // feature. With a period mid-window, the first chunk should end at the
+        // sentence boundary, not at the raw chunk_size cut.
+        let chunker = DocumentChunker::new(10, 2);
+        let text = "one two three four five. six seven eight nine ten eleven twelve thirteen";
+
+        let chunks = chunk_text_bounded(chunker, text);
+
+        assert!(chunks[0].metadata.sentence_boundary_respected);
+        assert!(
+            chunks[0].content.ends_with("five."),
+            "first chunk should end at the sentence boundary, got: {:?}",
+            chunks[0].content
+        );
+        assert_full_token_coverage(text, &chunks);
     }
 }
