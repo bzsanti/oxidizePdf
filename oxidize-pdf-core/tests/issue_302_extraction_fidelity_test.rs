@@ -64,6 +64,44 @@ fn symptom2_word_spaces_preserved_on_tight_justified_text() {
     );
 }
 
+/// Extract a given page with the partition options and return its joined text.
+fn higgs_page_text(page: u32) -> String {
+    let reader = PdfReader::open(HIGGS).expect("open Higgs fixture");
+    let doc = PdfDocument::new(reader);
+    let opts = ExtractionOptions {
+        preserve_layout: true,
+        reconstruct_paragraphs: true,
+        ..Default::default()
+    };
+    let mut ex = TextExtractor::with_options(opts);
+    let extracted = ex.extract_from_page(&doc, page).expect("extract");
+    extracted
+        .fragments
+        .iter()
+        .map(|f| f.text.clone())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+#[test]
+fn issue_305_subword_backfill_run_not_reordered() {
+    // #305: dense justified body split into sub-word runs; "described" backfills
+    // the span of "...selections" and x-sort interleaved it into
+    // "sedleescctriiobnesd". Across the document the reading order must hold.
+    // (Higgs page 5 carries "...the kinematic selections described in...".)
+    let text = higgs_page_text(5);
+    assert!(
+        text.contains("selectionsdescribed") || text.contains("selections described"),
+        "sub-word backfill reorder: 'selections described' scrambled:\n{}",
+        snippet(&text, "kinematic")
+    );
+    assert!(
+        !text.contains("sedlee") && !text.contains("scctriio"),
+        "scramble 'sedleescctriiobnesd' present:\n{}",
+        snippet(&text, "kinematic")
+    );
+}
+
 fn snippet(text: &str, needle: &str) -> String {
     text.lines()
         .find(|l| l.contains(needle))

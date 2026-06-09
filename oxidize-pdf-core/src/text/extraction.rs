@@ -2090,30 +2090,34 @@ fn assign_row_ids(fragments: &[TextFragment]) -> Vec<u32> {
 ///
 /// `line` holds `(emission_index, fragment)` pairs for one visual line in any
 /// order. Returns `true` when, walked in emission order, the line has no
-/// DISJOINT backward x-step: every fragment either advances in x or only
-/// overlaps its predecessor's box (a font switch whose glyph box reaches back
-/// over the previous run — #302 symptom 1). A backward step to a non-
-/// overlapping x position means the emission order is not reading order
-/// (right-to-left / random generators), so x-order should be used instead.
-/// Lines that are already x-monotone in emission satisfy this trivially and
-/// decode identically under either policy.
+/// DISJOINT backward x-step — i.e. no fragment lands entirely to the LEFT of
+/// everything emitted so far on the line. Such a left jump is the signature of
+/// a genuinely scrambled stream (right-to-left / random generators), for which
+/// x-order is authoritative.
+///
+/// The comparison is against the line's running left edge, not the immediately
+/// preceding fragment: dense bodies are split into sub-word glyph runs, so a
+/// run that legitimately backfills the line (a font-switched math symbol, or a
+/// word whose run starts left of the previous short run — #302 symptom 1 /
+/// #305) overlaps the *covered span* even when it does not overlap the single
+/// fragment right before it. As long as it does not jump past the line's left
+/// edge, emission order is preserved. Lines that are already x-monotone in
+/// emission satisfy this trivially and decode identically under either policy.
 fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
     if line.len() < 2 {
         return true;
     }
     let mut em: Vec<&(usize, &TextFragment)> = line.iter().collect();
     em.sort_by_key(|&&(idx, _)| idx);
-    for pair in em.windows(2) {
-        let prev = pair[0].1;
-        let cur = pair[1].1;
-        if cur.x < prev.x {
-            let prev_end = prev.x + prev.width;
-            let cur_end = cur.x + cur.width;
-            let spans_overlap = cur.x < prev_end && cur_end > prev.x;
-            if !spans_overlap {
-                return false;
-            }
+    let mut min_start = em[0].1.x;
+    for &&(_, f) in &em[1..] {
+        let end = f.x + f.width;
+        // A fragment whose right edge is at or left of the leftmost glyph seen
+        // so far is a true backward jump — emission order is not reading order.
+        if end <= min_start {
+            return false;
         }
+        min_start = min_start.min(f.x);
     }
     true
 }
@@ -3149,6 +3153,33 @@ mod tests {
         assert_eq!(
             lines[0].text, "to theZ",
             "overlapping font-switch fragment must keep emission (reading) order"
+        );
+    }
+
+    #[test]
+    fn merge_into_lines_keeps_emission_when_run_backfills_covered_span() {
+        // #305: dense justified body text is split into sub-word fragments by
+        // the font's arbitrary glyph runs. A later word ("described", x 492..537)
+        // is emitted with a backward x-origin that lands INSIDE the span already
+        // covered by the line ("...selections", 479..521), but does NOT overlap
+        // the short immediately-preceding fragment ("s", 517..521). Emission is
+        // still the reading order, so the line must keep it — the overlap test
+        // has to consider the line's running extent, not just the previous
+        // fragment. (Real case: Higgs p5 "kinematic selections described in".)
+        let extractor = TextExtractor::with_options(ExtractionOptions {
+            reconstruct_paragraphs: true,
+            ..Default::default()
+        });
+        let row = vec![
+            tf("selection", 479.0, 400.0, 38.0, 8.0), // 479..517
+            tf("s", 517.0, 400.0, 4.0, 8.0),          // 517..521  short predecessor
+            tf("d", 492.0, 400.0, 4.0, 8.0),          // 492..496  backfill, no overlap with "s"
+            tf("escribed", 496.0, 400.0, 41.0, 8.0),  // 496..537
+        ];
+        let lines = extractor.merge_into_lines(&row);
+        assert_eq!(
+            lines[0].text, "selectionsdescribed",
+            "a run that backfills the line's covered span must keep emission order"
         );
     }
 
