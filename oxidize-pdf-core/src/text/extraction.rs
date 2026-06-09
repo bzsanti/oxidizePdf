@@ -471,9 +471,87 @@ impl TextExtractor {
                     line.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
                 }
                 let frags: Vec<&TextFragment> = line.into_iter().map(|(_, f)| f).collect();
-                build_line_fragment(frags, self.options.space_threshold)
+                self.build_line_fragment(frags)
             })
             .collect()
+    }
+
+    /// Space-glyph advance for `font_name` in text space (point units at
+    /// `font_size`), or `None` when unknown. Prefers the font's embedded
+    /// `/Widths` entry for code 32; falls back to the Adobe Core-14 AFM space
+    /// width for the standard base fonts (Times/Helvetica/Courier/Symbol/
+    /// ZapfDingbats), which ship no `/Widths` array (#302 symptom 2).
+    fn font_space_advance(&self, font_name: Option<&str>, font_size: f64) -> Option<f64> {
+        let info = self.font_cache.get(font_name?)?;
+        if let Some(ref widths) = info.metrics.widths {
+            let first = info.metrics.first_char.unwrap_or(0);
+            if first <= 32 {
+                if let Some(&w) = widths.get((32 - first) as usize) {
+                    if w > 0.0 {
+                        return Some(w / 1000.0 * font_size);
+                    }
+                }
+            }
+        }
+        standard_14_space_width(&info.name).map(|em| em / 1000.0 * font_size)
+    }
+
+    /// Minimum inter-fragment x-gap that counts as a word space for `frag`.
+    /// Anchored to the font's real space-glyph advance when known — word gaps
+    /// scale with the font's space metric, not with a fixed fraction of font
+    /// size — falling back to `space_threshold * font_size` otherwise. Tightly
+    /// set justified text (e.g. Standard-14 Times body) has word gaps near
+    /// 0.2em, far below the legacy 0.3*font_size, which dropped spaces
+    /// ("thequadrupletis"); a font with a 250-unit space then gets a 0.125em
+    /// threshold instead (#302 symptom 2).
+    fn space_gap_threshold(&self, frag: &TextFragment) -> f64 {
+        match self.font_space_advance(frag.font_name.as_deref(), frag.font_size) {
+            Some(adv) if adv > 0.0 => 0.5 * adv,
+            _ => self.options.space_threshold * frag.font_size,
+        }
+    }
+
+    /// Assemble one visual line's fragments into a single line `TextFragment`,
+    /// inserting a space between consecutive fragments whose x-gap exceeds the
+    /// font-anchored [`space_gap_threshold`](Self::space_gap_threshold).
+    fn build_line_fragment(&self, line: Vec<&TextFragment>) -> TextFragment {
+        let head = line[0];
+        let mut text = String::new();
+        let mut x_min = head.x;
+        let mut x_max = head.x + head.width;
+        let mut y_min = head.y;
+        let mut y_max = head.y + head.height;
+
+        for (i, frag) in line.iter().enumerate() {
+            if i > 0 {
+                let prev = line[i - 1];
+                let gap = frag.x - (prev.x + prev.width);
+                if gap > self.space_gap_threshold(frag) {
+                    text.push(' ');
+                }
+            }
+            text.push_str(&frag.text);
+            x_min = x_min.min(frag.x);
+            x_max = x_max.max(frag.x + frag.width);
+            y_min = y_min.min(frag.y);
+            y_max = y_max.max(frag.y + frag.height);
+        }
+
+        TextFragment {
+            text,
+            x: x_min,
+            y: y_min,
+            width: x_max - x_min,
+            height: y_max - y_min,
+            font_size: head.font_size,
+            font_name: head.font_name.clone(),
+            is_bold: head.is_bold,
+            is_italic: head.is_italic,
+            color: head.color,
+            space_decisions: Vec::new(),
+            mcid: head.mcid,
+            struct_tag: head.struct_tag.clone(),
+        }
     }
 
     /// Group consecutive lines into paragraphs based on vertical gap.
@@ -1340,8 +1418,8 @@ impl TextExtractor {
 
             if should_merge {
                 // Merge this fragment into current, preserving word boundaries
-                // when the gap exceeds the space threshold.
-                if x_gap > self.options.space_threshold * fragment.font_size {
+                // when the gap exceeds the font-anchored space threshold.
+                if x_gap > self.space_gap_threshold(fragment) {
                     current.text.push(' ');
                 }
                 current.text.push_str(&fragment.text);
@@ -2040,43 +2118,27 @@ fn line_prefers_emission_order(line: &[(usize, &TextFragment)]) -> bool {
     true
 }
 
-fn build_line_fragment(line: Vec<&TextFragment>, space_threshold: f64) -> TextFragment {
-    let head = line[0];
-    let mut text = String::new();
-    let mut x_min = head.x;
-    let mut x_max = head.x + head.width;
-    let mut y_min = head.y;
-    let mut y_max = head.y + head.height;
-
-    for (i, frag) in line.iter().enumerate() {
-        if i > 0 {
-            let prev = line[i - 1];
-            let gap = frag.x - (prev.x + prev.width);
-            if gap > space_threshold * frag.font_size {
-                text.push(' ');
-            }
-        }
-        text.push_str(&frag.text);
-        x_min = x_min.min(frag.x);
-        x_max = x_max.max(frag.x + frag.width);
-        y_min = y_min.min(frag.y);
-        y_max = y_max.max(frag.y + frag.height);
-    }
-
-    TextFragment {
-        text,
-        x: x_min,
-        y: y_min,
-        width: x_max - x_min,
-        height: y_max - y_min,
-        font_size: head.font_size,
-        font_name: head.font_name.clone(),
-        is_bold: head.is_bold,
-        is_italic: head.is_italic,
-        color: head.color,
-        space_decisions: Vec::new(),
-        mcid: head.mcid,
-        struct_tag: head.struct_tag.clone(),
+/// Space-glyph advance width (1000-em units) for the Adobe Core-14 base fonts,
+/// keyed by `/BaseFont`. Subset prefixes (`ABCDEF+`) are stripped; common
+/// substitute names (Arial→Helvetica, TimesNewRoman→Times, CourierNew→Courier)
+/// map to their metric-compatible base. Returns `None` for unknown fonts, which
+/// leaves the caller on its fixed-fraction fallback. These fonts legitimately
+/// ship no `/Widths` array, so their space metric is only available here.
+fn standard_14_space_width(base_font: &str) -> Option<f64> {
+    let name = base_font.rsplit('+').next().unwrap_or(base_font);
+    let lower = name.to_ascii_lowercase();
+    if lower.contains("courier") {
+        Some(600.0)
+    } else if lower.contains("helvetica") || lower.contains("arial") {
+        Some(278.0)
+    } else if lower.contains("times") {
+        Some(250.0)
+    } else if lower == "symbol" {
+        Some(250.0)
+    } else if lower.contains("zapfdingbats") || lower.contains("dingbats") {
+        Some(278.0)
+    } else {
+        None
     }
 }
 
@@ -3027,6 +3089,39 @@ mod tests {
         ];
         let lines = extractor.merge_into_lines(&tight);
         assert_eq!(lines[0].text, "ABCD", "tight gap must NOT insert space");
+    }
+
+    #[test]
+    fn standard_14_space_width_maps_base_fonts_and_substitutes() {
+        // Adobe Core-14 AFM space advances, with subset prefixes stripped and
+        // metric-compatible substitutes folded in (#302 symptom 2).
+        assert_eq!(super::standard_14_space_width("Times-Roman"), Some(250.0));
+        assert_eq!(
+            super::standard_14_space_width("Times-BoldItalic"),
+            Some(250.0)
+        );
+        assert_eq!(super::standard_14_space_width("Helvetica"), Some(278.0));
+        assert_eq!(super::standard_14_space_width("Courier-Bold"), Some(600.0));
+        assert_eq!(super::standard_14_space_width("Symbol"), Some(250.0));
+        assert_eq!(super::standard_14_space_width("ZapfDingbats"), Some(278.0));
+        // subset prefix stripped
+        assert_eq!(
+            super::standard_14_space_width("ABCDEF+Times-Roman"),
+            Some(250.0)
+        );
+        // metric-compatible substitutes
+        assert_eq!(super::standard_14_space_width("Arial-BoldMT"), Some(278.0));
+        assert_eq!(
+            super::standard_14_space_width("TimesNewRomanPSMT"),
+            Some(250.0)
+        );
+        assert_eq!(
+            super::standard_14_space_width("CourierNewPSMT"),
+            Some(600.0)
+        );
+        // unknown / embedded fonts fall through to the caller's fallback
+        assert_eq!(super::standard_14_space_width("Poppins-Regular"), None);
+        assert_eq!(super::standard_14_space_width("VUNXGH+Calibri"), None);
     }
 
     #[test]
