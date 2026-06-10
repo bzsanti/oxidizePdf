@@ -238,6 +238,20 @@ impl GraphicsContext {
         self
     }
 
+    /// Paint a registered shading into the current clip region with the
+    /// `sh` operator (ISO 32000-1 §8.7.4.2, issue #297).
+    ///
+    /// `name` must match a shading registered on the page via
+    /// [`Page::add_shading`]; the writer emits it under
+    /// `/Resources/Shading/<name>`. `sh` fills the current clip (the whole
+    /// page if unclipped), so callers typically wrap it in `q … W n … Q`
+    /// with a clip path to bound the gradient.
+    pub fn paint_shading(&mut self, name: impl Into<String>) -> &mut Self {
+        self.apply_pending_extgstate().unwrap_or_default();
+        self.operations.push(ops::Op::PaintShading(name.into()));
+        self
+    }
+
     pub fn set_stroke_color(&mut self, color: Color) -> &mut Self {
         self.stroke_color = color;
         self
@@ -1183,6 +1197,18 @@ impl GraphicsContext {
     /// Create clipping path from current path using non-zero winding rule
     pub fn clip(&mut self) -> &mut Self {
         self.operations.push(ops::Op::ClipNonZero);
+        self
+    }
+
+    /// End the current path without filling or stroking (`n`).
+    ///
+    /// Required to terminate a clipping path: the canonical sequence is
+    /// `<path> W n` (ISO 32000-1 §8.5.4). Use after [`clip`](Self::clip)
+    /// before painting a shading into the clipped region.
+    pub fn end_path(&mut self) -> &mut Self {
+        // `n` is a path-painting (no-op) operator, not a colour-painting one,
+        // so no pending-ExtGState flush is needed here (matches `clip`).
+        self.operations.push(ops::Op::EndPath);
         self
     }
 
