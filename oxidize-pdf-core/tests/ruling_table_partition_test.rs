@@ -33,6 +33,11 @@ use oxidize_pdf::pipeline::Element;
 use oxidize_pdf::text::{ExtractionOptions, Table, TextExtractor};
 use oxidize_pdf::{Document, Page};
 
+/// Monotonic sequence so every `bordered_table_inputs` call gets a unique temp
+/// file. The old path `rt_{rows.len()}.pdf` collided across tests that happened
+/// to use the same row count, racing under the parallel test runner (flaky CI).
+static RT_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// Build a 3-column bordered table PDF with the given rows; return (graphics, fragments).
 fn bordered_table_inputs(
     rows: &[[&str; 3]],
@@ -48,7 +53,12 @@ fn bordered_table_inputs(
     }
     page.add_table(&table).unwrap();
     doc.add_page(page);
-    let path = std::env::temp_dir().join(format!("rt_{}.pdf", rows.len()));
+    let path = std::env::temp_dir().join(format!(
+        "rt_{}_{}_{}.pdf",
+        rows.len(),
+        std::process::id(),
+        RT_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
     doc.save(&path).unwrap();
 
     let pdoc = PdfReader::open_document(&path).unwrap();

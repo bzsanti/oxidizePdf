@@ -37,6 +37,13 @@ cargo test --all
 echo "🔍 Running clippy..."
 cargo clippy --all -- -D warnings
 
+# Verify examples compile and the RAG showcase produces non-trivial output.
+# `cargo test --all` does not build examples; this gate keeps a broken or empty
+# example from shipping in a release. `--run` exercises the showcase if the
+# corpus cache is present locally.
+echo "📑 Verifying examples..."
+"$(dirname "$0")/verify-examples.sh" --run
+
 # Perform the release
 echo "📋 Creating release for $VERSION_BUMP version..."
 cargo release $VERSION_BUMP --execute

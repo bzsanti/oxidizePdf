@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.14.0] - 2026-06-10
+
+### Added
+
+- Axial and radial gradients now render. Shadings emit a real PDF `/Function`
+  built from their colour stops — Type 2 (exponential) for two stops, Type 3
+  (stitching) for more — and the required `/ColorSpace`, with the function
+  written as an indirect object. New paint path: `GraphicsContext::paint_shading`
+  (the `sh` operator) plus `GraphicsContext::end_path` (the `n` operator) for
+  terminating a clip path (`W n`). Previously shadings emitted a placeholder
+  `/Function 1` integer, no `/ColorSpace`, and had no paint operator, so no
+  viewer could render a registered gradient (#297).
+
+### Fixed
+
+- Dense and multi-column documents: word scramble from unresolved indirect
+  `/Font` dictionaries, intra-line reordering of overlapping font-switched runs,
+  missing inter-word spaces for Standard-14 fonts without `/Widths`, and `U+FFFD`
+  from ToUnicode CMaps whose codespace length disagreed with their `bfchar`
+  entries (#302, #305).
+- `DocumentChunker::chunk_text` infinite loop on certain inputs (inverted
+  progress guard, unbounded sentence-search window, degenerate config) (#308).
+- `measure_text`/`measure_char` over-measured non-ASCII WinAnsi glyphs; the
+  Core-14 metric tables now carry exact AFM widths for the 0x80–0xFF range, and
+  `get_string_width` measures per character instead of per UTF-8 byte (#309,
+  #313).
+
+### Internal
+
+- Examples are now compiled and verified in CI and gated in the release script
+  (#303); community-health files added (#307).
+
 ## [2.13.0] - 2026-06-07
 
 ### Added

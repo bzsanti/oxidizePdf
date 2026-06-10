@@ -2672,8 +2672,19 @@ impl<W: Write> PdfWriter<W> {
                 page.shadings().iter().collect();
             entries.sort_by_key(|(name, _)| name.as_str());
             for (name, shading) in entries {
+                let mut shading_dict = shading.to_pdf_dictionary()?;
+                // Hoist the inline /Function to an indirect object (issue #297 B).
+                // ISO 32000-1 §8.7.4.5.2: functions are normally indirect. Only
+                // a dictionary value is hoisted; FunctionBased shadings carry an
+                // external function id (an Integer) which is left untouched.
+                if let Some(Object::Dictionary(_)) = shading_dict.get("Function") {
+                    if let Some(func_obj) = shading_dict.remove("Function") {
+                        let func_id = self.allocate_object_id();
+                        self.write_object(func_id, func_obj)?;
+                        shading_dict.set("Function", Object::Reference(func_id));
+                    }
+                }
                 let shading_id = self.allocate_object_id();
-                let shading_dict = shading.to_pdf_dictionary()?;
                 self.write_object(shading_id, Object::Dictionary(shading_dict))?;
                 sh_dict.set(name, Object::Reference(shading_id));
             }

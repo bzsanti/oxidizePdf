@@ -111,98 +111,44 @@ lazy_static::lazy_static! {
 
 lazy_static::lazy_static! {
     static ref FONT_METRICS: HashMap<Font, FontMetrics> = {
+        // Single source of truth: the byte-indexed Adobe AFM tables in
+        // `text/fonts/standard.rs`. Each char-keyed entry is derived by decoding
+        // every WinAnsi byte code to its Unicode character, so this char-keyed
+        // API and the byte-keyed `StandardFontMetrics` API stay in lock-step
+        // (#313). Symbolic fonts (Symbol, ZapfDingbats) are excluded: their
+        // encoding is not WinAnsi and `measure_*` short-circuits them anyway.
+        use crate::text::encoding::winansi_decode_char;
+        use crate::text::fonts::get_standard_font_metrics;
+
+        let fonts = [
+            Font::Helvetica,
+            Font::HelveticaBold,
+            Font::HelveticaOblique,
+            Font::HelveticaBoldOblique,
+            Font::TimesRoman,
+            Font::TimesBold,
+            Font::TimesItalic,
+            Font::TimesBoldItalic,
+            Font::Courier,
+            Font::CourierBold,
+            Font::CourierOblique,
+            Font::CourierBoldOblique,
+        ];
+
         let mut metrics = HashMap::new();
-
-        // Helvetica
-        metrics.insert(Font::Helvetica, FontMetrics::new(556).with_widths(&[
-            (' ', 278), ('!', 278), ('"', 355), ('#', 556), ('$', 556), ('%', 889),
-            ('&', 667), ('\'', 191), ('(', 333), (')', 333), ('*', 389), ('+', 584),
-            (',', 278), ('-', 333), ('.', 278), ('/', 278), ('0', 556), ('1', 556),
-            ('2', 556), ('3', 556), ('4', 556), ('5', 556), ('6', 556), ('7', 556),
-            ('8', 556), ('9', 556), (':', 278), (';', 278), ('<', 584), ('=', 584),
-            ('>', 584), ('?', 556), ('@', 1015), ('A', 667), ('B', 667), ('C', 722),
-            ('D', 722), ('E', 667), ('F', 611), ('G', 778), ('H', 722), ('I', 278),
-            ('J', 500), ('K', 667), ('L', 556), ('M', 833), ('N', 722), ('O', 778),
-            ('P', 667), ('Q', 778), ('R', 722), ('S', 667), ('T', 611), ('U', 722),
-            ('V', 667), ('W', 944), ('X', 667), ('Y', 667), ('Z', 611), ('[', 278),
-            ('\\', 278), (']', 278), ('^', 469), ('_', 556), ('`', 333), ('a', 556),
-            ('b', 556), ('c', 500), ('d', 556), ('e', 556), ('f', 278), ('g', 556),
-            ('h', 556), ('i', 222), ('j', 222), ('k', 500), ('l', 222), ('m', 833),
-            ('n', 556), ('o', 556), ('p', 556), ('q', 556), ('r', 333), ('s', 500),
-            ('t', 278), ('u', 556), ('v', 500), ('w', 722), ('x', 500), ('y', 500),
-            ('z', 500), ('{', 334), ('|', 260), ('}', 334), ('~', 584),
-        ]));
-
-        // Helvetica Bold
-        metrics.insert(Font::HelveticaBold, FontMetrics::new(611).with_widths(&[
-            (' ', 278), ('!', 333), ('"', 474), ('#', 556), ('$', 556), ('%', 889),
-            ('&', 722), ('\'', 238), ('(', 333), (')', 333), ('*', 389), ('+', 584),
-            (',', 278), ('-', 333), ('.', 278), ('/', 278), ('0', 556), ('1', 556),
-            ('2', 556), ('3', 556), ('4', 556), ('5', 556), ('6', 556), ('7', 556),
-            ('8', 556), ('9', 556), (':', 333), (';', 333), ('<', 584), ('=', 584),
-            ('>', 584), ('?', 611), ('@', 975), ('A', 722), ('B', 722), ('C', 722),
-            ('D', 722), ('E', 667), ('F', 611), ('G', 778), ('H', 722), ('I', 278),
-            ('J', 556), ('K', 722), ('L', 611), ('M', 833), ('N', 722), ('O', 778),
-            ('P', 667), ('Q', 778), ('R', 722), ('S', 667), ('T', 611), ('U', 722),
-            ('V', 667), ('W', 944), ('X', 667), ('Y', 667), ('Z', 611), ('[', 333),
-            ('\\', 278), (']', 333), ('^', 584), ('_', 556), ('`', 333), ('a', 556),
-            ('b', 611), ('c', 556), ('d', 611), ('e', 556), ('f', 333), ('g', 611),
-            ('h', 611), ('i', 278), ('j', 278), ('k', 556), ('l', 278), ('m', 889),
-            ('n', 611), ('o', 611), ('p', 611), ('q', 611), ('r', 389), ('s', 556),
-            ('t', 333), ('u', 611), ('v', 556), ('w', 778), ('x', 556), ('y', 556),
-            ('z', 500), ('{', 389), ('|', 280), ('}', 389), ('~', 584),
-        ]));
-
-        // Times Roman
-        metrics.insert(Font::TimesRoman, FontMetrics::new(500).with_widths(&[
-            (' ', 250), ('!', 333), ('"', 408), ('#', 500), ('$', 500), ('%', 833),
-            ('&', 778), ('\'', 180), ('(', 333), (')', 333), ('*', 500), ('+', 564),
-            (',', 250), ('-', 333), ('.', 250), ('/', 278), ('0', 500), ('1', 500),
-            ('2', 500), ('3', 500), ('4', 500), ('5', 500), ('6', 500), ('7', 500),
-            ('8', 500), ('9', 500), (':', 278), (';', 278), ('<', 564), ('=', 564),
-            ('>', 564), ('?', 444), ('@', 921), ('A', 722), ('B', 667), ('C', 667),
-            ('D', 722), ('E', 611), ('F', 556), ('G', 722), ('H', 722), ('I', 333),
-            ('J', 389), ('K', 722), ('L', 611), ('M', 889), ('N', 722), ('O', 722),
-            ('P', 556), ('Q', 722), ('R', 667), ('S', 556), ('T', 611), ('U', 722),
-            ('V', 722), ('W', 944), ('X', 722), ('Y', 722), ('Z', 611), ('[', 333),
-            ('\\', 278), (']', 333), ('^', 469), ('_', 500), ('`', 333), ('a', 444),
-            ('b', 500), ('c', 444), ('d', 500), ('e', 444), ('f', 333), ('g', 500),
-            ('h', 500), ('i', 278), ('j', 278), ('k', 500), ('l', 278), ('m', 778),
-            ('n', 500), ('o', 500), ('p', 500), ('q', 500), ('r', 333), ('s', 389),
-            ('t', 278), ('u', 500), ('v', 500), ('w', 722), ('x', 500), ('y', 500),
-            ('z', 444), ('{', 480), ('|', 200), ('}', 480), ('~', 541),
-        ]));
-
-        // Courier (all characters have the same width)
-        metrics.insert(Font::Courier, FontMetrics::new(600).with_widths(&[
-            (' ', 600), ('!', 600), ('"', 600), ('#', 600), ('$', 600), ('%', 600),
-            ('&', 600), ('\'', 600), ('(', 600), (')', 600), ('*', 600), ('+', 600),
-            (',', 600), ('-', 600), ('.', 600), ('/', 600), ('0', 600), ('1', 600),
-            ('2', 600), ('3', 600), ('4', 600), ('5', 600), ('6', 600), ('7', 600),
-            ('8', 600), ('9', 600), (':', 600), (';', 600), ('<', 600), ('=', 600),
-            ('>', 600), ('?', 600), ('@', 600), ('A', 600), ('B', 600), ('C', 600),
-            ('D', 600), ('E', 600), ('F', 600), ('G', 600), ('H', 600), ('I', 600),
-            ('J', 600), ('K', 600), ('L', 600), ('M', 600), ('N', 600), ('O', 600),
-            ('P', 600), ('Q', 600), ('R', 600), ('S', 600), ('T', 600), ('U', 600),
-            ('V', 600), ('W', 600), ('X', 600), ('Y', 600), ('Z', 600), ('[', 600),
-            ('\\', 600), (']', 600), ('^', 600), ('_', 600), ('`', 600), ('a', 600),
-            ('b', 600), ('c', 600), ('d', 600), ('e', 600), ('f', 600), ('g', 600),
-            ('h', 600), ('i', 600), ('j', 600), ('k', 600), ('l', 600), ('m', 600),
-            ('n', 600), ('o', 600), ('p', 600), ('q', 600), ('r', 600), ('s', 600),
-            ('t', 600), ('u', 600), ('v', 600), ('w', 600), ('x', 600), ('y', 600),
-            ('z', 600), ('{', 600), ('|', 600), ('}', 600), ('~', 600),
-        ]));
-
-        // For now, use the same metrics for variations
-        metrics.insert(Font::HelveticaOblique, metrics[&Font::Helvetica].clone());
-        metrics.insert(Font::HelveticaBoldOblique, metrics[&Font::HelveticaBold].clone());
-        metrics.insert(Font::TimesBold, metrics[&Font::TimesRoman].clone());
-        metrics.insert(Font::TimesItalic, metrics[&Font::TimesRoman].clone());
-        metrics.insert(Font::TimesBoldItalic, metrics[&Font::TimesRoman].clone());
-        metrics.insert(Font::CourierBold, metrics[&Font::Courier].clone());
-        metrics.insert(Font::CourierOblique, metrics[&Font::Courier].clone());
-        metrics.insert(Font::CourierBoldOblique, metrics[&Font::Courier].clone());
-
+        for font in fonts {
+            if let Some(sm) = get_standard_font_metrics(&font) {
+                let mut widths = HashMap::new();
+                for code in 0u16..=255 {
+                    let ch = winansi_decode_char(code as u8);
+                    widths.insert(ch, sm.widths[code as usize] as u16);
+                }
+                metrics.insert(
+                    font,
+                    FontMetrics::from_char_map(widths, sm.default_width as u16),
+                );
+            }
+        }
         metrics
     };
 }
@@ -583,6 +529,72 @@ mod tests {
         assert_eq!(metrics1.default_width, metrics2.default_width);
     }
 
+    // ---- #309: non-ASCII WinAnsi glyph widths ----------------------------
+    // At font_size 1000.0, `measure_char` returns the glyph advance directly in
+    // font units, so these assert exact Adobe Core-14 AFM widths. Expected
+    // values come from the Adobe AFM files (glyph name -> WX), mapped through
+    // the Adobe Glyph List and WinAnsiEncoding (= Windows-1252). Pre-fix every
+    // non-ASCII char resolved to the generic `default_width`.
+
+    fn afm_width(ch: char, font: Font) -> u16 {
+        measure_char(ch, font, 1000.0).round() as u16
+    }
+
+    #[test]
+    fn test_non_ascii_winansi_width_matches_afm_helvetica() {
+        // The exact case from issue #309: í must be 278, not the 556 default.
+        assert_eq!(afm_width('í', Font::Helvetica), 278);
+        assert_ne!(
+            afm_width('í', Font::Helvetica),
+            556,
+            "must not fall back to default_width"
+        );
+        // Accented letters track their base-letter advance in Helvetica.
+        assert_eq!(afm_width('á', Font::Helvetica), 556); // aacute
+        assert_eq!(afm_width('ñ', Font::Helvetica), 556); // ntilde
+        assert_eq!(afm_width('é', Font::Helvetica), 556); // eacute
+                                                          // Typographic punctuation and symbols.
+        assert_eq!(afm_width('—', Font::Helvetica), 1000); // emdash U+2014
+        assert_eq!(afm_width('–', Font::Helvetica), 556); // endash U+2013
+        assert_eq!(afm_width('•', Font::Helvetica), 350); // bullet U+2022
+        assert_eq!(afm_width('©', Font::Helvetica), 737); // copyright
+        assert_eq!(afm_width('€', Font::Helvetica), 556); // euro U+20AC
+        assert_eq!(afm_width('’', Font::Helvetica), 222); // quoteright U+2019
+    }
+
+    #[test]
+    fn test_non_ascii_winansi_width_matches_afm_helvetica_bold() {
+        assert_eq!(afm_width('í', Font::HelveticaBold), 278);
+        assert_eq!(afm_width('é', Font::HelveticaBold), 556);
+        assert_eq!(afm_width('—', Font::HelveticaBold), 1000);
+        assert_eq!(afm_width('’', Font::HelveticaBold), 278); // bold quoteright
+    }
+
+    #[test]
+    fn test_non_ascii_winansi_width_matches_afm_times() {
+        assert_eq!(afm_width('í', Font::TimesRoman), 278); // iacute
+        assert_eq!(afm_width('é', Font::TimesRoman), 444); // eacute
+        assert_eq!(afm_width('ñ', Font::TimesRoman), 500); // ntilde
+        assert_eq!(afm_width('—', Font::TimesRoman), 1000);
+        assert_eq!(afm_width('©', Font::TimesRoman), 760);
+        assert_eq!(afm_width('™', Font::TimesRoman), 980); // trademark U+2122
+    }
+
+    #[test]
+    fn test_non_ascii_winansi_width_courier_is_monospace() {
+        // Every Courier glyph, ASCII or not, is 600 units.
+        for ch in ['í', 'é', 'ñ', '—', '•', '©', '€', '’'] {
+            assert_eq!(afm_width(ch, Font::Courier), 600, "char {ch:?}");
+        }
+    }
+
+    #[test]
+    fn test_non_ascii_measure_text_string() {
+        // "café" — c=500, a=556, f=278, é=556 = 1890 units at size 1000.
+        let w = measure_text("café", &Font::Helvetica, 1000.0);
+        assert!((w - 1890.0).abs() < 0.5, "got {w}");
+    }
+
     #[test]
     fn test_measure_text_helvetica() {
         let text = "Hello";
@@ -834,17 +846,22 @@ mod tests {
 
     #[test]
     fn test_unicode_characters_default_width() {
-        // Test characters not in the metrics tables
-        let unicode_chars = ['β', 'π', '€', '™'];
+        // Characters with no glyph in the WinAnsi-encoded base-14 fonts (Greek,
+        // CJK) must fall back to default_width. Note: € (U+20AC) and ™ (U+2122)
+        // are NOT here — they ARE WinAnsi glyphs and now carry real AFM widths
+        // (see test_non_ascii_winansi_width_matches_afm_*), #309.
+        let unicode_chars = ['β', 'π', 'δ', '中', '雪'];
 
         for ch in &unicode_chars {
             let helvetica_width = measure_char(*ch, Font::Helvetica, 12.0);
             let times_width = measure_char(*ch, Font::TimesRoman, 12.0);
             let courier_width = measure_char(*ch, Font::Courier, 12.0);
 
-            // Should use default widths
-            let helvetica_expected = 556.0 * 12.0 / 1000.0;
-            let times_expected = 500.0 * 12.0 / 1000.0;
+            // Should use each font's default_width (the Adobe AFM/standard.rs
+            // values, single source of truth per #313): Helvetica 278,
+            // Times-Roman 250, Courier 600.
+            let helvetica_expected = 278.0 * 12.0 / 1000.0;
+            let times_expected = 250.0 * 12.0 / 1000.0;
             let courier_expected = 600.0 * 12.0 / 1000.0;
 
             assert!(
@@ -983,16 +1000,17 @@ mod tests {
     }
 
     #[test]
-    fn test_times_bold_uses_base_metrics() {
-        let base_width = measure_char('A', Font::TimesRoman, 12.0);
-        let bold_width = measure_char('A', Font::TimesBold, 12.0);
-        let italic_width = measure_char('A', Font::TimesItalic, 12.0);
-        let bold_italic_width = measure_char('A', Font::TimesBoldItalic, 12.0);
-
-        // All Times variants use base Times Roman metrics
-        assert_eq!(base_width, bold_width);
-        assert_eq!(base_width, italic_width);
-        assert_eq!(base_width, bold_italic_width);
+    fn test_times_variants_use_their_own_metrics() {
+        // Each Times variant carries its own Adobe AFM widths; they are NOT
+        // aliased to Times-Roman (#313). For 'A': Roman 722, Bold 722,
+        // Italic 611, BoldItalic 667.
+        let w = |f| (measure_char('A', f, 1000.0)).round() as u16;
+        assert_eq!(w(Font::TimesRoman), 722);
+        assert_eq!(w(Font::TimesBold), 722);
+        assert_eq!(w(Font::TimesItalic), 611);
+        assert_eq!(w(Font::TimesBoldItalic), 667);
+        // Italic is genuinely distinct from Roman here.
+        assert_ne!(w(Font::TimesItalic), w(Font::TimesRoman));
     }
 
     #[test]

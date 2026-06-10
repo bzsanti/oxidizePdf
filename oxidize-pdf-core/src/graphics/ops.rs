@@ -136,6 +136,11 @@ pub(crate) enum Op {
     /// `mode Tr` — text rendering mode (`0`..=`7` per ISO 32000-1 §9.3.6)
     SetRenderingMode(u8),
 
+    // ── path painting (no-op) ──
+    /// `n` — end the path without filling or stroking. Required to
+    /// terminate a clipping path (`W n`) per ISO 32000-1 §8.5.4.
+    EndPath,
+
     // ── clipping ──
     /// `W` — modify current clipping path using the non-zero winding rule.
     ClipNonZero,
@@ -144,6 +149,12 @@ pub(crate) enum Op {
     /// `W S` — clip then stroke. Used by the `clip_stroke` builder for
     /// the common pattern of stroking the boundary of the clip region.
     ClipStroke,
+
+    // ── shading ──
+    /// `/name sh` — paint the named shading into the current clip region
+    /// (ISO 32000-1 §8.7.4.2). The shading must be registered in
+    /// `/Resources/Shading` under `name`.
+    PaintShading(String),
 
     // ── special ──
     /// `% comment` — a PDF comment line. Used for transparency-group
@@ -325,10 +336,18 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
                 writeln!(out, "{mode} Tr").expect("writing to Vec<u8> never fails");
             }
 
+            // ── path painting (no-op) ──
+            Op::EndPath => out.extend_from_slice(b"n\n"),
+
             // ── clipping ──
             Op::ClipNonZero => out.extend_from_slice(b"W\n"),
             Op::ClipEvenOdd => out.extend_from_slice(b"W*\n"),
             Op::ClipStroke => out.extend_from_slice(b"W S\n"),
+
+            // ── shading ──
+            Op::PaintShading(name) => {
+                writeln!(out, "/{name} sh").expect("writing to Vec<u8> never fails");
+            }
 
             // ── special ──
             Op::Comment(text) => {
@@ -438,5 +457,19 @@ mod tests {
     fn comment_emits_percent_prefix() {
         let ops = vec![Op::Comment("Begin Transparency Group".to_string())];
         assert_eq!(ops_to_string(&ops), "% Begin Transparency Group\n");
+    }
+
+    #[test]
+    fn paint_shading_emits_name_sh() {
+        // Issue #297 D: `/name sh` paints a registered shading (ISO 32000-1 §8.7.4.2).
+        let ops = vec![Op::PaintShading("Grad1".to_string())];
+        assert_eq!(ops_to_string(&ops), "/Grad1 sh\n");
+    }
+
+    #[test]
+    fn clip_end_path_emits_w_then_n() {
+        // ISO 32000-1 §8.5.4: a clip path is terminated by `W n`.
+        let ops = vec![Op::ClipNonZero, Op::EndPath];
+        assert_eq!(ops_to_string(&ops), "W\nn\n");
     }
 }

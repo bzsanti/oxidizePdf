@@ -49,6 +49,163 @@ impl ColorStop {
     }
 }
 
+/// Resolve the PDF colour space name for a set of stops.
+///
+/// A shading dictionary carries a single `/ColorSpace` (ISO 32000-1
+/// §8.7.4.3, Table 78), so all stops must share one space. If every stop
+/// is already in the same device space that space is kept; any mix is
+/// promoted to `DeviceRGB` (the lossless common denominator here, since
+/// `Color::to_rgb` converts Gray/CMYK exactly for our device spaces).
+fn resolve_color_space(stops: &[ColorStop]) -> &'static str {
+    match stops.first() {
+        Some(first) => {
+            let name = first.color.color_space_name();
+            if stops.iter().all(|s| s.color.color_space_name() == name) {
+                name
+            } else {
+                "DeviceRGB"
+            }
+        }
+        None => "DeviceRGB",
+    }
+}
+
+/// Component values of `color` expressed in the given device space.
+fn color_components(color: &Color, space: &str) -> Vec<f64> {
+    match space {
+        "DeviceGray" => vec![match color {
+            Color::Gray(g) => *g,
+            // `resolve_color_space` only yields "DeviceGray" when every stop
+            // is `Color::Gray`, so a non-Gray colour here is a logic bug, not
+            // a case to silently approximate.
+            other => {
+                unreachable!("color_components(DeviceGray) called with non-Gray color: {other:?}")
+            }
+        }],
+        "DeviceCMYK" => {
+            let (c, m, y, k) = color.cmyk_components();
+            vec![c, m, y, k]
+        }
+        // DeviceRGB (and any unexpected name) → exact RGB conversion.
+        _ => match color.to_rgb() {
+            Color::Rgb(r, g, b) => vec![r, g, b],
+            _ => unreachable!("to_rgb always yields Color::Rgb"),
+        },
+    }
+}
+
+/// Build a Type 2 (exponential interpolation) function dictionary mapping
+/// the parametric domain `[0 1]` linearly from `c0` to `c1`
+/// (ISO 32000-1 §7.10.3). Mirrors the Type 2 shape built by
+/// `separation_color::TintTransform::to_pdf_dict`, but over `Color` rather
+/// than raw component vectors.
+fn type2_function(c0: &Color, c1: &Color, space: &str) -> Dictionary {
+    let mut dict = Dictionary::new();
+    dict.set("FunctionType", Object::Integer(2));
+    dict.set(
+        "Domain",
+        Object::Array(vec![Object::Real(0.0), Object::Real(1.0)]),
+    );
+    dict.set(
+        "C0",
+        Object::Array(
+            color_components(c0, space)
+                .into_iter()
+                .map(Object::Real)
+                .collect(),
+        ),
+    );
+    dict.set(
+        "C1",
+        Object::Array(
+            color_components(c1, space)
+                .into_iter()
+                .map(Object::Real)
+                .collect(),
+        ),
+    );
+    dict.set("N", Object::Real(1.0));
+    dict
+}
+
+/// Build the colour-interpolation `/Function` for a gradient from its
+/// stops (ISO 32000-1 §7.10, Functions):
+/// - 1 stop  → a constant Type 2 (`C0 == C1`),
+/// - 2 stops → a single Type 2 (§7.10.3),
+/// - N stops → a Type 3 stitching function (§7.10.4) wrapping `N-1` Type 2
+///   subfunctions, with `/Bounds` at the interior stop positions and
+///   `/Encode` mapping each segment back onto `[0 1]`.
+fn build_color_function(stops: &[ColorStop], space: &str) -> Result<Dictionary> {
+    match stops {
+        [] => Err(PdfError::InvalidStructure(
+            "Shading must have at least one color stop".to_string(),
+        )),
+        [only] => Ok(type2_function(&only.color, &only.color, space)),
+        [a, b] => Ok(type2_function(&a.color, &b.color, space)),
+        _ => {
+            let subfunctions: Vec<Object> = stops
+                .windows(2)
+                .map(|w| Object::Dictionary(type2_function(&w[0].color, &w[1].color, space)))
+                .collect();
+
+            // Interior stop positions become the stitching bounds.
+            let bounds: Vec<Object> = stops[1..stops.len() - 1]
+                .iter()
+                .map(|s| Object::Real(s.position))
+                .collect();
+
+            // Each subfunction consumes the full [0 1] sub-domain.
+            let encode: Vec<Object> = (0..subfunctions.len())
+                .flat_map(|_| [Object::Real(0.0), Object::Real(1.0)])
+                .collect();
+
+            let mut dict = Dictionary::new();
+            dict.set("FunctionType", Object::Integer(3));
+            dict.set(
+                "Domain",
+                Object::Array(vec![Object::Real(0.0), Object::Real(1.0)]),
+            );
+            dict.set("Functions", Object::Array(subfunctions));
+            dict.set("Bounds", Object::Array(bounds));
+            dict.set("Encode", Object::Array(encode));
+            Ok(dict)
+        }
+    }
+}
+
+/// Assemble a complete axial/radial shading dictionary with a real,
+/// renderable `/Function` and the required `/ColorSpace`. The function is
+/// inlined here; the writer hoists it to an indirect object at emit time
+/// (issue #297 B) so the dictionary is also valid standalone.
+fn assemble_gradient_dict(
+    shading_type: ShadingType,
+    coords: Vec<Object>,
+    stops: &[ColorStop],
+    extend_start: bool,
+    extend_end: bool,
+) -> Result<Dictionary> {
+    let space = resolve_color_space(stops);
+    let function = build_color_function(stops, space)?;
+
+    let mut dict = Dictionary::new();
+    dict.set("ShadingType", Object::Integer(shading_type as i64));
+    dict.set("ColorSpace", Object::Name(space.to_string()));
+    dict.set("Coords", Object::Array(coords));
+    dict.set(
+        "Domain",
+        Object::Array(vec![Object::Real(0.0), Object::Real(1.0)]),
+    );
+    dict.set("Function", Object::Dictionary(function));
+    dict.set(
+        "Extend",
+        Object::Array(vec![
+            Object::Boolean(extend_start),
+            Object::Boolean(extend_end),
+        ]),
+    );
+    Ok(dict)
+}
+
 /// Coordinate point for shading definitions
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
@@ -121,34 +278,25 @@ impl AxialShading {
         Self::new(name, start_point, end_point, color_stops)
     }
 
-    /// Generate PDF shading dictionary
+    /// Generate PDF shading dictionary (ISO 32000-1 §8.7.4.3, Table 78).
+    ///
+    /// Emits a real `/Function` interpolating the `color_stops` and the
+    /// required `/ColorSpace`. The function is inlined; the writer hoists
+    /// it to an indirect object when emitting the page (issue #297).
     pub fn to_pdf_dictionary(&self) -> Result<Dictionary> {
-        let mut shading_dict = Dictionary::new();
-
-        // Basic shading properties
-        shading_dict.set("ShadingType", Object::Integer(ShadingType::Axial as i64));
-
-        // Coordinate array [x0 y0 x1 y1]
         let coords = vec![
             Object::Real(self.start_point.x),
             Object::Real(self.start_point.y),
             Object::Real(self.end_point.x),
             Object::Real(self.end_point.y),
         ];
-        shading_dict.set("Coords", Object::Array(coords));
-
-        // Function (simplified - would reference actual function object)
-        // In a real implementation, this would create a proper function dictionary
-        shading_dict.set("Function", Object::Integer(1)); // Placeholder
-
-        // Extend array
-        let extend = vec![
-            Object::Boolean(self.extend_start),
-            Object::Boolean(self.extend_end),
-        ];
-        shading_dict.set("Extend", Object::Array(extend));
-
-        Ok(shading_dict)
+        assemble_gradient_dict(
+            ShadingType::Axial,
+            coords,
+            &self.color_stops,
+            self.extend_start,
+            self.extend_end,
+        )
     }
 
     /// Validate axial shading parameters
@@ -248,14 +396,12 @@ impl RadialShading {
         Self::new(name, center, start_radius, center, end_radius, color_stops)
     }
 
-    /// Generate PDF shading dictionary
+    /// Generate PDF shading dictionary (ISO 32000-1 §8.7.4.4, Table 79).
+    ///
+    /// Emits a real `/Function` interpolating the `color_stops` and the
+    /// required `/ColorSpace`. The function is inlined; the writer hoists
+    /// it to an indirect object when emitting the page (issue #297).
     pub fn to_pdf_dictionary(&self) -> Result<Dictionary> {
-        let mut shading_dict = Dictionary::new();
-
-        // Basic shading properties
-        shading_dict.set("ShadingType", Object::Integer(ShadingType::Radial as i64));
-
-        // Coordinate array [x0 y0 r0 x1 y1 r1]
         let coords = vec![
             Object::Real(self.start_center.x),
             Object::Real(self.start_center.y),
@@ -264,19 +410,13 @@ impl RadialShading {
             Object::Real(self.end_center.y),
             Object::Real(self.end_radius),
         ];
-        shading_dict.set("Coords", Object::Array(coords));
-
-        // Function (simplified - would reference actual function object)
-        shading_dict.set("Function", Object::Integer(1)); // Placeholder
-
-        // Extend array
-        let extend = vec![
-            Object::Boolean(self.extend_start),
-            Object::Boolean(self.extend_end),
-        ];
-        shading_dict.set("Extend", Object::Array(extend));
-
-        Ok(shading_dict)
+        assemble_gradient_dict(
+            ShadingType::Radial,
+            coords,
+            &self.color_stops,
+            self.extend_start,
+            self.extend_end,
+        )
     }
 
     /// Validate radial shading parameters
@@ -448,7 +588,17 @@ impl ShadingPattern {
         self
     }
 
-    /// Generate PDF pattern dictionary for shading pattern
+    /// Generate PDF pattern dictionary for shading pattern.
+    ///
+    /// NOTE: `ShadingPattern` is not yet wired through `Page` → writer (there
+    /// is no `Page::add_shading_pattern` and the writer iterates only
+    /// `page.shadings()`), so this method is not exercised by the
+    /// serialisation pipeline today. The `sh` direct-paint path
+    /// ([`GraphicsContext::paint_shading`] over [`Page::add_shading`]) is the
+    /// wired, end-to-end gradient path. Because the inlined `/Shading` here
+    /// carries its `/Function` inline (the writer's indirect-hoist only
+    /// applies to `page.shadings()`), full PatternType-2 fill support remains
+    /// a follow-up.
     pub fn to_pdf_pattern_dictionary(&self) -> Result<Dictionary> {
         let mut pattern_dict = Dictionary::new();
 
@@ -456,8 +606,14 @@ impl ShadingPattern {
         pattern_dict.set("Type", Object::Name("Pattern".to_string()));
         pattern_dict.set("PatternType", Object::Integer(2)); // Shading pattern
 
-        // Shading reference (would be resolved during PDF generation)
-        pattern_dict.set("Shading", Object::Integer(1)); // Placeholder
+        // Inline the real shading dictionary (issue #297 C). A PatternType 2
+        // /Shading may be a dictionary or an indirect reference (ISO 32000-1
+        // §8.7.3.3, Table 76); inlining keeps the pattern self-contained and
+        // renderable instead of the old `Object::Integer(1)` placeholder.
+        pattern_dict.set(
+            "Shading",
+            Object::Dictionary(self.shading.to_pdf_dictionary()?),
+        );
 
         // Matrix (if specified)
         if let Some(matrix) = self.matrix {
@@ -1052,6 +1208,293 @@ mod tests {
                 assert!(!(*end_extend));
             }
         }
+    }
+
+    // ── Issue #297: real /Function, /ColorSpace and the `sh` paint path ──
+
+    /// Extract the C0/C1 arrays of a Type 2 function dictionary as f64 vecs.
+    fn type2_c0_c1(func: &Dictionary) -> (Vec<f64>, Vec<f64>) {
+        let extract = |key: &str| -> Vec<f64> {
+            match func.get(key) {
+                Some(Object::Array(a)) => a
+                    .iter()
+                    .map(|o| match o {
+                        Object::Real(v) => *v,
+                        Object::Integer(v) => *v as f64,
+                        _ => panic!("{key} component is not numeric"),
+                    })
+                    .collect(),
+                other => panic!("{key} is not an array: {other:?}"),
+            }
+        };
+        (extract("C0"), extract("C1"))
+    }
+
+    #[test]
+    fn test_axial_two_stops_emits_real_type2_function() {
+        // 2 stops red→blue must produce a Type 2 (exponential) function whose
+        // endpoints carry the actual stop colours, not a placeholder integer.
+        let shading = AxialShading::linear_gradient(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(100.0, 0.0),
+            Color::red(),
+            Color::blue(),
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+
+        // /ColorSpace is REQUIRED by ISO 32000-1 §8.7.4.3 Table 78 — was missing.
+        assert_eq!(
+            dict.get("ColorSpace"),
+            Some(&Object::Name("DeviceRGB".to_string())),
+            "axial shading must declare /ColorSpace"
+        );
+
+        // /Function must be a real function dictionary, not Object::Integer(1).
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        assert_eq!(func.get("FunctionType"), Some(&Object::Integer(2)));
+        let (c0, c1) = type2_c0_c1(func);
+        assert_eq!(c0, vec![1.0, 0.0, 0.0], "C0 must be red");
+        assert_eq!(c1, vec![0.0, 0.0, 1.0], "C1 must be blue");
+        assert_eq!(func.get("N"), Some(&Object::Real(1.0)));
+        assert_eq!(
+            func.get("Domain"),
+            Some(&Object::Array(vec![Object::Real(0.0), Object::Real(1.0)]))
+        );
+    }
+
+    #[test]
+    fn test_axial_three_stops_emits_type3_stitching() {
+        // 3 stops must produce a Type 3 stitching function wrapping 2 Type 2
+        // subfunctions, with /Bounds at the interior stop and /Encode [0 1 0 1].
+        let shading = AxialShading::new(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(100.0, 0.0),
+            vec![
+                ColorStop::new(0.0, Color::red()),
+                ColorStop::new(0.5, Color::green()),
+                ColorStop::new(1.0, Color::blue()),
+            ],
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        assert_eq!(func.get("FunctionType"), Some(&Object::Integer(3)));
+        assert_eq!(
+            func.get("Bounds"),
+            Some(&Object::Array(vec![Object::Real(0.5)])),
+            "interior stop position is the only bound"
+        );
+        assert_eq!(
+            func.get("Encode"),
+            Some(&Object::Array(vec![
+                Object::Real(0.0),
+                Object::Real(1.0),
+                Object::Real(0.0),
+                Object::Real(1.0),
+            ]))
+        );
+        let subfuncs = match func.get("Functions") {
+            Some(Object::Array(a)) => a,
+            other => panic!("/Functions must be an array, got {other:?}"),
+        };
+        assert_eq!(subfuncs.len(), 2, "two segments for three stops");
+        // First subfunction red→green.
+        let f0 = match &subfuncs[0] {
+            Object::Dictionary(d) => d,
+            other => panic!("subfunction 0 not a dict: {other:?}"),
+        };
+        let (c0, c1) = type2_c0_c1(f0);
+        assert_eq!(c0, vec![1.0, 0.0, 0.0]);
+        assert_eq!(c1, vec![0.0, 1.0, 0.0]);
+    }
+
+    #[test]
+    fn test_axial_gray_stops_emit_devicegray_function() {
+        // Uniform Gray stops must keep DeviceGray (1 component), not promote to RGB.
+        let shading = AxialShading::linear_gradient(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 0.0),
+            Color::black(),
+            Color::white(),
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+        assert_eq!(
+            dict.get("ColorSpace"),
+            Some(&Object::Name("DeviceGray".to_string()))
+        );
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        let (c0, c1) = type2_c0_c1(func);
+        assert_eq!(c0, vec![0.0], "black");
+        assert_eq!(c1, vec![1.0], "white");
+    }
+
+    #[test]
+    fn test_axial_cmyk_stops_emit_devicecmyk_function() {
+        // Uniform CMYK stops keep DeviceCMYK with 4-component C0/C1.
+        let shading = AxialShading::linear_gradient(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 0.0),
+            Color::Cmyk(1.0, 0.0, 0.0, 0.0),
+            Color::Cmyk(0.0, 1.0, 0.0, 0.0),
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+        assert_eq!(
+            dict.get("ColorSpace"),
+            Some(&Object::Name("DeviceCMYK".to_string()))
+        );
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        let (c0, c1) = type2_c0_c1(func);
+        assert_eq!(c0, vec![1.0, 0.0, 0.0, 0.0], "C0 = cyan, 4 components");
+        assert_eq!(c1, vec![0.0, 1.0, 0.0, 0.0], "C1 = magenta, 4 components");
+    }
+
+    #[test]
+    fn test_axial_four_stops_type3_has_three_subfunctions_two_bounds() {
+        let shading = AxialShading::new(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(100.0, 0.0),
+            vec![
+                ColorStop::new(0.0, Color::red()),
+                ColorStop::new(0.3, Color::green()),
+                ColorStop::new(0.7, Color::blue()),
+                ColorStop::new(1.0, Color::white()),
+            ],
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        assert_eq!(func.get("FunctionType"), Some(&Object::Integer(3)));
+        let subfuncs = match func.get("Functions") {
+            Some(Object::Array(a)) => a,
+            other => panic!("/Functions array expected, got {other:?}"),
+        };
+        assert_eq!(subfuncs.len(), 3, "4 stops → 3 segments");
+        assert_eq!(
+            func.get("Bounds"),
+            Some(&Object::Array(vec![Object::Real(0.3), Object::Real(0.7)])),
+            "two interior bounds at the middle stops"
+        );
+        assert_eq!(
+            func.get("Encode"),
+            Some(&Object::Array(vec![
+                Object::Real(0.0),
+                Object::Real(1.0),
+                Object::Real(0.0),
+                Object::Real(1.0),
+                Object::Real(0.0),
+                Object::Real(1.0),
+            ]))
+        );
+    }
+
+    #[test]
+    fn test_single_stop_emits_constant_type2() {
+        // A lone stop is valid (validate() only rejects empty) → constant colour.
+        let shading = AxialShading::new(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 0.0),
+            vec![ColorStop::new(0.0, Color::Rgb(0.2, 0.4, 0.6))],
+        );
+        let func = match shading.to_pdf_dictionary().unwrap().get("Function") {
+            Some(Object::Dictionary(d)) => d.clone(),
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        assert_eq!(func.get("FunctionType"), Some(&Object::Integer(2)));
+        let (c0, c1) = type2_c0_c1(&func);
+        assert_eq!(c0, c1, "constant colour: C0 == C1");
+        assert_eq!(c0, vec![0.2, 0.4, 0.6]);
+    }
+
+    #[test]
+    fn test_mixed_color_spaces_promote_to_rgb() {
+        // Mixing Gray and RGB stops must promote the whole shading to DeviceRGB.
+        let shading = AxialShading::new(
+            "G".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(10.0, 0.0),
+            vec![
+                ColorStop::new(0.0, Color::Gray(0.5)),
+                ColorStop::new(1.0, Color::Rgb(1.0, 0.0, 0.0)),
+            ],
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+        assert_eq!(
+            dict.get("ColorSpace"),
+            Some(&Object::Name("DeviceRGB".to_string()))
+        );
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        let (c0, c1) = type2_c0_c1(func);
+        assert_eq!(c0, vec![0.5, 0.5, 0.5], "gray 0.5 promoted to RGB");
+        assert_eq!(c1, vec![1.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_radial_emits_real_function_and_colorspace() {
+        let center = Point::new(50.0, 50.0);
+        let shading = RadialShading::radial_gradient(
+            "R".to_string(),
+            center,
+            0.0,
+            25.0,
+            Color::cyan(),
+            Color::magenta(),
+        );
+        let dict = shading.to_pdf_dictionary().unwrap();
+        assert_eq!(
+            dict.get("ColorSpace"),
+            Some(&Object::Name("DeviceRGB".to_string()))
+        );
+        let func = match dict.get("Function") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Function must be a dictionary, got {other:?}"),
+        };
+        assert_eq!(func.get("FunctionType"), Some(&Object::Integer(2)));
+    }
+
+    #[test]
+    fn test_shading_pattern_inlines_real_shading_not_placeholder() {
+        // Issue #297 C: /Shading must be the real shading dict, never Integer(1).
+        let axial = AxialShading::linear_gradient(
+            "P".to_string(),
+            Point::new(0.0, 0.0),
+            Point::new(100.0, 0.0),
+            Color::red(),
+            Color::blue(),
+        );
+        let pattern = ShadingPattern::new("SP1".to_string(), ShadingDefinition::Axial(axial));
+        let dict = pattern.to_pdf_pattern_dictionary().unwrap();
+        assert_eq!(dict.get("PatternType"), Some(&Object::Integer(2)));
+        let shading = match dict.get("Shading") {
+            Some(Object::Dictionary(d)) => d,
+            other => panic!("/Shading must be an inline dict, got {other:?}"),
+        };
+        assert_eq!(shading.get("ShadingType"), Some(&Object::Integer(2)));
+        assert!(
+            matches!(shading.get("Function"), Some(Object::Dictionary(_))),
+            "inlined shading must carry a real /Function"
+        );
     }
 
     #[test]
