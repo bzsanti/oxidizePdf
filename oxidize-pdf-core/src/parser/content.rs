@@ -942,9 +942,21 @@ impl ContentParser {
         let mut tokenizer = ContentTokenizer::new(content);
         let mut tokens = Vec::new();
 
-        // Tokenize the entire stream
-        while let Some(token) = tokenizer.next_token()? {
-            tokens.push(token);
+        // Tokenize the entire stream. Best-effort recovery (issue #319):
+        // if the tokenizer hits an unrecoverable construct (e.g. an
+        // unterminated hex string), stop there but KEEP every token parsed
+        // so far instead of discarding the whole page. `next_token` already
+        // recovers internally from skippable garbage; a hard error here is
+        // the tail of the stream, and losing the tail beats losing the page.
+        loop {
+            match tokenizer.next_token() {
+                Ok(Some(token)) => tokens.push(token),
+                Ok(None) => break,
+                Err(_e) => {
+                    tracing::debug!("content tokenizer stopped early: {_e}");
+                    break;
+                }
+            }
         }
 
         let mut parser = Self {
@@ -965,8 +977,22 @@ impl ContentParser {
 
             match &token {
                 Token::Operator(op) => {
-                    let operator = self.parse_operator(op, &mut operand_stack)?;
-                    operators.push(operator);
+                    // Best-effort recovery (issue #319): a single malformed
+                    // operator must NOT discard the entire content stream.
+                    // Content streams are not safety-critical; an operand
+                    // mismatch on one operator (e.g. a `Td` missing its
+                    // numbers, common in some producers) previously aborted
+                    // the whole page via `?`, so the extractor dropped every
+                    // valid operator before it. Instead, skip the bad
+                    // operator, resync by clearing its pending operands, and
+                    // continue parsing the rest of the stream.
+                    match self.parse_operator(op, &mut operand_stack) {
+                        Ok(operator) => operators.push(operator),
+                        Err(_e) => {
+                            tracing::debug!("skipping malformed content operator '{op}': {_e}");
+                            operand_stack.clear();
+                        }
+                    }
                 }
                 _ => {
                     // Not an operator, push to operand stack
@@ -2158,16 +2184,30 @@ mod tests {
 
         #[test]
         fn test_error_handling_insufficient_operands() {
-            let content = b"100 Td"; // Missing y coordinate
-            let result = ContentParser::parse(content);
-            assert!(result.is_err());
+            // Best-effort recovery (issue #319): `Td` is missing its y
+            // coordinate. The malformed operator is skipped, but a following
+            // valid text operator must still be recovered — the page is NOT
+            // discarded wholesale.
+            let content = b"100 Td (kept) Tj";
+            let ops = ContentParser::parse(content).expect("recovers from bad Td");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::ShowText(t) if t == b"kept")),
+                "valid Tj after the malformed Td must survive: {ops:?}"
+            );
         }
 
         #[test]
         fn test_error_handling_invalid_operator() {
-            let content = b"100 200 INVALID";
-            let result = ContentParser::parse(content);
-            assert!(result.is_err());
+            // Unknown operator `INVALID` is skipped; the following valid
+            // MoveTo survives (issue #319 recovery contract).
+            let content = b"100 200 INVALID 10 20 m";
+            let ops = ContentParser::parse(content).expect("recovers from unknown operator");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::MoveTo(_, _))),
+                "valid MoveTo after the unknown operator must survive: {ops:?}"
+            );
         }
 
         #[test]
@@ -2259,29 +2299,41 @@ mod tests {
 
         #[test]
         fn test_show_text_array_complex() {
-            // Test simple text array without complex syntax
-            let content = b"(Hello) TJ";
-            let result = ContentParser::parse(content);
-            // This should fail since TJ expects array, but test the error handling
-            assert!(result.is_err());
+            // `TJ` expects an array operand, not a plain string. The malformed
+            // operator is skipped; a following valid Tj is recovered
+            // (issue #319 recovery contract).
+            let content = b"(Hello) TJ (kept) Tj";
+            let ops = ContentParser::parse(content).expect("recovers from malformed TJ");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::ShowText(t) if t == b"kept")),
+                "valid Tj after the malformed TJ must survive: {ops:?}"
+            );
         }
 
         #[test]
         fn test_dash_pattern_empty() {
-            // Test simple dash pattern without array syntax
-            let content = b"0 d";
-            let result = ContentParser::parse(content);
-            // This should fail since dash pattern needs array, but test the error handling
-            assert!(result.is_err());
+            // `d` needs an array operand; the malformed operator is skipped and
+            // a following valid MoveTo survives (issue #319 recovery contract).
+            let content = b"0 d 10 20 m";
+            let ops = ContentParser::parse(content).expect("recovers from malformed d");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::MoveTo(_, _))),
+                "valid MoveTo after the malformed dash op must survive: {ops:?}"
+            );
         }
 
         #[test]
         fn test_dash_pattern_complex() {
-            // Test simple dash pattern without complex array syntax
-            let content = b"2.5 d";
-            let result = ContentParser::parse(content);
-            // This should fail since dash pattern needs array, but test the error handling
-            assert!(result.is_err());
+            // Same recovery contract with a real-number operand before `d`.
+            let content = b"2.5 d 10 20 m";
+            let ops = ContentParser::parse(content).expect("recovers from malformed d");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::MoveTo(_, _))),
+                "valid MoveTo after the malformed dash op must survive: {ops:?}"
+            );
         }
 
         #[test]
@@ -2694,20 +2746,32 @@ mod tests {
 
         #[test]
         fn test_parser_error_handling_invalid_operators() {
-            // Missing operands for move operator
-            let content = b"m";
-            let result = ContentParser::parse(content);
-            assert!(result.is_err());
+            // Best-effort recovery contract (issue #319).
 
-            // Invalid hex string (no closing >)
-            let content = b"<ABC DEF BT";
-            let result = ContentParser::parse(content);
-            assert!(result.is_err());
+            // Missing operands for `m`: the malformed operator is skipped but
+            // a following valid `l` is recovered.
+            let content = b"m 10 20 l";
+            let ops = ContentParser::parse(content).expect("recovers from operand-less m");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::LineTo(_, _))),
+                "valid LineTo after the operand-less m must survive: {ops:?}"
+            );
 
-            // Test that we can detect actual parsing errors
-            let content = b"100 200 300"; // Numbers without operator should parse ok
-            let result = ContentParser::parse(content);
-            assert!(result.is_ok()); // This should actually be ok since no operator is attempted
+            // Unterminated hex string: the tokenizer stops at the malformed
+            // tail but keeps every token before it, so valid text ahead of the
+            // bad hex is still extracted.
+            let content = b"(kept) Tj <ABC DEF";
+            let ops = ContentParser::parse(content).expect("recovers, keeping pre-error tokens");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::ShowText(t) if t == b"kept")),
+                "text before the unterminated hex must survive: {ops:?}"
+            );
+
+            // Numbers without an operator parse OK (no operator attempted).
+            let content = b"100 200 300";
+            assert!(ContentParser::parse(content).is_ok());
         }
 
         #[test]
@@ -2869,11 +2933,49 @@ mod tests {
 
         #[test]
         fn test_tokenizer_error_recovery() {
-            // Test that parser can handle malformed but recoverable content
+            // A comment carrying a stray binary byte sits between two valid
+            // path operators. The comment (and its binary) is skipped and
+            // BOTH operators are recovered (issue #319 recovery contract).
             let content = b"100 200 m % Comment with\xFFbinary\n150 250 l";
-            let result = ContentParser::parse(content);
-            // Should either parse successfully or fail gracefully
-            assert!(result.is_ok() || result.is_err());
+            let ops = ContentParser::parse(content).expect("recovers around binary comment");
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::MoveTo(_, _))),
+                "MoveTo before the comment must survive: {ops:?}"
+            );
+            assert!(
+                ops.iter()
+                    .any(|op| matches!(op, ContentOperation::LineTo(_, _))),
+                "LineTo after the comment must survive: {ops:?}"
+            );
+        }
+
+        #[test]
+        fn malformed_operator_does_not_discard_surrounding_text() {
+            // Issue #319: a single malformed operator must NOT drop the whole
+            // page's content. Here a bare `Td` (missing its two operands)
+            // sits between two valid text-show operators. Before the fix,
+            // `parse_operators` propagated the operand error with `?`, so the
+            // entire stream returned Err and BOTH show-text ops were lost
+            // (the extractor then dropped the page). The parser must recover:
+            // skip the bad operator, keep the valid ones.
+            let content = b"BT /F1 12 Tf 72 700 Td (First line) Tj Td (Second line) Tj ET";
+            let ops = ContentParser::parse_content(content)
+                .expect("malformed operator must not fail the whole stream");
+            let shown: Vec<&Vec<u8>> = ops
+                .iter()
+                .filter_map(|op| match op {
+                    ContentOperation::ShowText(t) => Some(t),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                shown.len(),
+                2,
+                "both valid Tj operators must survive the malformed Td"
+            );
+            assert_eq!(shown[0], b"First line");
+            assert_eq!(shown[1], b"Second line");
         }
 
         #[test]
