@@ -353,3 +353,77 @@ fn fill_hierarchical_field_incremental() {
     ids.sort_unstable();
     assert_eq!(ids, vec![4, 6], "only street kid + AcroForm rewritten");
 }
+
+// ---------------------------------------------------------------------------
+// Terminal field whose /Kids are WIDGET annotations (not sub-fields)
+// ---------------------------------------------------------------------------
+
+/// Read `/V` of a specific object id directly (bypasses the field-tree walk,
+/// so it works regardless of widget-vs-subfield kid classification).
+fn object_v(bytes: &[u8], num: u32, gen: u16) -> Option<String> {
+    let mut reader = PdfReader::new(Cursor::new(bytes)).expect("parse");
+    let dict = reader.get_object(num, gen).ok()?.as_dict()?.clone();
+    dict.get("V")
+        .and_then(|o| o.as_string())
+        .map(|s| String::from_utf8_lossy(s.as_bytes()).into_owned())
+}
+
+/// The most common real-world layout (Acrobat): a single terminal field
+/// dict that carries `/T`/`/FT` AND a `/Kids` array whose elements are
+/// widget annotation dicts (`/Subtype /Widget`, NO `/T`). The field
+/// resolver must treat this node as terminal — recursing into the widgets
+/// (which have no `/T`) would lose the field entirely.
+fn build_widget_kids_form_pdf() -> Vec<u8> {
+    // 1 Catalog  2 Pages  3 Page  4 AcroForm
+    // 5 terminal field "email" with widget kid 6
+    // 6 widget annotation (no /T)
+    let objects: Vec<String> = vec![
+        "<< /Type /Catalog /Pages 2 0 R /AcroForm 4 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Annots [6 0 R] >>".to_string(),
+        "<< /Fields [5 0 R] >>".to_string(),
+        "<< /FT /Tx /T (email) /Kids [6 0 R] >>".to_string(),
+        "<< /Type /Annot /Subtype /Widget /Parent 5 0 R /Rect [100 700 300 720] >>".to_string(),
+    ];
+
+    let mut pdf = Vec::new();
+    pdf.extend_from_slice(b"%PDF-1.7\n");
+    let mut offsets = Vec::with_capacity(objects.len());
+    for (i, body) in objects.iter().enumerate() {
+        offsets.push(pdf.len() as u64);
+        pdf.extend_from_slice(format!("{} 0 obj\n{}\nendobj\n", i + 1, body).as_bytes());
+    }
+    let xref_pos = pdf.len() as u64;
+    let n = objects.len() + 1;
+    pdf.extend_from_slice(format!("xref\n0 {n}\n").as_bytes());
+    pdf.extend_from_slice(b"0000000000 65535 f \n");
+    for off in &offsets {
+        pdf.extend_from_slice(format!("{off:010} 00000 n \n").as_bytes());
+    }
+    pdf.extend_from_slice(
+        format!("trailer\n<< /Size {n} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n").as_bytes(),
+    );
+    pdf
+}
+
+#[test]
+fn fill_field_with_widget_kids() {
+    let base = build_widget_kids_form_pdf();
+    // The terminal field is object 5; before fill it has no value.
+    assert!(object_v(&base, 5, 0).is_none(), "field starts empty");
+
+    let output = IncrementalFormFiller::new(&base)
+        .fill("email", "user@example.com")
+        .expect("must resolve a terminal field whose kids are widgets");
+
+    assert_eq!(&output[..base.len()], &base[..], "verbatim prefix");
+    assert_eq!(
+        object_v(&output, 5, 0).as_deref(),
+        Some("user@example.com"),
+        "/V must be set on the terminal field object (5), not lost in widget recursion"
+    );
+    // Only the field (5) + AcroForm (4) change — the widget (6) is untouched.
+    let mut ids = appended_xref_object_numbers(&output[base.len()..]);
+    ids.sort_unstable();
+    assert_eq!(ids, vec![4, 5]);
+}

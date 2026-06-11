@@ -69,12 +69,12 @@ impl<'a> IncrementalFormFiller<'a> {
 /// or cyclic `/Kids` structures).
 const MAX_FIELD_DEPTH: u8 = 32;
 
-/// Resolve every terminal/named AcroForm field of `bytes` to its object id,
-/// keyed by fully-qualified name (ISO 32000-1 §12.7.3.1).
-fn resolve_acroform_fields(bytes: &[u8]) -> Result<HashMap<String, (u32, u16)>> {
-    let mut reader = PdfReader::new(Cursor::new(bytes))
-        .map_err(|e| PdfError::InvalidStructure(format!("parse base PDF: {e}")))?;
-
+/// Resolve every terminal/named AcroForm field to its object id, keyed by
+/// fully-qualified name (ISO 32000-1 §12.7.3.1). Reuses the caller's reader
+/// (the base PDF is parsed once per fill).
+fn resolve_acroform_fields(
+    reader: &mut PdfReader<Cursor<&[u8]>>,
+) -> Result<HashMap<String, (u32, u16)>> {
     let acroform_dict = {
         let catalog = reader
             .catalog()
@@ -105,7 +105,7 @@ fn resolve_acroform_fields(bytes: &[u8]) -> Result<HashMap<String, (u32, u16)>> 
 
     let mut out = HashMap::new();
     for (n, g) in field_refs {
-        collect_fields(&mut reader, (n, g), "", &mut out, 0)?;
+        collect_fields(reader, (n, g), "", &mut out, 0)?;
     }
     Ok(out)
 }
@@ -151,7 +151,22 @@ fn collect_fields(
         _ => Vec::new(),
     };
 
-    if kids.is_empty() {
+    // A non-empty `/Kids` does NOT imply an intermediate field. Per ISO
+    // 32000-1 §12.7.3.1 a single terminal field may carry `/T`/`/FT`/`/V`
+    // AND a `/Kids` array whose elements are its WIDGET annotations
+    // (`/Subtype /Widget`, no `/T`) — the dominant Acrobat layout. Only
+    // recurse when at least one kid is itself a field (has `/T`); otherwise
+    // the kids are widgets and THIS node is the terminal field.
+    let kids_are_subfields = kids.iter().any(|(n, g)| {
+        reader
+            .get_object(*n, *g)
+            .ok()
+            .and_then(|o| o.as_dict())
+            .map(|d| d.contains_key("T"))
+            .unwrap_or(false)
+    });
+
+    if kids.is_empty() || !kids_are_subfields {
         // Terminal field — record it under its full name (if it has one).
         if partial.is_some() {
             out.insert(full_name, node_ref);
@@ -193,10 +208,12 @@ fn fill_many_impl(base_bytes: &[u8], fields: &[(&str, &str)]) -> Result<Vec<u8>>
     // Resolve the AcroForm dict object id and its current contents.
     let (acro_ref, mut acro_dict) = resolve_acroform_object(&mut reader)?;
 
-    // Resolve field name -> object id.
-    let field_map = resolve_acroform_fields(base_bytes)?;
+    // Resolve field name -> object id (reusing the open reader, no second parse).
+    let field_map = resolve_acroform_fields(&mut reader)?;
 
-    // Build the set of modified objects.
+    // Build the set of modified objects. Duplicate field names (or distinct
+    // names resolving to the same object id) collapse to a single rewrite
+    // with the LAST value, so we never emit two objects for one id.
     let mut modified: Vec<(u32, u16, PdfDictionary)> = Vec::new();
     for (name, value) in fields {
         let (num, gen) = field_map
@@ -215,7 +232,10 @@ fn fill_many_impl(base_bytes: &[u8], fields: &[(&str, &str)]) -> Result<Vec<u8>>
             "V".to_string(),
             PdfObject::String(PdfString(value.as_bytes().to_vec())),
         );
-        modified.push((num, gen, field_dict));
+        match modified.iter_mut().find(|(n, g, _)| *n == num && *g == gen) {
+            Some(slot) => slot.2 = field_dict,
+            None => modified.push((num, gen, field_dict)),
+        }
     }
 
     // Flag NeedAppearances so viewers regenerate the appearance stream.
@@ -239,13 +259,20 @@ fn fill_many_impl(base_bytes: &[u8], fields: &[(&str, &str)]) -> Result<Vec<u8>>
     changed.push((acro_ref.0, acro_ref.1, acro_offset));
 
     let xref_pos = out.len() as u64;
+    // Keep the permanent first /ID element; regenerate the second so the
+    // revision is distinguishable (§14.4). Omit /ID entirely if the base had
+    // none.
+    let id_pair = base_id_first.map(|first| {
+        let second = derive_revision_id(&first, fields, xref_pos);
+        (first, second)
+    });
     out.extend_from_slice(&write_partial_xref_section(&changed));
     out.extend_from_slice(&write_incremental_trailer(
         base_startxref,
         base_root,
         base_size,
         xref_pos,
-        base_id_first,
+        id_pair,
     ));
 
     Ok(out)
@@ -394,7 +421,13 @@ fn write_literal_string(out: &mut Vec<u8>, bytes: &[u8]) {
 
 /// Format a PDF real without scientific notation, trimming trailing zeros.
 fn format_real(f: f64) -> String {
-    if f == f.trunc() && f.is_finite() {
+    // PDF has no token for NaN/Infinity; emit a benign 0 rather than a
+    // malformed numeric. Field dicts essentially never carry such values,
+    // but the serializer must stay total.
+    if !f.is_finite() {
+        return "0".to_string();
+    }
+    if f == f.trunc() {
         return format!("{}", f as i64);
     }
     let mut s = format!("{f:.6}");
@@ -439,28 +472,48 @@ fn write_partial_xref_section(changed: &[(u32, u16, u64)]) -> Vec<u8> {
 }
 
 /// Build the incremental-update trailer chaining `/Prev` and reusing the
-/// base `/Root`, `/Size` and `/ID`.
+/// base `/Root` and `/Size`. The `/ID` array, when present, keeps the
+/// permanent first element and carries a fresh second element that changes
+/// with this revision (ISO 32000-1 Table 15 / §14.4 — signature validators
+/// rely on the second element changing per update).
 fn write_incremental_trailer(
     base_prev_xref: u64,
     base_root: (u32, u16),
     base_size: u32,
     new_xref_pos: u64,
-    base_id_first: Option<Vec<u8>>,
+    id_pair: Option<(Vec<u8>, Vec<u8>)>,
 ) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(b"trailer\n<< ");
     out.extend_from_slice(format!("/Size {base_size} ").as_bytes());
     out.extend_from_slice(format!("/Root {} {} R ", base_root.0, base_root.1).as_bytes());
     out.extend_from_slice(format!("/Prev {base_prev_xref} ").as_bytes());
-    if let Some(id) = base_id_first {
-        let hex: String = id.iter().map(|b| format!("{b:02X}")).collect();
-        out.extend_from_slice(format!("/ID [<{hex}> <{hex}>] ").as_bytes());
+    if let Some((first, second)) = id_pair {
+        let hex = |bytes: &[u8]| -> String { bytes.iter().map(|b| format!("{b:02X}")).collect() };
+        out.extend_from_slice(format!("/ID [<{}> <{}>] ", hex(&first), hex(&second)).as_bytes());
     }
     out.extend_from_slice(b">>\n");
     out.extend_from_slice(b"startxref\n");
     out.extend_from_slice(format!("{new_xref_pos}\n").as_bytes());
     out.extend_from_slice(b"%%EOF\n");
     out
+}
+
+/// Derive a fresh 16-byte `/ID` second element bound to this revision's
+/// content (permanent id + the values written + the new xref position).
+/// Deterministic so a given fill reproduces byte-for-byte (testable), while
+/// still differing from the base second element and from other revisions.
+fn derive_revision_id(first: &[u8], fields: &[(&str, &str)], xref_pos: u64) -> Vec<u8> {
+    let mut buf = Vec::new();
+    buf.extend_from_slice(first);
+    for (name, value) in fields {
+        buf.extend_from_slice(name.as_bytes());
+        buf.push(0);
+        buf.extend_from_slice(value.as_bytes());
+        buf.push(0);
+    }
+    buf.extend_from_slice(&xref_pos.to_le_bytes());
+    md5::compute(&buf).0.to_vec()
 }
 
 #[cfg(test)]
@@ -501,10 +554,33 @@ mod tests {
     }
 
     #[test]
-    fn incremental_trailer_emits_id_when_present() {
-        let bytes = write_incremental_trailer(10, (2, 0), 5, 99, Some(vec![0xDE, 0xAD]));
+    fn incremental_trailer_emits_distinct_id_pair() {
+        // The first element is preserved; the second changes with the
+        // revision (§14.4). They must NOT be identical.
+        let bytes = write_incremental_trailer(
+            10,
+            (2, 0),
+            5,
+            99,
+            Some((vec![0xDE, 0xAD], vec![0xBE, 0xEF])),
+        );
         let s = String::from_utf8(bytes).unwrap();
-        assert!(s.contains("/ID [<DEAD> <DEAD>]"), "id reused: {s}");
+        assert!(s.contains("/ID [<DEAD> <BEEF>]"), "distinct id pair: {s}");
+    }
+
+    #[test]
+    fn revision_id_differs_from_permanent_and_is_deterministic() {
+        let first = vec![1u8, 2, 3, 4];
+        let a = derive_revision_id(&first, &[("name", "Ada")], 100);
+        let b = derive_revision_id(&first, &[("name", "Ada")], 100);
+        let c = derive_revision_id(&first, &[("name", "Grace")], 100);
+        assert_eq!(a, b, "same inputs -> same id (reproducible)");
+        assert_ne!(
+            a, first,
+            "second element must differ from the permanent one"
+        );
+        assert_ne!(a, c, "different content -> different revision id");
+        assert_eq!(a.len(), 16, "PDF /ID elements are 16 bytes");
     }
 
     #[test]
