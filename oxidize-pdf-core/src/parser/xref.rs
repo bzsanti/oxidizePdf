@@ -708,21 +708,25 @@ impl XRefTable {
 
         let mut lines = content.pdf_lines();
 
-        // Find startxref line - need to iterate forward after finding it
+        // Find the LAST startxref in the tail window. An incremental update
+        // (ISO 32000-1 §7.5.6) appends a new `startxref`/`%%EOF` after the
+        // original; the most recent one points at the newest cross-reference
+        // section and MUST take precedence (earlier ones are reached via the
+        // `/Prev` chain). Returning the first occurrence would read the base
+        // PDF and silently ignore every appended update.
+        let mut last_offset = None;
         while let Some(line) = lines.next() {
             if line.trim() == "startxref" {
                 // The offset should be on the next line
                 if let Some(offset_line) = lines.next() {
-                    let offset = offset_line
-                        .trim()
-                        .parse::<u64>()
-                        .map_err(|_| ParseError::InvalidXRef)?;
-                    return Ok(offset);
+                    if let Ok(offset) = offset_line.trim().parse::<u64>() {
+                        last_offset = Some(offset);
+                    }
                 }
             }
         }
 
-        Err(ParseError::InvalidXRef)
+        last_offset.ok_or(ParseError::InvalidXRef)
     }
 
     /// Scan PDF for objects not present in XRef and add them (for hybrid files)
