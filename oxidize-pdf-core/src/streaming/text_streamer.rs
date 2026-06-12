@@ -773,10 +773,14 @@ mod tests {
         let content = b"BT /Times New Roman 14 Tf ET";
         let result = streamer.process_chunk(content);
 
-        // This should fail because "New" is treated as an unknown operator
-        assert!(result.is_err());
+        // Best-effort recovery (issue #319): "New"/"Roman" are unknown
+        // operators and the resulting `Tf` is missing its font-name operand.
+        // The malformed directives are skipped instead of aborting the chunk,
+        // so processing succeeds...
+        assert!(result.is_ok());
 
-        // The font and size should remain unchanged (default values)
+        // ...but the malformed font directive must NOT take effect: the font
+        // and size stay at their defaults.
         assert_eq!(streamer.current_font, None);
         assert_eq!(streamer.current_font_size, 12.0);
     }

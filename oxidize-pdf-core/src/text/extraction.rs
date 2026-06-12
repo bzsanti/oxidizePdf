@@ -255,6 +255,19 @@ struct SavedGraphicsState {
     fill_color: Option<Color>,
 }
 
+/// Mutable accumulator threaded through `process_operations` so the op loop
+/// can be driven recursively (page content stream → Form XObjects) while
+/// carrying text state, position, and accumulated output. Bundled into one
+/// struct so the op match moves verbatim into the recursive method (#319).
+struct OpRunState {
+    state: TextState,
+    in_text_object: bool,
+    last_x: f64,
+    last_y: f64,
+    extracted_text: String,
+    fragments: Vec<TextFragment>,
+}
+
 impl Default for TextState {
     fn default() -> Self {
         Self {
@@ -659,22 +672,33 @@ impl TextExtractor {
             page.content_streams_with_document(document)?
         };
 
-        let mut extracted_text = String::new();
-        let mut fragments = Vec::new();
-        let mut state = TextState::default();
-        let mut in_text_object = false;
-        let mut last_x = 0.0;
-        let mut last_y = 0.0;
+        let extracted_text = String::new();
+        let fragments = Vec::new();
+        let state = TextState::default();
+        let in_text_object = false;
+        let last_x = 0.0;
+        let last_y = 0.0;
 
-        // Issue #269 Phase 1: resolve /Properties resource dictionary for BDC
-        // resource-ref operands (e.g. `/Span /PropsName BDC`). Optional — most
-        // PDFs use inline dicts.
-        let page_properties: Option<&crate::parser::objects::PdfDictionary> = page
-            .get_resources()
-            .and_then(|res| match res.get("Properties") {
-                Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
-                _ => None,
-            });
+        // Page resources (owned) for XObject + /Properties lookup during
+        // recursive Form XObject extraction (issue #319).
+        let page_resources: Option<crate::parser::objects::PdfDictionary> =
+            if let Some(rr) = page.dict.get("Resources").and_then(|o| o.as_reference()) {
+                document
+                    .get_object(rr.0, rr.1)
+                    .ok()
+                    .and_then(|o| o.as_dict().cloned())
+            } else {
+                page.get_resources().cloned()
+            };
+
+        let mut run = OpRunState {
+            state,
+            in_text_object,
+            last_x,
+            last_y,
+            extracted_text,
+            fragments,
+        };
 
         // Process each content stream
         for (stream_idx, stream_data) in streams.iter().enumerate() {
@@ -708,483 +732,21 @@ impl TextExtractor {
                 }
             };
 
-            let _ops_span = tracing::info_span!("text_ops_loop").entered();
-            for op in operations {
-                match op {
-                    ContentOperation::BeginText => {
-                        in_text_object = true;
-                        // Reset text matrix to identity
-                        state.text_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-                        state.text_line_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-                    }
-
-                    ContentOperation::EndText => {
-                        in_text_object = false;
-                    }
-
-                    ContentOperation::SetTextMatrix(a, b, c, d, e, f) => {
-                        state.text_matrix =
-                            [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
-                        state.text_line_matrix =
-                            [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
-                    }
-
-                    ContentOperation::MoveText(tx, ty) => {
-                        // Update text matrix by translation
-                        let new_matrix = multiply_matrix(
-                            &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
-                            &state.text_line_matrix,
-                        );
-                        state.text_matrix = new_matrix;
-                        state.text_line_matrix = new_matrix;
-                    }
-
-                    ContentOperation::NextLine => {
-                        // Move to next line using current leading
-                        let new_matrix = multiply_matrix(
-                            &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
-                            &state.text_line_matrix,
-                        );
-                        state.text_matrix = new_matrix;
-                        state.text_line_matrix = new_matrix;
-                    }
-
-                    ContentOperation::ShowText(text) => {
-                        if in_text_object {
-                            let text_bytes = &text;
-                            let decoded = self.decode_text(text_bytes, &state)?;
-
-                            // Pen origin in user space = (CTM × text_matrix)(0, 0).
-                            let (x, y) = text_origin(&state);
-
-                            // Add spacing based on position change
-                            if !extracted_text.is_empty() {
-                                let dx = x - last_x;
-                                let dy = (y - last_y).abs();
-
-                                if dy > self.options.newline_threshold {
-                                    extracted_text.push('\n');
-                                } else if dx > self.options.space_threshold * state.font_size {
-                                    extracted_text.push(' ');
-                                }
-                            }
-
-                            extracted_text.push_str(&decoded);
-
-                            // Get font info for accurate width calculation.
-                            // Width comes from the char codes (`text_bytes`), not
-                            // the decoded Unicode: the Widths array is code-indexed
-                            // (issue #302).
-                            let text_width = {
-                                let font_info = state
-                                    .font_name
-                                    .as_ref()
-                                    .and_then(|name| self.font_cache.get(name));
-                                calculate_text_width_from_codes(
-                                    text_bytes,
-                                    &decoded,
-                                    state.font_size,
-                                    font_info,
-                                )
-                            };
-
-                            if self.options.preserve_layout {
-                                emit_text_fragment(
-                                    &mut fragments,
-                                    &decoded,
-                                    text_width,
-                                    x,
-                                    y,
-                                    &mut state,
-                                    self.options.include_artifacts,
-                                );
-                            }
-
-                            // Update position for next text
-                            last_x = x + text_width;
-                            last_y = y;
-
-                            // Update text matrix for next show operation
-                            let tx = text_width * state.horizontal_scale / 100.0;
-                            state.text_matrix =
-                                multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
-                        }
-                    }
-
-                    ContentOperation::ShowTextArray(array) => {
-                        if in_text_object {
-                            for item in array {
-                                match item {
-                                    TextElement::Text(text_bytes) => {
-                                        let decoded = self.decode_text(&text_bytes, &state)?;
-                                        extracted_text.push_str(&decoded);
-
-                                        let text_width = {
-                                            let font_info = state
-                                                .font_name
-                                                .as_ref()
-                                                .and_then(|name| self.font_cache.get(name));
-                                            calculate_text_width_from_codes(
-                                                &text_bytes,
-                                                &decoded,
-                                                state.font_size,
-                                                font_info,
-                                            )
-                                        };
-
-                                        if self.options.preserve_layout {
-                                            let (x, y) = text_origin(&state);
-                                            emit_text_fragment(
-                                                &mut fragments,
-                                                &decoded,
-                                                text_width,
-                                                x,
-                                                y,
-                                                &mut state,
-                                                self.options.include_artifacts,
-                                            );
-                                        }
-
-                                        let tx = text_width * state.horizontal_scale / 100.0;
-                                        state.text_matrix = multiply_matrix(
-                                            &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
-                                            &state.text_matrix,
-                                        );
-                                    }
-                                    TextElement::Spacing(adjustment) => {
-                                        // Text position adjustment (negative = move left,
-                                        // i.e. shifts the pen forward). When the synthesised
-                                        // forward advance exceeds `tj_space_threshold * font_size`
-                                        // we treat the kern as an implicit `U+0020` (issue #272):
-                                        // many PDFs encode word breaks purely as wide negative
-                                        // kerns and never emit a literal space byte.
-                                        let tx = -(adjustment as f64) / 1000.0 * state.font_size;
-
-                                        if tx > self.options.tj_space_threshold * state.font_size
-                                            && !extracted_text.is_empty()
-                                            && !extracted_text.ends_with(' ')
-                                        {
-                                            extracted_text.push(' ');
-
-                                            // Skip the fragment-level emission while an
-                                            // ActualText scope is pending: the synthesised
-                                            // space is a heuristic, not real content, and
-                                            // emitting it would call `emit_text_fragment`
-                                            // whose ActualText short-circuit would inflate
-                                            // `pending.width` and set `pending.populated`
-                                            // even though no real `Tj` has fired yet. The
-                                            // EMC flush will supply the canonical fragment
-                                            // text from the override (Phase 1 #269 contract).
-                                            if self.options.preserve_layout
-                                                && state.pending_actualtext.is_none()
-                                            {
-                                                // Emit a synthetic single-space fragment at the
-                                                // current pen origin so downstream layout merges
-                                                // (e.g. `merge_close_fragments`) see the gap as
-                                                // explicit content rather than as a sub-threshold
-                                                // x-jump. Width = the kern advance so the next
-                                                // text fragment begins flush against it.
-                                                let (sx, sy) = text_origin(&state);
-                                                emit_text_fragment(
-                                                    &mut fragments,
-                                                    " ",
-                                                    tx,
-                                                    sx,
-                                                    sy,
-                                                    &mut state,
-                                                    self.options.include_artifacts,
-                                                );
-                                            }
-                                        }
-
-                                        state.text_matrix = multiply_matrix(
-                                            &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
-                                            &state.text_matrix,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    ContentOperation::NextLineShowText(text) => {
-                        if in_text_object {
-                            // ' = T* then Tj string. Advance line matrix by -leading.
-                            let new_matrix = multiply_matrix(
-                                &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
-                                &state.text_line_matrix,
-                            );
-                            state.text_matrix = new_matrix;
-                            state.text_line_matrix = new_matrix;
-
-                            let decoded = self.decode_text(&text, &state)?;
-                            let (x, y) = text_origin(&state);
-
-                            if !extracted_text.is_empty() {
-                                extracted_text.push('\n');
-                            }
-                            extracted_text.push_str(&decoded);
-
-                            let text_width = {
-                                let font_info = state
-                                    .font_name
-                                    .as_ref()
-                                    .and_then(|name| self.font_cache.get(name));
-                                calculate_text_width_from_codes(
-                                    &text,
-                                    &decoded,
-                                    state.font_size,
-                                    font_info,
-                                )
-                            };
-
-                            if self.options.preserve_layout {
-                                emit_text_fragment(
-                                    &mut fragments,
-                                    &decoded,
-                                    text_width,
-                                    x,
-                                    y,
-                                    &mut state,
-                                    self.options.include_artifacts,
-                                );
-                            }
-
-                            last_x = x + text_width;
-                            last_y = y;
-
-                            let tx = text_width * state.horizontal_scale / 100.0;
-                            state.text_matrix =
-                                multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
-                        }
-                    }
-
-                    ContentOperation::SetSpacingNextLineShowText(word_space, char_space, text) => {
-                        if in_text_object {
-                            // " = aw Tw, ac Tc, then ' string. ISO 32000-1 §9.4.3.
-                            // The variant fields mirror the spec field names:
-                            // (word_spacing, char_spacing, text).
-                            state.word_space = word_space as f64;
-                            state.char_space = char_space as f64;
-
-                            let new_matrix = multiply_matrix(
-                                &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
-                                &state.text_line_matrix,
-                            );
-                            state.text_matrix = new_matrix;
-                            state.text_line_matrix = new_matrix;
-
-                            let decoded = self.decode_text(&text, &state)?;
-                            let (x, y) = text_origin(&state);
-
-                            if !extracted_text.is_empty() {
-                                extracted_text.push('\n');
-                            }
-                            extracted_text.push_str(&decoded);
-
-                            let text_width = {
-                                let font_info = state
-                                    .font_name
-                                    .as_ref()
-                                    .and_then(|name| self.font_cache.get(name));
-                                calculate_text_width_from_codes(
-                                    &text,
-                                    &decoded,
-                                    state.font_size,
-                                    font_info,
-                                )
-                            };
-
-                            if self.options.preserve_layout {
-                                emit_text_fragment(
-                                    &mut fragments,
-                                    &decoded,
-                                    text_width,
-                                    x,
-                                    y,
-                                    &mut state,
-                                    self.options.include_artifacts,
-                                );
-                            }
-
-                            last_x = x + text_width;
-                            last_y = y;
-
-                            let tx = text_width * state.horizontal_scale / 100.0;
-                            state.text_matrix =
-                                multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
-                        }
-                    }
-
-                    ContentOperation::SetFont(name, size) => {
-                        state.font_name = Some(name);
-                        state.font_size = size as f64;
-                    }
-
-                    ContentOperation::SetLeading(leading) => {
-                        state.leading = leading as f64;
-                    }
-
-                    ContentOperation::SetCharSpacing(spacing) => {
-                        state.char_space = spacing as f64;
-                    }
-
-                    ContentOperation::SetWordSpacing(spacing) => {
-                        state.word_space = spacing as f64;
-                    }
-
-                    ContentOperation::SetHorizontalScaling(scale) => {
-                        state.horizontal_scale = scale as f64;
-                    }
-
-                    ContentOperation::SetTextRise(rise) => {
-                        state.text_rise = rise as f64;
-                    }
-
-                    ContentOperation::SetTextRenderMode(mode) => {
-                        state.render_mode = mode as u8;
-                    }
-
-                    ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
-                        // Update CTM: new_ctm = concat_matrix * current_ctm
-                        let [a0, b0, c0, d0, e0, f0] = state.ctm;
-                        let a = a as f64;
-                        let b = b as f64;
-                        let c = c as f64;
-                        let d = d as f64;
-                        let e = e as f64;
-                        let f = f as f64;
-                        state.ctm = [
-                            a * a0 + b * c0,
-                            a * b0 + b * d0,
-                            c * a0 + d * c0,
-                            c * b0 + d * d0,
-                            e * a0 + f * c0 + e0,
-                            e * b0 + f * d0 + f0,
-                        ];
-                    }
-
-                    // Graphics state stack (issue #262). `q` snapshots the
-                    // current CTM and fill_color; `Q` restores the most recent
-                    // snapshot. Without these, every `cm` accumulates onto the
-                    // CTM forever, producing absurd page-space coordinates and
-                    // wrong font_size scaling on PDFs that nest graphics state.
-                    ContentOperation::SaveGraphicsState => {
-                        state.saved_states.push(SavedGraphicsState {
-                            ctm: state.ctm,
-                            fill_color: state.fill_color,
-                        });
-                    }
-                    ContentOperation::RestoreGraphicsState => {
-                        if let Some(saved) = state.saved_states.pop() {
-                            state.ctm = saved.ctm;
-                            state.fill_color = saved.fill_color;
-                        }
-                        // Unbalanced Q (pop on empty stack) is silently ignored
-                        // to keep extraction robust to malformed PDFs.
-                    }
-
-                    // Color operations (Phase 4: Color extraction)
-                    ContentOperation::SetNonStrokingGray(gray) => {
-                        state.fill_color = Some(Color::gray(gray as f64));
-                    }
-
-                    ContentOperation::SetNonStrokingRGB(r, g, b) => {
-                        state.fill_color = Some(Color::rgb(r as f64, g as f64, b as f64));
-                    }
-
-                    ContentOperation::SetNonStrokingCMYK(c, m, y, k) => {
-                        state.fill_color =
-                            Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
-                    }
-
-                    // Issue #269 Phase 1: marked-content operators
-                    ContentOperation::BeginMarkedContent(tag) => {
-                        let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
-                        state.mc_stack.push(MarkedContentEntry {
-                            is_artifact: tag == "Artifact" || parent_artifact,
-                            tag,
-                            mcid: None,
-                            actual_text: None,
-                        });
-                    }
-
-                    ContentOperation::BeginMarkedContentWithProps(tag, props) => {
-                        let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
-                        let (mcid, actual_text) = resolve_props(&props, page_properties);
-
-                        // If this scope declares ActualText, open a pending run that will be
-                        // flushed on the matching EMC. Suppresses per-Tj emission inside the
-                        // scope (innermost-ActualText-wins per spec §4).
-                        if let Some(ref text) = actual_text {
-                            state.pending_actualtext = Some(PendingActualText {
-                                text: text.clone(),
-                                first_x: 0.0,
-                                first_y: 0.0,
-                                width: 0.0,
-                                font_size: state.font_size,
-                                font_name: state.font_name.clone(),
-                                is_bold: false, // overwritten on first Tj
-                                is_italic: false,
-                                color: state.fill_color,
-                                stack_depth: state.mc_stack.len(), // BEFORE the push below
-                                populated: false,
-                            });
-                        }
-
-                        state.mc_stack.push(MarkedContentEntry {
-                            is_artifact: tag == "Artifact" || parent_artifact,
-                            tag,
-                            mcid,
-                            actual_text,
-                        });
-                    }
-
-                    ContentOperation::EndMarkedContent => {
-                        let popped_depth = state.mc_stack.len();
-                        if state.mc_stack.pop().is_none() {
-                            // Unbalanced EMC — log and ignore. Real PDFs occasionally emit
-                            // dangling EMC (e.g. from incremental updates). We must not panic.
-                            tracing::debug!(
-                                "extraction: EMC with empty marked-content stack on page {}",
-                                page_index + 1
-                            );
-                        } else if let Some(pending) = state.pending_actualtext.as_ref() {
-                            // If we just closed the scope that opened the pending run, flush it.
-                            if pending.stack_depth + 1 == popped_depth {
-                                let run = state.pending_actualtext.take().unwrap();
-                                if run.populated && self.options.preserve_layout {
-                                    let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
-                                    let in_artifact = state.mc_stack.iter().any(|e| e.is_artifact);
-                                    if !in_artifact || self.options.include_artifacts {
-                                        fragments.push(TextFragment {
-                                            text: run.text,
-                                            x: run.first_x,
-                                            y: run.first_y,
-                                            width: run.width,
-                                            height: run.font_size,
-                                            font_size: run.font_size,
-                                            font_name: run.font_name,
-                                            is_bold: run.is_bold,
-                                            is_italic: run.is_italic,
-                                            color: run.color,
-                                            space_decisions: Vec::new(),
-                                            mcid,
-                                            struct_tag,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    _ => {
-                        // Other operations don't affect text extraction
-                    }
-                }
-            }
+            run = self.process_operations(
+                operations,
+                document,
+                page_resources.as_ref(),
+                run,
+                page_index,
+                0,
+            )?;
         }
 
+        let OpRunState {
+            mut extracted_text,
+            mut fragments,
+            ..
+        } = run;
         {
             let _span = tracing::info_span!("layout_finalize").entered();
 
@@ -1224,6 +786,645 @@ impl TextExtractor {
             text: extracted_text,
             fragments,
         })
+    }
+
+    /// Run a content-stream operation list, recursing into Form XObjects so
+    /// text drawn inside a `Do`-painted Form XObject is extracted (issue #319).
+    #[allow(clippy::too_many_arguments)]
+    fn process_operations<R: Read + Seek>(
+        &mut self,
+        operations: Vec<ContentOperation>,
+        document: &PdfDocument<R>,
+        resources: Option<&crate::parser::objects::PdfDictionary>,
+        run: OpRunState,
+        page_index: u32,
+        depth: u8,
+    ) -> ParseResult<OpRunState> {
+        let OpRunState {
+            mut state,
+            mut in_text_object,
+            mut last_x,
+            mut last_y,
+            mut extracted_text,
+            mut fragments,
+        } = run;
+
+        let page_properties: Option<&crate::parser::objects::PdfDictionary> =
+            resources.and_then(|res| match res.get("Properties") {
+                Some(crate::parser::objects::PdfObject::Dictionary(d)) => Some(d),
+                _ => None,
+            });
+
+        let _ops_span = tracing::info_span!("text_ops_loop").entered();
+        for op in operations {
+            match op {
+                ContentOperation::BeginText => {
+                    in_text_object = true;
+                    // Reset text matrix to identity
+                    state.text_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+                    state.text_line_matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+                }
+
+                ContentOperation::EndText => {
+                    in_text_object = false;
+                }
+
+                ContentOperation::SetTextMatrix(a, b, c, d, e, f) => {
+                    state.text_matrix =
+                        [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
+                    state.text_line_matrix =
+                        [a as f64, b as f64, c as f64, d as f64, e as f64, f as f64];
+                }
+
+                ContentOperation::MoveText(tx, ty) => {
+                    // Update text matrix by translation
+                    let new_matrix = multiply_matrix(
+                        &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
+                        &state.text_line_matrix,
+                    );
+                    state.text_matrix = new_matrix;
+                    state.text_line_matrix = new_matrix;
+                }
+
+                ContentOperation::NextLine => {
+                    // Move to next line using current leading
+                    let new_matrix = multiply_matrix(
+                        &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+                        &state.text_line_matrix,
+                    );
+                    state.text_matrix = new_matrix;
+                    state.text_line_matrix = new_matrix;
+                }
+
+                ContentOperation::ShowText(text) => {
+                    if in_text_object {
+                        let text_bytes = &text;
+                        let decoded = self.decode_text(text_bytes, &state)?;
+
+                        // Pen origin in user space = (CTM × text_matrix)(0, 0).
+                        let (x, y) = text_origin(&state);
+
+                        // Add spacing based on position change
+                        if !extracted_text.is_empty() {
+                            let dx = x - last_x;
+                            let dy = (y - last_y).abs();
+
+                            if dy > self.options.newline_threshold {
+                                extracted_text.push('\n');
+                            } else if dx > self.options.space_threshold * state.font_size {
+                                extracted_text.push(' ');
+                            }
+                        }
+
+                        extracted_text.push_str(&decoded);
+
+                        // Get font info for accurate width calculation.
+                        // Width comes from the char codes (`text_bytes`), not
+                        // the decoded Unicode: the Widths array is code-indexed
+                        // (issue #302).
+                        let text_width = {
+                            let font_info = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+                            calculate_text_width_from_codes(
+                                text_bytes,
+                                &decoded,
+                                state.font_size,
+                                font_info,
+                            )
+                        };
+
+                        if self.options.preserve_layout {
+                            emit_text_fragment(
+                                &mut fragments,
+                                &decoded,
+                                text_width,
+                                x,
+                                y,
+                                &mut state,
+                                self.options.include_artifacts,
+                            );
+                        }
+
+                        // Update position for next text
+                        last_x = x + text_width;
+                        last_y = y;
+
+                        // Update text matrix for next show operation
+                        let tx = text_width * state.horizontal_scale / 100.0;
+                        state.text_matrix =
+                            multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
+                    }
+                }
+
+                ContentOperation::ShowTextArray(array) => {
+                    if in_text_object {
+                        for item in array {
+                            match item {
+                                TextElement::Text(text_bytes) => {
+                                    let decoded = self.decode_text(&text_bytes, &state)?;
+                                    extracted_text.push_str(&decoded);
+
+                                    let text_width = {
+                                        let font_info = state
+                                            .font_name
+                                            .as_ref()
+                                            .and_then(|name| self.font_cache.get(name));
+                                        calculate_text_width_from_codes(
+                                            &text_bytes,
+                                            &decoded,
+                                            state.font_size,
+                                            font_info,
+                                        )
+                                    };
+
+                                    if self.options.preserve_layout {
+                                        let (x, y) = text_origin(&state);
+                                        emit_text_fragment(
+                                            &mut fragments,
+                                            &decoded,
+                                            text_width,
+                                            x,
+                                            y,
+                                            &mut state,
+                                            self.options.include_artifacts,
+                                        );
+                                    }
+
+                                    let tx = text_width * state.horizontal_scale / 100.0;
+                                    state.text_matrix = multiply_matrix(
+                                        &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
+                                        &state.text_matrix,
+                                    );
+                                }
+                                TextElement::Spacing(adjustment) => {
+                                    // Text position adjustment (negative = move left,
+                                    // i.e. shifts the pen forward). When the synthesised
+                                    // forward advance exceeds `tj_space_threshold * font_size`
+                                    // we treat the kern as an implicit `U+0020` (issue #272):
+                                    // many PDFs encode word breaks purely as wide negative
+                                    // kerns and never emit a literal space byte.
+                                    let tx = -(adjustment as f64) / 1000.0 * state.font_size;
+
+                                    if tx > self.options.tj_space_threshold * state.font_size
+                                        && !extracted_text.is_empty()
+                                        && !extracted_text.ends_with(' ')
+                                    {
+                                        extracted_text.push(' ');
+
+                                        // Skip the fragment-level emission while an
+                                        // ActualText scope is pending: the synthesised
+                                        // space is a heuristic, not real content, and
+                                        // emitting it would call `emit_text_fragment`
+                                        // whose ActualText short-circuit would inflate
+                                        // `pending.width` and set `pending.populated`
+                                        // even though no real `Tj` has fired yet. The
+                                        // EMC flush will supply the canonical fragment
+                                        // text from the override (Phase 1 #269 contract).
+                                        if self.options.preserve_layout
+                                            && state.pending_actualtext.is_none()
+                                        {
+                                            // Emit a synthetic single-space fragment at the
+                                            // current pen origin so downstream layout merges
+                                            // (e.g. `merge_close_fragments`) see the gap as
+                                            // explicit content rather than as a sub-threshold
+                                            // x-jump. Width = the kern advance so the next
+                                            // text fragment begins flush against it.
+                                            let (sx, sy) = text_origin(&state);
+                                            emit_text_fragment(
+                                                &mut fragments,
+                                                " ",
+                                                tx,
+                                                sx,
+                                                sy,
+                                                &mut state,
+                                                self.options.include_artifacts,
+                                            );
+                                        }
+                                    }
+
+                                    state.text_matrix = multiply_matrix(
+                                        &[1.0, 0.0, 0.0, 1.0, tx, 0.0],
+                                        &state.text_matrix,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ContentOperation::NextLineShowText(text) => {
+                    if in_text_object {
+                        // ' = T* then Tj string. Advance line matrix by -leading.
+                        let new_matrix = multiply_matrix(
+                            &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+                            &state.text_line_matrix,
+                        );
+                        state.text_matrix = new_matrix;
+                        state.text_line_matrix = new_matrix;
+
+                        let decoded = self.decode_text(&text, &state)?;
+                        let (x, y) = text_origin(&state);
+
+                        if !extracted_text.is_empty() {
+                            extracted_text.push('\n');
+                        }
+                        extracted_text.push_str(&decoded);
+
+                        let text_width = {
+                            let font_info = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+                            calculate_text_width_from_codes(
+                                &text,
+                                &decoded,
+                                state.font_size,
+                                font_info,
+                            )
+                        };
+
+                        if self.options.preserve_layout {
+                            emit_text_fragment(
+                                &mut fragments,
+                                &decoded,
+                                text_width,
+                                x,
+                                y,
+                                &mut state,
+                                self.options.include_artifacts,
+                            );
+                        }
+
+                        last_x = x + text_width;
+                        last_y = y;
+
+                        let tx = text_width * state.horizontal_scale / 100.0;
+                        state.text_matrix =
+                            multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
+                    }
+                }
+
+                ContentOperation::SetSpacingNextLineShowText(word_space, char_space, text) => {
+                    if in_text_object {
+                        // " = aw Tw, ac Tc, then ' string. ISO 32000-1 §9.4.3.
+                        // The variant fields mirror the spec field names:
+                        // (word_spacing, char_spacing, text).
+                        state.word_space = word_space as f64;
+                        state.char_space = char_space as f64;
+
+                        let new_matrix = multiply_matrix(
+                            &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+                            &state.text_line_matrix,
+                        );
+                        state.text_matrix = new_matrix;
+                        state.text_line_matrix = new_matrix;
+
+                        let decoded = self.decode_text(&text, &state)?;
+                        let (x, y) = text_origin(&state);
+
+                        if !extracted_text.is_empty() {
+                            extracted_text.push('\n');
+                        }
+                        extracted_text.push_str(&decoded);
+
+                        let text_width = {
+                            let font_info = state
+                                .font_name
+                                .as_ref()
+                                .and_then(|name| self.font_cache.get(name));
+                            calculate_text_width_from_codes(
+                                &text,
+                                &decoded,
+                                state.font_size,
+                                font_info,
+                            )
+                        };
+
+                        if self.options.preserve_layout {
+                            emit_text_fragment(
+                                &mut fragments,
+                                &decoded,
+                                text_width,
+                                x,
+                                y,
+                                &mut state,
+                                self.options.include_artifacts,
+                            );
+                        }
+
+                        last_x = x + text_width;
+                        last_y = y;
+
+                        let tx = text_width * state.horizontal_scale / 100.0;
+                        state.text_matrix =
+                            multiply_matrix(&[1.0, 0.0, 0.0, 1.0, tx, 0.0], &state.text_matrix);
+                    }
+                }
+
+                ContentOperation::SetFont(name, size) => {
+                    state.font_name = Some(name);
+                    state.font_size = size as f64;
+                }
+
+                ContentOperation::SetLeading(leading) => {
+                    state.leading = leading as f64;
+                }
+
+                ContentOperation::SetCharSpacing(spacing) => {
+                    state.char_space = spacing as f64;
+                }
+
+                ContentOperation::SetWordSpacing(spacing) => {
+                    state.word_space = spacing as f64;
+                }
+
+                ContentOperation::SetHorizontalScaling(scale) => {
+                    state.horizontal_scale = scale as f64;
+                }
+
+                ContentOperation::SetTextRise(rise) => {
+                    state.text_rise = rise as f64;
+                }
+
+                ContentOperation::SetTextRenderMode(mode) => {
+                    state.render_mode = mode as u8;
+                }
+
+                ContentOperation::SetTransformMatrix(a, b, c, d, e, f) => {
+                    // Update CTM: new_ctm = concat_matrix * current_ctm
+                    let [a0, b0, c0, d0, e0, f0] = state.ctm;
+                    let a = a as f64;
+                    let b = b as f64;
+                    let c = c as f64;
+                    let d = d as f64;
+                    let e = e as f64;
+                    let f = f as f64;
+                    state.ctm = [
+                        a * a0 + b * c0,
+                        a * b0 + b * d0,
+                        c * a0 + d * c0,
+                        c * b0 + d * d0,
+                        e * a0 + f * c0 + e0,
+                        e * b0 + f * d0 + f0,
+                    ];
+                }
+
+                // Graphics state stack (issue #262). `q` snapshots the
+                // current CTM and fill_color; `Q` restores the most recent
+                // snapshot. Without these, every `cm` accumulates onto the
+                // CTM forever, producing absurd page-space coordinates and
+                // wrong font_size scaling on PDFs that nest graphics state.
+                ContentOperation::SaveGraphicsState => {
+                    state.saved_states.push(SavedGraphicsState {
+                        ctm: state.ctm,
+                        fill_color: state.fill_color,
+                    });
+                }
+                ContentOperation::RestoreGraphicsState => {
+                    if let Some(saved) = state.saved_states.pop() {
+                        state.ctm = saved.ctm;
+                        state.fill_color = saved.fill_color;
+                    }
+                    // Unbalanced Q (pop on empty stack) is silently ignored
+                    // to keep extraction robust to malformed PDFs.
+                }
+
+                // Color operations (Phase 4: Color extraction)
+                ContentOperation::SetNonStrokingGray(gray) => {
+                    state.fill_color = Some(Color::gray(gray as f64));
+                }
+
+                ContentOperation::SetNonStrokingRGB(r, g, b) => {
+                    state.fill_color = Some(Color::rgb(r as f64, g as f64, b as f64));
+                }
+
+                ContentOperation::SetNonStrokingCMYK(c, m, y, k) => {
+                    state.fill_color = Some(Color::cmyk(c as f64, m as f64, y as f64, k as f64));
+                }
+
+                // Issue #269 Phase 1: marked-content operators
+                ContentOperation::BeginMarkedContent(tag) => {
+                    let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
+                    state.mc_stack.push(MarkedContentEntry {
+                        is_artifact: tag == "Artifact" || parent_artifact,
+                        tag,
+                        mcid: None,
+                        actual_text: None,
+                    });
+                }
+
+                ContentOperation::BeginMarkedContentWithProps(tag, props) => {
+                    let parent_artifact = state.mc_stack.last().is_some_and(|e| e.is_artifact);
+                    let (mcid, actual_text) = resolve_props(&props, page_properties);
+
+                    // If this scope declares ActualText, open a pending run that will be
+                    // flushed on the matching EMC. Suppresses per-Tj emission inside the
+                    // scope (innermost-ActualText-wins per spec §4).
+                    if let Some(ref text) = actual_text {
+                        state.pending_actualtext = Some(PendingActualText {
+                            text: text.clone(),
+                            first_x: 0.0,
+                            first_y: 0.0,
+                            width: 0.0,
+                            font_size: state.font_size,
+                            font_name: state.font_name.clone(),
+                            is_bold: false, // overwritten on first Tj
+                            is_italic: false,
+                            color: state.fill_color,
+                            stack_depth: state.mc_stack.len(), // BEFORE the push below
+                            populated: false,
+                        });
+                    }
+
+                    state.mc_stack.push(MarkedContentEntry {
+                        is_artifact: tag == "Artifact" || parent_artifact,
+                        tag,
+                        mcid,
+                        actual_text,
+                    });
+                }
+
+                ContentOperation::EndMarkedContent => {
+                    let popped_depth = state.mc_stack.len();
+                    if state.mc_stack.pop().is_none() {
+                        // Unbalanced EMC — log and ignore. Real PDFs occasionally emit
+                        // dangling EMC (e.g. from incremental updates). We must not panic.
+                        tracing::debug!(
+                            "extraction: EMC with empty marked-content stack on page {}",
+                            page_index + 1
+                        );
+                    } else if let Some(pending) = state.pending_actualtext.as_ref() {
+                        // If we just closed the scope that opened the pending run, flush it.
+                        if pending.stack_depth + 1 == popped_depth {
+                            let run = state.pending_actualtext.take().unwrap();
+                            if run.populated && self.options.preserve_layout {
+                                let (mcid, struct_tag) = innermost_mc_tag(&state.mc_stack);
+                                let in_artifact = state.mc_stack.iter().any(|e| e.is_artifact);
+                                if !in_artifact || self.options.include_artifacts {
+                                    fragments.push(TextFragment {
+                                        text: run.text,
+                                        x: run.first_x,
+                                        y: run.first_y,
+                                        width: run.width,
+                                        height: run.font_size,
+                                        font_size: run.font_size,
+                                        font_name: run.font_name,
+                                        is_bold: run.is_bold,
+                                        is_italic: run.is_italic,
+                                        color: run.color,
+                                        space_decisions: Vec::new(),
+                                        mcid,
+                                        struct_tag,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ContentOperation::PaintXObject(name) => {
+                    // Issue #319: recurse into Form XObjects. `Do` paints a
+                    // Form XObject in an implicit q/Q, with the XObject's
+                    // /Matrix composed onto the CTM and its own /Resources
+                    // fonts in scope. Without this, text drawn inside the
+                    // XObject (the page body, for RML2PDF "inclPDF" output)
+                    // is never extracted.
+                    const MAX_XOBJECT_DEPTH: u8 = 12;
+                    if depth < MAX_XOBJECT_DEPTH {
+                        if let Some((xobj_ops, xobj_res, matrix)) =
+                            self.load_form_xobject(resources, &name, document)
+                        {
+                            let saved_ctm = state.ctm;
+                            let saved_fill = state.fill_color;
+                            let saved_stack = state.saved_states.len();
+                            let saved_fonts = self.font_cache.clone();
+
+                            if let Some(m) = matrix {
+                                let [a0, b0, c0, d0, e0, f0] = state.ctm;
+                                let [a, b, c, d, e, f] = m;
+                                state.ctm = [
+                                    a * a0 + b * c0,
+                                    a * b0 + b * d0,
+                                    c * a0 + d * c0,
+                                    c * b0 + d * d0,
+                                    e * a0 + f * c0 + e0,
+                                    e * b0 + f * d0 + f0,
+                                ];
+                            }
+                            if let Some(ref xr) = xobj_res {
+                                self.cache_fonts_from_resources::<R>(xr, document);
+                            }
+
+                            let sub = OpRunState {
+                                state,
+                                in_text_object: false,
+                                last_x,
+                                last_y,
+                                extracted_text,
+                                fragments,
+                            };
+                            let mut out = self.process_operations(
+                                xobj_ops,
+                                document,
+                                xobj_res.as_ref(),
+                                sub,
+                                page_index,
+                                depth + 1,
+                            )?;
+
+                            out.state.ctm = saved_ctm;
+                            out.state.fill_color = saved_fill;
+                            out.state.saved_states.truncate(saved_stack);
+                            self.font_cache = saved_fonts;
+
+                            state = out.state;
+                            last_x = out.last_x;
+                            last_y = out.last_y;
+                            extracted_text = out.extracted_text;
+                            fragments = out.fragments;
+                        }
+                    }
+                }
+                _ => {
+                    // Other operations don't affect text extraction
+                }
+            }
+        }
+
+        Ok(OpRunState {
+            state,
+            in_text_object,
+            last_x,
+            last_y,
+            extracted_text,
+            fragments,
+        })
+    }
+
+    /// Load a Form XObject by name: parsed operations, resolved /Resources,
+    /// and optional /Matrix. None for image XObjects or anything unparseable.
+    fn load_form_xobject<R: Read + Seek>(
+        &self,
+        resources: Option<&crate::parser::objects::PdfDictionary>,
+        name: &str,
+        document: &PdfDocument<R>,
+    ) -> Option<(
+        Vec<ContentOperation>,
+        Option<crate::parser::objects::PdfDictionary>,
+        Option<[f64; 6]>,
+    )> {
+        use crate::parser::objects::PdfObject;
+        let res = resources?;
+        let xobjects = match res.get("XObject")? {
+            PdfObject::Dictionary(d) => d.clone(),
+            PdfObject::Reference(n, g) => match document.get_object(*n, *g).ok()? {
+                PdfObject::Dictionary(d) => d,
+                _ => return None,
+            },
+            _ => return None,
+        };
+        let (n, g) = xobjects.get(name)?.as_reference()?;
+        let obj = document.get_object(n, g).ok()?;
+        let stream = obj.as_stream()?;
+        if stream
+            .dict
+            .get("Subtype")
+            .and_then(|o| o.as_name())
+            .map(|nm| nm.0.as_str())
+            != Some("Form")
+        {
+            return None;
+        }
+        let data = stream.decode(&Default::default()).ok()?;
+        let ops = ContentParser::parse_content(&data).ok()?;
+        let xobj_res = match stream.dict.get("Resources") {
+            Some(PdfObject::Dictionary(d)) => Some(d.clone()),
+            Some(PdfObject::Reference(rn, rg)) => document
+                .get_object(*rn, *rg)
+                .ok()
+                .and_then(|o| o.as_dict().cloned()),
+            _ => None,
+        };
+        let matrix = stream
+            .dict
+            .get("Matrix")
+            .and_then(|o| o.as_array())
+            .and_then(|a| {
+                if a.0.len() == 6 {
+                    let mut m = [0.0f64; 6];
+                    for (i, slot) in m.iter_mut().enumerate() {
+                        *slot = a.0[i]
+                            .as_real()
+                            .or_else(|| a.0[i].as_integer().map(|x| x as f64))?;
+                    }
+                    Some(m)
+                } else {
+                    None
+                }
+            });
+        Some((ops, xobj_res, matrix))
     }
 
     /// Sort text fragments by position and merge them appropriately

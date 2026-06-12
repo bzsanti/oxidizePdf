@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [2.15.0] - 2026-06-11
+
+### Added
+
+- `IncrementalFormFiller` (`oxidize_pdf::writer`): fill AcroForm fields on an
+  existing, already-serialized PDF and recover the value via a form reader.
+  It appends a conformant ISO 32000-1 §7.5.6 incremental update — the original
+  bytes are preserved verbatim, only the modified field objects and the
+  `/AcroForm` dict are rewritten (with a partial cross-reference section, a
+  chained `/Prev`, and a regenerated `/ID`). Resolves hierarchical field names
+  (`/Kids` + `/Parent`) and terminal fields whose `/Kids` are widget
+  annotations. Sets `/V` and `/AcroForm/NeedAppearances` (`/AP` regeneration is
+  a follow-up). `PdfReader::trailer()` accessor added (#318).
+
+### Fixed
+
+- Text extraction dropped a whole page's content when that page's content
+  stream contained a single malformed operator: the parser propagated the
+  error and the extractor discarded every operator on the page. Parsing is now
+  best-effort — a malformed operator is skipped and surrounding valid operators
+  are kept; an unrecoverable tokenizer error keeps the tokens parsed so far
+  instead of discarding the page (#319).
+- Text drawn inside a Form XObject (invoked with `Do`) was never extracted.
+  Producers such as RML2PDF/pluscode embed the page body as a Form XObject
+  ("inclPDF"), so only the page's direct content was returned and the body went
+  missing. The extractor now recurses into Form XObjects — composing their
+  `/Matrix` onto the CTM, scoping their `/Resources` fonts, and handling nested
+  XObjects with a depth guard. Validated across the full 9051-PDF corpus: zero
+  regressions, 277 files recover previously-dropped text (#319).
+
 ## [2.14.0] - 2026-06-10
 
 ### Added

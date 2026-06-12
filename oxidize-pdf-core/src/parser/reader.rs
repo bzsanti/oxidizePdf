@@ -71,6 +71,17 @@ impl<R: Read + Seek> PdfReader<R> {
         self.encryption_handler.is_some()
     }
 
+    /// Access the parsed document trailer.
+    ///
+    /// Exposes the already-parsed [`PdfTrailer`], which carries the base
+    /// `startxref` offset (`xref_offset`), and the `/Root`, `/Info`, `/ID`
+    /// and `/Size` entries. Required to build a conformant ISO 32000-1
+    /// §7.5.6 incremental update (the appended trailer must chain its
+    /// `/Prev` to this offset and reuse the base `/Root` and `/ID`).
+    pub fn trailer(&self) -> &PdfTrailer {
+        &self.trailer
+    }
+
     /// Check if the PDF is unlocked (can read encrypted content)
     pub fn is_unlocked(&self) -> bool {
         match &self.encryption_handler {
