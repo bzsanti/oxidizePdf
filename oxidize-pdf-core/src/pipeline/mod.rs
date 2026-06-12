@@ -1,4 +1,4 @@
-mod chunk_metadata;
+pub(crate) mod chunk_metadata;
 pub mod element;
 pub mod export;
 pub mod graph;

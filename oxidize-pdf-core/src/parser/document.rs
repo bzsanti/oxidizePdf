@@ -1403,12 +1403,31 @@ impl<R: Read + Seek> PdfDocument<R> {
         let elements = self.partition()?;
         let chunker = crate::pipeline::HybridChunker::new(config);
         let hybrid_chunks = chunker.chunk(&elements);
-        let rag_chunks = hybrid_chunks
-            .iter()
-            .enumerate()
-            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
-            .collect();
-        Ok(rag_chunks)
+        Ok(self.build_rag_chunks(&hybrid_chunks, None))
+    }
+
+    /// Build linked [`RagChunk`]s from hybrid chunks, optionally stamping a
+    /// [`DocumentSource`](crate::pipeline::DocumentSource), then wiring
+    /// prev/next ids. Shared by all `rag_chunks*` entry points (DRY).
+    fn build_rag_chunks(
+        &self,
+        hybrid_chunks: &[crate::pipeline::HybridChunk],
+        source: Option<crate::pipeline::DocumentSource>,
+    ) -> Vec<crate::pipeline::RagChunk> {
+        let mut chunks: Vec<crate::pipeline::RagChunk> = match &source {
+            Some(s) => hybrid_chunks
+                .iter()
+                .enumerate()
+                .map(|(i, hc)| crate::pipeline::RagChunk::from_hybrid_chunk_with_source(i, hc, s))
+                .collect(),
+            None => hybrid_chunks
+                .iter()
+                .enumerate()
+                .map(|(i, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(i, hc))
+                .collect(),
+        };
+        crate::pipeline::chunk_metadata::link_chunks(&mut chunks);
+        chunks
     }
 
     /// Extract and chunk the document using a pre-configured extraction profile.
@@ -1436,12 +1455,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         let elements = self.partition_with_profile(profile)?;
         let chunker = crate::pipeline::HybridChunker::default();
         let hybrid_chunks = chunker.chunk(&elements);
-        let rag_chunks = hybrid_chunks
-            .iter()
-            .enumerate()
-            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
-            .collect();
-        Ok(rag_chunks)
+        Ok(self.build_rag_chunks(&hybrid_chunks, None))
     }
 
     /// Combine a pre-configured extraction profile with a custom chunking config.
@@ -1468,11 +1482,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         let elements = self.partition_with_profile(profile)?;
         let chunker = crate::pipeline::HybridChunker::new(config);
         let hybrid_chunks = chunker.chunk(&elements);
-        Ok(hybrid_chunks
-            .iter()
-            .enumerate()
-            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
-            .collect())
+        Ok(self.build_rag_chunks(&hybrid_chunks, None))
     }
 
     /// Extract chunks as a JSON string ready for vector store ingestion.

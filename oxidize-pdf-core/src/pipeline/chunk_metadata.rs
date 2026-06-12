@@ -182,6 +182,19 @@ impl ChunkMetadata {
     }
 }
 
+/// Fill `prev_chunk_id` / `next_chunk_id` on each chunk from its neighbours' ids.
+pub(crate) fn link_chunks(chunks: &mut [crate::pipeline::RagChunk]) {
+    let ids: Vec<String> = chunks.iter().map(|c| c.metadata.chunk_id.clone()).collect();
+    for (i, c) in chunks.iter_mut().enumerate() {
+        c.metadata.prev_chunk_id = if i > 0 {
+            Some(ids[i - 1].clone())
+        } else {
+            None
+        };
+        c.metadata.next_chunk_id = ids.get(i + 1).cloned();
+    }
+}
+
 /// Deterministic chunk id: `<doc_id>:<index>` where `doc_id` is the supplied
 /// `doc_hash` or, absent that, the first 8 bytes of SHA-256(full_text) in hex.
 pub(crate) fn content_chunk_id(doc_hash: Option<&str>, index: usize, full_text: &str) -> String {

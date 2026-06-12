@@ -14,19 +14,58 @@ fn make_para(text: &str, page: u32, x: f64, y: f64) -> Element {
     })
 }
 
+/// `RagChunk` is `#[non_exhaustive]`, so external crates cannot build it via a
+/// struct literal. Construct one through the public `from_hybrid_chunk` API and
+/// override the public fields these tests need to pin.
+#[allow(clippy::too_many_arguments)]
+fn make_rag_chunk(
+    chunk_index: usize,
+    text: &str,
+    full_text: &str,
+    page_numbers: Vec<u32>,
+    bounding_boxes: Vec<ElementBBox>,
+    element_types: Vec<String>,
+    heading_context: Option<String>,
+    token_estimate: usize,
+    is_oversized: bool,
+) -> RagChunk {
+    let chunker = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 512,
+        overlap_tokens: 0,
+        merge_adjacent: false,
+        propagate_headings: false,
+        merge_policy: MergePolicy::AnyInlineContent,
+    });
+    let chunks = chunker.chunk(&[Element::Paragraph(ElementData {
+        text: text.to_string(),
+        metadata: ElementMetadata::default(),
+    })]);
+    let mut chunk = RagChunk::from_hybrid_chunk(chunk_index, &chunks[0]);
+    chunk.chunk_index = chunk_index;
+    chunk.text = text.to_string();
+    chunk.full_text = full_text.to_string();
+    chunk.page_numbers = page_numbers;
+    chunk.bounding_boxes = bounding_boxes;
+    chunk.element_types = element_types;
+    chunk.heading_context = heading_context;
+    chunk.token_estimate = token_estimate;
+    chunk.is_oversized = is_oversized;
+    chunk
+}
+
 #[test]
 fn test_rag_chunk_has_required_fields() {
-    let chunk = RagChunk {
-        chunk_index: 0,
-        text: "Hello world.".to_string(),
-        full_text: "Introduction\n\nHello world.".to_string(),
-        page_numbers: vec![0],
-        bounding_boxes: vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
-        element_types: vec!["paragraph".to_string()],
-        heading_context: Some("Introduction".to_string()),
-        token_estimate: 2,
-        is_oversized: false,
-    };
+    let chunk = make_rag_chunk(
+        0,
+        "Hello world.",
+        "Introduction\n\nHello world.",
+        vec![0],
+        vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
+        vec!["paragraph".to_string()],
+        Some("Introduction".to_string()),
+        2,
+        false,
+    );
 
     assert_eq!(chunk.chunk_index, 0);
     assert_eq!(chunk.text, "Hello world.");
@@ -112,17 +151,17 @@ fn test_rag_chunk_collects_pages_from_multi_page_elements() {
 #[cfg(feature = "semantic")]
 #[test]
 fn test_rag_chunk_serializes_to_json() {
-    let chunk = RagChunk {
-        chunk_index: 3,
-        text: "Some text content.".to_string(),
-        full_text: "Heading\n\nSome text content.".to_string(),
-        page_numbers: vec![0, 1],
-        bounding_boxes: vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
-        element_types: vec!["paragraph".to_string()],
-        heading_context: Some("Heading".to_string()),
-        token_estimate: 3,
-        is_oversized: false,
-    };
+    let chunk = make_rag_chunk(
+        3,
+        "Some text content.",
+        "Heading\n\nSome text content.",
+        vec![0, 1],
+        vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
+        vec!["paragraph".to_string()],
+        Some("Heading".to_string()),
+        3,
+        false,
+    );
 
     let json = serde_json::to_string(&chunk).expect("serialization must succeed");
 
@@ -138,17 +177,17 @@ fn test_rag_chunk_serializes_to_json() {
 #[cfg(feature = "semantic")]
 #[test]
 fn test_rag_chunk_to_json_method() {
-    let chunk = RagChunk {
-        chunk_index: 0,
-        text: "Test.".to_string(),
-        full_text: "Test.".to_string(),
-        page_numbers: vec![0],
-        bounding_boxes: vec![],
-        element_types: vec!["paragraph".to_string()],
-        heading_context: None,
-        token_estimate: 1,
-        is_oversized: false,
-    };
+    let chunk = make_rag_chunk(
+        0,
+        "Test.",
+        "Test.",
+        vec![0],
+        vec![],
+        vec!["paragraph".to_string()],
+        None,
+        1,
+        false,
+    );
 
     let json = chunk.to_json().expect("to_json must succeed");
     assert!(json.starts_with('{'));
