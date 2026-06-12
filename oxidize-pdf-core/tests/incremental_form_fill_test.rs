@@ -156,6 +156,37 @@ fn base_startxref(bytes: &[u8]) -> u64 {
     reader.trailer().xref_offset
 }
 
+/// Base trailer `/Size` (= the first object id a fresh appearance stream takes).
+fn base_size(bytes: &[u8]) -> u32 {
+    let reader = PdfReader::new(Cursor::new(bytes)).expect("parse");
+    reader.trailer().size().expect("base /Size") as u32
+}
+
+/// Object ids of the first page's widget annotations (the bearers of /AP after
+/// a fill in the separate-widget layouts).
+fn page_widget_ids(bytes: &[u8]) -> Vec<u32> {
+    let mut reader = PdfReader::new(Cursor::new(bytes)).expect("parse");
+    let pages = reader.pages().expect("pages").clone();
+    let (pn, pg) = match pages.get("Kids").and_then(|o| o.as_array()) {
+        Some(arr) => arr.0[0].as_reference().expect("page ref"),
+        None => return Vec::new(),
+    };
+    let page = reader
+        .get_object(pn, pg)
+        .expect("page")
+        .as_dict()
+        .expect("page dict")
+        .clone();
+    match page.get("Annots") {
+        Some(PdfObject::Array(arr)) => arr
+            .0
+            .iter()
+            .filter_map(|o| o.as_reference().map(|(n, _)| n))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
 /// Read `/Prev` from an appended incremental trailer (text form).
 fn appended_prev(appended: &[u8]) -> u64 {
     let s = String::from_utf8_lossy(appended);
@@ -220,15 +251,20 @@ fn fill_single_field_incremental_roundtrip() {
         "/AcroForm/NeedAppearances must be true"
     );
 
-    // 4) Appended xref lists exactly the changed objects: field + AcroForm.
+    // 4) Appended xref lists the changed objects: field + its widget + AcroForm
+    //    + one synthesized /AP appearance stream (the new follow-up behaviour).
     let appended = &output[base.len()..];
     let mut ids = appended_xref_object_numbers(appended);
     ids.sort_unstable();
-    let mut expected = vec![field_id_after.0, acro_id.0];
+    let widget_ids = page_widget_ids(&base);
+    let ap_stream_id = base_size(&base); // single text field -> single new stream
+    let mut expected = vec![field_id_after.0, acro_id.0, ap_stream_id];
+    expected.extend(widget_ids);
     expected.sort_unstable();
+    expected.dedup();
     assert_eq!(
         ids, expected,
-        "appended xref must list exactly the field and AcroForm objects"
+        "appended xref must list the field, its widget, the AcroForm and the new /AP stream"
     );
 
     // 5) /Prev chains to the base startxref.
@@ -264,9 +300,13 @@ fn fill_many_fields_incremental_roundtrip() {
         Some(true)
     );
 
-    // Appended xref: two field objects + one AcroForm object = 3 distinct ids.
+    // Appended xref: 2 fields + 2 widgets + AcroForm + 2 /AP streams = 7 ids.
     let ids = appended_xref_object_numbers(&output[base.len()..]);
-    assert_eq!(ids.len(), 3, "two fields + AcroForm, got {ids:?}");
+    assert_eq!(
+        ids.len(),
+        7,
+        "two fields + two widgets + AcroForm + two /AP streams, got {ids:?}"
+    );
 }
 
 #[test]
@@ -422,8 +462,18 @@ fn fill_field_with_widget_kids() {
         Some("user@example.com"),
         "/V must be set on the terminal field object (5), not lost in widget recursion"
     );
-    // Only the field (5) + AcroForm (4) change — the widget (6) is untouched.
+    // Field (5) gets /V, AcroForm (4) gets NeedAppearances, the widget (6) is
+    // rewritten with /AP, and one new appearance stream (7) is appended.
     let mut ids = appended_xref_object_numbers(&output[base.len()..]);
     ids.sort_unstable();
-    assert_eq!(ids, vec![4, 5]);
+    assert_eq!(ids, vec![4, 5, 6, 7]);
+    // The widget (6) now carries a synthesized /AP/N showing the value.
+    let mut reader = PdfReader::new(Cursor::new(&output)).expect("parse");
+    let widget = reader
+        .get_object(6, 0)
+        .expect("widget 6")
+        .as_dict()
+        .expect("dict")
+        .clone();
+    assert!(widget.contains_key("AP"), "widget gains /AP");
 }
