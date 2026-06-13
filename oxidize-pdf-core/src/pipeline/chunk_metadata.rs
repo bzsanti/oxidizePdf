@@ -159,8 +159,15 @@ pub struct ChunkMetadata {
     /// Sentence count (uses the chunker's sentence splitter).
     pub sentence_count: usize,
     /// Detected language code (ISO 639-3, via `whatlang`); `None` if the
-    /// `lang-detect` feature is off or detection is inconclusive.
+    /// `language-detection` feature is off or detection is inconclusive.
     pub language: Option<String>,
+    /// Detection confidence in `(0, 1]` for [`language`](Self::language);
+    /// `None` when no language was detected.
+    pub language_confidence: Option<f32>,
+    /// Whether `whatlang` considered the [`language`](Self::language)
+    /// detection reliable. Consumers should gate language-based routing on
+    /// this; `None` when no language was detected.
+    pub language_reliable: Option<bool>,
     /// Deterministic, stable identifier for this chunk.
     pub chunk_id: String,
     /// Identifier of the previous chunk in the document, if any.
@@ -197,6 +204,18 @@ impl ChunkMetadata {
             .map(|e| e.metadata().heading_path.clone())
             .unwrap_or_default();
         let (page_span, page_regions) = page_anchor(elements);
+        // Detect once; fill code + confidence + reliability together.
+        #[cfg(feature = "language-detection")]
+        let (language, language_confidence, language_reliable) = match detect_language_full(text) {
+            Some((code, conf, reliable)) => (Some(code), Some(conf), Some(reliable)),
+            None => (None, None, None),
+        };
+        #[cfg(not(feature = "language-detection"))]
+        let (language, language_confidence, language_reliable): (
+            Option<String>,
+            Option<f32>,
+            Option<bool>,
+        ) = (None, None, None);
         ChunkMetadata {
             heading_path,
             dominant_font: agg.dominant_font,
@@ -208,10 +227,9 @@ impl ChunkMetadata {
             char_count: char_count(text),
             word_count: word_count(text),
             sentence_count: sentence_count(text),
-            #[cfg(feature = "language-detection")]
-            language: detect_language(text),
-            #[cfg(not(feature = "language-detection"))]
-            language: None,
+            language,
+            language_confidence,
+            language_reliable,
             chunk_id: content_chunk_id(doc_hash, chunk_index, full_text),
             prev_chunk_id: None,
             next_chunk_id: None,
@@ -277,10 +295,25 @@ pub(crate) fn link_chunks(chunks: &mut [crate::pipeline::RagChunk]) {
 /// Requires the `language-detection` feature.
 #[cfg(feature = "language-detection")]
 pub fn detect_language(text: &str) -> Option<String> {
+    detect_language_full(text).map(|(code, _, _)| code)
+}
+
+/// Run `whatlang` once and return `(code, confidence, reliable)`; `None` for
+/// empty/whitespace-only input or when no detection is produced. Single call
+/// site so [`ChunkMetadata`] can fill code + confidence + reliability without
+/// detecting twice.
+#[cfg(feature = "language-detection")]
+pub(crate) fn detect_language_full(text: &str) -> Option<(String, f32, bool)> {
     if text.trim().is_empty() {
         return None;
     }
-    whatlang::detect(text).map(|info| info.lang().code().to_string())
+    whatlang::detect(text).map(|info| {
+        (
+            info.lang().code().to_string(),
+            info.confidence() as f32,
+            info.is_reliable(),
+        )
+    })
 }
 
 /// Deterministic chunk id: `<doc_id>:<index>` where `doc_id` is the supplied
@@ -517,5 +550,36 @@ mod tests {
         let m = ChunkMetadata::from_elements(&[], "", "", 0, None);
         assert_eq!(m.page_span, None);
         assert!(m.page_regions.is_empty());
+    }
+
+    #[cfg(feature = "language-detection")]
+    #[test]
+    fn language_reliability_populated_alongside_code() {
+        let els = vec![para("x", "F", 10.0, false, 1.0)];
+        let text =
+            "The annual report summarizes the financial performance of the company over the year.";
+        let m = ChunkMetadata::from_elements(&els, text, text, 0, None);
+        assert_eq!(m.language.as_deref(), Some("eng"));
+        let conf = m
+            .language_confidence
+            .expect("confidence present when a language is detected");
+        assert!(
+            conf > 0.0 && conf <= 1.0,
+            "confidence must be in (0, 1], got {conf}"
+        );
+        assert_eq!(
+            m.language_reliable,
+            Some(true),
+            "a full English sentence must be a reliable detection"
+        );
+    }
+
+    #[cfg(feature = "language-detection")]
+    #[test]
+    fn language_reliability_none_for_empty_text() {
+        let m = ChunkMetadata::from_elements(&[], "", "", 0, None);
+        assert_eq!(m.language, None);
+        assert_eq!(m.language_confidence, None);
+        assert_eq!(m.language_reliable, None);
     }
 }
