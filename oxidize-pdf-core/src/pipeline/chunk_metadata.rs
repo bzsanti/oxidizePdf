@@ -7,7 +7,7 @@
 #[cfg(feature = "semantic")]
 use serde::{Deserialize, Serialize};
 
-use crate::pipeline::element::Element;
+use crate::pipeline::element::{Element, ElementBBox};
 use crate::pipeline::hybrid_chunking::split_into_sentences;
 
 /// Char-weighted aggregates over a chunk's elements.
@@ -120,6 +120,19 @@ impl DocumentSource {
     }
 }
 
+/// Citation anchor for a chunk on a single page: the axis-aligned union of all
+/// the chunk's element bounding boxes that fall on that page. Lets a RAG
+/// consumer cite back to an exact region of the source PDF.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
+#[non_exhaustive]
+pub struct PageRegion {
+    /// Page the region is on (as stored on the elements).
+    pub page: u32,
+    /// Union bounding box of the chunk's elements on this page.
+    pub bbox: ElementBBox,
+}
+
 /// Per-chunk metadata attached to every [`RagChunk`](crate::pipeline::RagChunk).
 #[derive(Debug, Clone, Default, PartialEq)]
 #[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
@@ -156,6 +169,12 @@ pub struct ChunkMetadata {
     pub next_chunk_id: Option<String>,
     /// Source-document metadata, if available.
     pub source: Option<DocumentSource>,
+    /// First and last page the chunk's elements touch (inclusive), or `None`
+    /// when the chunk has no positioned elements.
+    pub page_span: Option<(u32, u32)>,
+    /// Per-page citation regions (union bbox of the chunk's elements on each
+    /// page), sorted ascending by page. Empty when the chunk has no elements.
+    pub page_regions: Vec<PageRegion>,
 }
 
 use sha2::{Digest, Sha256};
@@ -177,6 +196,7 @@ impl ChunkMetadata {
             .first()
             .map(|e| e.metadata().heading_path.clone())
             .unwrap_or_default();
+        let (page_span, page_regions) = page_anchor(elements);
         ChunkMetadata {
             heading_path,
             dominant_font: agg.dominant_font,
@@ -196,8 +216,44 @@ impl ChunkMetadata {
             prev_chunk_id: None,
             next_chunk_id: None,
             source: None,
+            page_span,
+            page_regions,
         }
     }
+}
+
+/// Union of two axis-aligned bounding boxes.
+fn union_bbox(a: ElementBBox, b: ElementBBox) -> ElementBBox {
+    let x = a.x.min(b.x);
+    let y = a.y.min(b.y);
+    let right = a.right().max(b.right());
+    let top = a.top().max(b.top());
+    ElementBBox::new(x, y, right - x, top - y)
+}
+
+/// Compute the chunk's citation anchor: `(page_span, page_regions)`. Groups the
+/// elements by page, unions their bboxes per page, and sorts the regions by
+/// page ascending. Returns `(None, vec![])` for an element-less chunk.
+fn page_anchor(elements: &[Element]) -> (Option<(u32, u32)>, Vec<PageRegion>) {
+    let mut by_page: Vec<(u32, ElementBBox)> = Vec::new();
+    for e in elements {
+        let page = e.metadata().page;
+        let bbox = *e.bbox();
+        match by_page.iter_mut().find(|(p, _)| *p == page) {
+            Some(slot) => slot.1 = union_bbox(slot.1, bbox),
+            None => by_page.push((page, bbox)),
+        }
+    }
+    if by_page.is_empty() {
+        return (None, Vec::new());
+    }
+    by_page.sort_by_key(|(p, _)| *p);
+    let span = (by_page.first().unwrap().0, by_page.last().unwrap().0);
+    let regions = by_page
+        .into_iter()
+        .map(|(page, bbox)| PageRegion { page, bbox })
+        .collect();
+    (Some(span), regions)
 }
 
 /// Fill `prev_chunk_id` / `next_chunk_id` on each chunk from its neighbours' ids.
@@ -413,5 +469,53 @@ mod tests {
         // the chunk text (the exact code is whatlang's call, not asserted here).
         #[cfg(not(feature = "language-detection"))]
         assert_eq!(m.language, None);
+    }
+
+    fn el_at(text: &str, page: u32, x: f64, y: f64, w: f64, h: f64) -> Element {
+        Element::Paragraph(ElementData {
+            text: text.to_string(),
+            metadata: ElementMetadata {
+                page,
+                bbox: crate::pipeline::element::ElementBBox::new(x, y, w, h),
+                ..ElementMetadata::default()
+            },
+        })
+    }
+
+    #[test]
+    fn citation_anchor_page_span_and_per_page_union_bbox() {
+        let els = vec![
+            el_at("a", 1, 10.0, 700.0, 100.0, 20.0), // page1: x[10,110] y[700,720]
+            el_at("b", 1, 50.0, 600.0, 200.0, 10.0), // page1: x[50,250] y[600,610]
+            el_at("c", 2, 30.0, 500.0, 40.0, 40.0),  // page2: x[30,70]  y[500,540]
+        ];
+        let text = "a\nb\nc";
+        let m = ChunkMetadata::from_elements(&els, text, text, 0, None);
+
+        assert_eq!(m.page_span, Some((1, 2)));
+        assert_eq!(m.page_regions.len(), 2);
+        // Sorted ascending by page.
+        assert_eq!(m.page_regions[0].page, 1);
+        assert_eq!(m.page_regions[1].page, 2);
+
+        // Page 1 region = union of its two element bboxes.
+        let p1 = &m.page_regions[0].bbox;
+        assert_eq!(p1.x, 10.0);
+        assert_eq!(p1.y, 600.0);
+        assert_eq!(p1.right(), 250.0);
+        assert_eq!(p1.top(), 720.0);
+
+        // Page 2 region = the single element's bbox.
+        let p2 = &m.page_regions[1].bbox;
+        assert_eq!(p2.x, 30.0);
+        assert_eq!(p2.right(), 70.0);
+        assert_eq!(p2.top(), 540.0);
+    }
+
+    #[test]
+    fn citation_anchor_empty_for_no_elements() {
+        let m = ChunkMetadata::from_elements(&[], "", "", 0, None);
+        assert_eq!(m.page_span, None);
+        assert!(m.page_regions.is_empty());
     }
 }

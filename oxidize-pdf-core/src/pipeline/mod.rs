@@ -11,7 +11,7 @@ pub mod semantic_chunking;
 
 #[cfg(feature = "language-detection")]
 pub use chunk_metadata::detect_language;
-pub use chunk_metadata::{ChunkMetadata, ContentTypeFlags, DocumentSource};
+pub use chunk_metadata::{ChunkMetadata, ContentTypeFlags, DocumentSource, PageRegion};
 pub use element::{
     element_reading_order, Element, ElementBBox, ElementData, ElementMetadata, ImageElementData,
     KeyValueElementData, TableElementData,
