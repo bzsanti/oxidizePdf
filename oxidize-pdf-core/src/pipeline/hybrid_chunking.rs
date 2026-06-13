@@ -446,7 +446,7 @@ fn split_by_sentences(text: &str, max_tokens: usize) -> Vec<String> {
 
 /// Split text into sentence-like segments preserving punctuation.
 /// Splits on `. `, `! `, `? `, and `\n`.
-fn split_into_sentences(text: &str) -> Vec<String> {
+pub(crate) fn split_into_sentences(text: &str) -> Vec<String> {
     let mut sentences = Vec::new();
     let mut current = String::new();
     let mut iter = text.chars().peekable();
@@ -479,7 +479,7 @@ fn split_into_sentences(text: &str) -> Vec<String> {
 }
 
 /// Create a new Paragraph element from an existing element's metadata, replacing the text.
-/// Preserves provenance (page, bbox, parent_heading).
+/// Preserves provenance (page, bbox, parent_heading, heading_path).
 fn make_text_fragment_element(source: &Element, fragment_text: &str) -> Element {
     let metadata = source.metadata().clone();
     Element::Paragraph(ElementData {
@@ -488,6 +488,7 @@ fn make_text_fragment_element(source: &Element, fragment_text: &str) -> Element 
             page: metadata.page,
             bbox: metadata.bbox,
             parent_heading: metadata.parent_heading,
+            heading_path: metadata.heading_path,
             ..Default::default()
         },
     })

@@ -1403,12 +1403,98 @@ impl<R: Read + Seek> PdfDocument<R> {
         let elements = self.partition()?;
         let chunker = crate::pipeline::HybridChunker::new(config);
         let hybrid_chunks = chunker.chunk(&elements);
-        let rag_chunks = hybrid_chunks
-            .iter()
-            .enumerate()
-            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
-            .collect();
-        Ok(rag_chunks)
+        Ok(self.build_rag_chunks(&hybrid_chunks, None))
+    }
+
+    /// Build RAG chunks stamped with source-document metadata.
+    ///
+    /// Auto-fills `title`/`author`/`creation_date`/`total_pages` from the info
+    /// dictionary (only where the caller left them `None`); the caller-supplied
+    /// `source` provides `filename`/`doc_hash` (and may override any auto-filled
+    /// field). `doc_hash`, when set, becomes the stable prefix of every
+    /// `chunk_id`. Same chunking pipeline as [`rag_chunks`](Self::rag_chunks).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::DocumentSource;
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let mut source = DocumentSource::default();
+    /// source.filename = Some("document.pdf".to_string());
+    /// source.doc_hash = Some("sha256-prefix".to_string());
+    /// let chunks = doc.rag_chunks_with_source(source)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks_with_source(
+        &self,
+        source: crate::pipeline::DocumentSource,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        self.rag_chunks_with_source_and_config(
+            source,
+            crate::pipeline::HybridChunkConfig::default(),
+        )
+    }
+
+    /// Like [`rag_chunks_with_source`](Self::rag_chunks_with_source) but with a
+    /// custom chunking configuration — for callers that need both
+    /// source-document stamping and a non-default token budget.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::{DocumentSource, HybridChunkConfig};
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let source = DocumentSource::with_file(Some("document.pdf".into()), None);
+    /// let config = HybridChunkConfig { max_tokens: 256, ..Default::default() };
+    /// let chunks = doc.rag_chunks_with_source_and_config(source, config)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks_with_source_and_config(
+        &self,
+        mut source: crate::pipeline::DocumentSource,
+        config: crate::pipeline::HybridChunkConfig,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        if let Ok(meta) = self.metadata() {
+            source.title = source.title.or(meta.title);
+            source.author = source.author.or(meta.author);
+            source.creation_date = source.creation_date.or(meta.creation_date);
+            source.total_pages = source.total_pages.or(meta.page_count);
+        }
+        if source.total_pages.is_none() {
+            source.total_pages = self.page_count().ok();
+        }
+        let elements = self.partition()?;
+        let chunker = crate::pipeline::HybridChunker::new(config);
+        let hybrid_chunks = chunker.chunk(&elements);
+        Ok(self.build_rag_chunks(&hybrid_chunks, Some(source)))
+    }
+
+    /// Build linked [`RagChunk`]s from hybrid chunks, optionally stamping a
+    /// [`DocumentSource`](crate::pipeline::DocumentSource), then wiring
+    /// prev/next ids. Shared by all `rag_chunks*` entry points (DRY).
+    fn build_rag_chunks(
+        &self,
+        hybrid_chunks: &[crate::pipeline::HybridChunk],
+        source: Option<crate::pipeline::DocumentSource>,
+    ) -> Vec<crate::pipeline::RagChunk> {
+        let mut chunks: Vec<crate::pipeline::RagChunk> = match &source {
+            Some(s) => hybrid_chunks
+                .iter()
+                .enumerate()
+                .map(|(i, hc)| crate::pipeline::RagChunk::from_hybrid_chunk_with_source(i, hc, s))
+                .collect(),
+            None => hybrid_chunks
+                .iter()
+                .enumerate()
+                .map(|(i, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(i, hc))
+                .collect(),
+        };
+        crate::pipeline::chunk_metadata::link_chunks(&mut chunks);
+        chunks
     }
 
     /// Extract and chunk the document using a pre-configured extraction profile.
@@ -1436,12 +1522,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         let elements = self.partition_with_profile(profile)?;
         let chunker = crate::pipeline::HybridChunker::default();
         let hybrid_chunks = chunker.chunk(&elements);
-        let rag_chunks = hybrid_chunks
-            .iter()
-            .enumerate()
-            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
-            .collect();
-        Ok(rag_chunks)
+        Ok(self.build_rag_chunks(&hybrid_chunks, None))
     }
 
     /// Combine a pre-configured extraction profile with a custom chunking config.
@@ -1468,11 +1549,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         let elements = self.partition_with_profile(profile)?;
         let chunker = crate::pipeline::HybridChunker::new(config);
         let hybrid_chunks = chunker.chunk(&elements);
-        Ok(hybrid_chunks
-            .iter()
-            .enumerate()
-            .map(|(idx, hc)| crate::pipeline::RagChunk::from_hybrid_chunk(idx, hc))
-            .collect())
+        Ok(self.build_rag_chunks(&hybrid_chunks, None))
     }
 
     /// Extract chunks as a JSON string ready for vector store ingestion.

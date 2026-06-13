@@ -560,15 +560,63 @@ impl Partitioner {
             }
         }
 
-        // Post-classification relationship pass: assign parent_heading
-        let mut current_heading: Option<String> = None;
-        for element in &mut elements {
-            if matches!(element, Element::Title(_)) {
-                current_heading = Some(element.text().to_string());
+        // Post-classification relationship pass: assign parent_heading + heading_path
+        elements = Self::assign_heading_paths(elements);
+
+        elements
+    }
+
+    /// Assign `heading_path` (full breadcrumb) and `parent_heading` (its leaf) to
+    /// every element, inferring heading level from Title font sizes.
+    pub(crate) fn assign_heading_paths(mut elements: Vec<Element>) -> Vec<Element> {
+        // 1. Rank distinct Title font sizes desc, merging sizes within 5%.
+        let mut sizes: Vec<f64> = elements
+            .iter()
+            .filter(|e| matches!(e, Element::Title(_)))
+            .filter_map(|e| e.metadata().font_size)
+            .filter(|s| s.is_finite() && *s > 0.0)
+            .collect();
+        sizes.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+        let mut buckets: Vec<f64> = Vec::new();
+        for s in sizes {
+            if !buckets.iter().any(|b| (b - s).abs() <= b * 0.05) {
+                buckets.push(s);
             }
-            element.set_parent_heading(current_heading.clone());
         }
 
+        // Saturating usize->u8: a document with ≥255 distinct title sizes is
+        // implausible, but a silent wrapping cast there would corrupt the level
+        // ordering, so clamp instead.
+        let to_level = |n: usize| -> u8 { u8::try_from(n).unwrap_or(u8::MAX) };
+        let level_of = |size: Option<f64>| -> u8 {
+            match size {
+                Some(s) if s.is_finite() && s > 0.0 => {
+                    for (i, b) in buckets.iter().enumerate() {
+                        if (s - b).abs() <= b * 0.05 {
+                            return to_level(i + 1);
+                        }
+                    }
+                    to_level(buckets.len().max(1))
+                }
+                // Unknown / non-finite / non-positive size: treat as one level
+                // deeper than the deepest known bucket, so the title is appended
+                // as a leaf child and never pops a known-size ancestor.
+                _ => to_level(buckets.len() + 1),
+            }
+        };
+
+        // 2. Walk elements maintaining a (level, text) stack.
+        let mut stack: Vec<(u8, String)> = Vec::new();
+        for element in &mut elements {
+            if matches!(element, Element::Title(_)) {
+                let level = level_of(element.metadata().font_size);
+                stack.retain(|(lvl, _)| *lvl < level);
+                stack.push((level, element.text().to_string()));
+            }
+            let path: Vec<String> = stack.iter().map(|(_, t)| t.clone()).collect();
+            element.set_parent_heading(path.last().cloned());
+            element.set_heading_path(path);
+        }
         elements
     }
 }
@@ -836,6 +884,7 @@ fn meta_from_fragment(f: &TextFragment, page: u32) -> ElementMetadata {
         is_bold: f.is_bold,
         is_italic: f.is_italic,
         parent_heading: None,
+        heading_path: Vec::new(),
     }
 }
 
@@ -1554,5 +1603,86 @@ mod tests {
             .filter(|e| matches!(e, Element::Footer(_)))
             .count();
         assert_eq!(footer_count, 0);
+    }
+
+    #[test]
+    fn heading_path_builds_breadcrumb_by_font_size() {
+        use crate::pipeline::element::{Element, ElementData, ElementMetadata};
+        let title = |t: &str, size: f64| {
+            let metadata = ElementMetadata {
+                font_size: Some(size),
+                ..ElementMetadata::default()
+            };
+            Element::Title(ElementData {
+                text: t.to_string(),
+                metadata,
+            })
+        };
+        let para = |t: &str| {
+            Element::Paragraph(ElementData {
+                text: t.to_string(),
+                metadata: ElementMetadata::default(),
+            })
+        };
+
+        // H1(20) > H2(14) > body ; then a new H1(20) resets depth.
+        let elements = vec![
+            title("1 Introduction", 20.0),
+            title("1.2 Scope", 14.0),
+            para("Body text under scope."),
+            title("2 Methods", 20.0),
+            para("Body under methods."),
+        ];
+
+        let linked = Partitioner::assign_heading_paths(elements);
+        assert_eq!(
+            linked[2].metadata().heading_path,
+            vec!["1 Introduction", "1.2 Scope"]
+        );
+        assert_eq!(
+            linked[2].metadata().parent_heading.as_deref(),
+            Some("1.2 Scope")
+        );
+        assert_eq!(linked[4].metadata().heading_path, vec!["2 Methods"]);
+    }
+
+    #[test]
+    fn heading_path_unknown_size_title_appends_not_resets() {
+        use crate::pipeline::element::{Element, ElementData, ElementMetadata};
+        let title = |t: &str, size: Option<f64>| {
+            let metadata = ElementMetadata {
+                font_size: size,
+                ..ElementMetadata::default()
+            };
+            Element::Title(ElementData {
+                text: t.to_string(),
+                metadata,
+            })
+        };
+        let para = |t: &str| {
+            Element::Paragraph(ElementData {
+                text: t.to_string(),
+                metadata: ElementMetadata::default(),
+            })
+        };
+
+        // Big(20) > Small(10) > a None-size title must NOT clear the breadcrumb;
+        // it is appended at the deepest level.
+        let elements = vec![
+            title("H1", Some(20.0)),
+            title("H1.1", Some(10.0)),
+            title("NoSize", None),
+            para("body"),
+        ];
+        let linked = Partitioner::assign_heading_paths(elements);
+        // The None-size title is deepest; it sits under H1>H1.1.
+        assert_eq!(
+            linked[3].metadata().heading_path,
+            vec!["H1", "H1.1", "NoSize"]
+        );
+        assert_eq!(
+            linked[3].metadata().parent_heading.as_deref(),
+            Some("NoSize")
+        );
     }
 }
