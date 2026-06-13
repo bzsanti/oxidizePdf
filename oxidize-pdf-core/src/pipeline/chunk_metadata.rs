@@ -182,6 +182,12 @@ pub struct ChunkMetadata {
     /// Per-page citation regions (union bbox of the chunk's elements on each
     /// page), sorted ascending by page. Empty when the chunk has no elements.
     pub page_regions: Vec<PageRegion>,
+    /// Row count of the chunk's largest table (by row count), or `None` if the
+    /// chunk has no table. Lets a consumer filter/route table-bearing chunks.
+    pub table_rows: Option<usize>,
+    /// Column count (widest row) of the same table reported by
+    /// [`table_rows`](Self::table_rows); `None` when the chunk has no table.
+    pub table_cols: Option<usize>,
 }
 
 use sha2::{Digest, Sha256};
@@ -204,6 +210,7 @@ impl ChunkMetadata {
             .map(|e| e.metadata().heading_path.clone())
             .unwrap_or_default();
         let (page_span, page_regions) = page_anchor(elements);
+        let (table_rows, table_cols) = table_dims(elements);
         // Detect once; fill code + confidence + reliability together.
         #[cfg(feature = "language-detection")]
         let (language, language_confidence, language_reliable) = match detect_language_full(text) {
@@ -236,8 +243,27 @@ impl ChunkMetadata {
             source: None,
             page_span,
             page_regions,
+            table_rows,
+            table_cols,
         }
     }
+}
+
+/// Dimensions of the chunk's largest table (by row count): `(rows, widest row)`.
+/// `(None, None)` when the chunk contains no table element.
+fn table_dims(elements: &[Element]) -> (Option<usize>, Option<usize>) {
+    elements
+        .iter()
+        .filter_map(|e| match e {
+            Element::Table(t) => Some(&t.rows),
+            _ => None,
+        })
+        .max_by_key(|rows| rows.len())
+        .map(|rows| {
+            let cols = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+            (Some(rows.len()), Some(cols))
+        })
+        .unwrap_or((None, None))
 }
 
 /// Union of two axis-aligned bounding boxes.
@@ -465,8 +491,14 @@ mod tests {
         assert!(!m.content_types.has_table);
         assert_eq!(m.char_count, 0);
         assert_eq!(m.language, None);
+        assert_eq!(m.language_confidence, None);
+        assert_eq!(m.language_reliable, None);
         assert_eq!(m.chunk_id, "");
         assert!(m.source.is_none());
+        assert_eq!(m.page_span, None);
+        assert!(m.page_regions.is_empty());
+        assert_eq!(m.table_rows, None);
+        assert_eq!(m.table_cols, None);
     }
 
     #[test]
@@ -581,5 +613,43 @@ mod tests {
         assert_eq!(m.language, None);
         assert_eq!(m.language_confidence, None);
         assert_eq!(m.language_reliable, None);
+    }
+
+    fn table_with(rows: Vec<Vec<&str>>) -> Element {
+        Element::Table(crate::pipeline::element::TableElementData {
+            rows: rows
+                .into_iter()
+                .map(|r| r.into_iter().map(String::from).collect())
+                .collect(),
+            metadata: ElementMetadata::default(),
+        })
+    }
+
+    #[test]
+    fn table_dims_from_largest_table() {
+        let small = table_with(vec![vec!["a", "b"]]); // 1 row x 2 cols
+        let big = table_with(vec![vec!["a"], vec!["b"], vec!["c"]]); // 3 rows x 1 col
+        let els = vec![para("x", "F", 10.0, false, 1.0), small, big];
+        let text = "x";
+        let m = ChunkMetadata::from_elements(&els, text, text, 0, None);
+        // Largest by row count wins.
+        assert_eq!(m.table_rows, Some(3));
+        assert_eq!(m.table_cols, Some(1));
+    }
+
+    #[test]
+    fn table_cols_uses_widest_row() {
+        let ragged = table_with(vec![vec!["a", "b"], vec!["c", "d", "e", "f"]]);
+        let m = ChunkMetadata::from_elements(&[ragged], "t", "t", 0, None);
+        assert_eq!(m.table_rows, Some(2));
+        assert_eq!(m.table_cols, Some(4));
+    }
+
+    #[test]
+    fn table_dims_none_without_table() {
+        let els = vec![para("just prose", "F", 10.0, false, 1.0)];
+        let m = ChunkMetadata::from_elements(&els, "just prose", "just prose", 0, None);
+        assert_eq!(m.table_rows, None);
+        assert_eq!(m.table_cols, None);
     }
 }
