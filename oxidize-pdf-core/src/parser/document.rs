@@ -1406,6 +1406,46 @@ impl<R: Read + Seek> PdfDocument<R> {
         Ok(self.build_rag_chunks(&hybrid_chunks, None))
     }
 
+    /// Build RAG chunks stamped with source-document metadata.
+    ///
+    /// Auto-fills `title`/`author`/`creation_date`/`total_pages` from the info
+    /// dictionary (only where the caller left them `None`); the caller-supplied
+    /// `source` provides `filename`/`doc_hash` (and may override any auto-filled
+    /// field). `doc_hash`, when set, becomes the stable prefix of every
+    /// `chunk_id`. Same chunking pipeline as [`rag_chunks`](Self::rag_chunks).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::DocumentSource;
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let mut source = DocumentSource::default();
+    /// source.filename = Some("document.pdf".to_string());
+    /// source.doc_hash = Some("sha256-prefix".to_string());
+    /// let chunks = doc.rag_chunks_with_source(source)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks_with_source(
+        &self,
+        mut source: crate::pipeline::DocumentSource,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        if let Ok(meta) = self.metadata() {
+            source.title = source.title.or(meta.title);
+            source.author = source.author.or(meta.author);
+            source.creation_date = source.creation_date.or(meta.creation_date);
+            source.total_pages = source.total_pages.or(meta.page_count);
+        }
+        if source.total_pages.is_none() {
+            source.total_pages = self.page_count().ok();
+        }
+        let elements = self.partition()?;
+        let chunker = crate::pipeline::HybridChunker::default();
+        let hybrid_chunks = chunker.chunk(&elements);
+        Ok(self.build_rag_chunks(&hybrid_chunks, Some(source)))
+    }
+
     /// Build linked [`RagChunk`]s from hybrid chunks, optionally stamping a
     /// [`DocumentSource`](crate::pipeline::DocumentSource), then wiring
     /// prev/next ids. Shared by all `rag_chunks*` entry points (DRY).

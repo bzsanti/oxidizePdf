@@ -8,7 +8,7 @@
 //! list. It does NOT assert mere absence of crash.
 
 use oxidize_pdf::parser::{PdfDocument, PdfReader};
-use oxidize_pdf::pipeline::{HybridChunkConfig, MergePolicy, RagChunk};
+use oxidize_pdf::pipeline::{DocumentSource, HybridChunkConfig, MergePolicy, RagChunk};
 use oxidize_pdf::text::Font;
 use oxidize_pdf::{Document, Page};
 use std::io::Cursor;
@@ -138,4 +138,69 @@ fn rag_chunks_have_linked_ids_and_metadata() {
         chunks[0].metadata.source.is_none(),
         "rag_chunks_with must not stamp a DocumentSource"
     );
+}
+
+/// Task 8: `rag_chunks_with_source` auto-fills title/author/total_pages from the
+/// parsed info dictionary, preserves the caller-supplied filename/doc_hash, and
+/// uses the doc_hash as the chunk_id prefix. Content-verifying: asserts the
+/// exact source fields, not mere presence.
+#[test]
+fn source_metadata_pulled_from_info_dict() {
+    let mut doc = Document::new();
+    doc.set_title("Spec Sheet");
+    doc.set_author("ACME");
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::HelveticaBold, 16.0)
+        .at(50.0, 760.0)
+        .write("Section One")
+        .unwrap();
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(50.0, 720.0)
+        .write("Body paragraph with enough words to form at least one chunk reliably.")
+        .unwrap();
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().expect("pdf generation should succeed");
+
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse generated PDF");
+    let parsed = PdfDocument::new(reader);
+
+    // `DocumentSource` is `#[non_exhaustive]` (forward-compat for new fields), so
+    // external callers build it from `default()` + field assignment, never a
+    // struct literal.
+    let mut source = DocumentSource::default();
+    source.filename = Some("spec.pdf".to_string());
+    source.doc_hash = Some("abc123".to_string());
+    let chunks = parsed
+        .rag_chunks_with_source(source)
+        .expect("rag_chunks_with_source must succeed");
+
+    assert!(!chunks.is_empty(), "expected at least one chunk");
+    let s = chunks[0]
+        .metadata
+        .source
+        .as_ref()
+        .expect("chunk must carry source metadata");
+
+    // Auto-filled from the info dictionary.
+    assert_eq!(s.title.as_deref(), Some("Spec Sheet"));
+    assert_eq!(s.author.as_deref(), Some("ACME"));
+    assert!(
+        s.total_pages.unwrap() >= 1,
+        "total_pages must be auto-filled from the document"
+    );
+
+    // Caller-supplied, preserved.
+    assert_eq!(s.filename.as_deref(), Some("spec.pdf"));
+    assert_eq!(s.doc_hash.as_deref(), Some("abc123"));
+
+    // doc_hash drives the chunk_id prefix on every chunk.
+    for (i, c) in chunks.iter().enumerate() {
+        assert_eq!(
+            c.metadata.chunk_id,
+            format!("abc123:{i}"),
+            "chunk[{i}].chunk_id must be doc_hash-prefixed"
+        );
+    }
 }
