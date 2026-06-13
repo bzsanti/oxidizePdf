@@ -340,6 +340,77 @@ fn rag_chunk_metadata_json_roundtrip() {
         back.metadata.char_count, chunks[0].metadata.char_count,
         "char_count must survive the round-trip"
     );
+    // Enrichment fields survive serialization too.
+    assert!(json.contains("\"page_span\""), "json must carry page_span");
+    assert!(
+        json.contains("\"page_regions\""),
+        "json must carry page_regions"
+    );
+    assert_eq!(
+        back.metadata.page_span, chunks[0].metadata.page_span,
+        "page_span must survive the round-trip"
+    );
+    assert_eq!(
+        back.metadata.page_regions, chunks[0].metadata.page_regions,
+        "page_regions must survive the round-trip"
+    );
+    assert_eq!(
+        back.metadata.table_rows, chunks[0].metadata.table_rows,
+        "table_rows must survive the round-trip"
+    );
+}
+
+/// Enrichment end-to-end: the citation anchor (page_span + page_regions) is
+/// populated through the real `rag_chunks` pipeline, with regions that fall
+/// inside the A4 page box. Content-verifying, not mere presence.
+#[test]
+fn citation_anchor_populated_through_rag_chunks() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::HelveticaBold, 16.0)
+        .at(50.0, 760.0)
+        .write("Anchored Section")
+        .unwrap();
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(50.0, 720.0)
+        .write("Body paragraph positioned on the page so the chunk has a real bounding box.")
+        .unwrap();
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().expect("pdf generation should succeed");
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse generated PDF");
+    let parsed = PdfDocument::new(reader);
+    let chunks = parsed.rag_chunks().expect("rag_chunks must succeed");
+    assert!(!chunks.is_empty(), "expected at least one chunk");
+
+    let m = &chunks[0].metadata;
+    // Page numbers follow the pipeline's own indexing (0-based here); assert
+    // the span is well-ordered rather than assuming a base.
+    let (first, last) = m.page_span.expect("page_span must be populated");
+    assert!(
+        last >= first,
+        "page_span must be well-ordered: ({first},{last})"
+    );
+    // Single-page document → exactly one region.
+    assert_eq!(
+        m.page_regions.len(),
+        1,
+        "single-page chunk must have exactly one citation region"
+    );
+    assert_eq!(m.page_regions[0].page, first, "region page must match span");
+    for region in &m.page_regions {
+        let b = &region.bbox;
+        // A4 is ~595x842 pt; the region must sit within a generous page box.
+        assert!(
+            b.x >= 0.0 && b.y >= 0.0 && b.right() <= 700.0 && b.top() <= 900.0,
+            "region bbox must fall inside the A4 page, got {b:?}"
+        );
+        assert!(
+            b.width > 0.0 && b.height > 0.0,
+            "region bbox must be non-degenerate, got {b:?}"
+        );
+    }
 }
 
 /// #2: `rag_chunks_with_source_and_config` both stamps the source metadata and
