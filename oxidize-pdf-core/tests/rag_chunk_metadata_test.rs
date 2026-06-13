@@ -204,3 +204,91 @@ fn source_metadata_pulled_from_info_dict() {
         );
     }
 }
+
+/// Task 9: `detect_language` returns the dominant ISO 639-3 code via `whatlang`,
+/// gated behind the existing `language-detection` feature. Empty input yields
+/// `None`.
+#[cfg(feature = "language-detection")]
+#[test]
+fn language_detected_for_english_and_spanish() {
+    use oxidize_pdf::pipeline::detect_language;
+    assert_eq!(
+        detect_language("The quick brown fox jumps over the lazy dog repeatedly."),
+        Some("eng".to_string())
+    );
+    assert_eq!(
+        detect_language("El veloz murciélago hindú comía feliz cardillo y kiwi en su jardín."),
+        Some("spa".to_string())
+    );
+    assert_eq!(detect_language(""), None);
+    assert_eq!(detect_language("   \n\t  "), None);
+}
+
+/// Task 9: with the feature on, `rag_chunks` populates `metadata.language` for
+/// chunks whose body is long enough for a reliable detection.
+#[cfg(feature = "language-detection")]
+#[test]
+fn rag_chunk_language_populated_end_to_end() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    let english = [
+        "The annual report summarizes the financial performance of the company.",
+        "Revenue increased steadily across every regional market during the year.",
+        "The board recommends a dividend in line with the long term policy framework.",
+    ];
+    let mut y = 760.0;
+    for line in english {
+        page.text()
+            .set_font(Font::Helvetica, 11.0)
+            .at(50.0, y)
+            .write(line)
+            .unwrap();
+        y -= 20.0;
+    }
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().expect("pdf generation should succeed");
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse generated PDF");
+    let parsed = PdfDocument::new(reader);
+    let chunks = parsed.rag_chunks().expect("rag_chunks must succeed");
+
+    assert!(!chunks.is_empty(), "expected at least one chunk");
+    assert_eq!(
+        chunks[0].metadata.language.as_deref(),
+        Some("eng"),
+        "English body must be detected as eng"
+    );
+}
+
+/// Task 9 Step 6: real-fixture assertion through the RAG pipeline. Opens the
+/// UDHR Chinese fixture, runs `rag_chunks`, and asserts the dominant detected
+/// `metadata.language` is Chinese (`cmn`). This exercises the
+/// partition → HybridChunker → `RagChunk.metadata.language` path end-to-end,
+/// distinct from the `ai::DocumentChunker` corpus coverage.
+#[cfg(all(feature = "language-detection", feature = "multilingual-fixtures"))]
+#[test]
+fn rag_chunk_language_detected_on_udhr_chinese_fixture() {
+    use oxidize_pdf::parser::PdfReader;
+    use std::collections::HashMap;
+    use std::path::Path;
+
+    let path = Path::new("tests/fixtures/multilingual").join("udhr_chinese.pdf");
+    let doc = PdfReader::open_document(&path).expect("open udhr_chinese.pdf");
+    let chunks = doc.rag_chunks().expect("rag_chunks on fixture");
+    assert!(!chunks.is_empty(), "fixture must yield chunks");
+
+    let mut tally: HashMap<String, usize> = HashMap::new();
+    for c in &chunks {
+        if let Some(code) = c.metadata.language.as_deref() {
+            *tally.entry(code.to_string()).or_default() += 1;
+        }
+    }
+    let dominant = tally
+        .iter()
+        .max_by_key(|(_, n)| **n)
+        .map(|(code, _)| code.as_str());
+    assert_eq!(
+        dominant,
+        Some("cmn"),
+        "dominant detected language across chunks must be Chinese (cmn); tally={tally:?}"
+    );
+}

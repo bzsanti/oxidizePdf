@@ -173,6 +173,9 @@ impl ChunkMetadata {
             char_count: char_count(text),
             word_count: word_count(text),
             sentence_count: sentence_count(text),
+            #[cfg(feature = "language-detection")]
+            language: detect_language(text),
+            #[cfg(not(feature = "language-detection"))]
             language: None,
             chunk_id: content_chunk_id(doc_hash, chunk_index, full_text),
             prev_chunk_id: None,
@@ -193,6 +196,20 @@ pub(crate) fn link_chunks(chunks: &mut [crate::pipeline::RagChunk]) {
         };
         c.metadata.next_chunk_id = ids.get(i + 1).cloned();
     }
+}
+
+/// Detect the dominant language of `text` as an ISO 639-3 code (e.g. `"eng"`,
+/// `"spa"`), via `whatlang`. Returns `None` for empty/whitespace-only input or
+/// when `whatlang` produces no detection. The detection is best-effort: on
+/// short or ambiguous text the code may be unreliable.
+///
+/// Requires the `language-detection` feature.
+#[cfg(feature = "language-detection")]
+pub fn detect_language(text: &str) -> Option<String> {
+    if text.trim().is_empty() {
+        return None;
+    }
+    whatlang::detect(text).map(|info| info.lang().code().to_string())
 }
 
 /// Deterministic chunk id: `<doc_id>:<index>` where `doc_id` is the supplied
@@ -354,6 +371,9 @@ mod tests {
         assert_eq!(m.char_count, text.chars().count());
         assert_eq!(m.chunk_id, content_chunk_id(None, 3, text));
         assert!(m.source.is_none());
-        assert_eq!(m.language, None); // language filled separately in a later task
+        // Without the feature the field stays None; with it, detection runs on
+        // the chunk text (the exact code is whatlang's call, not asserted here).
+        #[cfg(not(feature = "language-detection"))]
+        assert_eq!(m.language, None);
     }
 }
