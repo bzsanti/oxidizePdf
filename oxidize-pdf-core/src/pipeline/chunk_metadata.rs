@@ -105,6 +105,21 @@ pub struct DocumentSource {
     pub total_pages: Option<u32>,
 }
 
+impl DocumentSource {
+    /// Construct a source from the two caller-supplied fields (`filename`,
+    /// `doc_hash`); the rest (`title`/`author`/`creation_date`/`total_pages`)
+    /// are left `None` for [`rag_chunks_with_source`](crate::parser::PdfDocument::rag_chunks_with_source)
+    /// to auto-fill from the info dictionary. Provided because `DocumentSource`
+    /// is `#[non_exhaustive]`, so external callers cannot use a struct literal.
+    pub fn with_file(filename: Option<String>, doc_hash: Option<String>) -> Self {
+        Self {
+            filename,
+            doc_hash,
+            ..Default::default()
+        }
+    }
+}
+
 /// Per-chunk metadata attached to every [`RagChunk`](crate::pipeline::RagChunk).
 #[derive(Debug, Clone, Default, PartialEq)]
 #[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
@@ -363,6 +378,22 @@ mod tests {
         assert_eq!(m.language, None);
         assert_eq!(m.chunk_id, "");
         assert!(m.source.is_none());
+    }
+
+    #[test]
+    fn document_source_with_file_sets_only_supplied_fields() {
+        let s = DocumentSource::with_file(Some("doc.pdf".to_string()), Some("h7".to_string()));
+        assert_eq!(s.filename.as_deref(), Some("doc.pdf"));
+        assert_eq!(s.doc_hash.as_deref(), Some("h7"));
+        // Everything the caller did not supply stays None for the info-dict
+        // auto-fill pass to populate.
+        assert_eq!(s.title, None);
+        assert_eq!(s.author, None);
+        assert_eq!(s.creation_date, None);
+        assert_eq!(s.total_pages, None);
+
+        let empty = DocumentSource::with_file(None, None);
+        assert_eq!(empty, DocumentSource::default());
     }
 
     #[test]

@@ -17,10 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`has_table`/`has_list`/`has_code`/`heading_only`), char/word/sentence
   counts, a deterministic `chunk_id`, and prev/next chunk links. `RagChunk`
   and the new metadata types are `#[non_exhaustive]`.
-- `PdfDocument::rag_chunks_with_source(DocumentSource)`: builds chunks stamped
-  with source-document metadata. Auto-fills `title`/`author`/`creation_date`/
-  `total_pages` from the info dictionary (caller values win); the caller's
-  `doc_hash` becomes the stable `chunk_id` prefix.
+- `PdfDocument::rag_chunks_with_source(DocumentSource)` and
+  `rag_chunks_with_source_and_config(DocumentSource, HybridChunkConfig)`: build
+  chunks stamped with source-document metadata, the latter also honouring a
+  custom token budget. Auto-fill `title`/`author`/`creation_date`/`total_pages`
+  from the info dictionary (caller values win); the caller's `doc_hash` becomes
+  the stable `chunk_id` prefix. `DocumentSource::with_file(filename, doc_hash)`
+  is the ergonomic constructor for the two caller-supplied fields.
 - Optional per-chunk language detection behind the existing
   `language-detection` feature: `pipeline::detect_language(text)` returns the
   dominant ISO 639-3 code (via `whatlang`), and `ChunkMetadata::language` is

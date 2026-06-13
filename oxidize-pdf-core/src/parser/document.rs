@@ -1429,7 +1429,34 @@ impl<R: Read + Seek> PdfDocument<R> {
     /// ```
     pub fn rag_chunks_with_source(
         &self,
+        source: crate::pipeline::DocumentSource,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        self.rag_chunks_with_source_and_config(
+            source,
+            crate::pipeline::HybridChunkConfig::default(),
+        )
+    }
+
+    /// Like [`rag_chunks_with_source`](Self::rag_chunks_with_source) but with a
+    /// custom chunking configuration — for callers that need both
+    /// source-document stamping and a non-default token budget.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use oxidize_pdf::parser::PdfDocument;
+    /// use oxidize_pdf::pipeline::{DocumentSource, HybridChunkConfig};
+    ///
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// let source = DocumentSource::with_file(Some("document.pdf".into()), None);
+    /// let config = HybridChunkConfig { max_tokens: 256, ..Default::default() };
+    /// let chunks = doc.rag_chunks_with_source_and_config(source, config)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn rag_chunks_with_source_and_config(
+        &self,
         mut source: crate::pipeline::DocumentSource,
+        config: crate::pipeline::HybridChunkConfig,
     ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
         if let Ok(meta) = self.metadata() {
             source.title = source.title.or(meta.title);
@@ -1441,7 +1468,7 @@ impl<R: Read + Seek> PdfDocument<R> {
             source.total_pages = self.page_count().ok();
         }
         let elements = self.partition()?;
-        let chunker = crate::pipeline::HybridChunker::default();
+        let chunker = crate::pipeline::HybridChunker::new(config);
         let hybrid_chunks = chunker.chunk(&elements);
         Ok(self.build_rag_chunks(&hybrid_chunks, Some(source)))
     }

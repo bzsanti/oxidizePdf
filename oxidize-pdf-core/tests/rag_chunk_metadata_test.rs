@@ -166,12 +166,10 @@ fn source_metadata_pulled_from_info_dict() {
     let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse generated PDF");
     let parsed = PdfDocument::new(reader);
 
-    // `DocumentSource` is `#[non_exhaustive]` (forward-compat for new fields), so
-    // external callers build it from `default()` + field assignment, never a
-    // struct literal.
-    let mut source = DocumentSource::default();
-    source.filename = Some("spec.pdf".to_string());
-    source.doc_hash = Some("abc123".to_string());
+    // `DocumentSource` is `#[non_exhaustive]`; `with_file` is the ergonomic
+    // constructor for the two caller-supplied fields (filename, doc_hash).
+    let source =
+        DocumentSource::with_file(Some("spec.pdf".to_string()), Some("abc123".to_string()));
     let chunks = parsed
         .rag_chunks_with_source(source)
         .expect("rag_chunks_with_source must succeed");
@@ -342,4 +340,80 @@ fn rag_chunk_metadata_json_roundtrip() {
         back.metadata.char_count, chunks[0].metadata.char_count,
         "char_count must survive the round-trip"
     );
+}
+
+/// #2: `rag_chunks_with_source_and_config` both stamps the source metadata and
+/// honours a custom chunking config — closing the gap where a caller needed
+/// source stamping AND a non-default token budget. Verified by comparing chunk
+/// counts at a tight budget against the default-config source path on the same
+/// document.
+#[test]
+fn rag_chunks_with_source_and_config_applies_both() {
+    let mut doc = Document::new();
+    doc.set_title("Budgeted");
+    let mut page = Page::a4();
+    let body = [
+        (
+            760.0,
+            "Alpha paragraph with several distinct words filling a token bucket fully.",
+        ),
+        (
+            740.0,
+            "Bravo paragraph with several distinct words filling a token bucket fully.",
+        ),
+        (
+            720.0,
+            "Charlie paragraph with several distinct words filling a token bucket fully.",
+        ),
+        (
+            700.0,
+            "Delta paragraph with several distinct words filling a token bucket fully.",
+        ),
+    ];
+    for (y, line) in body {
+        page.text()
+            .set_font(Font::Helvetica, 11.0)
+            .at(50.0, y)
+            .write(line)
+            .unwrap();
+    }
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().expect("pdf generation should succeed");
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse generated PDF");
+    let parsed = PdfDocument::new(reader);
+
+    let default_source = DocumentSource::with_file(None, Some("h".to_string()));
+    let default_chunks = parsed
+        .rag_chunks_with_source(default_source)
+        .expect("default-config source path");
+
+    let tight_config = HybridChunkConfig {
+        max_tokens: 8,
+        overlap_tokens: 0,
+        merge_adjacent: true,
+        propagate_headings: true,
+        merge_policy: MergePolicy::AnyInlineContent,
+    };
+    let tight_source = DocumentSource::with_file(None, Some("h".to_string()));
+    let tight_chunks = parsed
+        .rag_chunks_with_source_and_config(tight_source, tight_config)
+        .expect("config-aware source path");
+
+    // Config took effect: a tight budget yields strictly more chunks.
+    assert!(
+        tight_chunks.len() > default_chunks.len(),
+        "tight max_tokens must produce more chunks ({} tight vs {} default)",
+        tight_chunks.len(),
+        default_chunks.len()
+    );
+    // Source still stamped, with auto-filled info-dict title.
+    let s = tight_chunks[0]
+        .metadata
+        .source
+        .as_ref()
+        .expect("source must be stamped through the config path");
+    assert_eq!(s.title.as_deref(), Some("Budgeted"));
+    assert_eq!(s.doc_hash.as_deref(), Some("h"));
+    // doc_hash drives the chunk_id prefix here too.
+    assert!(tight_chunks[0].metadata.chunk_id.starts_with("h:"));
 }
