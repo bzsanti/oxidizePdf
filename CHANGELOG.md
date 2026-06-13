@@ -27,7 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional per-chunk language detection behind the existing
   `language-detection` feature: `pipeline::detect_language(text)` returns the
   dominant ISO 639-3 code (via `whatlang`), and `ChunkMetadata::language` is
-  populated when the feature is enabled.
+  populated when the feature is enabled. `ChunkMetadata::language_confidence`
+  and `language_reliable` surface `whatlang`'s confidence and reliability so
+  consumers can gate language-based routing.
+- Citation anchor on `ChunkMetadata`: `page_span: Option<(u32, u32)>` and
+  `page_regions: Vec<PageRegion>` (the union bounding box of the chunk's
+  elements per page), giving RAG consumers an exact region of the source PDF to
+  cite back to. New `pipeline::PageRegion { page, bbox }`.
+- Table dimensions on `ChunkMetadata`: `table_rows`/`table_cols` (largest table
+  in the chunk) for table-aware retrieval.
 
 ## [2.15.0] - 2026-06-11
 
