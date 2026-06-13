@@ -145,11 +145,11 @@ pub struct ChunkMetadata {
 
 use sha2::{Digest, Sha256};
 
-#[allow(dead_code)] // wired into RagChunk::from_hybrid_chunk (Task 7)
 impl ChunkMetadata {
     /// Build chunk metadata from the chunk's elements and text. `full_text` is
     /// used for the content-hash id; `doc_hash` (when `Some`) overrides it.
-    /// Language and prev/next links are filled by later passes.
+    /// Language is detected here when the `language-detection` feature is on;
+    /// prev/next links are filled by a later pass ([`link_chunks`]).
     pub(crate) fn from_elements(
         elements: &[Element],
         text: &str,
@@ -336,6 +336,13 @@ mod tests {
         let b = content_chunk_id(None, 0, "the quick brown fox");
         assert_eq!(a, b, "same text + index → same id");
         assert!(a.ends_with(":0"));
+        // Hashless prefix is exactly 8 bytes of SHA-256 → 16 hex chars; pin the
+        // width so a change to the digest slice can't silently shrink the id.
+        assert_eq!(
+            a.split(':').next().unwrap().len(),
+            16,
+            "hashless chunk_id prefix must be 16 hex chars (8 bytes)"
+        );
 
         let with_hash = content_chunk_id(Some("dochash123"), 7, "ignored when hash present");
         assert_eq!(with_hash, "dochash123:7");

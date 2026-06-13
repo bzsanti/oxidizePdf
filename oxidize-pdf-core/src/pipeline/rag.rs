@@ -77,6 +77,29 @@ pub struct RagChunk {
 impl RagChunk {
     /// Build a `RagChunk` from a [`HybridChunk`], extracting all metadata from its elements.
     pub fn from_hybrid_chunk(chunk_index: usize, chunk: &HybridChunk) -> Self {
+        Self::from_hybrid_chunk_inner(chunk_index, chunk, None)
+    }
+
+    /// Like [`from_hybrid_chunk`](Self::from_hybrid_chunk) but stamping source
+    /// metadata and using `source.doc_hash` for the chunk_id prefix when set.
+    pub fn from_hybrid_chunk_with_source(
+        chunk_index: usize,
+        chunk: &HybridChunk,
+        source: &DocumentSource,
+    ) -> Self {
+        let mut c = Self::from_hybrid_chunk_inner(chunk_index, chunk, Some(source));
+        c.metadata.source = Some(source.clone());
+        c
+    }
+
+    /// Shared constructor. `source` (when `Some`) supplies the `doc_hash` used
+    /// as the chunk_id prefix, so the id is computed exactly once — callers that
+    /// also want the full source stamped do that themselves.
+    fn from_hybrid_chunk_inner(
+        chunk_index: usize,
+        chunk: &HybridChunk,
+        source: Option<&DocumentSource>,
+    ) -> Self {
         let elements = chunk.elements();
         let page_numbers = collect_pages(elements);
         let bounding_boxes = elements.iter().map(|e| *e.bbox()).collect();
@@ -84,7 +107,9 @@ impl RagChunk {
             elements.iter().map(|e| e.type_name().to_string()).collect();
         let text = chunk.text();
         let full_text = chunk.full_text();
-        let metadata = ChunkMetadata::from_elements(elements, &text, &full_text, chunk_index, None);
+        let doc_hash = source.and_then(|s| s.doc_hash.as_deref());
+        let metadata =
+            ChunkMetadata::from_elements(elements, &text, &full_text, chunk_index, doc_hash);
 
         Self {
             chunk_index,
@@ -98,23 +123,6 @@ impl RagChunk {
             is_oversized: chunk.is_oversized(),
             metadata,
         }
-    }
-
-    /// Like [`from_hybrid_chunk`](Self::from_hybrid_chunk) but stamping source
-    /// metadata and using `source.doc_hash` for the chunk_id prefix when set.
-    pub fn from_hybrid_chunk_with_source(
-        chunk_index: usize,
-        chunk: &HybridChunk,
-        source: &DocumentSource,
-    ) -> Self {
-        let mut c = Self::from_hybrid_chunk(chunk_index, chunk);
-        c.metadata.chunk_id = crate::pipeline::chunk_metadata::content_chunk_id(
-            source.doc_hash.as_deref(),
-            chunk_index,
-            &c.full_text,
-        );
-        c.metadata.source = Some(source.clone());
-        c
     }
 
     /// Serialize this chunk to a JSON string (requires `semantic` feature).

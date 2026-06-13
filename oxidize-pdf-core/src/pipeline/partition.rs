@@ -584,20 +584,24 @@ impl Partitioner {
             }
         }
 
+        // Saturating usize->u8: a document with ≥255 distinct title sizes is
+        // implausible, but a silent wrapping cast there would corrupt the level
+        // ordering, so clamp instead.
+        let to_level = |n: usize| -> u8 { u8::try_from(n).unwrap_or(u8::MAX) };
         let level_of = |size: Option<f64>| -> u8 {
             match size {
                 Some(s) if s.is_finite() && s > 0.0 => {
                     for (i, b) in buckets.iter().enumerate() {
                         if (s - b).abs() <= b * 0.05 {
-                            return (i + 1) as u8;
+                            return to_level(i + 1);
                         }
                     }
-                    buckets.len().max(1) as u8
+                    to_level(buckets.len().max(1))
                 }
                 // Unknown / non-finite / non-positive size: treat as one level
                 // deeper than the deepest known bucket, so the title is appended
                 // as a leaf child and never pops a known-size ancestor.
-                _ => (buckets.len() + 1) as u8,
+                _ => to_level(buckets.len() + 1),
             }
         };
 
