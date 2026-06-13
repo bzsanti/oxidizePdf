@@ -292,3 +292,54 @@ fn rag_chunk_language_detected_on_udhr_chinese_fixture() {
         "dominant detected language across chunks must be Chinese (cmn); tally={tally:?}"
     );
 }
+
+/// Task 10: a `RagChunk` (with nested `ChunkMetadata`) survives a JSON
+/// round-trip under the `semantic` feature — the nested metadata serializes and
+/// deserializes back identically. Content-verifying on the structural fields.
+#[cfg(feature = "semantic")]
+#[test]
+fn rag_chunk_metadata_json_roundtrip() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::HelveticaBold, 16.0)
+        .at(50.0, 760.0)
+        .write("Roundtrip Heading")
+        .unwrap();
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(50.0, 720.0)
+        .write("Body paragraph with enough words to produce one serializable chunk.")
+        .unwrap();
+    doc.add_page(page);
+    let pdf_bytes = doc.to_bytes().expect("pdf generation should succeed");
+    let reader = PdfReader::new(Cursor::new(&pdf_bytes)).expect("parse generated PDF");
+    let parsed = PdfDocument::new(reader);
+    let chunks = parsed.rag_chunks().expect("rag_chunks must succeed");
+    assert!(!chunks.is_empty(), "expected at least one chunk");
+
+    let json = chunks[0].to_json().expect("serialize chunk to JSON");
+    assert!(
+        json.contains("\"metadata\""),
+        "json must carry nested metadata"
+    );
+    assert!(
+        json.contains("\"heading_path\""),
+        "json must carry heading_path"
+    );
+    assert!(json.contains("\"chunk_id\""), "json must carry chunk_id");
+
+    let back: RagChunk = serde_json::from_str(&json).expect("deserialize chunk from JSON");
+    assert_eq!(
+        back.metadata.chunk_id, chunks[0].metadata.chunk_id,
+        "chunk_id must survive the round-trip"
+    );
+    assert_eq!(
+        back.metadata.heading_path, chunks[0].metadata.heading_path,
+        "heading_path must survive the round-trip"
+    );
+    assert_eq!(
+        back.metadata.char_count, chunks[0].metadata.char_count,
+        "char_count must survive the round-trip"
+    );
+}

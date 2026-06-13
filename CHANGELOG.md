@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
+
+### Added
+
+- Rich chunk metadata for RAG: every `RagChunk` now carries a nested
+  `ChunkMetadata` (`oxidize_pdf::pipeline`) with the section breadcrumb
+  (`heading_path`), char-weighted dominant font/size and bold/italic flags,
+  the lowest element confidence (`min_confidence`), content-type flags
+  (`has_table`/`has_list`/`has_code`/`heading_only`), char/word/sentence
+  counts, a deterministic `chunk_id`, and prev/next chunk links. `RagChunk`
+  and the new metadata types are `#[non_exhaustive]`.
+- `PdfDocument::rag_chunks_with_source(DocumentSource)`: builds chunks stamped
+  with source-document metadata. Auto-fills `title`/`author`/`creation_date`/
+  `total_pages` from the info dictionary (caller values win); the caller's
+  `doc_hash` becomes the stable `chunk_id` prefix.
+- Optional per-chunk language detection behind the existing
+  `language-detection` feature: `pipeline::detect_language(text)` returns the
+  dominant ISO 639-3 code (via `whatlang`), and `ChunkMetadata::language` is
+  populated when the feature is enabled.
+
 ## [2.15.0] - 2026-06-11
 
 ### Added
