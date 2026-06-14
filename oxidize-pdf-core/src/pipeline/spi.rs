@@ -8,6 +8,7 @@ use crate::pipeline::element::Element;
 /// A grouping of elements destined to become one chunk. The chunking strategy
 /// decides the boundaries; the pipeline owns everything downstream (RagChunk,
 /// chunk_id, links, metadata).
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct ChunkGroup {
     /// The elements that form this chunk, in order.
@@ -64,18 +65,27 @@ impl AnalysisPipeline {
     }
 
     /// Replace the chunking strategy.
+    ///
+    /// `max_tokens` is independent of the strategy: it stays at whatever
+    /// [`new`](Self::new) or [`with_max_tokens`](Self::with_max_tokens) set it
+    /// to (default 512) and is used only to flag oversized chunks. A custom
+    /// strategy that chunks to a different budget should also call
+    /// [`with_max_tokens`](Self::with_max_tokens) so the oversized flag matches.
+    #[must_use]
     pub fn with_chunking(mut self, strategy: Box<dyn ChunkingStrategy>) -> Self {
         self.chunking = strategy;
         self
     }
 
     /// Set the token budget used to flag oversized chunks.
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
         self.max_tokens = max_tokens;
         self
     }
 
     /// Stamp source-document metadata onto every chunk.
+    #[must_use]
     pub fn with_source(mut self, source: DocumentSource) -> Self {
         self.source = Some(source);
         self
