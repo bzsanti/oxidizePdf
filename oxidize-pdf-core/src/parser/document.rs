@@ -1480,11 +1480,29 @@ impl<R: Read + Seek> PdfDocument<R> {
     }
 
     /// Run a custom [`AnalysisPipeline`](crate::pipeline::AnalysisPipeline):
-    /// partition, apply the pipeline's chunking strategy, then build linked
-    /// `RagChunk`s (ids, prev/next, metadata, optional source) exactly as the
-    /// other `rag_chunks*` entry points do.
+    /// partition, optionally classify elements, apply the pipeline's chunking
+    /// strategy, build linked `RagChunk`s (ids, prev/next, metadata, optional
+    /// source) exactly as the other `rag_chunks*` entry points do, then run any
+    /// enrichers over each chunk's `extra` bag.
     ///
     /// `AnalysisPipeline::new()` reproduces [`rag_chunks`](Self::rag_chunks).
+    ///
+    /// **Stability:** requires `unstable-spi`; exempt from semver until promoted.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::PdfDocument;
+    /// # use oxidize_pdf::pipeline::AnalysisPipeline;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// // Default pipeline == rag_chunks(); swap in a custom strategy/classifier/
+    /// // enricher via the builder to extend it.
+    /// let chunks = doc.rag_chunks_with_pipeline(&AnalysisPipeline::new())?;
+    /// println!("{} chunks", chunks.len());
+    /// # Ok(())
+    /// # }
+    /// ```
     #[cfg(feature = "unstable-spi")]
     pub fn rag_chunks_with_pipeline(
         &self,
@@ -1519,6 +1537,8 @@ impl<R: Read + Seek> PdfDocument<R> {
             .into_iter()
             .map(|g| crate::pipeline::HybridChunk::from_group(g, pipeline.max_tokens))
             .collect();
+        // `mut` is needed only for the enricher pass below (gated `semantic`);
+        // without that feature the binding is never mutated — silence the warning.
         #[allow(unused_mut)]
         let mut chunks = self.build_rag_chunks(&hybrid, source);
         #[cfg(feature = "semantic")]

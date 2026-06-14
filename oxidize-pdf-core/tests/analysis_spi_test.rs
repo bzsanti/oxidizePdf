@@ -517,3 +517,36 @@ fn class_label_string_ergonomics() {
     let owned: String = ClassLabel::new("definition".to_string()).into();
     assert_eq!(owned, "definition");
 }
+
+#[test]
+fn pipeline_owns_oversized_flag_regardless_of_strategy() {
+    // Spec §10.5: a strategy that emits an over-budget group → the pipeline
+    // marks is_oversized. OnePerElement keeps each (multi-word) paragraph in its
+    // own group; a 1-token budget makes every real text chunk over-budget.
+    let bytes = build_two_section_doc();
+    let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+
+    let tight = AnalysisPipeline::new()
+        .with_chunking(Box::new(OnePerElement))
+        .with_max_tokens(1);
+    let oversized = parsed
+        .rag_chunks_with_pipeline(&tight)
+        .expect("rag_chunks_with_pipeline");
+    assert!(
+        oversized.iter().any(|c| c.is_oversized),
+        "tiny budget → the pipeline flags oversized even though the strategy ignores budget"
+    );
+
+    // Same strategy, generous budget → nothing oversized. Proves the flag tracks
+    // the pipeline's budget, not the strategy.
+    let loose = AnalysisPipeline::new()
+        .with_chunking(Box::new(OnePerElement))
+        .with_max_tokens(10_000);
+    let none_over = parsed
+        .rag_chunks_with_pipeline(&loose)
+        .expect("rag_chunks_with_pipeline");
+    assert!(
+        none_over.iter().all(|c| !c.is_oversized),
+        "generous budget → no chunk is oversized"
+    );
+}

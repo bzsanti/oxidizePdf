@@ -30,6 +30,9 @@ impl ChunkGroup {
 /// Decides which elements group into a chunk. Implement this in a (possibly
 /// closed) crate to override how the pipeline forms chunks. The pipeline
 /// computes `oversized`, `chunk_id`, prev/next links, and `ChunkMetadata`.
+///
+/// **Stability:** behind `unstable-spi`; exempt from semver until promoted.
+/// The signature may change between releases while experimental.
 pub trait ChunkingStrategy: Send + Sync {
     /// Group `elements` into chunks. Called once per document.
     fn chunk(&self, elements: &[Element]) -> Vec<ChunkGroup>;
@@ -93,6 +96,8 @@ pub struct ClassifyContext<'a> {
 /// domain-specific classes. Runs once per element; the label is stored on
 /// [`ElementMetadata::class_label`](crate::pipeline::ElementMetadata::class_label)
 /// and may be read by a [`ChunkingStrategy`] to decide chunk boundaries.
+///
+/// **Stability:** behind `unstable-spi`; exempt from semver until promoted.
 pub trait ElementClassifier: Send + Sync {
     /// Return a label for `element`, or `None` to leave it unlabelled.
     ///
@@ -121,6 +126,9 @@ pub struct EnrichContext<'a> {
 /// (possibly closed) crate to surface domain signals (e.g. `legal.clause_number`)
 /// without the core ever knowing their semantics. Enrichers run in registration
 /// order; namespace keys to avoid collisions.
+///
+/// **Stability:** behind `unstable-spi` + `semantic`; exempt from semver until
+/// promoted.
 #[cfg(feature = "semantic")]
 pub trait MetadataEnricher: Send + Sync {
     /// Enrich `meta.extra` using the read-only `ctx`.
@@ -131,7 +139,10 @@ use crate::pipeline::hybrid_chunking::{HybridChunkConfig, HybridChunker};
 use crate::pipeline::DocumentSource;
 
 /// Configures the analysis pipeline: which chunking strategy to run, the token
-/// budget used to flag oversized chunks, and optional source-document metadata.
+/// budget used to flag oversized chunks, optional source-document metadata, an
+/// optional element classifier, and optional metadata enrichers.
+///
+/// **Stability:** behind `unstable-spi`; exempt from semver until promoted.
 pub struct AnalysisPipeline {
     pub(crate) chunking: Box<dyn ChunkingStrategy>,
     pub(crate) max_tokens: usize,

@@ -90,6 +90,17 @@ jobs:
         if: matrix.os != 'macos-latest' || matrix.rust != 'beta'
         run: cargo test --all --features internal-testing --verbose
 
+      # The analysis SPI is gated behind `unstable-spi` (+ `semantic` for the
+      # enricher/extra bag), so the default test step above never compiles its
+      # tests. Exercise the SPI feature matrix on Linux/stable (spec §10.6).
+      - name: Run analysis SPI tests (unstable-spi)
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: cargo test -p oxidize-pdf --features "internal-testing,unstable-spi" --verbose
+
+      - name: Run analysis SPI tests (unstable-spi + semantic)
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: cargo test -p oxidize-pdf --features "internal-testing,unstable-spi,semantic" --verbose
+
       - name: Build documentation
         run: cargo doc --all --no-deps
 
