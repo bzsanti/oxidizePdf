@@ -27,4 +27,6 @@ pub use rag::RagChunk;
 pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 pub use semantic_chunking::{SemanticChunk, SemanticChunkConfig, SemanticChunker};
 #[cfg(feature = "unstable-spi")]
-pub use spi::{AnalysisPipeline, ChunkGroup, ChunkingStrategy};
+pub use spi::{
+    AnalysisPipeline, ChunkGroup, ChunkingStrategy, ClassLabel, ClassifyContext, ElementClassifier,
+};

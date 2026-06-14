@@ -1494,7 +1494,26 @@ impl<R: Read + Seek> PdfDocument<R> {
         if let Some(src) = source.as_mut() {
             self.autofill_source(src);
         }
-        let elements = self.partition()?;
+        let mut elements = self.partition()?;
+        if let Some(classifier) = pipeline.classifier.as_deref() {
+            // Two passes: read labels against an immutable slice, then apply —
+            // the classifier inspects neighbours via `ClassifyContext`, so it
+            // cannot run while the slice is being mutated.
+            let labels: Vec<Option<crate::pipeline::ClassLabel>> = (0..elements.len())
+                .map(|index| {
+                    let ctx = crate::pipeline::ClassifyContext {
+                        elements: &elements,
+                        index,
+                    };
+                    classifier.classify(&elements[index], &ctx)
+                })
+                .collect();
+            for (element, label) in elements.iter_mut().zip(labels) {
+                if let Some(label) = label {
+                    element.metadata_mut().class_label = Some(label.0.into_owned());
+                }
+            }
+        }
         let groups = pipeline.chunking.chunk(&elements);
         let hybrid: Vec<crate::pipeline::HybridChunk> = groups
             .into_iter()

@@ -182,3 +182,96 @@ fn decorator_wraps_default_and_refines() {
     assert_eq!(groups[0].elements.len(), 2);
     assert_eq!(groups[1].elements.len(), 2);
 }
+
+// --- ElementClassifier seam (§7) ---
+
+use oxidize_pdf::pipeline::{ClassLabel, ClassifyContext, ElementClassifier};
+
+/// Classifier that labels any element whose text contains "CLAUSE".
+struct MarkClause;
+
+impl ElementClassifier for MarkClause {
+    fn classify(&self, element: &Element, ctx: &ClassifyContext) -> Option<ClassLabel> {
+        // ctx must expose the surrounding elements and this element's index.
+        assert_eq!(ctx.elements[ctx.index].text(), element.text());
+        if element.text().contains("CLAUSE") {
+            Some(ClassLabel::new("clause"))
+        } else {
+            None
+        }
+    }
+}
+
+/// Strategy that copies each element's `class_label` into the group's
+/// heading_context — making the classifier's effect observable downstream.
+struct ExposeLabel;
+
+impl ChunkingStrategy for ExposeLabel {
+    fn chunk(&self, elements: &[Element]) -> Vec<ChunkGroup> {
+        elements
+            .iter()
+            .map(|e| ChunkGroup::new(vec![e.clone()], e.metadata().class_label.clone()))
+            .collect()
+    }
+}
+
+#[test]
+fn classifier_runs_before_chunking_and_sets_class_label() {
+    let mut doc = Document::new();
+    let mut page = Page::a4();
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(50.0, 760.0)
+        .write("Intro paragraph without the marker word here.")
+        .unwrap();
+    page.text()
+        .set_font(Font::Helvetica, 11.0)
+        .at(50.0, 730.0)
+        .write("CLAUSE 1 the parties hereby agree to the following terms.")
+        .unwrap();
+    doc.add_page(page);
+    let bytes = doc.to_bytes().expect("pdf generation");
+
+    let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+    let pipeline = AnalysisPipeline::new()
+        .with_classifier(Box::new(MarkClause))
+        .with_chunking(Box::new(ExposeLabel));
+    let chunks = parsed
+        .rag_chunks_with_pipeline(&pipeline)
+        .expect("rag_chunks_with_pipeline");
+
+    // Exactly the chunk(s) whose text carries "CLAUSE" inherit the label;
+    // others have no heading_context from a label.
+    let labeled: Vec<&str> = chunks
+        .iter()
+        .filter(|c| c.heading_context.as_deref() == Some("clause"))
+        .map(|c| c.text.as_str())
+        .collect();
+    assert_eq!(
+        labeled.len(),
+        1,
+        "exactly one element carries the CLAUSE label"
+    );
+    assert!(labeled[0].contains("CLAUSE"));
+
+    let unlabeled = chunks
+        .iter()
+        .filter(|c| c.heading_context.is_none())
+        .count();
+    assert!(unlabeled >= 1, "the intro element is unlabeled");
+}
+
+#[test]
+fn default_pipeline_has_no_classifier_and_leaves_labels_unset() {
+    let bytes = build_two_section_doc();
+    let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+    // No classifier configured → ExposeLabel sees only None labels.
+    let pipeline = AnalysisPipeline::new().with_chunking(Box::new(ExposeLabel));
+    let chunks = parsed
+        .rag_chunks_with_pipeline(&pipeline)
+        .expect("rag_chunks_with_pipeline");
+    assert!(
+        chunks.iter().all(|c| c.heading_context.is_none()),
+        "without a classifier, no element carries a class label"
+    );
+}
