@@ -33,3 +33,51 @@ pub trait ChunkingStrategy: Send + Sync {
     /// Group `elements` into chunks. Called once per document.
     fn chunk(&self, elements: &[Element]) -> Vec<ChunkGroup>;
 }
+
+use crate::pipeline::hybrid_chunking::{HybridChunkConfig, HybridChunker};
+use crate::pipeline::DocumentSource;
+
+/// Configures the analysis pipeline: which chunking strategy to run, the token
+/// budget used to flag oversized chunks, and optional source-document metadata.
+pub struct AnalysisPipeline {
+    pub(crate) chunking: Box<dyn ChunkingStrategy>,
+    pub(crate) max_tokens: usize,
+    pub(crate) source: Option<DocumentSource>,
+}
+
+impl Default for AnalysisPipeline {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AnalysisPipeline {
+    /// Default pipeline: the built-in `HybridChunker`, default token budget, no
+    /// source. Reproduces `PdfDocument::rag_chunks()` exactly.
+    pub fn new() -> Self {
+        let config = HybridChunkConfig::default();
+        Self {
+            max_tokens: config.max_tokens,
+            chunking: Box::new(HybridChunker::new(config)),
+            source: None,
+        }
+    }
+
+    /// Replace the chunking strategy.
+    pub fn with_chunking(mut self, strategy: Box<dyn ChunkingStrategy>) -> Self {
+        self.chunking = strategy;
+        self
+    }
+
+    /// Set the token budget used to flag oversized chunks.
+    pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
+        self.max_tokens = max_tokens;
+        self
+    }
+
+    /// Stamp source-document metadata onto every chunk.
+    pub fn with_source(mut self, source: DocumentSource) -> Self {
+        self.source = Some(source);
+        self
+    }
+}
