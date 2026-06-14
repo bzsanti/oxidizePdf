@@ -30,3 +30,5 @@ pub use semantic_chunking::{SemanticChunk, SemanticChunkConfig, SemanticChunker}
 pub use spi::{
     AnalysisPipeline, ChunkGroup, ChunkingStrategy, ClassLabel, ClassifyContext, ElementClassifier,
 };
+#[cfg(all(feature = "unstable-spi", feature = "semantic"))]
+pub use spi::{EnrichContext, MetadataEnricher};

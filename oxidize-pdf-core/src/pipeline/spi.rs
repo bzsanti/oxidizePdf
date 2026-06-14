@@ -74,6 +74,30 @@ pub trait ElementClassifier: Send + Sync {
     fn classify(&self, element: &Element, ctx: &ClassifyContext) -> Option<ClassLabel>;
 }
 
+/// Read-only context handed to a [`MetadataEnricher`]: the chunk's embedding
+/// text, its source elements, and its heading breadcrumb. The enricher uses
+/// these to compute provider-specific fields it writes into `extra`.
+#[cfg(feature = "semantic")]
+pub struct EnrichContext<'a> {
+    /// The chunk's text (elements joined by newlines).
+    pub text: &'a str,
+    /// The elements that compose this chunk, in order.
+    pub elements: &'a [Element],
+    /// The chunk's heading breadcrumb, root→leaf.
+    pub heading_path: &'a [String],
+}
+
+/// Writes provider-specific fields into a chunk's open `extra` bag after the
+/// pipeline has derived its metadata and linked it. Implement this in a
+/// (possibly closed) crate to surface domain signals (e.g. `legal.clause_number`)
+/// without the core ever knowing their semantics. Enrichers run in registration
+/// order; namespace keys to avoid collisions.
+#[cfg(feature = "semantic")]
+pub trait MetadataEnricher: Send + Sync {
+    /// Enrich `meta.extra` using the read-only `ctx`.
+    fn enrich(&self, ctx: &EnrichContext, meta: &mut crate::pipeline::ChunkMetadata);
+}
+
 use crate::pipeline::hybrid_chunking::{HybridChunkConfig, HybridChunker};
 use crate::pipeline::DocumentSource;
 
@@ -84,6 +108,8 @@ pub struct AnalysisPipeline {
     pub(crate) max_tokens: usize,
     pub(crate) source: Option<DocumentSource>,
     pub(crate) classifier: Option<Box<dyn ElementClassifier>>,
+    #[cfg(feature = "semantic")]
+    pub(crate) enrichers: Vec<Box<dyn MetadataEnricher>>,
 }
 
 impl Default for AnalysisPipeline {
@@ -102,6 +128,8 @@ impl AnalysisPipeline {
             chunking: Box::new(HybridChunker::new(config)),
             source: None,
             classifier: None,
+            #[cfg(feature = "semantic")]
+            enrichers: Vec::new(),
         }
     }
 
@@ -139,6 +167,16 @@ impl AnalysisPipeline {
     #[must_use]
     pub fn with_classifier(mut self, classifier: Box<dyn ElementClassifier>) -> Self {
         self.classifier = Some(classifier);
+        self
+    }
+
+    /// Register an enricher that writes provider-specific fields into each
+    /// chunk's `extra` bag after metadata is derived and chunks are linked.
+    /// Enrichers run in registration order.
+    #[cfg(feature = "semantic")]
+    #[must_use]
+    pub fn with_enricher(mut self, enricher: Box<dyn MetadataEnricher>) -> Self {
+        self.enrichers.push(enricher);
         self
     }
 }

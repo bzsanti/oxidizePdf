@@ -275,3 +275,107 @@ fn default_pipeline_has_no_classifier_and_leaves_labels_unset() {
         "without a classifier, no element carries a class label"
     );
 }
+
+// --- MetadataEnricher seam (§7), gated on `semantic` (writes `extra`) ---
+
+#[cfg(feature = "semantic")]
+mod enricher {
+    use super::*;
+    use oxidize_pdf::pipeline::{ChunkMetadata, EnrichContext, MetadataEnricher};
+
+    /// Enricher that stamps the chunk's word count and element count into the
+    /// open `extra` bag, proving it can read text + elements and write `extra`.
+    struct CountEnricher;
+
+    impl MetadataEnricher for CountEnricher {
+        fn enrich(&self, ctx: &EnrichContext, meta: &mut ChunkMetadata) {
+            let words = ctx.text.split_whitespace().count();
+            meta.extra
+                .insert("test.word_count".to_string(), serde_json::json!(words));
+            meta.extra.insert(
+                "test.element_count".to_string(),
+                serde_json::json!(ctx.elements.len()),
+            );
+            // heading_path is reachable too.
+            meta.extra.insert(
+                "test.heading_depth".to_string(),
+                serde_json::json!(ctx.heading_path.len()),
+            );
+        }
+    }
+
+    #[test]
+    fn enricher_writes_namespaced_keys_into_extra() {
+        let bytes = build_two_section_doc();
+        let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+        let pipeline = AnalysisPipeline::new().with_enricher(Box::new(CountEnricher));
+        let chunks = parsed
+            .rag_chunks_with_pipeline(&pipeline)
+            .expect("rag_chunks_with_pipeline");
+
+        assert!(!chunks.is_empty());
+        for c in &chunks {
+            let wc = c.metadata.extra.get("test.word_count").expect("word_count");
+            assert_eq!(
+                wc.as_u64().unwrap() as usize,
+                c.text.split_whitespace().count(),
+                "enricher saw the real chunk text"
+            );
+            let ec = c
+                .metadata
+                .extra
+                .get("test.element_count")
+                .expect("element_count");
+            assert!(ec.as_u64().unwrap() >= 1, "chunk has >= 1 element");
+            assert!(c.metadata.extra.contains_key("test.heading_depth"));
+        }
+    }
+
+    #[test]
+    fn enrichers_run_in_order_last_writer_wins_per_key() {
+        struct StampA;
+        struct StampB;
+        impl MetadataEnricher for StampA {
+            fn enrich(&self, _ctx: &EnrichContext, meta: &mut ChunkMetadata) {
+                meta.extra
+                    .insert("ns.order".to_string(), serde_json::json!("A"));
+            }
+        }
+        impl MetadataEnricher for StampB {
+            fn enrich(&self, _ctx: &EnrichContext, meta: &mut ChunkMetadata) {
+                meta.extra
+                    .insert("ns.order".to_string(), serde_json::json!("B"));
+            }
+        }
+
+        let bytes = build_two_section_doc();
+        let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+        let pipeline = AnalysisPipeline::new()
+            .with_enricher(Box::new(StampA))
+            .with_enricher(Box::new(StampB));
+        let chunks = parsed
+            .rag_chunks_with_pipeline(&pipeline)
+            .expect("rag_chunks_with_pipeline");
+
+        for c in &chunks {
+            assert_eq!(
+                c.metadata.extra.get("ns.order").unwrap(),
+                &serde_json::json!("B"),
+                "enrichers apply in insertion order; B runs after A"
+            );
+        }
+    }
+
+    #[test]
+    fn no_enricher_leaves_extra_empty() {
+        let bytes = build_two_section_doc();
+        let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+        let chunks = parsed
+            .rag_chunks_with_pipeline(&AnalysisPipeline::new())
+            .expect("rag_chunks_with_pipeline");
+        assert!(
+            chunks.iter().all(|c| c.metadata.extra.is_empty()),
+            "default pipeline does not touch extra"
+        );
+    }
+}

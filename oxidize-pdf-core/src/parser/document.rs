@@ -1519,7 +1519,27 @@ impl<R: Read + Seek> PdfDocument<R> {
             .into_iter()
             .map(|g| crate::pipeline::HybridChunk::from_group(g, pipeline.max_tokens))
             .collect();
-        Ok(self.build_rag_chunks(&hybrid, source))
+        #[allow(unused_mut)]
+        let mut chunks = self.build_rag_chunks(&hybrid, source);
+        #[cfg(feature = "semantic")]
+        if !pipeline.enrichers.is_empty() {
+            // Enrich each chunk's `extra` bag. The hybrid chunk (kept alongside)
+            // supplies the source elements; text/heading_path are snapshotted to
+            // release the immutable borrow before mutating `metadata`.
+            for (chunk, hc) in chunks.iter_mut().zip(hybrid.iter()) {
+                let text = chunk.text.clone();
+                let heading_path = chunk.metadata.heading_path.clone();
+                let ctx = crate::pipeline::EnrichContext {
+                    text: &text,
+                    elements: hc.elements(),
+                    heading_path: &heading_path,
+                };
+                for enricher in &pipeline.enrichers {
+                    enricher.enrich(&ctx, &mut chunk.metadata);
+                }
+            }
+        }
+        Ok(chunks)
     }
 
     /// Build linked [`RagChunk`]s from hybrid chunks, optionally stamping a
