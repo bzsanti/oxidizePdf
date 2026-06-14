@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.0] - 2026-06-14
+
 ### Added
 
 - Rich chunk metadata for RAG: every `RagChunk` now carries a nested
