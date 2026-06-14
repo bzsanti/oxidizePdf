@@ -123,6 +123,16 @@ impl HybridChunk {
     pub fn is_oversized(&self) -> bool {
         self.oversized
     }
+
+    /// Convert into a [`ChunkGroup`](crate::pipeline::spi::ChunkGroup),
+    /// dropping the derived `oversized` flag (the pipeline recomputes it).
+    #[cfg(feature = "unstable-spi")]
+    pub(crate) fn into_group(self) -> crate::pipeline::spi::ChunkGroup {
+        crate::pipeline::spi::ChunkGroup {
+            elements: self.elements,
+            heading_context: self.heading_context,
+        }
+    }
 }
 
 /// Hybrid chunker that merges adjacent elements and propagates heading context.
@@ -492,4 +502,15 @@ fn make_text_fragment_element(source: &Element, fragment_text: &str) -> Element 
             ..Default::default()
         },
     })
+}
+
+#[cfg(feature = "unstable-spi")]
+impl crate::pipeline::spi::ChunkingStrategy for HybridChunker {
+    fn chunk(&self, elements: &[Element]) -> Vec<crate::pipeline::spi::ChunkGroup> {
+        // Call the inherent method explicitly to avoid recursing into this impl.
+        HybridChunker::chunk(self, elements)
+            .into_iter()
+            .map(HybridChunk::into_group)
+            .collect()
+    }
 }
