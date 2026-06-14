@@ -6,6 +6,8 @@
 
 #[cfg(feature = "semantic")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "semantic")]
+use std::collections::BTreeMap;
 
 use crate::pipeline::element::{Element, ElementBBox};
 use crate::pipeline::hybrid_chunking::split_into_sentences;
@@ -188,6 +190,12 @@ pub struct ChunkMetadata {
     /// Column count (widest row) of the same table reported by
     /// [`table_rows`](Self::table_rows); `None` when the chunk has no table.
     pub table_cols: Option<usize>,
+    /// Open extension bag for provider-supplied fields (e.g. a closed analyzer
+    /// stamping `legal.clause_number`). Namespacing keys by provider avoids
+    /// collisions. Serializes nested under `"extra"`; omitted when empty.
+    #[cfg(feature = "semantic")]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 use sha2::{Digest, Sha256};
@@ -245,6 +253,8 @@ impl ChunkMetadata {
             page_regions,
             table_rows,
             table_cols,
+            #[cfg(feature = "semantic")]
+            extra: BTreeMap::new(),
         }
     }
 }
@@ -651,5 +661,35 @@ mod tests {
         let m = ChunkMetadata::from_elements(&els, "just prose", "just prose", 0, None);
         assert_eq!(m.table_rows, None);
         assert_eq!(m.table_cols, None);
+    }
+
+    #[cfg(feature = "semantic")]
+    #[test]
+    fn extra_bag_defaults_empty_and_roundtrips() {
+        let mut m = ChunkMetadata::default();
+        assert!(m.extra.is_empty(), "extra defaults to empty");
+
+        // Empty extra is omitted from the serialized output.
+        let json_empty = serde_json::to_string(&m).unwrap();
+        assert!(
+            !json_empty.contains("\"extra\""),
+            "empty extra must be skipped in JSON"
+        );
+
+        // Populated extra survives a deterministic round-trip.
+        m.extra
+            .insert("legal.clause_number".to_string(), serde_json::json!("3.2"));
+        m.extra.insert(
+            "legal.defined_terms".to_string(),
+            serde_json::json!(["Party", "Agreement"]),
+        );
+        let json = serde_json::to_string(&m).unwrap();
+        assert!(json.contains("\"extra\""));
+        let back: ChunkMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.extra, m.extra, "extra survives round-trip");
+        assert_eq!(
+            back.extra.get("legal.clause_number").unwrap(),
+            &serde_json::json!("3.2")
+        );
     }
 }

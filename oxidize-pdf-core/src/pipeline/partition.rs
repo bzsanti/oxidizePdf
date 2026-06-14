@@ -885,6 +885,8 @@ fn meta_from_fragment(f: &TextFragment, page: u32) -> ElementMetadata {
         is_italic: f.is_italic,
         parent_heading: None,
         heading_path: Vec::new(),
+        #[cfg(feature = "unstable-spi")]
+        class_label: None,
     }
 }
 

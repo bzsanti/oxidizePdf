@@ -8,6 +8,8 @@ pub mod profile;
 pub mod rag;
 pub mod reading_order;
 pub mod semantic_chunking;
+#[cfg(feature = "unstable-spi")]
+pub mod spi;
 
 #[cfg(feature = "language-detection")]
 pub use chunk_metadata::detect_language;
@@ -24,3 +26,9 @@ pub use profile::{ExtractionProfile, ProfileConfig};
 pub use rag::RagChunk;
 pub use reading_order::{ReadingOrder, SimpleReadingOrder, XYCutReadingOrder};
 pub use semantic_chunking::{SemanticChunk, SemanticChunkConfig, SemanticChunker};
+#[cfg(feature = "unstable-spi")]
+pub use spi::{
+    AnalysisPipeline, ChunkGroup, ChunkingStrategy, ClassLabel, ClassifyContext, ElementClassifier,
+};
+#[cfg(all(feature = "unstable-spi", feature = "semantic"))]
+pub use spi::{EnrichContext, MetadataEnricher};

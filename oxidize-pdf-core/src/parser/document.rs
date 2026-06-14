@@ -1458,19 +1458,108 @@ impl<R: Read + Seek> PdfDocument<R> {
         mut source: crate::pipeline::DocumentSource,
         config: crate::pipeline::HybridChunkConfig,
     ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        self.autofill_source(&mut source);
+        let elements = self.partition()?;
+        let chunker = crate::pipeline::HybridChunker::new(config);
+        let hybrid_chunks = chunker.chunk(&elements);
+        Ok(self.build_rag_chunks(&hybrid_chunks, Some(source)))
+    }
+
+    /// Fill `title`/`author`/`creation_date`/`total_pages` from the info
+    /// dictionary where the caller left them `None`.
+    fn autofill_source(&self, source: &mut crate::pipeline::DocumentSource) {
         if let Ok(meta) = self.metadata() {
-            source.title = source.title.or(meta.title);
-            source.author = source.author.or(meta.author);
-            source.creation_date = source.creation_date.or(meta.creation_date);
+            source.title = source.title.take().or(meta.title);
+            source.author = source.author.take().or(meta.author);
+            source.creation_date = source.creation_date.take().or(meta.creation_date);
             source.total_pages = source.total_pages.or(meta.page_count);
         }
         if source.total_pages.is_none() {
             source.total_pages = self.page_count().ok();
         }
-        let elements = self.partition()?;
-        let chunker = crate::pipeline::HybridChunker::new(config);
-        let hybrid_chunks = chunker.chunk(&elements);
-        Ok(self.build_rag_chunks(&hybrid_chunks, Some(source)))
+    }
+
+    /// Run a custom [`AnalysisPipeline`](crate::pipeline::AnalysisPipeline):
+    /// partition, optionally classify elements, apply the pipeline's chunking
+    /// strategy, build linked `RagChunk`s (ids, prev/next, metadata, optional
+    /// source) exactly as the other `rag_chunks*` entry points do, then run any
+    /// enrichers over each chunk's `extra` bag.
+    ///
+    /// `AnalysisPipeline::new()` reproduces [`rag_chunks`](Self::rag_chunks).
+    ///
+    /// **Stability:** requires `unstable-spi`; exempt from semver until promoted.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use oxidize_pdf::parser::PdfDocument;
+    /// # use oxidize_pdf::pipeline::AnalysisPipeline;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let doc = PdfDocument::open("document.pdf")?;
+    /// // Default pipeline == rag_chunks(); swap in a custom strategy/classifier/
+    /// // enricher via the builder to extend it.
+    /// let chunks = doc.rag_chunks_with_pipeline(&AnalysisPipeline::new())?;
+    /// println!("{} chunks", chunks.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "unstable-spi")]
+    pub fn rag_chunks_with_pipeline(
+        &self,
+        pipeline: &crate::pipeline::AnalysisPipeline,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        let mut source = pipeline.source.clone();
+        if let Some(src) = source.as_mut() {
+            self.autofill_source(src);
+        }
+        let mut elements = self.partition()?;
+        if let Some(classifier) = pipeline.classifier.as_deref() {
+            // Two passes: read labels against an immutable slice, then apply —
+            // the classifier inspects neighbours via `ClassifyContext`, so it
+            // cannot run while the slice is being mutated.
+            let labels: Vec<Option<crate::pipeline::ClassLabel>> = (0..elements.len())
+                .map(|index| {
+                    let ctx = crate::pipeline::ClassifyContext {
+                        elements: &elements,
+                        index,
+                    };
+                    classifier.classify(&elements[index], &ctx)
+                })
+                .collect();
+            for (element, label) in elements.iter_mut().zip(labels) {
+                if let Some(label) = label {
+                    element.metadata_mut().class_label = Some(label.0.into_owned());
+                }
+            }
+        }
+        let groups = pipeline.chunking.chunk(&elements);
+        let hybrid: Vec<crate::pipeline::HybridChunk> = groups
+            .into_iter()
+            .map(|g| crate::pipeline::HybridChunk::from_group(g, pipeline.max_tokens))
+            .collect();
+        // `mut` is needed only for the enricher pass below (gated `semantic`);
+        // without that feature the binding is never mutated — silence the warning.
+        #[allow(unused_mut)]
+        let mut chunks = self.build_rag_chunks(&hybrid, source);
+        #[cfg(feature = "semantic")]
+        if !pipeline.enrichers.is_empty() {
+            // Enrich each chunk's `extra` bag. The hybrid chunk (kept alongside)
+            // supplies the source elements; text/heading_path are snapshotted to
+            // release the immutable borrow before mutating `metadata`.
+            for (chunk, hc) in chunks.iter_mut().zip(hybrid.iter()) {
+                let text = chunk.text.clone();
+                let heading_path = chunk.metadata.heading_path.clone();
+                let ctx = crate::pipeline::EnrichContext {
+                    text: &text,
+                    elements: hc.elements(),
+                    heading_path: &heading_path,
+                };
+                for enricher in &pipeline.enrichers {
+                    enricher.enrich(&ctx, &mut chunk.metadata);
+                }
+            }
+        }
+        Ok(chunks)
     }
 
     /// Build linked [`RagChunk`]s from hybrid chunks, optionally stamping a
