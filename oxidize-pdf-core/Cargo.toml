@@ -471,6 +471,10 @@ signatures = [
 # Semantic marking (Community level - basic tagging)
 semantic = ["dep:serde_json"]
 
+# Unstable analysis SPI (ChunkingStrategy + AnalysisPipeline). Exempt from
+# semver while experimental; may change until promoted to a stable feature.
+unstable-spi = []
+
 # Language detection for RAG chunks (opt-in: pulls pure-Rust `whatlang`)
 language-detection = ["dep:whatlang"]
 
