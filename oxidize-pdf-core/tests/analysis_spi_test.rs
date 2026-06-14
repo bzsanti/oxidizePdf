@@ -140,3 +140,45 @@ fn custom_strategy_drives_chunk_count_and_pipeline_owns_ids() {
         assert!(!c.metadata.chunk_id.is_empty());
     }
 }
+
+/// A strategy that delegates to the default and then merges every pair of
+/// adjacent groups — proving "delegate to the default and refine".
+struct PairMerger {
+    inner: HybridChunker,
+}
+
+impl ChunkingStrategy for PairMerger {
+    fn chunk(&self, elements: &[Element]) -> Vec<ChunkGroup> {
+        let base = ChunkingStrategy::chunk(&self.inner, elements);
+        let mut out = Vec::new();
+        let mut iter = base.into_iter();
+        while let Some(mut a) = iter.next() {
+            if let Some(b) = iter.next() {
+                a.elements.extend(b.elements);
+            }
+            out.push(a);
+        }
+        out
+    }
+}
+
+#[test]
+fn decorator_wraps_default_and_refines() {
+    let elements = vec![para("alpha"), para("bravo"), para("charlie"), para("delta")];
+
+    let inner = HybridChunker::new(HybridChunkConfig {
+        max_tokens: 1, // force one element per group from the default
+        overlap_tokens: 0,
+        merge_adjacent: false,
+        propagate_headings: false,
+        merge_policy: MergePolicy::AnyInlineContent,
+    });
+    let base_count = ChunkingStrategy::chunk(&inner, &elements).len();
+    assert_eq!(base_count, 4, "default emits one group per element here");
+
+    let decorated = PairMerger { inner };
+    let groups = decorated.chunk(&elements);
+    assert_eq!(groups.len(), 2, "pairs merged: 4 groups -> 2");
+    assert_eq!(groups[0].elements.len(), 2);
+    assert_eq!(groups[1].elements.len(), 2);
+}
