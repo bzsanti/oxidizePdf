@@ -36,6 +36,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cite back to. New `pipeline::PageRegion { page, bbox }`.
 - Table dimensions on `ChunkMetadata`: `table_rows`/`table_cols` (largest table
   in the chunk) for table-aware retrieval.
+- **Analysis SPI** (unstable, behind the new `unstable-spi` feature): extension
+  points that let a closed crate plug custom analysis into the RAG pipeline
+  without forking the MIT core. The trait surface is exempt from semver while
+  experimental.
+  - `ChunkingStrategy` (`pipeline::ChunkingStrategy`) + `ChunkGroup`: decide how
+    elements group into chunks; the pipeline still owns `chunk_id`, prev/next
+    links, `oversized`, and `ChunkMetadata`. `HybridChunker` is the default impl
+    (`impl ChunkingStrategy for HybridChunker`), so a custom strategy can wrap it
+    and refine.
+  - `ElementClassifier` (`pipeline::ElementClassifier`) + `ClassLabel` +
+    `ClassifyContext`: assign an open string label to each element before
+    chunking, stored on the new `ElementMetadata::class_label`. A chunking
+    strategy may read it to drive boundaries.
+  - `MetadataEnricher` (`pipeline::MetadataEnricher`) + `EnrichContext` (both
+    additionally behind `semantic`): write provider-specific fields into a
+    chunk's open `extra` bag after metadata is derived; enrichers run in
+    registration order.
+  - `ChunkMetadata::extra: BTreeMap<String, serde_json::Value>` (behind
+    `semantic`): open, namespaced metadata bag, serialized nested under `extra`
+    and omitted when empty (no output change unless populated).
+  - `AnalysisPipeline` builder + `PdfDocument::rag_chunks_with_pipeline`:
+    run a strategy/classifier/enrichers over a document. `AnalysisPipeline::new()`
+    reproduces `rag_chunks()` exactly (verified by a parity test). Every existing
+    `rag_chunks*` entry point is unchanged.
 
 ## [2.15.0] - 2026-06-11
 
