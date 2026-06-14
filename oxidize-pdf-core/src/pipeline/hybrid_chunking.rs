@@ -133,6 +133,25 @@ impl HybridChunk {
             heading_context: self.heading_context,
         }
     }
+
+    /// Build a chunk from a [`ChunkGroup`](crate::pipeline::spi::ChunkGroup),
+    /// recomputing `oversized` against `max_tokens`. Used by the pipeline when a
+    /// custom strategy produced the grouping.
+    #[cfg(feature = "unstable-spi")]
+    pub(crate) fn from_group(group: crate::pipeline::spi::ChunkGroup, max_tokens: usize) -> Self {
+        let text = group
+            .elements
+            .iter()
+            .map(|e| e.display_text())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let oversized = estimate_tokens(&text) > max_tokens;
+        HybridChunk {
+            elements: group.elements,
+            heading_context: group.heading_context,
+            oversized,
+        }
+    }
 }
 
 /// Hybrid chunker that merges adjacent elements and propagates heading context.
@@ -512,5 +531,34 @@ impl crate::pipeline::spi::ChunkingStrategy for HybridChunker {
             .into_iter()
             .map(HybridChunk::into_group)
             .collect()
+    }
+}
+
+#[cfg(all(test, feature = "unstable-spi"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_group_recomputes_oversized_and_preserves_content() {
+        use crate::pipeline::spi::ChunkGroup;
+
+        let big = Element::Paragraph(ElementData {
+            text: "one two three four five six seven eight".to_string(),
+            metadata: ElementMetadata::default(),
+        });
+        // Budget far below the token count → oversized.
+        let group = ChunkGroup::new(vec![big.clone()], Some("H".to_string()));
+        let hc = HybridChunk::from_group(group, 2);
+        assert!(
+            hc.is_oversized(),
+            "8-word chunk over a 2-token budget is oversized"
+        );
+        assert_eq!(hc.heading_context.as_deref(), Some("H"));
+        assert_eq!(hc.elements().len(), 1);
+
+        // Generous budget → not oversized.
+        let group2 = ChunkGroup::new(vec![big], None);
+        let hc2 = HybridChunk::from_group(group2, 100);
+        assert!(!hc2.is_oversized());
     }
 }
