@@ -379,3 +379,127 @@ mod enricher {
         );
     }
 }
+
+// --- Capstone: classifier + label-aware strategy + enricher compose (§7 e2e) ---
+
+#[cfg(feature = "semantic")]
+mod seams_compose {
+    use super::*;
+    use oxidize_pdf::pipeline::{ChunkMetadata, EnrichContext, MetadataEnricher};
+
+    /// Labels elements that begin a clause.
+    struct ClauseClassifier;
+    impl ElementClassifier for ClauseClassifier {
+        fn classify(&self, element: &Element, _ctx: &ClassifyContext) -> Option<ClassLabel> {
+            element
+                .text()
+                .starts_with("CLAUSE")
+                .then(|| ClassLabel::new("clause"))
+        }
+    }
+
+    /// Strategy that starts a new group at every element labelled "clause";
+    /// non-clause elements append to the current group. A boundary DECISION
+    /// driven by the classifier's label — the core's HybridChunker can't do this.
+    struct SplitOnClause;
+    impl ChunkingStrategy for SplitOnClause {
+        fn chunk(&self, elements: &[Element]) -> Vec<ChunkGroup> {
+            let mut groups: Vec<ChunkGroup> = Vec::new();
+            for e in elements {
+                let is_clause = e.metadata().class_label.as_deref() == Some("clause");
+                if is_clause || groups.is_empty() {
+                    groups.push(ChunkGroup::new(
+                        vec![e.clone()],
+                        e.metadata().class_label.clone(),
+                    ));
+                } else {
+                    groups.last_mut().unwrap().elements.push(e.clone());
+                }
+            }
+            groups
+        }
+    }
+
+    /// Reads the classifier's label off the chunk's elements (via `ctx`) and
+    /// stamps it onto `extra` under a namespaced key — proving the enricher sees
+    /// the classifier's output end-to-end.
+    struct ClauseEnricher;
+    impl MetadataEnricher for ClauseEnricher {
+        fn enrich(&self, ctx: &EnrichContext, meta: &mut ChunkMetadata) {
+            let is_clause = ctx
+                .elements
+                .iter()
+                .any(|e| e.metadata().class_label.as_deref() == Some("clause"));
+            meta.extra
+                .insert("legal.is_clause".to_string(), serde_json::json!(is_clause));
+        }
+    }
+
+    fn three_clause_doc() -> Vec<u8> {
+        let mut doc = Document::new();
+        let mut page = Page::a4();
+        let lines = [
+            (
+                760.0,
+                "Preamble text that precedes any clause in the agreement.",
+            ),
+            (
+                730.0,
+                "CLAUSE 1 the first obligation of the parties is stated here.",
+            ),
+            (
+                700.0,
+                "Continuation of clause one with additional detail and terms.",
+            ),
+            (
+                670.0,
+                "CLAUSE 2 the second obligation follows in this separate clause.",
+            ),
+        ];
+        for (y, t) in lines {
+            page.text()
+                .set_font(Font::Helvetica, 11.0)
+                .at(50.0, y)
+                .write(t)
+                .unwrap();
+        }
+        doc.add_page(page);
+        doc.to_bytes().expect("pdf generation")
+    }
+
+    #[test]
+    fn classifier_drives_strategy_boundaries_and_enricher_reads_through() {
+        let bytes = three_clause_doc();
+        let parsed = PdfDocument::new(PdfReader::new(Cursor::new(&bytes)).unwrap());
+        let pipeline = AnalysisPipeline::new()
+            .with_classifier(Box::new(ClauseClassifier))
+            .with_chunking(Box::new(SplitOnClause))
+            .with_enricher(Box::new(ClauseEnricher));
+        let chunks = parsed
+            .rag_chunks_with_pipeline(&pipeline)
+            .expect("rag_chunks_with_pipeline");
+
+        // Preamble starts group 0 (no clause yet); each CLAUSE opens a new group.
+        // → exactly 3 groups: [preamble], [CLAUSE 1 + continuation], [CLAUSE 2].
+        assert_eq!(chunks.len(), 3, "two clause boundaries split into 3 chunks");
+
+        // The two clause chunks carry the label end-to-end into `extra`.
+        let clause_chunks: Vec<&_> = chunks
+            .iter()
+            .filter(|c| c.metadata.extra.get("legal.is_clause") == Some(&serde_json::json!(true)))
+            .collect();
+        assert_eq!(clause_chunks.len(), 2, "two chunks are clause-labelled");
+        for c in &clause_chunks {
+            assert!(c.text.contains("CLAUSE"));
+        }
+        // The continuation merged into clause 1, not its own chunk.
+        let clause1 = clause_chunks
+            .iter()
+            .find(|c| c.text.contains("CLAUSE 1"))
+            .unwrap();
+        assert!(
+            clause1.text.contains("Continuation"),
+            "non-clause element appended to the open clause group"
+        );
+    }
+}
