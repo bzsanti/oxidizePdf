@@ -54,6 +54,30 @@ impl ClassLabel {
     }
 }
 
+impl AsRef<str> for ClassLabel {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<ClassLabel> for String {
+    fn from(label: ClassLabel) -> String {
+        label.0.into_owned()
+    }
+}
+
+impl PartialEq<str> for ClassLabel {
+    fn eq(&self, other: &str) -> bool {
+        self.0.as_ref() == other
+    }
+}
+
+impl PartialEq<&str> for ClassLabel {
+    fn eq(&self, other: &&str) -> bool {
+        self.0.as_ref() == *other
+    }
+}
+
 /// Read-only context handed to an [`ElementClassifier`]: the full element slice
 /// and the index of the element being classified, so a classifier can inspect
 /// neighbours (preceding/following elements) to make its decision.
@@ -71,6 +95,11 @@ pub struct ClassifyContext<'a> {
 /// and may be read by a [`ChunkingStrategy`] to decide chunk boundaries.
 pub trait ElementClassifier: Send + Sync {
     /// Return a label for `element`, or `None` to leave it unlabelled.
+    ///
+    /// `ctx` exposes the full element slice for neighbour inspection, but
+    /// implementations should run in O(1) or O(k) — looking at a constant window
+    /// of neighbours — not O(N) over the whole slice, so the overall
+    /// classification pass stays O(N).
     fn classify(&self, element: &Element, ctx: &ClassifyContext) -> Option<ClassLabel>;
 }
 

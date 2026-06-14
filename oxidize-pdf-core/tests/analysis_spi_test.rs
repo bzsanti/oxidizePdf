@@ -503,3 +503,17 @@ mod seams_compose {
         );
     }
 }
+
+#[test]
+fn class_label_string_ergonomics() {
+    let label = ClassLabel::new("clause");
+    // AsRef<str>
+    assert_eq!(label.as_ref() as &str, "clause");
+    // PartialEq<str> / PartialEq<&str>
+    assert_eq!(label, *"clause");
+    assert!(label == "clause");
+    assert!(label != "definition");
+    // From<ClassLabel> for String
+    let owned: String = ClassLabel::new("definition".to_string()).into();
+    assert_eq!(owned, "definition");
+}
