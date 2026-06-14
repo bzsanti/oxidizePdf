@@ -9,6 +9,7 @@
 
 pub mod colorspace_inspect;
 pub mod pdf_assembler;
+pub mod rag_helpers;
 pub mod synthetic_pdf;
 
 /// Count the number of /Type /Page entries in PDF bytes (excluding /Type /Pages).

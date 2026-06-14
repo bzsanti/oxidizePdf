@@ -6,6 +6,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
+
+## [2.16.0] - 2026-06-14
+
+### Added
+
+- Rich chunk metadata for RAG: every `RagChunk` now carries a nested
+  `ChunkMetadata` (`oxidize_pdf::pipeline`) with the section breadcrumb
+  (`heading_path`), char-weighted dominant font/size and bold/italic flags,
+  the lowest element confidence (`min_confidence`), content-type flags
+  (`has_table`/`has_list`/`has_code`/`heading_only`), char/word/sentence
+  counts, a deterministic `chunk_id`, and prev/next chunk links. `RagChunk`
+  and the new metadata types are `#[non_exhaustive]`.
+- `PdfDocument::rag_chunks_with_source(DocumentSource)` and
+  `rag_chunks_with_source_and_config(DocumentSource, HybridChunkConfig)`: build
+  chunks stamped with source-document metadata, the latter also honouring a
+  custom token budget. Auto-fill `title`/`author`/`creation_date`/`total_pages`
+  from the info dictionary (caller values win); the caller's `doc_hash` becomes
+  the stable `chunk_id` prefix. `DocumentSource::with_file(filename, doc_hash)`
+  is the ergonomic constructor for the two caller-supplied fields.
+- Optional per-chunk language detection behind the existing
+  `language-detection` feature: `pipeline::detect_language(text)` returns the
+  dominant ISO 639-3 code (via `whatlang`), and `ChunkMetadata::language` is
+  populated when the feature is enabled. `ChunkMetadata::language_confidence`
+  and `language_reliable` surface `whatlang`'s confidence and reliability so
+  consumers can gate language-based routing.
+- Citation anchor on `ChunkMetadata`: `page_span: Option<(u32, u32)>` and
+  `page_regions: Vec<PageRegion>` (the union bounding box of the chunk's
+  elements per page), giving RAG consumers an exact region of the source PDF to
+  cite back to. New `pipeline::PageRegion { page, bbox }`.
+- Table dimensions on `ChunkMetadata`: `table_rows`/`table_cols` (largest table
+  in the chunk) for table-aware retrieval.
+- **Analysis SPI** (unstable, behind the new `unstable-spi` feature): extension
+  points that let a closed crate plug custom analysis into the RAG pipeline
+  without forking the MIT core. The trait surface is exempt from semver while
+  experimental.
+  - `ChunkingStrategy` (`pipeline::ChunkingStrategy`) + `ChunkGroup`: decide how
+    elements group into chunks; the pipeline still owns `chunk_id`, prev/next
+    links, `oversized`, and `ChunkMetadata`. `HybridChunker` is the default impl
+    (`impl ChunkingStrategy for HybridChunker`), so a custom strategy can wrap it
+    and refine.
+  - `ElementClassifier` (`pipeline::ElementClassifier`) + `ClassLabel` +
+    `ClassifyContext`: assign an open string label to each element before
+    chunking, stored on the new `ElementMetadata::class_label`. A chunking
+    strategy may read it to drive boundaries.
+  - `MetadataEnricher` (`pipeline::MetadataEnricher`) + `EnrichContext` (both
+    additionally behind `semantic`): write provider-specific fields into a
+    chunk's open `extra` bag after metadata is derived; enrichers run in
+    registration order.
+  - `ChunkMetadata::extra: BTreeMap<String, serde_json::Value>` (behind
+    `semantic`): open, namespaced metadata bag, serialized nested under `extra`
+    and omitted when empty (no output change unless populated).
+  - `AnalysisPipeline` builder + `PdfDocument::rag_chunks_with_pipeline`:
+    run a strategy/classifier/enrichers over a document. `AnalysisPipeline::new()`
+    reproduces `rag_chunks()` exactly (verified by a parity test). Every existing
+    `rag_chunks*` entry point is unchanged.
+
 ## [2.15.0] - 2026-06-11
 
 ### Added

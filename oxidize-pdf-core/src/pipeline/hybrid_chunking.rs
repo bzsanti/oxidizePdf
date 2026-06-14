@@ -123,6 +123,35 @@ impl HybridChunk {
     pub fn is_oversized(&self) -> bool {
         self.oversized
     }
+
+    /// Convert into a [`ChunkGroup`](crate::pipeline::spi::ChunkGroup),
+    /// dropping the derived `oversized` flag (the pipeline recomputes it).
+    #[cfg(feature = "unstable-spi")]
+    pub(crate) fn into_group(self) -> crate::pipeline::spi::ChunkGroup {
+        crate::pipeline::spi::ChunkGroup {
+            elements: self.elements,
+            heading_context: self.heading_context,
+        }
+    }
+
+    /// Build a chunk from a [`ChunkGroup`](crate::pipeline::spi::ChunkGroup),
+    /// recomputing `oversized` against `max_tokens`. Used by the pipeline when a
+    /// custom strategy produced the grouping.
+    #[cfg(feature = "unstable-spi")]
+    pub(crate) fn from_group(group: crate::pipeline::spi::ChunkGroup, max_tokens: usize) -> Self {
+        let text = group
+            .elements
+            .iter()
+            .map(|e| e.display_text())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let oversized = estimate_tokens(&text) > max_tokens;
+        HybridChunk {
+            elements: group.elements,
+            heading_context: group.heading_context,
+            oversized,
+        }
+    }
 }
 
 /// Hybrid chunker that merges adjacent elements and propagates heading context.
@@ -446,7 +475,7 @@ fn split_by_sentences(text: &str, max_tokens: usize) -> Vec<String> {
 
 /// Split text into sentence-like segments preserving punctuation.
 /// Splits on `. `, `! `, `? `, and `\n`.
-fn split_into_sentences(text: &str) -> Vec<String> {
+pub(crate) fn split_into_sentences(text: &str) -> Vec<String> {
     let mut sentences = Vec::new();
     let mut current = String::new();
     let mut iter = text.chars().peekable();
@@ -479,7 +508,7 @@ fn split_into_sentences(text: &str) -> Vec<String> {
 }
 
 /// Create a new Paragraph element from an existing element's metadata, replacing the text.
-/// Preserves provenance (page, bbox, parent_heading).
+/// Preserves provenance (page, bbox, parent_heading, heading_path).
 fn make_text_fragment_element(source: &Element, fragment_text: &str) -> Element {
     let metadata = source.metadata().clone();
     Element::Paragraph(ElementData {
@@ -488,7 +517,48 @@ fn make_text_fragment_element(source: &Element, fragment_text: &str) -> Element 
             page: metadata.page,
             bbox: metadata.bbox,
             parent_heading: metadata.parent_heading,
+            heading_path: metadata.heading_path,
             ..Default::default()
         },
     })
+}
+
+#[cfg(feature = "unstable-spi")]
+impl crate::pipeline::spi::ChunkingStrategy for HybridChunker {
+    fn chunk(&self, elements: &[Element]) -> Vec<crate::pipeline::spi::ChunkGroup> {
+        // Call the inherent method explicitly to avoid recursing into this impl.
+        HybridChunker::chunk(self, elements)
+            .into_iter()
+            .map(HybridChunk::into_group)
+            .collect()
+    }
+}
+
+#[cfg(all(test, feature = "unstable-spi"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_group_recomputes_oversized_and_preserves_content() {
+        use crate::pipeline::spi::ChunkGroup;
+
+        let big = Element::Paragraph(ElementData {
+            text: "one two three four five six seven eight".to_string(),
+            metadata: ElementMetadata::default(),
+        });
+        // Budget far below the token count → oversized.
+        let group = ChunkGroup::new(vec![big.clone()], Some("H".to_string()));
+        let hc = HybridChunk::from_group(group, 2);
+        assert!(
+            hc.is_oversized(),
+            "8-word chunk over a 2-token budget is oversized"
+        );
+        assert_eq!(hc.heading_context.as_deref(), Some("H"));
+        assert_eq!(hc.elements().len(), 1);
+
+        // Generous budget → not oversized.
+        let group2 = ChunkGroup::new(vec![big], None);
+        let hc2 = HybridChunk::from_group(group2, 100);
+        assert!(!hc2.is_oversized());
+    }
 }

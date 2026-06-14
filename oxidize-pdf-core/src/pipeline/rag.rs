@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
+use crate::pipeline::chunk_metadata::ChunkMetadata;
 use crate::pipeline::element::Element;
 use crate::pipeline::hybrid_chunking::HybridChunk;
-use crate::pipeline::ElementBBox;
+use crate::pipeline::{DocumentSource, ElementBBox};
 
 #[cfg(feature = "semantic")]
 use serde::{Deserialize, Serialize};
@@ -43,6 +44,7 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "semantic", derive(Serialize, Deserialize))]
+#[non_exhaustive]
 pub struct RagChunk {
     /// Sequential index of this chunk in the document (0-based).
     pub chunk_index: usize,
@@ -68,27 +70,58 @@ pub struct RagChunk {
     pub token_estimate: usize,
     /// Whether the chunk exceeds the configured `max_tokens`.
     pub is_oversized: bool,
+    /// Rich per-chunk metadata (heading path, font/style, counts, ids, source).
+    pub metadata: ChunkMetadata,
 }
 
 impl RagChunk {
     /// Build a `RagChunk` from a [`HybridChunk`], extracting all metadata from its elements.
     pub fn from_hybrid_chunk(chunk_index: usize, chunk: &HybridChunk) -> Self {
+        Self::from_hybrid_chunk_inner(chunk_index, chunk, None)
+    }
+
+    /// Like [`from_hybrid_chunk`](Self::from_hybrid_chunk) but stamping source
+    /// metadata and using `source.doc_hash` for the chunk_id prefix when set.
+    pub fn from_hybrid_chunk_with_source(
+        chunk_index: usize,
+        chunk: &HybridChunk,
+        source: &DocumentSource,
+    ) -> Self {
+        let mut c = Self::from_hybrid_chunk_inner(chunk_index, chunk, Some(source));
+        c.metadata.source = Some(source.clone());
+        c
+    }
+
+    /// Shared constructor. `source` (when `Some`) supplies the `doc_hash` used
+    /// as the chunk_id prefix, so the id is computed exactly once — callers that
+    /// also want the full source stamped do that themselves.
+    fn from_hybrid_chunk_inner(
+        chunk_index: usize,
+        chunk: &HybridChunk,
+        source: Option<&DocumentSource>,
+    ) -> Self {
         let elements = chunk.elements();
         let page_numbers = collect_pages(elements);
         let bounding_boxes = elements.iter().map(|e| *e.bbox()).collect();
         let element_types: Vec<String> =
             elements.iter().map(|e| e.type_name().to_string()).collect();
+        let text = chunk.text();
+        let full_text = chunk.full_text();
+        let doc_hash = source.and_then(|s| s.doc_hash.as_deref());
+        let metadata =
+            ChunkMetadata::from_elements(elements, &text, &full_text, chunk_index, doc_hash);
 
         Self {
             chunk_index,
-            text: chunk.text(),
-            full_text: chunk.full_text(),
+            text,
+            full_text,
             page_numbers,
             bounding_boxes,
             element_types,
             heading_context: chunk.heading_context.clone(),
             token_estimate: chunk.token_estimate(),
             is_oversized: chunk.is_oversized(),
+            metadata,
         }
     }
 

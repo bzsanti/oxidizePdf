@@ -209,6 +209,22 @@ pub fn jsonl_line(
     entry_url: &str,
     chunk: &RagChunk,
 ) -> String {
+    let m = &chunk.metadata;
+    // Citation anchor: where in the source PDF this chunk lives (the RAG
+    // coordinate-fidelity differentiator).
+    let page_regions: Vec<_> = m
+        .page_regions
+        .iter()
+        .map(|r| {
+            json!({
+                "page": r.page,
+                "x": r.bbox.x,
+                "y": r.bbox.y,
+                "width": r.bbox.width,
+                "height": r.bbox.height,
+            })
+        })
+        .collect();
     let value = json!({
         "id": format!("{}-{:04}", entry_slug, chunk.chunk_index),
         "text": chunk.text,
@@ -219,9 +235,25 @@ pub fn jsonl_line(
             "language": entry_language,
             "page_numbers": chunk.page_numbers,
             "heading_context": chunk.heading_context,
+            "heading_path": m.heading_path,
             "element_types": chunk.element_types,
             "token_estimate": chunk.token_estimate,
             "is_oversized": chunk.is_oversized,
+            "chunk_id": m.chunk_id,
+            "prev_chunk_id": m.prev_chunk_id,
+            "next_chunk_id": m.next_chunk_id,
+            "page_span": m.page_span,
+            "page_regions": page_regions,
+            "char_count": m.char_count,
+            "word_count": m.word_count,
+            "content_types": {
+                "has_table": m.content_types.has_table,
+                "has_list": m.content_types.has_list,
+                "has_code": m.content_types.has_code,
+                "heading_only": m.content_types.heading_only,
+            },
+            "table_rows": m.table_rows,
+            "table_cols": m.table_cols,
         }
     });
     value.to_string()

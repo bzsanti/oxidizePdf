@@ -3,6 +3,10 @@ use oxidize_pdf::pipeline::{
     MergePolicy, RagChunk,
 };
 
+#[path = "common/mod.rs"]
+mod common;
+use common::rag_helpers::make_rag_chunk;
+
 fn make_para(text: &str, page: u32, x: f64, y: f64) -> Element {
     Element::Paragraph(ElementData {
         text: text.to_string(),
@@ -16,17 +20,17 @@ fn make_para(text: &str, page: u32, x: f64, y: f64) -> Element {
 
 #[test]
 fn test_rag_chunk_has_required_fields() {
-    let chunk = RagChunk {
-        chunk_index: 0,
-        text: "Hello world.".to_string(),
-        full_text: "Introduction\n\nHello world.".to_string(),
-        page_numbers: vec![0],
-        bounding_boxes: vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
-        element_types: vec!["paragraph".to_string()],
-        heading_context: Some("Introduction".to_string()),
-        token_estimate: 2,
-        is_oversized: false,
-    };
+    let chunk = make_rag_chunk(
+        0,
+        "Hello world.",
+        "Introduction\n\nHello world.",
+        vec![0],
+        vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
+        vec!["paragraph".to_string()],
+        Some("Introduction".to_string()),
+        2,
+        false,
+    );
 
     assert_eq!(chunk.chunk_index, 0);
     assert_eq!(chunk.text, "Hello world.");
@@ -112,17 +116,17 @@ fn test_rag_chunk_collects_pages_from_multi_page_elements() {
 #[cfg(feature = "semantic")]
 #[test]
 fn test_rag_chunk_serializes_to_json() {
-    let chunk = RagChunk {
-        chunk_index: 3,
-        text: "Some text content.".to_string(),
-        full_text: "Heading\n\nSome text content.".to_string(),
-        page_numbers: vec![0, 1],
-        bounding_boxes: vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
-        element_types: vec!["paragraph".to_string()],
-        heading_context: Some("Heading".to_string()),
-        token_estimate: 3,
-        is_oversized: false,
-    };
+    let chunk = make_rag_chunk(
+        3,
+        "Some text content.",
+        "Heading\n\nSome text content.",
+        vec![0, 1],
+        vec![ElementBBox::new(50.0, 700.0, 400.0, 12.0)],
+        vec!["paragraph".to_string()],
+        Some("Heading".to_string()),
+        3,
+        false,
+    );
 
     let json = serde_json::to_string(&chunk).expect("serialization must succeed");
 
@@ -138,17 +142,17 @@ fn test_rag_chunk_serializes_to_json() {
 #[cfg(feature = "semantic")]
 #[test]
 fn test_rag_chunk_to_json_method() {
-    let chunk = RagChunk {
-        chunk_index: 0,
-        text: "Test.".to_string(),
-        full_text: "Test.".to_string(),
-        page_numbers: vec![0],
-        bounding_boxes: vec![],
-        element_types: vec!["paragraph".to_string()],
-        heading_context: None,
-        token_estimate: 1,
-        is_oversized: false,
-    };
+    let chunk = make_rag_chunk(
+        0,
+        "Test.",
+        "Test.",
+        vec![0],
+        vec![],
+        vec!["paragraph".to_string()],
+        None,
+        1,
+        false,
+    );
 
     let json = chunk.to_json().expect("to_json must succeed");
     assert!(json.starts_with('{'));

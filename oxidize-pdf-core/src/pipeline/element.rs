@@ -131,6 +131,11 @@ impl Element {
         self.metadata_mut().parent_heading = heading;
     }
 
+    /// Set the full heading breadcrumb for this element.
+    pub fn set_heading_path(&mut self, path: Vec<String>) {
+        self.metadata_mut().heading_path = path;
+    }
+
     /// Returns the number of rows if this is a Table element.
     pub fn row_count(&self) -> Option<usize> {
         match self {
@@ -253,6 +258,18 @@ pub struct ElementMetadata {
     pub is_italic: bool,
     /// The text of the nearest preceding Title element, if any.
     pub parent_heading: Option<String>,
+    /// Full ancestor heading breadcrumb, root→leaf. Empty if outside any heading.
+    pub heading_path: Vec<String>,
+    /// Open class label assigned by a custom
+    /// [`ElementClassifier`](crate::pipeline::spi::ElementClassifier) before
+    /// chunking (e.g. `"clause"`, `"definition"`). `None` unless a classifier
+    /// set it. A chunking strategy may read it to make boundary decisions.
+    #[cfg(feature = "unstable-spi")]
+    #[cfg_attr(
+        feature = "semantic",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub class_label: Option<String>,
 }
 
 impl Default for ElementMetadata {
@@ -266,6 +283,9 @@ impl Default for ElementMetadata {
             is_bold: false,
             is_italic: false,
             parent_heading: None,
+            heading_path: Vec::new(),
+            #[cfg(feature = "unstable-spi")]
+            class_label: None,
         }
     }
 }
