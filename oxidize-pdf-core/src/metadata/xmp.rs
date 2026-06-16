@@ -142,9 +142,17 @@ pub enum XmpValue {
     Alt(Vec<(String, String)>), // (lang, value)
     /// Structured property (nested key-value pairs)
     /// ISO 16684-1 Section 7.9.2.2
-    Struct(HashMap<String, Box<XmpValue>>),
+    ///
+    /// Storage is a `BTreeMap` so field iteration order is sorted by name,
+    /// giving byte-reproducible XMP output (issue #334 follow-up to #331).
+    /// Public API (`XmpMetadata::set_struct`) still accepts `HashMap` from
+    /// callers for ergonomics; conversion happens at the boundary.
+    Struct(BTreeMap<String, Box<XmpValue>>),
     /// Array of structured properties
-    ArrayStruct(Vec<HashMap<String, Box<XmpValue>>>),
+    ///
+    /// Inner field order is sorted-by-name (`BTreeMap`); outer item order
+    /// is caller-supplied (`Vec`).
+    ArrayStruct(Vec<BTreeMap<String, Box<XmpValue>>>),
 }
 
 /// XMP property
@@ -293,13 +301,17 @@ impl XmpMetadata {
 
     /// Set a structured property (nested key-value pairs)
     /// ISO 16684-1 Section 7.9.2.2
+    ///
+    /// Accepts a `HashMap` for caller ergonomics and converts to the
+    /// internal sorted storage (`BTreeMap`) at the boundary so XMP output
+    /// is byte-reproducible regardless of caller insertion order.
     pub fn set_struct(
         &mut self,
         namespace: XmpNamespace,
         name: impl Into<String>,
         fields: HashMap<String, XmpValue>,
     ) {
-        let boxed_fields: HashMap<String, Box<XmpValue>> =
+        let boxed_fields: BTreeMap<String, Box<XmpValue>> =
             fields.into_iter().map(|(k, v)| (k, Box::new(v))).collect();
 
         self.properties.push(XmpProperty {
@@ -310,13 +322,16 @@ impl XmpMetadata {
     }
 
     /// Set an array of structured properties
+    ///
+    /// Per-item field order is sorted (`BTreeMap`); item order in the array
+    /// is preserved as supplied by the caller (`Vec`).
     pub fn set_array_struct(
         &mut self,
         namespace: XmpNamespace,
         name: impl Into<String>,
         items: Vec<HashMap<String, XmpValue>>,
     ) {
-        let boxed_items: Vec<HashMap<String, Box<XmpValue>>> = items
+        let boxed_items: Vec<BTreeMap<String, Box<XmpValue>>> = items
             .into_iter()
             .map(|item| item.into_iter().map(|(k, v)| (k, Box::new(v))).collect())
             .collect();
@@ -531,9 +546,11 @@ impl XmpMetadata {
         let mut in_rdf_description = false;
         let mut had_container = false;
 
-        // For structured properties
-        let mut struct_items: Vec<HashMap<String, Box<XmpValue>>> = Vec::new();
-        let mut current_struct: Option<HashMap<String, Box<XmpValue>>> = None;
+        // For structured properties. Use `BTreeMap` so a round-tripped XMP
+        // packet (parse → serialize) keeps the same sorted field order as
+        // the writer produces from scratch (issue #334).
+        let mut struct_items: Vec<BTreeMap<String, Box<XmpValue>>> = Vec::new();
+        let mut current_struct: Option<BTreeMap<String, Box<XmpValue>>> = None;
         let mut struct_field_name: Option<String> = None;
         let mut struct_field_value = String::new();
 
@@ -576,7 +593,7 @@ impl XmpMetadata {
 
                         if has_parse_type_resource {
                             current_container = Some(ContainerType::Resource);
-                            current_struct = Some(HashMap::new());
+                            current_struct = Some(BTreeMap::new());
                         } else if current_container == Some(ContainerType::Alt) {
                             // Check for xml:lang attribute for rdf:Alt
                             current_lang = e
