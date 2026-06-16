@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.1] - 2026-06-16
+
+### Fixed
+
+- `ExtractionProfile::Presentation` collapsed slide-shape grids (parallel
+  columns of bullets) to a `Table` element. The profile now opts out of the
+  spatial-cluster table detector via a new `PartitionConfig.detect_spatial_tables`
+  knob (default `true`, set to `false` only by `Presentation`). Ruling-based
+  detection remains active. Fixes #329.
+- `TextExtractor::extract_from_page` returned non-empty `.text` with zero
+  `.fragments` on pages wrapped entirely in `/Artifact BMC … EMC` (a common
+  pattern for slide-deck closing legal-disclaimer pages). Such pages were
+  invisible to `partition_with(...)` / `rag_chunks(...)` even though the user
+  saw text in `.text`. `extracted_text` now uses the same artifact gate as
+  fragment emission (`skip_artifact_text`). Fixes #330.
+- XMP serializer emitted `xmlns:*` namespace declarations in HashMap
+  iteration order, breaking PDF byte-reproducibility. Custom namespace
+  storage migrated to `BTreeMap` and the local namespace map inside
+  `to_xmp_packet` is now sorted. Fixes #331.
+- `XmpValue::Struct` and `XmpValue::ArrayStruct` field elements were emitted
+  in HashMap iteration order under `<rdf:Description>` and
+  `<rdf:li rdf:parseType="Resource">`. Internal storage migrated to
+  `BTreeMap` (public API kept `HashMap` parameters; values are sorted
+  on insert). Fixes #334 items #1–#3.
+- `FontCache::font_names()` returned font names in `HashMap` iteration order,
+  yielding non-deterministic PDF font ObjectId assignments across builds.
+  Now sorts before returning. Fixes #334 item #5.
+
 ## [2.16.0] - 2026-06-14
 
 ### Added
