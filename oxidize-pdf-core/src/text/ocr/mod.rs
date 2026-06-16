@@ -952,6 +952,9 @@ pub enum OcrEngine {
     Aws,
     /// Google Cloud Vision OCR
     GoogleCloud,
+    /// Vision Language Model (VLM) — any model exposing a chat/completions-style
+    /// vision API (OpenAI, Anthropic, Ollama, etc.)
+    Vlm,
 }
 
 impl OcrEngine {
@@ -963,13 +966,14 @@ impl OcrEngine {
             OcrEngine::Azure => "Azure Computer Vision",
             OcrEngine::Aws => "AWS Textract",
             OcrEngine::GoogleCloud => "Google Cloud Vision",
+            OcrEngine::Vlm => "VLM",
         }
     }
 
     /// Check if this engine supports the given image format
     pub fn supports_format(&self, format: ImageFormat) -> bool {
         match self {
-            OcrEngine::Mock => true, // Mock supports all formats
+            OcrEngine::Mock => true,
             OcrEngine::Tesseract => matches!(
                 format,
                 ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::Tiff
@@ -977,6 +981,10 @@ impl OcrEngine {
             OcrEngine::Azure => matches!(format, ImageFormat::Jpeg | ImageFormat::Png),
             OcrEngine::Aws => matches!(format, ImageFormat::Jpeg | ImageFormat::Png),
             OcrEngine::GoogleCloud => matches!(format, ImageFormat::Jpeg | ImageFormat::Png),
+            OcrEngine::Vlm => matches!(
+                format,
+                ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::Tiff
+            ),
         }
     }
 }

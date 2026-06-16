@@ -101,6 +101,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
         run: cargo test -p oxidize-pdf --features "internal-testing,unstable-spi,semantic" --verbose
 
+      - name: Run VLM OCR provider tests (ocr-vlm)
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: cargo test -p oxidize-pdf --features "ocr-vlm" --verbose
+
       - name: Build documentation
         run: cargo doc --all --no-deps
 

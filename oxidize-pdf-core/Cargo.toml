@@ -95,6 +95,11 @@ rusty-tesseract = { version = "1.1.10", optional = true }
 image = { workspace = true, features = ["png", "jpeg"], optional = true }
 tiktoken-rs = { version = "0.12.0", optional = true }
 
+# VLM OCR provider dependencies (optional — pulled by `ocr-vlm` feature)
+reqwest = { workspace = true, features = ["json"], optional = true }
+tokio = { workspace = true, features = ["rt"], optional = true }
+base64 = { workspace = true, optional = true }
+
 # Platform-specific
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -443,7 +448,8 @@ external-images = ["dep:image"]
 
 # OCR features (opt-in: pulls `rusty-tesseract`, which requires the C `tesseract` binary on PATH)
 ocr-tesseract = ["dep:rusty-tesseract", "external-images"]
-ocr-full = ["ocr-tesseract"]
+ocr-vlm = ["dep:reqwest", "dep:tokio", "dep:base64", "dep:serde_json"]
+ocr-full = ["ocr-tesseract", "ocr-vlm"]
 
 # Performance features
 performance = ["dep:rayon", "compression"]

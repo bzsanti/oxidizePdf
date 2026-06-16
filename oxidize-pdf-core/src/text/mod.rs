@@ -27,6 +27,9 @@ mod cmap_tests;
 #[cfg(feature = "ocr-tesseract")]
 pub mod tesseract_provider;
 
+#[cfg(feature = "ocr-vlm")]
+pub mod vlm_provider;
+
 pub use encoding::{escape_pdf_string_literal, TextEncoding};
 pub use extraction::{
     sanitize_extracted_text, ExtractedText, ExtractionOptions, TextExtractor, TextFragment,
@@ -59,6 +62,9 @@ pub use validation::{MatchType, TextMatch, TextValidationResult, TextValidator};
 
 #[cfg(feature = "ocr-tesseract")]
 pub use tesseract_provider::{RustyTesseractConfig, RustyTesseractProvider};
+
+#[cfg(feature = "ocr-vlm")]
+pub use vlm_provider::{VlmConfig, VlmConfigBuilder, VlmOcrProvider};
 
 use crate::error::Result;
 use crate::Color;
