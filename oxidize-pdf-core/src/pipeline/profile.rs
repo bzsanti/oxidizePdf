@@ -129,6 +129,15 @@ impl ExtractionProfile {
                     title_min_font_ratio: 1.2,
                     header_zone: 0.10,
                     footer_zone: 0.10,
+                    // Slide decks lay content out as a grid of shape/textbox
+                    // columns (the "Origin / Challenge / Solution / Impact"
+                    // pattern). The spatial-cluster table detector fires on
+                    // those grids confidently, collapsing the whole slide
+                    // into a single Table element with reordered cells and
+                    // character-level join scrambling (issue #329). Ruling
+                    // detection still runs, so drawn tables on slides remain
+                    // detected.
+                    detect_spatial_tables: false,
                     ..PartitionConfig::default()
                 },
             },

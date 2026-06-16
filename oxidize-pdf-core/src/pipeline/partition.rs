@@ -44,6 +44,13 @@ pub struct PartitionConfig {
     /// falling back to the spatial detector for the rest. When false, only the
     /// spatial detector runs and no page graphics are extracted. Default: true.
     pub prefer_ruling_tables: bool,
+    /// Run the spatial-cluster table detector (alongside ruling detection, if
+    /// enabled). Disable when the document layout produces frequent
+    /// shape/textbox grids that are not tabular data — e.g. slide decks with
+    /// "Origin / Challenge / Solution / Impact" column patterns (issue #329).
+    /// Ruling-based detection still runs when `prefer_ruling_tables` is true,
+    /// so drawn tables are unaffected. Default: true.
+    pub detect_spatial_tables: bool,
 }
 
 impl Default for PartitionConfig {
@@ -57,6 +64,7 @@ impl Default for PartitionConfig {
             reading_order: ReadingOrderStrategy::Simple,
             min_table_confidence: 0.5,
             prefer_ruling_tables: true,
+            detect_spatial_tables: true,
         }
     }
 }
@@ -353,64 +361,73 @@ impl Partitioner {
                 }
             }
 
-            let unclaimed_frags: Vec<&TextFragment> = fragments
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| !claimed[*i])
-                .map(|(_, f)| f)
-                .collect();
+            // Spatial-cluster detector: runs alongside the ruling pass on
+            // remaining (unclaimed) fragments. Gated by `detect_spatial_tables`
+            // so profiles whose layouts produce frequent non-tabular shape
+            // grids (slide decks, issue #329) can opt out without losing the
+            // ruling-based path above.
+            if self.config.detect_spatial_tables {
+                let unclaimed_frags: Vec<&TextFragment> = fragments
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| !claimed[*i])
+                    .map(|(_, f)| f)
+                    .collect();
 
-            let detector = crate::text::structured::StructuredDataDetector::new(Default::default());
+                let detector =
+                    crate::text::structured::StructuredDataDetector::new(Default::default());
 
-            let regions = segment_into_table_regions(&unclaimed_frags, 2.0);
+                let regions = segment_into_table_regions(&unclaimed_frags, 2.0);
 
-            for region in &regions {
-                // Skip regions that look like numbered/bulleted lists.
-                if region_looks_like_list(region) {
-                    continue;
-                }
+                for region in &regions {
+                    // Skip regions that look like numbered/bulleted lists.
+                    if region_looks_like_list(region) {
+                        continue;
+                    }
 
-                let region_owned: Vec<TextFragment> = region.iter().map(|f| (*f).clone()).collect();
+                    let region_owned: Vec<TextFragment> =
+                        region.iter().map(|f| (*f).clone()).collect();
 
-                if let Ok(result) = detector.detect(&region_owned) {
-                    for table in &result.tables {
-                        // Apply minimum confidence filter.
-                        if table.confidence < self.config.min_table_confidence {
-                            continue;
-                        }
+                    if let Ok(result) = detector.detect(&region_owned) {
+                        for table in &result.tables {
+                            // Apply minimum confidence filter.
+                            if table.confidence < self.config.min_table_confidence {
+                                continue;
+                            }
 
-                        let rows: Vec<Vec<String>> = table
-                            .rows
-                            .iter()
-                            .map(|row| row.cells.iter().map(|c| c.text.clone()).collect())
-                            .collect();
+                            let rows: Vec<Vec<String>> = table
+                                .rows
+                                .iter()
+                                .map(|row| row.cells.iter().map(|c| c.text.clone()).collect())
+                                .collect();
 
-                        let bbox = ElementBBox::new(
-                            table.bounding_box.x,
-                            table.bounding_box.y,
-                            table.bounding_box.width,
-                            table.bounding_box.height,
-                        );
+                            let bbox = ElementBBox::new(
+                                table.bounding_box.x,
+                                table.bounding_box.y,
+                                table.bounding_box.width,
+                                table.bounding_box.height,
+                            );
 
-                        elements.push(Element::Table(TableElementData {
-                            rows,
-                            metadata: ElementMetadata {
-                                page,
-                                bbox,
-                                confidence: table.confidence,
-                                ..Default::default()
-                            },
-                        }));
+                            elements.push(Element::Table(TableElementData {
+                                rows,
+                                metadata: ElementMetadata {
+                                    page,
+                                    bbox,
+                                    confidence: table.confidence,
+                                    ..Default::default()
+                                },
+                            }));
 
-                        // Claim fragments that fall within this table's bounding box.
-                        for (i, f) in fragments.iter().enumerate() {
-                            if !claimed[i]
-                                && f.x >= table.bounding_box.x - 1.0
-                                && f.x <= table.bounding_box.right() + 1.0
-                                && f.y >= table.bounding_box.y - 1.0
-                                && f.y <= table.bounding_box.top() + 1.0
-                            {
-                                claimed[i] = true;
+                            // Claim fragments that fall within this table's bounding box.
+                            for (i, f) in fragments.iter().enumerate() {
+                                if !claimed[i]
+                                    && f.x >= table.bounding_box.x - 1.0
+                                    && f.x <= table.bounding_box.right() + 1.0
+                                    && f.y >= table.bounding_box.y - 1.0
+                                    && f.y <= table.bounding_box.top() + 1.0
+                                {
+                                    claimed[i] = true;
+                                }
                             }
                         }
                     }

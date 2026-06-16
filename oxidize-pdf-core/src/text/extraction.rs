@@ -864,8 +864,14 @@ impl TextExtractor {
                         // Pen origin in user space = (CTM × text_matrix)(0, 0).
                         let (x, y) = text_origin(&state);
 
+                        // Mirror the gate inside `emit_text_fragment` so that
+                        // `.text` and `.fragments` stay consistent for pages
+                        // wrapped in an `/Artifact` marked-content scope —
+                        // issue #330.
+                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+
                         // Add spacing based on position change
-                        if !extracted_text.is_empty() {
+                        if !skip_text && !extracted_text.is_empty() {
                             let dx = x - last_x;
                             let dy = (y - last_y).abs();
 
@@ -876,7 +882,9 @@ impl TextExtractor {
                             }
                         }
 
-                        extracted_text.push_str(&decoded);
+                        if !skip_text {
+                            extracted_text.push_str(&decoded);
+                        }
 
                         // Get font info for accurate width calculation.
                         // Width comes from the char codes (`text_bytes`), not
@@ -924,7 +932,14 @@ impl TextExtractor {
                             match item {
                                 TextElement::Text(text_bytes) => {
                                     let decoded = self.decode_text(&text_bytes, &state)?;
-                                    extracted_text.push_str(&decoded);
+                                    // Mirror the gate inside `emit_text_fragment`
+                                    // so `.text` and `.fragments` stay consistent
+                                    // for Artifact scopes (issue #330).
+                                    let skip_text =
+                                        skip_artifact_text(&state, self.options.include_artifacts);
+                                    if !skip_text {
+                                        extracted_text.push_str(&decoded);
+                                    }
 
                                     let text_width = {
                                         let font_info = state
@@ -967,7 +982,10 @@ impl TextExtractor {
                                     // kerns and never emit a literal space byte.
                                     let tx = -(adjustment as f64) / 1000.0 * state.font_size;
 
-                                    if tx > self.options.tj_space_threshold * state.font_size
+                                    let skip_tj_space =
+                                        skip_artifact_text(&state, self.options.include_artifacts);
+                                    if !skip_tj_space
+                                        && tx > self.options.tj_space_threshold * state.font_size
                                         && !extracted_text.is_empty()
                                         && !extracted_text.ends_with(' ')
                                     {
@@ -1027,10 +1045,14 @@ impl TextExtractor {
                         let decoded = self.decode_text(&text, &state)?;
                         let (x, y) = text_origin(&state);
 
-                        if !extracted_text.is_empty() {
-                            extracted_text.push('\n');
+                        // Mirror the artifact gate (issue #330).
+                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        if !skip_text {
+                            if !extracted_text.is_empty() {
+                                extracted_text.push('\n');
+                            }
+                            extracted_text.push_str(&decoded);
                         }
-                        extracted_text.push_str(&decoded);
 
                         let text_width = {
                             let font_info = state
@@ -1084,10 +1106,14 @@ impl TextExtractor {
                         let decoded = self.decode_text(&text, &state)?;
                         let (x, y) = text_origin(&state);
 
-                        if !extracted_text.is_empty() {
-                            extracted_text.push('\n');
+                        // Mirror the artifact gate (issue #330).
+                        let skip_text = skip_artifact_text(&state, self.options.include_artifacts);
+                        if !skip_text {
+                            if !extracted_text.is_empty() {
+                                extracted_text.push('\n');
+                            }
+                            extracted_text.push_str(&decoded);
                         }
-                        extracted_text.push_str(&decoded);
 
                         let text_width = {
                             let font_info = state
@@ -1829,6 +1855,21 @@ impl Default for TextExtractor {
 ///
 /// `mcid` and `struct_tag` come from the innermost ancestor on the stack that
 /// declared `/MCID`; non-tagged content leaves both as `None`.
+/// Whether the current marked-content stack should suppress text emission.
+///
+/// Mirrors the gate inside [`emit_text_fragment`]: when an ancestor in the
+/// stack is `/Artifact` and the caller has not opted into artifact content
+/// via `include_artifacts`, neither `.text` nor `.fragments` should receive
+/// the run. Used by the four show-text operator arms to keep `extracted_text`
+/// and `fragments` symmetric — a page whose entire content is an
+/// `/Artifact BMC … EMC` scope (the common pattern for screen-reader-skipped
+/// disclaimers / footers / decorative tagged-PDF content) used to surface
+/// text in `.text` while leaving `.fragments` empty, silently dropping the
+/// page from `partition_with(...)` / `rag_chunks(...)` (issue #330).
+fn skip_artifact_text(state: &TextState, include_artifacts: bool) -> bool {
+    !include_artifacts && state.mc_stack.iter().any(|e| e.is_artifact)
+}
+
 fn emit_text_fragment(
     fragments: &mut Vec<TextFragment>,
     decoded: &str,
