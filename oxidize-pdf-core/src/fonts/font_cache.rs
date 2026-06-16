@@ -44,12 +44,20 @@ impl FontCache {
         fonts.contains_key(name)
     }
 
-    /// Get all font names in the cache
+    /// Get all font names in the cache, sorted lexicographically.
+    ///
+    /// Sorting is intentional: the writer (`PdfWriter::write_fonts`) iterates
+    /// this list to allocate ObjectIds for each font. Returning `HashMap`
+    /// iteration order (randomized per instance) caused two builds of the
+    /// same document to allocate different ObjectIds, cascading into
+    /// divergent xref tables and resource references — see #334 item #5.
     pub fn font_names(&self) -> Vec<String> {
         let Ok(fonts) = self.fonts.read() else {
             return Vec::new();
         };
-        fonts.keys().cloned().collect()
+        let mut names: Vec<String> = fonts.keys().cloned().collect();
+        names.sort();
+        names
     }
 
     /// Clear the cache
