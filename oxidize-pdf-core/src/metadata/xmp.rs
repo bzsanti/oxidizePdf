@@ -78,7 +78,7 @@ use crate::error::Result;
 use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// Standard XMP namespaces
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -175,8 +175,10 @@ enum ContainerType {
 pub struct XmpMetadata {
     /// Properties stored in this metadata
     properties: Vec<XmpProperty>,
-    /// Custom namespaces
-    custom_namespaces: HashMap<String, String>,
+    /// Custom namespaces. Stored as a `BTreeMap` so iteration order is
+    /// deterministic (sorted by prefix), giving byte-stable XMP packets
+    /// across runs and processes (issue #331).
+    custom_namespaces: BTreeMap<String, String>,
 }
 
 impl Default for XmpMetadata {
@@ -190,7 +192,7 @@ impl XmpMetadata {
     pub fn new() -> Self {
         Self {
             properties: Vec::new(),
-            custom_namespaces: HashMap::new(),
+            custom_namespaces: BTreeMap::new(),
         }
     }
 
@@ -349,8 +351,11 @@ impl XmpMetadata {
         xml.push_str("  <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n");
         xml.push_str("    <rdf:Description rdf:about=\"\"");
 
-        // Add namespace declarations
-        let mut namespaces: HashMap<String, String> = HashMap::new();
+        // Add namespace declarations. `BTreeMap` (sorted by prefix) keeps the
+        // emitted `xmlns:*` order deterministic across calls — `HashMap`
+        // iteration order is randomized per instance and produced byte-unstable
+        // packets across runs (issue #331).
+        let mut namespaces: BTreeMap<String, String> = BTreeMap::new();
         for prop in &self.properties {
             namespaces.insert(
                 prop.namespace.prefix().to_string(),
