@@ -267,8 +267,10 @@ impl XRefTable {
             // This is necessary for hybrid files where XRef stream only lists some objects
             reader.seek(SeekFrom::Start(0))?;
 
-            if let Err(_e) = Self::scan_and_fill_missing_objects(reader, &mut merged_table) {
-            } else {
+            // Best-effort: the hybrid scan is supplementary, so a failure here must
+            // not abort parsing — but it must not be swallowed silently either.
+            if let Err(e) = Self::scan_and_fill_missing_objects(reader, &mut merged_table) {
+                tracing::debug!("scan_and_fill_missing_objects failed (non-fatal): {e}");
             }
         }
 
