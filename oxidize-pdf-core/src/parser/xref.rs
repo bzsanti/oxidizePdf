@@ -174,6 +174,53 @@ fn scan_object_headers_chunked<R: Read + Seek>(
     Ok(headers)
 }
 
+/// Read up to `max` bytes starting at absolute `offset`. Bounded memory: the
+/// returned buffer is at most `max` bytes regardless of file size.
+fn read_window_at<R: Read + Seek>(reader: &mut R, offset: u64, max: usize) -> ParseResult<Vec<u8>> {
+    reader.seek(SeekFrom::Start(offset))?;
+    let mut buf = vec![0u8; max];
+    let mut filled = 0;
+    while filled < max {
+        let n = reader.read(&mut buf[filled..])?;
+        if n == 0 {
+            break;
+        }
+        filled += n;
+    }
+    buf.truncate(filled);
+    Ok(buf)
+}
+
+/// Read the last `max` bytes of the file (or the whole file if shorter),
+/// returning `(start_offset, bytes)`. Bounded to `max` bytes.
+fn read_tail<R: Read + Seek>(reader: &mut R, max: usize) -> ParseResult<(u64, Vec<u8>)> {
+    let len = reader.seek(SeekFrom::End(0))?;
+    let start = len.saturating_sub(max as u64);
+    let bytes = read_window_at(reader, start, (len - start) as usize)?;
+    Ok((start, bytes))
+}
+
+/// Read object `obj_num`'s content window starting at its xref `offset`,
+/// trimmed at the first `endobj`, as a (lossy) string. Returns `None` if the
+/// `N 0 obj` header is not present within the bounded window.
+fn read_object_content<R: Read + Seek>(
+    reader: &mut R,
+    obj_num: u32,
+    offset: u64,
+) -> ParseResult<Option<String>> {
+    const OBJ_WINDOW: usize = 64 * 1024;
+    let window = read_window_at(reader, offset, OBJ_WINDOW)?;
+    let obj_pattern = format!("{obj_num} 0 obj");
+    let Some(obj_start) = find_byte_pattern(&window, obj_pattern.as_bytes()) else {
+        return Ok(None);
+    };
+    let Some(endobj_rel) = find_byte_pattern(&window[obj_start..], b"endobj") else {
+        return Ok(None);
+    };
+    let content_bytes = &window[obj_start..obj_start + endobj_rel];
+    Ok(Some(String::from_utf8_lossy(content_bytes).into_owned()))
+}
+
 /// Read a line handling both CR (\r) and LF (\n) as line terminators.
 ///
 /// PDF files can use CR, LF, or CRLF as line endings (ISO 32000-1 Section 7.2.3).
@@ -894,126 +941,52 @@ impl XRefTable {
         reader: &mut BufReader<R>,
         _options: &super::ParseOptions,
     ) -> ParseResult<Self> {
+        // Bounded-memory recovery (Issue #339): scan object headers in fixed-size
+        // chunks and resolve the catalog through per-object / file-tail windows,
+        // instead of reading the whole file into a Vec.
+        const ROOT_TAIL: usize = 256 * 1024;
+        const CATALOG_TAIL: usize = 100 * 1024;
+
         let mut table = Self::new();
 
-        // Read entire file into memory for scanning
-        let mut buffer = Vec::new();
-        reader.read_to_end(&mut buffer)?;
-
-        tracing::debug!("XRef recovery: scanning {} bytes for objects", buffer.len());
-
-        // Try to extract Root from XRef stream first (more reliable than searching)
-        // Keep content String for sections not yet refactored (will be removed progressively)
-        let content = String::from_utf8_lossy(&buffer);
-
-        let mut xref_root_candidate = None;
-        if let Some(root_match) = extract_root_from_xref_stream(&content) {
-            xref_root_candidate = Some(root_match);
-            tracing::debug!("XRef recovery: Found Root {} in XRef stream", root_match);
-        }
-
-        let mut objects_found = 0;
-        let mut object_streams = Vec::new();
-
-        // Scan using byte-based pattern matching for object headers
-        // (Issue #93: Avoid UTF-8 char boundary panics)
-        let mut pos = 0;
-        while pos < buffer.len() {
-            // Look for "obj" keyword using byte operations
-            let remaining = &buffer[pos..];
-
-            // Find the next "obj" keyword (byte pattern b"obj")
-            if let Some(obj_pos) = find_byte_pattern(remaining, b"obj") {
-                // Make sure it's preceded by whitespace and numbers
-                let abs_pos = pos + obj_pos;
-                if abs_pos < 4 {
-                    pos += obj_pos + 3;
-                    continue;
-                }
-
-                // Look backwards for the object number and generation
-                // Handle both \n and \r as line endings (search in bytes)
-                let line_start = buffer[..abs_pos]
-                    .iter()
-                    .rposition(|&b| b == b'\n' || b == b'\r')
-                    .map(|p| p + 1)
-                    .unwrap_or(0);
-                let line_end = abs_pos + 3; // Include "obj"
-
-                // Make sure we don't go out of bounds
-                if line_end <= buffer.len() {
-                    let line_bytes = &buffer[line_start..line_end];
-
-                    if let Some((obj_num, gen_num)) = parse_obj_header_bytes(line_bytes) {
-                        let offset = line_start;
-
-                        // Add entry if not already present (avoid duplicates)
-                        if !table.entries.contains_key(&obj_num) {
-                            table.add_entry(
-                                obj_num,
-                                XRefEntry {
-                                    offset: offset as u64,
-                                    generation: gen_num,
-                                    in_use: true,
-                                },
-                            );
-                            objects_found += 1;
-
-                            // Check if this might be an object stream
-                            let obj_end_pos = line_end;
-                            // Use byte operations to avoid UTF-8 boundary issues
-                            if obj_end_pos + 200 < buffer.len() {
-                                let search_bytes = &buffer[obj_end_pos..obj_end_pos + 200];
-                                if let Some(stream_pos) =
-                                    search_bytes.windows(6).position(|w| w == b"stream")
-                                {
-                                    // Check if this is likely an object stream by looking for /Type /ObjStm
-                                    let check_bytes =
-                                        &buffer[obj_end_pos..obj_end_pos + stream_pos];
-                                    let check_str = String::from_utf8_lossy(check_bytes);
-                                    if check_str.contains("/Type") && check_str.contains("/ObjStm")
-                                    {
-                                        object_streams.push(obj_num);
-                                        tracing::debug!(
-                                            "XRef recovery: found object stream at object {obj_num}"
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                pos = abs_pos + 3;
-            } else {
-                break;
+        // 1) Locate object headers (bounded scan). The first definition of each
+        //    object number wins, matching the previous full-buffer behaviour.
+        let headers = scan_object_headers(reader)?;
+        for h in &headers {
+            if !table.entries.contains_key(&h.obj_num) {
+                table.add_entry(
+                    h.obj_num,
+                    XRefEntry {
+                        offset: h.offset,
+                        generation: h.generation,
+                        in_use: true,
+                    },
+                );
             }
         }
 
-        tracing::debug!(
-            "XRef recovery: found {} objects and {} object streams",
-            objects_found,
-            object_streams.len()
-        );
-
-        if objects_found == 0 {
+        if table.entries.is_empty() {
             return Err(ParseError::InvalidXRef);
         }
+        tracing::debug!("XRef recovery: found {} objects", table.len());
 
-        // Note: In a full implementation, we would parse the object streams
-        // to extract compressed objects, but for now we just note their existence
+        // 2) Prefer /Root declared in an XRef stream. The XRef stream / trailer
+        //    conventionally lives at the end of the file, so scan a bounded tail.
+        let (_, root_tail) = read_tail(reader, ROOT_TAIL)?;
+        let root_tail_str = String::from_utf8_lossy(&root_tail);
+        let xref_root_candidate = extract_root_from_xref_stream(&root_tail_str);
 
-        // Create minimal trailer
+        // 3) Build a minimal trailer.
         let mut trailer = super::objects::PdfDictionary::new();
         trailer.insert(
             "Size".to_string(),
             super::objects::PdfObject::Integer(table.len() as i64),
         );
 
-        // Try to find Root (Catalog) object
+        // 4) Resolve the catalog object.
         let mut catalog_candidate = None;
 
-        // First, try using Root from XRef stream (most reliable)
+        // 4a) Root from the XRef stream, if it points at a known object.
         if let Some(xref_root) = xref_root_candidate {
             if table.entries.contains_key(&xref_root) {
                 catalog_candidate = Some(xref_root);
@@ -1026,159 +999,88 @@ impl XRefTable {
             }
         }
 
-        // If XRef Root not found or not in table, search manually
+        // 4b) Validate object structure by content.
         if catalog_candidate.is_none() {
-            catalog_candidate = find_catalog_by_content(&table, &buffer);
+            catalog_candidate = find_catalog_by_content(reader, &table)?;
         }
 
-        // Fallback to common object numbers if catalog not found by content
-        // FIX for Issue #83: Validate object type before accepting as catalog
-        // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
+        // 4c) Fallback to common object numbers (Issue #83: validate type).
         if catalog_candidate.is_none() {
             for obj_num in [1, 2, 3, 4, 5] {
-                if let Some(entry) = table.entries.get(&obj_num) {
-                    if entry.in_use {
-                        let offset = entry.offset as usize;
-                        if offset < buffer.len() {
-                            // Check if this object is /Type/Catalog (not /Type/Sig)
-                            let obj_pattern = format!("{} 0 obj", obj_num);
-                            if let Some(obj_start) =
-                                find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
-                            {
-                                let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) =
-                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
-                                {
-                                    let absolute_end = absolute_start + endobj_pos;
-                                    let obj_content_bytes = &buffer[absolute_start..absolute_end];
-                                    let obj_content = String::from_utf8_lossy(obj_content_bytes);
-
-                                    // Skip /Type/Sig objects (digital signatures)
-                                    if obj_content.contains("/Type/Sig")
-                                        || obj_content.contains("/Type /Sig")
-                                    {
-                                        tracing::debug!("Skipping object {} (Type: Sig)", obj_num);
-                                        continue;
-                                    }
-
-                                    // Accept if it has /Type/Catalog or /Pages (catalog indicator)
-                                    if obj_content.contains("/Type/Catalog")
-                                        || obj_content.contains("/Type /Catalog")
-                                        || obj_content.contains("/Pages")
-                                    {
-                                        catalog_candidate = Some(obj_num);
-                                        tracing::debug!("Using fallback catalog candidate: object {} (validated)", obj_num);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                let offset = match table.entries.get(&obj_num) {
+                    Some(entry) if entry.in_use => entry.offset,
+                    _ => continue,
+                };
+                if let Some(content) = read_object_content(reader, obj_num, offset)? {
+                    // Skip /Type/Sig objects (digital signatures).
+                    if content.contains("/Type/Sig") || content.contains("/Type /Sig") {
+                        tracing::debug!("Skipping object {} (Type: Sig)", obj_num);
+                        continue;
+                    }
+                    if content.contains("/Type/Catalog")
+                        || content.contains("/Type /Catalog")
+                        || content.contains("/Pages")
+                    {
+                        catalog_candidate = Some(obj_num);
+                        tracing::debug!(
+                            "Using fallback catalog candidate: object {} (validated)",
+                            obj_num
+                        );
+                        break;
                     }
                 }
             }
         }
 
-        // If still no Root found, scan ALL objects as last resort (not just first)
-        // FIX for Issue #83: In signed PDFs, catalog might be anywhere, not just object 1
+        // 4d) Last resort: scan ALL objects (sorted) for /Type/Catalog or /Pages.
         if catalog_candidate.is_none() && !table.entries.is_empty() {
             tracing::debug!(
                 "Last resort: Scanning all {} objects for any with /Pages or /Catalog",
                 table.entries.len()
             );
 
-            // Sort object numbers to check in order
             let mut obj_numbers: Vec<u32> = table.entries.keys().copied().collect();
             obj_numbers.sort_unstable();
 
             for obj_num in obj_numbers {
-                if let Some(entry) = table.entries.get(&obj_num) {
-                    if entry.in_use {
-                        let offset = entry.offset as usize;
-                        if offset < buffer.len() {
-                            // Use byte-based search to avoid UTF-8 char boundary issues (Issue #93)
-                            let obj_pattern = format!("{} 0 obj", obj_num);
-                            if let Some(obj_start) =
-                                find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
-                            {
-                                let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) =
-                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
-                                {
-                                    let absolute_end = absolute_start + endobj_pos;
-                                    let obj_content_bytes = &buffer[absolute_start..absolute_end];
-
-                                    // Convert to String only for content checks (small section)
-                                    let obj_content = String::from_utf8_lossy(obj_content_bytes);
-
-                                    // Skip signature objects
-                                    if obj_content.contains("/Type/Sig")
-                                        || obj_content.contains("/Type /Sig")
-                                    {
-                                        continue;
-                                    }
-
-                                    // Look for catalog indicators: /Type/Catalog OR /Pages key
-                                    if obj_content.contains("/Type/Catalog")
-                                        || obj_content.contains("/Type /Catalog")
-                                    {
-                                        catalog_candidate = Some(obj_num);
-                                        tracing::debug!("Last resort: Found catalog at object {} (/Type/Catalog)", obj_num);
-                                        break;
-                                    } else if obj_content.contains("/Pages") {
-                                        catalog_candidate = Some(obj_num);
-                                        tracing::debug!(
-                                            "Last resort: Found catalog at object {} (has /Pages)",
-                                            obj_num
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                let offset = match table.entries.get(&obj_num) {
+                    Some(entry) if entry.in_use => entry.offset,
+                    _ => continue,
+                };
+                if let Some(content) = read_object_content(reader, obj_num, offset)? {
+                    if content.contains("/Type/Sig") || content.contains("/Type /Sig") {
+                        continue;
+                    }
+                    if content.contains("/Type/Catalog") || content.contains("/Type /Catalog") {
+                        catalog_candidate = Some(obj_num);
+                        tracing::debug!(
+                            "Last resort: Found catalog at object {} (/Type/Catalog)",
+                            obj_num
+                        );
+                        break;
+                    } else if content.contains("/Pages") {
+                        catalog_candidate = Some(obj_num);
+                        tracing::debug!(
+                            "Last resort: Found catalog at object {} (has /Pages)",
+                            obj_num
+                        );
+                        break;
                     }
                 }
             }
 
-            // If STILL nothing found, search END of file content (not entire file)
-            // FIX for Issue #83: When XRef table is completely corrupted/empty,
-            // table entries are unreliable - search last 100KB only (performance optimization)
-            // FIX for Issue #93: Use byte-based operations to avoid UTF-8 char boundary panics
+            // 4e) Extreme last resort: scan the last 100KB for /Type/Catalog and
+            //     walk back to its "N 0 obj" header (Issue #83/#93).
             if catalog_candidate.is_none() {
                 tracing::debug!("Extreme last resort: Scanning last 100KB for /Type/Catalog");
 
-                // Search for "/Type/Catalog" in LAST 100KB only (catalog is at end in signed PDFs)
-                // This avoids performance issues with large PDFs (>1MB)
-                const SEARCH_WINDOW: usize = 100 * 1024; // 100KB
-                let search_start = if buffer.len() > SEARCH_WINDOW {
-                    buffer.len() - SEARCH_WINDOW
-                } else {
-                    0
-                };
-                let search_buffer = &buffer[search_start..];
-
-                let catalog_pattern = b"/Type/Catalog";
-                if let Some(catalog_pos) = rfind_byte_pattern(search_buffer, catalog_pattern) {
-                    let absolute_pos = search_start + catalog_pos;
-                    tracing::debug!(
-                        "Extreme last resort: Found /Type/Catalog at position {}",
-                        absolute_pos
-                    );
-
-                    // Find the "obj_num 0 obj" pattern BEFORE this /Type/Catalog
-                    // Search backwards up to 200 bytes
-                    let local_search_start = if catalog_pos > 200 {
-                        catalog_pos - 200
-                    } else {
-                        0
-                    };
+                let (_, search_buffer) = read_tail(reader, CATALOG_TAIL)?;
+                if let Some(catalog_pos) = rfind_byte_pattern(&search_buffer, b"/Type/Catalog") {
+                    let local_search_start = catalog_pos.saturating_sub(200);
                     let search_area = &search_buffer[local_search_start..catalog_pos];
 
-                    // Look for pattern "NNNN 0 obj" where NNNN is object number
                     if let Some(obj_pattern_pos) = rfind_byte_pattern(search_area, b" 0 obj") {
-                        // Find the number before " 0 obj"
                         let before_obj = &search_area[..obj_pattern_pos];
-
-                        // Convert only this small section to String for parsing
                         let before_obj_str = String::from_utf8_lossy(before_obj);
                         let trimmed = before_obj_str.trim_end();
 
@@ -1193,55 +1095,34 @@ impl XRefTable {
                                     catalog_candidate = Some(obj_num);
                                 }
                             }
-                        } else {
-                            // No non-digit found, entire string might be the number
-                            let num_str = trimmed.trim();
-                            if let Ok(obj_num) = num_str.parse::<u32>() {
-                                tracing::debug!(
-                                    "Extreme last resort: Found /Type/Catalog at object {}",
-                                    obj_num
-                                );
-                                catalog_candidate = Some(obj_num);
-                            }
+                        } else if let Ok(obj_num) = trimmed.trim().parse::<u32>() {
+                            tracing::debug!(
+                                "Extreme last resort: Found /Type/Catalog at object {}",
+                                obj_num
+                            );
+                            catalog_candidate = Some(obj_num);
                         }
                     }
                 } else {
                     tracing::debug!("Extreme last resort: No /Type/Catalog found in last 100KB");
                 }
+            }
 
-                // If STILL nothing, fallback to first non-Sig object in table
-                // FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
-                if catalog_candidate.is_none() {
-                    tracing::warn!(" Could not find any catalog object, using first non-signature object as absolute last resort");
-                    for obj_num in table.entries.keys().copied().collect::<Vec<_>>().iter() {
-                        let offset = match table.entries.get(obj_num) {
-                            Some(entry) => entry.offset as usize,
-                            None => continue, // Skip if entry not found (shouldn't happen)
-                        };
-                        if offset < buffer.len() {
-                            let obj_pattern = format!("{} 0 obj", obj_num);
-                            if let Some(obj_start) =
-                                find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
-                            {
-                                let absolute_start = offset + obj_start;
-                                if let Some(endobj_pos) =
-                                    find_byte_pattern(&buffer[absolute_start..], b"endobj")
-                                {
-                                    let absolute_end = absolute_start + endobj_pos;
-                                    let obj_content_bytes = &buffer[absolute_start..absolute_end];
-                                    let obj_content = String::from_utf8_lossy(obj_content_bytes);
-                                    if !obj_content.contains("/Type/Sig")
-                                        && !obj_content.contains("/Type /Sig")
-                                    {
-                                        catalog_candidate = Some(*obj_num);
-                                        tracing::debug!(
-                                            "Using object {} as absolute last resort",
-                                            obj_num
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
+            // 4f) Absolute last resort: first non-signature object in the table.
+            if catalog_candidate.is_none() {
+                tracing::warn!(" Could not find any catalog object, using first non-signature object as absolute last resort");
+                let mut obj_numbers: Vec<u32> = table.entries.keys().copied().collect();
+                obj_numbers.sort_unstable();
+                for obj_num in obj_numbers {
+                    let offset = match table.entries.get(&obj_num) {
+                        Some(entry) => entry.offset,
+                        None => continue,
+                    };
+                    if let Some(content) = read_object_content(reader, obj_num, offset)? {
+                        if !content.contains("/Type/Sig") && !content.contains("/Type /Sig") {
+                            catalog_candidate = Some(obj_num);
+                            tracing::debug!("Using object {} as absolute last resort", obj_num);
+                            break;
                         }
                     }
                 }
@@ -1888,6 +1769,56 @@ mod tests {
         assert_eq!(table.get_entry(3).map(|e| e.offset), Some(off3));
         // Already-present object 2 must NOT be overwritten by the scan.
         assert_eq!(table.get_entry(2).map(|e| e.offset), Some(99999));
+    }
+
+    #[test]
+    fn test_recovery_finds_objects_and_catalog_root() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        let off1 = buf.len() as u64;
+        buf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        let off2 = buf.len() as u64;
+        buf.extend_from_slice(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        let off3 = buf.len() as u64;
+        buf.extend_from_slice(b"3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n");
+
+        let mut reader = BufReader::new(Cursor::new(buf));
+        let table =
+            XRefTable::parse_with_recovery_options(&mut reader, &ParseOptions::default()).unwrap();
+
+        assert_eq!(table.get_entry(1).map(|e| e.offset), Some(off1));
+        assert_eq!(table.get_entry(2).map(|e| e.offset), Some(off2));
+        assert_eq!(table.get_entry(3).map(|e| e.offset), Some(off3));
+
+        // Root must resolve to the /Type /Catalog object (1).
+        let root = table.trailer().and_then(|t| t.get("Root")).cloned();
+        assert_eq!(root, Some(PdfObject::Reference(1, 0)));
+    }
+
+    #[test]
+    fn test_recovery_uses_root_from_xref_stream() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        buf.extend_from_slice(b"5 0 obj\n<< /Type /Catalog /Pages 6 0 R >>\nendobj\n");
+        buf.extend_from_slice(b"6 0 obj\n<< /Type /Pages /Count 0 >>\nendobj\n");
+        // XRef stream object declaring /Root 5 0 R near the end of the file.
+        buf.extend_from_slice(
+            b"9 0 obj\n<< /Type /XRef /Root 5 0 R /Size 10 >>\nstream\n....\nendstream\nendobj\n",
+        );
+
+        let mut reader = BufReader::new(Cursor::new(buf));
+        let table =
+            XRefTable::parse_with_recovery_options(&mut reader, &ParseOptions::default()).unwrap();
+
+        let root = table.trailer().and_then(|t| t.get("Root")).cloned();
+        assert_eq!(root, Some(PdfObject::Reference(5, 0)));
+    }
+
+    #[test]
+    fn test_recovery_empty_when_no_objects() {
+        let mut reader = BufReader::new(Cursor::new(b"%PDF-1.7\nnothing useful here\n".to_vec()));
+        let result = XRefTable::parse_with_recovery_options(&mut reader, &ParseOptions::default());
+        assert!(matches!(result, Err(ParseError::InvalidXRef)));
     }
 
     #[test]
@@ -3040,40 +2971,32 @@ fn extract_root_from_xref_stream(content: &str) -> Option<u32> {
 
 /// Find catalog by searching content and validating structure
 /// FIX for Issue #93: Use byte-based operations to avoid UTF-8 boundary panics
-fn find_catalog_by_content(table: &XRefTable, buffer: &[u8]) -> Option<u32> {
-    for (obj_num, entry) in &table.entries {
-        if entry.in_use {
-            let offset = entry.offset as usize;
-            if offset < buffer.len() {
-                // Look for the complete object structure: "obj_num 0 obj ... /Type /Catalog ... endobj"
-                let obj_pattern = format!("{} 0 obj", obj_num);
-                if let Some(obj_start) =
-                    find_byte_pattern(&buffer[offset..], obj_pattern.as_bytes())
-                {
-                    let absolute_start = offset + obj_start;
+fn find_catalog_by_content<R: Read + Seek>(
+    reader: &mut R,
+    table: &XRefTable,
+) -> ParseResult<Option<u32>> {
+    // Deterministic order (Issue #339 / #334): iterate object numbers sorted,
+    // not in HashMap order, so the chosen catalog is stable across runs.
+    let mut obj_numbers: Vec<u32> = table.entries.keys().copied().collect();
+    obj_numbers.sort_unstable();
 
-                    // Find the end of this object
-                    if let Some(endobj_pos) =
-                        find_byte_pattern(&buffer[absolute_start..], b"endobj")
-                    {
-                        let absolute_end = absolute_start + endobj_pos;
-                        let obj_content_bytes = &buffer[absolute_start..absolute_end];
-                        let obj_content = String::from_utf8_lossy(obj_content_bytes);
-
-                        // Validate that this object contains "/Type /Catalog" within its boundaries
-                        if obj_content.contains("/Type /Catalog") {
-                            tracing::debug!(
-                                "Found catalog candidate at object {} (validated structure)",
-                                obj_num
-                            );
-                            return Some(*obj_num);
-                        }
-                    }
-                }
+    for obj_num in obj_numbers {
+        let offset = match table.entries.get(&obj_num) {
+            Some(entry) if entry.in_use => entry.offset,
+            _ => continue,
+        };
+        // Read a bounded window of the object and validate "/Type /Catalog".
+        if let Some(content) = read_object_content(reader, obj_num, offset)? {
+            if content.contains("/Type /Catalog") {
+                tracing::debug!(
+                    "Found catalog candidate at object {} (validated structure)",
+                    obj_num
+                );
+                return Ok(Some(obj_num));
             }
         }
     }
 
     tracing::debug!("No valid catalog found by content search");
-    None
+    Ok(None)
 }
