@@ -435,10 +435,11 @@ impl XRefTable {
         // This happens when the PDF has direct objects (1-N) that aren't listed in XRef streams
         // Typical for Skia/PDF and other optimized generators
         if options.lenient_syntax || options.collect_warnings {
-            // Scan for objects that exist in the PDF but aren't in the XRef
-            // This is necessary for hybrid files where XRef stream only lists some objects
-            reader.seek(SeekFrom::Start(0))?;
-
+            // Scan for objects that exist in the PDF but aren't in the XRef.
+            // This is necessary for hybrid files where the XRef stream only lists
+            // some objects. scan_object_headers seeks to the start itself, so no
+            // explicit rewind is needed here.
+            //
             // Best-effort: the hybrid scan is supplementary, so a failure here must
             // not abort parsing — but it must not be swallowed silently either.
             if let Err(e) = Self::scan_and_fill_missing_objects(reader, &mut merged_table) {
@@ -1690,6 +1691,57 @@ mod tests {
                 offset: off
             }]
         );
+    }
+
+    #[test]
+    fn test_scan_object_headers_carry_truncation_no_newline_run() {
+        // Adversarial: a >CARRY_CAP (1024) run with NO newline, which forces the
+        // carry-truncation branch. Verifies the chunked scan still equals the
+        // single-window reference — i.e. truncation never emits a header at a
+        // wrong offset (refutes the "incorrect carry offset" hypothesis).
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+
+        // 2000 bytes of non-newline filler (includes spaces/digits to be nasty).
+        let filler: Vec<u8> = (0..2000u32)
+            .map(|i| if i % 5 == 0 { b' ' } else { b'7' })
+            .collect();
+
+        // Case A: real header AFTER a newline that follows the long no-newline run.
+        buf.extend_from_slice(&filler);
+        buf.push(b'\n');
+        let off_a = buf.len() as u64;
+        buf.extend_from_slice(b"5 0 obj\n<< >>\nendobj\n");
+
+        // Case B: "7 0 obj" GLUED to a long no-newline run (not at a line start);
+        // must be treated identically by both scans.
+        buf.extend_from_slice(&filler);
+        buf.extend_from_slice(b"7 0 obj\n<< >>\nendobj\n");
+
+        let reference =
+            scan_object_headers_chunked(&mut Cursor::new(buf.clone()), buf.len().max(1)).unwrap();
+
+        // Chunk sizes far below CARRY_CAP force the truncation path repeatedly.
+        for cs in [16usize, 64, 256] {
+            let chunked = scan_object_headers_chunked(&mut Cursor::new(buf.clone()), cs).unwrap();
+            assert_eq!(
+                chunked, reference,
+                "carry-truncation mismatch at chunk_size={cs}"
+            );
+        }
+
+        // The header preceded by a newline is found at its true offset; the glued
+        // one (no line start) is not a valid header in either scan.
+        assert!(reference
+            .iter()
+            .any(|h| h.obj_num == 5 && h.offset == off_a));
+        assert!(!reference.iter().any(|h| h.obj_num == 7));
+    }
+
+    #[test]
+    fn test_scan_object_headers_empty_input() {
+        let headers = scan_object_headers(&mut Cursor::new(Vec::new())).unwrap();
+        assert!(headers.is_empty());
     }
 
     #[test]
