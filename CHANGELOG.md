@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.2] - 2026-06-17
+
+### Fixed
+
+- Lenient parsing loaded the entire file into memory via `read_to_end`, defeating
+  the seek-based reader and risking excessive memory use / OOM on large or
+  malformed PDFs. The hybrid missing-object scan — which runs on every lenient
+  parse, including `PdfReader::open` (lenient by default) — and the XRef recovery
+  path now locate object headers with a chunked, seek-based scan, keeping peak
+  memory at O(chunk) instead of O(file). Parsing behaviour and the public API are
+  unchanged. Fixes #339.
+
+### Changed
+
+- XRef recovery now selects the catalog object deterministically (sorted object
+  iteration instead of `HashMap` order), making recovered-document output stable
+  across runs.
+
 ## [2.16.1] - 2026-06-16
 
 ### Fixed
