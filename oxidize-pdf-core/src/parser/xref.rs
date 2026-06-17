@@ -49,6 +49,131 @@ fn parse_obj_header_bytes(line_bytes: &[u8]) -> Option<(u32, u16)> {
     None
 }
 
+/// A PDF object header (`N G obj`) located by a raw byte scan.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ObjHeader {
+    obj_num: u32,
+    generation: u16,
+    /// Absolute byte offset of the start of the header line.
+    offset: u64,
+}
+
+/// Scan one in-memory window for `N G obj` headers, appending de-duplicated
+/// results (keyed by absolute line-start offset) to `out`.
+///
+/// `window_base` is the absolute file offset of `window[0]`.
+fn scan_window_for_headers(
+    window: &[u8],
+    window_base: u64,
+    out: &mut Vec<ObjHeader>,
+    seen: &mut std::collections::BTreeSet<u64>,
+) {
+    let mut pos = 0;
+    while pos < window.len() {
+        let Some(obj_rel) = find_byte_pattern(&window[pos..], b"obj") else {
+            break;
+        };
+        let abs = pos + obj_rel; // window-local index of 'o' in "obj"
+
+        // A header needs at least "N G " (4 bytes) before "obj".
+        if abs < 4 {
+            pos = abs + 3;
+            continue;
+        }
+
+        let line_start = window[..abs]
+            .iter()
+            .rposition(|&b| b == b'\n' || b == b'\r')
+            .map(|p| p + 1)
+            .unwrap_or(0);
+        let line_bytes = &window[line_start..abs + 3];
+
+        if let Some((obj_num, generation)) = parse_obj_header_bytes(line_bytes) {
+            let offset = window_base + line_start as u64;
+            if seen.insert(offset) {
+                out.push(ObjHeader {
+                    obj_num,
+                    generation,
+                    offset,
+                });
+            }
+        }
+
+        pos = abs + 3;
+    }
+}
+
+/// Scan a reader for `N G obj` headers using bounded memory (Issue #339).
+///
+/// Behaviourally equivalent to a full-buffer scan — find every `obj` keyword,
+/// walk back to the start of its line, parse `N G obj` — but reads the file in
+/// fixed-size chunks with a small line carry-over, so peak memory is O(CHUNK)
+/// regardless of file size instead of O(file). Results are returned in
+/// ascending offset order, de-duplicated by line-start offset.
+fn scan_object_headers<R: Read + Seek>(reader: &mut R) -> ParseResult<Vec<ObjHeader>> {
+    scan_object_headers_chunked(reader, 64 * 1024)
+}
+
+/// Chunked implementation of [`scan_object_headers`] with an explicit chunk size
+/// (the public entry point fixes it at 64 KiB; tests vary it to exercise chunk
+/// boundaries cheaply).
+fn scan_object_headers_chunked<R: Read + Seek>(
+    reader: &mut R,
+    chunk_size: usize,
+) -> ParseResult<Vec<ObjHeader>> {
+    let chunk_size = chunk_size.max(1);
+    // Generously larger than the longest possible "N G obj" line so any header
+    // straddling a chunk boundary is preserved without unbounded carry growth.
+    const CARRY_CAP: usize = 1024;
+
+    reader.seek(SeekFrom::Start(0))?;
+
+    let mut headers: Vec<ObjHeader> = Vec::new();
+    let mut seen: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    let mut carry: Vec<u8> = Vec::new();
+    let mut window_base: u64 = 0; // absolute offset of carry[0]
+    let mut chunk = vec![0u8; chunk_size];
+
+    loop {
+        // Read may return short; fill up to chunk_size bytes.
+        let mut filled = 0;
+        while filled < chunk_size {
+            let n = reader.read(&mut chunk[filled..])?;
+            if n == 0 {
+                break;
+            }
+            filled += n;
+        }
+        let eof = filled == 0;
+        if eof && carry.is_empty() {
+            break;
+        }
+
+        // window = carry ++ freshly read bytes
+        let mut window = std::mem::take(&mut carry);
+        window.extend_from_slice(&chunk[..filled]);
+
+        scan_window_for_headers(&window, window_base, &mut headers, &mut seen);
+
+        if eof {
+            break;
+        }
+
+        // Carry from the last line boundary, bounded to CARRY_CAP so the next
+        // window can see a header that straddles this chunk boundary.
+        let last_nl = window.iter().rposition(|&b| b == b'\n' || b == b'\r');
+        let mut start = last_nl.map(|p| p + 1).unwrap_or(0);
+        if window.len() - start > CARRY_CAP {
+            start = window.len() - CARRY_CAP;
+        }
+        window_base += start as u64;
+        carry = window[start..].to_vec();
+    }
+
+    headers.sort_by_key(|h| h.offset);
+    Ok(headers)
+}
+
 /// Read a line handling both CR (\r) and LF (\n) as line terminators.
 ///
 /// PDF files can use CR, LF, or CRLF as line endings (ISO 32000-1 Section 7.2.3).
@@ -736,55 +861,22 @@ impl XRefTable {
         reader: &mut BufReader<R>,
         table: &mut Self,
     ) -> ParseResult<()> {
-        // Read entire file into memory for scanning
-        let mut buffer = Vec::new();
-        reader.read_to_end(&mut buffer)?;
-
-        let mut _objects_added = 0;
-
-        // Scan for object headers using byte patterns (not String to preserve offsets)
-        let mut pos = 0;
-        while pos < buffer.len() {
-            // Find "obj" pattern in bytes
-            if let Some(obj_pos) = buffer[pos..].windows(3).position(|w| w == b"obj") {
-                let abs_pos = pos + obj_pos;
-                if abs_pos < 4 {
-                    pos += obj_pos + 3;
-                    continue;
-                }
-
-                // Look backwards for newline to find line start
-                let line_start = buffer[..abs_pos]
-                    .iter()
-                    .rposition(|&b| b == b'\n' || b == b'\r')
-                    .map(|p| p + 1)
-                    .unwrap_or(0);
-
-                // Extract the line containing "N G obj"
-                let line_bytes = &buffer[line_start..abs_pos + 3];
-                let line = String::from_utf8_lossy(line_bytes);
-
-                if let Some((obj_num, gen_num)) = Self::parse_obj_header(line.trim()) {
-                    // Only add if not already present
-                    if !table.entries.contains_key(&obj_num)
-                        && !table.extended_entries.contains_key(&obj_num)
-                    {
-                        // Offset is the BYTE position of line start (not char position)
-                        table.add_entry(
-                            obj_num,
-                            XRefEntry {
-                                offset: line_start as u64,
-                                generation: gen_num,
-                                in_use: true,
-                            },
-                        );
-                        _objects_added += 1;
-                    }
-                }
-
-                pos = abs_pos + 3;
-            } else {
-                break;
+        // Bounded-memory scan (Issue #339): locate object headers in fixed-size
+        // chunks instead of reading the entire file into a Vec. Headers are
+        // returned in ascending offset order, so the first definition of a given
+        // object number wins — matching the previous full-buffer behaviour.
+        for header in scan_object_headers(reader)? {
+            if !table.entries.contains_key(&header.obj_num)
+                && !table.extended_entries.contains_key(&header.obj_num)
+            {
+                table.add_entry(
+                    header.obj_num,
+                    XRefEntry {
+                        offset: header.offset,
+                        generation: header.generation,
+                        in_use: true,
+                    },
+                );
             }
         }
 
@@ -1169,18 +1261,6 @@ impl XRefTable {
     }
 
     /// Parse object header from line
-    fn parse_obj_header(line: &str) -> Option<(u32, u16)> {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-
-        if parts.len() >= 3 && parts[2] == "obj" {
-            if let (Ok(obj_num), Ok(gen_num)) = (parts[0].parse::<u32>(), parts[1].parse::<u16>()) {
-                return Some((obj_num, gen_num));
-            }
-        }
-
-        None
-    }
-
     /// Validate XRef offset before using it.
     ///
     /// NOTE: This function was previously used in the buggy linearized XRef handling
@@ -1642,6 +1722,174 @@ mod tests {
     use crate::parser::objects::{PdfDictionary, PdfObject};
     use std::io::Cursor;
 
+    // ---- Issue #339: bounded-memory object-header scanner ----
+
+    #[test]
+    fn test_scan_object_headers_finds_simple_headers() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        let off1 = buf.len() as u64;
+        buf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog >>\nendobj\n");
+        let off2 = buf.len() as u64;
+        buf.extend_from_slice(b"2 0 obj\n<< /Type /Pages >>\nendobj\n");
+        let off10 = buf.len() as u64;
+        buf.extend_from_slice(b"10 0 obj\n<< /Length 0 >>\nendobj\n");
+
+        let mut cursor = Cursor::new(buf);
+        let headers = scan_object_headers(&mut cursor).unwrap();
+
+        assert_eq!(
+            headers,
+            vec![
+                ObjHeader {
+                    obj_num: 1,
+                    generation: 0,
+                    offset: off1
+                },
+                ObjHeader {
+                    obj_num: 2,
+                    generation: 0,
+                    offset: off2
+                },
+                ObjHeader {
+                    obj_num: 10,
+                    generation: 0,
+                    offset: off10
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_scan_object_headers_chunk_invariant_across_boundaries() {
+        // Headers placed at varied offsets so small chunk sizes force many to
+        // straddle chunk boundaries. The result must not depend on chunk size.
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        let mut expected: Vec<(u32, u64)> = Vec::new();
+        for i in 1..=50u32 {
+            for _ in 0..(i as usize % 7) {
+                buf.push(b' ');
+            }
+            buf.push(b'\n');
+            expected.push((i, buf.len() as u64));
+            buf.extend_from_slice(format!("{i} 0 obj\n<< /N {i} >>\nendobj\n").as_bytes());
+        }
+
+        // Single-window scan (chunk >= file length) is the reference.
+        let reference =
+            scan_object_headers_chunked(&mut Cursor::new(buf.clone()), buf.len().max(1)).unwrap();
+
+        let got: Vec<(u32, u64)> = reference.iter().map(|h| (h.obj_num, h.offset)).collect();
+        assert_eq!(
+            got, expected,
+            "reference scan disagrees with hand-computed offsets"
+        );
+
+        for cs in [1usize, 2, 3, 7, 13, 16, 64, 256] {
+            let chunked = scan_object_headers_chunked(&mut Cursor::new(buf.clone()), cs).unwrap();
+            assert_eq!(chunked, reference, "scan mismatch at chunk_size={cs}");
+        }
+    }
+
+    #[test]
+    fn test_scan_object_headers_ignores_endobj_keyword() {
+        // "endobj" contains "obj" but must never be parsed as a header.
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF\n");
+        let off = buf.len() as u64;
+        buf.extend_from_slice(b"7 0 obj\n<< >>\nendobj\nendobj\n");
+
+        let headers = scan_object_headers(&mut Cursor::new(buf)).unwrap();
+        assert_eq!(
+            headers,
+            vec![ObjHeader {
+                obj_num: 7,
+                generation: 0,
+                offset: off
+            }]
+        );
+    }
+
+    #[test]
+    fn test_scan_object_headers_reads_in_bounded_chunks() {
+        // Instrumented reader recording the largest single `read` request.
+        struct MaxReadReader<R> {
+            inner: R,
+            max_read: usize,
+        }
+        impl<R: Read> Read for MaxReadReader<R> {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                self.max_read = self.max_read.max(buf.len());
+                self.inner.read(buf)
+            }
+        }
+        impl<R: Seek> Seek for MaxReadReader<R> {
+            fn seek(&mut self, p: SeekFrom) -> std::io::Result<u64> {
+                self.inner.seek(p)
+            }
+        }
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF\n");
+        for i in 1..=2000u32 {
+            buf.extend_from_slice(format!("{i} 0 obj\n<< >>\nendobj\n").as_bytes());
+        }
+        let total = buf.len();
+        assert!(
+            total > 8192,
+            "fixture must exceed the chunk size to be meaningful"
+        );
+
+        let mut r = MaxReadReader {
+            inner: Cursor::new(buf),
+            max_read: 0,
+        };
+        let headers = scan_object_headers_chunked(&mut r, 4096).unwrap();
+
+        assert_eq!(headers.len(), 2000);
+        assert_eq!(headers[0].obj_num, 1);
+        assert_eq!(headers[1999].obj_num, 2000);
+        // A read_to_end-based scan would request the whole remaining file in one
+        // growing buffer; a chunked scan never asks for more than one chunk.
+        assert!(
+            r.max_read <= 4096,
+            "scanner requested {} bytes in a single read (chunk=4096, file={total}); not bounded",
+            r.max_read
+        );
+    }
+
+    #[test]
+    fn test_scan_and_fill_adds_missing_preserves_present() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        let off1 = buf.len() as u64;
+        buf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog >>\nendobj\n");
+        buf.extend_from_slice(b"2 0 obj\n<< /Type /Pages >>\nendobj\n");
+        let off3 = buf.len() as u64;
+        buf.extend_from_slice(b"3 0 obj\n<< >>\nendobj\n");
+
+        let mut table = XRefTable::new();
+        // Pretend obj 2 was already known from the XRef stream at a different offset.
+        table.add_entry(
+            2,
+            XRefEntry {
+                offset: 99999,
+                generation: 0,
+                in_use: true,
+            },
+        );
+
+        let mut reader = BufReader::new(Cursor::new(buf));
+        XRefTable::scan_and_fill_missing_objects(&mut reader, &mut table).unwrap();
+
+        // Missing objects 1 and 3 added at their real line-start offsets.
+        assert_eq!(table.get_entry(1).map(|e| e.offset), Some(off1));
+        assert_eq!(table.get_entry(3).map(|e| e.offset), Some(off3));
+        // Already-present object 2 must NOT be overwritten by the scan.
+        assert_eq!(table.get_entry(2).map(|e| e.offset), Some(99999));
+    }
+
     #[test]
     fn test_parse_xref_entry() {
         let entry1 = XRefTable::parse_xref_entry("0000000000 65535 f ").unwrap();
@@ -1993,18 +2241,15 @@ mod tests {
     #[test]
     fn test_parse_obj_header() {
         // Valid headers
-        assert_eq!(XRefTable::parse_obj_header("1 0 obj"), Some((1, 0)));
-        assert_eq!(XRefTable::parse_obj_header("123 5 obj"), Some((123, 5)));
-        assert_eq!(
-            XRefTable::parse_obj_header("  42   3   obj  "),
-            Some((42, 3))
-        );
+        assert_eq!(parse_obj_header_bytes(b"1 0 obj"), Some((1, 0)));
+        assert_eq!(parse_obj_header_bytes(b"123 5 obj"), Some((123, 5)));
+        assert_eq!(parse_obj_header_bytes(b"  42   3   obj  "), Some((42, 3)));
 
         // Invalid headers
-        assert_eq!(XRefTable::parse_obj_header("1 obj"), None);
-        assert_eq!(XRefTable::parse_obj_header("abc 0 obj"), None);
-        assert_eq!(XRefTable::parse_obj_header("1 0 object"), None);
-        assert_eq!(XRefTable::parse_obj_header(""), None);
+        assert_eq!(parse_obj_header_bytes(b"1 obj"), None);
+        assert_eq!(parse_obj_header_bytes(b"abc 0 obj"), None);
+        assert_eq!(parse_obj_header_bytes(b"1 0 object"), None);
+        assert_eq!(parse_obj_header_bytes(b""), None);
     }
 
     #[test]
