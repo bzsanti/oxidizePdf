@@ -526,28 +526,19 @@ impl XRefTable {
                 {
                     tracing::debug!("Parsing XRef stream");
 
-                    // Try to decode the stream, with fallback for corrupted streams
+                    // Decode the stream exactly once. `XRefStream::parse` treats
+                    // its input as already decoded (issue #341), so on decode
+                    // failure we must NOT hand it the raw compressed bytes — they
+                    // are not valid xref entries and only ever "worked" because
+                    // `parse` used to re-decode them. Propagate the error so the
+                    // caller falls back to recovery mode instead.
                     let decoded_data = match stream.decode(options) {
                         Ok(data) => data,
                         Err(e) => {
                             tracing::debug!(
-                                "XRef stream decode failed: {e:?}, attempting raw data fallback"
+                                "XRef stream decode failed: {e:?}, triggering recovery mode"
                             );
-
-                            // If decode fails, try using raw stream data
-                            // This helps with corrupted Flate streams
-                            if !stream.data.is_empty() {
-                                tracing::debug!(
-                                    "Using raw stream data ({} bytes) as fallback",
-                                    stream.data.len()
-                                );
-                                stream.data.clone()
-                            } else {
-                                tracing::debug!(
-                                    "No raw stream data available, triggering recovery mode"
-                                );
-                                return Err(e);
-                            }
+                            return Err(e);
                         }
                     };
 
