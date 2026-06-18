@@ -50,7 +50,14 @@ pub struct XRefStream {
 }
 
 impl XRefStream {
-    /// Parse a cross-reference stream
+    /// Parse a cross-reference stream from already-decoded entry bytes.
+    ///
+    /// `stream_data` must be the decoded (decompressed) content: the caller is
+    /// responsible for running `stream.decode()` before invoking this function.
+    /// The `stream_dict` may still carry `/Filter` and `/DecodeParms`, but this
+    /// function does NOT apply them. Passing raw compressed bytes here would
+    /// re-inflate already-inflated data and produce a bogus "Xref stream data
+    /// truncated" error (issue #341).
     pub fn parse<R: Read + Seek>(
         _reader: &mut R,
         stream_dict: PdfDictionary,
@@ -546,7 +553,11 @@ mod tests {
         );
 
         let (dict, compressed) = builder.build().unwrap();
-        // Mirror production: caller decodes via `stream.decode()` before `parse`.
+        // Mirror production: the caller decodes via `stream.decode()` before
+        // `parse`. The builder emits FlateDecode, so decoding with FlateDecode
+        // here reproduces exactly what `stream.decode()` would yield. If the
+        // builder ever switches filter (predictor/LZW), this line must follow it
+        // or the decoded-input precondition no longer matches production.
         let decoded = apply_filter(&compressed, Filter::FlateDecode).unwrap();
         (dict, decoded)
     }

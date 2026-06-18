@@ -535,7 +535,7 @@ impl XRefTable {
                     let decoded_data = match stream.decode(options) {
                         Ok(data) => data,
                         Err(e) => {
-                            tracing::debug!(
+                            tracing::warn!(
                                 "XRef stream decode failed: {e:?}, triggering recovery mode"
                             );
                             return Err(e);

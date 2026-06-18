@@ -11,7 +11,7 @@
 //! the strict reader path — including documents oxidize-pdf writes itself. The
 //! lenient `PdfReader::open` path masks it via object-scan recovery.
 
-use oxidize_pdf::parser::PdfReader;
+use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::writer::{PdfWriter, WriterConfig};
 use oxidize_pdf::{Document, Font, Page};
 use std::io::Cursor;
@@ -79,5 +79,25 @@ fn multi_page_xref_stream_pdf_parses_via_strict_reader() {
     assert_eq!(
         page_count, 5,
         "five-page xref-stream PDF must report 5 pages"
+    );
+}
+
+/// The fix changed the lenient path too: when `stream.decode()` fails, the
+/// caller now goes straight to scan recovery instead of feeding raw compressed
+/// bytes to `parse`. This guards that a well-formed xref-stream PDF still
+/// resolves correctly under lenient options after that change.
+#[test]
+fn xref_stream_pdf_parses_via_lenient_reader() {
+    let buffer = write_xref_stream_pdf(3);
+
+    let mut reader = PdfReader::new_with_options(Cursor::new(buffer), ParseOptions::lenient())
+        .expect("lenient reader must parse xref-stream PDF");
+    let page_count = reader
+        .page_count()
+        .expect("page_count must succeed on the lenient path");
+
+    assert_eq!(
+        page_count, 3,
+        "three-page xref-stream PDF must report 3 pages on the lenient path"
     );
 }
