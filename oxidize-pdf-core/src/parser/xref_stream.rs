@@ -6,7 +6,6 @@
 //! Cross-reference streams are an alternative to traditional xref tables,
 //! providing more compact representation and supporting compressed object streams.
 
-use crate::parser::filters::{apply_filter, apply_filter_with_params, Filter};
 use crate::parser::objects::{PdfArray, PdfDictionary, PdfName, PdfObject};
 use crate::parser::ParseOptions;
 use crate::parser::{ParseError, ParseResult};
@@ -51,7 +50,14 @@ pub struct XRefStream {
 }
 
 impl XRefStream {
-    /// Parse a cross-reference stream
+    /// Parse a cross-reference stream from already-decoded entry bytes.
+    ///
+    /// `stream_data` must be the decoded (decompressed) content: the caller is
+    /// responsible for running `stream.decode()` before invoking this function.
+    /// The `stream_dict` may still carry `/Filter` and `/DecodeParms`, but this
+    /// function does NOT apply them. Passing raw compressed bytes here would
+    /// re-inflate already-inflated data and produce a bogus "Xref stream data
+    /// truncated" error (issue #341).
     pub fn parse<R: Read + Seek>(
         _reader: &mut R,
         stream_dict: PdfDictionary,
@@ -118,66 +124,14 @@ impl XRefStream {
                 vec![(0, size)]
             };
 
-        // Calculate entry size from W array for XRef stream predictor handling
-        let entry_size = widths.iter().sum::<usize>();
-
-        // Decode the stream data
-        let decoded_data = if let Some(filter_obj) = stream_dict.get("Filter") {
-            // Apply filters
-            match filter_obj {
-                PdfObject::Name(filter_name) => {
-                    // Use apply_filter_with_params to handle DecodeParms (like Predictor)
-                    let filter = Filter::from_name(filter_name.as_str()).ok_or_else(|| {
-                        ParseError::StreamDecodeError(format!("Unknown filter: {filter_name:?}"))
-                    })?;
-
-                    // Get DecodeParms if available
-                    let decode_params = stream_dict.get("DecodeParms");
-
-                    if let Some(params_obj) = decode_params {
-                        if let Some(mut params_dict) = params_obj.as_dict().cloned() {
-                            // FIX for Issue #83: XRef streams with PNG predictor
-                            // Override /Columns with actual entry size from W array
-                            // This fixes predictor mismatch (e.g., Columns=4 but W=[1,3,2] requires 6)
-                            if params_dict
-                                .get("Predictor")
-                                .and_then(|p| p.as_integer())
-                                .is_some()
-                            {
-                                params_dict.insert(
-                                    "Columns".to_string(),
-                                    PdfObject::Integer(entry_size as i64),
-                                );
-                            }
-                            apply_filter_with_params(&stream_data, filter, Some(&params_dict))?
-                        } else {
-                            apply_filter(&stream_data, filter)?
-                        }
-                    } else {
-                        apply_filter(&stream_data, filter)?
-                    }
-                }
-                PdfObject::Array(filters) => {
-                    let mut data = stream_data;
-                    for filter in filters.0.iter() {
-                        if let Some(filter_name) = filter.as_name() {
-                            data = apply_filter(
-                                &data,
-                                Filter::from_name(filter_name.as_str()).ok_or_else(|| {
-                                    ParseError::StreamDecodeError(format!(
-                                        "Unknown filter: {filter_name:?}"
-                                    ))
-                                })?,
-                            )?;
-                        }
-                    }
-                    data
-                }
-                _ => stream_data,
-            }
-        } else {
-            stream_data
-        };
+        // The `stream_data` argument is ALREADY decoded: the only production
+        // caller (`xref.rs`) runs `stream.decode()` (FlateDecode + any predictor)
+        // before handing the buffer to `parse`. The stream dict still carries
+        // `/Filter` (and possibly `/DecodeParms`), but re-applying the filter
+        // here would inflate already-inflated bytes — yielding 0 bytes and a
+        // bogus "Xref stream data truncated" error (issue #341). The contract is
+        // therefore: `parse` does not decode; it consumes decoded entry bytes.
+        let decoded_data = stream_data;
 
         Ok(XRefStream {
             dict: stream_dict,
@@ -487,6 +441,7 @@ fn compress_data(data: &[u8]) -> ParseResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::filters::{apply_filter, Filter};
 
     #[test]
     fn test_read_field() {
@@ -566,6 +521,84 @@ mod tests {
         assert!(dict.get("W").is_some());
         assert!(dict.get("Size").is_some());
         assert!(dict.get("Filter").is_some());
+    }
+
+    /// Build a representative xref stream and decode its data exactly the way
+    /// the production caller (`xref.rs`) does (`stream.decode()` first), then
+    /// return the dict (which still carries `/Filter`) together with the
+    /// already-decoded entry bytes. This is the precise calling convention that
+    /// `XRefStream::parse` receives in production.
+    fn decoded_xref_stream_inputs() -> (PdfDictionary, Vec<u8>) {
+        let mut builder = XRefStreamBuilder::new();
+        builder.add_entry(
+            0,
+            XRefEntry::Free {
+                next_free_object: 0,
+                generation: 65535,
+            },
+        );
+        builder.add_entry(
+            1,
+            XRefEntry::InUse {
+                offset: 15,
+                generation: 0,
+            },
+        );
+        builder.add_entry(
+            2,
+            XRefEntry::Compressed {
+                stream_object_number: 5,
+                index_within_stream: 0,
+            },
+        );
+
+        let (dict, compressed) = builder.build().unwrap();
+        // Mirror production: the caller decodes via `stream.decode()` before
+        // `parse`. The builder emits FlateDecode, so decoding with FlateDecode
+        // here reproduces exactly what `stream.decode()` would yield. If the
+        // builder ever switches filter (predictor/LZW), this line must follow it
+        // or the decoded-input precondition no longer matches production.
+        let decoded = apply_filter(&compressed, Filter::FlateDecode).unwrap();
+        (dict, decoded)
+    }
+
+    fn assert_three_entries(stream: &XRefStream) {
+        let entries = stream.to_xref_entries().unwrap();
+        assert_eq!(entries.len(), 3, "must recover all three xref entries");
+        assert!(matches!(entries[0].1, XRefEntry::Free { .. }));
+        assert!(matches!(
+            entries[1].1,
+            XRefEntry::InUse {
+                offset: 15,
+                generation: 0
+            }
+        ));
+        assert!(matches!(
+            entries[2].1,
+            XRefEntry::Compressed {
+                stream_object_number: 5,
+                index_within_stream: 0
+            }
+        ));
+    }
+
+    /// Issue #341: `parse` receives already-decoded data from the only caller.
+    /// It must NOT re-apply the `/Filter` still present in the dict. Before the
+    /// fix, re-inflating already-inflated bytes produced 0 bytes and
+    /// `to_xref_entries` reported "Xref stream data truncated".
+    #[test]
+    fn parse_treats_input_as_already_decoded_flate() {
+        let (dict, decoded) = decoded_xref_stream_inputs();
+        assert!(
+            dict.get("Filter").is_some(),
+            "precondition: dict still carries /Filter, as in production"
+        );
+
+        let mut reader = std::io::Cursor::new(Vec::<u8>::new());
+        let stream =
+            XRefStream::parse(&mut reader, dict, decoded, &ParseOptions::default()).unwrap();
+
+        assert_three_entries(&stream);
     }
 
     #[test]

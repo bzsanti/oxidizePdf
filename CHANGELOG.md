@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.3] - 2026-06-19
+
+### Fixed
+
+- Cross-reference streams (`/Type /XRef`, standard since PDF 1.5 and ubiquitous in
+  linearized / government documents) were decoded twice: the reader decoded the
+  stream and then `XRefStream::parse` re-applied the still-present `/Filter` to the
+  already-inflated bytes, yielding 0 bytes and a bogus "Xref stream data truncated"
+  error. This broke the strict reader path (`PdfReader::new`) for every xref-stream
+  PDF — including documents oxidize-pdf writes itself — and surfaced as "Pages is
+  not a dictionary" on the lenient path when object-scan recovery could not
+  compensate. `parse` now treats its input as already decoded and no longer
+  re-applies the filter; on decode failure the reader goes straight to recovery
+  instead of feeding raw compressed bytes to the parser. Fixes #341.
+
 ## [2.16.2] - 2026-06-17
 
 ### Fixed
