@@ -148,6 +148,7 @@ pub struct AnalysisPipeline {
     pub(crate) max_tokens: usize,
     pub(crate) source: Option<DocumentSource>,
     pub(crate) classifier: Option<Box<dyn ElementClassifier>>,
+    pub(crate) partition_config: crate::pipeline::PartitionConfig,
     #[cfg(feature = "semantic")]
     pub(crate) enrichers: Vec<Box<dyn MetadataEnricher>>,
 }
@@ -168,6 +169,7 @@ impl AnalysisPipeline {
             chunking: Box::new(HybridChunker::new(config)),
             source: None,
             classifier: None,
+            partition_config: crate::pipeline::PartitionConfig::default(),
             #[cfg(feature = "semantic")]
             enrichers: Vec::new(),
         }
@@ -190,6 +192,20 @@ impl AnalysisPipeline {
     #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
         self.max_tokens = max_tokens;
+        self
+    }
+
+    /// Set the [`PartitionConfig`](crate::pipeline::PartitionConfig) used to
+    /// partition the document before classification and chunking.
+    ///
+    /// By default the pipeline partitions with `PartitionConfig::default()`
+    /// (table detection on). Override this when the default table detector
+    /// misclassifies the document — e.g. single-column prose pages collapsed
+    /// into empty `table` elements — so a structure-aware consumer can run over
+    /// a correctly-partitioned document (issue #345).
+    #[must_use]
+    pub fn with_partition_config(mut self, config: crate::pipeline::PartitionConfig) -> Self {
+        self.partition_config = config;
         self
     }
 
