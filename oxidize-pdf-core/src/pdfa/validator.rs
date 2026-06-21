@@ -254,8 +254,24 @@ impl PdfAValidator {
             }
         };
 
+        // Decode the stream before parsing: the /Metadata XMP packet may be
+        // filtered (commonly /FlateDecode), in which case `stream.data` holds
+        // the still-compressed bytes. Reading them raw makes `XmpMetadata::parse`
+        // fail (or yield no pdfa_id), spuriously reporting the document as
+        // non-conformant (issue #346). `decode` is a no-op for an unfiltered
+        // stream, so uncompressed metadata is unaffected.
+        let decoded = match stream.decode(&crate::parser::ParseOptions::default()) {
+            Ok(data) => data,
+            Err(_) => {
+                // The metadata stream exists but its filters cannot be applied,
+                // so the XMP packet is unreadable.
+                errors.push(ValidationError::XmpMetadataMissing);
+                return Ok(());
+            }
+        };
+
         // Parse the XMP metadata
-        let xmp_data = String::from_utf8_lossy(&stream.data);
+        let xmp_data = String::from_utf8_lossy(&decoded);
         let xmp = match XmpMetadata::parse(&xmp_data) {
             Ok(x) => x,
             Err(_) => {
