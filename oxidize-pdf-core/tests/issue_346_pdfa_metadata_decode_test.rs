@@ -4,15 +4,21 @@
 //! non-conformant (`XmpMetadataMissing` / `XmpMissingPdfAIdentifier`), even
 //! though the same document with an uncompressed `/Metadata` stream validates.
 //!
-//! Fixtures (provided by the reporter on the issue): two PDF/A-3b documents that
-//! differ *only* in whether the `/Metadata` XMP stream is FlateDecode-compressed.
-//! Compressing the metadata stream must not change the validation outcome.
+//! Fixtures: `issue_346_compressed_xmp.pdf` and `issue_346_uncompressed_xmp.pdf`
+//! are the two PDF/A-3b documents attached by the reporter to
+//! <https://github.com/bzsanti/oxidizePdf/issues/346>; they differ *only* in
+//! whether the `/Metadata` XMP stream is FlateDecode-compressed. Compressing the
+//! metadata stream must not change the validation outcome.
+//! `issue_346_unsupported_filter_xmp.pdf` is the compressed fixture with its
+//! `/Metadata` filter rewritten to an unsupported name, to exercise the
+//! decode-failure branch (the stream cannot be decoded → metadata unreadable).
 
 use oxidize_pdf::parser::PdfReader;
 use oxidize_pdf::pdfa::{PdfALevel, PdfAValidator, ValidationError};
 
 const COMPRESSED: &str = "tests/fixtures/issue_346_compressed_xmp.pdf";
 const UNCOMPRESSED: &str = "tests/fixtures/issue_346_uncompressed_xmp.pdf";
+const UNSUPPORTED_FILTER: &str = "tests/fixtures/issue_346_unsupported_filter_xmp.pdf";
 
 fn validate(path: &str) -> Vec<ValidationError> {
     let mut reader = PdfReader::open(path).expect("open fixture");
@@ -53,5 +59,25 @@ fn flate_compressed_metadata_does_not_spuriously_report_missing_xmp() {
     assert!(
         !errors.contains(&ValidationError::XmpMissingPdfAIdentifier),
         "spurious XmpMissingPdfAIdentifier on a FlateDecode XMP stream: {errors:?}"
+    );
+}
+
+#[test]
+fn undecodable_metadata_stream_reports_missing_without_erroring() {
+    // The /Metadata stream declares a filter that cannot be applied, so its XMP
+    // packet is genuinely unreadable. The validator must classify this as
+    // XmpMetadataMissing and still return Ok — not propagate a parse error nor
+    // panic. This covers the decode-failure branch of check_metadata_from_data.
+    let mut reader = PdfReader::open(UNSUPPORTED_FILTER).expect("open fixture");
+    let result = PdfAValidator::new(PdfALevel::A3b)
+        .validate(&mut reader)
+        .expect("validate must return Ok even when the metadata stream is undecodable");
+
+    assert!(
+        result
+            .errors()
+            .contains(&ValidationError::XmpMetadataMissing),
+        "an undecodable /Metadata stream must report XmpMetadataMissing, got: {:?}",
+        result.errors()
     );
 }

@@ -6,7 +6,7 @@
 use super::error::{PdfAError, ValidationError};
 use super::types::{PdfAConformance, PdfALevel, ValidationResult, ValidationWarning};
 use super::xmp::XmpMetadata;
-use crate::parser::PdfReader;
+use crate::parser::{ParseOptions, PdfReader};
 use std::io::{Read, Seek};
 
 /// Extracted catalog data for validation
@@ -260,7 +260,7 @@ impl PdfAValidator {
         // fail (or yield no pdfa_id), spuriously reporting the document as
         // non-conformant (issue #346). `decode` is a no-op for an unfiltered
         // stream, so uncompressed metadata is unaffected.
-        let decoded = match stream.decode(&crate::parser::ParseOptions::default()) {
+        let decoded = match stream.decode(&ParseOptions::default()) {
             Ok(data) => data,
             Err(_) => {
                 // The metadata stream exists but its filters cannot be applied,
