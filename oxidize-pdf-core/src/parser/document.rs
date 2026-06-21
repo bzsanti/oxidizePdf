@@ -1487,6 +1487,12 @@ impl<R: Read + Seek> PdfDocument<R> {
     ///
     /// `AnalysisPipeline::new()` reproduces [`rag_chunks`](Self::rag_chunks).
     ///
+    /// Partitioning uses the pipeline's
+    /// [`PartitionConfig`](crate::pipeline::PartitionConfig) (default unless set
+    /// via [`with_partition_config`](crate::pipeline::AnalysisPipeline::with_partition_config)),
+    /// so a structure-aware consumer can override the table detector when it
+    /// misclassifies the document (issue #345).
+    ///
     /// **Stability:** requires `unstable-spi`; exempt from semver until promoted.
     ///
     /// # Example
@@ -1512,7 +1518,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         if let Some(src) = source.as_mut() {
             self.autofill_source(src);
         }
-        let mut elements = self.partition()?;
+        let mut elements = self.partition_with(pipeline.partition_config.clone())?;
         if let Some(classifier) = pipeline.classifier.as_deref() {
             // Two passes: read labels against an immutable slice, then apply —
             // the classifier inspects neighbours via `ClassifyContext`, so it

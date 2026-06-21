@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.4] - 2026-06-21
+
+### Added
+
+- `AnalysisPipeline::with_partition_config` (unstable `unstable-spi`): a custom
+  analysis pipeline can now run over a configurable partition. Previously
+  `rag_chunks_with_pipeline` always partitioned with the default `PartitionConfig`,
+  so a structure-aware consumer could not avoid the table detector turning
+  single-column prose pages into empty `table` elements. The default round-trips to
+  the previous behaviour. Addresses the API part of #345 (the table-detector quality
+  issue remains open as a follow-up).
+
+### Fixed
+
+- PDF/A validation reported an otherwise-conformant document as non-conformant when
+  its XMP `/Metadata` stream was `/Filter /FlateDecode`-compressed: the validator
+  read the raw, still-compressed bytes instead of decoding them, so the XMP packet
+  was never parsed (`XmpMetadataMissing` / `XmpMissingPdfAIdentifier`). The stream is
+  now decoded before parsing; an unfiltered stream is unaffected. Fixes #346.
+
 ## [2.16.3] - 2026-06-19
 
 ### Fixed
