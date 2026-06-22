@@ -2216,7 +2216,11 @@ impl<R: Read + Seek> PdfReader<R> {
         let data = match length {
             Some(len) => {
                 // Trust /Length (ISO 32000 §7.3.8.1): read exactly `len` bytes. This
-                // is correct for binary streams whose bytes may contain "endstream".
+                // is correct for binary streams whose bytes may contain "endstream",
+                // which an endstream-search would mistakenly truncate at. Accepted
+                // tradeoff on this repair path: a stale-too-large /Length would read
+                // past endstream, but that is rarer than binary data containing the
+                // marker, and trusting /Length is the ISO-correct behavior.
                 let body = read_window_at(&mut self.reader, data_abs, len)?;
                 dict.insert(
                     PdfName("Length".to_string()),
@@ -2247,7 +2251,7 @@ impl<R: Read + Seek> PdfReader<R> {
         let rest = dict_content[idx + "/Length".len()..].trim_start();
         let tokens: Vec<&str> = rest.split_whitespace().collect();
 
-        // Indirect reference: "G N R".
+        // Indirect reference: "N G R" (e.g. "42 0 R" — object number, generation, keyword).
         if tokens.len() >= 3 && tokens[2] == "R" {
             if let Ok(len_obj) = tokens[0].parse::<u32>() {
                 return self.resolve_length_object(len_obj);
@@ -2312,8 +2316,18 @@ impl<R: Read + Seek> PdfReader<R> {
             searched = acc.len();
             offset += chunk.len() as u64;
 
-            if chunk.len() < WIN || acc.len() > MAX_STREAM {
-                break; // EOF or guard
+            if chunk.len() < WIN {
+                break; // EOF before endstream
+            }
+            if acc.len() > MAX_STREAM {
+                // Runaway guard: surface the truncation so a downstream decode
+                // failure on the incomplete body is traceable to here rather than
+                // appearing as a cryptic error.
+                tracing::warn!(
+                    "stream body exceeds {} MiB runaway guard without endstream; truncating",
+                    MAX_STREAM / (1024 * 1024)
+                );
+                break;
             }
         }
 
