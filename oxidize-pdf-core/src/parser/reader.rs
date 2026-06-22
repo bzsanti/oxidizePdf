@@ -8,13 +8,19 @@ use super::object_stream::ObjectStream;
 use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfString};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
-use super::xref::XRefTable;
+use super::xref::{read_object_window, XRefTable};
 use super::{ParseError, ParseResult};
 use crate::objects::ObjectId;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
+
+/// Bounded window for manual dictionary extraction (Issue #339). Object headers
+/// are located by the chunked scanner and only this many bytes are read at the
+/// object offset, instead of buffering the whole file. Large enough for any
+/// realistic catalog / pages dictionary (incl. multi-thousand-entry `/Kids`).
+const MANUAL_DICT_WINDOW: usize = 256 * 1024;
 
 /// Find a byte pattern in a byte slice
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -1718,24 +1724,28 @@ impl<R: Read + Seek> PdfReader<R> {
         // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
 
-        // Find object 102 content manually
-        if self.reader.seek(SeekFrom::Start(0)).is_err() {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Failed to seek to beginning for manual extraction".to_string(),
-            });
-        }
+        // Issue #339: locate the object header via the bounded chunked scanner and
+        // read only a bounded window at its offset, instead of buffering the whole
+        // file. Peak memory stays O(window) regardless of file size.
+        let window = match read_object_window(&mut self.reader, obj_num, MANUAL_DICT_WINDOW) {
+            Ok(Some((_, w))) => w,
+            Ok(None) => {
+                self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: format!("Object {obj_num} not found in manual extraction"),
+                });
+            }
+            Err(_) => {
+                self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: "Failed to read file for manual extraction".to_string(),
+                });
+            }
+        };
 
-        // Read the entire file
-        let mut buffer = Vec::new();
-        if self.reader.read_to_end(&mut buffer).is_err() {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Failed to read file for manual extraction".to_string(),
-            });
-        }
-
-        let content = String::from_utf8_lossy(&buffer);
+        let content = String::from_utf8_lossy(&window);
 
         // Find the object content based on object number
         let pattern = format!("{} 0 obj", obj_num);
