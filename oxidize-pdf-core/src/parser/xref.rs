@@ -176,7 +176,11 @@ fn scan_object_headers_chunked<R: Read + Seek>(
 
 /// Read up to `max` bytes starting at absolute `offset`. Bounded memory: the
 /// returned buffer is at most `max` bytes regardless of file size.
-fn read_window_at<R: Read + Seek>(reader: &mut R, offset: u64, max: usize) -> ParseResult<Vec<u8>> {
+pub(crate) fn read_window_at<R: Read + Seek>(
+    reader: &mut R,
+    offset: u64,
+    max: usize,
+) -> ParseResult<Vec<u8>> {
     reader.seek(SeekFrom::Start(offset))?;
     let mut buf = vec![0u8; max];
     let mut filled = 0;
@@ -221,25 +225,81 @@ fn read_object_content<R: Read + Seek>(
     Ok(Some(String::from_utf8_lossy(content_bytes).into_owned()))
 }
 
-/// Locate object `obj_num` via the bounded chunked header scan and return its
+/// Locate the first (lowest-offset) `obj_num G obj` header via the bounded
+/// chunked scan, stopping as soon as it is found — so locating an object near
+/// the front of a large file does not read the whole tail. Returns its absolute
+/// line-start offset, or `None` if no such header exists. Peak memory is O(chunk).
+///
+/// First-occurrence semantics match the prior whole-file `find("N 0 obj")` used
+/// by the manual-extraction fallbacks (Issue #339).
+fn find_object_offset<R: Read + Seek>(reader: &mut R, obj_num: u32) -> ParseResult<Option<u64>> {
+    const CHUNK_SIZE: usize = 64 * 1024;
+    const CARRY_CAP: usize = 1024;
+
+    reader.seek(SeekFrom::Start(0))?;
+
+    let mut carry: Vec<u8> = Vec::new();
+    let mut window_base: u64 = 0; // absolute offset of carry[0]
+    let mut chunk = vec![0u8; CHUNK_SIZE];
+
+    loop {
+        let mut filled = 0;
+        while filled < CHUNK_SIZE {
+            let n = reader.read(&mut chunk[filled..])?;
+            if n == 0 {
+                break;
+            }
+            filled += n;
+        }
+        let eof = filled == 0;
+        if eof && carry.is_empty() {
+            break;
+        }
+
+        let mut window = std::mem::take(&mut carry);
+        window.extend_from_slice(&chunk[..filled]);
+
+        // Scan this window; return the first match in ascending offset order.
+        let mut headers = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        scan_window_for_headers(&window, window_base, &mut headers, &mut seen);
+        if let Some(header) = headers.iter().find(|h| h.obj_num == obj_num) {
+            return Ok(Some(header.offset));
+        }
+
+        if eof {
+            break;
+        }
+
+        // Carry the last partial line so a header straddling the chunk boundary
+        // is seen in full by the next window (bounded to CARRY_CAP).
+        let last_nl = window.iter().rposition(|&b| b == b'\n' || b == b'\r');
+        let mut start = last_nl.map(|p| p + 1).unwrap_or(0);
+        if window.len() - start > CARRY_CAP {
+            start = window.len() - CARRY_CAP;
+        }
+        window_base += start as u64;
+        carry = window[start..].to_vec();
+    }
+
+    Ok(None)
+}
+
+/// Locate object `obj_num` via the bounded early-stopping scan and return its
 /// byte offset plus a bounded window of `max` bytes starting at that offset.
 /// Returns `None` if no `N G obj` header for `obj_num` exists.
 ///
 /// Peak memory is O(scan chunk + `max`) regardless of file size — this is the
 /// bounded replacement for the whole-file `read_to_end` manual-extraction
-/// fallbacks in `reader.rs` (Issue #339). When several headers share `obj_num`
-/// (e.g. incremental updates), the first (lowest-offset) occurrence wins,
-/// matching the prior scan-from-start `find` behavior.
+/// fallbacks in `reader.rs` (Issue #339).
 pub(crate) fn read_object_window<R: Read + Seek>(
     reader: &mut R,
     obj_num: u32,
     max: usize,
 ) -> ParseResult<Option<(u64, Vec<u8>)>> {
-    let headers = scan_object_headers(reader)?;
-    let Some(header) = headers.iter().find(|h| h.obj_num == obj_num) else {
+    let Some(offset) = find_object_offset(reader, obj_num)? else {
         return Ok(None);
     };
-    let offset = header.offset;
     let window = read_window_at(reader, offset, max)?;
     Ok(Some((offset, window)))
 }
