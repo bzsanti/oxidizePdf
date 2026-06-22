@@ -3319,6 +3319,37 @@ mod tests {
     }
 
     #[test]
+    fn test_signature_verification_reads_full_file_intentionally() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Issue #339 boundary: unlike the manual-extraction fallbacks, signature
+        // verification MUST read the entire file — the signature digest is computed
+        // over the full /ByteRange (ISO 32000-1 §12.8.3.3). This pins that intent so
+        // the deliberate read_to_end is not mistakenly "optimized" into a bounded read.
+        let data = create_minimal_pdf();
+        let file_len = data.len();
+
+        let total = Arc::new(AtomicUsize::new(0));
+        let reader = CountingReader {
+            inner: Cursor::new(data),
+            total_read: total.clone(),
+            max_read: Arc::new(AtomicUsize::new(0)),
+        };
+        let mut pdf = PdfReader::new_with_options(reader, ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+
+        total.store(0, Ordering::SeqCst);
+        // No signatures present: the function still reads the whole file up front.
+        let _ = pdf.verify_signatures();
+        let read = total.load(Ordering::SeqCst);
+        assert!(
+            read >= file_len,
+            "signature verification must read the whole file (read {read}, file {file_len})"
+        );
+    }
+
+    #[test]
     fn test_reader_version() {
         let pdf_data = create_minimal_pdf();
         let cursor = Cursor::new(pdf_data);
