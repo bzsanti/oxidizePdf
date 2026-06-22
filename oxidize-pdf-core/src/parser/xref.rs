@@ -328,7 +328,12 @@ pub(crate) fn scan_page_object_refs<R: Read + Seek>(
             None => &window[..],
         };
         let text = String::from_utf8_lossy(region);
-        if text.contains("/Type /Page") && !text.contains("/Type /Pages") {
+        // PDF names need no whitespace before the value: both "/Type /Page" and the
+        // compact "/Type/Page" are valid (ISO 32000-1 §7.3.5). Match both, and
+        // exclude the page-tree node /Type /Pages in either spelling.
+        let is_page = text.contains("/Type /Page") || text.contains("/Type/Page");
+        let is_pages = text.contains("/Type /Pages") || text.contains("/Type/Pages");
+        if is_page && !is_pages {
             pages.push((header.obj_num, 0));
         }
     }
@@ -1964,6 +1969,26 @@ mod tests {
             r.max_read <= 64 * 1024,
             "locate requested {} bytes in a single read (file={total}); not bounded",
             r.max_read
+        );
+    }
+
+    #[test]
+    fn test_scan_page_object_refs_matches_compact_type_page() {
+        // `/Type/Page` without a space before the value is valid PDF (ISO 32000-1
+        // §7.3.5) and is emitted by Ghostscript / pdfTeX. The page scan must detect
+        // it, while still excluding the compact page-tree node `/Type/Pages`.
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        buf.extend_from_slice(b"1 0 obj\n<< /Type/Catalog /Pages 2 0 R >>\nendobj\n");
+        buf.extend_from_slice(b"2 0 obj\n<< /Type/Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        buf.extend_from_slice(b"3 0 obj\n<< /Type/Page /Parent 2 0 R >>\nendobj\n");
+
+        let mut r = Cursor::new(buf);
+        let pages = scan_page_object_refs(&mut r).unwrap();
+        assert_eq!(
+            pages,
+            vec![(3, 0)],
+            "compact /Type/Page must be detected and compact /Type/Pages excluded"
         );
     }
 
