@@ -304,6 +304,39 @@ pub(crate) fn read_object_window<R: Read + Seek>(
     Ok(Some((offset, window)))
 }
 
+/// Scan the whole file in bounded chunks for objects whose dictionary declares
+/// `/Type /Page` (excluding the page-tree node `/Type /Pages`), returning
+/// `(obj_num, 0)` for each in ascending, de-duplicated order.
+///
+/// Peak memory is O(scan chunk + probe window) regardless of file size — the
+/// bounded replacement for the whole-file `read_to_end` page scan in `reader.rs`
+/// (Issue #339). Each header is probed with a small bounded window at its offset,
+/// and the match is confined to the object's own body (up to `endobj`).
+pub(crate) fn scan_page_object_refs<R: Read + Seek>(
+    reader: &mut R,
+) -> ParseResult<Vec<(u32, u16)>> {
+    const PROBE: usize = 4 * 1024;
+
+    let headers = scan_object_headers(reader)?;
+    let mut pages = Vec::new();
+    for header in &headers {
+        let window = read_window_at(reader, header.offset, PROBE)?;
+        // Confine the match to this object's own body so a later object's /Type
+        // cannot leak into this one.
+        let region = match find_byte_pattern(&window, b"endobj") {
+            Some(end) => &window[..end],
+            None => &window[..],
+        };
+        let text = String::from_utf8_lossy(region);
+        if text.contains("/Type /Page") && !text.contains("/Type /Pages") {
+            pages.push((header.obj_num, 0));
+        }
+    }
+    pages.sort_unstable();
+    pages.dedup();
+    Ok(pages)
+}
+
 /// Read a line handling both CR (\r) and LF (\n) as line terminators.
 ///
 /// PDF files can use CR, LF, or CRLF as line endings (ISO 32000-1 Section 7.2.3).

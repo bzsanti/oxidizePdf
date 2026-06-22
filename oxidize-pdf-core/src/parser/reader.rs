@@ -8,7 +8,7 @@ use super::object_stream::ObjectStream;
 use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfString};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
-use super::xref::{read_object_window, read_window_at, XRefTable};
+use super::xref::{read_object_window, read_window_at, scan_page_object_refs, XRefTable};
 use super::{ParseError, ParseResult};
 use crate::objects::ObjectId;
 use std::collections::HashMap;
@@ -2626,62 +2626,17 @@ impl<R: Read + Seek> PdfReader<R> {
         &mut self.parse_context
     }
 
-    /// Find all page objects by scanning the entire PDF
+    /// Find all page objects by scanning the entire PDF in bounded chunks.
+    ///
+    /// Issue #339: replaces a whole-file `read_to_end` with a chunked scan that
+    /// probes each object header with a small bounded window, keeping peak memory
+    /// O(chunk) regardless of file size. A scan error degrades to an empty list,
+    /// matching the previous behavior.
     fn find_page_objects(&mut self) -> ParseResult<Vec<(u32, u16)>> {
-        // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
-
-        // Read entire PDF content
-        if self.reader.seek(SeekFrom::Start(0)).is_err() {
-            return Ok(vec![]);
-        }
-
-        let mut buffer = Vec::new();
-        if self.reader.read_to_end(&mut buffer).is_err() {
-            return Ok(vec![]);
-        }
-
-        // Restore original position
+        let result = scan_page_object_refs(&mut self.reader);
         self.reader.seek(SeekFrom::Start(original_pos)).ok();
-
-        let content = String::from_utf8_lossy(&buffer);
-        let mut page_objects = Vec::new();
-
-        // Search for patterns like "n 0 obj" followed by "/Type /Page"
-        let lines: Vec<&str> = content.lines().collect();
-
-        for (i, line) in lines.iter().enumerate() {
-            // Check for object start pattern "n 0 obj"
-            if line.trim().ends_with(" 0 obj") {
-                if let Some(obj_str) = line.trim().strip_suffix(" 0 obj") {
-                    if let Ok(obj_num) = obj_str.parse::<u32>() {
-                        // Look ahead for "/Type /Page" in the next several lines
-                        for j in 1..=10 {
-                            if i + j < lines.len() {
-                                let future_line = lines[i + j];
-                                if future_line.contains("/Type /Page")
-                                    && !future_line.contains("/Type /Pages")
-                                {
-                                    page_objects.push((obj_num, 0));
-                                    break;
-                                }
-                                // Stop looking if we hit next object or endobj
-                                if future_line.trim().ends_with(" 0 obj")
-                                    || future_line.trim() == "endobj"
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        page_objects.sort();
-        page_objects.dedup();
-
-        Ok(page_objects)
+        Ok(result.unwrap_or_default())
     }
 
     /// Find catalog object by scanning
@@ -3173,17 +3128,21 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    /// Reader instrumented to count the total bytes read, shared via an atomic so
-    /// the test can reset it after `PdfReader::new` and observe only the reads done
-    /// by the method under test. Total (not peak-single) is the honest oracle: an
-    /// unbounded `read_to_end` consumes the whole file, while a bounded locate that
-    /// stops at the target object near the front reads far less than the file size.
+    /// Reader instrumented with two shared counters so a test can reset them after
+    /// `PdfReader::new` and observe only the reads done by the method under test:
+    /// - `total_read`: total bytes consumed — distinguishes a bounded locate that
+    ///   stops at a front object from an unbounded `read_to_end` of the whole file.
+    /// - `max_read`: largest single read request — distinguishes a scan that only
+    ///   ever asks for one chunk from a `read_to_end` that grows one huge buffer.
     struct CountingReader<R> {
         inner: R,
         total_read: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        max_read: std::sync::Arc<std::sync::atomic::AtomicUsize>,
     }
     impl<R: Read> Read for CountingReader<R> {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.max_read
+                .fetch_max(buf.len(), std::sync::atomic::Ordering::SeqCst);
             let n = self.inner.read(buf)?;
             self.total_read
                 .fetch_add(n, std::sync::atomic::Ordering::SeqCst);
@@ -3252,6 +3211,7 @@ mod tests {
         let reader = CountingReader {
             inner: Cursor::new(data),
             total_read: counter.clone(),
+            max_read: Arc::new(AtomicUsize::new(0)),
         };
         let mut pdf = PdfReader::new_with_options(reader, ParseOptions::tolerant())
             .expect("minimal PDF must parse");
@@ -3281,6 +3241,80 @@ mod tests {
         assert!(
             total_read <= L + 2 * MANUAL_DICT_WINDOW,
             "manual stream extraction read {total_read} bytes total (file={file_len}); not bounded by object size"
+        );
+    }
+
+    #[test]
+    fn test_find_page_objects_bounded() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Issue #339: find_page_objects scans the whole file to enumerate every
+        // page object, so it must do so in bounded chunks — never holding the
+        // entire file in memory. A multi-MiB filler makes an unbounded read_to_end
+        // (one growing buffer) observable: the largest single read approaches the
+        // file size, whereas the chunked scan never asks for more than one chunk.
+        const FILLER: usize = 2 * 1024 * 1024;
+        let filler: Vec<u8> = (0..FILLER).map(|i| (i % 251) as u8).collect();
+
+        let header = b"%PDF-1.4\n";
+        let obj1 = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [4 0 R 5 0 R 6 0 R] /Count 3 >>\nendobj\n";
+
+        let mut data = Vec::new();
+        data.extend_from_slice(header);
+        let obj1_start = data.len();
+        data.extend_from_slice(obj1);
+        let obj2_start = data.len();
+        data.extend_from_slice(obj2);
+
+        // Three page objects, not listed in xref, so only the scan finds them.
+        for n in [4u32, 5, 6] {
+            data.extend_from_slice(
+                format!(
+                    "{n} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\n"
+                )
+                .as_bytes(),
+            );
+        }
+
+        // Large unrelated filler stream object so the file dwarfs the chunk size.
+        data.extend_from_slice(b"7 0 obj\n<< /Length 2097152 >>\nstream\n");
+        data.extend_from_slice(&filler);
+        data.extend_from_slice(b"\nendstream\nendobj\n");
+
+        let xref_start = data.len();
+        let xref = format!(
+            "xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF"
+        );
+        data.extend_from_slice(xref.as_bytes());
+        let file_len = data.len();
+
+        let max_read = Arc::new(AtomicUsize::new(0));
+        let reader = CountingReader {
+            inner: Cursor::new(data),
+            total_read: Arc::new(AtomicUsize::new(0)),
+            max_read: max_read.clone(),
+        };
+        let mut pdf = PdfReader::new_with_options(reader, ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+
+        // Observe only the reads performed by the method under test.
+        max_read.store(0, Ordering::SeqCst);
+        let pages = pdf.find_page_objects().expect("page scan must succeed");
+
+        // All three page objects discovered (and the /Pages node excluded).
+        assert_eq!(
+            pages,
+            vec![(4, 0), (5, 0), (6, 0)],
+            "must find exactly the three /Type /Page objects"
+        );
+
+        // Bounded: the scan never requested more than one chunk in a single read.
+        let peak = max_read.load(Ordering::SeqCst);
+        assert!(
+            peak <= 128 * 1024,
+            "page scan requested {peak} bytes in one read (file={file_len}); not bounded"
         );
     }
 
