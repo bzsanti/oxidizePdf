@@ -8,13 +8,19 @@ use super::object_stream::ObjectStream;
 use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfString};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
-use super::xref::XRefTable;
+use super::xref::{read_object_window, read_window_at, scan_page_object_refs, XRefTable};
 use super::{ParseError, ParseResult};
 use crate::objects::ObjectId;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
+
+/// Bounded window for manual dictionary extraction (Issue #339). Object headers
+/// are located by the chunked scanner and only this many bytes are read at the
+/// object offset, instead of buffering the whole file. Large enough for any
+/// realistic catalog / pages dictionary (incl. multi-thousand-entry `/Kids`).
+const MANUAL_DICT_WINDOW: usize = 256 * 1024;
 
 /// Find a byte pattern in a byte slice
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -1718,24 +1724,28 @@ impl<R: Read + Seek> PdfReader<R> {
         // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
 
-        // Find object 102 content manually
-        if self.reader.seek(SeekFrom::Start(0)).is_err() {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Failed to seek to beginning for manual extraction".to_string(),
-            });
-        }
+        // Issue #339: locate the object header via the bounded chunked scanner and
+        // read only a bounded window at its offset, instead of buffering the whole
+        // file. Peak memory stays O(window) regardless of file size.
+        let window = match read_object_window(&mut self.reader, obj_num, MANUAL_DICT_WINDOW) {
+            Ok(Some((_, w))) => w,
+            Ok(None) => {
+                self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: format!("Object {obj_num} not found in manual extraction"),
+                });
+            }
+            Err(_) => {
+                self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                return Err(ParseError::SyntaxError {
+                    position: 0,
+                    message: "Failed to read file for manual extraction".to_string(),
+                });
+            }
+        };
 
-        // Read the entire file
-        let mut buffer = Vec::new();
-        if self.reader.read_to_end(&mut buffer).is_err() {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Failed to read file for manual extraction".to_string(),
-            });
-        }
-
-        let content = String::from_utf8_lossy(&buffer);
+        let content = String::from_utf8_lossy(&window);
 
         // Find the object content based on object number
         let pattern = format!("{} 0 obj", obj_num);
@@ -2079,73 +2089,73 @@ impl<R: Read + Seek> PdfReader<R> {
         // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
 
-        // Find object content manually
-        if self.reader.seek(SeekFrom::Start(0)).is_err() {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Failed to seek to beginning for manual extraction".to_string(),
-            });
-        }
-
-        // Read the entire file
-        let mut buffer = Vec::new();
-        if self.reader.read_to_end(&mut buffer).is_err() {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Failed to read file for manual extraction".to_string(),
-            });
-        }
-
-        // For stream objects, we need to work with raw bytes to avoid corruption
-        let pattern = format!("{} 0 obj", obj_num).into_bytes();
-
-        if let Some(obj_start) = find_bytes(&buffer, &pattern) {
-            let start = obj_start + pattern.len();
-            let search_area = &buffer[start..];
-
-            if let Some(dict_start) = find_bytes(search_area, b"<<") {
-                // Handle nested dictionaries properly by counting brackets
-                let mut bracket_count = 1;
-                let mut pos = dict_start + 2;
-                let mut dict_end = None;
-
-                while pos < search_area.len() - 1 && bracket_count > 0 {
-                    if search_area[pos] == b'<' && search_area[pos + 1] == b'<' {
-                        bracket_count += 1;
-                        pos += 2;
-                    } else if search_area[pos] == b'>' && search_area[pos + 1] == b'>' {
-                        bracket_count -= 1;
-                        if bracket_count == 0 {
-                            dict_end = Some(pos);
-                            break;
-                        }
-                        pos += 2;
-                    } else {
-                        pos += 1;
-                    }
+        // Issue #339: locate the object via the bounded early-stopping scan and read
+        // only a bounded window at its offset, instead of buffering the whole file.
+        // The stream body (which can be large, e.g. XMP metadata) is read separately,
+        // bounded by its /Length.
+        let (obj_offset, window) =
+            match read_object_window(&mut self.reader, obj_num, MANUAL_DICT_WINDOW) {
+                Ok(Some(v)) => v,
+                Ok(None) => {
+                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                    return Err(ParseError::SyntaxError {
+                        position: 0,
+                        message: format!("Could not manually extract object {obj_num}"),
+                    });
                 }
+                Err(_) => {
+                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                    return Err(ParseError::SyntaxError {
+                        position: 0,
+                        message: "Failed to read file for manual extraction".to_string(),
+                    });
+                }
+            };
 
-                if let Some(dict_end_pos) = dict_end {
-                    let dict_start_abs = dict_start + 2;
-                    let dict_end_abs = dict_end_pos;
-                    let dict_content_bytes = &search_area[dict_start_abs..dict_end_abs];
-                    let dict_content = String::from_utf8_lossy(dict_content_bytes);
+        // The window starts at the "N G obj" header; the object dictionary is the
+        // first "<<" that follows.
+        if let Some(dict_start) = find_bytes(&window, b"<<") {
+            // Handle nested dictionaries properly by counting brackets
+            let mut bracket_count = 1;
+            let mut pos = dict_start + 2;
+            let mut dict_end = None;
 
-                    // Check if this is followed by stream data - be specific about positioning
-                    let after_dict = &search_area[dict_end_abs + 2..];
-                    if is_immediate_stream_start(after_dict) {
-                        // This is a stream object
-                        return self.reconstruct_stream_object_bytes(
-                            obj_num,
-                            &dict_content,
-                            after_dict,
-                        );
-                    } else {
-                        // This is a dictionary object - fall back to existing logic
-                        return self
-                            .extract_object_manually(obj_num)
-                            .map(|dict| PdfObject::Dictionary(dict));
+            while pos < window.len().saturating_sub(1) && bracket_count > 0 {
+                if window[pos] == b'<' && window[pos + 1] == b'<' {
+                    bracket_count += 1;
+                    pos += 2;
+                } else if window[pos] == b'>' && window[pos + 1] == b'>' {
+                    bracket_count -= 1;
+                    if bracket_count == 0 {
+                        dict_end = Some(pos);
+                        break;
                     }
+                    pos += 2;
+                } else {
+                    pos += 1;
+                }
+            }
+
+            if let Some(dict_end_pos) = dict_end {
+                let dict_content = String::from_utf8_lossy(&window[dict_start + 2..dict_end_pos]);
+
+                // Is the dictionary immediately followed by stream data?
+                let after_dict = &window[dict_end_pos + 2..];
+                if is_immediate_stream_start(after_dict) {
+                    // Absolute file offset of after_dict[0].
+                    let after_dict_abs = obj_offset + (dict_end_pos + 2) as u64;
+                    return self.reconstruct_stream_object_bounded(
+                        obj_num,
+                        &dict_content,
+                        after_dict_abs,
+                        after_dict,
+                    );
+                } else {
+                    // Plain dictionary object - reuse the bounded dict extractor.
+                    self.reader.seek(SeekFrom::Start(original_pos)).ok();
+                    return self
+                        .extract_object_manually(obj_num)
+                        .map(PdfObject::Dictionary);
                 }
             }
         }
@@ -2155,24 +2165,28 @@ impl<R: Read + Seek> PdfReader<R> {
 
         Err(ParseError::SyntaxError {
             position: 0,
-            message: format!("Could not manually extract object {}", obj_num),
+            message: format!("Could not manually extract object {obj_num}"),
         })
     }
 
-    /// Reconstruct a stream object from bytes to avoid corruption
-    fn reconstruct_stream_object_bytes(
+    /// Reconstruct a stream object using bounded reads (Issue #339).
+    ///
+    /// The dictionary was already parsed from a bounded window; the stream body is
+    /// read directly at its absolute file offset, bounded by `/Length` (or, if
+    /// `/Length` is indirect, by resolving that length object; or, if absent, by a
+    /// bounded scan to `endstream`). `after_dict_abs` is the absolute file offset of
+    /// `after_dict[0]` — the bytes immediately following the dictionary's `>>`.
+    fn reconstruct_stream_object_bounded(
         &mut self,
         obj_num: u32,
         dict_content: &str,
+        after_dict_abs: u64,
         after_dict: &[u8],
     ) -> ParseResult<PdfObject> {
         use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
         use std::collections::HashMap;
 
-        // Parse dictionary content
         let mut dict = HashMap::new();
-
-        // Simple parsing for /Filter and /Length
         if dict_content.contains("/Filter /FlateDecode") {
             dict.insert(
                 PdfName("Filter".to_string()),
@@ -2180,76 +2194,139 @@ impl<R: Read + Seek> PdfReader<R> {
             );
         }
 
-        if let Some(length_start) = dict_content.find("/Length ") {
-            let length_part = &dict_content[length_start + 8..];
+        // Resolve the stream length: direct integer, indirect reference, or unknown.
+        let length = self.parse_stream_length(dict_content)?;
 
-            // Check if this is an indirect reference (e.g., "8 0 R")
-            // Pattern: number + space + number + space + "R"
-            let is_indirect_ref =
-                length_part.trim().contains(" R") || length_part.trim().contains(" 0 R");
+        // Locate "stream" within the bounded window and the first byte of the data.
+        let Some(stream_kw) = find_bytes(after_dict, b"stream") else {
+            return Err(ParseError::SyntaxError {
+                position: 0,
+                message: format!("Could not reconstruct stream for object {obj_num}"),
+            });
+        };
+        let after_kw = stream_kw + 6; // "stream".len()
+        let data_rel = match after_dict.get(after_kw) {
+            Some(b'\r') if after_dict.get(after_kw + 1) == Some(&b'\n') => after_kw + 2,
+            Some(b'\r') | Some(b'\n') => after_kw + 1,
+            _ => after_kw,
+        };
+        let data_abs = after_dict_abs + data_rel as u64;
 
-            if is_indirect_ref {
-                // Don't insert Length into dict - we'll use actual stream data length
-            } else if let Some(space_pos) = length_part.find(' ') {
-                let length_str = &length_part[..space_pos];
-                if let Ok(length) = length_str.parse::<i64>() {
-                    dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
-                }
-            } else {
-                // Length might be at the end
-                if let Ok(length) = length_part.trim().parse::<i64>() {
-                    dict.insert(PdfName("Length".to_string()), PdfObject::Integer(length));
-                }
+        // Read the stream body, bounded by its real size rather than the whole file.
+        let data = match length {
+            Some(len) => {
+                // Trust /Length (ISO 32000 §7.3.8.1): read exactly `len` bytes. This
+                // is correct for binary streams whose bytes may contain "endstream".
+                let body = read_window_at(&mut self.reader, data_abs, len)?;
+                dict.insert(
+                    PdfName("Length".to_string()),
+                    PdfObject::Integer(len as i64),
+                );
+                body
             }
-        } else {
-        }
+            None => {
+                // Unknown length: scan forward in bounded windows to `endstream`,
+                // retaining only the stream bytes (O(stream size), not O(file)).
+                self.read_stream_until_endstream(data_abs)?
+            }
+        };
 
-        // Find stream data
-        if let Some(stream_start) = find_bytes(after_dict, b"stream") {
-            let stream_start_pos = stream_start + 6; // "stream".len()
-            let stream_data_start = if after_dict.get(stream_start_pos) == Some(&b'\n') {
-                stream_start_pos + 1
-            } else if after_dict.get(stream_start_pos) == Some(&b'\r') {
-                if after_dict.get(stream_start_pos + 1) == Some(&b'\n') {
-                    stream_start_pos + 2
-                } else {
-                    stream_start_pos + 1
-                }
-            } else {
-                stream_start_pos
-            };
+        Ok(PdfObject::Stream(PdfStream {
+            dict: PdfDictionary(dict),
+            data,
+        }))
+    }
 
-            if let Some(endstream_pos) = find_bytes(after_dict, b"endstream") {
-                let mut stream_data = &after_dict[stream_data_start..endstream_pos];
+    /// Parse a stream's `/Length` from its dictionary text, resolving an indirect
+    /// reference via a bounded lookup. Returns `None` if absent or unresolvable, in
+    /// which case the caller scans to `endstream`.
+    fn parse_stream_length(&mut self, dict_content: &str) -> ParseResult<Option<usize>> {
+        let Some(idx) = dict_content.find("/Length") else {
+            return Ok(None);
+        };
+        let rest = dict_content[idx + "/Length".len()..].trim_start();
+        let tokens: Vec<&str> = rest.split_whitespace().collect();
 
-                // Respect the Length field if present
-                if let Some(PdfObject::Integer(length)) = dict.get(&PdfName("Length".to_string())) {
-                    let expected_length = *length as usize;
-                    if stream_data.len() > expected_length {
-                        stream_data = &stream_data[..expected_length];
-                    } else if stream_data.len() < expected_length {
-                        tracing::debug!(
-                            "WARNING: Stream data ({} bytes) < Length ({} bytes)!",
-                            stream_data.len(),
-                            expected_length
-                        );
-                    }
-                }
-
-                let stream = PdfStream {
-                    dict: PdfDictionary(dict),
-                    data: stream_data.to_vec(),
-                };
-
-                return Ok(PdfObject::Stream(stream));
-            } else {
+        // Indirect reference: "G N R".
+        if tokens.len() >= 3 && tokens[2] == "R" {
+            if let Ok(len_obj) = tokens[0].parse::<u32>() {
+                return self.resolve_length_object(len_obj);
             }
         }
 
-        Err(ParseError::SyntaxError {
-            position: 0,
-            message: format!("Could not reconstruct stream for object {}", obj_num),
-        })
+        // Direct integer.
+        if let Some(tok) = tokens.first() {
+            if let Ok(n) = tok.parse::<i64>() {
+                if n >= 0 {
+                    return Ok(Some(n as usize));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Resolve an indirect `/Length` object value via a small bounded window. The
+    /// length object is a bare integer (`N G obj <int> endobj`), so a tiny read at
+    /// its offset suffices — no recursion through `get_object`, avoiding the false
+    /// circular dependency this manual path exists to break.
+    fn resolve_length_object(&mut self, len_obj: u32) -> ParseResult<Option<usize>> {
+        let Some((_, window)) = read_object_window(&mut self.reader, len_obj, 4096)? else {
+            return Ok(None);
+        };
+        let text = String::from_utf8_lossy(&window);
+        // Skip the "N G obj" header; the first "obj" is the header keyword.
+        if let Some(obj_pos) = text.find("obj") {
+            let after = text[obj_pos + 3..].trim_start();
+            let digits: String = after.chars().take_while(|c| c.is_ascii_digit()).collect();
+            if let Ok(n) = digits.parse::<usize>() {
+                return Ok(Some(n));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Read a stream body of unknown length by scanning forward in bounded windows
+    /// from `data_abs` until `endstream`, accumulating only the stream bytes. Peak
+    /// memory is O(window + stream size), never O(file size).
+    fn read_stream_until_endstream(&mut self, data_abs: u64) -> ParseResult<Vec<u8>> {
+        const WIN: usize = 64 * 1024;
+        const MAX_STREAM: usize = 64 * 1024 * 1024; // runaway guard
+
+        let mut acc: Vec<u8> = Vec::new();
+        let mut offset = data_abs;
+        let mut searched = 0usize;
+        loop {
+            let chunk = read_window_at(&mut self.reader, offset, WIN)?;
+            if chunk.is_empty() {
+                break; // EOF without endstream
+            }
+            acc.extend_from_slice(&chunk);
+
+            // Search the freshly added region with an 8-byte overlap so an
+            // "endstream" straddling a window boundary is not missed.
+            let from = searched.saturating_sub(b"endstream".len() - 1);
+            if let Some(rel) = find_bytes(&acc[from..], b"endstream") {
+                acc.truncate(from + rel);
+                break;
+            }
+            searched = acc.len();
+            offset += chunk.len() as u64;
+
+            if chunk.len() < WIN || acc.len() > MAX_STREAM {
+                break; // EOF or guard
+            }
+        }
+
+        // Trim a single trailing EOL before "endstream" (not part of the data).
+        if acc.last() == Some(&b'\n') {
+            acc.pop();
+            if acc.last() == Some(&b'\r') {
+                acc.pop();
+            }
+        } else if acc.last() == Some(&b'\r') {
+            acc.pop();
+        }
+        Ok(acc)
     }
 
     /// Parse Resources from PDF content string
@@ -2549,62 +2626,17 @@ impl<R: Read + Seek> PdfReader<R> {
         &mut self.parse_context
     }
 
-    /// Find all page objects by scanning the entire PDF
+    /// Find all page objects by scanning the entire PDF in bounded chunks.
+    ///
+    /// Issue #339: replaces a whole-file `read_to_end` with a chunked scan that
+    /// probes each object header with a small bounded window, keeping peak memory
+    /// O(chunk) regardless of file size. A scan error degrades to an empty list,
+    /// matching the previous behavior.
     fn find_page_objects(&mut self) -> ParseResult<Vec<(u32, u16)>> {
-        // Save current position
         let original_pos = self.reader.stream_position().unwrap_or(0);
-
-        // Read entire PDF content
-        if self.reader.seek(SeekFrom::Start(0)).is_err() {
-            return Ok(vec![]);
-        }
-
-        let mut buffer = Vec::new();
-        if self.reader.read_to_end(&mut buffer).is_err() {
-            return Ok(vec![]);
-        }
-
-        // Restore original position
+        let result = scan_page_object_refs(&mut self.reader);
         self.reader.seek(SeekFrom::Start(original_pos)).ok();
-
-        let content = String::from_utf8_lossy(&buffer);
-        let mut page_objects = Vec::new();
-
-        // Search for patterns like "n 0 obj" followed by "/Type /Page"
-        let lines: Vec<&str> = content.lines().collect();
-
-        for (i, line) in lines.iter().enumerate() {
-            // Check for object start pattern "n 0 obj"
-            if line.trim().ends_with(" 0 obj") {
-                if let Some(obj_str) = line.trim().strip_suffix(" 0 obj") {
-                    if let Ok(obj_num) = obj_str.parse::<u32>() {
-                        // Look ahead for "/Type /Page" in the next several lines
-                        for j in 1..=10 {
-                            if i + j < lines.len() {
-                                let future_line = lines[i + j];
-                                if future_line.contains("/Type /Page")
-                                    && !future_line.contains("/Type /Pages")
-                                {
-                                    page_objects.push((obj_num, 0));
-                                    break;
-                                }
-                                // Stop looking if we hit next object or endobj
-                                if future_line.trim().ends_with(" 0 obj")
-                                    || future_line.trim() == "endobj"
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        page_objects.sort();
-        page_objects.dedup();
-
-        Ok(page_objects)
+        Ok(result.unwrap_or_default())
     }
 
     /// Find catalog object by scanning
@@ -3094,6 +3126,227 @@ mod tests {
         let cursor = Cursor::new(pdf_data);
         let result = PdfReader::new(cursor);
         assert!(result.is_ok());
+    }
+
+    /// Reader instrumented with two shared counters so a test can reset them after
+    /// `PdfReader::new` and observe only the reads done by the method under test:
+    /// - `total_read`: total bytes consumed — distinguishes a bounded locate that
+    ///   stops at a front object from an unbounded `read_to_end` of the whole file.
+    /// - `max_read`: largest single read request — distinguishes a scan that only
+    ///   ever asks for one chunk from a `read_to_end` that grows one huge buffer.
+    struct CountingReader<R> {
+        inner: R,
+        total_read: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        max_read: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    }
+    impl<R: Read> Read for CountingReader<R> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.max_read
+                .fetch_max(buf.len(), std::sync::atomic::Ordering::SeqCst);
+            let n = self.inner.read(buf)?;
+            self.total_read
+                .fetch_add(n, std::sync::atomic::Ordering::SeqCst);
+            Ok(n)
+        }
+    }
+    impl<R: Seek> Seek for CountingReader<R> {
+        fn seek(&mut self, p: SeekFrom) -> std::io::Result<u64> {
+            self.inner.seek(p)
+        }
+    }
+
+    #[test]
+    fn test_extract_stream_manually_bounded_honors_length() {
+        use crate::parser::objects::PdfObject;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Issue #339: extract_object_or_stream_manually must locate the object
+        // and read its stream body bounded by /Length, never buffering the whole
+        // file. A large XMP-sized stream (> the 256 KiB dict window) followed by a
+        // big unrelated filler object makes the bound observable and proves the
+        // body is not truncated at any fixed window.
+        const L: usize = 300 * 1024; // 307200, exceeds MANUAL_DICT_WINDOW
+        const FILLER: usize = 4 * 1024 * 1024; // dwarfs the target object
+
+        // Deterministic +1 byte ramp: never produces the "endstream" byte run
+        // (those bytes are not an arithmetic +1 sequence), so the marker search
+        // is unambiguous and full-content equality is meaningful.
+        let payload: Vec<u8> = (0..L).map(|i| (i % 251) as u8).collect();
+        let filler: Vec<u8> = (0..FILLER).map(|i| ((i + 7) % 251) as u8).collect();
+
+        let header = b"%PDF-1.4\n";
+        let obj1 = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n";
+
+        let mut data = Vec::new();
+        data.extend_from_slice(header);
+        let obj1_start = data.len();
+        data.extend_from_slice(obj1);
+        let obj2_start = data.len();
+        data.extend_from_slice(obj2);
+
+        // Object 4: the target stream with a DIRECT /Length. Not listed in xref,
+        // so it is only reachable via the manual scan fallback.
+        data.extend_from_slice(
+            b"4 0 obj\n<< /Type /Metadata /Subtype /XML /Length 307200 >>\nstream\n",
+        );
+        data.extend_from_slice(&payload);
+        data.extend_from_slice(b"\nendstream\nendobj\n");
+
+        // Object 5: large unrelated filler so file size >> target object size.
+        data.extend_from_slice(b"5 0 obj\n<< /Length 4194304 >>\nstream\n");
+        data.extend_from_slice(&filler);
+        data.extend_from_slice(b"\nendstream\nendobj\n");
+
+        // xref lists only 0/1/2; startxref sits at the very end so new() parses it.
+        let xref_start = data.len();
+        let xref = format!(
+            "xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF"
+        );
+        data.extend_from_slice(xref.as_bytes());
+        let file_len = data.len();
+
+        let counter = Arc::new(AtomicUsize::new(0));
+        let reader = CountingReader {
+            inner: Cursor::new(data),
+            total_read: counter.clone(),
+            max_read: Arc::new(AtomicUsize::new(0)),
+        };
+        let mut pdf = PdfReader::new_with_options(reader, ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+
+        // Observe only the reads performed by the method under test.
+        counter.store(0, Ordering::SeqCst);
+        let obj = pdf
+            .extract_object_or_stream_manually(4)
+            .expect("stream object 4 must be extracted");
+
+        // Content intact: full stream body, not truncated at any fixed window.
+        let stream = match &obj {
+            PdfObject::Stream(s) => s,
+            other => panic!("expected a stream, got {other:?}"),
+        };
+        assert_eq!(
+            stream.data.len(),
+            L,
+            "stream body must equal /Length (no truncation)"
+        );
+        assert_eq!(stream.data, payload, "stream body content must be intact");
+
+        // Bounded: the target object sits near the front, so a bounded locate that
+        // stops at object 4 reads far less than the whole file (which holds the
+        // 4 MiB filler). An unbounded read_to_end would consume the entire file.
+        let total_read = counter.load(Ordering::SeqCst);
+        assert!(
+            total_read <= L + 2 * MANUAL_DICT_WINDOW,
+            "manual stream extraction read {total_read} bytes total (file={file_len}); not bounded by object size"
+        );
+    }
+
+    #[test]
+    fn test_find_page_objects_bounded() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Issue #339: find_page_objects scans the whole file to enumerate every
+        // page object, so it must do so in bounded chunks — never holding the
+        // entire file in memory. A multi-MiB filler makes an unbounded read_to_end
+        // (one growing buffer) observable: the largest single read approaches the
+        // file size, whereas the chunked scan never asks for more than one chunk.
+        const FILLER: usize = 2 * 1024 * 1024;
+        let filler: Vec<u8> = (0..FILLER).map(|i| (i % 251) as u8).collect();
+
+        let header = b"%PDF-1.4\n";
+        let obj1 = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [4 0 R 5 0 R 6 0 R] /Count 3 >>\nendobj\n";
+
+        let mut data = Vec::new();
+        data.extend_from_slice(header);
+        let obj1_start = data.len();
+        data.extend_from_slice(obj1);
+        let obj2_start = data.len();
+        data.extend_from_slice(obj2);
+
+        // Three page objects, not listed in xref, so only the scan finds them.
+        for n in [4u32, 5, 6] {
+            data.extend_from_slice(
+                format!(
+                    "{n} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\n"
+                )
+                .as_bytes(),
+            );
+        }
+
+        // Large unrelated filler stream object so the file dwarfs the chunk size.
+        data.extend_from_slice(b"7 0 obj\n<< /Length 2097152 >>\nstream\n");
+        data.extend_from_slice(&filler);
+        data.extend_from_slice(b"\nendstream\nendobj\n");
+
+        let xref_start = data.len();
+        let xref = format!(
+            "xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF"
+        );
+        data.extend_from_slice(xref.as_bytes());
+        let file_len = data.len();
+
+        let max_read = Arc::new(AtomicUsize::new(0));
+        let reader = CountingReader {
+            inner: Cursor::new(data),
+            total_read: Arc::new(AtomicUsize::new(0)),
+            max_read: max_read.clone(),
+        };
+        let mut pdf = PdfReader::new_with_options(reader, ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+
+        // Observe only the reads performed by the method under test.
+        max_read.store(0, Ordering::SeqCst);
+        let pages = pdf.find_page_objects().expect("page scan must succeed");
+
+        // All three page objects discovered (and the /Pages node excluded).
+        assert_eq!(
+            pages,
+            vec![(4, 0), (5, 0), (6, 0)],
+            "must find exactly the three /Type /Page objects"
+        );
+
+        // Bounded: the scan never requested more than one chunk in a single read.
+        let peak = max_read.load(Ordering::SeqCst);
+        assert!(
+            peak <= 128 * 1024,
+            "page scan requested {peak} bytes in one read (file={file_len}); not bounded"
+        );
+    }
+
+    #[test]
+    fn test_signature_verification_reads_full_file_intentionally() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // Issue #339 boundary: unlike the manual-extraction fallbacks, signature
+        // verification MUST read the entire file — the signature digest is computed
+        // over the full /ByteRange (ISO 32000-1 §12.8.3.3). This pins that intent so
+        // the deliberate read_to_end is not mistakenly "optimized" into a bounded read.
+        let data = create_minimal_pdf();
+        let file_len = data.len();
+
+        let total = Arc::new(AtomicUsize::new(0));
+        let reader = CountingReader {
+            inner: Cursor::new(data),
+            total_read: total.clone(),
+            max_read: Arc::new(AtomicUsize::new(0)),
+        };
+        let mut pdf = PdfReader::new_with_options(reader, ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+
+        total.store(0, Ordering::SeqCst);
+        // No signatures present: the function still reads the whole file up front.
+        let _ = pdf.verify_signatures();
+        let read = total.load(Ordering::SeqCst);
+        assert!(
+            read >= file_len,
+            "signature verification must read the whole file (read {read}, file {file_len})"
+        );
     }
 
     #[test]

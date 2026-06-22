@@ -176,7 +176,11 @@ fn scan_object_headers_chunked<R: Read + Seek>(
 
 /// Read up to `max` bytes starting at absolute `offset`. Bounded memory: the
 /// returned buffer is at most `max` bytes regardless of file size.
-fn read_window_at<R: Read + Seek>(reader: &mut R, offset: u64, max: usize) -> ParseResult<Vec<u8>> {
+pub(crate) fn read_window_at<R: Read + Seek>(
+    reader: &mut R,
+    offset: u64,
+    max: usize,
+) -> ParseResult<Vec<u8>> {
     reader.seek(SeekFrom::Start(offset))?;
     let mut buf = vec![0u8; max];
     let mut filled = 0;
@@ -219,6 +223,118 @@ fn read_object_content<R: Read + Seek>(
     };
     let content_bytes = &window[obj_start..obj_start + endobj_rel];
     Ok(Some(String::from_utf8_lossy(content_bytes).into_owned()))
+}
+
+/// Locate the first (lowest-offset) `obj_num G obj` header via the bounded
+/// chunked scan, stopping as soon as it is found — so locating an object near
+/// the front of a large file does not read the whole tail. Returns its absolute
+/// line-start offset, or `None` if no such header exists. Peak memory is O(chunk).
+///
+/// First-occurrence semantics match the prior whole-file `find("N 0 obj")` used
+/// by the manual-extraction fallbacks (Issue #339).
+fn find_object_offset<R: Read + Seek>(reader: &mut R, obj_num: u32) -> ParseResult<Option<u64>> {
+    const CHUNK_SIZE: usize = 64 * 1024;
+    const CARRY_CAP: usize = 1024;
+
+    reader.seek(SeekFrom::Start(0))?;
+
+    let mut carry: Vec<u8> = Vec::new();
+    let mut window_base: u64 = 0; // absolute offset of carry[0]
+    let mut chunk = vec![0u8; CHUNK_SIZE];
+
+    loop {
+        let mut filled = 0;
+        while filled < CHUNK_SIZE {
+            let n = reader.read(&mut chunk[filled..])?;
+            if n == 0 {
+                break;
+            }
+            filled += n;
+        }
+        let eof = filled == 0;
+        if eof && carry.is_empty() {
+            break;
+        }
+
+        let mut window = std::mem::take(&mut carry);
+        window.extend_from_slice(&chunk[..filled]);
+
+        // Scan this window; return the first match in ascending offset order.
+        let mut headers = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        scan_window_for_headers(&window, window_base, &mut headers, &mut seen);
+        if let Some(header) = headers.iter().find(|h| h.obj_num == obj_num) {
+            return Ok(Some(header.offset));
+        }
+
+        if eof {
+            break;
+        }
+
+        // Carry the last partial line so a header straddling the chunk boundary
+        // is seen in full by the next window (bounded to CARRY_CAP).
+        let last_nl = window.iter().rposition(|&b| b == b'\n' || b == b'\r');
+        let mut start = last_nl.map(|p| p + 1).unwrap_or(0);
+        if window.len() - start > CARRY_CAP {
+            start = window.len() - CARRY_CAP;
+        }
+        window_base += start as u64;
+        carry = window[start..].to_vec();
+    }
+
+    Ok(None)
+}
+
+/// Locate object `obj_num` via the bounded early-stopping scan and return its
+/// byte offset plus a bounded window of `max` bytes starting at that offset.
+/// Returns `None` if no `N G obj` header for `obj_num` exists.
+///
+/// Peak memory is O(scan chunk + `max`) regardless of file size — this is the
+/// bounded replacement for the whole-file `read_to_end` manual-extraction
+/// fallbacks in `reader.rs` (Issue #339).
+pub(crate) fn read_object_window<R: Read + Seek>(
+    reader: &mut R,
+    obj_num: u32,
+    max: usize,
+) -> ParseResult<Option<(u64, Vec<u8>)>> {
+    let Some(offset) = find_object_offset(reader, obj_num)? else {
+        return Ok(None);
+    };
+    let window = read_window_at(reader, offset, max)?;
+    Ok(Some((offset, window)))
+}
+
+/// Scan the whole file in bounded chunks for objects whose dictionary declares
+/// `/Type /Page` (excluding the page-tree node `/Type /Pages`), returning
+/// `(obj_num, 0)` for each in ascending, de-duplicated order.
+///
+/// Peak memory is O(scan chunk + probe window) regardless of file size — the
+/// bounded replacement for the whole-file `read_to_end` page scan in `reader.rs`
+/// (Issue #339). Each header is probed with a small bounded window at its offset,
+/// and the match is confined to the object's own body (up to `endobj`).
+pub(crate) fn scan_page_object_refs<R: Read + Seek>(
+    reader: &mut R,
+) -> ParseResult<Vec<(u32, u16)>> {
+    const PROBE: usize = 4 * 1024;
+
+    let headers = scan_object_headers(reader)?;
+    let mut pages = Vec::new();
+    for header in &headers {
+        let window = read_window_at(reader, header.offset, PROBE)?;
+        // Confine the match to this object's own body so a later object's /Type
+        // cannot leak into this one.
+        let region = match find_byte_pattern(&window, b"endobj") {
+            Some(end) => &window[..end],
+            None => &window[..],
+        };
+        let text = String::from_utf8_lossy(region);
+        if text.contains("/Type /Page") && !text.contains("/Type /Pages") {
+            pages.push((header.obj_num, 0));
+        }
+    }
+    pages.sort_unstable();
+    pages.dedup();
+    Ok(pages)
 }
 
 /// Read a line handling both CR (\r) and LF (\n) as line terminators.
@@ -1779,6 +1895,74 @@ mod tests {
         assert!(
             r.max_read <= 4096,
             "scanner requested {} bytes in a single read (chunk=4096, file={total}); not bounded",
+            r.max_read
+        );
+    }
+
+    #[test]
+    fn test_read_object_window_bounded_and_correct() {
+        // Issue #339 follow-up: reader.rs manual-extraction fallbacks must locate
+        // an object via the bounded chunked scanner + a bounded window read,
+        // never `read_to_end` over the whole file.
+        //
+        // Instrumented reader recording the largest single `read` request: a
+        // `read_to_end`-based locate grows one buffer to ~file size; a bounded
+        // locate never requests more than one scan chunk (64 KiB) or one window.
+        struct MaxReadReader<R> {
+            inner: R,
+            max_read: usize,
+        }
+        impl<R: Read> Read for MaxReadReader<R> {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                self.max_read = self.max_read.max(buf.len());
+                self.inner.read(buf)
+            }
+        }
+        impl<R: Seek> Seek for MaxReadReader<R> {
+            fn seek(&mut self, p: SeekFrom) -> std::io::Result<u64> {
+                self.inner.seek(p)
+            }
+        }
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"%PDF-1.7\n");
+        let cat_off = buf.len() as u64;
+        buf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        buf.extend_from_slice(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        // Padding object large enough that the whole file far exceeds the 64 KiB
+        // scan chunk, so an unbounded read_to_end would be clearly distinguishable.
+        buf.extend_from_slice(b"3 0 obj\n<< /Type /Page >>\nstream\n");
+        buf.extend(std::iter::repeat(b'x').take(200 * 1024));
+        buf.extend_from_slice(b"\nendstream\nendobj\n");
+        let total = buf.len();
+        assert!(
+            total > 64 * 1024,
+            "fixture must exceed the scan chunk size to be meaningful"
+        );
+
+        let mut r = MaxReadReader {
+            inner: Cursor::new(buf),
+            max_read: 0,
+        };
+
+        let (offset, window) = read_object_window(&mut r, 1, 64 * 1024)
+            .unwrap()
+            .expect("object 1 must be locatable by bounded scan");
+
+        // Located at the real header offset, window holds the object's dict.
+        assert_eq!(offset, cat_off, "header offset must be the real line start");
+        assert!(
+            find_byte_pattern(&window, b"/Type /Catalog").is_some(),
+            "window must contain the catalog dict"
+        );
+        assert!(
+            find_byte_pattern(&window, b"/Pages 2 0 R").is_some(),
+            "window must contain the /Pages reference"
+        );
+        // Bounded: never requested more than one scan chunk / window in a single read.
+        assert!(
+            r.max_read <= 64 * 1024,
+            "locate requested {} bytes in a single read (file={total}); not bounded",
             r.max_read
         );
     }
