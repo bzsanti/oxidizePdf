@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.5] - 2026-06-22
+
+### Fixed
+
+- Lenient parsing of a PDF with a damaged or absent cross-reference table could
+  read the entire file into memory. The v2.16.2 fix bounded the xref-scan sites,
+  but three per-object manual-extraction fallbacks in the reader still buffered the
+  whole file via `read_to_end` — reachable through `info()` / `catalog()` and page
+  recovery on a partially damaged xref. All three now locate the object via a
+  chunked, early-stopping scan and read only a bounded window, so peak memory is
+  O(window) regardless of file size. Stream bodies are read bounded by `/Length`
+  (direct, indirect resolved without recursion, or absent via a bounded scan to
+  `endstream`), so large XMP metadata is no longer truncated. Signature
+  verification still reads the full file, as its digest covers the entire
+  `/ByteRange`. Completes the bounded-memory work for #339.
+- Manual stream reconstruction now trusts a direct `/Length` exactly instead of
+  truncating at the first `endstream` byte sequence, which previously corrupted
+  binary streams whose data legitimately contains the bytes `endstream`.
+- Page recovery now also detects the compact `/Type/Page` spelling (no space before
+  the value), valid per ISO 32000-1 §7.3.5 and emitted by some generators.
+
 ## [2.16.4] - 2026-06-21
 
 ### Added
