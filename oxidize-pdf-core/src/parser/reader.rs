@@ -3422,6 +3422,42 @@ mod tests {
     }
 
     #[test]
+    fn test_reconstruct_malformed_dict_falls_back_without_panic() {
+        use crate::parser::objects::PdfObject;
+
+        // Issue #351: when the generic dict parse fails (a dictionary the bracket
+        // counter accepted as balanced `<<...>>` but the lexer rejects — here a
+        // dangling key with no value), the reconstruction must not panic and must
+        // still recover the stream via the legacy minimal path. /Length is honored
+        // for the bounded body read; the body must come back intact.
+        let payload = b"0123456789";
+        let len = payload.len();
+        // `/BadKey` has no value before `>>` → parse_with_options errors → fallback.
+        let dict_body = format!(" /Length {len} /BadKey ");
+        let data = build_manual_stream_pdf(&dict_body, payload);
+
+        let mut pdf = PdfReader::new_with_options(Cursor::new(data), ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+        let obj = pdf
+            .extract_object_or_stream_manually(4)
+            .expect("malformed-dict stream must still be reconstructed via fallback");
+        let stream = match &obj {
+            PdfObject::Stream(s) => s,
+            other => panic!("expected a stream, got {other:?}"),
+        };
+
+        assert_eq!(
+            stream.data, payload,
+            "fallback path must still read the bounded body intact"
+        );
+        // Legacy fallback dict carries no /Filter (none was the Flate literal form).
+        assert!(
+            stream.dict.get("Filter").is_none(),
+            "fallback dict must not invent a /Filter"
+        );
+    }
+
+    #[test]
     fn test_find_page_objects_bounded() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
