@@ -14,6 +14,11 @@ pub struct CidMapping {
     pub unicode_to_cid: HashMap<u32, u16>,
     /// CID to Unicode mapping (reverse)
     pub cid_to_unicode: HashMap<u16, u32>,
+    /// CID to a multi-codepoint Unicode string (issue #358). Lets one CID (e.g.
+    /// a `fi` ligature glyph) map back to several characters in the `ToUnicode`
+    /// CMap so the text stays extractable. Takes precedence over
+    /// `cid_to_unicode` for any CID present in both.
+    pub cid_to_unicode_str: HashMap<u16, String>,
     /// CID to GID mapping for the font
     pub cid_to_gid: HashMap<u16, u16>,
     /// Maximum CID value used
@@ -28,11 +33,30 @@ impl Default for CidMapping {
         Self {
             unicode_to_cid: HashMap::new(),
             cid_to_unicode: HashMap::new(),
+            cid_to_unicode_str: HashMap::new(),
             cid_to_gid: HashMap::new(),
             max_cid: 0,
             unmapped_chars: Vec::new(),
         }
     }
+}
+
+/// Encode a single Unicode scalar value as UTF-16BE hex (a surrogate pair for
+/// non-BMP code points), as required by a `ToUnicode` bfchar destination.
+fn utf16be_hex_cp(cp: u32) -> String {
+    if cp <= 0xFFFF {
+        format!("{cp:04X}")
+    } else {
+        let v = cp - 0x10000;
+        let high = ((v >> 10) & 0x3FF) + 0xD800;
+        let low = (v & 0x3FF) + 0xDC00;
+        format!("{high:04X}{low:04X}")
+    }
+}
+
+/// Encode a string as concatenated UTF-16BE hex (multi-codepoint destination).
+fn utf16be_hex_str(s: &str) -> String {
+    s.chars().map(|c| utf16be_hex_cp(c as u32)).collect()
 }
 
 impl CidMapping {
@@ -138,23 +162,26 @@ impl CidMapping {
         cmap.push_str(&format!("<0001> <{:04X}>\n", self.max_cid));
         cmap.push_str("endcodespacerange\n");
 
-        // Write actual CID to Unicode mappings
-        let mappings: Vec<_> = self.cid_to_unicode.iter().collect();
-        let chunks: Vec<_> = mappings.chunks(100).collect();
+        // Build the merged CID → UTF-16BE destination list. The multi-codepoint
+        // string map (issue #358, e.g. ligature → "fi") takes precedence over the
+        // single-codepoint map for any shared CID. Sorted by CID so the output is
+        // deterministic regardless of HashMap iteration order.
+        let mut entries: Vec<(u16, String)> = Vec::new();
+        for (cid, s) in &self.cid_to_unicode_str {
+            entries.push((*cid, utf16be_hex_str(s)));
+        }
+        for (cid, cp) in &self.cid_to_unicode {
+            if self.cid_to_unicode_str.contains_key(cid) {
+                continue;
+            }
+            entries.push((*cid, utf16be_hex_cp(*cp)));
+        }
+        entries.sort_by_key(|(cid, _)| *cid);
 
-        for chunk in chunks {
+        for chunk in entries.chunks(100) {
             cmap.push_str(&format!("{} beginbfchar\n", chunk.len()));
-            for (cid, unicode) in chunk {
-                // Handle both BMP and non-BMP characters
-                if **unicode <= 0xFFFF {
-                    cmap.push_str(&format!("<{:04X}> <{:04X}>\n", cid, unicode));
-                } else {
-                    // For characters outside BMP, use UTF-16 surrogate pairs
-                    let unicode = **unicode - 0x10000;
-                    let high = ((unicode >> 10) & 0x3FF) + 0xD800;
-                    let low = (unicode & 0x3FF) + 0xDC00;
-                    cmap.push_str(&format!("<{:04X}> <{:04X}{:04X}>\n", cid, high, low));
-                }
+            for (cid, dst_hex) in chunk {
+                cmap.push_str(&format!("<{cid:04X}> <{dst_hex}>\n"));
             }
             cmap.push_str("endbfchar\n");
         }
@@ -400,6 +427,42 @@ mod tests {
         // Check mappings
         assert!(cmap_str.contains("<0001> <0041>")); // CID 1 -> U+0041
         assert!(cmap_str.contains("<0002> <0042>")); // CID 2 -> U+0042
+    }
+
+    #[test]
+    fn test_generate_tounicode_cmap_multichar_ligature() {
+        // Issue #358: a ligature glyph maps back to several characters so the
+        // text stays extractable. "fi" = U+0066 U+0069 → UTF-16BE 0066 0069.
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_unicode_str.insert(7, "fi".to_string());
+        mapping.max_cid = 7;
+
+        let cmap = mapping.generate_tounicode_cmap();
+        let cmap_str = String::from_utf8(cmap).unwrap();
+        assert!(
+            cmap_str.contains("<0007> <00660069>"),
+            "ligature CID must map to multi-codepoint UTF-16BE; got:\n{cmap_str}"
+        );
+    }
+
+    #[test]
+    fn test_generate_tounicode_cmap_str_takes_precedence() {
+        // When a CID is in both maps, the multi-char string wins (and only one
+        // entry is emitted for that CID).
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_unicode.insert(3, 0x0066); // 'f' (single)
+        mapping.cid_to_unicode_str.insert(3, "ffi".to_string());
+        mapping.max_cid = 3;
+
+        let cmap_str = String::from_utf8(mapping.generate_tounicode_cmap()).unwrap();
+        assert!(
+            cmap_str.contains("<0003> <006600660069>"),
+            "string mapping must win; got:\n{cmap_str}"
+        );
+        assert!(
+            !cmap_str.contains("<0003> <0066>\n"),
+            "single-codepoint entry for CID 3 must not also appear"
+        );
     }
 
     #[test]
