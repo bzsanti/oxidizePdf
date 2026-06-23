@@ -8,7 +8,9 @@ use super::object_stream::ObjectStream;
 use super::objects::{PdfArray, PdfDictionary, PdfObject, PdfString};
 use super::stack_safe::StackSafeContext;
 use super::trailer::PdfTrailer;
-use super::xref::{read_object_window, read_window_at, scan_page_object_refs, XRefTable};
+use super::xref::{
+    find_byte_pattern, read_object_window, read_window_at, scan_page_object_refs, XRefTable,
+};
 use super::{ParseError, ParseResult};
 use crate::objects::ObjectId;
 use std::collections::HashMap;
@@ -21,13 +23,6 @@ use std::path::Path;
 /// object offset, instead of buffering the whole file. Large enough for any
 /// realistic catalog / pages dictionary (incl. multi-thousand-entry `/Kids`).
 const MANUAL_DICT_WINDOW: usize = 256 * 1024;
-
-/// Find a byte pattern in a byte slice
-fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
-}
 
 /// Check if bytes start with "stream" after optional whitespace
 fn is_immediate_stream_start(data: &[u8]) -> bool {
@@ -2114,7 +2109,7 @@ impl<R: Read + Seek> PdfReader<R> {
 
         // The window starts at the "N G obj" header; the object dictionary is the
         // first "<<" that follows.
-        if let Some(dict_start) = find_bytes(&window, b"<<") {
+        if let Some(dict_start) = find_byte_pattern(&window, b"<<") {
             // Handle nested dictionaries properly by counting brackets
             let mut bracket_count = 1;
             let mut pos = dict_start + 2;
@@ -2198,7 +2193,7 @@ impl<R: Read + Seek> PdfReader<R> {
         let length = self.parse_stream_length(dict_content)?;
 
         // Locate "stream" within the bounded window and the first byte of the data.
-        let Some(stream_kw) = find_bytes(after_dict, b"stream") else {
+        let Some(stream_kw) = find_byte_pattern(after_dict, b"stream") else {
             return Err(ParseError::SyntaxError {
                 position: 0,
                 message: format!("Could not reconstruct stream for object {obj_num}"),
@@ -2309,7 +2304,7 @@ impl<R: Read + Seek> PdfReader<R> {
             // Search the freshly added region with an 8-byte overlap so an
             // "endstream" straddling a window boundary is not missed.
             let from = searched.saturating_sub(b"endstream".len() - 1);
-            if let Some(rel) = find_bytes(&acc[from..], b"endstream") {
+            if let Some(rel) = find_byte_pattern(&acc[from..], b"endstream") {
                 acc.truncate(from + rel);
                 break;
             }
@@ -4539,26 +4534,26 @@ startxref
         // =============================================================================
 
         #[test]
-        fn test_find_bytes_basic() {
+        fn test_find_byte_pattern_basic() {
             let haystack = b"Hello World";
             let needle = b"World";
-            let pos = find_bytes(haystack, needle);
+            let pos = find_byte_pattern(haystack, needle);
             assert_eq!(pos, Some(6), "Must find 'World' at position 6");
         }
 
         #[test]
-        fn test_find_bytes_not_found() {
+        fn test_find_byte_pattern_not_found() {
             let haystack = b"Hello World";
             let needle = b"Rust";
-            let pos = find_bytes(haystack, needle);
+            let pos = find_byte_pattern(haystack, needle);
             assert_eq!(pos, None, "Must return None when not found");
         }
 
         #[test]
-        fn test_find_bytes_at_start() {
+        fn test_find_byte_pattern_at_start() {
             let haystack = b"Hello World";
             let needle = b"Hello";
-            let pos = find_bytes(haystack, needle);
+            let pos = find_byte_pattern(haystack, needle);
             assert_eq!(pos, Some(0), "Must find at position 0");
         }
 
