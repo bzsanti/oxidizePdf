@@ -2138,6 +2138,8 @@ impl<R: Read + Seek> PdfReader<R> {
 
             if let Some(dict_end_pos) = dict_end {
                 let dict_content = String::from_utf8_lossy(&window[dict_start + 2..dict_end_pos]);
+                // Full `<<...>>` slice, for generic re-parsing of the dictionary.
+                let dict_bytes = &window[dict_start..dict_end_pos + 2];
 
                 // Is the dictionary immediately followed by stream data?
                 let after_dict = &window[dict_end_pos + 2..];
@@ -2146,6 +2148,7 @@ impl<R: Read + Seek> PdfReader<R> {
                     let after_dict_abs = obj_offset + (dict_end_pos + 2) as u64;
                     return self.reconstruct_stream_object_bounded(
                         obj_num,
+                        dict_bytes,
                         &dict_content,
                         after_dict_abs,
                         after_dict,
@@ -2179,6 +2182,7 @@ impl<R: Read + Seek> PdfReader<R> {
     fn reconstruct_stream_object_bounded(
         &mut self,
         obj_num: u32,
+        dict_bytes: &[u8],
         dict_content: &str,
         after_dict_abs: u64,
         after_dict: &[u8],
@@ -2186,13 +2190,39 @@ impl<R: Read + Seek> PdfReader<R> {
         use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
         use std::collections::HashMap;
 
-        let mut dict = HashMap::new();
-        if dict_content.contains("/Filter /FlateDecode") {
-            dict.insert(
-                PdfName("Filter".to_string()),
-                PdfObject::Name(PdfName("FlateDecode".to_string())),
+        // Issue #351: reconstruct the FULL stream dictionary by re-parsing the
+        // already-in-memory `<<...>>` bytes with the real object parser, rather than
+        // recognizing only the single hardcoded `/Filter /FlateDecode` form. This
+        // preserves every entry generically — non-Flate filters (`/DCTDecode`,
+        // `/LZWDecode`), filter arrays, `/DecodeParms`, `/Subtype`, `/ColorSpace`,
+        // etc. — which the manual fallback previously dropped, silently corrupting
+        // downstream decoding. The stream body is still read separately and bounded
+        // (Issue #339); only the dictionary construction changed.
+        let opts = self.options.clone();
+        let mut dict: HashMap<PdfName, PdfObject> = {
+            let mut lexer = super::lexer::Lexer::new_with_options(
+                std::io::Cursor::new(dict_bytes),
+                opts.clone(),
             );
-        }
+            match PdfObject::parse_with_options(&mut lexer, &opts) {
+                Ok(PdfObject::Dictionary(d)) => d.0,
+                // The slice ends at `>>`, so no stream body is available here; if the
+                // parser still reports a stream, keep its dictionary.
+                Ok(PdfObject::Stream(s)) => s.dict.0,
+                // Parse failure: fall back to the legacy minimal behavior so this
+                // repair path never regresses below what it preserved before.
+                _ => {
+                    let mut d = HashMap::new();
+                    if dict_content.contains("/Filter /FlateDecode") {
+                        d.insert(
+                            PdfName("Filter".to_string()),
+                            PdfObject::Name(PdfName("FlateDecode".to_string())),
+                        );
+                    }
+                    d
+                }
+            }
+        };
 
         // Resolve the stream length: direct integer, indirect reference, or unknown.
         let length = self.parse_stream_length(dict_content)?;
@@ -2231,7 +2261,16 @@ impl<R: Read + Seek> PdfReader<R> {
             None => {
                 // Unknown length: scan forward in bounded windows to `endstream`,
                 // retaining only the stream bytes (O(stream size), not O(file)).
-                self.read_stream_until_endstream(data_abs)?
+                let body = self.read_stream_until_endstream(data_abs)?;
+                // Pin /Length to the bytes actually read. The generic dict parse may
+                // have carried an unresolvable indirect `/Length N G R`; replacing it
+                // keeps the dictionary consistent with the body and avoids a dangling
+                // reference downstream.
+                dict.insert(
+                    PdfName("Length".to_string()),
+                    PdfObject::Integer(body.len() as i64),
+                );
+                body
             }
         };
 
@@ -3256,6 +3295,130 @@ mod tests {
             total_read <= L + 2 * MANUAL_DICT_WINDOW,
             "manual stream extraction read {total_read} bytes total (file={file_len}); not bounded by object size"
         );
+    }
+
+    /// Build a minimal PDF whose object 4 is a stream reachable only via the manual
+    /// scan fallback (absent from xref), with the given dictionary body and payload.
+    /// Returns the full file bytes. Used by the #351 reconstruction-dict tests.
+    #[cfg(test)]
+    fn build_manual_stream_pdf(obj4_dict_body: &str, payload: &[u8]) -> Vec<u8> {
+        let header = b"%PDF-1.4\n";
+        let obj1 = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        let obj2 = b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n";
+
+        let mut data = Vec::new();
+        data.extend_from_slice(header);
+        let obj1_start = data.len();
+        data.extend_from_slice(obj1);
+        let obj2_start = data.len();
+        data.extend_from_slice(obj2);
+
+        // Object 4: stream reachable only via the manual scan (not listed in xref).
+        data.extend_from_slice(format!("4 0 obj\n<<{obj4_dict_body}>>\nstream\n").as_bytes());
+        data.extend_from_slice(payload);
+        data.extend_from_slice(b"\nendstream\nendobj\n");
+
+        // xref lists only 0/1/2; startxref at the end so new() parses the file.
+        let xref_start = data.len();
+        let xref = format!(
+            "xref\n0 3\n0000000000 65535 f \n{obj1_start:010} 00000 n \n{obj2_start:010} 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF"
+        );
+        data.extend_from_slice(xref.as_bytes());
+        data
+    }
+
+    #[test]
+    fn test_reconstruct_preserves_non_flate_filter() {
+        use crate::parser::objects::PdfObject;
+
+        // Issue #351: the manual stream reconstruction fallback must preserve the
+        // stream's /Filter generically, not only /FlateDecode. A DCTDecode stream
+        // reached via the manual scan previously lost its /Filter (and /Subtype),
+        // causing downstream to treat compressed bytes as raw — a silent wrong
+        // result. Body content is irrelevant here; the dictionary is the contract.
+        let payload = b"\xff\xd8\xff\xe0not-a-real-jpeg\xff\xd9";
+        let len = payload.len();
+        let dict_body =
+            format!(" /Type /XObject /Subtype /Image /Filter /DCTDecode /Length {len} ");
+        let data = build_manual_stream_pdf(&dict_body, payload);
+
+        let mut pdf = PdfReader::new_with_options(Cursor::new(data), ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+        let obj = pdf
+            .extract_object_or_stream_manually(4)
+            .expect("stream object 4 must be extracted");
+        let stream = match &obj {
+            PdfObject::Stream(s) => s,
+            other => panic!("expected a stream, got {other:?}"),
+        };
+
+        assert_eq!(
+            stream
+                .dict
+                .get("Filter")
+                .and_then(|o| o.as_name())
+                .map(|n| n.0.as_str()),
+            Some("DCTDecode"),
+            "non-Flate /Filter must be preserved in reconstructed stream dict"
+        );
+        assert_eq!(
+            stream
+                .dict
+                .get("Subtype")
+                .and_then(|o| o.as_name())
+                .map(|n| n.0.as_str()),
+            Some("Image"),
+            "/Subtype must be preserved, not dropped"
+        );
+        assert_eq!(stream.data, payload, "stream body must be intact");
+    }
+
+    #[test]
+    fn test_reconstruct_preserves_filter_array_and_decodeparms() {
+        use crate::parser::objects::PdfObject;
+
+        // Issue #351: filter arrays and /DecodeParms must survive the manual
+        // reconstruction, and the parser must tolerate the no-space `/Filter[`
+        // spacing variant. A LZWDecode→FlateDecode chain with predictor parms is
+        // a realistic case the old hardcoded `/Filter /FlateDecode` match dropped.
+        let payload = b"compressed-bytes-placeholder";
+        let len = payload.len();
+        let dict_body = format!(
+            " /Filter[/LZWDecode /FlateDecode] /DecodeParms[null<< /Predictor 12 /Columns 4 >>] /Length {len} "
+        );
+        let data = build_manual_stream_pdf(&dict_body, payload);
+
+        let mut pdf = PdfReader::new_with_options(Cursor::new(data), ParseOptions::tolerant())
+            .expect("minimal PDF must parse");
+        let obj = pdf
+            .extract_object_or_stream_manually(4)
+            .expect("stream object 4 must be extracted");
+        let stream = match &obj {
+            PdfObject::Stream(s) => s,
+            other => panic!("expected a stream, got {other:?}"),
+        };
+
+        let filter = stream
+            .dict
+            .get("Filter")
+            .and_then(|o| o.as_array())
+            .expect("/Filter array must be preserved");
+        let names: Vec<&str> = filter
+            .0
+            .iter()
+            .filter_map(|o| o.as_name())
+            .map(|n| n.0.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["LZWDecode", "FlateDecode"],
+            "filter array entries must be preserved in order"
+        );
+        assert!(
+            stream.dict.get("DecodeParms").is_some(),
+            "/DecodeParms must be preserved alongside the filter chain"
+        );
+        assert_eq!(stream.data, payload, "stream body must be intact");
     }
 
     #[test]
