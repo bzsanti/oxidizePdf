@@ -157,9 +157,13 @@ impl CidMapping {
         cmap.push_str("/CMapName /Adobe-Identity-UCS def\n");
         cmap.push_str("/CMapType 2 def\n");
 
-        // Code space range
+        // Code space range. Type0/Identity-H uses 2-byte codes, so the
+        // codespace is the full `<0000> <FFFF>` range — always valid and
+        // independent of `max_cid` (a caller may populate the maps without
+        // setting it; a `<0001> <max_cid>` range would be invalid when
+        // max_cid == 0 and too tight to cover every used CID otherwise).
         cmap.push_str("1 begincodespacerange\n");
-        cmap.push_str(&format!("<0001> <{:04X}>\n", self.max_cid));
+        cmap.push_str("<0000> <FFFF>\n");
         cmap.push_str("endcodespacerange\n");
 
         // Build the merged CID → UTF-16BE destination list. The multi-codepoint
@@ -427,6 +431,24 @@ mod tests {
         // Check mappings
         assert!(cmap_str.contains("<0001> <0041>")); // CID 1 -> U+0041
         assert!(cmap_str.contains("<0002> <0042>")); // CID 2 -> U+0042
+    }
+
+    #[test]
+    fn test_tounicode_codespace_is_valid_regardless_of_max_cid() {
+        // Issue #358 robustness: the codespacerange must be a valid 2-byte range
+        // even when a caller populates the maps without setting `max_cid` (its
+        // default is 0, which previously emitted `<0001> <0000>` — start > end,
+        // an invalid CMap that viewers reject, dropping text extraction).
+        let mut mapping = CidMapping::new();
+        mapping.cid_to_unicode_str.insert(7, "fi".to_string());
+        // max_cid deliberately left at its default (0).
+        let s = String::from_utf8(mapping.generate_tounicode_cmap()).unwrap();
+        assert!(
+            s.contains("<0000> <FFFF>"),
+            "codespace must be the full valid 2-byte Identity range; got:\n{s}"
+        );
+        // And the mapping itself must still be present.
+        assert!(s.contains("<0007> <00660069>"), "got:\n{s}");
     }
 
     #[test]

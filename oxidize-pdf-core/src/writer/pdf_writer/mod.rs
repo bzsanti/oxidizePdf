@@ -1512,10 +1512,10 @@ impl<W: Write> PdfWriter<W> {
         // to use) and embedded whole; the CID semantics come from the caller's
         // `CidMapping`. Kept separate from the Unicode-keyed fonts above.
         // Deterministic order so output is reproducible (BTreeMap-style sort).
-        let mut cid_names: Vec<&String> = document.cid_keyed_fonts().keys().collect();
-        cid_names.sort();
-        for font_name in cid_names {
-            let (data, mapping) = &document.cid_keyed_fonts()[font_name];
+        let mut cid_fonts: Vec<(&String, &(Vec<u8>, crate::fonts::CidMapping))> =
+            document.cid_keyed_fonts().iter().collect();
+        cid_fonts.sort_by(|a, b| a.0.cmp(b.0));
+        for (font_name, (data, mapping)) in cid_fonts {
             let font_id = self.write_cid_keyed_font(font_name, data, mapping)?;
             font_refs.insert(font_name.clone(), font_id);
         }

@@ -1635,6 +1635,19 @@ mod tests {
     }
 
     #[test]
+    fn show_cid_array_with_empty_run_does_not_panic_and_emits_empty_tj() {
+        // An empty run must still produce a well-formed (empty) TJ array, never panic.
+        let mut gc = GraphicsContext::new();
+        gc.set_custom_font("ShapedRoboto", 12.0);
+        gc.show_cid_array(&[], 0.0, 0.0);
+        let out = String::from_utf8(gc.generate_operations().unwrap()).unwrap();
+        assert!(
+            out.contains("[ ] TJ"),
+            "expected empty TJ array; got:\n{out}"
+        );
+    }
+
+    #[test]
     fn show_cid_array_coalesces_consecutive_unadjusted_glyphs() {
         // Glyphs with no adjustment between them collapse into one hex run.
         let mut gc = GraphicsContext::new();
