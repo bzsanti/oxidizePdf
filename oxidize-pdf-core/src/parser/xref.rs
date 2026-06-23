@@ -14,14 +14,13 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 // (Issue #93: Avoid UTF-8 char boundary panics in XRef recovery)
 // ============================================================================
 
-/// Find byte pattern in buffer (replaces String::find for binary-safe searching).
+/// Find a byte pattern in a buffer (replaces `str::find` for binary-safe searching).
+///
+/// Operates on raw bytes, so unlike `str::find` it never panics on UTF-8
+/// boundaries — PDFs are binary and may contain arbitrary byte sequences.
 ///
 /// `pub(crate)` so sibling parser modules (e.g. `reader.rs`) reuse this single
 /// implementation instead of duplicating it (Issue #352).
-///
-/// # Safety
-/// This function operates on raw bytes and never panics on UTF-8 boundaries.
-/// PDFs are binary files and may contain arbitrary byte sequences.
 pub(crate) fn find_byte_pattern(buffer: &[u8], pattern: &[u8]) -> Option<usize> {
     buffer
         .windows(pattern.len())
