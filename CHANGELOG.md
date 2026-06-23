@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [2.16.6] - 2026-06-23
+
+### Fixed
+
+- The manual stream-reconstruction recovery path (used when a PDF's cross-reference
+  table is damaged or absent) rebuilt each stream dictionary recognizing only the
+  single hardcoded `/Filter /FlateDecode` form. Every other entry was dropped —
+  non-Flate filters (`/DCTDecode`, `/LZWDecode`), filter arrays, `/DecodeParms`,
+  `/Subtype`, `/ColorSpace`, etc. When this path fired on a non-Flate stream, the
+  missing `/Filter` made downstream decoding treat compressed bytes as raw, a silent
+  wrong result. The dictionary is now re-parsed in full with the real object parser,
+  preserving every entry generically. The bounded-memory guarantees from #339 are
+  unchanged: stream bodies are still read bounded by `/Length` (or a bounded scan to
+  `endstream`), never the whole file. (#351)
+
+### Changed
+
+- Deduplicated two byte-identical binary-substring search helpers
+  (`reader::find_bytes` and `xref::find_byte_pattern`) into a single `pub(crate)`
+  implementation, removing the risk of silent divergence. No behavior change. (#352)
+
 ## [2.16.5] - 2026-06-22
 
 ### Fixed
