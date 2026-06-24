@@ -1832,8 +1832,30 @@ impl<W: Write> PdfWriter<W> {
         use crate::text::fonts::truetype::TrueTypeFont;
 
         // Parse once for the descriptor/metrics and once for glyph advances.
+        // Both use the ORIGINAL font: descriptor metrics are font-global and /W
+        // advances are looked up by original GID (invariant under renumbering).
         let font = crate::fonts::Font::from_bytes(font_name, data.to_vec())?;
         let tt_font = TrueTypeFont::parse(data.to_vec())?;
+
+        // #358 Fase 2: subset the embedded font to exactly the glyphs drawn via
+        // `show_cid_array`. The used GIDs are the values of `cid_to_gid` (the
+        // consumer registers exactly the run's glyphs). The content stream keeps
+        // using original GIDs as CIDs; `CIDToGIDMap` (below) bridges them to the
+        // subset's compacted GID space via `gid_remap`. On any failure, fall back
+        // to embedding the full font with an unchanged CIDToGIDMap.
+        let used_gids: std::collections::HashSet<u16> =
+            mapping.cid_to_gid.values().copied().collect();
+        let (embed_bytes, gid_remap): (Vec<u8>, Option<std::collections::HashMap<u16, u16>>) =
+            match crate::text::fonts::truetype_subsetter::subset_font_by_gids(
+                data.to_vec(),
+                &used_gids,
+            ) {
+                Ok(subset) => (subset.font_data, Some(subset.old_to_new)),
+                Err(e) => {
+                    tracing::debug!("CID-keyed subsetting failed ({e:?}); embedding full font");
+                    (data.to_vec(), None)
+                }
+            };
 
         let font_id = self.allocate_object_id();
         let descendant_font_id = self.allocate_object_id();
@@ -1841,29 +1863,29 @@ impl<W: Write> PdfWriter<W> {
         let font_file_id = self.allocate_object_id();
         let to_unicode_id = self.allocate_object_id();
 
-        // FontFile2 stream — full font, /Length1 = uncompressed byte count
+        // FontFile2 stream — subset font, /Length1 = uncompressed byte count
         // (ISO 32000-1 §9.9), FlateDecode-compressed when configured.
         let mut font_file_dict = Dictionary::new();
-        font_file_dict.set("Length1", Object::Integer(data.len() as i64));
+        font_file_dict.set("Length1", Object::Integer(embed_bytes.len() as i64));
         #[cfg(feature = "compression")]
         {
             let font_stream_obj = if self.config.compress_streams {
                 let mut stream =
-                    crate::objects::Stream::with_dictionary(font_file_dict, data.to_vec());
+                    crate::objects::Stream::with_dictionary(font_file_dict, embed_bytes);
                 stream.compress_flate()?;
                 Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
             } else {
                 let mut d = font_file_dict;
-                d.set("Length", Object::Integer(data.len() as i64));
-                Object::Stream(d, data.to_vec())
+                d.set("Length", Object::Integer(embed_bytes.len() as i64));
+                Object::Stream(d, embed_bytes)
             };
             self.write_object(font_file_id, font_stream_obj)?;
         }
         #[cfg(not(feature = "compression"))]
         {
             let mut d = font_file_dict;
-            d.set("Length", Object::Integer(data.len() as i64));
-            self.write_object(font_file_id, Object::Stream(d, data.to_vec()))?;
+            d.set("Length", Object::Integer(embed_bytes.len() as i64));
+            self.write_object(font_file_id, Object::Stream(d, embed_bytes))?;
         }
 
         // FontDescriptor — reuse the parsed font's metrics.
@@ -1916,9 +1938,22 @@ impl<W: Write> PdfWriter<W> {
         }
         cid_font.set("W", Object::Array(w_array));
 
-        // CIDToGIDMap: an empty generator output means CID == GID for all
-        // entries → the `/Identity` name; otherwise a binary stream.
-        let cid_to_gid_map = mapping.generate_cid_to_gid_map();
+        // CIDToGIDMap: when the font was subsetted, remap each CID's GID to its
+        // compacted id in the subset (so a CID = original GID resolves to the
+        // right glyph in the smaller font). An empty generator output means
+        // CID == GID for all entries → the `/Identity` name; otherwise a stream.
+        let cid_to_gid_map = match &gid_remap {
+            Some(remap) => {
+                let mut remapped = mapping.clone();
+                remapped.cid_to_gid = mapping
+                    .cid_to_gid
+                    .iter()
+                    .map(|(&cid, &old_gid)| (cid, remap.get(&old_gid).copied().unwrap_or(0)))
+                    .collect();
+                remapped.generate_cid_to_gid_map()
+            }
+            None => mapping.generate_cid_to_gid_map(),
+        };
         if cid_to_gid_map.is_empty() {
             cid_font.set("CIDToGIDMap", Object::Name("Identity".to_string()));
         } else {

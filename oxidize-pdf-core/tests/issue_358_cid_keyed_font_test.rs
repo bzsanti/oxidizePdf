@@ -2,10 +2,11 @@
 //!
 //! `Document::add_cid_keyed_font` registers a font drawn by glyph id (the
 //! positioned-glyph-run path used by a shaper). The writer must emit a
-//! `Type0`/`CIDFontType2` font with `Encoding /Identity-H`, an Identity
-//! `CIDToGIDMap` (since CID == GID here), a `/W` array built from the real
-//! `hmtx` advances of the used glyphs, and a `ToUnicode` CMap so the text stays
-//! extractable. Verified against real font output (re-parse + dictionary
+//! `Type0`/`CIDFontType2` font with `Encoding /Identity-H`, a subsetted
+//! `FontFile2` (#358 Fase 2) with a `CIDToGIDMap` stream remapping each CID
+//! (= original GID) to its compacted subset GID, a `/W` array built from the
+//! real `hmtx` advances of the used glyphs, and a `ToUnicode` CMap so the text
+//! stays extractable. Verified against real font output (re-parse + dictionary
 //! content), not a smoke check.
 
 use oxidize_pdf::fonts::CidMapping;
@@ -28,7 +29,7 @@ fn contains(haystack: &[u8], needle: &str) -> bool {
 }
 
 #[test]
-fn cid_keyed_font_emits_identity_cidfonttype2_with_tounicode_and_widths() {
+fn cid_keyed_font_emits_subsetted_cidfonttype2_with_tounicode_and_widths() {
     let Some(data) = load_fixture() else { return };
 
     // Resolve real glyph ids for 'A' and 'B' so the mapping is CID == GID
@@ -53,6 +54,7 @@ fn cid_keyed_font_emits_identity_cidfonttype2_with_tounicode_and_widths() {
     mapping.cid_to_unicode.insert(gid_b, 'B' as u32);
     mapping.max_cid = gid_a.max(gid_b);
 
+    let original_len = data.len();
     let mut doc = Document::new();
     doc.set_compress(false); // deterministic, inspectable bytes
     doc.add_cid_keyed_font("ShapedRoboto", data, mapping)
@@ -71,14 +73,21 @@ fn cid_keyed_font_emits_identity_cidfonttype2_with_tounicode_and_widths() {
         "Identity-H encoding expected"
     );
 
-    // 3) CIDFontType2 descendant with an Identity CIDToGIDMap (CID == GID).
+    // 3) CIDFontType2 descendant. The font is subsetted to the used glyphs
+    //    (#358 Fase 2): the whole font is NOT embedded, and CIDToGIDMap is a
+    //    remap stream from each CID (= original GID) to its compacted subset GID
+    //    — no longer /Identity.
     assert!(
         contains(&pdf, "/Subtype /CIDFontType2"),
         "CIDFontType2 descendant font expected"
     );
     assert!(
-        contains(&pdf, "/CIDToGIDMap /Identity"),
-        "CID == GID mapping must serialize as /CIDToGIDMap /Identity"
+        !contains(&pdf, "/CIDToGIDMap /Identity"),
+        "subsetting remaps GIDs, so CIDToGIDMap must be a stream, not /Identity"
+    );
+    assert!(
+        !contains(&pdf, &format!("/Length1 {original_len}")),
+        "the full font ({original_len} bytes) must not be embedded; it must be subsetted"
     );
 
     // 4) ToUnicode CMap maps each CID back to its Unicode code point, so the
