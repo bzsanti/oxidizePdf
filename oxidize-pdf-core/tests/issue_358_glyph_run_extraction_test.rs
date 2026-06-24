@@ -50,14 +50,9 @@ fn glyph_run_with_ligature_extracts_component_characters() {
     page.graphics().set_custom_font("ShapedRun", 24.0);
     page.graphics().show_cid_array(
         &[
-            CidShowElement {
-                cid: lig_gid,
-                adjust: 0.0,
-            },
-            CidShowElement {
-                cid: x_gid,
-                adjust: -20.0, // a small kern; must not split the word
-            },
+            CidShowElement::new(lig_gid, 0.0),
+            // a small kern; must not split the word
+            CidShowElement::new(x_gid, -20.0),
         ],
         100.0,
         500.0,

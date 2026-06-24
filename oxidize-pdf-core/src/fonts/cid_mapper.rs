@@ -8,7 +8,12 @@ use crate::text::fonts::truetype::{CmapSubtable, TrueTypeFont};
 use std::collections::HashMap;
 
 /// Represents a mapping between Unicode, CID, and GID
+///
+/// `#[non_exhaustive]`: external consumers construct via [`CidMapping::new`]
+/// (or [`Default`]) and populate the public fields, so future iterations can
+/// add fields (e.g. subset-GID maps in #358 phase 2) without a breaking change.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct CidMapping {
     /// Unicode to CID mapping
     pub unicode_to_cid: HashMap<u32, u16>,
