@@ -321,8 +321,19 @@ impl Page {
             // Phase 3.2: Resolve embedded font streams
             // For each font in resources, resolve FontDescriptor and font stream references
             // and embed the stream data directly so writer doesn't need to resolve references
+            let font_resource = match unified_resources.get("Font") {
+                // Resolve a reference to a Font dictionary
+                Some(crate::pdf_objects::Object::Reference(id)) => {
+                    match document.get_object(id.number(), id.generation()) {
+                        Ok(resolved_obj) => Some(&Self::convert_parser_object_to_unified(&resolved_obj)),
+                        _ => None,
+                    }
+                }
+                other => other
+            };
+
             if let Some(crate::pdf_objects::Object::Dictionary(fonts)) =
-                unified_resources.get("Font")
+                font_resource
             {
                 let fonts_clone = fonts.clone();
                 let mut resolved_fonts = crate::pdf_objects::Dictionary::new();
