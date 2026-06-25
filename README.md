@@ -34,7 +34,7 @@ Most PDF libraries give you a wall of text. oxidize-pdf gives you **structured, 
 
 ```toml
 [dependencies]
-oxidize-pdf = "2.3"
+oxidize-pdf = "3.0"
 ```
 
 ### RAG Pipeline -- One Liner

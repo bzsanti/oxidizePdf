@@ -8,6 +8,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [3.0.0] - 2026-06-25
+
+This is a major release. It introduces a CID-keyed positioned-glyph-run write API
+(issue #358) and contains two breaking changes to the public API surface. Code that
+only uses the high-level document/page/text APIs is unaffected; the breaking changes
+touch the low-level font modules.
+
+### Added
+
+- CID-keyed positioned glyph runs (issue #358). A new write path embeds Identity-H
+  Type0/CIDFontType2 fonts where the CID equals the glyph id, emits the text as a
+  `TJ` array, and produces a valid `ToUnicode` CMap so the result stays extractable.
+  - `Document::add_cid_keyed_font` registers a CID-keyed font on a path kept separate
+    from the Unicode-keyed embedding path (the two are never mixed by construction).
+  - `GraphicsContext::show_cid_array(&[CidShowElement])` writes a positioned run.
+    `CidShowElement` carries `cid`, `adjust` (advance kern) and `x_offset` (per-glyph
+    horizontal shift, emitted as paired `TJ` adjustments without consuming advance).
+    Constructed via `CidShowElement::new(cid, adjust)` and `with_x_offset(..)`; the
+    type is `#[non_exhaustive]`.
+  - The embedded font is **subset by used GIDs**, reusing the active char-driven
+    subsetter pipeline. `CIDToGIDMap` is remapped from `/Identity` to a compact
+    stream. Measured on a 2-glyph document: 268,432 → 6,465 bytes (-97.6%). Falls
+    back to full embedding if subsetting fails.
+  - `CidMapping` gained `cid_to_unicode_str: HashMap<u16, String>` so a single CID
+    (e.g. an `fi` ligature glyph) maps back to several characters in the `ToUnicode`
+    CMap.
+- `Op::ShowTextArray` content operator for `TJ`.
+
+### BREAKING CHANGES
+
+- Removed the non-functional glyph-driven subsetter
+  `oxidize_pdf::text::fonts::truetype_subsetting` and its public re-exports
+  `TrueTypeSubsetter`, `SubsettingOptions`, and `SubsetStatistics`. These types had
+  stubbed `loca`/`cmap` handling and no production call-sites. Font subsetting is
+  handled by the char-driven subsetter (`truetype_subsetter`), which is unchanged.
+  Migration: callers (none expected) should drop these imports; subsetting happens
+  automatically during font embedding.
+- `oxidize_pdf::fonts::CidMapping` is now `#[non_exhaustive]` and gained a new public
+  field (`cid_to_unicode_str`). External code can no longer construct it with a struct
+  literal or match it exhaustively. Migration: build it via `CidMapping::new()` (or
+  `Default::default()`) and populate the public fields.
+
 ## [2.16.6] - 2026-06-23
 
 ### Fixed
