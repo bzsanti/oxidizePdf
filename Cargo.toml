@@ -10,7 +10,7 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-version = "2.16.6"
+version = "3.0.0"
 edition = "2021"
 rust-version = "1.88"  # MSRV - dependency floor: subprocess (let-chains), image 0.25.10, time 0.3.47 all require 1.88
 authors = ["Santiago Fernández Muñoz"]

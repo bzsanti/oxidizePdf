@@ -61,6 +61,60 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::sync::Arc;
 
+/// One element of a positioned glyph run drawn with
+/// [`GraphicsContext::show_cid_array`] (issue #358).
+///
+/// `cid` is a 2-byte code in the active CID-keyed font (a glyph id under
+/// `CIDToGIDMap = Identity`). `adjust` is an optional position adjustment
+/// applied AFTER this glyph, in thousandths of a unit of text space — the `TJ`
+/// convention, where a positive value moves the next glyph left (back) and a
+/// negative value moves it right (forward). Use `0.0` for no adjustment.
+///
+/// The core treats `cid` as an opaque code and does not perform shaping; a
+/// consumer (e.g. `oxidize-compose`) produces these from a shaped run.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
+pub struct CidShowElement {
+    /// 2-byte code (glyph id) in the active CID-keyed font.
+    pub cid: u16,
+    /// Position adjustment applied to the pen **advance** after this glyph
+    /// (thousandths of text-space units; `0.0` = none). This is the `TJ` kern: a
+    /// positive value moves the next glyph left, a negative value moves it right.
+    pub adjust: f32,
+    /// Per-glyph horizontal **offset** (issue #358 #3): displaces this glyph from
+    /// its pen position by `x_offset` thousandths of a text-space unit (positive =
+    /// right) **without** changing the advance to the next glyph. Used for GPOS
+    /// mark attachment / diacritics, where a glyph must be nudged independently of
+    /// its advance. `0.0` = drawn at the pen position. Distinct from `adjust`,
+    /// which consumes advance.
+    pub x_offset: f32,
+}
+
+impl CidShowElement {
+    /// Construct a positioned glyph-run element with no per-glyph offset.
+    ///
+    /// This type is `#[non_exhaustive]`, so external consumers (e.g.
+    /// `oxidize-compose`) must build it through this constructor rather than a
+    /// struct literal — letting future iterations add fields without a breaking
+    /// change. `cid` is a 2-byte code (glyph id under `CIDToGIDMap = Identity`);
+    /// `adjust` is the post-glyph advance adjustment in thousandths of a
+    /// text-space unit (`0.0` = none). `x_offset` defaults to `0.0`; set it with
+    /// [`with_x_offset`](Self::with_x_offset).
+    pub fn new(cid: u16, adjust: f32) -> Self {
+        Self {
+            cid,
+            adjust,
+            x_offset: 0.0,
+        }
+    }
+
+    /// Set the per-glyph horizontal offset (see [`x_offset`](Self::x_offset)).
+    pub fn with_x_offset(mut self, x_offset: f32) -> Self {
+        self.x_offset = x_offset;
+        self
+    }
+}
+
 /// Saved graphics state for save/restore operations.
 /// Using `Arc<str>` for `font_name` makes `Clone` O(1) — only increments the reference count.
 #[derive(Clone)]
@@ -1404,6 +1458,61 @@ impl GraphicsContext {
         });
     }
 
+    /// Draw a positioned glyph run over the active CID-keyed font (issue #358).
+    ///
+    /// Emits a `TJ` array: consecutive glyphs with no adjustment are coalesced
+    /// into one hex string, and each element's `adjust` (when non-zero) becomes
+    /// a numeric position adjustment after its glyph. The active font must have
+    /// been selected with [`set_custom_font`](Self::set_custom_font) and
+    /// registered via [`Document::add_cid_keyed_font`](crate::Document::add_cid_keyed_font);
+    /// the `cid` values are codes in that font (glyph ids under Identity).
+    ///
+    /// This is the neutral core primitive; shaping and the ergonomic glyph-run
+    /// API live in the consumer.
+    pub fn show_cid_array(&mut self, elements: &[CidShowElement], x: f64, y: f64) -> &mut Self {
+        self.operations.push(ops::Op::BeginText);
+        self.apply_fill_color();
+        self.push_active_font();
+        self.operations.push(ops::Op::SetTextPosition { x, y });
+
+        let mut tj: Vec<ops::TextArrayElement> = Vec::new();
+        let mut run = String::new();
+        for el in elements {
+            if el.x_offset != 0.0 {
+                // #358 #3: draw this glyph displaced by `x_offset` without
+                // consuming advance — `-x_offset` before it, `+x_offset` after —
+                // folding the glyph's own after-kern into the trailing number.
+                if !run.is_empty() {
+                    tj.push(ops::TextArrayElement::Glyphs(
+                        std::mem::take(&mut run).into_bytes(),
+                    ));
+                }
+                tj.push(ops::TextArrayElement::Adjust(-el.x_offset));
+                tj.push(ops::TextArrayElement::Glyphs(
+                    format!("{:04X}", el.cid).into_bytes(),
+                ));
+                tj.push(ops::TextArrayElement::Adjust(el.x_offset + el.adjust));
+                continue;
+            }
+            write!(&mut run, "{:04X}", el.cid).expect("write to String never fails");
+            if el.adjust != 0.0 {
+                // Flush the glyphs accumulated so far (including this one), then
+                // the adjustment that applies after it.
+                tj.push(ops::TextArrayElement::Glyphs(
+                    std::mem::take(&mut run).into_bytes(),
+                ));
+                tj.push(ops::TextArrayElement::Adjust(el.adjust));
+            }
+        }
+        if !run.is_empty() {
+            tj.push(ops::TextArrayElement::Glyphs(run.into_bytes()));
+        }
+
+        self.operations.push(ops::Op::ShowTextArray(tj));
+        self.operations.push(ops::Op::EndText);
+        self
+    }
+
     /// Legacy: Draw text with hex encoding (kept for compatibility)
     #[deprecated(note = "Use draw_text() which automatically detects encoding")]
     pub fn draw_text_hex(&mut self, text: &str, x: f64, y: f64) -> Result<&mut Self> {
@@ -1547,6 +1656,112 @@ impl GraphicsContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cid_show_element_new_sets_fields() {
+        // Issue #358: `CidShowElement` is `#[non_exhaustive]`, so external
+        // consumers (oxidize-compose) build elements through the constructor
+        // rather than a struct literal. `new` must set both fields verbatim.
+        let el = CidShowElement::new(7, -25.0);
+        assert_eq!(el.cid, 7);
+        assert_eq!(el.adjust, -25.0);
+    }
+
+    #[test]
+    fn cid_show_element_x_offset_defaults_zero_and_builder_sets_it() {
+        // #358 #3: `x_offset` defaults to 0 via `new`; `with_x_offset` sets it
+        // without disturbing the other fields.
+        let e = CidShowElement::new(7, -25.0);
+        assert_eq!(e.x_offset, 0.0);
+        let e2 = CidShowElement::new(7, -25.0).with_x_offset(40.0);
+        assert_eq!(e2.x_offset, 40.0);
+        assert_eq!(e2.cid, 7);
+        assert_eq!(e2.adjust, -25.0);
+    }
+
+    #[test]
+    fn show_cid_array_x_offset_displaces_without_consuming_advance() {
+        // #358 #3: a glyph with x_offset is drawn shifted right by x_offset and
+        // the advance is restored after it: `[ -x <gid> +x ] TJ`.
+        let mut gc = GraphicsContext::new();
+        gc.set_custom_font("ShapedRoboto", 12.0);
+        gc.show_cid_array(
+            &[CidShowElement::new(5, 0.0).with_x_offset(40.0)],
+            100.0,
+            700.0,
+        );
+        let out = String::from_utf8(gc.generate_operations().unwrap()).unwrap();
+        assert!(
+            out.contains("[ -40.00 <0005> 40.00 ] TJ"),
+            "x_offset must wrap the glyph with paired TJ adjustments; got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn show_cid_array_x_offset_combines_with_adjust() {
+        // The trailing number folds the advance restore (+x_offset) with the
+        // glyph's own after-kern `adjust`: 40 + (-30) = 10.
+        let mut gc = GraphicsContext::new();
+        gc.set_custom_font("ShapedRoboto", 12.0);
+        gc.show_cid_array(
+            &[CidShowElement::new(5, -30.0).with_x_offset(40.0)],
+            0.0,
+            0.0,
+        );
+        let out = String::from_utf8(gc.generate_operations().unwrap()).unwrap();
+        assert!(
+            out.contains("[ -40.00 <0005> 10.00 ] TJ"),
+            "x_offset + adjust must fold into the trailing TJ number; got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn show_cid_array_emits_tj_with_adjustment_between_glyph_runs() {
+        // Issue #358: a glyph followed by a kern, then another glyph, must emit
+        // `[ <gid0> adj <gid1> ] TJ` over the active CID-keyed font.
+        let mut gc = GraphicsContext::new();
+        gc.set_custom_font("ShapedRoboto", 12.0);
+        gc.show_cid_array(
+            &[CidShowElement::new(5, -30.0), CidShowElement::new(6, 0.0)],
+            100.0,
+            700.0,
+        );
+        let out = String::from_utf8(gc.generate_operations().unwrap()).unwrap();
+        assert!(
+            out.contains("[ <0005> -30.00 <0006> ] TJ"),
+            "expected TJ array with adjustment; got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn show_cid_array_with_empty_run_does_not_panic_and_emits_empty_tj() {
+        // An empty run must still produce a well-formed (empty) TJ array, never panic.
+        let mut gc = GraphicsContext::new();
+        gc.set_custom_font("ShapedRoboto", 12.0);
+        gc.show_cid_array(&[], 0.0, 0.0);
+        let out = String::from_utf8(gc.generate_operations().unwrap()).unwrap();
+        assert!(
+            out.contains("[ ] TJ"),
+            "expected empty TJ array; got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn show_cid_array_coalesces_consecutive_unadjusted_glyphs() {
+        // Glyphs with no adjustment between them collapse into one hex run.
+        let mut gc = GraphicsContext::new();
+        gc.set_custom_font("ShapedRoboto", 12.0);
+        gc.show_cid_array(
+            &[CidShowElement::new(5, 0.0), CidShowElement::new(6, 0.0)],
+            0.0,
+            0.0,
+        );
+        let out = String::from_utf8(gc.generate_operations().unwrap()).unwrap();
+        assert!(
+            out.contains("[ <00050006> ] TJ"),
+            "expected coalesced glyph run; got:\n{out}"
+        );
+    }
 
     #[test]
     fn test_graphics_context_new() {

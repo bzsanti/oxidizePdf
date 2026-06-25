@@ -67,6 +67,13 @@ pub struct Document {
     pub(crate) semantic_entities: Vec<SemanticEntity>,
     /// Document structure tree for Tagged PDF (accessibility)
     pub(crate) struct_tree: Option<StructTree>,
+    /// CID-keyed fonts registered for positioned-glyph-run drawing (issue #358).
+    /// Each entry is the raw font bytes plus an explicit `CidMapping` (CID=GID,
+    /// CID→Unicode) supplied by the caller. Kept SEPARATE from `custom_fonts`
+    /// (the Unicode-keyed path) so a font object is never shared between the two
+    /// drawing modes — the CID semantics are incompatible. Embedded whole (no
+    /// subsetting in this iteration).
+    pub(crate) cid_keyed_fonts: HashMap<String, (Vec<u8>, crate::fonts::CidMapping)>,
 }
 
 /// Metadata for a PDF document.
@@ -135,6 +142,7 @@ impl Document {
             viewer_preferences: None,
             semantic_entities: Vec::new(),
             struct_tree: None,
+            cid_keyed_fonts: HashMap::new(),
         }
     }
 
@@ -539,6 +547,51 @@ impl Document {
         }
 
         Ok(())
+    }
+
+    /// Register a CID-keyed font for positioned-glyph-run drawing (issue #358).
+    ///
+    /// Unlike [`add_font_from_bytes`](Self::add_font_from_bytes) (which is
+    /// Unicode-keyed: content-stream codes are interpreted as Unicode code
+    /// points), a CID-keyed font interprets the 2-byte codes drawn via
+    /// [`show_cid_array`](crate::text::TextContext::show_cid_array) as the CIDs
+    /// in `mapping`. With `CIDToGIDMap = Identity` (CID = GID) this lets a
+    /// caller draw a pre-shaped glyph run (e.g. from `rustybuzz`) directly by
+    /// glyph id, expressing ligatures and per-glyph positioning the
+    /// Unicode-keyed path cannot.
+    ///
+    /// `mapping` must carry `cid_to_gid` (which GID each CID renders) and
+    /// `cid_to_unicode` (so the text stays extractable via the emitted
+    /// `ToUnicode` CMap). The font is embedded whole — no subsetting in this
+    /// iteration. Registered separately from custom fonts so the two drawing
+    /// modes never share a font object.
+    ///
+    /// Only TrueType/SFNT fonts (`CIDFontType2`) are supported in this
+    /// iteration; an OpenType/CFF font returns an error.
+    pub fn add_cid_keyed_font(
+        &mut self,
+        name: impl Into<String>,
+        data: Vec<u8>,
+        mapping: crate::fonts::CidMapping,
+    ) -> Result<()> {
+        let name = name.into();
+        // Validate the bytes parse as a supported font up front, so registration
+        // fails fast rather than at write time. Reuses the standard loader.
+        let font = CustomFont::from_bytes(&name, data.clone())?;
+        if font.format != crate::fonts::FontFormat::TrueType {
+            return Err(crate::error::PdfError::InvalidStructure(format!(
+                "add_cid_keyed_font: only TrueType (CIDFontType2) fonts are supported \
+                 in this iteration; '{name}' is {:?}",
+                font.format
+            )));
+        }
+        self.cid_keyed_fonts.insert(name, (data, mapping));
+        Ok(())
+    }
+
+    /// CID-keyed fonts registered via [`add_cid_keyed_font`](Self::add_cid_keyed_font).
+    pub(crate) fn cid_keyed_fonts(&self) -> &HashMap<String, (Vec<u8>, crate::fonts::CidMapping)> {
+        &self.cid_keyed_fonts
     }
 
     /// Get a custom font by name

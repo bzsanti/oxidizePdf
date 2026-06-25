@@ -1507,6 +1507,19 @@ impl<W: Write> PdfWriter<W> {
             }
         }
 
+        // CID-keyed fonts (issue #358): registered explicitly for positioned
+        // glyph-run drawing. Emitted unconditionally (registration is the intent
+        // to use) and embedded whole; the CID semantics come from the caller's
+        // `CidMapping`. Kept separate from the Unicode-keyed fonts above.
+        // Deterministic order so output is reproducible (BTreeMap-style sort).
+        let mut cid_fonts: Vec<(&String, &(Vec<u8>, crate::fonts::CidMapping))> =
+            document.cid_keyed_fonts().iter().collect();
+        cid_fonts.sort_by(|a, b| a.0.cmp(b.0));
+        for (font_name, (data, mapping)) in cid_fonts {
+            let font_id = self.write_cid_keyed_font(font_name, data, mapping)?;
+            font_refs.insert(font_name.clone(), font_id);
+        }
+
         Ok(font_refs)
     }
 
@@ -1796,6 +1809,209 @@ impl<W: Write> PdfWriter<W> {
         );
         type0_font.set("ToUnicode", Object::Reference(to_unicode_id));
 
+        self.write_object(font_id, Object::Dictionary(type0_font))?;
+
+        Ok(font_id)
+    }
+
+    /// Write a CID-keyed Type0 font (issue #358) from explicit font bytes and a
+    /// caller-supplied [`CidMapping`](crate::fonts::CidMapping).
+    ///
+    /// Unlike [`write_type0_font_from_font`](Self::write_type0_font_from_font),
+    /// which is Unicode-keyed (CID = Unicode code point, subset by characters),
+    /// this emits a `CIDFontType2` whose content-stream codes are the CIDs in
+    /// `mapping`. `CIDToGIDMap` / `ToUnicode` / `/W` all come from the mapping's
+    /// generators, so the run is drawn by glyph id and stays extractable. The
+    /// font is embedded whole (no subsetting in this iteration).
+    fn write_cid_keyed_font(
+        &mut self,
+        font_name: &str,
+        data: &[u8],
+        mapping: &crate::fonts::CidMapping,
+    ) -> Result<ObjectId> {
+        use crate::text::fonts::truetype::TrueTypeFont;
+
+        // Parse once for the descriptor/metrics and once for glyph advances.
+        // Both use the ORIGINAL font: descriptor metrics are font-global and /W
+        // advances are looked up by original GID (invariant under renumbering).
+        let font = crate::fonts::Font::from_bytes(font_name, data.to_vec())?;
+        let tt_font = TrueTypeFont::parse(data.to_vec())?;
+
+        // #358 Fase 2: subset the embedded font to exactly the glyphs drawn via
+        // `show_cid_array`. The used GIDs are the values of `cid_to_gid` (the
+        // consumer registers exactly the run's glyphs). The content stream keeps
+        // using original GIDs as CIDs; `CIDToGIDMap` (below) bridges them to the
+        // subset's compacted GID space via `gid_remap`. On any failure, fall back
+        // to embedding the full font with an unchanged CIDToGIDMap.
+        let used_gids: std::collections::HashSet<u16> =
+            mapping.cid_to_gid.values().copied().collect();
+        let (embed_bytes, gid_remap): (Vec<u8>, Option<std::collections::HashMap<u16, u16>>) =
+            match crate::text::fonts::truetype_subsetter::subset_font_by_gids(
+                data.to_vec(),
+                &used_gids,
+            ) {
+                Ok(subset) => (subset.font_data, Some(subset.old_to_new)),
+                Err(e) => {
+                    tracing::debug!("CID-keyed subsetting failed ({e:?}); embedding full font");
+                    (data.to_vec(), None)
+                }
+            };
+
+        let font_id = self.allocate_object_id();
+        let descendant_font_id = self.allocate_object_id();
+        let descriptor_id = self.allocate_object_id();
+        let font_file_id = self.allocate_object_id();
+        let to_unicode_id = self.allocate_object_id();
+
+        // FontFile2 stream — subset font, /Length1 = uncompressed byte count
+        // (ISO 32000-1 §9.9), FlateDecode-compressed when configured.
+        let mut font_file_dict = Dictionary::new();
+        font_file_dict.set("Length1", Object::Integer(embed_bytes.len() as i64));
+        #[cfg(feature = "compression")]
+        {
+            let font_stream_obj = if self.config.compress_streams {
+                let mut stream =
+                    crate::objects::Stream::with_dictionary(font_file_dict, embed_bytes);
+                stream.compress_flate()?;
+                Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
+            } else {
+                let mut d = font_file_dict;
+                d.set("Length", Object::Integer(embed_bytes.len() as i64));
+                Object::Stream(d, embed_bytes)
+            };
+            self.write_object(font_file_id, font_stream_obj)?;
+        }
+        #[cfg(not(feature = "compression"))]
+        {
+            let mut d = font_file_dict;
+            d.set("Length", Object::Integer(embed_bytes.len() as i64));
+            self.write_object(font_file_id, Object::Stream(d, embed_bytes))?;
+        }
+
+        // FontDescriptor — reuse the parsed font's metrics.
+        let mut descriptor = Dictionary::new();
+        descriptor.set("Type", Object::Name("FontDescriptor".to_string()));
+        descriptor.set("FontName", Object::Name(font_name.to_string()));
+        descriptor.set("Flags", Object::Integer(4)); // Symbolic
+        descriptor.set(
+            "FontBBox",
+            Object::Array(vec![
+                Object::Integer(font.descriptor.font_bbox[0] as i64),
+                Object::Integer(font.descriptor.font_bbox[1] as i64),
+                Object::Integer(font.descriptor.font_bbox[2] as i64),
+                Object::Integer(font.descriptor.font_bbox[3] as i64),
+            ]),
+        );
+        descriptor.set(
+            "ItalicAngle",
+            Object::Real(font.descriptor.italic_angle as f64),
+        );
+        descriptor.set("Ascent", Object::Real(font.descriptor.ascent as f64));
+        descriptor.set("Descent", Object::Real(font.descriptor.descent as f64));
+        descriptor.set("CapHeight", Object::Real(font.descriptor.cap_height as f64));
+        descriptor.set("StemV", Object::Real(font.descriptor.stem_v as f64));
+        descriptor.set("FontFile2", Object::Reference(font_file_id));
+        self.write_object(descriptor_id, Object::Dictionary(descriptor))?;
+
+        // CIDFont (descendant). CIDFontType2 — TrueType only (validated at
+        // registration time in `Document::add_cid_keyed_font`).
+        let mut cid_font = Dictionary::new();
+        cid_font.set("Type", Object::Name("Font".to_string()));
+        cid_font.set("Subtype", Object::Name("CIDFontType2".to_string()));
+        cid_font.set("BaseFont", Object::Name(font_name.to_string()));
+        let mut cid_system_info = Dictionary::new();
+        cid_system_info.set("Registry", Object::String("Adobe".to_string()));
+        cid_system_info.set("Ordering", Object::String("Identity".to_string()));
+        cid_system_info.set("Supplement", Object::Integer(0));
+        cid_font.set("CIDSystemInfo", Object::Dictionary(cid_system_info));
+        cid_font.set("FontDescriptor", Object::Reference(descriptor_id));
+        cid_font.set("DW", Object::Integer(self.calculate_default_width(&font)));
+
+        // /W widths array from the mapping's per-CID advances (units already
+        // normalised to 1000/em by the generator). Each entry is a singleton
+        // `cid [ width ]`.
+        let w_tuples = mapping.generate_width_array(&tt_font)?;
+        let mut w_array: Vec<Object> = Vec::new();
+        for (cid, _cid_last, width) in w_tuples {
+            w_array.push(Object::Integer(cid as i64));
+            w_array.push(Object::Array(vec![Object::Integer(width as i64)]));
+        }
+        cid_font.set("W", Object::Array(w_array));
+
+        // CIDToGIDMap: when the font was subsetted, remap each CID's GID to its
+        // compacted id in the subset (so a CID = original GID resolves to the
+        // right glyph in the smaller font). An empty generator output means
+        // CID == GID for all entries → the `/Identity` name; otherwise a stream.
+        let cid_to_gid_map = match &gid_remap {
+            Some(remap) => {
+                let mut remapped = mapping.clone();
+                remapped.cid_to_gid = mapping
+                    .cid_to_gid
+                    .iter()
+                    .map(|(&cid, &old_gid)| (cid, remap.get(&old_gid).copied().unwrap_or(0)))
+                    .collect();
+                remapped.generate_cid_to_gid_map()
+            }
+            None => mapping.generate_cid_to_gid_map(),
+        };
+        if cid_to_gid_map.is_empty() {
+            cid_font.set("CIDToGIDMap", Object::Name("Identity".to_string()));
+        } else {
+            let cid_to_gid_map_id = self.allocate_object_id();
+            let map_dict = Dictionary::new();
+            #[cfg(feature = "compression")]
+            let map_stream = if self.config.compress_streams {
+                let mut stream = crate::objects::Stream::with_dictionary(map_dict, cid_to_gid_map);
+                stream.compress_flate()?;
+                Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
+            } else {
+                let mut d = map_dict;
+                d.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
+                Object::Stream(d, cid_to_gid_map)
+            };
+            #[cfg(not(feature = "compression"))]
+            let map_stream = {
+                let mut d = map_dict;
+                d.set("Length", Object::Integer(cid_to_gid_map.len() as i64));
+                Object::Stream(d, cid_to_gid_map)
+            };
+            self.write_object(cid_to_gid_map_id, map_stream)?;
+            cid_font.set("CIDToGIDMap", Object::Reference(cid_to_gid_map_id));
+        }
+        self.write_object(descendant_font_id, Object::Dictionary(cid_font))?;
+
+        // ToUnicode CMap from the mapping (CID → Unicode), so extraction works.
+        let cmap_data = mapping.generate_tounicode_cmap();
+        let cmap_dict = Dictionary::new();
+        #[cfg(feature = "compression")]
+        let cmap_stream = if self.config.compress_streams {
+            let mut stream = crate::objects::Stream::with_dictionary(cmap_dict, cmap_data);
+            stream.compress_flate()?;
+            Object::Stream(stream.dictionary().clone(), stream.data().to_vec())
+        } else {
+            let mut d = cmap_dict;
+            d.set("Length", Object::Integer(cmap_data.len() as i64));
+            Object::Stream(d, cmap_data)
+        };
+        #[cfg(not(feature = "compression"))]
+        let cmap_stream = {
+            let mut d = cmap_dict;
+            d.set("Length", Object::Integer(cmap_data.len() as i64));
+            Object::Stream(d, cmap_data)
+        };
+        self.write_object(to_unicode_id, cmap_stream)?;
+
+        // Type0 wrapper.
+        let mut type0_font = Dictionary::new();
+        type0_font.set("Type", Object::Name("Font".to_string()));
+        type0_font.set("Subtype", Object::Name("Type0".to_string()));
+        type0_font.set("BaseFont", Object::Name(font_name.to_string()));
+        type0_font.set("Encoding", Object::Name("Identity-H".to_string()));
+        type0_font.set(
+            "DescendantFonts",
+            Object::Array(vec![Object::Reference(descendant_font_id)]),
+        );
+        type0_font.set("ToUnicode", Object::Reference(to_unicode_id));
         self.write_object(font_id, Object::Dictionary(type0_font))?;
 
         Ok(font_id)

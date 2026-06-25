@@ -539,16 +539,21 @@ impl TrueTypeSubsetter {
             }
         }
 
-        // Create glyph remapping: old_glyph_id -> new_glyph_id
-        let mut glyph_map: HashMap<u16, u16> = HashMap::new();
-        let mut sorted_glyphs: Vec<u16> = needed_glyphs.iter().copied().collect();
-        sorted_glyphs.sort(); // Ensure glyph 0 (.notdef) comes first
+        // Renumber the needed glyphs to a compact id space and rebuild the SFNT.
+        // Shared with the glyph-driven entry point `subset_font_by_gids` (#358).
+        let (subset_font_data, glyph_map) = match self.renumber_and_build(&needed_glyphs) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::debug!("  Subsetting failed: {:?}, using full font as fallback", e);
+                return Ok(SubsetResult {
+                    font_data: self.font_data.clone(),
+                    glyph_mapping: cmap.mappings.clone(),
+                    is_raw_cff: false,
+                });
+            }
+        };
 
-        for (new_id, &old_id) in sorted_glyphs.iter().enumerate() {
-            glyph_map.insert(old_id, new_id as u16);
-        }
-
-        // Create new cmap with remapped glyph IDs
+        // Map each used char to its NEW (compacted) glyph id for the caller.
         let mut new_cmap: HashMap<u32, u16> = HashMap::new();
         for ch in used_chars {
             let unicode = *ch as u32;
@@ -559,31 +564,35 @@ impl TrueTypeSubsetter {
             }
         }
 
-        // Build the actual subset font
-        match self.build_subset_font(&glyph_map) {
-            Ok(subset_font_data) => {
-                tracing::debug!(
-                    "  Successfully subsetted: {} -> {} bytes ({:.1}% reduction)",
-                    self.font_data.len(),
-                    subset_font_data.len(),
-                    (1.0 - subset_font_data.len() as f32 / self.font_data.len() as f32) * 100.0
-                );
+        tracing::debug!(
+            "  Successfully subsetted: {} -> {} bytes ({:.1}% reduction)",
+            self.font_data.len(),
+            subset_font_data.len(),
+            (1.0 - subset_font_data.len() as f32 / self.font_data.len() as f32) * 100.0
+        );
+        Ok(SubsetResult {
+            font_data: subset_font_data,
+            glyph_mapping: new_cmap,
+            is_raw_cff: false,
+        })
+    }
 
-                Ok(SubsetResult {
-                    font_data: subset_font_data,
-                    glyph_mapping: new_cmap,
-                    is_raw_cff: false,
-                })
-            }
-            Err(e) => {
-                tracing::debug!("  Subsetting failed: {:?}, using full font as fallback", e);
-                Ok(SubsetResult {
-                    font_data: self.font_data.clone(),
-                    glyph_mapping: cmap.mappings.clone(),
-                    is_raw_cff: false,
-                })
-            }
+    /// Renumber `needed_glyphs` to a compact `0..N` id space (sorted, so `.notdef`
+    /// → new id 0) and rebuild the SFNT. Returns the subset bytes and the
+    /// `old_gid -> new_gid` map. Shared core of the char-driven [`subset`](Self::subset)
+    /// and the glyph-driven [`subset_font_by_gids`].
+    fn renumber_and_build(
+        &self,
+        needed_glyphs: &HashSet<u16>,
+    ) -> ParseResult<(Vec<u8>, HashMap<u16, u16>)> {
+        let mut glyph_map: HashMap<u16, u16> = HashMap::new();
+        let mut sorted_glyphs: Vec<u16> = needed_glyphs.iter().copied().collect();
+        sorted_glyphs.sort();
+        for (new_id, &old_id) in sorted_glyphs.iter().enumerate() {
+            glyph_map.insert(old_id, new_id as u16);
         }
+        let subset_font_data = self.build_subset_font(&glyph_map)?;
+        Ok((subset_font_data, glyph_map))
     }
 
     /// Expand composite glyphs by adding all component GIDs to needed_glyphs.
@@ -855,6 +864,41 @@ impl TrueTypeSubsetter {
 pub fn subset_font(font_data: Vec<u8>, used_chars: &HashSet<char>) -> ParseResult<SubsetResult> {
     let subsetter = TrueTypeSubsetter::new(font_data)?;
     subsetter.subset(used_chars)
+}
+
+/// Result of glyph-driven subsetting ([`subset_font_by_gids`]).
+pub struct GidSubsetResult {
+    /// Subset TrueType font bytes (SFNT; embed via `/FontFile2`).
+    pub font_data: Vec<u8>,
+    /// Map from each original glyph id to its compacted id in the subset. The
+    /// CID-keyed embed remaps `CIDToGIDMap` through this, so the content stream
+    /// keeps using original GIDs as CIDs while the embedded font is compacted.
+    pub old_to_new: HashMap<u16, u16>,
+}
+
+/// Subset a TrueType font to exactly the given glyph ids — plus `.notdef` and any
+/// transitively-referenced composite components — compacting glyph ids to a `0..N`
+/// space. Unlike [`subset_font`] this is glyph-driven (no cmap lookup), for the
+/// CID-keyed glyph-run path (issue #358). TrueType (`glyf`) only; CFF returns an error.
+pub fn subset_font_by_gids(
+    font_data: Vec<u8>,
+    used_gids: &HashSet<u16>,
+) -> ParseResult<GidSubsetResult> {
+    let subsetter = TrueTypeSubsetter::new(font_data)?;
+    if subsetter.font.is_cff {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: "subset_font_by_gids supports TrueType (glyf) fonts only".to_string(),
+        });
+    }
+    let mut needed_glyphs = used_gids.clone();
+    needed_glyphs.insert(0); // Always include .notdef
+    subsetter.expand_composite_glyphs(&mut needed_glyphs);
+    let (font_data, old_to_new) = subsetter.renumber_and_build(&needed_glyphs)?;
+    Ok(GidSubsetResult {
+        font_data,
+        old_to_new,
+    })
 }
 
 #[cfg(test)]
