@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [3.0.1] - 2026-06-26
+
+### Fixed
+
+- Pages whose `/Resources` reference the `/Font` dictionary indirectly
+  (`/Font 1 0 R`) rather than inline now keep their fonts when rebuilt via
+  `Page::from_parsed_with_content` (e.g. when merging PDFs). Previously the
+  font-resolution step matched only an inline dictionary, so the indirect
+  reference was carried over unresolved and the embedded fonts were lost,
+  rendering text with the wrong font or invisibly. Reported and fixed by
+  @Hatell (#362).
+
 ## [3.0.0] - 2026-06-25
 
 This is a major release. It introduces a CID-keyed positioned-glyph-run write API
