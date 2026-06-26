@@ -16,6 +16,21 @@
 use super::color::{finite_or_zero, write_fill_color_bytes, write_stroke_color_bytes, Color};
 use std::io::Write;
 
+/// One element of a `TJ` text array (`Op::ShowTextArray`).
+///
+/// A `TJ` array interleaves shown glyph strings with numeric position
+/// adjustments (ISO 32000-1 §9.4.3). `Glyphs` holds uppercase hex digits
+/// (2-byte codes for a Type0/Identity font); `Adjust` is a position
+/// adjustment in thousandths of a unit of text space (negative moves the
+/// next glyph forward — the convention used for kerning).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum TextArrayElement {
+    /// `<HEX>` — uppercase hex digits, emitted inside angle brackets.
+    Glyphs(Vec<u8>),
+    /// A numeric position adjustment (thousandths of text-space units).
+    Adjust(f32),
+}
+
 /// PDF content-stream operators as typed values.
 ///
 /// `Op::Raw` is an escape hatch for operators that have not been modelled
@@ -122,6 +137,10 @@ pub(crate) enum Op {
     ShowText(Vec<u8>),
     /// `<HEX> Tj` — the bytes are uppercase hex digits.
     ShowTextHex(Vec<u8>),
+    /// `[ <HEX> adj <HEX> ... ] TJ` — show glyph strings with per-element
+    /// position adjustments (ISO 32000-1 §9.4.3). Used to draw a positioned
+    /// glyph run (kerning / shaped output) over a Type0/Identity font.
+    ShowTextArray(Vec<TextArrayElement>),
     /// `value Tw`
     SetWordSpacing(f64),
     /// `value Tc`
@@ -312,6 +331,23 @@ pub(crate) fn serialize_ops(out: &mut Vec<u8>, ops: &[Op]) {
                 out.extend_from_slice(bytes);
                 out.extend_from_slice(b"> Tj\n");
             }
+            Op::ShowTextArray(elements) => {
+                out.extend_from_slice(b"[");
+                for element in elements {
+                    match element {
+                        TextArrayElement::Glyphs(bytes) => {
+                            out.extend_from_slice(b" <");
+                            out.extend_from_slice(bytes);
+                            out.push(b'>');
+                        }
+                        TextArrayElement::Adjust(value) => {
+                            let v = finite_or_zero(*value as f64);
+                            write!(out, " {v:.2}").expect("writing to Vec<u8> never fails");
+                        }
+                    }
+                }
+                out.extend_from_slice(b" ] TJ\n");
+            }
             Op::SetWordSpacing(value) => {
                 let v = finite_or_zero(*value);
                 writeln!(out, "{v:.2} Tw").expect("writing to Vec<u8> never fails");
@@ -445,6 +481,34 @@ mod tests {
     fn show_text_hex_wraps_with_angle_brackets_and_tj() {
         let ops = vec![Op::ShowTextHex(b"4E2D6587".to_vec())];
         assert_eq!(ops_to_string(&ops), "<4E2D6587> Tj\n");
+    }
+
+    #[test]
+    fn show_text_array_interleaves_glyphs_and_adjustments_as_tj() {
+        let ops = vec![Op::ShowTextArray(vec![
+            TextArrayElement::Glyphs(b"00410042".to_vec()),
+            TextArrayElement::Adjust(-50.0),
+            TextArrayElement::Glyphs(b"0043".to_vec()),
+        ])];
+        assert_eq!(ops_to_string(&ops), "[ <00410042> -50.00 <0043> ] TJ\n");
+    }
+
+    #[test]
+    fn show_text_array_single_glyph_run_has_no_adjustment() {
+        let ops = vec![Op::ShowTextArray(vec![TextArrayElement::Glyphs(
+            b"0041".to_vec(),
+        )])];
+        assert_eq!(ops_to_string(&ops), "[ <0041> ] TJ\n");
+    }
+
+    #[test]
+    fn show_text_array_sanitises_non_finite_adjustment_to_zero() {
+        let ops = vec![Op::ShowTextArray(vec![
+            TextArrayElement::Glyphs(b"0041".to_vec()),
+            TextArrayElement::Adjust(f32::NAN),
+            TextArrayElement::Glyphs(b"0042".to_vec()),
+        ])];
+        assert_eq!(ops_to_string(&ops), "[ <0041> 0.00 <0042> ] TJ\n");
     }
 
     #[test]
