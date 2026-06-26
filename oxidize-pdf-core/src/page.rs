@@ -321,12 +321,19 @@ impl Page {
             // Phase 3.2: Resolve embedded font streams
             // For each font in resources, resolve FontDescriptor and font stream references
             // and embed the stream data directly so writer doesn't need to resolve references
+            // The `/Font` entry may itself be an indirect reference
+            // (`/Font 1 0 R`) instead of an inline dictionary. Resolve it here
+            // so the loop below sees the underlying font dictionary. The owned
+            // resolved object is held in `resolved_font` to outlive the borrow:
+            // returning `&convert(..)` directly fails on the MSRV (1.88) with
+            // E0716, as the temporary is dropped at the end of the statement.
+            let resolved_font: crate::pdf_objects::Object;
             let font_resource = match unified_resources.get("Font") {
-                // Resolve a reference to a Font dictionary
                 Some(crate::pdf_objects::Object::Reference(id)) => {
                     match document.get_object(id.number(), id.generation()) {
                         Ok(resolved_obj) => {
-                            Some(&Self::convert_parser_object_to_unified(&resolved_obj))
+                            resolved_font = Self::convert_parser_object_to_unified(&resolved_obj);
+                            Some(&resolved_font)
                         }
                         _ => None,
                     }
