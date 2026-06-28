@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [3.0.2] - 2026-06-28
+
+### Fixed
+
+- AES-128 and AES-256 documents written by the crate can now be read back.
+  Previously their encrypted content decrypted to empty (text extraction
+  returned nothing) even with the correct password; RC4-128 was unaffected.
+  Three root causes (#364, reported by @peter-ssk):
+  - **AES-128 (R4)**: the reader chose the cipher by encryption revision and
+    decrypted AESV2 streams with RC4. The cipher is now selected from the
+    `/CFM` crypt filter (`/StmF` → `/CF` → `/CFM`), so real-world R4+RC4 files
+    keep working too.
+  - **AES-256 (R5)**: the writer encrypted objects with a password-derived key
+    instead of the random file key sealed in `/UE`, which the reader recovers;
+    the keys differed. The writer now uses the key sealed in `/UE`.
+  - Decryption failures were swallowed into empty content (silent data loss);
+    the reader now surfaces them as errors.
+- Owner-password unlock of AES-256 documents now works, and unlocking an
+  AES-256 document with a wrong password no longer panics (the R5/R6 owner
+  path was previously unimplemented and fell through to R2–R4 logic).
+
+### Security
+
+- Removed debug `eprintln!` statements that leaked the derived encryption key
+  and user password to stderr in debug builds.
+
 ## [3.0.1] - 2026-06-26
 
 ### Fixed

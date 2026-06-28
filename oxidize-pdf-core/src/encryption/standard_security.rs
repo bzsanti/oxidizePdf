@@ -288,25 +288,6 @@ impl StandardSecurityHandler {
                     data.extend_from_slice(id);
                 }
 
-                #[cfg(debug_assertions)]
-                {
-                    eprintln!("[DEBUG compute_key] padded[0..8]: {:02x?}", &padded[..8]);
-                    eprintln!("[DEBUG compute_key] owner_hash len: {}", owner_hash.len());
-                    eprintln!(
-                        "[DEBUG compute_key] P bytes: {:02x?}",
-                        permissions.bits().to_le_bytes()
-                    );
-                    eprintln!("[DEBUG compute_key] data len before MD5: {}", data.len());
-                    // Print full data for comparison
-                    let data_hex: String = data.iter().map(|b| format!("{:02x}", b)).collect();
-                    eprintln!("[DEBUG compute_key] full data hex: {}", data_hex);
-
-                    // Verify specific expected hash for debugging
-                    if data_hex == "7573657228bf4e5e4e758a4164004e56fffa01082e2e00b6d0683e802f0ca9fe94e8094419662a774442fb072e3d9f19e9d130ec09a4d0061e78fe920f7ab62ffcffffff9c5b2a0606f918182e6c5cc0cac374d6" {
-                        eprintln!("[DEBUG compute_key] DATA MATCHES EXPECTED - should produce eee5568378306e35...");
-                    }
-                }
-
                 // For R4 with metadata not encrypted, add extra bytes
                 if self.revision == SecurityHandlerRevision::R4 {
                     // In a full implementation, check EncryptMetadata flag
@@ -315,17 +296,6 @@ impl StandardSecurityHandler {
 
                 // Step 3: Create MD5 hash
                 let mut hash = md5::compute(&data).to_vec();
-
-                #[cfg(debug_assertions)]
-                {
-                    eprintln!(
-                        "[DEBUG compute_key] initial hash[0..8]: {:02x?}",
-                        &hash[..8]
-                    );
-                    let hash_hex: String = hash.iter().map(|b| format!("{:02x}", b)).collect();
-                    eprintln!("[DEBUG compute_key] full hash: {}", hash_hex);
-                    eprintln!("[DEBUG compute_key] key_length: {}", self.key_length);
-                }
 
                 // Step 4: For revision 3+, do 50 additional iterations
                 if self.revision >= SecurityHandlerRevision::R3 {
@@ -336,11 +306,6 @@ impl StandardSecurityHandler {
 
                 // Step 5: Truncate to key length
                 hash.truncate(self.key_length);
-
-                #[cfg(debug_assertions)]
-                {
-                    eprintln!("[DEBUG compute_key] final key: {:02x?}", &hash);
-                }
 
                 Ok(EncryptionKey::new(hash))
             }
@@ -365,20 +330,49 @@ impl StandardSecurityHandler {
         }
     }
 
-    /// Decrypt a string
-    pub fn decrypt_string(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+    /// Decrypt a string, propagating any decryption error (issue #364).
+    ///
+    /// Prefer this over [`decrypt_string`](Self::decrypt_string) on read paths:
+    /// the latter swallows AES failures into an empty `Vec`, turning corruption
+    /// or a wrong key into *silent data loss* instead of a surfaced error.
+    ///
+    /// `pub(crate)`: an internal read-path helper, not part of the public API.
+    pub(crate) fn try_decrypt_string(
+        &self,
+        data: &[u8],
+        key: &EncryptionKey,
+        obj_id: &ObjectId,
+    ) -> Result<Vec<u8>> {
         match self.revision {
             SecurityHandlerRevision::R4
             | SecurityHandlerRevision::R5
-            | SecurityHandlerRevision::R6 => {
-                // AES path for R4 (AES-128) and R5/R6 (AES-256)
-                self.decrypt_aes(data, key, obj_id).unwrap_or_default()
-            }
-            _ => {
-                // RC4 is symmetric
-                self.encrypt_string(data, key, obj_id)
-            }
+            | SecurityHandlerRevision::R6 => self.decrypt_aes(data, key, obj_id),
+            // RC4 is symmetric and cannot fail (no padding/auth).
+            _ => Ok(self.encrypt_string(data, key, obj_id)),
         }
+    }
+
+    /// Decrypt a stream, propagating any decryption error (issue #364).
+    ///
+    /// See [`try_decrypt_string`](Self::try_decrypt_string) for why read paths
+    /// should use this instead of [`decrypt_stream`](Self::decrypt_stream).
+    ///
+    /// `pub(crate)`: an internal read-path helper, not part of the public API.
+    pub(crate) fn try_decrypt_stream(
+        &self,
+        data: &[u8],
+        key: &EncryptionKey,
+        obj_id: &ObjectId,
+    ) -> Result<Vec<u8>> {
+        // Streams and strings share the same per-object cipher.
+        self.try_decrypt_string(data, key, obj_id)
+    }
+
+    /// Decrypt a string. Lenient: a decryption failure yields an empty `Vec`.
+    /// New code should use [`try_decrypt_string`](Self::try_decrypt_string).
+    pub fn decrypt_string(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
+        self.try_decrypt_string(data, key, obj_id)
+            .unwrap_or_default()
     }
 
     /// Encrypt a stream
@@ -386,20 +380,11 @@ impl StandardSecurityHandler {
         self.encrypt_string(data, key, obj_id)
     }
 
-    /// Decrypt a stream
+    /// Decrypt a stream. Lenient: a decryption failure yields an empty `Vec`.
+    /// New code should use [`try_decrypt_stream`](Self::try_decrypt_stream).
     pub fn decrypt_stream(&self, data: &[u8], key: &EncryptionKey, obj_id: &ObjectId) -> Vec<u8> {
-        match self.revision {
-            SecurityHandlerRevision::R4
-            | SecurityHandlerRevision::R5
-            | SecurityHandlerRevision::R6 => {
-                // AES path for R4 (AES-128) and R5/R6 (AES-256)
-                self.decrypt_aes(data, key, obj_id).unwrap_or_default()
-            }
-            _ => {
-                // RC4 is symmetric
-                self.decrypt_string(data, key, obj_id)
-            }
-        }
+        self.try_decrypt_stream(data, key, obj_id)
+            .unwrap_or_default()
     }
 
     /// Encrypt data using AES.
@@ -2383,6 +2368,46 @@ mod tests {
         let encrypted = handler.encrypt_string(data, &key, &obj_id);
         let decrypted = handler.decrypt_string(&encrypted, &key, &obj_id);
         assert_eq!(decrypted.as_slice(), data);
+    }
+
+    // Issue #364: a failed AES decryption must surface as an error, not be
+    // swallowed into empty content (silent data loss). The `try_*` variants
+    // propagate the error; the legacy `Vec`-returning ones keep the lenient
+    // behaviour for backward compatibility.
+    #[test]
+    fn test_try_decrypt_stream_surfaces_aes_error() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x11; 16]);
+        let obj_id = ObjectId::new(1, 0);
+
+        // Too short to even contain the 16-byte AES IV → must error.
+        let undecryptable = [0u8; 8];
+
+        let err = handler.try_decrypt_stream(&undecryptable, &key, &obj_id);
+        assert!(
+            err.is_err(),
+            "try_decrypt_stream must return Err on undecryptable AES data, got {err:?}"
+        );
+
+        // The legacy lenient API still swallows into empty Vec (documents the
+        // behaviour the parser path no longer relies on).
+        let lenient = handler.decrypt_stream(&undecryptable, &key, &obj_id);
+        assert!(lenient.is_empty());
+    }
+
+    #[test]
+    fn test_try_decrypt_string_surfaces_aes_error() {
+        let handler = StandardSecurityHandler::aes_128_r4();
+        let key = EncryptionKey::new(vec![0x22; 16]);
+        let obj_id = ObjectId::new(2, 0);
+
+        let undecryptable = [0u8; 4];
+        assert!(
+            handler
+                .try_decrypt_string(&undecryptable, &key, &obj_id)
+                .is_err(),
+            "try_decrypt_string must return Err on undecryptable AES data"
+        );
     }
 
     // ===== SHA-256/512 NIST Vector Tests (Phase 1.3 - RustCrypto Integration) =====
