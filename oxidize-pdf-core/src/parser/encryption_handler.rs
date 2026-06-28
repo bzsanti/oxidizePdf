@@ -6,12 +6,17 @@
 use super::objects::PdfDictionary;
 use super::{ParseError, ParseResult};
 use crate::encryption::{
-    EncryptionKey, Permissions, Rc4, Rc4Key, StandardSecurityHandler, UserPassword,
+    EncryptionKey, OwnerPassword, Permissions, Rc4, Rc4Key, StandardSecurityHandler, UserPassword,
 };
 use crate::objects::ObjectId;
 
-/// Encryption information extracted from PDF trailer
+/// Encryption information extracted from PDF trailer.
+///
+/// `#[non_exhaustive]`: this is parser output, not meant to be constructed by
+/// downstream code. The attribute lets future fields (like `cfm`, added for
+/// issue #364) be added without a breaking change.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct EncryptionInfo {
     /// Filter name (should be "Standard")
     pub filter: String,
@@ -31,6 +36,12 @@ pub struct EncryptionInfo {
     pub ue: Option<Vec<u8>>,
     /// OE entry (encrypted owner key, R5/R6 only)
     pub oe: Option<Vec<u8>>,
+    /// Stream crypt filter method (/CFM of the filter named by /StmF), V>=4 only.
+    /// One of "V2" (RC4), "AESV2" (AES-128), "AESV3" (AES-256), "Identity".
+    /// Determines the cipher for revision 4, where R alone is ambiguous.
+    ///
+    /// `pub(crate)`: internal cipher-selection input, not part of the public API.
+    pub(crate) cfm: Option<String>,
 }
 
 /// PDF Encryption Handler
@@ -50,10 +61,22 @@ impl EncryptionHandler {
     pub fn new(encrypt_dict: &PdfDictionary, file_id: Option<Vec<u8>>) -> ParseResult<Self> {
         let encryption_info = Self::parse_encryption_dict(encrypt_dict)?;
 
-        // Create appropriate security handler based on revision
+        // Create the security handler. For V>=4 the cipher is determined by the
+        // stream crypt filter method (/CFM), not by the revision: R4 may be either
+        // RC4 (/V2) or AES-128 (/AESV2). Selecting by revision alone decrypts
+        // AES-128 streams with RC4 → garbage (issue #364).
         let security_handler = match encryption_info.r {
             2 => StandardSecurityHandler::rc4_40bit(),
-            3 | 4 => StandardSecurityHandler::rc4_128bit(),
+            3 => StandardSecurityHandler::rc4_128bit(),
+            4 => match encryption_info.cfm.as_deref() {
+                // RC4-128 crypt filter under R4 (legacy, but valid).
+                Some("V2") => StandardSecurityHandler::rc4_128bit(),
+                // AES-128 is the conventional R4 cipher and what this crate writes.
+                // Default to it for /AESV2, a missing /CFM, or any other value: R4
+                // construction must stay infallible (it always built a handler
+                // before #364), so non-RC4 cases fall back to AES rather than error.
+                _ => StandardSecurityHandler::aes_128_r4(),
+            },
             5 => StandardSecurityHandler::aes_256_r5(),
             6 => StandardSecurityHandler::aes_256_r6(),
             _ => {
@@ -143,6 +166,14 @@ impl EncryptionHandler {
             .and_then(|obj| obj.as_string())
             .map(|s| s.as_bytes().to_vec());
 
+        // Get the stream crypt filter method (V>=4). For V<4 the cipher is fixed
+        // by V/R (RC4), so /CF is absent and cfm stays None.
+        let cfm = if v >= 4 {
+            Self::parse_stream_cfm(dict)
+        } else {
+            None
+        };
+
         Ok(EncryptionInfo {
             filter: filter.to_string(),
             v,
@@ -153,7 +184,32 @@ impl EncryptionHandler {
             length,
             ue,
             oe,
+            cfm,
         })
+    }
+
+    /// Resolve the crypt filter method (/CFM) of the filter named by /StmF.
+    ///
+    /// `/Encrypt` carries `/CF << /StdCF << /CFM /AESV2 >> >>` and `/StmF /StdCF`.
+    /// Returns the CFM name (e.g. "AESV2", "V2"), or "Identity" when streams are
+    /// not encrypted, or None when no crypt filter is declared.
+    fn parse_stream_cfm(dict: &PdfDictionary) -> Option<String> {
+        let stmf = dict
+            .get("StmF")
+            .and_then(|o| o.as_name())
+            .map(|n| n.0.as_str())
+            .unwrap_or("Identity"); // ISO 32000-1 §7.6.5: default /StmF is Identity
+
+        if stmf == "Identity" {
+            return Some("Identity".to_string());
+        }
+
+        let cf = dict.get("CF").and_then(|o| o.as_dict())?;
+        cf.get(stmf)
+            .and_then(|o| o.as_dict())
+            .and_then(|f| f.get("CFM"))
+            .and_then(|o| o.as_name())
+            .map(|n| n.0.clone())
     }
 
     /// Check if PDF is encrypted by looking for Encrypt entry in trailer
@@ -273,6 +329,70 @@ impl EncryptionHandler {
         Ok(is_valid)
     }
 
+    /// R5/R6 owner password unlock (SHA-256/AES-256 based per ISO 32000-2).
+    ///
+    /// Mirrors [`unlock_user_r5_r6`](Self::unlock_user_r5_r6) but validates the
+    /// owner password against the `/O` entry and recovers the file key from `/OE`.
+    fn unlock_owner_r5_r6(&mut self, owner_password: &OwnerPassword) -> ParseResult<bool> {
+        let o_entry = self.encryption_info.o.clone();
+        let u_entry = self.encryption_info.u.clone();
+
+        let is_valid = if self.encryption_info.r == 5 {
+            self.security_handler
+                .validate_r5_owner_password(owner_password, &o_entry)
+        } else {
+            self.security_handler
+                .validate_r6_owner_password(owner_password, &o_entry, &u_entry)
+        }
+        .map_err(|e| ParseError::SyntaxError {
+            position: 0,
+            message: format!(
+                "Failed to validate R{} owner password: {e}",
+                self.encryption_info.r
+            ),
+        })?;
+
+        if is_valid {
+            let oe_entry =
+                self.encryption_info
+                    .oe
+                    .as_deref()
+                    .ok_or_else(|| ParseError::SyntaxError {
+                        position: 0,
+                        message: format!(
+                            "R{} encryption requires OE entry but it is missing",
+                            self.encryption_info.r
+                        ),
+                    })?;
+
+            let key = if self.encryption_info.r == 5 {
+                self.security_handler.recover_r5_owner_encryption_key(
+                    owner_password,
+                    &o_entry,
+                    oe_entry,
+                )
+            } else {
+                self.security_handler.recover_r6_owner_encryption_key(
+                    owner_password,
+                    &o_entry,
+                    &u_entry,
+                    oe_entry,
+                )
+            }
+            .map_err(|e| ParseError::SyntaxError {
+                position: 0,
+                message: format!(
+                    "Failed to recover R{} owner encryption key: {e}",
+                    self.encryption_info.r
+                ),
+            })?;
+
+            self.encryption_key = Some(EncryptionKey::new(key));
+        }
+
+        Ok(is_valid)
+    }
+
     /// Try to unlock PDF with owner password
     ///
     /// Owner password authentication works by:
@@ -280,6 +400,13 @@ impl EncryptionHandler {
     /// 2. Decrypting the O entry to recover the user password
     /// 3. Using the recovered user password to compute the encryption key
     pub fn unlock_with_owner_password(&mut self, password: &str) -> ParseResult<bool> {
+        // R5/R6 (AES-256) use a completely different owner-password algorithm.
+        // The MD5/RC4 path below assumes key_length <= 16 (MD5 output); for R5/R6
+        // key_length is 32, so `hash[..key_length]` would panic. Dispatch first.
+        if self.encryption_info.r >= 5 {
+            return self.unlock_owner_r5_r6(&OwnerPassword(password.to_string()));
+        }
+
         // Standard 32-byte padding from PDF spec
         const PADDING: [u8; 32] = [
             0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA,
@@ -340,18 +467,6 @@ impl EncryptionHandler {
 
         let user_password = String::from_utf8_lossy(&decrypted[..user_pwd_end]).to_string();
 
-        #[cfg(debug_assertions)]
-        {
-            eprintln!(
-                "[DEBUG owner unlock] derived user password: {:?}",
-                &user_password
-            );
-            eprintln!(
-                "[DEBUG owner unlock] decrypted bytes: {:02x?}",
-                &decrypted[..8]
-            );
-        }
-
         // Step 6: Try to unlock with the derived user password
         if self.unlock_with_user_password(&user_password)? {
             return Ok(true);
@@ -378,18 +493,36 @@ impl EncryptionHandler {
         self.encryption_key.as_ref()
     }
 
-    /// Decrypt a string object
+    /// Decrypt a string object.
+    ///
+    /// Uses the error-propagating `try_*` variant so an AES decryption failure
+    /// surfaces as an error rather than silently yielding empty content (#364).
     pub fn decrypt_string(&self, data: &[u8], obj_id: &ObjectId) -> ParseResult<Vec<u8>> {
         match &self.encryption_key {
-            Some(key) => Ok(self.security_handler.decrypt_string(data, key, obj_id)),
+            Some(key) => self
+                .security_handler
+                .try_decrypt_string(data, key, obj_id)
+                .map_err(|e| ParseError::SyntaxError {
+                    position: 0,
+                    message: format!("Failed to decrypt string for object {obj_id:?}: {e}"),
+                }),
             None => Err(ParseError::EncryptionNotSupported),
         }
     }
 
-    /// Decrypt a stream object
+    /// Decrypt a stream object.
+    ///
+    /// Uses the error-propagating `try_*` variant so an AES decryption failure
+    /// surfaces as an error rather than silently yielding empty content (#364).
     pub fn decrypt_stream(&self, data: &[u8], obj_id: &ObjectId) -> ParseResult<Vec<u8>> {
         match &self.encryption_key {
-            Some(key) => Ok(self.security_handler.decrypt_stream(data, key, obj_id)),
+            Some(key) => self
+                .security_handler
+                .try_decrypt_stream(data, key, obj_id)
+                .map_err(|e| ParseError::SyntaxError {
+                    position: 0,
+                    message: format!("Failed to decrypt stream for object {obj_id:?}: {e}"),
+                }),
             None => Err(ParseError::EncryptionNotSupported),
         }
     }
@@ -402,7 +535,11 @@ impl EncryptionHandler {
         ) {
             (2, _) => "RC4 40-bit".to_string(),
             (3, len) => format!("RC4 {len}-bit"),
-            (4, len) => format!("RC4 {len}-bit with metadata control"),
+            // R4 may be RC4 or AES-128 depending on the /CFM crypt filter (#364).
+            (4, len) => match self.encryption_info.cfm.as_deref() {
+                Some("V2") => format!("RC4 {len}-bit with metadata control"),
+                _ => "AES-128 (Revision 4)".to_string(),
+            },
             (5, _) => "AES-256 (Revision 5)".to_string(),
             (6, _) => "AES-256 (Revision 6, Unicode passwords)".to_string(),
             (r, len) => format!("Unknown revision {r} with {len}-bit key"),
@@ -588,6 +725,67 @@ mod tests {
         assert_eq!(info.o.len(), 32);
         assert_eq!(info.u.len(), 32);
         assert_eq!(info.p, -4);
+        // V<4 has no crypt filters → cfm is None.
+        assert_eq!(info.cfm, None);
+    }
+
+    /// Build a V=4/R=4 encryption dict whose StdCF crypt filter uses `cfm`.
+    fn create_v4_encryption_dict(cfm: &str) -> PdfDictionary {
+        let mut dict = PdfDictionary::new();
+        dict.insert(
+            "Filter".to_string(),
+            PdfObject::Name(PdfName("Standard".to_string())),
+        );
+        dict.insert("V".to_string(), PdfObject::Integer(4));
+        dict.insert("R".to_string(), PdfObject::Integer(4));
+        dict.insert("Length".to_string(), PdfObject::Integer(128));
+        dict.insert(
+            "O".to_string(),
+            PdfObject::String(PdfString::new(vec![0u8; 32])),
+        );
+        dict.insert(
+            "U".to_string(),
+            PdfObject::String(PdfString::new(vec![0u8; 32])),
+        );
+        dict.insert("P".to_string(), PdfObject::Integer(-4));
+
+        let mut std_cf = PdfDictionary::new();
+        std_cf.insert("CFM".to_string(), PdfObject::Name(PdfName(cfm.to_string())));
+        let mut cf = PdfDictionary::new();
+        cf.insert("StdCF".to_string(), PdfObject::Dictionary(std_cf));
+        dict.insert("CF".to_string(), PdfObject::Dictionary(cf));
+        dict.insert(
+            "StmF".to_string(),
+            PdfObject::Name(PdfName("StdCF".to_string())),
+        );
+        dict
+    }
+
+    #[test]
+    fn test_cfm_parsed_from_crypt_filter() {
+        // Issue #364: R4 cipher is decided by /CFM, not the revision.
+        let aes =
+            EncryptionHandler::parse_encryption_dict(&create_v4_encryption_dict("AESV2")).unwrap();
+        assert_eq!(aes.cfm.as_deref(), Some("AESV2"));
+
+        let rc4 =
+            EncryptionHandler::parse_encryption_dict(&create_v4_encryption_dict("V2")).unwrap();
+        assert_eq!(rc4.cfm.as_deref(), Some("V2"));
+    }
+
+    #[test]
+    fn test_r4_algorithm_info_reflects_cipher() {
+        // AESV2 under R4 must report AES-128, not RC4 (#364).
+        let aes = EncryptionHandler::new(&create_v4_encryption_dict("AESV2"), None).unwrap();
+        assert_eq!(aes.algorithm_info(), "AES-128 (Revision 4)");
+
+        // A legacy R4 PDF using the V2 (RC4) crypt filter still reports RC4.
+        let rc4 = EncryptionHandler::new(&create_v4_encryption_dict("V2"), None).unwrap();
+        assert!(
+            rc4.algorithm_info().starts_with("RC4"),
+            "got: {}",
+            rc4.algorithm_info()
+        );
     }
 
     #[test]
@@ -833,15 +1031,14 @@ mod tests {
         let handler = EncryptionHandler::new(&dict, None).unwrap();
         assert_eq!(handler.algorithm_info(), "RC4 128-bit");
 
-        // Test Rev 4 (128-bit with metadata control)
+        // Test Rev 4 without a V2 crypt filter → AES-128 (the conventional R4
+        // cipher and this crate's default). A legacy RC4 R4 PDF would carry an
+        // explicit /CFM /V2 crypt filter; see test_r4_algorithm_info_reflects_cipher.
         let mut dict = create_test_encryption_dict();
         dict.insert("R".to_string(), PdfObject::Integer(4));
         dict.insert("Length".to_string(), PdfObject::Integer(128));
         let handler = EncryptionHandler::new(&dict, None).unwrap();
-        assert_eq!(
-            handler.algorithm_info(),
-            "RC4 128-bit with metadata control"
-        );
+        assert_eq!(handler.algorithm_info(), "AES-128 (Revision 4)");
 
         // Test Rev 5 (AES-256)
         let mut dict = create_test_encryption_dict();

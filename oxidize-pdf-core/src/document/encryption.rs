@@ -4,7 +4,7 @@ use crate::encryption::{
     EncryptionDictionary, EncryptionKey, OwnerPassword, Permissions, StandardSecurityHandler,
     UserPassword,
 };
-use crate::error::Result;
+use crate::error::{PdfError, Result};
 use crate::objects::ObjectId;
 
 /// Encryption settings for a document
@@ -144,13 +144,26 @@ impl DocumentEncryption {
         .with_r5_entries(ue_entry, oe_entry))
     }
 
-    /// Get encryption key
+    /// Get the object encryption key used to encrypt streams and strings.
+    ///
+    /// For RC4/AES-128 the key is derived from the password (ISO 32000-1 Algorithm 2).
+    /// For AES-256 (R5) the object key is the random file key **sealed in `/UE`**, not a
+    /// password-derived key — `create_aes256_encryption_dict` generates it randomly and
+    /// the reader recovers it via `recover_r5_encryption_key`. Deriving a password-based
+    /// key here would not match what the reader recovers, so encrypted content would
+    /// decrypt to garbage (issue #364).
     pub fn get_encryption_key(
         &self,
         enc_dict: &EncryptionDictionary,
         file_id: Option<&[u8]>,
     ) -> Result<EncryptionKey> {
         let handler = self.handler();
+        if matches!(self.strength, EncryptionStrength::Aes256) {
+            let ue = enc_dict.ue.as_deref().ok_or_else(|| {
+                PdfError::EncryptionError("AES-256 encryption dict missing UE entry".to_string())
+            })?;
+            return handler.recover_r5_encryption_key(&self.user_password, &enc_dict.u, ue);
+        }
         handler.compute_encryption_key(&self.user_password, &enc_dict.o, self.permissions, file_id)
     }
 }
