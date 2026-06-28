@@ -1,8 +1,9 @@
 use oxidize_pdf::document::{DocumentEncryption, EncryptionStrength};
 use oxidize_pdf::encryption::Permissions;
 use oxidize_pdf::parser::PdfReader;
+use oxidize_pdf::text::ExtractionOptions;
 use oxidize_pdf::writer::PdfWriter;
-use oxidize_pdf::{Document, Page};
+use oxidize_pdf::{Document, Font, Page};
 use std::io::Cursor;
 
 // ── Fase 2: Writer must emit /Encrypt and /ID in trailer ────────────────
@@ -386,5 +387,144 @@ fn test_aes128_content_is_encrypted() {
     assert!(
         !content.contains("SECRET_AES128_MARKER"),
         "AES-128 encrypted PDF must not contain plaintext content — objects are not being encrypted"
+    );
+}
+
+// ── Issue #364: full round-trip — content must be recoverable after unlock ──
+// The Fase 6 tests above stop at unlock() and never extract content, so the
+// broken decryption path was untested. These assert the marker survives a
+// write → read → unlock → extract round-trip for every cipher.
+
+const ROUNDTRIP_MARKER: &str = "ROUNDTRIP_MARKER_42";
+
+/// Write a single-page PDF containing the marker, optionally encrypted, then
+/// read it back, unlock, and extract the text of page 0.
+fn roundtrip_extract(strength: Option<EncryptionStrength>) -> String {
+    let mut doc = Document::new();
+    let mut page = Page::new(595.0, 842.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(72.0, 760.0)
+        .write(ROUNDTRIP_MARKER)
+        .unwrap();
+    doc.add_page(page);
+    if let Some(s) = strength {
+        doc.set_encryption(DocumentEncryption::new("u", "o", Permissions::all(), s));
+    }
+
+    let bytes = doc.to_bytes().expect("write document");
+    let mut reader = PdfReader::new(Cursor::new(bytes)).expect("parse written PDF");
+    if reader.is_encrypted() {
+        reader
+            .unlock_with_password("u")
+            .expect("unlock with correct user password");
+    }
+    let pdfdoc = reader.into_document();
+    pdfdoc
+        .extract_text_from_page_with_options(0, ExtractionOptions::default())
+        .expect("extract text")
+        .text
+}
+
+#[test]
+fn test_roundtrip_plaintext_baseline() {
+    let text = roundtrip_extract(None);
+    assert!(
+        text.contains(ROUNDTRIP_MARKER),
+        "plaintext round-trip must recover the marker, got: {text:?}"
+    );
+}
+
+#[test]
+fn test_roundtrip_rc4_128_baseline() {
+    let text = roundtrip_extract(Some(EncryptionStrength::Rc4_128bit));
+    assert!(
+        text.contains(ROUNDTRIP_MARKER),
+        "RC4-128 round-trip must recover the marker, got: {text:?}"
+    );
+}
+
+#[test]
+fn test_roundtrip_aes128_recovers_content() {
+    let text = roundtrip_extract(Some(EncryptionStrength::Aes128));
+    assert!(
+        text.contains(ROUNDTRIP_MARKER),
+        "AES-128 round-trip must recover the marker after unlock, got: {text:?}"
+    );
+}
+
+#[test]
+fn test_roundtrip_aes256_recovers_content() {
+    let text = roundtrip_extract(Some(EncryptionStrength::Aes256));
+    assert!(
+        text.contains(ROUNDTRIP_MARKER),
+        "AES-256 round-trip must recover the marker after unlock, got: {text:?}"
+    );
+}
+
+/// A wrong password must not unlock an AES-256 document (it must report failure,
+/// not silently yield a usable-but-empty reader). Guards against the unlock path
+/// masking a decryption-key mismatch.
+#[test]
+fn test_roundtrip_aes256_wrong_password_does_not_unlock() {
+    let mut doc = Document::new();
+    let mut page = Page::new(595.0, 842.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(72.0, 760.0)
+        .write(ROUNDTRIP_MARKER)
+        .unwrap();
+    doc.add_page(page);
+    doc.set_encryption(DocumentEncryption::new(
+        "u",
+        "o",
+        Permissions::all(),
+        EncryptionStrength::Aes256,
+    ));
+
+    let bytes = doc.to_bytes().expect("write document");
+    let mut reader = PdfReader::new(Cursor::new(bytes)).expect("parse written PDF");
+    assert!(reader.is_encrypted());
+
+    let unlocked = reader
+        .unlock_with_password("definitely-wrong")
+        .expect("unlock attempt itself must not error");
+    assert!(!unlocked, "a wrong password must not unlock the document");
+}
+
+/// The owner password must also unlock an AES-256 document and recover content
+/// (exercises the R5 owner-password path: validate /O, recover key from /OE).
+#[test]
+fn test_roundtrip_aes256_owner_password_recovers_content() {
+    let mut doc = Document::new();
+    let mut page = Page::new(595.0, 842.0);
+    page.text()
+        .set_font(Font::Helvetica, 24.0)
+        .at(72.0, 760.0)
+        .write(ROUNDTRIP_MARKER)
+        .unwrap();
+    doc.add_page(page);
+    doc.set_encryption(DocumentEncryption::new(
+        "u",
+        "owner-secret",
+        Permissions::all(),
+        EncryptionStrength::Aes256,
+    ));
+
+    let bytes = doc.to_bytes().expect("write document");
+    let mut reader = PdfReader::new(Cursor::new(bytes)).expect("parse written PDF");
+    let unlocked = reader
+        .unlock_with_password("owner-secret")
+        .expect("owner unlock must not error");
+    assert!(unlocked, "owner password must unlock the document");
+
+    let pdfdoc = reader.into_document();
+    let text = pdfdoc
+        .extract_text_from_page_with_options(0, ExtractionOptions::default())
+        .expect("extract text")
+        .text;
+    assert!(
+        text.contains(ROUNDTRIP_MARKER),
+        "owner-unlocked AES-256 must recover the marker, got: {text:?}"
     );
 }
