@@ -1514,11 +1514,40 @@ impl<R: Read + Seek> PdfDocument<R> {
         &self,
         pipeline: &crate::pipeline::AnalysisPipeline,
     ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
+        let elements = self.partition_with(pipeline.partition_config.clone())?;
+        self.rag_chunks_from_elements(elements, pipeline)
+    }
+
+    /// Run a custom [`AnalysisPipeline`](crate::pipeline::AnalysisPipeline)
+    /// (classify → chunk → enrich) over **caller-provided** elements, instead of
+    /// the document's own partition.
+    ///
+    /// This is the element-source seam behind
+    /// [`rag_chunks_with_pipeline`](Self::rag_chunks_with_pipeline), which is
+    /// exactly `self.rag_chunks_from_elements(self.partition_with(cfg)?, pipeline)`.
+    /// Use it to feed externally-recovered elements (e.g. list items a two-column
+    /// layout scrambles past the partitioner) into the same enriched chunk flow
+    /// as the rest of the document — with uniform classification and enrichment,
+    /// avoiding the `RagChunk` metadata-stamping workaround that bypasses both
+    /// (issue #360). Partitioned and recovered elements can be mixed freely.
+    ///
+    /// The pipeline's [`PartitionConfig`](crate::pipeline::PartitionConfig) is not
+    /// consulted here — the caller has already chosen the elements. The pipeline's
+    /// [`source`](crate::pipeline::AnalysisPipeline::with_source), when set, is
+    /// still autofilled from this document (title/author/page count) and stamped
+    /// onto the chunks, exactly as in `rag_chunks_with_pipeline`.
+    ///
+    /// **Stability:** requires `unstable-spi`; exempt from semver until promoted.
+    #[cfg(feature = "unstable-spi")]
+    pub fn rag_chunks_from_elements(
+        &self,
+        mut elements: Vec<crate::pipeline::Element>,
+        pipeline: &crate::pipeline::AnalysisPipeline,
+    ) -> ParseResult<Vec<crate::pipeline::RagChunk>> {
         let mut source = pipeline.source.clone();
         if let Some(src) = source.as_mut() {
             self.autofill_source(src);
         }
-        let mut elements = self.partition_with(pipeline.partition_config.clone())?;
         if let Some(classifier) = pipeline.classifier.as_deref() {
             // Two passes: read labels against an immutable slice, then apply —
             // the classifier inspects neighbours via `ClassifyContext`, so it

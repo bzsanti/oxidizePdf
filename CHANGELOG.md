@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [3.0.3] - 2026-06-29
+
+### Added
+
+- `PdfDocument::rag_chunks_from_elements(elements, pipeline)` (feature
+  `unstable-spi`): run a custom `AnalysisPipeline` (classifier → chunking →
+  enrichers) over caller-provided `Element`s instead of the document's own
+  partition. Lets a consumer feed externally-recovered content (e.g. list items
+  a two-column layout scrambles past the partitioner) into the same enriched
+  chunk flow, mixing partitioned and recovered elements. `rag_chunks_with_pipeline`
+  is now `rag_chunks_from_elements(partition_with(cfg)?, pipeline)` and keeps its
+  exact behaviour. Additive and behind `unstable-spi` only — no stable API change
+  (#360).
+
 ## [3.0.2] - 2026-06-28
 
 ### Fixed
