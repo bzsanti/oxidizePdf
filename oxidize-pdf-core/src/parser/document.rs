@@ -60,7 +60,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::path::Path;
-use std::rc::Rc;
 
 /// Resource manager for efficient PDF object caching.
 ///
@@ -212,8 +211,10 @@ pub struct PdfDocument<R: Read + Seek> {
     reader: RefCell<PdfReader<R>>,
     /// Page tree navigator (lazily initialized)
     page_tree: RefCell<Option<PageTree>>,
-    /// Shared resource manager for object caching
-    resources: Rc<ResourceManager>,
+    /// Resource manager for object caching (owned; interior mutability via RefCell).
+    /// Not shared/cloned, so a plain owned field keeps `PdfDocument<R>: Send` for
+    /// `R: Send` without any locking overhead (issue #369).
+    resources: ResourceManager,
     /// Cached document metadata to avoid repeated parsing
     metadata_cache: RefCell<Option<super::reader::DocumentMetadata>>,
 }
@@ -224,7 +225,7 @@ impl<R: Read + Seek> PdfDocument<R> {
         Self {
             reader: RefCell::new(reader),
             page_tree: RefCell::new(None),
-            resources: Rc::new(ResourceManager::new()),
+            resources: ResourceManager::new(),
             metadata_cache: RefCell::new(None),
         }
     }
@@ -1891,6 +1892,26 @@ mod tests {
     use super::*;
     use crate::parser::objects::{PdfObject, PdfString};
     use std::io::Cursor;
+
+    // Issue #369: PdfDocument<R> must be Send so callers (e.g. the PyO3
+    // bindings) can release a thread-blocking lock around reader operations.
+    #[test]
+    fn test_pdf_document_is_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<PdfDocument<std::fs::File>>();
+        assert_send::<PdfDocument<Cursor<Vec<u8>>>>();
+    }
+
+    // Issue #369: dropping the unshared Rc must not change cache behavior.
+    #[test]
+    fn test_resource_cache_roundtrip_after_owned_field() {
+        let rm = ResourceManager::new();
+        assert!(rm.get_cached((7, 0)).is_none());
+        rm.cache_object((7, 0), PdfObject::Integer(42));
+        assert_eq!(rm.get_cached((7, 0)), Some(PdfObject::Integer(42)));
+        rm.clear_cache();
+        assert!(rm.get_cached((7, 0)).is_none());
+    }
 
     // Helper function to create a minimal PDF in memory
     fn create_minimal_pdf() -> Vec<u8> {
