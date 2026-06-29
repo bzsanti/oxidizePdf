@@ -15,7 +15,7 @@
 //! # Key Features
 //!
 //! - **Automatic caching**: Objects are cached after first access
-//! - **Resource management**: Shared resources are handled efficiently
+//! - **Resource management**: Objects are cached per-document for efficient reuse
 //! - **Page navigation**: Fast access to any page in the document
 //! - **Reference resolution**: Automatic resolution of indirect references
 //! - **Text extraction**: Built-in support for extracting text from pages
@@ -64,9 +64,9 @@ use std::path::Path;
 /// Resource manager for efficient PDF object caching.
 ///
 /// The ResourceManager provides centralized caching of PDF objects to avoid
-/// repeated parsing and to share resources between different parts of the document.
-/// It uses RefCell for interior mutability, allowing multiple immutable references
-/// to the document while still being able to update the cache.
+/// repeated parsing overhead. It is owned exclusively by a `PdfDocument` and uses
+/// `RefCell` for interior mutability, so cache writes can occur through a shared
+/// borrow of the document.
 ///
 /// # Caching Strategy
 ///
@@ -180,6 +180,13 @@ impl ResourceManager {
 /// - **Lazy Loading**: Pages and resources are loaded on demand
 /// - **Automatic Caching**: Frequently accessed objects are cached
 /// - **Safe API**: Borrow checker issues are handled internally
+///
+/// # Thread Safety
+///
+/// `PdfDocument<R>` is `Send` for `R: Send` (issue #369): it can be moved to
+/// another thread or across a Python GIL boundary (e.g. `Python::allow_threads`).
+/// It is intentionally `!Sync` because `RefCell` does not permit shared concurrent
+/// access; callers that need concurrent reads should use one instance per thread.
 ///
 /// # Example
 ///
@@ -1900,6 +1907,7 @@ mod tests {
         fn assert_send<T: Send>() {}
         assert_send::<PdfDocument<std::fs::File>>();
         assert_send::<PdfDocument<Cursor<Vec<u8>>>>();
+        assert_send::<PdfDocument<Cursor<&'static [u8]>>>();
     }
 
     // Issue #369: dropping the unshared Rc must not change cache behavior.
