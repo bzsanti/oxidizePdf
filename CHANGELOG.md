@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- next-header -->
 ## [Unreleased]
 
+## [3.0.4] - 2026-06-29
+
+### Changed
+
+- `PdfDocument<R>` is now `Send` for `R: Send`. The internal
+  `Rc<ResourceManager>` (which was never cloned or shared) is replaced by an
+  owned `ResourceManager` field; the inner `RefCell` cache is unchanged, so
+  there is no locking overhead and no behavioral change. This lets callers move
+  a document across threads — concretely, the Python bindings can release the
+  GIL (`Python::allow_threads`) around reader operations. `PdfDocument` remains
+  `!Sync` (#369).
+
 ## [3.0.3] - 2026-06-29
 
 ### Added
