@@ -1,0 +1,21 @@
+# Treat binary test fixtures as binary so git never applies EOL (CRLF)
+# conversion to them. Without this, small PDFs with no NUL byte in their first
+# 8 KiB are auto-detected as *text* and get LF→CRLF-mangled on Windows checkouts
+# (core.autocrlf=true, the default on GitHub Actions Windows runners), which
+# corrupts the byte offsets and breaks parsing (issue #373 CI: pypdf AES-256
+# fixture parsed as "Unknown keyword: rms" only on windows-latest).
+*.pdf   binary
+*.PDF   binary
+
+# Fonts and images used as fixtures are binary too.
+*.ttf   binary
+*.otf   binary
+*.ttc   binary
+*.woff  binary
+*.woff2 binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.jbig2 binary
