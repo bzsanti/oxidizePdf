@@ -390,7 +390,7 @@ impl StandardSecurityHandler {
     /// Encrypt data using AES.
     ///
     /// - **R4**: AES-128-CBC with MD5-based per-object key (ISO 32000-1 §7.6.2 Algorithm 1 + "sAlT")
-    /// - **R5/R6**: AES-256-CBC with SHA-256 key derivation
+    /// - **R5/R6**: AES-256-CBC with the file key used directly (ISO 32000-2 §7.6.4.3, AESV3)
     pub fn encrypt_aes(
         &self,
         data: &[u8],
@@ -403,7 +403,7 @@ impl StandardSecurityHandler {
                 Aes::new(AesKey::new_128(obj_key)?)
             }
             SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                let obj_key = self.compute_aes_object_key(key, obj_id)?;
+                let obj_key = self.compute_aes256_object_key(key, obj_id)?;
                 Aes::new(AesKey::new_256(obj_key)?)
             }
             _ => {
@@ -428,7 +428,7 @@ impl StandardSecurityHandler {
     /// Decrypt data using AES.
     ///
     /// - **R4**: AES-128-CBC with MD5-based per-object key
-    /// - **R5/R6**: AES-256-CBC with SHA-256 key derivation
+    /// - **R5/R6**: AES-256-CBC with the file key used directly (ISO 32000-2 §7.6.4.3, AESV3)
     pub fn decrypt_aes(
         &self,
         data: &[u8],
@@ -450,7 +450,7 @@ impl StandardSecurityHandler {
                 Aes::new(AesKey::new_128(obj_key)?)
             }
             SecurityHandlerRevision::R5 | SecurityHandlerRevision::R6 => {
-                let obj_key = self.compute_aes_object_key(key, obj_id)?;
+                let obj_key = self.compute_aes256_object_key(key, obj_id)?;
                 Aes::new(AesKey::new_256(obj_key)?)
             }
             _ => {
@@ -481,21 +481,27 @@ impl StandardSecurityHandler {
         hash[..key_len].to_vec()
     }
 
-    /// Compute AES-256 object-specific encryption key for Rev 5/6 (SHA-256 based).
-    fn compute_aes_object_key(&self, key: &EncryptionKey, obj_id: &ObjectId) -> Result<Vec<u8>> {
+    /// Object encryption key for the AESV3 crypt filter (Rev 5/6, V5).
+    ///
+    /// ISO 32000-2 §7.6.4.3: for AESV3 the object encryption key **is the file
+    /// encryption key, used directly** — unlike V1/V2/AESV2 (Rev ≤ 4), there is
+    /// no per-object hashing with the object number, generation and `sAlT`. The
+    /// object number is *not* mixed in. Deriving a salted per-object key here
+    /// (as earlier revisions do) yields a wrong AES key and PKCS#7 unpad
+    /// failures on spec-compliant files (issue #373); it also made our own
+    /// AES-256 output unreadable by any other conforming reader.
+    fn compute_aes256_object_key(
+        &self,
+        key: &EncryptionKey,
+        _obj_id: &ObjectId,
+    ) -> Result<Vec<u8>> {
         if self.revision < SecurityHandlerRevision::R5 {
             return Err(crate::error::PdfError::EncryptionError(
-                "SHA-256 AES key derivation only for Rev 5+".to_string(),
+                "AESV3 file-key derivation only for Rev 5+".to_string(),
             ));
         }
 
-        let mut data = Vec::new();
-        data.extend_from_slice(&key.key);
-        data.extend_from_slice(&obj_id.number().to_le_bytes());
-        data.extend_from_slice(&obj_id.generation().to_le_bytes());
-        data.extend_from_slice(b"sAlT");
-
-        Ok(sha256(&data))
+        Ok(key.key.clone())
     }
 
     /// Compute encryption key for AES Rev 5/6
@@ -870,9 +876,12 @@ impl StandardSecurityHandler {
         // Extract key_salt from U[40..48]
         let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // Compute intermediate key using Algorithm 2.B (ISO 32000-2:2020)
-        // For key derivation, we pass the full U entry as the third parameter
-        let hash = compute_hash_r6_algorithm_2b(user_password.0.as_bytes(), key_salt, u_entry)?;
+        // Compute intermediate key using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.3).
+        // For the USER password the additional input is EMPTY (the 48-byte U
+        // entry is only used when hashing an OWNER password). This mirrors the
+        // read side (`recover_r6_encryption_key`) so our own R6 UE round-trips
+        // and is decryptable by conforming readers (issue #373).
+        let hash = compute_hash_r6_algorithm_2b(user_password.0.as_bytes(), key_salt, &[])?;
         let intermediate_key = hash[..U_HASH_LENGTH].to_vec();
 
         // Encrypt encryption_key with intermediate_key using AES-256-CBC, IV = 0
@@ -918,9 +927,13 @@ impl StandardSecurityHandler {
         // Extract key_salt from U[40..48]
         let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // Compute intermediate key using Algorithm 2.B (ISO 32000-2:2020)
-        // For key derivation, we pass the full U entry as the third parameter
-        let hash = compute_hash_r6_algorithm_2b(user_password.0.as_bytes(), key_salt, u_entry)?;
+        // Compute intermediate key using Algorithm 2.B (ISO 32000-2:2020 §7.6.4.3.4).
+        // For the USER password the additional input is EMPTY (it is the 48-byte
+        // U entry only when hashing an OWNER password). Passing u_entry here
+        // produces a wrong intermediate key → wrong file key → PKCS#7 unpad
+        // failures on real R6 files, even though validation (which correctly
+        // uses empty input) succeeds (issue #373).
+        let hash = compute_hash_r6_algorithm_2b(user_password.0.as_bytes(), key_salt, &[])?;
         let intermediate_key = hash[..U_HASH_LENGTH].to_vec();
 
         // Decrypt UE to get encryption key using AES-256-CBC with IV = 0
