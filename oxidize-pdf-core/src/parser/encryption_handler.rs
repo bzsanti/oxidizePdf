@@ -362,7 +362,7 @@ impl EncryptionHandler {
 
         let is_valid = if self.encryption_info.r == 5 {
             self.security_handler
-                .validate_r5_owner_password(owner_password, &o_entry)
+                .validate_r5_owner_password(owner_password, &o_entry, &u_entry)
         } else {
             self.security_handler
                 .validate_r6_owner_password(owner_password, &o_entry, &u_entry)
@@ -392,6 +392,7 @@ impl EncryptionHandler {
                 self.security_handler.recover_r5_owner_encryption_key(
                     owner_password,
                     &o_entry,
+                    &u_entry,
                     oe_entry,
                 )
             } else {

@@ -401,9 +401,18 @@ impl DocumentEncryption {
                 file_id,
             )?
         } else {
-            // For R5/R6, use advanced key derivation
-            // This is simplified - in production, extract salts from encryption dict
-            EncryptionKey::new(vec![0u8; 32])
+            // R5/R6 (AES-256) recover the file key from the UE/OE entries via
+            // `StandardSecurityHandler::recover_r5_encryption_key` /
+            // `recover_r6_encryption_key`, not from a password-derived key. This
+            // legacy constructor never implemented that, and returning a zero key
+            // would silently decrypt every object to garbage. Fail loudly instead
+            // (issue #380). The production reader path is `EncryptionHandler` in
+            // `src/parser/encryption_handler.rs`.
+            return Err(PdfError::EncryptionError(format!(
+                "DocumentEncryption::new does not support AES-256 (R{}); \
+                 use the reader's EncryptionHandler for R5/R6 key recovery",
+                encryption_dict.r
+            )));
         };
 
         // Create crypt filter manager
@@ -1147,7 +1156,10 @@ mod tests {
     }
 
     #[test]
-    fn test_document_encryption_r5() {
+    fn test_document_encryption_r5_rejects_aes256() {
+        // This legacy constructor never implemented R5/R6 key recovery and used
+        // to return a zero key, silently decrypting every object to garbage.
+        // It now fails loudly (issue #380).
         let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
             vec![0u8; 32],
             vec![1u8; 32],
@@ -1157,11 +1169,11 @@ mod tests {
         encryption_dict.r = 5;
 
         let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
-        assert!(result.is_ok());
+        assert!(result.is_err(), "R5 must be rejected, not zero-keyed");
     }
 
     #[test]
-    fn test_document_encryption_r6() {
+    fn test_document_encryption_r6_rejects_aes256() {
         let mut encryption_dict = crate::encryption::EncryptionDictionary::rc4_128bit(
             vec![0u8; 32],
             vec![1u8; 32],
@@ -1171,7 +1183,7 @@ mod tests {
         encryption_dict.r = 6;
 
         let result = DocumentEncryption::new(encryption_dict, "user_password", Some(b"file_id"));
-        assert!(result.is_ok());
+        assert!(result.is_err(), "R6 must be rejected, not zero-keyed");
     }
 
     #[test]

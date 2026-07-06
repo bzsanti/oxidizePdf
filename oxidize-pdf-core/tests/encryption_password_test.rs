@@ -454,13 +454,14 @@ fn test_validate_owner_password_r5_correct() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("r5_owner_secret".to_string());
 
-    // Dummy user password (not used for R5 owner validation, but required by API)
+    // The R5 owner hash binds the 48-byte U entry (issue #380).
     let user_pwd = UserPassword("".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     // Compute O entry using internal R5 function
     // O entry structure: hash[32] + validation_salt[8] + key_salt[8] = 48 bytes
     let o_entry = handler
-        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .compute_r5_owner_hash(&owner_pwd, &u_entry)
         .expect("R5 owner hash computation should succeed");
     let permissions = Permissions::new();
 
@@ -471,7 +472,7 @@ fn test_validate_owner_password_r5_correct() {
         &user_pwd,
         permissions,
         None,
-        None, // u_entry not needed for R5
+        Some(&u_entry), // R5 owner validation needs the U entry
     );
 
     // Then: Should return Ok(true)
@@ -493,12 +494,13 @@ fn test_validate_owner_password_r5_incorrect() {
     let correct_owner = OwnerPassword("correct_r5_owner".to_string());
     let wrong_owner = OwnerPassword("wrong_r5_owner".to_string());
 
-    // Dummy user password (not used for R5 owner validation)
+    // The R5 owner hash binds the 48-byte U entry (issue #380).
     let user_pwd = UserPassword("".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     // Compute O entry with correct password
     let o_entry = handler
-        .compute_r5_owner_hash(&correct_owner, &user_pwd)
+        .compute_r5_owner_hash(&correct_owner, &u_entry)
         .expect("R5 owner hash computation should succeed");
     let permissions = Permissions::new();
 
@@ -509,7 +511,7 @@ fn test_validate_owner_password_r5_incorrect() {
         &user_pwd,
         permissions,
         None,
-        None, // u_entry not needed for R5
+        Some(&u_entry), // R5 owner validation needs the U entry
     );
 
     // Then: Should return Ok(false)

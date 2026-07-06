@@ -122,7 +122,7 @@ impl DocumentEncryption {
         file_id: Option<&[u8]>,
     ) -> Result<EncryptionDictionary> {
         let u_entry = handler.compute_r5_user_hash(&self.user_password)?;
-        let o_entry = handler.compute_r5_owner_hash(&self.owner_password, &self.user_password)?;
+        let o_entry = handler.compute_r5_owner_hash(&self.owner_password, &u_entry)?;
 
         // Generate a random 32-byte file encryption key
         let mut encryption_key = vec![0u8; 32];
@@ -132,8 +132,12 @@ impl DocumentEncryption {
 
         // Compute UE and OE entries (encrypted copies of the encryption key)
         let ue_entry = handler.compute_r5_ue_entry(&self.user_password, &u_entry, &enc_key_obj)?;
-        let oe_entry =
-            handler.compute_r5_oe_entry(&self.owner_password, &o_entry, &encryption_key)?;
+        let oe_entry = handler.compute_r5_oe_entry(
+            &self.owner_password,
+            &o_entry,
+            &u_entry,
+            &encryption_key,
+        )?;
 
         Ok(EncryptionDictionary::aes_256(
             o_entry,

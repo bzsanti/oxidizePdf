@@ -18,9 +18,10 @@ fn test_r5_owner_hash_computation() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("owner_r5".to_string());
     let user_pwd = UserPassword("user_r5".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     let o_entry = handler
-        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .compute_r5_owner_hash(&owner_pwd, &u_entry)
         .expect("R5 owner hash computation should succeed");
 
     // O entry for R5/R6 is 48 bytes: hash(32) + validation_salt(8) + key_salt(8)
@@ -32,15 +33,16 @@ fn test_r5_owner_password_validation_correct() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("correct_owner".to_string());
     let user_pwd = UserPassword("user".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     // First compute the O entry
     let o_entry = handler
-        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .compute_r5_owner_hash(&owner_pwd, &u_entry)
         .expect("Owner hash computation should succeed");
 
     // Validate with correct owner password
     let is_valid = handler
-        .validate_r5_owner_password(&owner_pwd, &o_entry)
+        .validate_r5_owner_password(&owner_pwd, &o_entry, &u_entry)
         .expect("Validation should not error");
 
     assert!(is_valid, "R5: correct owner password should validate");
@@ -52,14 +54,15 @@ fn test_r5_owner_password_validation_incorrect() {
     let correct_owner = OwnerPassword("correct".to_string());
     let wrong_owner = OwnerPassword("wrong".to_string());
     let user_pwd = UserPassword("user".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     let o_entry = handler
-        .compute_r5_owner_hash(&correct_owner, &user_pwd)
+        .compute_r5_owner_hash(&correct_owner, &u_entry)
         .expect("Owner hash computation should succeed");
 
     // Validate with wrong owner password
     let is_invalid = handler
-        .validate_r5_owner_password(&wrong_owner, &o_entry)
+        .validate_r5_owner_password(&wrong_owner, &o_entry, &u_entry)
         .expect("Validation should not error");
 
     assert!(!is_invalid, "R5: wrong owner password should not validate");
@@ -70,10 +73,11 @@ fn test_r5_oe_entry_computation() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("owner".to_string());
     let user_pwd = UserPassword("user".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     // Compute O entry
     let o_entry = handler
-        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .compute_r5_owner_hash(&owner_pwd, &u_entry)
         .expect("Owner hash computation should succeed");
 
     // Generate encryption key
@@ -81,7 +85,7 @@ fn test_r5_oe_entry_computation() {
 
     // Compute OE entry
     let oe_entry = handler
-        .compute_r5_oe_entry(&owner_pwd, &o_entry, &encryption_key)
+        .compute_r5_oe_entry(&owner_pwd, &o_entry, &u_entry, &encryption_key)
         .expect("OE entry computation should succeed");
 
     // OE is 32 bytes (encrypted encryption key)
@@ -93,10 +97,11 @@ fn test_r5_owner_encryption_key_recovery() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("recover_owner".to_string());
     let user_pwd = UserPassword("recover_user".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     // Compute O entry
     let o_entry = handler
-        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .compute_r5_owner_hash(&owner_pwd, &u_entry)
         .expect("Owner hash computation should succeed");
 
     // Original encryption key
@@ -104,12 +109,12 @@ fn test_r5_owner_encryption_key_recovery() {
 
     // Compute OE entry
     let oe_entry = handler
-        .compute_r5_oe_entry(&owner_pwd, &o_entry, &original_key)
+        .compute_r5_oe_entry(&owner_pwd, &o_entry, &u_entry, &original_key)
         .expect("OE entry computation should succeed");
 
     // Recover key from OE
     let recovered_key = handler
-        .recover_r5_owner_encryption_key(&owner_pwd, &o_entry, &oe_entry)
+        .recover_r5_owner_encryption_key(&owner_pwd, &o_entry, &u_entry, &oe_entry)
         .expect("Key recovery should succeed");
 
     assert_eq!(
@@ -124,10 +129,11 @@ fn test_r5_owner_full_workflow() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("full_workflow_owner".to_string());
     let user_pwd = UserPassword("full_workflow_user".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     // 1. Compute O entry
     let o = handler
-        .compute_r5_owner_hash(&owner_pwd, &user_pwd)
+        .compute_r5_owner_hash(&owner_pwd, &u_entry)
         .expect("Owner hash should succeed");
 
     // 2. Generate encryption key
@@ -135,18 +141,20 @@ fn test_r5_owner_full_workflow() {
 
     // 3. Compute OE entry
     let oe = handler
-        .compute_r5_oe_entry(&owner_pwd, &o, &key)
+        .compute_r5_oe_entry(&owner_pwd, &o, &u_entry, &key)
         .expect("OE computation should succeed");
 
     // 4. Validate owner password
     assert!(
-        handler.validate_r5_owner_password(&owner_pwd, &o).unwrap(),
+        handler
+            .validate_r5_owner_password(&owner_pwd, &o, &u_entry)
+            .unwrap(),
         "Owner password should validate"
     );
 
     // 5. Recover key
     let recovered = handler
-        .recover_r5_owner_encryption_key(&owner_pwd, &o, &oe)
+        .recover_r5_owner_encryption_key(&owner_pwd, &o, &u_entry, &oe)
         .expect("Key recovery should succeed");
     assert_eq!(recovered, key);
 }
@@ -318,15 +326,16 @@ fn test_r5_owner_empty_password() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let empty_owner = OwnerPassword(String::new());
     let user_pwd = UserPassword("user".to_string());
+    let u_entry = handler.compute_r5_user_hash(&user_pwd).unwrap();
 
     let o = handler
-        .compute_r5_owner_hash(&empty_owner, &user_pwd)
+        .compute_r5_owner_hash(&empty_owner, &u_entry)
         .expect("Empty owner password should work");
 
     assert_eq!(o.len(), 48);
 
     assert!(handler
-        .validate_r5_owner_password(&empty_owner, &o)
+        .validate_r5_owner_password(&empty_owner, &o, &u_entry)
         .unwrap());
 }
 
@@ -336,8 +345,9 @@ fn test_r5_owner_o_entry_invalid_length() {
     let owner_pwd = OwnerPassword("owner".to_string());
 
     let short_o = vec![0u8; 32]; // Should be 48
+    let u_entry = vec![0u8; 48];
 
-    let result = handler.validate_r5_owner_password(&owner_pwd, &short_o);
+    let result = handler.validate_r5_owner_password(&owner_pwd, &short_o, &u_entry);
     assert!(result.is_err(), "Should error with invalid O entry length");
 }
 
@@ -346,9 +356,10 @@ fn test_r5_owner_oe_entry_invalid_length() {
     let handler = StandardSecurityHandler::aes_256_r5();
     let owner_pwd = OwnerPassword("owner".to_string());
     let o_entry = vec![0u8; 48];
+    let u_entry = vec![0u8; 48];
 
     let short_oe = vec![0u8; 16]; // Should be 32
 
-    let result = handler.recover_r5_owner_encryption_key(&owner_pwd, &o_entry, &short_oe);
+    let result = handler.recover_r5_owner_encryption_key(&owner_pwd, &o_entry, &u_entry, &short_oe);
     assert!(result.is_err(), "Should error with invalid OE entry length");
 }

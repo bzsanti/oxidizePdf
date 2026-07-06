@@ -1155,28 +1155,40 @@ impl StandardSecurityHandler {
     /// Compute R5 owner password hash (O entry)
     ///
     /// Algorithm 9 (ISO 32000-1): Creates 48-byte O entry
-    /// - Bytes 0-31: SHA-256(owner_password || validation_salt)
+    /// - Bytes 0-31: SHA-256(owner_password || validation_salt || U)
+    ///   (Adobe ext-level-3 requires appending the 48-byte /U entry)
     /// - Bytes 32-39: validation_salt (8 random bytes)
     /// - Bytes 40-47: key_salt (8 random bytes)
     pub fn compute_r5_owner_hash(
         &self,
         owner_password: &OwnerPassword,
-        _user_password: &UserPassword,
+        u_entry: &[u8],
     ) -> Result<Vec<u8>> {
         if self.revision != SecurityHandlerRevision::R5 {
             return Err(crate::error::PdfError::EncryptionError(
                 "R5 owner hash only for Revision 5".to_string(),
             ));
         }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes for R5 O computation, got {}",
+                U_ENTRY_LENGTH,
+                u_entry.len()
+            )));
+        }
 
         // Generate random salts
         let validation_salt = generate_salt(R5_SALT_LENGTH);
         let key_salt = generate_salt(R5_SALT_LENGTH);
 
-        // Compute hash: SHA-256(owner_password || validation_salt)
+        // Compute hash: SHA-256(owner_password || validation_salt || U[0..48]).
+        // The R5 (Adobe SHA-256 extension level 3) owner hash appends the whole
+        // 48-byte U entry; omitting it makes the O entry non-interoperable with
+        // conforming readers (issue #380). The R5 *user* hash omits U by design.
         let mut data = Vec::new();
         data.extend_from_slice(owner_password.0.as_bytes());
         data.extend_from_slice(&validation_salt);
+        data.extend_from_slice(u_entry);
 
         let hash = sha256(&data);
 
@@ -1197,6 +1209,7 @@ impl StandardSecurityHandler {
         &self,
         owner_password: &OwnerPassword,
         o_entry: &[u8],
+        u_entry: &[u8],
     ) -> Result<bool> {
         if o_entry.len() != U_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
@@ -1205,14 +1218,23 @@ impl StandardSecurityHandler {
                 o_entry.len()
             )));
         }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "R5 U entry must be {} bytes, got {}",
+                U_ENTRY_LENGTH,
+                u_entry.len()
+            )));
+        }
 
         // Extract validation_salt from O (bytes 32-39)
         let validation_salt = &o_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
 
-        // Compute hash: SHA-256(owner_password || validation_salt)
+        // Compute hash: SHA-256(owner_password || validation_salt || U[0..48]).
+        // See `compute_r5_owner_hash` for why U is appended (issue #380).
         let mut data = Vec::new();
         data.extend_from_slice(owner_password.0.as_bytes());
         data.extend_from_slice(validation_salt);
+        data.extend_from_slice(u_entry);
 
         let hash = sha256(&data);
 
@@ -1224,16 +1246,24 @@ impl StandardSecurityHandler {
     /// Compute R5 OE entry (encrypted encryption key with owner password)
     ///
     /// OE = AES-256-CBC(encryption_key, key=intermediate_key, iv=zeros)
-    /// where intermediate_key = SHA-256(owner_password || key_salt)
+    /// where intermediate_key = SHA-256(owner_password || key_salt || U)
+    /// (Adobe ext-level-3 requires appending the 48-byte /U entry)
     pub fn compute_r5_oe_entry(
         &self,
         owner_password: &OwnerPassword,
         o_entry: &[u8],
+        u_entry: &[u8],
         encryption_key: &[u8],
     ) -> Result<Vec<u8>> {
         if o_entry.len() != U_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
                 "O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
                 U_ENTRY_LENGTH
             )));
         }
@@ -1247,10 +1277,12 @@ impl StandardSecurityHandler {
         // Extract key_salt from O (bytes 40-47)
         let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // Compute intermediate key: SHA-256(owner_password || key_salt)
+        // Compute intermediate key: SHA-256(owner_password || key_salt || U[0..48]).
+        // See `compute_r5_owner_hash` for why U is appended (issue #380).
         let mut data = Vec::new();
         data.extend_from_slice(owner_password.0.as_bytes());
         data.extend_from_slice(key_salt);
+        data.extend_from_slice(u_entry);
 
         let intermediate_key = sha256(&data);
 
@@ -1271,11 +1303,18 @@ impl StandardSecurityHandler {
         &self,
         owner_password: &OwnerPassword,
         o_entry: &[u8],
+        u_entry: &[u8],
         oe_entry: &[u8],
     ) -> Result<Vec<u8>> {
         if o_entry.len() != U_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
                 "O entry must be {} bytes",
+                U_ENTRY_LENGTH
+            )));
+        }
+        if u_entry.len() != U_ENTRY_LENGTH {
+            return Err(crate::error::PdfError::EncryptionError(format!(
+                "U entry must be {} bytes",
                 U_ENTRY_LENGTH
             )));
         }
@@ -1289,10 +1328,12 @@ impl StandardSecurityHandler {
         // Extract key_salt from O (bytes 40-47)
         let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // Compute intermediate key
+        // Compute intermediate key: SHA-256(owner_password || key_salt || U[0..48]).
+        // See `compute_r5_owner_hash` for why U is appended (issue #380).
         let mut data = Vec::new();
         data.extend_from_slice(owner_password.0.as_bytes());
         data.extend_from_slice(key_salt);
+        data.extend_from_slice(u_entry);
 
         let intermediate_key = sha256(&data);
 
@@ -1331,13 +1372,14 @@ impl StandardSecurityHandler {
         let validation_salt = generate_salt(R6_SALT_LENGTH);
         let key_salt = generate_salt(R6_SALT_LENGTH);
 
-        // For R6, use Algorithm 2.B: hash = Alg2B(owner_password || validation_salt || U[0..48])
-        let mut input = Vec::new();
-        input.extend_from_slice(owner_password.0.as_bytes());
-        input.extend_from_slice(&validation_salt);
-        input.extend_from_slice(u_entry);
-
-        let hash = compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+        // For R6 the owner hash is Algorithm 2.B with the owner password, the
+        // validation salt, and the 48-byte U entry as the additional input
+        // (ISO 32000-2:2020 §7.6.4.3.4). `compute_hash_r6_algorithm_2b` builds
+        // `password ‖ salt ‖ U` internally; passing a pre-concatenated blob as
+        // the `password` argument double-includes the salt/U and is not
+        // interoperable with conforming readers (issue #380).
+        let hash =
+            compute_hash_r6_algorithm_2b(owner_password.0.as_bytes(), &validation_salt, u_entry)?;
 
         // Construct O entry: hash[0..32] + validation_salt + key_salt
         let mut o_entry = Vec::with_capacity(U_ENTRY_LENGTH);
@@ -1374,13 +1416,11 @@ impl StandardSecurityHandler {
         // Extract validation_salt from O (bytes 32-39)
         let validation_salt = &o_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
 
-        // Compute hash using Algorithm 2.B
-        let mut input = Vec::new();
-        input.extend_from_slice(owner_password.0.as_bytes());
-        input.extend_from_slice(validation_salt);
-        input.extend_from_slice(u_entry);
-
-        let hash = compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+        // Compute hash using Algorithm 2.B: 2B(owner_pw, validation_salt, U).
+        // See `compute_r6_owner_hash` for why the salt/U must be passed as
+        // dedicated arguments rather than pre-concatenated (issue #380).
+        let hash =
+            compute_hash_r6_algorithm_2b(owner_password.0.as_bytes(), validation_salt, u_entry)?;
 
         // SECURITY: Constant-time comparison prevents timing attacks
         let stored_hash = &o_entry[..U_HASH_LENGTH];
@@ -1419,14 +1459,10 @@ impl StandardSecurityHandler {
         // Extract key_salt from O (bytes 40-47)
         let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // Compute intermediate key using Algorithm 2.B
-        let mut input = Vec::new();
-        input.extend_from_slice(owner_password.0.as_bytes());
-        input.extend_from_slice(key_salt);
-        input.extend_from_slice(u_entry);
-
+        // Compute intermediate key using Algorithm 2.B: 2B(owner_pw, key_salt, U).
+        // See `compute_r6_owner_hash` for the argument-order rationale (#380).
         let intermediate_key =
-            compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+            compute_hash_r6_algorithm_2b(owner_password.0.as_bytes(), key_salt, u_entry)?;
 
         // Encrypt encryption_key with intermediate_key using AES-256-CBC
         let aes = Aes::new(AesKey::new_256(intermediate_key[..32].to_vec())?);
@@ -1469,14 +1505,10 @@ impl StandardSecurityHandler {
         // Extract key_salt from O (bytes 40-47)
         let key_salt = &o_entry[U_KEY_SALT_START..U_KEY_SALT_END];
 
-        // Compute intermediate key using Algorithm 2.B
-        let mut input = Vec::new();
-        input.extend_from_slice(owner_password.0.as_bytes());
-        input.extend_from_slice(key_salt);
-        input.extend_from_slice(u_entry);
-
+        // Compute intermediate key using Algorithm 2.B: 2B(owner_pw, key_salt, U).
+        // See `compute_r6_owner_hash` for the argument-order rationale (#380).
         let intermediate_key =
-            compute_hash_r6_algorithm_2b(&input, owner_password.0.as_bytes(), u_entry)?;
+            compute_hash_r6_algorithm_2b(owner_password.0.as_bytes(), key_salt, u_entry)?;
 
         // Decrypt OE to get encryption key
         let aes = Aes::new(AesKey::new_256(intermediate_key[..32].to_vec())?);
@@ -1574,7 +1606,8 @@ impl StandardSecurityHandler {
     /// - `_user_password`: Unused for R2-R4 (recovered from owner_hash), ignored for R5/R6
     /// - `_permissions`: Unused for R5/R6 (not part of validation)
     /// - `_file_id`: Unused for R5/R6 (not part of validation)
-    /// - `u_entry`: Required for R6 (U entry needed for Algorithm 2.B), ignored for R2-R5
+    /// - `u_entry`: Required for R5 and R6 (the U entry is bound into the owner
+    ///   hash — SHA-256 for R5, Algorithm 2.B for R6); ignored for R2-R4
     pub fn validate_owner_password(
         &self,
         owner_password: &OwnerPassword,
@@ -1643,9 +1676,14 @@ impl StandardSecurityHandler {
                 Ok(computed_owner[..32] == owner_hash[..32])
             }
             SecurityHandlerRevision::R5 => {
-                // R5 uses simple SHA-256 validation (Algorithm 12)
-                // owner_hash is the O entry (48 bytes)
-                self.validate_r5_owner_password(owner_password, owner_hash)
+                // R5 owner validation is SHA-256(owner_pw ‖ salt ‖ U); it needs
+                // the 48-byte U entry (issue #380).
+                let u = u_entry.ok_or_else(|| {
+                    crate::error::PdfError::EncryptionError(
+                        "R5 owner password validation requires U entry".to_string(),
+                    )
+                })?;
+                self.validate_r5_owner_password(owner_password, owner_hash, u)
             }
             SecurityHandlerRevision::R6 => {
                 // R6 uses Algorithm 2.B which requires U entry
