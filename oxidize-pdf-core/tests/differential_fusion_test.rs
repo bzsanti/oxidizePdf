@@ -93,11 +93,39 @@ fn wordish(t: &str) -> bool {
     t.len() >= 3 && t.chars().all(|c| c.is_alphabetic())
 }
 
-/// Count fusions: adjacent poppler words `(a, b)` such that our text contains
-/// `ab` but poppler's never does (so it is our glue, not a real token).
+/// The set of maximal alphabetic runs in `s` (letters split on any non-letter).
+/// Built once per document so fusion lookups are O(1) instead of a substring
+/// scan per bigram (issue #450: the previous `contains` form was O(bigrams ×
+/// text_length) and blew up on very large documents). A wordish fused pair `ab`
+/// is pure-alphabetic, so it is a fusion iff it equals one of these runs — this
+/// also catches trailing punctuation (`Management System` → the run
+/// `ManagementSystem` out of the token `ManagementSystem,`).
+fn alpha_runs(s: &str) -> HashSet<String> {
+    let mut set = HashSet::new();
+    let mut cur = String::new();
+    for c in s.chars() {
+        if c.is_alphabetic() {
+            cur.push(c);
+        } else if !cur.is_empty() {
+            set.insert(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.is_empty() {
+        set.insert(cur);
+    }
+    set
+}
+
+/// Count fusions: adjacent poppler words `(a, b)` whose concatenation `ab` is a
+/// maximal alphabetic run in OUR text but not in poppler's (so it is our glue,
+/// not a real token). O(N) via prebuilt run sets (issue #450). Accepted change
+/// from the prior substring form: three-or-more words glued into a single run
+/// are no longer counted (the bigram no longer equals the whole run), and
+/// substring-only coincidences inside a longer run are dropped as noise; the
+/// baseline is re-measured accordingly.
 fn fusion_count(ours: &str, pop: &str) -> usize {
-    let ours_flat: String = ours.split_whitespace().collect::<Vec<_>>().join(" ");
-    let pop_flat: String = pop.split_whitespace().collect::<Vec<_>>().join(" ");
+    let ours_runs = alpha_runs(ours);
+    let pop_runs = alpha_runs(pop);
     let toks: Vec<&str> = pop.split_whitespace().collect();
     let mut seen = HashSet::new();
     let mut n = 0;
@@ -110,7 +138,7 @@ fn fusion_count(ours: &str, pop: &str) -> usize {
         if !seen.insert(fused.clone()) {
             continue;
         }
-        if ours_flat.contains(&fused) && !pop_flat.contains(&fused) {
+        if ours_runs.contains(&fused) && !pop_runs.contains(&fused) {
             n += 1;
         }
     }
