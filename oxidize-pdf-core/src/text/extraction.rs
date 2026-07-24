@@ -1040,14 +1040,18 @@ impl TextExtractor {
                                 // the dy check alone misses it, so treat a backward
                                 // dx beyond one line-height (2× the threshold,
                                 // conservative) as a newline even when dy is small
-                                // (issue #390). A wrap always lands on a different
-                                // baseline, so require a nonzero dy: a strictly
-                                // same-line backward jump is glyph repositioning,
-                                // not a wrap (issue #441). dy is baseline-relative
-                                // (issue #443), so this holds under rotation too;
-                                // the epsilon absorbs projection rounding noise.
-                                let line_wrap = dy > SAME_LINE_EPS
-                                    && dx < -(self.options.newline_threshold * 2.0);
+                                // (issue #390). With a nonzero leading that gate is
+                                // enough; but at dy == 0 the jump is ambiguous with
+                                // a same-line reposition (issue #441). Resolve it by
+                                // magnitude: a reposition is local, a same-Y wrap
+                                // returns across the whole column, so a jump beyond
+                                // `SAME_Y_WRAP_EM` font sizes is a wrap even at dy == 0
+                                // (issue #447). dx/dy are baseline-relative (issue
+                                // #443), so this holds under rotation; the epsilon
+                                // absorbs projection rounding noise.
+                                let same_y_wrap = dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
+                                let line_wrap = dx < -(self.options.newline_threshold * 2.0)
+                                    && (dy > SAME_LINE_EPS || same_y_wrap);
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
                                 } else if dx > self.options.space_threshold * state.font_size {
@@ -1137,17 +1141,22 @@ impl TextExtractor {
                                     // pieces. A *backward* dx beyond one line-height
                                     // (2× the threshold, conservative) is a wrap, not a
                                     // kern, so it is safe to break there — but only when
-                                    // the pen also moved vertically: a wrap always lands
-                                    // on a different baseline, so a strictly same-line
-                                    // backward jump is glyph repositioning, not a wrap
-                                    // (issue #441). Deltas are baseline-relative (issue
-                                    // #443), so both gates hold under rotation; the
-                                    // epsilon absorbs projection rounding noise.
+                                    // the pen also moved vertically: with a nonzero
+                                    // leading that gate identifies the wrap. At dy == 0
+                                    // the backward jump is ambiguous with a same-line
+                                    // reposition (issue #441); resolve it by magnitude,
+                                    // treating a jump beyond `SAME_Y_WRAP_EM` font sizes
+                                    // as a same-Y wrap (issue #447). Deltas are
+                                    // baseline-relative (issue #443), so both gates hold
+                                    // under rotation; the epsilon absorbs projection
+                                    // rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
                                     let dy = dy_signed.abs();
-                                    let line_wrap = dy > SAME_LINE_EPS
-                                        && dx < -(self.options.newline_threshold * 2.0);
+                                    let same_y_wrap =
+                                        dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
+                                    let line_wrap = dx < -(self.options.newline_threshold * 2.0)
+                                        && (dy > SAME_LINE_EPS || same_y_wrap);
                                     if !skip_text {
                                         let separator = if !extracted_text.is_empty()
                                             && (dy > self.options.newline_threshold || line_wrap)
@@ -2521,6 +2530,30 @@ fn advance_pen(state: &mut TextState, text_width: f64) -> (f64, f64) {
 /// below this epsilon is "the same baseline". The smallest meaningful
 /// leading in real documents is orders of magnitude above it.
 const SAME_LINE_EPS: f64 = 1e-6;
+
+/// Backward-jump magnitude, in multiples of the font size, above which a
+/// same-baseline (`dy == 0`) backward pen jump is a line wrap rather than a
+/// glyph reposition (issue #447).
+///
+/// At `dy == 0` a backward jump is ambiguous: a same-line reposition
+/// (justification, kerned overlay, out-of-order emission — issue #441) and a
+/// real wrap whose two lines happen to land on the same content-stream Y
+/// (issue #447) both produce it. They separate by MAGNITUDE: a reposition is
+/// local (a word/phrase — a few em), while a wrap returns across the whole
+/// text column (many em). This bound sits in that gap, scaled to font size
+/// because the reposition scale is the glyph/word scale, not the fixed
+/// paragraph-break `newline_threshold`. Scaled to `font_size.abs()`: `Tf`
+/// accepts negative sizes (mirrored text), and the sign must not flip the
+/// threshold's sense — otherwise a negative size makes every backward jump a
+/// "wrap" and resurrects the #441 defect.
+///
+/// Accepted, documented limitation (the #417/#422 trade-off): a same-line
+/// reposition that jumps back more than this many em is misread as a wrap, and
+/// a same-Y wrap of a line shorter than this is glued. Both are rare and
+/// neither loses a glyph — only the separator is wrong. A wrap with any
+/// nonzero leading (the common case, issue #390) is unaffected: it breaks on
+/// the `dy`-aware gate regardless of magnitude.
+const SAME_Y_WRAP_EM: f64 = 10.0;
 
 /// Pen movement from the previous post-advance pen point `last` to the
 /// current glyph origin `cur` (both user space), measured in the frame of the
