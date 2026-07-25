@@ -216,6 +216,22 @@ fn flat_extraction_does_not_fuse_more_words_than_poppler() {
         }
     }
 
+    // Reaching this point with `compared == 0` means every file in the corpus
+    // was excluded (poppler vanished mid-run, our parser regressed globally,
+    // or all files hit the per-file timeout) — NOT that fusion is zero. With
+    // no comparisons, `total_fusions` is trivially 0, which is <= any
+    // baseline and would even print a false IMPROVEMENT below. That is an
+    // instrument failure, not a measurement, so it must fail loudly instead
+    // of passing silently.
+    assert!(
+        compared > 0,
+        "differential fusion gate measured NOTHING: 0 of {} corpus files were compared \
+         (skipped={skipped}). This is an instrument failure (pdftotext missing mid-run, a \
+         global parser regression, or every file timing out), not proof there are no fusions \
+         — do not read a passing gate here as a separator-regression guarantee.",
+        pdfs.len()
+    );
+
     let key = dir.file_name().and_then(|s| s.to_str()).unwrap_or("corpus");
     println!(
         "differential fusion gate [{key}]: compared={compared} skipped={skipped} \

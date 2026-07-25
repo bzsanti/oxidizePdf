@@ -193,6 +193,22 @@ fn flat_extraction_does_not_transpose_more_words_than_poppler() {
         }
     }
 
+    // Reaching this point with `compared == 0` means every file in the corpus
+    // was excluded (poppler vanished mid-run, our parser regressed globally,
+    // or all files hit the per-file timeout) — NOT that ordering is perfect.
+    // With no comparisons, `transposed` is trivially 0, which is <= any
+    // baseline and would even print a false IMPROVEMENT below. That is an
+    // instrument failure, not a measurement, so it must fail loudly instead
+    // of passing silently.
+    assert!(
+        compared > 0,
+        "differential order gate measured NOTHING: 0 of {} corpus files were compared \
+         (skipped={skipped}). This is an instrument failure (pdftotext missing mid-run, a \
+         global parser regression, or every file timing out), not proof the reading order is \
+         correct — do not read a passing gate here as a reading-order guarantee.",
+        pdfs.len()
+    );
+
     let transposed = common_total - in_order_total;
     per_doc.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let median = per_doc.get(per_doc.len() / 2).copied().unwrap_or(0.0);
