@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`PlainTextExtractor` silently dropped all text shown by the `'` and `"`
+  operators.** Both are show-text operators (ISO 32000-1 §9.4.3, Table 109):
+  `'` is "next line, then show", `"` is "set word and character spacing, next
+  line, then show". Neither had a handler in that extractor's operator match,
+  so the string operand was never emitted — content loss, not a spacing defect,
+  in a re-exported public API, and a disagreement with `TextExtractor` about
+  what a document contains. Both now move to the next line and emit their text.
+  The spacing operands of `"` are consumed and not stored: this extractor
+  derives separators from pen positions rather than from accumulated glyph
+  advances.
+
 - **Text extraction ignored the `TD` operator, losing line breaks and fusing
   words** (#451). `tx ty TD` (ISO 32000-1 §9.4.2) is defined as `-ty TL`
   followed by `tx ty Td`: it moves to the next line *and* sets the leading.
@@ -21,8 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pdftotext`, implementing it takes word fusions from 6298 to 752 (−88%), and
   the opposite metric improves too (words lost 7428 → 5545). No threshold
   change moved either metric, which is the signature of a missing operator
-  rather than a mis-tuned heuristic. Fixed in both `TextExtractor` and
-  `PlainTextExtractor`, which carry independent operator matches.
+  rather than a mis-tuned heuristic. Fixed in the two text-extraction paths,
+  `TextExtractor` and `PlainTextExtractor`, which carry independent operator
+  matches. Other content-stream consumers in the crate keep their own operator
+  matches and still ignore `TD`; they are tracked separately.
 
 ## [4.2.1] - 2026-07-22
 
