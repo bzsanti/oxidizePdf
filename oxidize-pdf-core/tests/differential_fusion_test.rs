@@ -85,11 +85,16 @@ fn poppler(path: &Path) -> Option<String> {
     String::from_utf8(o.stdout).ok()
 }
 
-/// A token worth comparing: pure alphabetic, length >= 3. Keeps the signal on
-/// real words and off punctuation, numbers, and single letters where legitimate
-/// reading-order differences (columns, tables) would add noise.
+/// A token worth comparing: pure alphabetic, at least 3 CHARACTERS. Keeps the
+/// signal on real words and off punctuation, numbers, and single letters where
+/// legitimate reading-order differences (columns, tables) would add noise.
+///
+/// Characters, not bytes: `t.len() >= 3` admitted two-letter accented and
+/// one-character CJK tokens (`él` is 3 bytes, `文書` is 6), so the threshold
+/// silently loosened on exactly the corpora where short-token collisions are
+/// most likely. The order gate already counts characters.
 fn wordish(t: &str) -> bool {
-    t.len() >= 3 && t.chars().all(|c| c.is_alphabetic())
+    t.chars().count() >= 3 && t.chars().all(|c| c.is_alphabetic())
 }
 
 /// The set of maximal alphabetic runs in `s` (letters split on any non-letter).
@@ -204,21 +209,47 @@ fn baseline_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/baselines/differential_fusion_baseline.json")
 }
 
+/// The committed baseline must be readable by the policy that judges it.
+///
+/// `load_baseline` returns `Missing` for an absent file and `Unusable` for one
+/// it cannot parse; only `Found` makes the gate enforce anything. This test
+/// runs on every PR with no corpus and no poppler, so a baseline broken by a
+/// hand edit, a merge, or a schema change is caught there instead of turning
+/// the nightly green-and-blind.
+#[test]
+fn the_committed_baseline_is_loadable() {
+    let path = baseline_path();
+    match ratchet::load_baseline(&path, "t3-stress") {
+        ratchet::Baseline::Found(b) => {
+            assert!(
+                b.compared > 0 && b.denominator > 0 && b.pop_alpha_chars > 0,
+                "committed baseline has empty terms, so every ratio it judges is degenerate: {b:?}"
+            );
+        }
+        other => panic!(
+            "committed baseline at {} is not usable ({other:?}) — the gate would record a fresh \
+             one and pass, every night, having enforced nothing",
+            path.display()
+        ),
+    }
+}
+
 /// The gate. See the module docs for policy.
 #[test]
 fn flat_extraction_does_not_fuse_more_words_than_poppler() {
-    // Skip cleanly when the independent oracle is unavailable.
+    // Skip cleanly when the independent oracle is unavailable — unless the
+    // job declared the measurement mandatory (see ratchet::corpus_required).
     if Command::new("pdftotext").arg("-v").output().is_err() {
-        eprintln!("SKIP: pdftotext (poppler) not on PATH — differential gate inert.");
+        ratchet::skip_or_fail("pdftotext (poppler) not on PATH");
         return;
     }
     let dir = corpus_dir();
     let pdfs = corpus_support::find_pdfs(&dir);
     if pdfs.is_empty() {
-        eprintln!(
-            "SKIP: no corpus at {} — run download.sh or set OXIDIZE_DIFF_CORPUS.",
+        ratchet::skip_or_fail(&format!(
+            "no corpus at {} (run download.sh or set OXIDIZE_DIFF_CORPUS)",
             dir.display()
-        );
+        ));
         return;
     }
 
@@ -276,7 +307,11 @@ fn flat_extraction_does_not_fuse_more_words_than_poppler() {
     // Self-baselining ratchet on rate + coverage; see common/differential_ratchet.rs.
     let bpath = baseline_path();
     match ratchet::load_baseline(&bpath, key) {
-        None => {
+        ratchet::Baseline::Unusable(reason) => panic!(
+            "differential gate has an UNUSABLE baseline, refusing to measure against nothing: \
+             {reason}"
+        ),
+        ratchet::Baseline::Missing => {
             ratchet::record_baseline(&bpath, key, &current);
             eprintln!(
                 "NOTE: no usable baseline for [{key}] — recorded rate={:.6} over \
@@ -285,7 +320,7 @@ fn flat_extraction_does_not_fuse_more_words_than_poppler() {
                 bpath.display()
             );
         }
-        Some(baseline) => {
+        ratchet::Baseline::Found(baseline) => {
             let found = ratchet::regressions(&current, &baseline, "fusion");
             assert!(
                 found.is_empty(),
