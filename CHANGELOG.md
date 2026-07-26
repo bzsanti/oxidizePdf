@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [Unreleased]
+
+### Fixed
+
+- **Text extraction ignored the `TD` operator, losing line breaks and fusing
+  words** (#451). `tx ty TD` (ISO 32000-1 §9.4.2) is defined as `-ty TL`
+  followed by `tx ty Td`: it moves to the next line *and* sets the leading.
+  The operator was parsed but had no handler in either extraction path, so it
+  fell through to the catch-all: the line break did not exist for the
+  extractor (Δx = Δy = 0 at the spacing decision, so the last word of one line
+  and the first of the next came out glued) and every later `T*` advanced by a
+  stale leading. Measured over the 1802-PDF stress corpus against poppler
+  `pdftotext`, implementing it takes word fusions from 6298 to 752 (−88%), and
+  the opposite metric improves too (words lost 7428 → 5545). No threshold
+  change moved either metric, which is the signature of a missing operator
+  rather than a mis-tuned heuristic. Fixed in both `TextExtractor` and
+  `PlainTextExtractor`, which carry independent operator matches.
+
 ## [4.2.1] - 2026-07-22
 
 ### Fixed
