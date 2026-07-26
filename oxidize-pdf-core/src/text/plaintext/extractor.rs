@@ -238,13 +238,60 @@ impl PlainTextExtractor {
                         state.text_line_matrix = new_matrix;
                     }
 
-                    ContentOperation::NextLine => {
+                    // `tx ty TD` (ISO 32000-1 §9.4.2) is `-ty TL` followed by
+                    // `tx ty Td`: it moves to the next line AND sets the
+                    // leading. Same defect as issue #451 in `TextExtractor`,
+                    // living independently in this second public path: the
+                    // operator fell through the catch-all below, so the line
+                    // break did not exist here either (`dx = dy = 0` at the
+                    // spacing decision) and every later `T*` advanced by a
+                    // stale leading.
+                    ContentOperation::MoveTextSetLeading(tx, ty) => {
+                        state.leading = -(ty as f64);
                         let new_matrix = multiply_matrix(
-                            &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+                            &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
                             &state.text_line_matrix,
                         );
                         state.text_matrix = new_matrix;
                         state.text_line_matrix = new_matrix;
+                    }
+
+                    ContentOperation::NextLine => {
+                        Self::advance_to_next_line(&mut state);
+                    }
+
+                    // `string '` is `T*` followed by `Tj` (ISO 32000-1 §9.4.3,
+                    // Table 109). The operator had no arm here, so the string
+                    // was never emitted: not a missing separator like the `TD`
+                    // gap above, but silent loss of the content itself.
+                    ContentOperation::NextLineShowText(text) => {
+                        if in_text_object {
+                            let decoded = self.decode_text::<R>(&text, &state)?;
+                            let (x, y) = Self::advance_to_next_line(&mut state);
+                            Self::push_on_new_line(&mut extracted_text, &decoded);
+                            last_x = x;
+                            last_y = y;
+                        }
+                    }
+
+                    // `aw ac string "` is `aw Tw`, `ac Tc`, then `string '`.
+                    // The spacing operands are consumed and deliberately not
+                    // stored: this extractor decides separators from pen
+                    // positions, never from accumulated glyph advances, so
+                    // there is nothing here for them to affect. `TextExtractor`
+                    // does track them.
+                    ContentOperation::SetSpacingNextLineShowText(
+                        _word_space,
+                        _char_space,
+                        text,
+                    ) => {
+                        if in_text_object {
+                            let decoded = self.decode_text::<R>(&text, &state)?;
+                            let (x, y) = Self::advance_to_next_line(&mut state);
+                            Self::push_on_new_line(&mut extracted_text, &decoded);
+                            last_x = x;
+                            last_y = y;
+                        }
                     }
 
                     ContentOperation::ShowText(text) => {
@@ -457,6 +504,29 @@ impl PlainTextExtractor {
     }
 
     /// Apply line break mode processing
+    /// Move the text line matrix down by one leading and return the new pen
+    /// origin in user space. Shared by `T*`, `'` and `"`, which differ only in
+    /// what they do after the line move.
+    fn advance_to_next_line(state: &mut TextState) -> (f64, f64) {
+        let new_matrix = multiply_matrix(
+            &[1.0, 0.0, 0.0, 1.0, 0.0, -state.leading],
+            &state.text_line_matrix,
+        );
+        state.text_matrix = new_matrix;
+        state.text_line_matrix = new_matrix;
+        transform_point(0.0, 0.0, &state.text_matrix)
+    }
+
+    /// Append text that the operator itself placed on a new line. Unlike the
+    /// `Tj`/`TJ` path there is no threshold to consult: `'` and `"` moved the
+    /// line, so the break is a fact, not an inference.
+    fn push_on_new_line(acc: &mut String, decoded: &str) {
+        if !acc.is_empty() {
+            acc.push('\n');
+        }
+        acc.push_str(decoded);
+    }
+
     fn apply_line_break_mode(&self, text: &str) -> String {
         match self.config.line_break_mode {
             LineBreakMode::Auto => self.auto_line_breaks(text),

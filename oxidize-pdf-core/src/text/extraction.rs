@@ -1001,6 +1001,22 @@ impl TextExtractor {
                     state.text_line_matrix = new_matrix;
                 }
 
+                // `tx ty TD` (ISO 32000-1 §9.4.2) is defined as `-ty TL`
+                // followed by `tx ty Td`: it moves to the next line AND sets
+                // the leading. The operator was parsed but never handled, so
+                // the line break did not exist for the extractor (`dx = dy =
+                // 0` at the boundary) and every later `T*` inherited a stale
+                // leading (issue #451).
+                ContentOperation::MoveTextSetLeading(tx, ty) => {
+                    state.leading = -(ty as f64);
+                    let new_matrix = multiply_matrix(
+                        &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
+                        &state.text_line_matrix,
+                    );
+                    state.text_matrix = new_matrix;
+                    state.text_line_matrix = new_matrix;
+                }
+
                 ContentOperation::NextLine => {
                     // Move to next line using current leading
                     let new_matrix = multiply_matrix(
