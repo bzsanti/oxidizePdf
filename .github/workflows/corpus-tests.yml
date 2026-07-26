@@ -69,9 +69,10 @@ jobs:
     name: "T2 + T3: Real-World & Stress"
     if: github.event_name == 'schedule' && github.event.schedule == '0 3 * * *'
     runs-on: ubuntu-latest
-    # T2 + T3 ~35 min; + the differential fusion gate (poppler over ~1800 PDFs,
-    # ~5 min locally, per-file timeouts capped at 15 s). Headroom for slower CI.
-    timeout-minutes: 75
+    # T2 + T3 ~35 min; + two differential gates, each a full extract-and-compare
+    # pass with poppler over ~1800 PDFs (per-file timeouts capped at 15 s).
+    # Headroom for slower CI.
+    timeout-minutes: 105
     steps:
       - uses: actions/checkout@v5
         with:
@@ -121,6 +122,13 @@ jobs:
 
       - name: Run differential word-fusion gate (T3 vs poppler)
         run: cargo test --test differential_fusion_test -- --nocapture
+
+      # Reading-ORDER gate: the fusion gate above is structurally blind to
+      # order (interleaved columns and out-of-order blocks all score zero
+      # fusions), so it needs its own run. Same corpus, same oracle, same
+      # ratchet policy; baseline in tests/baselines/. Issue #448.
+      - name: Run differential reading-order gate (T3 vs poppler)
+        run: cargo test --test differential_order_test -- --nocapture
 
       - name: Upload results
         if: always()
