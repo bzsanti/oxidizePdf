@@ -320,11 +320,75 @@ struct TextState {
     pending_actualtext: Option<PendingActualText>,
 }
 
-/// Subset of graphics state saved by `q` and restored by `Q` (issue #262).
-#[derive(Clone)]
+/// Graphics state saved by `q` and restored by `Q` (issues #262, #452).
+///
+/// Holds the CTM, the fill colour, and the TEXT STATE parameters. The text
+/// state is graphics state per ISO 32000-1 §9.3 and Table 52 — leading,
+/// character and word spacing, horizontal scaling, font and size, text rise
+/// and render mode all live there, so `Q` must put them back. Before #452 only
+/// the CTM and the colour were restored, and a leading set inside a `q … Q`
+/// block kept driving line breaks after the block closed.
+///
+/// `text_matrix` and `text_line_matrix` are deliberately NOT here: they are
+/// text OBJECT state, established by `BT` and discarded by `ET` (§9.4.1), not
+/// graphics state. Restoring them on `Q` would be a different bug.
+///
+/// Four of the text-state fields — `char_space`, `word_space`, `text_rise` and
+/// `render_mode` — are currently written by their operators but never read by
+/// the extractor, so restoring them changes no output today and no test can
+/// guard them. They are here because they are graphics state: whoever wires
+/// them into the pen advance, the y offset or invisible-text filtering should
+/// not have to rediscover this bug.
 struct SavedGraphicsState {
     ctm: [f64; 6],
     fill_color: Option<Color>,
+    leading: f64,
+    char_space: f64,
+    word_space: f64,
+    horizontal_scale: f64,
+    text_rise: f64,
+    font_size: f64,
+    font_name: Option<String>,
+    render_mode: u8,
+}
+
+impl SavedGraphicsState {
+    /// Snapshot the graphics state, for `q` and for the implicit save around
+    /// `Do` (§8.10.1). Both callers go through here so the two can never drift
+    /// into disagreeing about what the graphics state contains.
+    fn capture(state: &TextState) -> Self {
+        Self {
+            ctm: state.ctm,
+            fill_color: state.fill_color,
+            leading: state.leading,
+            char_space: state.char_space,
+            word_space: state.word_space,
+            horizontal_scale: state.horizontal_scale,
+            text_rise: state.text_rise,
+            font_size: state.font_size,
+            font_name: state.font_name.clone(),
+            render_mode: state.render_mode,
+        }
+    }
+
+    /// Put the snapshot back. Consumes it, so the `String` moves instead of
+    /// being cloned.
+    ///
+    /// Note the fields it does NOT touch: the text matrices (text object state,
+    /// §9.4.1), the marked-content stack (its nesting is independent of
+    /// `q`/`Q`, §14.6) and the saved-state stack itself.
+    fn restore_into(self, state: &mut TextState) {
+        state.ctm = self.ctm;
+        state.fill_color = self.fill_color;
+        state.leading = self.leading;
+        state.char_space = self.char_space;
+        state.word_space = self.word_space;
+        state.horizontal_scale = self.horizontal_scale;
+        state.text_rise = self.text_rise;
+        state.font_size = self.font_size;
+        state.font_name = self.font_name;
+        state.render_mode = self.render_mode;
+    }
 }
 
 /// Mutable accumulator threaded through `process_operations` so the op loop
@@ -1480,18 +1544,16 @@ impl TextExtractor {
                 // CTM forever, producing absurd page-space coordinates and
                 // wrong font_size scaling on PDFs that nest graphics state.
                 ContentOperation::SaveGraphicsState => {
-                    state.saved_states.push(SavedGraphicsState {
-                        ctm: state.ctm,
-                        fill_color: state.fill_color,
-                    });
+                    state.saved_states.push(SavedGraphicsState::capture(&state));
                 }
                 ContentOperation::RestoreGraphicsState => {
+                    // Text state is graphics state (§9.3, Table 52): a leading,
+                    // font or scale set inside the block dies with it (issue
+                    // #452). Unbalanced Q (pop on empty stack) is silently
+                    // ignored to keep extraction robust to malformed PDFs.
                     if let Some(saved) = state.saved_states.pop() {
-                        state.ctm = saved.ctm;
-                        state.fill_color = saved.fill_color;
+                        saved.restore_into(&mut state);
                     }
-                    // Unbalanced Q (pop on empty stack) is silently ignored
-                    // to keep extraction robust to malformed PDFs.
                 }
 
                 // Color operations (Phase 4: Color extraction)
@@ -1620,10 +1682,20 @@ impl TextExtractor {
                         if let Some((xobj_ops, xobj_res, matrix)) =
                             self.load_form_xobject(resources, &name, document)
                         {
-                            let saved_ctm = state.ctm;
-                            let saved_fill = state.fill_color;
-                            let saved_stack = state.saved_states.len();
+                            // `Do` paints inside an IMPLICIT q/Q (§8.10.1),
+                            // so the whole graphics state — text state included
+                            // (issue #452) — comes back afterwards. Same
+                            // snapshot the `q` arm takes, so the two cannot
+                            // disagree about what that state is.
+                            let outer = SavedGraphicsState::capture(&state);
                             let saved_fonts = self.font_cache.clone();
+                            // The form gets its own save-state stack: a stray
+                            // `Q` inside it must not pop the page's snapshots.
+                            // Truncating afterwards could not undo that — a
+                            // popped entry is gone — and with the text state
+                            // now in each snapshot, a mispaired restore
+                            // corrupts font decoding, not just the CTM.
+                            let outer_stack = std::mem::take(&mut state.saved_states);
 
                             if let Some(m) = matrix {
                                 let [a0, b0, c0, d0, e0, f0] = state.ctm;
@@ -1659,9 +1731,8 @@ impl TextExtractor {
                                 depth + 1,
                             )?;
 
-                            out.state.ctm = saved_ctm;
-                            out.state.fill_color = saved_fill;
-                            out.state.saved_states.truncate(saved_stack);
+                            outer.restore_into(&mut out.state);
+                            out.state.saved_states = outer_stack;
                             self.font_cache = saved_fonts;
 
                             state = out.state;
