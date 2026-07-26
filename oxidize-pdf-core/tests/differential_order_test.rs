@@ -14,14 +14,20 @@
 //! poppler's relative order; everything else is transposed.
 //!
 //! Poppler's order is itself heuristic, so disagreement is not proof of our
-//! error. The gate therefore RATCHETS (the count may only go down) instead of
-//! asserting equality, exactly like the fusion gate. Coverage is reported
-//! separately so losing content and misordering it cannot hide each other.
+//! error. The gate therefore RATCHETS instead of asserting equality, exactly
+//! like the fusion gate — and on the same three axes: transposition RATE
+//! (transposed over aligned words), files compared, and content coverage.
+//! Ratcheting the transposed COUNT alone would let a loss of extracted text
+//! read as an ordering win: fewer words aligned means fewer words to transpose.
+//! Policy and unit tests in `common/differential_ratchet.rs`.
 //!
 //! Runs only with corpus + `pdftotext` present; otherwise skips (inert on PRs,
 //! runs in the nightly corpus job).
 
 mod corpus_support;
+
+#[path = "common/differential_ratchet.rs"]
+mod ratchet;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -33,13 +39,6 @@ use oxidize_pdf::parser::{ParseOptions, PdfReader};
 use oxidize_pdf::text::TextExtractor;
 
 const PER_FILE_TIMEOUT_SECS: u64 = 15;
-
-/// Tolerance on the baseline, absorbing run-to-run nondeterminism (a file that
-/// sometimes times out shifts the total). A real ordering regression moves the
-/// count by thousands, far above this floor.
-fn baseline_slack(baseline: usize) -> usize {
-    baseline / 50 + 5
-}
 
 fn ours(path: &Path) -> Option<String> {
     let bytes = std::fs::read(path).ok()?;
@@ -117,9 +116,14 @@ fn order_metrics(our_txt: &str, pop_txt: &str) -> (usize, usize) {
     (mapped.len(), in_order)
 }
 
+/// One file's contribution: `(common, in_order, our letters, poppler letters)`.
+/// The letter counts feed the content-coverage floor, which is what stops a
+/// loss of extracted text from reading as an ordering improvement.
+type FileSample = (usize, usize, u64, u64);
+
 /// Per-file metrics on a worker thread with a hard timeout, so a slow parse is
 /// excluded rather than fatal. `None` means excluded, never counted as zero.
-fn metrics_for_file(path: &Path) -> Option<(usize, usize)> {
+fn metrics_for_file(path: &Path) -> Option<FileSample> {
     let p = path.to_path_buf();
     let (tx, rx) = mpsc::channel();
     let handle = std::thread::Builder::new()
@@ -132,7 +136,7 @@ fn metrics_for_file(path: &Path) -> Option<(usize, usize)> {
                         if c == 0 {
                             None
                         } else {
-                            Some((c, l))
+                            Some((c, l, ratchet::alpha_chars(&o), ratchet::alpha_chars(&pop)))
                         }
                     }
                     _ => None,
@@ -181,12 +185,17 @@ fn flat_extraction_does_not_transpose_more_words_than_poppler() {
     let mut in_order_total = 0usize;
     let mut per_doc: Vec<f64> = Vec::new();
 
+    let mut our_chars = 0u64;
+    let mut pop_chars = 0u64;
+
     for pdf in &pdfs {
         match metrics_for_file(pdf) {
-            Some((c, l)) => {
+            Some((c, l, ours_len, pop_len)) => {
                 compared += 1;
                 common_total += c;
                 in_order_total += l;
+                our_chars += ours_len;
+                pop_chars += pop_len;
                 per_doc.push(l as f64 / c as f64);
             }
             None => skipped += 1,
@@ -216,51 +225,52 @@ fn flat_extraction_does_not_transpose_more_words_than_poppler() {
     let below = per_doc.iter().filter(|f| **f < 0.95).count();
 
     let key = dir.file_name().and_then(|s| s.to_str()).unwrap_or("corpus");
+    let current = ratchet::GateSample {
+        compared,
+        numerator: transposed,
+        denominator: common_total,
+        our_alpha_chars: our_chars,
+        pop_alpha_chars: pop_chars,
+    };
     println!(
         "differential order gate [{key}]: compared={compared} skipped={skipped} \
-         common={common_total} transposed={transposed} \
-         fidelity_micro={:.4} median={median:.4} p10={p10:.4} docs_below_0.95={below}",
-        in_order_total as f64 / common_total.max(1) as f64
+         common={common_total} transposed={transposed} transposed_rate={:.6} \
+         fidelity_micro={:.4} median={median:.4} p10={p10:.4} docs_below_0.95={below} \
+         content_coverage={:.4}",
+        current.rate(),
+        in_order_total as f64 / common_total.max(1) as f64,
+        current.coverage()
     );
 
     let bpath = baseline_path();
-    let mut baselines: serde_json::Map<String, serde_json::Value> = std::fs::read_to_string(&bpath)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default();
-
-    match baselines
-        .get(key)
-        .and_then(|v| v.get("transposed"))
-        .and_then(|v| v.as_u64())
-    {
+    match ratchet::load_baseline(&bpath, key) {
         None => {
-            baselines.insert(
-                key.to_string(),
-                serde_json::json!({ "transposed": transposed, "common": common_total }),
-            );
-            std::fs::create_dir_all(bpath.parent().unwrap()).ok();
-            std::fs::write(&bpath, serde_json::to_string_pretty(&baselines).unwrap()).ok();
+            ratchet::record_baseline(&bpath, key, &current);
             eprintln!(
-                "NOTE: no baseline for [{key}] — recorded transposed={transposed}. \
-                 Commit {} and future runs will ratchet against it.",
+                "NOTE: no usable baseline for [{key}] — recorded transposed_rate={:.6} over \
+                 {compared} files. Commit {} and future runs will ratchet against it.",
+                current.rate(),
                 bpath.display()
             );
         }
         Some(baseline) => {
-            let baseline = baseline as usize;
+            let found = ratchet::regressions(&current, &baseline, "transposed");
             assert!(
-                transposed <= baseline + baseline_slack(baseline),
-                "reading-order REGRESSION [{key}]: {transposed} transposed words vs baseline \
-                 {baseline}. Our flat extractor now emits MORE words out of poppler's relative \
-                 order. If this is an intended trade-off, lower the baseline in {}; otherwise it \
-                 is a reading-order regression (issue #448).",
+                found.is_empty(),
+                "reading-order gate FAILED [{key}]:\n  - {}\n\
+                 Our flat extractor either emits more words out of poppler's relative order, or \
+                 compares less of the corpus than the baseline did. If this is an intended \
+                 trade-off, re-record the baseline in {}; otherwise it is a reading-order \
+                 regression (issue #448).",
+                found.join("\n  - "),
                 bpath.display()
             );
-            if transposed < baseline {
+            if current.rate() < baseline.rate() {
                 eprintln!(
-                    "IMPROVEMENT [{key}]: {transposed} < baseline {baseline}. \
-                     Lower the baseline to ratchet the gain in."
+                    "IMPROVEMENT [{key}]: transposed rate {:.6} < baseline {:.6}. \
+                     Re-record the baseline to ratchet the gain in.",
+                    current.rate(),
+                    baseline.rate()
                 );
             }
         }

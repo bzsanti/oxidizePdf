@@ -1,6 +1,11 @@
 {
   "t3-stress": {
-    "common": 570129,
-    "transposed": 148658
+    "compared": 1037,
+    "content_coverage": 0.9937813547683058,
+    "denominator": 570129,
+    "numerator": 148658,
+    "our_alpha_chars": 4716376,
+    "pop_alpha_chars": 4745889,
+    "rate": 0.2607444981749744
   }
 }
