@@ -30,6 +30,34 @@ fn extract_text(content: &[u8]) -> String {
         .text
 }
 
+/// `(text, x, y)` of every fragment under `preserve_layout` — the only
+/// extraction mode that exposes coordinates, and therefore the only oracle that
+/// can pin the SIGN and MAGNITUDE of the leading `TD` sets. The flat separator
+/// logic compares `dy.abs()` against a threshold, so it cannot distinguish
+/// `+20` from `-20` nor `20` from `60`.
+///
+/// Fragments come back in reading order (`sort_by_position` is on by default),
+/// which for a correct `TD` coincides with emission order; a wrong leading sign
+/// also permutes this vector, and the tests below assert on both position and
+/// text so either symptom fails.
+fn fragments_of(content: &[u8]) -> Vec<(String, f64, f64)> {
+    let pdf = build_pdf_with_content_stream(content);
+    let reader = PdfReader::new(Cursor::new(pdf)).expect("synthetic PDF must parse");
+    let document = PdfDocument::new(reader);
+    let options = ExtractionOptions {
+        preserve_layout: true,
+        ..Default::default()
+    };
+    let mut extractor = TextExtractor::with_options(options);
+    extractor
+        .extract_from_page(&document, 0)
+        .expect("extract page 0")
+        .fragments
+        .into_iter()
+        .map(|f| (f.text, f.x, f.y))
+        .collect()
+}
+
 /// El caso mínimo del defecto real (`format-corpus/preserve_303226.pdf`): dos
 /// `Tj` separados por un `TD`. El salto vertical (20 unidades a 12pt) supera
 /// `newline_threshold` (10.0), así que el separador correcto es un salto de
@@ -83,6 +111,65 @@ fn td_sets_leading_for_subsequent_t_star() {
         !text.contains("twothree"),
         "a stale leading of 0 fuses the T* line; got {:?}",
         text
+    );
+}
+
+/// Content stream compartido por los dos pines de coordenadas: `TD` con
+/// desplazamiento en ambos ejes seguido de un `T*` que hereda su leading.
+/// Origen nominal (100, 700); tras `50 -20 TD` la línea empieza en (150, 680);
+/// el `T*` posterior baja UN leading, es decir a (150, 660).
+const TD_THEN_T_STAR: &[u8] =
+    b"BT\n/F1 12 Tf\n100 700 Td\n(one)Tj\n50 -20 TD\n(two)Tj\nT*\n(three)Tj\nET\n";
+
+/// El eje horizontal del contrato: `TD` traslada la matriz de LÍNEA por
+/// `(tx, ty)`, así que la nueva línea empieza en `(x + tx, y + ty)`. Se asertan
+/// coordenadas, no la presencia de un `\n`: el separador plano solo mira
+/// `dy.abs()` contra un umbral y da el mismo texto para cualquier `ty` que lo
+/// supere.
+#[test]
+fn td_translates_the_line_origin_by_tx_and_ty() {
+    let frags = fragments_of(TD_THEN_T_STAR);
+    assert_eq!(
+        frags.len(),
+        3,
+        "expected one fragment per Tj; got {:?}",
+        frags
+    );
+    assert_eq!(frags[0].0, "one");
+    assert!(
+        (frags[0].1 - 100.0).abs() < 0.01 && (frags[0].2 - 700.0).abs() < 0.01,
+        "first line must sit at the Td origin (100, 700); got {:?}",
+        frags[0]
+    );
+    assert_eq!(frags[1].0, "two");
+    assert!(
+        (frags[1].1 - 150.0).abs() < 0.01 && (frags[1].2 - 680.0).abs() < 0.01,
+        "`50 -20 TD` must move the line origin to (150, 680); got {:?}",
+        frags[1]
+    );
+}
+
+/// La mitad que ningún test fijaba: `TD` fija el leading a `-ty` EXACTAMENTE.
+/// El `T*` siguiente baja un leading desde el origen de línea, luego la tercera
+/// línea cae en y = 680 - 20 = 660. Este pin mata las dos mutaciones que
+/// sobrevivían a los tests de texto plano: leading `+ty` (signo invertido → la
+/// línea SUBE a 700) y leading `-3*ty` (magnitud x3 → cae a 620). Ambas siguen
+/// produciendo `dy.abs() > newline_threshold`, así que el texto plano no las ve.
+#[test]
+fn td_sets_the_leading_to_exactly_minus_ty() {
+    let frags = fragments_of(TD_THEN_T_STAR);
+    assert_eq!(frags.len(), 3, "expected three fragments; got {:?}", frags);
+    assert_eq!(frags[2].0, "three");
+    assert!(
+        (frags[2].2 - 660.0).abs() < 0.01,
+        "T* must descend by the leading TD set (20), landing at y = 660; got y = {} \
+         (700 would be an inverted sign, 620 a tripled magnitude)",
+        frags[2].2
+    );
+    assert!(
+        (frags[2].1 - 150.0).abs() < 0.01,
+        "T* keeps the line origin's x from TD (150); got x = {}",
+        frags[2].1
     );
 }
 
