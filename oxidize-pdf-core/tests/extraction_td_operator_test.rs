@@ -173,6 +173,62 @@ fn td_sets_the_leading_to_exactly_minus_ty() {
     );
 }
 
+/// El salto de línea de `TD` tiene que sobrevivir a una CTM rotada. Las
+/// heurísticas de separador no comparan deltas en espacio de usuario, sino su
+/// proyección sobre la dirección de la línea base (#443); ese mecanismo es
+/// ajeno a `TD` y podría desactivarlo sin que ningún test axis-aligned lo note.
+/// A 90° el avance de línea cae sobre el eje x de usuario, que es justo el eje
+/// que la versión anterior a #443 usaba para decidir espacios.
+#[test]
+fn td_breaks_the_line_under_a_rotated_ctm() {
+    let content = b"q\n0 1 -1 0 0 0 cm\nBT\n/F1 12 Tf\n100 700 Td\n(condition)Tj\n0 -20 TD\n(records)Tj\nET\nQ\n";
+    let text = extract_text(content);
+    assert!(
+        !text.contains("conditionrecords"),
+        "TD must break the line under a rotated CTM too; got fused text {:?}",
+        text
+    );
+    assert!(
+        text.contains("condition\nrecords"),
+        "expected a newline between the two runs under rotation; got {:?}",
+        text
+    );
+}
+
+/// Los dos extractores públicos tienen que coincidir en la estructura de línea
+/// que produce `TD`. El camino plano de `PlainTextExtractor` no puede observar
+/// el signo del leading (compara `dy.abs()`), así que este contraste con
+/// `TextExtractor` — que sí lo fija por coordenadas — es lo que impide que las
+/// dos implementaciones del operador diverjan sin que ningún test lo vea.
+#[test]
+fn both_public_extractors_agree_on_the_line_structure_td_produces() {
+    use oxidize_pdf::text::plaintext::{LineBreakMode, PlainTextConfig, PlainTextExtractor};
+
+    let content = b"BT\n/F1 12 Tf\n100 700 Td\n(alpha)Tj\n0 -20 TD\n(beta)Tj\nT*\n(gamma)Tj\nET\n";
+
+    let flat = extract_text(content);
+
+    let pdf = build_pdf_with_content_stream(content);
+    let reader = PdfReader::new(Cursor::new(pdf)).expect("synthetic PDF must parse");
+    let document = PdfDocument::new(reader);
+    let mut plain = PlainTextExtractor::with_config(PlainTextConfig {
+        line_break_mode: LineBreakMode::PreserveAll,
+        ..Default::default()
+    });
+    let plain_text = plain.extract(&document, 0).expect("extract page 0").text;
+
+    assert_eq!(
+        flat.trim(),
+        plain_text.trim(),
+        "TextExtractor and PlainTextExtractor must produce the same lines for the same TD"
+    );
+    assert!(
+        flat.contains("alpha\nbeta\ngamma"),
+        "and that shared structure must be the correct one; got {:?}",
+        flat
+    );
+}
+
 /// `TD` con desplazamiento horizontal además del vertical: la traslación es
 /// de la matriz de LÍNEA, así que el origen de la nueva línea es
 /// `(x + tx, y + ty)` y el `T*` siguiente parte de ahí, no del margen
