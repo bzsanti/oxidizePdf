@@ -414,12 +414,12 @@ fn join_texts<'a>(parts: impl Iterator<Item = &'a str>) -> String {
 /// the corpus run for a page-dictionary field.
 struct ParsedDoc {
     pages: Vec<Vec<TextFragment>>,
-    /// `.text` of the SHIPPING flat path, concatenated over pages. This is the
+    /// `.text` of the SHIPPING flat path, one entry per page. This is the
     /// only reference that matters: a variant is worth wiring in when it beats
     /// what the extractor emits today, not when it beats the probe's own
     /// grouping. Keeping both apart is what caught the probe's first corpus
     /// run, whose baseline was 17 coverage points below the flat path.
-    flat_text: String,
+    flat_pages: Vec<String>,
     rotated_pages: usize,
     page_count: usize,
 }
@@ -435,7 +435,7 @@ fn parse_bytes(bytes: Vec<u8>) -> Option<ParsedDoc> {
     let mut ex = TextExtractor::with_options(probe_options());
     let mut flat = TextExtractor::new();
     let mut pages = Vec::new();
-    let mut flat_text = String::new();
+    let mut flat_pages: Vec<String> = Vec::new();
     let mut rotated_pages = 0usize;
     let mut page_count = 0usize;
     for i in 0..doc.page_count().unwrap_or(0) {
@@ -449,13 +449,12 @@ fn parse_bytes(bytes: Vec<u8>) -> Option<ParsedDoc> {
             pages.push(page.fragments);
         }
         if let Ok(page) = flat.extract_from_page(&doc, i) {
-            flat_text.push_str(&page.text);
-            flat_text.push('\n');
+            flat_pages.push(page.text);
         }
     }
     Some(ParsedDoc {
         pages,
-        flat_text,
+        flat_pages,
         rotated_pages,
         page_count,
     })
@@ -544,7 +543,8 @@ fn sample_file(path: &Path) -> Outcome {
         return Outcome::Skipped(|s| s.not_a_permutation += 1);
     }
 
-    let flat = order_metrics_words(&words(&doc.flat_text), &pop_words);
+    let flat_words: Vec<String> = doc.flat_pages.iter().flat_map(|t| words(t)).collect();
+    let flat = order_metrics_words(&flat_words, &pop_words);
     Outcome::Sampled(Box::new(FileSample {
         flat,
         metrics,
@@ -731,19 +731,16 @@ fn dump_per_page_fidelity() {
     let dir = corpus_dir();
     let pdfs = corpus_support::find_pdfs(&dir);
     let path = pdfs.first().expect("point OXIDIZE_PROBE_CORPUS at a PDF");
-    let pages = fragments_by_page(path).expect("document must parse");
+    let doc = parse_doc(path).expect("document must parse");
 
-    let mut whole_ours: Vec<String> = Vec::new();
-    let (mut sum_pop, mut sum_in_order) = (0usize, 0usize);
-    println!("\n{} · pages={}", path.display(), pages.len());
+    let (mut sum_pop, mut sum_flat, mut sum_base) = (0usize, 0usize, 0usize);
+    println!("\n{} · pages={}", path.display(), doc.pages.len());
     println!(
-        "{:>5} {:>10} {:>10} {:>10}",
-        "page", "pop_words", "common", "fidelity"
+        "{:>5} {:>10} {:>9} {:>9} {:>9} {:>9}   {}",
+        "page", "pop_words", "flat_cov", "flat_fid", "base_cov", "base_fid", "worse"
     );
 
-    for (i, frags) in pages.iter().enumerate() {
-        let ours = page_text(frags, Variant::Base);
-        whole_ours.extend(words(&ours));
+    for (i, frags) in doc.pages.iter().enumerate() {
         let Some(pop_page) = poppler_page(path, i + 1) else {
             continue;
         };
@@ -751,28 +748,31 @@ fn dump_per_page_fidelity() {
         if pw.is_empty() {
             continue;
         }
-        let m = order_metrics_words(&words(&ours), &pw);
-        sum_pop += m.pop_words;
-        sum_in_order += m.in_order;
-        println!(
-            "{i:>5} {:>10} {:>10} {:>10.4}",
-            m.pop_words,
-            m.common,
-            m.in_order as f64 / m.common.max(1) as f64
+        let base = order_metrics_words(&words(&page_text(frags, Variant::Base)), &pw);
+        let flat = order_metrics_words(
+            &words(doc.flat_pages.get(i).map(String::as_str).unwrap_or("")),
+            &pw,
         );
+        sum_pop += pw.len();
+        sum_flat += flat.in_order;
+        sum_base += base.in_order;
+        // Only the pages where the two emissions actually differ are worth
+        // printing: on a 429-page document the rest is noise.
+        if flat.in_order + 5 < base.in_order || flat.common + 5 < base.common {
+            println!(
+                "{i:>5} {:>10} {:>9.4} {:>9.4} {:>9.4} {:>9.4}   flat",
+                pw.len(),
+                flat.common as f64 / pw.len() as f64,
+                flat.in_order as f64 / flat.common.max(1) as f64,
+                base.common as f64 / pw.len() as f64,
+                base.in_order as f64 / base.common.max(1) as f64,
+            );
+        }
     }
 
-    let whole_pop = words(&poppler(path).expect("poppler must read the document"));
-    let whole = order_metrics_words(&whole_ours, &whole_pop);
     println!(
-        "\nper-page (pages aligned independently): pop_words={sum_pop} in_order={sum_in_order} \
-         misplaced_rate={:.6}\n\
-         whole-document (one sequence):            pop_words={} in_order={} \
-         misplaced_rate={:.6}",
-        (sum_pop - sum_in_order) as f64 / sum_pop.max(1) as f64,
-        whole.pop_words,
-        whole.in_order,
-        whole.misplaced() as f64 / whole.pop_words.max(1) as f64
+        "\npages aligned independently: pop_words={sum_pop} \
+         flat_in_order={sum_flat} base_in_order={sum_base}"
     );
 }
 
@@ -791,31 +791,101 @@ fn dump_page_alignment() {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
-    let pages = fragments_by_page(path).expect("document must parse");
-    let frags = pages.get(page).expect("page index out of range");
+    let doc = parse_doc(path).expect("document must parse");
+    let frags = doc.pages.get(page).expect("page index out of range");
 
-    let ours = words(&page_text(frags, Variant::Base));
+    let base = words(&page_text(frags, Variant::Base));
+    let flat_text = doc.flat_pages.get(page).cloned().unwrap_or_default();
+    let flat = words(&flat_text);
     let pop = words(&poppler_page(path, page + 1).expect("poppler must read the page"));
 
-    println!("\nOURS (stream order), {} words:", ours.len());
-    for (i, w) in ours.iter().enumerate() {
-        print!("{w} ");
-        if i % 12 == 11 {
-            println!();
+    let dump = |name: &str, ws: &[String]| {
+        println!("\n{name}, {} words:", ws.len());
+        for (i, w) in ws.iter().enumerate() {
+            print!("{w} ");
+            if i % 12 == 11 {
+                println!();
+            }
         }
-    }
-    println!("\n\nPOPPLER, {} words:", pop.len());
-    for (i, w) in pop.iter().enumerate() {
-        print!("{w} ");
-        if i % 12 == 11 {
-            println!();
+        println!();
+    };
+    dump("FLAT PATH (ships)", &flat);
+    dump("BASE (probe grouping, stream order)", &base);
+    dump("POPPLER", &pop);
+
+    // Which of poppler's words each side fails to produce at all. A word the
+    // flat path never emits is not an ordering defect — and because the metric
+    // aligns by k-th occurrence, one dropped word shifts every later occurrence
+    // of the same token, so losses show up magnified as disorder.
+    let missing = |ws: &[String]| -> Vec<String> {
+        let mut have: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+        for w in ws {
+            *have.entry(w.as_str()).or_default() += 1;
         }
-    }
-    let m = order_metrics_words(&ours, &pop);
+        let mut out = Vec::new();
+        for w in &pop {
+            match have.get_mut(w.as_str()) {
+                Some(n) if *n > 0 => *n -= 1,
+                _ => out.push(w.clone()),
+            }
+        }
+        out
+    };
     println!(
-        "\n\npage {page}: {m:?} fidelity={:.4}",
-        m.in_order as f64 / m.common.max(1) as f64
+        "\nPOPPLER words the FLAT path never emits: {:?}",
+        missing(&flat)
     );
+    println!(
+        "\nPOPPLER words the BASE grouping never emits: {:?}",
+        missing(&base)
+    );
+
+    let mf = order_metrics_words(&flat, &pop);
+    let mb = order_metrics_words(&base, &pop);
+    println!(
+        "\npage {page}\n  flat {mf:?} fidelity={:.4}\n  base {mb:?} fidelity={:.4}",
+        mf.in_order as f64 / mf.common.max(1) as f64,
+        mb.in_order as f64 / mb.common.max(1) as f64
+    );
+}
+
+/// Raw fragments of one page (`OXIDIZE_PROBE_PAGE`), with the geometry and the
+/// font each one carries. The unit the flat path decides separators on.
+#[test]
+#[ignore = "manual diagnostic on one page; see the module header"]
+fn dump_raw_fragments() {
+    let dir = corpus_dir();
+    let pdfs = corpus_support::find_pdfs(&dir);
+    let path = pdfs.first().expect("point OXIDIZE_PROBE_CORPUS at a PDF");
+    let page: usize = std::env::var("OXIDIZE_PROBE_PAGE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    let doc = parse_doc(path).expect("document must parse");
+    let frags = doc.pages.get(page).expect("page index out of range");
+    println!(
+        "\n{} page {page}: {} fragments",
+        path.display(),
+        frags.len()
+    );
+    println!(
+        "{:>8} {:>8} {:>8} {:>6} {:>8}  {:<16} {}",
+        "x", "y", "width", "size", "gap", "font", "text"
+    );
+    let mut prev_right = f64::NAN;
+    for f in frags.iter().take(60) {
+        println!(
+            "{:>8.2} {:>8.2} {:>8.2} {:>6.1} {:>8.2}  {:<16} {:?}",
+            f.x,
+            f.y,
+            f.width,
+            f.font_size,
+            f.x - prev_right,
+            f.font_name.as_deref().unwrap_or("-"),
+            f.text
+        );
+        prev_right = f.x + f.width;
+    }
 }
 
 fn poppler_page(path: &Path, page: usize) -> Option<String> {
@@ -859,6 +929,12 @@ fn probe_reading_order_gain_on_corpus() {
     let mut rotated_pages = 0usize;
     let mut total_pages = 0usize;
 
+    // Where the flat path and the probe's un-reordered baseline disagree, per
+    // file. The two emit the same words in the same stream order, so any gap
+    // between them is NOT about reading order — it is the emission itself, and
+    // it is worth naming the documents that carry it.
+    let mut flat_vs_base: Vec<(i64, usize, &Path)> = Vec::new();
+
     for pdf in &pdfs {
         let Some(sample) = sample_with_timeout(pdf, &mut skips) else {
             continue;
@@ -867,6 +943,11 @@ fn probe_reading_order_gain_on_corpus() {
         pop_words_total += sample.metrics[0].pop_words;
         rotated_pages += sample.rotated_pages;
         total_pages += sample.pages;
+        flat_vs_base.push((
+            sample.flat.misplaced() as i64 - sample.metrics[0].misplaced() as i64,
+            sample.flat.pop_words,
+            pdf.as_path(),
+        ));
         let rows = std::iter::once(&sample.flat).chain(sample.metrics.iter());
         for (t, m) in totals.iter_mut().zip(rows) {
             t.misplaced += m.misplaced();
@@ -940,4 +1021,30 @@ fn probe_reading_order_gain_on_corpus() {
          'coverage' is aligned words over poppler's: a variant that gains order by \
          losing coverage has bought nothing."
     );
+
+    // The flat path and `base(stream)` emit the same words in the same order,
+    // so a difference between them is an emission defect, not an ordering one.
+    // Concentration matters: a gap spread over a thousand files is a systematic
+    // difference in the separator rules; a gap carried by ten files is ten
+    // documents with something specific wrong.
+    flat_vs_base.sort_by_key(|(d, _, _)| -*d);
+    let carried: i64 = flat_vs_base
+        .iter()
+        .map(|(d, _, _)| *d)
+        .filter(|d| *d > 0)
+        .sum();
+    let helped = flat_vs_base.iter().filter(|(d, _, _)| *d > 0).count();
+    let hurt = flat_vs_base.iter().filter(|(d, _, _)| *d < 0).count();
+    println!(
+        "\nFLAT vs base(stream) — same words, same order, so this is EMISSION, not ordering:\n  \
+         files where grouping wins={helped} loses={hurt} tie={} · words the winners carry={carried}\n  \
+         top 12 by words gained:",
+        flat_vs_base.len() - helped - hurt
+    );
+    for (delta, pop, path) in flat_vs_base.iter().take(12) {
+        println!(
+            "    {delta:>7} of {pop:>6} poppler words  {}",
+            path.file_name().and_then(|s| s.to_str()).unwrap_or("?")
+        );
+    }
 }
