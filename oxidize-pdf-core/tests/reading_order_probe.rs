@@ -934,6 +934,7 @@ fn probe_reading_order_gain_on_corpus() {
     // between them is NOT about reading order — it is the emission itself, and
     // it is worth naming the documents that carry it.
     let mut flat_vs_base: Vec<(i64, usize, &Path)> = Vec::new();
+    let mut per_file_flat: Vec<(String, OrderMetrics)> = Vec::new();
 
     for pdf in &pdfs {
         let Some(sample) = sample_with_timeout(pdf, &mut skips) else {
@@ -947,6 +948,13 @@ fn probe_reading_order_gain_on_corpus() {
             sample.flat.misplaced() as i64 - sample.metrics[0].misplaced() as i64,
             sample.flat.pop_words,
             pdf.as_path(),
+        ));
+        per_file_flat.push((
+            pdf.file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("?")
+                .to_string(),
+            sample.flat,
         ));
         let rows = std::iter::once(&sample.flat).chain(sample.metrics.iter());
         for (t, m) in totals.iter_mut().zip(rows) {
@@ -964,6 +972,20 @@ fn probe_reading_order_gain_on_corpus() {
         "probe measured NOTHING: 0 of {} files compared ({skips:?})",
         pdfs.len()
     );
+
+    // Per-file flat-path metrics, for diffing one build against another:
+    // an aggregate that moves says the corpus changed, not which documents did.
+    if let Ok(csv) = std::env::var("OXIDIZE_PROBE_CSV") {
+        let mut out = String::from("file,pop_words,common,in_order\n");
+        for (name, m) in &per_file_flat {
+            out.push_str(&format!(
+                "{name},{},{},{}\n",
+                m.pop_words, m.common, m.in_order
+            ));
+        }
+        std::fs::write(&csv, out).expect("csv path must be writable");
+        println!("per-file flat metrics written to {csv}");
+    }
 
     let rate = |n: usize| n as f64 / pop_words_total.max(1) as f64;
     // Everything is judged against what the extractor SHIPS today, not against
