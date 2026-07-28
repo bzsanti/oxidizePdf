@@ -8,6 +8,7 @@ mod flow;
 mod font;
 pub mod font_manager;
 pub mod fonts;
+pub(crate) mod graphics_state_stack;
 mod header_footer;
 pub mod invoice;
 mod layout;

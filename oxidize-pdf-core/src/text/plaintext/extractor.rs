@@ -11,6 +11,7 @@ use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::encoding::TextEncoding;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
+use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -27,7 +28,25 @@ struct TextState {
     font_name: Option<String>,
     /// Stack for `q`/`Q`. This extractor tracks no CTM, so the only graphics
     /// state it can lose is the text state (issue #452).
-    saved_states: Vec<SavedTextState>,
+    ///
+    /// Bounded: see [`GraphicsStateStack`] for the depth cap and for why the
+    /// pushes it refuses have to be counted (issue #455).
+    saved_states: GraphicsStateStack<SavedTextState>,
+}
+
+impl TextState {
+    /// `q` (§8.4.4): snapshot the text state.
+    ///
+    /// The snapshot is built lazily: past the depth cap it is never built at
+    /// all, so a `q` flood does not pay for the font-name clone of an entry
+    /// the stack is about to refuse (issue #455).
+    fn save_graphics_state(&mut self) {
+        self.saved_states.push_with(|| SavedTextState {
+            leading: self.leading,
+            font_size: self.font_size,
+            font_name: self.font_name.clone(),
+        });
+    }
 }
 
 /// The text state parameters this extractor tracks, saved by `q` and restored
@@ -54,7 +73,7 @@ impl Default for TextState {
             leading: 0.0,
             font_size: 0.0,
             font_name: None,
-            saved_states: Vec::new(),
+            saved_states: GraphicsStateStack::default(),
         }
     }
 }
@@ -400,11 +419,7 @@ impl PlainTextExtractor {
                     // not survive it (issue #452). The text matrices are not
                     // saved: they are text object state, owned by `BT`/`ET`.
                     ContentOperation::SaveGraphicsState => {
-                        state.saved_states.push(SavedTextState {
-                            leading: state.leading,
-                            font_size: state.font_size,
-                            font_name: state.font_name.clone(),
-                        });
+                        state.save_graphics_state();
                     }
 
                     ContentOperation::RestoreGraphicsState => {
