@@ -185,14 +185,26 @@ impl<R: Read + Seek> PdfReader<R> {
     pub fn unlock_with_password(&mut self, password: &str) -> ParseResult<bool> {
         match &mut self.encryption_handler {
             Some(handler) => {
-                // Try user password first
-                if handler.unlock_with_user_password(password).unwrap_or(false) {
-                    Ok(true)
-                } else {
-                    // Try owner password
-                    Ok(handler
-                        .unlock_with_owner_password(password)
-                        .unwrap_or(false))
+                // A password that does not match returns Ok(false); an Err means
+                // the encryption dictionary itself could not be processed — a
+                // truncated /U, an unsupported revision. Both were collapsed into
+                // "wrong password", which is how the real cause of issue #459
+                // stayed invisible: the reporter was told to find a password for
+                // a document whose empty password was already correct.
+                //
+                // The owner password still gets its turn before any error is
+                // raised: a document whose /O is unusable can open on its /U.
+                let user = handler.unlock_with_user_password(password);
+                if matches!(user, Ok(true)) {
+                    return Ok(true);
+                }
+                let owner = handler.unlock_with_owner_password(password);
+                if matches!(owner, Ok(true)) {
+                    return Ok(true);
+                }
+                match (user, owner) {
+                    (Err(e), _) | (Ok(_), Err(e)) => Err(e),
+                    (Ok(_), Ok(_)) => Ok(false),
                 }
             }
             None => Ok(true), // Not encrypted
@@ -2656,22 +2668,22 @@ impl<R: Read + Seek> PdfReader<R> {
 
         if let Some(info_dict) = self.info()? {
             if let Some(title) = info_dict.get("Title").and_then(|o| o.as_string()) {
-                metadata.title = title.as_str().ok().map(|s| s.to_string());
+                metadata.title = Some(title.to_text());
             }
             if let Some(author) = info_dict.get("Author").and_then(|o| o.as_string()) {
-                metadata.author = author.as_str().ok().map(|s| s.to_string());
+                metadata.author = Some(author.to_text());
             }
             if let Some(subject) = info_dict.get("Subject").and_then(|o| o.as_string()) {
-                metadata.subject = subject.as_str().ok().map(|s| s.to_string());
+                metadata.subject = Some(subject.to_text());
             }
             if let Some(keywords) = info_dict.get("Keywords").and_then(|o| o.as_string()) {
-                metadata.keywords = keywords.as_str().ok().map(|s| s.to_string());
+                metadata.keywords = Some(keywords.to_text());
             }
             if let Some(creator) = info_dict.get("Creator").and_then(|o| o.as_string()) {
-                metadata.creator = creator.as_str().ok().map(|s| s.to_string());
+                metadata.creator = Some(creator.to_text());
             }
             if let Some(producer) = info_dict.get("Producer").and_then(|o| o.as_string()) {
-                metadata.producer = producer.as_str().ok().map(|s| s.to_string());
+                metadata.producer = Some(producer.to_text());
             }
         }
 

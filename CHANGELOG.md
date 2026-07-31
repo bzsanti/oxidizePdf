@@ -6,6 +6,132 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- next-header -->
+## [4.2.2] - 2026-07-31
+
+### Fixed
+
+- **A literal string reached the object model as a text round-trip of its bytes,
+  not as its bytes** (#459). The lexer ran every `(...)` string through an
+  encoding-recovery pass that decoded the bytes as text and re-encoded the result
+  as UTF-8. For a text string that is harmless; for a binary one it is
+  destruction — byte `0xB2` came back as `0xC2 0xB2`. Literal strings now reach
+  the object model unchanged, and the strings a PDF defines as *text* are decoded
+  where they are read as text, by the new `PdfString::to_text` (ISO 32000-1
+  §7.9.2.2: UTF-16BE when a byte order mark is present, PDFDocEncoding
+  otherwise).
+
+  Two consequences beyond the reported symptom. Document metadata now decodes
+  UTF-16BE `/Title`, `/Author` and the rest, which previously surfaced as
+  `þÿ`-prefixed mojibake. And any binary string — `/U`, `/O`, `/Perms`, `/ID`,
+  every string in an encrypted document — is now readable, where before only the
+  hex-string form of those entries survived. That is why the qpdf-generated
+  fixtures in this suite all passed while real Acrobat output failed.
+
+  The consumers that read a string as text decode it explicitly now: AcroForm
+  field names (`/T`) and default appearance strings (`/DA`), and the `/T`,
+  `/Reason`, `/Location`, `/ContactInfo` and `/M` of a signature. A field named
+  with accented characters is addressed by that name, so leaving it undecoded
+  would have made the field unfillable.
+
+- **`/U` and `/O` entries longer than 48 bytes were rejected instead of read**
+  (#459). ISO 32000-2 §7.6.4.3.3 defines the R5/R6 entries as 48 bytes — a
+  32-byte hash and two 8-byte salts — but Acrobat writes them as 127-byte
+  strings, zero-padded past byte 48, and those documents open in every
+  conforming reader. Both revisions, on the user and the owner path, now read
+  the defined 48-byte prefix and ignore what follows. Shorter than 48 is still
+  an error: the salts would not fit. The `compute_*` functions build our own
+  entries and keep requiring exactly 48 bytes.
+
+  Together with the string fix above, this reopens documents whose *correct*
+  password — often the empty one — was reported as `WrongPassword`: the
+  reporter's file was a public annual report that opens in any browser.
+
+- **A malformed encryption dictionary was reported as a wrong password** (#459).
+  `PdfReader::unlock` collapsed every failure from the encryption handler into
+  `WrongPassword`, so a truncated `/U` or an unsupported revision sent the caller
+  hunting for a password that does not exist. Errors now surface with their own
+  message; a password that merely does not match still yields `WrongPassword`,
+  and the owner password still gets its turn before any error is raised.
+
+- **The `q`/`Q` graphics state stack was unbounded in both text extractors**
+  (#455). Nothing in a content stream limits how deep `q` nesting goes, so a
+  stream of one million `q` operators — about 2 MB — pushed one million
+  snapshots. Since #452 each snapshot also carries the text state, including a
+  heap allocation for the font name whenever a font is set, so the per-entry
+  cost of that flood had roughly doubled. Both extractors now cap the stack at
+  1024 entries; Annex C of ISO 32000-1 gives 28 as the historical
+  implementation limit for graphics state nesting, so no real document comes
+  near it.
+
+  The cap counts the pushes it refuses and answers exactly that many `Q`
+  operators with no restore, so every `Q` still pairs with its own `q`. Dropping
+  pushes while honouring every `Q` would have been worse than the flood: each
+  restore past the cap would hand back the state of a level further out than the
+  one it closes, and with the text state now inside each snapshot that changes
+  the font in force. Levels within the cap keep restoring exactly; only levels
+  deeper than 1024 stop restoring. The count is part of the stack value, so it
+  changes hands with it at a Form XObject boundary, where the form already gets
+  its own stack.
+
+  This bounds the extractors' own contribution, not the whole path: the content
+  parser still materialises a `Vec<ContentOperation>` — 80 bytes per operator —
+  for the same stream before either extractor runs.
+
+- **The text state was not restored when a graphics state block closed** (#452).
+  Leading, character and word spacing, horizontal scaling, font and size, text
+  rise and render mode are text state parameters, and the text state is part of
+  the graphics state (ISO 32000-1 §9.3, Table 52) — so `Q` must put them back.
+  Only the CTM and the fill colour were restored, so a leading, font or scale
+  set inside a `q … Q` block kept driving extraction after the block closed.
+  The same omission applied to the implicit save/restore that surrounds a Form
+  XObject (§8.10.1): after `Do` the page continued with whatever text state the
+  XObject had left behind, which meant text after the `Do` could be decoded
+  with the XObject's font instead of the page's. Both sites now share one
+  snapshot routine. Additionally, a Form XObject now gets its own graphics
+  state stack: a stray `Q` inside it used to pop the *page's* saved state,
+  which truncation afterwards could not undo, so the page's own `Q` restored
+  from nothing.
+
+  Measured over 8552 corpus PDFs across all six tiers: 26 documents change,
+  every one of them for the better. Text that was being decoded with a leaked
+  font now decodes correctly (one document goes from 464 to 1420 characters,
+  another from `N n Chinese` to `Name in Chinese`, another from `6R` to
+  `Sound.`); the rest are a handful of spurious spaces and newlines that the
+  separator heuristic no longer synthesises, because the pen advance is now
+  computed with the correct font size and scale. No document loses a word and
+  none stops extracting. `PlainTextExtractor`, which had no `q`/`Q` handling at
+  all, now saves and restores the three text state parameters it tracks.
+
+  The text matrices are deliberately not restored: they are text *object*
+  state, established by `BT` and discarded by `ET` (§9.4.1).
+
+- **`PlainTextExtractor` silently dropped all text shown by the `'` and `"`
+  operators.** Both are show-text operators (ISO 32000-1 §9.4.3, Table 109):
+  `'` is "next line, then show", `"` is "set word and character spacing, next
+  line, then show". Neither had a handler in that extractor's operator match,
+  so the string operand was never emitted — content loss, not a spacing defect,
+  in a re-exported public API, and a disagreement with `TextExtractor` about
+  what a document contains. Both now move to the next line and emit their text.
+  The spacing operands of `"` are consumed and not stored: this extractor
+  derives separators from pen positions rather than from accumulated glyph
+  advances.
+
+- **Text extraction ignored the `TD` operator, losing line breaks and fusing
+  words** (#451). `tx ty TD` (ISO 32000-1 §9.4.2) is defined as `-ty TL`
+  followed by `tx ty Td`: it moves to the next line *and* sets the leading.
+  The operator was parsed but had no handler in either extraction path, so it
+  fell through to the catch-all: the line break did not exist for the
+  extractor (Δx = Δy = 0 at the spacing decision, so the last word of one line
+  and the first of the next came out glued) and every later `T*` advanced by a
+  stale leading. Measured over the 1802-PDF stress corpus against poppler
+  `pdftotext`, implementing it takes word fusions from 6298 to 752 (−88%), and
+  the opposite metric improves too (words lost 7428 → 5545). No threshold
+  change moved either metric, which is the signature of a missing operator
+  rather than a mis-tuned heuristic. Fixed in the two text-extraction paths,
+  `TextExtractor` and `PlainTextExtractor`, which carry independent operator
+  matches. Other content-stream consumers in the crate keep their own operator
+  matches and still ignore `TD`; they are tracked separately.
+
 ## [4.2.1] - 2026-07-22
 
 ### Fixed

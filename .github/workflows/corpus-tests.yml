@@ -69,7 +69,10 @@ jobs:
     name: "T2 + T3: Real-World & Stress"
     if: github.event_name == 'schedule' && github.event.schedule == '0 3 * * *'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # T2 + T3 ~35 min; + two differential gates, each a full extract-and-compare
+    # pass with poppler over ~1800 PDFs (per-file timeouts capped at 15 s).
+    # Headroom for slower CI.
+    timeout-minutes: 105
     steps:
       - uses: actions/checkout@v5
         with:
@@ -109,6 +112,32 @@ jobs:
 
       - name: Run T3 — Stress
         run: cargo test --test t3_stress -- --nocapture
+
+      # Differential word-fusion gate: our flat extractor vs poppler pdftotext
+      # over the T3 stress corpus. Reality-derived oracle for the separator
+      # class (issues #390/#441/#443/#447). Ratchets against a committed
+      # baseline; see differential_fusion_test.rs. Skips if poppler absent.
+      - name: Install poppler (pdftotext) for differential gate
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      # OXIDIZE_DIFF_REQUIRE_CORPUS turns the gates' skip paths into failures.
+      # They skip by design when poppler or the corpus is missing, which keeps
+      # them inert on PRs — but here the corpus download is best-effort, so
+      # without this a failed download would leave the job green having
+      # measured nothing.
+      - name: Run differential word-fusion gate (T3 vs poppler)
+        env:
+          OXIDIZE_DIFF_REQUIRE_CORPUS: "1"
+        run: cargo test --test differential_fusion_test -- --nocapture
+
+      # Reading-ORDER gate: the fusion gate above is structurally blind to
+      # order (interleaved columns and out-of-order blocks all score zero
+      # fusions), so it needs its own run. Same corpus, same oracle, same
+      # ratchet policy; baseline in tests/baselines/. Issue #448.
+      - name: Run differential reading-order gate (T3 vs poppler)
+        env:
+          OXIDIZE_DIFF_REQUIRE_CORPUS: "1"
+        run: cargo test --test differential_order_test -- --nocapture
 
       - name: Upload results
         if: always()

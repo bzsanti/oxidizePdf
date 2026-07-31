@@ -24,6 +24,24 @@
 //!      geometrically detectable (no missing newline, #390). Unlike #1-#4,
 //!      this oracle does NOT filter whitespace away — it is the only invariant
 //!      that can see separator bugs, the class where #438 and #441 escaped.
+//!
+//!      SCOPE — read before trusting this as a class guard. This is NOT a
+//!      "separator class is closed" invariant; it is a regression guard for the
+//!      line shapes the generator KNOWS HOW TO DRAW. Its oracle is co-designed
+//!      with the generator (`emit_line_structure` both draws the page and
+//!      declares the expected lines), so it is structurally blind to any shape
+//!      the generator does not emit. Concretely: every wrap it emits drops the
+//!      pen to a LOWER baseline (dy > 0), and every dy == 0 backward jump it
+//!      emits is a mid-line reposition — so a real wrap whose two lines share
+//!      the SAME content-stream Y (dy == 0) is outside its input space entirely.
+//!      That exact shape is issue #447, and it escaped PAST this invariant to a
+//!      user. Recovering producer intent (which glyphs form a logical line)
+//!      from local pen deltas is an underdetermined inverse problem; no
+//!      synthetic oracle built from our own model can certify it. The durable
+//!      guard for that class is measurement against real documents with an
+//!      independent oracle (differential extraction / provisioned ground truth /
+//!      the document's own tagged structure), not another generated property.
+//!      Treat #447's fix as pinned by `issue_447_same_y_wrap_test`, not here.
 //!   6. LINE STRUCTURE UNDER ROTATION — the same oracle under a rotated CTM:
 //!      a rigid page rotation must not change the extracted line structure.
 //!      PINNED `#[ignore]` to open issue #443 (separator heuristics measure

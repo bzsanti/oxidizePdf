@@ -10,6 +10,7 @@ use crate::parser::objects::{PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
+use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -310,7 +311,10 @@ struct TextState {
     /// and other graphics state items that the text extractor needs to restore.
     /// Per PDF spec §8.4.4, `q` pushes the full graphics state and `Q` pops it;
     /// here we save only the fields that influence text extraction.
-    saved_states: Vec<SavedGraphicsState>,
+    ///
+    /// Bounded: see [`GraphicsStateStack`] for the depth cap and for why the
+    /// pushes it refuses have to be counted (issue #455).
+    saved_states: GraphicsStateStack<SavedGraphicsState>,
     /// Marked-content stack (issue #269 Phase 1). Pushed on BMC/BDC,
     /// popped on EMC. Empty on entry to each page.
     mc_stack: Vec<MarkedContentEntry>,
@@ -320,11 +324,97 @@ struct TextState {
     pending_actualtext: Option<PendingActualText>,
 }
 
-/// Subset of graphics state saved by `q` and restored by `Q` (issue #262).
-#[derive(Clone)]
+impl TextState {
+    /// `q` (§8.4.4): snapshot the graphics state.
+    ///
+    /// The snapshot is built lazily so that past the depth cap it is not built
+    /// at all: a `q` flood must not pay for the font-name clone of an entry the
+    /// stack is about to refuse (issue #455).
+    ///
+    /// That laziness is what forces the stack out of the state and back: the
+    /// closure calls [`SavedGraphicsState::capture`], which borrows the WHOLE
+    /// `TextState` — the ten fields of the snapshot are defined in one place on
+    /// purpose, so the `q` path and the implicit save around `Do` cannot drift
+    /// apart — and that borrow overlaps the mutable borrow of `saved_states`.
+    /// Moving a four-word stack twice per `q` is the price of not duplicating
+    /// the snapshot definition. The plain extractor reads its three fields
+    /// inline instead, so its borrows are disjoint and it needs none of this.
+    fn save_graphics_state(&mut self) {
+        let mut stack = std::mem::take(&mut self.saved_states);
+        stack.push_with(|| SavedGraphicsState::capture(self));
+        self.saved_states = stack;
+    }
+}
+
+/// Graphics state saved by `q` and restored by `Q` (issues #262, #452).
+///
+/// Holds the CTM, the fill colour, and the TEXT STATE parameters. The text
+/// state is graphics state per ISO 32000-1 §9.3 and Table 52 — leading,
+/// character and word spacing, horizontal scaling, font and size, text rise
+/// and render mode all live there, so `Q` must put them back. Before #452 only
+/// the CTM and the colour were restored, and a leading set inside a `q … Q`
+/// block kept driving line breaks after the block closed.
+///
+/// `text_matrix` and `text_line_matrix` are deliberately NOT here: they are
+/// text OBJECT state, established by `BT` and discarded by `ET` (§9.4.1), not
+/// graphics state. Restoring them on `Q` would be a different bug.
+///
+/// Four of the text-state fields — `char_space`, `word_space`, `text_rise` and
+/// `render_mode` — are currently written by their operators but never read by
+/// the extractor, so restoring them changes no output today and no test can
+/// guard them. They are here because they are graphics state: whoever wires
+/// them into the pen advance, the y offset or invisible-text filtering should
+/// not have to rediscover this bug.
 struct SavedGraphicsState {
     ctm: [f64; 6],
     fill_color: Option<Color>,
+    leading: f64,
+    char_space: f64,
+    word_space: f64,
+    horizontal_scale: f64,
+    text_rise: f64,
+    font_size: f64,
+    font_name: Option<String>,
+    render_mode: u8,
+}
+
+impl SavedGraphicsState {
+    /// Snapshot the graphics state, for `q` and for the implicit save around
+    /// `Do` (§8.10.1). Both callers go through here so the two can never drift
+    /// into disagreeing about what the graphics state contains.
+    fn capture(state: &TextState) -> Self {
+        Self {
+            ctm: state.ctm,
+            fill_color: state.fill_color,
+            leading: state.leading,
+            char_space: state.char_space,
+            word_space: state.word_space,
+            horizontal_scale: state.horizontal_scale,
+            text_rise: state.text_rise,
+            font_size: state.font_size,
+            font_name: state.font_name.clone(),
+            render_mode: state.render_mode,
+        }
+    }
+
+    /// Put the snapshot back. Consumes it, so the `String` moves instead of
+    /// being cloned.
+    ///
+    /// Note the fields it does NOT touch: the text matrices (text object state,
+    /// §9.4.1), the marked-content stack (its nesting is independent of
+    /// `q`/`Q`, §14.6) and the saved-state stack itself.
+    fn restore_into(self, state: &mut TextState) {
+        state.ctm = self.ctm;
+        state.fill_color = self.fill_color;
+        state.leading = self.leading;
+        state.char_space = self.char_space;
+        state.word_space = self.word_space;
+        state.horizontal_scale = self.horizontal_scale;
+        state.text_rise = self.text_rise;
+        state.font_size = self.font_size;
+        state.font_name = self.font_name;
+        state.render_mode = self.render_mode;
+    }
 }
 
 /// Mutable accumulator threaded through `process_operations` so the op loop
@@ -359,7 +449,7 @@ impl Default for TextState {
             font_name: None,
             render_mode: 0,
             fill_color: None,
-            saved_states: Vec::new(),
+            saved_states: GraphicsStateStack::default(),
             mc_stack: Vec::new(),
             pending_actualtext: None,
         }
@@ -1001,6 +1091,22 @@ impl TextExtractor {
                     state.text_line_matrix = new_matrix;
                 }
 
+                // `tx ty TD` (ISO 32000-1 §9.4.2) is defined as `-ty TL`
+                // followed by `tx ty Td`: it moves to the next line AND sets
+                // the leading. The operator was parsed but never handled, so
+                // the line break did not exist for the extractor (`dx = dy =
+                // 0` at the boundary) and every later `T*` inherited a stale
+                // leading (issue #451).
+                ContentOperation::MoveTextSetLeading(tx, ty) => {
+                    state.leading = -(ty as f64);
+                    let new_matrix = multiply_matrix(
+                        &[1.0, 0.0, 0.0, 1.0, tx as f64, ty as f64],
+                        &state.text_line_matrix,
+                    );
+                    state.text_matrix = new_matrix;
+                    state.text_line_matrix = new_matrix;
+                }
+
                 ContentOperation::NextLine => {
                     // Move to next line using current leading
                     let new_matrix = multiply_matrix(
@@ -1040,14 +1146,18 @@ impl TextExtractor {
                                 // the dy check alone misses it, so treat a backward
                                 // dx beyond one line-height (2× the threshold,
                                 // conservative) as a newline even when dy is small
-                                // (issue #390). A wrap always lands on a different
-                                // baseline, so require a nonzero dy: a strictly
-                                // same-line backward jump is glyph repositioning,
-                                // not a wrap (issue #441). dy is baseline-relative
-                                // (issue #443), so this holds under rotation too;
-                                // the epsilon absorbs projection rounding noise.
-                                let line_wrap = dy > SAME_LINE_EPS
-                                    && dx < -(self.options.newline_threshold * 2.0);
+                                // (issue #390). With a nonzero leading that gate is
+                                // enough; but at dy == 0 the jump is ambiguous with
+                                // a same-line reposition (issue #441). Resolve it by
+                                // magnitude: a reposition is local, a same-Y wrap
+                                // returns across the whole column, so a jump beyond
+                                // `SAME_Y_WRAP_EM` font sizes is a wrap even at dy == 0
+                                // (issue #447). dx/dy are baseline-relative (issue
+                                // #443), so this holds under rotation; the epsilon
+                                // absorbs projection rounding noise.
+                                let same_y_wrap = dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
+                                let line_wrap = dx < -(self.options.newline_threshold * 2.0)
+                                    && (dy > SAME_LINE_EPS || same_y_wrap);
                                 if dy > self.options.newline_threshold || line_wrap {
                                     Some('\n')
                                 } else if dx > self.options.space_threshold * state.font_size {
@@ -1137,17 +1247,22 @@ impl TextExtractor {
                                     // pieces. A *backward* dx beyond one line-height
                                     // (2× the threshold, conservative) is a wrap, not a
                                     // kern, so it is safe to break there — but only when
-                                    // the pen also moved vertically: a wrap always lands
-                                    // on a different baseline, so a strictly same-line
-                                    // backward jump is glyph repositioning, not a wrap
-                                    // (issue #441). Deltas are baseline-relative (issue
-                                    // #443), so both gates hold under rotation; the
-                                    // epsilon absorbs projection rounding noise.
+                                    // the pen also moved vertically: with a nonzero
+                                    // leading that gate identifies the wrap. At dy == 0
+                                    // the backward jump is ambiguous with a same-line
+                                    // reposition (issue #441); resolve it by magnitude,
+                                    // treating a jump beyond `SAME_Y_WRAP_EM` font sizes
+                                    // as a same-Y wrap (issue #447). Deltas are
+                                    // baseline-relative (issue #443), so both gates hold
+                                    // under rotation; the epsilon absorbs projection
+                                    // rounding noise.
                                     let (dx, dy_signed) =
                                         pen_delta(&state, (last_x, last_y), (x, y));
                                     let dy = dy_signed.abs();
-                                    let line_wrap = dy > SAME_LINE_EPS
-                                        && dx < -(self.options.newline_threshold * 2.0);
+                                    let same_y_wrap =
+                                        dx < -(state.font_size.abs() * SAME_Y_WRAP_EM);
+                                    let line_wrap = dx < -(self.options.newline_threshold * 2.0)
+                                        && (dy > SAME_LINE_EPS || same_y_wrap);
                                     if !skip_text {
                                         let separator = if !extracted_text.is_empty()
                                             && (dy > self.options.newline_threshold || line_wrap)
@@ -1455,18 +1570,16 @@ impl TextExtractor {
                 // CTM forever, producing absurd page-space coordinates and
                 // wrong font_size scaling on PDFs that nest graphics state.
                 ContentOperation::SaveGraphicsState => {
-                    state.saved_states.push(SavedGraphicsState {
-                        ctm: state.ctm,
-                        fill_color: state.fill_color,
-                    });
+                    state.save_graphics_state();
                 }
                 ContentOperation::RestoreGraphicsState => {
+                    // Text state is graphics state (§9.3, Table 52): a leading,
+                    // font or scale set inside the block dies with it (issue
+                    // #452). Unbalanced Q (pop on empty stack) is silently
+                    // ignored to keep extraction robust to malformed PDFs.
                     if let Some(saved) = state.saved_states.pop() {
-                        state.ctm = saved.ctm;
-                        state.fill_color = saved.fill_color;
+                        saved.restore_into(&mut state);
                     }
-                    // Unbalanced Q (pop on empty stack) is silently ignored
-                    // to keep extraction robust to malformed PDFs.
                 }
 
                 // Color operations (Phase 4: Color extraction)
@@ -1595,10 +1708,26 @@ impl TextExtractor {
                         if let Some((xobj_ops, xobj_res, matrix)) =
                             self.load_form_xobject(resources, &name, document)
                         {
-                            let saved_ctm = state.ctm;
-                            let saved_fill = state.fill_color;
-                            let saved_stack = state.saved_states.len();
+                            // `Do` paints inside an IMPLICIT q/Q (§8.10.1),
+                            // so the whole graphics state — text state included
+                            // (issue #452) — comes back afterwards. Same
+                            // snapshot the `q` arm takes, so the two cannot
+                            // disagree about what that state is.
+                            let outer = SavedGraphicsState::capture(&state);
                             let saved_fonts = self.font_cache.clone();
+                            // The form gets its own save-state stack: a stray
+                            // `Q` inside it must not pop the page's snapshots.
+                            // Truncating afterwards could not undo that — a
+                            // popped entry is gone — and with the text state
+                            // now in each snapshot, a mispaired restore
+                            // corrupts font decoding, not just the CTM.
+                            //
+                            // The count of pushes the depth cap refused is part
+                            // of the stack, so it changes hands here too: a
+                            // form that inherited the page's count would let its
+                            // own `Q` consume it, and the page would come back
+                            // short (issue #455).
+                            let outer_stack = std::mem::take(&mut state.saved_states);
 
                             if let Some(m) = matrix {
                                 let [a0, b0, c0, d0, e0, f0] = state.ctm;
@@ -1634,9 +1763,8 @@ impl TextExtractor {
                                 depth + 1,
                             )?;
 
-                            out.state.ctm = saved_ctm;
-                            out.state.fill_color = saved_fill;
-                            out.state.saved_states.truncate(saved_stack);
+                            outer.restore_into(&mut out.state);
+                            out.state.saved_states = outer_stack;
                             self.font_cache = saved_fonts;
 
                             state = out.state;
@@ -2522,6 +2650,30 @@ fn advance_pen(state: &mut TextState, text_width: f64) -> (f64, f64) {
 /// leading in real documents is orders of magnitude above it.
 const SAME_LINE_EPS: f64 = 1e-6;
 
+/// Backward-jump magnitude, in multiples of the font size, above which a
+/// same-baseline (`dy == 0`) backward pen jump is a line wrap rather than a
+/// glyph reposition (issue #447).
+///
+/// At `dy == 0` a backward jump is ambiguous: a same-line reposition
+/// (justification, kerned overlay, out-of-order emission — issue #441) and a
+/// real wrap whose two lines happen to land on the same content-stream Y
+/// (issue #447) both produce it. They separate by MAGNITUDE: a reposition is
+/// local (a word/phrase — a few em), while a wrap returns across the whole
+/// text column (many em). This bound sits in that gap, scaled to font size
+/// because the reposition scale is the glyph/word scale, not the fixed
+/// paragraph-break `newline_threshold`. Scaled to `font_size.abs()`: `Tf`
+/// accepts negative sizes (mirrored text), and the sign must not flip the
+/// threshold's sense — otherwise a negative size makes every backward jump a
+/// "wrap" and resurrects the #441 defect.
+///
+/// Accepted, documented limitation (the #417/#422 trade-off): a same-line
+/// reposition that jumps back more than this many em is misread as a wrap, and
+/// a same-Y wrap of a line shorter than this is glued. Both are rare and
+/// neither loses a glyph — only the separator is wrong. A wrap with any
+/// nonzero leading (the common case, issue #390) is unaffected: it breaks on
+/// the `dy`-aware gate regardless of magnitude.
+const SAME_Y_WRAP_EM: f64 = 10.0;
+
 /// Pen movement from the previous post-advance pen point `last` to the
 /// current glyph origin `cur` (both user space), measured in the frame of the
 /// current text baseline (issue #443): `dx` along the baseline direction,
@@ -2576,31 +2728,16 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
 
 /// Decode a PDF string operand into Rust `String`.
 ///
-/// PDF strings inside marked-content properties (notably `/ActualText`)
-/// may be encoded as:
-///
-/// - **UTF-16BE with BOM**: leading `0xFE 0xFF`, then big-endian 16-bit
-///   code units. This is the canonical encoding for non-ASCII ActualText
-///   (e.g. `fi` ligature, Greek/math symbols). Decoded via `String::from_utf16_lossy`
-///   so invalid surrogate pairs become `U+FFFD` rather than panicking.
-/// - **PDFDocEncoding** (the catch-all for non-BOM bytes). For the ASCII
-///   subset (0x20-0x7E) PDFDocEncoding is identical to Latin-1. We
-///   conservatively map byte-by-byte to `char`. A future revision can
-///   plug in the full PDFDocEncoding table if a real PDF emerges with
-///   high-bit characters in ActualText *without* a UTF-16BE BOM (rare;
-///   most producers emit the BOM when going outside ASCII).
+/// A string inside marked-content properties (notably `/ActualText`) is a PDF
+/// text string like any other, so this is
+/// [`PdfString::to_text`](crate::parser::objects::PdfString::to_text): UTF-16BE
+/// when a byte order mark is present — the canonical encoding for non-ASCII
+/// `/ActualText`, e.g. an `fi` ligature or a Greek symbol — and the WinAnsi
+/// reading of PDFDocEncoding otherwise. Before that helper existed this mapped
+/// non-BOM bytes to `char` one by one, which is Latin-1 and wrong for the
+/// typographic punctuation WinAnsi puts in `0x80..=0x9F`.
 fn decode_pdf_string(bytes: &[u8]) -> String {
-    if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
-        let mut code_units: Vec<u16> = Vec::with_capacity((bytes.len() - 2) / 2);
-        let mut i = 2;
-        while i + 1 < bytes.len() {
-            code_units.push(u16::from_be_bytes([bytes[i], bytes[i + 1]]));
-            i += 2;
-        }
-        String::from_utf16_lossy(&code_units)
-    } else {
-        bytes.iter().map(|&b| b as char).collect()
-    }
+    crate::parser::objects::decode_text_string(bytes)
 }
 
 /// Resolve a `MarkedContentProps` to `(mcid, actual_text)`.
