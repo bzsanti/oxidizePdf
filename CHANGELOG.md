@@ -10,6 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `q`/`Q` graphics state stack was unbounded in both text extractors**
+  (#455). Nothing in a content stream limits how deep `q` nesting goes, so a
+  stream of one million `q` operators — about 2 MB — pushed one million
+  snapshots. Since #452 each snapshot also carries the text state, including a
+  heap allocation for the font name whenever a font is set, so the per-entry
+  cost of that flood had roughly doubled. Both extractors now cap the stack at
+  1024 entries; Annex C of ISO 32000-1 gives 28 as the historical
+  implementation limit for graphics state nesting, so no real document comes
+  near it.
+
+  The cap counts the pushes it refuses and answers exactly that many `Q`
+  operators with no restore, so every `Q` still pairs with its own `q`. Dropping
+  pushes while honouring every `Q` would have been worse than the flood: each
+  restore past the cap would hand back the state of a level further out than the
+  one it closes, and with the text state now inside each snapshot that changes
+  the font in force. Levels within the cap keep restoring exactly; only levels
+  deeper than 1024 stop restoring. The count is part of the stack value, so it
+  changes hands with it at a Form XObject boundary, where the form already gets
+  its own stack.
+
+  This bounds the extractors' own contribution, not the whole path: the content
+  parser still materialises a `Vec<ContentOperation>` — 80 bytes per operator —
+  for the same stream before either extractor runs.
+
 - **The text state was not restored when a graphics state block closed** (#452).
   Leading, character and word spacing, horizontal scaling, font and size, text
   rise and render mode are text state parameters, and the text state is part of

@@ -10,6 +10,7 @@ use crate::parser::objects::{PdfDictionary, PdfObject};
 use crate::parser::page_tree::ParsedPage;
 use crate::parser::ParseResult;
 use crate::text::extraction_cmap::{CMapTextExtractor, FontInfo};
+use crate::text::graphics_state_stack::GraphicsStateStack;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
@@ -310,7 +311,10 @@ struct TextState {
     /// and other graphics state items that the text extractor needs to restore.
     /// Per PDF spec §8.4.4, `q` pushes the full graphics state and `Q` pops it;
     /// here we save only the fields that influence text extraction.
-    saved_states: Vec<SavedGraphicsState>,
+    ///
+    /// Bounded: see [`GraphicsStateStack`] for the depth cap and for why the
+    /// pushes it refuses have to be counted (issue #455).
+    saved_states: GraphicsStateStack<SavedGraphicsState>,
     /// Marked-content stack (issue #269 Phase 1). Pushed on BMC/BDC,
     /// popped on EMC. Empty on entry to each page.
     mc_stack: Vec<MarkedContentEntry>,
@@ -318,6 +322,28 @@ struct TextState {
     /// At most one active run at a time — nested ActualText replaces the
     /// outer (innermost wins, per spec §4).
     pending_actualtext: Option<PendingActualText>,
+}
+
+impl TextState {
+    /// `q` (§8.4.4): snapshot the graphics state.
+    ///
+    /// The snapshot is built lazily so that past the depth cap it is not built
+    /// at all: a `q` flood must not pay for the font-name clone of an entry the
+    /// stack is about to refuse (issue #455).
+    ///
+    /// That laziness is what forces the stack out of the state and back: the
+    /// closure calls [`SavedGraphicsState::capture`], which borrows the WHOLE
+    /// `TextState` — the ten fields of the snapshot are defined in one place on
+    /// purpose, so the `q` path and the implicit save around `Do` cannot drift
+    /// apart — and that borrow overlaps the mutable borrow of `saved_states`.
+    /// Moving a four-word stack twice per `q` is the price of not duplicating
+    /// the snapshot definition. The plain extractor reads its three fields
+    /// inline instead, so its borrows are disjoint and it needs none of this.
+    fn save_graphics_state(&mut self) {
+        let mut stack = std::mem::take(&mut self.saved_states);
+        stack.push_with(|| SavedGraphicsState::capture(self));
+        self.saved_states = stack;
+    }
 }
 
 /// Graphics state saved by `q` and restored by `Q` (issues #262, #452).
@@ -423,7 +449,7 @@ impl Default for TextState {
             font_name: None,
             render_mode: 0,
             fill_color: None,
-            saved_states: Vec::new(),
+            saved_states: GraphicsStateStack::default(),
             mc_stack: Vec::new(),
             pending_actualtext: None,
         }
@@ -1544,7 +1570,7 @@ impl TextExtractor {
                 // CTM forever, producing absurd page-space coordinates and
                 // wrong font_size scaling on PDFs that nest graphics state.
                 ContentOperation::SaveGraphicsState => {
-                    state.saved_states.push(SavedGraphicsState::capture(&state));
+                    state.save_graphics_state();
                 }
                 ContentOperation::RestoreGraphicsState => {
                     // Text state is graphics state (§9.3, Table 52): a leading,
@@ -1695,6 +1721,12 @@ impl TextExtractor {
                             // popped entry is gone — and with the text state
                             // now in each snapshot, a mispaired restore
                             // corrupts font decoding, not just the CTM.
+                            //
+                            // The count of pushes the depth cap refused is part
+                            // of the stack, so it changes hands here too: a
+                            // form that inherited the page's count would let its
+                            // own `Q` consume it, and the page would come back
+                            // short (issue #455).
                             let outer_stack = std::mem::take(&mut state.saved_states);
 
                             if let Some(m) = matrix {
