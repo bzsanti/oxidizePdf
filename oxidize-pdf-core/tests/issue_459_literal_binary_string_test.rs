@@ -41,15 +41,15 @@ fn build_pdf(objects: &[Vec<u8>], trailer_extra: &str) -> Vec<u8> {
 
     for (i, body) in objects.iter().enumerate() {
         offsets.push(pdf.len());
-        write!(pdf, "{} 0 obj\n", i + 1).unwrap();
+        writeln!(pdf, "{} 0 obj", i + 1).unwrap();
         pdf.extend_from_slice(body);
         pdf.extend_from_slice(b"\nendobj\n");
     }
 
     let xref_offset = pdf.len();
-    write!(pdf, "xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).unwrap();
+    writeln!(pdf, "xref\n0 {}\n0000000000 65535 f ", objects.len() + 1).unwrap();
     for offset in &offsets {
-        write!(pdf, "{:010} 00000 n \n", offset).unwrap();
+        writeln!(pdf, "{:010} 00000 n ", offset).unwrap();
     }
     write!(
         pdf,

@@ -27,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hex-string form of those entries survived. That is why the qpdf-generated
   fixtures in this suite all passed while real Acrobat output failed.
 
+  The consumers that read a string as text decode it explicitly now: AcroForm
+  field names (`/T`) and default appearance strings (`/DA`), and the `/T`,
+  `/Reason`, `/Location`, `/ContactInfo` and `/M` of a signature. A field named
+  with accented characters is addressed by that name, so leaving it undecoded
+  would have made the field unfillable.
+
 - **`/U` and `/O` entries longer than 48 bytes were rejected instead of read**
   (#459). ISO 32000-2 §7.6.4.3.3 defines the R5/R6 entries as 48 bytes — a
   32-byte hash and two 8-byte salts — but Acrobat writes them as 127-byte

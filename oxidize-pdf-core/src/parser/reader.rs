@@ -2668,22 +2668,22 @@ impl<R: Read + Seek> PdfReader<R> {
 
         if let Some(info_dict) = self.info()? {
             if let Some(title) = info_dict.get("Title").and_then(|o| o.as_string()) {
-                metadata.title = Some(title.as_text());
+                metadata.title = Some(title.to_text());
             }
             if let Some(author) = info_dict.get("Author").and_then(|o| o.as_string()) {
-                metadata.author = Some(author.as_text());
+                metadata.author = Some(author.to_text());
             }
             if let Some(subject) = info_dict.get("Subject").and_then(|o| o.as_string()) {
-                metadata.subject = Some(subject.as_text());
+                metadata.subject = Some(subject.to_text());
             }
             if let Some(keywords) = info_dict.get("Keywords").and_then(|o| o.as_string()) {
-                metadata.keywords = Some(keywords.as_text());
+                metadata.keywords = Some(keywords.to_text());
             }
             if let Some(creator) = info_dict.get("Creator").and_then(|o| o.as_string()) {
-                metadata.creator = Some(creator.as_text());
+                metadata.creator = Some(creator.to_text());
             }
             if let Some(producer) = info_dict.get("Producer").and_then(|o| o.as_string()) {
-                metadata.producer = Some(producer.as_text());
+                metadata.producer = Some(producer.to_text());
             }
         }
 

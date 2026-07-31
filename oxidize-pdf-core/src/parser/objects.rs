@@ -1186,10 +1186,13 @@ impl PdfString {
     /// Decode as a PDF *text string* (ISO 32000-1 §7.9.2.2).
     ///
     /// A text string is either UTF-16BE introduced by a `0xFE 0xFF` byte order
-    /// mark, or PDFDocEncoding. Bytes outside `0x80..=0x9F` decode identically
-    /// under PDFDocEncoding and Latin-1; inside that block this uses the WinAnsi
-    /// table, which is what producers writing typographic punctuation without a
-    /// BOM mean by those bytes.
+    /// mark, or PDFDocEncoding. Without a BOM this decodes through the WinAnsi
+    /// (Windows-1252) table, which agrees with PDFDocEncoding across the Latin
+    /// letters and diverges only where few real documents go: PDFDocEncoding
+    /// puts typographic punctuation in `0x80..=0x9F` in a different order than
+    /// WinAnsi does, and maps `0xA0` to `€` where WinAnsi has a no-break space.
+    /// Producers that need those characters emit the BOM. Swapping in the full
+    /// PDFDocEncoding table would only change the reading of those slots.
     ///
     /// Use this for entries a PDF defines as text — `/Title`, `/Author`,
     /// `/ActualText`. Entries that are binary — `/U`, `/O`, `/Perms`, `/ID` —
@@ -1202,13 +1205,13 @@ impl PdfString {
     /// use oxidize_pdf::parser::objects::PdfString;
     ///
     /// // PDFDocEncoding
-    /// assert_eq!(PdfString::new(vec![b'a', 0xF1, b'o']).as_text(), "año");
+    /// assert_eq!(PdfString::new(vec![b'a', 0xF1, b'o']).to_text(), "año");
     ///
     /// // UTF-16BE with a byte order mark
     /// let utf16 = vec![0xFE, 0xFF, 0x00, b'A', 0x00, 0xF1, 0x00, b'o'];
-    /// assert_eq!(PdfString::new(utf16).as_text(), "Año");
+    /// assert_eq!(PdfString::new(utf16).to_text(), "Año");
     /// ```
-    pub fn as_text(&self) -> String {
+    pub fn to_text(&self) -> String {
         decode_text_string(&self.0)
     }
 
@@ -1220,9 +1223,9 @@ impl PdfString {
 
 /// Decodes the bytes of a PDF text string (ISO 32000-1 §7.9.2.2).
 ///
-/// See [`PdfString::as_text`] for the encodings involved and for when a string
+/// See [`PdfString::to_text`] for the encodings involved and for when a string
 /// must *not* be decoded this way.
-pub fn decode_text_string(bytes: &[u8]) -> String {
+pub(crate) fn decode_text_string(bytes: &[u8]) -> String {
     if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
         let code_units: Vec<u16> = bytes[2..]
             .chunks_exact(2)
