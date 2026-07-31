@@ -738,13 +738,7 @@ impl StandardSecurityHandler {
         password: &UserPassword,
         u_entry: &[u8],
     ) -> Result<bool> {
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "R5 U entry must be {} bytes, got {}",
-                U_ENTRY_LENGTH,
-                u_entry.len()
-            )));
-        }
+        let u_entry = defined_entry_prefix(u_entry, "R5 U")?;
 
         // Extract validation_salt from U
         let validation_salt = &u_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
@@ -840,12 +834,7 @@ impl StandardSecurityHandler {
                 ue_entry.len()
             )));
         }
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "U entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
+        let u_entry = defined_entry_prefix(u_entry, "U")?;
 
         // Extract key_salt from U
         let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
@@ -930,13 +919,7 @@ impl StandardSecurityHandler {
         password: &UserPassword,
         u_entry: &[u8],
     ) -> Result<bool> {
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "R6 U entry must be {} bytes, got {}",
-                U_ENTRY_LENGTH,
-                u_entry.len()
-            )));
-        }
+        let u_entry = defined_entry_prefix(u_entry, "R6 U")?;
 
         // Extract validation_salt from U[32..40]
         let validation_salt = &u_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
@@ -1020,12 +1003,7 @@ impl StandardSecurityHandler {
                 ue_entry.len()
             )));
         }
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "U entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
+        let u_entry = defined_entry_prefix(u_entry, "U")?;
 
         // Extract key_salt from U[40..48]
         let key_salt = &u_entry[U_KEY_SALT_START..U_KEY_SALT_END];
@@ -1264,20 +1242,8 @@ impl StandardSecurityHandler {
         o_entry: &[u8],
         u_entry: &[u8],
     ) -> Result<bool> {
-        if o_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "R5 O entry must be {} bytes, got {}",
-                U_ENTRY_LENGTH,
-                o_entry.len()
-            )));
-        }
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "R5 U entry must be {} bytes, got {}",
-                U_ENTRY_LENGTH,
-                u_entry.len()
-            )));
-        }
+        let o_entry = defined_entry_prefix(o_entry, "R5 O")?;
+        let u_entry = defined_entry_prefix(u_entry, "R5 U")?;
 
         // Extract validation_salt from O (bytes 32-39)
         let validation_salt = &o_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
@@ -1358,18 +1324,8 @@ impl StandardSecurityHandler {
         u_entry: &[u8],
         oe_entry: &[u8],
     ) -> Result<Vec<u8>> {
-        if o_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "O entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "U entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
+        let o_entry = defined_entry_prefix(o_entry, "O")?;
+        let u_entry = defined_entry_prefix(u_entry, "U")?;
         if oe_entry.len() != UE_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
                 "OE entry must be {} bytes",
@@ -1452,18 +1408,8 @@ impl StandardSecurityHandler {
         o_entry: &[u8],
         u_entry: &[u8],
     ) -> Result<bool> {
-        if o_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "R6 O entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "R6 U entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
+        let o_entry = defined_entry_prefix(o_entry, "R6 O")?;
+        let u_entry = defined_entry_prefix(u_entry, "R6 U")?;
 
         // Extract validation_salt from O (bytes 32-39)
         let validation_salt = &o_entry[U_VALIDATION_SALT_START..U_VALIDATION_SALT_END];
@@ -1535,18 +1481,8 @@ impl StandardSecurityHandler {
         u_entry: &[u8],
         oe_entry: &[u8],
     ) -> Result<Vec<u8>> {
-        if o_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "O entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
-        if u_entry.len() != U_ENTRY_LENGTH {
-            return Err(crate::error::PdfError::EncryptionError(format!(
-                "U entry must be {} bytes",
-                U_ENTRY_LENGTH
-            )));
-        }
+        let o_entry = defined_entry_prefix(o_entry, "O")?;
+        let u_entry = defined_entry_prefix(u_entry, "U")?;
         if oe_entry.len() != UE_ENTRY_LENGTH {
             return Err(crate::error::PdfError::EncryptionError(format!(
                 "OE entry must be {} bytes",
@@ -1979,6 +1915,31 @@ const U_KEY_SALT_END: usize = 48;
 
 /// Total length of U entry for R5/R6
 const U_ENTRY_LENGTH: usize = 48;
+
+/// Narrows a `/U` or `/O` entry read from a document to the bytes ISO 32000-2
+/// §7.6.4.3.3 defines for it: a 32-byte hash, an 8-byte validation salt and an
+/// 8-byte key salt.
+///
+/// Acrobat writes those entries as 127-byte strings, zero-padding everything
+/// past byte 48 — the length the pre-R5 revisions used for `/U` and `/O`. Such
+/// documents open in every conforming reader, so trailing bytes are ignored
+/// rather than treated as a malformed entry, which is what turned a correct
+/// empty password into `WrongPassword` in issue #459. Anything shorter than 48
+/// bytes is still an error: the salts would not fit.
+///
+/// This applies to entries parsed from a file. The `compute_*` functions build
+/// our own entries and keep requiring exactly 48 bytes.
+fn defined_entry_prefix<'a>(entry: &'a [u8], label: &str) -> Result<&'a [u8]> {
+    if entry.len() < U_ENTRY_LENGTH {
+        return Err(crate::error::PdfError::EncryptionError(format!(
+            "{} entry must be at least {} bytes, got {}",
+            label,
+            U_ENTRY_LENGTH,
+            entry.len()
+        )));
+    }
+    Ok(&entry[..U_ENTRY_LENGTH])
+}
 
 /// Length of UE entry (encrypted encryption key)
 const UE_ENTRY_LENGTH: usize = 32;
@@ -2711,18 +2672,25 @@ mod tests {
     }
 
     #[test]
-    fn test_r5_user_hash_invalid_entry_length() {
+    fn test_r5_user_hash_entry_shorter_than_the_salts_is_rejected() {
         let handler = StandardSecurityHandler::aes_256_r5();
         let password = UserPassword("test".to_string());
 
-        // Try to validate with wrong length U entry
-        let short_entry = vec![0u8; 32]; // Too short
+        // 32 bytes hold the hash but neither salt.
+        let short_entry = vec![0u8; 32];
         let result = handler.validate_r5_user_password(&password, &short_entry);
         assert!(result.is_err(), "Short U entry must fail");
 
-        let long_entry = vec![0u8; 64]; // Too long
-        let result = handler.validate_r5_user_password(&password, &long_entry);
-        assert!(result.is_err(), "Long U entry must fail");
+        // Longer than 48 is what Acrobat writes (127 bytes, zero-padded): the
+        // entry is evaluated on its defined prefix rather than rejected on its
+        // length (issue #459). An all-zero entry still fails to validate.
+        let long_entry = vec![0u8; 64];
+        assert!(
+            !handler
+                .validate_r5_user_password(&password, &long_entry)
+                .expect("a longer entry is read, not refused"),
+            "an all-zero entry must not authenticate any password"
+        );
     }
 
     #[test]

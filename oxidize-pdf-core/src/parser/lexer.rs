@@ -357,14 +357,14 @@ impl<R: Read> Lexer<R> {
             }
         }
 
-        // Apply character encoding recovery if enabled
-        let processed_string = if self.options.lenient_encoding {
-            self.process_string_with_encoding_recovery(&string)?
-        } else {
-            string
-        };
-
-        Ok(Token::String(processed_string))
+        // A literal string carries bytes, not text. `/U`, `/O`, `/Perms` and the
+        // strings of an encrypted document are binary, and decoding them as text
+        // to re-encode the result as UTF-8 changes their length and their content
+        // — that is what rejected a correct empty password in issue #459. The
+        // bytes therefore reach the object model unchanged; the strings that ARE
+        // text are decoded where they are read as text, by
+        // [`PdfString::to_text`](super::objects::PdfString::to_text).
+        Ok(Token::String(string))
     }
 
     /// Read angle bracket tokens (hex strings or dict markers)
@@ -882,179 +882,6 @@ impl<R: Read> Lexer<R> {
         let saved_pos = self.save_position()?;
         let result = self.next_token();
         self.restore_position(saved_pos)?;
-        result
-    }
-
-    /// Process string bytes with enhanced character encoding recovery
-    fn process_string_with_encoding_recovery(
-        &mut self,
-        string_bytes: &[u8],
-    ) -> ParseResult<Vec<u8>> {
-        use super::encoding::{CharacterDecoder, EncodingOptions, EncodingType, EnhancedDecoder};
-
-        // First check for common problematic bytes that need special handling
-        let has_problematic_chars = string_bytes.iter().any(|&b| {
-            // Control characters and Latin-1 supplement range that often cause issues
-            (0x80..=0x9F).contains(&b)
-                || b == 0x07
-                || (b <= 0x1F && b != 0x09 && b != 0x0A && b != 0x0D)
-        });
-
-        let decoder = EnhancedDecoder::new();
-
-        // Use more aggressive encoding options if problematic characters detected
-        let encoding_options = if has_problematic_chars {
-            EncodingOptions {
-                lenient_mode: true, // Always use lenient mode for problematic chars
-                preferred_encoding: Some(EncodingType::Windows1252), // Try Windows-1252 first for control chars
-                max_replacements: std::cmp::max(100, string_bytes.len() / 10), // More generous replacement limit
-                log_issues: self.options.collect_warnings,
-            }
-        } else {
-            EncodingOptions {
-                lenient_mode: self.options.lenient_encoding,
-                preferred_encoding: self.options.preferred_encoding,
-                max_replacements: 50,
-                log_issues: self.options.collect_warnings,
-            }
-        };
-
-        match decoder.decode(string_bytes, &encoding_options) {
-            Ok(result) => {
-                // Log warning if replacements were made or problematic chars detected
-                if (result.replacement_count > 0 || has_problematic_chars)
-                    && self.options.collect_warnings
-                {
-                    self.warnings.push(ParseWarning::InvalidEncoding {
-                        position: self.position,
-                        recovered_text: if result.text.len() > 50 {
-                            // Ultra-safe character boundary truncation
-                            let truncate_at = result
-                                .text
-                                .char_indices()
-                                .map(|(i, _)| i)
-                                .nth(47)
-                                .unwrap_or_else(|| {
-                                    // Fallback: find last valid boundary within first 47 bytes
-                                    let limit = result.text.len().min(47);
-                                    let mut pos = limit;
-                                    while pos > 0 && !result.text.is_char_boundary(pos) {
-                                        pos -= 1;
-                                    }
-                                    pos
-                                });
-
-                            // Double-check the boundary before slicing
-                            let safe_text = if truncate_at <= result.text.len()
-                                && result.text.is_char_boundary(truncate_at)
-                            {
-                                result.text[..truncate_at].to_string()
-                            } else {
-                                // Emergency fallback: use chars().take() for absolute safety
-                                result.text.chars().take(47).collect::<String>()
-                            };
-
-                            format!(
-                                "{}... (truncated, {} chars total)",
-                                safe_text,
-                                result.text.chars().count()
-                            )
-                        } else {
-                            result.text.clone()
-                        },
-                        encoding_used: result.detected_encoding,
-                        replacement_count: result.replacement_count,
-                    });
-                }
-
-                // Convert back to bytes
-                Ok(result.text.into_bytes())
-            }
-            Err(encoding_error) => {
-                if self.options.lenient_encoding {
-                    // Enhanced fallback strategy
-                    let fallback_result = self.apply_fallback_encoding_strategy(string_bytes);
-
-                    if self.options.collect_warnings {
-                        self.warnings.push(ParseWarning::InvalidEncoding {
-                            position: self.position,
-                            recovered_text: format!(
-                                "Fallback strategy applied: {} -> {} chars",
-                                string_bytes.len(),
-                                fallback_result.len()
-                            ),
-                            encoding_used: None,
-                            replacement_count: string_bytes.len(),
-                        });
-                    }
-                    Ok(fallback_result)
-                } else {
-                    Err(ParseError::CharacterEncodingError {
-                        position: self.position,
-                        message: format!(
-                            "Failed to decode string with any supported encoding: {encoding_error}"
-                        ),
-                    })
-                }
-            }
-        }
-    }
-
-    /// Apply fallback encoding strategy for severely corrupted strings
-    fn apply_fallback_encoding_strategy(&self, string_bytes: &[u8]) -> Vec<u8> {
-        let mut result = Vec::with_capacity(string_bytes.len());
-
-        for &byte in string_bytes {
-            match byte {
-                // Replace common problematic control characters with safe alternatives
-                0x00..=0x08 | 0x0B | 0x0C | 0x0E..=0x1F => {
-                    result.push(b' '); // Replace control chars with space
-                }
-                0x80..=0x9F => {
-                    // Windows-1252 control character range - try to map to reasonable alternatives
-                    let replacement = match byte {
-                        0x80 => b'E',  // Euro sign -> E
-                        0x81 => b' ',  // Undefined -> space
-                        0x82 => b',',  // Single low-9 quotation mark -> comma
-                        0x83 => b'f',  // Latin small letter f with hook -> f
-                        0x84 => b'"',  // Double low-9 quotation mark -> quote
-                        0x85 => b'.',  // Horizontal ellipsis -> period
-                        0x86 => b'+',  // Dagger -> plus
-                        0x87 => b'+',  // Double dagger -> plus
-                        0x88 => b'^',  // Modifier letter circumflex accent -> caret
-                        0x89 => b'%',  // Per mille sign -> percent
-                        0x8A => b'S',  // Latin capital letter S with caron -> S
-                        0x8B => b'<',  // Single left-pointing angle quotation mark
-                        0x8C => b'O',  // Latin capital ligature OE -> O
-                        0x8D => b' ',  // Undefined -> space
-                        0x8E => b'Z',  // Latin capital letter Z with caron -> Z
-                        0x8F => b' ',  // Undefined -> space
-                        0x90 => b' ',  // Undefined -> space
-                        0x91 => b'\'', // Left single quotation mark
-                        0x92 => b'\'', // Right single quotation mark
-                        0x93 => b'"',  // Left double quotation mark
-                        0x94 => b'"',  // Right double quotation mark
-                        0x95 => b'*',  // Bullet -> asterisk
-                        0x96 => b'-',  // En dash -> hyphen
-                        0x97 => b'-',  // Em dash -> hyphen
-                        0x98 => b'~',  // Small tilde
-                        0x99 => b'T',  // Trade mark sign -> T
-                        0x9A => b's',  // Latin small letter s with caron -> s
-                        0x9B => b'>',  // Single right-pointing angle quotation mark
-                        0x9C => b'o',  // Latin small ligature oe -> o
-                        0x9D => b' ',  // Undefined -> space
-                        0x9E => b'z',  // Latin small letter z with caron -> z
-                        0x9F => b'Y',  // Latin capital letter Y with diaeresis -> Y
-                        _ => b'?',     // Fallback
-                    };
-                    result.push(replacement);
-                }
-                _ => {
-                    result.push(byte); // Keep valid bytes as-is
-                }
-            }
-        }
-
         result
     }
 

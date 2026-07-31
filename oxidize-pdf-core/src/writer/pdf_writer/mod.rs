@@ -894,8 +894,11 @@ impl<W: Write> PdfWriter<W> {
             PdfObj::Boolean(b) => WriterObj::Boolean(*b),
             PdfObj::Integer(i) => WriterObj::Integer(*i),
             PdfObj::Real(f) => WriterObj::Real(*f),
+            // As in `overlay`: the writer's string is a Rust `String`, so a
+            // binary string cannot survive; decoding as text keeps the text
+            // strings of a copied object readable (issue #459).
             PdfObj::String(s) => {
-                WriterObj::String(String::from_utf8_lossy(s.as_bytes()).to_string())
+                WriterObj::String(crate::parser::objects::decode_text_string(s.as_bytes()))
             }
             PdfObj::Name(n) => WriterObj::Name(n.as_str().to_string()),
             PdfObj::Array(arr) => {

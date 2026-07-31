@@ -144,7 +144,7 @@ fn collect_fields(
     let partial = node
         .get("T")
         .and_then(|o| o.as_string())
-        .map(|s| String::from_utf8_lossy(s.as_bytes()).into_owned());
+        .map(|s| s.to_text());
 
     let full_name = match (&partial, parent_prefix.is_empty()) {
         (Some(t), true) => t.clone(),
@@ -434,7 +434,7 @@ fn rect_of(dict: &PdfDictionary) -> Option<[f64; 4]> {
 fn da_of(dict: &PdfDictionary) -> Option<String> {
     dict.get("DA")
         .and_then(|o| o.as_string())
-        .map(|s| String::from_utf8_lossy(s.as_bytes()).into_owned())
+        .map(|s| s.to_text())
 }
 
 /// Build the `/AP /N` content stream for a single-line text widget: a

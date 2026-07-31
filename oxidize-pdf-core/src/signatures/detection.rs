@@ -173,7 +173,7 @@ fn extract_signature_field<R: Read + Seek>(
 
     // Extract optional field name from parent field dict
     if let Some(PdfObject::String(name)) = field_dict.get("T") {
-        sig.name = Some(String::from_utf8_lossy(name.as_bytes()).to_string());
+        sig.name = Some(name.to_text());
     }
 
     // Extract optional /SubFilter
@@ -183,22 +183,22 @@ fn extract_signature_field<R: Read + Seek>(
 
     // Extract optional /Reason
     if let Some(PdfObject::String(reason)) = sig_dict.get("Reason") {
-        sig.reason = Some(String::from_utf8_lossy(reason.as_bytes()).to_string());
+        sig.reason = Some(reason.to_text());
     }
 
     // Extract optional /Location
     if let Some(PdfObject::String(loc)) = sig_dict.get("Location") {
-        sig.location = Some(String::from_utf8_lossy(loc.as_bytes()).to_string());
+        sig.location = Some(loc.to_text());
     }
 
     // Extract optional /ContactInfo
     if let Some(PdfObject::String(contact)) = sig_dict.get("ContactInfo") {
-        sig.contact_info = Some(String::from_utf8_lossy(contact.as_bytes()).to_string());
+        sig.contact_info = Some(contact.to_text());
     }
 
     // Extract optional /M (signing time)
     if let Some(PdfObject::String(time)) = sig_dict.get("M") {
-        sig.signing_time = Some(String::from_utf8_lossy(time.as_bytes()).to_string());
+        sig.signing_time = Some(time.to_text());
     }
 
     Ok(Some(sig))

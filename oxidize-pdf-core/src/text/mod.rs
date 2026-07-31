@@ -1,6 +1,6 @@
 pub mod cid_to_unicode;
 pub mod cmap;
-mod encoding;
+pub(crate) mod encoding;
 pub(crate) mod encoding_cmap;
 pub mod extraction;
 mod extraction_cmap;

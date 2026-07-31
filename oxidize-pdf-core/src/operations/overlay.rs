@@ -149,7 +149,11 @@ fn convert_parser_obj_to_objects_obj<R: Read + Seek>(
         PObj::Boolean(b) => WObj::Boolean(*b),
         PObj::Integer(i) => WObj::Integer(*i),
         PObj::Real(r) => WObj::Real(*r),
-        PObj::String(s) => WObj::String(String::from_utf8_lossy(s.as_bytes()).to_string()),
+        // The writer's string is a Rust `String`, so it cannot carry a binary
+        // string; decoding as text at least keeps the text strings of a copied
+        // resource readable (issue #459). A resource holding genuinely binary
+        // string data still cannot survive this conversion.
+        PObj::String(s) => WObj::String(s.to_text()),
         PObj::Name(n) => WObj::Name(n.as_str().to_string()),
         PObj::Array(arr) => {
             let items: Vec<WObj> = arr
