@@ -10,6 +10,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A literal string reached the object model as a text round-trip of its bytes,
+  not as its bytes** (#459). The lexer ran every `(...)` string through an
+  encoding-recovery pass that decoded the bytes as text and re-encoded the result
+  as UTF-8. For a text string that is harmless; for a binary one it is
+  destruction — byte `0xB2` came back as `0xC2 0xB2`. Literal strings now reach
+  the object model unchanged, and the strings a PDF defines as *text* are decoded
+  where they are read as text, by the new `PdfString::as_text` (ISO 32000-1
+  §7.9.2.2: UTF-16BE when a byte order mark is present, PDFDocEncoding
+  otherwise).
+
+  Two consequences beyond the reported symptom. Document metadata now decodes
+  UTF-16BE `/Title`, `/Author` and the rest, which previously surfaced as
+  `þÿ`-prefixed mojibake. And any binary string — `/U`, `/O`, `/Perms`, `/ID`,
+  every string in an encrypted document — is now readable, where before only the
+  hex-string form of those entries survived. That is why the qpdf-generated
+  fixtures in this suite all passed while real Acrobat output failed.
+
+- **`/U` and `/O` entries longer than 48 bytes were rejected instead of read**
+  (#459). ISO 32000-2 §7.6.4.3.3 defines the R5/R6 entries as 48 bytes — a
+  32-byte hash and two 8-byte salts — but Acrobat writes them as 127-byte
+  strings, zero-padded past byte 48, and those documents open in every
+  conforming reader. Both revisions, on the user and the owner path, now read
+  the defined 48-byte prefix and ignore what follows. Shorter than 48 is still
+  an error: the salts would not fit. The `compute_*` functions build our own
+  entries and keep requiring exactly 48 bytes.
+
+  Together with the string fix above, this reopens documents whose *correct*
+  password — often the empty one — was reported as `WrongPassword`: the
+  reporter's file was a public annual report that opens in any browser.
+
+- **A malformed encryption dictionary was reported as a wrong password** (#459).
+  `PdfReader::unlock` collapsed every failure from the encryption handler into
+  `WrongPassword`, so a truncated `/U` or an unsupported revision sent the caller
+  hunting for a password that does not exist. Errors now surface with their own
+  message; a password that merely does not match still yields `WrongPassword`,
+  and the owner password still gets its turn before any error is raised.
+
 - **The `q`/`Q` graphics state stack was unbounded in both text extractors**
   (#455). Nothing in a content stream limits how deep `q` nesting goes, so a
   stream of one million `q` operators — about 2 MB — pushed one million

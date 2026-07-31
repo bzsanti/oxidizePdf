@@ -1183,9 +1183,57 @@ impl PdfString {
         std::str::from_utf8(&self.0)
     }
 
+    /// Decode as a PDF *text string* (ISO 32000-1 §7.9.2.2).
+    ///
+    /// A text string is either UTF-16BE introduced by a `0xFE 0xFF` byte order
+    /// mark, or PDFDocEncoding. Bytes outside `0x80..=0x9F` decode identically
+    /// under PDFDocEncoding and Latin-1; inside that block this uses the WinAnsi
+    /// table, which is what producers writing typographic punctuation without a
+    /// BOM mean by those bytes.
+    ///
+    /// Use this for entries a PDF defines as text — `/Title`, `/Author`,
+    /// `/ActualText`. Entries that are binary — `/U`, `/O`, `/Perms`, `/ID` —
+    /// must be read with [`as_bytes`](Self::as_bytes): decoding them as text and
+    /// re-encoding the result changes their content (issue #459).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use oxidize_pdf::parser::objects::PdfString;
+    ///
+    /// // PDFDocEncoding
+    /// assert_eq!(PdfString::new(vec![b'a', 0xF1, b'o']).as_text(), "año");
+    ///
+    /// // UTF-16BE with a byte order mark
+    /// let utf16 = vec![0xFE, 0xFF, 0x00, b'A', 0x00, 0xF1, 0x00, b'o'];
+    /// assert_eq!(PdfString::new(utf16).as_text(), "Año");
+    /// ```
+    pub fn as_text(&self) -> String {
+        decode_text_string(&self.0)
+    }
+
     /// Get as bytes
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+}
+
+/// Decodes the bytes of a PDF text string (ISO 32000-1 §7.9.2.2).
+///
+/// See [`PdfString::as_text`] for the encodings involved and for when a string
+/// must *not* be decoded this way.
+pub fn decode_text_string(bytes: &[u8]) -> String {
+    if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
+        let code_units: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|pair| u16::from_be_bytes([pair[0], pair[1]]))
+            .collect();
+        String::from_utf16_lossy(&code_units)
+    } else {
+        bytes
+            .iter()
+            .map(|&byte| crate::text::encoding::winansi_decode_char(byte))
+            .collect()
     }
 }
 

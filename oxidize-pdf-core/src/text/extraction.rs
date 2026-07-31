@@ -2742,17 +2742,7 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
 ///   high-bit characters in ActualText *without* a UTF-16BE BOM (rare;
 ///   most producers emit the BOM when going outside ASCII).
 fn decode_pdf_string(bytes: &[u8]) -> String {
-    if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
-        let mut code_units: Vec<u16> = Vec::with_capacity((bytes.len() - 2) / 2);
-        let mut i = 2;
-        while i + 1 < bytes.len() {
-            code_units.push(u16::from_be_bytes([bytes[i], bytes[i + 1]]));
-            i += 2;
-        }
-        String::from_utf16_lossy(&code_units)
-    } else {
-        bytes.iter().map(|&b| b as char).collect()
-    }
+    crate::parser::objects::decode_text_string(bytes)
 }
 
 /// Resolve a `MarkedContentProps` to `(mcid, actual_text)`.
