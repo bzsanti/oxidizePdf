@@ -10,6 +10,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The text state was not restored when a graphics state block closed** (#452).
+  Leading, character and word spacing, horizontal scaling, font and size, text
+  rise and render mode are text state parameters, and the text state is part of
+  the graphics state (ISO 32000-1 §9.3, Table 52) — so `Q` must put them back.
+  Only the CTM and the fill colour were restored, so a leading, font or scale
+  set inside a `q … Q` block kept driving extraction after the block closed.
+  The same omission applied to the implicit save/restore that surrounds a Form
+  XObject (§8.10.1): after `Do` the page continued with whatever text state the
+  XObject had left behind, which meant text after the `Do` could be decoded
+  with the XObject's font instead of the page's. Both sites now share one
+  snapshot routine. Additionally, a Form XObject now gets its own graphics
+  state stack: a stray `Q` inside it used to pop the *page's* saved state,
+  which truncation afterwards could not undo, so the page's own `Q` restored
+  from nothing.
+
+  Measured over 8552 corpus PDFs across all six tiers: 26 documents change,
+  every one of them for the better. Text that was being decoded with a leaked
+  font now decodes correctly (one document goes from 464 to 1420 characters,
+  another from `N n Chinese` to `Name in Chinese`, another from `6R` to
+  `Sound.`); the rest are a handful of spurious spaces and newlines that the
+  separator heuristic no longer synthesises, because the pen advance is now
+  computed with the correct font size and scale. No document loses a word and
+  none stops extracting. `PlainTextExtractor`, which had no `q`/`Q` handling at
+  all, now saves and restores the three text state parameters it tracks.
+
+  The text matrices are deliberately not restored: they are text *object*
+  state, established by `BT` and discarded by `ET` (§9.4.1).
+
 - **`PlainTextExtractor` silently dropped all text shown by the `'` and `"`
   operators.** Both are show-text operators (ISO 32000-1 §9.4.3, Table 109):
   `'` is "next line, then show", `"` is "set word and character spacing, next

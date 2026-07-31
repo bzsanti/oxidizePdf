@@ -25,6 +25,25 @@ struct TextState {
     leading: f64,
     font_size: f64,
     font_name: Option<String>,
+    /// Stack for `q`/`Q`. This extractor tracks no CTM, so the only graphics
+    /// state it can lose is the text state (issue #452).
+    saved_states: Vec<SavedTextState>,
+}
+
+/// The text state parameters this extractor tracks, saved by `q` and restored
+/// by `Q`.
+///
+/// Text state is graphics state per ISO 32000-1 §9.3 and Table 52, so a leading
+/// or font set inside a `q … Q` block dies with the block. Before #452 this
+/// extractor had no `q`/`Q` handling at all and every such value leaked out.
+///
+/// The text matrices are absent on purpose: they are text OBJECT state, set by
+/// `BT` and discarded by `ET` (§9.4.1), and `Q` must not touch them.
+#[derive(Debug, Clone)]
+struct SavedTextState {
+    leading: f64,
+    font_size: f64,
+    font_name: Option<String>,
 }
 
 impl Default for TextState {
@@ -35,6 +54,7 @@ impl Default for TextState {
             leading: 0.0,
             font_size: 0.0,
             font_name: None,
+            saved_states: Vec::new(),
         }
     }
 }
@@ -373,6 +393,28 @@ impl PlainTextExtractor {
 
                     ContentOperation::SetLeading(leading) => {
                         state.leading = leading as f64;
+                    }
+
+                    // Text state is graphics state (ISO 32000-1 §9.3, Table
+                    // 52), so a leading or font set inside a `q … Q` block must
+                    // not survive it (issue #452). The text matrices are not
+                    // saved: they are text object state, owned by `BT`/`ET`.
+                    ContentOperation::SaveGraphicsState => {
+                        state.saved_states.push(SavedTextState {
+                            leading: state.leading,
+                            font_size: state.font_size,
+                            font_name: state.font_name.clone(),
+                        });
+                    }
+
+                    ContentOperation::RestoreGraphicsState => {
+                        // An unbalanced `Q` is ignored rather than fatal, to
+                        // stay robust on malformed documents.
+                        if let Some(saved) = state.saved_states.pop() {
+                            state.leading = saved.leading;
+                            state.font_size = saved.font_size;
+                            state.font_name = saved.font_name;
+                        }
                     }
 
                     _ => {
