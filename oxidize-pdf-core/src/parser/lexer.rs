@@ -363,7 +363,7 @@ impl<R: Read> Lexer<R> {
         // — that is what rejected a correct empty password in issue #459. The
         // bytes therefore reach the object model unchanged; the strings that ARE
         // text are decoded where they are read as text, by
-        // [`PdfString::as_text`](super::objects::PdfString::as_text).
+        // [`PdfString::to_text`](super::objects::PdfString::to_text).
         Ok(Token::String(string))
     }
 

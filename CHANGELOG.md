@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as UTF-8. For a text string that is harmless; for a binary one it is
   destruction — byte `0xB2` came back as `0xC2 0xB2`. Literal strings now reach
   the object model unchanged, and the strings a PDF defines as *text* are decoded
-  where they are read as text, by the new `PdfString::as_text` (ISO 32000-1
+  where they are read as text, by the new `PdfString::to_text` (ISO 32000-1
   §7.9.2.2: UTF-16BE when a byte order mark is present, PDFDocEncoding
   otherwise).
 

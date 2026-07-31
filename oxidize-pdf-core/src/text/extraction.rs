@@ -2728,19 +2728,14 @@ fn multiply_matrix(a: &[f64; 6], b: &[f64; 6]) -> [f64; 6] {
 
 /// Decode a PDF string operand into Rust `String`.
 ///
-/// PDF strings inside marked-content properties (notably `/ActualText`)
-/// may be encoded as:
-///
-/// - **UTF-16BE with BOM**: leading `0xFE 0xFF`, then big-endian 16-bit
-///   code units. This is the canonical encoding for non-ASCII ActualText
-///   (e.g. `fi` ligature, Greek/math symbols). Decoded via `String::from_utf16_lossy`
-///   so invalid surrogate pairs become `U+FFFD` rather than panicking.
-/// - **PDFDocEncoding** (the catch-all for non-BOM bytes). For the ASCII
-///   subset (0x20-0x7E) PDFDocEncoding is identical to Latin-1. We
-///   conservatively map byte-by-byte to `char`. A future revision can
-///   plug in the full PDFDocEncoding table if a real PDF emerges with
-///   high-bit characters in ActualText *without* a UTF-16BE BOM (rare;
-///   most producers emit the BOM when going outside ASCII).
+/// A string inside marked-content properties (notably `/ActualText`) is a PDF
+/// text string like any other, so this is
+/// [`PdfString::to_text`](crate::parser::objects::PdfString::to_text): UTF-16BE
+/// when a byte order mark is present — the canonical encoding for non-ASCII
+/// `/ActualText`, e.g. an `fi` ligature or a Greek symbol — and the WinAnsi
+/// reading of PDFDocEncoding otherwise. Before that helper existed this mapped
+/// non-BOM bytes to `char` one by one, which is Latin-1 and wrong for the
+/// typographic punctuation WinAnsi puts in `0x80..=0x9F`.
 fn decode_pdf_string(bytes: &[u8]) -> String {
     crate::parser::objects::decode_text_string(bytes)
 }
