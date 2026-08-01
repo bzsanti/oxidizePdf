@@ -8,13 +8,11 @@ use crate::parser::objects::{PdfDictionary, PdfName, PdfObject, PdfStream};
 use crate::parser::{ParseError, ParseOptions, ParseResult};
 use crate::text::cid_to_unicode::CidCollection;
 use crate::text::cmap::CMap;
-use crate::text::extraction::TextExtractor;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 
 /// Font metrics for accurate text width calculation
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct FontMetrics {
     /// First character code in the Widths array
     pub first_char: Option<u32>,
@@ -42,7 +40,6 @@ impl Default for FontMetrics {
 
 /// Font information with CMap support
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct FontInfo {
     /// Font name
     pub name: String,
@@ -56,8 +53,6 @@ pub struct FontInfo {
     pub differences: Option<HashMap<u8, String>>,
     /// For Type0 fonts: descendant font
     pub descendant_font: Option<Box<FontInfo>>,
-    /// For CIDFonts: CIDToGIDMap
-    pub cid_to_gid_map: Option<Vec<u16>>,
     /// For CIDFonts: CIDSystemInfo Ordering (e.g., "CNS1", "GB1", "Japan1", "Korea1")
     pub cid_ordering: Option<String>,
     /// Font metrics (widths, kerning)
@@ -68,30 +63,24 @@ pub struct FontInfo {
     pub cid_encoding: Option<crate::text::encoding_cmap::CidEncoding>,
 }
 
-/// Enhanced text extractor with CMap support
-#[allow(dead_code)]
+/// Parser for a PDF font dictionary into the [`FontInfo`] the decoders read.
+///
+/// Stateless: it carries no cache and extracts no text. `R` names the reader
+/// type of the document whose indirect objects the parse resolves.
 pub struct CMapTextExtractor<R: Read + Seek> {
-    /// Base text extractor
-    base_extractor: TextExtractor,
-    /// Cached font information
-    font_cache: HashMap<String, FontInfo>,
     /// PDF document reference for resource lookup
     _phantom: std::marker::PhantomData<R>,
 }
 
 impl<R: Read + Seek> CMapTextExtractor<R> {
-    /// Create a new CMap-aware text extractor
-    #[allow(dead_code)]
+    /// Create a new CMap-aware font parser
     pub fn new() -> Self {
         Self {
-            base_extractor: TextExtractor::new(),
-            font_cache: HashMap::new(),
             _phantom: std::marker::PhantomData,
         }
     }
 
     /// Extract font information from a font dictionary
-    #[allow(dead_code)]
     pub fn extract_font_info(
         &mut self,
         font_dict: &PdfDictionary,
@@ -115,7 +104,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
             cid_encoding: None,
@@ -205,7 +193,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Parse encoding differences array
-    #[allow(dead_code)]
     fn parse_encoding_differences(
         &self,
         differences: &[PdfObject],
@@ -230,7 +217,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Parse ToUnicode stream
-    #[allow(dead_code)]
     fn parse_tounicode_stream(
         &self,
         stream: &PdfStream,
@@ -241,7 +227,6 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
     }
 
     /// Extract font metrics (widths, kerning) from font dictionary
-    #[allow(dead_code)]
     fn extract_font_metrics(
         &self,
         font_dict: &PdfDictionary,
@@ -326,7 +311,7 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
                         document.get_object(font_file_ref.0, font_file_ref.1)
                     {
                         // Try to extract kerning from TrueType font
-                        if let Ok(kerning_pairs) = self.extract_truetype_kerning(&font_stream) {
+                        if let Ok(kerning_pairs) = extract_truetype_kerning(&font_stream) {
                             if !kerning_pairs.is_empty() {
                                 metrics.kerning = Some(kerning_pairs);
                             }
@@ -338,216 +323,177 @@ impl<R: Read + Seek> CMapTextExtractor<R> {
 
         Ok(metrics)
     }
+}
 
-    /// Extract kerning pairs from TrueType font stream (kern table)
-    ///
-    /// # Kerning Support
-    ///
-    /// **Implemented:**
-    /// - TrueType fonts (FontFile2): Extracts kerning from embedded `kern` table
-    ///
-    /// **NOT Implemented (by design):**
-    /// - Type1 fonts (FontFile): Type1 PFB (PostScript Font Binary) files embedded in PDFs
-    ///   only contain glyph outlines, NOT font metrics. Kerning data for Type1 fonts is stored
-    ///   separately in .afm (Adobe Font Metrics) or .pfm (PostScript Font Metrics) files,
-    ///   which are NOT embedded in PDF documents.
-    ///
-    /// For Type1 fonts requiring kerning, PDFs use TJ array position adjustments in content
-    /// streams (already handled by text extraction). There is no kerning data to extract
-    /// from embedded Type1 font programs.
-    ///
-    /// If a real-world edge case emerges where Type1 fonts DO embed kerning data, this can
-    /// be revisited. Current implementation handles 99.9% of PDFs correctly.
-    #[allow(dead_code)]
-    fn extract_truetype_kerning(
-        &self,
-        font_stream: &PdfStream,
-    ) -> ParseResult<HashMap<(u32, u32), f64>> {
-        // Decode the font stream
-        let font_data = match font_stream.decode(&ParseOptions::default()) {
-            Ok(data) => data,
-            Err(_) => return Ok(HashMap::new()), // Silently fail if can't decode
-        };
+/// Extract kerning pairs from TrueType font stream (kern table)
+///
+/// # Kerning Support
+///
+/// **Implemented:**
+/// - TrueType fonts (FontFile2): Extracts kerning from embedded `kern` table
+///
+/// **NOT Implemented (by design):**
+/// - Type1 fonts (FontFile): Type1 PFB (PostScript Font Binary) files embedded in PDFs
+///   only contain glyph outlines, NOT font metrics. Kerning data for Type1 fonts is stored
+///   separately in .afm (Adobe Font Metrics) or .pfm (PostScript Font Metrics) files,
+///   which are NOT embedded in PDF documents.
+///
+/// For Type1 fonts requiring kerning, PDFs use TJ array position adjustments in content
+/// streams (already handled by text extraction). There is no kerning data to extract
+/// from embedded Type1 font programs.
+///
+/// If a real-world edge case emerges where Type1 fonts DO embed kerning data, this can
+/// be revisited. Current implementation handles 99.9% of PDFs correctly.
+pub(crate) fn extract_truetype_kerning(
+    font_stream: &PdfStream,
+) -> ParseResult<HashMap<(u32, u32), f64>> {
+    // Decode the font stream
+    let font_data = match font_stream.decode(&ParseOptions::default()) {
+        Ok(data) => data,
+        Err(_) => return Ok(HashMap::new()), // Silently fail if can't decode
+    };
 
-        // Parse TrueType font tables
-        match self.parse_truetype_kern_table(&font_data) {
-            Ok(pairs) => Ok(pairs),
-            Err(_) => Ok(HashMap::new()), // Silently fail if parsing fails
+    // Parse TrueType font tables
+    match parse_truetype_kern_table(&font_data) {
+        Ok(pairs) => Ok(pairs),
+        Err(_) => Ok(HashMap::new()), // Silently fail if parsing fails
+    }
+}
+
+/// Parse TrueType kern table (Format 0 only)
+pub(crate) fn parse_truetype_kern_table(font_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
+    // TrueType fonts start with a table directory
+    if font_data.len() < 12 {
+        return Err(ParseError::SyntaxError {
+            position: 0,
+            message: "Font data too short for TrueType header".to_string(),
+        });
+    }
+
+    // Read table directory offset (offset 12 + 16 * numTables)
+    let num_tables = u16::from_be_bytes([font_data[4], font_data[5]]) as usize;
+
+    // Find 'kern' table in table directory
+    let mut kern_offset = None;
+    let mut kern_length = None;
+
+    for i in 0..num_tables {
+        let table_offset = 12 + i * 16;
+        if table_offset + 16 > font_data.len() {
+            break;
+        }
+
+        // Read table tag (4 bytes)
+        let tag = &font_data[table_offset..table_offset + 4];
+
+        if tag == b"kern" {
+            // Read table offset and length
+            kern_offset = Some(u32::from_be_bytes([
+                font_data[table_offset + 8],
+                font_data[table_offset + 9],
+                font_data[table_offset + 10],
+                font_data[table_offset + 11],
+            ]) as usize);
+
+            kern_length = Some(u32::from_be_bytes([
+                font_data[table_offset + 12],
+                font_data[table_offset + 13],
+                font_data[table_offset + 14],
+                font_data[table_offset + 15],
+            ]) as usize);
+
+            break;
         }
     }
 
-    /// Parse TrueType kern table (Format 0 only)
-    #[allow(dead_code)]
-    fn parse_truetype_kern_table(&self, font_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
-        // TrueType fonts start with a table directory
-        if font_data.len() < 12 {
-            return Err(ParseError::SyntaxError {
-                position: 0,
-                message: "Font data too short for TrueType header".to_string(),
-            });
-        }
+    // If no kern table found, return empty map
+    let (offset, length) = match (kern_offset, kern_length) {
+        (Some(o), Some(l)) => (o, l),
+        _ => return Ok(HashMap::new()),
+    };
 
-        // Read table directory offset (offset 12 + 16 * numTables)
-        let num_tables = u16::from_be_bytes([font_data[4], font_data[5]]) as usize;
-
-        // Find 'kern' table in table directory
-        let mut kern_offset = None;
-        let mut kern_length = None;
-
-        for i in 0..num_tables {
-            let table_offset = 12 + i * 16;
-            if table_offset + 16 > font_data.len() {
-                break;
-            }
-
-            // Read table tag (4 bytes)
-            let tag = &font_data[table_offset..table_offset + 4];
-
-            if tag == b"kern" {
-                // Read table offset and length
-                kern_offset = Some(u32::from_be_bytes([
-                    font_data[table_offset + 8],
-                    font_data[table_offset + 9],
-                    font_data[table_offset + 10],
-                    font_data[table_offset + 11],
-                ]) as usize);
-
-                kern_length = Some(u32::from_be_bytes([
-                    font_data[table_offset + 12],
-                    font_data[table_offset + 13],
-                    font_data[table_offset + 14],
-                    font_data[table_offset + 15],
-                ]) as usize);
-
-                break;
-            }
-        }
-
-        // If no kern table found, return empty map
-        let (offset, length) = match (kern_offset, kern_length) {
-            (Some(o), Some(l)) => (o, l),
-            _ => return Ok(HashMap::new()),
-        };
-
-        if offset + length > font_data.len() {
-            return Err(ParseError::SyntaxError {
-                position: offset,
-                message: "Invalid kern table offset".to_string(),
-            });
-        }
-
-        // Parse kern table header
-        let kern_data = &font_data[offset..offset + length];
-        if kern_data.len() < 4 {
-            return Ok(HashMap::new());
-        }
-
-        // Version and nTables
-        // nTables is a u16 at bytes 2-3
-        let n_tables = u16::from_be_bytes([kern_data[2], kern_data[3]]) as usize;
-
-        let mut kerning_pairs = HashMap::new();
-        let mut table_offset = 4; // After header
-
-        // Parse each subtable (we only support Format 0)
-        for _ in 0..n_tables {
-            if table_offset + 6 > kern_data.len() {
-                break;
-            }
-
-            // Subtable header
-            let subtable_length = u32::from_be_bytes([
-                0,
-                0,
-                kern_data[table_offset + 2],
-                kern_data[table_offset + 3],
-            ]) as usize;
-
-            let coverage =
-                u16::from_be_bytes([kern_data[table_offset + 4], kern_data[table_offset + 5]]);
-
-            // Format is in the lower byte per TrueType spec (ISO 14496-22:2019)
-            let format = coverage & 0xFF;
-
-            // Only process Format 0 (ordered pair list)
-            if format == 0 && table_offset + subtable_length <= kern_data.len() {
-                let subtable_data = &kern_data[table_offset + 6..table_offset + subtable_length];
-
-                if subtable_data.len() >= 8 {
-                    let n_pairs = u16::from_be_bytes([subtable_data[0], subtable_data[1]]) as usize;
-
-                    // Skip searchRange, entrySelector, rangeShift (6 bytes)
-                    let mut pair_offset = 8;
-
-                    for _ in 0..n_pairs {
-                        if pair_offset + 6 > subtable_data.len() {
-                            break;
-                        }
-
-                        let left_glyph = u16::from_be_bytes([
-                            subtable_data[pair_offset],
-                            subtable_data[pair_offset + 1],
-                        ]) as u32;
-
-                        let right_glyph = u16::from_be_bytes([
-                            subtable_data[pair_offset + 2],
-                            subtable_data[pair_offset + 3],
-                        ]) as u32;
-
-                        let value = i16::from_be_bytes([
-                            subtable_data[pair_offset + 4],
-                            subtable_data[pair_offset + 5],
-                        ]) as f64;
-
-                        // Store kerning pair (value is in FUnits, typically 1/1000)
-                        kerning_pairs.insert((left_glyph, right_glyph), value);
-
-                        pair_offset += 6;
-                    }
-                }
-            }
-
-            table_offset += subtable_length;
-        }
-
-        Ok(kerning_pairs)
+    if offset + length > font_data.len() {
+        return Err(ParseError::SyntaxError {
+            position: offset,
+            message: "Invalid kern table offset".to_string(),
+        });
     }
 
-    /// Extract text from a page with CMap support
-    #[allow(dead_code)]
-    pub fn extract_text_from_page(
-        &mut self,
-        document: &PdfDocument<R>,
-        page_index: u32,
-    ) -> ParseResult<String> {
-        // Get page
-        let page = document.get_page(page_index)?;
+    // Parse kern table header
+    let kern_data = &font_data[offset..offset + length];
+    if kern_data.len() < 4 {
+        return Ok(HashMap::new());
+    }
 
-        // Extract font resources
-        if let Some(resources) = page.get_resources() {
-            if let Some(PdfObject::Dictionary(font_dict)) = resources.get("Font") {
-                // Cache all fonts from this page
-                for (font_name, font_obj) in font_dict.0.iter() {
-                    if let Some(font_ref) = font_obj.as_reference() {
-                        if let Ok(PdfObject::Dictionary(font_dict)) =
-                            document.get_object(font_ref.0, font_ref.1)
-                        {
-                            if let Ok(font_info) = self.extract_font_info(&font_dict, document) {
-                                self.font_cache.insert(font_name.0.clone(), font_info);
-                            }
-                        }
+    // Version and nTables
+    // nTables is a u16 at bytes 2-3
+    let n_tables = u16::from_be_bytes([kern_data[2], kern_data[3]]) as usize;
+
+    let mut kerning_pairs = HashMap::new();
+    let mut table_offset = 4; // After header
+
+    // Parse each subtable (we only support Format 0)
+    for _ in 0..n_tables {
+        if table_offset + 6 > kern_data.len() {
+            break;
+        }
+
+        // Subtable header
+        let subtable_length = u32::from_be_bytes([
+            0,
+            0,
+            kern_data[table_offset + 2],
+            kern_data[table_offset + 3],
+        ]) as usize;
+
+        let coverage =
+            u16::from_be_bytes([kern_data[table_offset + 4], kern_data[table_offset + 5]]);
+
+        // Format is in the lower byte per TrueType spec (ISO 14496-22:2019)
+        let format = coverage & 0xFF;
+
+        // Only process Format 0 (ordered pair list)
+        if format == 0 && table_offset + subtable_length <= kern_data.len() {
+            let subtable_data = &kern_data[table_offset + 6..table_offset + subtable_length];
+
+            if subtable_data.len() >= 8 {
+                let n_pairs = u16::from_be_bytes([subtable_data[0], subtable_data[1]]) as usize;
+
+                // Skip searchRange, entrySelector, rangeShift (6 bytes)
+                let mut pair_offset = 8;
+
+                for _ in 0..n_pairs {
+                    if pair_offset + 6 > subtable_data.len() {
+                        break;
                     }
+
+                    let left_glyph = u16::from_be_bytes([
+                        subtable_data[pair_offset],
+                        subtable_data[pair_offset + 1],
+                    ]) as u32;
+
+                    let right_glyph = u16::from_be_bytes([
+                        subtable_data[pair_offset + 2],
+                        subtable_data[pair_offset + 3],
+                    ]) as u32;
+
+                    let value = i16::from_be_bytes([
+                        subtable_data[pair_offset + 4],
+                        subtable_data[pair_offset + 5],
+                    ]) as f64;
+
+                    // Store kerning pair (value is in FUnits, typically 1/1000)
+                    kerning_pairs.insert((left_glyph, right_glyph), value);
+
+                    pair_offset += 6;
                 }
             }
         }
 
-        // Extract text using base extractor
-        // Note: This would need to be enhanced to use the cached font information
-        let extracted = self
-            .base_extractor
-            .extract_from_page(document, page_index)?;
-        Ok(extracted.text)
+        table_offset += subtable_length;
     }
+
+    Ok(kerning_pairs)
 }
 
 /// The whitespace `sanitize_extracted_text` keeps downstream. `decode_is_usable`
@@ -575,6 +521,68 @@ pub(crate) fn decode_is_usable(decoded: &str) -> bool {
         && !decoded
             .chars()
             .all(|c| c.is_control() && !is_preservable_whitespace(c))
+}
+
+/// How a page's `/Font` subdictionary names one font.
+///
+/// Both forms are legal: any dictionary value may be written directly
+/// (ISO 32000-1 §7.3.7), and §9.5 imposes no reference requirement on the
+/// entries of the font subdictionary. Real producers use both — our own writer
+/// emits them inline.
+pub(crate) enum FontEntry {
+    /// `/F1 12 0 R`. The font dictionary is its own object, so a caller may
+    /// cache the parsed font across pages keyed by that object id.
+    Indirect(u32, u16),
+    /// `/F1 << /Type /Font ... >>`. Written directly into the resources; there
+    /// is no object id to key a cross-page cache on, so it is parsed per page.
+    Inline(PdfDictionary),
+}
+
+/// Resolve a page's `/Font` resource subdictionary into its entries.
+///
+/// Resolves the `/Font` level (itself either a dictionary or a reference) and
+/// classifies each entry, without resolving the entries themselves — a caller
+/// holding a font cache keyed by object id can then skip the fetch entirely on
+/// a hit.
+///
+/// Every text extractor used to read only the entries that were indirect
+/// references, so a page with inline fonts decoded against an empty cache: no
+/// `/ToUnicode`, no `/Encoding`, and the byte-wise fallback turned glyph codes
+/// into whatever those bytes mean in WinAnsi.
+///
+/// Dereferences a single level, the convention throughout the parser: a `/Font`
+/// (or an entry) written as a reference *to another reference* dereferences to a
+/// `Reference`, falls through, and drops the font. That shape does not occur in
+/// the measured corpus and no producer is known to emit it; a double-indirect
+/// font resource would need its own handling.
+pub(crate) fn resolve_font_entries<R: Read + Seek>(
+    resources: &PdfDictionary,
+    document: &PdfDocument<R>,
+) -> Vec<(String, FontEntry)> {
+    let font_dict = match resources.get("Font") {
+        Some(PdfObject::Dictionary(dict)) => Some(dict.clone()),
+        Some(PdfObject::Reference(num, gen)) => match document.get_object(*num, *gen) {
+            Ok(PdfObject::Dictionary(dict)) => Some(dict),
+            _ => None,
+        },
+        _ => None,
+    };
+
+    let Some(font_dict) = font_dict else {
+        return Vec::new();
+    };
+
+    font_dict
+        .0
+        .iter()
+        .filter_map(|(name, obj)| match obj {
+            PdfObject::Reference(num, gen) => {
+                Some((name.0.clone(), FontEntry::Indirect(*num, *gen)))
+            }
+            PdfObject::Dictionary(dict) => Some((name.0.clone(), FontEntry::Inline(dict.clone()))),
+            _ => None,
+        })
+        .collect()
 }
 
 /// Decode text using font information — free function (no allocations).
@@ -773,7 +781,6 @@ fn decode_with_encoding(text_bytes: &[u8], font_info: &FontInfo) -> ParseResult<
 }
 
 /// Convert glyph name to Unicode character
-#[allow(dead_code)]
 fn glyph_name_to_unicode(name: &str) -> Option<char> {
     // Adobe Glyph List mapping (simplified subset)
     match name {
@@ -819,7 +826,6 @@ fn glyph_name_to_unicode(name: &str) -> Option<char> {
 }
 
 /// Decode WinAnsiEncoding
-#[allow(dead_code)]
 fn decode_winansi(byte: u8) -> char {
     // WinAnsiEncoding is mostly Latin-1 with some differences in 0x80-0x9F range
     match byte {
@@ -855,7 +861,6 @@ fn decode_winansi(byte: u8) -> char {
 }
 
 /// Decode MacRomanEncoding
-#[allow(dead_code)]
 fn decode_macroman(byte: u8) -> char {
     // MacRomanEncoding differs from Latin-1 in the 0x80-0xFF range
     match byte {
@@ -897,7 +902,6 @@ fn decode_macroman(byte: u8) -> char {
 }
 
 /// Decode StandardEncoding
-#[allow(dead_code)]
 fn decode_standard(byte: u8) -> char {
     // StandardEncoding is similar to Latin-1 with some differences
     // For simplicity, using Latin-1 as approximation
@@ -941,7 +945,6 @@ mod tests {
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
             cid_encoding: None,
@@ -981,7 +984,6 @@ endcmap
             to_unicode: Some(cmap),
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
             cid_encoding: None,
@@ -1018,7 +1020,6 @@ endcmap
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: Some("GB1".into()),
             metrics: FontMetrics::default(),
             cid_encoding: None,
@@ -1030,7 +1031,6 @@ endcmap
             to_unicode: None,
             differences: None,
             descendant_font: Some(Box::new(descendant)),
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
             cid_encoding: Some(CidEncoding::Cmap(enc)),
@@ -1050,7 +1050,6 @@ endcmap
             to_unicode: None,
             differences: None,
             descendant_font: None,
-            cid_to_gid_map: None,
             cid_ordering: Some("GB1".into()),
             metrics: FontMetrics::default(),
             cid_encoding: None,
@@ -1062,7 +1061,6 @@ endcmap
             to_unicode: None,
             differences: None,
             descendant_font: Some(Box::new(descendant)),
-            cid_to_gid_map: None,
             cid_ordering: None,
             metrics: FontMetrics::default(),
             cid_encoding: Some(CidEncoding::Utf16Be),
@@ -1094,28 +1092,4 @@ endcmap
             "explicit mapping must override the CID-table fallback"
         );
     }
-}
-
-// =========================================================================
-// PUBLIC TEST HELPERS FOR KERNING (Issue #87 - Quality Agent Required)
-// =========================================================================
-
-/// Extract kerning pairs from raw TrueType font data (public wrapper for tests)
-///
-/// This is a convenience function for testing kerning extraction without
-/// needing a full PdfDocument context.
-#[allow(dead_code)]
-pub fn extract_truetype_kerning(font_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
-    let extractor: CMapTextExtractor<std::fs::File> = CMapTextExtractor::new();
-    extractor.parse_truetype_kern_table(font_data)
-}
-
-/// Parse TrueType kern table from raw kern table data (public wrapper for tests)
-///
-/// This function parses the kern table data directly, useful for unit testing
-/// the kern table parser without needing a full TrueType font file.
-#[allow(dead_code)]
-pub fn parse_truetype_kern_table(kern_data: &[u8]) -> ParseResult<HashMap<(u32, u32), f64>> {
-    let extractor: CMapTextExtractor<std::fs::File> = CMapTextExtractor::new();
-    extractor.parse_truetype_kern_table(kern_data)
 }
