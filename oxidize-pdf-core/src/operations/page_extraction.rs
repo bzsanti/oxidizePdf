@@ -5,7 +5,7 @@
 //! API specifically for page extraction use cases.
 
 use super::{OperationError, OperationResult, PageRange};
-use crate::parser::{ContentOperation, ContentParser, ParsedPage, PdfDocument, PdfReader};
+use crate::parser::{ParsedPage, PdfDocument, PdfReader};
 use crate::{Document, Page};
 use std::fs::File;
 use std::path::Path;
@@ -155,155 +155,17 @@ impl PageExtractor {
         Ok(doc)
     }
 
-    /// Convert a parsed page to a new page
+    /// Convert a parsed page to a new page, preserving its content verbatim.
+    ///
+    /// Copies the original content streams and resources (fonts, images,
+    /// XObjects) unchanged via [`Page::from_parsed_with_content`], the path
+    /// `merge` uses, instead of re-emitting the page through the high-level API
+    /// — which mapped every font to one of the standard 14, decoded bytes with
+    /// `from_utf8`, and dropped images and unrecognized operators (#453).
+    /// `/Rotate` is carried over by `from_parsed_with_content`.
     fn convert_page(&mut self, parsed_page: &ParsedPage) -> OperationResult<Page> {
-        // Create new page with same dimensions
-        let width = parsed_page.width();
-        let height = parsed_page.height();
-        let mut page = Page::new(width, height);
-
-        // Apply rotation if needed
-        if parsed_page.rotation != 0 {
-            page.set_rotation(parsed_page.rotation);
-        }
-
-        // Get content streams
-        let content_streams = self
-            .document
-            .get_page_content_streams(parsed_page)
-            .map_err(|e| OperationError::ParseError(e.to_string()))?;
-
-        // Parse and process content streams
-        let mut has_content = false;
-        for stream_data in &content_streams {
-            match ContentParser::parse_content(stream_data) {
-                Ok(operators) => {
-                    self.process_operators(&mut page, &operators)?;
-                    has_content = true;
-                }
-                Err(e) => {
-                    // Log warning but continue with other streams
-                    tracing::debug!("Warning: Failed to parse content stream: {e}");
-                }
-            }
-        }
-
-        // Handle annotations if preservation is enabled
-        if self.options.preserve_annotations {
-            // Note: Annotation preservation requires annotation support implementation
-        }
-
-        // Handle form fields if preservation is enabled
-        if self.options.preserve_forms {
-            // Note: Form field preservation requires form support implementation
-        }
-
-        // If no content was successfully processed, add a placeholder
-        if !has_content {
-            page.text()
-                .set_font(crate::text::Font::Helvetica, 10.0)
-                .at(50.0, height - 50.0)
-                .write("[Page extracted]")
-                .map_err(OperationError::PdfError)?;
-        }
-
-        Ok(page)
-    }
-
-    /// Process content operators to recreate page content
-    fn process_operators(
-        &self,
-        page: &mut Page,
-        operators: &[ContentOperation],
-    ) -> OperationResult<()> {
-        // This is a simplified implementation that handles basic text and graphics
-        // A full implementation would handle all PDF operators
-
-        let mut text_object = false;
-        let mut current_font = crate::text::Font::Helvetica;
-        let mut current_font_size = 12.0;
-        let mut current_x = 0.0;
-        let mut current_y = 0.0;
-
-        for operator in operators {
-            match operator {
-                ContentOperation::BeginText => {
-                    text_object = true;
-                }
-                ContentOperation::EndText => {
-                    text_object = false;
-                }
-                ContentOperation::SetFont(name, size) => {
-                    current_font = self.map_font_name(name);
-                    current_font_size = *size;
-                }
-                ContentOperation::MoveText(x, y) => {
-                    current_x = *x;
-                    current_y = *y;
-                }
-                ContentOperation::ShowText(text) => {
-                    if text_object {
-                        if let Ok(text_str) = String::from_utf8(text.clone()) {
-                            page.text()
-                                .set_font(current_font.clone(), current_font_size as f64)
-                                .at(current_x as f64, current_y as f64)
-                                .write(&text_str)
-                                .map_err(OperationError::PdfError)?;
-                        }
-                    }
-                }
-                ContentOperation::MoveTo(x, y) => {
-                    page.graphics().move_to(*x as f64, *y as f64);
-                }
-                ContentOperation::LineTo(x, y) => {
-                    page.graphics().line_to(*x as f64, *y as f64);
-                }
-                ContentOperation::Rectangle(x, y, w, h) => {
-                    page.graphics()
-                        .rectangle(*x as f64, *y as f64, *w as f64, *h as f64);
-                }
-                ContentOperation::Stroke => {
-                    page.graphics().stroke();
-                }
-                ContentOperation::Fill => {
-                    page.graphics().fill();
-                }
-                ContentOperation::SetStrokingRGB(r, g, b) => {
-                    page.graphics()
-                        .set_stroke_color(crate::Color::rgb(*r as f64, *g as f64, *b as f64));
-                }
-                ContentOperation::SetNonStrokingRGB(r, g, b) => {
-                    page.graphics()
-                        .set_fill_color(crate::Color::rgb(*r as f64, *g as f64, *b as f64));
-                }
-                ContentOperation::SetLineWidth(width) => {
-                    page.graphics().set_line_width(*width as f64);
-                }
-                _ => {
-                    // Other operators not yet implemented
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Map PDF font names to our font enum
-    fn map_font_name(&self, name: &str) -> crate::text::Font {
-        match name {
-            "Times-Roman" => crate::text::Font::TimesRoman,
-            "Times-Bold" => crate::text::Font::TimesBold,
-            "Times-Italic" => crate::text::Font::TimesItalic,
-            "Times-BoldItalic" => crate::text::Font::TimesBoldItalic,
-            "Helvetica-Bold" => crate::text::Font::HelveticaBold,
-            "Helvetica-Oblique" => crate::text::Font::HelveticaOblique,
-            "Helvetica-BoldOblique" => crate::text::Font::HelveticaBoldOblique,
-            "Courier" => crate::text::Font::Courier,
-            "Courier-Bold" => crate::text::Font::CourierBold,
-            "Courier-Oblique" => crate::text::Font::CourierOblique,
-            "Courier-BoldOblique" => crate::text::Font::CourierBoldOblique,
-            _ => crate::text::Font::Helvetica, // Default fallback
-        }
+        Page::from_parsed_with_content(parsed_page, &self.document)
+            .map_err(|e| OperationError::ParseError(e.to_string()))
     }
 }
 
@@ -643,38 +505,6 @@ mod tests {
         // When metadata is not preserved, the document should have default/empty metadata
         assert_eq!(extracted_doc.pages.len(), 1);
         // Note: Document doesn't have getter methods for metadata in current API
-    }
-
-    #[test]
-    fn test_map_font_name() {
-        let temp_dir = TempDir::new().unwrap();
-        let mut doc = create_test_pdf("Test", 1);
-        let path = save_test_pdf(&mut doc, &temp_dir, "test.pdf");
-
-        let reader = PdfReader::open(&path).unwrap();
-        let document = PdfDocument::new(reader);
-        let extractor = PageExtractor::new(document);
-
-        assert_eq!(
-            extractor.map_font_name("Times-Roman"),
-            crate::text::Font::TimesRoman
-        );
-        assert_eq!(
-            extractor.map_font_name("Times-Bold"),
-            crate::text::Font::TimesBold
-        );
-        assert_eq!(
-            extractor.map_font_name("Helvetica-Bold"),
-            crate::text::Font::HelveticaBold
-        );
-        assert_eq!(
-            extractor.map_font_name("Courier"),
-            crate::text::Font::Courier
-        );
-        assert_eq!(
-            extractor.map_font_name("Unknown"),
-            crate::text::Font::Helvetica
-        );
     }
 
     #[test]
