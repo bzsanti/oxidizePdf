@@ -5,7 +5,7 @@
 
 use super::{OperationError, OperationResult, PageRange};
 use crate::parser::page_tree::ParsedPage;
-use crate::parser::{ContentOperation, ContentParser, PdfDocument, PdfReader};
+use crate::parser::{PdfDocument, PdfReader};
 use crate::{Document, Page};
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -170,145 +170,18 @@ impl PdfSplitter {
         Ok(())
     }
 
-    /// Convert a parsed page to a new page
+    /// Convert a parsed page to a new page, preserving its content verbatim.
+    ///
+    /// Copies the original content streams and resources (fonts, images,
+    /// XObjects) unchanged via [`Page::from_parsed_with_content`], the same path
+    /// `merge` uses. The former implementation re-emitted the page through the
+    /// high-level API — mapping every font to one of the standard 14, decoding
+    /// bytes with `from_utf8`, and dropping every operator it did not recognize
+    /// — so it lost images and mangled any non-ASCII or CID-encoded text
+    /// (#453). `/Rotate` is carried over by `from_parsed_with_content`.
     fn convert_page(&mut self, parsed_page: &ParsedPage) -> OperationResult<Page> {
-        // Create new page with same dimensions
-        let width = parsed_page.width();
-        let height = parsed_page.height();
-        let mut page = Page::new(width, height);
-
-        // Set rotation if needed
-        if parsed_page.rotation != 0 {
-            page.set_rotation(parsed_page.rotation);
-        }
-
-        // Get content streams
-        let content_streams = self
-            .document
-            .get_page_content_streams(parsed_page)
-            .map_err(|e| OperationError::ParseError(e.to_string()))?;
-
-        // Parse and process content streams
-        let mut has_content = false;
-        for stream_data in &content_streams {
-            match ContentParser::parse_content(stream_data) {
-                Ok(operators) => {
-                    // Process the operators to recreate content
-                    self.process_operators(&mut page, &operators)?;
-                    has_content = true;
-                }
-                Err(e) => {
-                    // If parsing fails, fall back to placeholder
-                    tracing::debug!("Warning: Failed to parse content stream: {e}");
-                }
-            }
-        }
-
-        // If no content was successfully processed, add a placeholder
-        if !has_content {
-            page.text()
-                .set_font(crate::text::Font::Helvetica, 10.0)
-                .at(50.0, height - 50.0)
-                .write("[Page extracted - content reconstruction in progress]")
-                .map_err(OperationError::PdfError)?;
-        }
-
-        Ok(page)
-    }
-
-    /// Process content operators to recreate page content
-    fn process_operators(
-        &self,
-        page: &mut Page,
-        operators: &[ContentOperation],
-    ) -> OperationResult<()> {
-        // Track graphics state
-        let mut text_object = false;
-        let mut current_font = crate::text::Font::Helvetica;
-        let mut current_font_size = 12.0;
-        let mut current_x = 0.0;
-        let mut current_y = 0.0;
-
-        for operator in operators {
-            match operator {
-                ContentOperation::BeginText => {
-                    text_object = true;
-                }
-                ContentOperation::EndText => {
-                    text_object = false;
-                }
-                ContentOperation::SetFont(name, size) => {
-                    // Map PDF font names to our fonts
-                    current_font = match name.as_str() {
-                        "Times-Roman" => crate::text::Font::TimesRoman,
-                        "Times-Bold" => crate::text::Font::TimesBold,
-                        "Times-Italic" => crate::text::Font::TimesItalic,
-                        "Times-BoldItalic" => crate::text::Font::TimesBoldItalic,
-                        "Helvetica-Bold" => crate::text::Font::HelveticaBold,
-                        "Helvetica-Oblique" => crate::text::Font::HelveticaOblique,
-                        "Helvetica-BoldOblique" => crate::text::Font::HelveticaBoldOblique,
-                        "Courier" => crate::text::Font::Courier,
-                        "Courier-Bold" => crate::text::Font::CourierBold,
-                        "Courier-Oblique" => crate::text::Font::CourierOblique,
-                        "Courier-BoldOblique" => crate::text::Font::CourierBoldOblique,
-                        _ => crate::text::Font::Helvetica, // Default fallback
-                    };
-                    current_font_size = *size;
-                }
-                ContentOperation::MoveText(tx, ty) => {
-                    current_x += tx;
-                    current_y += ty;
-                }
-                ContentOperation::ShowText(text_bytes) => {
-                    if text_object {
-                        // Convert bytes to string (assuming ASCII/UTF-8 for now)
-                        if let Ok(text) = String::from_utf8(text_bytes.clone()) {
-                            page.text()
-                                .set_font(current_font.clone(), current_font_size as f64)
-                                .at(current_x as f64, current_y as f64)
-                                .write(&text)
-                                .map_err(OperationError::PdfError)?;
-                        }
-                    }
-                }
-                ContentOperation::Rectangle(x, y, width, height) => {
-                    page.graphics()
-                        .rect(*x as f64, *y as f64, *width as f64, *height as f64);
-                }
-                ContentOperation::MoveTo(x, y) => {
-                    page.graphics().move_to(*x as f64, *y as f64);
-                }
-                ContentOperation::LineTo(x, y) => {
-                    page.graphics().line_to(*x as f64, *y as f64);
-                }
-                ContentOperation::Stroke => {
-                    page.graphics().stroke();
-                }
-                ContentOperation::Fill => {
-                    page.graphics().fill();
-                }
-                ContentOperation::SetNonStrokingRGB(r, g, b) => {
-                    page.graphics().set_fill_color(crate::graphics::Color::Rgb(
-                        *r as f64, *g as f64, *b as f64,
-                    ));
-                }
-                ContentOperation::SetStrokingRGB(r, g, b) => {
-                    page.graphics()
-                        .set_stroke_color(crate::graphics::Color::Rgb(
-                            *r as f64, *g as f64, *b as f64,
-                        ));
-                }
-                ContentOperation::SetLineWidth(width) => {
-                    page.graphics().set_line_width(*width as f64);
-                }
-                // Note: Additional operators can be implemented on demand
-                _ => {
-                    // Silently skip unimplemented operators for now
-                }
-            }
-        }
-
-        Ok(())
+        Page::from_parsed_with_content(parsed_page, &self.document)
+            .map_err(|e| OperationError::ParseError(e.to_string()))
     }
 
     /// Format the output path based on the pattern
