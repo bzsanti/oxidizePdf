@@ -1197,6 +1197,8 @@ impl TextExtractor {
                                 &decoded,
                                 state.font_size,
                                 font_info,
+                                state.char_space,
+                                state.word_space,
                             )
                         };
 
@@ -1294,6 +1296,8 @@ impl TextExtractor {
                                             &decoded,
                                             state.font_size,
                                             font_info,
+                                            state.char_space,
+                                            state.word_space,
                                         )
                                     };
 
@@ -1430,6 +1434,8 @@ impl TextExtractor {
                                 &decoded,
                                 state.font_size,
                                 font_info,
+                                state.char_space,
+                                state.word_space,
                             )
                         };
 
@@ -1497,6 +1503,8 @@ impl TextExtractor {
                                 &decoded,
                                 state.font_size,
                                 font_info,
+                                state.char_space,
+                                state.word_space,
                             )
                         };
 
@@ -2643,7 +2651,10 @@ fn emit_text_fragment(
 /// or pure-translation matrix; non-uniform CTM scaling produced wrong origins.
 fn text_origin(state: &TextState) -> (f64, f64) {
     let combined = multiply_matrix(&state.text_matrix, &state.ctm);
-    transform_point(0.0, 0.0, &combined)
+    // Text rise (`Ts`) shifts the glyph origin up the text-space y-axis before
+    // the text/CTM transform (ISO 32000-1 §9.4.4). For an axis-aligned matrix
+    // this moves the user-space y by exactly `Ts`.
+    transform_point(0.0, state.text_rise, &combined)
 }
 
 /// Advance the text matrix by one shown glyph run of unscaled width
@@ -2901,20 +2912,38 @@ fn calculate_text_width(text: &str, font_size: f64, font_info: Option<&FontInfo>
 /// `decoded` is the already-decoded text for this run; it is only consulted for
 /// composite (Type0) fonts, whose multi-byte codes cannot be indexed byte-wise
 /// and whose width path is unchanged here to avoid regressing CJK extraction.
+/// Unscaled text-space advance of a run (before `Th`), including the text-state
+/// spacing parameters (ISO 32000-1 §9.4.4): the glyph displacement is
+/// `w0/1000 * Tfs + Tc + Tw`, so `char_space` (`Tc`) is added once per glyph and
+/// `word_space` (`Tw`) once per *single-byte* space (code 32, §9.3.3). Both are
+/// unscaled text-space units, added directly (not multiplied by the font size);
+/// the caller's `advance_pen` applies `Th`.
 fn calculate_text_width_from_codes(
     codes: &[u8],
     decoded: &str,
     font_size: f64,
     font_info: Option<&FontInfo>,
+    char_space: f64,
+    word_space: f64,
 ) -> f64 {
     // Composite (Type0) fonts use multi-byte codes; a single byte is not a code,
     // so byte-indexed width lookup is invalid. Preserve the existing decoded-based
-    // behavior for them.
+    // behavior for them, adding `Tc` per glyph. `Tw` applies only to the
+    // single-byte code 32 (§9.3.3), which a multi-byte code can never be, so it
+    // does not apply here.
     let is_composite =
         font_info.is_some_and(|f| f.font_type == "Type0" || f.descendant_font.is_some());
     if is_composite {
-        return calculate_text_width(decoded, font_size, font_info);
+        let glyphs = decoded.chars().count() as f64;
+        return calculate_text_width(decoded, font_size, font_info) + char_space * glyphs;
     }
+
+    // `Tc` on every byte-code, `Tw` on every space byte. Shared by the metric
+    // and no-metric branches below.
+    let spacing = |codes: &[u8]| -> f64 {
+        char_space * codes.len() as f64
+            + word_space * codes.iter().filter(|&&b| b == b' ').count() as f64
+    };
 
     if let Some(font) = font_info {
         if let Some(ref widths) = font.metrics.widths {
@@ -2946,12 +2975,12 @@ fn calculate_text_width_from_codes(
                 }
             }
 
-            return total_width;
+            return total_width + spacing(codes);
         }
     }
 
     // No metrics: one fallback width per code (byte), the simple-font glyph count.
-    codes.len() as f64 * font_size * 0.5
+    codes.len() as f64 * font_size * 0.5 + spacing(codes)
 }
 
 /// Sanitize extracted text by removing or replacing control characters.
@@ -3697,7 +3726,8 @@ mod tests {
 
         let codes = [1u8, 2u8];
         let decoded = "mi"; // what decode_text produced for these codes
-        let width = calculate_text_width_from_codes(&codes, decoded, 10.0, Some(&font_info));
+        let width =
+            calculate_text_width_from_codes(&codes, decoded, 10.0, Some(&font_info), 0.0, 0.0);
         let expected = (1000.0 + 100.0) / 1000.0 * 10.0; // 11.0
         assert!(
             (width - expected).abs() < 1e-6,
